@@ -1,0 +1,72 @@
+/* Itqan CMS Global Styles */
+:root {
+  --itqan-primary: #669B80;
+  --itqan-dark: #22433D;
+  --itqan-light: #f8f9fa;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Itqan Brand Colors */
+.btn-itqan-primary {
+  background-color: var(--itqan-primary);
+  border-color: var(--itqan-primary);
+  color: white;
+}
+
+.btn-itqan-primary:hover {
+  background-color: var(--itqan-dark);
+  border-color: var(--itqan-dark);
+  color: white;
+}
+
+.text-itqan-primary {
+  color: var(--itqan-primary) !important;
+}
+
+.text-itqan-dark {
+  color: var(--itqan-dark) !important;
+}
+
+.bg-itqan-primary {
+  background-color: var(--itqan-primary) !important;
+}
+
+.bg-itqan-dark {
+  background-color: var(--itqan-dark) !important;
+}
+
+/* RTL Support for Arabic */
+html[dir="rtl"] {
+  direction: rtl;
+}
+
+html[dir="rtl"] .container,
+html[dir="rtl"] .container-fluid {
+  text-align: right;
+}
+
+/* Auth0 Universal Login customization */
+.auth0-login {
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--itqan-light) 0%, var(--itqan-primary) 100%);
+}
+
+.auth-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(102, 155, 128, 0.1);
+  border: 1px solid rgba(102, 155, 128, 0.1);
+}
+
+.brand-logo {
+  color: var(--itqan-primary);
+  font-weight: 700;
+  font-size: 2rem;
+}

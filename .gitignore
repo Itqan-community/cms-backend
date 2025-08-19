@@ -1,0 +1,84 @@
+# Dependencies
+node_modules/
+*/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Production builds
+.next/
+out/
+dist/
+build/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+
+# Docker
+.dockerignore
+
+# Strapi
+cms/.strapi/
+cms/.tmp/
+cms/public/uploads/*
+!cms/public/uploads/.gitkeep
+cms/.env
+cms/build/
+cms/dist/
+
+# Next.js
+web/.next/
+web/out/
+web/.vercel
+
+# Package managers
+package-lock.json
+yarn.lock
+
+# Temporary files
+*.tmp
+*.temp
+
+# Auth0 secrets (keep config structure but not actual secrets)
+auth0-secrets.json
+
+# Test files that contain sensitive data
+test-auth0-auto.sh
+verify-auth0-setup.sh

@@ -1,0 +1,62 @@
+{
+    "prompt": "You are an autonomous coding agent completing STORY-10: Review Workflow for Itqan CMS. Implement Draft->Review->Published workflow using Strapi's built-in Review Workflows plugin with proper state transitions and notifications.",
+    "context": {
+        "project": "Itqan CMS",
+        "feature": "Editorial Workflow",
+        "tech_stack": [
+            "Strapi v5",
+            "Review Workflows plugin"
+        ],
+        "roles": [
+            "Author",
+            "Editor",
+            "Admin"
+        ]
+    },
+    "objectives": [
+        "Enable Strapi Review Workflows plugin for content approval",
+        "Configure workflow stages: Draft, Editorial Review, Ready, Published",
+        "Set up role-based permissions for workflow transitions",
+        "Test complete workflow from draft to published state"
+    ],
+    "tasks": [
+        "Enable review-workflows plugin in config/plugins.ts",
+        "Configure workflow stages with proper naming and transitions",
+        "Apply workflow to Article and Page content types",
+        "Set up permissions: Authors can create/edit, Editors can review/publish",
+        "Configure workflow notifications for stage transitions",
+        "Test workflow with sample content across different user roles",
+        "Document workflow process for content creators"
+    ],
+    "guard_rails": [
+        "Only allow valid state transitions (no skipping review stages)",
+        "Ensure proper permission checks before state changes",
+        "Maintain audit trail of all workflow transitions",
+        "Prevent accidental publishing of unreviewed content"
+    ],
+    "acceptance_criteria": [
+        "Given I am an Author, when I create content, then it starts in Draft stage",
+        "Given I am an Editor, when I review content, then I can approve or reject it",
+        "Given content is in Published stage, then it appears in public API",
+        "Workflow history shows all transitions with timestamps and users",
+        "Email notifications sent on stage transitions"
+    ],
+    "definition_of_done": [
+        "Workflow configured and working across all content types",
+        "Role permissions properly restrict workflow actions",
+        "Workflow transitions tested with multiple user accounts",
+        "Documentation created for editorial process"
+    ],
+    "out_of_scope": [
+        "Advanced approval workflows with multiple reviewers",
+        "Custom workflow stages beyond basic needs",
+        "Integration with external approval systems"
+    ],
+    "references": [
+        "docs/Itqan_CMS_BRD.md §3.6 Review & Approval Workflow",
+        "Strapi Review Workflows documentation",
+        "RBAC configuration from story 11",
+        "Screen ADMIN-004: Workflow management panel",
+        "English wireframe: ai-memory-bank/tasks/screens/en/public_and_workflow_wireframes.html#ADMIN-004"
+    ]
+}

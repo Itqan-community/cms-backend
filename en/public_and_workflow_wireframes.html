@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Itqan CMS - Public & Workflow Wireframes</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .wireframe {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            margin: 20px 0;
+            padding: 20px;
+            min-height: 600px;
+            page-break-after: always;
+        }
+        .header-nav {
+            background: white;
+            padding: 15px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .brand {
+            color: #669B80;
+            font-weight: bold;
+        }
+        .search-bar {
+            background: #22433D;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 4px;
+            width: 300px;
+        }
+        .article-card {
+            background: white;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            display: flex;
+            gap: 15px;
+        }
+        .article-image {
+            background: #e9ecef;
+            width: 150px;
+            height: 100px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        .sidebar {
+            background: white;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .license-modal {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 30px;
+            max-width: 500px;
+            margin: 100px auto;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .workflow-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+        }
+        .status-draft { background: #fff3cd; color: #664d03; }
+        .status-review { background: #cff4fc; color: #055160; }
+        .status-published { background: #d1e7dd; color: #0f5132; }
+        .permissions-grid {
+            display: grid;
+            grid-template-columns: 200px repeat(4, 1fr);
+            gap: 5px;
+            align-items: center;
+        }
+        .permissions-header {
+            font-weight: bold;
+            padding: 10px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            text-align: center;
+        }
+        .permission-row {
+            padding: 8px;
+            border: 1px solid #dee2e6;
+        }
+        .btn-primary {
+            background-color: #669B80;
+            border-color: #669B80;
+        }
+        .btn-secondary {
+            background-color: #22433D;
+            border-color: #22433D;
+        }
+        .admin-header {
+            background: #22433D;
+            color: white;
+            padding: 15px 0;
+        }
+        .admin-brand {
+            color: white;
+            font-weight: bold;
+        }
+        .admin-sidebar {
+            background: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+            min-height: 500px;
+            padding: 20px;
+        }
+        .content-area {
+            padding: 20px;
+        }
+        .form-section {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ADMIN-004: Workflow Panel -->
+<div class="wireframe" id="ADMIN-004">
+    <div class="admin-header">
+        <div class="container-fluid">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="admin-brand">Itqan CMS Admin</div>
+                <div class="text-white">Admin User</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2 admin-sidebar">
+                <nav class="nav flex-column">
+                    <a class="nav-link" href="#">Dashboard</a>
+                    <a class="nav-link" href="#">Media Library</a>
+                    <a class="nav-link" href="#">Content</a>
+                    <a class="nav-link active" href="#">Workflow</a>
+                    <a class="nav-link" href="#">Settings</a>
+                </nav>
+            </div>
+            
+            <div class="col-md-10 content-area">
+                <h3>Content Workflow Management</h3>
+                
+                <div class="form-section">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5>Pending Reviews</h5>
+                        <div>
+                            <select class="form-select d-inline-block" style="width: auto;">
+                                <option>All Status</option>
+                                <option>Draft</option>
+                                <option>Under Review</option>
+                                <option>Published</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Author</th>
+                                <th>Status</th>
+                                <th>Last Modified</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Understanding Quranic Verses in Context</td>
+                                <td>Ahmed AlRajhy</td>
+                                <td><span class="workflow-status status-review">Under Review</span></td>
+                                <td>2 hours ago</td>
+                                <td>
+                                    <button class="btn btn-sm btn-success me-1">Approve</button>
+                                    <button class="btn btn-sm btn-warning me-1">Request Changes</button>
+                                    <button class="btn btn-sm btn-outline-primary">View</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Historical Context of Surah Al-Fatiha</td>
+                                <td>Sarah Mohammed</td>
+                                <td><span class="workflow-status status-draft">Draft</span></td>
+                                <td>1 day ago</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary me-1">Submit for Review</button>
+                                    <button class="btn btn-sm btn-outline-primary">Edit</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>The Miraculous Language of the Quran</td>
+                                <td>Dr. Khalid Hassan</td>
+                                <td><span class="workflow-status status-published">Published</span></td>
+                                <td>3 days ago</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-secondary">Unpublish</button>
+                                    <button class="btn btn-sm btn-outline-primary">Edit</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="form-section">
+                    <h5>Workflow Statistics</h5>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h3 class="text-warning">12</h3>
+                                    <p class="mb-0">Drafts</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h3 class="text-info">5</h3>
+                                    <p class="mb-0">Under Review</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h3 class="text-success">28</h3>
+                                    <p class="mb-0">Published</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h3 class="text-primary">45</h3>
+                                    <p class="mb-0">Total Articles</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ADMIN-005: Roles Settings -->
+<div class="wireframe" id="ADMIN-005">
+    <div class="admin-header">
+        <div class="container-fluid">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="admin-brand">Itqan CMS Admin</div>
+                <div class="text-white">Admin User</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2 admin-sidebar">
+                <nav class="nav flex-column">
+                    <a class="nav-link" href="#">Dashboard</a>
+                    <a class="nav-link" href="#">Media Library</a>
+                    <a class="nav-link" href="#">Content</a>
+                    <a class="nav-link" href="#">Users</a>
+                    <a class="nav-link active" href="#">Roles & Permissions</a>
+                </nav>
+            </div>
+            
+            <div class="col-md-10 content-area">
+                <h3>Role-Based Access Control (RBAC)</h3>
+                
+                <div class="form-section">
+                    <h5>Permission Matrix</h5>
+                    <div class="permissions-grid">
+                        <div class="permissions-header">Feature</div>
+                        <div class="permissions-header">Admin</div>
+                        <div class="permissions-header">Publisher</div>
+                        <div class="permissions-header">Reviewer</div>
+                        <div class="permissions-header">Developer</div>
+                        
+                        <div class="permission-row">Create Content</div>
+                        <div class="permission-row text-center">✓</div>
+                        <div class="permission-row text-center">✓</div>
+                        <div class="permission-row text-center">✗</div>
+                        <div class="permission-row text-center">✗</div>
+                        
+                        <div class="permission-row">Edit Content</div>
+                        <div class="permission-row text-center">✓</div>
+                        <div class="permission-row text-center">✓</div>
+                        <div class="permission-row text-center">✓</div>
+                        <div class="permission-row text-center">✗</div>
+                        
+                        <div class="permission-row">Publish Content</div>
+                        <div class="permission-row text-center">✓</div>
+                        <div class="permission-row text-center">✓</div>
+                        <div class="permission-row text-center">✗</div>
+                        <div class="permission-row text-center">✗</div>
+                        
+                        <div class="permission-row">Manage Users</div>
+                        <div class="permission-row text-center">✓</div>
+                        <div class="permission-row text-center">✗</div>
+                        <div class="permission-row text-center">✗</div>
+                        <div class="permission-row text-center">✗</div>
+                        
+                        <div class="permission-row">API Access</div>
+                        <div class="permission-row text-center">✓</div>
+                        <div class="permission-row text-center">✗</div>
+                        <div class="permission-row text-center">✗</div>
+                        <div class="permission-row text-center">✓</div>
+                        
+                        <div class="permission-row">Media Upload</div>
+                        <div class="permission-row text-center">✓</div>
+                        <div class="permission-row text-center">✓</div>
+                        <div class="permission-row text-center">✗</div>
+                        <div class="permission-row text-center">✗</div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h5>User Role Assignment</h5>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Email</th>
+                                <th>Current Role</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Ahmed AlRajhy</td>
+                                <td>ahmed@example.com</td>
+                                <td><span class="badge bg-primary">Publisher</span></td>
+                                <td>
+                                    <select class="form-select form-select-sm d-inline-block me-2" style="width: auto;">
+                                        <option>Publisher</option>
+                                        <option>Reviewer</option>
+                                        <option>Developer</option>
+                                    </select>
+                                    <button class="btn btn-sm btn-outline-primary">Update</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Sarah Mohammed</td>
+                                <td>sarah@example.com</td>
+                                <td><span class="badge bg-info">Reviewer</span></td>
+                                <td>
+                                    <select class="form-select form-select-sm d-inline-block me-2" style="width: auto;">
+                                        <option>Publisher</option>
+                                        <option selected>Reviewer</option>
+                                        <option>Developer</option>
+                                    </select>
+                                    <button class="btn btn-sm btn-outline-primary">Update</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <button class="btn btn-primary">Save Permissions</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PUB-001: Article List -->
+<div class="wireframe" id="PUB-001">
+    <div class="header-nav">
+        <div class="container-fluid">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="brand">Itqan CMS</div>
+                <nav class="d-flex gap-4">
+                    <a href="#" class="text-decoration-none">Home</a>
+                    <a href="#" class="text-decoration-none">Publishers</a>
+                    <a href="#" class="text-decoration-none">Content Standards</a>
+                    <a href="#" class="text-decoration-none">About Project</a>
+                </nav>
+                <button class="btn btn-outline-primary">Login</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container-fluid mt-3">
+        <div class="search-bar mx-auto text-center mb-4">
+            <input type="text" class="form-control d-inline-block" style="width: 300px;" placeholder="Search...">
+        </div>
+    </div>
+    
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-8">
+                <h3>Published Articles</h3>
+                
+                <div class="article-card">
+                    <div class="article-image"></div>
+                    <div class="flex-grow-1">
+                        <h5>Understanding Quranic Verses in Context</h5>
+                        <p class="text-muted small">Published by Ahmed AlRajhy • 2 days ago</p>
+                        <p>This article explores the importance of understanding Quranic verses within their historical and linguistic context to derive accurate meanings and interpretations.</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge bg-secondary me-1">Tafsir</span>
+                                <span class="badge bg-secondary">Context</span>
+                            </div>
+                            <a href="#" class="btn btn-sm btn-outline-primary">Read More</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="article-card">
+                    <div class="article-image"></div>
+                    <div class="flex-grow-1">
+                        <h5>The Miraculous Language of the Quran</h5>
+                        <p class="text-muted small">Published by Dr. Khalid Hassan • 5 days ago</p>
+                        <p>An exploration of the linguistic miracles found in the Quran, examining the unique Arabic expressions and their profound meanings.</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge bg-secondary me-1">Language</span>
+                                <span class="badge bg-secondary">Miracle</span>
+                            </div>
+                            <a href="#" class="btn btn-sm btn-outline-primary">Read More</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <nav class="mt-4">
+                    <ul class="pagination">
+                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                        <li class="page-item"><a class="page-link" href="#">2</a></li>
+                        <li class="page-item"><a class="page-link" href="#">3</a></li>
+                        <li class="page-item"><a class="page-link" href="#">4</a></li>
+                        <li class="page-item"><a class="page-link" href="#">...</a></li>
+                    </ul>
+                </nav>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="sidebar">
+                    <h5>Categories</h5>
+                    <div class="list-group list-group-flush">
+                        <a href="#" class="list-group-item list-group-item-action">Quranic Studies (142)</a>
+                        <a href="#" class="list-group-item list-group-item-action">Tafsir (89)</a>
+                        <a href="#" class="list-group-item list-group-item-action">History (76)</a>
+                        <a href="#" class="list-group-item list-group-item-action">Biography (43)</a>
+                        <a href="#" class="list-group-item list-group-item-action">Modern Studies (28)</a>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h6>License Information</h6>
+                    <div class="small">
+                        <p><strong>Creative Commons</strong></p>
+                        <ul class="list-unstyled">
+                            <li>✓ Free to Share</li>
+                            <li>✓ CC0: Public Domain</li>
+                            <li>✓ Attribution</li>
+                            <li>✓ Commercial Use</li>
+                            <li>○ Share Alike</li>
+                            <li>○ No Derivatives</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- LIC-001: License Modal -->
+<div class="wireframe" id="LIC-001">
+    <div style="background: rgba(0,0,0,0.5); position: fixed; top: 0; left: 0; right: 0; bottom: 0;">
+        <div class="license-modal">
+            <h4 class="text-center mb-4">Terms and Conditions for API Access</h4>
+            <p class="mb-3">Welcome to the Itqan CMS API. Please review and accept our terms and conditions to continue.</p>
+            
+            <div class="border rounded p-3 mb-4" style="height: 200px; overflow-y: scroll; background: #f8f9fa;">
+                <h6>Article 1</h6>
+                <p>You must provide proper attribution when using content from our API. This includes citing the original author and maintaining the license information.</p>
+                
+                <h6>Article 2</h6>
+                <p>Commercial use is permitted under the Creative Commons license, but you must comply with the specific license terms of each piece of content.</p>
+                
+                <h6>Article 3</h6>
+                <p>You are responsible for ensuring that your use of the API and content complies with applicable laws and regulations in your jurisdiction.</p>
+                
+                <p class="small text-muted">© 2023 Itqan Digital Standards. All rights reserved.</p>
+            </div>
+            
+            <div class="d-flex justify-content-between">
+                <button class="btn btn-outline-secondary">Previous</button>
+                <div>
+                    <span class="me-3">Article 1 of 3</span>
+                    <button class="btn btn-success me-2">Accept Terms</button>
+                    <button class="btn btn-primary">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

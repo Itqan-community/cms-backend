@@ -1,0 +1,14 @@
+{
+  "prompt": "Story-6: Docker Dev Stack is considered completed. Ensure docker-compose.yaml, env.dev.example, Dockerfiles are present and allow \"docker compose up --build\" to run all services.",
+  "context": {
+    "project": "Itqan CMS",
+    "feature": "Developer Environment",
+    "status": "completed"
+  },
+  "definition_of_done": [
+    "docker compose up builds images and all services become healthy",
+    "Strapi accessible at http://localhost:1337",
+    "Next.js accessible at http://localhost:3000",
+    "MinIO & Meilisearch accessible on respective ports"
+  ]
+}

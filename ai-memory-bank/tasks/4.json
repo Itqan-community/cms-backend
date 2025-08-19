@@ -1,0 +1,46 @@
+{
+  "prompt": "You are an autonomous coding agent completing STORY-4: Hybrid Token Exchange between Auth0 and Strapi for Itqan CMS.",
+  "context": {
+    "project": "Itqan CMS",
+    "feature": "Hybrid Token Exchange",
+    "auth_model": "Auth0 Hybrid (Hosted Universal Login)",
+    "tech_stack": ["Strapi v5", "Next.js 14"],
+    "screens": ["AUTH-002"],
+    "integration": "Auth0 Universal Login → Strapi JWT"
+  },
+  "objectives": [
+    "Backend endpoint validates Auth0 access token",
+    "Create/refresh Strapi JWT",
+    "Map Auth0 roles to Strapi roles"
+  ],
+  "tasks": [
+    "Create server route POST /auth/exchange for Auth0 token validation",
+    "Verify Auth0 access token via JWKS endpoint and audience claim",
+    "Handle AUTH-002 screen: loading state during token exchange process",
+    "Extract user claims from Auth0 token (sub, email, GitHub profile)",
+    "Use Strapi Admin API to create/update user and issue JWT",
+    "Map Auth0 roles to Strapi roles (Admin, Publisher, Developer, Reviewer)",
+    "Implement secure token caching with 1h TTL"
+  ],
+  "guard_rails": [
+    "Audience & issuer check",
+    "Rate-limit 10 req/min/ip"
+  ],
+  "acceptance_criteria": [
+    "Valid token returns 200 and Strapi JWT",
+    "Invalid token returns 401"
+  ],
+  "definition_of_done": [
+    "Integration test with real Auth0 token",
+    "Docs updated"
+  ],
+  "out_of_scope": [
+    "Refresh token rotation"
+  ],
+  "references": [
+    "Auth0 M2M docs",
+    "Strapi auth docs",
+    "Screen AUTH-002: Token exchange loading state",
+    "English wireframe: ai-memory-bank/tasks/screens/en/create_english_wireframes.html#AUTH-002"
+  ]
+}

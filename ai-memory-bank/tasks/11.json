@@ -1,0 +1,65 @@
+{
+    "prompt": "You are an autonomous coding agent completing STORY-11: RBAC Roles for Itqan CMS. Define and configure role-based access control with Admin, Publisher, Developer, and Reviewer roles with appropriate permissions for content and API access.",
+    "context": {
+        "project": "Itqan CMS",
+        "feature": "Role-Based Access Control",
+        "tech_stack": [
+            "Strapi v5",
+            "Users & Permissions plugin"
+        ],
+        "roles": [
+            "Admin",
+            "Publisher",
+            "Developer",
+            "Reviewer"
+        ]
+    },
+    "objectives": [
+        "Create four distinct user roles with clear permission boundaries",
+        "Configure content permissions based on user responsibilities",
+        "Set up API access controls for developer role",
+        "Test role restrictions and permissions enforcement"
+    ],
+    "tasks": [
+        "Create Admin role with full system access and user management",
+        "Create Publisher role with content creation and basic management rights",
+        "Create Developer role with API access and limited content read permissions",
+        "Create Reviewer role with content review and approval permissions",
+        "Configure collection-type permissions for each role (CRUD operations)",
+        "Set up API endpoint permissions and rate limiting per role",
+        "Test role switching and permission enforcement",
+        "Document role matrix and permission guidelines"
+    ],
+    "guard_rails": [
+        "Admin role should have unrestricted access to all features",
+        "Publisher role cannot modify system settings or user accounts",
+        "Developer role has read-only access to most content",
+        "Reviewer role can only modify content workflow states",
+        "No role below Admin can access sensitive system configurations"
+    ],
+    "acceptance_criteria": [
+        "Given I login as Publisher, then I can create/edit articles but not manage users",
+        "Given I login as Developer, then I can access API but not modify content",
+        "Given I login as Reviewer, then I can change workflow states but not create content",
+        "Given I login as Admin, then I have access to all system features",
+        "API endpoints respect role-based permissions and return appropriate errors"
+    ],
+    "definition_of_done": [
+        "All four roles created with documented permissions",
+        "Role-based restrictions tested across all major features",
+        "Permission matrix documented for future reference",
+        "Test users created for each role type"
+    ],
+    "out_of_scope": [
+        "Advanced permission schemes like resource-level permissions",
+        "Integration with external identity providers beyond Auth0",
+        "Custom permission plugins or extensions"
+    ],
+    "references": [
+        "docs/Itqan_CMS_BRD.md §3.1 User Management",
+        "docs/diagrams/level4-data-models.md User/Permission entities",
+        "Strapi Users & Permissions plugin documentation",
+        "Screen ADMIN-005: RBAC role and permission matrix",
+        "English wireframe: ai-memory-bank/tasks/screens/en/public_and_workflow_wireframes.html#ADMIN-005"
+    ]
+}

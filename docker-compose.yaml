@@ -1,0 +1,130 @@
+version: "3.9"
+
+services:
+  # Strapi CMS API
+  strapi:
+    build:
+      context: ./cms
+      dockerfile: Dockerfile.dev
+    container_name: itqan-strapi
+    volumes:
+      - ./cms:/srv/app
+      - /srv/app/node_modules  # anonymous volume to avoid host overriding
+    env_file: .env.dev
+    ports:
+      - "1337:1337"
+    depends_on:
+      - postgres
+      - minio
+      - meilisearch
+    networks:
+      - itqan-network
+    restart: unless-stopped
+
+  # Next.js Public Website (dev mode with hot-reload)
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile.dev
+    container_name: itqan-web
+    volumes:
+      - ./web:/app
+      - /app/node_modules  # anonymous volume
+    env_file: .env.dev
+    ports:
+      - "3000:3000"
+    depends_on:
+      - strapi
+    networks:
+      - itqan-network
+    restart: unless-stopped
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: itqan-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-itqan_cms}
+      POSTGRES_USER: ${POSTGRES_USER:-cms_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev_password_123}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - itqan-network
+    restart: unless-stopped
+
+  # MinIO Object Storage (S3-compatible)
+  minio:
+    image: minio/minio:latest
+    container_name: itqan-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"  # API
+      - "9001:9001"  # Console
+    networks:
+      - itqan-network
+    restart: unless-stopped
+
+  # Meilisearch (Lightweight Search Engine)
+  meilisearch:
+    image: getmeili/meilisearch:v1.6
+    container_name: itqan-meilisearch
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-dev-master-key-123}
+      MEILI_NO_ANALYTICS: true
+      MEILI_ENV: development
+    volumes:
+      - meilisearch_data:/meili_data
+    ports:
+      - "7700:7700"
+    networks:
+      - itqan-network
+    restart: unless-stopped
+
+  # Job Worker (Redis-dependent, commented out for now)
+  # worker:
+  #   build:
+  #     context: ./cms
+  #     dockerfile: Dockerfile.dev
+  #   container_name: itqan-worker
+  #   command: yarn worker
+  #   volumes:
+  #     - ./cms:/srv/app
+  #     - /srv/app/node_modules
+  #   env_file: .env.dev
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  #   networks:
+  #     - itqan-network
+  #   restart: unless-stopped
+
+  # Redis (for future use with caching/queues)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: itqan-redis
+  #   volumes:
+  #     - redis_data:/data
+  #   ports:
+  #     - "6379:6379"
+  #   networks:
+  #     - itqan-network
+  #   restart: unless-stopped
+
+volumes:
+  postgres_data:
+  minio_data:
+  meilisearch_data:
+  # redis_data:
+
+networks:
+  itqan-network:
+    driver: bridge

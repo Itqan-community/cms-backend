@@ -1,0 +1,48 @@
+{
+  "prompt": "You are an autonomous coding agent completing STORY-3: User Login via Auth0 for Itqan CMS.",
+  "context": {
+    "project": "Itqan CMS",
+    "feature": "User Login",
+    "auth_model": "Auth0 Hybrid (Hosted Universal Login)",
+    "tech_stack": ["Next.js 14", "Strapi v5"],
+    "screens": ["AUTH-001"],
+    "colors": {"primary": "#669B80", "dark": "#22433D"},
+    "auth_priority": ["GitHub SSO", "Google OAuth", "Email/Password"]
+  },
+  "objectives": [
+    "Allow existing users to authenticate",
+    "Store session securely",
+    "Show localized (EN/AR) login labels"
+  ],
+  "tasks": [
+    "Configure /login route to redirect to Auth0 Hosted Universal Login",
+    "Customize Auth0 Universal Login page with Itqan branding (#669B80, #22433D)",
+    "Set GitHub SSO as primary provider in Auth0 tenant configuration",
+    "Add language parameter to Auth0 authorize URL based on site locale (EN/AR)",
+    "Implement logout route clearing cookies and Auth0 session",
+    "Build AUTH-001 screen: login trigger page with branded call-to-action",
+    "Implement useAuth() hook exposing user profile and access token"
+  ],
+  "guard_rails": [
+    "Tokens in httpOnly cookies",
+    "XSS safe redirects"
+  ],
+  "acceptance_criteria": [
+    "User can login and see dashboard",
+    "JWT stored server-side verified by Strapi token exchange"
+  ],
+  "definition_of_done": [
+    "Unit tests pass",
+    "Security scan no high issues"
+  ],
+  "out_of_scope": [
+    "SSO enterprise connections"
+  ],
+  "references": [
+    "ai-memory-bank/tasks/screens/SCREEN_MAPPING.md",
+    "ai-memory-bank/logo.svg (color scheme)",
+    "Screen AUTH-001: Login page with Auth0 Universal Login redirect",
+    "docs/Itqan_CMS_BRD.md §3.1",
+    "English wireframe: ai-memory-bank/tasks/screens/en/create_english_wireframes.html#AUTH-001"
+  ]
+}

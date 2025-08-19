@@ -1,0 +1,58 @@
+{
+  "prompt": "You are an autonomous coding agent completing STORY-1: User Registration for Itqan CMS using Strapi v5 and Auth0 Hybrid auth. Implement front-end and back-end so that a new user can create an account via Auth0 Universal Login, and a corresponding Strapi user record with role=\"Viewer\" is created automatically.",
+  "context": {
+    "project": "Itqan CMS",
+    "feature": "User Registration",
+    "auth_model": "Auth0 Hybrid (SPA + M2M)",
+    "tech_stack": ["Next.js 14", "Strapi v5", "PostgreSQL", "Redis", "S3"],
+    "screens": ["REG-001"],
+    "colors": {"primary": "#669B80", "dark": "#22433D"},
+    "auth_priority": ["GitHub SSO", "Google OAuth", "Email/Password"]
+  },
+  "objectives": [
+    "Configure Auth0 tenant with Universal Login, EN & AR prompts",
+    "Implement Next.js page that redirects to Auth0 hosted login/signup",
+    "Handle Auth0 callback; exchange code for access & ID token using auth0-spa-sdk",
+    "Call backend \"/auth/callback\" endpoint to create user in Strapi via Admin API",
+    "Assign default role 'Viewer' and store Auth0 user_id mapping"
+  ],
+  "tasks": [
+    "Create Auth0 application (SPA) with GitHub SSO as primary provider",
+    "Configure Universal Login page with Itqan branding (#669B80, #22433D colors)",
+    "Set up machine-to-machine client for Strapi integration",
+    "Configure environment vars (AUTH0_DOMAIN, CLIENT_ID, AUDIENCE, M2M_CLIENT_SECRET)",
+    "Implement Next.js auth hook with @auth0/nextjs-auth0",
+    "Create registration page (REG-001) that redirects to Auth0 Universal Login",
+    "Add API route /api/auth/callback to forward token to Strapi",
+    "Write Strapi bootstrap script to map Auth0 user_id to Strapi uid",
+    "Test GitHub SSO registration flow end-to-end"
+  ],
+  "guard_rails": [
+    "Never expose Client Secret to front-end code",
+    "All tokens stored httpOnly cookies",
+    "Fail registration if email domain is on deny-list",
+    "Log PII only in secure backend logs, not console"
+  ],
+  "acceptance_criteria": [
+    "Given I am an unauthenticated visitor, when I click 'Sign up' I am redirected to Auth0 Universal Login",
+    "After successful signup, I see the Itqan Dashboard with welcome message",
+    "Strapi database contains a new user record linked to Auth0 sub",
+    "New user has role 'Viewer' and cannot access admin endpoints"
+  ],
+  "definition_of_done": [
+    "CI pipeline passes Jest + Playwright tests",
+    "Code merged to main with green checks",
+    "Story status updated to completed in tasks.csv"
+  ],
+  "out_of_scope": [
+    "Profile completion form",
+    "Email verification enforcement (handled in STORY-2)"
+  ],
+  "references": [
+    "docs/Itqan_CMS_BRD.md §3.1",
+    "ai-memory-bank/tasks/screens/SCREEN_MAPPING.md",
+    "ai-memory-bank/logo.svg (color scheme)",
+    "Screen REG-001: Registration page with Auth0 Universal Login",
+    "English wireframe: ai-memory-bank/tasks/screens/en/create_english_wireframes.html#REG-001"
+  ]
+}

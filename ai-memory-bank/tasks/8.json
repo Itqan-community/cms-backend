@@ -1,0 +1,56 @@
+{
+    "prompt": "You are an autonomous coding agent completing STORY-8: Meilisearch Integration for Itqan CMS. Install and configure Strapi plugin to automatically sync content to Meilisearch for full-text search capabilities.",
+    "context": {
+        "project": "Itqan CMS",
+        "feature": "Search Integration",
+        "tech_stack": [
+            "Strapi v5",
+            "Meilisearch v1.6",
+            "Docker"
+        ],
+        "environment": "Development"
+    },
+    "objectives": [
+        "Install Strapi Meilisearch plugin and configure connection",
+        "Set up automatic content indexing on create/update/delete",
+        "Configure search indexes for Articles and Pages with proper fields",
+        "Test search functionality via Meilisearch dashboard"
+    ],
+    "tasks": [
+        "Install strapi-plugin-meilisearch or @meilisearch/strapi-plugin",
+        "Configure config/plugins.ts with Meilisearch host and master key",
+        "Define searchable content types and fields in plugin config",
+        "Set up lifecycle hooks for automatic index synchronization",
+        "Test content indexing by creating sample articles",
+        "Verify search results via Meilisearch dashboard at localhost:7700"
+    ],
+    "guard_rails": [
+        "Store Meilisearch master key in environment variables",
+        "Only index published content, not drafts",
+        "Exclude sensitive fields from search index",
+        "Handle connection failures gracefully"
+    ],
+    "acceptance_criteria": [
+        "Given I create an article in Strapi, then it appears in Meilisearch index",
+        "Given I search for content via Meilisearch dashboard, then relevant results return",
+        "Index updates automatically when content is modified or deleted",
+        "Search supports both English and Arabic content"
+    ],
+    "definition_of_done": [
+        "Plugin configuration documented with field mappings",
+        "Sample content indexed and searchable",
+        "Integration tested with bilingual content"
+    ],
+    "out_of_scope": [
+        "Frontend search UI implementation",
+        "Advanced search features like facets or filters",
+        "Search analytics or ranking algorithms"
+    ],
+    "references": [
+        "docker-compose.yaml Meilisearch service",
+        "env.dev.example MEILI_* variables",
+        "Meilisearch Strapi plugin documentation",
+        "Screen ADMIN-002: Search configuration panel",
+        "English wireframe: ai-memory-bank/tasks/screens/en/admin_wireframes.html#ADMIN-002"
+    ]
+}

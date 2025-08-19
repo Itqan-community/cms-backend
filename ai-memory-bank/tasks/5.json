@@ -1,0 +1,46 @@
+{
+  "prompt": "You are an autonomous coding agent completing STORY-5: First-Time Dashboard Empty State for Itqan CMS.",
+  "context": {
+    "project": "Itqan CMS",
+    "feature": "Dashboard",
+    "auth_model": "Auth0 Hybrid",
+    "tech_stack": ["Next.js 14", "Bootstrap"],
+    "screens": ["DASH-001"],
+    "colors": {"primary": "#669B80", "dark": "#22433D"}
+  },
+  "objectives": [
+    "Render dashboard layout",
+    "Show profile completion checklist if user incomplete",
+    "Support EN/AR translation"
+  ],
+  "tasks": [
+    "Create /dashboard page protected by useAuth",
+    "Implement Bootstrap responsive layout with Itqan color scheme (#669B80, #22433D)",
+    "Build DASH-001 screen: sidebar navigation, header with logo, main content area",
+    "Fetch user profile from Strapi API",
+    "Display empty state with placeholder cards (\"No resources yet\")",
+    "Add profile completion checklist with progress indicators",
+    "Implement language switcher (EN/AR) with proper RTL layout",
+    "Add call-to-action buttons: \"Complete Profile\", \"Create First Article\""
+  ],
+  "guard_rails": [
+    "RTL layout flip for Arabic",
+    "Use Bootstrap responsive utilities"
+  ],
+  "acceptance_criteria": [
+    "First-time user sees empty state with checklist",
+    "Switching locale changes UI copy"
+  ],
+  "definition_of_done": [
+    "Snapshots in Playwright",
+    "i18n JSON updated"
+  ],
+  "out_of_scope": [
+    "Content upload widgets"
+  ],
+  "references": [
+    "Wireframe dashboard in cms-screens.png",
+    "Screen DASH-001: Empty dashboard with profile completion checklist",
+    "English wireframe: ai-memory-bank/tasks/screens/en/create_english_wireframes.html#DASH-001"
+  ]
+}

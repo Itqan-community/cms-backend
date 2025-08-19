@@ -1,0 +1,224 @@
+---
+alwaysApply: true
+---
+
+# Itqan CMS - Cursor AI Rules & Guidelines
+
+## Project Overview
+This is the Itqan Quranic Content Management System (CMS) - a headless CMS built with Strapi v5 and Next.js 14, designed to aggregate and distribute verified Quranic content with proper licensing workflows.
+
+## Critical AI Task Processing Rule
+🚨 **MANDATORY**: Every user prompt must be converted into a structured JSON task format before execution. Follow these steps:
+
+1. **Parse the user request** and identify the core task
+2. **Create a JSON prompt** following the established format in `ai-memory-bank/tasks/*.json`
+3. **Execute the task** using the structured JSON as guidance
+4. **Update relevant tracking** in `ai-memory-bank/tasks.csv` if applicable
+
+### JSON Prompt Template Structure:
+```json
+{
+  "prompt": "Clear description of the autonomous task to complete",
+  "context": {
+    "project": "Itqan CMS",
+    "feature": "Feature name",
+    "auth_model": "Auth0 Hybrid (SPA + M2M)",
+    "tech_stack": ["Next.js 14", "Strapi v5", "PostgreSQL", "Bootstrap"],
+    "screens": ["SCREEN-ID"],
+    "colors": {"primary": "#669B80", "dark": "#22433D"}
+  },
+  "objectives": ["Clear numbered objectives"],
+  "tasks": ["Specific actionable tasks"],
+  "guard_rails": ["Safety and security constraints"],
+  "acceptance_criteria": ["Testable success conditions"],
+  "definition_of_done": ["Completion requirements"],
+  "out_of_scope": ["What not to include"],
+  "references": ["Related files and documentation"]
+}
+```
+
+Never skip this JSON conversion step - it ensures consistency and traceability across all development tasks.
+
+## Architecture & Tech Stack
+- **Backend**: Strapi v5 (Node.js/TypeScript) with PostgreSQL
+- **Frontend**: Next.js 14 with Bootstrap and i18n (EN/AR)
+- **Search**: Meilisearch v1.6 for full-text search
+- **Storage**: MinIO (S3-compatible) for development, Alibaba OSS for production
+- **Auth**: Auth0 Hybrid (SPA + M2M) integration
+- **Deployment**: Docker Compose (dev), Kubernetes/ACK (production)
+- **Infrastructure**: Alibaba Cloud (production), DigitalOcean (testing)
+
+## Code Quality & Standards
+
+### General Principles
+- Follow existing patterns in the codebase - don't reinvent the wheel
+- Prioritize code reuse and modularity
+- Write self-documenting code with clear variable and function names
+- Use TypeScript strictly - avoid `any` types
+- Follow established naming conventions in the project
+
+### Strapi-Specific Rules
+- Use Strapi's lifecycle hooks instead of custom middleware where possible
+- Leverage Strapi's built-in plugins before writing custom functionality
+- Follow Strapi v5 patterns for content types, components, and services
+- Use environment variables for all configuration (never hardcode values)
+- Implement proper error handling and validation in API endpoints
+
+### Next.js Best Practices
+- Use App Router (Next.js 14) patterns consistently
+- Implement proper SEO with metadata API
+- Use Server Components by default, Client Components only when needed
+- Leverage ISR (Incremental Static Regeneration) for performance
+- Follow i18n patterns for bilingual EN/AR support
+
+### Database & Content Modeling
+- Use UUIDs for primary keys consistently
+- Implement soft deletes with status fields rather than hard deletes
+- Follow established content type patterns from existing models
+- Use proper field validations and constraints
+- Maintain referential integrity with proper relations
+
+## Internationalization (i18n)
+- Support English (en) and Arabic (ar) locales
+- Use Strapi's i18n plugin for content localization
+- Implement proper RTL support for Arabic content
+- Follow established translation patterns in templates
+- Test bilingual functionality thoroughly
+
+## Authentication & Security
+- Use Auth0 Hybrid pattern (SPA + M2M) consistently
+- Store secrets in environment variables only
+- Implement proper RBAC with defined roles: Admin, Publisher, Developer, Reviewer
+- Use HTTPS everywhere and validate all inputs
+- Follow established JWT token patterns
+
+## Development Workflow
+- Reference existing task JSON files in ai-memory-bank/tasks/ for implementation patterns
+- Follow the established Docker Compose setup for local development
+- Use existing environment variable patterns from env.dev.example
+- Test changes with `docker compose up --build` before committing
+- Follow existing file structure and naming conventions
+
+## Task Execution Guidelines
+- **ALWAYS** convert user prompts to JSON format before starting work
+- Always read related task JSON files in ai-memory-bank/tasks/ before starting
+- Follow the established prompt structure and acceptance criteria
+- **MANDATORY STATUS TRACKING**: 
+  - When starting a task: Update status from "todo" to "in-progress" in ai-memory-bank/tasks.csv
+  - When completing a task: Update status from "in-progress" to "completed" in ai-memory-bank/tasks.csv
+- **MANDATORY TASK COMPLETION DOCUMENTATION**:
+  - When completing any task, create a summary document in `./docs/md/`
+  - Use naming convention: `{task-number}-{short-description}.md`
+  - Include task objectives, what was accomplished, testing results, and next steps
+  - Examples: `1-user-registration.md`, `5-dashboard-welcome.md`, `12-api-key-management.md`
+- Reference existing similar implementations before writing new code
+- Test bilingual functionality for any user-facing features
+
+## File Structure Conventions
+```
+cms/                    # Strapi v5 backend
+├── src/api/           # Content types and API logic
+├── config/            # Strapi configuration
+└── Dockerfile.dev     # Development container
+
+web/                   # Next.js frontend  
+├── app/               # App Router structure
+├── components/        # Reusable components
+└── Dockerfile.dev     # Development container
+
+ai-memory-bank/        # Task management
+├── tasks.csv          # Main task tracking
+└── tasks/             # Detailed task specifications
+
+docs/                  # Project documentation
+├── diagrams/          # C4 architecture diagrams
+└── md/                # Task completion summaries (required)
+```
+
+## Testing & Quality Assurance
+
+### Systematic Testing Methodology
+Every task must include comprehensive testing using multiple approaches:
+
+#### 1. cURL Testing Protocol
+- **GET Requests**: Test page accessibility and response headers
+- **POST Requests**: Validate form submissions and API endpoints
+- **Error Handling**: Test invalid inputs and edge cases
+- **Authentication**: Test protected routes and token handling
+
+```bash
+# Example testing sequence:
+curl -i http://localhost:3000/register                    # Test page access
+curl -X POST http://localhost:3000/register \            # Test form submission
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "firstName=Test&email=test@example.com"
+curl -i http://localhost:3000/api/auth/login             # Test Auth0 endpoints
+```
+
+#### 2. Browser Testing Requirements
+- Test all features in both English and Arabic
+- Verify RTL layout works correctly for Arabic content
+- Ensure responsive design works on mobile/tablet/desktop
+- Test JavaScript functionality and user interactions
+- Validate form validation and error states
+
+#### 3. Infrastructure Testing
+- Test Docker Compose stack functionality
+- Validate service connectivity (PostgreSQL, MinIO, Meilisearch)
+- Test environment variable configuration
+- Verify port accessibility and service health
+
+#### 4. API Testing Protocol
+- Validate API endpoints with proper authentication
+- Test role-based permissions thoroughly
+- Test rate limiting and security constraints
+- Validate request/response formats and error codes
+
+#### 5. Integration Testing
+- Test end-to-end user flows (registration → login → dashboard)
+- Validate Auth0 → Strapi → Next.js integration
+- Test database operations and data consistency
+- Test file upload and storage workflows
+
+#### 6. Error Diagnosis Protocol
+When issues are found:
+1. **Identify**: Log the exact error message and HTTP status
+2. **Isolate**: Test individual components separately
+3. **Debug**: Check environment variables and configuration
+4. **Fix**: Implement graceful error handling
+5. **Verify**: Re-test the entire flow end-to-end
+
+#### 7. Documentation Requirements
+- Document all test procedures in task completion
+- Include cURL commands for API testing
+- Record environment setup requirements
+- Update troubleshooting guides with solutions
+
+## Performance Considerations
+- Use caching strategies (Redis ready for future implementation)
+- Optimize images with Next.js Image component
+- Implement proper pagination for content listings
+- Use database indexes for frequently queried fields
+- Consider CDN integration for static assets
+
+## Error Handling
+- Implement graceful error handling throughout the application
+- Use proper HTTP status codes
+- Log errors appropriately for debugging
+- Provide user-friendly error messages
+- Handle edge cases and validation failures
+
+## Documentation
+- Update README files when changing setup procedures
+- Document any new environment variables in env.dev.example
+- Keep API documentation current with changes
+- Update C4 diagrams if architecture changes significantly
+
+## References
+- Main documentation: docs/Itqan_CMS_BRD.md and docs/Itqan_CMS_BRS.md
+- Architecture: docs/diagrams/ (C4 model diagrams)
+- Setup: README-Docker.md for development environment
+- Tasks: ai-memory-bank/tasks.csv and individual JSON files
+- English wireframes: ai-memory-bank/tasks/screens/en/*.html
+
+Remember: Always reference existing patterns and implementations before creating new solutions. The goal is consistency and code reuse across the entire project.
