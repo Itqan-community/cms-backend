@@ -91,14 +91,47 @@ The purpose of this project is to:
 
 ---
 
-## 10. Glossary  
+## 10. High-Level Data Model Overview
+The CMS centres around seven core entities:
+
+| Entity | Description | Key Relations |
+|--------|-------------|---------------|
+| **User** | Account representing developers, publishers, admins, reviewers | belongs-to **Role**; can act *as publisher* for Resources; submits **AccessRequest**s; generates **UsageEvent**s |
+| **Role** | RBAC role (Admin, Publisher, Developer, Reviewer) | one-to-many Users |
+| **Resource** | Any Qur'anic asset (text corpus, audio set, tafsir, translation) | owned by a Publisher (User); has many **License** records; exposed through **Distribution** endpoints |
+| **License** | Legal terms attached to a Resource | many-to-one Resource; gate access for Developers |
+| **Distribution** | Deliverable package/API endpoint for a Resource (e.g., REST JSON, audio zip) | many-to-one Resource; developers request via **AccessRequest** |
+| **AccessRequest** | Developer's request to use a Distribution under a License | belongs to User (Developer) and Distribution; approval required |
+| **UsageEvent** | Logged event each time an API/key consumes a Resource | belongs to User and Resource (or Distribution) |
+
+See `docs/diagrams/high-level-db-components-relationship.png` for the full ER diagram.
+
+---
+
+## 11. Glossary  
 - **CMS:** Content Management System.  
 - **API:** Application Programming Interface.  
 - **Itqan:** A global community initiative for advancing Qur’anic technologies.  
 
 ---
 
-## 11. Approval  
+## 11. High-Level Data Model Overview
+The CMS centres around seven core entities:
+| Entity | Description | Key Relations |
+|--------|-------------|---------------|
+| **User** | Account representing developers, publishers, admins, reviewers | belongs-to **Role**; can act *as publisher* for Resources; submits **AccessRequest**s; generates **UsageEvent**s |
+| **Role** | RBAC role (Admin, Publisher, Developer, Reviewer) | one-to-many Users |
+| **Resource** | Any Qur’anic asset (text corpus, audio set, tafsir, translation) | owned by a Publisher (User); has many **License** records; exposed through **Distribution** endpoints |
+| **License** | Legal terms attached to a Resource | many-to-one Resource; gate access for Developers |
+| **Distribution** | Deliverable package/API endpoint for a Resource (e.g., REST JSON, audio zip) | many-to-one Resource; developers request via **AccessRequest** |
+| **AccessRequest** | Developer’s request to use a Distribution under a License | belongs to User (Developer) and Distribution; approval required |
+| **UsageEvent** | Logged event each time an API/key consumes a Resource | belongs to User and Resource (or Distribution) |
+
+See `docs/diagrams/high-level-db-components-relationship.png` for the full ER diagram.
+
+---
+
+## 12. Approval  
 **Project Sponsor:** [Name]  
 **Project Owner:** Itqan Community Board  
 **Date:** [To be signed]  

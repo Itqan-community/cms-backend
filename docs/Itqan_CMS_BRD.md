@@ -118,14 +118,31 @@ This BRD outlines the detailed requirements for the Itqan CMS. The CMS is intend
 
 ---
 
-## 9. Appendices  
+## 10. High-Level Data Model Overview
+The following entities capture licensing and access control logic:
 
-### 9.1 Glossary  
+| Entity | Purpose | Notes |
+|--------|---------|-------|
+| **User** | Registered person/org (developer, publisher, admin) | Auth0 `sub` saved in Django `User.profile` |
+| **Role** | RBAC role assignment | One Role per User, configurable |
+| **Resource** | Core content item (Qur’an text, tafsir, audio set) | Metadata: language, version, checksum |
+| **License** | Contract terms for a Resource | Geography, rate-limit, attribution fields |
+| **Distribution** | Specific delivery format (REST JSON, audio ZIP, GraphQL) | Token/URL, versioned |
+| **AccessRequest** | Developer applies for Distribution usage | Status: pending / approved / rejected |
+| **UsageEvent** | Logged every API hit / file download | Used for analytics & rate enforcement |
+
+Diagram reference: `docs/diagrams/high-level-db-components-relationship.png`.
+
+---
+
+## 10. Appendices  
+
+### 10.1 Glossary  
 - **CMS:** Content Management System.  
 - **API:** Application Programming Interface.  
 - **RBAC:** Role-Based Access Control.  
 
-### 9.2 References  
+### 10.2 References  
 - Itqan Strategic Plan (1447H).  
 - PRD Release 1 – v0.3 (MVP Initial).  
 

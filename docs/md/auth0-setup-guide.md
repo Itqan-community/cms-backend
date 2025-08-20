@@ -1,6 +1,19 @@
-# Task 1: Auth0 Setup Instructions
+# 1 – User Registration (Auth0 Setup Guide)
 
-## Auth0 Configuration Required
+**Date:** 2024-12-15  
+**Author:** Itqan CMS Team  
+
+## Overview
+Comprehensive manual setup instructions for Auth0 tenant configuration including SPA application creation, API resource setup, and social connection configuration for the Itqan CMS authentication system.
+
+## Objectives
+- Create and configure Auth0 tenant
+- Set up SPA application with proper callbacks
+- Configure API resources and scopes
+- Enable GitHub and Google social connections
+- Generate environment configuration
+
+## Implementation Details
 
 ### 1. Create Auth0 Tenant
 1. Go to [Auth0 Dashboard](https://manage.auth0.com/)

@@ -2,6 +2,9 @@
 
 This directory contains the complete C4 model architecture diagrams for the Itqan CMS Release 1 MVP system.
 
+## Additional Diagrams
+- `high-level-db-components-relationship.png` - Entity Relationship diagram showing core database entities (User, Role, Resource, License, Distribution, AccessRequest, UsageEvent) and their relationships
+
 ## C4 Model Overview
 
 The C4 model provides a hierarchical way to think about and communicate software architecture through four levels of abstraction:

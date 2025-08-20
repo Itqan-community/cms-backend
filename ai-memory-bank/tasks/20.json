@@ -1,0 +1,38 @@
+{
+  "prompt": "Integrate the high-level database component relationship (User, Role, Resource, License, Distribution, AccessRequest, UsageEvent) into project documentation and backlog.",
+  "context": {
+    "project": "Itqan CMS",
+    "feature": "DB Relationship Integration",
+    "auth_model": "Auth0 Hybrid (SPA + M2M)",
+    "tech_stack": ["Angular 19", "Django 4 + DRF + Wagtail", "PostgreSQL", "MeiliSearch"],
+    "screens": [],
+    "colors": {"primary": "#669B80", "dark": "#22433D"}
+  },
+  "objectives": [
+    "Document high-level ER structure in BRD and BRS",
+    "Add architecture diagram reference to docs/diagrams",
+    "Update migration/implementation tasks to reflect entities and relations"
+  ],
+  "tasks": [
+    "Insert \"Data Model Overview\" section in Itqan_CMS_BRS.md",
+    "Insert corresponding section in Itqan_CMS_BRD.md",
+    "Export or reference high-level-db-components-relationship.png in docs/diagrams",
+    "Update tasks.csv with new backend migration sub-tasks (this file)",
+    "Plan Django models + migrations stub (future tasks)"
+  ],
+  "guard_rails": [
+    "Keep diagram file out of repo if binary > 5 MB; link instead",
+    "No implementation code yet, docs only"
+  ],
+  "acceptance_criteria": [
+    "BRS and BRD each contain a clear description/table of entities and relationships",
+    "tasks.csv reflects the new task (20) with todo status",
+    "Diagram reference added to docs/diagrams/README.md"
+  ],
+  "definition_of_done": [
+    "Documentation updated and pushed",
+    "Backlog row created",
+    "No linter errors"
+  ],
+  "out_of_scope": ["Actual Django model code", "Database migrations"]
+}

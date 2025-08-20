@@ -1,60 +1,48 @@
-# Itqan CMS - Docker Development Setup
+# 6 – Docker Development Stack
 
-This document explains how to run the Itqan CMS stack locally using Docker Compose, and how to deploy it on any cloud provider for testing.
+**Date:** 2024-12-15  
+**Author:** Itqan CMS Team  
 
-## 🚀 Quick Start
+## Overview
+Complete Docker Compose development environment setup for the Itqan CMS stack including Strapi v5, Next.js 14, PostgreSQL, MinIO, and Meilisearch. This implementation provides a fully containerized development environment with hot reload capabilities and cloud deployment instructions.
 
-### Prerequisites
-- Docker & Docker Compose installed
-- At least 4GB RAM available for containers
-- Node.js 20+ (for local development outside containers)
+## Objectives
+- Set up complete Docker Compose development stack
+- Configure all required services (Strapi, Next.js, PostgreSQL, MinIO, Meilisearch)
+- Enable hot reload development workflow
+- Provide cloud deployment instructions
+- Document troubleshooting procedures
 
-### 1. Clone and Setup
+### Container Architecture
+- **Strapi Container**: Headless CMS API on port 1337 with volume mount to `./cms`
+- **Next.js Container**: Frontend application on port 3000 with volume mount to `./web`
+- **PostgreSQL Container**: Database service on port 5432 with persistent volume
+- **MinIO Container**: S3-compatible object storage on ports 9000/9001
+- **Meilisearch Container**: Search engine on port 7700 with persistent index storage
 
+### Environment Configuration
+- Environment variables managed through `env.dev.example` template
+- Docker Compose configuration supports development hot reload
+- Volume mounts enable real-time code changes without container rebuilds
+- Service dependencies properly configured for startup order
+
+### Key Setup Commands
 ```bash
-git clone <repository-url> itqan-cms
-cd itqan-cms
-
-# Copy environment file and adjust as needed
+# Initial setup
+git clone <repository-url> itqan-cms && cd itqan-cms
 cp env.dev.example .env.dev
-
-# Generate Strapi secrets
-# You can use online generators or:
 node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+
+# Service startup
+docker compose up --build  # Build and start all services
+docker compose up -d --build  # Background mode
+
+# Service access
+# Strapi Admin: http://localhost:1337/admin
+# Next.js App: http://localhost:3000
+# MinIO Console: http://localhost:9001 (minioadmin/minioadmin)
+# PostgreSQL: localhost:5432
 ```
-
-### 2. Build and Start Services
-
-```bash
-# Build all images and start services
-docker compose up --build
-
-# Or run in background
-docker compose up -d --build
-```
-
-### 3. Access Services
-
-- **Strapi Admin**: http://localhost:1337/admin
-- **Next.js Public Site**: http://localhost:3000
-- **MinIO Console**: http://localhost:9001 (minioadmin/minioadmin)
-- **Meilisearch**: http://localhost:7700
-- **PostgreSQL**: localhost:5432
-
-### 4. First-Time Setup
-
-1. **Create Strapi Admin User**:
-   - Visit http://localhost:1337/admin
-   - Complete the admin user registration
-
-2. **Configure Auth0**:
-   - Update `.env.dev` with your Auth0 tenant details
-   - Restart containers: `docker compose restart`
-
-3. **Configure MinIO Bucket**:
-   - Visit http://localhost:9001
-   - Create bucket: `itqan-uploads`
-   - Set access policy to public-read
 
 ## 🛠 Development Workflow
 
@@ -200,30 +188,22 @@ docker compose exec strapi env
 docker compose ps
 ```
 
-## 📊 Service URLs & Credentials
+## Acceptance Criteria Verification
+- [x] Docker Compose stack with all services configured
+- [x] Hot reload development environment functional
+- [x] Volume mounts enable real-time code changes
+- [x] All service ports accessible and documented
+- [x] Cloud deployment instructions provided
+- [x] Troubleshooting procedures documented
 
-### Development URLs
-- Strapi Admin: http://localhost:1337/admin
-- Strapi API: http://localhost:1337/api
-- Next.js App: http://localhost:3000
-- MinIO Console: http://localhost:9001
-- Meilisearch Dashboard: http://localhost:7700
-
-### Default Credentials
-- **PostgreSQL**: `cms_user` / `dev_password_123`
-- **MinIO**: `minioadmin` / `minioadmin`
-- **Meilisearch**: Master Key: `dev-master-key-123`
-
-## 🔄 Next Steps
-
-Once the application is fully developed and tested:
-
+## Next Steps
 1. Create production Dockerfiles (multi-stage builds)
 2. Set up Kubernetes manifests for ACK (Alibaba Cloud)
 3. Configure Terraform for infrastructure provisioning
 4. Implement CI/CD pipeline with GitHub Actions
 5. Set up monitoring and alerting
 
----
-
-For questions or issues, please check the main project documentation or create an issue in the repository.
+## References
+- Service URLs: Strapi (1337), Next.js (3000), MinIO (9000/9001), Meilisearch (7700)
+- Default credentials: PostgreSQL (cms_user/dev_password_123), MinIO (minioadmin/minioadmin)
+- Related task JSON: `ai-memory-bank/tasks/6.json`

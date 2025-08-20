@@ -1,7 +1,6 @@
 ---
 alwaysApply: true
 ---
-
 # Itqan CMS - Cursor AI Rules & Guidelines
 
 ## Project Overview
@@ -41,12 +40,54 @@ Never skip this JSON conversion step - it ensures consistency and traceability a
 
 ## Architecture & Tech Stack
 - **Backend**: Strapi v5 (Node.js/TypeScript) with PostgreSQL
-- **Frontend**: Next.js 14 with Bootstrap and i18n (EN/AR)
+- **Frontend**: Next.js 14 with Ant Design 5.0 and i18n (EN/AR)
+- **UI Framework**: Ant Design 5.0 with CSS-in-JS theming and RTL support
 - **Search**: Meilisearch v1.6 for full-text search
 - **Storage**: MinIO (S3-compatible) for development, Alibaba OSS for production
 - **Auth**: Auth0 Hybrid (SPA + M2M) integration
 - **Deployment**: Docker Compose (dev), Kubernetes/ACK (production)
 - **Infrastructure**: Alibaba Cloud (production), DigitalOcean (testing)
+
+## UI/UX Design System - Ant Design 5.0
+
+### Design Principles
+- **Clarity**: Clear visual hierarchy with consistent Ant Design patterns
+- **Efficiency**: Streamlined workflows using Ant Design's component library
+- **Controllability**: Users maintain control through predictable Ant Design interactions
+- **Certainty**: Reliable interface behaviors following Ant Design specifications
+
+### Brand Color Integration
+- **Primary Brand**: #669B80 (Itqan Green) - mapped to Ant Design's colorPrimary token
+- **Dark Accent**: #22433D (Itqan Dark Green) - used for emphasis and dark theme
+- **Theme Configuration**:
+  ```typescript
+  const itqanTheme = {
+    token: {
+      colorPrimary: '#669B80',
+      colorSuccess: '#52c41a',
+      colorWarning: '#faad14', 
+      colorError: '#ff4d4f',
+      borderRadius: 6,
+      fontFamily: {
+        en: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        ar: '"Noto Sans Arabic", "IBM Plex Sans Arabic", sans-serif'
+      }
+    }
+  };
+  ```
+
+### Component Usage Standards
+- **Forms**: Always use Ant Design Form, Input, Select, DatePicker components
+- **Navigation**: Use Menu, Breadcrumb, Steps, Pagination components
+- **Data Display**: Use Table, List, Card, Descriptions, Tag components
+- **Feedback**: Use Message, Notification, Modal, Drawer, Alert components
+- **Layout**: Use Space, Divider, Row, Col with 8px grid system
+
+### Typography & Spacing
+- **Arabic Fonts**: 'Noto Sans Arabic', 'IBM Plex Sans Arabic', sans-serif
+- **English Fonts**: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif
+- **Base Grid**: 8px spacing system (8px, 16px, 24px, 32px, 48px, 64px)
+- **Line Heights**: Follow Ant Design's 1.5715 base for optimal readability
 
 ## Code Quality & Standards
 

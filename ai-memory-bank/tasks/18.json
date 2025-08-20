@@ -1,0 +1,65 @@
+{
+  "prompt": "Incorporate Ant Design 5.0 principles and guidelines into the Itqan CMS project rules and development workflow",
+  "context": {
+    "project": "Itqan CMS",
+    "feature": "Ant Design Integration",
+    "auth_model": "Auth0 Hybrid (SPA + M2M)",
+    "tech_stack": ["Next.js 14", "Strapi v5", "PostgreSQL", "Ant Design 5", "TypeScript"],
+    "screens": ["ALL-SCREENS"],
+    "colors": {"primary": "#669B80", "dark": "#22433D"},
+    "current_state": "Bootstrap mentioned in rules but Ant Design 5 already in tech stack"
+  },
+  "objectives": [
+    "Replace Bootstrap references with Ant Design 5.0 guidelines in cms.mdc",
+    "Integrate Ant Design's design principles with bilingual EN/AR support",
+    "Establish component usage patterns and theming guidelines",
+    "Define RTL support strategy using Ant Design's i18n capabilities",
+    "Create testing protocols for Ant Design components"
+  ],
+  "tasks": [
+    "Research Ant Design 5.0 core principles (completed)",
+    "Analyze Ant Design's RTL and internationalization features",
+    "Create comprehensive Ant Design section for cms.mdc",
+    "Update Frontend section to replace Bootstrap with Ant Design",
+    "Define color theme integration with existing brand colors",
+    "Establish component naming and usage conventions",
+    "Create testing guidelines for Ant Design components",
+    "Update JSON template structure to reflect Ant Design usage"
+  ],
+  "guard_rails": [
+    "Maintain compatibility with existing Next.js 14 and Strapi v5 setup",
+    "Preserve all existing functionality while transitioning to Ant Design",
+    "Ensure RTL support for Arabic content is properly implemented",
+    "Follow Ant Design's accessibility guidelines",
+    "Maintain performance standards with proper tree-shaking"
+  ],
+  "acceptance_criteria": [
+    "cms.mdc includes comprehensive Ant Design 5.0 guidelines section",
+    "Bootstrap references are replaced with Ant Design equivalents",
+    "RTL/LTR and bilingual guidelines are clearly defined",
+    "Component usage patterns are documented with examples",
+    "Theming strategy integrates project brand colors (#669B80, #22433D)",
+    "Testing protocols include Ant Design-specific requirements",
+    "JSON task template updated to include Ant Design in tech stack"
+  ],
+  "definition_of_done": [
+    "cms.mdc file updated with complete Ant Design integration rules",
+    "All team members can follow clear Ant Design implementation guidelines",
+    "RTL support strategy is documented and testable",
+    "Component library usage is standardized across the project",
+    "Performance and accessibility guidelines are established"
+  ],
+  "out_of_scope": [
+    "Actual implementation of Ant Design components in existing code",
+    "Migration of existing Bootstrap components to Ant Design",
+    "Package.json updates or dependency installation",
+    "Component library creation or custom component development"
+  ],
+  "references": [
+    "Current cms.mdc file structure",
+    "Ant Design 5.0 official documentation",
+    "Project brand guidelines (#669B80, #22433D colors)",
+    "Existing bilingual EN/AR requirements",
+    "Next.js 14 and TypeScript compatibility requirements"
+  ]
+}

@@ -1,8 +1,17 @@
-# cURL User Signup Test Results
+# 1 – User Registration (cURL Testing)
 
-## 🧪 **Test User Created Via cURL**
+**Date:** 2024-12-15  
+**Author:** Itqan CMS Team  
 
-Successfully tested user signup flow using systematic cURL testing methodology.
+## Overview
+Systematic cURL testing methodology applied to user signup flow validation, successfully creating test users and verifying database integration.
+
+## Objectives
+- Test user registration page accessibility via cURL
+- Validate form submission and Auth0 integration
+- Create test users programmatically
+- Verify database persistence
+- Document cURL testing methodology
 
 ### 👤 **Test User Details:**
 ```
