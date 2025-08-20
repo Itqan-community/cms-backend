@@ -131,7 +131,10 @@ The following entities capture licensing and access control logic:
 | **AccessRequest** | Developer applies for Distribution usage | Status: pending / approved / rejected |
 | **UsageEvent** | Logged every API hit / file download | Used for analytics & rate enforcement |
 
-Diagram reference: `docs/diagrams/high-level-db-components-relationship.png`.
+Diagram references:
+- `docs/diagrams/high-level-db-components-relationship.png` - Visual ER diagram
+- `docs/diagrams/high-level-db-components-relationship.mmd` - Mermaid source
+- `docs/diagrams/api-surface-overview.mmd` - API endpoint design
 
 ---
 

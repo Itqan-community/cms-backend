@@ -4,6 +4,8 @@ This directory contains the complete C4 model architecture diagrams for the Itqa
 
 ## Additional Diagrams
 - `high-level-db-components-relationship.png` - Entity Relationship diagram showing core database entities (User, Role, Resource, License, Distribution, AccessRequest, UsageEvent) and their relationships
+- `high-level-db-components-relationship.mmd` - Mermaid source for the ER diagram above
+- `api-surface-overview.mmd` - API surface design showing endpoints organized by authentication and role requirements
 
 ## C4 Model Overview
 

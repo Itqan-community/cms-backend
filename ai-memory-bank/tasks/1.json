@@ -1,58 +1,61 @@
 {
-  "prompt": "You are an autonomous coding agent completing STORY-1: User Registration for Itqan CMS using Strapi v5 and Auth0 Hybrid auth. Implement front-end and back-end so that a new user can create an account via Auth0 Universal Login, and a corresponding Strapi user record with role=\"Viewer\" is created automatically.",
+  "prompt": "Bootstrap Angular 19 project with CSR architecture, Vite builder, Signals, NG-ZORRO theme, and Auth0 SPA SDK setup",
   "context": {
     "project": "Itqan CMS",
-    "feature": "User Registration",
-    "auth_model": "Auth0 Hybrid (SPA + M2M)",
-    "tech_stack": ["Next.js 14", "Strapi v5", "PostgreSQL", "Redis", "S3"],
-    "screens": ["REG-001"],
-    "colors": {"primary": "#669B80", "dark": "#22433D"},
-    "auth_priority": ["GitHub SSO", "Google OAuth", "Email/Password"]
+    "feature": "Angular 19 Project Bootstrap", 
+    "auth_model": "Auth0 SPA SDK",
+    "tech_stack": ["Angular 19", "Vite", "Signals", "NG-ZORRO", "Auth0 SPA SDK"],
+    "screens": [],
+    "colors": {"primary": "#669B80", "dark": "#22433D"}
   },
   "objectives": [
-    "Configure Auth0 tenant with Universal Login, EN & AR prompts",
-    "Implement Next.js page that redirects to Auth0 hosted login/signup",
-    "Handle Auth0 callback; exchange code for access & ID token using auth0-spa-sdk",
-    "Call backend \"/auth/callback\" endpoint to create user in Strapi via Admin API",
-    "Assign default role 'Viewer' and store Auth0 user_id mapping"
+    "Create new Angular 19 project with Vite builder",
+    "Configure Signals-based state management",
+    "Integrate NG-ZORRO UI component library with Itqan theme",
+    "Setup Auth0 SPA SDK for authentication",
+    "Configure bilingual EN/AR support structure"
   ],
   "tasks": [
-    "Create Auth0 application (SPA) with GitHub SSO as primary provider",
-    "Configure Universal Login page with Itqan branding (#669B80, #22433D colors)",
-    "Set up machine-to-machine client for Strapi integration",
-    "Configure environment vars (AUTH0_DOMAIN, CLIENT_ID, AUDIENCE, M2M_CLIENT_SECRET)",
-    "Implement Next.js auth hook with @auth0/nextjs-auth0",
-    "Create registration page (REG-001) that redirects to Auth0 Universal Login",
-    "Add API route /api/auth/callback to forward token to Strapi",
-    "Write Strapi bootstrap script to map Auth0 user_id to Strapi uid",
-    "Test GitHub SSO registration flow end-to-end"
+    "Run `ng new itqan-web --routing --style=scss --package-manager=npm`",
+    "Configure Vite builder and standalone components",
+    "Install and configure NG-ZORRO with custom Itqan theme",
+    "Setup Angular Signals for reactive state management", 
+    "Install @auth0/auth0-spa-js and configure Auth0 service",
+    "Setup i18n structure for EN/AR locales",
+    "Create basic layout with header, sidebar, and main content area",
+    "Configure environment files for development and production"
   ],
   "guard_rails": [
-    "Never expose Client Secret to front-end code",
-    "All tokens stored httpOnly cookies",
-    "Fail registration if email domain is on deny-list",
-    "Log PII only in secure backend logs, not console"
+    "Use Angular 19 standalone components pattern",
+    "Follow NG-ZORRO design system guidelines",
+    "Implement proper TypeScript typing throughout",
+    "Use Angular Signals instead of RxJS where appropriate",
+    "Ensure bilingual RTL support readiness"
   ],
   "acceptance_criteria": [
-    "Given I am an unauthenticated visitor, when I click 'Sign up' I am redirected to Auth0 Universal Login",
-    "After successful signup, I see the Itqan Dashboard with welcome message",
-    "Strapi database contains a new user record linked to Auth0 sub",
-    "New user has role 'Viewer' and cannot access admin endpoints"
+    "Angular 19 project runs successfully with `ng serve`",
+    "NG-ZORRO components render with Itqan color scheme",
+    "Auth0 login flow redirects work (even if backend not ready)",
+    "Basic EN/AR locale switching infrastructure exists",
+    "Project structure follows Angular best practices"
   ],
   "definition_of_done": [
-    "CI pipeline passes Jest + Playwright tests",
-    "Code merged to main with green checks",
-    "Story status updated to completed in tasks.csv"
+    "Project builds and runs without errors",
+    "Themed NG-ZORRO components visible in browser",
+    "Auth0 configuration present and testable",
+    "Documentation updated with setup instructions",
+    "Git repository structure established"
   ],
   "out_of_scope": [
-    "Profile completion form",
-    "Email verification enforcement (handled in STORY-2)"
+    "Backend integration (handled in separate tasks)",
+    "Complex routing setup (basic routing only)",
+    "Production deployment configuration",
+    "Advanced Auth0 features beyond basic login"
   ],
   "references": [
-    "docs/Itqan_CMS_BRD.md §3.1",
-    "ai-memory-bank/tasks/screens/SCREEN_MAPPING.md",
-    "ai-memory-bank/logo.svg (color scheme)",
-    "Screen REG-001: Registration page with Auth0 Universal Login",
-    "English wireframe: ai-memory-bank/tasks/screens/en/create_english_wireframes.html#REG-001"
+    "Angular 19 documentation",
+    "NG-ZORRO component library docs",
+    "Auth0 SPA SDK documentation",
+    "docs/diagrams/high-level-db-components-relationship.png"
   ]
 }

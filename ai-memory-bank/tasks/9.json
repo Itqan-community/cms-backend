@@ -1,63 +1,61 @@
 {
-    "prompt": "You are an autonomous coding agent completing STORY-9: Content Models & i18n for Itqan CMS. Create core content types (Article, Page, Category, Tag) with English/Arabic internationalization support using Strapi's i18n plugin.",
-    "context": {
-        "project": "Itqan CMS",
-        "feature": "Content Modeling",
-        "tech_stack": [
-            "Strapi v5",
-            "PostgreSQL",
-            "i18n plugin"
-        ],
-        "locales": [
-            "en",
-            "ar"
-        ]
-    },
-    "objectives": [
-        "Enable Strapi i18n plugin with EN/AR locales",
-        "Create Article content type with all required fields",
-        "Create Page, Category, Tag content types with proper relations",
-        "Configure SEO component for meta fields",
-        "Test content creation in both languages"
-    ],
-    "tasks": [
-        "Enable i18n plugin in config/plugins.ts with locales: ['en', 'ar']",
-        "Create Article collection type with title, slug, body, excerpt, status, publishedAt",
-        "Create Category collection type with hierarchical parent/child relations",
-        "Create Tag collection type for many-to-many tagging",
-        "Create Page collection type for static content",
-        "Create SEO component with metaTitle, metaDescription, ogImage fields",
-        "Enable localization for all content types and test bilingual content creation"
-    ],
-    "guard_rails": [
-        "Use UID field for slugs with proper patterns",
-        "Set proper field validations (required, min/max length)",
-        "Use enumeration for status field (draft, review, published)",
-        "Ensure proper relation configurations for performance"
-    ],
-    "acceptance_criteria": [
-        "Given I create an article in English, then I can create Arabic translation",
-        "Categories support nested hierarchy via parent field",
-        "Tags can be assigned to multiple articles via many-to-many relation",
-        "SEO fields are properly structured as reusable component",
-        "Content types appear in Strapi admin with proper field layouts"
-    ],
-    "definition_of_done": [
-        "All content types created with proper field configurations",
-        "Sample bilingual content created for testing",
-        "Content type schemas documented with field purposes",
-        "Relations working correctly in admin interface"
-    ],
-    "out_of_scope": [
-        "Advanced field types like dynamic zones",
-        "Custom field validations beyond basic requirements",
-        "Media relations (handled in separate story)"
-    ],
-    "references": [
-        "docs/Itqan_CMS_BRD.md §3.2 Content Management",
-        "docs/diagrams/level4-data-models.md",
-        "Strapi i18n plugin documentation",
-        "Screen ADMIN-003: Content creation forms with EN/AR locale switcher",
-        "English wireframe: ai-memory-bank/tasks/screens/en/admin_wireframes.html#ADMIN-003"
-    ]
+  "prompt": "Setup DigitalOcean production infrastructure using DOKS (Kubernetes), Terraform IaC, Helm charts, and DO Spaces for storage",
+  "context": {
+    "project": "Itqan CMS",
+    "feature": "DigitalOcean Prod (DOKS) Infra",
+    "auth_model": "Infrastructure and deployment automation",
+    "tech_stack": ["DigitalOcean", "DOKS", "Terraform", "Helm", "Kubernetes", "DO Spaces"],
+    "screens": [],
+    "colors": {"primary": "#669B80", "dark": "#22433D"}
+  },
+  "objectives": [
+    "Create Terraform configuration for DOKS cluster",
+    "Setup Helm charts for application deployment",
+    "Configure DO Spaces for file storage",
+    "Implement CI/CD pipeline with GitHub Actions",
+    "Setup monitoring and logging infrastructure"
+  ],
+  "tasks": [
+    "Create Terraform modules for DOKS cluster provisioning",
+    "Setup DO Spaces bucket with proper access policies",
+    "Create Helm charts for Django backend deployment",
+    "Build Helm charts for Angular frontend deployment",
+    "Configure PostgreSQL managed database",
+    "Setup Redis managed service for Celery",
+    "Implement ingress controller with SSL termination",
+    "Create GitHub Actions workflow for automated deployment"
+  ],
+  "guard_rails": [
+    "Use Terraform for all infrastructure as code",
+    "Implement proper resource tagging and organization",
+    "Setup secure networking with private clusters",
+    "Use managed services where possible (DB, Redis)",
+    "Implement proper backup and disaster recovery"
+  ],
+  "acceptance_criteria": [
+    "DOKS cluster provisioned and accessible",
+    "Applications deploy successfully via Helm",
+    "DO Spaces integrated for file storage",
+    "CI/CD pipeline deploys on git push",
+    "SSL certificates automatically managed"
+  ],
+  "definition_of_done": [
+    "Complete infrastructure deployed via Terraform",
+    "Applications running in production environment",
+    "Monitoring and logging functional",
+    "Backup procedures tested and documented",
+    "Cost optimization implemented"
+  ],
+  "out_of_scope": [
+    "Alibaba Cloud migration (separate task)",
+    "Advanced monitoring beyond basic metrics",
+    "Multi-region deployment",
+    "Advanced security hardening"
+  ],
+  "references": [
+    "DigitalOcean DOKS documentation",
+    "Terraform DigitalOcean provider docs",
+    "Helm chart best practices",
+    "Kubernetes deployment patterns"
+  ]
 }

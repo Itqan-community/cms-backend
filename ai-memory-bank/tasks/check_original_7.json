@@ -14,7 +14,6 @@
         "Install and configure Strapi upload provider for S3-compatible storage",
         "Connect Strapi to MinIO container running on port 9000",
         "Create initial bucket and set appropriate permissions",
-        "Ensure uploads attach to Resource entities in database",
         "Test file upload via Strapi admin interface"
     ],
     "tasks": [

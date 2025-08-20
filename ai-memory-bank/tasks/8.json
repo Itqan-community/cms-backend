@@ -1,56 +1,61 @@
 {
-    "prompt": "You are an autonomous coding agent completing STORY-8: Meilisearch Integration for Itqan CMS. Install and configure Strapi plugin to automatically sync content to Meilisearch for full-text search capabilities.",
-    "context": {
-        "project": "Itqan CMS",
-        "feature": "Search Integration",
-        "tech_stack": [
-            "Strapi v5",
-            "Meilisearch v1.6",
-            "Docker"
-        ],
-        "environment": "Development"
-    },
-    "objectives": [
-        "Install Strapi Meilisearch plugin and configure connection",
-        "Set up automatic content indexing on create/update/delete",
-        "Configure search indexes for Articles and Pages with proper fields",
-        "Test search functionality via Meilisearch dashboard"
-    ],
-    "tasks": [
-        "Install strapi-plugin-meilisearch or @meilisearch/strapi-plugin",
-        "Configure config/plugins.ts with Meilisearch host and master key",
-        "Define searchable content types and fields in plugin config",
-        "Set up lifecycle hooks for automatic index synchronization",
-        "Test content indexing by creating sample articles",
-        "Verify search results via Meilisearch dashboard at localhost:7700"
-    ],
-    "guard_rails": [
-        "Store Meilisearch master key in environment variables",
-        "Only index published content, not drafts",
-        "Exclude sensitive fields from search index",
-        "Handle connection failures gracefully"
-    ],
-    "acceptance_criteria": [
-        "Given I create an article in Strapi, then it appears in Meilisearch index",
-        "Given I search for content via Meilisearch dashboard, then relevant results return",
-        "Index updates automatically when content is modified or deleted",
-        "Search supports both English and Arabic content"
-    ],
-    "definition_of_done": [
-        "Plugin configuration documented with field mappings",
-        "Sample content indexed and searchable",
-        "Integration tested with bilingual content"
-    ],
-    "out_of_scope": [
-        "Frontend search UI implementation",
-        "Advanced search features like facets or filters",
-        "Search analytics or ranking algorithms"
-    ],
-    "references": [
-        "docker-compose.yaml Meilisearch service",
-        "env.dev.example MEILI_* variables",
-        "Meilisearch Strapi plugin documentation",
-        "Screen ADMIN-002: Search configuration panel",
-        "English wireframe: ai-memory-bank/tasks/screens/en/admin_wireframes.html#ADMIN-002"
-    ]
+  "prompt": "Create UsageEvent logging service for post-MVP analytics, including middleware for API tracking and Celery tasks for data processing",
+  "context": {
+    "project": "Itqan CMS",
+    "feature": "UsageEvent Logging Service (Post-MVP)",
+    "auth_model": "System-level service tracking",
+    "tech_stack": ["Django Middleware", "Celery", "Analytics", "Background Processing"],
+    "screens": [],
+    "colors": {"primary": "#669B80", "dark": "#22433D"}
+  },
+  "objectives": [
+    "Create middleware to log all API usage events",
+    "Implement Celery tasks for analytics data processing",
+    "Build UsageEvent aggregation and reporting",
+    "Setup rate limiting enforcement based on usage",
+    "Create analytics dashboard for administrators"
+  ],
+  "tasks": [
+    "Create Django middleware to capture API requests",
+    "Implement UsageEvent creation with resource/user tracking",
+    "Build Celery tasks for usage data aggregation", 
+    "Create analytics models for usage summaries",
+    "Implement rate limiting based on usage patterns",
+    "Build admin dashboard for usage analytics",
+    "Create usage reporting and export functionality",
+    "Setup data retention policies for usage events"
+  ],
+  "guard_rails": [
+    "Minimize performance impact of usage tracking",
+    "Protect user privacy in analytics data",
+    "Handle high-volume logging efficiently",
+    "Implement proper data retention policies",
+    "Ensure analytics don't affect core functionality"
+  ],
+  "acceptance_criteria": [
+    "All API requests logged as UsageEvents",
+    "Analytics processing runs without affecting performance",
+    "Usage-based rate limiting functions correctly",
+    "Admin dashboard shows meaningful usage insights",
+    "Data retention policies automatically enforced"
+  ],
+  "definition_of_done": [
+    "Middleware captures usage events accurately",
+    "Celery analytics tasks process data efficiently",
+    "Rate limiting prevents abuse based on usage",
+    "Analytics dashboard provides actionable insights",
+    "System performance unaffected by logging"
+  ],
+  "out_of_scope": [
+    "Real-time analytics (batch processing only)",
+    "Complex ML-based usage predictions",
+    "External analytics service integration",
+    "Advanced visualization beyond basic charts"
+  ],
+  "references": [
+    "docs/diagrams/high-level-db-components-relationship.png",
+    "Django middleware documentation",
+    "Celery best practices for high-volume tasks",
+    "Analytics data modeling patterns"
+  ]
 }

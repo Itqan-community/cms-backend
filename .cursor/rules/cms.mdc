@@ -4,7 +4,7 @@ alwaysApply: true
 # Itqan CMS - Cursor AI Rules & Guidelines
 
 ## Project Overview
-This is the Itqan Quranic Content Management System (CMS) - a headless CMS built with Strapi v5 and Next.js 14, designed to aggregate and distribute verified Quranic content with proper licensing workflows.
+This is the Itqan Quranic Content Management System (CMS) - a headless CMS designed to aggregate, license, and distribute verified Quranic content (text, audio, translations, tafsir) to developers and publishers through controlled APIs with proper licensing workflows. The system uses an Angular 19 + Django/Wagtail architecture with PostgreSQL, MeiliSearch, Auth0, and Celery, initially deploying on DigitalOcean DOKS before migrating to Alibaba Cloud ACK, enabling role-based access control for Admins, Publishers, Developers, and Reviewers to manage content licensing and distribution at scale.
 
 ## Critical AI Task Processing Rule
 🚨 **MANDATORY**: Every user prompt must be converted into a structured JSON task format before execution. Follow these steps:
@@ -22,7 +22,7 @@ This is the Itqan Quranic Content Management System (CMS) - a headless CMS built
     "project": "Itqan CMS",
     "feature": "Feature name",
     "auth_model": "Auth0 Hybrid (SPA + M2M)",
-    "tech_stack": ["Next.js 14", "Strapi v5", "PostgreSQL", "Bootstrap"],
+    "tech_stack": ["Angular 19", "Django 5.2", "PostgreSQL", "NG-ZORRO"],
     "screens": ["SCREEN-ID"],
     "colors": {"primary": "#669B80", "dark": "#22433D"}
   },
@@ -39,49 +39,49 @@ This is the Itqan Quranic Content Management System (CMS) - a headless CMS built
 Never skip this JSON conversion step - it ensures consistency and traceability across all development tasks.
 
 ## Architecture & Tech Stack
-- **Backend**: Strapi v5 (Node.js/TypeScript) with PostgreSQL
-- **Frontend**: Next.js 14 with Ant Design 5.0 and i18n (EN/AR)
-- **UI Framework**: Ant Design 5.0 with CSS-in-JS theming and RTL support
-- **Search**: Meilisearch v1.6 for full-text search
+- **Backend**: Django 5.2 + Django REST Framework + Wagtail CMS with PostgreSQL
+- **Frontend**: Angular 19 (CSR first, SSR via Angular Universal later) with NG-ZORRO and i18n (EN/AR)
+- **UI Framework**: NG-ZORRO (Ant Design for Angular) with CSS-in-JS theming and RTL support
+- **Search**: Meilisearch v1.6 for full-text search via Celery background tasks
 - **Storage**: MinIO (S3-compatible) for development, Alibaba OSS for production
-- **Auth**: Auth0 Hybrid (SPA + M2M) integration
-- **Deployment**: Docker Compose (dev), Kubernetes/ACK (production)
-- **Infrastructure**: Alibaba Cloud (production), DigitalOcean (testing)
+- **Auth**: Auth0 (SPA SDK on Angular, OIDC/JWKS validation on Django)
+- **Background Tasks**: Celery with Redis broker for indexing and analytics
+- **Deployment**: Docker Compose (dev), DigitalOcean DOKS (initial prod), Alibaba Cloud ACK (future prod)
+- **Infrastructure**: DigitalOcean (initial production), Alibaba Cloud (migration target)
 
-## UI/UX Design System - Ant Design 5.0
+## UI/UX Design System - NG-ZORRO (Ant Design for Angular)
 
 ### Design Principles
-- **Clarity**: Clear visual hierarchy with consistent Ant Design patterns
-- **Efficiency**: Streamlined workflows using Ant Design's component library
-- **Controllability**: Users maintain control through predictable Ant Design interactions
-- **Certainty**: Reliable interface behaviors following Ant Design specifications
+- **Clarity**: Clear visual hierarchy with consistent NG-ZORRO component patterns
+- **Efficiency**: Streamlined workflows using NG-ZORRO's comprehensive component library
+- **Controllability**: Users maintain control through predictable Angular + NG-ZORRO interactions
+- **Certainty**: Reliable interface behaviors following Ant Design specifications adapted for Angular
 
 ### Brand Color Integration
 - **Primary Brand**: #669B80 (Itqan Green) - mapped to Ant Design's colorPrimary token
 - **Dark Accent**: #22433D (Itqan Dark Green) - used for emphasis and dark theme
 - **Theme Configuration**:
   ```typescript
-  const itqanTheme = {
-    token: {
-      colorPrimary: '#669B80',
-      colorSuccess: '#52c41a',
-      colorWarning: '#faad14', 
-      colorError: '#ff4d4f',
-      borderRadius: 6,
-      fontFamily: {
-        en: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-        ar: '"Noto Sans Arabic", "IBM Plex Sans Arabic", sans-serif'
-      }
+  // Angular NG-ZORRO theme configuration
+  export const itqanTheme = {
+    primaryColor: '#669B80',
+    successColor: '#52c41a',
+    warningColor: '#faad14', 
+    errorColor: '#ff4d4f',
+    borderRadius: '6px',
+    fontFamily: {
+      en: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      ar: '"Noto Sans Arabic", "IBM Plex Sans Arabic", sans-serif'
     }
   };
   ```
 
 ### Component Usage Standards
-- **Forms**: Always use Ant Design Form, Input, Select, DatePicker components
-- **Navigation**: Use Menu, Breadcrumb, Steps, Pagination components
-- **Data Display**: Use Table, List, Card, Descriptions, Tag components
-- **Feedback**: Use Message, Notification, Modal, Drawer, Alert components
-- **Layout**: Use Space, Divider, Row, Col with 8px grid system
+- **Forms**: Always use NG-ZORRO nz-form, nz-input, nz-select, nz-date-picker components
+- **Navigation**: Use nz-menu, nz-breadcrumb, nz-steps, nz-pagination components
+- **Data Display**: Use nz-table, nz-list, nz-card, nz-descriptions, nz-tag components
+- **Feedback**: Use nz-message, nz-notification, nz-modal, nz-drawer, nz-alert components
+- **Layout**: Use nz-space, nz-divider, nz-row, nz-col with 8px grid system
 
 ### Typography & Spacing
 - **Arabic Fonts**: 'Noto Sans Arabic', 'IBM Plex Sans Arabic', sans-serif
@@ -98,19 +98,21 @@ Never skip this JSON conversion step - it ensures consistency and traceability a
 - Use TypeScript strictly - avoid `any` types
 - Follow established naming conventions in the project
 
-### Strapi-Specific Rules
-- Use Strapi's lifecycle hooks instead of custom middleware where possible
-- Leverage Strapi's built-in plugins before writing custom functionality
-- Follow Strapi v5 patterns for content types, components, and services
+### Django-Specific Rules
+- Use Django's signals and middleware patterns appropriately
+- Leverage Django REST Framework for all API endpoints
+- Follow Django 5.2 patterns for models, views, and serializers
 - Use environment variables for all configuration (never hardcode values)
 - Implement proper error handling and validation in API endpoints
+- Use Wagtail CMS for content management and editorial workflows
 
-### Next.js Best Practices
-- Use App Router (Next.js 14) patterns consistently
-- Implement proper SEO with metadata API
-- Use Server Components by default, Client Components only when needed
-- Leverage ISR (Incremental Static Regeneration) for performance
-- Follow i18n patterns for bilingual EN/AR support
+### Angular Best Practices
+- Use Angular 19 standalone components pattern consistently
+- Implement Angular Signals for reactive state management
+- Use NG-ZORRO components following design system guidelines
+- Leverage Angular Universal for SSR when SEO is required
+- Follow Angular i18n patterns for bilingual EN/AR support
+- Use Angular Services for API communication and state management
 
 ### Database & Content Modeling
 - Use UUIDs for primary keys consistently
@@ -121,17 +123,19 @@ Never skip this JSON conversion step - it ensures consistency and traceability a
 
 ## Internationalization (i18n)
 - Support English (en) and Arabic (ar) locales
-- Use Strapi's i18n plugin for content localization
-- Implement proper RTL support for Arabic content
-- Follow established translation patterns in templates
-- Test bilingual functionality thoroughly
+- Use Django's i18n framework with .po files for backend localization
+- Use Angular i18n with XLIFF/JSON files for frontend localization
+- Implement proper RTL support for Arabic content in NG-ZORRO components
+- Follow established translation patterns in both Django templates and Angular components
+- Test bilingual functionality thoroughly across backend and frontend
 
 ## Authentication & Security
-- Use Auth0 Hybrid pattern (SPA + M2M) consistently
+- Use Auth0 SPA SDK on Angular frontend for user authentication
+- Use Auth0 OIDC/JWKS validation on Django backend for API security
 - Store secrets in environment variables only
 - Implement proper RBAC with defined roles: Admin, Publisher, Developer, Reviewer
 - Use HTTPS everywhere and validate all inputs
-- Follow established JWT token patterns
+- Follow established JWT token patterns for API authentication
 
 ## Development Workflow
 - Reference existing task JSON files in ai-memory-bank/tasks/ for implementation patterns
@@ -157,14 +161,16 @@ Never skip this JSON conversion step - it ensures consistency and traceability a
 
 ## File Structure Conventions
 ```
-cms/                    # Strapi v5 backend
-├── src/api/           # Content types and API logic
-├── config/            # Strapi configuration
+backend/                # Django + Wagtail backend
+├── apps/              # Django apps (accounts, content, licensing, analytics)
+├── config/            # Django settings and configuration
+├── requirements.txt   # Python dependencies
 └── Dockerfile.dev     # Development container
 
-web/                   # Next.js frontend  
-├── app/               # App Router structure
-├── components/        # Reusable components
+frontend/              # Angular 19 frontend  
+├── src/app/           # Angular application structure
+├── src/components/    # Reusable NG-ZORRO components
+├── package.json       # Node.js dependencies
 └── Dockerfile.dev     # Development container
 
 ai-memory-bank/        # Task management
@@ -236,11 +242,12 @@ When issues are found:
 - Update troubleshooting guides with solutions
 
 ## Performance Considerations
-- Use caching strategies (Redis ready for future implementation)
-- Optimize images with Next.js Image component
-- Implement proper pagination for content listings
+- Use Redis caching for Celery task queue and session storage
+- Optimize images and assets with CDN integration (Alibaba OSS/CDN)
+- Implement proper pagination for content listings in Django REST API
 - Use database indexes for frequently queried fields
-- Consider CDN integration for static assets
+- Leverage Angular OnPush change detection and lazy loading
+- Use MeiliSearch for fast full-text search instead of database queries
 
 ## Error Handling
 - Implement graceful error handling throughout the application
@@ -257,9 +264,11 @@ When issues are found:
 
 ## References
 - Main documentation: docs/Itqan_CMS_BRD.md and docs/Itqan_CMS_BRS.md
-- Architecture: docs/diagrams/ (C4 model diagrams)
+- Architecture: docs/diagrams/ (C4 model diagrams + ER/API Mermaid files)
+- Database Schema: docs/diagrams/high-level-db-components-relationship.mmd
+- API Design: docs/diagrams/api-surface-overview.mmd
 - Setup: README-Docker.md for development environment
-- Tasks: ai-memory-bank/tasks.csv and individual JSON files
+- Tasks: ai-memory-bank/tasks.csv and individual JSON files (1-30)
 - English wireframes: ai-memory-bank/tasks/screens/en/*.html
 
 Remember: Always reference existing patterns and implementations before creating new solutions. The goal is consistency and code reuse across the entire project.

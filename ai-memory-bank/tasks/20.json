@@ -1,38 +1,64 @@
 {
-  "prompt": "Integrate the high-level database component relationship (User, Role, Resource, License, Distribution, AccessRequest, UsageEvent) into project documentation and backlog.",
-  "context": {
-    "project": "Itqan CMS",
-    "feature": "DB Relationship Integration",
-    "auth_model": "Auth0 Hybrid (SPA + M2M)",
-    "tech_stack": ["Angular 19", "Django 4 + DRF + Wagtail", "PostgreSQL", "MeiliSearch"],
-    "screens": [],
-    "colors": {"primary": "#669B80", "dark": "#22433D"}
-  },
-  "objectives": [
-    "Document high-level ER structure in BRD and BRS",
-    "Add architecture diagram reference to docs/diagrams",
-    "Update migration/implementation tasks to reflect entities and relations"
-  ],
-  "tasks": [
-    "Insert \"Data Model Overview\" section in Itqan_CMS_BRS.md",
-    "Insert corresponding section in Itqan_CMS_BRD.md",
-    "Export or reference high-level-db-components-relationship.png in docs/diagrams",
-    "Update tasks.csv with new backend migration sub-tasks (this file)",
-    "Plan Django models + migrations stub (future tasks)"
-  ],
-  "guard_rails": [
-    "Keep diagram file out of repo if binary > 5 MB; link instead",
-    "No implementation code yet, docs only"
-  ],
-  "acceptance_criteria": [
-    "BRS and BRD each contain a clear description/table of entities and relationships",
-    "tasks.csv reflects the new task (20) with todo status",
-    "Diagram reference added to docs/diagrams/README.md"
-  ],
-  "definition_of_done": [
-    "Documentation updated and pushed",
-    "Backlog row created",
-    "No linter errors"
-  ],
-  "out_of_scope": ["Actual Django model code", "Database migrations"]
+    "prompt": "You are an autonomous coding agent completing STORY-9: Content Models & i18n for Itqan CMS. Create core content types (Article, Page, Category, Tag) with English/Arabic internationalization support using Strapi's i18n plugin.",
+    "context": {
+        "project": "Itqan CMS",
+        "feature": "Content Modeling",
+        "tech_stack": [
+            "Strapi v5",
+            "PostgreSQL",
+            "i18n plugin"
+        ],
+        "locales": [
+            "en",
+            "ar"
+        ]
+    },
+    "objectives": [
+        "Enable Strapi i18n plugin with EN/AR locales",
+        "Create Resource content type matching ER model requirements",
+        "Create Distribution content type for delivery formats",
+        "Create License content type with terms and restrictions",
+        "Configure proper relationships between Resource/Distribution/License",
+        "Test content creation in both languages"
+    ],
+    "tasks": [
+        "Enable i18n plugin in config/plugins.ts with locales: ['en', 'ar']",
+        "Create Resource collection type with title, description, type, language, version, checksum, publisher relationship",
+        "Create Distribution collection type with format_type, endpoint_url, version, access_config",
+        "Create License collection type with license_type, terms, geographic/usage restrictions",
+        "Configure Resource-to-License one-to-many relationship",
+        "Configure Resource-to-Distribution one-to-many relationship",
+        "Enable localization for all content types and test bilingual content creation"
+    ],
+    "guard_rails": [
+        "Use UID field for slugs with proper patterns",
+        "Set proper field validations (required, min/max length)",
+        "Use enumeration for status field (draft, review, published)",
+        "Ensure proper relation configurations for performance"
+    ],
+    "acceptance_criteria": [
+        "Given I create an article in English, then I can create Arabic translation",
+        "Categories support nested hierarchy via parent field",
+        "Tags can be assigned to multiple articles via many-to-many relation",
+        "SEO fields are properly structured as reusable component",
+        "Content types appear in Strapi admin with proper field layouts"
+    ],
+    "definition_of_done": [
+        "All content types created with proper field configurations",
+        "Sample bilingual content created for testing",
+        "Content type schemas documented with field purposes",
+        "Relations working correctly in admin interface"
+    ],
+    "out_of_scope": [
+        "Advanced field types like dynamic zones",
+        "Custom field validations beyond basic requirements",
+        "Media relations (handled in separate story)"
+    ],
+    "references": [
+        "docs/Itqan_CMS_BRD.md §3.2 Content Management",
+        "docs/diagrams/level4-data-models.md",
+        "Strapi i18n plugin documentation",
+        "Screen ADMIN-003: Content creation forms with EN/AR locale switcher",
+        "English wireframe: ai-memory-bank/tasks/screens/en/admin_wireframes.html#ADMIN-003"
+    ]
 }

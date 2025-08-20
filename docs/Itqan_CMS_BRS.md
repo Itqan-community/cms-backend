@@ -104,7 +104,10 @@ The CMS centres around seven core entities:
 | **AccessRequest** | Developer's request to use a Distribution under a License | belongs to User (Developer) and Distribution; approval required |
 | **UsageEvent** | Logged event each time an API/key consumes a Resource | belongs to User and Resource (or Distribution) |
 
-See `docs/diagrams/high-level-db-components-relationship.png` for the full ER diagram.
+Diagram references:
+- `docs/diagrams/high-level-db-components-relationship.png` - Visual ER diagram
+- `docs/diagrams/high-level-db-components-relationship.mmd` - Mermaid source
+- `docs/diagrams/api-surface-overview.mmd` - API endpoint design
 
 ---
 
@@ -127,7 +130,10 @@ The CMS centres around seven core entities:
 | **AccessRequest** | Developer’s request to use a Distribution under a License | belongs to User (Developer) and Distribution; approval required |
 | **UsageEvent** | Logged event each time an API/key consumes a Resource | belongs to User and Resource (or Distribution) |
 
-See `docs/diagrams/high-level-db-components-relationship.png` for the full ER diagram.
+Diagram references:
+- `docs/diagrams/high-level-db-components-relationship.png` - Visual ER diagram
+- `docs/diagrams/high-level-db-components-relationship.mmd` - Mermaid source
+- `docs/diagrams/api-surface-overview.mmd` - API endpoint design
 
 ---
 

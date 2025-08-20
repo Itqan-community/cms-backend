@@ -1,56 +1,61 @@
 {
-    "prompt": "You are an autonomous coding agent completing STORY-7: MinIO Upload Provider for Itqan CMS. Configure Strapi v5 to store file uploads in local MinIO bucket instead of local filesystem, ensuring S3-compatible setup works in development.",
-    "context": {
-        "project": "Itqan CMS",
-        "feature": "File Storage Integration",
-        "tech_stack": [
-            "Strapi v5",
-            "MinIO",
-            "Docker"
-        ],
-        "environment": "Development"
-    },
-    "objectives": [
-        "Install and configure Strapi upload provider for S3-compatible storage",
-        "Connect Strapi to MinIO container running on port 9000",
-        "Create initial bucket and set appropriate permissions",
-        "Test file upload via Strapi admin interface"
-    ],
-    "tasks": [
-        "Install @strapi/provider-upload-aws-s3 package in cms/",
-        "Configure config/plugins.ts with MinIO endpoint and credentials",
-        "Add MinIO bucket creation script or manual setup instructions",
-        "Update env.dev.example with proper S3 provider settings",
-        "Test media library upload and verify files stored in MinIO",
-        "Document MinIO console access and bucket management"
-    ],
-    "guard_rails": [
-        "Use S3_FORCE_PATH_STYLE=true for MinIO compatibility",
-        "Store MinIO credentials in environment variables only",
-        "Ensure bucket has appropriate access policy for development",
-        "Do not commit real access keys to version control"
-    ],
-    "acceptance_criteria": [
-        "Given I upload an image via Strapi admin, then it appears in MinIO bucket",
-        "Given I access uploaded file URL, then image displays correctly",
-        "MinIO console shows uploaded files in itqan-uploads bucket",
-        "No files are stored in local public/uploads directory"
-    ],
-    "definition_of_done": [
-        "Upload provider configuration documented in README",
-        "Test upload works end-to-end via docker-compose stack",
-        "MinIO bucket accessible via console at localhost:9001"
-    ],
-    "out_of_scope": [
-        "Production S3 or Alibaba OSS configuration",
-        "Image transformation or optimization",
-        "CDN integration"
-    ],
-    "references": [
-        "docker-compose.yaml MinIO service",
-        "env.dev.example AWS_* variables",
-        "Strapi upload provider docs",
-        "Screen ADMIN-001: Media Library interface",
-        "English wireframe: ai-memory-bank/tasks/screens/en/admin_wireframes.html#ADMIN-001"
-    ]
+  "prompt": "Implement AccessRequest workflow allowing developers to request Distribution access, with admin approval process and automatic access control",
+  "context": {
+    "project": "Itqan CMS",
+    "feature": "AccessRequest Workflow",
+    "auth_model": "Role-based workflow (Developer → Admin approval)",
+    "tech_stack": ["Django", "DRF", "Email notifications", "State machine", "Permissions"],
+    "screens": [],
+    "colors": {"primary": "#669B80", "dark": "#22433D"}
+  },
+  "objectives": [
+    "Create AccessRequest state machine (pending → approved/rejected)",
+    "Implement developer request submission flow",
+    "Build admin approval/rejection interface",
+    "Setup automatic Distribution access control",
+    "Create email notifications for status changes"
+  ],
+  "tasks": [
+    "Create AccessRequest model with status field and state transitions",
+    "Implement API endpoints for request submission and management",
+    "Build admin approval workflow with bulk actions",
+    "Create Distribution access control middleware",
+    "Setup email notification system for status changes",
+    "Implement request validation (duplicate prevention, license compliance)",
+    "Create developer dashboard for tracking request status",
+    "Add usage tracking integration for approved requests"
+  ],
+  "guard_rails": [
+    "Only developers can submit AccessRequests",
+    "Only admins can approve/reject requests",
+    "Prevent duplicate requests for same Distribution",
+    "Validate license compliance before approval",
+    "Log all workflow state changes for audit"
+  ],
+  "acceptance_criteria": [
+    "Developers can submit access requests successfully",
+    "Admins can approve/reject requests via API and admin interface",
+    "Approved requests grant automatic Distribution access",
+    "Email notifications sent for all status changes",
+    "Request status tracked throughout lifecycle"
+  ],
+  "definition_of_done": [
+    "Complete workflow tested end-to-end",
+    "State transitions validated and secure",
+    "Email notifications working correctly",
+    "Admin interface functional and user-friendly",
+    "Access control enforced properly"
+  ],
+  "out_of_scope": [
+    "Complex approval hierarchies",
+    "Advanced license negotiation features",
+    "Integration with external legal systems",
+    "Automated approval based on criteria"
+  ],
+  "references": [
+    "docs/diagrams/high-level-db-components-relationship.png",
+    "Django state machine patterns",
+    "Email notification best practices",
+    "Access control implementation guides"
+  ]
 }

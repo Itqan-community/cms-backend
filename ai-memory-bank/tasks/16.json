@@ -1,60 +1,49 @@
 {
-  "prompt": "You are an autonomous coding agent completing STORY-16: Email Notifications for Itqan CMS. Implement email system for user registration confirmations, workflow approvals, license requests, and system notifications using SMTP configuration.",
+  "prompt": "You are an autonomous coding agent completing STORY-5: First-Time Dashboard Empty State for Itqan CMS.",
   "context": {
     "project": "Itqan CMS",
-    "feature": "Email Notification System",
-    "tech_stack": ["Strapi v5", "Email provider", "Template engine"],
-    "notification_types": ["Registration", "Workflow transitions", "License requests", "System alerts"]
+    "feature": "Dashboard",
+    "auth_model": "Auth0 Hybrid",
+    "tech_stack": ["Next.js 14", "Bootstrap"],
+    "screens": ["DASH-001"],
+    "colors": {"primary": "#669B80", "dark": "#22433D"}
   },
   "objectives": [
-    "Configure SMTP email provider in Strapi",
-    "Create email templates for different notification types",
-    "Implement automated emails for user registration and workflow events",
-    "Set up admin notifications for important system events"
+    "Render dashboard layout",
+    "Show profile completion checklist if user incomplete",
+    "Display pending AccessRequests and developer quota status",
+    "Support EN/AR translation"
   ],
   "tasks": [
-    "Configure email provider plugin in Strapi with SMTP settings",
-    "Create email templates for registration welcome and verification",
-    "Implement workflow transition emails (draft submitted, review approved, etc.)",
-    "Create license request notification emails for publishers",
-    "Set up admin alert emails for system events and errors",
-    "Add email template management interface in admin",
-    "Implement email queue for reliable delivery",
-    "Create bilingual email templates (English/Arabic)",
-    "Add email preferences and unsubscribe functionality",
-    "Test email delivery and template rendering"
+    "Create /dashboard page protected by useAuth",
+    "Implement Bootstrap responsive layout with Itqan color scheme (#669B80, #22433D)",
+    "Build DASH-001 screen: sidebar navigation, header with logo, main content area",
+    "Fetch user profile from Strapi API",
+    "Display empty state with placeholder cards (\"No resources yet\")",
+    "Show pending AccessRequests with status indicators",
+    "Display developer quota usage and limits",
+    "Add profile completion checklist with progress indicators",
+    "Implement language switcher (EN/AR) with proper RTL layout",
+    "Add call-to-action buttons: \"Complete Profile\", \"Create First Article\""
   ],
   "guard_rails": [
-    "All emails must include unsubscribe links for compliance",
-    "Email templates must be responsive for mobile devices",
-    "Sensitive information should not be included in email content",
-    "Email sending should not block API requests (use queue)",
-    "Failed email deliveries should be logged and retried"
+    "RTL layout flip for Arabic",
+    "Use Bootstrap responsive utilities"
   ],
   "acceptance_criteria": [
-    "Given a user registers, then they receive welcome email in their preferred language",
-    "Given content workflow changes, then relevant users receive notification emails",
-    "Given license request is submitted, then publisher receives notification email",
-    "Email templates render correctly in major email clients",
-    "Users can manage email preferences and unsubscribe from notifications"
+    "First-time user sees empty state with checklist",
+    "Switching locale changes UI copy"
   ],
   "definition_of_done": [
-    "Email system configured and sending notifications reliably",
-    "All email templates created and tested in both languages",
-    "Email queue handling delivery failures and retries",
-    "Admin interface for managing email templates and settings",
-    "Email delivery monitoring and error logging implemented"
+    "Snapshots in Playwright",
+    "i18n JSON updated"
   ],
   "out_of_scope": [
-    "Advanced email marketing features",
-    "Integration with external email service providers beyond SMTP",
-    "Email analytics and open rate tracking"
+    "Content upload widgets"
   ],
   "references": [
-    "docs/Itqan_CMS_BRD.md §3.7 Notifications",
-    "env.dev.example EMAIL_* configuration variables",
-    "Strapi email plugin documentation",
-    "Screen ADMIN-007: Email template editor with EN/AR bilingual support",
-    "English wireframe: ai-memory-bank/tasks/screens/en/final_wireframes.html#ADMIN-007"
+    "Wireframe dashboard in cms-screens.png",
+    "Screen DASH-001: Empty dashboard with profile completion checklist",
+    "English wireframe: ai-memory-bank/tasks/screens/en/create_english_wireframes.html#DASH-001"
   ]
 }

@@ -1,45 +1,56 @@
 {
-  "prompt": "Update stack to Angular 19 CSR with SSR-ready Universal, Django + Wagtail backend; phased DigitalOcean → Alibaba deployment plan.",
-  "context": {
-    "project": "Itqan CMS",
-    "feature": "Architecture & Deployment Plan",
-    "auth_model": "Auth0 Hybrid (SPA + M2M)",
-    "tech_stack": ["Angular 19", "Django 4 + DRF + Wagtail", "PostgreSQL", "MeiliSearch", "MinIO/OSS", "K8s"],
-    "screens": [],
-    "colors": {"primary": "#669B80", "dark": "#22433D"}
-  },
-  "objectives": [
-    "Document updated architecture with CSR-first approach",
-    "Outline phased deployment (DigitalOcean then Alibaba Cloud)",
-    "Ensure SSR readiness via Angular Universal"
-  ],
-  "tasks": [
-    "Draft stack summary",
-    "Add deployment phases section",
-    "Create mermaid diagram overview"
-  ],
-  "guard_rails": [
-    "No secrets in repo",
-    "Follow existing cms.mdc rules",
-    "Maintain bilingual/RTL requirements"
-  ],
-  "acceptance_criteria": [
-    "Plan lists all core components",
-    "Both cloud phases described",
-    "Diagram renders without errors"
-  ],
-  "definition_of_done": [
-    "Plan added to docs/md",
-    "tasks.csv updated",
-    "Mermaid diagram validated"
-  ],
-  "out_of_scope": [
-    "Terraform code",
-    "Helm charts"
-  ],
-  "references": [
-    "https://angular.dev/",
-    "Auth0 docs",
-    "Wagtail docs"
-  ]
+    "prompt": "You are an autonomous coding agent completing STORY-8: Meilisearch Integration for Itqan CMS. Install and configure Strapi plugin to automatically sync content to Meilisearch for full-text search capabilities.",
+    "context": {
+        "project": "Itqan CMS",
+        "feature": "Search Integration",
+        "tech_stack": [
+            "Strapi v5",
+            "Meilisearch v1.6",
+            "Docker"
+        ],
+        "environment": "Development"
+    },
+    "objectives": [
+        "Install Strapi Meilisearch plugin and configure connection",
+        "Set up automatic content indexing on create/update/delete",
+        "Configure search indexes for Articles and Pages with proper fields",
+        "Test search functionality via Meilisearch dashboard"
+    ],
+    "tasks": [
+        "Install strapi-plugin-meilisearch or @meilisearch/strapi-plugin",
+        "Configure config/plugins.ts with Meilisearch host and master key",
+        "Define searchable content types and fields in plugin config",
+        "Set up lifecycle hooks for automatic index synchronization",
+        "Test content indexing by creating sample articles",
+        "Verify search results via Meilisearch dashboard at localhost:7700"
+    ],
+    "guard_rails": [
+        "Store Meilisearch master key in environment variables",
+        "Only index published content, not drafts",
+        "Exclude sensitive fields from search index",
+        "Handle connection failures gracefully"
+    ],
+    "acceptance_criteria": [
+        "Given I create an article in Strapi, then it appears in Meilisearch index",
+        "Given I search for content via Meilisearch dashboard, then relevant results return",
+        "Index updates automatically when content is modified or deleted",
+        "Search supports both English and Arabic content"
+    ],
+    "definition_of_done": [
+        "Plugin configuration documented with field mappings",
+        "Sample content indexed and searchable",
+        "Integration tested with bilingual content"
+    ],
+    "out_of_scope": [
+        "Frontend search UI implementation",
+        "Advanced search features like facets or filters",
+        "Search analytics or ranking algorithms"
+    ],
+    "references": [
+        "docker-compose.yaml Meilisearch service",
+        "env.dev.example MEILI_* variables",
+        "Meilisearch Strapi plugin documentation",
+        "Screen ADMIN-002: Search configuration panel",
+        "English wireframe: ai-memory-bank/tasks/screens/en/admin_wireframes.html#ADMIN-002"
+    ]
 }

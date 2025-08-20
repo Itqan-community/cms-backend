@@ -1,46 +1,61 @@
 {
-  "prompt": "You are an autonomous coding agent completing STORY-5: First-Time Dashboard Empty State for Itqan CMS.",
+  "prompt": "Integrate Celery task queue with MeiliSearch for content indexing, using Redis broker and Django signals for automatic updates",
   "context": {
     "project": "Itqan CMS",
-    "feature": "Dashboard",
-    "auth_model": "Auth0 Hybrid",
-    "tech_stack": ["Next.js 14", "Bootstrap"],
-    "screens": ["DASH-001"],
+    "feature": "Celery + MeiliSearch Integration", 
+    "auth_model": "Service-to-service integration",
+    "tech_stack": ["Celery", "Redis", "MeiliSearch", "Django Signals", "Background Tasks"],
+    "screens": [],
     "colors": {"primary": "#669B80", "dark": "#22433D"}
   },
   "objectives": [
-    "Render dashboard layout",
-    "Show profile completion checklist if user incomplete",
-    "Support EN/AR translation"
+    "Setup Celery with Redis broker for background tasks",
+    "Configure MeiliSearch for full-text search indexing",
+    "Create Django signals to trigger indexing on model changes",
+    "Implement search index management tasks",
+    "Build monitoring and error handling for async tasks"
   ],
   "tasks": [
-    "Create /dashboard page protected by useAuth",
-    "Implement Bootstrap responsive layout with Itqan color scheme (#669B80, #22433D)",
-    "Build DASH-001 screen: sidebar navigation, header with logo, main content area",
-    "Fetch user profile from Strapi API",
-    "Display empty state with placeholder cards (\"No resources yet\")",
-    "Add profile completion checklist with progress indicators",
-    "Implement language switcher (EN/AR) with proper RTL layout",
-    "Add call-to-action buttons: \"Complete Profile\", \"Create First Article\""
+    "Install and configure Celery with Redis broker",
+    "Setup MeiliSearch server and Python client",
+    "Create Celery tasks for indexing Resources and content",
+    "Implement Django signals on Resource/License/Distribution models",
+    "Build search index configuration and mapping",
+    "Create tasks for bulk indexing and index rebuilding",
+    "Add Celery monitoring with Django admin integration",
+    "Implement error handling and retry logic for failed tasks"
   ],
   "guard_rails": [
-    "RTL layout flip for Arabic",
-    "Use Bootstrap responsive utilities"
+    "All indexing operations must be idempotent",
+    "Handle MeiliSearch connection failures gracefully",
+    "Implement proper task retry mechanisms",
+    "Log all indexing operations for debugging",
+    "Ensure search index stays synchronized with database"
   ],
   "acceptance_criteria": [
-    "First-time user sees empty state with checklist",
-    "Switching locale changes UI copy"
+    "Celery workers process tasks successfully",
+    "MeiliSearch indexes update automatically on model changes",
+    "Search functionality returns relevant results",
+    "Failed tasks retry appropriately",
+    "Monitoring dashboard shows task status"
   ],
   "definition_of_done": [
-    "Snapshots in Playwright",
-    "i18n JSON updated"
+    "Celery and Redis running in development environment",
+    "MeiliSearch indexes created and populated",
+    "Django signals trigger indexing correctly",
+    "Search API endpoints return accurate results",
+    "Error handling tested with connection failures"
   ],
   "out_of_scope": [
-    "Content upload widgets"
+    "Advanced search features like faceting",
+    "Search analytics and metrics",
+    "Custom search ranking algorithms",
+    "Search API rate limiting"
   ],
   "references": [
-    "Wireframe dashboard in cms-screens.png",
-    "Screen DASH-001: Empty dashboard with profile completion checklist",
-    "English wireframe: ai-memory-bank/tasks/screens/en/create_english_wireframes.html#DASH-001"
+    "Celery documentation",
+    "MeiliSearch Python SDK docs",
+    "Django signals documentation",
+    "Redis configuration best practices"
   ]
 }

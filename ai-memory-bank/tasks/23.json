@@ -1,0 +1,60 @@
+{
+    "prompt": "You are an autonomous coding agent completing STORY-12: API Keys & Rate Limiting for Itqan CMS. Implement API key generation, management, and basic rate limiting to protect against abuse while enabling developer access to content APIs.",
+    "context": {
+        "project": "Itqan CMS",
+        "feature": "API Security & Rate Limiting",
+        "tech_stack": [
+            "Strapi v5",
+            "Rate limiting middleware"
+        ],
+        "environment": "Development with production considerations"
+    },
+    "objectives": [
+        "Implement API key generation and management for developers",
+        "Add rate limiting middleware to protect API endpoints",
+        "Create developer dashboard for API key management",
+        "Set up monitoring and logging for API usage"
+    ],
+    "tasks": [
+        "Install and configure rate limiting middleware (express-rate-limit or similar)",
+        "Create API key generation system in Strapi admin",
+        "Implement API key authentication middleware for public endpoints",
+        "Configure different rate limits per user role (Developer vs Public)",
+        "Add API key management interface in Strapi admin",
+        "Set up logging for rate limit violations and API usage",
+        "Create documentation for API key usage and limits",
+        "Test rate limiting with various scenarios and key types"
+    ],
+    "guard_rails": [
+        "Rate limits should be configurable via environment variables",
+        "API keys must be cryptographically secure and unique",
+        "Rate limiting should not affect admin or authenticated user operations",
+        "Failed requests should return appropriate HTTP status codes",
+        "API keys should be revocable and manageable"
+    ],
+    "acceptance_criteria": [
+        "Given I generate an API key as Admin, then developers can use it for API access",
+        "Given I exceed rate limits, then API returns 429 Too Many Requests",
+        "Given I use invalid API key, then API returns 401 Unauthorized",
+        "Rate limits differentiate between authenticated and public access",
+        "API usage statistics are logged and viewable in admin interface"
+    ],
+    "definition_of_done": [
+        "Rate limiting active on all public API endpoints",
+        "API key generation and management working in admin",
+        "Rate limit violations properly logged and monitored",
+        "API documentation updated with authentication requirements"
+    ],
+    "out_of_scope": [
+        "Advanced rate limiting algorithms (sliding window, etc.)",
+        "API monetization or usage-based billing",
+        "Integration with external API management platforms"
+    ],
+    "references": [
+        "docs/Itqan_CMS_BRD.md §3.4 APIs for Developers",
+        "env.dev.example RATE_LIMIT_* variables",
+        "Strapi API authentication documentation",
+        "Screen ADMIN-006: API key generation and rate limit settings",
+        "English wireframe: ai-memory-bank/tasks/screens/en/final_wireframes.html#ADMIN-006"
+    ]
+}

@@ -1,62 +1,46 @@
 {
-  "prompt": "You are an autonomous coding agent completing STORY-15: Licensing Workflow for Itqan CMS. Implement license agreement system where developers must accept terms before accessing Quranic content via API, with tracking and compliance features.",
+  "prompt": "You are an autonomous coding agent completing STORY-4: Hybrid Token Exchange between Auth0 and Strapi for Itqan CMS.",
   "context": {
     "project": "Itqan CMS",
-    "feature": "Content Licensing System",
-    "tech_stack": ["Strapi v5", "Next.js 14", "Bootstrap", "Legal compliance"],
-    "screens": ["LIC-001"],
-    "colors": {"primary": "#669B80", "dark": "#22433D"},
-    "compliance": ["Publisher rights", "Geographic restrictions", "Attribution requirements"]
+    "feature": "Hybrid Token Exchange",
+    "auth_model": "Auth0 Hybrid (Hosted Universal Login)",
+    "tech_stack": ["Strapi v5", "Next.js 14"],
+    "screens": ["AUTH-002"],
+    "integration": "Auth0 Universal Login → Strapi JWT"
   },
   "objectives": [
-    "Create license content type with terms, restrictions, and requirements",
-    "Implement license acceptance workflow for developers",
-    "Track license agreements and compliance status",
-    "Enforce license restrictions on API access"
+    "Backend endpoint validates Auth0 access token",
+    "Create/refresh Strapi JWT",
+    "Map Auth0 roles to Strapi roles"
   ],
   "tasks": [
-    "Create License collection type with terms, geographic scope, attribution requirements",
-    "Create UserLicense junction table to track user acceptances",
-    "Build LIC-001 screen: Bootstrap modal blocking API access until license accepted",
-    "Style modal with Itqan colors (#669B80, #22433D) and responsive design",
-    "Implement license acceptance API endpoint with legal timestamp",
-    "Add license validation middleware to content API endpoints",
-    "Create license management interface for admins",
-    "Support bilingual license terms (EN/AR) with proper RTL layout",
-    "Track license violations and API usage compliance",
-    "Test modal blocking behavior across different API scenarios"
+    "Create server route POST /auth/exchange for Auth0 token validation",
+    "Verify Auth0 access token via JWKS endpoint and audience claim",
+    "Handle AUTH-002 screen: loading state during token exchange process",
+    "Extract user claims from Auth0 token (sub, email, GitHub profile)",
+    "Use Strapi Admin API to create/update user and issue JWT",
+    "Map Auth0 roles to Strapi roles (Admin, Publisher, Developer, Reviewer)",
+    "Implement secure token caching with 1h TTL"
   ],
   "guard_rails": [
-    "License acceptance must be explicitly recorded with timestamps",
-    "API access should be blocked until required licenses are accepted",
-    "License terms must be versioned for legal compliance",
-    "Geographic restrictions must be enforced based on user location",
-    "Attribution requirements must be clearly communicated to developers"
+    "Audience & issuer check",
+    "Rate-limit 10 req/min/ip"
   ],
   "acceptance_criteria": [
-    "Given I am a new developer, when I access content API, then I must accept licenses first",
-    "Given I accept a license, then my acceptance is permanently recorded with timestamp",
-    "Given content has geographic restrictions, then API enforces location-based access",
-    "License dashboard shows all agreements, restrictions, and compliance status",
-    "Publishers can define license terms and track developer acceptances"
+    "Valid token returns 200 and Strapi JWT",
+    "Invalid token returns 401"
   ],
   "definition_of_done": [
-    "License system fully implemented with acceptance tracking",
-    "API endpoints properly enforce license requirements",
-    "Admin interface allows license management and reporting",
-    "Legal compliance features tested with sample scenarios",
-    "Documentation created for publishers and developers"
+    "Integration test with real Auth0 token",
+    "Docs updated"
   ],
   "out_of_scope": [
-    "Complex licensing negotiations or custom terms",
-    "Payment processing for paid licenses",
-    "Integration with external legal systems"
+    "Refresh token rotation"
   ],
   "references": [
-    "docs/Itqan_CMS_BRD.md §3.3 Licensing & Permissions",
-    "docs/diagrams/level4-data-models.md",
-    "Legal compliance requirements for Quranic content",
-    "Screen LIC-001: License modal blocking API access until acceptance",
-    "English wireframe: ai-memory-bank/tasks/screens/en/public_and_workflow_wireframes.html#LIC-001"
+    "Auth0 M2M docs",
+    "Strapi auth docs",
+    "Screen AUTH-002: Token exchange loading state",
+    "English wireframe: ai-memory-bank/tasks/screens/en/create_english_wireframes.html#AUTH-002"
   ]
 }
