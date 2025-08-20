@@ -1,0 +1,927 @@
+openapi: 3.0.3
+info:
+  title: Itqan CMS API
+  description: |
+    Quranic Content Management System API for aggregating, licensing, and distributing verified Quranic content.
+    
+    ## Authentication
+    - **Public API**: No authentication required
+    - **Developer API**: JWT token required (via Auth0)
+    - **Publisher API**: JWT token + Publisher role required
+    - **Admin API**: JWT token + Admin role required
+    
+    ## Base URL
+    - Development: `http://localhost:8000/api/v1`
+    - Production: `https://api.itqan.com/api/v1`
+  version: 1.0.0
+  contact:
+    name: Itqan Community
+    url: https://itqan.com
+    email: api@itqan.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Development server
+  - url: https://api.itqan.com/api/v1
+    description: Production server
+
+security:
+  - BearerAuth: []
+  - {}
+
+paths:
+  # Public API Endpoints (No Auth)
+  /search:
+    get:
+      tags: [Public API]
+      summary: Search Quranic content
+      description: Full-text search across public resources
+      security: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query
+        - name: filters
+          in: query
+          schema:
+            type: string
+          description: JSON-encoded filters
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResults'
+
+  /resources:
+    get:
+      tags: [Public API]
+      summary: List public resources
+      description: Get publicly available Quranic resources
+      security: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: language
+          in: query
+          schema:
+            type: string
+            enum: [ar, en]
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [text, audio, translation, tafsir]
+      responses:
+        '200':
+          description: List of public resources
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceList'
+
+  /resources/{id}:
+    get:
+      tags: [Public API]
+      summary: Get resource details
+      description: Get metadata for a specific resource
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Resource details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Resource'
+        '404':
+          description: Resource not found
+
+  /distributions:
+    get:
+      tags: [Public API]
+      summary: List public distributions
+      description: Get publicly available content distributions
+      security: []
+      responses:
+        '200':
+          description: List of public distributions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DistributionList'
+
+  # Authentication Endpoints
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Exchange Auth0 token for JWT
+      description: Authenticate with Auth0 token and receive system JWT
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                auth0_token:
+                  type: string
+                  description: Auth0 access token
+              required: [auth0_token]
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+                  expires_in:
+                    type: integer
+                  user:
+                    $ref: '#/components/schemas/User'
+
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Refresh JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token:
+                  type: string
+              required: [refresh_token]
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  expires_in:
+                    type: integer
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Invalidate token
+      responses:
+        '204':
+          description: Logout successful
+
+  /auth/me:
+    get:
+      tags: [Authentication]
+      summary: Get current user profile
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  # Developer API Endpoints
+  /access-requests:
+    post:
+      tags: [Developer API]
+      summary: Request distribution access
+      description: Submit a request to access a specific distribution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                distribution_id:
+                  type: string
+                  format: uuid
+                justification:
+                  type: string
+                  description: Use case description
+              required: [distribution_id, justification]
+      responses:
+        '201':
+          description: Access request created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessRequest'
+
+  /access-requests/mine:
+    get:
+      tags: [Developer API]
+      summary: Get my access requests
+      description: Track status of submitted access requests
+      responses:
+        '200':
+          description: List of access requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AccessRequest'
+
+  /usage-events/mine:
+    get:
+      tags: [Developer API]
+      summary: Get my usage analytics
+      description: View API usage statistics
+      parameters:
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Usage analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageAnalytics'
+
+  /distributions/{id}:
+    get:
+      tags: [Developer API]
+      summary: Access approved distribution
+      description: Download or access approved distribution content
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Distribution content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Distribution'
+        '403':
+          description: Access not approved
+
+  /distributions/{id}/download:
+    get:
+      tags: [Developer API]
+      summary: Download distribution content
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: File download
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+
+  # Publisher API Endpoints
+  /resources:
+    post:
+      tags: [Publisher API]
+      summary: Create new resource
+      description: Publishers can create new Quranic resources
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResourceCreate'
+      responses:
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Resource'
+
+    put:
+      tags: [Publisher API]
+      summary: Update resource
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResourceUpdate'
+      responses:
+        '200':
+          description: Resource updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Resource'
+
+  /licenses:
+    post:
+      tags: [Publisher API]
+      summary: Create license for resource
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LicenseCreate'
+      responses:
+        '201':
+          description: License created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/License'
+
+  /analytics/resources:
+    get:
+      tags: [Publisher API]
+      summary: Get resource usage analytics
+      description: View analytics for publisher's resources
+      responses:
+        '200':
+          description: Resource analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceAnalytics'
+
+  # Admin API Endpoints
+  /users:
+    get:
+      tags: [Admin API]
+      summary: List all users
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+
+  /roles:
+    get:
+      tags: [Admin API]
+      summary: List all roles
+      responses:
+        '200':
+          description: List of roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Role'
+
+  /access-requests/{id}:
+    patch:
+      tags: [Admin API]
+      summary: Approve or reject access request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [approved, rejected]
+                admin_notes:
+                  type: string
+              required: [status]
+      responses:
+        '200':
+          description: Access request updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessRequest'
+
+  /admin/resources:
+    get:
+      tags: [Admin API]
+      summary: Manage all resources
+      description: Admin access to all resources in the system
+      responses:
+        '200':
+          description: List of all resources
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceList'
+
+  /admin/analytics:
+    get:
+      tags: [Admin API]
+      summary: System-wide analytics
+      description: Get comprehensive system analytics
+      responses:
+        '200':
+          description: System analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemAnalytics'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        auth0_id:
+          type: string
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+        profile_data:
+          type: object
+        is_active:
+          type: boolean
+        last_login:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Role:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          enum: [Admin, Publisher, Developer, Reviewer]
+        description:
+          type: string
+        permissions:
+          type: object
+        is_active:
+          type: boolean
+
+    Resource:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        resource_type:
+          type: string
+          enum: [text, audio, translation, tafsir]
+        language:
+          type: string
+        version:
+          type: string
+        checksum:
+          type: string
+        publisher_id:
+          type: string
+          format: uuid
+        metadata:
+          type: object
+        is_active:
+          type: boolean
+        published_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ResourceCreate:
+      type: object
+      required: [title, description, resource_type, language]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        resource_type:
+          type: string
+          enum: [text, audio, translation, tafsir]
+        language:
+          type: string
+        version:
+          type: string
+        metadata:
+          type: object
+
+    ResourceUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        version:
+          type: string
+        metadata:
+          type: object
+
+    License:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        resource_id:
+          type: string
+          format: uuid
+        license_type:
+          type: string
+          enum: [open, restricted, commercial]
+        terms:
+          type: string
+        geographic_restrictions:
+          type: object
+        usage_restrictions:
+          type: object
+        requires_approval:
+          type: boolean
+        is_active:
+          type: boolean
+        effective_from:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+
+    LicenseCreate:
+      type: object
+      required: [resource_id, license_type, terms]
+      properties:
+        resource_id:
+          type: string
+          format: uuid
+        license_type:
+          type: string
+          enum: [open, restricted, commercial]
+        terms:
+          type: string
+        geographic_restrictions:
+          type: object
+        usage_restrictions:
+          type: object
+        requires_approval:
+          type: boolean
+          default: true
+
+    Distribution:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        resource_id:
+          type: string
+          format: uuid
+        format_type:
+          type: string
+          enum: [REST_JSON, GraphQL, ZIP, API]
+        endpoint_url:
+          type: string
+        version:
+          type: string
+        access_config:
+          type: object
+        metadata:
+          type: object
+        is_active:
+          type: boolean
+
+    AccessRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        requester_id:
+          type: string
+          format: uuid
+        distribution_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        justification:
+          type: string
+        admin_notes:
+          type: string
+        approved_by:
+          type: string
+          format: uuid
+        requested_at:
+          type: string
+          format: date-time
+        reviewed_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+
+    UsageEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        resource_id:
+          type: string
+          format: uuid
+        distribution_id:
+          type: string
+          format: uuid
+        event_type:
+          type: string
+          enum: [api_call, download, view]
+        endpoint:
+          type: string
+        request_size:
+          type: integer
+        response_size:
+          type: integer
+        ip_address:
+          type: string
+        user_agent:
+          type: string
+        metadata:
+          type: object
+        occurred_at:
+          type: string
+          format: date-time
+
+    ResourceList:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          nullable: true
+        previous:
+          type: string
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Resource'
+
+    DistributionList:
+      type: object
+      properties:
+        count:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Distribution'
+
+    SearchResults:
+      type: object
+      properties:
+        query:
+          type: string
+        total_hits:
+          type: integer
+        processing_time_ms:
+          type: integer
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              title:
+                type: string
+              description:
+                type: string
+              resource_type:
+                type: string
+              language:
+                type: string
+              score:
+                type: number
+              highlights:
+                type: object
+
+    UsageAnalytics:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        total_requests:
+          type: integer
+        quota_used:
+          type: integer
+        quota_limit:
+          type: integer
+        period_start:
+          type: string
+          format: date-time
+        period_end:
+          type: string
+          format: date-time
+        daily_usage:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              requests:
+                type: integer
+
+    ResourceAnalytics:
+      type: object
+      properties:
+        publisher_id:
+          type: string
+          format: uuid
+        total_resources:
+          type: integer
+        total_downloads:
+          type: integer
+        total_api_calls:
+          type: integer
+        popular_resources:
+          type: array
+          items:
+            type: object
+            properties:
+              resource_id:
+                type: string
+                format: uuid
+              title:
+                type: string
+              usage_count:
+                type: integer
+
+    SystemAnalytics:
+      type: object
+      properties:
+        total_users:
+          type: integer
+        total_resources:
+          type: integer
+        total_api_calls:
+          type: integer
+        active_users_30d:
+          type: integer
+        storage_used_gb:
+          type: number
+        bandwidth_used_gb:
+          type: number
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        code:
+          type: string
+        details:
+          type: object
+
+  responses:
+    UnauthorizedError:
+      description: Authentication information is missing or invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ForbiddenError:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+tags:
+  - name: Public API
+    description: Publicly accessible endpoints without authentication
+  - name: Authentication
+    description: User authentication and token management
+  - name: Developer API
+    description: API access for developers with JWT authentication
+  - name: Publisher API
+    description: Content management for publishers
+  - name: Admin API
+    description: Administrative functions with admin role required

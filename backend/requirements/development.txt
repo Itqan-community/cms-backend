@@ -1,0 +1,22 @@
+-r base.txt
+
+# Development Tools
+django-debug-toolbar==4.2.*
+django-silk==5.0.*
+
+# Testing
+pytest==7.4.*
+pytest-django==4.5.*
+pytest-cov==4.1.*
+factory-boy==3.3.*
+
+# Code Quality
+black==23.7.*
+isort==5.12.*
+flake8==6.0.*
+mypy==1.5.*
+django-stubs==4.2.*
+
+# Documentation
+mkdocs==1.5.*
+mkdocs-material==9.2.*

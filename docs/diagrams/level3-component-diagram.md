@@ -1,158 +1,225 @@
-# Level 3: Component Diagram - Content API Container
+# Level 3: Component Diagram - Django Backend Container
 
 **Audience:** Developers, Technical Teams  
-**Purpose:** Zooms into the Content API container, showing its internal components/modules.
+**Purpose:** Zooms into the Django 4.2 + Wagtail backend container, showing its internal components and architecture.
 
 ```mermaid
 graph TB
     %% External Containers
-    APIGateway["🚪 API Gateway"]
-    WebApp["🖥️ Web Application"]
-    PostgresDB["🗄️ PostgreSQL Database"]
-    Redis["⚡ Redis Cache"]
-    SearchEngine["🔍 Elasticsearch"]
-    MessageQueue["📨 Message Queue"]
+    AngularApp["🅰️ Angular Frontend"]
+    Auth0["🔐 Auth0"]
+    PostgresDB["🐘 PostgreSQL"]
+    Redis["⚡ Redis"]
+    MeiliSearch["🔍 MeiliSearch"]
+    MinIO["📁 MinIO Storage"]
 
-    
-    subgraph "Content API Container"
-        %% Controllers
-        ContentController["📝 Content Controller<br/>Handles content CRUD requests"]
-        CategoryController["🏷️ Category Controller<br/>Manages content categories"]
-        TagController["🔖 Tag Controller<br/>Manages content tags"]
-        WorkflowController["⚡ Workflow Controller<br/>Content publishing workflow"]
+    subgraph "Django 4.2 + Wagtail Backend Container"
+        %% Django Core
+        URLDispatcher["🔀 URL Dispatcher<br/>config/urls.py<br/>Route requests to apps"]
         
-        %% Services
-        ContentService["📋 Content Service<br/>Business logic for content"]
-        ValidationService["✅ Validation Service<br/>Content validation rules"]
-        PermissionService["🔐 Permission Service<br/>Access control logic"]
-        SearchService["🔍 Search Service<br/>Content search & indexing"]
-        CacheService["⚡ Cache Service<br/>Caching strategies"]
+        %% Middleware Layer
+        CORSMiddleware["🌐 CORS Middleware<br/>Cross-origin requests"]
+        AuthMiddleware["🔐 Auth Middleware<br/>JWT token validation"]
+        PermissionMiddleware["🛡️ Permission Middleware<br/>Role-based access control"]
         
-        %% Repositories
-        ContentRepository["📊 Content Repository<br/>Data access layer"]
-        CategoryRepository["📊 Category Repository<br/>Category data access"]
-        TagRepository["📊 Tag Repository<br/>Tag data access"]
-        AuditRepository["📊 Audit Repository<br/>Change tracking"]
+        %% Django Apps
+        subgraph "Django Apps (Domain-Driven)"
+            %% Core App
+            CoreApp["⚙️ Core App<br/>• Base models & utilities<br/>• Custom user model<br/>• Common permissions<br/>• Shared validators"]
+            
+            %% Accounts App
+            AccountsApp["👥 Accounts App<br/>• User management<br/>• Auth0 integration<br/>• Profile management<br/>• Role assignments"]
+            
+            %% Content App
+            ContentApp["📚 Content App<br/>• Quranic resources<br/>• Text & audio content<br/>• Multilingual support<br/>• Version control"]
+            
+            %% Licensing App
+            LicensingApp["📄 Licensing App<br/>• License management<br/>• Access requests<br/>• Usage permissions<br/>• Commercial terms"]
+            
+            %% Analytics App
+            AnalyticsApp["📊 Analytics App<br/>• Usage tracking<br/>• API metrics<br/>• User behavior<br/>• License compliance"]
+            
+            %% API App
+            APIApp["🔌 API App<br/>• REST endpoints<br/>• API versioning<br/>• Response formatting<br/>• Error handling"]
+        end
+        
+        %% Wagtail CMS Components
+        subgraph "Wagtail CMS Layer"
+            WagtailAdmin["👨‍💼 Wagtail Admin<br/>Editorial interface"]
+            WagtailPages["📄 Wagtail Pages<br/>Content management"]
+            WagtailWorkflows["⚡ Wagtail Workflows<br/>Content approval"]
+            WagtailSearch["🔍 Wagtail Search<br/>CMS search integration"]
+        end
+        
+        %% Django REST Framework
+        subgraph "Django REST Framework"
+            APIViews["🔗 API Views<br/>• ViewSets<br/>• Generic views<br/>• Custom endpoints"]
+            Serializers["📝 Serializers<br/>• Data validation<br/>• JSON formatting<br/>• Field mapping"]
+            Permissions["🔐 DRF Permissions<br/>• Custom permissions<br/>• Object-level auth<br/>• API throttling"]
+            Pagination["📑 Pagination<br/>• Page numbering<br/>• Cursor pagination<br/>• Custom page sizes"]
+        end
+        
+        %% Database Layer
+        DjangoORM["🗄️ Django ORM<br/>• Model definitions<br/>• Query optimization<br/>• Migration management<br/>• Database relationships"]
+        
+        %% Background Tasks
+        CeleryTasks["⚙️ Celery Tasks<br/>• Content indexing<br/>• Email notifications<br/>• File processing<br/>• Analytics updates"]
+        
+        %% Services Layer
+        subgraph "Business Services"
+            AuthService["🔐 Auth Service<br/>Auth0 token validation"]
+            ContentService["📚 Content Service<br/>Content management logic"]
+            LicenseService["📄 License Service<br/>Access control logic"]
+            SearchService["🔍 Search Service<br/>MeiliSearch integration"]
+            NotificationService["📧 Notification Service<br/>Email & alerts"]
+        end
         
         %% Utilities
-        SlugGenerator["🔗 Slug Generator<br/>URL-friendly identifiers"]
-        MarkdownProcessor["📝 Markdown Processor<br/>Content formatting"]
-        ImageProcessor["🖼️ Image Processor<br/>Image optimization"]
-        EventPublisher["📡 Event Publisher<br/>Domain events"]
-        
-        %% Middleware
-        AuthMiddleware["🔐 Auth Middleware<br/>Request authentication"]
-        ValidationMiddleware["✅ Validation Middleware<br/>Input validation"]
-        RateLimitMiddleware["⏱️ Rate Limit Middleware<br/>API rate limiting"]
-        
+        subgraph "Utilities & Helpers"
+            FileHandlers["📁 File Handlers<br/>Upload & processing"]
+            Validators["✅ Validators<br/>Custom validation"]
+            Signals["📡 Django Signals<br/>Event handling"]
+            Management["⚙️ Management Commands<br/>CLI operations"]
+        end
     end
     
-    %% External to API
-    APIGateway -->|"HTTP requests"| AuthMiddleware
-    WebApp -->|"Content requests"| AuthMiddleware
+    %% External Requests
+    AngularApp -->|"HTTP/HTTPS<br/>JWT Bearer Token"| URLDispatcher
     
     %% Middleware Chain
-    AuthMiddleware --> ValidationMiddleware
-    ValidationMiddleware --> RateLimitMiddleware
+    URLDispatcher --> CORSMiddleware
+    CORSMiddleware --> AuthMiddleware
+    AuthMiddleware --> PermissionMiddleware
     
-    %% Controllers
-    RateLimitMiddleware --> ContentController
-    RateLimitMiddleware --> CategoryController
-    RateLimitMiddleware --> TagController
-    RateLimitMiddleware --> WorkflowController
+    %% Auth Integration
+    AuthMiddleware -->|"Token validation<br/>OIDC/JWKS"| Auth0
     
-    %% Controller to Services
-    ContentController --> ContentService
-    ContentController --> ValidationService
-    ContentController --> PermissionService
+    %% App Routing
+    PermissionMiddleware --> CoreApp
+    PermissionMiddleware --> AccountsApp
+    PermissionMiddleware --> ContentApp
+    PermissionMiddleware --> LicensingApp
+    PermissionMiddleware --> AnalyticsApp
+    PermissionMiddleware --> APIApp
     
-    CategoryController --> ContentService
-    TagController --> ContentService
-    WorkflowController --> ContentService
+    %% Wagtail Integration
+    URLDispatcher --> WagtailAdmin
+    WagtailAdmin --> WagtailPages
+    WagtailAdmin --> WagtailWorkflows
+    WagtailPages --> WagtailSearch
+    
+    %% API Layer
+    APIApp --> APIViews
+    APIViews --> Serializers
+    APIViews --> Permissions
+    APIViews --> Pagination
     
     %% Service Dependencies
-    ContentService --> ContentRepository
-    ContentService --> SearchService
-    ContentService --> CacheService
-    ContentService --> EventPublisher
+    AccountsApp --> AuthService
+    ContentApp --> ContentService
+    ContentApp --> SearchService
+    LicensingApp --> LicenseService
+    AnalyticsApp --> NotificationService
     
-    ValidationService --> MarkdownProcessor
-    SearchService --> SearchEngine
-    CacheService --> Redis
+    %% Database Access
+    CoreApp --> DjangoORM
+    AccountsApp --> DjangoORM
+    ContentApp --> DjangoORM
+    LicensingApp --> DjangoORM
+    AnalyticsApp --> DjangoORM
+    WagtailPages --> DjangoORM
     
-    %% Repository to Database
-    ContentRepository --> PostgresDB
-    CategoryRepository --> PostgresDB
-    TagRepository --> PostgresDB
-    AuditRepository --> PostgresDB
+    %% External Service Integration
+    DjangoORM --> PostgresDB
+    AuthService --> Redis
+    SearchService --> MeiliSearch
+    FileHandlers --> MinIO
+    CeleryTasks --> Redis
     
-    %% Utilities
-    ContentService --> SlugGenerator
-    ContentService --> MarkdownProcessor
-    ContentService --> ImageProcessor
+    %% Background Processing
+    ContentService --> CeleryTasks
+    NotificationService --> CeleryTasks
     
-    %% Event Publishing
-    EventPublisher --> MessageQueue
+    %% Signal Handling
+    DjangoORM --> Signals
+    Signals --> CeleryTasks
     
-    %% Search Integration
-    ContentService --> SearchService
-    SearchService --> SearchEngine
-    
-
+    %% Wagtail Search Integration
+    WagtailSearch --> SearchService
     
     %% Styling
-    classDef controllerClass fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
-    classDef serviceClass fill:#fff3e0,stroke:#f57c00,stroke-width:2px
-    classDef repositoryClass fill:#fce4ec,stroke:#c2185b,stroke-width:2px
-    classDef utilityClass fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    classDef middlewareClass fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    classDef externalClass fill:#ffebee,stroke:#d32f2f,stroke-width:2px
+    classDef appClass fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
+    classDef wagtailClass fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef drfClass fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    classDef serviceClass fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef utilityClass fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef middlewareClass fill:#ffebee,stroke:#d32f2f,stroke-width:2px
+    classDef externalClass fill:#f1f8e9,stroke:#33691e,stroke-width:2px
     
-    class ContentController,CategoryController,TagController,WorkflowController controllerClass
-    class ContentService,ValidationService,PermissionService,SearchService,CacheService serviceClass
-    class ContentRepository,CategoryRepository,TagRepository,AuditRepository repositoryClass
-    class SlugGenerator,MarkdownProcessor,ImageProcessor,EventPublisher utilityClass
-    class AuthMiddleware,ValidationMiddleware,RateLimitMiddleware middlewareClass
-    class APIGateway,WebApp,PostgresDB,Redis,SearchEngine,MessageQueue externalClass
+    class CoreApp,AccountsApp,ContentApp,LicensingApp,AnalyticsApp,APIApp appClass
+    class WagtailAdmin,WagtailPages,WagtailWorkflows,WagtailSearch wagtailClass
+    class APIViews,Serializers,Permissions,Pagination drfClass
+    class AuthService,ContentService,LicenseService,SearchService,NotificationService serviceClass
+    class FileHandlers,Validators,Signals,Management utilityClass
+    class CORSMiddleware,AuthMiddleware,PermissionMiddleware,URLDispatcher middlewareClass
+    class AngularApp,Auth0,PostgresDB,Redis,MeiliSearch,MinIO externalClass
 ```
 
 ## Description
 
-This diagram focuses on the internal structure of the Content API container, showing how it's organized into layers and components:
+This diagram focuses on the internal structure of the Django 4.2 + Wagtail backend container, showing how it's organized using Django's app-based architecture:
 
-### Controllers Layer
-- **Content Controller**: Handles HTTP requests for content CRUD operations
-- **Category Controller**: Manages content categorization endpoints
-- **Tag Controller**: Handles content tagging functionality
-- **Workflow Controller**: Manages content publishing and approval workflows
+### Django Apps (Domain-Driven Design)
+- **Core App**: Foundation app with base models, custom user model, shared utilities, and common permissions
+- **Accounts App**: User management, Auth0 integration, user profiles, and role assignments
+- **Content App**: Quranic resources management, text & audio content, multilingual support, and version control
+- **Licensing App**: License management, access requests, usage permissions, and commercial terms
+- **Analytics App**: Usage tracking, API metrics, user behavior analysis, and license compliance monitoring
+- **API App**: REST endpoints, API versioning, response formatting, and centralized error handling
 
-### Middleware Layer
-- **Auth Middleware**: Validates authentication tokens and user sessions
-- **Validation Middleware**: Validates incoming request data and parameters
-- **Rate Limit Middleware**: Prevents API abuse and ensures fair usage
+### Wagtail CMS Layer
+- **Wagtail Admin**: Rich editorial interface for content management
+- **Wagtail Pages**: Structured content management with page trees
+- **Wagtail Workflows**: Content approval and publishing workflows
+- **Wagtail Search**: Integrated search functionality for CMS content
 
-### Services Layer (Business Logic)
-- **Content Service**: Core business logic for content management
-- **Validation Service**: Content validation rules and sanitization
-- **Permission Service**: Access control and authorization logic
-- **Search Service**: Content indexing and search functionality
-- **Cache Service**: Caching strategies and cache invalidation
+### Django REST Framework Components
+- **API Views**: ViewSets, generic views, and custom endpoints for all API functionality
+- **Serializers**: Data validation, JSON formatting, and field mapping for API responses
+- **Permissions**: Custom permission classes, object-level authorization, and API throttling
+- **Pagination**: Page numbering, cursor pagination, and customizable page sizes
 
-### Repository Layer (Data Access)
-- **Content Repository**: Data access patterns for content entities
-- **Category Repository**: Category-specific data operations
-- **Tag Repository**: Tag management data access
-- **Audit Repository**: Change tracking and versioning
+### Business Services Layer
+- **Auth Service**: Auth0 token validation and user authentication logic
+- **Content Service**: Core business logic for Quranic content management
+- **License Service**: Access control logic and license validation
+- **Search Service**: MeiliSearch integration for full-text search
+- **Notification Service**: Email notifications and system alerts
 
-### Utility Components
-- **Slug Generator**: Creates SEO-friendly URL slugs
-- **Markdown Processor**: Converts markdown to HTML and handles formatting
-- **Image Processor**: Image optimization and transformation
-- **Event Publisher**: Publishes domain events for external processing
+### Utilities & Infrastructure
+- **Django ORM**: Model definitions, query optimization, and database relationship management
+- **Celery Tasks**: Background processing for indexing, notifications, and file operations
+- **File Handlers**: Upload processing and MinIO storage integration
+- **Django Signals**: Event-driven architecture for decoupled component communication
+- **Management Commands**: CLI operations for maintenance and data management
+
+### Middleware Pipeline
+1. **CORS Middleware**: Handles cross-origin requests from Angular frontend
+2. **Auth Middleware**: Validates JWT tokens from Auth0 and sets user context
+3. **Permission Middleware**: Enforces role-based access control throughout the application
 
 ### Architecture Patterns
-- **Layered Architecture**: Clear separation of concerns across layers
-- **Repository Pattern**: Abstraction over data access logic
-- **Middleware Pattern**: Request processing pipeline
-- **Event-Driven**: Domain events for loose coupling
-- **Dependency Injection**: Service dependencies managed through DI container
+- **Domain-Driven Design**: Apps organized around business domains (accounts, content, licensing)
+- **Service Layer Pattern**: Business logic encapsulated in dedicated service classes
+- **Repository Pattern**: Django ORM acts as repository layer with model managers
+- **Event-Driven Architecture**: Django signals enable loose coupling between components
+- **Middleware Pattern**: Request processing pipeline with cross-cutting concerns
+- **Background Processing**: Celery tasks for non-blocking operations
+
+### Key Features
+- **Multilingual Support**: Django i18n for Arabic and English content
+- **Role-Based Security**: Custom permissions integrated with Auth0 roles
+- **RESTful API**: Complete REST API following OpenAPI specification
+- **Content Workflows**: Wagtail workflows for content review and approval
+- **Search Integration**: MeiliSearch for fast, relevant content discovery
+- **Scalable Background Processing**: Celery workers for heavy operations

@@ -1,75 +1,76 @@
 # Level 2: Container Diagram - Itqan CMS
 
 **Audience:** Architects, Technical Leads  
-**Purpose:** Shows the major containers (apps, services, DBs, APIs) and how they interact.
+**Purpose:** Shows the major containers (apps, services, DBs, APIs) and how they interact in the Quranic Content Management System.
 
 ```mermaid
 graph TB
     %% External Actors
-    Users["👤 Users<br/>(All User Types)"]
+    Publishers["👤 Publishers"]
+    Developers["👤 Developers"]
     Admins["👤 Administrators"]
+    Reviewers["👤 Reviewers"]
     
     %% External Systems
-    EmailService["📧 Email Service"]
-    CDN["🌐 CDN"]
-    Analytics["📊 Analytics Service"]
+    Auth0["🔐 Auth0<br/>Identity Provider"]
+    AlibabaOSS["☁️ Alibaba OSS + CDN"]
+    EmailService["📧 Mailgun"]
+    ExternalAPIs["🔗 External Quranic APIs"]
     
-    subgraph "Itqan CMS System"
-        %% Frontend Containers
-        WebApp["🖥️ Web Application<br/>(React/Vue.js)<br/>Content management interface"]
-        PublicSite["🌐 Public Website<br/>(Next.js/Static)<br/>Public-facing content"]
+    subgraph "Itqan CMS System - Kubernetes Cluster"
+        %% Frontend Container
+        AngularApp["🅰️ Angular 19 Frontend<br/>(Single Page Application)<br/>• NG-ZORRO UI Components<br/>• Auth0 SPA SDK<br/>• Bilingual (EN/AR)<br/>• Responsive Design"]
         
-        %% Backend Containers
-        APIGateway["🚪 API Gateway<br/>(Node.js/Express)<br/>Request routing & auth"]
-        ContentAPI["📝 Content API<br/>(Node.js/Express)<br/>Content management"]
-        UserAPI["👥 User API<br/>(Node.js/Express)<br/>User & auth management"]
-        MediaAPI["🖼️ Media API<br/>(Node.js/Express)<br/>File & asset management"]
+        %% Backend Container
+        DjangoAPI["🐍 Django 4.2 + Wagtail<br/>(REST API + CMS Backend)<br/>• Django REST Framework<br/>• Wagtail Content Management<br/>• Auth0 OIDC Validation<br/>• Role-based Permissions"]
         
-        %% Data Containers
-        PostgresDB["🗄️ PostgreSQL Database<br/>(Primary Data Store)<br/>Content, users, metadata"]
-        Redis["⚡ Redis Cache<br/>(In-Memory Cache)<br/>Sessions, temp data"]
-        FileStorage["📁 File Storage<br/>(S3/MinIO)<br/>Media files, documents"]
+        %% Background Processing
+        CeleryWorker["⚙️ Celery Workers<br/>(Background Tasks)<br/>• Content Indexing<br/>• Email Notifications<br/>• File Processing<br/>• Analytics Processing"]
         
-        %% Infrastructure Containers
-        SearchEngine["🔍 Elasticsearch<br/>(Search Index)<br/>Content search"]
-        MessageQueue["📨 Message Queue<br/>(Redis/RabbitMQ)<br/>Background jobs"]
+        %% Data Layer
+        PostgresDB["🐘 PostgreSQL 16<br/>(Primary Database)<br/>• User Accounts<br/>• Quranic Resources<br/>• Licenses & Access Requests<br/>• Usage Analytics"]
+        
+        Redis["⚡ Redis<br/>(Cache + Message Broker)<br/>• Session Storage<br/>• API Response Caching<br/>• Celery Task Queue<br/>• Rate Limiting"]
+        
+        MeiliSearch["🔍 MeiliSearch v1.6<br/>(Search Engine)<br/>• Full-text Search<br/>• Quranic Content Indexing<br/>• Multi-language Support<br/>• Faceted Search"]
+        
+        %% Development Storage (will be replaced by Alibaba OSS in prod)
+        MinIO["📁 MinIO<br/>(S3-Compatible Storage)<br/>• Audio Files<br/>• Document Storage<br/>• Media Assets<br/>• Backup Archives"]
         
     end
     
-    %% User to Frontend
-    Users -->|"HTTPS requests"| WebApp
-    Users -->|"Views content"| PublicSite
-    Admins -->|"Admin interface"| WebApp
+    %% User Interactions
+    Publishers -->|"HTTPS/Auth0 Login<br/>Upload Quranic content"| AngularApp
+    Developers -->|"HTTPS/Auth0 Login<br/>Request API access"| AngularApp
+    Admins -->|"HTTPS/Auth0 Login<br/>System management"| AngularApp
+    Reviewers -->|"HTTPS/Auth0 Login<br/>Content review"| AngularApp
     
     %% Frontend to Backend
-    WebApp -->|"API calls (REST/GraphQL)"| APIGateway
-    PublicSite -->|"Content requests"| APIGateway
+    AngularApp -->|"REST API Calls<br/>JWT Authentication<br/>JSON over HTTPS"| DjangoAPI
     
-    %% API Gateway routing
-    APIGateway -->|"Routes content requests"| ContentAPI
-    APIGateway -->|"Routes user requests"| UserAPI
-    APIGateway -->|"Routes media requests"| MediaAPI
+    %% Authentication Flow
+    AngularApp -->|"User Login/Register<br/>Token Exchange"| Auth0
+    DjangoAPI -->|"Token Validation<br/>OIDC/JWKS"| Auth0
     
-    %% Backend to Data
-    ContentAPI -->|"CRUD operations"| PostgresDB
-    ContentAPI -->|"Search queries"| SearchEngine
-    ContentAPI -->|"Cache content"| Redis
-    
-    UserAPI -->|"User data"| PostgresDB
-    UserAPI -->|"Session storage"| Redis
-    
-    MediaAPI -->|"File metadata"| PostgresDB
-    MediaAPI -->|"Store/retrieve files"| FileStorage
+    %% Backend Data Access
+    DjangoAPI -->|"ORM Queries<br/>User/Content/License Data"| PostgresDB
+    DjangoAPI -->|"Cache Read/Write<br/>Session Management"| Redis
+    DjangoAPI -->|"Search Queries<br/>Content Discovery"| MeiliSearch
+    DjangoAPI -->|"File Upload/Download<br/>Media Management"| MinIO
     
     %% Background Processing
-    ContentAPI -->|"Queue jobs"| MessageQueue
-    MediaAPI -->|"Queue processing"| MessageQueue
-    MessageQueue -->|"Process content"| SearchEngine
+    DjangoAPI -->|"Queue Tasks<br/>Async Operations"| Redis
+    Redis -->|"Task Distribution"| CeleryWorker
+    CeleryWorker -->|"Update Search Index"| MeiliSearch
+    CeleryWorker -->|"Process Content"| PostgresDB
+    CeleryWorker -->|"File Operations"| MinIO
     
     %% External Integrations
-    UserAPI -->|"Send notifications"| EmailService
-    MediaAPI -->|"CDN sync"| CDN
-    APIGateway -->|"Usage tracking"| Analytics
+    CeleryWorker -->|"Send Notifications<br/>SMTP/API"| EmailService
+    DjangoAPI -->|"Import Verified Content<br/>REST/GraphQL"| ExternalAPIs
+    
+    %% Production Storage (Future)
+    DjangoAPI -.->|"Production File Storage<br/>(Future Migration)"| AlibabaOSS
     
     %% Styling
     classDef userClass fill:#e1f5fe,stroke:#01579b,stroke-width:2px
@@ -79,40 +80,72 @@ graph TB
     classDef infraClass fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
     classDef externalClass fill:#ffebee,stroke:#d32f2f,stroke-width:2px
     
-    class Users,Admins userClass
-    class WebApp,PublicSite frontendClass
-    class APIGateway,ContentAPI,UserAPI,MediaAPI backendClass
-    class PostgresDB,Redis,FileStorage dataClass
-    class SearchEngine,MessageQueue infraClass
-    class EmailService,CDN,Analytics externalClass
+    class Publishers,Developers,Admins,Reviewers userClass
+    class AngularApp frontendClass
+    class DjangoAPI backendClass
+    class PostgresDB,MinIO dataClass
+    class Redis,MeiliSearch,CeleryWorker infraClass
+    class Auth0,AlibabaOSS,EmailService,ExternalAPIs externalClass
 ```
 
 ## Description
 
-This diagram shows the high-level technical architecture of the Itqan CMS system, breaking it down into major containers:
+This diagram shows the high-level technical architecture of the Itqan Quranic Content Management System, breaking it down into major containers:
 
-### Frontend Containers
-- **Web Application**: React/Vue.js based admin interface for content management
-- **Public Website**: Next.js/Static site for public content consumption
+### Frontend Container
+- **Angular 19 SPA**: Single-page application with NG-ZORRO (Ant Design for Angular) components
+  - **Authentication**: Auth0 SPA SDK for secure user login
+  - **Internationalization**: Bilingual support (English/Arabic) with RTL layout
+  - **Responsive Design**: Mobile-first approach using NG-ZORRO responsive components
+  - **State Management**: Angular Signals for reactive state management
 
-### Backend API Containers
-- **API Gateway**: Central entry point handling routing, authentication, and rate limiting
-- **Content API**: Manages all content-related operations (CRUD, publishing, workflow)
-- **User API**: Handles user management, authentication, and authorization
-- **Media API**: Manages file uploads, processing, and asset delivery
+### Backend Container
+- **Django 4.2 + Wagtail**: Monolithic backend providing both API and CMS functionality
+  - **REST API**: Django REST Framework for all client-server communication
+  - **Content Management**: Wagtail CMS for editorial workflows and content approval
+  - **Authentication**: Auth0 OIDC/JWKS token validation
+  - **Authorization**: Role-based access control (Admin, Publisher, Developer, Reviewer)
+
+### Background Processing
+- **Celery Workers**: Distributed task processing for:
+  - Content indexing in MeiliSearch
+  - Email notifications via Mailgun
+  - File processing and optimization
+  - Usage analytics calculation
 
 ### Data Storage Containers
-- **PostgreSQL Database**: Primary relational database for structured data
-- **Redis Cache**: In-memory cache for sessions, temporary data, and performance optimization
-- **File Storage**: Object storage (S3/MinIO) for media files and documents
+- **PostgreSQL 16**: Primary relational database storing:
+  - User accounts and profiles
+  - Quranic resources (text, audio metadata)
+  - Licenses and access requests
+  - Usage events and analytics
+- **MinIO**: S3-compatible object storage for development (replaced by Alibaba OSS in production)
+- **Redis**: Multi-purpose in-memory store for:
+  - User session storage
+  - API response caching
+  - Celery task queue
+  - Rate limiting counters
 
 ### Infrastructure Containers
-- **Elasticsearch**: Search engine for full-text content search and indexing
-- **Message Queue**: Asynchronous job processing (Redis/RabbitMQ)
+- **MeiliSearch v1.6**: Specialized search engine for:
+  - Full-text search across Quranic content
+  - Multi-language indexing (Arabic, English, translations)
+  - Faceted search with filters
+  - Typo-tolerant search capabilities
 
 ### Key Architecture Patterns
-- **Microservices**: Separate APIs for different domains (content, user, media)
-- **API Gateway Pattern**: Centralized routing and cross-cutting concerns
-- **CQRS**: Separate read/write paths with caching and search optimization
-- **Event-Driven**: Background processing via message queues
-- **Stateless Services**: Session state managed in Redis for scalability
+- **Monolithic Backend**: Django handles all business logic with clear app separation
+- **SPA Frontend**: Angular provides rich, interactive user experience
+- **Microservices Data Layer**: Separate specialized services (search, cache, queue)
+- **Event-Driven Processing**: Background tasks via Celery for scalability
+- **Headless CMS**: Wagtail provides content management without coupling to presentation layer
+
+### Technology Stack Summary
+- **Frontend**: Angular 19, NG-ZORRO, TypeScript, Auth0 SPA SDK
+- **Backend**: Django 4.2 LTS, Wagtail, Django REST Framework, Python
+- **Database**: PostgreSQL 16 with UUID primary keys
+- **Search**: MeiliSearch v1.6 with Arabic language support
+- **Cache/Queue**: Redis for both caching and message brokering
+- **Storage**: MinIO (dev) → Alibaba OSS (prod)
+- **Authentication**: Auth0 with OAuth 2.0 + OIDC
+- **Background Tasks**: Celery with Redis broker
