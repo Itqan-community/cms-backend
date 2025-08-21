@@ -85,7 +85,7 @@ services:
       - AUTH0_ROLE_CLAIM=https://cms.itqan.dev/roles
       - AUTH0_AUDIENCE=https://api.cms.itqan.dev
       - AUTH0_DOMAIN=dev-itqan.eu.auth0.com
-      - AUTH0_CLIENT_ID=N3S0JhhYSWaLuhVMuBb9ZTX4gEPJ0G8f
+      - AUTH0_CLIENT_ID=h4NPegjClDuYxZefNBeXIhqXbu9SV6aC
       - AUTH0_CLIENT_SECRET=AjwysVUiFkVbZ1SEjFBbAcNMIPEEQSimbMKx_aMraEW5SiKGZgu_7Smoei8T8kUk
     ports:
       - "8000:8000"
@@ -128,7 +128,7 @@ services:
       - AUTH0_ROLE_CLAIM=https://cms.itqan.dev/roles
       - AUTH0_AUDIENCE=https://api.cms.itqan.dev
       - AUTH0_DOMAIN=dev-itqan.eu.auth0.com
-      - AUTH0_CLIENT_ID=N3S0JhhYSWaLuhVMuBb9ZTX4gEPJ0G8f
+      - AUTH0_CLIENT_ID=h4NPegjClDuYxZefNBeXIhqXbu9SV6aC
       - AUTH0_CLIENT_SECRET=AjwysVUiFkVbZ1SEjFBbAcNMIPEEQSimbMKx_aMraEW5SiKGZgu_7Smoei8T8kUk
     volumes:
       - ../../backend:/app

@@ -3,7 +3,7 @@ export const environment = {
   apiUrl: 'https://cms.itqan.dev/api/v1', // Production API URL
   auth0: {
     domain: 'dev-itqan.eu.auth0.com', // Production Auth0 domain
-    clientId: "N3S0JhhYSWaLuhVMuBb9ZTX4gEPJ0G8f",
+    clientId: "h4NPegjClDuYxZefNBeXIhqXbu9SV6aC",
     audience: 'https://api.cms.itqan.dev',
     redirectUri: `${window.location.origin}/auth/callback`,
     scope: 'openid profile email read:current_user update:current_user_metadata'

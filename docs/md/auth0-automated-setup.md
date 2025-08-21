@@ -10,7 +10,7 @@ Successfully integrated real Auth0 development credentials into the Itqan CMS An
 
 ### Development Credentials
 - **Domain:** `dev-itqan.eu.auth0.com`
-- **Client ID:** `N3S0JhhYSWaLuhVMuBb9ZTX4gEPJ0G8f`
+- **Client ID:** `h4NPegjClDuYxZefNBeXIhqXbu9SV6aC`
 - **Client Secret:** `AjwysVUiFkVbZ1SEjFBbAcNMIPEEQSimbMKx_aMraEW5SiKGZgu_7Smoei8T8kUk`
 - **Audience:** `https://api.cms.itqan.dev`
 - **JWKS URL:** `https://dev-itqan.eu.auth0.com/.well-known/jwks.json`
@@ -31,7 +31,7 @@ Updated `frontend/src/environments/environment.ts`:
 ```typescript
 auth0: {
   domain: 'dev-itqan.eu.auth0.com',
-  clientId: 'N3S0JhhYSWaLuhVMuBb9ZTX4gEPJ0G8f',
+  clientId: 'h4NPegjClDuYxZefNBeXIhqXbu9SV6aC',
   audience: 'https://api.cms.itqan.dev',
   redirectUri: `${window.location.origin}/auth/callback`,
   scope: 'openid profile email read:current_user update:current_user_metadata'
@@ -58,7 +58,7 @@ auth0: {
 Backend configured with Auth0 environment variables:
 ```bash
 AUTH0_DOMAIN=dev-itqan.eu.auth0.com
-AUTH0_CLIENT_ID=N3S0JhhYSWaLuhVMuBb9ZTX4gEPJ0G8f
+AUTH0_CLIENT_ID=h4NPegjClDuYxZefNBeXIhqXbu9SV6aC
 AUTH0_CLIENT_SECRET=AjwysVUiFkVbZ1SEjFBbAcNMIPEEQSimbMKx_aMraEW5SiKGZgu_7Smoei8T8kUk
 AUTH0_AUDIENCE=https://api.cms.itqan.dev
 AUTH0_ISSUER=https://dev-itqan.eu.auth0.com/
@@ -91,7 +91,7 @@ curl --request POST \
   --url https://dev-itqan.eu.auth0.com/oauth/token \
   --header 'content-type: application/json' \
   --data '{
-    "client_id":"N3S0JhhYSWaLuhVMuBb9ZTX4gEPJ0G8f",
+    "client_id":"h4NPegjClDuYxZefNBeXIhqXbu9SV6aC",
     "client_secret":"AjwysVUiFkVbZ1SEjFBbAcNMIPEEQSimbMKx_aMraEW5SiKGZgu_7Smoei8T8kUk",
     "audience":"https://api.cms.itqan.dev",
     "grant_type":"client_credentials"
