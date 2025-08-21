@@ -1,11 +1,11 @@
 import { Routes } from '@angular/router';
 
 export const routes: Routes = [
-  // Default redirect to registration for new users
+  // Landing page for all users (authenticated and unauthenticated)
   {
     path: '',
-    redirectTo: '/auth/register',
-    pathMatch: 'full'
+    loadComponent: () => import('./features/landing/landing-page.component').then(m => m.LandingPageComponent),
+    title: 'Itqan CMS - Islamic Content Management System'
   },
   
   // Dashboard

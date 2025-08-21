@@ -3,47 +3,53 @@
   "context": {
     "project": "Itqan CMS",
     "feature": "Email Notification System",
-    "tech_stack": ["Strapi v5", "Email provider", "Template engine"],
-    "notification_types": ["Registration", "Workflow transitions", "License requests", "System alerts"]
+    "tech_stack": ["Django 4.2", "Celery", "Angular 19", "NG-ZORRO", "Email provider", "Django templates"],
+    "notification_types": ["Registration", "Workflow transitions", "License requests", "System alerts"],
+    "complete_screen_flow": "docs/screens/cms-screens.png"
   },
   "objectives": [
-    "Configure SMTP email provider in Strapi",
-    "Create email templates for different notification types",
-    "Implement automated emails for user registration and workflow events",
+    "Configure SMTP email provider in Django settings",
+    "Create Django email templates for different notification types",
+    "Implement automated emails for user registration and Wagtail workflow events using Celery",
+    "Create Angular email template management interface (ADMIN-007)",
     "Set up admin notifications for important system events"
   ],
   "tasks": [
-    "Configure email provider plugin in Strapi with SMTP settings",
-    "Create email templates for registration welcome and verification",
-    "Implement workflow transition emails (draft submitted, review approved, etc.)",
-    "Create license request notification emails for publishers",
-    "Set up admin alert emails for system events and errors",
-    "Add email template management interface in admin",
-    "Implement email queue for reliable delivery",
-    "Create bilingual email templates (English/Arabic)",
-    "Add email preferences and unsubscribe functionality",
-    "Test email delivery and template rendering"
+    "Configure Django email backend with SMTP settings in Django settings",
+    "Create Django email templates for registration welcome and verification",
+    "Implement Wagtail workflow transition emails using Django signals and Celery (draft submitted, review approved, etc.)",
+    "Create license request notification emails for publishers via AccessRequest workflow",
+    "Set up admin alert emails for system events and errors using Django logging",
+    "Create Angular email template management interface (ADMIN-007) using NG-ZORRO",
+    "Implement Celery task queue for reliable email delivery",
+    "Create bilingual Django email templates (English/Arabic) with proper RTL support",
+    "Add email preferences and unsubscribe functionality via Django models",
+    "Integrate email system with cms.mdc User Access Request workflow",
+    "Test email delivery and template rendering across both Django and Angular interfaces"
   ],
   "guard_rails": [
     "All emails must include unsubscribe links for compliance",
-    "Email templates must be responsive for mobile devices",
+    "Django email templates must be responsive for mobile devices",
     "Sensitive information should not be included in email content",
-    "Email sending should not block API requests (use queue)",
-    "Failed email deliveries should be logged and retried"
+    "Email sending should not block Django API requests (use Celery queue)",
+    "Failed email deliveries should be logged and retried via Celery",
+    "Email content must follow Islamic content guidelines and cultural considerations"
   ],
   "acceptance_criteria": [
-    "Given a user registers, then they receive welcome email in their preferred language",
-    "Given content workflow changes, then relevant users receive notification emails",
-    "Given license request is submitted, then publisher receives notification email",
-    "Email templates render correctly in major email clients",
-    "Users can manage email preferences and unsubscribe from notifications"
+    "Given a user registers, then they receive welcome email in their preferred language via Celery",
+    "Given Wagtail content workflow changes, then relevant users receive notification emails",
+    "Given AccessRequest is submitted, then publisher receives notification email following cms.mdc flow",
+    "Django email templates render correctly in major email clients",
+    "Users can manage email preferences and unsubscribe via Angular interface (ADMIN-007)",
+    "Email templates support bilingual content (EN/AR) with proper RTL layout"
   ],
   "definition_of_done": [
-    "Email system configured and sending notifications reliably",
-    "All email templates created and tested in both languages",
-    "Email queue handling delivery failures and retries",
-    "Admin interface for managing email templates and settings",
-    "Email delivery monitoring and error logging implemented"
+    "Django email system configured and sending notifications reliably via Celery",
+    "All Django email templates created and tested in both languages (EN/AR)",
+    "Celery email queue handling delivery failures and retries",
+    "Angular admin interface (ADMIN-007) for managing email templates using NG-ZORRO",
+    "Email delivery monitoring and error logging implemented via Django logging",
+    "Complete integration with cms.mdc screen flow and User Access Request workflow"
   ],
   "out_of_scope": [
     "Advanced email marketing features",
@@ -52,9 +58,13 @@
   ],
   "references": [
     "docs/Itqan_CMS_BRD.md §3.7 Notifications",
-    "env.dev.example EMAIL_* configuration variables",
-    "Strapi email plugin documentation",
-    "Screen ADMIN-007: Email template editor with EN/AR bilingual support",
-    "English wireframe: ai-memory-bank/tasks/screens/en/final_wireframes.html#ADMIN-007"
+    "docs/screens/cms-screens.png - Complete screen flow with ADMIN-007",
+    "backend/config/settings/base.py - Django email configuration",
+    "Django email documentation and SMTP backend configuration",
+    "Celery task queue documentation for email processing",
+    "Screen ADMIN-007: Angular email template editor with EN/AR bilingual support using NG-ZORRO",
+    ".cursor/rules/cms.mdc - User Access Request Scenario Workflow section",
+    "backend/apps/licensing/ - AccessRequest email notifications",
+    "frontend/src/app/features/admin/email-templates/ - Angular email management interface"
   ]
 }

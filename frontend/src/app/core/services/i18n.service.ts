@@ -49,8 +49,18 @@ export class I18nService {
       'common.no': 'No',
       'common.confirm': 'Confirm',
 
+      // App
+      'app.name': 'Itqan CMS',
+
+      // Navigation
+      'nav.home': 'Home',
+      'nav.about': 'About',
+      'nav.documentation': 'Documentation',
+      'nav.api_standards': 'API Standards',
+
       // Authentication
       'auth.welcome': 'Welcome to Itqan CMS',
+      'auth.get_started': 'Get Started',
       'auth.login_title': 'Sign In to Your Account',
       'auth.register_title': 'Create Your Account',
       'auth.email': 'Email Address',
@@ -74,6 +84,68 @@ export class I18nService {
       'dashboard.stats.pending_requests': 'Pending Requests',
       'dashboard.stats.active_users': 'Active Users',
       'dashboard.stats.published_content': 'Published Content',
+
+      // Landing Page
+      'landing.hero.title': 'Authentic Islamic Content Management System',
+      'landing.hero.description': 'Aggregate, license, and distribute verified Quranic content through controlled APIs with proper Islamic licensing workflows and scholarly review.',
+      'landing.hero.start_free': 'Start Free',
+      'landing.hero.watch_demo': 'Watch Demo',
+      'landing.hero.browse_content': 'Browse Content',
+
+      // Documentation Section
+      'landing.docs.title': 'API Documentation: Data Access Standards',
+      'landing.docs.subtitle': 'This document outlines the data access standards for files. Please follow the guidance provided for each category.',
+
+      // API Usage Standards
+      'landing.docs.api_usage.title': 'API Usage Standards',
+      'landing.docs.api_usage.correct_format': 'Use the correct API format for data access.',
+      'landing.docs.api_usage.proper_indexing': 'Ensure proper indexing of the API in a correct format.',
+      'landing.docs.api_usage.verify_database': 'Verify the most beneficial database entries.',
+      'landing.docs.api_usage.example_desc': 'Example: Access verse 2:255, use getVerse(\'2:255\')',
+
+      // Word Usage Standards
+      'landing.docs.word_usage.title': 'Word Usage Standards',
+      'landing.docs.word_usage.defined_keys': 'Use the specified key definitions for words.',
+      'landing.docs.word_usage.update_list': 'Ensure updating the list of defined words.',
+      'landing.docs.word_usage.maintain_format': 'Maintain consistency in word formatting.',
+      'landing.docs.word_usage.example_desc': 'Example: To retrieve the word "Allah", use getWord("الله")',
+
+      // Tafsir Usage Standards
+      'landing.docs.tafsir_usage.title': 'Tafsir Usage Standards',
+      'landing.docs.tafsir_usage.correct_reference': 'Use the correct reference for tafsir access.',
+      'landing.docs.tafsir_usage.verify_accuracy': 'Ensure verification of translation accuracy.',
+      'landing.docs.tafsir_usage.modern_interpretations': 'Verify the existence of verified modern interpretations.',
+      'landing.docs.tafsir_usage.example_desc': 'Example: To access tafsir for verse 2:255, use getTafsir(\'2:255\')',
+
+      // Statistics
+      'landing.stats.resources': 'Islamic Resources',
+      'landing.stats.developers': 'Active Developers',
+      'landing.stats.api_calls': 'Monthly API Calls',
+      'landing.stats.countries': 'Countries Served',
+
+      // Features
+      'landing.features.title': 'Why Choose Itqan CMS?',
+      'landing.features.subtitle': 'Built specifically for Islamic content with scholarly review and authentic verification.',
+      'landing.features.authentic.title': 'Authentic Content',
+      'landing.features.authentic.description': 'All Quranic content is verified by Islamic scholars with SHA-256 integrity checksums.',
+      'landing.features.multilingual.title': 'Multilingual Support',
+      'landing.features.multilingual.description': 'Native Arabic with RTL support plus comprehensive translation management.',
+      'landing.features.api.title': 'Robust API',
+      'landing.features.api.description': 'RESTful APIs with proper authentication, rate limiting, and Islamic licensing compliance.',
+
+      // Footer
+      'footer.about.title': 'About Itqan',
+      'footer.about.description': 'Specialized headless CMS for Islamic content management with scholarly review and global distribution.',
+      'footer.resources.title': 'Resources',
+      'footer.resources.documentation': 'Documentation',
+      'footer.resources.api_reference': 'API Reference',
+      'footer.resources.guides': 'Developer Guides',
+      'footer.resources.support': 'Support',
+      'footer.legal.title': 'Legal',
+      'footer.legal.privacy': 'Privacy Policy',
+      'footer.legal.terms': 'Terms of Service',
+      'footer.legal.licenses': 'Content Licenses',
+      'footer.copyright': '© 2023 Itqan Development. All rights reserved.',
 
       // Resources
       'resources.title': 'Quranic Resources',
@@ -173,8 +245,18 @@ export class I18nService {
       'common.no': 'لا',
       'common.confirm': 'تأكيد',
 
+      // App
+      'app.name': 'نظام إتقان',
+
+      // Navigation
+      'nav.home': 'الرئيسية',
+      'nav.about': 'من المشروع',
+      'nav.documentation': 'معايير البحوث والتقنية',
+      'nav.api_standards': 'معايير استخدام آية',
+
       // Authentication
       'auth.welcome': 'مرحباً بك في نظام إتقان',
+      'auth.get_started': 'تسجيل الدخول',
       'auth.login_title': 'تسجيل الدخول إلى حسابك',
       'auth.register_title': 'إنشاء حساب جديد',
       'auth.email': 'عنوان البريد الإلكتروني',
@@ -198,6 +280,68 @@ export class I18nService {
       'dashboard.stats.pending_requests': 'الطلبات المعلقة',
       'dashboard.stats.active_users': 'المستخدمون النشطون',
       'dashboard.stats.published_content': 'المحتوى المنشور',
+
+      // Landing Page
+      'landing.hero.title': 'نظام إدارة المحتوى الإسلامي الموثق',
+      'landing.hero.description': 'يجمع ويرخص ويوزع المحتوى القرآني الموثق من خلال واجهات برمجة التطبيقات المتحكم فيها مع سير عمل الترخيص الإسلامي والمراجعة العلمية.',
+      'landing.hero.start_free': 'ابدأ مجاناً',
+      'landing.hero.watch_demo': 'شاهد العرض التوضيحي',
+      'landing.hero.browse_content': 'تصفح المحتوى',
+
+      // Documentation Section
+      'landing.docs.title': 'الوثائق: معايير الوصول إلى البيانات',
+      'landing.docs.subtitle': 'يوضح هذا المستند معايير الوصول إلى البيانات في الملفات. يرجى اتباع الإرشادات أدناه لكل فئة.',
+
+      // API Usage Standards
+      'landing.docs.api_usage.title': 'معايير استخدام آية',
+      'landing.docs.api_usage.correct_format': 'استخدم تنسيق معرف الآية الصحيح.',
+      'landing.docs.api_usage.proper_indexing': 'تأكد من فهرسة الآية بشكل صحيح.',
+      'landing.docs.api_usage.verify_database': 'تحقق من أكبر التحديثات في قاعدة بيانات الآيات.',
+      'landing.docs.api_usage.example_desc': 'مثال: للوصول إلى الآية 2:255، استخدم getVerse(\'2:255\')',
+
+      // Word Usage Standards
+      'landing.docs.word_usage.title': 'معايير استخدام الكلمات',
+      'landing.docs.word_usage.defined_keys': 'استخدم مفاتيح الكلمات المحددة.',
+      'landing.docs.word_usage.update_list': 'تأكد من تحديث قائمة الكلمات.',
+      'landing.docs.word_usage.maintain_format': 'الحفاظ على الاتساق في تنسيق الكلمات.',
+      'landing.docs.word_usage.example_desc': 'مثال: لاسترجاع كلمة "الله"، استخدم getWord("الله")',
+
+      // Tafsir Usage Standards
+      'landing.docs.tafsir_usage.title': 'معايير استخدام تفسير',
+      'landing.docs.tafsir_usage.correct_reference': 'استخدم مرجع تفسير الصحيح.',
+      'landing.docs.tafsir_usage.verify_accuracy': 'تأكد من دقة الترجمات.',
+      'landing.docs.tafsir_usage.modern_interpretations': 'تحقق من وجود تفسيرات محدثة لتفسير.',
+      'landing.docs.tafsir_usage.example_desc': 'مثال: للوصول إلى تفسير للآية 2:255، استخدم getTafsir(\'2:255\')',
+
+      // Statistics
+      'landing.stats.resources': 'الموارد الإسلامية',
+      'landing.stats.developers': 'المطورين النشطين',
+      'landing.stats.api_calls': 'استدعاءات API الشهرية',
+      'landing.stats.countries': 'البلدان المخدومة',
+
+      // Features
+      'landing.features.title': 'لماذا تختار نظام إتقان؟',
+      'landing.features.subtitle': 'مصمم خصيصاً للمحتوى الإسلامي مع المراجعة العلمية والتحقق الموثق.',
+      'landing.features.authentic.title': 'محتوى موثق',
+      'landing.features.authentic.description': 'جميع المحتوى القرآني تم التحقق منه من قبل علماء المسلمين مع مجاميع التحقق SHA-256.',
+      'landing.features.multilingual.title': 'دعم متعدد اللغات',
+      'landing.features.multilingual.description': 'العربية الأصلية مع دعم RTL بالإضافة إلى إدارة الترجمة الشاملة.',
+      'landing.features.api.title': 'واجهة برمجة تطبيقات قوية',
+      'landing.features.api.description': 'واجهات برمجة تطبيقات RESTful مع التوثيق المناسب وتحديد المعدل والامتثال للترخيص الإسلامي.',
+
+      // Footer
+      'footer.about.title': 'عن إتقان',
+      'footer.about.description': 'نظام إدارة محتوى متخصص للمحتوى الإسلامي مع المراجعة العلمية والتوزيع العالمي.',
+      'footer.resources.title': 'الموارد',
+      'footer.resources.documentation': 'الوثائق',
+      'footer.resources.api_reference': 'مرجع API',
+      'footer.resources.guides': 'أدلة المطورين',
+      'footer.resources.support': 'الدعم',
+      'footer.legal.title': 'القانونية',
+      'footer.legal.privacy': 'سياسة الخصوصية',
+      'footer.legal.terms': 'شروط الخدمة',
+      'footer.legal.licenses': 'تراخيص المحتوى',
+      'footer.copyright': '© 2023 معايير التقنية الدولية. كل الحقوق محفوظة.',
 
       // Resources
       'resources.title': 'الموارد القرآنية',

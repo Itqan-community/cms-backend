@@ -82,6 +82,10 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - DJANGO_SETTINGS_MODULE=config.settings.development
+      - AUTH0_ROLE_CLAIM=https://cms.itqan.dev/roles
+      - AUTH0_AUDIENCE=https://api.cms.itqan.dev
+      - AUTH0_DOMAIN=dev-itqan.eu.auth0.com
+      - AUTH0_CLIENT_ID=WzJCVxBo1WHeGDQItOuxDwd0ZnaZ8OLw
     ports:
       - "8000:8000"
     volumes:
@@ -120,6 +124,10 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - DJANGO_SETTINGS_MODULE=config.settings.development
+      - AUTH0_ROLE_CLAIM=https://cms.itqan.dev/roles
+      - AUTH0_AUDIENCE=https://api.cms.itqan.dev
+      - AUTH0_DOMAIN=dev-itqan.eu.auth0.com
+      - AUTH0_CLIENT_ID=WzJCVxBo1WHeGDQItOuxDwd0ZnaZ8OLw
     volumes:
       - ../../backend:/app
     networks:

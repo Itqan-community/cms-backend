@@ -1,0 +1,559 @@
+// Landing Page Styles - Following Itqan Islamic Design System
+// Colors: Primary #669B80, Dark #22433D
+
+.landing-layout {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+// Header Styles
+.landing-header {
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  padding: 0;
+  height: auto;
+  line-height: normal;
+
+  .header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+    height: 64px;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .logo-img {
+      height: 32px;
+      width: auto;
+    }
+
+    .logo-text {
+      font-size: 18px;
+      font-weight: 600;
+      color: #669B80;
+      font-family: 'Noto Sans Arabic', sans-serif;
+    }
+  }
+
+  .main-nav {
+    border: none;
+    background: transparent;
+
+    li {
+      font-weight: 500;
+      
+      a {
+        color: #22433D;
+        transition: color 0.3s ease;
+
+        &:hover {
+          color: #669B80;
+        }
+      }
+    }
+  }
+
+  .auth-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    .user-dropdown {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      border-radius: 6px;
+      transition: background-color 0.3s ease;
+
+      &:hover {
+        background-color: #f5f5f5;
+      }
+
+      .username {
+        font-weight: 500;
+        color: #22433D;
+      }
+    }
+
+    .lang-dropdown {
+      margin-left: 12px;
+
+      a {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 8px;
+        color: #22433D;
+        border-radius: 4px;
+        transition: background-color 0.3s ease;
+
+        &:hover {
+          background-color: #f5f5f5;
+        }
+      }
+
+      .lang-option {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+    }
+  }
+}
+
+// Main Content Styles
+.landing-content {
+  min-height: calc(100vh - 64px - 200px); // Header and footer heights
+}
+
+// Hero Section
+.hero-section {
+  padding: 80px 0;
+  background: linear-gradient(135deg, #669B80 0%, #22433D 100%);
+  color: white;
+
+  .hero-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  .hero-text {
+    .hero-title {
+      font-size: 48px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      color: white !important;
+      line-height: 1.2;
+      font-family: 'Noto Sans Arabic', sans-serif;
+    }
+
+    .hero-description {
+      font-size: 20px;
+      margin-bottom: 32px;
+      color: rgba(255, 255, 255, 0.9) !important;
+      line-height: 1.6;
+    }
+
+    .hero-actions {
+      margin-top: 32px;
+
+      button {
+        height: 48px;
+        padding: 0 32px;
+        font-size: 16px;
+        font-weight: 600;
+        border-radius: 8px;
+
+        &[nz-button][nzType="primary"] {
+          background: white;
+          border-color: white;
+          color: #669B80;
+
+          &:hover {
+            background: #f8f9fa;
+            border-color: #f8f9fa;
+          }
+        }
+
+        &[nz-button][nzType="default"] {
+          background: transparent;
+          border-color: white;
+          color: white;
+
+          &:hover {
+            background: rgba(255, 255, 255, 0.1);
+          }
+        }
+      }
+    }
+  }
+
+  .hero-visual {
+    text-align: center;
+
+    .hero-image {
+      max-width: 100%;
+      height: auto;
+      opacity: 0.9;
+    }
+  }
+}
+
+// API Documentation Section (based on ADMIN-002.png design)
+.api-docs-section {
+  padding: 80px 0;
+  background: white;
+
+  .docs-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  .docs-header {
+    text-align: center;
+    margin-bottom: 48px;
+
+    h2 {
+      font-size: 36px;
+      font-weight: 600;
+      color: #22433D;
+      margin-bottom: 16px;
+      font-family: 'Noto Sans Arabic', sans-serif;
+    }
+
+    p {
+      font-size: 18px;
+      color: #666;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+  }
+
+  .docs-card {
+    height: 100%;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+
+    .ant-card-head {
+      border-bottom: 2px solid #669B80;
+      
+      .ant-card-head-title {
+        color: #669B80;
+        font-weight: 600;
+        font-size: 18px;
+        font-family: 'Noto Sans Arabic', sans-serif;
+      }
+    }
+
+    .docs-content {
+      .docs-list {
+        list-style: none;
+        padding: 0;
+        margin-bottom: 24px;
+
+        li {
+          padding: 8px 0;
+          color: #22433D;
+          position: relative;
+          padding-right: 20px;
+
+          &:before {
+            content: '•';
+            color: #669B80;
+            font-weight: bold;
+            position: absolute;
+            right: 0;
+          }
+        }
+      }
+
+      .code-example {
+        background: #f6f8fa;
+        border: 1px solid #e1e4e8;
+        border-radius: 6px;
+        padding: 16px;
+        margin-top: 16px;
+
+        code {
+          background: transparent;
+          color: #d73a49;
+          font-weight: 600;
+          font-size: 14px;
+          font-family: 'Courier New', monospace;
+        }
+
+        .code-desc {
+          margin: 8px 0 0 0;
+          font-size: 12px;
+          color: #586069;
+        }
+      }
+    }
+  }
+}
+
+// Statistics Section
+.stats-section {
+  padding: 60px 0;
+  background: #f8f9fa;
+
+  .stats-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  .ant-statistic {
+    text-align: center;
+
+    .ant-statistic-title {
+      color: #22433D;
+      font-weight: 600;
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    .ant-statistic-content {
+      .ant-statistic-content-value {
+        color: #669B80;
+        font-weight: 700;
+        font-size: 36px;
+      }
+    }
+  }
+}
+
+// Features Section
+.features-section {
+  padding: 80px 0;
+  background: white;
+
+  .features-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  .section-header {
+    text-align: center;
+    margin-bottom: 48px;
+
+    h2 {
+      font-size: 36px;
+      font-weight: 600;
+      color: #22433D;
+      margin-bottom: 16px;
+      font-family: 'Noto Sans Arabic', sans-serif;
+    }
+
+    p {
+      font-size: 18px;
+      color: #666;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+  }
+
+  .feature-card {
+    height: 100%;
+    text-align: center;
+    border-radius: 12px;
+    padding: 32px 24px;
+    border: 1px solid #e8e8e8;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(102, 155, 128, 0.15);
+      border-color: #669B80;
+    }
+
+    .feature-icon {
+      margin-bottom: 24px;
+
+      .anticon {
+        font-size: 48px;
+        color: #669B80;
+      }
+    }
+
+    h3 {
+      color: #22433D;
+      font-weight: 600;
+      margin-bottom: 16px;
+      font-family: 'Noto Sans Arabic', sans-serif;
+    }
+
+    p {
+      color: #666;
+      line-height: 1.6;
+    }
+  }
+}
+
+// Footer Styles
+.landing-footer {
+  background: #22433D;
+  color: white;
+  padding: 48px 0 24px;
+
+  .footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  .footer-section {
+    h4 {
+      color: #669B80;
+      font-weight: 600;
+      margin-bottom: 16px;
+      font-family: 'Noto Sans Arabic', sans-serif;
+    }
+
+    p {
+      color: rgba(255, 255, 255, 0.8);
+      line-height: 1.6;
+    }
+
+    .footer-links {
+      list-style: none;
+      padding: 0;
+
+      li {
+        margin-bottom: 8px;
+
+        a {
+          color: rgba(255, 255, 255, 0.7);
+          text-decoration: none;
+          transition: color 0.3s ease;
+
+          &:hover {
+            color: #669B80;
+          }
+        }
+      }
+    }
+  }
+
+  .footer-bottom {
+    text-align: center;
+    margin-top: 24px;
+
+    p {
+      color: rgba(255, 255, 255, 0.6);
+      margin: 0;
+    }
+  }
+}
+
+// RTL Support
+[dir="rtl"] {
+  .header-content {
+    .logo {
+      flex-direction: row-reverse;
+    }
+
+    .auth-actions {
+      .user-dropdown {
+        flex-direction: row-reverse;
+      }
+    }
+  }
+
+  .docs-content {
+    .docs-list {
+      li {
+        padding-left: 20px;
+        padding-right: 0;
+
+        &:before {
+          left: 0;
+          right: auto;
+        }
+      }
+    }
+  }
+
+  .hero-text {
+    text-align: right;
+
+    .hero-title,
+    .hero-description {
+      text-align: right;
+    }
+  }
+
+  .docs-header,
+  .section-header {
+    h2,
+    p {
+      text-align: right;
+    }
+  }
+}
+
+// Mobile Responsive
+@media (max-width: 768px) {
+  .header-content {
+    padding: 0 16px;
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 64px;
+
+    .main-nav {
+      display: none; // Hide on mobile, could be replaced with drawer
+    }
+  }
+
+  .hero-section {
+    padding: 48px 0;
+
+    .hero-content {
+      padding: 0 16px;
+    }
+
+    .hero-text {
+      .hero-title {
+        font-size: 32px;
+      }
+
+      .hero-description {
+        font-size: 16px;
+      }
+    }
+
+    .hero-actions {
+      button {
+        width: 100%;
+        margin-bottom: 12px;
+      }
+    }
+  }
+
+  .api-docs-section,
+  .features-section {
+    padding: 48px 0;
+
+    .docs-container,
+    .features-container {
+      padding: 0 16px;
+    }
+  }
+
+  .stats-section {
+    padding: 32px 0;
+
+    .stats-container {
+      padding: 0 16px;
+    }
+
+    .ant-statistic {
+      .ant-statistic-content {
+        .ant-statistic-content-value {
+          font-size: 24px;
+        }
+      }
+    }
+  }
+
+  .footer-content {
+    padding: 0 16px;
+  }
+}

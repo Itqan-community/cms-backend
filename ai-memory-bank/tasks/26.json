@@ -3,10 +3,11 @@
   "context": {
     "project": "Itqan CMS",
     "feature": "Content Licensing System",
-    "tech_stack": ["Strapi v5", "Next.js 14", "Bootstrap", "Legal compliance"],
+    "tech_stack": ["Django 4.2", "Angular 19", "NG-ZORRO", "Legal compliance"],
     "screens": ["LIC-001"],
     "colors": {"primary": "#669B80", "dark": "#22433D"},
-    "compliance": ["Publisher rights", "Geographic restrictions", "Attribution requirements"]
+    "compliance": ["Publisher rights", "Geographic restrictions", "Attribution requirements"],
+    "complete_screen_flow": "docs/screens/cms-screens.png"
   },
   "objectives": [
     "Create license content type with terms, restrictions, and requirements",
@@ -15,16 +16,17 @@
     "Enforce license restrictions on Distribution access"
   ],
   "tasks": [
-    "Create License collection type with terms, geographic scope, attribution requirements",
-    "Integrate license acceptance with AccessRequest submission workflow",
-    "Build LIC-001 screen: Bootstrap modal blocking Distribution access until license accepted",
-    "Style modal with Itqan colors (#669B80, #22433D) and responsive design",
-    "Implement license acceptance API endpoint with legal timestamp",
-    "Add license validation middleware to content API endpoints",
-    "Create license management interface for admins",
-    "Support bilingual license terms (EN/AR) with proper RTL layout",
-    "Track license violations and API usage compliance",
-    "Test modal blocking behavior across different API scenarios"
+    "Enhance existing License model with terms, geographic scope, attribution requirements",
+    "Integrate license acceptance with AccessRequest submission workflow maintaining 7-entity schema",
+    "Build LIC-001 screen: NG-ZORRO modal blocking Distribution access until license accepted",
+    "Style Angular modal with Itqan colors (#669B80, #22433D) and responsive NG-ZORRO design",
+    "Implement Django REST Framework license acceptance API endpoint with legal timestamp",
+    "Add license validation middleware to Django REST API content endpoints",
+    "Create Angular license management interface for admins using NG-ZORRO components",
+    "Support bilingual license terms (EN/AR) with proper RTL layout using Angular i18n",
+    "Track license violations and API usage compliance via Django logging",
+    "Integrate license modal with cms.mdc User Access Request workflow",
+    "Test modal blocking behavior across different Django API scenarios"
   ],
   "guard_rails": [
     "License acceptance must be explicitly recorded with timestamps",
@@ -34,18 +36,20 @@
     "Attribution requirements must be clearly communicated to developers"
   ],
   "acceptance_criteria": [
-    "Given I am a new developer, when I access content API, then I must accept licenses first",
-    "Given I accept a license, then my acceptance is permanently recorded with timestamp",
-    "Given content has geographic restrictions, then API enforces location-based access",
-    "License dashboard shows all agreements, restrictions, and compliance status",
-    "Publishers can define license terms and track developer acceptances"
+    "Given I am a new developer, when I access Django REST API content, then I must accept licenses via LIC-001 modal first",
+    "Given I accept a license, then my acceptance is permanently recorded with timestamp in Django database",
+    "Given content has geographic restrictions, then Django API enforces location-based access",
+    "Angular license dashboard shows all agreements, restrictions, and compliance status using NG-ZORRO components",
+    "Publishers can define license terms and track developer acceptances via Django admin",
+    "License modal integrates seamlessly with cms.mdc User Access Request workflow"
   ],
   "definition_of_done": [
-    "License system fully implemented with acceptance tracking",
-    "API endpoints properly enforce license requirements",
-    "Admin interface allows license management and reporting",
-    "Legal compliance features tested with sample scenarios",
-    "Documentation created for publishers and developers"
+    "License system fully implemented with Django backend and Angular frontend acceptance tracking",
+    "Django REST API endpoints properly enforce license requirements with middleware",
+    "Angular admin interface allows license management and reporting using NG-ZORRO",
+    "Legal compliance features tested with sample Islamic content scenarios",
+    "Documentation created for publishers and developers following cms.mdc flow",
+    "Complete integration with cms.mdc screen flow"
   ],
   "out_of_scope": [
     "Complex licensing negotiations or custom terms",
@@ -54,9 +58,12 @@
   ],
   "references": [
     "docs/Itqan_CMS_BRD.md §3.3 Licensing & Permissions",
-    "docs/diagrams/level4-data-models.md",
-    "Legal compliance requirements for Quranic content",
-    "Screen LIC-001: License modal blocking API access until acceptance",
-    "English wireframe: ai-memory-bank/tasks/screens/en/public_and_workflow_wireframes.html#LIC-001"
+    "docs/diagrams/level4-data-models.md - 7-entity schema License model",
+    "docs/screens/cms-screens.png - Complete screen flow with LIC-001",
+    "Legal compliance requirements for Islamic Quranic content",
+    "Screen LIC-001: NG-ZORRO license modal blocking API access until acceptance",
+    ".cursor/rules/cms.mdc - User Access Request Scenario Workflow section", 
+    "backend/apps/licensing/ - Django License model and API endpoints",
+    "frontend/src/app/features/licensing/ - Angular license acceptance components"
   ]
 }

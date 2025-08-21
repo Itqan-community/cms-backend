@@ -20,6 +20,9 @@ from apps.content.views import ResourceViewSet, DistributionViewSet
 from apps.licensing.views import LicenseViewSet, AccessRequestViewSet
 from apps.analytics.views import UsageEventViewSet
 
+# Import Landing Page Views
+from apps.api.views.landing import platform_statistics, platform_features, recent_content
+
 # Create API router
 router = DefaultRouter()
 
@@ -46,6 +49,11 @@ urlpatterns = [
     
     # API endpoints
     path('', include(router.urls)),
+    
+    # Landing page endpoints (public)
+    path('landing/statistics/', platform_statistics, name='landing_statistics'),
+    path('landing/features/', platform_features, name='landing_features'),
+    path('landing/recent-content/', recent_content, name='landing_recent_content'),
     
     # Search endpoints
     path('search/', include('apps.search.urls')),

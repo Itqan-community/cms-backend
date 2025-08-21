@@ -133,18 +133,18 @@ Created comprehensive test page: `test-auth0-integration.html`
 ### Allowed URLs Configuration
 - **Allowed Callback URLs:** 
   - `http://localhost:4200/auth/callback` (local development)
-  - `https://develop.itqan.dev/auth/callback` (development environment)
-  - `https://staging.itqan.dev/auth/callback` (staging environment)
+  - `https://develop.cms.itqan.dev/auth/callback` (development environment)
+  - `https://staging.cms.itqan.dev/auth/callback` (staging environment)
   - `https://cms.itqan.dev/auth/callback` (production)
 - **Allowed Logout URLs:**
   - `http://localhost:4200` (local development)
-  - `https://develop.itqan.dev` (development environment)
-  - `https://staging.itqan.dev` (staging environment)
+  - `https://develop.cms.itqan.dev` (development environment)
+  - `https://staging.cms.itqan.dev` (staging environment)
   - `https://cms.itqan.dev` (production)
 - **Allowed Web Origins:**
   - `http://localhost:4200` (local development)
-  - `https://develop.itqan.dev` (development environment)
-  - `https://staging.itqan.dev` (staging environment)
+  - `https://develop.cms.itqan.dev` (development environment)
+  - `https://staging.cms.itqan.dev` (staging environment)
   - `https://cms.itqan.dev` (production)
 
 ### Advanced Settings
