@@ -21,6 +21,7 @@ import { NzMessageModule } from 'ng-zorro-antd/message';
 import { AuthService } from '../../core/services/auth.service';
 import { I18nService } from '../../core/services/i18n.service';
 import { StateService } from '../../core/services/state.service';
+import { environment } from '../../../environments/environment';
 
 interface PlatformStatistics {
   totalResources: number;
@@ -389,8 +390,9 @@ export class LandingPageComponent implements OnInit {
   private loadPlatformStats(): void {
     this.statsLoading.set(true);
     
-    // Call backend API for platform statistics
-    this.http.get<PlatformStatistics>('/api/v1/landing/statistics/')
+    // Call backend API for platform statistics using full URL
+    const apiUrl = `${environment.apiUrl}/landing/statistics/`;
+    this.http.get<PlatformStatistics>(apiUrl)
       .subscribe({
         next: (stats) => {
           this.platformStats.set(stats);
