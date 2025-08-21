@@ -159,8 +159,8 @@ export class RegisterComponent {
   async registerWithGitHub(): Promise<void> {
     try {
       this.clearError();
-      // Auth0 Universal Login will prioritize GitHub based on configuration
-      await this.authService.register();
+      // Direct to GitHub OAuth registration
+      await this.authService.registerWithGitHub();
     } catch (error) {
       console.error('GitHub registration error:', error);
       this.stateService.setError('Failed to initiate GitHub registration');
@@ -173,8 +173,8 @@ export class RegisterComponent {
   async registerWithGoogle(): Promise<void> {
     try {
       this.clearError();
-      // Auth0 Universal Login with Google connection
-      await this.authService.register();
+      // Direct to Google OAuth registration
+      await this.authService.registerWithGoogle();
     } catch (error) {
       console.error('Google registration error:', error);
       this.stateService.setError('Failed to initiate Google registration');

@@ -226,6 +226,60 @@ export class AuthService {
   }
 
   /**
+   * Initiate GitHub login flow
+   */
+  async loginWithGitHub(redirectUrl?: string): Promise<void> {
+    if (!isPlatformBrowser(this.platformId) || !this.auth0Client) {
+      throw new Error('Auth0 client not initialized or not in browser');
+    }
+
+    try {
+      // Store redirect URL for after authentication
+      if (redirectUrl && typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('auth_redirect_url', redirectUrl);
+      }
+
+      // Start Auth0 login flow with GitHub connection
+      await this.auth0Client.loginWithRedirect({
+        authorizationParams: {
+          prompt: 'login',
+          connection: 'github'
+        }
+      });
+    } catch (error) {
+      console.error('GitHub login error:', error);
+      this.stateService.setError('Failed to initiate GitHub login');
+    }
+  }
+
+  /**
+   * Initiate Google login flow
+   */
+  async loginWithGoogle(redirectUrl?: string): Promise<void> {
+    if (!isPlatformBrowser(this.platformId) || !this.auth0Client) {
+      throw new Error('Auth0 client not initialized or not in browser');
+    }
+
+    try {
+      // Store redirect URL for after authentication
+      if (redirectUrl && typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('auth_redirect_url', redirectUrl);
+      }
+
+      // Start Auth0 login flow with Google connection
+      await this.auth0Client.loginWithRedirect({
+        authorizationParams: {
+          prompt: 'login',
+          connection: 'google-oauth2'
+        }
+      });
+    } catch (error) {
+      console.error('Google login error:', error);
+      this.stateService.setError('Failed to initiate Google login');
+    }
+  }
+
+  /**
    * Initiate registration flow
    */
   async register(): Promise<void> {
@@ -243,6 +297,48 @@ export class AuthService {
     } catch (error) {
       console.error('Registration error:', error);
       this.stateService.setError('Failed to initiate registration');
+    }
+  }
+
+  /**
+   * Initiate GitHub registration flow
+   */
+  async registerWithGitHub(): Promise<void> {
+    if (!this.auth0Client) {
+      throw new Error('Auth0 client not initialized');
+    }
+
+    try {
+      await this.auth0Client.loginWithRedirect({
+        authorizationParams: {
+          screen_hint: 'signup',
+          connection: 'github'
+        }
+      });
+    } catch (error) {
+      console.error('GitHub registration error:', error);
+      this.stateService.setError('Failed to initiate GitHub registration');
+    }
+  }
+
+  /**
+   * Initiate Google registration flow
+   */
+  async registerWithGoogle(): Promise<void> {
+    if (!this.auth0Client) {
+      throw new Error('Auth0 client not initialized');
+    }
+
+    try {
+      await this.auth0Client.loginWithRedirect({
+        authorizationParams: {
+          screen_hint: 'signup',
+          connection: 'google-oauth2'
+        }
+      });
+    } catch (error) {
+      console.error('Google registration error:', error);
+      this.stateService.setError('Failed to initiate Google registration');
     }
   }
 

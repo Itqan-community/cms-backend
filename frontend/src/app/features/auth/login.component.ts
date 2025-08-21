@@ -173,8 +173,8 @@ export class LoginComponent {
   async loginWithGitHub(): Promise<void> {
     try {
       this.clearError();
-      // Store redirect URL for post-login
-      await this.authService.login('/dashboard');
+      // Direct to GitHub OAuth
+      await this.authService.loginWithGitHub('/dashboard');
     } catch (error) {
       console.error('GitHub login error:', error);
       this.stateService.setError('Failed to initiate GitHub login');
@@ -187,8 +187,8 @@ export class LoginComponent {
   async loginWithGoogle(): Promise<void> {
     try {
       this.clearError();
-      // Auth0 Universal Login will show Google as an option
-      await this.authService.login('/dashboard');
+      // Direct to Google OAuth
+      await this.authService.loginWithGoogle('/dashboard');
     } catch (error) {
       console.error('Google login error:', error);
       this.stateService.setError('Failed to initiate Google login');
