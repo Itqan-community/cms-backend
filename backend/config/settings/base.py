@@ -28,7 +28,10 @@ DJANGO_APPS = [
 
 THIRD_PARTY_APPS = [
     'rest_framework',
+    'rest_framework_simplejwt',
     'corsheaders',
+    'django_filters',
+    'drf_spectacular',
     'wagtail.contrib.forms',
     'wagtail.contrib.redirects',
     'wagtail.embeds',
@@ -50,6 +53,8 @@ LOCAL_APPS = [
     'apps.content',
     'apps.licensing',
     'apps.analytics',
+    'apps.search',
+    'apps.authentication',
     'apps.api',
 ]
 
@@ -207,8 +212,88 @@ WAGTAIL_I18N_ENABLED = True
 # Base URL to use when referring to full URLs within the Wagtail admin backend
 WAGTAILIMAGES_EXTENSIONS = ['gif', 'jpg', 'jpeg', 'png', 'webp']
 
-# Custom user model (will be added in Task 3)
-# AUTH_USER_MODEL = 'accounts.User'
+# Custom user model
+AUTH_USER_MODEL = 'accounts.User'
+
+# Authentication backends
+AUTHENTICATION_BACKENDS = [
+    'apps.authentication.backends.Auth0JWTBackend',
+    'django.contrib.auth.backends.ModelBackend',  # Keep for admin access
+]
+
+# Django REST Framework Configuration
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.URLPathVersioning',
+    'DEFAULT_VERSION': 'v1',
+    'ALLOWED_VERSIONS': ['v1'],
+    'VERSION_PARAM': 'version',
+}
+
+# Simple JWT Configuration
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
+    'AUDIENCE': None,
+    'ISSUER': 'itqan-cms',
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+    'JTI_CLAIM': 'jti',
+}
+
+# DRF Spectacular Configuration (API Documentation)
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Itqan CMS API',
+    'DESCRIPTION': 'API for managing and distributing Quranic content, including text, audio, and translations.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SCHEMA_PATH_PREFIX': '/api/v1',
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SORT_OPERATIONS': False,
+    'TAGS': [
+        {'name': 'Authentication', 'description': 'User authentication and token management'},
+        {'name': 'Users', 'description': 'User account management'},
+        {'name': 'Roles', 'description': 'Role-based access control'},
+        {'name': 'Resources', 'description': 'Quranic content resources'},
+        {'name': 'Licenses', 'description': 'Content licensing and terms'},
+        {'name': 'Distributions', 'description': 'Content access formats'},
+        {'name': 'Access Requests', 'description': 'Developer access approval workflow'},
+        {'name': 'Usage Events', 'description': 'Analytics and usage tracking'},
+    ],
+}
 
 # Celery Configuration
 CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
@@ -217,6 +302,62 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_ALWAYS_EAGER = config('CELERY_TASK_ALWAYS_EAGER', default=False, cast=bool)
+
+# MeiliSearch Configuration
+MEILISEARCH_URL = config('MEILISEARCH_URL', default='http://localhost:7700')
+MEILISEARCH_MASTER_KEY = config('MEILISEARCH_MASTER_KEY', default='masterKey')
+MEILISEARCH_TIMEOUT = config('MEILISEARCH_TIMEOUT', default=30, cast=int)
+MEILISEARCH_INDEXES = {
+    'resources': {
+        'uid': 'resources',
+        'primary_key': 'id',
+        'searchable_attributes': ['title', 'description', 'language'],
+        'filterable_attributes': ['resource_type', 'language', 'publisher_id', 'is_active'],
+        'sortable_attributes': ['created_at', 'updated_at', 'published_at'],
+        'ranking_rules': [
+            'words',
+            'typo',
+            'proximity',
+            'attribute',
+            'sort',
+            'exactness',
+            'published_at:desc'
+        ]
+    }
+}
+
+# Auth0 OIDC Configuration
+AUTH0_DOMAIN = config('AUTH0_DOMAIN', default='your-tenant.auth0.com')
+AUTH0_AUDIENCE = config('AUTH0_AUDIENCE', default='https://itqan-cms-api')
+AUTH0_CLIENT_ID = config('AUTH0_CLIENT_ID', default='your-client-id')
+AUTH0_CLIENT_SECRET = config('AUTH0_CLIENT_SECRET', default='your-client-secret')
+AUTH0_ALGORITHM = config('AUTH0_ALGORITHM', default='RS256')
+AUTH0_ISSUER = config('AUTH0_ISSUER', default=f'https://{AUTH0_DOMAIN}/')
+AUTH0_JWKS_URL = config('AUTH0_JWKS_URL', default=f'https://{AUTH0_DOMAIN}/.well-known/jwks.json')
+AUTH0_JWKS_CACHE_TTL = config('AUTH0_JWKS_CACHE_TTL', default=300, cast=int)  # 5 minutes
+AUTH0_TOKEN_LEEWAY = config('AUTH0_TOKEN_LEEWAY', default=10, cast=int)  # 10 seconds for clock skew
+
+# Auth0 Role Mapping Configuration
+AUTH0_ROLE_MAPPING = {
+    'admin': 'Admin',
+    'publisher': 'Publisher', 
+    'developer': 'Developer',
+    'reviewer': 'Reviewer',
+}
+AUTH0_DEFAULT_ROLE = 'Developer'  # Default role for users without explicit role
+AUTH0_ROLE_CLAIM = config('AUTH0_ROLE_CLAIM', default='https://itqan-cms.com/roles')
+AUTH0_USER_INFO_CLAIMS = [
+    'email',
+    'email_verified',
+    'name',
+    'given_name', 
+    'family_name',
+    'picture',
+    'locale',
+    'updated_at',
+    AUTH0_ROLE_CLAIM,
+]
 
 # Cache Configuration
 CACHES = {

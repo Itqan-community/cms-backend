@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Access Request Rejected - Itqan CMS</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .header { color: #669B80; font-size: 24px; font-weight: bold; margin-bottom: 20px; }
+        .rejected { color: #dc3545; font-weight: bold; font-size: 18px; margin-bottom: 15px; }
+        .content { line-height: 1.6; color: #333; }
+        .details { background-color: #f8f9fa; padding: 15px; border-radius: 4px; margin: 20px 0; }
+        .reason { background-color: #fff3cd; padding: 15px; border-radius: 4px; margin: 20px 0; border-left: 4px solid #ffc107; }
+        .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 14px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">Access Request Rejected</div>
+        
+        <div class="rejected">❌ Your access request has been rejected</div>
+        
+        <div class="content">
+            <p>Hello {{ requester.get_full_name }},</p>
+            
+            <p>We regret to inform you that your access request for the following resource has been rejected:</p>
+            
+            <div class="details">
+                <strong>Resource:</strong> {{ resource.title }}<br>
+                <strong>Distribution Format:</strong> {{ distribution.format_type }}<br>
+                <strong>Reviewed by:</strong> {{ approved_by.get_full_name }}<br>
+                <strong>Reviewed on:</strong> {{ access_request.reviewed_at|date:"F j, Y g:i A" }}<br>
+            </div>
+            
+            {% if rejection_reason %}
+            <div class="reason">
+                <strong>Rejection Reason:</strong> {{ rejection_reason }}
+            </div>
+            {% endif %}
+            
+            {% if admin_notes %}
+            <div class="details">
+                <strong>Additional Notes:</strong><br>
+                {{ admin_notes }}
+            </div>
+            {% endif %}
+            
+            <p>If you believe this decision was made in error or if you have additional information that might support your request, please feel free to submit a new request with more details.</p>
+            
+            <p>Thank you for your interest in Itqan CMS.</p>
+        </div>
+        
+        <div class="footer">
+            <p>This is an automated notification from Itqan CMS.<br>
+            Please do not reply to this email.</p>
+        </div>
+    </div>
+</body>
+</html>

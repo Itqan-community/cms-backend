@@ -4,15 +4,32 @@ alwaysApply: true
 # Itqan CMS - Cursor AI Rules & Guidelines
 
 ## Project Overview
-This is the Itqan Quranic Content Management System (CMS) - a headless CMS designed to aggregate, license, and distribute verified Quranic content (text, audio, translations, tafsir) to developers and publishers through controlled APIs with proper licensing workflows. The system uses an Angular 19 + Django/Wagtail architecture with PostgreSQL, MeiliSearch, Auth0, and Celery, initially deploying on DigitalOcean DOKS before migrating to Alibaba Cloud ACK, enabling role-based access control for Admins, Publishers, Developers, and Reviewers to manage content licensing and distribution at scale.
+This is the **Itqan Quranic Content Management System (CMS)** - a specialized headless CMS designed to aggregate, license, and distribute verified Quranic content (text, audio, translations, tafsir) to Islamic organizations, app developers, and publishers through controlled APIs with proper licensing workflows. 
+
+The system enables **Islamic content authenticity** through scholarly review workflows, **global distribution** via CDN, and **flexible licensing** supporting Islamic copyright principles. Built with **Angular 19 + Django 4.2 + Wagtail** architecture, it provides role-based access control for **Admins, Publishers, Developers, and Reviewers** to manage Quranic content licensing and distribution at scale.
+
+### Islamic Content Management Focus
+- **Content Integrity**: SHA-256 checksums for Quranic text accuracy verification
+- **Scholarly Review**: Wagtail workflows for Islamic scholar content approval
+- **Multilingual Support**: Native Arabic with RTL layouts + translation management
+- **Licensing Flexibility**: Support for Islamic copyright and usage principles
+- **Global Distribution**: Optimized for worldwide Islamic community access
 
 ## Critical AI Task Processing Rule
 🚨 **MANDATORY**: Every user prompt must be converted into a structured JSON task format before execution. Follow these steps:
 
 1. **Parse the user request** and identify the core task
-2. **Create a JSON prompt** following the established format in `ai-memory-bank/tasks/*.json`
-3. **Execute the task** using the structured JSON as guidance
-4. **Update relevant tracking** in `ai-memory-bank/tasks.csv` if applicable
+2. **Validate against C4 Architecture** - Check `docs/diagrams/level1-4` for architectural alignment
+3. **Create a JSON prompt** following the established format in `ai-memory-bank/tasks/*.json`
+4. **Execute the task** using the structured JSON as guidance
+5. **Update relevant tracking** in `ai-memory-bank/tasks.csv` if applicable
+
+### Architecture Validation Checklist
+Before implementing any feature, verify:
+- ✅ **Level 1**: Does this fit the Islamic content management ecosystem?
+- ✅ **Level 2**: Which containers are involved (Angular, Django, PostgreSQL, etc.)?
+- ✅ **Level 3**: Which Django apps are affected (Core, Accounts, Content, Licensing, Analytics, API)?
+- ✅ **Level 4**: Does this follow the 7-entity schema (Role, User, Resource, License, Distribution, AccessRequest, UsageEvent)?
 
 ### JSON Prompt Template Structure:
 ```json
@@ -39,15 +56,34 @@ This is the Itqan Quranic Content Management System (CMS) - a headless CMS desig
 Never skip this JSON conversion step - it ensures consistency and traceability across all development tasks.
 
 ## Architecture & Tech Stack
-- **Backend**: Django 5.2 + Django REST Framework + Wagtail CMS with PostgreSQL
-- **Frontend**: Angular 19 (CSR first, SSR via Angular Universal later) with NG-ZORRO and i18n (EN/AR)
-- **UI Framework**: NG-ZORRO (Ant Design for Angular) with CSS-in-JS theming and RTL support
-- **Search**: Meilisearch v1.6 for full-text search via Celery background tasks
-- **Storage**: MinIO (S3-compatible) for development, Alibaba OSS for production
-- **Auth**: Auth0 (SPA SDK on Angular, OIDC/JWKS validation on Django)
-- **Background Tasks**: Celery with Redis broker for indexing and analytics
-- **Deployment**: Docker Compose (dev), DigitalOcean DOKS (initial prod), Alibaba Cloud ACK (future prod)
-- **Infrastructure**: DigitalOcean (initial production), Alibaba Cloud (migration target)
+
+### Complete System Architecture (Based on C4 Model)
+Following the C4 architecture diagrams in `docs/diagrams/`, the system uses:
+
+#### **Level 1: System Context**
+- **Users**: Publishers (Islamic orgs), Developers (app builders), Admins, Reviewers, End Users
+- **External Systems**: Auth0 (OAuth/OIDC), Alibaba Cloud (OSS+CDN), Email Service (Mailgun)
+- **Core Purpose**: Quranic content aggregation → licensing → controlled distribution → global access
+
+#### **Level 2: Container Architecture** 
+- **Frontend**: Angular 19 SPA with NG-ZORRO + Auth0 SPA SDK + bilingual support (EN/AR)
+- **Backend**: Django 4.2 LTS + Wagtail CMS + Django REST Framework (monolithic API)
+- **Data Layer**: PostgreSQL 16 (primary) + Redis (cache/queue) + MeiliSearch v1.6 (search)
+- **Storage**: MinIO (dev) → Alibaba OSS (prod) with CDN for global content delivery
+- **Background**: Celery workers for content indexing, notifications, and file processing
+
+#### **Level 3: Django Backend Components**
+- **Domain Apps**: Core, Accounts, Content, Licensing, Analytics, API (domain-driven design)
+- **Wagtail Layer**: Editorial interface, content workflows, page management, search integration
+- **DRF Layer**: API views, serializers, permissions, pagination with comprehensive REST API
+- **Services**: Auth (Auth0 OIDC), Content, License, Search (MeiliSearch), Notification services
+- **Middleware**: CORS, JWT Auth, Role-based permissions with request pipeline processing
+
+#### **Level 4: Database Schema (7 Core Entities)**
+- **User Management**: `ROLE` (4 roles) → `USER` (Auth0 integration)
+- **Content**: `RESOURCE` (Quranic content) → `LICENSE` (usage terms) → `DISTRIBUTION` (access formats)
+- **Workflow**: `ACCESS_REQUEST` (approval workflow) → `USAGE_EVENT` (analytics tracking)
+- **Features**: UUID PKs, JSONB metadata, soft deletes, integrity verification, multilingual support
 
 ## UI/UX Design System - NG-ZORRO (Ant Design for Angular)
 
@@ -99,12 +135,15 @@ Never skip this JSON conversion step - it ensures consistency and traceability a
 - Follow established naming conventions in the project
 
 ### Django-Specific Rules
-- Use Django's signals and middleware patterns appropriately
-- Leverage Django REST Framework for all API endpoints
-- Follow Django 5.2 patterns for models, views, and serializers
-- Use environment variables for all configuration (never hardcode values)
-- Implement proper error handling and validation in API endpoints
-- Use Wagtail CMS for content management and editorial workflows
+- **Domain-Driven Apps**: Follow the 6-app structure: Core, Accounts, Content, Licensing, Analytics, API
+- **Django 4.2 LTS Patterns**: Use established Django 4.2 LTS patterns for models, views, serializers
+- **Wagtail Integration**: Use Wagtail CMS for editorial workflows and scholarly content review
+- **DRF Standards**: Leverage Django REST Framework for all API endpoints with consistent serialization
+- **7-Entity Schema**: Adhere to the exact database schema: Role, User, Resource, License, Distribution, AccessRequest, UsageEvent
+- **Islamic Content Requirements**: Implement content integrity (checksums), multilingual support (Arabic RTL), and scholarly review workflows
+- **Proper Signal Usage**: Use Django signals appropriately for event-driven architecture
+- **Environment Configuration**: Use environment variables for all configuration (never hardcode values)
+- **Error Handling**: Implement comprehensive error handling and validation in API endpoints
 
 ### Angular Best Practices
 - Use Angular 19 standalone components pattern consistently
@@ -115,11 +154,16 @@ Never skip this JSON conversion step - it ensures consistency and traceability a
 - Use Angular Services for API communication and state management
 
 ### Database & Content Modeling
-- Use UUIDs for primary keys consistently
-- Implement soft deletes with status fields rather than hard deletes
-- Follow established content type patterns from existing models
-- Use proper field validations and constraints
-- Maintain referential integrity with proper relations
+- **7-Entity Schema Compliance**: Strictly follow the core entities from `docs/diagrams/level4-data-models.md`
+- **UUID Primary Keys**: Use UUIDs consistently for all primary keys across all entities
+- **Soft Delete Pattern**: Implement soft deletes with `is_active` flags rather than hard deletes
+- **JSONB Metadata**: Use JSONB fields for flexible metadata without schema migrations
+- **Content Integrity**: Include SHA-256 checksum fields for Quranic content verification
+- **Multilingual Support**: Implement proper language fields with ISO codes (ar, en, etc.)
+- **Referential Integrity**: Maintain strict foreign key relationships between entities
+- **Islamic Content Validation**: Add validation for Islamic content standards and authenticity
+- **Timestamp Auditing**: Include created_at/updated_at timestamps on all entities
+- **Index Strategy**: Create strategic indexes on foreign keys and frequently queried fields
 
 ## Internationalization (i18n)
 - Support English (en) and Arabic (ar) locales
@@ -161,25 +205,40 @@ Never skip this JSON conversion step - it ensures consistency and traceability a
 
 ## File Structure Conventions
 ```
-backend/                # Django + Wagtail backend
-├── apps/              # Django apps (accounts, content, licensing, analytics)
-├── config/            # Django settings and configuration
-├── requirements.txt   # Python dependencies
+backend/                # Django 4.2 + Wagtail backend
+├── apps/              # Domain-driven Django apps
+│   ├── core/          # Base models, utilities, common permissions
+│   ├── accounts/      # User management, Auth0 integration, roles
+│   ├── content/       # Quranic resources, distributions
+│   ├── licensing/     # License management, access requests, notifications
+│   ├── analytics/     # Usage tracking, events, reporting
+│   ├── authentication/# Auth0 OIDC integration, JWT validation
+│   ├── search/        # MeiliSearch integration, indexing
+│   └── api/           # REST endpoints, API versioning, permissions
+├── config/            # Django settings (base, dev, prod)
+├── requirements/      # Python dependencies (base, dev, prod)
 └── Dockerfile.dev     # Development container
 
-frontend/              # Angular 19 frontend  
+frontend/              # Angular 19 SPA frontend  
 ├── src/app/           # Angular application structure
 ├── src/components/    # Reusable NG-ZORRO components
+├── src/services/      # API communication, state management
+├── src/models/        # TypeScript interfaces for 7 core entities
 ├── package.json       # Node.js dependencies
 └── Dockerfile.dev     # Development container
 
-ai-memory-bank/        # Task management
-├── tasks.csv          # Main task tracking
-└── tasks/             # Detailed task specifications
-
-docs/                  # Project documentation
-├── diagrams/          # C4 architecture diagrams
+docs/                  # Architecture & Documentation
+├── diagrams/          # C4 model diagrams (Level 1-4)
+│   ├── level1-system-context.md      # System in Islamic content ecosystem
+│   ├── level2-container-diagram.md   # Angular + Django architecture
+│   ├── level3-component-diagram.md   # Django backend components
+│   ├── level4-data-models.md         # 7-entity database schema
+│   └── api-surface-overview.mmd      # Complete API specification
 └── md/                # Task completion summaries (required)
+
+ai-memory-bank/        # Task management & tracking
+├── tasks.csv          # Main task tracking (30 tasks)
+└── tasks/             # Detailed JSON task specifications
 ```
 
 ## Testing & Quality Assurance
@@ -263,12 +322,55 @@ When issues are found:
 - Update C4 diagrams if architecture changes significantly
 
 ## References
-- Main documentation: docs/Itqan_CMS_BRD.md and docs/Itqan_CMS_BRS.md
-- Architecture: docs/diagrams/ (C4 model diagrams + ER/API Mermaid files)
-- Database Schema: docs/diagrams/high-level-db-components-relationship.mmd
-- API Design: docs/diagrams/api-surface-overview.mmd
-- Setup: README-Docker.md for development environment
-- Tasks: ai-memory-bank/tasks.csv and individual JSON files (1-30)
-- English wireframes: ai-memory-bank/tasks/screens/en/*.html
 
-Remember: Always reference existing patterns and implementations before creating new solutions. The goal is consistency and code reuse across the entire project.
+### Architecture Documentation
+- **C4 Model Diagrams**: `docs/diagrams/` - Complete architecture from system context to data models
+  - `level1-system-context.md` - Itqan CMS in Islamic content ecosystem  
+  - `level2-container-diagram.md` - Angular + Django + supporting services
+  - `level3-component-diagram.md` - Django backend internal components
+  - `level4-data-models.md` - 7-entity database schema (MUST FOLLOW)
+- **API Specification**: `docs/diagrams/api-surface-overview.mmd` - Complete REST API design
+- **Database Schema**: `docs/diagrams/high-level-db-components-relationship.mmd` - Core entity relationships
+
+### Development Workflow
+- **Task Management**: `ai-memory-bank/tasks.csv` - 30 tasks with status tracking
+- **Task Specifications**: `ai-memory-bank/tasks/*.json` - Detailed JSON task definitions
+- **Completion Documentation**: `docs/md/` - Required task completion summaries
+- **Setup Guide**: `README-Docker.md` - Development environment configuration
+
+### Islamic Content Management
+- **Business Requirements**: `docs/Itqan_CMS_BRD.md` and `docs/Itqan_CMS_BRS.md`
+- **Content Integrity**: SHA-256 checksum verification for Quranic text
+- **Scholarly Review**: Wagtail workflow integration for content approval
+- **Multilingual Support**: Arabic RTL + English LTR with proper i18n
+
+### Implementation Guidelines
+**CRITICAL**: Always reference the C4 architecture diagrams before implementing any feature. The 7-entity database schema in `level4-data-models.md` is the single source of truth for all data modeling decisions.
+
+Remember: Consistency with existing patterns, Islamic content requirements, and architectural alignment are paramount for this specialized CMS.
+
+## Completed Task Validation
+
+### Tasks 1-7 Status (Architecture-Compliant ✅)
+- **Task 1**: Angular 19 Project Bootstrap - ✅ Aligned with Level 2 Container (Angular SPA + NG-ZORRO)
+- **Task 2**: Django-Wagtail Project Bootstrap - ✅ Aligned with Level 2 Container (Django 4.2 LTS + Wagtail + PostgreSQL 16)
+- **Task 3**: Core Data Models & Migrations - ✅ Implements exact Level 4 schema (7 entities with UUID PKs, soft delete)
+- **Task 4**: Django REST API v1 - ✅ Follows Level 3 DRF layer with comprehensive CRUD endpoints
+- **Task 5**: Celery + MeiliSearch Integration - ✅ Implements Level 2 background processing + search containers
+- **Task 6**: Auth0 OIDC Integration - ✅ Follows Level 2 Auth0 external system + Level 3 Auth service
+- **Task 7**: AccessRequest Workflow - ✅ Implements Level 4 AccessRequest entity with email notifications + access control
+
+### Current Implementation Status
+The backend foundation is **enterprise-ready** with:
+- **7 Core Entities** implemented per Level 4 schema
+- **6 Domain Apps** organized per Level 3 component structure  
+- **Auth0 OIDC** integration per Level 2 external systems
+- **Comprehensive Workflow** for Islamic content licensing and access control
+- **Search + Background Tasks** via MeiliSearch + Celery per Level 2 infrastructure
+
+### Next Development Phase
+Tasks 8+ should focus on:
+- **Frontend Integration** (Angular connects to Django REST API)
+- **Content Management UI** (Publisher workflows for Quranic content)
+- **Admin Interface** (Access request approvals, user management)
+- **Production Deployment** (DigitalOcean → Alibaba Cloud migration per Level 1 context)
