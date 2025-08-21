@@ -191,6 +191,99 @@ def auth0_config(request):
     }, status=status.HTTP_200_OK)
 
 
+class TokenExchangeView(APIView):
+    """
+    Auth0 to Django JWT token exchange (Task 15: AUTH-002)
+    """
+    permission_classes = [AllowAny]
+    
+    @extend_schema(
+        summary="Exchange Auth0 token for Django JWT",
+        description="Validate Auth0 access token and return Django JWT with user information",
+        request={
+            'type': 'object',
+            'properties': {
+                'access_token': {'type': 'string', 'description': 'Auth0 access token'},
+                'id_token': {'type': 'string', 'description': 'Auth0 ID token (optional)'}
+            },
+            'required': ['access_token']
+        }
+    )
+    def post(self, request):
+        """Exchange Auth0 tokens for Django JWT"""
+        access_token = request.data.get('access_token')
+        id_token = request.data.get('id_token')
+        
+        if not access_token:
+            return Response(
+                {'error': 'access_token is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Use the authentication backend to validate token and get/create user
+            backend = Auth0JWTBackend()
+            user = backend.authenticate(request, token=access_token)
+            
+            if not user:
+                return Response(
+                    {'error': 'Invalid token or user authentication failed'},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+            
+            # Generate Django JWT for the user
+            from rest_framework_simplejwt.tokens import RefreshToken
+            refresh = RefreshToken.for_user(user)
+            django_access_token = str(refresh.access_token)
+            django_refresh_token = str(refresh)
+            
+            # Get user role and permissions info
+            role_info = auth0_user_service.get_user_roles_info(user)
+            
+            # Return response with Django JWT and user info
+            response_data = {
+                'tokens': {
+                    'access': django_access_token,
+                    'refresh': django_refresh_token
+                },
+                'user': {
+                    'id': str(user.id),
+                    'email': user.email,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                    'full_name': user.get_full_name(),
+                    'auth0_id': user.auth0_id,
+                    'role': user.role.name if user.role else None,
+                    'is_active': user.is_active,
+                    'permissions': role_info.get('permissions', {}),
+                    'role_flags': {
+                        'is_admin': role_info.get('is_admin', False),
+                        'is_publisher': role_info.get('is_publisher', False),
+                        'is_developer': role_info.get('is_developer', False),
+                        'is_reviewer': role_info.get('is_reviewer', False),
+                    }
+                },
+                'message': 'Token exchange successful'
+            }
+            
+            logger.info(f"Token exchange successful for user {user.email}")
+            return Response(response_data, status=status.HTTP_200_OK)
+        
+        except (JWTValidationError, UserServiceError) as e:
+            logger.warning(f"Token exchange failed: {e}")
+            return Response(
+                {'error': f'Token exchange failed: {e}'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        except Exception as e:
+            logger.error(f"Unexpected token exchange error: {e}")
+            return Response(
+                {'error': 'Token exchange service error'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 @extend_schema(

@@ -1,64 +1,78 @@
 {
-    "prompt": "You are an autonomous coding agent completing STORY-9: Content Models & i18n for Itqan CMS. Create core content types (Article, Page, Category, Tag) with English/Arabic internationalization support using Strapi's i18n plugin.",
+    "prompt": "You are an autonomous coding agent completing STORY-9: Content Models & i18n for Itqan CMS. Create core content types with English/Arabic internationalization support using Django's i18n framework and Angular i18n.",
     "context": {
         "project": "Itqan CMS",
         "feature": "Content Modeling",
         "tech_stack": [
-            "Strapi v5",
+            "Django 4.2",
+            "Angular 19",
+            "NG-ZORRO",
             "PostgreSQL",
-            "i18n plugin"
+            "Django i18n"
         ],
         "locales": [
             "en",
             "ar"
-        ]
+        ],
+        "complete_screen_flow": "docs/screens/cms-screens.png"
     },
     "objectives": [
-        "Enable Strapi i18n plugin with EN/AR locales",
-        "Create Resource content type matching ER model requirements",
-        "Create Distribution content type for delivery formats",
-        "Create License content type with terms and restrictions",
-        "Configure proper relationships between Resource/Distribution/License",
-        "Test content creation in both languages"
+        "Configure Django i18n framework with EN/AR locales",
+        "Enhance existing Resource model with i18n fields",
+        "Enhance existing Distribution model for multilingual delivery formats",
+        "Enhance existing License model with bilingual terms and restrictions",
+        "Create Angular content creation forms (ADMIN-003) with locale switcher",
+        "Implement proper relationships between Resource/Distribution/License models",
+        "Test content creation in both languages via Angular and Django admin"
     ],
     "tasks": [
-        "Enable i18n plugin in config/plugins.ts with locales: ['en', 'ar']",
-        "Create Resource collection type with title, description, type, language, version, checksum, publisher relationship",
-        "Create Distribution collection type with format_type, endpoint_url, version, access_config",
-        "Create License collection type with license_type, terms, geographic/usage restrictions",
-        "Configure Resource-to-License one-to-many relationship",
-        "Configure Resource-to-Distribution one-to-many relationship",
-        "Enable localization for all content types and test bilingual content creation"
+        "Configure Django i18n settings with locales: ['en', 'ar'] and proper locale paths",
+        "Enhance Resource model with translatable fields using django-modeltranslation",
+        "Enhance Distribution model with bilingual format descriptions and config",
+        "Enhance License model with translatable terms and geographic restrictions",
+        "Create Django admin interfaces with language tabs for multilingual content",
+        "Implement Angular content creation forms (ADMIN-003) with NG-ZORRO locale switcher",
+        "Configure proper foreign key relationships maintaining 7-entity schema",
+        "Create bilingual content templates and test content creation workflow",
+        "Implement Angular i18n for frontend locale switching with RTL support"
     ],
     "guard_rails": [
-        "Use UID field for slugs with proper patterns",
-        "Set proper field validations (required, min/max length)",
-        "Use enumeration for status field (draft, review, published)",
-        "Ensure proper relation configurations for performance"
+        "Maintain existing 7-entity schema integrity (User, Role, Resource, License, Distribution, AccessRequest, UsageEvent)",
+        "Use Django SlugField for URL-friendly identifiers with proper patterns",
+        "Set proper Django field validations (required, max_length, choices)",
+        "Use Django choices for status fields (draft, review, published)",
+        "Ensure proper foreign key relationships and database indexes for performance",
+        "Follow Islamic content compliance requirements for all translatable content"
     ],
     "acceptance_criteria": [
-        "Given I create an article in English, then I can create Arabic translation",
-        "Categories support nested hierarchy via parent field",
-        "Tags can be assigned to multiple articles via many-to-many relation",
-        "SEO fields are properly structured as reusable component",
-        "Content types appear in Strapi admin with proper field layouts"
+        "Given I create a resource in English via ADMIN-003, then I can create Arabic translation",
+        "Resource relationships properly connect to License and Distribution entities",
+        "Angular forms (ADMIN-003) support locale switching with NG-ZORRO components",
+        "Content appears in Django admin with proper field layouts and language tabs",
+        "Arabic content displays properly with RTL layout in Angular frontend"
     ],
     "definition_of_done": [
-        "All content types created with proper field configurations",
-        "Sample bilingual content created for testing",
-        "Content type schemas documented with field purposes",
-        "Relations working correctly in admin interface"
+        "Enhanced Django models with proper i18n field configurations",
+        "Angular ADMIN-003 forms implemented with NG-ZORRO locale switcher",
+        "Sample bilingual content created for testing via both Django admin and Angular",
+        "Django model schemas documented with translatable field purposes",
+        "Relationships working correctly maintaining 7-entity schema integrity",
+        "Complete integration with cms.mdc screen flow"
     ],
     "out_of_scope": [
-        "Advanced field types like dynamic zones",
-        "Custom field validations beyond basic requirements",
-        "Media relations (handled in separate story)"
+        "Advanced field types beyond standard Django model fields",
+        "Custom field validations beyond Django built-in validators",
+        "Media relations (handled in Task 18 Media Library story)"
     ],
     "references": [
         "docs/Itqan_CMS_BRD.md §3.2 Content Management",
-        "docs/diagrams/level4-data-models.md",
-        "Strapi i18n plugin documentation",
+        "docs/diagrams/level4-data-models.md - 7-entity schema (MUST FOLLOW)",
+        "docs/screens/cms-screens.png - Complete screen flow with ADMIN-003",
+        "Django i18n documentation and django-modeltranslation",
+        "Angular i18n documentation",
         "Screen ADMIN-003: Content creation forms with EN/AR locale switcher",
-        "English wireframe: ai-memory-bank/tasks/screens/en/admin_wireframes.html#ADMIN-003"
+        ".cursor/rules/cms.mdc - Complete Screen Flow Documentation section",
+        "backend/apps/content/ - Enhanced Django content models",
+        "frontend/src/app/features/admin/content/ - Angular content creation forms"
     ]
 }

@@ -22,19 +22,17 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-COPY requirements/development.txt /app/requirements.txt
+COPY requirements/ /app/requirements/
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+    && pip install --no-cache-dir -r requirements/development.txt
 
-# Copy project
-COPY . /app/
-
-# Create logs directory
-RUN mkdir -p /app/logs
-
-# Create non-root user
+# Create non-root user and directories
 RUN adduser --disabled-password --gecos '' appuser \
-    && chown -R appuser:appuser /app
+    && mkdir -p /app/logs /app/staticfiles /app/media
+
+# Copy project and set ownership
+COPY . /app/
+RUN chown -R appuser:appuser /app
 USER appuser
 
 # Expose port

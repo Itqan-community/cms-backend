@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 200 48" xmlns="http://www.w3.org/2000/svg">
+  <!-- Itqan CMS Logo -->
+  <defs>
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#669B80"/>
+      <stop offset="100%" style="stop-color:#22433D"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Logo Symbol -->
+  <rect x="8" y="8" width="32" height="32" rx="6" fill="url(#logoGradient)"/>
+  <path d="M16 20 L24 14 L32 20 L32 30 L24 36 L16 30 Z" fill="white" opacity="0.9"/>
+  <circle cx="24" cy="24" r="3" fill="url(#logoGradient)"/>
+  
+  <!-- Text -->
+  <text x="52" y="20" font-family="'Segoe UI', system-ui, sans-serif" font-size="16" font-weight="600" fill="#22433D">
+    Itqan
+  </text>
+  <text x="52" y="35" font-family="'Segoe UI', system-ui, sans-serif" font-size="11" font-weight="400" fill="#669B80" letter-spacing="1px">
+    CMS
+  </text>
+</svg>

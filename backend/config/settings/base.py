@@ -56,6 +56,7 @@ LOCAL_APPS = [
     'apps.search',
     'apps.authentication',
     'apps.api',
+    'apps.medialib',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -214,6 +215,111 @@ WAGTAILIMAGES_EXTENSIONS = ['gif', 'jpg', 'jpeg', 'png', 'webp']
 
 # Custom user model
 AUTH_USER_MODEL = 'accounts.User'
+
+# Static files (CSS, JavaScript, Images)
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
+
+# Media files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Default file storage
+DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+
+# MinIO Configuration (S3-compatible storage)
+# These settings will be overridden in development/production settings
+MINIO_ENDPOINT = config('MINIO_ENDPOINT', default='localhost:9000')
+MINIO_ACCESS_KEY = config('MINIO_ACCESS_KEY', default='minioadmin')
+MINIO_SECRET_KEY = config('MINIO_SECRET_KEY', default='minioadmin')
+MINIO_USE_HTTPS = config('MINIO_USE_HTTPS', default=False, cast=bool)
+MINIO_BUCKET_NAME = config('MINIO_BUCKET_NAME', default='itqan-uploads')
+
+# MeiliSearch Configuration
+MEILISEARCH_URL = config('MEILISEARCH_URL', default='http://localhost:7700')
+MEILISEARCH_MASTER_KEY = config('MEILISEARCH_MASTER_KEY', default='itqan-meili-master-key-dev')
+MEILISEARCH_TIMEOUT = config('MEILISEARCH_TIMEOUT', default=30, cast=int)
+
+# MeiliSearch Index Configuration
+MEILISEARCH_INDEXES = {
+    'resources': {
+        'primary_key': 'id',
+        'searchable_attributes': [
+            'title',
+            'title_ar',
+            'description', 
+            'description_ar',
+            'content',
+            'content_ar',
+            'tags'
+        ],
+        'filterable_attributes': [
+            'resource_type',
+            'language',
+            'status',
+            'created_by',
+            'license_type',
+            'is_public'
+        ],
+        'sortable_attributes': [
+            'created_at',
+            'updated_at',
+            'title',
+            'title_ar'
+        ],
+        'ranking_rules': [
+            'words',
+            'typo',
+            'proximity',
+            'attribute',
+            'sort',
+            'exactness'
+        ]
+    },
+    'users': {
+        'primary_key': 'id',
+        'searchable_attributes': [
+            'first_name',
+            'last_name',
+            'email',
+            'organization'
+        ],
+        'filterable_attributes': [
+            'role',
+            'is_active',
+            'email_verified'
+        ],
+        'sortable_attributes': [
+            'created_at',
+            'last_login',
+            'first_name',
+            'last_name'
+        ]
+    },
+    'media': {
+        'primary_key': 'id',
+        'searchable_attributes': [
+            'title',
+            'description',
+            'original_filename',
+            'tags'
+        ],
+        'filterable_attributes': [
+            'media_type',
+            'uploaded_by',
+            'folder'
+        ],
+        'sortable_attributes': [
+            'created_at',
+            'file_size',
+            'title'
+        ]
+    }
+}
 
 # Authentication backends
 AUTHENTICATION_BACKENDS = [

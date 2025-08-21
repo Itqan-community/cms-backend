@@ -1,28 +1,37 @@
 {
-    "prompt": "You are an autonomous coding agent completing STORY-8: Meilisearch Integration for Itqan CMS. Install and configure Strapi plugin to automatically sync content to Meilisearch for full-text search capabilities.",
+    "prompt": "You are an autonomous coding agent completing STORY-8: Meilisearch Integration for Itqan CMS. Install and configure Django to automatically sync content to Meilisearch for full-text search capabilities.",
     "context": {
         "project": "Itqan CMS",
         "feature": "Search Integration",
         "tech_stack": [
-            "Strapi v5",
-            "Meilisearch v1.6",
+            "Django 4.2",
+            "Angular 19",
+            "NG-ZORRO",
+            "MeiliSearch v1.6",
             "Docker"
         ],
-        "environment": "Development"
+        "environment": "Development",
+        "complete_screen_flow": "docs/screens/cms-screens.png"
     },
     "objectives": [
-        "Install Strapi Meilisearch plugin and configure connection",
-        "Set up automatic content indexing on create/update/delete",
-        "Configure search indexes for Articles and Pages with proper fields",
-        "Test search functionality via Meilisearch dashboard"
+        "Install MeiliSearch Python client and configure Django integration",
+        "Set up automatic content indexing on create/update/delete via Django signals",
+        "Configure search indexes for Resources and Content with proper fields",
+        "Create Django admin interface for search configuration (ADMIN-002)",
+        "Create Angular search components following cms.mdc flow",
+        "Test search functionality via MeiliSearch dashboard and Angular UI"
     ],
     "tasks": [
-        "Install strapi-plugin-meilisearch or @meilisearch/strapi-plugin",
-        "Configure config/plugins.ts with Meilisearch host and master key",
-        "Define searchable content types and fields in plugin config",
-        "Set up lifecycle hooks for automatic index synchronization",
-        "Test content indexing by creating sample articles",
-        "Verify search results via Meilisearch dashboard at localhost:7700"
+        "Install meilisearch-python client for Django integration",
+        "Configure Django settings with MeiliSearch host and master key",
+        "Create Django search app with index management utilities",
+        "Define searchable models and fields in search configuration",
+        "Set up Django signals for automatic index synchronization",
+        "Create Django admin interface for search configuration (ADMIN-002)",
+        "Implement Angular search components using NG-ZORRO",
+        "Test content indexing by creating sample resources",
+        "Verify search results via MeiliSearch dashboard at localhost:7700",
+        "Test bilingual search with Arabic and English content"
     ],
     "guard_rails": [
         "Store Meilisearch master key in environment variables",
@@ -31,26 +40,33 @@
         "Handle connection failures gracefully"
     ],
     "acceptance_criteria": [
-        "Given I create an article in Strapi, then it appears in Meilisearch index",
-        "Given I search for content via Meilisearch dashboard, then relevant results return",
-        "Index updates automatically when content is modified or deleted",
-        "Search supports both English and Arabic content"
+        "Given I create a resource in Django, then it appears in MeiliSearch index automatically",
+        "Given I search for content via MeiliSearch dashboard, then relevant results return",
+        "Given I use Angular search UI (following cms.mdc flow), then results display properly",
+        "Index updates automatically when content is modified or deleted via Django signals",
+        "Search supports both English and Arabic content with proper tokenization",
+        "Django admin interface (ADMIN-002) allows search configuration management"
     ],
     "definition_of_done": [
-        "Plugin configuration documented with field mappings",
-        "Sample content indexed and searchable",
-        "Integration tested with bilingual content"
+        "Django MeiliSearch integration documented with field mappings",
+        "Angular search components implemented with NG-ZORRO",
+        "Sample content indexed and searchable via both admin and frontend",
+        "Integration tested with bilingual content",
+        "Complete integration with cms.mdc screen flow"
     ],
     "out_of_scope": [
-        "Frontend search UI implementation",
         "Advanced search features like facets or filters",
-        "Search analytics or ranking algorithms"
+        "Search analytics or ranking algorithms",
+        "Machine learning or AI-powered search relevance"
     ],
     "references": [
-        "docker-compose.yaml Meilisearch service",
-        "env.dev.example MEILI_* variables",
-        "Meilisearch Strapi plugin documentation",
-        "Screen ADMIN-002: Search configuration panel",
-        "English wireframe: ai-memory-bank/tasks/screens/en/admin_wireframes.html#ADMIN-002"
+        "deployment/docker/docker-compose.yml MeiliSearch service",
+        "backend/config/settings/base.py MeiliSearch configuration",
+        "docs/screens/cms-screens.png - Complete screen flow with ADMIN-002",
+        "MeiliSearch Python client documentation",
+        "Screen ADMIN-002: Search configuration panel with Django admin integration",
+        ".cursor/rules/cms.mdc - Complete Screen Flow Documentation section",
+        "backend/apps/search/ - Django MeiliSearch integration app",
+        "frontend/src/app/features/search/ - Angular search components"
     ]
 }

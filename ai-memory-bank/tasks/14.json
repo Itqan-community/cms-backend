@@ -4,10 +4,11 @@
     "project": "Itqan CMS",
     "feature": "User Login",
     "auth_model": "Auth0 Hybrid (Hosted Universal Login)",
-    "tech_stack": ["Next.js 14", "Strapi v5"],
+    "tech_stack": ["Angular 19", "Django 4.2", "NG-ZORRO"],
     "screens": ["AUTH-001"],
     "colors": {"primary": "#669B80", "dark": "#22433D"},
-    "auth_priority": ["GitHub SSO", "Google OAuth", "Email/Password"]
+    "auth_priority": ["GitHub SSO", "Google OAuth", "Email/Password"],
+    "complete_screen_flow": "docs/screens/cms-screens.png"
   },
   "objectives": [
     "Allow existing users to authenticate",
@@ -15,21 +16,22 @@
     "Show localized (EN/AR) login labels"
   ],
   "tasks": [
-    "Configure /login route to redirect to Auth0 Hosted Universal Login",
+    "Configure Angular /login route to redirect to Auth0 Hosted Universal Login",
     "Customize Auth0 Universal Login page with Itqan branding (#669B80, #22433D)",
     "Set GitHub SSO as primary provider in Auth0 tenant configuration",
     "Add language parameter to Auth0 authorize URL based on site locale (EN/AR)",
-    "Implement logout route clearing cookies and Auth0 session",
-    "Build AUTH-001 screen: login trigger page with branded call-to-action",
-    "Implement useAuth() hook exposing user profile and access token"
+    "Implement Angular logout functionality clearing Auth0 session",
+    "Build AUTH-001 screen: login trigger page with NG-ZORRO branded components",
+    "Implement Angular AuthService exposing user profile and access token",
+    "Integrate with Django backend for user session management"
   ],
   "guard_rails": [
-    "Tokens in httpOnly cookies",
-    "XSS safe redirects"
+    "Secure token handling via Angular AuthService",
+    "XSS safe redirects following Angular security best practices"
   ],
   "acceptance_criteria": [
-    "User can login and see dashboard",
-    "JWT stored server-side verified by Strapi token exchange"
+    "User can login and see dashboard following cms.mdc complete screen flow",
+    "JWT tokens properly exchanged between Auth0 and Django backend"
   ],
   "definition_of_done": [
     "Unit tests pass",
@@ -39,10 +41,12 @@
     "SSO enterprise connections"
   ],
   "references": [
-    "ai-memory-bank/tasks/screens/SCREEN_MAPPING.md",
-    "ai-memory-bank/logo.svg (color scheme)",
-    "Screen AUTH-001: Login page with Auth0 Universal Login redirect",
+    "docs/screens/cms-screens.png - Complete screen flow with AUTH-001 integration",
+    "ai-memory-bank/logo.png (Itqan branding)",
+    "Screen AUTH-001: Login page accessible from LANDING-001 with Auth0 Universal Login",
     "docs/Itqan_CMS_BRD.md §3.1",
-    "English wireframe: ai-memory-bank/tasks/screens/en/create_english_wireframes.html#AUTH-001"
+    ".cursor/rules/cms.mdc - Complete Screen Flow Documentation section",
+    "frontend/src/app/features/auth/login.component.ts - Angular login component",
+    "backend/apps/authentication/ - Django Auth0 integration"
   ]
 }

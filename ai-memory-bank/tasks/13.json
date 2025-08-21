@@ -1,26 +1,27 @@
 {
-  "prompt": "You are an autonomous coding agent completing STORY-2: Email Verification enforcement for Itqan CMS. Block dashboard access until Auth0 email_verified is true and mirror status in Strapi user profile.",
+  "prompt": "You are an autonomous coding agent completing STORY-2: Email Verification enforcement for Itqan CMS. Block dashboard access until Auth0 email_verified is true and mirror status in Django user profile.",
   "context": {
     "project": "Itqan CMS",
     "feature": "Email Verification",
     "auth_model": "Auth0 Hybrid (Hosted Universal Login)",
-    "tech_stack": ["Next.js 14", "Strapi v5"],
+    "tech_stack": ["Angular 19", "Django 4.2", "NG-ZORRO"],
     "screens": ["REG-002"],
-    "colors": {"primary": "#669B80", "dark": "#22433D"}
+    "colors": {"primary": "#669B80", "dark": "#22433D"},
+    "developer_flow": "docs/screens/Developer Resource Access & Resource Download - Initial Registration Scenario.png"
   },
   "objectives": [
     "Enforce verified email",
-    "Sync email_verified flag to Strapi",
+    "Sync email_verified flag to Django User model",
     "Display resend-verification UI"
   ],
   "tasks": [
     "Enable Email Verification in Auth0 tenant with Hosted Universal Login",
     "Configure Auth0 Universal Login page to show verification message",
     "Add post-login action to include email_verified in ID token",
-    "Build REG-002 screen: verification status page with Itqan branding",
-    "On Next.js callback, if email_verified=false redirect to /verify-email",
-    "Expose endpoint /api/auth/verification-status to poll",
-    "Add Strapi user attribute emailVerified",
+    "Build REG-002 screen: verification status page with Itqan branding using NG-ZORRO",
+    "On Angular auth callback, if email_verified=false redirect to /verify-email",
+    "Expose Django endpoint /api/auth/verification-status/ to poll",
+    "Add Django User model field email_verified",
     "Implement resend verification link via Auth0 Management API"
   ],
   "guard_rails": [
@@ -40,9 +41,12 @@
     "Multi-factor auth"
   ],
   "references": [
-    "BRD §3.1",
-    "Auth0 docs",
+    "docs/Itqan_CMS_BRD.md §3.1",
+    "docs/screens/Developer Resource Access & Resource Download - Initial Registration Scenario.png",
+    "Auth0 Email Verification documentation",
     "Screen REG-002: Email verification confirmation page",
-    "English wireframe: ai-memory-bank/tasks/screens/en/create_english_wireframes.html#REG-002"
+    ".cursor/rules/cms.mdc - Developer Flow Documentation section",
+    "frontend/src/app/features/auth/email-verification.component.ts - Angular verification component",
+    "backend/apps/authentication/ - Django Auth0 integration"
   ]
 }

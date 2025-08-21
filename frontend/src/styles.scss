@@ -1,93 +1,140 @@
-/* Itqan CMS - Global Styles */
+/* Itqan CMS Global Styles */
+
+// Import NG-ZORRO styles
 @import 'ng-zorro-antd/ng-zorro-antd.min.css';
 
-/* Itqan Brand Colors */
-:root {
-  --itqan-primary: #669B80;
-  --itqan-dark: #22433D;
-  --itqan-primary-light: #7db092;
-  --itqan-primary-dark: #558e6e;
-  --itqan-text-primary: #22433D;
-  --itqan-text-secondary: #666;
-  --itqan-bg-light: #f8f9fa;
-  --itqan-border: #e0e0e0;
+// Import custom Islamic theme
+@import './theme.scss';
+
+// Global Islamic Content Styles
+* {
+  box-sizing: border-box;
 }
 
-/* Custom NG-ZORRO Theme Overrides */
-.ant-btn-primary {
-  background-color: var(--itqan-primary);
-  border-color: var(--itqan-primary);
-  
-  &:hover, &:focus {
-    background-color: var(--itqan-primary-light);
-    border-color: var(--itqan-primary-light);
-  }
-  
-  &:active {
-    background-color: var(--itqan-primary-dark);
-    border-color: var(--itqan-primary-dark);
-  }
+html {
+  font-size: 14px;
+  scroll-behavior: smooth;
 }
 
-.ant-menu-horizontal > .ant-menu-item-selected {
-  color: var(--itqan-primary);
-  border-bottom-color: var(--itqan-primary);
-}
-
-.ant-layout-header {
-  background-color: var(--itqan-dark);
-  color: white;
-}
-
-/* Typography */
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  color: var(--itqan-text-primary);
+  margin: 0;
+  padding: 0;
+  font-family: var(--ant-font-family);
+  font-size: var(--ant-font-size-base);
+  line-height: var(--ant-line-height-base);
+  color: var(--ant-text-color);
+  background-color: var(--ant-body-background);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Arabic Typography */
+// RTL Support
 [dir="rtl"] {
-  font-family: 'Noto Sans Arabic', 'IBM Plex Sans Arabic', -apple-system, BlinkMacSystemFont, sans-serif;
+  text-align: right;
+  
+  body {
+    font-family: 'Noto Sans Arabic', 'IBM Plex Sans Arabic', 'Amiri', sans-serif;
+  }
 }
 
-/* Layout Utilities */
-.itqan-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 16px;
+// Islamic Content Typography
+.arabic-text {
+  font-family: 'Noto Sans Arabic', 'IBM Plex Sans Arabic', 'Amiri', sans-serif;
+  font-size: 16px;
+  line-height: 1.8;
+  direction: rtl;
+  text-align: right;
 }
 
-.itqan-card {
-  background: white;
+.english-text {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  direction: ltr;
+  text-align: left;
+}
+
+// Utility Classes for Islamic Content
+.quranic-verse {
+  font-family: 'Amiri', 'Scheherazade New', 'Noto Sans Arabic', sans-serif;
+  font-size: 20px;
+  line-height: 2.2;
+  color: #2c3e50;
+  background: #f8f9fa;
+  padding: 20px;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  padding: 24px;
+  border-right: 4px solid #669B80;
+  margin: 16px 0;
+  direction: rtl;
+  text-align: right;
 }
 
-/* Responsive utilities */
-@media (max-width: 768px) {
-  .itqan-container {
-    padding: 0 12px;
+.verse-translation {
+  font-style: italic;
+  color: #6c757d;
+  background: #fafbfc;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin: 8px 0;
+  border-left: 3px solid #dee2e6;
+}
+
+.tafsir-commentary {
+  background: #e9ecef;
+  padding: 16px;
+  border-radius: 6px;
+  margin: 12px 0;
+  border-left: 3px solid #22433D;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+// Loading and Accessibility
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+// Focus Management for Accessibility
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background: #669B80;
+  color: white;
+  padding: 8px;
+  text-decoration: none;
+  border-radius: 4px;
+  z-index: 1000;
+  
+  &:focus {
+    top: 6px;
+  }
+}
+
+// Print Styles
+@media print {
+  .no-print {
+    display: none !important;
   }
   
-  .itqan-card {
-    padding: 16px;
-  }
-}
-
-/* RTL Support */
-[dir="rtl"] .ant-layout-sider {
-  right: 0;
-  left: auto;
-}
-
-[dir="rtl"] .ant-menu-horizontal {
-  direction: rtl;
-}
-
-/* Custom loading spinner with Itqan colors */
-.itqan-loading {
-  .ant-spin-dot-item {
-    background-color: var(--itqan-primary);
+  .quranic-verse,
+  .verse-translation,
+  .tafsir-commentary {
+    background: white !important;
+    border: 1px solid #ccc !important;
+    page-break-inside: avoid;
   }
 }

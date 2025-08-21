@@ -16,11 +16,7 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
 # Development middleware
 MIDDLEWARE.insert(0, 'django.middleware.security.SecurityMiddleware')
 
-# Development database (override if needed)
-DATABASES['default'].update({
-    'HOST': 'localhost',
-    'PORT': '5432',
-})
+# Development database (configured via environment variables)
 
 # Email backend for development
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

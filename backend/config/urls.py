@@ -23,6 +23,9 @@ urlpatterns = [
     # Authentication
     path('api/v1/auth/', include('apps.accounts.urls')),
     
+    # Media Library
+    path('', include('apps.medialib.urls')),
+    
     # Wagtail frontend (catch-all for CMS pages)
     path('', include(wagtail_urls)),
 ]

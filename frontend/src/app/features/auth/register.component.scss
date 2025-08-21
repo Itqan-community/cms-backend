@@ -1,0 +1,278 @@
+// REG-001 Registration Page Styles
+// Based on Itqan CMS design system with NG-ZORRO components
+
+.register-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f0f8f4 0%, #e8f5e8 100%);
+  padding: 24px;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+    align-items: flex-start;
+    padding-top: 10vh;
+  }
+}
+
+.register-card-wrapper {
+  width: 100%;
+  max-width: 480px;
+}
+
+.register-card {
+  box-shadow: 
+    0 10px 30px rgba(34, 67, 61, 0.08),
+    0 4px 16px rgba(102, 155, 128, 0.05);
+  border-radius: 12px;
+  overflow: hidden;
+
+  :global(.ant-card-body) {
+    padding: 48px 40px;
+
+    @media (max-width: 768px) {
+      padding: 32px 24px;
+    }
+  }
+}
+
+// Header Section
+.register-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.logo-section {
+  margin-bottom: 24px;
+
+  .logo {
+    height: 48px;
+    width: auto;
+    max-width: 200px;
+
+    @media (max-width: 768px) {
+      height: 40px;
+    }
+  }
+
+  :global(.text-logo) {
+    font-size: 28px;
+    font-weight: 700;
+    color: #669B80;
+    letter-spacing: -0.5px;
+
+    @media (max-width: 768px) {
+      font-size: 24px;
+    }
+  }
+}
+
+.register-title {
+  font-size: 28px;
+  font-weight: 600;
+  color: #22433D;
+  margin: 0 0 12px 0;
+  letter-spacing: -0.5px;
+  line-height: 1.3;
+
+  @media (max-width: 768px) {
+    font-size: 24px;
+  }
+}
+
+.register-subtitle {
+  font-size: 16px;
+  color: #6B7280;
+  margin: 0;
+  line-height: 1.5;
+
+  @media (max-width: 768px) {
+    font-size: 14px;
+  }
+}
+
+// Error Alert
+.error-alert {
+  margin-bottom: 24px;
+}
+
+// Registration Options
+.register-options {
+  margin-bottom: 32px;
+
+  .w-full {
+    width: 100%;
+  }
+}
+
+// Button Styles
+.github-button {
+  background-color: #669B80 !important;
+  border-color: #669B80 !important;
+  color: white !important;
+  font-weight: 500;
+  height: 48px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+
+  &:hover, &:focus {
+    background-color: #5a8b73 !important;
+    border-color: #5a8b73 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 155, 128, 0.3);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  :global(.anticon) {
+    font-size: 18px;
+    margin-right: 8px;
+  }
+}
+
+.google-button,
+.email-button {
+  height: 48px;
+  border-radius: 8px;
+  border: 1.5px solid #E5E7EB;
+  color: #374151;
+  font-weight: 500;
+  transition: all 0.2s ease;
+
+  &:hover, &:focus {
+    border-color: #669B80;
+    color: #669B80;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 155, 128, 0.15);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  :global(.anticon) {
+    font-size: 18px;
+    margin-right: 8px;
+  }
+}
+
+.google-button :global(.anticon) {
+  color: #4285F4;
+}
+
+.email-button :global(.anticon) {
+  color: #6B7280;
+}
+
+// Divider
+.divider {
+  margin: 24px 0;
+
+  :global(.ant-divider-inner-text) {
+    color: #9CA3AF;
+    font-size: 14px;
+    padding: 0 16px;
+    background-color: white;
+  }
+
+  :global(.ant-divider::before),
+  :global(.ant-divider::after) {
+    border-top-color: #E5E7EB;
+  }
+}
+
+// Terms Section
+.terms-section {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.terms-text {
+  font-size: 13px;
+  color: #6B7280;
+  line-height: 1.5;
+  margin: 0;
+
+  .terms-link {
+    color: #669B80;
+    text-decoration: none;
+    font-weight: 500;
+
+    &:hover {
+      text-decoration: underline;
+      color: #5a8b73;
+    }
+  }
+}
+
+// Login Section
+.login-section {
+  text-align: center;
+  padding-top: 24px;
+  border-top: 1px solid #E5E7EB;
+}
+
+.login-text {
+  font-size: 14px;
+  color: #6B7280;
+  margin: 0;
+
+  .login-link {
+    color: #669B80;
+    text-decoration: none;
+    font-weight: 500;
+    cursor: pointer;
+    margin-left: 4px;
+
+    &:hover, &:focus {
+      text-decoration: underline;
+      color: #5a8b73;
+    }
+  }
+}
+
+// Loading States
+:global(.ant-btn-loading) {
+  pointer-events: none;
+}
+
+// Focus Styles for Accessibility
+.github-button:focus-visible,
+.google-button:focus-visible,
+.email-button:focus-visible {
+  outline: 2px solid #669B80;
+  outline-offset: 2px;
+}
+
+.login-link:focus-visible {
+  outline: 2px solid #669B80;
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
+// RTL Support for Arabic
+[dir="rtl"] {
+  .register-title,
+  .register-subtitle,
+  .terms-text,
+  .login-text {
+    text-align: right;
+  }
+
+  .github-button,
+  .google-button,
+  .email-button {
+    :global(.anticon) {
+      margin-right: 0;
+      margin-left: 8px;
+    }
+  }
+
+  .login-link {
+    margin-left: 0;
+    margin-right: 4px;
+  }
+}

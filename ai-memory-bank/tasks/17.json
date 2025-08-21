@@ -7,8 +7,9 @@
   },
   "definition_of_done": [
     "docker compose up builds images and all services become healthy",
-    "Strapi accessible at http://localhost:1337",
-    "Next.js accessible at http://localhost:3000",
-    "MinIO & Meilisearch accessible on respective ports"
+    "Django backend accessible at http://localhost:8000",
+    "Angular frontend accessible at http://localhost:4200",
+    "PostgreSQL, Redis, MinIO & MeiliSearch accessible on respective ports",
+    "Complete cms.mdc screen flow accessible through containerized environment"
   ]
 }

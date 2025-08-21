@@ -2,10 +2,29 @@ export const environment = {
   production: false,
   apiUrl: 'http://localhost:8000/api/v1',
   auth0: {
-    domain: 'your-auth0-domain.auth0.com', // TODO: Set your Auth0 domain
-    clientId: 'your-client-id', // TODO: Set your Auth0 client ID
-    audience: 'https://api.itqan.com',
-    redirectUri: 'http://localhost:4200/callback',
-    scope: 'openid profile email'
+    domain: 'dev-itqan.eu.auth0.com',
+    clientId: 'N3S0JhhYSWaLuhVMuBb9ZTX4gEPJ0G8f',
+    audience: 'https://dev-itqan.eu.auth0.com/api/v2/',
+    redirectUri: `${window.location.origin}/auth/callback`,
+    scope: 'openid profile email read:current_user update:current_user_metadata'
+  },
+  features: {
+    enableAnalytics: true,
+    enableNotifications: true,
+    enableRealTimeUpdates: true,
+    enableAdvancedSearch: true
+  },
+  islamic: {
+    defaultReciter: 'Abdul Rahman Al-Sudais',
+    supportedLanguages: ['ar', 'en', 'ur', 'fr', 'id', 'tr'],
+    quranicFonts: ['Amiri', 'Scheherazade New', 'Noto Sans Arabic'],
+    enableHijriCalendar: true,
+    enablePrayerTimes: false // Future feature
+  },
+  cdn: {
+    baseUrl: 'http://localhost:9000', // MinIO for development
+    audioPath: '/audio',
+    imagesPath: '/images',
+    documentsPath: '/documents'
   }
 };

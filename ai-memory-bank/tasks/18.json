@@ -1,27 +1,34 @@
 {
-    "prompt": "You are an autonomous coding agent completing STORY-7: MinIO Upload Provider for Itqan CMS. Configure Strapi v5 to store file uploads in local MinIO bucket instead of local filesystem, ensuring S3-compatible setup works in development.",
+    "prompt": "You are an autonomous coding agent completing STORY-7: MinIO Upload Provider for Itqan CMS. Configure Django 4.2 to store file uploads in local MinIO bucket instead of local filesystem, ensuring S3-compatible setup works in development.",
     "context": {
         "project": "Itqan CMS",
         "feature": "File Storage Integration",
         "tech_stack": [
-            "Strapi v5",
+            "Django 4.2",
+            "Angular 19",
+            "NG-ZORRO",
             "MinIO",
             "Docker"
         ],
-        "environment": "Development"
+        "environment": "Development",
+        "complete_screen_flow": "docs/screens/cms-screens.png"
     },
     "objectives": [
-        "Install and configure Strapi upload provider for S3-compatible storage",
-        "Connect Strapi to MinIO container running on port 9000",
+        "Install and configure Django storage backend for S3-compatible MinIO",
+        "Connect Django to MinIO container running on port 9000",
         "Create initial bucket and set appropriate permissions",
         "Ensure uploads attach to Resource entities in database",
-        "Test file upload via Strapi admin interface"
+        "Create Angular media library UI following ADMIN-001 screen design",
+        "Test file upload via Django REST API and Angular frontend"
     ],
     "tasks": [
-        "Install @strapi/provider-upload-aws-s3 package in cms/",
-        "Configure config/plugins.ts with MinIO endpoint and credentials",
+        "Install django-storages and boto3 packages for S3-compatible storage",
+        "Configure Django settings with MinIO endpoint and credentials",
+        "Create Django medialib app with MediaFile and MediaFolder models",
         "Add MinIO bucket creation script or manual setup instructions",
-        "Update env.dev.example with proper S3 provider settings",
+        "Implement Django REST API endpoints for media upload and management",
+        "Create Angular media library components using NG-ZORRO file upload",
+        "Update env.dev.example with proper MinIO settings",
         "Test media library upload and verify files stored in MinIO",
         "Document MinIO console access and bucket management"
     ],
@@ -32,15 +39,19 @@
         "Do not commit real access keys to version control"
     ],
     "acceptance_criteria": [
-        "Given I upload an image via Strapi admin, then it appears in MinIO bucket",
-        "Given I access uploaded file URL, then image displays correctly",
+        "Given I upload an image via Angular media library UI (ADMIN-001), then it appears in MinIO bucket",
+        "Given I access uploaded file URL, then image displays correctly in Angular frontend",
         "MinIO console shows uploaded files in itqan-uploads bucket",
-        "No files are stored in local public/uploads directory"
+        "Django REST API properly handles file upload and metadata storage",
+        "Angular components follow NG-ZORRO design system and cms.mdc flow",
+        "No files are stored in local filesystem, all in MinIO"
     ],
     "definition_of_done": [
-        "Upload provider configuration documented in README",
+        "Django storage configuration documented in README",
+        "Angular media library components implemented with NG-ZORRO",
         "Test upload works end-to-end via docker-compose stack",
-        "MinIO bucket accessible via console at localhost:9001"
+        "MinIO bucket accessible via console at localhost:9001",
+        "Complete integration with cms.mdc screen flow"
     ],
     "out_of_scope": [
         "Production S3 or Alibaba OSS configuration",
@@ -48,10 +59,13 @@
         "CDN integration"
     ],
     "references": [
-        "docker-compose.yaml MinIO service",
-        "env.dev.example AWS_* variables",
-        "Strapi upload provider docs",
-        "Screen ADMIN-001: Media Library interface",
-        "English wireframe: ai-memory-bank/tasks/screens/en/admin_wireframes.html#ADMIN-001"
+        "deployment/docker/docker-compose.yml MinIO service",
+        "backend/config/settings/base.py Django storage configuration",
+        "docs/screens/cms-screens.png - Complete screen flow with ADMIN-001",
+        "django-storages documentation for S3-compatible backends",
+        "Screen ADMIN-001: Media Library interface with NG-ZORRO file upload",
+        ".cursor/rules/cms.mdc - Complete Screen Flow Documentation section",
+        "backend/apps/medialib/ - Django media management app",
+        "frontend/src/app/features/admin/media-library/ - Angular media components"
     ]
 }

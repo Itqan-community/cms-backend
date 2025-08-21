@@ -4,15 +4,18 @@
         "project": "Itqan CMS",
         "feature": "Role-Based Access Control",
         "tech_stack": [
-            "Strapi v5",
-            "Users & Permissions plugin"
+            "Django 4.2",
+            "Django Auth System",
+            "Angular 19",
+            "NG-ZORRO"
         ],
         "roles": [
             "Admin",
             "Publisher",
             "Developer",
             "Reviewer"
-        ]
+        ],
+        "complete_screen_flow": "docs/screens/cms-screens.png"
     },
     "objectives": [
         "Create four distinct user roles with clear permission boundaries",

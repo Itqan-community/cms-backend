@@ -9,6 +9,7 @@ app_name = 'authentication'
 urlpatterns = [
     # Auth0 authentication endpoints
     path('login/', views.Auth0LoginView.as_view(), name='auth0_login'),
+    path('exchange/', views.TokenExchangeView.as_view(), name='token_exchange'),
     path('validate/', views.validate_token, name='validate_token'),
     path('profile/', views.user_profile, name='user_profile'),
     

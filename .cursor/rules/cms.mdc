@@ -374,3 +374,362 @@ Tasks 8+ should focus on:
 - **Content Management UI** (Publisher workflows for Quranic content)
 - **Admin Interface** (Access request approvals, user management)
 - **Production Deployment** (DigitalOcean → Alibaba Cloud migration per Level 1 context)
+
+## Developer (User) Flow Documentation
+
+### Complete Developer Resource Access & Download Flow
+This section documents the end-to-end "Developer Resource Access & Resource Download - Initial Registration Scenario" as illustrated in `docs/screens/Developer Resource Access & Resource Download - Initial Registration Scenario.png`.
+
+#### Flow Overview
+The developer onboarding and resource access process follows a secure, multi-step workflow that ensures proper authentication, authorization, and licensing compliance for Quranic content distribution.
+
+#### Step-by-Step Process
+
+1. **Initial Entry Point**
+   - Developer discovers Itqan CMS platform
+   - Navigates to registration page
+   - **Implementation**: Task 12 (REG-001 screen)
+
+2. **Developer Registration**
+   - User completes registration form with required details
+   - Auth0 SPA SDK handles account creation
+   - Initial user record created in Django backend
+   - **Implementation**: Task 12 (User Registration)
+   - **Screens**: REG-001
+   - **Entities**: User, Role (Developer role assignment)
+
+3. **Email Verification**
+   - Auth0 sends verification email automatically
+   - Developer clicks verification link
+   - Email status updated in User entity
+   - **Implementation**: Task 13 (Email Verification)
+   - **Screens**: REG-002
+   - **Entities**: User (email_verified flag)
+
+4. **Authentication Process**
+   - Developer attempts login via Auth0
+   - Support for Social Login (GitHub/Google) and email/password
+   - **Implementation**: Task 14 (User Login)
+   - **Screens**: AUTH-001
+   - **External Systems**: Auth0 OIDC
+
+5. **Token Exchange & Loading**
+   - Auth0 access token exchanged for Django JWT
+   - Loading state during token processing
+   - **Implementation**: Task 15 (Token Exchange Loading)
+   - **Screens**: AUTH-002
+   - **API Endpoints**: `/api/auth/exchange/`
+
+6. **Dashboard Welcome & Onboarding**
+   - First-time user greeted with welcome interface
+   - Profile completion checklist presented
+   - API quota and access status displayed
+   - **Implementation**: Task 16 (Dashboard Welcome)
+   - **Screens**: DASH-001
+   - **Entities**: User profile, AccessRequest status
+
+7. **Resource Discovery & Access Request**
+   - Developer browses available Quranic content resources
+   - Selects desired content for licensing
+   - Submits AccessRequest for admin approval
+   - **Entities**: Resource, License, AccessRequest
+   - **Workflow**: Draft → Pending → Review → Approved/Rejected
+
+8. **Admin Approval Process**
+   - Admin receives notification of pending AccessRequest
+   - Reviews developer profile and request details
+   - Makes approval/rejection decision with comments
+   - **Entities**: AccessRequest (status updates), User (admin role)
+   - **Notifications**: Email notifications to developer
+
+9. **Resource Access Granted**
+   - Upon approval, Distribution records are created
+   - API keys and access tokens generated
+   - Developer gains programmatic access to licensed content
+   - **Entities**: Distribution, UsageEvent (tracking begins)
+
+10. **Content Download & Integration**
+    - Developer can now access licensed Quranic content via API
+    - Usage tracking begins for analytics and compliance
+    - **Entities**: UsageEvent, Distribution
+    - **External Systems**: MinIO/Alibaba OSS for content delivery
+
+#### Technical Implementation Mapping
+
+**Frontend Components (Angular 19 + NG-ZORRO)**:
+- Registration: `features/auth/register.component.ts` (REG-001)
+- Email Verification: `features/auth/email-verification.component.ts` (REG-002)
+- Login: `features/auth/login.component.ts` (AUTH-001)
+- Token Exchange: `features/auth/auth-callback.component.ts` (AUTH-002)
+- Dashboard: `features/dashboard/dashboard.component.ts` (DASH-001)
+
+**Backend APIs (Django 4.2 + DRF)**:
+- Authentication: `apps/authentication/` (Auth0 OIDC integration)
+- User Management: `apps/accounts/` (User and Role entities)
+- Content Management: `apps/content/` (Resource and Distribution entities)
+- Licensing: `apps/licensing/` (License and AccessRequest entities)
+- Analytics: `apps/analytics/` (UsageEvent tracking)
+
+**Database Entities (7-Entity Schema)**:
+- **User**: Developer account and profile data
+- **Role**: Developer role assignment and permissions
+- **Resource**: Quranic content available for licensing
+- **License**: Usage terms and conditions for content
+- **Distribution**: Granted access to specific content
+- **AccessRequest**: Approval workflow for content access
+- **UsageEvent**: Analytics and compliance tracking
+
+#### Bilingual Support (EN/AR)
+- All user-facing screens support English and Arabic
+- Right-to-Left (RTL) layout for Arabic content
+- Islamic cultural considerations in UI/UX design
+- Proper Arabic typography with 'Noto Sans Arabic' font family
+
+#### Security & Compliance
+- Auth0 OIDC for secure authentication
+- JWT tokens for API access control
+- Role-based access control (RBAC) throughout the flow
+- SHA-256 checksums for Quranic content integrity
+- Audit trail via UsageEvent logging
+
+#### Integration Points
+- **Auth0**: OAuth/OIDC authentication and user management
+- **Mailgun**: Email notifications for workflow steps
+- **MinIO/Alibaba OSS**: Content storage and CDN delivery
+- **MeiliSearch**: Full-text search for resource discovery
+- **Redis**: Session management and Celery task queue
+- **PostgreSQL**: Primary data storage with JSONB metadata
+
+This flow ensures that all developer interactions with Quranic content are properly authenticated, authorized, and tracked while maintaining the highest standards of Islamic content integrity and scholarly review.
+
+### User Access Request Scenario Workflow
+This section documents the detailed "User Access Request Scenario" that occurs within step 7 of the main developer flow, providing granular documentation of the resource access request process.
+
+#### Access Request Flow Overview
+Once a developer has completed registration and reached the dashboard, they can initiate specific resource access requests. This workflow ensures proper licensing compliance and Islamic content authenticity verification before granting access to Quranic content.
+
+#### Detailed Access Request Steps
+
+1. **Logged-in User Request Access Scenario Starts**
+   - Developer navigates to resource catalog from dashboard
+   - Identifies specific Quranic content resource for licensing
+   - Clicks "Request Access" button to initiate workflow
+   - **Implementation**: Accessible from DASH-001 dashboard via resource discovery section
+   - **Security**: Requires valid Django JWT and Developer role verification
+
+2. **User Answers Access Purpose Questions**
+   - Developer completes brief questionnaire about intended use
+   - Questions cover: project type, expected usage volume, distribution method, target audience
+   - Form validation ensures completeness and appropriate use cases
+   - **Implementation**: Angular reactive form with NG-ZORRO nz-form components
+   - **Screens**: ACCESS-REQ-001 (Questionnaire form)
+   - **Validation**: Islamic content usage guidelines compliance
+
+3. **User Reviews Terms and Conditions in Carousel**
+   - Interactive carousel displays licensing terms, Islamic copyright principles, usage restrictions
+   - Multi-slide presentation covering: attribution requirements, modification policies, distribution limits, scholarly integrity standards
+   - Bilingual presentation (EN/AR) with proper RTL layout for Arabic content
+   - **Implementation**: NG-ZORRO nz-carousel with nz-card components
+   - **Content**: Dynamic loading of license terms from License entity
+   - **Navigation**: Previous/Next controls, progress indicators, slide thumbnails
+
+4. **User Accept or Discard Decision Process**
+   - Clear accept/decline options presented after terms review
+   - Accept button enables after full carousel completion (all slides viewed)
+   - Decline option allows graceful exit with optional feedback
+   - **Implementation**: NG-ZORRO nz-button with nz-modal confirmation dialogs
+   - **UX**: Disabled state management, clear visual feedback, confirmation prompts
+   - **Tracking**: User decision logged in UsageEvent for analytics
+
+5. **Decision Point: User Accept?**
+   - **If Accept**: Proceed to access request submission and processing
+   - **If Decline**: Return to dashboard with optional feedback collection
+   - **Implementation**: Angular reactive state management with clear workflow branching
+   - **Backend**: AccessRequest entity status updates (Draft → Pending)
+
+6. **Access Approved Path (Accept = Yes)**
+   - **Popup Collapse and Fade**: Smooth UI transition with loading indicators
+   - **File Start to Download**: Resource access granted, download initiated
+   - **Implementation**: NG-ZORRO nz-progress with download status tracking
+   - **Backend**: Distribution entity creation, file access token generation
+   - **Security**: Time-limited download URLs, audit trail creation
+
+#### Technical Implementation Details
+
+**Frontend Components (Angular 19 + NG-ZORRO)**:
+- Access Request Form: `features/access/access-request-form.component.ts`
+- Terms Carousel: `features/access/terms-carousel.component.ts`
+- Decision Modal: `features/access/access-decision-modal.component.ts`
+- Download Progress: `features/access/download-progress.component.ts`
+
+**Backend APIs (Django 4.2 + DRF)**:
+- Access Request Submission: `POST /api/v1/licensing/access-requests/`
+- Terms and Conditions: `GET /api/v1/licensing/licenses/{id}/terms/`
+- Download Authorization: `POST /api/v1/content/distributions/{id}/download/`
+- Usage Tracking: `POST /api/v1/analytics/usage-events/`
+
+**Database Entities Integration**:
+- **AccessRequest**: Stores request details, purpose, status progression
+- **License**: Contains terms, conditions, Islamic copyright requirements
+- **Distribution**: Created upon approval for download access management
+- **UsageEvent**: Tracks user decisions, download activities, compliance metrics
+- **Resource**: Referenced resource with SHA-256 integrity checksums
+- **User**: Developer profile with access history and quota tracking
+
+#### Islamic Content Compliance Features
+- **Scholarly Review Integration**: Terms include scholarly authenticity verification requirements
+- **Attribution Standards**: Clear requirements for Quranic content attribution in derivative works
+- **Modification Policies**: Strict guidelines preserving Quranic text integrity (no alterations permitted)
+- **Distribution Controls**: Usage tracking ensures proper Islamic copyright principle adherence
+- **Integrity Verification**: SHA-256 checksums provided for content authenticity validation
+
+#### Bilingual User Experience (EN/AR)
+- **Terms Carousel**: Full bilingual presentation of licensing terms
+- **Form Labels**: Complete Arabic translation with proper RTL form layout
+- **Decision Prompts**: Clear messaging in both languages for accept/decline options
+- **Progress Indicators**: Culturally appropriate icons and messaging
+- **Error Messages**: Comprehensive bilingual error handling and user guidance
+
+#### Security and Audit Features
+- **Request Validation**: Server-side validation of all access request parameters
+- **Rate Limiting**: Prevention of automated access request abuse
+- **Audit Trail**: Complete logging of user decisions and download activities
+- **Token Security**: Time-limited, single-use download authorization tokens
+- **Compliance Tracking**: Monitoring adherence to Islamic content usage guidelines
+
+#### Integration with Main Developer Flow
+This detailed access request workflow represents the granular implementation of steps 7-10 in the main developer flow:
+- **Step 7 Expansion**: Resource Discovery & Access Request → Detailed questionnaire and terms review
+- **Step 8 Connection**: Admin Approval Process → Triggered by access request submission
+- **Step 9 Implementation**: Resource Access Granted → Download authorization and Distribution creation
+- **Step 10 Tracking**: Content Download & Integration → Usage analytics and compliance monitoring
+
+This comprehensive workflow ensures that all Quranic content access requests follow proper Islamic licensing principles while providing a smooth, user-friendly experience for developers seeking to integrate authentic Islamic content into their applications.
+
+## Complete Screen Flow Documentation
+
+### Comprehensive User Journey Overview
+The Itqan CMS provides multiple user journey paths designed to serve different audiences while maintaining Islamic content integrity and proper authentication workflows. The complete screen flow accommodates both authenticated and unauthenticated users with seamless transitions between different system areas.
+
+#### Landing Page - Dual Audience Entry Point (LANDING-001)
+**Starting Point**: The far-right screen serves as the primary landing page, designed to accommodate both authenticated and unauthenticated visitors.
+
+**Key Features**:
+- **Unauthenticated Visitors**: Clear call-to-action for registration, content preview, Islamic CMS value proposition
+- **Authenticated Users**: Quick access to dashboard, recent activity, personalized content recommendations
+- **Bilingual Support**: Full EN/AR language switching with proper RTL layout for Arabic
+- **Islamic Branding**: Prominent display of Itqan identity with Islamic design principles
+- **Content Teaser**: Preview of available Quranic content to encourage registration
+
+#### Primary User Flow Paths
+
+**Path 1: Unauthenticated Visitor Journey**
+1. **LANDING-001** → **Registration Flow**
+   - Landing page with clear value proposition for Islamic content management
+   - "Get Started" or "Sign Up" call-to-action buttons
+   - Content preview showcasing Quranic resources and scholarly review process
+
+2. **REG-001** → **REG-002** → **AUTH-001** 
+   - Standard registration flow as documented in previous developer workflow
+   - Email verification process with Islamic-themed confirmation messaging
+   - Login screen with social authentication (GitHub/Google) and email/password
+
+3. **AUTH-002** → **DASH-001**
+   - Token exchange loading screen with Itqan branding
+   - First-time user dashboard with onboarding checklist and Islamic welcome messaging
+
+**Path 2: Authenticated User Return Journey**
+1. **LANDING-001** → **Quick Dashboard Access**
+   - Authenticated users see personalized landing page content
+   - Direct access to dashboard without additional authentication steps
+   - Recent activity summary and pending notifications
+
+2. **DASH-001** → **Content Management Flows**
+   - Dashboard serves as central hub for all authenticated activities
+   - Access to resource discovery, content creation, and admin functions
+
+**Path 3: Content Discovery & Access Flow**
+1. **DASH-001** → **Resource Catalog**
+   - Browse available Quranic content with advanced filtering
+   - Search functionality powered by MeiliSearch with Arabic text support
+   - Resource detail pages with Islamic content metadata
+
+2. **Resource Detail** → **ACCESS-REQ-001** → **Terms Carousel**
+   - Resource access request initiation
+   - Purpose questionnaire for Islamic content usage compliance
+   - Terms and conditions carousel as documented in User Access Request workflow
+
+3. **Decision Flow** → **Download** or **Dashboard Return**
+   - Accept/decline decision process
+   - Successful access leads to secure download with progress tracking
+   - Decline returns to dashboard with optional feedback collection
+
+#### Administrative User Flows
+
+**Path 4: Admin Content Management**
+1. **DASH-001** → **Admin Interface**
+   - Role-based access to Django/Wagtail admin interface
+   - Content moderation and scholarly review workflows
+   - User management and access request approvals
+
+2. **Admin Screens** → **Content Publishing**
+   - **ADMIN-001**: Media library and upload functionality
+   - **ADMIN-002**: Search configuration and indexing management
+   - **ADMIN-003**: Content creation forms with bilingual support
+   - **ADMIN-004**: Workflow management for editorial processes
+
+#### Bilingual Navigation Flows
+
+**Arabic Language Path (AR)**
+- Complete RTL layout transformation for all screens
+- Arabic content management with proper typography
+- Islamic calendar integration and cultural considerations
+- Right-to-left navigation patterns following Arabic reading conventions
+
+**English Language Path (EN)**
+- Standard LTR layout for international users
+- Western design patterns with Islamic content focus
+- Accessibility compliance for global developer audience
+- Standard left-to-right navigation and interaction patterns
+
+#### Technical Screen Flow Integration
+
+**Frontend Routing Structure (Angular 19)**:
+```typescript
+const routes: Routes = [
+  { path: '', component: LandingPageComponent },                    // LANDING-001
+  { path: 'register', component: RegisterComponent },               // REG-001
+  { path: 'verify-email', component: EmailVerificationComponent },  // REG-002
+  { path: 'login', component: LoginComponent },                     // AUTH-001
+  { path: 'auth/callback', component: AuthCallbackComponent },      // AUTH-002
+  { path: 'dashboard', component: DashboardComponent, canActivate: [AuthGuard] }, // DASH-001
+  { path: 'access-request/:resourceId', component: AccessRequestComponent }, // ACCESS-REQ-001
+  { path: 'admin', loadChildren: () => import('./admin/admin.module').then(m => m.AdminModule) }
+];
+```
+
+**Backend API Integration**:
+- **Landing Page APIs**: Content preview, statistics, featured resources
+- **Authentication APIs**: As documented in previous workflows
+- **Content APIs**: Resource discovery, access requests, downloads
+- **Admin APIs**: Content management, user administration, analytics
+
+#### Islamic Content Compliance Throughout Flow
+- **Content Integrity**: SHA-256 checksums displayed at every content interaction point
+- **Scholarly Attribution**: Clear attribution requirements shown throughout access flows
+- **Usage Guidelines**: Islamic content usage principles integrated into every request flow
+- **Audit Trails**: Complete user journey tracking for compliance and analytics
+
+#### Security and Access Control
+- **Role-Based Navigation**: Different screen access based on User roles (Admin, Publisher, Developer, Reviewer)
+- **JWT Validation**: Secure token validation at every authenticated screen transition
+- **Rate Limiting**: Protection against automated access attempts throughout flows
+- **Content Protection**: Secure download URLs with time-limited access tokens
+
+#### Mobile-Responsive Considerations
+- **Responsive Design**: All screens adapt to mobile, tablet, and desktop viewports
+- **Touch Interactions**: Mobile-optimized navigation for Arabic and English interfaces
+- **Performance**: Optimized loading for slower connections in global Islamic communities
+- **Offline Capability**: Progressive Web App features for content access in low-connectivity areas
+
+This comprehensive screen flow ensures that all users, regardless of authentication status or language preference, can effectively discover, access, and utilize Quranic content while maintaining the highest standards of Islamic content integrity and scholarly review.

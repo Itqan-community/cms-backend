@@ -1,6 +1,6 @@
 # Django 4.2 LTS (compatible with Python 3.9)
 Django==4.2.*
-djangorestframework==3.14.*
+djangorestframework>=3.15.1
 django-cors-headers==4.3.*
 
 # Wagtail CMS
@@ -34,7 +34,7 @@ django-modeltranslation==0.18.*
 
 # Utilities
 python-decouple==3.8
-Pillow==10.0.*
+Pillow>=10.3.0
 python-dateutil==2.8.*
 requests==2.31.*
 

@@ -1,30 +1,32 @@
 {
-  "prompt": "You are an autonomous coding agent completing STORY-1: User Registration for Itqan CMS using Strapi v5 and Auth0 Hybrid auth. Implement front-end and back-end so that a new user can create an account via Auth0 Universal Login, and a corresponding Strapi user record with role=\"Viewer\" is created automatically.",
+  "prompt": "You are an autonomous coding agent completing STORY-1: User Registration for Itqan CMS using Django 4.2 and Auth0 Hybrid auth. Implement Angular frontend and Django backend so that a new user can create an account via Auth0 Universal Login, and a corresponding Django user record with role=\"Developer\" is created automatically.",
   "context": {
     "project": "Itqan CMS",
     "feature": "User Registration",
     "auth_model": "Auth0 Hybrid (SPA + M2M)",
-    "tech_stack": ["Next.js 14", "Strapi v5", "PostgreSQL", "Redis", "S3"],
+    "tech_stack": ["Angular 19", "Django 4.2", "PostgreSQL", "NG-ZORRO"],
     "screens": ["REG-001"],
     "colors": {"primary": "#669B80", "dark": "#22433D"},
-    "auth_priority": ["GitHub SSO", "Google OAuth", "Email/Password"]
+    "auth_priority": ["GitHub SSO", "Google OAuth", "Email/Password"],
+    "developer_flow": "docs/screens/Developer Resource Access & Resource Download - Initial Registration Scenario.png",
+    "complete_screen_flow": "docs/screens/cms-screens.png"
   },
   "objectives": [
     "Configure Auth0 tenant with Universal Login, EN & AR prompts",
-    "Implement Next.js page that redirects to Auth0 hosted login/signup",
-    "Handle Auth0 callback; exchange code for access & ID token using auth0-spa-sdk",
-    "Call backend \"/auth/callback\" endpoint to create user in Strapi via Admin API",
-    "Assign default role 'Viewer' and store Auth0 user_id mapping"
+    "Implement Angular component that redirects to Auth0 hosted login/signup",
+    "Handle Auth0 callback; exchange code for access & ID token using Auth0 Angular SDK",
+    "Call Django backend \"/api/auth/exchange/\" endpoint to create user via Django ORM",
+    "Assign default role 'Developer' and store Auth0 user_id mapping in User entity"
   ],
   "tasks": [
     "Create Auth0 application (SPA) with GitHub SSO as primary provider",
     "Configure Universal Login page with Itqan branding (#669B80, #22433D colors)",
-    "Set up machine-to-machine client for Strapi integration",
+    "Set up machine-to-machine client for Django integration",
     "Configure environment vars (AUTH0_DOMAIN, CLIENT_ID, AUDIENCE, M2M_CLIENT_SECRET)",
-    "Implement Next.js auth hook with @auth0/nextjs-auth0",
-    "Create registration page (REG-001) that redirects to Auth0 Universal Login",
-    "Add API route /api/auth/callback to forward token to Strapi",
-    "Write Strapi bootstrap script to map Auth0 user_id to Strapi uid",
+    "Implement Angular AuthService with @auth0/auth0-angular",
+    "Create registration component (REG-001) that redirects to Auth0 Universal Login",
+    "Add Django API view /api/auth/exchange/ for token validation and user creation",
+    "Write Django signal to map Auth0 user_id to Django User model",
     "Test GitHub SSO registration flow end-to-end"
   ],
   "guard_rails": [
@@ -36,23 +38,27 @@
   "acceptance_criteria": [
     "Given I am an unauthenticated visitor, when I click 'Sign up' I am redirected to Auth0 Universal Login",
     "After successful signup, I see the Itqan Dashboard with welcome message",
-    "Strapi database contains a new user record linked to Auth0 sub",
-    "New user has role 'Viewer' and cannot access admin endpoints"
+    "Django database contains a new User record linked to Auth0 sub",
+    "New user has role 'Developer' and follows complete developer flow for resource access"
   ],
   "definition_of_done": [
-    "CI pipeline passes Jest + Playwright tests",
-    "Code merged to main with green checks",
+    "Docker Compose environment passes all tests",
+    "Angular component follows NG-ZORRO design system",
     "Story status updated to completed in tasks.csv"
   ],
   "out_of_scope": [
     "Profile completion form",
-    "Email verification enforcement (handled in STORY-2)"
+    "Email verification enforcement (handled in Task 13)"
   ],
   "references": [
     "docs/Itqan_CMS_BRD.md §3.1",
-    "ai-memory-bank/tasks/screens/SCREEN_MAPPING.md",
-    "ai-memory-bank/logo.svg (color scheme)",
-    "Screen REG-001: Registration page with Auth0 Universal Login",
-    "English wireframe: ai-memory-bank/tasks/screens/en/create_english_wireframes.html#REG-001"
+    "docs/screens/cms-screens.png - Complete screen flow with landing page entry point",
+    "docs/screens/Developer Resource Access & Resource Download - Initial Registration Scenario.png",
+    "ai-memory-bank/logo.png (Itqan branding)",
+    "Screen REG-001: Registration page accessible from LANDING-001",
+    ".cursor/rules/cms.mdc - Complete Screen Flow Documentation section",
+    ".cursor/rules/cms.mdc - Developer Flow Documentation section",
+    "backend/apps/authentication/ - Django Auth0 integration",
+    "frontend/src/app/features/auth/register.component.ts - Angular registration component"
   ]
 }

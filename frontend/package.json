@@ -1,21 +1,29 @@
 {
-  "name": "itqan-web",
+  "name": "frontend",
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "dev": "ng serve",
     "build": "ng build",
+    "build:develop": "ng build --configuration develop",
+    "build:staging": "ng build --configuration staging",
+    "build:prod": "ng build --configuration production",
+    "serve:develop": "ng serve --configuration develop",
+    "serve:staging": "ng serve --configuration staging",
+    "preview": "ng serve --configuration production",
+    "serve": "ng serve",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
   "private": true,
   "dependencies": {
     "@angular/animations": "^19.2.14",
-    "@angular/cdk": "^20.2.0",
     "@angular/common": "^19.2.0",
     "@angular/compiler": "^19.2.0",
     "@angular/core": "^19.2.0",
     "@angular/forms": "^19.2.0",
+    "@angular/localize": "^19.2.14",
     "@angular/platform-browser": "^19.2.0",
     "@angular/platform-browser-dynamic": "^19.2.0",
     "@angular/router": "^19.2.0",
@@ -26,6 +34,7 @@
     "zone.js": "~0.15.0"
   },
   "devDependencies": {
+    "@analogjs/vite-plugin-angular": "^1.19.4",
     "@angular-devkit/build-angular": "^19.2.15",
     "@angular/cli": "^19.2.15",
     "@angular/compiler-cli": "^19.2.0",
@@ -36,6 +45,7 @@
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
-    "typescript": "~5.7.2"
+    "typescript": "~5.7.2",
+    "vite": "^6.3.5"
   }
 }

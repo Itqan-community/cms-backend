@@ -1,39 +1,98 @@
 import { Routes } from '@angular/router';
 
 export const routes: Routes = [
+  // Default redirect to registration for new users
   {
     path: '',
-    redirectTo: '/dashboard',
+    redirectTo: '/auth/register',
     pathMatch: 'full'
   },
-  {
-    path: 'auth',
-    loadChildren: () => import('./features/auth/auth.routes').then(m => m.authRoutes)
-  },
+  
+  // Dashboard
   {
     path: 'dashboard',
-    loadChildren: () => import('./features/dashboard/dashboard.routes').then(m => m.dashboardRoutes)
+    loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent),
+    title: 'Dashboard - Itqan CMS'
   },
+  
+  // Authentication
+  {
+    path: 'auth',
+    children: [
+      {
+        path: 'register',
+        loadComponent: () => import('./features/auth/register.component').then(m => m.RegisterComponent),
+        title: 'Register - Itqan CMS'
+      },
+      {
+        path: 'login',
+        loadComponent: () => import('./features/auth/login.component').then(m => m.LoginComponent),
+        title: 'Login - Itqan CMS'
+      },
+      {
+        path: 'verify-email',
+        loadComponent: () => import('./features/auth/email-verification.component').then(m => m.EmailVerificationComponent),
+        title: 'Email Verification - Itqan CMS'
+      },
+      {
+        path: 'callback',
+        loadComponent: () => import('./features/auth/auth-callback.component').then(m => m.AuthCallbackComponent),
+        title: 'Authentication - Itqan CMS'
+      }
+    ]
+  },
+  
+  // Resources (Publisher/Admin)
+  {
+    path: 'resources',
+    loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent), // Placeholder
+    title: 'Resources - Itqan CMS'
+  },
+  
+  // Access Requests
+  {
+    path: 'access-requests',
+    loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent), // Placeholder
+    title: 'Access Requests - Itqan CMS'
+  },
+  
+  // Analytics (Admin/Publisher)
+  {
+    path: 'analytics',
+    loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent), // Placeholder
+    title: 'Analytics - Itqan CMS'
+  },
+  
+  // Administration (Admin only)
   {
     path: 'admin',
-    loadChildren: () => import('./features/admin/admin.routes').then(m => m.adminRoutes)
+    children: [
+      {
+        path: 'users',
+        loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent), // Placeholder
+        title: 'User Management - Itqan CMS'
+      },
+      {
+        path: 'roles',
+        loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent), // Placeholder
+        title: 'Role Management - Itqan CMS'
+      },
+      {
+        path: 'licenses',
+        loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent), // Placeholder
+        title: 'License Management - Itqan CMS'
+      }
+    ]
   },
+  
+  // Profile
   {
-    path: 'public',
-    loadChildren: () => import('./features/public/public.routes').then(m => m.publicRoutes)
+    path: 'profile',
+    loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent), // Placeholder
+    title: 'Profile - Itqan CMS'
   },
-  {
-    path: 'search',
-    loadChildren: () => import('./features/search/search.routes').then(m => m.searchRoutes)
-  },
-  {
-    path: 'licensing',
-    loadChildren: () => import('./features/licensing/licensing.routes').then(m => m.licensingRoutes)
-  },
-  {
-    path: 'callback',
-    loadComponent: () => import('./features/auth/components/auth-callback.component').then(m => m.AuthCallbackComponent)
-  },
+  
+  // Catch-all redirect
   {
     path: '**',
     redirectTo: '/dashboard'
