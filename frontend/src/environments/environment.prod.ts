@@ -1,10 +1,10 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://api.itqan-cms.com/api/v1', // Production API URL
+  apiUrl: 'https://cms.itqan.dev/api/v1', // Production API URL
   auth0: {
-    domain: 'itqan-cms.auth0.com', // Production Auth0 domain
-    clientId: 'production-client-id', // Will be set via environment variables
-    audience: 'https://itqan-cms-api',
+    domain: 'dev-itqan.eu.auth0.com', // Production Auth0 domain
+    clientId: "N3S0JhhYSWaLuhVMuBb9ZTX4gEPJ0G8f",
+    audience: 'https://api.cms.itqan.dev',
     redirectUri: `${window.location.origin}/auth/callback`,
     scope: 'openid profile email read:current_user update:current_user_metadata'
   },
@@ -22,7 +22,7 @@ export const environment = {
     enablePrayerTimes: true // Enable in production
   },
   cdn: {
-    baseUrl: 'https://cdn.itqan-cms.com', // Alibaba OSS CDN
+    baseUrl: 'https://cdn.cms.itqan.dev', // Alibaba OSS CDN
     audioPath: '/audio',
     imagesPath: '/images',
     documentsPath: '/documents'
