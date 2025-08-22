@@ -27,6 +27,7 @@ DJANGO_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
+    'modeltranslation',  # Must be before Django apps that use translations
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
@@ -57,6 +58,7 @@ LOCAL_APPS = [
     'apps.authentication',
     'apps.api',
     'apps.medialib',
+    'apps.api_keys',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -69,6 +71,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'apps.api_keys.authentication.APIUsageMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'wagtail.contrib.redirects.middleware.RedirectMiddleware',
@@ -228,9 +231,6 @@ STATICFILES_DIRS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Default file storage
-DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
-
 # MinIO Configuration (S3-compatible storage)
 # These settings will be overridden in development/production settings
 MINIO_ENDPOINT = config('MINIO_ENDPOINT', default='localhost:9000')
@@ -238,6 +238,23 @@ MINIO_ACCESS_KEY = config('MINIO_ACCESS_KEY', default='minioadmin')
 MINIO_SECRET_KEY = config('MINIO_SECRET_KEY', default='minioadmin')
 MINIO_USE_HTTPS = config('MINIO_USE_HTTPS', default=False, cast=bool)
 MINIO_BUCKET_NAME = config('MINIO_BUCKET_NAME', default='itqan-uploads')
+
+# Configure MinIO as S3-compatible storage
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
+# AWS S3 settings for MinIO compatibility
+AWS_ACCESS_KEY_ID = MINIO_ACCESS_KEY
+AWS_SECRET_ACCESS_KEY = MINIO_SECRET_KEY
+AWS_S3_ENDPOINT_URL = f"http{'s' if MINIO_USE_HTTPS else ''}://{MINIO_ENDPOINT}"
+AWS_STORAGE_BUCKET_NAME = MINIO_BUCKET_NAME
+AWS_S3_REGION_NAME = 'us-east-1'  # MinIO default
+AWS_S3_USE_SSL = MINIO_USE_HTTPS
+AWS_S3_VERIFY = False  # Disable SSL verification for local development
+AWS_S3_FORCE_PATH_STYLE = True  # Required for MinIO
+AWS_DEFAULT_ACL = 'public-read'  # Make uploaded files publicly accessible
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=86400',
+}
 
 # MeiliSearch Configuration
 MEILISEARCH_URL = config('MEILISEARCH_URL', default='http://localhost:7700')
@@ -330,11 +347,23 @@ AUTHENTICATION_BACKENDS = [
 # Django REST Framework Configuration
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'apps.api_keys.authentication.APIKeyAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'apps.api_keys.authentication.APIKeyThrottle',
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/hour',
+        'user': '1000/hour',
+        'api_key': '1000/hour',  # Default rate, overridden by individual key settings
+    },
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
     ],

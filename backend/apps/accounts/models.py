@@ -221,21 +221,48 @@ class User(AbstractUser):
         
         return action in resource_permissions
 
-    def is_admin(self):
-        """Check if user has Admin role"""
-        return self.role and self.role.name == 'Admin'
+    def can_manage_users(self):
+        """Check if user can manage other users"""
+        return self.has_permission('users', 'create') or self.is_admin()
 
-    def is_publisher(self):
-        """Check if user has Publisher role"""
-        return self.role and self.role.name == 'Publisher'
+    def can_access_admin_panel(self):
+        """Check if user can access Django admin panel"""
+        return self.has_permission('system', 'admin_panel') or self.is_admin()
 
-    def is_developer(self):
-        """Check if user has Developer role"""
-        return self.role and self.role.name == 'Developer'
+    def can_manage_system_settings(self):
+        """Check if user can modify system settings"""
+        return self.has_permission('system', 'system_settings') or self.is_admin()
 
-    def is_reviewer(self):
-        """Check if user has Reviewer role"""
-        return self.role and self.role.name == 'Reviewer'
+    def can_create_content(self):
+        """Check if user can create content (Resources, Licenses)"""
+        return (self.has_permission('resources', 'create') or 
+                self.has_permission('licenses', 'create') or 
+                self.is_admin())
+
+    def can_review_content(self):
+        """Check if user can review and approve content"""
+        return (self.has_permission('resources', 'review') or 
+                self.has_permission('resources', 'approve') or 
+                self.is_reviewer() or self.is_admin())
+
+    def can_access_api(self):
+        """Check if user can access the API"""
+        return self.is_developer() or self.is_admin()
+
+    def get_accessible_resources(self):
+        """Get queryset of resources user can access"""
+        from apps.content.models import Resource
+        
+        if self.is_admin():
+            return Resource.objects.all()
+        elif self.is_publisher():
+            return Resource.objects.filter(publisher=self)
+        elif self.is_reviewer():
+            return Resource.objects.all()  # Reviewers can see all for review
+        elif self.is_developer():
+            return Resource.objects.filter(is_published=True)  # Only published content
+        else:
+            return Resource.objects.none()
 
     def get_auth0_metadata(self):
         """

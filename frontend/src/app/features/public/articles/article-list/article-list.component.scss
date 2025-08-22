@@ -1,0 +1,350 @@
+/* Article List Component Styles - PUB-001 */
+.article-list-page {
+  min-height: 100vh;
+  background: #fafafa;
+
+  .page-header {
+    background: white;
+    padding: 40px 24px;
+    text-align: center;
+    margin-bottom: 24px;
+
+    nz-breadcrumb {
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      color: #262626;
+      margin-bottom: 8px;
+    }
+
+    p {
+      font-size: 1.1rem;
+      color: #8c8c8c;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+  }
+
+  .featured-section {
+    margin-bottom: 32px;
+    padding: 0 24px;
+
+    h2 {
+      margin-bottom: 24px;
+      color: #262626;
+    }
+
+    .featured-main-card {
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      }
+
+      .featured-image {
+        position: relative;
+        height: 300px;
+        overflow: hidden;
+
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          transition: transform 0.3s ease;
+        }
+
+        .featured-overlay {
+          position: absolute;
+          top: 16px;
+          right: 16px;
+        }
+      }
+
+      .article-meta {
+        display: flex;
+        gap: 16px;
+        margin-top: 12px;
+        font-size: 14px;
+        color: #8c8c8c;
+
+        span {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+      }
+
+      &:hover .featured-image img {
+        transform: scale(1.05);
+      }
+    }
+
+    .featured-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+
+      .featured-side-card {
+        cursor: pointer;
+        transition: all 0.3s ease;
+
+        &:hover {
+          transform: translateX(4px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .side-article {
+          .side-content {
+            h4 {
+              margin-bottom: 8px;
+              color: #262626;
+              font-size: 16px;
+              line-height: 1.4;
+            }
+
+            p {
+              color: #595959;
+              font-size: 14px;
+              margin-bottom: 12px;
+              line-height: 1.5;
+            }
+
+            .side-meta {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              font-size: 12px;
+              color: #8c8c8c;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .filter-section {
+    margin-bottom: 24px;
+    padding: 0 24px;
+
+    .filter-actions {
+      margin-top: 16px;
+      text-align: center;
+    }
+  }
+
+  .articles-section {
+    padding: 0 24px;
+    margin-bottom: 40px;
+
+    .loading-section {
+      .ant-skeleton {
+        padding: 16px;
+      }
+    }
+
+    .articles-grid {
+      .article-card {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        height: 100%;
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .article-image {
+          position: relative;
+          height: 200px;
+          overflow: hidden;
+
+          img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+          }
+
+          .article-overlay {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+          }
+        }
+
+        .article-footer {
+          margin-top: 12px;
+
+          .article-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: #8c8c8c;
+
+            .author {
+              display: flex;
+              align-items: center;
+              gap: 6px;
+            }
+
+            .date {
+              display: flex;
+              align-items: center;
+              gap: 4px;
+            }
+          }
+
+          .article-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+
+            nz-tag {
+              cursor: pointer;
+
+              &:hover {
+                opacity: 0.8;
+              }
+            }
+          }
+        }
+
+        &:hover .article-image img {
+          transform: scale(1.05);
+        }
+      }
+    }
+
+    .empty-section {
+      text-align: center;
+      padding: 60px 0;
+    }
+
+    .pagination-section {
+      margin-top: 40px;
+      text-align: center;
+    }
+  }
+
+  .quick-categories {
+    padding: 0 24px;
+    margin-bottom: 40px;
+
+    h3 {
+      margin-bottom: 16px;
+      color: #262626;
+    }
+
+    .category-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+
+      .category-tag {
+        cursor: pointer;
+        transition: all 0.3s ease;
+
+        &:hover {
+          transform: scale(1.05);
+        }
+      }
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .article-list-page {
+    .page-header {
+      padding: 24px 16px;
+
+      h1 {
+        font-size: 2rem;
+      }
+    }
+
+    .featured-section,
+    .filter-section,
+    .articles-section,
+    .quick-categories {
+      padding: 0 16px;
+    }
+
+    .featured-section {
+      .featured-main-card {
+        .featured-image {
+          height: 200px;
+        }
+
+        .article-meta {
+          flex-direction: column;
+          gap: 8px;
+          align-items: flex-start;
+        }
+      }
+
+      .featured-sidebar {
+        margin-top: 16px;
+      }
+    }
+
+    .articles-section {
+      .articles-grid {
+        .article-card {
+          .article-image {
+            height: 160px;
+          }
+        }
+      }
+    }
+  }
+}
+
+// RTL support
+[dir="rtl"] {
+  .article-list-page {
+    .featured-section {
+      .featured-main-card {
+        .featured-overlay {
+          right: auto;
+          left: 16px;
+        }
+      }
+    }
+
+    .articles-section {
+      .articles-grid {
+        .article-card {
+          .article-image {
+            .article-overlay {
+              right: auto;
+              left: 8px;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Print styles
+@media print {
+  .article-list-page {
+    .filter-section,
+    .pagination-section {
+      display: none;
+    }
+
+    .featured-section,
+    .articles-section {
+      page-break-inside: avoid;
+    }
+  }
+}

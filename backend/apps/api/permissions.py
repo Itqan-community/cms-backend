@@ -134,6 +134,49 @@ class IsPublisherOwnerOrAdmin(permissions.BasePermission):
         return False
 
 
+class IsPublisherOwnerOrReviewer(permissions.BasePermission):
+    """
+    Permission to allow publishers who own the content, reviewers, or Admin users
+    """
+    def has_permission(self, request, view):
+        return (
+            request.user and
+            request.user.is_authenticated and
+            request.user.is_active
+        )
+    
+    def has_object_permission(self, request, view, obj):
+        # Admin users can access everything
+        if request.user.is_admin():
+            return True
+        
+        # Reviewers can access content for review purposes
+        if request.user.is_reviewer():
+            return True
+        
+        # Publishers can only access their own content
+        if request.user.is_publisher():
+            if hasattr(obj, 'publisher'):
+                return obj.publisher == request.user
+            elif hasattr(obj, 'resource') and hasattr(obj.resource, 'publisher'):
+                return obj.resource.publisher == request.user
+        
+        return False
+
+
+class IsReviewerOrAdmin(permissions.BasePermission):
+    """
+    Permission to allow Reviewer or Admin users only
+    """
+    def has_permission(self, request, view):
+        return (
+            request.user and
+            request.user.is_authenticated and
+            request.user.is_active and
+            (request.user.is_reviewer() or request.user.is_admin())
+        )
+
+
 class ResourcePermission(permissions.BasePermission):
     """
     Custom permission for Resource objects based on actions and roles

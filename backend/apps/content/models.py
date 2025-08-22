@@ -66,6 +66,48 @@ class Resource(BaseModel):
         blank=True,
         help_text="Timestamp when the resource was published"
     )
+    
+    # Workflow fields
+    WORKFLOW_STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('in_review', 'In Review'),
+        ('reviewed', 'Reviewed'),
+        ('published', 'Published'),
+        ('rejected', 'Rejected'),
+    ]
+    
+    workflow_status = models.CharField(
+        max_length=20,
+        choices=WORKFLOW_STATUS_CHOICES,
+        default='draft',
+        help_text="Current workflow status of the resource"
+    )
+    
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reviewed_resources',
+        help_text="User who reviewed this resource (must have Reviewer role)"
+    )
+    
+    reviewed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Timestamp when the resource was reviewed"
+    )
+    
+    review_notes = models.TextField(
+        blank=True,
+        help_text="Notes from the reviewer about the resource"
+    )
+    
+    submitted_for_review_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Timestamp when resource was submitted for review"
+    )
 
     # Managers
     objects = ActiveObjectsManager()
@@ -81,6 +123,9 @@ class Resource(BaseModel):
             models.Index(fields=['language']),
             models.Index(fields=['publisher']),
             models.Index(fields=['published_at']),
+            models.Index(fields=['workflow_status']),
+            models.Index(fields=['reviewed_by']),
+            models.Index(fields=['submitted_for_review_at']),
         ]
 
     def __str__(self):
@@ -114,6 +159,163 @@ class Resource(BaseModel):
         return self.media_files.filter(is_active=True).aggregate(
             total_size=models.Sum('file_size')
         )['total_size'] or 0
+    
+    # Workflow methods
+    def can_submit_for_review(self, user):
+        """Check if user can submit this resource for review"""
+        return (
+            self.workflow_status == 'draft' and
+            (self.publisher == user or user.is_admin())
+        )
+    
+    def can_review(self, user):
+        """Check if user can review this resource"""
+        return (
+            self.workflow_status == 'in_review' and
+            (user.is_reviewer() or user.is_admin())
+        )
+    
+    def can_publish(self, user):
+        """Check if user can publish this resource"""
+        return (
+            self.workflow_status == 'reviewed' and
+            (user.is_reviewer() or user.is_admin())
+        )
+    
+    def submit_for_review(self, user):
+        """Submit resource for review"""
+        if not self.can_submit_for_review(user):
+            raise ValueError("Cannot submit resource for review")
+        
+        from django.utils import timezone
+        self.workflow_status = 'in_review'
+        self.submitted_for_review_at = timezone.now()
+        self.save()
+        
+        # Send notification to reviewers
+        self._send_workflow_notification('submitted_for_review')
+    
+    def approve_review(self, user, notes=''):
+        """Approve resource review"""
+        if not self.can_review(user):
+            raise ValueError("Cannot approve resource")
+        
+        from django.utils import timezone
+        self.workflow_status = 'reviewed'
+        self.reviewed_by = user
+        self.reviewed_at = timezone.now()
+        self.review_notes = notes
+        self.save()
+        
+        # Send notification to publisher
+        self._send_workflow_notification('approved')
+    
+    def reject_review(self, user, notes=''):
+        """Reject resource review"""
+        if not self.can_review(user):
+            raise ValueError("Cannot reject resource")
+        
+        from django.utils import timezone
+        self.workflow_status = 'rejected'
+        self.reviewed_by = user
+        self.reviewed_at = timezone.now()
+        self.review_notes = notes
+        self.save()
+        
+        # Send notification to publisher
+        self._send_workflow_notification('rejected')
+    
+    def publish_resource(self, user):
+        """Publish the resource"""
+        if not self.can_publish(user):
+            raise ValueError("Cannot publish resource")
+        
+        from django.utils import timezone
+        self.workflow_status = 'published'
+        self.published_at = timezone.now()
+        self.save()
+        
+        # Send notification to publisher and team
+        self._send_workflow_notification('published')
+    
+    def reset_to_draft(self, user):
+        """Reset resource to draft status"""
+        if not (self.publisher == user or user.is_admin()):
+            raise ValueError("Cannot reset resource to draft")
+        
+        self.workflow_status = 'draft'
+        self.reviewed_by = None
+        self.reviewed_at = None
+        self.review_notes = ''
+        self.submitted_for_review_at = None
+        self.published_at = None
+        self.save()
+        
+        # Send notification
+        self._send_workflow_notification('reset_to_draft')
+    
+    def _send_workflow_notification(self, action):
+        """Send workflow notification via Celery"""
+        try:
+            from apps.licensing.tasks import send_workflow_notification
+            send_workflow_notification.delay(
+                resource_id=str(self.id),
+                action=action,
+                resource_title=self.title,
+                publisher_email=self.publisher.email
+            )
+        except ImportError:
+            # Handle case where Celery task doesn't exist yet
+            pass
+    
+    def get_workflow_status_display_color(self):
+        """Get color for workflow status display"""
+        color_map = {
+            'draft': 'default',
+            'in_review': 'processing',
+            'reviewed': 'success',
+            'published': 'green',
+            'rejected': 'error',
+        }
+        return color_map.get(self.workflow_status, 'default')
+    
+    def get_workflow_history(self):
+        """Get workflow transition history"""
+        history = []
+        
+        if self.created_at:
+            history.append({
+                'status': 'draft',
+                'timestamp': self.created_at,
+                'user': self.publisher,
+                'notes': 'Resource created'
+            })
+        
+        if self.submitted_for_review_at:
+            history.append({
+                'status': 'in_review',
+                'timestamp': self.submitted_for_review_at,
+                'user': self.publisher,
+                'notes': 'Submitted for review'
+            })
+        
+        if self.reviewed_at:
+            history.append({
+                'status': self.workflow_status,
+                'timestamp': self.reviewed_at,
+                'user': self.reviewed_by,
+                'notes': self.review_notes or f'Resource {self.workflow_status}'
+            })
+        
+        if self.published_at:
+            history.append({
+                'status': 'published',
+                'timestamp': self.published_at,
+                'user': self.reviewed_by or self.publisher,
+                'notes': 'Resource published'
+            })
+        
+        return sorted(history, key=lambda x: x['timestamp'])
 
 
 class Distribution(BaseModel):

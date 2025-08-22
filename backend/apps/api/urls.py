@@ -16,9 +16,11 @@ from drf_spectacular.views import (
 
 # Import ViewSets
 from apps.accounts.views import RoleViewSet, UserViewSet
-from apps.content.views import ResourceViewSet, DistributionViewSet
+from apps.content.views import ResourceViewSet, DistributionViewSet, WorkflowViewSet, workflow_permissions
 from apps.licensing.views import LicenseViewSet, AccessRequestViewSet
 from apps.analytics.views import UsageEventViewSet
+from apps.medialib.views import MediaFileViewSet, MediaFolderViewSet, MediaAttachmentViewSet
+from apps.api_keys.views import APIKeyViewSet, APIKeyUsageViewSet, RateLimitEventViewSet, APIKeyStatisticsViewSet
 
 # Import Landing Page Views
 from apps.api.views.landing import platform_statistics, platform_features, recent_content
@@ -34,6 +36,20 @@ router.register(r'distributions', DistributionViewSet, basename='distribution')
 router.register(r'licenses', LicenseViewSet, basename='license')
 router.register(r'access-requests', AccessRequestViewSet, basename='accessrequest')
 router.register(r'usage-events', UsageEventViewSet, basename='usageevent')
+
+# Media Library ViewSets
+router.register(r'media/files', MediaFileViewSet, basename='mediafile')
+router.register(r'media/folders', MediaFolderViewSet, basename='mediafolder')
+router.register(r'media/attachments', MediaAttachmentViewSet, basename='mediaattachment')
+
+# Workflow Management ViewSet
+router.register(r'workflow', WorkflowViewSet, basename='workflow')
+
+# API Key Management ViewSets
+router.register(r'api-keys', APIKeyViewSet, basename='apikey')
+router.register(r'api-keys-usage', APIKeyUsageViewSet, basename='apikeyusage')
+router.register(r'rate-limit-events', RateLimitEventViewSet, basename='ratelimitevent')
+router.register(r'api-stats', APIKeyStatisticsViewSet, basename='apikeystats')
 
 # API URL patterns
 urlpatterns = [
@@ -54,6 +70,9 @@ urlpatterns = [
     path('landing/statistics/', platform_statistics, name='landing_statistics'),
     path('landing/features/', platform_features, name='landing_features'),
     path('landing/recent-content/', recent_content, name='landing_recent_content'),
+    
+    # Workflow endpoints
+    path('workflow/permissions/', workflow_permissions, name='workflow_permissions'),
     
     # Search endpoints
     path('search/', include('apps.search.urls')),

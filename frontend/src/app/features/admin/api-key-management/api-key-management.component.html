@@ -1,0 +1,475 @@
+<!-- API Key Management Component - ADMIN-006 -->
+<div class="api-key-management">
+  <!-- Header -->
+  <div class="api-header">
+    <nz-breadcrumb>
+      <nz-breadcrumb-item>
+        <nz-icon nzType="home"></nz-icon>
+        <span>{{ i18n.t()('navigation.dashboard') }}</span>
+      </nz-breadcrumb-item>
+      <nz-breadcrumb-item>
+        <nz-icon nzType="api"></nz-icon>
+        <span>{{ i18n.t()('navigation.api_key_management') }}</span>
+      </nz-breadcrumb-item>
+    </nz-breadcrumb>
+
+    <div class="header-actions">
+      <button nz-button nzType="default" (click)="loadData()">
+        <nz-icon nzType="reload"></nz-icon>
+        {{ i18n.t()('common.refresh') }}
+      </button>
+      <button nz-button nzType="primary" (click)="openApiKeyModal()">
+        <nz-icon nzType="plus"></nz-icon>
+        {{ i18n.t()('api_key.create_api_key') }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="api-content">
+    <!-- Global Statistics Card -->
+    <nz-card class="stats-card" [nzLoading]="loading()">
+      <div nz-row [nzGutter]="[16, 16]">
+        <div nz-col [nzSpan]="6">
+          <nz-statistic 
+            [nzTitle]="i18n.t()('stats.total_api_keys')" 
+            [nzValue]="globalStats()?.api_keys?.total || 0"
+            nzPrefix="api">
+          </nz-statistic>
+        </div>
+        <div nz-col [nzSpan]="6">
+          <nz-statistic 
+            [nzTitle]="i18n.t()('stats.active_keys')" 
+            [nzValue]="globalStats()?.api_keys?.active || 0"
+            nzPrefix="check-circle">
+          </nz-statistic>
+        </div>
+        <div nz-col [nzSpan]="6">
+          <nz-statistic 
+            [nzTitle]="i18n.t()('stats.requests_30_days')" 
+            [nzValue]="globalStats()?.usage_last_30_days?.total_requests || 0"
+            nzPrefix="bar-chart">
+          </nz-statistic>
+        </div>
+        <div nz-col [nzSpan]="6">
+          <nz-statistic 
+            [nzTitle]="i18n.t()('stats.error_rate')" 
+            [nzValue]="globalStats()?.usage_last_30_days?.error_rate || 0"
+            nzSuffix="%"
+            nzPrefix="exclamation-circle">
+          </nz-statistic>
+        </div>
+      </div>
+    </nz-card>
+
+    <!-- Main Content Tabs -->
+    <nz-card class="api-tabs-card">
+      <nz-tabset [(nzSelectedIndex)]="currentTab" nzType="card">
+        
+        <!-- API Keys Tab -->
+        <nz-tab [nzTitle]="i18n.t()('tabs.api_keys')">
+          <div class="tab-content">
+            <nz-table 
+              #apiKeysTable 
+              [nzData]="apiKeys()" 
+              [nzLoading]="loading()"
+              nzSize="middle"
+              [nzPageSize]="10">
+              <thead>
+                <tr>
+                  <th>{{ i18n.t()('api_key.name') }}</th>
+                  <th>{{ i18n.t()('api_key.key_preview') }}</th>
+                  <th>{{ i18n.t()('api_key.owner') }}</th>
+                  <th>{{ i18n.t()('api_key.rate_limit') }}</th>
+                  <th>{{ i18n.t()('api_key.usage') }}</th>
+                  <th>{{ i18n.t()('api_key.last_used') }}</th>
+                  <th>{{ i18n.t()('common.status') }}</th>
+                  <th>{{ i18n.t()('common.actions') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *nzFor="let apiKey of apiKeysTable.data">
+                  <td>
+                    <div class="api-key-info">
+                      <strong>{{ apiKey.name }}</strong>
+                      <div class="api-key-description">{{ apiKey.description || '-' }}</div>
+                    </div>
+                  </td>
+                  <td>
+                    <code class="key-preview">{{ apiKey.key_prefix }}***</code>
+                  </td>
+                  <td>
+                    <div class="owner-info">
+                      <strong>{{ apiKey.user_name || apiKey.user_email }}</strong>
+                      <div class="owner-email">{{ apiKey.user_email }}</div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="rate-limit">{{ apiKey.rate_limit }}/hour</span>
+                  </td>
+                  <td>
+                    <nz-statistic 
+                      [nzValue]="apiKey.total_requests" 
+                      [nzValueStyle]="{ fontSize: '14px' }">
+                    </nz-statistic>
+                  </td>
+                  <td>{{ formatDateTime(apiKey.last_used_at) }}</td>
+                  <td>
+                    <nz-tag [nzColor]="getApiKeyStatusColor(getApiKeyStatus(apiKey))">
+                      {{ getApiKeyStatus(apiKey) }}
+                    </nz-tag>
+                  </td>
+                  <td class="action-buttons">
+                    <button 
+                      nz-button 
+                      nzType="text" 
+                      nzSize="small"
+                      (click)="openStatsModal(apiKey)"
+                      nz-tooltip 
+                      [nzTooltipTitle]="i18n.t()('api_key.view_stats')">
+                      <nz-icon nzType="bar-chart"></nz-icon>
+                    </button>
+                    <button 
+                      nz-button 
+                      nzType="text" 
+                      nzSize="small"
+                      (click)="openApiKeyModal(apiKey)"
+                      nz-tooltip 
+                      [nzTooltipTitle]="i18n.t()('common.edit')">
+                      <nz-icon nzType="edit"></nz-icon>
+                    </button>
+                    <button 
+                      nz-button 
+                      nzType="text" 
+                      nzSize="small"
+                      nz-popconfirm
+                      [nzPopconfirmTitle]="i18n.t()('api_key.regenerate_confirm')"
+                      (nzOnConfirm)="regenerateApiKey(apiKey)"
+                      [disabled]="apiKey.is_revoked"
+                      nz-tooltip 
+                      [nzTooltipTitle]="i18n.t()('api_key.regenerate')">
+                      <nz-icon nzType="sync"></nz-icon>
+                    </button>
+                    <button 
+                      nz-button 
+                      nzType="text" 
+                      nzSize="small"
+                      nzDanger
+                      (click)="openRevokeModal(apiKey)"
+                      [disabled]="apiKey.is_revoked"
+                      nz-tooltip 
+                      [nzTooltipTitle]="i18n.t()('api_key.revoke')">
+                      <nz-icon nzType="stop"></nz-icon>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </nz-table>
+
+            <nz-empty *ngIf="apiKeys().length === 0 && !loading()" 
+              [nzNotFoundContent]="i18n.t()('api_key.no_keys_found')">
+              <nz-empty-footer>
+                <p>{{ i18n.t()('api_key.create_first_key_hint') }}</p>
+                <button nz-button nzType="primary" (click)="openApiKeyModal()">
+                  {{ i18n.t()('api_key.create_first_key') }}
+                </button>
+              </nz-empty-footer>
+            </nz-empty>
+          </div>
+        </nz-tab>
+
+        <!-- Usage Logs Tab -->
+        <nz-tab [nzTitle]="i18n.t()('tabs.usage_logs')">
+          <div class="tab-content">
+            <nz-table 
+              #usageTable 
+              [nzData]="usageLogs()" 
+              [nzLoading]="loading()"
+              nzSize="small"
+              [nzPageSize]="20">
+              <thead>
+                <tr>
+                  <th>{{ i18n.t()('usage.api_key') }}</th>
+                  <th>{{ i18n.t()('usage.endpoint') }}</th>
+                  <th>{{ i18n.t()('usage.method') }}</th>
+                  <th>{{ i18n.t()('usage.status') }}</th>
+                  <th>{{ i18n.t()('usage.ip_address') }}</th>
+                  <th>{{ i18n.t()('usage.response_time') }}</th>
+                  <th>{{ i18n.t()('usage.timestamp') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *nzFor="let usage of usageTable.data">
+                  <td>{{ usage.api_key_name }}</td>
+                  <td>
+                    <code class="endpoint">{{ usage.endpoint }}</code>
+                  </td>
+                  <td>
+                    <nz-tag [nzColor]="usage.method === 'GET' ? 'blue' : usage.method === 'POST' ? 'green' : 'orange'">
+                      {{ usage.method }}
+                    </nz-tag>
+                  </td>
+                  <td>
+                    <nz-tag [nzColor]="getStatusCodeColor(usage.status_code)">
+                      {{ usage.status_code }}
+                    </nz-tag>
+                  </td>
+                  <td>{{ usage.ip_address }}</td>
+                  <td>{{ usage.response_time }}ms</td>
+                  <td>{{ formatDateTime(usage.created_at) }}</td>
+                </tr>
+              </tbody>
+            </nz-table>
+
+            <nz-empty *ngIf="usageLogs().length === 0 && !loading()" 
+              [nzNotFoundContent]="i18n.t()('usage.no_logs_found')">
+            </nz-empty>
+          </div>
+        </nz-tab>
+
+        <!-- Rate Limit Events Tab -->
+        <nz-tab [nzTitle]="i18n.t()('tabs.rate_limits')">
+          <div class="tab-content">
+            <nz-table 
+              #rateLimitTable 
+              [nzData]="rateLimitEvents()" 
+              [nzLoading]="loading()"
+              nzSize="small"
+              [nzPageSize]="20">
+              <thead>
+                <tr>
+                  <th>{{ i18n.t()('rate_limit.api_key') }}</th>
+                  <th>{{ i18n.t()('rate_limit.type') }}</th>
+                  <th>{{ i18n.t()('rate_limit.endpoint') }}</th>
+                  <th>{{ i18n.t()('rate_limit.ip_address') }}</th>
+                  <th>{{ i18n.t()('rate_limit.violation') }}</th>
+                  <th>{{ i18n.t()('rate_limit.timestamp') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *nzFor="let event of rateLimitTable.data">
+                  <td>{{ event.api_key_name || 'Anonymous' }}</td>
+                  <td>
+                    <nz-tag nzColor="red">{{ event.limit_type }}</nz-tag>
+                  </td>
+                  <td>
+                    <code class="endpoint">{{ event.endpoint }}</code>
+                  </td>
+                  <td>{{ event.ip_address }}</td>
+                  <td>
+                    <span class="violation-info">
+                      {{ event.current_count }}/{{ event.limit_value }} 
+                      in {{ event.window_seconds }}s
+                    </span>
+                  </td>
+                  <td>{{ formatDateTime(event.created_at) }}</td>
+                </tr>
+              </tbody>
+            </nz-table>
+
+            <nz-empty *ngIf="rateLimitEvents().length === 0 && !loading()" 
+              [nzNotFoundContent]="i18n.t()('rate_limit.no_events_found')">
+            </nz-empty>
+          </div>
+        </nz-tab>
+
+      </nz-tabset>
+    </nz-card>
+  </div>
+</div>
+
+<!-- API Key Create/Edit Modal -->
+<nz-modal
+  [(nzVisible)]="apiKeyModalVisible"
+  [nzTitle]="selectedApiKey() ? i18n.t()('api_key.edit_api_key') : i18n.t()('api_key.create_api_key')"
+  [nzOkText]="i18n.t()('common.save')"
+  [nzCancelText]="i18n.t()('common.cancel')"
+  (nzOnOk)="saveApiKey()"
+  (nzOnCancel)="cancelApiKeyModal()"
+  nzWidth="700px">
+  
+  <ng-container *nzModalContent>
+    <form nz-form [formGroup]="apiKeyForm" nzLayout="vertical">
+      <div nz-row [nzGutter]="16">
+        <div nz-col [nzSpan]="12">
+          <nz-form-item>
+            <nz-form-label nzRequired>{{ i18n.t()('api_key.name') }}</nz-form-label>
+            <nz-form-control nzErrorTip="Please enter API key name">
+              <input nz-input formControlName="name" [placeholder]="i18n.t()('api_key.name_placeholder')" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col [nzSpan]="12">
+          <nz-form-item>
+            <nz-form-label>{{ i18n.t()('api_key.rate_limit') }}</nz-form-label>
+            <nz-form-control nzErrorTip="Please enter valid rate limit">
+              <nz-input-number 
+                formControlName="rate_limit" 
+                [nzMin]="1" 
+                [nzMax]="10000"
+                [nzStep]="100"
+                nzPlaceHolder="1000">
+              </nz-input-number>
+              <span class="input-suffix">requests/hour</span>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      </div>
+
+      <nz-form-item>
+        <nz-form-label>{{ i18n.t()('api_key.description') }}</nz-form-label>
+        <nz-form-control>
+          <textarea 
+            nz-input 
+            formControlName="description" 
+            [nzRows]="3"
+            [placeholder]="i18n.t()('api_key.description_placeholder')">
+          </textarea>
+        </nz-form-control>
+      </nz-form-item>
+
+      <div nz-row [nzGutter]="16">
+        <div nz-col [nzSpan]="12">
+          <nz-form-item>
+            <nz-form-label>{{ i18n.t()('api_key.expires_in_days') }}</nz-form-label>
+            <nz-form-control>
+              <nz-input-number 
+                formControlName="expires_in_days" 
+                [nzMin]="1" 
+                [nzMax]="365"
+                nzPlaceHolder="Never expires">
+              </nz-input-number>
+              <span class="input-suffix">days (optional)</span>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      </div>
+
+      <nz-alert 
+        nzType="info" 
+        [nzMessage]="i18n.t()('api_key.security_note')"
+        [nzDescription]="i18n.t()('api_key.security_description')"
+        nzShowIcon>
+      </nz-alert>
+    </form>
+  </ng-container>
+</nz-modal>
+
+<!-- API Key Display Modal (for new keys) -->
+<nz-modal
+  [(nzVisible)]="keyDisplayModalVisible"
+  [nzTitle]="i18n.t()('api_key.new_key_created')"
+  [nzOkText]="i18n.t()('common.close')"
+  [nzCancelDisabled]="true"
+  (nzOnOk)="closeKeyDisplayModal()"
+  nzWidth="600px">
+  
+  <ng-container *nzModalContent>
+    <nz-alert 
+      nzType="warning" 
+      [nzMessage]="i18n.t()('api_key.copy_warning')"
+      [nzDescription]="i18n.t()('api_key.copy_warning_description')"
+      nzShowIcon>
+    </nz-alert>
+
+    <div class="generated-key-display">
+      <label>{{ i18n.t()('api_key.your_new_key') }}:</label>
+      <div class="key-container">
+        <code class="generated-key">{{ generatedApiKey() }}</code>
+        <button 
+          nz-button 
+          nzType="primary" 
+          nzSize="small"
+          (click)="copyToClipboard(generatedApiKey()!)"
+          nz-tooltip
+          [nzTooltipTitle]="i18n.t()('common.copy_to_clipboard')">
+          <nz-icon nzType="copy"></nz-icon>
+        </button>
+      </div>
+    </div>
+  </ng-container>
+</nz-modal>
+
+<!-- Revoke API Key Modal -->
+<nz-modal
+  [(nzVisible)]="revokeModalVisible"
+  [nzTitle]="i18n.t()('api_key.revoke_api_key')"
+  [nzOkText]="i18n.t()('api_key.revoke')"
+  [nzOkType]="'danger'"
+  [nzCancelText]="i18n.t()('common.cancel')"
+  (nzOnOk)="revokeApiKey()"
+  (nzOnCancel)="cancelRevokeModal()"
+  nzWidth="500px">
+  
+  <ng-container *nzModalContent>
+    <p>{{ i18n.t()('api_key.revoke_confirmation') }}</p>
+    
+    <form nz-form [formGroup]="revokeForm" nzLayout="vertical">
+      <nz-form-item>
+        <nz-form-label nzRequired>{{ i18n.t()('api_key.revoke_reason') }}</nz-form-label>
+        <nz-form-control nzErrorTip="Please provide a reason">
+          <textarea 
+            nz-input 
+            formControlName="reason" 
+            [nzRows]="3"
+            [placeholder]="i18n.t()('api_key.revoke_reason_placeholder')">
+          </textarea>
+        </nz-form-control>
+      </nz-form-item>
+    </form>
+  </ng-container>
+</nz-modal>
+
+<!-- API Key Statistics Modal -->
+<nz-modal
+  [(nzVisible)]="statsModalVisible"
+  [nzTitle]="i18n.t()('api_key.statistics')"
+  [nzOkText]="i18n.t()('common.close')"
+  [nzCancelDisabled]="true"
+  (nzOnOk)="cancelStatsModal()"
+  nzWidth="800px">
+  
+  <ng-container *nzModalContent>
+    <div class="stats-content" *ngIf="apiKeyStats()">
+      <div nz-row [nzGutter]="[16, 16]">
+        <div nz-col [nzSpan]="6">
+          <nz-statistic 
+            [nzTitle]="i18n.t()('stats.total_requests')" 
+            [nzValue]="apiKeyStats()!.total_requests">
+          </nz-statistic>
+        </div>
+        <div nz-col [nzSpan]="6">
+          <nz-statistic 
+            [nzTitle]="i18n.t()('stats.error_requests')" 
+            [nzValue]="apiKeyStats()!.error_requests">
+          </nz-statistic>
+        </div>
+        <div nz-col [nzSpan]="6">
+          <nz-statistic 
+            [nzTitle]="i18n.t()('stats.error_rate')" 
+            [nzValue]="apiKeyStats()!.error_rate"
+            nzSuffix="%">
+          </nz-statistic>
+        </div>
+        <div nz-col [nzSpan]="6">
+          <nz-statistic 
+            [nzTitle]="i18n.t()('stats.rate_limit_violations')" 
+            [nzValue]="apiKeyStats()!.rate_limit_violations">
+          </nz-statistic>
+        </div>
+      </div>
+
+      <nz-divider></nz-divider>
+
+      <h4>{{ i18n.t()('stats.top_endpoints') }}</h4>
+      <nz-list [nzDataSource]="apiKeyStats()!.top_endpoints" nzSize="small">
+        <ng-container *nzFor="let endpoint of apiKeyStats()!.top_endpoints">
+          <nz-list-item>
+            <span nz-typography><code>{{ endpoint.endpoint }}</code></span>
+            <span class="endpoint-requests">{{ endpoint.requests }} requests</span>
+          </nz-list-item>
+        </ng-container>
+      </nz-list>
+    </div>
+  </ng-container>
+</nz-modal>

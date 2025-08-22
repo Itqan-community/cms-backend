@@ -22,8 +22,8 @@ class ResourceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Resource
         fields = [
-            'id', 'title', 'description', 'resource_type', 'language', 
-            'language_display', 'version', 'checksum', 'publisher', 
+            'id', 'title', 'title_en', 'title_ar', 'description', 'description_en', 'description_ar',
+            'resource_type', 'language', 'language_display', 'version', 'checksum', 'publisher', 
             'publisher_name', 'publisher_email', 'metadata', 'is_published',
             'published_at', 'distribution_count', 'license_count',
             'is_active', 'created_at', 'updated_at'

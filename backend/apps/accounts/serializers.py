@@ -1,5 +1,5 @@
 """
-Serializers for User and Role models
+Serializers for user accounts and role management
 """
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
@@ -10,58 +10,65 @@ User = get_user_model()
 
 class RoleSerializer(serializers.ModelSerializer):
     """
-    Serializer for Role model with permission management
+    Serializer for Role model
     """
     user_count = serializers.SerializerMethodField()
+    permission_categories = serializers.SerializerMethodField()
     
     class Meta:
         model = Role
         fields = [
-            'id', 'name', 'description', 'permissions', 
-            'is_active', 'user_count', 'created_at', 'updated_at'
+            'id', 'name', 'description', 'permissions', 'user_count',
+            'permission_categories', 'is_active', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'user_count']
-    
+        read_only_fields = ['id', 'user_count', 'permission_categories', 'created_at', 'updated_at']
+
     def get_user_count(self, obj):
-        """Get count of active users with this role"""
+        """Get number of users with this role"""
         return obj.users.filter(is_active=True).count()
-    
-    def validate_name(self, value):
-        """Validate role name is one of the allowed choices"""
-        valid_roles = ['Admin', 'Publisher', 'Developer', 'Reviewer']
-        if value not in valid_roles:
-            raise serializers.ValidationError(
-                f"Role name must be one of: {', '.join(valid_roles)}"
-            )
-        return value
-    
+
+    def get_permission_categories(self, obj):
+        """Get list of permission categories for this role"""
+        return list(obj.permissions.keys()) if obj.permissions else []
+
     def validate_permissions(self, value):
-        """Validate permissions structure"""
+        """
+        Validate permissions structure
+        """
         if not isinstance(value, dict):
-            raise serializers.ValidationError("Permissions must be a JSON object")
+            raise serializers.ValidationError("Permissions must be a dictionary")
         
-        # Validate permission structure (basic validation)
-        valid_resources = ['users', 'roles', 'resources', 'licenses', 'distributions', 
-                          'access_requests', 'usage_events', 'system']
-        valid_actions = ['create', 'read', 'update', 'delete', 'approve', 'reject', 
-                        'read_own', 'admin_panel', 'system_settings', 'review']
+        # Define valid permission categories and actions
+        valid_categories = {
+            'users', 'roles', 'resources', 'licenses', 'distributions',
+            'access_requests', 'usage_events', 'system', 'workflow',
+            'media', 'search', 'api'
+        }
         
-        for resource, actions in value.items():
-            if resource not in valid_resources:
+        valid_actions = {
+            'create', 'read', 'update', 'delete', 'approve', 'reject',
+            'review', 'publish', 'submit_for_review', 'manage', 'configure',
+            'read_own', 'read_published', 'manage_own', 'upload', 'access',
+            'generate_keys', 'accept', 'admin_panel', 'system_settings',
+            'backup', 'restore', 'override', 'submit', 'draft', 'reindex',
+            'read_own_content'
+        }
+        
+        for category, actions in value.items():
+            if category not in valid_categories:
                 raise serializers.ValidationError(
-                    f"Invalid resource '{resource}'. Valid resources: {', '.join(valid_resources)}"
+                    f"Invalid permission category: {category}"
                 )
             
             if not isinstance(actions, list):
                 raise serializers.ValidationError(
-                    f"Actions for '{resource}' must be a list"
+                    f"Actions for {category} must be a list"
                 )
             
             for action in actions:
                 if action not in valid_actions:
                     raise serializers.ValidationError(
-                        f"Invalid action '{action}' for resource '{resource}'. "
-                        f"Valid actions: {', '.join(valid_actions)}"
+                        f"Invalid action '{action}' for category '{category}'"
                     )
         
         return value
@@ -69,138 +76,174 @@ class RoleSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     """
-    Serializer for User model with role information
+    Serializer for User model
     """
     role_name = serializers.CharField(source='role.name', read_only=True)
-    full_name = serializers.CharField(source='get_full_name', read_only=True)
-    auth0_status = serializers.SerializerMethodField()
+    role_permissions = serializers.SerializerMethodField()
+    full_name = serializers.CharField(read_only=True)
+    can_access_admin = serializers.SerializerMethodField()
     
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'username', 'first_name', 'last_name', 
-            'full_name', 'role', 'role_name', 'auth0_id', 'auth0_status',
-            'profile_data', 'is_active', 'is_staff', 'is_superuser',
-            'last_login', 'date_joined', 'created_at', 'updated_at'
+            'id', 'username', 'email', 'first_name', 'last_name', 'full_name',
+            'auth0_id', 'role', 'role_name', 'role_permissions', 'profile_data',
+            'is_active', 'last_login', 'can_access_admin', 'created_at', 'updated_at'
         ]
         read_only_fields = [
-            'id', 'auth0_id', 'last_login', 'date_joined', 
-            'created_at', 'updated_at', 'full_name', 'role_name', 'auth0_status'
+            'id', 'auth0_id', 'role_name', 'role_permissions', 'full_name',
+            'can_access_admin', 'last_login', 'created_at', 'updated_at'
         ]
-        extra_kwargs = {
-            'password': {'write_only': True},
-            'profile_data': {'required': False},
-        }
-    
-    def get_auth0_status(self, obj):
-        """Get Auth0 integration status"""
-        return 'connected' if obj.auth0_id else 'not_connected'
-    
+
+    def get_role_permissions(self, obj):
+        """Get user's role permissions"""
+        if obj.role:
+            return obj.role.permissions
+        return {}
+
+    def get_can_access_admin(self, obj):
+        """Check if user can access admin panel"""
+        return obj.can_access_admin_panel()
+
     def validate_email(self, value):
-        """Validate email uniqueness"""
-        if self.instance and self.instance.email == value:
-            return value
-        
-        if User.objects.filter(email=value, is_active=True).exists():
-            raise serializers.ValidationError("A user with this email already exists")
-        
+        """
+        Validate email uniqueness
+        """
+        if User.objects.filter(email=value).exclude(id=self.instance.id if self.instance else None).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
         return value
-    
-    def validate_role(self, value):
-        """Validate role exists and is active"""
-        if not value or not value.is_active:
-            raise serializers.ValidationError("Role must be active")
-        return value
-    
-    def validate_profile_data(self, value):
-        """Validate profile data structure"""
-        if value and not isinstance(value, dict):
-            raise serializers.ValidationError("Profile data must be a JSON object")
-        return value or {}
 
 
-class UserCreateSerializer(UserSerializer):
+class UserCreateSerializer(serializers.ModelSerializer):
     """
-    Serializer for creating new users with password
+    Serializer for creating new users
     """
     password = serializers.CharField(write_only=True, min_length=8)
-    password_confirm = serializers.CharField(write_only=True)
-    
-    class Meta(UserSerializer.Meta):
-        fields = UserSerializer.Meta.fields + ['password', 'password_confirm']
-    
-    def validate(self, attrs):
-        """Validate password confirmation"""
-        if attrs.get('password') != attrs.get('password_confirm'):
-            raise serializers.ValidationError("Passwords do not match")
-        
-        attrs.pop('password_confirm', None)
-        return attrs
-    
-    def create(self, validated_data):
-        """Create user with hashed password"""
-        password = validated_data.pop('password')
-        user = User.objects.create_user(password=password, **validated_data)
-        return user
-
-
-class UserUpdateSerializer(UserSerializer):
-    """
-    Serializer for updating existing users (without password)
-    """
-    class Meta(UserSerializer.Meta):
-        fields = [field for field in UserSerializer.Meta.fields if field != 'password']
-
-
-class UserProfileSerializer(serializers.ModelSerializer):
-    """
-    Simplified serializer for user profile information
-    """
-    role_name = serializers.CharField(source='role.name', read_only=True)
-    full_name = serializers.CharField(source='get_full_name', read_only=True)
-    permissions = serializers.SerializerMethodField()
+    confirm_password = serializers.CharField(write_only=True)
     
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'username', 'first_name', 'last_name', 
-            'full_name', 'role_name', 'permissions', 'profile_data',
-            'last_login', 'date_joined'
+            'username', 'email', 'first_name', 'last_name', 'role',
+            'password', 'confirm_password', 'profile_data'
         ]
-        read_only_fields = [
-            'id', 'email', 'role_name', 'permissions', 
-            'last_login', 'date_joined', 'full_name'
-        ]
-    
-    def get_permissions(self, obj):
-        """Get user's role permissions"""
-        return obj.role.permissions if obj.role else {}
 
-
-class PasswordChangeSerializer(serializers.Serializer):
-    """
-    Serializer for changing user password
-    """
-    current_password = serializers.CharField(required=True)
-    new_password = serializers.CharField(required=True, min_length=8)
-    new_password_confirm = serializers.CharField(required=True)
-    
-    def validate_current_password(self, value):
-        """Validate current password"""
-        user = self.context['request'].user
-        if not user.check_password(value):
-            raise serializers.ValidationError("Current password is incorrect")
-        return value
-    
     def validate(self, attrs):
-        """Validate new password confirmation"""
-        if attrs['new_password'] != attrs['new_password_confirm']:
-            raise serializers.ValidationError("New passwords do not match")
+        """
+        Validate password confirmation
+        """
+        if attrs['password'] != attrs['confirm_password']:
+            raise serializers.ValidationError("Passwords don't match")
         return attrs
-    
-    def save(self):
-        """Update user password"""
-        user = self.context['request'].user
-        user.set_password(self.validated_data['new_password'])
+
+    def create(self, validated_data):
+        """
+        Create user with encrypted password
+        """
+        validated_data.pop('confirm_password')
+        password = validated_data.pop('password')
+        
+        user = User(**validated_data)
+        user.set_password(password)
         user.save()
+        
         return user
+
+
+class RolePermissionMatrixSerializer(serializers.Serializer):
+    """
+    Serializer for role permission matrix
+    """
+    matrix = serializers.DictField(
+        child=serializers.DictField(
+            child=serializers.ListField(child=serializers.CharField())
+        )
+    )
+    roles = serializers.ListField(child=serializers.CharField())
+    resources = serializers.ListField(child=serializers.CharField())
+
+
+class RoleAssignmentSerializer(serializers.Serializer):
+    """
+    Serializer for role assignment operations
+    """
+    user_id = serializers.UUIDField()
+    role_id = serializers.UUIDField()
+    reason = serializers.CharField(max_length=500, required=False)
+
+    def validate_user_id(self, value):
+        """Validate user exists"""
+        try:
+            User.objects.get(id=value, is_active=True)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("User not found")
+        return value
+
+    def validate_role_id(self, value):
+        """Validate role exists"""
+        try:
+            Role.objects.get(id=value, is_active=True)
+        except Role.DoesNotExist:
+            raise serializers.ValidationError("Role not found")
+        return value
+
+
+class PermissionCheckSerializer(serializers.Serializer):
+    """
+    Serializer for checking user permissions
+    """
+    resource = serializers.CharField(max_length=50)
+    action = serializers.CharField(max_length=50)
+    user_id = serializers.UUIDField(required=False)
+
+    def validate_resource(self, value):
+        """Validate resource category"""
+        valid_resources = {
+            'users', 'roles', 'resources', 'licenses', 'distributions',
+            'access_requests', 'usage_events', 'system', 'workflow',
+            'media', 'search', 'api'
+        }
+        if value not in valid_resources:
+            raise serializers.ValidationError(f"Invalid resource: {value}")
+        return value
+
+
+class UserStatsSerializer(serializers.Serializer):
+    """
+    Serializer for user statistics
+    """
+    role_distribution = serializers.DictField(child=serializers.IntegerField())
+    total_users = serializers.IntegerField()
+    active_users = serializers.IntegerField()
+    inactive_users = serializers.IntegerField()
+    roles_count = serializers.IntegerField()
+
+
+class RoleSummarySerializer(serializers.ModelSerializer):
+    """
+    Summary serializer for Role model (for lists)
+    """
+    user_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Role
+        fields = ['id', 'name', 'description', 'user_count', 'is_active']
+
+    def get_user_count(self, obj):
+        """Get number of users with this role"""
+        return obj.users.filter(is_active=True).count()
+
+
+class UserSummarySerializer(serializers.ModelSerializer):
+    """
+    Summary serializer for User model (for lists)
+    """
+    role_name = serializers.CharField(source='role.name', read_only=True)
+    full_name = serializers.CharField(read_only=True)
+    
+    class Meta:
+        model = User
+        fields = [
+            'id', 'username', 'email', 'full_name', 'role_name',
+            'is_active', 'last_login', 'created_at'
+        ]

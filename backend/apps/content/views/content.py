@@ -8,8 +8,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
 from django.utils import timezone
 
-from .models import Resource, Distribution
-from .serializers import (
+from ..models import Resource, Distribution
+from ..serializers import (
     ResourceSerializer, ResourceListSerializer,
     DistributionSerializer, DistributionListSerializer
 )
