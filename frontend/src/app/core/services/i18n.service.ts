@@ -48,6 +48,8 @@ export class I18nService {
       'common.yes': 'Yes',
       'common.no': 'No',
       'common.confirm': 'Confirm',
+      'common.or': 'or',
+      'common.and': 'and',
 
       // App
       'app.name': 'Itqan CMS',
@@ -55,8 +57,12 @@ export class I18nService {
       // Navigation
       'nav.home': 'Home',
       'nav.about': 'About',
+      'nav.publishers': 'Publishers',
+      'nav.content_standards': 'Content & Technical Standards',
       'nav.documentation': 'Documentation',
       'nav.api_standards': 'API Standards',
+      'nav.language': 'Language',
+      'nav.switch_language': 'Switch Language',
 
       // Authentication
       'auth.welcome': 'Welcome to Itqan CMS',
@@ -74,6 +80,14 @@ export class I18nService {
       'auth.signing_in': 'Signing in...',
       'auth.signing_up': 'Creating account...',
       'auth.logout_confirm': 'Are you sure you want to logout?',
+      'auth.continue_github': 'Continue with GitHub',
+      'auth.continue_google': 'Continue with Google',
+      'auth.continue_email': 'Continue with Email',
+      'auth.forgot_password_link': 'Forgot your password?',
+      'auth.terms_agreement': 'By signing in, you agree to our',
+      'auth.terms_service': 'Terms of Service',
+      'auth.privacy_policy': 'Privacy Policy',
+      'auth.register_free': 'Sign up for free',
 
       // Dashboard
       'dashboard.welcome': 'Welcome to Itqan CMS',
@@ -95,6 +109,42 @@ export class I18nService {
       // Documentation Section
       'landing.docs.title': 'API Documentation: Data Access Standards',
       'landing.docs.subtitle': 'This document outlines the data access standards for files. Please follow the guidance provided for each category.',
+
+              // Content Standards Page
+        'content_standards.title': 'Documents: Data Access Standards',
+        'content_standards.subtitle': 'This document describes the standards for accessing data in files. Please follow the guidelines below for each category.',
+        'content_standards.verse.title': 'Verse Usage Standards',
+        'content_standards.verse.description': 'To access verses, follow the standards below:',
+        'content_standards.verse.guideline_1': 'Use correct verse identifier format',
+        'content_standards.verse.guideline_2': 'Ensure proper verse indexing',
+        'content_standards.verse.guideline_3': 'Check for latest updates in verse database',
+        'content_standards.verse.example_title': 'Example: To access verse 2:255, use',
+        'content_standards.word.title': 'Word Usage Standards',
+        'content_standards.word.description': 'To access words, adhere to the following:',
+        'content_standards.word.guideline_1': 'Use specified word keys',
+        'content_standards.word.guideline_2': 'Ensure word list is updated',
+        'content_standards.word.guideline_3': 'Maintain consistency in word formatting',
+        'content_standards.word.example_title': 'Example: To retrieve word "الله", use',
+        'content_standards.tafsir.title': 'Tafsir Usage Standards',
+        'content_standards.tafsir.description': 'When accessing tafsir, follow the guidelines below:',
+        'content_standards.tafsir.guideline_1': 'Use correct tafsir reference',
+        'content_standards.tafsir.guideline_2': 'Ensure accuracy of translations',
+        'content_standards.tafsir.guideline_3': 'Check for updated interpretations',
+        'content_standards.tafsir.example_title': 'Example: To access tafsir for verse 2:255, use',
+        'content_standards.copyright': '© Documentation Standards 2023. All rights reserved.',
+
+        // Asset Store Page
+        'asset_store.search_placeholder': 'Search for Islamic resources...',
+        'asset_store.loading': 'Loading resources...',
+        'asset_store.license': 'License',
+        'asset_store.download': 'Download',
+        'asset_store.pagination_total': 'Showing {start}-{end} of {total} resources',
+        'asset_store.no_resources': 'No resources found matching your criteria',
+        'asset_store.filters': 'Filters',
+        'asset_store.categories': 'Categories',
+        'asset_store.creative_commons': 'Creative Commons License',
+        'asset_store.language': 'Language',
+        'asset_store.all_languages': 'All Languages',
 
       // API Usage Standards
       'landing.docs.api_usage.title': 'API Usage Standards',
@@ -244,15 +294,21 @@ export class I18nService {
       'common.yes': 'نعم',
       'common.no': 'لا',
       'common.confirm': 'تأكيد',
+      'common.or': 'أو',
+      'common.and': 'و',
 
       // App
       'app.name': 'نظام إتقان',
 
       // Navigation
       'nav.home': 'الرئيسية',
-      'nav.about': 'من المشروع',
+      'nav.about': 'عن المشروع',
+      'nav.publishers': 'الناشرين',
+      'nav.content_standards': 'معايير المحتوى والتقنية',
       'nav.documentation': 'معايير البحوث والتقنية',
       'nav.api_standards': 'معايير استخدام آية',
+      'nav.language': 'اللغة',
+      'nav.switch_language': 'تبديل اللغة',
 
       // Authentication
       'auth.welcome': 'مرحباً بك في نظام إتقان',
@@ -270,6 +326,14 @@ export class I18nService {
       'auth.signing_in': 'جاري تسجيل الدخول...',
       'auth.signing_up': 'جاري إنشاء الحساب...',
       'auth.logout_confirm': 'هل أنت متأكد من تسجيل الخروج؟',
+      'auth.continue_github': 'المتابعة مع GitHub',
+      'auth.continue_google': 'المتابعة مع Google',
+      'auth.continue_email': 'المتابعة بالبريد الإلكتروني',
+      'auth.forgot_password_link': 'نسيت كلمة المرور؟',
+      'auth.terms_agreement': 'بتسجيل الدخول، فإنك توافق على',
+      'auth.terms_service': 'شروط الخدمة',
+      'auth.privacy_policy': 'سياسة الخصوصية',
+      'auth.register_free': 'إنشاء حساب مجاني',
 
       // Dashboard
       'dashboard.welcome': 'مرحباً بك في نظام إتقان',
@@ -291,6 +355,42 @@ export class I18nService {
       // Documentation Section
       'landing.docs.title': 'الوثائق: معايير الوصول إلى البيانات',
       'landing.docs.subtitle': 'يوضح هذا المستند معايير الوصول إلى البيانات في الملفات. يرجى اتباع الإرشادات أدناه لكل فئة.',
+
+              // Content Standards Page
+        'content_standards.title': 'الوثائق: معايير الوصول إلى البيانات',
+        'content_standards.subtitle': 'هذه الوثيقة تصف معايير الوصول إلى البيانات في الملفات. يرجى اتباع الإرشادات أدناه لكل فئة.',
+        'content_standards.verse.title': 'معايير استخدام الآية',
+        'content_standards.verse.description': 'للوصول إلى الآيات، اتبع المعايير التالية:',
+        'content_standards.verse.guideline_1': 'استخدم تنسيق معرف الآية الصحيح',
+        'content_standards.verse.guideline_2': 'تأكد من فهرسة الآية بشكل صحيح',
+        'content_standards.verse.guideline_3': 'تحقق من آخر التحديثات في قاعدة بيانات الآيات',
+        'content_standards.verse.example_title': 'مثال: للوصول إلى الآية 2:255، استخدم',
+        'content_standards.word.title': 'معايير استخدام الكلمات',
+        'content_standards.word.description': 'للوصول إلى الكلمات، التزم بما يلي:',
+        'content_standards.word.guideline_1': 'استخدم مفاتيح الكلمات المحددة',
+        'content_standards.word.guideline_2': 'تأكد من تحديث قائمة الكلمات',
+        'content_standards.word.guideline_3': 'احفظ على الاتساق في تنسيق الكلمات',
+        'content_standards.word.example_title': 'مثال: لاسترجاع كلمة "الله"، استخدم',
+        'content_standards.tafsir.title': 'معايير استخدام تفسير',
+        'content_standards.tafsir.description': 'عند الوصول إلى تفسير، اتبع الإرشادات التالية:',
+        'content_standards.tafsir.guideline_1': 'استخدم مرجع التفسير الصحيح',
+        'content_standards.tafsir.guideline_2': 'تأكد من دقة الترجمات',
+        'content_standards.tafsir.guideline_3': 'تحقق من وجود تفسيرات محدثة لتفسير',
+        'content_standards.tafsir.example_title': 'مثال: للوصول إلى تفسير للآية 2:255، استخدم',
+        'content_standards.copyright': '© معايير التوثيق لعام 2023. كل الحقوق محفوظة.',
+
+        // Asset Store Page
+        'asset_store.search_placeholder': 'البحث عن الموارد الإسلامية...',
+        'asset_store.loading': 'جاري تحميل الموارد...',
+        'asset_store.license': 'الرخصة',
+        'asset_store.download': 'تحميل',
+        'asset_store.pagination_total': 'عرض {start}-{end} من {total} مورد',
+        'asset_store.no_resources': 'لم يتم العثور على موارد تطابق معاييرك',
+        'asset_store.filters': 'المرشحات',
+        'asset_store.categories': 'الفئات',
+        'asset_store.creative_commons': 'رخصة المشاع الإبداعي',
+        'asset_store.language': 'اللغة',
+        'asset_store.all_languages': 'جميع اللغات',
 
       // API Usage Standards
       'landing.docs.api_usage.title': 'معايير استخدام آية',
@@ -432,6 +532,13 @@ export class I18nService {
 
   constructor() {
     // Initialize language from browser or localStorage
+    this.initializeLanguage();
+  }
+
+  /**
+   * Initialize the i18n service (public method)
+   */
+  initialize(): void {
     this.initializeLanguage();
   }
 

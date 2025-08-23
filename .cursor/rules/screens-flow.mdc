@@ -1,0 +1,201 @@
+---
+alwaysApply: false
+---
+
+# Itqan CMS – End-to-End User Flow Documentation
+
+## 🔄 Full User Flow Diagram
+
+![Itqan CMS Full Flow](itqan_cms_full_flow.png)
+
+---
+
+## 🗂 Screen Classification with Authentication States
+
+| File | Screen Content | PRD Mapping | Authentication Required? | Purpose |
+|------|----------------|-------------|---------------------------|---------|
+| **AUTH-001.png** | Login Page (GitHub, Google, Email/Password) | ITQ-105 | ❌ No (entry point) | Entry point for developers |
+| **AUTH-002.png** | Profile Completion (Project info, team size, self-intro) | ITQ-110–112 | ✅ Yes (after signup/login) | Collects developer details before resource access |
+| **ADMIN-001.png** | Asset Store (Landing) – search, resource cards, filters, pagination | ITQ-113–116 | ✅ Yes (user identified: “Welcome Mohammad”) | **Landing page** for discovering resources |
+| **ADMIN-002.png** | Documentation: Content Access Standards (Verses, Words, Tafsir) | ITQ-120 | ❌ No (public) | Developer guide on proper data usage |
+| **ADMIN-003.png** | Resource Details Page (publisher, metadata, preview, download) | ITQ-117 | ✅ Yes | Shows detailed resource information |
+| **ADMIN-004.png** | Access Request Form (Why + Added Value) | ITQ-118 | ✅ Yes | Popup for developers to request access |
+| **ADMIN-005.png** | License Terms Carousel – Step 1 | ITQ-119 | ✅ Yes | License review, step 1 |
+| **ADMIN-006.png** | License Terms Carousel – Step 2 | ITQ-119 | ✅ Yes | License review, step 2 |
+| **ADMIN-007.png** | License Terms Carousel – Step 3 | ITQ-119 | ✅ Yes | License review, step 3 |
+| **ADMIN-008.png** | Publisher Public Profile (bio, icon, resources grid, filters) | ITQ-121 | ✅ Yes | Public publisher profile |
+
+---
+
+## 🔢 Step-by-Step Narrative of Itqan CMS Flow
+
+### 1. **Login (AUTH-001)**
+- User arrives at the **Login Page**.  
+- Options: GitHub, Google, or Email/Password.  
+- If new, they click **Register**.  
+
+---
+
+### 2. **Sign Up → Profile Completion (AUTH-002)**
+- After registering, the user is redirected to a **Profile Form**.  
+- They must enter:
+  - Project info (What are you working on?)  
+  - Team size  
+  - Self-introduction  
+- **Completion is required** before accessing resources.  
+
+---
+
+### 3. **Landing Page (ADMIN-001)**  
+- After login/profile, user lands on the **Asset Store**.  
+- Features:  
+  - Global search  
+  - Resource cards (title, description, license, publisher)  
+  - Category filters (Translation, Transliteration, Corpus, Audio, Fonts)  
+  - License filters (Creative Commons)  
+  - Pagination  
+
+---
+
+### 4. **Optional: Documentation Page (ADMIN-002)**  
+- Publicly available, even without login.  
+- **Content Standards**: correct usage of Verses, Words, Tafsir.  
+- Example snippets show proper API usage.  
+
+---
+
+### 5. **View Resource Details (ADMIN-003)**  
+- Clicking a resource card opens its **Details Page**.  
+- Shows publisher info, metadata, description, preview, and “Download” button.  
+
+---
+
+### 6. **Submit Access Request (ADMIN-004)**  
+- On clicking “Download”, a popup form opens.  
+- User must explain:  
+  - Why they want the resource.  
+  - What added value it brings to their project.  
+
+---
+
+### 7. **Review License Terms (ADMIN-005 → 007)**  
+- User is taken through a **3-step carousel** of license terms:  
+  - **Clause 1 → Clause 2 → Clause 3**  
+- They cannot proceed without reviewing all.  
+- Finally, they must **Accept Terms**.  
+
+---
+
+### 8. **Download Resource (Final Step)**  
+- After acceptance, user can download the resource.  
+- Access is logged and publisher notified.  
+
+---
+
+### 9. **Publisher Profile (ADMIN-008)**  
+- At any time, user may click a publisher’s name/icon.  
+- Opens **Publisher Public Profile** with:  
+  - Bio, Icon  
+  - Grid of resources  
+  - Filters  
+
+---
+
+✅ This documentation provides a **3-layer view** of the Itqan CMS:  
+1. Visual (Diagram)  
+2. Tabular (Screen mapping with login states)  
+3. Sequential (Step-by-step narrative)
+
+---
+
+## 📋 Screen Flow Task Management System
+
+### Task Tracking Structure
+The Itqan CMS now uses a **dual-track task management system**:
+
+1. **Main Development Tasks**: `ai-memory-bank/tasks.csv` + `ai-memory-bank/tasks/*.json`
+   - Core development work (Tasks 1-33+)
+   - Backend implementation, infrastructure, integrations
+   - Full-stack feature development
+
+2. **Screen Flow Tasks**: `ai-memory-bank/tasks-screens-flow.csv` + `ai-memory-bank/tasks-screens-flow/*.json`
+   - UI/UX implementation and validation (SF-01 through SF-10)
+   - Screen-specific functionality and flow integration
+   - Wireframe-to-implementation validation
+
+### Screen Flow Task Naming Convention
+- **Task Numbers**: SF-01, SF-02, ..., SF-10
+- **Status Values**: `completed`, `todo`, `in-progress` 
+- **Original Task References**: Each completed screen references its original implementation task
+
+### Screen Flow Task Categories
+
+#### Authentication Flow (SF-01, SF-02)
+- **SF-01**: Login Page (AUTH-001) → Implemented in Task 14
+- **SF-02**: Profile Completion (AUTH-002) → Implemented in Task 15
+
+#### Resource Discovery Flow (SF-03, SF-04, SF-05)
+- **SF-03**: Asset Store Landing (ADMIN-001) → Implemented in Task 18
+- **SF-04**: Content Standards Documentation (ADMIN-002) → **NEW IMPLEMENTATION REQUIRED**
+- **SF-05**: Resource Details Page (ADMIN-003) → Implemented in Task 20
+
+#### Access Request Flow (SF-06, SF-07, SF-08, SF-09)
+- **SF-06**: Access Request Form (ADMIN-004) → Implemented in Task 21
+- **SF-07**: License Carousel Step 1 (ADMIN-005) → Implemented in Task 26
+- **SF-08**: License Carousel Step 2 (ADMIN-006) → Implemented in Task 26
+- **SF-09**: License Carousel Step 3 (ADMIN-007) → Implemented in Task 26
+
+#### Publisher Profile Flow (SF-10)
+- **SF-10**: Publisher Public Profile (ADMIN-008) → Implemented in Task 24
+
+### Priority Implementation: SF-04 Content Standards Page
+
+The **ADMIN-002 "Content Access Standards"** page is the **only screen requiring new implementation**:
+
+#### Key Requirements:
+- **Public Access**: No authentication required (unlike most other screens)
+- **Islamic Content Standards**: Document proper usage of Verses, Words, Tafsir
+- **API Examples**: Show correct `getVerse()`, `getWord()`, `getTafsir()` usage
+- **Bilingual Support**: Full EN/AR documentation with RTL layout
+- **Attribution Guidelines**: Islamic scholarly requirements and content integrity
+- **Integration**: Must fit into complete screen flow navigation
+
+#### Implementation Approach:
+1. **Angular Component**: New `content-standards.component.ts` with NG-ZORRO styling
+2. **Django Backend**: API endpoint serving documentation content
+3. **Routing**: Public route accessible from main navigation
+4. **Content Structure**: Organized sections for each content type with examples
+5. **Islamic Design**: Proper Arabic typography and Islamic content presentation
+
+### Screen Flow Validation Rules
+
+#### For Completed Screens (SF-01, SF-02, SF-03, SF-05 through SF-10):
+1. **Validate Implementation**: Ensure existing implementation matches wireframe specification
+2. **Test Functionality**: Verify all screen features work as designed
+3. **Flow Integration**: Confirm proper navigation between screens
+4. **Bilingual Support**: Test EN/AR localization and RTL layout
+5. **Authentication**: Verify auth requirements match specification
+
+#### For New Implementation (SF-04):
+1. **Design Compliance**: Must match ADMIN-002.png wireframe exactly
+2. **Islamic Content Standards**: Comprehensive coverage of content usage guidelines
+3. **Public Accessibility**: No authentication barriers
+4. **Developer Education**: Clear API examples and best practices
+5. **Integration**: Proper navigation integration with existing screen flow
+
+### Screen Flow Documentation Rules
+
+#### JSON Task Structure:
+- **Completed Screens**: Reference original implementation task, focus on validation
+- **New Screens**: Full implementation specification following task template
+- **Authentication Context**: Clearly specify auth requirements in each JSON
+- **Wireframe References**: Link to specific wireframe files
+- **Flow Integration**: Document navigation to/from other screens
+
+#### Maintenance Guidelines:
+- **Status Updates**: Keep CSV status current as work progresses
+- **Task Completion**: Mark screens as completed when validation/implementation finishes
+- **Documentation**: Update JSON files when requirements or implementations change
+- **Flow Evolution**: Add new screens to tracking system as wireframes are created
+
+This dual-track system ensures comprehensive coverage of both backend development and frontend user experience while maintaining clear traceability between wireframes, implementations, and user flows.  

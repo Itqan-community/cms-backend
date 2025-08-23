@@ -1,11 +1,32 @@
 import { Routes } from '@angular/router';
 
 export const routes: Routes = [
-  // Landing page for all users (authenticated and unauthenticated)
+  // Asset Store Landing page for all users (ADMIN-001 / SF-03)
   {
     path: '',
-    loadComponent: () => import('./features/landing/landing-page.component').then(m => m.LandingPageComponent),
+    loadComponent: () => import('./features/asset-store/asset-store.component').then(m => m.AssetStoreComponent),
     title: 'Itqan CMS - Islamic Content Management System'
+  },
+
+  // Content Standards Page (Public Access - ADMIN-002 / SF-04)
+  {
+    path: 'content-standards',
+    loadComponent: () => import('./features/content-standards/content-standards.component').then(m => m.ContentStandardsComponent),
+    title: 'Content & Technical Standards - Itqan CMS'
+  },
+
+  // Publishers Page (Public)
+  {
+    path: 'publishers',
+    loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent), // Placeholder
+    title: 'Publishers - Itqan CMS'
+  },
+
+  // About Page (Public)
+  {
+    path: 'about',
+    loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent), // Placeholder
+    title: 'About the Project - Itqan CMS'
   },
   
   // Dashboard

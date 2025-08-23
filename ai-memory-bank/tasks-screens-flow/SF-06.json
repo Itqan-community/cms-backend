@@ -1,0 +1,48 @@
+{
+  "prompt": "Document and validate existing Access Request Form implementation (ADMIN-004) completed in Task 21 for Itqan CMS screen flow integration.",
+  "context": {
+    "project": "Itqan CMS",
+    "feature": "Access Request Form (ADMIN-004)",
+    "auth_model": "Auth0 Hybrid (Authentication Required)",
+    "tech_stack": ["Angular 19", "Django 4.2", "NG-ZORRO"],
+    "screens": ["ADMIN-004"],
+    "colors": {"primary": "#669B80", "dark": "#22433D"},
+    "original_task": "Task 21",
+    "complete_screen_flow": "docs/screens/cms-screens.png"
+  },
+  "objectives": [
+    "Validate existing access request form matches ADMIN-004 wireframe",
+    "Ensure 'Why' and 'Added Value' fields capture developer justifications properly",
+    "Confirm proper integration with AccessRequest workflow and license terms flow"
+  ],
+  "tasks": [
+    "Review existing ADMIN-004 screen implementation in Task 21",
+    "Test access request popup form triggered from ADMIN-003 download button",
+    "Validate 'Why do you want this resource?' field functionality",
+    "Test 'What added value does it bring to your project?' field",
+    "Confirm form validation and required field enforcement",
+    "Test form submission creating AccessRequest entity in database",
+    "Verify navigation to ADMIN-005 license terms carousel after submission"
+  ],
+  "guard_rails": [
+    "No changes to existing working access request functionality",
+    "Maintain AccessRequest workflow established in Task 21"
+  ],
+  "acceptance_criteria": [
+    "ADMIN-004 screen matches wireframe specification",
+    "Access request form captures required justification data",
+    "Form submission properly initiates license terms review flow"
+  ],
+  "definition_of_done": [
+    "Screen flow validation completed",
+    "Access request workflow tested and documented"
+  ],
+  "out_of_scope": [
+    "Automated access approval without license terms review"
+  ],
+  "references": [
+    "ai-memory-bank/tasks/21.json - Original workflow management implementation",
+    "docs/screens/ADMIN-004.png - Access request form wireframe",
+    "backend/apps/licensing/ - AccessRequest entity and workflow logic"
+  ]
+}

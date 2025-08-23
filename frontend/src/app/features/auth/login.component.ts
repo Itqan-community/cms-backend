@@ -12,6 +12,7 @@ import { NzAlertModule } from 'ng-zorro-antd/alert';
 
 import { AuthService } from '../../core/services/auth.service';
 import { StateService } from '../../core/services/state.service';
+import { I18nService } from '../../core/services/i18n.service';
 
 /**
  * AUTH-001: Login Page Component
@@ -47,9 +48,9 @@ import { StateService } from '../../core/services/state.service';
                 (error)="onLogoError($event)"
               />
             </div>
-            <h1 class="login-title">Welcome Back</h1>
+            <h1 class="login-title">{{ t('auth.welcome') }}</h1>
             <p class="login-subtitle">
-              Sign in to your Itqan CMS account to access verified Quranic content
+              {{ t('auth.login_title') }}
             </p>
           </div>
 
@@ -78,11 +79,11 @@ import { StateService } from '../../core/services/state.service';
                 class="github-button"
               >
                 <span nz-icon nzType="github" nzTheme="outline"></span>
-                Continue with GitHub
+                {{ t('auth.continue_github') }}
               </button>
 
               <!-- Divider -->
-              <nz-divider nzText="or" nzOrientation="center" class="divider"/>
+              <nz-divider [nzText]="t('common.or')" nzOrientation="center" class="divider"/>
 
               <!-- Google OAuth (Secondary) -->
               <button
@@ -95,7 +96,7 @@ import { StateService } from '../../core/services/state.service';
                 class="google-button"
               >
                 <span nz-icon nzType="google" nzTheme="outline"></span>
-                Continue with Google
+                {{ t('auth.continue_google') }}
               </button>
 
               <!-- Email/Password (Fallback) -->
@@ -109,7 +110,7 @@ import { StateService } from '../../core/services/state.service';
                 class="email-button"
               >
                 <span nz-icon nzType="mail" nzTheme="outline"></span>
-                Continue with Email
+                {{ t('auth.continue_email') }}
               </button>
             </nz-space>
           </div>
@@ -123,7 +124,7 @@ import { StateService } from '../../core/services/state.service';
                 role="button"
                 tabindex="0"
               >
-                Forgot your password?
+                {{ t('auth.forgot_password_link') }}
               </a>
             </div>
           </div>
@@ -131,24 +132,24 @@ import { StateService } from '../../core/services/state.service';
           <!-- Terms and Privacy -->
           <div class="terms-section">
             <p class="terms-text">
-              By signing in, you agree to our
-              <a href="/terms" target="_blank" class="terms-link">Terms of Service</a>
-              and
-              <a href="/privacy" target="_blank" class="terms-link">Privacy Policy</a>
+              {{ t('auth.terms_agreement') }}
+              <a href="/terms" target="_blank" class="terms-link">{{ t('auth.terms_service') }}</a>
+              {{ t('common.and') }}
+              <a href="/privacy" target="_blank" class="terms-link">{{ t('auth.privacy_policy') }}</a>
             </p>
           </div>
 
           <!-- Register Link -->
           <div class="register-section">
             <p class="register-text">
-              Don't have an account?
+              {{ t('auth.no_account') }}
               <a 
                 class="register-link"
                 (click)="navigateToRegister()"
                 role="button"
                 tabindex="0"
               >
-                Sign up for free
+                {{ t('auth.register_free') }}
               </a>
             </p>
           </div>
@@ -162,10 +163,18 @@ export class LoginComponent {
   private readonly authService = inject(AuthService);
   private readonly stateService = inject(StateService);
   private readonly router = inject(Router);
+  private readonly i18nService = inject(I18nService);
 
   // Reactive state
   readonly isLoading = this.stateService.authLoading;
   readonly errorMessage = this.stateService.globalError;
+
+  /**
+   * Translation helper method
+   */
+  t(key: string): string {
+    return this.i18nService.translate(key);
+  }
 
   /**
    * Login with GitHub SSO (Primary option)

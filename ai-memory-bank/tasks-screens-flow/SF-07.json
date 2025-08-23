@@ -1,0 +1,48 @@
+{
+  "prompt": "Document and validate existing License Terms Carousel Step 1 implementation (ADMIN-005) completed in Task 26 for Itqan CMS screen flow integration.",
+  "context": {
+    "project": "Itqan CMS",
+    "feature": "License Terms Carousel Step 1 (ADMIN-005)",
+    "auth_model": "Auth0 Hybrid (Authentication Required)",
+    "tech_stack": ["Angular 19", "Django 4.2", "NG-ZORRO"],
+    "screens": ["ADMIN-005"],
+    "colors": {"primary": "#669B80", "dark": "#22433D"},
+    "original_task": "Task 26",
+    "complete_screen_flow": "docs/screens/cms-screens.png"
+  },
+  "objectives": [
+    "Validate existing license carousel step 1 matches ADMIN-005 wireframe",
+    "Ensure proper Islamic copyright and attribution requirements display",
+    "Confirm navigation controls work correctly within carousel workflow"
+  ],
+  "tasks": [
+    "Review existing ADMIN-005 screen implementation in Task 26",
+    "Test license terms carousel first step content display",
+    "Validate Islamic content licensing requirements presentation",
+    "Test Next button navigation to ADMIN-006 (step 2)",
+    "Confirm bilingual EN/AR support for license terms",
+    "Verify carousel progress indicators and step tracking",
+    "Test proper handling of license agreement storage"
+  ],
+  "guard_rails": [
+    "No changes to existing working license carousel functionality",
+    "Maintain Islamic copyright principles established in Task 26"
+  ],
+  "acceptance_criteria": [
+    "ADMIN-005 screen matches wireframe specification",
+    "License terms display correctly with Islamic content requirements",
+    "Carousel navigation functions properly within 3-step workflow"
+  ],
+  "definition_of_done": [
+    "Screen flow validation completed",
+    "License carousel step 1 tested and documented"
+  ],
+  "out_of_scope": [
+    "Customizable license terms based on resource type"
+  ],
+  "references": [
+    "ai-memory-bank/tasks/26.json - Original license agreement modal implementation",
+    "docs/screens/ADMIN-005.png - License carousel step 1 wireframe",
+    "backend/apps/licensing/ - License entity and agreement tracking logic"
+  ]
+}

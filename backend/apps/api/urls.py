@@ -25,6 +25,9 @@ from apps.api_keys.views import APIKeyViewSet, APIKeyUsageViewSet, RateLimitEven
 # Import Landing Page Views
 from apps.api.views.landing import platform_statistics, platform_features, recent_content
 
+# Import Content Standards Views
+from apps.api.views.content_standards import ContentStandardsView, content_standards_simple
+
 # Create API router
 router = DefaultRouter()
 
@@ -70,6 +73,10 @@ urlpatterns = [
     path('landing/statistics/', platform_statistics, name='landing_statistics'),
     path('landing/features/', platform_features, name='landing_features'),
     path('landing/recent-content/', recent_content, name='landing_recent_content'),
+    
+    # Content Standards endpoints (public - ADMIN-002 / SF-04)
+    path('content-standards/', ContentStandardsView.as_view(), name='content_standards'),
+    path('content-standards/simple/', content_standards_simple, name='content_standards_simple'),
     
     # Workflow endpoints
     path('workflow/permissions/', workflow_permissions, name='workflow_permissions'),
