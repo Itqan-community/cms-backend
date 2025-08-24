@@ -21,6 +21,8 @@
 .p-4 { padding: 1rem; } .p-6 { padding: 1.5rem; }
 .py-6 { padding-block: 1.5rem; } .px-4 { padding-inline: 1rem; }
 .mt-4 { margin-block-start: 1rem; } .mb-4 { margin-block-end: 1rem; }
+.mt-6 { margin-block-start: 1.5rem; } .mb-6 { margin-block-end: 1.5rem; }
+.mb-3 { margin-block-end: .75rem; } .mb-0 { margin-block-end: 0; }
 .ms-2 { margin-inline-start: .5rem; } .me-2 { margin-inline-end: .5rem; }
 .w-full { width: 100%; } .h-full { height: 100%; }
 .text-center { text-align: center; }
@@ -34,4 +36,29 @@
 
 @media (max-width: 768px) {
   .col-6 { flex: 0 0 100%; max-width: 100%; }
+}
+
+/* RTL-specific styles */
+[dir="rtl"] {
+  font-family: 'Segoe UI', Tahoma, Arial, Helvetica, sans-serif;
+}
+
+[dir="rtl"] .ms-2 {
+  margin-inline-start: 0;
+  margin-inline-end: .5rem;
+}
+
+[dir="rtl"] .me-2 {
+  margin-inline-end: 0;
+  margin-inline-start: .5rem;
+}
+
+/* Arabic typography improvements */
+[dir="rtl"] p, [dir="rtl"] li, [dir="rtl"] span {
+  line-height: 1.8;
+  letter-spacing: 0.02em;
+}
+
+[dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3 {
+  font-weight: 600;
 }
