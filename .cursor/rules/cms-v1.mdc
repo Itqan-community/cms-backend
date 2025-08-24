@@ -68,6 +68,7 @@ alwaysApply: true
   "references": ["Related files and documentation"]
 }
 ```
+- Ask questions to confirm your understanding of task before proceeding
 
 ## Development Guidelines
 - **Migration policy**: Never drop columns, mark deprecated
@@ -75,4 +76,10 @@ alwaysApply: true
 - **Security**: Separate admin/public interfaces
 - **Testing**: Test Publisher and Consumer workflows separately
 - **Documentation**: Generate API docs from processed resources
+
+## Environments & URLs
+- Production: `https://cms.itqan.dev`
+- Staging: `https://staging.cms.itqan.dev`
+- Develop: `https://dev.cms.itqan.dev`
+- Local: `http://local.cms.itqan.dev:8000` (add hosts entry mapping `local.cms.itqan.dev` → `127.0.0.1`)
 

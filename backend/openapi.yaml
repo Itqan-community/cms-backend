@@ -1,0 +1,1186 @@
+openapi: 3.1.0
+info:
+  title: Itqan CMS API
+  version: 0.1.0
+  description: |
+    Public catalog and access-request API for Quranic data distribution.
+    - Auth via Auth0 JWT (RS256). Backend verifies via OIDC/JWKS.
+    - Read-heavy design. UUID identifiers. Soft deletes not exposed.
+    - Content supports i18n. Use Accept-Language header when relevant.
+
+servers:
+  - url: https://cms.itqan.dev/api/v1
+    description: Production
+  - url: https://staging.cms.itqan.dev/api/v1
+    description: Staging
+  - url: https://dev.cms.itqan.dev/api/v1
+    description: Develop
+  - url: http://local.cms.itqan.dev:8000/api/v1
+    description: Local development (requires hosts entry mapping local.cms.itqan.dev → 127.0.0.1)
+
+tags:
+  - name: Public
+    description: Publicly accessible, cacheable endpoints
+  - name: Licenses
+  - name: Publishers
+  - name: Resources
+  - name: Assets
+  - name: AccessRequests
+  - name: Me
+  - name: Content
+  - name: Search
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "Auth0-issued JWT (RS256). Send as Authorization: Bearer <token>."
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+      example: 1
+    PageSizeParam:
+      name: page_size
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      example: 20
+    SearchParam:
+      name: q
+      in: query
+      schema:
+        type: string
+      example: "tafseer"
+    AcceptLanguage:
+      name: Accept-Language
+      in: header
+      schema:
+        type: string
+      example: ar
+      description: Preferred content language (i18n).
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            sample:
+              value:
+                detail: "Authentication credentials were not provided."
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            sample:
+              value:
+                detail: "Not found."
+
+  schemas:
+    UUID:
+      type: string
+      format: uuid
+      example: "3f2f5d5c-5a28-4b57-9a20-f2b4f3d9b3a9"
+    Timestamp:
+      type: string
+      format: date-time
+      example: "2025-01-01T12:34:56Z"
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
+      required: [detail]
+
+    PaginationMeta:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          nullable: true
+        previous:
+          type: string
+          nullable: true
+
+    License:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+        code:
+          type: string
+          example: cc0
+        name:
+          type: string
+          example: Creative Commons Zero v1.0 Universal
+        url:
+          type: string
+          format: uri
+      required: [id, code, name]
+
+    PublishingOrganization:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+        name:
+          type: string
+          example: مركز إتقان
+        slug:
+          type: string
+          example: itqan
+        website:
+          type: string
+          format: uri
+          nullable: true
+      required: [id, name, slug]
+
+    Resource:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+        org_id:
+          $ref: '#/components/schemas/UUID'
+        slug:
+          type: string
+          example: quran-metadata
+        title:
+          type: string
+          example: بيانات القرآن الوصفية
+        summary:
+          type: string
+          example: ملخص موجز حول محتوى المورد.
+        status:
+          type: string
+          example: published
+        default_license:
+          $ref: '#/components/schemas/License'
+        latest_version_id:
+          $ref: '#/components/schemas/UUID'
+          nullable: true
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+        updated_at:
+          $ref: '#/components/schemas/Timestamp'
+      required: [id, org_id, slug, title, status, created_at]
+
+    ResourceVersion:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+        resource_id:
+          $ref: '#/components/schemas/UUID'
+        semver:
+          type: string
+          example: 1.0.0
+        changelog:
+          type: string
+          nullable: true
+        processed:
+          type: boolean
+          example: true
+        api_endpoint:
+          type: string
+          nullable: true
+          example: "/quran/ayahs"
+        docs_url:
+          type: string
+          format: uri
+          nullable: true
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+      required: [id, resource_id, semver, processed, created_at]
+
+    ResourceVersionArtifact:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+        version_id:
+          $ref: '#/components/schemas/UUID'
+        storage_key:
+          type: string
+          example: resources/abcd/v1/artifacts/archive.zip
+        file_type:
+          type: string
+          example: zip
+        size_bytes:
+          type: integer
+          example: 102400
+        checksum:
+          type: string
+          example: sha256:deadbeef
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+
+    Asset:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+        version_id:
+          $ref: '#/components/schemas/UUID'
+        api_slug:
+          type: string
+          example: ayahs
+        visibility:
+          type: string
+          example: public
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+
+    AssetVersion:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+        asset_id:
+          $ref: '#/components/schemas/UUID'
+        semver:
+          type: string
+          example: 1.0.0
+        api_path:
+          type: string
+          example: /v1/ayahs
+        package_name:
+          type: string
+          nullable: true
+          example: '@itqan/ayahs'
+        docs_url:
+          type: string
+          format: uri
+          nullable: true
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+
+    Distribution:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+        asset_version_id:
+          $ref: '#/components/schemas/UUID'
+        distribution_type:
+          type: string
+          example: download
+        endpoint_url:
+          type: string
+          format: uri
+          nullable: true
+        package_name:
+          type: string
+          nullable: true
+        package_version:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+          example: true
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+
+    User:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        auth_provider:
+          type: string
+          example: auth0
+        is_active:
+          type: boolean
+          example: true
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+
+    Developer:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+        user_id:
+          $ref: '#/components/schemas/UUID'
+        handle:
+          type: string
+          example: dev_ahmad
+        bio:
+          type: string
+          nullable: true
+          example: مطور برمجيات مهتم بعلوم القرآن.
+        github_url:
+          type: string
+          format: uri
+          nullable: true
+          example: https://github.com/ahmad
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+
+    AccessRequest:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+        developer_id:
+          $ref: '#/components/schemas/UUID'
+        asset_id:
+          $ref: '#/components/schemas/UUID'
+        status:
+          type: string
+          example: pending
+        justification:
+          type: string
+          example: "سأستخدم البيانات في مشروع بحثي مفتوح المصدر."
+        decided_by:
+          $ref: '#/components/schemas/UUID'
+          nullable: true
+        decided_at:
+          $ref: '#/components/schemas/Timestamp'
+          nullable: true
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+      required: [id, developer_id, asset_id, status, justification, created_at]
+
+    AssetAccess:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+        access_request_id:
+          $ref: '#/components/schemas/UUID'
+        developer_id:
+          $ref: '#/components/schemas/UUID'
+        asset_version_id:
+          $ref: '#/components/schemas/UUID'
+        access_type:
+          type: string
+          example: download
+        token_id:
+          $ref: '#/components/schemas/UUID'
+          nullable: true
+        granted_at:
+          $ref: '#/components/schemas/Timestamp'
+
+paths:
+  /health:
+    get:
+      tags: [Public]
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+              examples:
+                sample:
+                  value:
+                    status: ok
+
+  /licenses:
+    get:
+      tags: [Licenses, Public]
+      summary: List licenses
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: List of licenses
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginationMeta'
+                  - type: object
+                    properties:
+                      results:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/License'
+              examples:
+                sample:
+                  value:
+                    count: 2
+                    next: null
+                    previous: null
+                    results:
+                      - id: "0b7b3d03-9a7c-4a2a-b9dd-b3e7b4c4a111"
+                        code: cc0
+                        name: Creative Commons Zero v1.0 Universal
+                        url: https://creativecommons.org/publicdomain/zero/1.0/
+                      - id: "f3a9c0de-1b7f-4b4e-a3a2-8f0f7e4f2222"
+                        code: cc-by
+                        name: CC BY 4.0
+                        url: https://creativecommons.org/licenses/by/4.0/
+
+  /licenses/{id}:
+    get:
+      tags: [Licenses, Public]
+      summary: Get license by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+      responses:
+        '200':
+          description: License
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/License'
+              examples:
+                sample:
+                  value:
+                    id: "0b7b3d03-9a7c-4a2a-b9dd-b3e7b4c4a111"
+                    code: cc0
+                    name: Creative Commons Zero v1.0 Universal
+                    url: https://creativecommons.org/publicdomain/zero/1.0/
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /publishers:
+    get:
+      tags: [Publishers, Public]
+      summary: List publishing organizations
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of publishers
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginationMeta'
+                  - type: object
+                    properties:
+                      results:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PublishingOrganization'
+              examples:
+                sample:
+                  value:
+                    count: 1
+                    next: null
+                    previous: null
+                    results:
+                      - id: "7f0b4f38-5e6f-4f3d-9a1c-7e0d8d300001"
+                        name: مركز إتقان
+                        slug: itqan
+                        website: https://www.itqan.dev
+
+  /publishers/{slug}:
+    get:
+      tags: [Publishers, Public]
+      summary: Get publisher by slug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Publisher
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishingOrganization'
+              examples:
+                sample:
+                  value:
+                    id: "7f0b4f38-5e6f-4f3d-9a1c-7e0d8d300001"
+                    name: مركز إتقان
+                    slug: itqan
+                    website: https://www.itqan.dev
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /resources:
+    get:
+      tags: [Resources, Public]
+      summary: List resources
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - name: org_slug
+          in: query
+          schema:
+            type: string
+        - name: license_code
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of resources
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginationMeta'
+                  - type: object
+                    properties:
+                      results:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Resource'
+              examples:
+                sample:
+                  value:
+                    count: 1
+                    next: null
+                    previous: null
+                    results:
+                      - id: "3e2c5a8b-1f1f-4e8f-8a2d-9e1f0a000123"
+                        org_id: "7f0b4f38-5e6f-4f3d-9a1c-7e0d8d300001"
+                        slug: quran-metadata
+                        title: بيانات القرآن الوصفية
+                        summary: ملخص موجز حول محتوى المورد.
+                        status: published
+                        default_license:
+                          id: "0b7b3d03-9a7c-4a2a-b9dd-b3e7b4c4a111"
+                          code: cc0
+                          name: Creative Commons Zero v1.0 Universal
+                          url: https://creativecommons.org/publicdomain/zero/1.0/
+                        latest_version_id: "8b8b8b8b-1111-2222-3333-444444444444"
+                        created_at: "2025-01-01T12:34:56Z"
+                        updated_at: "2025-01-02T12:34:56Z"
+
+  /resources/{slug}:
+    get:
+      tags: [Resources, Public]
+      summary: Get resource by slug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Resource
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Resource'
+              examples:
+                sample:
+                  value:
+                    id: "3e2c5a8b-1f1f-4e8f-8a2d-9e1f0a000123"
+                    org_id: "7f0b4f38-5e6f-4f3d-9a1c-7e0d8d300001"
+                    slug: quran-metadata
+                    title: بيانات القرآن الوصفية
+                    summary: ملخص موجز حول محتوى المورد.
+                    status: published
+                    default_license:
+                      id: "0b7b3d03-9a7c-4a2a-b9dd-b3e7b4c4a111"
+                      code: cc0
+                      name: Creative Commons Zero v1.0 Universal
+                      url: https://creativecommons.org/publicdomain/zero/1.0/
+                    latest_version_id: "8b8b8b8b-1111-2222-3333-444444444444"
+                    created_at: "2025-01-01T12:34:56Z"
+                    updated_at: "2025-01-02T12:34:56Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /resources/{slug}/versions:
+    get:
+      tags: [Resources, Public]
+      summary: List versions for a resource
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Versions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ResourceVersion'
+              examples:
+                sample:
+                  value:
+                    - id: "8b8b8b8b-1111-2222-3333-444444444444"
+                      resource_id: "3e2c5a8b-1f1f-4e8f-8a2d-9e1f0a000123"
+                      semver: 1.0.0
+                      changelog: الإصدار الأول.
+                      processed: true
+                      api_endpoint: "/quran/ayahs"
+                      docs_url: https://docs.itqan.dev/quran-metadata/1.0.0
+                      created_at: "2025-01-01T12:34:56Z"
+
+  /resources/{slug}/versions/{semver}:
+    get:
+      tags: [Resources, Public]
+      summary: Get specific resource version
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: semver
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Resource version
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceVersion'
+              examples:
+                sample:
+                  value:
+                    id: "8b8b8b8b-1111-2222-3333-444444444444"
+                    resource_id: "3e2c5a8b-1f1f-4e8f-8a2d-9e1f0a000123"
+                    semver: 1.0.0
+                    changelog: الإصدار الأول.
+                    processed: true
+                    api_endpoint: "/quran/ayahs"
+                    docs_url: https://docs.itqan.dev/quran-metadata/1.0.0
+                    created_at: "2025-01-01T12:34:56Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /assets:
+    get:
+      tags: [Assets, Public]
+      summary: List public assets
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - name: api_slug
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of assets
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginationMeta'
+                  - type: object
+                    properties:
+                      results:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Asset'
+              examples:
+                sample:
+                  value:
+                    count: 1
+                    next: null
+                    previous: null
+                    results:
+                      - id: "11111111-2222-3333-4444-555555555555"
+                        version_id: "8b8b8b8b-1111-2222-3333-444444444444"
+                        api_slug: ayahs
+                        visibility: public
+                        created_at: "2025-01-01T12:34:56Z"
+
+  /assets/{id}:
+    get:
+      tags: [Assets, Public]
+      summary: Get asset by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+      responses:
+        '200':
+          description: Asset
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+              examples:
+                sample:
+                  value:
+                    id: "11111111-2222-3333-4444-555555555555"
+                    version_id: "8b8b8b8b-1111-2222-3333-444444444444"
+                    api_slug: ayahs
+                    visibility: public
+                    created_at: "2025-01-01T12:34:56Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /assets/{id}/versions:
+    get:
+      tags: [Assets, Public]
+      summary: List asset versions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+      responses:
+        '200':
+          description: Asset versions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AssetVersion'
+              examples:
+                sample:
+                  value:
+                    - id: "aaaa1111-2222-3333-4444-555555555555"
+                      asset_id: "11111111-2222-3333-4444-555555555555"
+                      semver: 1.0.0
+                      api_path: /v1/ayahs
+                      package_name: '@itqan/ayahs'
+                      docs_url: https://docs.itqan.dev/ayahs/1.0.0
+                      created_at: "2025-01-01T12:34:56Z"
+
+  /assets/{id}/versions/{semver}:
+    get:
+      tags: [Assets, Public]
+      summary: Get asset version
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+        - name: semver
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Asset version
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetVersion'
+              examples:
+                sample:
+                  value:
+                    id: "aaaa1111-2222-3333-4444-555555555555"
+                    asset_id: "11111111-2222-3333-4444-555555555555"
+                    semver: 1.0.0
+                    api_path: /v1/ayahs
+                    package_name: '@itqan/ayahs'
+                    docs_url: https://docs.itqan.dev/ayahs/1.0.0
+                    created_at: "2025-01-01T12:34:56Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /distributions/{id}/download:
+    get:
+      tags: [Assets, Public]
+      summary: Get a presigned download URL for an active distribution
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+      responses:
+        '200':
+          description: Presigned URL response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+                  expires_at:
+                    $ref: '#/components/schemas/Timestamp'
+              examples:
+                sample:
+                  value:
+                    url: https://minio.local/presigned/abc123?X-Amz-Signature=...
+                    expires_at: "2025-01-01T13:34:56Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /access-requests:
+    post:
+      tags: [AccessRequests]
+      summary: Create an access request (authenticated developer)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                asset_id:
+                  $ref: '#/components/schemas/UUID'
+                justification:
+                  type: string
+              required: [asset_id, justification]
+            examples:
+              sample:
+                value:
+                  asset_id: "11111111-2222-3333-4444-555555555555"
+                  justification: "أعمل على واجهة برمجية مفتوحة المصدر."
+      responses:
+        '201':
+          description: Access request created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessRequest'
+              examples:
+                sample:
+                  value:
+                    id: "bbbb1111-2222-3333-4444-555555555555"
+                    developer_id: "cccc1111-2222-3333-4444-555555555555"
+                    asset_id: "11111111-2222-3333-4444-555555555555"
+                    status: pending
+                    justification: "أعمل على واجهة برمجية مفتوحة المصدر."
+                    created_at: "2025-01-01T12:40:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    get:
+      tags: [AccessRequests]
+      summary: List my access requests (authenticated)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: My access requests
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginationMeta'
+                  - type: object
+                    properties:
+                      results:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AccessRequest'
+              examples:
+                sample:
+                  value:
+                    count: 1
+                    next: null
+                    previous: null
+                    results:
+                      - id: "bbbb1111-2222-3333-4444-555555555555"
+                        developer_id: "cccc1111-2222-3333-4444-555555555555"
+                        asset_id: "11111111-2222-3333-4444-555555555555"
+                        status: pending
+                        justification: "أعمل على واجهة برمجية مفتوحة المصدر."
+                        created_at: "2025-01-01T12:40:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /access-requests/{id}:
+    get:
+      tags: [AccessRequests]
+      summary: Get an access request (owner or approver)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+      responses:
+        '200':
+          description: Access request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessRequest'
+              examples:
+                sample:
+                  value:
+                    id: "bbbb1111-2222-3333-4444-555555555555"
+                    developer_id: "cccc1111-2222-3333-4444-555555555555"
+                    asset_id: "11111111-2222-3333-4444-555555555555"
+                    status: pending
+                    justification: "أعمل على واجهة برمجية مفتوحة المصدر."
+                    created_at: "2025-01-01T12:40:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /access-requests/{id}/decision:
+    post:
+      tags: [AccessRequests]
+      summary: Approve or reject an access request (manager role)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [approved, rejected]
+              required: [status]
+            examples:
+              approve:
+                value:
+                  status: approved
+              reject:
+                value:
+                  status: rejected
+      responses:
+        '200':
+          description: Decision recorded; may create AssetAccess
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessRequest'
+              examples:
+                approved:
+                  value:
+                    id: "bbbb1111-2222-3333-4444-555555555555"
+                    developer_id: "cccc1111-2222-3333-4444-555555555555"
+                    asset_id: "11111111-2222-3333-4444-555555555555"
+                    status: approved
+                    decided_by: "dddd1111-2222-3333-4444-555555555555"
+                    decided_at: "2025-01-01T13:00:00Z"
+                    created_at: "2025-01-01T12:40:00Z"
+                rejected:
+                  value:
+                    id: "bbbb1111-2222-3333-4444-555555555555"
+                    developer_id: "cccc1111-2222-3333-4444-555555555555"
+                    asset_id: "11111111-2222-3333-4444-555555555555"
+                    status: rejected
+                    decided_by: "dddd1111-2222-3333-4444-555555555555"
+                    decided_at: "2025-01-01T13:00:00Z"
+                    created_at: "2025-01-01T12:40:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /me:
+    get:
+      tags: [Me]
+      summary: Current user profile (User + Developer)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  developer:
+                    $ref: '#/components/schemas/Developer'
+              examples:
+                sample:
+                  value:
+                    user:
+                      id: "eeee1111-2222-3333-4444-555555555555"
+                      email: user@example.com
+                      auth_provider: auth0
+                      is_active: true
+                      created_at: "2025-01-01T10:00:00Z"
+                    developer:
+                      id: "cccc1111-2222-3333-4444-555555555555"
+                      user_id: "eeee1111-2222-3333-4444-555555555555"
+                      handle: dev_ahmad
+                      bio: مطور برمجيات مهتم بعلوم القرآن.
+                      github_url: https://github.com/ahmad
+                      created_at: "2025-01-01T10:05:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /me/developer:
+    patch:
+      tags: [Me]
+      summary: Update developer profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                handle:
+                  type: string
+                bio:
+                  type: string
+                github_url:
+                  type: string
+                  format: uri
+            examples:
+              sample:
+                value:
+                  handle: dev_ahmad
+                  bio: "مهتم بمعايير المحتوى والتنقيح."
+                  github_url: https://github.com/ahmad
+      responses:
+        '200':
+          description: Updated developer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Developer'
+              examples:
+                sample:
+                  value:
+                    id: "cccc1111-2222-3333-4444-555555555555"
+                    user_id: "eeee1111-2222-3333-4444-555555555555"
+                    handle: dev_ahmad
+                    bio: مهتم بمعايير المحتوى والتنقيح.
+                    github_url: https://github.com/ahmad
+                    created_at: "2025-01-01T10:05:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /content/standards:
+    get:
+      tags: [Content, Public]
+      summary: Content and utilization standards page
+      parameters:
+        - $ref: '#/components/parameters/AcceptLanguage'
+      responses:
+        '200':
+          description: Standards content (rendered or markdown)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: string
+                  body_md:
+                    type: string
+                  updated_at:
+                    $ref: '#/components/schemas/Timestamp'
+              examples:
+                ar:
+                  value:
+                    title: "الوثائق: معايير الوصول إلى البيانات"
+                    body_md: |
+                      يوضح هذا المستند معايير الوصول إلى البيانات في الملفات...
+                    updated_at: "2025-01-01T09:00:00Z"
+                en:
+                  value:
+                    title: Standards for Content and Access
+                    body_md: |
+                      This page describes the standards for accessing the data...
+                    updated_at: "2025-01-01T09:00:00Z"
+
+  /search:
+    get:
+      tags: [Search, Public]
+      summary: Full-text search across resources and publishers
+      parameters:
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  hits:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                          enum: [resource, publisher, asset]
+                        id:
+                          $ref: '#/components/schemas/UUID'
+                        title:
+                          type: string
+                        snippet:
+                          type: string
+                  estimatedTotalHits:
+                    type: integer
+              examples:
+                sample:
+                  value:
+                    hits:
+                      - type: resource
+                        id: "3e2c5a8b-1f1f-4e8f-8a2d-9e1f0a000123"
+                        title: بيانات القرآن الوصفية
+                        snippet: "...بيانات وصفية عن الآيات..."
+                      - type: publisher
+                        id: "7f0b4f38-5e6f-4f3d-9a1c-7e0d8d300001"
+                        title: مركز إتقان
+                        snippet: "...الناشر ومجموعة الموارد..."
+                    estimatedTotalHits: 2
+
+
