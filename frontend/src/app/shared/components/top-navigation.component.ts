@@ -6,7 +6,10 @@ import { NzLayoutModule } from 'ng-zorro-antd/layout';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
+import { NzAvatarModule } from 'ng-zorro-antd/avatar';
 import { I18nService } from '../../core/services/i18n.service';
+import { StateService } from '../../core/services/state.service';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-top-navigation',
@@ -18,7 +21,8 @@ import { I18nService } from '../../core/services/i18n.service';
     NzLayoutModule,
     NzButtonModule,
     NzIconModule,
-    NzDropDownModule
+    NzDropDownModule,
+    NzAvatarModule
   ],
   template: `
     <nz-header class="header">
@@ -53,14 +57,36 @@ import { I18nService } from '../../core/services/i18n.service';
           <!-- Language Switcher -->
           <button nz-button nzType="text" (click)="toggleLanguage()" class="language-btn">
             <span nz-icon nzType="global" nzTheme="outline"></span>
-            <span class="language-label">{{ isArabic ? 'ع' : 'EN' }}</span>
+            <span class="language-label">{{ isArabic ? 'EN' : 'ع' }}</span>
           </button>
 
-          <!-- Login Button -->
-          <button nz-button nzType="primary" (click)="navigateToLogin()" class="login-btn">
-            <span nz-icon nzType="login" nzTheme="outline"></span>
-            <span>{{ t('nav.login') }}</span>
-          </button>
+          <!-- Authenticated User Section -->
+          <div *ngIf="isAuthenticated()" class="user-section">
+            <!-- User Info -->
+            <div class="user-info">
+              <nz-avatar 
+                [nzText]="getUserInitials()" 
+                [nzSize]="32" 
+                class="user-avatar"
+                nzSrc="">
+              </nz-avatar>
+              <span class="user-name">{{ getUserDisplayName() }}</span>
+            </div>
+            
+            <!-- Logout Button -->
+            <button nz-button nzType="default" (click)="logout()" class="logout-btn">
+              <span nz-icon nzType="logout" nzTheme="outline"></span>
+              <span>{{ t('nav.logout') }}</span>
+            </button>
+          </div>
+
+          <!-- Login Button (when not authenticated) -->
+          <div *ngIf="!isAuthenticated()" class="login-section">
+            <button nz-button nzType="primary" (click)="loginWithAuth0()" class="login-btn">
+              <span nz-icon nzType="login" nzTheme="outline"></span>
+              <span>{{ t('nav.login') }}</span>
+            </button>
+          </div>
         </div>
       </div>
     </nz-header>
@@ -186,6 +212,51 @@ import { I18nService } from '../../core/services/i18n.service';
       border-color: #5a8670;
     }
 
+    .user-section {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .user-avatar {
+      background: #669B80;
+      color: white;
+      font-weight: 600;
+    }
+
+    .user-name {
+      font-weight: 500;
+      color: #262626;
+      font-size: 14px;
+    }
+
+    .logout-btn {
+      border-color: #d9d9d9;
+      height: 32px;
+      padding: 0 12px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: #666;
+    }
+
+    .logout-btn:hover {
+      border-color: #669B80;
+      color: #669B80;
+    }
+
+    .login-section {
+      display: flex;
+      align-items: center;
+    }
+
     /* RTL Support */
     :host-context([dir="rtl"]) .logo-image {
       margin-right: 0;
@@ -203,6 +274,29 @@ import { I18nService } from '../../core/services/i18n.service';
     :host-context([dir="rtl"]) .check-icon {
       margin-right: 0;
       margin-left: 8px;
+    }
+
+    /* RTL User Section */
+    :host-context([dir="rtl"]) .user-section {
+      flex-direction: row-reverse;
+    }
+
+    :host-context([dir="rtl"]) .user-info {
+      flex-direction: row-reverse;
+    }
+
+    :host-context([dir="rtl"]) .user-name {
+      margin-left: 0;
+      margin-right: 8px;
+    }
+
+    :host-context([dir="rtl"]) .logout-btn {
+      margin-left: 0;
+      margin-right: 16px;
+    }
+
+    :host-context([dir="rtl"]) .login-btn {
+      flex-direction: row-reverse;
     }
 
     /* Responsive Design */
@@ -226,7 +320,9 @@ export class TopNavigationComponent {
 
   constructor(
     private router: Router,
-    private i18nService: I18nService
+    private i18nService: I18nService,
+    private stateService: StateService,
+    private authService: AuthService
   ) {
     // Initialize language state
     this.updateLanguageState();
@@ -247,10 +343,6 @@ export class TopNavigationComponent {
     this.router.navigate(['/']);
   }
 
-  navigateToLogin() {
-    this.router.navigate(['/auth/login']);
-  }
-
   switchLanguage(lang: 'en' | 'ar') {
     this.i18nService.setLanguage(lang);
     this.updateLanguageState();
@@ -259,5 +351,73 @@ export class TopNavigationComponent {
   toggleLanguage() {
     const newLang = this.isArabic ? 'en' : 'ar';
     this.switchLanguage(newLang);
+  }
+
+  /**
+   * Check if user is authenticated
+   */
+  isAuthenticated(): boolean {
+    return this.stateService.isAuthenticated();
+  }
+
+  /**
+   * Get user display name
+   */
+  getUserDisplayName(): string {
+    return this.stateService.userDisplayName();
+  }
+
+  /**
+   * Get user initials for avatar
+   */
+  getUserInitials(): string {
+    const user = this.stateService.currentUser();
+    if (!user) return 'U';
+    
+    const firstName = user.first_name || '';
+    const lastName = user.last_name || '';
+    
+    if (firstName && lastName) {
+      return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+    } else if (firstName) {
+      return firstName.charAt(0).toUpperCase();
+    } else if (user.email) {
+      return user.email.charAt(0).toUpperCase();
+    }
+    
+    return 'U';
+  }
+
+  /**
+   * Handle user logout
+   */
+  async logout(): Promise<void> {
+    try {
+      await this.authService.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Force navigation to login even if logout fails
+      await this.router.navigate(['/auth/login']);
+    }
+  }
+
+  /**
+   * Initiate Auth0 login flow
+   */
+  async loginWithAuth0(): Promise<void> {
+    try {
+      await this.authService.login();
+    } catch (error) {
+      console.error('Auth0 login error:', error);
+      // Fallback to login page on error
+      this.router.navigate(['/auth/login']);
+    }
+  }
+
+  /**
+   * Navigate to login page (fallback for direct navigation)
+   */
+  navigateToLogin(): void {
+    this.router.navigate(['/auth/login']);
   }
 }

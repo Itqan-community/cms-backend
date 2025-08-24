@@ -22,6 +22,13 @@ export const routes: Routes = [
     title: 'Publishers - Itqan CMS'
   },
 
+  // Publisher Profile Page (Dynamic)
+  {
+    path: 'publishers/:publisherId',
+    loadComponent: () => import('./features/publisher/publisher-profile.component').then(m => m.PublisherProfileComponent),
+    title: 'Publisher Profile - Itqan CMS'
+  },
+
   // About Page (Public)
   {
     path: 'about',
@@ -42,8 +49,18 @@ export const routes: Routes = [
     children: [
       {
         path: 'register',
+        loadComponent: () => import('./features/auth/custom-register.component').then(m => m.CustomRegisterComponent),
+        title: 'Create Account - Itqan CMS'
+      },
+      {
+        path: 'register/social',
         loadComponent: () => import('./features/auth/register.component').then(m => m.RegisterComponent),
         title: 'Register - Itqan CMS'
+      },
+      {
+        path: 'complete-profile',
+        loadComponent: () => import('./features/auth/complete-profile.component').then(m => m.CompleteProfileComponent),
+        title: 'Complete Profile - Itqan CMS'
       },
       {
         path: 'login',
@@ -106,12 +123,12 @@ export const routes: Routes = [
     ]
   },
   
-  // Profile
-  {
-    path: 'profile',
-    loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent), // Placeholder
-    title: 'Profile - Itqan CMS'
-  },
+  // Profile (temporarily disabled)
+  // {
+  //   path: 'profile',
+  //   loadComponent: () => import('./features/profile/profile.component').then(m => m.ProfileComponent),
+  //   title: 'Profile - Itqan CMS'
+  // },
   
   // Catch-all redirect
   {

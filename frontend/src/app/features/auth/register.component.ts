@@ -47,10 +47,15 @@ import { StateService } from '../../core/services/state.service';
                 (error)="onLogoError($event)"
               />
             </div>
-            <h1 class="register-title">Create Your Account</h1>
+            <h1 class="register-title">Login to Developer Platform</h1>
             <p class="register-subtitle">
-              Join Itqan CMS to access verified Quranic content and resources
+              Choose your preferred authentication method to complete registration
             </p>
+            <div class="progress-indicator">
+              <span class="step completed">1. Profile Information</span>
+              <span class="step-separator">→</span>
+              <span class="step active">2. Choose Authentication</span>
+            </div>
           </div>
 
           <!-- Error Alert -->
@@ -124,19 +129,33 @@ import { StateService } from '../../core/services/state.service';
             </p>
           </div>
 
-          <!-- Login Link -->
-          <div class="login-section">
-            <p class="login-text">
-              Already have an account?
-              <a 
-                class="login-link"
-                (click)="navigateToLogin()"
-                role="button"
-                tabindex="0"
+          <!-- Navigation Links -->
+          <div class="navigation-section">
+            <div class="back-section">
+              <button
+                nz-button
+                nzType="text"
+                (click)="goBackToProfile()"
+                class="back-button"
               >
-                Sign in
-              </a>
-            </p>
+                <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
+                Back to Profile
+              </button>
+            </div>
+            
+            <div class="login-section">
+              <p class="login-text">
+                Already have an account?
+                <a 
+                  class="login-link"
+                  (click)="navigateToLogin()"
+                  role="button"
+                  tabindex="0"
+                >
+                  Sign in
+                </a>
+              </p>
+            </div>
           </div>
         </nz-card>
       </div>
@@ -200,6 +219,13 @@ export class RegisterComponent {
    */
   navigateToLogin(): void {
     this.router.navigate(['/auth/login']);
+  }
+
+  /**
+   * Go back to profile information step
+   */
+  goBackToProfile(): void {
+    this.router.navigate(['/auth/register']);
   }
 
   /**

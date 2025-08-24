@@ -132,7 +132,7 @@ interface DeveloperQuota {
       <!-- Welcome Section -->
             <div class="welcome-section">
               <h2 class="welcome-title">
-                Welcome back, {{ getUserFirstName() }}!
+                Welcome back, {{ getUserDisplayName() }}!
               </h2>
               <p class="welcome-description">
                 Get started with Itqan CMS by completing your profile and exploring our verified Quranic content.
@@ -834,16 +834,30 @@ export class DashboardComponent implements OnInit {
   }
 
   getUserDisplayName(): string {
-    return 'John Doe'; // TODO: Get from user service
+    return this.stateService.userDisplayName();
   }
 
   getUserFirstName(): string {
-    return 'John'; // TODO: Get from user service
+    const user = this.stateService.currentUser();
+    return user?.first_name || user?.email?.split('@')[0] || 'User';
   }
 
   getUserInitials(): string {
-    const name = this.getUserDisplayName();
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+    const user = this.stateService.currentUser();
+    if (!user) return 'U';
+    
+    const firstName = user.first_name || '';
+    const lastName = user.last_name || '';
+    
+    if (firstName && lastName) {
+      return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+    } else if (firstName) {
+      return firstName.charAt(0).toUpperCase();
+    } else if (user.email) {
+      return user.email.charAt(0).toUpperCase();
+    }
+    
+    return 'U';
   }
 
   formatDate(dateString: string): string {

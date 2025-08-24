@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzResultModule } from 'ng-zorro-antd/result';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -8,6 +9,7 @@ import { NzAlertModule } from 'ng-zorro-antd/alert';
 
 import { AuthService } from '../../core/services/auth.service';
 import { StateService } from '../../core/services/state.service';
+import { environment } from '../../../environments/environment';
 
 /**
  * AUTH-002: Token Exchange Loading Component
@@ -238,6 +240,7 @@ export class AuthCallbackComponent implements OnInit {
   private authService = inject(AuthService);
   private stateService = inject(StateService);
   private router = inject(Router);
+  private http = inject(HttpClient);
 
   isLoading = true;
   hasError = false;
@@ -266,9 +269,25 @@ export class AuthCallbackComponent implements OnInit {
       
       await this.delay(500);
       
-      this.setLoadingStep(3, 'Setting up profile', 'Preparing your dashboard...');
+      this.setLoadingStep(3, 'Setting up profile', 'Saving your information to our system...');
       
       await this.delay(800);
+      
+      // Save any pending registration data to Django backend (not Auth0)
+      await this.savePendingRegistrationData();
+      
+      // Check if user needs to complete profile (for social login)
+      const needsProfileCompletion = await this.checkIfProfileCompletionNeeded();
+      
+      if (needsProfileCompletion) {
+        // Redirect to profile completion for social login users
+        this.isLoading = false;
+        this.isSuccess = true;
+        
+        await this.delay(1000);
+        await this.router.navigate(['/auth/complete-profile']);
+        return;
+      }
       
       // Show success briefly before redirect
       this.isLoading = false;
@@ -276,8 +295,8 @@ export class AuthCallbackComponent implements OnInit {
       
       await this.delay(1000);
       
-      // Redirect to dashboard or intended page
-      const targetUrl = sessionStorage.getItem('auth_redirect_url') || '/dashboard';
+      // Redirect to Asset Store (home page) or intended page
+      const targetUrl = sessionStorage.getItem('auth_redirect_url') || '/';
       sessionStorage.removeItem('auth_redirect_url');
       await this.router.navigate([targetUrl]);
       
@@ -324,5 +343,85 @@ export class AuthCallbackComponent implements OnInit {
 
   async goToLogin(): Promise<void> {
     await this.router.navigate(['/auth/login']);
+  }
+
+  /**
+   * Save pending registration data to Django backend (not Auth0)
+   */
+  private async savePendingRegistrationData(): Promise<void> {
+    try {
+      // Check for pending registration data from custom form
+      const pendingDataStr = sessionStorage.getItem('pendingRegistrationData');
+      if (!pendingDataStr) {
+        return; // No pending data to save
+      }
+
+      const pendingData = JSON.parse(pendingDataStr);
+      
+      // Validate data age (max 30 minutes)
+      const dataAge = Date.now() - (pendingData.timestamp || 0);
+      if (dataAge > 30 * 60 * 1000) {
+        console.warn('Pending registration data expired, skipping save');
+        sessionStorage.removeItem('pendingRegistrationData');
+        return;
+      }
+
+      // Save additional user information to Django backend
+      const updateData = {
+        first_name: pendingData.firstName,
+        last_name: pendingData.lastName,
+        profile_data: {
+          phone: pendingData.phone || '',
+          title: pendingData.title || '',
+          registration_source: 'custom_form',
+          registration_completed_at: new Date().toISOString()
+        }
+      };
+
+      // Call Django API to update user profile using correct endpoint
+      await this.http.put(
+        `${environment.apiUrl}/auth/profile/`,
+        updateData
+      ).toPromise();
+
+      // Clean up session storage
+      sessionStorage.removeItem('pendingRegistrationData');
+      
+      console.log('✅ Additional user information saved to Django backend');
+
+    } catch (error) {
+      console.error('❌ Failed to save pending registration data:', error);
+      // Don't throw error - continue with authentication flow
+    }
+  }
+
+  /**
+   * Check if user needs to complete profile after social login
+   */
+  private async checkIfProfileCompletionNeeded(): Promise<boolean> {
+    try {
+      // Get current user from state service
+      const currentUser = this.stateService.currentUser();
+      
+      if (!currentUser) return false;
+
+      // Check if user has completed professional profile fields
+      const hasPhone = currentUser.profile_data?.['phone'];
+      const hasTitle = currentUser.profile_data?.['title'];
+      
+      // Get Auth0 user to check if this was a social login
+      const auth0User = await this.authService.getAuth0User();
+      const isSocialLogin = auth0User && 
+        (auth0User as any).identities?.some((identity: any) => 
+          identity.provider === 'github' || identity.provider === 'google-oauth2'
+        );
+
+      // If social login and missing professional info, needs completion
+      return isSocialLogin && (!hasPhone && !hasTitle);
+      
+    } catch (error) {
+      console.error('Error checking profile completion need:', error);
+      return false;
+    }
   }
 }

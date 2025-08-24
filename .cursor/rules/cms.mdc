@@ -125,6 +125,383 @@ Following the C4 architecture diagrams in `docs/diagrams/`, the system uses:
 - **Base Grid**: 8px spacing system (8px, 16px, 24px, 32px, 48px, 64px)
 - **Line Heights**: Follow Ant Design's 1.5715 base for optimal readability
 
+## 🌍 RTL/LTR Layout System - MANDATORY
+
+### CRITICAL REQUIREMENT: Universal RTL/LTR Support
+**Every UI component, page, and feature MUST support both Right-to-Left (Arabic) and Left-to-Right (English) layouts simultaneously. This is non-negotiable for Islamic content management.**
+
+### RTL/LTR Implementation Rules
+
+#### **1. HTML Structure Requirements**
+```html
+<!-- MANDATORY: All components must include dir attribute -->
+<div class="component-container" [dir]="isArabic() ? 'rtl' : 'ltr'">
+  <!-- Component content -->
+</div>
+
+<!-- Alternative: Use global layout directive -->
+<div class="component-container" [class.rtl]="isArabic()" [class.ltr]="!isArabic()">
+  <!-- Component content -->
+</div>
+```
+
+#### **2. CSS/SCSS RTL Pattern (Mandatory)**
+```scss
+// Base LTR styles (default)
+.component {
+  margin-left: 16px;
+  text-align: left;
+  border-left: 2px solid #ccc;
+  padding: 0 16px 0 24px; /* right, bottom, left, top */
+}
+
+// RTL overrides (required for every component)
+:host-context([dir="rtl"]) .component,
+.rtl .component {
+  margin-left: 0;
+  margin-right: 16px;
+  text-align: right;
+  border-left: none;
+  border-right: 2px solid #ccc;
+  padding: 0 24px 0 16px; /* Reversed padding */
+}
+
+// Flexbox RTL handling
+.flex-container {
+  display: flex;
+  flex-direction: row; /* Default LTR */
+}
+
+:host-context([dir="rtl"]) .flex-container,
+.rtl .flex-container {
+  flex-direction: row-reverse; /* RTL reversal */
+}
+```
+
+#### **3. Angular Signal Integration**
+```typescript
+export class BaseComponent {
+  // REQUIRED: Every component must have language detection
+  protected readonly isArabic = signal<boolean>(false);
+  
+  constructor(private i18nService: I18nService) {
+    // Update RTL state when language changes
+    effect(() => {
+      this.isArabic.set(this.i18nService.currentLanguage() === 'ar');
+    });
+  }
+  
+  // Helper method for conditional classes
+  getRTLClasses(): Record<string, boolean> {
+    return {
+      'rtl': this.isArabic(),
+      'ltr': !this.isArabic()
+    };
+  }
+}
+```
+
+#### **4. NG-ZORRO RTL Configuration**
+```typescript
+// REQUIRED: Configure NG-ZORRO for RTL support
+import { NzConfigService } from 'ng-zorro-antd/core/config';
+
+export class AppComponent implements OnInit {
+  constructor(private nzConfigService: NzConfigService) {}
+  
+  ngOnInit(): void {
+    // Global RTL configuration
+    this.nzConfigService.set('message', { nzRtl: true });
+    this.nzConfigService.set('notification', { nzRtl: true });
+    this.nzConfigService.set('modal', { nzRtl: true });
+  }
+}
+```
+
+#### **5. Form Layout RTL Rules**
+```scss
+// Form field alignment
+.form-field {
+  text-align: left;
+}
+
+:host-context([dir="rtl"]) .form-field,
+.rtl .form-field {
+  text-align: right;
+}
+
+// Label positioning
+.form-label {
+  float: left;
+  margin-right: 8px;
+}
+
+:host-context([dir="rtl"]) .form-label,
+.rtl .form-label {
+  float: right;
+  margin-right: 0;
+  margin-left: 8px;
+}
+
+// Required field indicators
+.required::after {
+  content: "*";
+  margin-left: 4px;
+}
+
+:host-context([dir="rtl"]) .required::after,
+.rtl .required::after {
+  margin-left: 0;
+  margin-right: 4px;
+}
+```
+
+#### **6. Navigation & Menu RTL**
+```scss
+// Horizontal navigation
+.nav-menu {
+  display: flex;
+  flex-direction: row;
+}
+
+:host-context([dir="rtl"]) .nav-menu,
+.rtl .nav-menu {
+  flex-direction: row-reverse;
+}
+
+// Dropdown menus
+.dropdown-menu {
+  left: 0;
+  right: auto;
+}
+
+:host-context([dir="rtl"]) .dropdown-menu,
+.rtl .dropdown-menu {
+  left: auto;
+  right: 0;
+}
+
+// Breadcrumbs
+.breadcrumb-separator::before {
+  content: ">";
+  margin: 0 8px;
+}
+
+:host-context([dir="rtl"]) .breadcrumb-separator::before,
+.rtl .breadcrumb-separator::before {
+  content: "<";
+}
+```
+
+#### **7. Icon & Image RTL Handling**
+```scss
+// Directional icons
+.arrow-icon {
+  transform: rotate(0deg);
+}
+
+:host-context([dir="rtl"]) .arrow-icon,
+.rtl .arrow-icon {
+  transform: rotate(180deg);
+}
+
+// Image alignment
+.content-image {
+  float: left;
+  margin: 0 16px 16px 0;
+}
+
+:host-context([dir="rtl"]) .content-image,
+.rtl .content-image {
+  float: right;
+  margin: 0 0 16px 16px;
+}
+```
+
+#### **8. Data Table RTL Rules**
+```scss
+// Table text alignment
+.data-table th,
+.data-table td {
+  text-align: left;
+}
+
+:host-context([dir="rtl"]) .data-table th,
+:host-context([dir="rtl"]) .data-table td,
+.rtl .data-table th,
+.rtl .data-table td {
+  text-align: right;
+}
+
+// Action buttons in tables
+.table-actions {
+  text-align: right;
+}
+
+:host-context([dir="rtl"]) .table-actions,
+.rtl .table-actions {
+  text-align: left;
+}
+```
+
+### RTL Testing Requirements
+
+#### **Mandatory Testing Checklist**
+- [ ] **Visual Layout**: All margins, paddings, and alignments reverse properly
+- [ ] **Text Alignment**: All text flows naturally in both directions
+- [ ] **Navigation**: Menu items, breadcrumbs, pagination work in both directions
+- [ ] **Forms**: Labels, inputs, validation messages align correctly
+- [ ] **Icons**: Directional icons (arrows, etc.) flip appropriately
+- [ ] **Tables**: Headers, cells, action buttons align properly
+- [ ] **Modals/Dropdowns**: Positioning works in both directions
+- [ ] **Typography**: Arabic fonts render correctly with proper spacing
+
+#### **Browser Testing Matrix**
+```bash
+# Test all features in both languages
+curl http://localhost:4200/?lang=en  # English (LTR) testing
+curl http://localhost:4200/?lang=ar  # Arabic (RTL) testing
+
+# Verify responsive design in both directions
+# - Mobile portrait/landscape
+# - Tablet portrait/landscape  
+# - Desktop standard/wide
+```
+
+#### **Automated RTL Testing**
+```typescript
+// Component test example
+describe('ComponentRTLTest', () => {
+  it('should render correctly in RTL mode', () => {
+    component.isArabic.set(true);
+    fixture.detectChanges();
+    
+    const container = fixture.debugElement.query(By.css('.component-container'));
+    expect(container.nativeElement.getAttribute('dir')).toBe('rtl');
+  });
+});
+```
+
+### Islamic UI/UX Cultural Considerations
+
+#### **Arabic Typography Rules**
+- **Font Selection**: Use 'Noto Sans Arabic' or 'IBM Plex Sans Arabic' for optimal readability
+- **Font Weight**: Arabic text requires slightly heavier font weights (500-600 instead of 400)
+- **Line Height**: Increase line-height by 0.2 for Arabic text (1.8 instead of 1.6)
+- **Letter Spacing**: Avoid letter-spacing with Arabic text (use 0 or default)
+
+#### **Cultural UI Patterns**
+- **Reading Flow**: Arabic users scan from right-to-left, top-to-bottom
+- **Color Meanings**: Green (#669B80) represents Islam, growth, and peace
+- **Number Systems**: Support both Arabic-Indic numerals (٠١٢٣) and Western (0123)
+- **Calendar Systems**: Support both Hijri and Gregorian calendars
+
+#### **Islamic Content Specific Rules**
+```scss
+// Quranic text special styling
+.quran-text {
+  font-family: 'Amiri', 'Scheherazade New', serif;
+  font-size: 18px;
+  line-height: 2.2;
+  text-align: justify;
+  direction: rtl;
+}
+
+// Arabic UI text
+.arabic-ui {
+  font-family: 'Noto Sans Arabic', 'IBM Plex Sans Arabic', sans-serif;
+  font-weight: 500;
+  direction: rtl;
+}
+
+// Mixed content handling
+.mixed-content {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+```
+
+### Implementation Priority
+
+#### **Phase 1: Core Components (IMMEDIATE)**
+1. **Navigation System** - Top nav, sidebars, menus
+2. **Authentication Forms** - Login, register, profile
+3. **Content Display** - Asset store, resource cards
+4. **Admin Interface** - Content management, user admin
+
+#### **Phase 2: Advanced Features**
+1. **Data Tables** - Sorting, filtering, pagination
+2. **Modal/Dialog Systems** - Confirmations, forms
+3. **Dashboard Widgets** - Charts, statistics, notifications
+4. **Search Interface** - Search bars, filters, results
+
+#### **Phase 3: Specialized Features**
+1. **Quranic Content Display** - Verses, translations, tafsir
+2. **Scholarly Review Interface** - Approval workflows
+3. **API Documentation** - Developer resources
+4. **Analytics Dashboard** - Usage metrics, reports
+
+### RTL Debugging & Troubleshooting
+
+#### **Common RTL Issues & Solutions**
+```scss
+// Issue: Flexbox not reversing
+.problem {
+  display: flex;
+  flex-direction: row; /* Items still LTR in RTL */
+}
+
+// Solution: Explicit RTL handling
+.solution {
+  display: flex;
+  flex-direction: row;
+}
+:host-context([dir="rtl"]) .solution {
+  flex-direction: row-reverse;
+}
+
+// Issue: Margins/padding not mirroring
+.problem {
+  margin-left: 16px; /* Still left margin in RTL */
+}
+
+// Solution: Proper RTL mirroring
+.solution {
+  margin-left: 16px;
+}
+:host-context([dir="rtl"]) .solution {
+  margin-left: 0;
+  margin-right: 16px;
+}
+```
+
+#### **RTL Performance Optimization**
+```scss
+// Use logical properties when possible (better performance)
+.modern-approach {
+  margin-inline-start: 16px; /* Automatically handles RTL/LTR */
+  padding-inline-end: 8px;
+  border-inline-start: 1px solid #ccc;
+}
+
+// Fallback for older browsers
+.fallback-approach {
+  margin-left: 16px;
+  padding-right: 8px;
+  border-left: 1px solid #ccc;
+}
+:host-context([dir="rtl"]) .fallback-approach {
+  margin-left: 0;
+  margin-right: 16px;
+  padding-right: 0;
+  padding-left: 8px;
+  border-left: none;
+  border-right: 1px solid #ccc;
+}
+```
+
+**ENFORCEMENT**: This RTL/LTR system is mandatory for ALL components. No exceptions. Every pull request must include RTL testing evidence, and all components must pass RTL/LTR visual regression tests before deployment.
+
 ## Code Quality & Standards
 
 ### General Principles

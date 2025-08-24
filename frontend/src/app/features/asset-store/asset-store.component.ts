@@ -24,13 +24,16 @@ import { NzAvatarModule } from 'ng-zorro-antd/avatar';
 import { NzTypographyModule } from 'ng-zorro-antd/typography';
 
 import { I18nService } from '../../core/services/i18n.service';
+import { AccessRequestModalComponent } from '../access/access-request-modal.component';
 import { environment } from '../../../environments/environment';
 
 interface Resource {
   id: string;
   title: string;
+  title_en?: string;
   title_ar?: string;
   description: string;
+  description_en?: string;
   description_ar?: string;
   resource_type: string;
   license_type: string;
@@ -41,6 +44,7 @@ interface Resource {
   download_count?: number;
   created_at: string;
   tags?: string[];
+  checksum?: string;
 }
 
 interface AssetStoreFilters {
@@ -89,7 +93,8 @@ interface AssetStoreResponse {
     NzDividerModule,
     NzSpaceModule,
     NzAvatarModule,
-    NzTypographyModule
+    NzTypographyModule,
+    AccessRequestModalComponent
   ],
   template: `
     <div class="asset-store-page" [dir]="isArabic() ? 'rtl' : 'ltr'">
@@ -222,14 +227,14 @@ interface AssetStoreResponse {
                     class="resource-card"
                     [nzHoverable]="true"
                     [nzCover]="resourceCover"
-                    [nzActions]="[downloadAction]"
-                    (click)="viewResource(resource)">
+                    [nzActions]="[requestAccessAction]"
+                    (click)="openAccessRequestModal(resource)">
                     
                     <!-- Resource Cover/Thumbnail -->
                     <ng-template #resourceCover>
                       <div class="resource-thumbnail">
                         <img 
-                          [src]="resource.thumbnail || '/assets/images/default-resource.jpg'"
+                          [src]="resource.thumbnail || '/assets/images/itqan-logo.svg'"
                           [alt]="getLocalizedTitle(resource)"
                           loading="lazy">
                         <div class="resource-overlay">
@@ -280,10 +285,10 @@ interface AssetStoreResponse {
                       </div>
                     </div>
 
-                    <!-- Download Action -->
-                    <ng-template #downloadAction>
-                      <span nz-icon nzType="download" nzTheme="outline"></span>
-                      {{ t('asset_store.download') }}
+                    <!-- Request Access Action -->
+                    <ng-template #requestAccessAction>
+                      <span nz-icon nzType="key" nzTheme="outline"></span>
+                      {{ t('asset_store.request_access') }}
                     </ng-template>
                   </nz-card>
                 </div>
@@ -321,6 +326,13 @@ interface AssetStoreResponse {
           </div>
         </nz-content>
       </nz-layout>
+
+      <!-- Access Request Modal -->
+      <app-access-request-modal
+        [(visible)]="showAccessModal"
+        [resource]="selectedResource"
+        (requestSubmitted)="onAccessRequestSubmitted($event)">
+      </app-access-request-modal>
     </div>
   `,
   styles: [`
@@ -762,6 +774,10 @@ export class AssetStoreComponent implements OnInit {
   selectedLicenses: string[] = [];
   selectedLanguage = '';
 
+  // Modal states
+  showAccessModal = false;
+  selectedResource: Resource | null = null;
+
   // Computed properties
   isArabic = computed(() => this.i18nService.currentLanguage() === 'ar');
 
@@ -980,72 +996,11 @@ export class AssetStoreComponent implements OnInit {
   }
 
   /**
-   * Navigation methods
+   * Modal and Navigation methods
    */
-  viewResource(resource: Resource) {
-    // Navigate to resource details page
-    console.log('View resource:', resource.id);
-  }
-
-  /**
-   * Helper methods for display
-   */
-  getLocalizedTitle(resource: Resource): string {
-    return this.isArabic() && resource.title_ar ? resource.title_ar : resource.title;
-  }
-
-  getLocalizedDescription(resource: Resource): string {
-    return this.isArabic() && resource.description_ar ? resource.description_ar : resource.description;
-  }
-
-  getLocalizedResourceType(type: string): string {
-    const typeMap: Record<string, { en: string; ar: string }> = {
-      'translation': { en: 'Translation', ar: 'ترجمة' },
-      'audio': { en: 'Audio', ar: 'صوتي' },
-      'fonts': { en: 'Fonts', ar: 'خطوط' },
-      'corpus': { en: 'Corpus', ar: 'مجموعة نصوص' }
-    };
-    
-    const typeInfo = typeMap[type] || { en: type, ar: type };
-    return this.isArabic() ? typeInfo.ar : typeInfo.en;
-  }
-
-  getLocalizedLicense(license: string): string {
-    const licenseMap: Record<string, { en: string; ar: string }> = {
-      'cc0': { en: 'Public Domain', ar: 'ملك عام' },
-      'cc-by': { en: 'CC BY', ar: 'مع النسبة' },
-      'cc-by-nc': { en: 'Non-Commercial', ar: 'غير تجاري' }
-    };
-    
-    const licenseInfo = licenseMap[license] || { en: license, ar: license };
-    return this.isArabic() ? licenseInfo.ar : licenseInfo.en;
-  }
-
-  getResourceTypeColor(type: string): string {
-    const colorMap: Record<string, string> = {
-      'translation': 'blue',
-      'audio': 'green',
-      'fonts': 'purple',
-      'corpus': 'orange'
-    };
-    return colorMap[type] || 'default';
-  }
-
-  getResourceTypeIcon(type: string): string {
-    const iconMap: Record<string, string> = {
-      'translation': 'file-text',
-      'audio': 'sound',
-      'fonts': 'font-colors',
-      'corpus': 'database'
-    };
-    return iconMap[type] || 'file';
-  }
-
-  getLicenseColor(license: string): string {
-    return license.includes('nc') ? 'orange' : 'green';
-  }
-
-  trackByResourceId(index: number, resource: Resource): string {
-    return resource.id;
-  }
-}
+  openAccessRequestModal(resource: Resource): void {
+    // Open access request modal for selected resource
+    this.selectedResource = {
+      ...resource,
+      title_en: resource.title || `Resource ${resource.id.slice(0, 8)}`,
+      title_ar: resource.title_ar || `

@@ -242,6 +242,13 @@ export class LoginComponent {
   }
 
   /**
+   * Navigate to social registration page
+   */
+  navigateToSocialRegister(): void {
+    this.router.navigate(['/auth/register/social']);
+  }
+
+  /**
    * Clear error message
    */
   clearError(): void {

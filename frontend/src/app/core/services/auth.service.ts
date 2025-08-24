@@ -69,12 +69,17 @@ export class AuthService {
 
       // Check if user is authenticated
       const isAuthenticated = await this.auth0Client.isAuthenticated();
+      console.log('🔍 Auth initialization - isAuthenticated:', isAuthenticated);
       
       if (isAuthenticated) {
+        console.log('🔍 User is authenticated, handling authenticated user...');
         await this.handleAuthenticatedUser();
+      } else {
+        console.log('🔍 User is not authenticated');
       }
 
       this._isInitialized.set(true);
+      console.log('✅ Auth0 initialization complete');
     } catch (error) {
       console.error('Failed to initialize Auth0:', error);
       this.stateService.setError('Failed to initialize authentication');
@@ -114,6 +119,9 @@ export class AuthService {
       
       // Exchange Auth0 tokens for Django JWT
       await this.exchangeTokens(accessToken);
+
+      // Sync authenticated user with backend to set currentUser and isAuthenticated state
+      await this.handleAuthenticatedUser();
       
     } catch (error) {
       console.error('Auth callback error:', error);
@@ -166,22 +174,28 @@ export class AuthService {
     if (!this.auth0Client) return;
 
     try {
+      console.log('🔍 Getting ID token from Auth0...');
       // Get ID token for backend authentication
       const idToken = await this.auth0Client.getIdTokenClaims();
       
       if (!idToken || !idToken.__raw) {
         throw new Error('No ID token available');
       }
+      console.log('✅ ID token received');
 
+      console.log('🔍 Authenticating with Django backend...');
       // Authenticate with Django backend  
       const authResponse = await firstValueFrom(
-        this.http.post<ApiResponse<AuthUser>>(`${environment.apiUrl}/api/auth/login/`, {
+        this.http.post<ApiResponse<AuthUser>>(`${environment.apiUrl}/api/v1/auth/login/`, {
           token: idToken.__raw
         })
       );
 
+      console.log('🔍 Django auth response:', authResponse);
+
       if (authResponse.status === 'success' && authResponse.data) {
         // Set user in state
+        console.log('✅ Setting user in state:', authResponse.data.user);
         this.stateService.setCurrentUser(authResponse.data.user);
         
         // Store tokens for API requests
@@ -300,6 +314,8 @@ export class AuthService {
     }
   }
 
+
+
   /**
    * Initiate GitHub registration flow
    */
@@ -355,7 +371,7 @@ export class AuthService {
       if (this.auth0Client) {
         await this.auth0Client.logout({
           logoutParams: {
-            returnTo: `${window.location.origin}/auth/login`
+            returnTo: window.location.origin
           }
         });
       } else {
