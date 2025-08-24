@@ -1,3 +1,78 @@
 ---
 alwaysApply: true
 ---
+
+# CMS V1 Rules
+
+## Project Overview
+- **Mission**: Build platform for Quranic data distribution
+- **Two main actors**: Publishers (upload data) and Consumers/Developers (access data)
+- **Non-profit**: Community-first, open-source approach
+- **Website**: www.itqan.dev
+
+## Database Design
+- **ER diagram**: Maintained in `docs/db-design/er-diagram.mmd`
+- **Schema updates**: Edit diagram file, keep rules high-level
+- **Database**: PostgreSQL recommended
+- **IDs**: Use UUIDs as primary keys
+- **Naming**: snake_case for tables/columns
+
+## V1 Scope & Constraints
+- **Resources**: Auto-granted CC0 license (manual licensing later)
+- **Processing**: Semi-manual resource processing by team
+- **Distribution**: File downloads (APIs/packages later)
+- **Access**: Auto-approve requests initially
+- **Roles**: Owner + Manager only (expand later)
+
+## Technical Stack
+- **Frontend**: Angular 19 CSR with Signals, Vite builder
+  - Later: Angular Universal for SSR when SEO/TTFB needed
+- **Backend**: Django + Django REST Framework for APIs
+  - Admin: Custom Angular Admin (replaces Wagtail)
+- **Authentication**: Auth0
+  - Angular: SPA SDK
+  - Django: OIDC/JWKS verification
+- **Search**: Meilisearch via Celery indexers on Django signals
+- **Storage**: django-storages integration
+  - Dev: MinIO
+  - Prod: Alibaba OSS
+- **Database**: PostgreSQL
+  - UUID primary keys
+  - Soft deletes pattern
+  - i18n content support
+- **Infrastructure**:
+  - Dev: Docker Compose
+  - Prod: K8s/ACK with API Gateway
+  - CDN for media assets
+
+## Prompt Structure Protocol
+- **Before starting any task**: Convert user prompt to structured format
+- **Required JSON structure**:
+```json
+{
+  "prompt": "Clear description of the autonomous task to complete",
+  "context": {
+    "project": "Itqan CMS",
+    "feature": "Feature name", 
+    "auth_model": "Auth0 Hybrid (SPA + M2M)",
+    "tech_stack": ["Angular 19", "Django 5.2", "PostgreSQL", "NG-ZORRO"],
+    "screens": ["SCREEN-ID"],
+    "colors": {"primary": "#669B80", "dark": "#22433D"}
+  },
+  "objectives": ["Clear numbered objectives"],
+  "tasks": ["Specific actionable tasks"],
+  "guard_rails": ["Safety and security constraints"],
+  "acceptance_criteria": ["Testable success conditions"],
+  "definition_of_done": ["Completion requirements"],
+  "out_of_scope": ["What not to include"],
+  "references": ["Related files and documentation"]
+}
+```
+
+## Development Guidelines
+- **Migration policy**: Never drop columns, mark deprecated
+- **Scaling**: Design for read-heavy workloads
+- **Security**: Separate admin/public interfaces
+- **Testing**: Test Publisher and Consumer workflows separately
+- **Documentation**: Generate API docs from processed resources
+

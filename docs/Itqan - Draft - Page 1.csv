@@ -1,0 +1,30 @@
+Id,Name,Shape Library,Page ID,Contained By,Group,Line Source,Line Destination,Source Arrow,Destination Arrow,Status,Text Area 1,Text Area 2,Text Area 3,Text Area 4,Text Area 5,Comments,SpreadsheetColumnParentKey,SpreadsheetRowParentKey
+1,Document,,,,,,,,,Draft,Itqan - Draft,,,,,,,
+121,Process,Flowchart Shapes/Containers,2,,,,,,,,User,,,,,,,
+122,Process,Flowchart Shapes/Containers,2,,,,,,,,Resource,,,,,,,
+123,Process,Flowchart Shapes/Containers,2,,,,,,,,Asset,,,,,,,
+124,Process,Flowchart Shapes/Containers,2,,,,,,,,License,,,,,,,
+125,Process,Flowchart Shapes/Containers,2,,,,,,,,AccessRequest,,,,,,,
+128,Process,Flowchart Shapes/Containers,2,,,,,,,,PublishingOrganization,,,,,,,
+136,Process,Flowchart Shapes/Containers,2,,,,,,,,AssetAccess,,,,,,,
+137,Process,Flowchart Shapes/Containers,2,,,,,,,,Developer,,,,,,,
+138,Process,Flowchart Shapes/Containers,2,,,,,,,,Member,,,,,,,
+144,Process,Flowchart Shapes/Containers,2,,,,,,,,"ResourceVersion
+semvar = 1.0.0",,,,,,,
+145,Process,Flowchart Shapes/Containers,2,,,,,,,,ResourceVersionArtifact,,,,,,,
+147,Process,Flowchart Shapes/Containers,2,,,,,,,,Distribution ?,,,,,,,
+148,Process,Flowchart Shapes/Containers,2,,,,,,,,AssetVersion,,,,,,,
+151,MinimalTextBlock,Standard,2,,,,,,,,"WHY? In V1 there will be two main members of two Roles:
+Owner : actual owner to regiser, login, to his account on Production in V2
+Manager : Itqan team to access stuff inside on his behave to upload Quranic data from Admin Panel. .. .. later more members (teams | employees) of different rules will be added e.g. Auditor, etc",,,,,,,
+152,Process,Flowchart Shapes/Containers,2,,,,,,,,Role,,,,,,,
+192,Line,,2,,,122,124,CFN ERD One Arrow,CFN ERD One Arrow,,,,,,,,,
+193,Line,,2,,,125,123,CFN ERD Many Arrow,CFN ERD One Arrow,,,,,,,,,
+194,Line,,2,,,128,122,CFN ERD One Arrow,CFN ERD Many Arrow,,,,,,,,,
+195,Line,,2,,,137,125,CFN ERD One Arrow,CFN ERD Many Arrow,,,,,,,,,
+196,Line,,2,,,138,128,CFN ERD Many Arrow,CFN ERD One Arrow,,,,,,,,,
+197,Line,,2,,,138,121,CFN ERD One Arrow,CFN ERD One Arrow,,,,,,,,,
+200,Line,,2,,,122,144,CFN ERD One Arrow,CFN ERD Many Arrow,,,,,,,,,
+201,Line,,2,,,145,144,CFN ERD One Arrow,CFN ERD One Arrow,,,,,,,,,
+205,Line,,2,,,138,152,CFN ERD One Arrow,CFN ERD One Arrow,,,,,,,,,
+207,Line,,2,,,121,137,CFN ERD One Arrow,CFN ERD One Arrow,,,,,,,,,
