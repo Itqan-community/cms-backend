@@ -1,0 +1,10 @@
+{% extends "wagtailadmin/userbar/item_base.html" %}
+{% load i18n wagtailadmin_tags %}
+
+{% block item_content %}
+    {% base_url_setting default="" as base_url %}
+    <a href="{{ base_url }}{% url 'wagtailadmin_home' %}" target="_parent" role="menuitem">
+        {% icon name="key" classname="w-action-icon" %}
+        {% trans 'Go to Wagtail admin' %}
+    </a>
+{% endblock %}

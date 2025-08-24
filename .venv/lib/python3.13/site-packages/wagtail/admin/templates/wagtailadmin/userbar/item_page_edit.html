@@ -1,0 +1,10 @@
+{% extends "wagtailadmin/userbar/item_base.html" %}
+{% load i18n wagtailadmin_tags %}
+
+{% block item_content %}
+    {% base_url_setting default="" as base_url %}
+    <a href="{{ base_url }}{% url 'wagtailadmin_pages:edit' self.page.id %}" target="_parent" role="menuitem">
+        {% icon name="edit" classname="w-action-icon" %}
+        {% trans 'Edit this page' %}
+    </a>
+{% endblock %}
