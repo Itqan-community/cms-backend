@@ -110,6 +110,22 @@ components:
           type: string
       required: [detail]
 
+    ValidationError:
+      type: object
+      properties:
+        detail:
+          type: string
+        field_errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example:
+            phone_number: ["Enter a valid phone number in E.164 format."]
+            first_name: ["This field is required."]
+      required: [detail]
+
     PaginationMeta:
       type: object
       properties:
@@ -149,33 +165,52 @@ components:
         slug:
           type: string
           example: itqan
+        icon_image_url:
+          type: string
+          format: uri
+          nullable: true
+          example: https://cdn.itqan.dev/orgs/icons/itqan.png
+        summary:
+          type: string
+          nullable: true
+          example: مركز متخصص في إنتاج وتوزيع البيانات القرآنية المعيارية
         website:
           type: string
           format: uri
           nullable: true
-      required: [id, name, slug]
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+        updated_at:
+          $ref: '#/components/schemas/Timestamp'
+      required: [id, name, slug, created_at, updated_at]
 
     Resource:
       type: object
       properties:
         id:
           $ref: '#/components/schemas/UUID'
-        org_id:
+        publishing_organization_id:
           $ref: '#/components/schemas/UUID'
+        name:
+          type: string
+          example: تفسير ابن كثير CSV
         slug:
           type: string
-          example: quran-metadata
-        title:
+          example: tafsir-ibn-katheer-csv
+        description:
           type: string
-          example: بيانات القرآن الوصفية
-        summary:
+          nullable: true
+          example: تفسير القرآن الكريم للإمام ابن كثير بصيغة CSV
+        category:
           type: string
-          example: ملخص موجز حول محتوى المورد.
+          enum: [recitation, mushaf, tafsir, hadith, linguistics, other]
+          example: tafsir
         status:
           type: string
-          example: published
-        default_license:
-          $ref: '#/components/schemas/License'
+          enum: [draft, ready, published, archived]
+          example: ready
+        default_license_id:
+          $ref: '#/components/schemas/UUID'
         latest_version_id:
           $ref: '#/components/schemas/UUID'
           nullable: true
@@ -183,7 +218,7 @@ components:
           $ref: '#/components/schemas/Timestamp'
         updated_at:
           $ref: '#/components/schemas/Timestamp'
-      required: [id, org_id, slug, title, status, created_at]
+      required: [id, publishing_organization_id, name, slug, category, status, default_license_id, created_at, updated_at]
 
     ResourceVersion:
       type: object
@@ -192,26 +227,43 @@ components:
           $ref: '#/components/schemas/UUID'
         resource_id:
           $ref: '#/components/schemas/UUID'
+        name:
+          type: string
+          example: v1.2 - إصلاح الأخطاء الإملائية
         semver:
           type: string
-          example: 1.0.0
+          example: 1.2.0
         changelog:
           type: string
           nullable: true
+          example: إصلاح الأخطاء الإملائية وتحسين جودة البيانات
+        storage_backend:
+          type: string
+          enum: [minio, s3, azure_blob]
+          example: minio
+        storage_path:
+          type: string
+          example: resources/tafsir-ibn-katheer/v1.2/
+        file_count:
+          type: integer
+          example: 3
+        total_size_bytes:
+          type: integer
+          example: 1048576
         processed:
           type: boolean
           example: true
         api_endpoint:
           type: string
           nullable: true
-          example: "/quran/ayahs"
+          example: "/api/v1/tafsir/ibn-katheer"
         docs_url:
           type: string
           format: uri
           nullable: true
         created_at:
           $ref: '#/components/schemas/Timestamp'
-      required: [id, resource_id, semver, processed, created_at]
+      required: [id, resource_id, name, semver, storage_backend, storage_path, file_count, total_size_bytes, processed, created_at]
 
     ResourceVersionArtifact:
       type: object
@@ -240,16 +292,30 @@ components:
       properties:
         id:
           $ref: '#/components/schemas/UUID'
-        version_id:
+        resource_version_id:
           $ref: '#/components/schemas/UUID'
+        name:
+          type: string
+          example: آيات القرآن - API
         api_slug:
           type: string
           example: ayahs
+        type:
+          type: string
+          enum: [api, download, package]
+          example: api
         visibility:
           type: string
+          enum: [public, private, restricted]
           example: public
+        access_requirements:
+          type: array
+          items:
+            type: string
+          example: ["registration", "attribution"]
         created_at:
           $ref: '#/components/schemas/Timestamp'
+      required: [id, resource_version_id, name, api_slug, type, visibility, created_at]
 
     AssetVersion:
       type: object
@@ -306,10 +372,26 @@ components:
       properties:
         id:
           $ref: '#/components/schemas/UUID'
+        first_name:
+          type: string
+          example: أحمد
+        last_name:
+          type: string
+          example: محمد
         email:
           type: string
           format: email
           example: user@example.com
+        phone_number:
+          type: string
+          nullable: true
+          pattern: '^\+[1-9]\d{1,14}$'
+          description: Phone number in E.164 format (e.g., +966501234567)
+          example: "+966501234567"
+        job_title:
+          type: string
+          nullable: true
+          example: مطور برمجيات
         auth_provider:
           type: string
           example: auth0
@@ -318,6 +400,9 @@ components:
           example: true
         created_at:
           $ref: '#/components/schemas/Timestamp'
+        updated_at:
+          $ref: '#/components/schemas/Timestamp'
+      required: [id, first_name, last_name, email, auth_provider, is_active, created_at, updated_at]
 
     Developer:
       type: object
@@ -379,12 +464,99 @@ components:
           $ref: '#/components/schemas/UUID'
         access_type:
           type: string
+          enum: [download, api, package, stream]
           example: download
         token_id:
           $ref: '#/components/schemas/UUID'
           nullable: true
+        expires_at:
+          $ref: '#/components/schemas/Timestamp'
+          nullable: true
+        usage_limit:
+          type: integer
+          nullable: true
+          example: 1000
+        usage_count:
+          type: integer
+          default: 0
+          example: 42
         granted_at:
           $ref: '#/components/schemas/Timestamp'
+      required: [id, access_request_id, developer_id, asset_version_id, access_type, usage_count, granted_at]
+
+    PublishingOrganizationMember:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+        user_id:
+          $ref: '#/components/schemas/UUID'
+        publishing_organization_id:
+          $ref: '#/components/schemas/UUID'
+        role:
+          type: string
+          enum: [owner, manager, contributor, viewer]
+          example: manager
+        status:
+          type: string
+          enum: [active, inactive, pending, suspended]
+          example: active
+        permissions:
+          type: array
+          items:
+            type: string
+          example: ["resource.create", "resource.edit", "resource.publish"]
+        joined_at:
+          $ref: '#/components/schemas/Timestamp'
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+      required: [id, user_id, publishing_organization_id, role, status, joined_at, created_at]
+
+    UsageEvent:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+        asset_access_id:
+          $ref: '#/components/schemas/UUID'
+        developer_id:
+          $ref: '#/components/schemas/UUID'
+        asset_id:
+          $ref: '#/components/schemas/UUID'
+        event_type:
+          type: string
+          enum: [download, api_call, stream_start, stream_end, error]
+          example: api_call
+        endpoint:
+          type: string
+          nullable: true
+          example: "/api/v1/ayahs"
+        request_size:
+          type: integer
+          nullable: true
+          example: 1024
+        response_size:
+          type: integer
+          nullable: true
+          example: 4096
+        status_code:
+          type: integer
+          nullable: true
+          example: 200
+        error_message:
+          type: string
+          nullable: true
+        ip_address:
+          type: string
+          nullable: true
+          example: "192.168.1.100"
+        user_agent:
+          type: string
+          nullable: true
+          example: "Mozilla/5.0 (compatible; MyApp/1.0)"
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+      required: [id, asset_access_id, developer_id, asset_id, event_type, created_at]
 
 paths:
   /health:
@@ -505,7 +677,11 @@ paths:
                       - id: "7f0b4f38-5e6f-4f3d-9a1c-7e0d8d300001"
                         name: مركز إتقان
                         slug: itqan
+                        icon_image_url: https://cdn.itqan.dev/orgs/icons/itqan.png
+                        summary: مركز متخصص في إنتاج وتوزيع البيانات القرآنية المعيارية
                         website: https://www.itqan.dev
+                        created_at: "2025-01-01T10:00:00Z"
+                        updated_at: "2025-01-01T10:00:00Z"
 
   /publishers/{slug}:
     get:
@@ -530,7 +706,11 @@ paths:
                     id: "7f0b4f38-5e6f-4f3d-9a1c-7e0d8d300001"
                     name: مركز إتقان
                     slug: itqan
+                    icon_image_url: https://cdn.itqan.dev/orgs/icons/itqan.png
+                    summary: مركز متخصص في إنتاج وتوزيع البيانات القرآنية المعيارية
                     website: https://www.itqan.dev
+                    created_at: "2025-01-01T10:00:00Z"
+                    updated_at: "2025-01-01T10:00:00Z"
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -572,16 +752,13 @@ paths:
                     previous: null
                     results:
                       - id: "3e2c5a8b-1f1f-4e8f-8a2d-9e1f0a000123"
-                        org_id: "7f0b4f38-5e6f-4f3d-9a1c-7e0d8d300001"
-                        slug: quran-metadata
-                        title: بيانات القرآن الوصفية
-                        summary: ملخص موجز حول محتوى المورد.
-                        status: published
-                        default_license:
-                          id: "0b7b3d03-9a7c-4a2a-b9dd-b3e7b4c4a111"
-                          code: cc0
-                          name: Creative Commons Zero v1.0 Universal
-                          url: https://creativecommons.org/publicdomain/zero/1.0/
+                        publishing_organization_id: "7f0b4f38-5e6f-4f3d-9a1c-7e0d8d300001"
+                        name: تفسير ابن كثير
+                        slug: tafsir-ibn-katheer
+                        description: تفسير القرآن العظيم للإمام ابن كثير بصيغة منظّمة
+                        category: tafsir
+                        status: ready
+                        default_license_id: "0b7b3d03-9a7c-4a2a-b9dd-b3e7b4c4a111"
                         latest_version_id: "8b8b8b8b-1111-2222-3333-444444444444"
                         created_at: "2025-01-01T12:34:56Z"
                         updated_at: "2025-01-02T12:34:56Z"
@@ -607,16 +784,13 @@ paths:
                 sample:
                   value:
                     id: "3e2c5a8b-1f1f-4e8f-8a2d-9e1f0a000123"
-                    org_id: "7f0b4f38-5e6f-4f3d-9a1c-7e0d8d300001"
-                    slug: quran-metadata
-                    title: بيانات القرآن الوصفية
-                    summary: ملخص موجز حول محتوى المورد.
-                    status: published
-                    default_license:
-                      id: "0b7b3d03-9a7c-4a2a-b9dd-b3e7b4c4a111"
-                      code: cc0
-                      name: Creative Commons Zero v1.0 Universal
-                      url: https://creativecommons.org/publicdomain/zero/1.0/
+                    publishing_organization_id: "7f0b4f38-5e6f-4f3d-9a1c-7e0d8d300001"
+                    name: تفسير ابن كثير
+                    slug: tafsir-ibn-katheer
+                    description: تفسير القرآن العظيم للإمام ابن كثير بصيغة منظّمة
+                    category: tafsir
+                    status: ready
+                    default_license_id: "0b7b3d03-9a7c-4a2a-b9dd-b3e7b4c4a111"
                     latest_version_id: "8b8b8b8b-1111-2222-3333-444444444444"
                     created_at: "2025-01-01T12:34:56Z"
                     updated_at: "2025-01-02T12:34:56Z"
@@ -647,11 +821,16 @@ paths:
                   value:
                     - id: "8b8b8b8b-1111-2222-3333-444444444444"
                       resource_id: "3e2c5a8b-1f1f-4e8f-8a2d-9e1f0a000123"
+                      name: "v1.0 - الإصدار الأول"
                       semver: 1.0.0
-                      changelog: الإصدار الأول.
+                      changelog: الإصدار الأول من تفسير ابن كثير
+                      storage_backend: minio
+                      storage_path: resources/tafsir-ibn-katheer/v1.0/
+                      file_count: 3
+                      total_size_bytes: 2097152
                       processed: true
-                      api_endpoint: "/quran/ayahs"
-                      docs_url: https://docs.itqan.dev/quran-metadata/1.0.0
+                      api_endpoint: "/api/v1/tafsir/ibn-katheer"
+                      docs_url: https://docs.itqan.dev/tafsir-ibn-katheer/1.0.0
                       created_at: "2025-01-01T12:34:56Z"
 
   /resources/{slug}/versions/{semver}:
@@ -681,11 +860,16 @@ paths:
                   value:
                     id: "8b8b8b8b-1111-2222-3333-444444444444"
                     resource_id: "3e2c5a8b-1f1f-4e8f-8a2d-9e1f0a000123"
+                    name: "v1.0 - الإصدار الأول"
                     semver: 1.0.0
-                    changelog: الإصدار الأول.
+                    changelog: الإصدار الأول من تفسير ابن كثير
+                    storage_backend: minio
+                    storage_path: resources/tafsir-ibn-katheer/v1.0/
+                    file_count: 3
+                    total_size_bytes: 2097152
                     processed: true
-                    api_endpoint: "/quran/ayahs"
-                    docs_url: https://docs.itqan.dev/quran-metadata/1.0.0
+                    api_endpoint: "/api/v1/tafsir/ibn-katheer"
+                    docs_url: https://docs.itqan.dev/tafsir-ibn-katheer/1.0.0
                     created_at: "2025-01-01T12:34:56Z"
         '404':
           $ref: '#/components/responses/NotFound'
@@ -724,9 +908,12 @@ paths:
                     previous: null
                     results:
                       - id: "11111111-2222-3333-4444-555555555555"
-                        version_id: "8b8b8b8b-1111-2222-3333-444444444444"
+                        resource_version_id: "8b8b8b8b-1111-2222-3333-444444444444"
+                        name: آيات القرآن - API
                         api_slug: ayahs
+                        type: api
                         visibility: public
+                        access_requirements: ["registration", "attribution"]
                         created_at: "2025-01-01T12:34:56Z"
 
   /assets/{id}:
@@ -750,9 +937,12 @@ paths:
                 sample:
                   value:
                     id: "11111111-2222-3333-4444-555555555555"
-                    version_id: "8b8b8b8b-1111-2222-3333-444444444444"
+                    resource_version_id: "8b8b8b8b-1111-2222-3333-444444444444"
+                    name: آيات القرآن - API
                     api_slug: ayahs
+                    type: api
                     visibility: public
+                    access_requirements: ["registration", "attribution"]
                     created_at: "2025-01-01T12:34:56Z"
         '404':
           $ref: '#/components/responses/NotFound'
@@ -1044,10 +1234,15 @@ paths:
                   value:
                     user:
                       id: "eeee1111-2222-3333-4444-555555555555"
+                      first_name: أحمد
+                      last_name: محمد
                       email: user@example.com
+                      phone_number: "+966501234567"
+                      job_title: مطور برمجيات
                       auth_provider: auth0
                       is_active: true
                       created_at: "2025-01-01T10:00:00Z"
+                      updated_at: "2025-01-01T10:00:00Z"
                     developer:
                       id: "cccc1111-2222-3333-4444-555555555555"
                       user_id: "eeee1111-2222-3333-4444-555555555555"
@@ -1100,6 +1295,74 @@ paths:
                     bio: مهتم بمعايير المحتوى والتنقيح.
                     github_url: https://github.com/ahmad
                     created_at: "2025-01-01T10:05:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /me/profile:
+    patch:
+      tags: [Me]
+      summary: Update user profile information
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                phone_number:
+                  type: string
+                  nullable: true
+                  pattern: '^\+[1-9]\d{1,14}$'
+                  description: Phone number in E.164 format (e.g., +966501234567)
+                job_title:
+                  type: string
+                  nullable: true
+              required: [first_name, last_name]
+            examples:
+              sample:
+                value:
+                  first_name: أحمد
+                  last_name: محمد
+                  phone_number: "+966501234567"
+                  job_title: مطور برمجيات
+      responses:
+        '200':
+          description: Updated user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              examples:
+                sample:
+                  value:
+                    id: "eeee1111-2222-3333-4444-555555555555"
+                    first_name: أحمد
+                    last_name: محمد
+                    email: user@example.com
+                    phone_number: "+966501234567"
+                    job_title: مطور برمجيات
+                    auth_provider: auth0
+                    is_active: true
+                    created_at: "2025-01-01T10:00:00Z"
+                    updated_at: "2025-01-01T11:30:00Z"
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                validation_error:
+                  value:
+                    detail: "Validation failed."
+                    field_errors:
+                      phone_number: ["Enter a valid phone number in E.164 format."]
         '401':
           $ref: '#/components/responses/Unauthorized'
 
@@ -1182,5 +1445,125 @@ paths:
                         title: مركز إتقان
                         snippet: "...الناشر ومجموعة الموارد..."
                     estimatedTotalHits: 2
+
+  /publishers/{slug}/members:
+    get:
+      tags: [Publishers]
+      summary: List organization members (requires authentication & permissions)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: Organization members
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginationMeta'
+                  - type: object
+                    properties:
+                      results:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PublishingOrganizationMember'
+              examples:
+                sample:
+                  value:
+                    count: 2
+                    next: null
+                    previous: null
+                    results:
+                      - id: "member111-2222-3333-4444-555555555555"
+                        user_id: "user1111-2222-3333-4444-555555555555"
+                        publishing_organization_id: "7f0b4f38-5e6f-4f3d-9a1c-7e0d8d300001"
+                        role: owner
+                        status: active
+                        permissions: ["*"]
+                        joined_at: "2024-01-01T10:00:00Z"
+                        created_at: "2024-01-01T10:00:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Insufficient permissions
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /me/usage:
+    get:
+      tags: [Me]
+      summary: Get my usage statistics
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date
+          example: "2025-01-01"
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date
+          example: "2025-01-31"
+        - name: asset_id
+          in: query
+          schema:
+            $ref: '#/components/schemas/UUID'
+      responses:
+        '200':
+          description: Usage statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_events:
+                    type: integer
+                    example: 1542
+                  api_calls:
+                    type: integer
+                    example: 1450
+                  downloads:
+                    type: integer
+                    example: 92
+                  data_transferred_bytes:
+                    type: integer
+                    example: 15728640
+                  recent_events:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UsageEvent'
+              examples:
+                sample:
+                  value:
+                    total_events: 1542
+                    api_calls: 1450
+                    downloads: 92
+                    data_transferred_bytes: 15728640
+                    recent_events:
+                      - id: "event111-2222-3333-4444-555555555555"
+                        asset_access_id: "access11-2222-3333-4444-555555555555"
+                        developer_id: "cccc1111-2222-3333-4444-555555555555"
+                        asset_id: "11111111-2222-3333-4444-555555555555"
+                        event_type: api_call
+                        endpoint: "/api/v1/ayahs"
+                        request_size: 256
+                        response_size: 4096
+                        status_code: 200
+                        ip_address: "192.168.1.100"
+                        user_agent: "MyApp/1.0"
+                        created_at: "2025-01-15T14:30:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
 
