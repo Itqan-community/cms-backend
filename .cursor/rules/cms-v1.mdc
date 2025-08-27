@@ -76,6 +76,7 @@ alwaysApply: true
 - **Security**: Separate admin/public interfaces
 - **Testing**: Test Publisher and Consumer workflows separately
 - **Documentation**: Generate API docs from processed resources
+- **AI-Human Balance**: Set clear objectives, balance AI insights with human judgment, and limit data review to avoid information overload
 
 ## Environments & URLs
 - Production: `https://cms.itqan.dev`
