@@ -4,6 +4,20 @@ alwaysApply: true
 
 # CMS V1 Rules
 
+### Interaction protocol
+1) First response to any user message:
+- Ask clarifying questions needed to fully understand the task.
+- Number of questions depends on complexity; ask only what is necessary.
+- Do not take any action (no edits, commands, or irreversible steps) until answers are received.
+
+2) After clarifications are provided:
+- Convert the request and clarifications into a single JSON object using the schema below.
+- Display the JSON to the user before acting, in a fenced json code block.
+- Then act on the task, using the JSON as the source of truth. If anything remains ambiguous, ask a brief follow-up before acting.
+
+3) Ongoing:
+- If new information arrives, update and redisplay the JSON before any further action.
+
 ## Project Overview
 - **Mission**: Build platform for Quranic data distribution
 - **Two main actors**: Publishers (upload data) and Consumers/Developers (access data)
