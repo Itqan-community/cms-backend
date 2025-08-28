@@ -11,11 +11,16 @@ alwaysApply: true
 - **Website**: www.itqan.dev
 
 ## Database Design
-- **ER diagram**: Maintained in `docs/db-design/er-diagram.mmd`
+- **ER diagram**: Maintained in `ai-memory-bank/docs/db-design/db_design_v1.drawio`
 - **Schema updates**: Edit diagram file, keep rules high-level
 - **Database**: PostgreSQL recommended
 - **IDs**: Use UUIDs as primary keys
 - **Naming**: snake_case for tables/columns
+
+## Wireframes
+- **UI/UX designs**: Available in `ai-memory-bank/docs/screens/`
+- **Screen coverage**: Authentication flows, asset listings, publisher details, resource details
+- **Design system**: Consistent visual language across all screens
 
 ## V1 Scope & Constraints
 - **Resources**: Auto-granted CC0 license (manual licensing later)
