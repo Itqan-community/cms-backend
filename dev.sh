@@ -20,12 +20,13 @@ elif [ -f "frontend/bun.lockb" ]; then
   PM="bun"
 fi
 
-export NEXT_PUBLIC_BACKEND_URL="${NEXT_PUBLIC_BACKEND_URL:-http://localhost:8000}"
+export NEXT_PUBLIC_BACKEND_URL="${NEXT_PUBLIC_BACKEND_URL:-http://127.0.0.1:8000}"
 
 echo "Starting backend (Django) on :8000..."
 (
   cd backend
-  exec "$PYTHON_CMD" manage.py runserver 0.0.0.0:8000
+  source venv/bin/activate
+  exec "$PYTHON_CMD" manage.py runserver 127.0.0.1:8000
 ) &
 
 echo "Starting frontend (Next.js) on :3000..."

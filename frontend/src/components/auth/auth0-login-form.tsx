@@ -15,7 +15,15 @@ interface LoginFormProps {
 export function Auth0LoginForm({ dict, locale }: LoginFormProps) {
   const { loginWithRedirect, isLoading } = useAuth();
 
-  const handleLogin = () => {
+  const handleSocialLogin = (connection: string) => {
+    loginWithRedirect({
+      authorizationParams: {
+        connection: connection,
+      },
+    });
+  };
+
+  const handleEmailLogin = () => {
     loginWithRedirect();
   };
 
@@ -41,7 +49,7 @@ export function Auth0LoginForm({ dict, locale }: LoginFormProps) {
             "bg-red-500 hover:bg-red-600 text-white border-red-500",
             "flex items-center justify-center gap-3"
           )}
-          onClick={handleLogin}
+          onClick={() => handleSocialLogin('google-oauth2')}
           disabled={isLoading}
         >
           <svg className="size-5" viewBox="0 0 24 24">
@@ -73,7 +81,7 @@ export function Auth0LoginForm({ dict, locale }: LoginFormProps) {
             "bg-gray-900 hover:bg-gray-800 text-white border-gray-900",
             "flex items-center justify-center gap-3"
           )}
-          onClick={handleLogin}
+          onClick={() => handleSocialLogin('github')}
           disabled={isLoading}
         >
           <svg className="size-5" fill="currentColor" viewBox="0 0 24 24">
@@ -99,7 +107,7 @@ export function Auth0LoginForm({ dict, locale }: LoginFormProps) {
       <Button
         type="button"
         className="w-full h-11"
-        onClick={handleLogin}
+        onClick={handleEmailLogin}
         disabled={isLoading}
       >
         {isLoading ? (locale === 'ar' ? 'جاري التحميل...' : 'Loading...') : dict.auth.login}

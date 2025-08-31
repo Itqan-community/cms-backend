@@ -122,7 +122,7 @@ def auth0_required(view_func):
     Decorator to require Auth0 authentication for a view
     """
     @wraps(view_func)
-    def wrapper(request, *args, **kwargs):
+    def wrapper(self, request, *args, **kwargs):
         auth_header = request.META.get('HTTP_AUTHORIZATION')
         
         if not auth_header:
@@ -144,7 +144,7 @@ def auth0_required(view_func):
             request.user = user
             request.auth0_payload = payload
             
-            return view_func(request, *args, **kwargs)
+            return view_func(self, request, *args, **kwargs)
             
         except Auth0Error as e:
             return JsonResponse({'error': str(e)}, status=401)

@@ -15,8 +15,21 @@ interface SignupFormProps {
 export function Auth0SignupForm({ dict, locale }: SignupFormProps) {
   const { loginWithRedirect, isLoading } = useAuth();
 
-  const handleSignup = () => {
-    loginWithRedirect();
+  const handleSocialSignup = (connection: string) => {
+    loginWithRedirect({
+      authorizationParams: {
+        connection: connection,
+        screen_hint: 'signup',
+      },
+    });
+  };
+
+  const handleEmailSignup = () => {
+    loginWithRedirect({
+      authorizationParams: {
+        screen_hint: 'signup',
+      },
+    });
   };
 
   return (
@@ -41,7 +54,7 @@ export function Auth0SignupForm({ dict, locale }: SignupFormProps) {
             "bg-red-500 hover:bg-red-600 text-white border-red-500",
             "flex items-center justify-center gap-3"
           )}
-          onClick={handleSignup}
+          onClick={() => handleSocialSignup('google-oauth2')}
           disabled={isLoading}
         >
           <svg className="size-5" viewBox="0 0 24 24">
@@ -73,7 +86,7 @@ export function Auth0SignupForm({ dict, locale }: SignupFormProps) {
             "bg-gray-900 hover:bg-gray-800 text-white border-gray-900",
             "flex items-center justify-center gap-3"
           )}
-          onClick={handleSignup}
+          onClick={() => handleSocialSignup('github')}
           disabled={isLoading}
         >
           <svg className="size-5" fill="currentColor" viewBox="0 0 24 24">
@@ -99,7 +112,7 @@ export function Auth0SignupForm({ dict, locale }: SignupFormProps) {
       <Button
         type="button"
         className="w-full h-11"
-        onClick={handleSignup}
+        onClick={handleEmailSignup}
         disabled={isLoading}
       >
         {isLoading ? (locale === 'ar' ? 'جاري التحميل...' : 'Loading...') : dict.auth.signup}

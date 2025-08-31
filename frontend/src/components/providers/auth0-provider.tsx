@@ -8,12 +8,22 @@ interface Auth0ProviderWrapperProps {
 }
 
 export function Auth0ProviderWrapper({ children }: Auth0ProviderWrapperProps) {
+  // Get the callback URL based on current locale
+  const getCallbackUrl = () => {
+    if (typeof window !== 'undefined') {
+      const currentPath = window.location.pathname;
+      const locale = currentPath.startsWith('/ar') ? 'ar' : 'en';
+      return `${window.location.origin}/${locale}/auth/callback`;
+    }
+    return `${env.NEXT_PUBLIC_APP_URL}/en/auth/callback`;
+  };
+
   return (
     <Auth0Provider
       domain={env.NEXT_PUBLIC_AUTH0_DOMAIN}
       clientId={env.NEXT_PUBLIC_AUTH0_CLIENT_ID}
       authorizationParams={{
-        redirect_uri: typeof window !== 'undefined' ? window.location.origin : env.NEXT_PUBLIC_APP_URL,
+        redirect_uri: getCallbackUrl(),
         audience: env.NEXT_PUBLIC_AUTH0_AUDIENCE,
       }}
       useRefreshTokens={true}

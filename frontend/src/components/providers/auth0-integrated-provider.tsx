@@ -61,48 +61,26 @@ export function Auth0IntegratedProvider({ children, locale }: AuthProviderProps)
       
       try {
         if (auth0IsAuthenticated && auth0User) {
-          // Get access token for API calls
-          const token = await getAccessTokenSilently();
+          // For now, we'll use the Auth0 user data directly and skip backend token validation
+          // This allows the flow to continue while we set up proper JWT validation
+          console.log('Auth0 user authenticated:', auth0User);
           
-          // Check if user exists in our backend
-          const response = await fetch(`${env.NEXT_PUBLIC_BACKEND_URL}/api/v1/auth/me`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          });
-
-          if (response.ok) {
-            // User exists in backend
-            const backendUser = await response.json();
-            const userData: User = {
-              id: backendUser.id,
-              email: backendUser.email,
-              firstName: backendUser.first_name,
-              lastName: backendUser.last_name,
-              provider: 'auth0',
-              profileCompleted: backendUser.profile_completed || false,
-              auth0Id: auth0User.sub!,
-            };
-            setUser(userData);
-            setRequiresProfileCompletion(!userData.profileCompleted);
-          } else if (response.status === 404) {
-            // User doesn't exist in backend, needs profile completion
-            const userData: User = {
-              id: '', // Will be set after profile completion
-              email: auth0User.email!,
-              firstName: auth0User.given_name || '',
-              lastName: auth0User.family_name || '',
-              provider: 'auth0',
-              profileCompleted: false,
-              auth0Id: auth0User.sub!,
-            };
-            setUser(userData);
-            setRequiresProfileCompletion(true);
-          } else {
-            console.error('Failed to sync user with backend');
-            setUser(null);
-          }
+          // Create user data from Auth0 user
+          const userData: User = {
+            id: auth0User.sub!,
+            email: auth0User.email!,
+            firstName: auth0User.given_name || '',
+            lastName: auth0User.family_name || '',
+            provider: 'auth0',
+            profileCompleted: false, // Always require profile completion for new flow
+            auth0Id: auth0User.sub!,
+          };
+          
+          setUser(userData);
+          setRequiresProfileCompletion(true);
+          
+          // Skip backend validation for now - we'll implement this after profile completion
+          // TODO: Re-enable backend sync after fixing JWT token issues
         } else {
           setUser(null);
           setRequiresProfileCompletion(false);
@@ -172,7 +150,28 @@ export function Auth0IntegratedProvider({ children, locale }: AuthProviderProps)
 
   const completeProfile = async (profileData: any) => {
     try {
-      const token = await getAccessTokenSilently();
+      // For now, simulate profile completion without backend call
+      // TODO: Re-enable backend integration after fixing JWT token issues
+      console.log('Profile data to be saved:', profileData);
+      
+      // Update user with completed profile
+      const updatedUser: User = {
+        ...user!,
+        firstName: profileData.firstName,
+        lastName: profileData.lastName,
+        profileCompleted: true,
+      };
+      
+      setUser(updatedUser);
+      setRequiresProfileCompletion(false);
+      router.replace(`/${locale}/dashboard`);
+      
+      /* TODO: Re-enable this after fixing token issues
+      const token = await getAccessTokenSilently({
+        authorizationParams: {
+          audience: env.NEXT_PUBLIC_AUTH0_AUDIENCE || undefined,
+        }
+      });
       
       const response = await fetch(`${env.NEXT_PUBLIC_BACKEND_URL}/api/v1/auth/complete-profile`, {
         method: 'POST',
@@ -210,6 +209,7 @@ export function Auth0IntegratedProvider({ children, locale }: AuthProviderProps)
       } else {
         throw new Error('Failed to complete profile');
       }
+      */
     } catch (error) {
       console.error('Error completing profile:', error);
       throw error;

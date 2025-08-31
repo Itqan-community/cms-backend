@@ -136,8 +136,8 @@ AUTH_USER_MODEL = 'core.User'
 
 # Auth0 Configuration
 AUTH0_DOMAIN = 'dev-itqan.eu.auth0.com'
-AUTH0_CLIENT_ID = 'N3S0JhhYSWaLuhVMuBb9ZTX4gEPJ0G8f'
-AUTH0_CLIENT_SECRET = 'AjwysVUiFkVbZ1SEjFBbAcNMIPEEQSimbMKx_aMraEW5SiKGZgu_7Smoei8T8kUk'
+AUTH0_CLIENT_ID = 'h4NPegjClDuYxZefNBeXIhqXbu9SV6aC'
+AUTH0_CLIENT_SECRET = 'nGzY1mx6DxrOQzsf-Y48NBCfwupmif6WZIvuGNK5FJcq4b3bPBY7p-Tp5mQJvuuI'
 AUTH0_AUDIENCE = None  # Set this if you have a specific API audience
 
 # CORS Configuration

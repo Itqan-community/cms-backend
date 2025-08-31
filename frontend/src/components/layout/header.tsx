@@ -1,6 +1,7 @@
 "use client";
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/providers/auth0-integrated-provider';
 import { LanguageSwitcher } from '@/components/language-switcher';
@@ -15,10 +16,12 @@ interface HeaderProps {
 }
 
 export function Header({ dict, locale }: HeaderProps) {
-  const { user, isAuthenticated, loginWithRedirect, logout, isLoading } = useAuth();
+  const { user, isAuthenticated, logout, isLoading } = useAuth();
+  const router = useRouter();
 
   const handleLogin = () => {
-    loginWithRedirect();
+    // Redirect to custom login page instead of Auth0 Universal Login
+    router.push(`/${locale}/auth/login`);
   };
 
   const handleLogout = () => {
