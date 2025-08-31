@@ -25,7 +25,7 @@ interface AuthContextType {
   loginWithRedirect: (options?: { connection?: string; screen_hint?: 'login' | 'signup' }) => void;
   logout: () => void;
   updateUser: (user: User) => void;
-  completeProfile: (profileData: any) => Promise<void>;
+  completeProfile: (profileData: Record<string, unknown>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -61,23 +61,50 @@ export function Auth0IntegratedProvider({ children, locale }: AuthProviderProps)
       
       try {
         if (auth0IsAuthenticated && auth0User) {
-          // For now, we'll use the Auth0 user data directly and skip backend token validation
-          // This allows the flow to continue while we set up proper JWT validation
-          console.log('Auth0 user authenticated:', auth0User);
-          
+          // Build email with fallback to /userinfo if the connection doesn't expose it by default
+          let resolvedEmail: string | undefined = auth0User.email || undefined;
+          if (!resolvedEmail) {
+            try {
+              const token = await getAccessTokenSilently({
+                authorizationParams: {
+                  scope: 'openid profile email',
+                },
+              });
+              const uiRes = await fetch(`https://${env.NEXT_PUBLIC_AUTH0_DOMAIN}/userinfo`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (uiRes.ok) {
+                const ui = await uiRes.json();
+                resolvedEmail = ui.email;
+              }
+            } catch (e) {
+              console.warn('Could not resolve email from /userinfo:', e);
+            }
+          }
+
           // Create user data from Auth0 user
           const userData: User = {
             id: auth0User.sub!,
-            email: auth0User.email!,
+            email: resolvedEmail || '',
             firstName: auth0User.given_name || '',
             lastName: auth0User.family_name || '',
             provider: 'auth0',
-            profileCompleted: false, // Always require profile completion for new flow
+            profileCompleted: false,
             auth0Id: auth0User.sub!,
           };
           
+          // Check persisted flag to avoid redirecting again on page refresh
+          try {
+            const persisted = typeof window !== 'undefined' 
+              ? window.localStorage.getItem('itqan_profile_completed')
+              : null;
+            if (persisted === '1') {
+              userData.profileCompleted = true;
+            }
+          } catch {}
+
           setUser(userData);
-          setRequiresProfileCompletion(true);
+          setRequiresProfileCompletion(!userData.profileCompleted);
           
           // Skip backend validation for now - we'll implement this after profile completion
           // TODO: Re-enable backend sync after fixing JWT token issues
@@ -130,6 +157,7 @@ export function Auth0IntegratedProvider({ children, locale }: AuthProviderProps)
       authorizationParams: {
         redirect_uri: `${env.NEXT_PUBLIC_APP_URL}/${locale}/auth/callback`,
         audience: env.NEXT_PUBLIC_AUTH0_AUDIENCE,
+        scope: 'openid profile email offline_access',
         connection: options?.connection,
         screen_hint: options?.screen_hint,
       },
@@ -151,7 +179,7 @@ export function Auth0IntegratedProvider({ children, locale }: AuthProviderProps)
     setRequiresProfileCompletion(!userData.profileCompleted);
   };
 
-  const completeProfile = async (profileData: any) => {
+  const completeProfile = async (profileData: Record<string, unknown>) => {
     try {
       // For now, simulate profile completion without backend call
       // TODO: Re-enable backend integration after fixing JWT token issues
@@ -160,13 +188,14 @@ export function Auth0IntegratedProvider({ children, locale }: AuthProviderProps)
       // Update user with completed profile
       const updatedUser: User = {
         ...user!,
-        firstName: profileData.firstName,
-        lastName: profileData.lastName,
+        firstName: profileData.firstName as string,
+        lastName: profileData.lastName as string,
         profileCompleted: true,
       };
       
       setUser(updatedUser);
       setRequiresProfileCompletion(false);
+      try { if (typeof window !== 'undefined') window.localStorage.setItem('itqan_profile_completed', '1'); } catch {}
       router.replace(`/${locale}/dashboard`);
       
       /* TODO: Re-enable this after fixing token issues

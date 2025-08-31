@@ -22,6 +22,15 @@ fi
 
 export NEXT_PUBLIC_BACKEND_URL="${NEXT_PUBLIC_BACKEND_URL:-http://127.0.0.1:8000}"
 
+# Uncomment the following lines to use PostgreSQL with Docker
+# echo "Starting Docker services (PostgreSQL, Redis)..."
+# docker-compose up -d
+# echo "Waiting for PostgreSQL to be ready..."
+# until docker-compose exec -T postgres pg_isready -U itqan_user -d itqan_cms; do
+#   echo "Waiting for PostgreSQL..."
+#   sleep 2
+# done
+
 echo "Starting backend (Django) on :8000..."
 (
   cd backend

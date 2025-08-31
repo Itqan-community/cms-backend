@@ -56,6 +56,42 @@ function getMinimalDictionary(): Dictionary {
     lightMode: "Light Mode",
     toggleTheme: "Toggle Theme",
     theme: "Theme",
+    dashboard: {
+      title: "Dashboard",
+      search: "Search",
+      searchPlaceholder: "Search assets and resources...",
+      filters: "Filters",
+      categories: "Categories",
+      formats: "Formats",
+      languages: "Languages",
+      licenses: "Licenses",
+      clearFilters: "Clear Filters",
+      results: "Results",
+      noResults: "No results found",
+      loading: "Loading...",
+      assets: {
+        title: "Assets",
+        download: "Download",
+        downloads: "Downloads",
+        size: "Size",
+        format: "Format",
+        language: "Language",
+        license: "License",
+        publisher: "Publisher",
+        publishedAt: "Published",
+        viewDetails: "View Details",
+        requestAccess: "Request Access"
+      },
+      pagination: {
+        previous: "Previous",
+        next: "Next",
+        page: "Page",
+        of: "of",
+        showing: "Showing",
+        to: "to",
+        total: "total"
+      }
+    },
     auth: {
       loginTitle: "Login to Developer Platform",
       signupTitle: "Create Account",
@@ -103,6 +139,33 @@ function getMinimalDictionary(): Dictionary {
         signupFailed: "Signup failed. Please try again",
         networkError: "Network error. Please check your internet connection"
       }
+    },
+    categories: {
+      quran: "Quran",
+      hadith: "Hadith",
+      tafsir: "Tafsir",
+      fiqh: "Fiqh",
+      aqeedah: "Aqeedah",
+      seerah: "Seerah",
+      dua: "Dua",
+      other: "Other"
+    },
+    formats: {
+      json: "JSON",
+      xml: "XML",
+      csv: "CSV",
+      audio: "Audio",
+      video: "Video",
+      pdf: "PDF",
+      text: "Text"
+    },
+    licenses: {
+      cc0: "Public Domain (CC0)",
+      'cc-by': "Creative Commons Attribution (CC BY)",
+      'cc-by-sa': "Creative Commons Attribution-ShareAlike (CC BY-SA)",
+      'cc-by-nc': "Creative Commons Attribution-NonCommercial (CC BY-NC)",
+      'cc-by-nc-sa': "Creative Commons Attribution-NonCommercial-ShareAlike (CC BY-NC-SA)",
+      'cc-by-nc-nd': "Creative Commons Attribution-NonCommercial-NoDerivs (CC BY-NC-ND)"
     }
   };
 }

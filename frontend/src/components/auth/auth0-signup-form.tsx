@@ -17,18 +17,14 @@ export function Auth0SignupForm({ dict, locale }: SignupFormProps) {
 
   const handleSocialSignup = (connection: string) => {
     loginWithRedirect({
-      authorizationParams: {
-        connection: connection,
-        screen_hint: 'signup',
-      },
+      connection: connection,
+      screen_hint: 'signup',
     });
   };
 
   const handleEmailSignup = () => {
     loginWithRedirect({
-      authorizationParams: {
-        screen_hint: 'signup',
-      },
+      screen_hint: 'signup',
     });
   };
 

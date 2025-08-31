@@ -25,6 +25,42 @@ export type Dictionary = {
   lightMode: string;
   toggleTheme: string;
   theme: string;
+  dashboard: {
+    title: string;
+    search: string;
+    searchPlaceholder: string;
+    filters: string;
+    categories: string;
+    formats: string;
+    languages: string;
+    licenses: string;
+    clearFilters: string;
+    results: string;
+    noResults: string;
+    loading: string;
+    assets: {
+      title: string;
+      download: string;
+      downloads: string;
+      size: string;
+      format: string;
+      language: string;
+      license: string;
+      publisher: string;
+      publishedAt: string;
+      viewDetails: string;
+      requestAccess: string;
+    };
+    pagination: {
+      previous: string;
+      next: string;
+      page: string;
+      of: string;
+      showing: string;
+      to: string;
+      total: string;
+    };
+  };
   auth: {
     loginTitle: string;
     signupTitle: string;
@@ -72,6 +108,33 @@ export type Dictionary = {
       signupFailed: string;
       networkError: string;
     };
+  };
+  categories: {
+    quran: string;
+    hadith: string;
+    tafsir: string;
+    fiqh: string;
+    aqeedah: string;
+    seerah: string;
+    dua: string;
+    other: string;
+  };
+  formats: {
+    json: string;
+    xml: string;
+    csv: string;
+    audio: string;
+    video: string;
+    pdf: string;
+    text: string;
+  };
+  licenses: {
+    cc0: string;
+    'cc-by': string;
+    'cc-by-sa': string;
+    'cc-by-nc': string;
+    'cc-by-nc-sa': string;
+    'cc-by-nc-nd': string;
   };
 };
 

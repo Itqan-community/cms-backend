@@ -23,6 +23,42 @@
   "lightMode": "الوضع المضيء",
   "toggleTheme": "تغيير المظهر",
   "theme": "المظهر",
+  "dashboard": {
+    "title": "لوحة التحكم",
+    "search": "البحث",
+    "searchPlaceholder": "ابحث عن الأصول والموارد...",
+    "filters": "التصفية",
+    "categories": "الفئات",
+    "formats": "التنسيقات",
+    "languages": "اللغات",
+    "licenses": "التراخيص",
+    "clearFilters": "مسح التصفية",
+    "results": "النتائج",
+    "noResults": "لا توجد نتائج",
+    "loading": "جاري التحميل...",
+    "assets": {
+      "title": "الأصول",
+      "download": "تحميل",
+      "downloads": "التحميلات",
+      "size": "الحجم",
+      "format": "التنسيق",
+      "language": "اللغة",
+      "license": "الترخيص",
+      "publisher": "الناشر",
+      "publishedAt": "تاريخ النشر",
+      "viewDetails": "عرض التفاصيل",
+      "requestAccess": "طلب الوصول"
+    },
+    "pagination": {
+      "previous": "السابق",
+      "next": "التالي",
+      "page": "الصفحة",
+      "of": "من",
+      "showing": "عرض",
+      "to": "إلى",
+      "total": "المجموع"
+    }
+  },
   "auth": {
     "loginTitle": "تسجيل الدخول لمنصة المطورين",
     "signupTitle": "إنشاء حساب",
@@ -70,5 +106,32 @@
       "signupFailed": "فشل إنشاء الحساب. حاول مرة أخرى",
       "networkError": "خطأ في الشبكة. تحقق من اتصالك بالإنترنت"
     }
+  },
+  "categories": {
+    "quran": "القرآن الكريم",
+    "hadith": "الحديث الشريف",
+    "tafsir": "التفسير",
+    "fiqh": "الفقه",
+    "aqeedah": "العقيدة",
+    "seerah": "السيرة النبوية",
+    "dua": "الأدعية",
+    "other": "أخرى"
+  },
+  "formats": {
+    "json": "JSON",
+    "xml": "XML",
+    "csv": "CSV",
+    "audio": "صوتي",
+    "video": "فيديو",
+    "pdf": "PDF",
+    "text": "نص"
+  },
+  "licenses": {
+    "cc0": "المجال العام (CC0)",
+    "cc-by": "المشاع الإبداعي - النسبة (CC BY)",
+    "cc-by-sa": "المشاع الإبداعي - النسبة والمشاركة (CC BY-SA)",
+    "cc-by-nc": "المشاع الإبداعي - النسبة وغير تجاري (CC BY-NC)",
+    "cc-by-nc-sa": "المشاع الإبداعي - النسبة وغير تجاري والمشاركة (CC BY-NC-SA)",
+    "cc-by-nc-nd": "المشاع الإبداعي - النسبة وغير تجاري وبلا اشتقاق (CC BY-NC-ND)"
   }
 }

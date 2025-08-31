@@ -40,7 +40,7 @@ export function Header({ dict, locale }: HeaderProps) {
         spacing.gapLg
       )}>
         {/* Logo and Navigation */}
-        <div className={cn(layoutPatterns.flexStart, spacing.gapLg)}>
+        <div className={cn("flex items-center", spacing.gapLg)}>
           {/* Logo */}
           <Link 
             href={`/${locale}`}
@@ -80,9 +80,9 @@ export function Header({ dict, locale }: HeaderProps) {
         </div>
 
         {/* Right side - Auth, Language, Theme */}
-        <div className={cn(layoutPatterns.flexEnd, spacing.gapMd)}>
+        <div className={cn("flex items-center", spacing.gapMd)}>
           {/* Language Switcher */}
-          <LanguageSwitcher />
+          <LanguageSwitcher currentLocale={locale} />
 
           {/* Theme Toggle */}
           <ThemeToggle />
@@ -91,7 +91,7 @@ export function Header({ dict, locale }: HeaderProps) {
           {isLoading ? (
             <div className="w-20 h-9 bg-muted animate-pulse rounded-md" />
           ) : isAuthenticated && user ? (
-            <div className={cn(layoutPatterns.flexEnd, spacing.gapSm)}>
+            <div className={cn("flex items-center", spacing.gapSm)}>
               {/* User Info */}
               <div className={cn("hidden sm:block", logical.textEnd)}>
                 <p className="text-sm font-medium text-foreground">

@@ -11,21 +11,26 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+import os
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env file
+load_dotenv(BASE_DIR / '.env')
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-f=kr87zi(c!%2+gfgc3f8n8h-hwi5x1tf&&45*ki8j1qe2ch$c'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-f=kr87zi(c!%2+gfgc3f8n8h-hwi5x1tf&&45*ki8j1qe2ch$c')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 
 # Application definition
@@ -84,8 +89,15 @@ WSGI_APPLICATION = 'itqan_cms.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.sqlite3'),
+        'NAME': os.getenv('DB_NAME', BASE_DIR / 'db.sqlite3'),
+        'USER': os.getenv('DB_USER', ''),
+        'PASSWORD': os.getenv('DB_PASSWORD', ''),
+        'HOST': os.getenv('DB_HOST', ''),
+        'PORT': os.getenv('DB_PORT', ''),
+        'OPTIONS': {
+            'timeout': 20,
+        }
     }
 }
 
@@ -135,10 +147,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'core.User'
 
 # Auth0 Configuration
-AUTH0_DOMAIN = 'dev-itqan.eu.auth0.com'
-AUTH0_CLIENT_ID = 'h4NPegjClDuYxZefNBeXIhqXbu9SV6aC'
-AUTH0_CLIENT_SECRET = 'nGzY1mx6DxrOQzsf-Y48NBCfwupmif6WZIvuGNK5FJcq4b3bPBY7p-Tp5mQJvuuI'
-AUTH0_AUDIENCE = 'https://api.itqan-cms.com'  # API audience for JWT validation
+AUTH0_DOMAIN = os.getenv('AUTH0_DOMAIN', 'dev-itqan.eu.auth0.com')
+AUTH0_CLIENT_ID = os.getenv('AUTH0_CLIENT_ID', 'h4NPegjClDuYxZefNBeXIhqXbu9SV6aC')
+AUTH0_CLIENT_SECRET = os.getenv('AUTH0_CLIENT_SECRET', 'nGzY1mx6DxrOQzsf-Y48NBCfwupmif6WZIvuGNK5FJcq4b3bPBY7p-Tp5mQJvuuI')
+AUTH0_AUDIENCE = os.getenv('AUTH0_AUDIENCE', 'https://api.itqan-cms.com')  # API audience for JWT validation
 
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = [

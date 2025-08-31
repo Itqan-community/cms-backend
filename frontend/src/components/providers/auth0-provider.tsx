@@ -24,6 +24,7 @@ export function Auth0ProviderWrapper({ children }: Auth0ProviderWrapperProps) {
       clientId={env.NEXT_PUBLIC_AUTH0_CLIENT_ID}
       authorizationParams={{
         redirect_uri: getCallbackUrl(),
+        scope: 'openid profile email offline_access',
         audience: env.NEXT_PUBLIC_AUTH0_AUDIENCE,
       }}
       useRefreshTokens={true}
