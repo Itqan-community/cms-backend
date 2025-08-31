@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/components/providers/auth-provider';
+import { useAuth } from '@/components/providers/auth0-integrated-provider';
 import type { Dictionary, Locale } from '@/lib/i18n/types';
 import { logical, direction } from '@/lib/styles/logical';
 import { validateSignupForm } from '@/lib/validations';
@@ -31,7 +31,7 @@ export function SignupForm({ dict, locale }: SignupFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string>('');
   
-  const { login } = useAuth();
+  const { updateUser } = useAuth();
 
   const handleInputChange = (field: keyof typeof formData) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -69,7 +69,22 @@ export function SignupForm({ dict, locale }: SignupFormProps) {
       const response = await signupUser(formData);
       
       if (response.success && response.user && response.token) {
-        login(response.user, response.token);
+        // Convert the response user to the Auth0IntegratedProvider User format
+        const auth0User = {
+          id: response.user.id,
+          email: response.user.email,
+          firstName: response.user.firstName,
+          lastName: response.user.lastName,
+          provider: 'email',
+          profileCompleted: true,
+          auth0Id: response.user.id, // Use the same ID for email users
+        };
+        
+        // Update the user in the Auth0IntegratedProvider context
+        updateUser(auth0User);
+        
+        // Redirect to dashboard
+        window.location.href = `/${locale}/dashboard`;
       } else {
         setSubmitError(response.error || dict.auth.validation.signupFailed);
       }

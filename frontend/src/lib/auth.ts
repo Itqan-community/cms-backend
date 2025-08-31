@@ -94,44 +94,49 @@ const generateFakeUser = (
 };
 
 /**
- * Simulate login API call
+ * Real login API call to backend
  */
 export const loginUser = async (email: string, password: string): Promise<AuthResponse> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // Simulate validation (in real app, this would be server-side)
-  if (email === 'test@example.com' && password === 'password123') {
-    const token = generateFakeToken();
-    const user = generateFakeUser(email, 'Test', 'User', 'email', {
-      jobTitle: 'Software Engineer',
-      phoneNumber: '+1234567890',
-      profileCompleted: true
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/v1/auth/login/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
     });
-    
-    tokenStorage.setToken(token);
-    userStorage.setUser(user);
-    
+
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      const { token, user } = data;
+      
+      // Store token and user data
+      tokenStorage.setToken(token);
+      userStorage.setUser(user);
+      
+      return {
+        success: true,
+        token,
+        user
+      };
+    } else {
+      return {
+        success: false,
+        error: data.error || 'Login failed'
+      };
+    }
+  } catch (error) {
+    console.error('Login error:', error);
     return {
-      success: true,
-      token,
-      user
+      success: false,
+      error: 'Network error. Please try again.'
     };
   }
-  
-  // Simulate different error scenarios
-  if (email === 'network@error.com') {
-    throw new Error('Network error');
-  }
-  
-  return {
-    success: false,
-    error: 'Invalid credentials'
-  };
 };
 
 /**
- * Simulate signup API call
+ * Real signup API call to backend
  */
 export const signupUser = async (formData: {
   firstName: string;
@@ -141,43 +146,42 @@ export const signupUser = async (formData: {
   email: string;
   password: string;
 }): Promise<AuthResponse> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1500));
-  
-  // Simulate email already exists error
-  if (formData.email === 'exists@example.com') {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/v1/auth/register/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(formData),
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      const { token, user } = data;
+      
+      // Store token and user data
+      tokenStorage.setToken(token);
+      userStorage.setUser(user);
+      
+      return {
+        success: true,
+        token,
+        user
+      };
+    } else {
+      return {
+        success: false,
+        error: data.error || 'Registration failed'
+      };
+    }
+  } catch (error) {
+    console.error('Signup error:', error);
     return {
       success: false,
-      error: 'Email already exists'
+      error: 'Network error. Please try again.'
     };
   }
-  
-  // Simulate network error
-  if (formData.email === 'network@error.com') {
-    throw new Error('Network error');
-  }
-  
-  const token = generateFakeToken();
-  const user = generateFakeUser(
-    formData.email,
-    formData.firstName,
-    formData.lastName,
-    'email',
-    {
-      jobTitle: formData.jobTitle,
-      phoneNumber: formData.phoneNumber,
-      profileCompleted: true
-    }
-  );
-  
-  tokenStorage.setToken(token);
-  userStorage.setUser(user);
-  
-  return {
-    success: true,
-    token,
-    user
-  };
 };
 
 /**

@@ -186,26 +186,13 @@ export function Auth0IntegratedProvider({ children, locale }: AuthProviderProps)
       console.log('Profile data to be saved:', profileData);
       
       // Update user with completed profile
-      const updatedUser: User = {
-        ...user!,
-        firstName: profileData.firstName as string,
-        lastName: profileData.lastName as string,
-        profileCompleted: true,
-      };
-      
-      setUser(updatedUser);
-      setRequiresProfileCompletion(false);
-      try { if (typeof window !== 'undefined') window.localStorage.setItem('itqan_profile_completed', '1'); } catch {}
-      router.replace(`/${locale}/dashboard`);
-      
-      /* TODO: Re-enable this after fixing token issues
       const token = await getAccessTokenSilently({
         authorizationParams: {
           audience: env.NEXT_PUBLIC_AUTH0_AUDIENCE || undefined,
         }
       });
       
-      const response = await fetch(`${env.NEXT_PUBLIC_BACKEND_URL}/api/v1/auth/complete-profile`, {
+      const response = await fetch(`${env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/v1/auth/complete-profile/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -237,11 +224,17 @@ export function Auth0IntegratedProvider({ children, locale }: AuthProviderProps)
         };
         setUser(userData);
         setRequiresProfileCompletion(false);
+        
+        // Set localStorage flag to persist profile completion
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('itqan_profile_completed', '1');
+        }
+        
         router.replace(`/${locale}/dashboard`);
       } else {
-        throw new Error('Failed to complete profile');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to complete profile');
       }
-      */
     } catch (error) {
       console.error('Error completing profile:', error);
       throw error;
