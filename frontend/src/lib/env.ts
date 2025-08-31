@@ -16,7 +16,7 @@ export const env = {
   // Auth0 Configuration
   NEXT_PUBLIC_AUTH0_DOMAIN: process.env.NEXT_PUBLIC_AUTH0_DOMAIN || 'dev-itqan.eu.auth0.com',
   NEXT_PUBLIC_AUTH0_CLIENT_ID: process.env.NEXT_PUBLIC_AUTH0_CLIENT_ID || 'h4NPegjClDuYxZefNBeXIhqXbu9SV6aC',
-  NEXT_PUBLIC_AUTH0_AUDIENCE: process.env.NEXT_PUBLIC_AUTH0_AUDIENCE || undefined,
+  NEXT_PUBLIC_AUTH0_AUDIENCE: process.env.NEXT_PUBLIC_AUTH0_AUDIENCE || 'https://api.itqan-cms.com',
 } as const;
 
 // Helper functions

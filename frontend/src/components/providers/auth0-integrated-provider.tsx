@@ -22,7 +22,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   requiresProfileCompletion: boolean;
-  loginWithRedirect: () => void;
+  loginWithRedirect: (options?: { connection?: string; screen_hint?: 'login' | 'signup' }) => void;
   logout: () => void;
   updateUser: (user: User) => void;
   completeProfile: (profileData: any) => Promise<void>;
@@ -125,10 +125,13 @@ export function Auth0IntegratedProvider({ children, locale }: AuthProviderProps)
     }
   }, [auth0IsAuthenticated, user, requiresProfileCompletion, pathname, locale, router, isLoading, auth0IsLoading]);
 
-  const loginWithRedirect = () => {
+  const loginWithRedirect = (options?: { connection?: string; screen_hint?: 'login' | 'signup' }) => {
     auth0LoginWithRedirect({
       authorizationParams: {
         redirect_uri: `${env.NEXT_PUBLIC_APP_URL}/${locale}/auth/callback`,
+        audience: env.NEXT_PUBLIC_AUTH0_AUDIENCE,
+        connection: options?.connection,
+        screen_hint: options?.screen_hint,
       },
     });
   };

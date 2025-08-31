@@ -16,15 +16,12 @@ export function Auth0LoginForm({ dict, locale }: LoginFormProps) {
   const { loginWithRedirect, isLoading } = useAuth();
 
   const handleSocialLogin = (connection: string) => {
-    loginWithRedirect({
-      authorizationParams: {
-        connection: connection,
-      },
-    });
+    // Pass connection directly; our auth context forwards it to Auth0
+    loginWithRedirect({ connection });
   };
 
   const handleEmailLogin = () => {
-    loginWithRedirect();
+    loginWithRedirect({});
   };
 
   return (

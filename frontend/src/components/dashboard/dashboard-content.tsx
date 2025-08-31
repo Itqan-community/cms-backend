@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from '@/components/providers/auth-provider';
+import { useAuth } from '@/components/providers/auth0-integrated-provider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Dictionary, Locale } from '@/lib/i18n/types';

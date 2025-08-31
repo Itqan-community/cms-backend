@@ -138,7 +138,7 @@ AUTH_USER_MODEL = 'core.User'
 AUTH0_DOMAIN = 'dev-itqan.eu.auth0.com'
 AUTH0_CLIENT_ID = 'h4NPegjClDuYxZefNBeXIhqXbu9SV6aC'
 AUTH0_CLIENT_SECRET = 'nGzY1mx6DxrOQzsf-Y48NBCfwupmif6WZIvuGNK5FJcq4b3bPBY7p-Tp5mQJvuuI'
-AUTH0_AUDIENCE = None  # Set this if you have a specific API audience
+AUTH0_AUDIENCE = 'https://api.itqan-cms.com'  # API audience for JWT validation
 
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = [

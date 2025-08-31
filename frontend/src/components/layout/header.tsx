@@ -105,7 +105,7 @@ export function Header({ dict, locale }: HeaderProps) {
               {/* User Avatar */}
               <div className="size-9 rounded-full bg-primary/10 flex items-center justify-center">
                 <span className="text-sm font-medium text-primary">
-                  {user.firstName?.[0]?.toUpperCase() || user.email[0].toUpperCase()}
+                  {user.firstName?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || '?'}
                 </span>
               </div>
 
