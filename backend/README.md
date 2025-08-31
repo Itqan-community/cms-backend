@@ -1,21 +1,17 @@
-# Backend (Django + DRF)
+## Itqan CMS (Monorepo)
 
-- APIs via DRF; custom Angular Admin (no Wagtail).
-- Auth: Auth0 (OIDC/JWKS verification).
-- Search: Meilisearch via Celery on Django signals.
-- Storage: MinIO (dev) / Alibaba OSS (prod) using django-storages.
-- DB: PostgreSQL with UUID PKs, soft deletes, i18n.
+This repository hosts the Itqan CMS platform: Quranic data publishing and consumption.
 
-## Dev
-- Python 3.12+, pip/pipenv/uv
-- Env: copy `.env.example` to `.env`
+### Structure (Layout A)
+```
+frontend/   # Angular 19 app (CSR → SSR later via Angular Universal)
+backend/    # Django + DRF API; Admin is a custom Angular app
+docs/       # diagrams and requirements
+.cursor/    # project rules (see `.cursor/rules/cms-v1.mdc`)
+```
 
-### Commands (suggested)
-- run: `python manage.py runserver`
-- migrate: `python manage.py migrate`
-- test: `pytest`
-- worker: `celery -A project worker -l info`
-
-## Notes
+### Getting Started
+- See `frontend/README.md` and `backend/README.md` for per-app setup.
 - Schema source of truth: `docs/db-design/er-diagram.mmd`.
-- Follow Prompt Structure Protocol in `.cursor/rules/cms-v1.mdc`.
+
+
