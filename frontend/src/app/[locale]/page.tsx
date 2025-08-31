@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { getDictionary } from "@/lib/i18n/dictionaries";
-import { LanguageSwitcher } from "@/components/language-switcher";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { MainLayout } from "@/components/layout/main-layout";
 import { layoutPatterns, typography, spacing } from "@/lib/styles/logical";
 import type { Locale } from "@/lib/i18n/types";
 import { cn } from "@/lib/utils";
@@ -19,17 +18,14 @@ export default async function HomePage({ params }: HomePageProps) {
   const dict = await getDictionary(validatedLocale);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-8 container-padding">
-      {/* Header with title and controls */}
-      <div className="flex items-center gap-4 flex-wrap justify-center">
-        <h1 className="text-4xl font-bold text-center">
-          {dict.welcome}
-        </h1>
-        <div className="flex items-center gap-2">
-          <LanguageSwitcher currentLocale={validatedLocale} />
-          <ThemeToggle />
+    <MainLayout dict={dict} locale={validatedLocale}>
+      <div className="min-h-[calc(100vh-200px)] flex flex-col items-center justify-center gap-8">
+        {/* Header with title */}
+        <div className="flex items-center gap-4 flex-wrap justify-center">
+          <h1 className="text-4xl font-bold text-center">
+            {dict.welcome}
+          </h1>
         </div>
-      </div>
       
       {/* Description */}
       <p className={cn(typography.paragraph, "text-lg text-muted-foreground text-center max-w-md")}>
@@ -111,11 +107,12 @@ export default async function HomePage({ params }: HomePageProps) {
       </div>
       
       {/* Original test button */}
-      <Button variant="outline" className="mt-8" asChild>
-        <Link href={`/${validatedLocale}/dashboard`}>
-          {validatedLocale === 'ar' ? 'الذهاب إلى لوحة التحكم (يتطلب تسجيل الدخول)' : 'Go to Dashboard (requires login)'}
-        </Link>
-      </Button>
-    </div>
+        <Button variant="outline" className="mt-8" asChild>
+          <Link href={`/${validatedLocale}/dashboard`}>
+            {validatedLocale === 'ar' ? 'الذهاب إلى لوحة التحكم (يتطلب تسجيل الدخول)' : 'Go to Dashboard (requires login)'}
+          </Link>
+        </Button>
+      </div>
+    </MainLayout>
   );
 }

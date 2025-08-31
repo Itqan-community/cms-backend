@@ -7,7 +7,8 @@ import { isValidLocale } from "@/lib/i18n/utils";
 import type { Locale } from "@/lib/i18n/types";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/providers/theme-provider";
-import { AuthProvider } from "@/components/providers/auth-provider";
+import { Auth0ProviderWrapper } from "@/components/providers/auth0-provider";
+import { Auth0IntegratedProvider } from "@/components/providers/auth0-integrated-provider";
 import { direction } from "@/lib/styles/logical";
 
 const geistSans = Geist({
@@ -61,9 +62,11 @@ export default async function RootLayout({
         )}
       >
         <ThemeProvider>
-          <AuthProvider locale={validatedLocale}>
-            {children}
-          </AuthProvider>
+          <Auth0ProviderWrapper>
+            <Auth0IntegratedProvider locale={validatedLocale}>
+              {children}
+            </Auth0IntegratedProvider>
+          </Auth0ProviderWrapper>
         </ThemeProvider>
       </body>
     </html>

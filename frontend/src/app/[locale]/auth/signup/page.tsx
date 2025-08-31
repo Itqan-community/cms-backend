@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { AuthLayout } from '@/components/auth/auth-layout';
-import { SignupForm } from '@/components/auth/signup-form';
+import { Auth0SignupForm } from '@/components/auth/auth0-signup-form';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { isValidLocale } from '@/lib/i18n/utils';
 import type { Locale } from '@/lib/i18n/types';
@@ -24,7 +24,7 @@ export default async function SignupPage({ params }: SignupPageProps) {
 
   return (
     <AuthLayout locale={validatedLocale}>
-      <SignupForm dict={dict} locale={validatedLocale} />
+      <Auth0SignupForm dict={dict} locale={validatedLocale} />
     </AuthLayout>
   );
 }

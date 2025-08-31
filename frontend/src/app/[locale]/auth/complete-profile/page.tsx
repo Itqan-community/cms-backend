@@ -9,47 +9,26 @@ interface CompleteProfilePageProps {
   params: Promise<{
     locale: string;
   }>;
-  searchParams: Promise<{
-    provider?: 'google' | 'github';
-    firstName?: string;
-    lastName?: string;
-    email?: string;
-  }>;
 }
 
 export default async function CompleteProfilePage({ 
-  params, 
-  searchParams 
+  params
 }: CompleteProfilePageProps) {
   const { locale } = await params;
-  const { provider, firstName, lastName, email } = await searchParams;
   
   // Validate locale
   if (!isValidLocale(locale)) {
     notFound();
   }
   
-  // Validate provider
-  if (!provider || !['google', 'github'].includes(provider)) {
-    notFound();
-  }
-  
   const validatedLocale = locale as Locale;
   const dict = await getDictionary(validatedLocale);
-
-  const initialData = {
-    firstName: firstName || '',
-    lastName: lastName || '',
-    email: email || ''
-  };
 
   return (
     <AuthLayout locale={validatedLocale}>
       <SocialProfileForm 
         dict={dict} 
         locale={validatedLocale}
-        provider={provider}
-        initialData={initialData}
       />
     </AuthLayout>
   );

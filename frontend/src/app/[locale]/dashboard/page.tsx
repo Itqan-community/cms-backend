@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { isValidLocale } from '@/lib/i18n/utils';
 import type { Locale } from '@/lib/i18n/types';
+import { MainLayout } from '@/components/layout/main-layout';
 import { DashboardContent } from '@/components/dashboard/dashboard-content';
 
 interface DashboardPageProps {
@@ -21,7 +22,11 @@ export default async function DashboardPage({ params }: DashboardPageProps) {
   const validatedLocale = locale as Locale;
   const dict = await getDictionary(validatedLocale);
 
-  return <DashboardContent dict={dict} locale={validatedLocale} />;
+  return (
+    <MainLayout dict={dict} locale={validatedLocale}>
+      <DashboardContent dict={dict} locale={validatedLocale} />
+    </MainLayout>
+  );
 }
 
 export async function generateMetadata({ params }: DashboardPageProps) {

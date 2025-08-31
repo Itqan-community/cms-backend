@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { AuthLayout } from '@/components/auth/auth-layout';
-import { LoginForm } from '@/components/auth/login-form';
+import { Auth0LoginForm } from '@/components/auth/auth0-login-form';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { isValidLocale } from '@/lib/i18n/utils';
 import type { Locale } from '@/lib/i18n/types';
@@ -24,7 +24,7 @@ export default async function LoginPage({ params }: LoginPageProps) {
 
   return (
     <AuthLayout locale={validatedLocale}>
-      <LoginForm dict={dict} locale={validatedLocale} />
+      <Auth0LoginForm dict={dict} locale={validatedLocale} />
     </AuthLayout>
   );
 }
