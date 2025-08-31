@@ -48,9 +48,40 @@ export function Auth0IntegratedProvider({ children, locale }: AuthProviderProps)
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [requiresProfileCompletion, setRequiresProfileCompletion] = useState(false);
+
+  // Initialize user state from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const storedUser = localStorage.getItem('itqan_user');
+        const profileCompleted = localStorage.getItem('itqan_profile_completed');
+        
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+          setRequiresProfileCompletion(profileCompleted !== '1' && !parsedUser.profileCompleted);
+        }
+      } catch (error) {
+        console.error('Error loading user from localStorage:', error);
+      }
+    }
+  }, []);
   
   const router = useRouter();
   const pathname = usePathname();
+
+  // Helper function to update user state and persist to localStorage
+  const persistUserState = (userData: User | null) => {
+    setUser(userData);
+    if (typeof window !== 'undefined') {
+      if (userData) {
+        localStorage.setItem('itqan_user', JSON.stringify(userData));
+      } else {
+        localStorage.removeItem('itqan_user');
+        localStorage.removeItem('itqan_profile_completed');
+      }
+    }
+  };
 
   // Sync Auth0 user with our backend
   useEffect(() => {
@@ -103,18 +134,18 @@ export function Auth0IntegratedProvider({ children, locale }: AuthProviderProps)
             }
           } catch {}
 
-          setUser(userData);
+          persistUserState(userData);
           setRequiresProfileCompletion(!userData.profileCompleted);
           
           // Skip backend validation for now - we'll implement this after profile completion
           // TODO: Re-enable backend sync after fixing JWT token issues
         } else {
-          setUser(null);
+          persistUserState(null);
           setRequiresProfileCompletion(false);
         }
       } catch (error) {
         console.error('Error syncing user:', error);
-        setUser(null);
+        persistUserState(null);
       } finally {
         setIsLoading(false);
       }
@@ -125,10 +156,15 @@ export function Auth0IntegratedProvider({ children, locale }: AuthProviderProps)
 
   // Handle route protection
   useEffect(() => {
+    // Wait for both Auth0 and our internal loading to complete
     if (isLoading || auth0IsLoading) return;
 
     const isAuthRoute = pathname.includes('/auth/');
     const isHomePage = pathname === `/${locale}` || pathname === `/${locale}/`;
+    const isCallbackRoute = pathname.includes('/auth/callback');
+    
+    // Don't redirect during callback processing
+    if (isCallbackRoute) return;
     
     // If user is authenticated
     if (auth0IsAuthenticated && user) {
@@ -139,14 +175,15 @@ export function Auth0IntegratedProvider({ children, locale }: AuthProviderProps)
       }
       
       // If profile is completed and user is on auth pages, redirect to dashboard/home
-      if (!requiresProfileCompletion && isAuthRoute) {
+      if (!requiresProfileCompletion && isAuthRoute && !isCallbackRoute) {
         router.replace(`/${locale}/dashboard`);
         return;
       }
     }
     
-    // If user is not authenticated and trying to access protected routes
-    if (!auth0IsAuthenticated && !isAuthRoute && !isHomePage) {
+    // Only redirect to login if we're sure the user is not authenticated
+    // and Auth0 has finished loading (to avoid redirecting during token refresh)
+    if (!auth0IsAuthenticated && !auth0IsLoading && !isAuthRoute && !isHomePage) {
       router.replace(`/${locale}/auth/login`);
       return;
     }
@@ -222,12 +259,12 @@ export function Auth0IntegratedProvider({ children, locale }: AuthProviderProps)
           profileCompleted: true,
           auth0Id: auth0User?.sub!,
         };
-        setUser(userData);
+        persistUserState(userData);
         setRequiresProfileCompletion(false);
         
-        // Set localStorage flag to persist profile completion
+        // Set profile completion flag
         if (typeof window !== 'undefined') {
-          window.localStorage.setItem('itqan_profile_completed', '1');
+          localStorage.setItem('itqan_profile_completed', '1');
         }
         
         router.replace(`/${locale}/dashboard`);
