@@ -1,0 +1,649 @@
+---
+alwaysApply: true
+---
+
+# CMS V1 Frontend Rules
+
+### Interaction protocol
+1) First response to any user message:
+- Ask clarifying questions needed to fully understand the task.
+- Number of questions depends on complexity; ask only what is necessary.
+- Do not take any action (no edits, commands, or irreversible steps) until answers are received.
+
+2) After clarifications are provided:
+- Convert the request and clarifications into a single JSON object using the schema below.
+- Display the JSON to the user before acting, in a fenced json code block.
+- Then act on the task, using the JSON as the source of truth. If anything remains ambiguous, ask a brief follow-up before acting.
+
+3) Ongoing:
+- If new information arrives, update and redisplay the JSON before any further action.
+
+## Project Overview
+- **Mission**: Build platform for Quranic data distribution
+- **Two main actors**: Publishers (upload data) and Consumers/Developers (access data)
+- **Non-profit**: Community-first, open-source approach
+- **Website**: www.itqan.dev
+- **Frontend Focus**: Multilingual UI with RTL/LTR support, modern React patterns
+
+## Frontend Architecture
+- **Framework**: Next.js 15 with App Router and React 19
+- **Language**: TypeScript with strict typing
+- **Styling**: Tailwind CSS with CSS logical properties for RTL support
+- **UI Components**: shadcn/ui + Radix UI primitives
+- **State Management**: React built-in state + Context providers
+- **Internationalization**: Custom i18n with Arabic (RTL) + English (LTR)
+- **Authentication**: Auth0 React SDK integration
+- **Build Tool**: Turbopack for development and production
+- **Deployment**: Netlify with SSG optimization
+
+## Critical Guidelines Reference
+- **Detailed Implementation Rules**: Always follow `GUIDELINES.md` in frontend root - THIS IS MANDATORY
+- **Architecture Patterns**: Strictly maintain directory structure defined in GUIDELINES.md Section "Directory Structure - STRICTLY ENFORCED"
+- **Naming Conventions**: Follow GUIDELINES.md Section "Naming Conventions" - kebab-case files, PascalCase components, camelCase functions
+- **RTL/LTR Requirements**: Use CSS logical properties exclusively per GUIDELINES.md Section "CSS Logical Properties - MANDATORY"
+- **Type Safety**: Follow TypeScript patterns in GUIDELINES.md Section "Internationalization Guidelines" - no `any` types allowed
+- **Component Patterns**: Server-first approach per GUIDELINES.md Section "Component Development Rules"
+- **Import Organization**: Follow GUIDELINES.md Section "Import Guidelines" - External → Next.js → Internal → Types
+- **Translation Management**: Follow GUIDELINES.md Section "Translation Management" for adding/using translations
+- **Theme System**: Follow GUIDELINES.md Section "Theme System Guidelines" for theme-aware components
+
+## V1 Frontend Scope & Constraints
+- **Authentication**: Auth0 social login + profile completion flow
+- **Languages**: Arabic (default) and English with full RTL/LTR support
+- **Responsive**: Mobile-first design with desktop optimization
+- **Accessibility**: WCAG compliance with proper ARIA labels
+- **Performance**: SSR/SSG for SEO, lazy loading for client components
+- **Theme**: Dark/Light mode with system preference detection
+
+## Technical Stack
+- **Frontend**: Next.js 15 + React 19 with SSR/SSG, Tailwind CSS, TypeScript
+  - UI: shadcn/ui + Radix UI components
+  - Icons: Lucide React
+  - Styling: CSS logical properties for RTL compatibility
+  - Fonts: System fonts with Arabic typography support
+- **Authentication**: Auth0 React SDK
+- **Development**: ESLint, TypeScript strict mode, Turbopack
+- **Deployment**: Netlify with automated builds
+- **Analytics**: Minimal, privacy-focused tracking
+
+## Prompt Structure Protocol
+- **Before starting any task**: Convert user prompt to structured format
+- **Required JSON structure**:
+```json
+{
+  "prompt": "Clear description of the autonomous task to complete",
+  "context": {
+    "project": "Itqan CMS Frontend",
+    "feature": "Feature name", 
+    "auth_model": "Auth0 React SDK",
+    "tech_stack": ["Next.js 15", "React 19", "TypeScript", "Tailwind CSS", "shadcn/ui"],
+    "screens": ["SCREEN-ID"],
+    "colors": {"primary": "#669B80", "dark": "#22433D"},
+    "i18n": {"default": "ar", "supported": ["ar", "en"]},
+    "rtl_support": true
+  },
+  "objectives": ["Clear numbered objectives"],
+  "tasks": ["Specific actionable tasks"],
+  "guard_rails": ["Safety and security constraints"],
+  "acceptance_criteria": ["Testable success conditions"],
+  "definition_of_done": ["Completion requirements"],
+  "out_of_scope": ["What not to include"],
+  "references": ["Related files and documentation", "GUIDELINES.md sections"]
+}
+```
+- Ask questions to confirm your understanding of task before proceeding
+
+## Development Guidelines
+
+### File Structure & Naming (GUIDELINES.md Sections: "Directory Structure" & "Naming Conventions")
+- **File Structure**: Strictly follow GUIDELINES.md directory structure - PROTECTED/CRITICAL files require special care
+- **Files/Directories**: kebab-case only (e.g., `language-switcher.tsx`, `i18n/utils.ts`)
+- **Components**: PascalCase for component names (e.g., `LanguageSwitcher`, `ThemeProvider`)
+- **Functions/Variables**: camelCase (e.g., `currentLocale`, `isValidLocale`, `getDictionary`)
+- **Types/Interfaces**: PascalCase (e.g., `Locale`, `HomePageProps`, `LocaleContextType`)
+- **Constants**: SCREAMING_SNAKE_CASE for global, camelCase for local
+
+### Import Organization (GUIDELINES.md Section: "Import Guidelines")
+```typescript
+// ✅ CORRECT - Import order
+import React from 'react';                    // External libraries
+import { NextRequest } from 'next/server';    // Next.js imports
+import { Button } from '@/components/ui/button'; // Internal components
+import { cn } from '@/lib/utils';             // Internal utilities
+import type { Locale } from '@/lib/i18n/types'; // Type imports last
+```
+
+### Type Safety (GUIDELINES.md Section: "Internationalization Guidelines")
+- **No `any` types**: Everything must be strictly typed
+- **Locale Validation**: Always use `isValidLocale()` before casting to `Locale`
+- **Type Guards**: Implement proper type guards for all user inputs
+- **Interface Updates**: Update type definitions when adding new translations
+
+### Strongly Typed View Models (MANDATORY)
+- **View Model Definition**: Every view/page MUST define strongly typed models for all data structures
+- **Interface First**: Define TypeScript interfaces before implementing components
+- **API Contract Types**: Create types that match backend API responses exactly
+- **Props Typing**: All component props must be explicitly typed with interfaces
+- **State Typing**: All React state must be strongly typed (no generic useState)
+- **Form Data Types**: All form inputs and validation schemas must be typed
+- **Error Types**: Define specific error types for different failure scenarios
+- **Loading States**: Type loading and async states explicitly
+
+### RTL Compliance (GUIDELINES.md Section: "CSS Logical Properties - MANDATORY")
+- **Logical Properties Only**: Never use physical directional properties (left/right)
+- **Use Logical Utilities**: Import and use `logical`, `layoutPatterns`, `spacing` from `@/lib/styles/logical`
+- **Class Merging**: Always use `cn()` utility for class merging
+- **Direction Awareness**: Use `direction.isRTL(locale)` for conditional logic
+
+### Component Patterns (GUIDELINES.md Section: "Component Development Rules")
+- **Server First**: Server components by default, client components only when interactive features needed
+- **Translation Loading**: Server components use `getDictionary()`, client components use `useTranslation()`
+- **Theme Integration**: Use `ThemeProvider` from `@/components/providers/theme-provider`
+- **Environment Variables**: Use `env` utility from `@/lib/env`, never access `process.env` directly
+
+### Performance & Security
+- **Bundle Optimization**: Monitor package imports, use dynamic imports for heavy components
+- **Input Validation**: Validate all user inputs with proper type guards
+- **Security Headers**: Maintain security headers in middleware.ts
+- **Accessibility**: WCAG compliance with proper ARIA labels and keyboard navigation
+
+## Critical Protected Files
+- **NEVER MODIFY WITHOUT EXTREME CAUTION**:
+  - `src/middleware.ts` - Routing, security, i18n detection
+  - `src/app/[locale]/layout.tsx` - Root layout with SSR
+  - `src/lib/i18n/types.ts` - Core type definitions
+  - `src/lib/i18n/utils.ts` - Locale validation and utilities
+  - `src/app/globals.css` - RTL/LTR base styles
+  - `package.json` - Dependencies and build scripts
+  - `next.config.ts` - Next.js configuration
+  - `tsconfig.json` - TypeScript configuration
+
+## RTL/LTR Requirements
+- **Default Language**: Arabic (RTL)
+- **Supported Locales**: `ar` (Arabic), `en` (English)
+- **URL Structure**: `/ar/page` (default), `/en/page`
+- **Styling**: Use CSS logical properties exclusively
+- **Text Direction**: Automatic based on locale detection
+- **Layout Mirroring**: Flexbox, margins, padding must reverse properly
+- **Typography**: Proper Arabic font rendering and line spacing
+
+## Component Development Rules
+### Server Components (Default)
+```typescript
+// ✅ CORRECT - Server component pattern
+export default async function MyPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const validatedLocale = locale as Locale;
+  const dict = await getDictionary(validatedLocale);
+  
+  return <div>{dict.title}</div>;
+}
+```
+
+### Client Components (When Required)
+```typescript
+// ✅ CORRECT - Client component pattern
+"use client";
+export function MyClientComponent() {
+  const { t, locale, isRTL } = useTranslation();
+  
+  return (
+    <div className={cn(logical.textStart)}>
+      {t('title')}
+    </div>
+  );
+}
+```
+
+### Styling Requirements
+```typescript
+// ✅ CORRECT - Use logical properties
+import { logical, layoutPatterns } from '@/lib/styles/logical';
+
+className={cn(
+  logical.paddingStart('4'),     // ps-4 (RTL-aware)
+  logical.textStart,             // text-start (RTL-aware)
+  layoutPatterns.spaceBetween    // flex justify-between items-center
+)}
+
+// ❌ WRONG - Physical properties
+className="pl-4 text-left ml-auto" // Not RTL-aware
+```
+
+## Authentication Integration
+- **Provider**: Auth0 React SDK
+- **Flow**: Social login → Profile completion → Dashboard
+- **Session**: Secure token storage with refresh handling
+- **Protection**: Route-level authentication guards
+- **Profile**: Additional data stored in backend database
+- **Logout**: Proper cleanup of Auth0 and application state
+
+## Performance Requirements
+- **Core Web Vitals**: LCP < 2.5s, FID < 100ms, CLS < 0.1
+- **Bundle Size**: Monitor and optimize component imports
+- **Images**: Next.js Image optimization with proper sizing
+- **Fonts**: System fonts with Arabic fallbacks
+- **Caching**: Proper HTTP caching headers via Netlify
+- **SSR**: Critical pages server-rendered for SEO
+- **Lazy Loading**: Non-critical components and routes
+
+## Security Guidelines (GUIDELINES.md Section: "Critical Security Rules")
+
+### Middleware Security (GUIDELINES.md Reference)
+```typescript
+// ✅ CRITICAL - Always include security headers
+const response = NextResponse.next();
+response.headers.set('X-Content-Type-Options', 'nosniff');
+response.headers.set('X-Frame-Options', 'DENY');
+response.headers.set('X-XSS-Protection', '1; mode=block');
+```
+
+### Input Validation (GUIDELINES.md Reference)
+```typescript
+// ✅ ALWAYS validate user inputs
+function isValidLocale(locale: string): locale is Locale {
+  return locales.includes(locale as Locale);
+}
+
+// ✅ ALWAYS validate before using
+if (!isValidLocale(userInput)) {
+  throw new Error('Invalid locale');
+}
+```
+
+### Security Best Practices
+- **Input Validation**: All user inputs validated with proper type guards
+- **XSS Prevention**: Proper data escaping and Content Security Policy
+- **CSRF Protection**: Token-based protection where needed
+- **Headers**: Security headers in middleware.ts (CRITICAL FILE)
+- **Environment**: Secure environment variable handling via lib/env.ts
+- **Dependencies**: Regular security audits and updates
+- **Locale Validation**: Never bypass locale validation - always use `isValidLocale()`
+- **Type Safety**: Strict TypeScript prevents many security issues
+
+## Testing Requirements
+- **Type Safety**: Full TypeScript coverage with strict mode
+- **RTL Testing**: Visual regression tests for both directions
+- **i18n Testing**: Translation completeness and accuracy
+- **Component Testing**: Key user flows and edge cases
+- **Accessibility**: Screen reader and keyboard navigation testing
+- **Performance**: Bundle size and rendering performance monitoring
+
+## Deployment & Environments
+- **Production**: `https://cms.itqan.dev` (Netlify)
+- **Preview**: Netlify preview deployments for PRs
+- **Development**: `http://localhost:3000`
+- **Build**: `npm run build` for production optimization
+- **Type Checking**: `npm run type-check` before deployment
+
+## Code Quality Rules (GUIDELINES.md Section: "Forbidden Practices")
+
+### FORBIDDEN PRACTICES - NEVER DO THESE
+```typescript
+// ❌ NEVER modify core i18n types without approval
+export type Locale = 'ar' | 'en' | 'fr'; // Requires architecture review
+
+// ❌ NEVER bypass locale validation
+const locale = pathname.split('/')[1] as Locale; // Wrong! Use validation
+
+// ❌ NEVER use physical CSS properties in new code
+className="ml-4 text-left pl-4" // Use logical properties instead
+
+// ❌ NEVER import translations directly
+import ar from '@/dictionaries/ar.json'; // Use getDictionary() instead
+
+// ❌ NEVER modify middleware without extreme caution
+// This file controls routing and security - requires careful review
+
+// ❌ NEVER add client-side code to server components
+"use client"; // Only when absolutely necessary
+
+// ❌ NEVER use hardcoded theme values
+const isDark = document.body.classList.contains('dark'); // Use useTheme()
+
+// ❌ NEVER modify tsconfig.json paths without understanding impact
+"paths": { "@/*": ["./different/path/*"] } // Could break everything
+
+// ❌ NEVER use string concatenation for classes
+className={"base-classes " + (conditionalClass ? "conditional-classes" : "")} // Use cn()
+
+// ❌ NEVER access process.env directly in components
+const url = process.env.NEXT_PUBLIC_BACKEND_URL; // Use env utility
+
+// ❌ NEVER use untyped view models or components
+function MyComponent(props: any) { } // Wrong! Must be strongly typed
+const [data, setData] = useState(); // Wrong! Must specify type
+interface Props { data: any; } // Wrong! Must be specific types
+
+// ❌ NEVER use generic Function type
+interface Props {
+  onClick: Function; // Wrong! Use specific function signature
+  callback: (...args: any[]) => any; // Wrong! Type the parameters
+}
+
+// ❌ NEVER skip error type definitions
+try {
+  await apiCall();
+} catch (error) {
+  console.log(error); // Wrong! Should type and handle specific errors
+}
+```
+
+### Package Installation Rules (GUIDELINES.md Section: "Package Installation Rules")
+```bash
+# ✅ CORRECT - Always specify exact versions for critical deps
+npm install next@15.5.0
+npm install react@19.1.0
+npm install typescript@^5
+
+# ✅ CORRECT - Group related dependencies
+npm install @radix-ui/react-slot class-variance-authority clsx
+
+# ❌ WRONG - Don't install without version specification for core deps
+npm install next  # Could break compatibility
+```
+
+### REQUIRED PATTERNS - ALWAYS USE THESE (GUIDELINES.md Reference)
+
+#### Locale Type Safety (GUIDELINES.md Section: "Locale Type Safety")
+```typescript
+// ✅ ALWAYS use the Locale type
+import type { Locale } from '@/lib/i18n/types';
+
+// ✅ ALWAYS validate before casting
+if (!isValidLocale(locale)) {
+  notFound();
+}
+const validatedLocale = locale as Locale;
+
+// ❌ NEVER use string directly
+const locale: string = 'ar'; // Wrong!
+```
+
+#### Translation Loading (GUIDELINES.md Section: "Translation Loading")
+```typescript
+// ✅ CORRECT - Server components
+const dict = await getDictionary(locale);
+
+// ✅ CORRECT - Client components
+const { t, dict } = useTranslation();
+
+// ❌ NEVER import translations directly
+import ar from '@/dictionaries/ar.json'; // Wrong!
+```
+
+#### RTL/LTR Handling (GUIDELINES.md Section: "RTL/LTR Handling")
+```typescript
+// ✅ ALWAYS use logical properties
+import { logical, direction } from '@/lib/styles/logical';
+
+// ✅ CORRECT usage
+className={cn(logical.paddingStart('4'), logical.textStart)}
+const isRTL = direction.isRTL(locale);
+
+// ❌ NEVER use hardcoded directional classes
+className="pl-4 text-left" // Wrong! Not RTL-aware
+```
+
+#### Component Styling (GUIDELINES.md Section: "Component Styling Patterns")
+```typescript
+// ✅ CORRECT - Use cn() utility for class merging
+import { cn } from '@/lib/utils';
+
+className={cn(
+  "base-classes",
+  conditionalClass && "conditional-classes",
+  props.className
+)}
+
+// ❌ WRONG - String concatenation
+className={"base-classes " + (conditionalClass ? "conditional-classes" : "")}
+```
+
+#### Environment Variables (GUIDELINES.md Section: "Environment Variables")
+```typescript
+// ✅ ALWAYS use the env utility
+import { env, isDevelopment } from '@/lib/env';
+
+const backendUrl = env.NEXT_PUBLIC_BACKEND_URL;
+if (isDevelopment) {
+  console.log('Development mode');
+}
+
+// ❌ NEVER access process.env directly in components
+const url = process.env.NEXT_PUBLIC_BACKEND_URL; // Wrong!
+```
+
+#### Strongly Typed View Models (MANDATORY PATTERNS)
+```typescript
+// ✅ CORRECT - Define view model interfaces first
+interface AssetListPageProps {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{ page?: string; category?: string }>;
+}
+
+interface AssetViewModel {
+  id: string;
+  title: string;
+  description: string;
+  publishedAt: Date;
+  publisher: PublisherViewModel;
+  categories: CategoryViewModel[];
+  downloadCount: number;
+  licenseType: LicenseType;
+}
+
+interface PublisherViewModel {
+  id: string;
+  name: string;
+  avatar?: string;
+  verified: boolean;
+}
+
+// ✅ CORRECT - API response types
+interface AssetListResponse {
+  assets: AssetViewModel[];
+  pagination: {
+    page: number;
+    totalPages: number;
+    totalItems: number;
+    hasNext: boolean;
+    hasPrevious: boolean;
+  };
+}
+
+// ✅ CORRECT - Form data types
+interface AssetUploadFormData {
+  title: string;
+  description: string;
+  categoryIds: string[];
+  file: File;
+  licenseType: LicenseType;
+  tags: string[];
+}
+
+// ✅ CORRECT - Error types
+interface ValidationError {
+  field: string;
+  message: string;
+  code: string;
+}
+
+interface ApiError {
+  message: string;
+  statusCode: number;
+  errors?: ValidationError[];
+}
+
+// ✅ CORRECT - Loading states
+interface AsyncState<T> {
+  data: T | null;
+  loading: boolean;
+  error: ApiError | null;
+}
+
+// ✅ CORRECT - Component with strongly typed props
+interface AssetCardProps {
+  asset: AssetViewModel;
+  onDownload: (assetId: string) => Promise<void>;
+  showPublisher?: boolean;
+  className?: string;
+}
+
+export function AssetCard({ asset, onDownload, showPublisher = true, className }: AssetCardProps) {
+  const [downloadState, setDownloadState] = useState<AsyncState<void>>({
+    data: null,
+    loading: false,
+    error: null
+  });
+
+  const handleDownload = async () => {
+    setDownloadState(prev => ({ ...prev, loading: true, error: null }));
+    try {
+      await onDownload(asset.id);
+      setDownloadState(prev => ({ ...prev, loading: false, data: null }));
+    } catch (error) {
+      setDownloadState(prev => ({ 
+        ...prev, 
+        loading: false, 
+        error: error as ApiError 
+      }));
+    }
+  };
+
+  return (
+    <div className={cn("asset-card", className)}>
+      {/* Component implementation */}
+    </div>
+  );
+}
+
+// ❌ WRONG - Untyped or loosely typed
+function AssetCard({ asset, onDownload }: any) { // Wrong! No types
+  const [loading, setLoading] = useState(); // Wrong! No type
+  const [data, setData] = useState(null); // Wrong! Should be typed
+  
+  // Wrong! No error handling types
+  const handleClick = () => onDownload(asset.id);
+}
+
+// ❌ WRONG - Generic types without specificity
+interface GenericProps {
+  data: any; // Wrong! Should be specific
+  callback: Function; // Wrong! Should be typed function
+}
+```
+
+## Code Review Checklist (GUIDELINES.md Section: "Code Review Checklist")
+
+### Before Submitting Changes - MANDATORY CHECKS
+
+#### ✅ **Type Safety & View Models**
+- [ ] All variables are properly typed
+- [ ] No `any` types used
+- [ ] Proper type guards implemented
+- [ ] Interface definitions updated
+- [ ] Locale type used correctly with validation
+- [ ] **View models defined for all data structures**
+- [ ] **Component props explicitly typed with interfaces**
+- [ ] **API response types match backend contracts**
+- [ ] **Form data and validation schemas are typed**
+- [ ] **Error types defined for failure scenarios**
+- [ ] **React state typed explicitly (no generic useState)**
+- [ ] **Async/loading states properly typed**
+
+#### ✅ **Internationalization**
+- [ ] Uses Locale type correctly
+- [ ] No hardcoded strings (use translations)
+- [ ] RTL/LTR compatibility maintained
+- [ ] Logical properties used for styling
+- [ ] Translation keys added to both ar.json and en.json
+- [ ] Dictionary type updated if new keys added
+
+#### ✅ **Performance**
+- [ ] Server components preferred over client components
+- [ ] Proper code splitting maintained
+- [ ] No unnecessary re-renders
+- [ ] Bundle size impact considered
+- [ ] Images optimized with Next.js Image component
+
+#### ✅ **Architecture**
+- [ ] File placed in correct directory per GUIDELINES.md structure
+- [ ] Naming conventions followed (kebab-case files, PascalCase components)
+- [ ] No circular dependencies
+- [ ] Proper error handling
+- [ ] Import organization follows External → Next.js → Internal → Types
+
+#### ✅ **Security & Validation**
+- [ ] All user inputs validated
+- [ ] No direct process.env access (use env utility)
+- [ ] Locale validation used before casting
+- [ ] No XSS vulnerabilities introduced
+
+#### ✅ **Build & Lint**
+- [ ] `npm run build` succeeds
+- [ ] `npm run lint` passes
+- [ ] `npm run type-check` passes
+- [ ] No console errors/warnings
+- [ ] RTL layout tested in both Arabic and English
+
+## Emergency Procedures
+### Critical File Recovery
+1. **Never delete** protected files without backup
+2. **Always test** i18n changes in both Arabic and English
+3. **Verify** RTL layout doesn't break with new components
+4. **Check** type safety with `npm run type-check`
+5. **Validate** build success with `npm run build`
+6. **Review** GUIDELINES.md for any missed requirements
+
+### Performance Issues
+1. **Identify** heavy components with bundle analyzer
+2. **Optimize** images and fonts loading
+3. **Review** client vs server component usage per GUIDELINES.md patterns
+4. **Check** for unnecessary re-renders
+5. **Monitor** Core Web Vitals metrics
+6. **Verify** logical properties usage for RTL performance
+
+## Development Workflow (GUIDELINES.md Section: "Development Workflow")
+
+### Adding New Features
+1. **Plan**: Review architecture impact against GUIDELINES.md
+2. **Design**: Follow established patterns in GUIDELINES.md
+3. **Implement**: Use guidelines and conventions strictly
+4. **Review**: Self-check against code review checklist above
+5. **Document**: Update relevant documentation
+
+### Modifying Existing Features
+1. **Understand**: Read existing code thoroughly
+2. **Preserve**: Maintain backward compatibility
+3. **Enhance**: Follow improvement patterns from GUIDELINES.md
+4. **Validate**: Verify all affected areas work correctly
+5. **Document**: Update changed behavior
+
+### Emergency Fixes
+1. **Assess**: Understand the urgency
+2. **Isolate**: Minimize change scope
+3. **Validate**: Verify fix doesn't break core features
+4. **Document**: Explain the emergency change
+5. **Follow-up**: Plan proper solution if needed
+
+---
+
+## 🎯 **REMEMBER: These rules work together with GUIDELINES.md**
+
+- **GUIDELINES.md**: Detailed implementation patterns and code examples (560 lines of comprehensive rules)
+- **cms-v1.mdc**: High-level architecture and workflow rules
+- **Both are MANDATORY** and must be followed strictly
+- **GUIDELINES.md Sections Referenced**: Directory Structure, Naming Conventions, Internationalization Guidelines, CSS Logical Properties, Component Development Rules, Import Guidelines, Translation Management, Theme System Guidelines, Critical Security Rules, Code Review Checklist, Forbidden Practices, Development Workflow
+
+Following these guidelines ensures:
+- **Consistency** with project architecture
+- **Quality** that meets production standards  
+- **Maintainability** for future development
+- **RTL/LTR** compatibility across all features
+- **Performance** optimization for global audience
+- **Security** best practices implementation
+- **Type Safety** with strict TypeScript patterns
+- **Accessibility** with WCAG compliance
+
+**Any deviation from these guidelines requires explicit approval and documentation of the reasoning.**

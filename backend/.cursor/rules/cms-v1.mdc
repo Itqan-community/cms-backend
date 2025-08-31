@@ -44,12 +44,14 @@ alwaysApply: true
 - **Roles**: Owner + Manager only (expand later)
 
 ## Technical Stack
-- **Frontend**: Angular 19 CSR with Signals, Vite builder
-  - Later: Angular Universal for SSR when SEO/TTFB needed
+- **Frontend**: Next.js 15 + React 19 with SSR/SSG, Tailwind CSS, TypeScript
+  - UI: shadcn/ui + Radix UI components
+  - I18n: Built-in RTL/LTR support (Arabic/English)
+  - Styling: CSS logical properties for RTL compatibility
 - **Backend**: Django + Django REST Framework for APIs
-  - Admin: Custom Angular Admin (replaces Wagtail)
+  - Admin: Custom admin interface
 - **Authentication**: Auth0
-  - Angular: SPA SDK
+  - Frontend: Auth0 React SDK
   - Django: OIDC/JWKS verification
 - **Search**: Meilisearch via Celery indexers on Django signals
 - **Storage**: django-storages integration
@@ -74,7 +76,7 @@ alwaysApply: true
     "project": "Itqan CMS",
     "feature": "Feature name", 
     "auth_model": "Auth0 Hybrid (SPA + M2M)",
-    "tech_stack": ["Angular 19", "Django 5.2", "PostgreSQL", "NG-ZORRO"],
+    "tech_stack": ["Next.js 15", "React 19", "Django 5.2", "PostgreSQL", "Tailwind CSS", "shadcn/ui"],
     "screens": ["SCREEN-ID"],
     "colors": {"primary": "#669B80", "dark": "#22433D"}
   },
@@ -96,6 +98,9 @@ alwaysApply: true
 - **Testing**: Test Publisher and Consumer workflows separately
 - **Documentation**: Generate API docs from processed resources
 - **AI-Human Balance**: Set clear objectives, balance AI insights with human judgment, and limit data review to avoid information overload
+- **Internationalization**: All features must support Arabic (RTL) and English (LTR) layouts
+- **RTL Compliance**: Use CSS logical properties, proper text alignment, and direction-aware layouts
+- **Type Safety**: Maintain strict TypeScript typing across frontend and API contracts
 
 ## Environments & URLs
 - Production: `https://cms.itqan.dev`
