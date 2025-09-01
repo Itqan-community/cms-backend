@@ -4,12 +4,12 @@
 
     # Handle static files FIRST (before reverse proxy)
     handle /static/* {
-        root * /srv/static
+        root * /srv
         file_server
     }
     
     handle /media/* {
-        root * /srv/media
+        root * /srv
         file_server
     }
 
