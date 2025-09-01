@@ -1,0 +1,41 @@
+{$SITE_DOMAIN} {
+    # Enable gzip compression
+    encode gzip
+
+    # Handle static files FIRST (before reverse proxy)
+    handle /static/* {
+        root * /srv
+        file_server
+    }
+    
+    handle /media/* {
+        root * /srv
+        file_server
+    }
+
+    # Reverse proxy to Django application (for all other requests)
+    reverse_proxy web:8000
+
+    # Security headers
+    header {
+        # Prevent MIME type sniffing
+        X-Content-Type-Options nosniff
+        # Prevent clickjacking
+        X-Frame-Options DENY
+        # Enable XSS protection
+        X-XSS-Protection "1; mode=block"
+        # HSTS (uncomment for production)
+        # Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    }
+
+    # Enable access logs
+    log {
+        output file /var/log/caddy/access.log
+        format json
+    }
+
+    # Health check endpoint
+    handle /health {
+        respond "OK" 200
+    }
+}

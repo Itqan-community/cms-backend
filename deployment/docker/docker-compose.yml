@@ -1,178 +1,48 @@
-version: '3.8'
+version: '3.9'
 
 services:
-  # PostgreSQL Database
-  postgres:
-    image: postgres:16-alpine
-    container_name: itqan-postgres
-    environment:
-      POSTGRES_DB: itqan_cms
-      POSTGRES_USER: itqan_user
-      POSTGRES_PASSWORD: itqan_password
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
-    networks:
-      - itqan-network
-    restart: unless-stopped
-
-  # Redis for Celery and Caching
-  redis:
-    image: redis:7-alpine
-    container_name: itqan-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - itqan-network
-    restart: unless-stopped
-    command: redis-server --appendonly yes
-
-  # MeiliSearch for Full-text Search
-  meilisearch:
-    image: getmeili/meilisearch:v1.6
-    container_name: itqan-meilisearch
-    environment:
-      MEILI_ENV: development
-      MEILI_MASTER_KEY: itqan-meili-master-key-dev
-      MEILI_HTTP_ADDR: "0.0.0.0:7700"
-    ports:
-      - "7700:7700"
-    volumes:
-      - meilisearch_data:/meili_data
-    networks:
-      - itqan-network
-    restart: unless-stopped
-
-  # MinIO for S3-compatible Storage (Development)
-  minio:
-    image: minio/minio:latest
-    container_name: itqan-minio
-    environment:
-      MINIO_ROOT_USER: itqan-minio-access
-      MINIO_ROOT_PASSWORD: itqan-minio-secret-key
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    volumes:
-      - minio_data:/data
-    networks:
-      - itqan-network
-    restart: unless-stopped
-    command: server /data --console-address ":9001"
-
-  # Django Backend
-  backend:
+  web:
     build:
-      context: ../../backend
-      dockerfile: ../deployment/docker/Dockerfile.backend
-    container_name: itqan-backend
+      context: ../../
+      dockerfile: deployment/docker/Dockerfile.backend
+    env_file:
+      - .env
     environment:
-      - DEBUG=True
-      - SECRET_KEY=django-dev-secret-key-change-in-production
-      - DB_NAME=itqan_cms
-      - DB_USER=itqan_user
-      - DB_PASSWORD=itqan_password
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - REDIS_URL=redis://redis:6379/1
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - DJANGO_SETTINGS_MODULE=config.settings.development
-      - AUTH0_ROLE_CLAIM=https://cms.itqan.dev/roles
-      - AUTH0_AUDIENCE=https://api.cms.itqan.dev
-      - AUTH0_DOMAIN=dev-itqan.eu.auth0.com
-      - AUTH0_CLIENT_ID=h4NPegjClDuYxZefNBeXIhqXbu9SV6aC
-      - AUTH0_CLIENT_SECRET=AjwysVUiFkVbZ1SEjFBbAcNMIPEEQSimbMKx_aMraEW5SiKGZgu_7Smoei8T8kUk
-    ports:
-      - "8000:8000"
+      DJANGO_SETTINGS_MODULE: itqan_cms.settings
+      PYTHONUNBUFFERED: "1"
+      PGSSLMODE: require
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     volumes:
-      - ../../backend:/app
-      - backend_media:/app/media
-      - backend_static:/app/staticfiles
-    networks:
-      - itqan-network
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    restart: unless-stopped
     depends_on:
-      - postgres
-      - redis
-      - meilisearch
-    restart: unless-stopped
-    command: >
-      sh -c "
-        python manage.py migrate &&
-        python manage.py collectstatic --noinput &&
-        python manage.py runserver 0.0.0.0:8000
-      "
+      - caddy
 
-  # Celery Worker for Background Tasks
-  celery-worker:
-    build:
-      context: ../../backend
-      dockerfile: ../deployment/docker/Dockerfile.backend
-    container_name: itqan-celery-worker
-    environment:
-      - DEBUG=True
-      - SECRET_KEY=django-dev-secret-key-change-in-production
-      - DB_NAME=itqan_cms
-      - DB_USER=itqan_user
-      - DB_PASSWORD=itqan_password
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - REDIS_URL=redis://redis:6379/1
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - DJANGO_SETTINGS_MODULE=config.settings.development
-      - AUTH0_ROLE_CLAIM=https://cms.itqan.dev/roles
-      - AUTH0_AUDIENCE=https://api.cms.itqan.dev
-      - AUTH0_DOMAIN=dev-itqan.eu.auth0.com
-      - AUTH0_CLIENT_ID=h4NPegjClDuYxZefNBeXIhqXbu9SV6aC
-      - AUTH0_CLIENT_SECRET=AjwysVUiFkVbZ1SEjFBbAcNMIPEEQSimbMKx_aMraEW5SiKGZgu_7Smoei8T8kUk
-    volumes:
-      - ../../backend:/app
-    networks:
-      - itqan-network
-    depends_on:
-      - postgres
-      - redis
-      - backend
-    restart: unless-stopped
-    command: celery -A config worker --loglevel=info
-
-  # Angular Frontend
-  frontend:
-    build:
-      context: ../../frontend
-      dockerfile: ../deployment/docker/Dockerfile.frontend
-    container_name: itqan-frontend
-    environment:
-      - NODE_ENV=development
+  caddy:
+    image: caddy:2-alpine
     ports:
-      - "4200:4200"
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN}
     volumes:
-      - ../../frontend:/app
-      - /app/node_modules
-    networks:
-      - itqan-network
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - static_volume:/srv/static:ro
+      - media_volume:/srv/media:ro
+      - caddy_logs:/var/log/caddy
     restart: unless-stopped
-    command: npm run start -- --host 0.0.0.0
-
-networks:
-  itqan-network:
-    driver: bridge
 
 volumes:
-  postgres_data:
-    driver: local
-  redis_data:
-    driver: local
-  meilisearch_data:
-    driver: local
-  minio_data:
-    driver: local
-  backend_media:
-    driver: local
-  backend_static:
-    driver: local
+  static_volume:
+  media_volume:
+  caddy_data:
+  caddy_config:
+  caddy_logs:
