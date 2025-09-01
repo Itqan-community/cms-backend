@@ -36,13 +36,8 @@ class AuthMeView(View):
     def get(self, request):
         user = request.user
         
-        # Check if user has completed profile
-        profile_completed = bool(
-            user.first_name and 
-            user.last_name and
-            hasattr(user, 'job_title') and user.job_title and
-            hasattr(user, 'phone_number') and user.phone_number
-        )
+        # Use the model's profile_completed property for consistency
+        profile_completed = user.profile_completed
         
         return JsonResponse({
             'id': str(user.id),
@@ -73,18 +68,12 @@ class CompleteProfileView(View):
             user.first_name = data.get('first_name', user.first_name)
             user.last_name = data.get('last_name', user.last_name)
             
-            # Add profile fields (these would typically be in a separate UserProfile model)
-            # For now, we'll add them as additional fields to the User model
-            if hasattr(user, 'job_title'):
-                user.job_title = data.get('job_title', '')
-            if hasattr(user, 'phone_number'):
-                user.phone_number = data.get('phone_number', '')
-            if hasattr(user, 'business_model'):
-                user.business_model = data.get('business_model', '')
-            if hasattr(user, 'team_size'):
-                user.team_size = data.get('team_size', '')
-            if hasattr(user, 'about_yourself'):
-                user.about_yourself = data.get('about_yourself', '')
+            # Add profile fields
+            user.job_title = data.get('job_title', '')
+            user.phone_number = data.get('phone_number', '')
+            user.business_model = data.get('business_model', '')
+            user.team_size = data.get('team_size', '')
+            user.about_yourself = data.get('about_yourself', '')
             
             user.save()
             
@@ -96,7 +85,7 @@ class CompleteProfileView(View):
                 'auth_provider': user.auth_provider,
                 'auth_provider_id': user.auth_provider_id,
                 'is_active': user.is_active,
-                'profile_completed': True,
+                'profile_completed': user.profile_completed,
                 'created_at': user.created_at.isoformat(),
                 'updated_at': user.updated_at.isoformat(),
             })
