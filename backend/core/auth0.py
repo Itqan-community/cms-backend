@@ -34,6 +34,19 @@ def get_auth0_public_key():
     except requests.RequestException as e:
         raise Auth0Error(f"Failed to fetch Auth0 public key: {str(e)}")
 
+def get_user_info_from_auth0(access_token):
+    """
+    Get user information from Auth0 using access token
+    """
+    try:
+        userinfo_url = f"https://{AUTH0_DOMAIN}/userinfo"
+        headers = {'Authorization': f'Bearer {access_token}'}
+        response = requests.get(userinfo_url, headers=headers)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        raise Auth0Error(f"Failed to get user info from Auth0: {str(e)}")
+
 def verify_auth0_token(token):
     """
     Verify Auth0 JWT token and return user info
@@ -81,12 +94,27 @@ def verify_auth0_token(token):
     except Exception as e:
         raise Auth0Error(f"Token verification failed: {str(e)}")
 
-def get_or_create_user_from_auth0(auth0_payload):
+def get_or_create_user_from_auth0(auth0_payload, access_token=None, fallback_email=None, fallback_sub=None):
     """
     Get or create a user based on Auth0 payload
     """
     auth0_id = auth0_payload.get('sub')
     email = auth0_payload.get('email')
+    
+    # If missing user info and we have an access token, try to get user info from Auth0
+    if (not auth0_id or not email) and access_token:
+        try:
+            user_info = get_user_info_from_auth0(access_token)
+            auth0_id = auth0_id or user_info.get('sub')
+            email = email or user_info.get('email')
+        except Exception as e:
+            print(f"Failed to get user info from Auth0: {e}")
+
+    # Final fallback to values provided in the request body (if present)
+    if not auth0_id and fallback_sub:
+        auth0_id = fallback_sub
+    if not email and fallback_email:
+        email = fallback_email
     
     if not auth0_id or not email:
         raise Auth0Error("Missing required user information in token")
@@ -137,8 +165,19 @@ def auth0_required(view_func):
             # Verify token
             payload = verify_auth0_token(token)
             
+            # Try to extract email/sub from request body as a fallback
+            fallback_email = None
+            fallback_sub = None
+            try:
+                if request.body:
+                    body_data = json.loads(request.body)
+                    fallback_email = body_data.get('email')
+                    fallback_sub = body_data.get('auth0_id')
+            except Exception:
+                pass
+
             # Get or create user
-            user = get_or_create_user_from_auth0(payload)
+            user = get_or_create_user_from_auth0(payload, token, fallback_email, fallback_sub)
             
             # Add user to request
             request.user = user
@@ -180,7 +219,7 @@ class Auth0Middleware:
                 try:
                     token = auth_header.split(' ')[1]
                     payload = verify_auth0_token(token)
-                    user = get_or_create_user_from_auth0(payload)
+                    user = get_or_create_user_from_auth0(payload, token)
                     
                     request.user = user
                     request.auth0_payload = payload

@@ -92,9 +92,11 @@ export function Auth0IntegratedProvider({ children, locale }: AuthProviderProps)
       
       try {
         if (auth0IsAuthenticated && auth0User) {
-          // Build email with fallback to /userinfo if the connection doesn't expose it by default
+          // Build email and names with fallback to /userinfo if the connection doesn't expose them by default
           let resolvedEmail: string | undefined = auth0User.email || undefined;
-          if (!resolvedEmail) {
+          let resolvedGivenName: string | undefined = auth0User.given_name || undefined;
+          let resolvedFamilyName: string | undefined = auth0User.family_name || undefined;
+          if (!resolvedEmail || !resolvedGivenName || !resolvedFamilyName) {
             try {
               const token = await getAccessTokenSilently({
                 authorizationParams: {
@@ -106,19 +108,37 @@ export function Auth0IntegratedProvider({ children, locale }: AuthProviderProps)
               });
               if (uiRes.ok) {
                 const ui = await uiRes.json();
-                resolvedEmail = ui.email;
+                resolvedEmail = resolvedEmail || ui.email;
+                resolvedGivenName = resolvedGivenName || ui.given_name;
+                resolvedFamilyName = resolvedFamilyName || ui.family_name;
+                // If provider only returns full name, split it
+                if ((!resolvedGivenName || !resolvedFamilyName) && ui.name) {
+                  const parts = String(ui.name).trim().split(/\s+/);
+                  if (!resolvedGivenName && parts[0]) resolvedGivenName = parts[0];
+                  if (!resolvedFamilyName && parts.length > 1) resolvedFamilyName = parts.slice(1).join(' ');
+                }
+                // As a last resort, use nickname as first name
+                if (!resolvedGivenName && ui.nickname) {
+                  resolvedGivenName = ui.nickname;
+                }
               }
             } catch (e) {
-              console.warn('Could not resolve email from /userinfo:', e);
+              console.warn('Could not resolve profile from /userinfo:', e);
             }
           }
 
+          // Resolve name fallbacks for providers that don't expose given/family name
+          const rawName = auth0User.name || '';
+          const nickname = (auth0User as any).nickname as string | undefined;
+          const derivedFirst = resolvedGivenName || auth0User.given_name || (rawName ? rawName.split(' ')[0] : (nickname || ''));
+          const derivedLast = resolvedFamilyName || auth0User.family_name || (rawName && rawName.includes(' ') ? rawName.split(' ').slice(1).join(' ') : '');
+
           // Create user data from Auth0 user
-          const userData: User = {
+          let userData: User = {
             id: auth0User.sub!,
             email: resolvedEmail || '',
-            firstName: auth0User.given_name || '',
-            lastName: auth0User.family_name || '',
+            firstName: derivedFirst || '',
+            lastName: derivedLast || '',
             provider: 'auth0',
             profileCompleted: false,
             auth0Id: auth0User.sub!,
@@ -134,11 +154,55 @@ export function Auth0IntegratedProvider({ children, locale }: AuthProviderProps)
             }
           } catch {}
 
-          persistUserState(userData);
-          setRequiresProfileCompletion(!userData.profileCompleted);
-          
-          // Skip backend validation for now - we'll implement this after profile completion
-          // TODO: Re-enable backend sync after fixing JWT token issues
+          // Try to fetch authoritative profile state from backend
+          try {
+            const token = await getAccessTokenSilently({
+              authorizationParams: {
+                audience: env.NEXT_PUBLIC_AUTH0_AUDIENCE,
+                scope: 'openid profile email'
+              },
+            });
+
+            const meResponse = await fetch(`${env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/v1/auth/me/`, {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+              },
+            });
+
+            if (meResponse.ok) {
+              const me = await meResponse.json();
+              userData = {
+                id: me.id,
+                email: me.email || userData.email,
+                firstName: me.first_name || userData.firstName,
+                lastName: me.last_name || userData.lastName,
+                provider: 'auth0',
+                profileCompleted: !!me.profile_completed,
+                auth0Id: auth0User.sub!,
+              };
+
+              persistUserState(userData);
+              setRequiresProfileCompletion(!userData.profileCompleted);
+
+              // Persist completion flag for future sessions
+              if (typeof window !== 'undefined') {
+                if (userData.profileCompleted) {
+                  window.localStorage.setItem('itqan_profile_completed', '1');
+                } else {
+                  window.localStorage.removeItem('itqan_profile_completed');
+                }
+              }
+            } else {
+              // Fallback to local userData if backend not reachable
+              persistUserState(userData);
+              setRequiresProfileCompletion(!userData.profileCompleted);
+            }
+          } catch (e) {
+            // Any token/me request issue: fallback gracefully
+            persistUserState(userData);
+            setRequiresProfileCompletion(!userData.profileCompleted);
+          }
         } else {
           persistUserState(null);
           setRequiresProfileCompletion(false);
@@ -163,19 +227,29 @@ export function Auth0IntegratedProvider({ children, locale }: AuthProviderProps)
     const isHomePage = pathname === `/${locale}` || pathname === `/${locale}/`;
     const isCallbackRoute = pathname.includes('/auth/callback');
     
-    // Don't redirect during callback processing
-    if (isCallbackRoute) return;
+    // Don't redirect during callback processing if Auth0 is still loading
+    if (isCallbackRoute && auth0IsLoading) return;
     
     // If user is authenticated
     if (auth0IsAuthenticated && user) {
+      // Special handling for callback route - redirect once authentication is complete
+      if (isCallbackRoute) {
+        if (requiresProfileCompletion) {
+          router.replace(`/${locale}/auth/complete-profile`);
+        } else {
+          router.replace(`/${locale}/dashboard`);
+        }
+        return;
+      }
+      
       // If user needs to complete profile
       if (requiresProfileCompletion && !pathname.includes('/auth/complete-profile')) {
         router.replace(`/${locale}/auth/complete-profile`);
         return;
       }
       
-      // If profile is completed and user is on auth pages, redirect to dashboard/home
-      if (!requiresProfileCompletion && isAuthRoute && !isCallbackRoute) {
+      // If profile is completed and user is on auth pages, redirect to dashboard
+      if (!requiresProfileCompletion && isAuthRoute) {
         router.replace(`/${locale}/dashboard`);
         return;
       }
@@ -202,13 +276,15 @@ export function Auth0IntegratedProvider({ children, locale }: AuthProviderProps)
   };
 
   const logout = () => {
+    // Clear local user state and flags first
+    persistUserState(null);
+    setRequiresProfileCompletion(false);
+    
     auth0Logout({
       logoutParams: {
         returnTo: `${env.NEXT_PUBLIC_APP_URL}/${locale}`,
       },
     });
-    setUser(null);
-    setRequiresProfileCompletion(false);
   };
 
   const updateUser = (userData: User) => {
@@ -226,8 +302,13 @@ export function Auth0IntegratedProvider({ children, locale }: AuthProviderProps)
       const token = await getAccessTokenSilently({
         authorizationParams: {
           audience: env.NEXT_PUBLIC_AUTH0_AUDIENCE || undefined,
+          scope: 'openid profile email'
         }
       });
+      
+      console.log('Auth0 token obtained:', token ? 'Token received' : 'No token');
+      console.log('Audience used:', env.NEXT_PUBLIC_AUTH0_AUDIENCE);
+      console.log('Backend URL:', env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000');
       
       const response = await fetch(`${env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/v1/auth/complete-profile/`, {
         method: 'POST',
@@ -237,7 +318,8 @@ export function Auth0IntegratedProvider({ children, locale }: AuthProviderProps)
         },
         body: JSON.stringify({
           auth0_id: auth0User?.sub,
-          email: auth0User?.email,
+          // Prefer Auth0 email if available; otherwise use fallback provided by the form
+          email: auth0User?.email || (profileData as any).email,
           first_name: profileData.firstName,
           last_name: profileData.lastName,
           job_title: profileData.jobTitle,
@@ -269,8 +351,15 @@ export function Auth0IntegratedProvider({ children, locale }: AuthProviderProps)
         
         router.replace(`/${locale}/dashboard`);
       } else {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to complete profile');
+        const errorText = await response.text();
+        console.error('Backend error response:', response.status, errorText);
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: errorText };
+        }
+        throw new Error(errorData.error || `Failed to complete profile: ${response.status}`);
       }
     } catch (error) {
       console.error('Error completing profile:', error);

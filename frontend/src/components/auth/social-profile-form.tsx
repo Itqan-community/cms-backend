@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/components/providers/auth0-integrated-provider';
 import type { Dictionary, Locale } from '@/lib/i18n/types';
 import { formLogical, spacing, typography } from '@/lib/styles/logical';
-import { validateSocialProfileForm } from '@/lib/validations';
+import { validateSocialProfileForm, validators } from '@/lib/validations';
 import { cn } from '@/lib/utils';
 
 interface SocialProfileFormProps {
@@ -25,6 +25,7 @@ export function SocialProfileForm({
   const [formData, setFormData] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
+    email: user?.email || '',
     jobTitle: '',
     phoneNumber: '',
     businessModel: '',
@@ -71,7 +72,16 @@ export function SocialProfileForm({
         fieldErrors[error.field] = error.message;
       });
       setErrors(fieldErrors);
-      return;
+      // continue to possibly collect email validation below
+    }
+    
+    // Additional email validation when Auth0 didn't provide one
+    if (!user?.email) {
+      const emailError = validators.email(formData.email, dict);
+      if (emailError) {
+        setErrors(prev => ({ ...prev, email: emailError }));
+        return;
+      }
     }
     
     setIsLoading(true);
@@ -80,6 +90,7 @@ export function SocialProfileForm({
       await completeProfile({
         firstName: formData.firstName,
         lastName: formData.lastName,
+        email: formData.email,
         jobTitle: formData.jobTitle,
         phoneNumber: formData.phoneNumber,
         businessModel: formData.businessModel,
@@ -88,7 +99,8 @@ export function SocialProfileForm({
       });
     } catch (error) {
       console.error('Profile completion error:', error);
-      setSubmitError(dict.auth.validation.networkError);
+      const message = error instanceof Error ? error.message : String(error);
+      setSubmitError(message || dict.auth.validation.networkError);
     } finally {
       setIsLoading(false);
     }
@@ -161,6 +173,31 @@ export function SocialProfileForm({
             />
           </div>
         </div>
+
+        {/* Email - required only if not provided by Auth0 */}
+        {!user?.email && (
+          <div className={formLogical.fieldset}>
+            <Label htmlFor="email" className={formLogical.label}>
+              {dict.auth.email}
+              <span className="text-red-500 ml-1">*</span>
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder={dict.auth.email}
+              value={formData.email}
+              onChange={handleInputChange('email')}
+              className={cn(
+                formLogical.input,
+                errors.email && "border-destructive focus-visible:border-destructive"
+              )}
+              aria-invalid={!!errors.email}
+            />
+            {errors.email && (
+              <p className={formLogical.errorText}>{errors.email}</p>
+            )}
+          </div>
+        )}
 
         {/* Job Title */}
         <div className={formLogical.fieldset}>
