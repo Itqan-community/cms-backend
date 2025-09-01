@@ -32,6 +32,24 @@ DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
+# CSRF and Security Settings for HTTPS
+CSRF_TRUSTED_ORIGINS = []
+if not DEBUG:
+    # Add HTTPS origins for production
+    for host in ALLOWED_HOSTS:
+        if host not in ['localhost', '127.0.0.1']:
+            CSRF_TRUSTED_ORIGINS.append(f'https://{host}')
+
+# Session Security
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_HTTPONLY = True
+SESSION_COOKIE_HTTPONLY = True
+
+# Add localhost for internal health checks
+if 'localhost' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('localhost')
+
 
 # Application definition
 
