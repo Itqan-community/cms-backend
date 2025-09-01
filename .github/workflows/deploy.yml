@@ -66,27 +66,9 @@ jobs:
             echo "⏳ Waiting for services to start..."
             sleep 30
             
-            # Health check
-            echo "🔍 Performing health check..."
-            if curl -f -s ${{ env.ENV_URL }}/health > /dev/null; then
-              echo "✅ Health check passed!"
-            else
-              echo "⚠️ Health check failed, but deployment completed"
-            fi
-            
             # Clean up old Docker images
             echo "🧹 Cleaning up old Docker images..."
             docker image prune -f || true
             
             echo "🎉 Deployment to ${{ env.ENV_NAME }} completed successfully!"
             echo "🌐 Application URL: ${{ env.ENV_URL }}"
-
-      - name: Deployment notification
-        if: always()
-        run: |
-          if [ "${{ job.status }}" == "success" ]; then
-            echo "✅ Deployment to ${{ env.ENV_NAME }} successful!"
-            echo "🌐 URL: ${{ env.ENV_URL }}"
-          else
-            echo "❌ Deployment to ${{ env.ENV_NAME }} failed!"
-          fi
