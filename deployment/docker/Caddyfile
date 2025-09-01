@@ -3,9 +3,13 @@
     encode gzip
 
     # Handle static files FIRST (before reverse proxy)
-    @static path /static/* /media/*
-    handle @static {
+    handle /static/* {
         root * /srv/static
+        file_server
+    }
+    
+    handle /media/* {
+        root * /srv/media
         file_server
     }
 
