@@ -43,28 +43,24 @@ jobs:
             # Navigate to application directory
             cd /srv/cms-backend
             
-            # Clone repository if it doesn't exist
-            if [ ! -d ".git" ]; then
-              echo "📦 Cloning repository..."
-              git clone --depth 1 --branch ${{ env.BRANCH }} https://github.com/Itqan-community/cms-backend.git /srv/cms-backend
-            fi
-            
-            # Update to latest code
-            echo "🔄 Updating code..."
-            git fetch origin ${{ env.BRANCH }}:${{ env.BRANCH }} --force
+            # Ensure we're on the correct branch
+            echo "📦 Fetching latest changes from GitHub..."
+            git fetch origin ${{ env.BRANCH }}
             git checkout ${{ env.BRANCH }}
             git reset --hard origin/${{ env.BRANCH }}
+            
+            # Show current commit
+            echo "📋 Current commit: $(git rev-parse --short HEAD) - $(git log -1 --pretty=%B)"
             
             # Verify environment file exists
             if [ ! -f "deployment/docker/.env" ]; then
               echo "❌ Environment file missing: deployment/docker/.env"
-              echo "Please create this file on the server using deployment/docker/env.template"
+              echo "Please create this file on the server"
               exit 1
             fi
             
-            # Pull latest images and rebuild
+            # Build and start containers
             echo "🏗️  Building and starting containers..."
-            docker compose -f deployment/docker/docker-compose.yml pull || true
             docker compose -f deployment/docker/docker-compose.yml up -d --build
             
             # Clean up old images
@@ -76,20 +72,23 @@ jobs:
             sleep 30
             
             # Check if application is responding
-            if docker compose -f deployment/docker/docker-compose.yml exec -T web curl -fsS http://localhost:8000/health >/dev/null 2>&1; then
-              echo "✅ Deployment successful! Application is healthy."
+            echo "🔍 Testing application health..."
+            if curl -f -s https://${{ env.HOST }}/admin/ > /dev/null; then
+              echo "✅ Deployment successful! Application is responding."
             else
               echo "⚠️  Application may not be fully ready yet. Check logs:"
-              docker compose -f deployment/docker/docker-compose.yml logs --tail=20 web
+              docker compose -f deployment/docker/docker-compose.yml logs --tail=10 web
             fi
             
             echo "🎉 Deployment to ${{ env.ENV_NAME }} completed!"
+            echo "🌐 Application URL: https://${{ env.HOST }}"
 
       - name: Notify deployment status
         if: always()
         run: |
           if [ "${{ job.status }}" == "success" ]; then
             echo "✅ Deployment to ${{ env.ENV_NAME }} was successful!"
+            echo "🌐 Application URL: https://${{ env.HOST }}"
           else
             echo "❌ Deployment to ${{ env.ENV_NAME }} failed!"
           fi
