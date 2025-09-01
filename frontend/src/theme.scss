@@ -1,0 +1,289 @@
+// Itqan CMS Islamic Theme for NG-ZORRO
+// Based on Ant Design with Islamic content management considerations
+
+// Primary Itqan Brand Colors
+$itqan-primary: #669B80;    // Itqan Green - main brand color
+$itqan-dark: #22433D;       // Itqan Dark Green - accent color
+$itqan-light: #E8F5E8;     // Light green for backgrounds
+$itqan-success: #52c41a;    // Success green
+$itqan-warning: #faad14;    // Warning amber
+$itqan-error: #ff4d4f;      // Error red
+$itqan-info: #1890ff;       // Info blue
+
+// Islamic Content Colors
+$arabic-text: #2c3e50;      // Dark color for Arabic text readability
+$quranic-highlight: #f8f9fa; // Light background for Quranic text
+$translation-bg: #fafbfc;   // Background for translations
+$tafsir-accent: #e9ecef;    // Accent for commentary sections
+
+// Typography for Islamic Content
+$arabic-font-family: 'Noto Sans Arabic', 'IBM Plex Sans Arabic', 'Amiri', 'Scheherazade New', sans-serif;
+$english-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+// RTL Support Variables
+$rtl-margin-start: margin-inline-start;
+$rtl-margin-end: margin-inline-end;
+$rtl-padding-start: padding-inline-start;
+$rtl-padding-end: padding-inline-end;
+
+// NG-ZORRO Theme Customization
+:root {
+  // Primary Colors
+  --ant-primary-color: #{$itqan-primary};
+  --ant-primary-color-hover: #{lighten($itqan-primary, 10%)};
+  --ant-primary-color-active: #{darken($itqan-primary, 10%)};
+  --ant-primary-color-outline: #{rgba($itqan-primary, 0.2)};
+  
+  // Success, Warning, Error
+  --ant-success-color: #{$itqan-success};
+  --ant-warning-color: #{$itqan-warning};
+  --ant-error-color: #{$itqan-error};
+  --ant-info-color: #{$itqan-info};
+  
+  // Background Colors
+  --ant-component-background: #ffffff;
+  --ant-body-background: #f5f5f5;
+  --ant-layout-body-background: #f0f2f5;
+  
+  // Text Colors
+  --ant-text-color: #{$arabic-text};
+  --ant-text-color-secondary: rgba(0, 0, 0, 0.65);
+  --ant-heading-color: #{$itqan-dark};
+  
+  // Border and Shadow
+  --ant-border-color-base: #d9d9d9;
+  --ant-border-radius-base: 6px;
+  --ant-box-shadow-base: 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
+  
+  // Font Settings
+  --ant-font-family: #{$english-font-family};
+  --ant-font-size-base: 14px;
+  --ant-line-height-base: 1.5715;
+}
+
+// Arabic/RTL Specific Styles
+[dir="rtl"] {
+  --ant-font-family: #{$arabic-font-family};
+  
+  .ant-typography {
+    font-family: var(--ant-font-family);
+    line-height: 1.8; // Better line height for Arabic text
+  }
+  
+  .quranic-text {
+    font-family: 'Amiri', 'Scheherazade New', #{$arabic-font-family};
+    font-size: 18px;
+    line-height: 2.2;
+    color: $arabic-text;
+    background-color: $quranic-highlight;
+    padding: 16px;
+    border-radius: 8px;
+    border-right: 4px solid $itqan-primary;
+  }
+  
+  .translation-text {
+    background-color: $translation-bg;
+    padding: 12px;
+    border-radius: 6px;
+    margin-top: 8px;
+    font-style: italic;
+  }
+  
+  .tafsir-text {
+    background-color: $tafsir-accent;
+    padding: 12px;
+    border-radius: 6px;
+    margin-top: 8px;
+    border-right: 2px solid $itqan-dark;
+  }
+}
+
+// Islamic Content Components
+.islamic-content-card {
+  .ant-card {
+    border: 1px solid rgba($itqan-primary, 0.3);
+    border-radius: 8px;
+    
+    .ant-card-head {
+      background: linear-gradient(135deg, $itqan-light 0%, rgba($itqan-primary, 0.1) 100%);
+      border-bottom: 1px solid rgba($itqan-primary, 0.2);
+      
+      .ant-card-head-title {
+        color: $itqan-dark;
+        font-weight: 600;
+      }
+    }
+  }
+}
+
+.islamic-header {
+  background: linear-gradient(135deg, $itqan-primary 0%, $itqan-dark 100%);
+  
+  .ant-menu {
+    background: transparent;
+    border-bottom: none;
+    
+    .ant-menu-item {
+      color: rgba(255, 255, 255, 0.85);
+      
+      &:hover {
+        color: white;
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+      
+      &.ant-menu-item-selected {
+        color: white;
+        background-color: rgba(255, 255, 255, 0.2);
+      }
+    }
+  }
+}
+
+// Responsive Islamic Content Layout
+.islamic-layout {
+  min-height: 100vh;
+  
+  .ant-layout-header {
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    
+    .logo {
+      display: flex;
+      align-items: center;
+      color: white;
+      font-size: 20px;
+      font-weight: bold;
+      
+      .logo-icon {
+        margin-inline-end: 12px;
+        font-size: 24px;
+      }
+    }
+    
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      
+      .language-switcher {
+        .ant-select {
+          min-width: 80px;
+          
+          .ant-select-selector {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+          }
+        }
+      }
+    }
+  }
+  
+  .ant-layout-sider {
+    .ant-menu {
+      height: 100%;
+      border-right: none;
+      
+      .ant-menu-item-icon {
+        font-size: 16px;
+      }
+      
+      .ant-menu-item {
+        margin: 4px 8px;
+        border-radius: 6px;
+        
+        &:hover {
+          background-color: rgba($itqan-primary, 0.1);
+        }
+        
+        &.ant-menu-item-selected {
+          background-color: rgba($itqan-primary, 0.15);
+          color: $itqan-primary;
+        }
+      }
+    }
+  }
+  
+  .ant-layout-content {
+    padding: 24px;
+    background: var(--ant-layout-body-background);
+    
+    .content-wrapper {
+      background: white;
+      padding: 24px;
+      border-radius: 8px;
+      box-shadow: var(--ant-box-shadow-base);
+      min-height: calc(100vh - 112px);
+    }
+  }
+}
+
+// Islamic Form Styling
+.islamic-form {
+  .ant-form-item-label {
+    font-weight: 600;
+    color: $itqan-dark;
+  }
+  
+  .ant-input,
+  .ant-select-selector,
+  .ant-picker {
+    border-radius: 6px;
+    
+    &:focus,
+    &.ant-input-focused,
+    &.ant-select-focused .ant-select-selector,
+    &.ant-picker-focused {
+      border-color: $itqan-primary;
+      box-shadow: 0 0 0 2px rgba($itqan-primary, 0.2);
+    }
+  }
+  
+  .ant-btn-primary {
+    background-color: $itqan-primary;
+    border-color: $itqan-primary;
+    
+    &:hover {
+      background-color: lighten($itqan-primary, 10%);
+      border-color: lighten($itqan-primary, 10%);
+    }
+    
+    &:active {
+      background-color: darken($itqan-primary, 10%);
+      border-color: darken($itqan-primary, 10%);
+    }
+  }
+}
+
+// Accessibility and Islamic Content Considerations
+.high-contrast {
+  --ant-text-color: #000000;
+  --ant-text-color-secondary: #333333;
+  --ant-border-color-base: #666666;
+}
+
+// Print Styles for Islamic Content
+@media print {
+  .quranic-text {
+    background: white !important;
+    color: black !important;
+    border: 1px solid #ccc !important;
+    page-break-inside: avoid;
+  }
+  
+  .islamic-header,
+  .ant-layout-sider {
+    display: none !important;
+  }
+}
+
+// Animation Preferences
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

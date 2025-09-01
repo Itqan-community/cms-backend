@@ -1,0 +1,120 @@
+flowchart TD
+    %% Itqan CMS API Surface Overview
+    %% Shows API structure for Angular + Django architecture
+
+    subgraph "Public API (No Auth)"
+        PUB_SEARCH["GET /api/v1/search<br/>?q=query&filters"]
+        PUB_RESOURCES["GET /api/v1/resources<br/>Public resources only"]
+        PUB_RESOURCE_DETAIL["GET /api/v1/resources/{id}<br/>Resource metadata"]
+        PUB_DISTRIBUTIONS["GET /api/v1/distributions<br/>Public distributions"]
+    end
+
+    subgraph "Developer API (JWT Auth)"
+        DEV_ACCESS_REQ["POST /api/v1/access-requests<br/>Request distribution access"]
+        DEV_MY_REQUESTS["GET /api/v1/access-requests/mine<br/>Track request status"]
+        DEV_MY_USAGE["GET /api/v1/usage-events/mine<br/>Usage analytics"]
+        DEV_DISTRIBUTIONS["GET /api/v1/distributions/{id}<br/>Access approved distributions"]
+        DEV_DOWNLOAD["GET /api/v1/distributions/{id}/download<br/>Download content"]
+    end
+
+    subgraph "Publisher API (JWT Auth + Publisher Role)"
+        PUB_RESOURCES_CRUD["CRUD /api/v1/resources<br/>Manage own resources"]
+        PUB_LICENSES["CRUD /api/v1/licenses<br/>Manage resource licenses"]
+        PUB_DISTRIBUTIONS_CRUD["CRUD /api/v1/distributions<br/>Manage distributions"]
+        PUB_ANALYTICS["GET /api/v1/analytics/resources<br/>Resource usage stats"]
+    end
+
+    subgraph "Admin API (JWT Auth + Admin Role)"
+        ADMIN_USERS["CRUD /api/v1/users<br/>User management"]
+        ADMIN_ROLES["CRUD /api/v1/roles<br/>Role management"]
+        ADMIN_ACCESS_APPROVAL["PATCH /api/v1/access-requests/{id}<br/>Approve/reject requests"]
+        ADMIN_ALL_RESOURCES["CRUD /api/v1/admin/resources<br/>Manage all resources"]
+        ADMIN_SYSTEM_ANALYTICS["GET /api/v1/admin/analytics<br/>System-wide analytics"]
+    end
+
+    subgraph "Auth Endpoints"
+        AUTH_LOGIN["POST /api/v1/auth/login<br/>Exchange Auth0 token for JWT"]
+        AUTH_REFRESH["POST /api/v1/auth/refresh<br/>Refresh JWT token"]
+        AUTH_LOGOUT["POST /api/v1/auth/logout<br/>Invalidate token"]
+        AUTH_ME["GET /api/v1/auth/me<br/>Current user profile"]
+    end
+
+    %% Backend Services
+    subgraph "Django Backend"
+        DJANGO_API["Django REST Framework<br/>API Endpoints"]
+        DJANGO_AUTH["JWT Authentication<br/>+ Role-based Permissions"]
+        DJANGO_ORM["Django ORM<br/>Database Layer"]
+    end
+
+    subgraph "Background Services"
+        CELERY["Celery Task Queue<br/>Async Processing"]
+        MEILISEARCH["MeiliSearch<br/>Full-text Search"]
+        REDIS["Redis<br/>Cache + Message Broker"]
+    end
+
+    subgraph "Data Layer"
+        POSTGRES["PostgreSQL<br/>Primary Database"]
+        ALIBABA_OSS["Alibaba OSS<br/>File Storage"]
+    end
+
+    %% API Flow Connections
+    PUB_SEARCH --> DJANGO_API
+    PUB_RESOURCES --> DJANGO_API
+    PUB_RESOURCE_DETAIL --> DJANGO_API
+    PUB_DISTRIBUTIONS --> DJANGO_API
+
+    DEV_ACCESS_REQ --> DJANGO_API
+    DEV_MY_REQUESTS --> DJANGO_API
+    DEV_MY_USAGE --> DJANGO_API
+    DEV_DISTRIBUTIONS --> DJANGO_API
+    DEV_DOWNLOAD --> DJANGO_API
+
+    PUB_RESOURCES_CRUD --> DJANGO_API
+    PUB_LICENSES --> DJANGO_API
+    PUB_DISTRIBUTIONS_CRUD --> DJANGO_API
+    PUB_ANALYTICS --> DJANGO_API
+
+    ADMIN_USERS --> DJANGO_API
+    ADMIN_ROLES --> DJANGO_API
+    ADMIN_ACCESS_APPROVAL --> DJANGO_API
+    ADMIN_ALL_RESOURCES --> DJANGO_API
+    ADMIN_SYSTEM_ANALYTICS --> DJANGO_API
+
+    AUTH_LOGIN --> DJANGO_API
+    AUTH_REFRESH --> DJANGO_API
+    AUTH_LOGOUT --> DJANGO_API
+    AUTH_ME --> DJANGO_API
+
+    %% Backend Connections
+    DJANGO_API --> DJANGO_AUTH
+    DJANGO_API --> DJANGO_ORM
+    DJANGO_ORM --> POSTGRES
+
+    DJANGO_API --> CELERY
+    CELERY --> MEILISEARCH
+    CELERY --> REDIS
+
+    PUB_SEARCH -.-> MEILISEARCH
+    DEV_DOWNLOAD -.-> ALIBABA_OSS
+
+    %% External Services
+    subgraph "External"
+        AUTH0["Auth0<br/>Identity Provider"]
+        CDN["Alibaba CDN<br/>Content Delivery"]
+    end
+
+    AUTH_LOGIN -.-> AUTH0
+    DEV_DOWNLOAD -.-> CDN
+
+    %% Styling
+    classDef publicAPI fill:#e1f5fe
+    classDef authAPI fill:#f3e5f5
+    classDef adminAPI fill:#ffebee
+    classDef backend fill:#e8f5e8
+    classDef external fill:#fff3e0
+
+    class PUB_SEARCH,PUB_RESOURCES,PUB_RESOURCE_DETAIL,PUB_DISTRIBUTIONS publicAPI
+    class DEV_ACCESS_REQ,DEV_MY_REQUESTS,DEV_MY_USAGE,DEV_DISTRIBUTIONS,DEV_DOWNLOAD,PUB_RESOURCES_CRUD,PUB_LICENSES,PUB_DISTRIBUTIONS_CRUD,PUB_ANALYTICS authAPI
+    class ADMIN_USERS,ADMIN_ROLES,ADMIN_ACCESS_APPROVAL,ADMIN_ALL_RESOURCES,ADMIN_SYSTEM_ANALYTICS adminAPI
+    class DJANGO_API,DJANGO_AUTH,DJANGO_ORM,CELERY,MEILISEARCH,REDIS,POSTGRES,ALIBABA_OSS backend
+    class AUTH0,CDN external

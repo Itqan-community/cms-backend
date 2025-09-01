@@ -1,0 +1,74 @@
+{
+  "prompt": "You are an autonomous coding agent completing STORY-17: Admin Branding & RTL for Itqan CMS. Customize Django admin and Wagtail CMS interface with Itqan branding, ensure proper RTL support for Arabic users, and optimize admin user experience.",
+  "context": {
+    "project": "Itqan CMS", 
+    "feature": "Admin Interface Customization",
+    "tech_stack": ["Django 4.2", "Wagtail CMS", "Angular 19", "NG-ZORRO", "CSS/SCSS", "RTL support"],
+    "locales": ["en", "ar"],
+    "complete_screen_flow": "docs/screens/cms-screens.png"
+  },
+  "objectives": [
+    "Apply Itqan branding to Django admin and Wagtail CMS interface",
+    "Implement full RTL support for Arabic admin users in both Django and Angular",
+    "Customize admin layout and navigation for better UX following cms.mdc flow",
+    "Create Angular admin components (ADMIN-008) for Islamic content management",
+    "Ensure consistent branding across Django, Wagtail, and Angular admin interfaces"
+  ],
+  "tasks": [
+    "Create custom Django admin theme with Itqan colors, logo, and typography",
+    "Implement Wagtail CMS branding with custom stylesheets and templates",
+    "Create Angular admin interface (ADMIN-008) with NG-ZORRO and Itqan branding",
+    "Implement RTL CSS support for Arabic in Django admin, Wagtail, and Angular",
+    "Customize Django admin login page and Wagtail login with branded design",
+    "Add custom Angular admin components for Islamic content type management",
+    "Configure Django and Angular i18n translations for Arabic interface",
+    "Optimize admin navigation and layout for Islamic content workflow",
+    "Add custom dashboard widgets for Quranic content statistics in both Django and Angular",
+    "Implement admin user preferences for language and theme across all interfaces",
+    "Test admin interfaces across different browsers and devices",
+    "Create comprehensive admin user guide with screenshots and Islamic content workflows"
+  ],
+  "guard_rails": [
+    "Admin customizations must not break core Django admin or Wagtail CMS functionality",
+    "RTL support should work seamlessly with existing Django, Wagtail, and Angular features",
+    "Custom Angular components must follow NG-ZORRO design system patterns",
+    "Django admin customizations must follow Django admin best practices",
+    "Branding should be professional and appropriate for Islamic content",
+    "Admin performance should not be degraded by customizations across all interfaces",
+    "Maintain consistency between Django admin, Wagtail, and Angular admin interfaces"
+  ],
+  "acceptance_criteria": [
+    "Django admin, Wagtail CMS, and Angular admin interfaces display Itqan logo and branded colors consistently",
+    "Arabic admin users see proper RTL layout with correct text direction across all admin interfaces",
+    "Custom Angular dashboard (ADMIN-008) shows relevant Islamic content statistics and quick actions",
+    "Django admin and Wagtail login pages reflect Itqan branding and Islamic mission",
+    "All admin functionality works correctly in both English and Arabic across Django, Wagtail, and Angular",
+    "Admin interfaces follow cms.mdc screen flow design principles"
+  ],
+  "definition_of_done": [
+    "Admin branding implemented and consistent across Django admin, Wagtail CMS, and Angular interfaces",
+    "RTL support fully functional for Arabic admin users in all three admin systems",
+    "Custom Angular admin components (ADMIN-008) integrated with NG-ZORRO without breaking existing features",
+    "All admin interfaces tested and optimized for performance",
+    "Admin user documentation updated with branded interface and Islamic content workflows",
+    "Complete integration with cms.mdc screen flow"
+  ],
+  "out_of_scope": [
+    "Complete admin panel rebuild or replacement",
+    "Advanced admin customizations beyond branding and RTL",
+    "Integration with external admin tools or dashboards"
+  ],
+  "references": [
+    "Itqan brand guidelines and visual identity",
+    "docs/screens/cms-screens.png - Complete screen flow with ADMIN-008",
+    "Django admin customization documentation",
+    "Wagtail CMS theming and customization documentation",
+    "NG-ZORRO RTL and internationalization documentation",
+    "RTL best practices for web applications",
+    "Screen ADMIN-008: Customized Django/Wagtail/Angular admin with Itqan branding",
+    ".cursor/rules/cms.mdc - Complete Screen Flow Documentation section",
+    "ai-memory-bank/logo.png - Itqan logo for branding",
+    "backend/static/admin/ - Django admin customization files",
+    "frontend/src/app/features/admin/ - Angular admin interface components"
+  ]
+}

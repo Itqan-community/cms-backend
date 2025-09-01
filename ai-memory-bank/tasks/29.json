@@ -1,0 +1,45 @@
+{
+  "prompt": "Update stack to Angular 19 CSR with SSR-ready Universal, Django + Wagtail backend; phased DigitalOcean → Alibaba deployment plan.",
+  "context": {
+    "project": "Itqan CMS",
+    "feature": "Architecture & Deployment Plan",
+    "auth_model": "Auth0 Hybrid (SPA + M2M)",
+    "tech_stack": ["Angular 19", "Django 5.2 + DRF + Wagtail", "PostgreSQL", "MeiliSearch", "MinIO/OSS", "K8s"],
+    "screens": [],
+    "colors": {"primary": "#669B80", "dark": "#22433D"}
+  },
+  "objectives": [
+    "Document updated architecture with CSR-first approach",
+    "Outline phased deployment (DigitalOcean then Alibaba Cloud)",
+    "Ensure SSR readiness via Angular Universal"
+  ],
+  "tasks": [
+    "Draft stack summary",
+    "Add deployment phases section",
+    "Create mermaid diagram overview"
+  ],
+  "guard_rails": [
+    "No secrets in repo",
+    "Follow existing cms.mdc rules",
+    "Maintain bilingual/RTL requirements"
+  ],
+  "acceptance_criteria": [
+    "Plan lists all core components",
+    "Both cloud phases described",
+    "Diagram renders without errors"
+  ],
+  "definition_of_done": [
+    "Plan added to docs/md",
+    "tasks.csv updated",
+    "Mermaid diagram validated"
+  ],
+  "out_of_scope": [
+    "Terraform code",
+    "Helm charts"
+  ],
+  "references": [
+    "https://angular.dev/",
+    "Auth0 docs",
+    "Wagtail docs"
+  ]
+}

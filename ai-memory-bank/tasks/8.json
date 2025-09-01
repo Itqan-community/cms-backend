@@ -1,0 +1,61 @@
+{
+  "prompt": "Create UsageEvent logging service for post-MVP analytics, including middleware for API tracking and Celery tasks for data processing",
+  "context": {
+    "project": "Itqan CMS",
+    "feature": "UsageEvent Logging Service (Post-MVP)",
+    "auth_model": "System-level service tracking",
+    "tech_stack": ["Django Middleware", "Celery", "Analytics", "Background Processing"],
+    "screens": [],
+    "colors": {"primary": "#669B80", "dark": "#22433D"}
+  },
+  "objectives": [
+    "Create middleware to log all API usage events",
+    "Implement Celery tasks for analytics data processing",
+    "Build UsageEvent aggregation and reporting",
+    "Setup rate limiting enforcement based on usage",
+    "Create analytics dashboard for administrators"
+  ],
+  "tasks": [
+    "Create Django middleware to capture API requests",
+    "Implement UsageEvent creation with resource/user tracking",
+    "Build Celery tasks for usage data aggregation", 
+    "Create analytics models for usage summaries",
+    "Implement rate limiting based on usage patterns",
+    "Build admin dashboard for usage analytics",
+    "Create usage reporting and export functionality",
+    "Setup data retention policies for usage events"
+  ],
+  "guard_rails": [
+    "Minimize performance impact of usage tracking",
+    "Protect user privacy in analytics data",
+    "Handle high-volume logging efficiently",
+    "Implement proper data retention policies",
+    "Ensure analytics don't affect core functionality"
+  ],
+  "acceptance_criteria": [
+    "All API requests logged as UsageEvents",
+    "Analytics processing runs without affecting performance",
+    "Usage-based rate limiting functions correctly",
+    "Admin dashboard shows meaningful usage insights",
+    "Data retention policies automatically enforced"
+  ],
+  "definition_of_done": [
+    "Middleware captures usage events accurately",
+    "Celery analytics tasks process data efficiently",
+    "Rate limiting prevents abuse based on usage",
+    "Analytics dashboard provides actionable insights",
+    "System performance unaffected by logging"
+  ],
+  "out_of_scope": [
+    "Real-time analytics (batch processing only)",
+    "Complex ML-based usage predictions",
+    "External analytics service integration",
+    "Advanced visualization beyond basic charts"
+  ],
+  "references": [
+    "docs/diagrams/high-level-db-components-relationship.png",
+    "Django middleware documentation",
+    "Celery best practices for high-volume tasks",
+    "Analytics data modeling patterns"
+  ]
+}

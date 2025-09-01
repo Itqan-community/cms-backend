@@ -1,0 +1,72 @@
+{
+    "prompt": "You are an autonomous coding agent completing STORY-8: Meilisearch Integration for Itqan CMS. Install and configure Django to automatically sync content to Meilisearch for full-text search capabilities.",
+    "context": {
+        "project": "Itqan CMS",
+        "feature": "Search Integration",
+        "tech_stack": [
+            "Django 4.2",
+            "Angular 19",
+            "NG-ZORRO",
+            "MeiliSearch v1.6",
+            "Docker"
+        ],
+        "environment": "Development",
+        "complete_screen_flow": "docs/screens/cms-screens.png"
+    },
+    "objectives": [
+        "Install MeiliSearch Python client and configure Django integration",
+        "Set up automatic content indexing on create/update/delete via Django signals",
+        "Configure search indexes for Resources and Content with proper fields",
+        "Create Django admin interface for search configuration (ADMIN-002)",
+        "Create Angular search components following cms.mdc flow",
+        "Test search functionality via MeiliSearch dashboard and Angular UI"
+    ],
+    "tasks": [
+        "Install meilisearch-python client for Django integration",
+        "Configure Django settings with MeiliSearch host and master key",
+        "Create Django search app with index management utilities",
+        "Define searchable models and fields in search configuration",
+        "Set up Django signals for automatic index synchronization",
+        "Create Django admin interface for search configuration (ADMIN-002)",
+        "Implement Angular search components using NG-ZORRO",
+        "Test content indexing by creating sample resources",
+        "Verify search results via MeiliSearch dashboard at localhost:7700",
+        "Test bilingual search with Arabic and English content"
+    ],
+    "guard_rails": [
+        "Store Meilisearch master key in environment variables",
+        "Only index published content, not drafts",
+        "Exclude sensitive fields from search index",
+        "Handle connection failures gracefully"
+    ],
+    "acceptance_criteria": [
+        "Given I create a resource in Django, then it appears in MeiliSearch index automatically",
+        "Given I search for content via MeiliSearch dashboard, then relevant results return",
+        "Given I use Angular search UI (following cms.mdc flow), then results display properly",
+        "Index updates automatically when content is modified or deleted via Django signals",
+        "Search supports both English and Arabic content with proper tokenization",
+        "Django admin interface (ADMIN-002) allows search configuration management"
+    ],
+    "definition_of_done": [
+        "Django MeiliSearch integration documented with field mappings",
+        "Angular search components implemented with NG-ZORRO",
+        "Sample content indexed and searchable via both admin and frontend",
+        "Integration tested with bilingual content",
+        "Complete integration with cms.mdc screen flow"
+    ],
+    "out_of_scope": [
+        "Advanced search features like facets or filters",
+        "Search analytics or ranking algorithms",
+        "Machine learning or AI-powered search relevance"
+    ],
+    "references": [
+        "deployment/docker/docker-compose.yml MeiliSearch service",
+        "backend/config/settings/base.py MeiliSearch configuration",
+        "docs/screens/cms-screens.png - Complete screen flow with ADMIN-002",
+        "MeiliSearch Python client documentation",
+        "Screen ADMIN-002: Search configuration panel with Django admin integration",
+        ".cursor/rules/cms.mdc - Complete Screen Flow Documentation section",
+        "backend/apps/search/ - Django MeiliSearch integration app",
+        "frontend/src/app/features/search/ - Angular search components"
+    ]
+}

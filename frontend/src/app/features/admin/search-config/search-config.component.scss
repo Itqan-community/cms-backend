@@ -1,0 +1,482 @@
+/* Search Configuration Component Styles - ADMIN-002 */
+/* Following NG-ZORRO design system with Itqan branding */
+
+.search-config {
+  height: 100vh;
+  background: #f5f5f5;
+
+  .search-header {
+    background: white;
+    padding: 16px 24px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    nz-breadcrumb {
+      margin: 0;
+      
+      nz-breadcrumb-item {
+        color: #666;
+        font-size: 14px;
+        
+        .anticon {
+          margin-right: 8px;
+        }
+      }
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+
+      button {
+        .anticon {
+          margin-right: 6px;
+        }
+      }
+    }
+  }
+
+  .search-content {
+    padding: 24px;
+    overflow-y: auto;
+    height: calc(100vh - 64px);
+
+    .health-alert,
+    .error-alert {
+      margin-bottom: 24px;
+    }
+
+    .overview-card,
+    .indexes-card,
+    .config-card,
+    .tasks-card {
+      margin-bottom: 24px;
+    }
+
+    .overview-card {
+      .ant-statistic {
+        text-align: center;
+
+        .ant-statistic-title {
+          color: #666;
+          font-size: 14px;
+          margin-bottom: 8px;
+        }
+
+        .ant-statistic-content {
+          font-size: 24px;
+          font-weight: 600;
+        }
+      }
+    }
+
+    .indexes-card {
+      .card-actions {
+        button {
+          .anticon {
+            margin-right: 6px;
+          }
+        }
+      }
+
+      .index-name {
+        strong {
+          display: block;
+          font-size: 14px;
+          color: #262626;
+        }
+
+        .index-description {
+          font-size: 12px;
+          color: #8c8c8c;
+          margin-top: 2px;
+        }
+      }
+
+      .action-buttons {
+        display: flex;
+        gap: 4px;
+
+        button {
+          width: 28px;
+          height: 28px;
+          padding: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          .anticon {
+            font-size: 14px;
+          }
+
+          &:hover:not([disabled]) {
+            .anticon {
+              color: #669B80; // Itqan primary color
+            }
+          }
+
+          &[nzDanger]:hover:not([disabled]) {
+            .anticon {
+              color: #ff4d4f;
+            }
+          }
+        }
+      }
+
+      nz-tag {
+        .anticon {
+          margin-right: 4px;
+        }
+      }
+    }
+
+    .config-card {
+      h3 {
+        margin: 0 0 16px 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: #262626;
+        border-bottom: 1px solid #f0f0f0;
+        padding-bottom: 8px;
+      }
+
+      .ant-form-item {
+        margin-bottom: 16px;
+
+        .ant-form-item-label {
+          label {
+            font-weight: 500;
+            color: #666;
+          }
+        }
+
+        .ant-form-item-control {
+          .ant-input-number,
+          .ant-switch {
+            width: 100%;
+          }
+
+          .ant-input-number {
+            max-width: 200px;
+          }
+        }
+      }
+
+      .form-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        padding-top: 16px;
+        border-top: 1px solid #f0f0f0;
+
+        button {
+          .anticon {
+            margin-right: 6px;
+          }
+        }
+      }
+    }
+
+    .tasks-card {
+      .ant-table-tbody {
+        tr {
+          &:hover {
+            background: #fafafa;
+          }
+        }
+      }
+
+      nz-progress {
+        width: 100px;
+      }
+    }
+  }
+}
+
+// Index Details Modal
+.index-config {
+  margin-top: 16px;
+
+  h4 {
+    margin: 16px 0 8px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #262626;
+  }
+
+  .attribute-tags {
+    margin-bottom: 16px;
+
+    nz-tag {
+      margin: 2px 4px 2px 0;
+      font-size: 12px;
+    }
+  }
+}
+
+// Loading states
+nz-spin {
+  display: block;
+  text-align: center;
+  padding: 40px 0;
+}
+
+// Responsive design
+@media (max-width: 1200px) {
+  .search-config {
+    .search-content {
+      .overview-card {
+        .ant-statistic {
+          margin-bottom: 16px;
+        }
+      }
+
+      .config-card {
+        [nz-col][nzSpan="12"] {
+          span: 24;
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .search-config {
+    .search-header {
+      flex-direction: column;
+      gap: 16px;
+      padding: 16px;
+
+      .header-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+    }
+
+    .search-content {
+      padding: 16px;
+
+      .overview-card {
+        [nz-col] {
+          [nzSpan] {
+            span: 12;
+          }
+        }
+      }
+
+      .indexes-card {
+        .ant-table {
+          font-size: 12px;
+
+          .action-buttons {
+            flex-direction: column;
+            gap: 2px;
+          }
+        }
+      }
+
+      .config-card {
+        .ant-form {
+          .ant-form-item {
+            .ant-form-item-label {
+              text-align: left;
+            }
+          }
+        }
+
+        .form-actions {
+          flex-direction: column;
+
+          button {
+            width: 100%;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Dark theme support (future enhancement)
+.dark-theme {
+  .search-config {
+    background: #141414;
+
+    .search-header,
+    .search-content {
+      background: #1f1f1f;
+      border-color: #303030;
+    }
+
+    .overview-card,
+    .indexes-card,
+    .config-card,
+    .tasks-card {
+      background: #262626;
+      border-color: #303030;
+    }
+  }
+}
+
+// Print styles
+@media print {
+  .search-config {
+    .search-header {
+      display: none;
+    }
+
+    .search-content {
+      padding: 0;
+      height: auto;
+      overflow: visible;
+
+      .overview-card,
+      .config-card {
+        page-break-inside: avoid;
+      }
+
+      .action-buttons {
+        display: none;
+      }
+    }
+  }
+}
+
+// High contrast mode
+@media (prefers-contrast: high) {
+  .search-config {
+    .index-name {
+      .index-description {
+        color: #595959;
+      }
+    }
+
+    .ant-statistic {
+      .ant-statistic-title {
+        color: #434343;
+      }
+    }
+  }
+}
+
+// Reduced motion
+@media (prefers-reduced-motion: reduce) {
+  .search-config {
+    * {
+      transition: none !important;
+      animation: none !important;
+    }
+  }
+}
+
+// Focus styles for accessibility
+.search-config {
+  button:focus,
+  .ant-input:focus,
+  .ant-input-number:focus,
+  .ant-switch:focus {
+    outline: 2px solid #669B80; // Itqan primary color
+    outline-offset: 2px;
+  }
+}
+
+// Status indicators
+.health-status {
+  &.healthy {
+    color: #52c41a;
+  }
+
+  &.unhealthy {
+    color: #ff4d4f;
+  }
+}
+
+// Progress bars customization
+nz-progress {
+  .ant-progress-bg {
+    background: #669B80 !important; // Itqan primary color
+  }
+
+  &.ant-progress-status-exception {
+    .ant-progress-bg {
+      background: #ff4d4f !important;
+    }
+  }
+}
+
+// Table enhancements
+.ant-table {
+  .ant-table-thead > tr > th {
+    background: #fafafa;
+    font-weight: 600;
+    color: #262626;
+  }
+
+  .ant-table-tbody > tr > td {
+    vertical-align: middle;
+  }
+
+  .ant-table-tbody > tr:hover > td {
+    background: #f5f5f5;
+  }
+}
+
+// Form enhancements
+.ant-form-item {
+  .ant-form-item-explain {
+    font-size: 12px;
+    color: #8c8c8c;
+    margin-top: 4px;
+  }
+
+  .ant-form-item-explain-error {
+    color: #ff4d4f;
+  }
+}
+
+// Modal enhancements
+.ant-modal {
+  .ant-modal-header {
+    border-bottom: 1px solid #f0f0f0;
+    
+    .ant-modal-title {
+      font-weight: 600;
+      color: #262626;
+    }
+  }
+
+  .ant-modal-body {
+    padding: 24px;
+  }
+}
+
+// Card enhancements
+.ant-card {
+  .ant-card-head {
+    border-bottom: 1px solid #f0f0f0;
+    
+    .ant-card-head-title {
+      font-weight: 600;
+      color: #262626;
+    }
+  }
+
+  .ant-card-body {
+    padding: 24px;
+  }
+}
+
+// Animation for loading states
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.loading-pulse {
+  animation: pulse 1.5s ease-in-out infinite;
+}

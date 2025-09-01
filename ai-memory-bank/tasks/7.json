@@ -1,0 +1,61 @@
+{
+  "prompt": "Implement AccessRequest workflow allowing developers to request Distribution access, with admin approval process and automatic access control",
+  "context": {
+    "project": "Itqan CMS",
+    "feature": "AccessRequest Workflow",
+    "auth_model": "Role-based workflow (Developer → Admin approval)",
+    "tech_stack": ["Django", "DRF", "Email notifications", "State machine", "Permissions"],
+    "screens": [],
+    "colors": {"primary": "#669B80", "dark": "#22433D"}
+  },
+  "objectives": [
+    "Create AccessRequest state machine (pending → approved/rejected)",
+    "Implement developer request submission flow",
+    "Build admin approval/rejection interface",
+    "Setup automatic Distribution access control",
+    "Create email notifications for status changes"
+  ],
+  "tasks": [
+    "Create AccessRequest model with status field and state transitions",
+    "Implement API endpoints for request submission and management",
+    "Build admin approval workflow with bulk actions",
+    "Create Distribution access control middleware",
+    "Setup email notification system for status changes",
+    "Implement request validation (duplicate prevention, license compliance)",
+    "Create developer dashboard for tracking request status",
+    "Add usage tracking integration for approved requests"
+  ],
+  "guard_rails": [
+    "Only developers can submit AccessRequests",
+    "Only admins can approve/reject requests",
+    "Prevent duplicate requests for same Distribution",
+    "Validate license compliance before approval",
+    "Log all workflow state changes for audit"
+  ],
+  "acceptance_criteria": [
+    "Developers can submit access requests successfully",
+    "Admins can approve/reject requests via API and admin interface",
+    "Approved requests grant automatic Distribution access",
+    "Email notifications sent for all status changes",
+    "Request status tracked throughout lifecycle"
+  ],
+  "definition_of_done": [
+    "Complete workflow tested end-to-end",
+    "State transitions validated and secure",
+    "Email notifications working correctly",
+    "Admin interface functional and user-friendly",
+    "Access control enforced properly"
+  ],
+  "out_of_scope": [
+    "Complex approval hierarchies",
+    "Advanced license negotiation features",
+    "Integration with external legal systems",
+    "Automated approval based on criteria"
+  ],
+  "references": [
+    "docs/diagrams/high-level-db-components-relationship.png",
+    "Django state machine patterns",
+    "Email notification best practices",
+    "Access control implementation guides"
+  ]
+}

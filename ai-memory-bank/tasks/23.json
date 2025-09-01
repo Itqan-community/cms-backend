@@ -1,0 +1,73 @@
+{
+    "prompt": "You are an autonomous coding agent completing STORY-12: API Keys & Rate Limiting for Itqan CMS. Implement API key generation, management, and basic rate limiting to protect against abuse while enabling developer access to content APIs.",
+    "context": {
+        "project": "Itqan CMS",
+        "feature": "API Security & Rate Limiting",
+        "tech_stack": [
+            "Django 4.2",
+            "Django REST Framework",
+            "Angular 19",
+            "NG-ZORRO",
+            "Django Rate Limiting"
+        ],
+        "environment": "Development with production considerations",
+        "complete_screen_flow": "docs/screens/cms-screens.png"
+    },
+    "objectives": [
+        "Implement API key generation and management for developers",
+        "Add rate limiting middleware to protect API endpoints",
+        "Create developer dashboard for API key management",
+        "Set up monitoring and logging for API usage"
+    ],
+    "tasks": [
+        "Install and configure Django rate limiting (django-ratelimit or DRF throttling)",
+        "Create API key generation system using Django REST Framework Token Authentication",
+        "Implement API key authentication middleware for Django REST API endpoints",
+        "Configure different rate limits per user role (Developer vs Public) using DRF throttling",
+        "Create Angular API key management interface (ADMIN-006) using NG-ZORRO",
+        "Add Django admin interface for API key management and monitoring",
+        "Set up Django logging for rate limit violations and API usage analytics",
+        "Integrate API key management with existing AccessRequest workflow",
+        "Create comprehensive API documentation for developers",
+        "Test rate limiting with various scenarios and key types across Django and Angular"
+    ],
+    "guard_rails": [
+        "Rate limits should be configurable via environment variables",
+        "API keys must be cryptographically secure and unique",
+        "Rate limiting should not affect admin or authenticated user operations",
+        "Failed requests should return appropriate HTTP status codes",
+        "API keys should be revocable and manageable"
+    ],
+    "acceptance_criteria": [
+        "Given I generate an API key as Admin via ADMIN-006, then developers can use it for Django REST API access",
+        "Given I exceed rate limits, then Django API returns 429 Too Many Requests with DRF error format",
+        "Given I use invalid API key, then Django API returns 401 Unauthorized",
+        "Rate limits differentiate between authenticated and public access using DRF throttling",
+        "API usage statistics are logged and viewable in Django admin and Angular ADMIN-006 interface",
+        "Angular interface (ADMIN-006) provides comprehensive API key management with NG-ZORRO components"
+    ],
+    "definition_of_done": [
+        "Django REST Framework rate limiting active on all public API endpoints",
+        "Angular API key management interface (ADMIN-006) implemented with NG-ZORRO",
+        "API key generation and management working in Django admin and Angular UI",
+        "Rate limit violations properly logged and monitored via Django logging",
+        "API documentation updated with Django REST Framework authentication requirements",
+        "Complete integration with cms.mdc screen flow"
+    ],
+    "out_of_scope": [
+        "Advanced rate limiting algorithms (sliding window, etc.)",
+        "API monetization or usage-based billing",
+        "Integration with external API management platforms"
+    ],
+    "references": [
+        "docs/Itqan_CMS_BRD.md §3.4 APIs for Developers",
+        "docs/screens/cms-screens.png - Complete screen flow with ADMIN-006",
+        "backend/config/settings/base.py - Django rate limiting configuration",
+        "Django REST Framework authentication and throttling documentation",
+        "Django REST Framework Token Authentication documentation",
+        "Screen ADMIN-006: API key generation and usage dashboard with NG-ZORRO",
+        ".cursor/rules/cms.mdc - Complete Screen Flow Documentation section",
+        "backend/apps/api/ - Django REST API endpoints with rate limiting",
+        "frontend/src/app/features/admin/api-management/ - Angular API key management interface"
+    ]
+}

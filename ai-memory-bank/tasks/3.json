@@ -1,0 +1,63 @@
+{
+  "prompt": "Implement core database models for the 7 ER entities with UUID primary keys, soft delete functionality, and proper relationships",
+  "context": {
+    "project": "Itqan CMS",
+    "feature": "Core Data Models & Migrations",
+    "auth_model": "Django User + Role-based permissions",
+    "tech_stack": ["Django 5.2", "PostgreSQL", "UUID fields", "Django ORM"],
+    "screens": [],
+    "colors": {"primary": "#669B80", "dark": "#22433D"}
+  },
+  "objectives": [
+    "Create Django models for all 7 ER entities",
+    "Implement UUID primary keys across all models", 
+    "Add soft delete functionality with status fields",
+    "Define proper foreign key relationships",
+    "Create comprehensive database migrations"
+  ],
+  "tasks": [
+    "Create User model extension with auth0_id and role relationship",
+    "Implement Role model with permission definitions",
+    "Create Resource model with metadata and publisher relationship",
+    "Build License model with terms and geographic restrictions",
+    "Implement Distribution model linking Resources to delivery formats",
+    "Create AccessRequest model for developer workflow",
+    "Build UsageEvent model for analytics tracking",
+    "Add soft delete mixin with is_active/deleted_at fields",
+    "Define all foreign key relationships and constraints",
+    "Create initial migrations and test data"
+  ],
+  "guard_rails": [
+    "All models must use UUID primary keys",
+    "Implement soft deletes, never hard delete data",
+    "Use proper Django model inheritance patterns",
+    "Add comprehensive model validation",
+    "Include created_at/updated_at timestamps on all models"
+  ],
+  "acceptance_criteria": [
+    "All 7 models defined with correct field types",
+    "UUID primary keys working correctly",
+    "Soft delete functionality tested",
+    "Relationships between models function properly",
+    "Migrations run without errors"
+  ],
+  "definition_of_done": [
+    "Models pass Django system checks",
+    "Database migrations execute successfully",
+    "Admin interface shows all models correctly",
+    "Model relationships work in Django shell",
+    "Unit tests written for critical model methods"
+  ],
+  "out_of_scope": [
+    "API endpoints (handled in separate task)",
+    "Complex business logic beyond basic models",
+    "Performance optimization",
+    "Advanced model features beyond MVP requirements"
+  ],
+  "references": [
+    "docs/diagrams/high-level-db-components-relationship.png",
+    "Django model documentation",
+    "PostgreSQL UUID documentation",
+    "docs/Itqan_CMS_BRS.md - Data Model Overview"
+  ]
+}

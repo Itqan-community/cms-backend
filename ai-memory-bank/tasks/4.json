@@ -1,0 +1,61 @@
+{
+  "prompt": "Create comprehensive Django REST API v1 with CRUD endpoints for all entities, proper JWT authentication, and role-based permissions",
+  "context": {
+    "project": "Itqan CMS", 
+    "feature": "Django REST API v1",
+    "auth_model": "JWT authentication with role-based permissions",
+    "tech_stack": ["Django REST Framework", "JWT", "ViewSets", "Serializers", "Permissions"],
+    "screens": [],
+    "colors": {"primary": "#669B80", "dark": "#22433D"}
+  },
+  "objectives": [
+    "Create DRF ViewSets for all 7 entities",
+    "Implement proper serializers with validation",
+    "Setup JWT authentication middleware",
+    "Create role-based permission classes",
+    "Build comprehensive API documentation"
+  ],
+  "tasks": [
+    "Create serializers for User, Role, Resource, License, Distribution, AccessRequest, UsageEvent",
+    "Implement ViewSets with full CRUD operations",
+    "Setup JWT authentication using djangorestframework-simplejwt",
+    "Create custom permission classes for Admin/Publisher/Developer/Reviewer roles",
+    "Implement filtering, searching, and pagination",
+    "Add API versioning with /api/v1/ prefix",
+    "Create API documentation using DRF spectacular",
+    "Build comprehensive error handling and validation"
+  ],
+  "guard_rails": [
+    "All endpoints must require proper authentication",
+    "Implement role-based access control on all operations",
+    "Use DRF best practices for serializers and viewsets",
+    "Validate all input data thoroughly",
+    "Return consistent error response formats"
+  ],
+  "acceptance_criteria": [
+    "All CRUD endpoints functional and tested",
+    "JWT authentication working correctly",
+    "Role-based permissions enforced",
+    "API documentation accessible via /api/docs/",
+    "Proper HTTP status codes returned"
+  ],
+  "definition_of_done": [
+    "All API endpoints pass integration tests",
+    "Authentication and permissions tested thoroughly",
+    "API documentation complete and accurate",
+    "Error handling covers all edge cases",
+    "Performance acceptable for expected load"
+  ],
+  "out_of_scope": [
+    "Frontend integration (separate task)",
+    "Advanced analytics endpoints",
+    "File upload handling (covered in separate task)",
+    "Real-time features"
+  ],
+  "references": [
+    "Django REST Framework documentation",
+    "JWT authentication best practices",
+    "docs/diagrams/api-surface-overview.mmd",
+    "docs/diagrams/high-level-db-components-relationship.png"
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "prompt": "Implement Auth0 OIDC integration in Django with JWKS validation, automatic role mapping to Role table, and JWT token handling",
+  "context": {
+    "project": "Itqan CMS",
+    "feature": "Auth0 OIDC Integration (Django)",
+    "auth_model": "Auth0 OIDC with Django JWT validation",
+    "tech_stack": ["Auth0", "OIDC", "JWKS", "Django", "PyJWT", "Requests"],
+    "screens": [],
+    "colors": {"primary": "#669B80", "dark": "#22433D"}
+  },
+  "objectives": [
+    "Configure Auth0 OIDC discovery and JWKS validation",
+    "Create Django authentication backend for Auth0 tokens",
+    "Implement automatic role mapping from Auth0 to Django Role model",
+    "Build user creation/update flow for Auth0 users",
+    "Setup comprehensive JWT token validation"
+  ],
+  "tasks": [
+    "Install PyJWT and requests for OIDC/JWKS handling",
+    "Create Auth0 OIDC configuration and settings",
+    "Implement custom Django authentication backend",
+    "Build JWKS public key fetching and caching",
+    "Create user lookup/creation service for Auth0 users",
+    "Implement role mapping from Auth0 metadata to Django Role",
+    "Add JWT token validation middleware",
+    "Create login/logout endpoints for frontend integration"
+  ],
+  "guard_rails": [
+    "Always validate JWT signatures against current JWKS",
+    "Handle Auth0 service outages gracefully",
+    "Cache JWKS keys with appropriate expiration",
+    "Never trust client-provided role information",
+    "Log all authentication attempts for security"
+  ],
+  "acceptance_criteria": [
+    "Auth0 JWT tokens validated successfully",
+    "Users created/updated automatically on first login",
+    "Role mapping works correctly from Auth0 metadata",
+    "Authentication backend integrates with Django permissions",
+    "Token validation errors handled appropriately"
+  ],
+  "definition_of_done": [
+    "JWT validation tested with real Auth0 tokens",
+    "User creation flow tested end-to-end",
+    "Role mapping verified for all role types",
+    "Error handling covers expired/invalid tokens",
+    "Documentation includes Auth0 configuration steps"
+  ],
+  "out_of_scope": [
+    "Frontend Auth0 SDK integration",
+    "Advanced Auth0 features like MFA",
+    "Custom Auth0 login pages",
+    "Auth0 Management API integration"
+  ],
+  "references": [
+    "Auth0 OIDC documentation",
+    "Django authentication backend docs",
+    "PyJWT documentation",
+    "JWKS specification"
+  ]
+}

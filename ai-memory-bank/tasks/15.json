@@ -1,0 +1,52 @@
+{
+  "prompt": "You are an autonomous coding agent completing STORY-4: Hybrid Token Exchange between Auth0 and Django for Itqan CMS.",
+  "context": {
+    "project": "Itqan CMS",
+    "feature": "Hybrid Token Exchange",
+    "auth_model": "Auth0 Hybrid (Hosted Universal Login)",
+    "tech_stack": ["Django 4.2", "Angular 19", "NG-ZORRO"],
+    "screens": ["AUTH-002"],
+    "integration": "Auth0 Universal Login → Django JWT",
+    "developer_flow": "docs/screens/Developer Resource Access & Resource Download - Initial Registration Scenario.png"
+  },
+  "objectives": [
+    "Backend endpoint validates Auth0 access token",
+    "Create/refresh Django JWT",
+    "Map Auth0 roles to Django User roles"
+  ],
+  "tasks": [
+    "Create Django API view POST /api/auth/exchange/ for Auth0 token validation",
+    "Verify Auth0 access token via JWKS endpoint and audience claim",
+    "Handle AUTH-002 screen: loading state during token exchange process using NG-ZORRO",
+    "Extract user claims from Auth0 token (sub, email, GitHub profile)",
+    "Use Django ORM to create/update user and issue JWT via SimpleJWT",
+    "Map Auth0 roles to Django User roles (Admin, Publisher, Developer, Reviewer)",
+    "Implement secure token caching with 1h TTL using Redis"
+  ],
+  "guard_rails": [
+    "Audience & issuer check",
+    "Rate-limit 10 req/min/ip"
+  ],
+  "acceptance_criteria": [
+    "Valid token returns 200 and Django JWT",
+    "Invalid token returns 401",
+    "Loading state displayed during token exchange process"
+  ],
+  "definition_of_done": [
+    "Integration test with real Auth0 token",
+    "Angular component follows NG-ZORRO design system",
+    "Developer flow documentation updated"
+  ],
+  "out_of_scope": [
+    "Refresh token rotation"
+  ],
+  "references": [
+    "Auth0 M2M documentation",
+    "Django REST Framework JWT documentation", 
+    "docs/screens/Developer Resource Access & Resource Download - Initial Registration Scenario.png",
+    "Screen AUTH-002: Token exchange loading state",
+    ".cursor/rules/cms.mdc - Developer Flow Documentation section",
+    "frontend/src/app/features/auth/auth-callback.component.ts - Angular loading component",
+    "backend/apps/authentication/views.py - Django token exchange view"
+  ]
+}

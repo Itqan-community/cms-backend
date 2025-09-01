@@ -1,0 +1,612 @@
+/* Workflow Management Component Styles - ADMIN-004 */
+/* Following NG-ZORRO design system with Itqan branding */
+
+.workflow-management {
+  height: 100vh;
+  background: #f5f5f5;
+
+  .workflow-header {
+    background: white;
+    padding: 16px 24px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    nz-breadcrumb {
+      margin: 0;
+      
+      nz-breadcrumb-item {
+        color: #666;
+        font-size: 14px;
+        
+        .anticon {
+          margin-right: 8px;
+        }
+      }
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+
+      button {
+        .anticon {
+          margin-right: 6px;
+        }
+      }
+    }
+  }
+
+  .workflow-content {
+    padding: 24px;
+    overflow-y: auto;
+    height: calc(100vh - 64px);
+
+    .stats-card {
+      margin-bottom: 24px;
+      
+      .ant-statistic {
+        text-align: center;
+
+        .ant-statistic-title {
+          color: #666;
+          font-size: 14px;
+          margin-bottom: 8px;
+          font-weight: 500;
+        }
+
+        .ant-statistic-content {
+          font-size: 24px;
+          font-weight: 600;
+        }
+
+        .ant-statistic-content-prefix {
+          margin-right: 8px;
+          font-size: 20px;
+        }
+      }
+
+      .user-role {
+        text-align: center;
+        
+        h4 {
+          margin: 0 0 8px 0;
+          color: #666;
+          font-size: 14px;
+          font-weight: 500;
+        }
+
+        nz-tag {
+          font-size: 12px;
+          font-weight: 600;
+        }
+      }
+    }
+
+    .workflow-tabs-card {
+      .ant-tabs {
+        .ant-tabs-tab {
+          font-weight: 500;
+          
+          &.ant-tabs-tab-active {
+            .ant-tabs-tab-btn {
+              color: #669B80; // Itqan primary color
+            }
+          }
+        }
+        
+        .ant-tabs-ink-bar {
+          background: #669B80; // Itqan primary color
+        }
+        
+        .ant-tabs-content {
+          padding-top: 16px;
+        }
+      }
+
+      .tab-content {
+        min-height: 400px;
+
+        .ant-table {
+          .resource-title {
+            strong {
+              color: #262626;
+              font-size: 14px;
+            }
+
+            .arabic-title {
+              font-size: 12px;
+              color: #8c8c8c;
+              margin-top: 2px;
+              font-family: 'Noto Sans Arabic', 'IBM Plex Sans Arabic', sans-serif;
+              direction: rtl;
+              text-align: right;
+            }
+          }
+
+          .action-buttons {
+            display: flex;
+            gap: 4px;
+
+            button {
+              width: 28px;
+              height: 28px;
+              padding: 0;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+
+              .anticon {
+                font-size: 14px;
+              }
+
+              &:hover:not([disabled]) {
+                .anticon {
+                  color: #669B80; // Itqan primary color
+                }
+              }
+            }
+          }
+
+          .review-actions {
+            display: flex;
+            gap: 8px;
+
+            button {
+              .anticon {
+                margin-right: 4px;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Modal Styles
+.ant-modal {
+  .ant-modal-header {
+    border-bottom: 1px solid #f0f0f0;
+    
+    .ant-modal-title {
+      font-weight: 600;
+      color: #262626;
+    }
+  }
+
+  .ant-modal-body {
+    padding: 24px;
+  }
+}
+
+// Timeline Styles
+.timeline-content {
+  .timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+
+    strong {
+      color: #262626;
+      font-size: 14px;
+    }
+
+    .timeline-time {
+      font-size: 12px;
+      color: #8c8c8c;
+    }
+  }
+
+  .timeline-user {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 6px;
+  }
+
+  .timeline-notes {
+    font-size: 13px;
+    color: #595959;
+    background: #fafafa;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border-left: 3px solid #669B80; // Itqan primary color
+  }
+}
+
+// Badge styles
+nz-badge {
+  .ant-badge-count {
+    background: #669B80; // Itqan primary color
+    border-color: #669B80;
+  }
+}
+
+// Tag customizations
+nz-tag {
+  &[nzColor="processing"] {
+    background: #e6f7ff;
+    border-color: #91d5ff;
+    color: #1890ff;
+  }
+
+  &[nzColor="success"] {
+    background: #f6ffed;
+    border-color: #b7eb8f;
+    color: #52c41a;
+  }
+
+  &[nzColor="green"] {
+    background: #f0f9f0;
+    border-color: #669B80;
+    color: #669B80; // Itqan primary color
+  }
+
+  &[nzColor="error"] {
+    background: #fff2f0;
+    border-color: #ffccc7;
+    color: #ff4d4f;
+  }
+}
+
+// Empty state styling
+nz-empty {
+  padding: 40px 0;
+  
+  .ant-empty-description {
+    color: #8c8c8c;
+    font-size: 14px;
+  }
+
+  nz-empty-footer {
+    margin-top: 16px;
+    
+    p {
+      color: #bfbfbf;
+      font-size: 12px;
+      margin-bottom: 16px;
+    }
+  }
+}
+
+// Loading states
+nz-spin {
+  display: block;
+  text-align: center;
+  padding: 40px 0;
+}
+
+// Responsive design
+@media (max-width: 1200px) {
+  .workflow-management {
+    .workflow-content {
+      .stats-card {
+        .ant-statistic {
+          margin-bottom: 16px;
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .workflow-management {
+    .workflow-header {
+      flex-direction: column;
+      gap: 16px;
+      padding: 16px;
+
+      .header-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+    }
+
+    .workflow-content {
+      padding: 16px;
+
+      .stats-card {
+        .ant-row {
+          [nz-col] {
+            [nzSpan] {
+              span: 12;
+              margin-bottom: 16px;
+            }
+          }
+        }
+
+        .user-role {
+          margin-top: 16px;
+        }
+      }
+
+      .workflow-tabs-card {
+        .ant-table {
+          font-size: 12px;
+
+          .action-buttons {
+            flex-direction: column;
+            gap: 2px;
+          }
+
+          .review-actions {
+            flex-direction: column;
+            gap: 4px;
+
+            button {
+              width: 100%;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Dark theme support (future enhancement)
+.dark-theme {
+  .workflow-management {
+    background: #141414;
+
+    .workflow-header,
+    .workflow-content {
+      background: #1f1f1f;
+      border-color: #303030;
+    }
+
+    .stats-card,
+    .workflow-tabs-card {
+      background: #262626;
+      border-color: #303030;
+    }
+  }
+}
+
+// High contrast mode
+@media (prefers-contrast: high) {
+  .workflow-management {
+    .resource-title {
+      .arabic-title {
+        color: #434343;
+      }
+    }
+
+    .timeline-content {
+      .timeline-user {
+        color: #434343;
+      }
+    }
+  }
+}
+
+// Reduced motion
+@media (prefers-reduced-motion: reduce) {
+  .workflow-management {
+    * {
+      transition: none !important;
+      animation: none !important;
+    }
+  }
+}
+
+// Print styles
+@media print {
+  .workflow-management {
+    .workflow-header {
+      display: none;
+    }
+
+    .workflow-content {
+      padding: 0;
+      height: auto;
+      overflow: visible;
+
+      .stats-card {
+        page-break-inside: avoid;
+      }
+
+      .action-buttons,
+      .review-actions {
+        display: none;
+      }
+
+      .workflow-tabs-card {
+        .ant-tabs-nav {
+          display: none;
+        }
+      }
+    }
+  }
+}
+
+// Focus styles for accessibility
+.workflow-management {
+  button:focus,
+  .ant-tabs-tab:focus {
+    outline: 2px solid #669B80; // Itqan primary color
+    outline-offset: 2px;
+  }
+}
+
+// Status-specific styling
+.status-draft {
+  .ant-tag {
+    background: #f5f5f5;
+    border-color: #d9d9d9;
+    color: #8c8c8c;
+  }
+}
+
+.status-in-review {
+  .ant-tag {
+    background: #e6f7ff;
+    border-color: #91d5ff;
+    color: #1890ff;
+  }
+}
+
+.status-reviewed {
+  .ant-tag {
+    background: #f6ffed;
+    border-color: #b7eb8f;
+    color: #52c41a;
+  }
+}
+
+.status-published {
+  .ant-tag {
+    background: #f0f9f0;
+    border-color: #669B80;
+    color: #669B80;
+  }
+}
+
+.status-rejected {
+  .ant-tag {
+    background: #fff2f0;
+    border-color: #ffccc7;
+    color: #ff4d4f;
+  }
+}
+
+// Workflow timeline colors
+.ant-timeline {
+  .ant-timeline-item {
+    &[nzColor="green"] {
+      .ant-timeline-item-head {
+        border-color: #669B80;
+        background: #669B80;
+      }
+    }
+
+    &[nzColor="processing"] {
+      .ant-timeline-item-head {
+        border-color: #1890ff;
+        background: #1890ff;
+      }
+    }
+
+    &[nzColor="error"] {
+      .ant-timeline-item-head {
+        border-color: #ff4d4f;
+        background: #ff4d4f;
+      }
+    }
+
+    &[nzColor="success"] {
+      .ant-timeline-item-head {
+        border-color: #52c41a;
+        background: #52c41a;
+      }
+    }
+  }
+}
+
+// Islamic content styling
+.islamic-content {
+  .arabic-text {
+    font-family: 'Noto Sans Arabic', 'IBM Plex Sans Arabic', sans-serif;
+    direction: rtl;
+    text-align: right;
+    line-height: 1.8;
+  }
+
+  .quran-metadata {
+    background: #f9f9f9;
+    padding: 12px;
+    border-radius: 4px;
+    border-left: 4px solid #669B80; // Itqan primary color
+    margin: 8px 0;
+
+    .metadata-label {
+      font-weight: 600;
+      color: #669B80;
+    }
+  }
+}
+
+// Animation for state changes
+.state-transition {
+  animation: highlightChange 0.5s ease-out;
+}
+
+@keyframes highlightChange {
+  0% {
+    background: #e6f7ff;
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+// Button customizations
+.ant-btn {
+  &.ant-btn-primary {
+    background: #669B80; // Itqan primary color
+    border-color: #669B80;
+
+    &:hover {
+      background: #5a8770;
+      border-color: #5a8770;
+    }
+  }
+
+  &.ant-btn-danger {
+    &:hover {
+      background: #ff7875;
+      border-color: #ff7875;
+    }
+  }
+}
+
+// Table enhancements
+.ant-table {
+  .ant-table-thead > tr > th {
+    background: #fafafa;
+    font-weight: 600;
+    color: #262626;
+    font-size: 13px;
+  }
+
+  .ant-table-tbody > tr > td {
+    vertical-align: middle;
+    font-size: 13px;
+  }
+
+  .ant-table-tbody > tr:hover > td {
+    background: #f5f5f5;
+  }
+}
+
+// Statistic enhancements
+.ant-statistic {
+  .ant-statistic-content-value {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+}
+
+// Form enhancements in modals
+.ant-modal .ant-form {
+  .ant-form-item {
+    margin-bottom: 16px;
+
+    .ant-form-item-label {
+      padding-bottom: 4px;
+
+      label {
+        font-weight: 500;
+        color: #262626;
+      }
+    }
+
+    textarea {
+      border-radius: 6px;
+      
+      &:focus, &:hover {
+        border-color: #669B80; // Itqan primary color
+      }
+    }
+  }
+}

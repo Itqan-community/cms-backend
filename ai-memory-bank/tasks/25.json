@@ -1,0 +1,71 @@
+{
+    "prompt": "You are an autonomous coding agent completing STORY-14: Search UI for Itqan CMS. Add client-side search functionality using Meilisearch index with real-time search, faceted filtering, and bilingual support.",
+    "context": {
+        "project": "Itqan CMS",
+        "feature": "Frontend Search Experience",
+        "tech_stack": [
+            "Next.js 14",
+            "Meilisearch",
+            "InstantSearch.js",
+            "Bootstrap"
+        ],
+        "search_features": [
+            "Real-time search",
+            "Faceted filtering",
+            "Bilingual support"
+        ]
+    },
+    "objectives": [
+        "Implement real-time search interface with instant results",
+        "Add faceted filtering by categories, tags, and content type",
+        "Support searching in both English and Arabic content",
+        "Create responsive search UI with accessibility features"
+    ],
+    "tasks": [
+        "Install Meilisearch JavaScript client and InstantSearch.js",
+        "Create search page component with search input and results",
+        "Implement real-time search with debounced API calls",
+        "Add faceted filters for categories, tags, and publish date",
+        "Configure search highlighting for matched terms",
+        "Implement search suggestions and autocomplete",
+        "Add locale-aware search (separate indexes or filtering)",
+        "Create search results layout with pagination",
+        "Add accessibility features (ARIA labels, keyboard navigation)",
+        "Test search performance and error handling"
+    ],
+    "guard_rails": [
+        "Search requests should be debounced to avoid API spam",
+        "Search results must respect content visibility and permissions",
+        "Arabic search should handle RTL text properly",
+        "Search UI should degrade gracefully if Meilisearch is unavailable",
+        "No sensitive or unpublished content should appear in results"
+    ],
+    "acceptance_criteria": [
+        "Given I type in search box, then results appear instantly without page reload",
+        "Given I use category filter, then results are filtered accordingly",
+        "Given I search Arabic text, then Arabic content is properly matched and displayed",
+        "Search highlighting shows matched terms in both languages",
+        "Search works on mobile devices with touch-friendly interface",
+        "Empty search states and error messages are user-friendly"
+    ],
+    "definition_of_done": [
+        "Search interface fully functional with real-time results",
+        "Faceted filtering working for all content metadata",
+        "Bilingual search tested with Arabic and English content",
+        "Search performance optimized for quick response times",
+        "Accessibility requirements met for keyboard and screen reader users"
+    ],
+    "out_of_scope": [
+        "Advanced search features like boolean operators",
+        "Search analytics and tracking",
+        "Elasticsearch or other search engine alternatives"
+    ],
+    "references": [
+        "ai-memory-bank/tasks/8.json (Meilisearch Integration)",
+        "docker-compose.yaml Meilisearch service",
+        "Meilisearch JavaScript SDK documentation",
+        "Screen SEARCH-001: Dedicated search page with faceted filters",
+        "Screen PUB-003: Search box embedded in article list page",
+        "English wireframes: ai-memory-bank/tasks/screens/en/final_wireframes.html#SEARCH-001 and ai-memory-bank/tasks/screens/en/final_wireframes.html#PUB-003"
+    ]
+}

@@ -1,0 +1,310 @@
+// REG-002 Email Verification Page Styles
+// Based on Itqan CMS design system with NG-ZORRO components
+
+.verification-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f0f8f4 0%, #e8f5e8 100%);
+  padding: 24px;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+    align-items: flex-start;
+    padding-top: 5vh;
+  }
+}
+
+.verification-card-wrapper {
+  width: 100%;
+  max-width: 600px;
+}
+
+.verification-card {
+  box-shadow: 
+    0 10px 30px rgba(34, 67, 61, 0.08),
+    0 4px 16px rgba(102, 155, 128, 0.05);
+  border-radius: 12px;
+  overflow: hidden;
+
+  :global(.ant-card-body) {
+    padding: 48px 40px;
+
+    @media (max-width: 768px) {
+      padding: 32px 24px;
+    }
+  }
+}
+
+// Checking State
+.checking-state {
+  text-align: center;
+  padding: 40px 20px;
+
+  .checking-content {
+    margin-top: 24px;
+
+    h2 {
+      color: #22433D;
+      font-size: 24px;
+      font-weight: 600;
+      margin: 0 0 12px 0;
+    }
+
+    p {
+      color: #6B7280;
+      font-size: 16px;
+      margin: 0;
+    }
+  }
+}
+
+// Verification Result
+.verification-result,
+.success-result {
+  :global(.ant-result-title) {
+    color: #22433D !important;
+    font-weight: 600;
+  }
+
+  :global(.ant-result-subtitle) {
+    color: #6B7280 !important;
+    line-height: 1.6;
+  }
+}
+
+.verification-icon {
+  font-size: 64px !important;
+  color: #669B80 !important;
+}
+
+// Alert Styles
+.error-alert,
+.success-alert {
+  margin-bottom: 24px;
+  border-radius: 8px;
+}
+
+// Action Buttons
+.verification-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 32px 0;
+
+  @media (min-width: 640px) {
+    flex-direction: row;
+    justify-content: center;
+  }
+}
+
+.resend-button {
+  background-color: #669B80 !important;
+  border-color: #669B80 !important;
+  color: white !important;
+  font-weight: 500;
+  height: 48px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled), &:focus:not(:disabled) {
+    background-color: #5a8b73 !important;
+    border-color: #5a8b73 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 155, 128, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  :global(.anticon) {
+    margin-right: 8px;
+  }
+}
+
+.check-button,
+.change-email-button {
+  height: 48px;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+
+  &:hover, &:focus {
+    border-color: #669B80;
+    color: #669B80;
+    transform: translateY(-1px);
+  }
+
+  :global(.anticon) {
+    margin-right: 8px;
+  }
+}
+
+.change-email-button {
+  color: #6B7280 !important;
+  border: none !important;
+
+  &:hover, &:focus {
+    color: #669B80 !important;
+    background-color: rgba(102, 155, 128, 0.05) !important;
+  }
+}
+
+.dashboard-button {
+  background-color: #669B80 !important;
+  border-color: #669B80 !important;
+  color: white !important;
+  font-weight: 500;
+  height: 56px;
+  padding: 0 32px;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: all 0.2s ease;
+
+  &:hover, &:focus {
+    background-color: #5a8b73 !important;
+    border-color: #5a8b73 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 155, 128, 0.4);
+  }
+
+  :global(.anticon) {
+    font-size: 18px;
+    margin-right: 8px;
+  }
+}
+
+// Help Section
+.help-section {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 24px;
+  margin-top: 32px;
+  text-align: left;
+
+  h4 {
+    color: #22433D;
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 16px 0;
+  }
+
+  .help-list {
+    margin: 0;
+    padding-left: 20px;
+    color: #6B7280;
+    line-height: 1.6;
+
+    li {
+      margin-bottom: 8px;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+}
+
+// Success State
+.verification-success {
+  text-align: center;
+
+  :global(.ant-result-icon .anticon) {
+    color: #52c41a !important;
+  }
+
+  :global(.ant-result-title) {
+    color: #22433D !important;
+  }
+}
+
+// Loading States
+:global(.ant-spin-nested-loading > .ant-spin-container) {
+  text-align: center;
+}
+
+:global(.ant-result-content) {
+  text-align: center;
+}
+
+// Focus States for Accessibility
+.resend-button:focus-visible,
+.check-button:focus-visible,
+.change-email-button:focus-visible,
+.dashboard-button:focus-visible {
+  outline: 2px solid #669B80;
+  outline-offset: 2px;
+}
+
+// Responsive Design
+@media (max-width: 640px) {
+  .verification-actions {
+    .resend-button,
+    .check-button,
+    .change-email-button {
+      width: 100%;
+    }
+  }
+
+  .help-section {
+    padding: 20px;
+    margin-top: 24px;
+
+    h4 {
+      font-size: 15px;
+    }
+
+    .help-list {
+      font-size: 14px;
+    }
+  }
+}
+
+// RTL Support for Arabic
+[dir="rtl"] {
+  .verification-actions {
+    :global(.anticon) {
+      margin-right: 0;
+      margin-left: 8px;
+    }
+  }
+
+  .help-list {
+    padding-left: 0;
+    padding-right: 20px;
+  }
+
+  .help-section {
+    text-align: right;
+  }
+}
+
+// Dark Theme Support (Future Enhancement)
+[data-theme="dark"] {
+  .verification-container {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  }
+
+  .verification-card {
+    background-color: #262626;
+  }
+
+  .help-section {
+    background-color: #1f1f1f;
+    border-color: #404040;
+  }
+
+  .checking-content h2,
+  .help-section h4 {
+    color: #ffffff;
+  }
+
+  .checking-content p,
+  .help-list {
+    color: #a0a0a0;
+  }
+}

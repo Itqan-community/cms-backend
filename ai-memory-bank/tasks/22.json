@@ -1,0 +1,79 @@
+{
+    "prompt": "You are an autonomous coding agent completing STORY-11: RBAC Roles for Itqan CMS. Define and configure role-based access control with Admin, Publisher, Developer, and Reviewer roles with appropriate permissions for content and API access.",
+    "context": {
+        "project": "Itqan CMS",
+        "feature": "Role-Based Access Control",
+        "tech_stack": [
+            "Django 4.2",
+            "Django Auth System",
+            "Angular 19",
+            "NG-ZORRO"
+        ],
+        "roles": [
+            "Admin",
+            "Publisher",
+            "Developer",
+            "Reviewer"
+        ],
+        "complete_screen_flow": "docs/screens/cms-screens.png"
+    },
+    "objectives": [
+        "Create four distinct user roles with clear permission boundaries",
+        "Configure content permissions based on user responsibilities", 
+        "Set up API access controls for developer role",
+        "Implement Publisher/Developer permission matrix for AccessRequests",
+        "Test role restrictions and permissions enforcement"
+    ],
+    "tasks": [
+        "Create Django User roles using the existing Role model from 7-entity schema",
+        "Configure Admin role with full system access and user management via Django admin",
+        "Configure Publisher role with content creation and basic management rights",
+        "Configure Developer role with API access and AccessRequest submission permissions",
+        "Configure Reviewer role with content review and Wagtail workflow approval permissions",
+        "Set up Django REST Framework permissions for each role using custom permission classes",
+        "Configure Resource/Distribution/AccessRequest permissions for each role",
+        "Create Angular role management interface (ADMIN-005) using NG-ZORRO components",
+        "Set up API endpoint permissions and rate limiting per role using DRF throttling",
+        "Integrate role-based navigation in Angular frontend following cms.mdc flow",
+        "Test role switching and permission enforcement across Django admin and Angular UI",
+        "Document role matrix and permission guidelines for Islamic content management"
+    ],
+    "guard_rails": [
+        "Admin role should have unrestricted access to all features",
+        "Publisher role cannot modify system settings or user accounts",
+        "Developer role has read-only access to most content",
+        "Reviewer role can only modify content workflow states",
+        "No role below Admin can access sensitive system configurations"
+    ],
+    "acceptance_criteria": [
+        "Given I login as Publisher, then I can create/edit Resources via ADMIN-005 but not manage users",
+        "Given I login as Developer, then I can access Django REST API but not modify content",
+        "Given I login as Reviewer, then I can change Wagtail workflow states but not create content",
+        "Given I login as Admin, then I have access to all Django admin and Angular features",
+        "Django REST API endpoints respect role-based permissions and return appropriate DRF errors",
+        "Angular navigation adapts based on user role following cms.mdc screen flow"
+    ],
+    "definition_of_done": [
+        "All four roles configured in Django using existing Role model",
+        "Angular role management interface (ADMIN-005) implemented with NG-ZORRO",
+        "Role-based restrictions tested across Django admin, Wagtail, and Angular UI",
+        "Permission matrix documented for Islamic content management workflow",
+        "Test users created for each role type with proper Auth0 integration"
+    ],
+    "out_of_scope": [
+        "Advanced permission schemes like resource-level permissions",
+        "Integration with external identity providers beyond Auth0",
+        "Custom permission plugins or extensions"
+    ],
+    "references": [
+        "docs/Itqan_CMS_BRD.md §3.1 User Management",
+        "docs/diagrams/level4-data-models.md - 7-entity schema User/Role entities",
+        "docs/screens/cms-screens.png - Complete screen flow with ADMIN-005",
+        "Django authentication system documentation",
+        "Django REST Framework permissions documentation",
+        "Screen ADMIN-005: RBAC role and permission matrix with NG-ZORRO components",
+        ".cursor/rules/cms.mdc - Complete Screen Flow Documentation section",
+        "backend/apps/accounts/ - User and Role models (7-entity schema)",
+        "frontend/src/app/features/admin/roles/ - Angular role management interface"
+    ]
+}

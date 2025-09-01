@@ -1,0 +1,78 @@
+{
+    "prompt": "You are an autonomous coding agent completing STORY-10: Review Workflow for Itqan CMS. Implement Draft->Review->Published workflow using Wagtail's built-in workflow system with proper state transitions and notifications.",
+    "context": {
+        "project": "Itqan CMS",
+        "feature": "Editorial Workflow",
+        "tech_stack": [
+            "Django 4.2",
+            "Wagtail CMS",
+            "Angular 19",
+            "NG-ZORRO"
+        ],
+        "roles": [
+            "Publisher",
+            "Reviewer", 
+            "Developer",
+            "Admin"
+        ],
+        "complete_screen_flow": "docs/screens/cms-screens.png"
+    },
+    "objectives": [
+        "Configure Wagtail workflow system for Resource publication approval",
+        "Configure workflow stages: Draft, Editorial Review, Ready, Published (publication scope only)",
+        "Set up role-based permissions for workflow transitions using 4-role system",
+        "Create Angular workflow management interface (ADMIN-004)",
+        "Test complete workflow from draft to published state for Resources",
+        "Integrate Islamic scholarly review requirements into workflow"
+    ],
+    "tasks": [
+        "Configure Wagtail workflow settings for Resource content approval",
+        "Create custom workflow stages with proper naming and Islamic content validation",
+        "Apply workflow to Resource models maintaining 7-entity schema integrity",
+        "Set up permissions: Publishers can create/edit, Reviewers can review/publish, Admins manage",
+        "Create Angular workflow management interface (ADMIN-004) using NG-ZORRO",
+        "Configure Wagtail workflow notifications for stage transitions",
+        "Integrate email notifications using Celery for workflow updates",
+        "Test workflow with sample Islamic content across different user roles",
+        "Document workflow process for Islamic content creators and reviewers"
+    ],
+    "guard_rails": [
+        "Only allow valid state transitions (no skipping review stages)",
+        "Ensure proper permission checks before state changes using 4-role system",
+        "Maintain audit trail of all workflow transitions in Wagtail",
+        "Prevent accidental publishing of unreviewed Islamic content",
+        "Follow Islamic scholarly review principles for content validation",
+        "Maintain 7-entity schema integrity throughout workflow"
+    ],
+    "acceptance_criteria": [
+        "Given I am a Publisher, when I create content, then it starts in Draft stage",
+        "Given I am a Reviewer, when I review content, then I can approve or reject it via ADMIN-004",
+        "Given content is in Published stage, then it appears in Django REST API",
+        "Workflow history shows all transitions with timestamps and users in Wagtail admin",
+        "Email notifications sent on stage transitions using Celery",
+        "Angular workflow interface (ADMIN-004) displays workflow status with NG-ZORRO components"
+    ],
+    "definition_of_done": [
+        "Wagtail workflow configured and working for Resource content types",
+        "4-role system permissions properly restrict workflow actions",
+        "Angular workflow interface (ADMIN-004) implemented with NG-ZORRO",
+        "Workflow transitions tested with multiple user accounts (Publisher, Reviewer, Admin)",
+        "Documentation created for Islamic content editorial process",
+        "Complete integration with cms.mdc screen flow"
+    ],
+    "out_of_scope": [
+        "Advanced approval workflows with multiple parallel reviewers",
+        "Custom workflow stages beyond Islamic scholarly review requirements",
+        "Integration with external approval systems beyond email notifications"
+    ],
+    "references": [
+        "docs/Itqan_CMS_BRD.md §3.6 Review & Approval Workflow",
+        "docs/screens/cms-screens.png - Complete screen flow with ADMIN-004",
+        "Wagtail workflow documentation",
+        "docs/diagrams/level4-data-models.md - 7-entity schema with workflow integration",
+        "Screen ADMIN-004: Workflow management panel with status buttons and timeline",
+        ".cursor/rules/cms.mdc - Complete Screen Flow Documentation section",
+        "backend/apps/content/ - Resource models with Wagtail workflow integration",
+        "frontend/src/app/features/admin/workflow/ - Angular workflow management interface"
+    ]
+}

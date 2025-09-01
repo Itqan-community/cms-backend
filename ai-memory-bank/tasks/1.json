@@ -1,0 +1,77 @@
+{
+  "prompt": "Bootstrap Angular 19 project with Vite builder, Signals, NG-ZORRO Islamic theme, bilingual RTL support, and Auth0 SPA SDK for Quranic content management",
+  "context": {
+    "project": "Itqan CMS",
+    "feature": "Angular 19 Project Bootstrap", 
+    "auth_model": "Auth0 SPA SDK (Level 2 Container)",
+    "tech_stack": ["Angular 19", "Vite", "Signals", "NG-ZORRO", "Auth0 SPA SDK", "i18n", "RTL"],
+    "screens": [],
+    "colors": {"primary": "#669B80", "dark": "#22433D"}
+  },
+  "objectives": [
+    "Create Angular 19 SPA matching C4 Level 2 Container specification",
+    "Configure Vite builder for optimized Islamic content delivery",
+    "Implement Angular Signals for reactive Quranic content state management",
+    "Integrate NG-ZORRO with custom Itqan Islamic theme and RTL support",
+    "Setup Auth0 SPA SDK matching backend OIDC integration",
+    "Configure comprehensive EN/AR bilingual support with proper RTL layouts",
+    "Create foundation for Islamic content management (Quranic text, audio, translations)"
+  ],
+  "tasks": [
+    "Backup existing frontend and create fresh Angular 19 project with Vite",
+    "Configure Vite builder for optimized development and production builds",
+    "Install and configure NG-ZORRO with custom Itqan Islamic theme (#669B80, #22433D)",
+    "Implement Angular Signals for reactive state management replacing RxJS patterns",
+    "Setup comprehensive i18n with @angular/localize for EN/AR with RTL support",
+    "Configure Auth0 SPA SDK matching backend OIDC integration",
+    "Create Islamic content management layout (header with Arabic support, sidebar, main area)",
+    "Implement TypeScript interfaces matching 7-entity database schema",
+    "Create core services for Quranic content management (text, audio, translations)",
+    "Setup development and production environments with proper Islamic content CDN configuration"
+  ],
+  "guard_rails": [
+    "MUST use Angular 19 standalone components pattern throughout",
+    "MUST follow NG-ZORRO design system with Islamic content considerations",
+    "MUST implement proper TypeScript typing with 7-entity interfaces",
+    "MUST use Angular Signals for state management (minimize RxJS usage)",
+    "MUST ensure proper Arabic RTL support and Islamic content handling",
+    "MUST align with C4 Level 2 Container architecture specification",
+    "MUST support Quranic text accuracy and content integrity requirements"
+  ],
+  "acceptance_criteria": [
+    "Angular 19 project with Vite builder runs successfully",
+    "NG-ZORRO components render with custom Itqan Islamic theme",
+    "Auth0 SPA SDK configured and connects to backend OIDC endpoints",
+    "Complete EN/AR i18n with RTL layouts working properly",
+    "Angular Signals implemented for reactive state management",
+    "TypeScript interfaces match exact 7-entity database schema",
+    "Islamic content management foundation (components, services) ready",
+    "Project structure follows C4 architecture and Angular best practices"
+  ],
+  "definition_of_done": [
+    "Vite-powered Angular 19 project builds and runs without errors",
+    "Custom Itqan Islamic theme applied to all NG-ZORRO components",
+    "Angular Signals implemented and working for state management",
+    "Complete EN/AR i18n with RTL support functional",
+    "Auth0 SPA SDK configured and tested with backend endpoints",
+    "TypeScript interfaces for 7-entity schema implemented",
+    "Islamic content management services and components created",
+    "Task completion documentation created (docs/md/1-angular-bootstrap.md)",
+    "C4 architecture validation completed for all 4 levels"
+  ],
+  "out_of_scope": [
+    "Complex backend API integration (handled in Tasks 12-28)",
+    "Advanced routing beyond basic Islamic content structure",
+    "Production deployment configuration (handled in Tasks 9-10)",
+    "Advanced Quranic content features (handled in content-specific tasks)"
+  ],
+  "references": [
+    "docs/diagrams/level1-system-context.md - Islamic content ecosystem",
+    "docs/diagrams/level2-container-diagram.md - Angular SPA specification",
+    "docs/diagrams/level3-component-diagram.md - Frontend integration points",
+    "docs/diagrams/level4-data-models.md - 7-entity TypeScript interfaces",
+    "Angular 19 + Vite documentation",
+    "NG-ZORRO Islamic content best practices",
+    "Auth0 SPA SDK + OIDC integration guide"
+  ]
+}

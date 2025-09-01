@@ -1,0 +1,13 @@
+-r base.txt
+
+# Production WSGI Server
+gunicorn==21.2.*
+
+# Production Monitoring
+sentry-sdk[django]==1.31.*
+
+# Production Caching
+django-redis==5.3.*
+
+# Production Database
+psycopg[c]==3.1.*

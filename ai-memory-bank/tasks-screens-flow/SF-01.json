@@ -1,0 +1,47 @@
+{
+  "prompt": "Document and validate existing Login Page implementation (AUTH-001) completed in Task 14 for Itqan CMS screen flow integration.",
+  "context": {
+    "project": "Itqan CMS",
+    "feature": "Login Page (AUTH-001)",
+    "auth_model": "Auth0 Hybrid (Hosted Universal Login)",
+    "tech_stack": ["Angular 19", "Django 4.2", "NG-ZORRO"],
+    "screens": ["AUTH-001"],
+    "colors": {"primary": "#669B80", "dark": "#22433D"},
+    "original_task": "Task 14",
+    "complete_screen_flow": "docs/screens/cms-screens.png"
+  },
+  "objectives": [
+    "Validate existing login implementation matches AUTH-001 wireframe",
+    "Ensure GitHub SSO and email/password authentication work correctly",
+    "Confirm proper integration with complete screen flow navigation"
+  ],
+  "tasks": [
+    "Review existing AUTH-001 screen implementation in Task 14",
+    "Test GitHub SSO authentication flow end-to-end",
+    "Test email/password login functionality",
+    "Validate Auth0 token exchange with Django backend",
+    "Confirm bilingual EN/AR support in login interface",
+    "Verify navigation to next screen (AUTH-002 or ADMIN-001) per flow"
+  ],
+  "guard_rails": [
+    "No changes to existing working authentication flow",
+    "Maintain security standards established in Task 14"
+  ],
+  "acceptance_criteria": [
+    "AUTH-001 screen matches wireframe specification",
+    "All authentication methods function correctly",
+    "Navigation follows documented screen flow"
+  ],
+  "definition_of_done": [
+    "Screen flow validation completed",
+    "Authentication tested and documented"
+  ],
+  "out_of_scope": [
+    "New authentication providers beyond existing GitHub/Google/Email"
+  ],
+  "references": [
+    "ai-memory-bank/tasks/14.json - Original login implementation",
+    "docs/screens/AUTH-001.png - Login page wireframe",
+    "frontend/src/app/features/auth/login.component.ts - Angular login component"
+  ]
+}
