@@ -298,3 +298,4 @@ Testing the improved CI/CD pipeline with git pull functionality.
 
 🧪 Testing GitHub Actions SSH fix...
 Test health endpoint
+🧪 Testing updated workflow with health endpoint - Mon Sep  1 21:51:57 SAST 2025
