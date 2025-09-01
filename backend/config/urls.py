@@ -5,11 +5,24 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import JsonResponse
+from django.utils import timezone
 from wagtail.admin import urls as wagtailadmin_urls
 from wagtail import urls as wagtail_urls
 from wagtail.documents import urls as wagtaildocs_urls
 
+def health_check(request):
+    """Simple health check endpoint for deployment verification"""
+    return JsonResponse({
+        'status': 'healthy',
+        'service': 'Itqan CMS API',
+        'timestamp': str(timezone.now())
+    })
+
 urlpatterns = [
+    # Health check endpoint
+    path('health/', health_check, name='health_check'),
+    
     # Django Admin
     path('django-admin/', admin.site.urls),
     
