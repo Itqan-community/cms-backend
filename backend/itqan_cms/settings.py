@@ -34,11 +34,10 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 # CSRF and Security Settings for HTTPS
 CSRF_TRUSTED_ORIGINS = []
-if not DEBUG:
-    # Add HTTPS origins for production
-    for host in ALLOWED_HOSTS:
-        if host not in ['localhost', '127.0.0.1']:
-            CSRF_TRUSTED_ORIGINS.append(f'https://{host}')
+# Add HTTPS origins for all environments (both debug and production)
+for host in ALLOWED_HOSTS:
+    if host not in ['localhost', '127.0.0.1']:
+        CSRF_TRUSTED_ORIGINS.append(f'https://{host}')
 
 # Session Security
 SESSION_COOKIE_SECURE = not DEBUG
