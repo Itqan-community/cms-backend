@@ -2,15 +2,15 @@
     # Enable gzip compression
     encode gzip
 
-    # Reverse proxy to Django application
-    reverse_proxy web:8000
-
-    # Handle static files
+    # Handle static files FIRST (before reverse proxy)
     @static path /static/* /media/*
     handle @static {
         root * /srv/static
         file_server
     }
+
+    # Reverse proxy to Django application (for all other requests)
+    reverse_proxy web:8000
 
     # Security headers
     header {
