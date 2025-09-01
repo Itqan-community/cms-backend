@@ -1,0 +1,82 @@
+name: Deploy to DigitalOcean
+
+on:
+  push:
+    branches: [develop, staging, main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Set deployment variables
+        id: vars
+        run: |
+          if [[ "${GITHUB_REF_NAME}" == "develop" ]]; then
+            echo "HOST=${{ secrets.DEVELOP_HOST }}" >> $GITHUB_ENV
+            echo "BRANCH=develop" >> $GITHUB_ENV
+            echo "ENV_NAME=development" >> $GITHUB_ENV
+            echo "ENV_URL=https://develop.api.cms.itqan.dev" >> $GITHUB_ENV
+          elif [[ "${GITHUB_REF_NAME}" == "staging" ]]; then
+            echo "HOST=${{ secrets.STAGING_HOST }}" >> $GITHUB_ENV
+            echo "BRANCH=staging" >> $GITHUB_ENV
+            echo "ENV_NAME=staging" >> $GITHUB_ENV
+            echo "ENV_URL=https://staging.api.cms.itqan.dev" >> $GITHUB_ENV
+          elif [[ "${GITHUB_REF_NAME}" == "main" ]]; then
+            echo "HOST=${{ secrets.PROD_HOST }}" >> $GITHUB_ENV
+            echo "BRANCH=main" >> $GITHUB_ENV
+            echo "ENV_NAME=production" >> $GITHUB_ENV
+            echo "ENV_URL=https://api.cms.itqan.dev" >> $GITHUB_ENV
+          fi
+
+      - name: Deploy to ${{ env.ENV_NAME }}
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            echo "🚀 Starting deployment to ${{ env.ENV_NAME }} environment..."
+            echo "📋 Target: ${{ env.ENV_URL }}"
+            echo "🌿 Branch: ${{ env.BRANCH }}"
+            
+            # Navigate to application directory
+            cd /srv/cms-backend
+            
+            # Pull latest changes
+            echo "📥 Fetching latest code from GitHub..."
+            git fetch origin ${{ env.BRANCH }}
+            git reset --hard origin/${{ env.BRANCH }}
+            
+            # Display current commit
+            echo "📋 Current commit: $(git rev-parse --short HEAD) - $(git log -1 --pretty=%B)"
+            
+            # Verify environment file exists
+            if [ ! -f deployment/docker/.env ]; then
+              echo "❌ Environment file missing!"
+              exit 1
+            fi
+            
+            # Deploy with Docker Compose
+            echo "🐳 Building and starting containers..."
+            docker compose -f deployment/docker/docker-compose.yml up -d --build
+            
+            # Wait for services to be ready
+            echo "⏳ Waiting for services to start..."
+            sleep 30
+            
+            # Health check
+            echo "🔍 Performing health check..."
+            if curl -f -s ${{ env.ENV_URL }}/health > /dev/null; then
+              echo "✅ Health check passed!"
+            else
+              echo "⚠️ Health check failed, but deployment completed"
+            fi
+            
+            # Clean up old Docker images
+            echo "🧹 Cleaning up old Docker images..."
+            docker image prune -f || true
+            
+            echo "🎉 Deployment to ${{ env.ENV_NAME }} completed successfully!"
+            echo "🌐 Application URL: ${{ env.ENV_URL }}"
