@@ -1,0 +1,94 @@
+name: Deploy to DigitalOcean
+
+on:
+  push:
+    branches: [develop, staging, main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Set deployment variables
+        id: vars
+        run: |
+          if [[ "${GITHUB_REF_NAME}" == "develop" ]]; then
+            echo "HOST=${{ secrets.DEVELOP_HOST }}" >> $GITHUB_ENV
+            echo "BRANCH=develop" >> $GITHUB_ENV
+            echo "ENV_NAME=development" >> $GITHUB_ENV
+          elif [[ "${GITHUB_REF_NAME}" == "staging" ]]; then
+            echo "HOST=${{ secrets.STAGING_HOST }}" >> $GITHUB_ENV
+            echo "BRANCH=staging" >> $GITHUB_ENV
+            echo "ENV_NAME=staging" >> $GITHUB_ENV
+          elif [[ "${GITHUB_REF_NAME}" == "main" ]]; then
+            echo "HOST=${{ secrets.PROD_HOST }}" >> $GITHUB_ENV
+            echo "BRANCH=main" >> $GITHUB_ENV
+            echo "ENV_NAME=production" >> $GITHUB_ENV
+          else
+            echo "Unknown branch: ${GITHUB_REF_NAME}"
+            exit 1
+          fi
+
+      - name: Deploy to ${{ env.ENV_NAME }}
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            
+            echo "🚀 Starting deployment to ${{ env.ENV_NAME }} environment..."
+            
+            # Navigate to application directory
+            cd /srv/cms-backend
+            
+            # Ensure we're on the correct branch
+            echo "📦 Fetching latest changes from GitHub..."
+            git fetch origin ${{ env.BRANCH }}
+            git checkout ${{ env.BRANCH }}
+            git reset --hard origin/${{ env.BRANCH }}
+            
+            # Show current commit
+            echo "📋 Current commit: $(git rev-parse --short HEAD) - $(git log -1 --pretty=%B)"
+            
+            # Verify environment file exists
+            if [ ! -f "deployment/docker/.env" ]; then
+              echo "❌ Environment file missing: deployment/docker/.env"
+              echo "Please create this file on the server"
+              exit 1
+            fi
+            
+            # Build and start containers
+            echo "🏗️  Building and starting containers..."
+            docker compose -f deployment/docker/docker-compose.yml up -d --build
+            
+            # Clean up old images
+            echo "🧹 Cleaning up old Docker images..."
+            docker image prune -f || true
+            
+            # Wait for health check
+            echo "🏥 Waiting for application to be healthy..."
+            sleep 30
+            
+            # Check if application is responding
+            echo "🔍 Testing application health..."
+            if curl -f -s https://${{ env.HOST }}/admin/ > /dev/null; then
+              echo "✅ Deployment successful! Application is responding."
+            else
+              echo "⚠️  Application may not be fully ready yet. Check logs:"
+              docker compose -f deployment/docker/docker-compose.yml logs --tail=10 web
+            fi
+            
+            echo "🎉 Deployment to ${{ env.ENV_NAME }} completed!"
+            echo "🌐 Application URL: https://${{ env.HOST }}"
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Deployment to ${{ env.ENV_NAME }} was successful!"
+            echo "🌐 Application URL: https://${{ env.HOST }}"
+          else
+            echo "❌ Deployment to ${{ env.ENV_NAME }} failed!"
+          fi
