@@ -17,11 +17,11 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
-from rest_framework import permissions
-from drf_yasg.views import get_schema_view
-from drf_yasg import openapi
+import yaml
+import json
+import os
 
 def health_check(request):
     """Simple health check endpoint for deployment verification"""
@@ -31,19 +31,115 @@ def health_check(request):
         'timestamp': str(timezone.now())
     })
 
-# Swagger/OpenAPI Schema
-schema_view = get_schema_view(
-    openapi.Info(
-        title="Itqan CMS API",
-        default_version='v1',
-        description="Content Management System API for Itqan platform",
-        terms_of_service="https://www.itqan.com/terms/",
-        contact=openapi.Contact(email="api@itqan.com"),
-        license=openapi.License(name="MIT License"),
-    ),
-    public=True,
-    permission_classes=[permissions.AllowAny],
-)
+def openapi_spec(request, format_type='json'):
+    """Serve OpenAPI specification from static YAML file"""
+    try:
+        # Path to the OpenAPI YAML file
+        openapi_file_path = os.path.join(settings.BASE_DIR, 'openapi.yaml')
+        
+        with open(openapi_file_path, 'r', encoding='utf-8') as file:
+            spec_data = yaml.safe_load(file)
+        
+        if format_type == 'yaml':
+            response = HttpResponse(
+                yaml.dump(spec_data, default_flow_style=False),
+                content_type='application/x-yaml'
+            )
+            response['Content-Disposition'] = 'inline; filename="openapi.yaml"'
+            return response
+        else:  # json format
+            return JsonResponse(spec_data, json_dumps_params={'indent': 2})
+            
+    except FileNotFoundError:
+        return JsonResponse({'error': 'OpenAPI specification file not found'}, status=404)
+    except yaml.YAMLError as e:
+        return JsonResponse({'error': f'Error parsing OpenAPI specification: {str(e)}'}, status=500)
+
+def swagger_ui_view(request):
+    """Swagger UI view that uses our static OpenAPI spec"""
+    # Get the base URL for the OpenAPI spec
+    base_url = f"{request.scheme}://{request.get_host()}"
+    spec_url = f"{base_url}/swagger.json"
+    
+    # Generate Swagger UI HTML
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Itqan CMS API - Swagger UI</title>
+        <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css" />
+        <style>
+            html {{
+                box-sizing: border-box;
+                overflow: -moz-scrollbars-vertical;
+                overflow-y: scroll;
+            }}
+            *, *:before, *:after {{
+                box-sizing: inherit;
+            }}
+            body {{
+                margin:0;
+                background: #fafafa;
+            }}
+        </style>
+    </head>
+    <body>
+        <div id="swagger-ui"></div>
+        <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js"></script>
+        <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-standalone-preset.js"></script>
+        <script>
+            window.onload = function() {{
+                const ui = SwaggerUIBundle({{
+                    url: "{spec_url}",
+                    dom_id: '#swagger-ui',
+                    deepLinking: true,
+                    presets: [
+                        SwaggerUIBundle.presets.apis,
+                        SwaggerUIStandalonePreset
+                    ],
+                    plugins: [
+                        SwaggerUIBundle.plugins.DownloadUrl
+                    ],
+                    layout: "StandaloneLayout"
+                }});
+            }};
+        </script>
+    </body>
+    </html>
+    """
+    
+    return HttpResponse(html, content_type='text/html')
+
+def redoc_view(request):
+    """ReDoc view that uses our static OpenAPI spec"""
+    # Get the base URL for the OpenAPI spec
+    base_url = f"{request.scheme}://{request.get_host()}"
+    spec_url = f"{base_url}/swagger.json"
+    
+    # Generate ReDoc HTML
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Itqan CMS API - Documentation</title>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700" rel="stylesheet">
+        <style>
+            body {{
+                margin: 0;
+                padding: 0;
+            }}
+        </style>
+    </head>
+    <body>
+        <redoc spec-url="{spec_url}"></redoc>
+        <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
+    </body>
+    </html>
+    """
+    
+    return HttpResponse(html, content_type='text/html')
 
 urlpatterns = [
     # Health check endpoint
@@ -51,13 +147,16 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/', include('core.urls')),
     
-    # Swagger/OpenAPI Documentation
-    re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
-    re_path(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    re_path(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    # OpenAPI Specification from static file
+    re_path(r'^swagger\.json$', openapi_spec, {'format_type': 'json'}, name='openapi-json'),
+    re_path(r'^swagger\.yaml$', openapi_spec, {'format_type': 'yaml'}, name='openapi-yaml'),
     
-    # API Documentation root
-    path('docs/', schema_view.with_ui('swagger', cache_timeout=0), name='api-docs'),
+    # Swagger UI and ReDoc using static spec
+    path('swagger/', swagger_ui_view, name='swagger-ui'),
+    path('redoc/', redoc_view, name='redoc'),
+    
+    # Keep legacy endpoints for compatibility
+    path('docs/', swagger_ui_view, name='api-docs'),
 ]
 
 # Add static/media URL patterns for development

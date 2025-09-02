@@ -16,8 +16,6 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
 import json
 import jwt
 import datetime
@@ -95,23 +93,6 @@ class CompleteProfileView(View):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
 
-@swagger_auto_schema(
-    method='get',
-    operation_description="Health check endpoint to verify API status",
-    responses={
-        200: openapi.Response(
-            description="API is healthy",
-            examples={
-                "application/json": {
-                    "status": "ok",
-                    "timestamp": "2024-01-01T12:00:00Z",
-                    "version": "1.0.0"
-                }
-            }
-        )
-    },
-    tags=['System']
-)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def health_check(request):
@@ -125,35 +106,6 @@ def health_check(request):
         'version': '1.0.0'
     })
 
-@swagger_auto_schema(
-    method='get',
-    operation_description="Get API information and available endpoints",
-    responses={
-        200: openapi.Response(
-            description="API information",
-            examples={
-                "application/json": {
-                    "name": "Itqan CMS API",
-                    "version": "1.0.0",
-                    "description": "Content Management System API",
-                    "endpoints": {
-                        "health": "/api/v1/health/",
-                        "auth": {
-                            "me": "/api/v1/auth/me/",
-                            "complete-profile": "/api/v1/auth/complete-profile/"
-                        },
-                        "docs": {
-                            "swagger": "/swagger/",
-                            "redoc": "/redoc/",
-                            "openapi": "/swagger.json"
-                        }
-                    }
-                }
-            }
-        )
-    },
-    tags=['System']
-)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def api_info(request):
