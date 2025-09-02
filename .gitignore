@@ -12,3 +12,4 @@ __pycache__/
 coverage/
 .mypy_cache/
 *.log
+venv/
