@@ -17,9 +17,19 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
+from django.http import JsonResponse
+from django.utils import timezone
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
+
+def health_check(request):
+    """Simple health check endpoint for deployment verification"""
+    return JsonResponse({
+        'status': 'healthy',
+        'service': 'Itqan CMS API',
+        'timestamp': str(timezone.now())
+    })
 
 # Swagger/OpenAPI Schema
 schema_view = get_schema_view(
@@ -36,6 +46,8 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
+    # Health check endpoint
+    path('health/', health_check, name='health_check'),
     path('admin/', admin.site.urls),
     path('api/v1/', include('core.urls')),
     
