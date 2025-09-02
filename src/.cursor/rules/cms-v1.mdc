@@ -102,6 +102,42 @@ alwaysApply: true
 - **RTL Compliance**: Use CSS logical properties, proper text alignment, and direction-aware layouts
 - **Type Safety**: Maintain strict TypeScript typing across frontend and API contracts
 
+## Development Workflow
+### Branch Strategy
+- **develop**: Primary development branch for new features and bug fixes
+- **staging**: Pre-production branch for final testing and validation
+- **main**: Production-ready code, only updated through PRs from staging
+
+### Development Process
+1. **Local Development** (`develop` branch):
+   - Make all changes on the `develop` branch
+   - Test fully locally on `http://local.cms.itqan.dev:8000`
+   - Ensure all features work correctly before promotion
+   - Run comprehensive testing (unit tests, integration tests, manual testing)
+
+2. **Staging Promotion** (`develop` → `staging`):
+   - Once satisfied with local testing, promote changes to `staging` branch
+   - Deploy to staging environment: `https://staging.cms.itqan.dev`
+   - Perform final validation and acceptance testing
+
+3. **Production Promotion** (`staging` → `main`):
+   - Create Pull Request from `staging` to `main` branch
+   - Manual code review required before merge
+   - Deploy to production: `https://cms.itqan.dev`
+   - Manual deployment process (automated deployment will be added later)
+
+### Environment Mapping
+- **develop** branch → `https://dev.cms.itqan.dev`
+- **staging** branch → `https://staging.cms.itqan.dev`
+- **main** branch → `https://cms.itqan.dev`
+- **local** development → `http://local.cms.itqan.dev:8000` (add hosts entry: `local.cms.itqan.dev` → `127.0.0.1`)
+
+### Testing Requirements
+- Full local testing must be completed before any branch promotion
+- All existing functionality must remain working
+- New features must be thoroughly tested in isolation and integration
+- Manual testing of critical user workflows required
+
 ## Environments & URLs
 - Production: `https://cms.itqan.dev`
 - Staging: `https://staging.cms.itqan.dev`
