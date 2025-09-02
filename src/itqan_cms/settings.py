@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     'developers',
     'publishers',
     'resources',
+    'mock_api',
 ]
 
 MIDDLEWARE = [
