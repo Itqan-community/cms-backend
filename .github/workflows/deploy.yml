@@ -1,32 +1,62 @@
 name: Deploy to DigitalOcean
 
 on:
+  # Direct push only triggers deployment for develop branch
   push:
-    branches: [develop, staging, main]
+    branches: [develop]
+  
+  # PR merges trigger deployment for staging and main branches
+  pull_request:
+    types: [closed]
+    branches: [staging, main]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Only run if:
+    # 1. Direct push to develop, OR
+    # 2. PR is merged into staging/main
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/develop') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     
     steps:
       - name: Set deployment variables
         id: vars
         run: |
-          if [[ "${GITHUB_REF_NAME}" == "develop" ]]; then
+          # For direct push to develop
+          if [[ "${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" == "develop" ]]; then
             echo "HOST=${{ secrets.DEVELOP_HOST }}" >> $GITHUB_ENV
             echo "BRANCH=develop" >> $GITHUB_ENV
             echo "ENV_NAME=development" >> $GITHUB_ENV
             echo "ENV_URL=https://develop.api.cms.itqan.dev" >> $GITHUB_ENV
-          elif [[ "${GITHUB_REF_NAME}" == "staging" ]]; then
+          # For PR merged into staging
+          elif [[ "${GITHUB_EVENT_NAME}" == "pull_request" && "${{ github.event.pull_request.base.ref }}" == "staging" ]]; then
             echo "HOST=${{ secrets.STAGING_HOST }}" >> $GITHUB_ENV
             echo "BRANCH=staging" >> $GITHUB_ENV
             echo "ENV_NAME=staging" >> $GITHUB_ENV
             echo "ENV_URL=https://staging.api.cms.itqan.dev" >> $GITHUB_ENV
-          elif [[ "${GITHUB_REF_NAME}" == "main" ]]; then
+          # For PR merged into main
+          elif [[ "${GITHUB_EVENT_NAME}" == "pull_request" && "${{ github.event.pull_request.base.ref }}" == "main" ]]; then
             echo "HOST=${{ secrets.PROD_HOST }}" >> $GITHUB_ENV
             echo "BRANCH=main" >> $GITHUB_ENV
             echo "ENV_NAME=production" >> $GITHUB_ENV
             echo "ENV_URL=https://api.cms.itqan.dev" >> $GITHUB_ENV
+          else
+            echo "❌ Unexpected trigger condition"
+            exit 1
+          fi
+
+      - name: Display deployment info
+        run: |
+          echo "🎯 Deployment Details:"
+          echo "   Event: ${{ github.event_name }}"
+          echo "   Environment: ${{ env.ENV_NAME }}"
+          echo "   Branch: ${{ env.BRANCH }}"
+          echo "   URL: ${{ env.ENV_URL }}"
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "   PR: #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}"
+            echo "   Author: ${{ github.event.pull_request.user.login }}"
           fi
 
       - name: Deploy to ${{ env.ENV_NAME }}
