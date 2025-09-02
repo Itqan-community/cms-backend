@@ -1,1054 +1,678 @@
 openapi: 3.1.0
 info:
   title: Itqan CMS API
-  version: 0.1.0
+  version: 1.0.0
   description: |
-    Public catalog and access-request API for Quranic data distribution.
-    - Auth via Auth0 JWT (RS256). Backend verifies via OIDC/JWKS.
-    - Read-heavy design. UUID identifiers. Soft deletes not exposed.
-    - Content supports i18n. Use Accept-Language header when relevant.
+    Content Management System API for Itqan platform - Quranic data distribution.
+    
+    This API provides endpoints for:
+    - User authentication and profile management
+    - Asset browsing and access control
+    - Publisher information
+    - License management
+    - Content standards
+    - System configuration
+    
+    ## Authentication
+    All protected endpoints require JWT authentication via the Authorization header:
+    ```
+    Authorization: Bearer <jwt_token>
+    ```
+    
+    ## Base URLs
+    - Development: `https://develop.api.cms.itqan.dev`
+    - Staging: `https://staging.api.cms.itqan.dev`
+    - Production: `https://api.cms.itqan.dev`
 
 servers:
-  - url: https://api.cms.itqan.dev/api/v1
+  - url: https://api.cms.itqan.dev
     description: Production
-  - url: https://staging.api.cms.itqan.dev/api/v1
+  - url: https://staging.api.cms.itqan.dev
     description: Staging
-  - url: https://develop.api.cms.itqan.dev/api/v1
-    description: Develop
-  - url: http://local.cms.itqan.dev:8000/api/v1
-    description: Local development (requires hosts entry mapping local.cms.itqan.dev → 127.0.0.1)
+  - url: https://develop.api.cms.itqan.dev
+    description: Development
+  - url: http://localhost:8000
+    description: Local development
 
 tags:
-  - name: Public
-    description: Publicly accessible, cacheable endpoints
-  - name: Licenses
-  - name: Publishers
-  - name: Resources
+  - name: Authentication
+    description: User authentication and profile management
   - name: Assets
-  - name: AccessRequests
-  - name: Me
-  - name: Content
-  - name: Search
+    description: Asset management, access control, and downloads
+  - name: Resources
+    description: Original resource packages
+  - name: Publishers
+    description: Publishing organizations and their content
+  - name: Licenses
+    description: License information and terms
+  - name: Content Standards
+    description: Content quality standards and guidelines
+  - name: System
+    description: System configuration and health endpoints
 
 security:
-  - bearerAuth: []
+  - BearerAuth: []
 
 components:
   securitySchemes:
-    bearerAuth:
+    BearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: "Auth0-issued JWT (RS256). Send as Authorization: Bearer <token>."
-
-  parameters:
-    PageParam:
-      name: page
-      in: query
-      schema:
-        type: integer
-        minimum: 1
-      example: 1
-    PageSizeParam:
-      name: page_size
-      in: query
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 100
-        default: 20
-      example: 20
-    SearchParam:
-      name: q
-      in: query
-      schema:
-        type: string
-      example: "tafseer"
-    AcceptLanguage:
-      name: Accept-Language
-      in: header
-      schema:
-        type: string
-      example: ar
-      description: Preferred content language (i18n).
-
-  responses:
-    Unauthorized:
-      description: Missing or invalid credentials
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          examples:
-            sample:
-              value:
-                detail: "Authentication credentials were not provided."
-    NotFound:
-      description: Resource not found
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          examples:
-            sample:
-              value:
-                detail: "Not found."
+      description: JWT token for authentication
 
   schemas:
-    UUID:
-      type: string
-      format: uuid
-      example: "3f2f5d5c-5a28-4b57-9a20-f2b4f3d9b3a9"
-    Timestamp:
-      type: string
-      format: date-time
-      example: "2025-01-01T12:34:56Z"
-    Error:
+    # Error Schemas
+    ApiError:
       type: object
       properties:
-        detail:
-          type: string
-      required: [detail]
-
-    ValidationError:
-      type: object
-      properties:
-        detail:
-          type: string
-        field_errors:
+        error:
           type: object
-          additionalProperties:
-            type: array
-            items:
+          properties:
+            code:
               type: string
-          example:
-            phone_number: ["Enter a valid phone number in E.164 format."]
-            first_name: ["This field is required."]
-      required: [detail]
+              description: Error code identifier
+            message:
+              type: string
+              description: Human-readable error message
+          required: [code, message]
+      required: [error]
+      example:
+        error:
+          code: "UNAUTHORIZED"
+          message: "Invalid or expired token"
 
-    PaginationMeta:
+    # User Schemas
+    User:
       type: object
       properties:
-        count:
+        id:
           type: integer
-        next:
+          description: Unique user identifier
+        email:
           type: string
-          nullable: true
-        previous:
-          type: string
-          nullable: true
-
-    License:
-      type: object
-      properties:
-        id:
-          $ref: '#/components/schemas/UUID'
-        code:
-          type: string
-          example: cc0
+          format: email
+          description: User email address
         name:
           type: string
-          example: Creative Commons Zero v1.0 Universal
-        url:
-          type: string
-          format: uri
-      required: [id, code, name]
-
-    PublishingOrganization:
-      type: object
-      properties:
-        id:
-          $ref: '#/components/schemas/UUID'
-        name:
-          type: string
-          example: مركز إتقان
-        slug:
-          type: string
-          example: itqan
-        icon_image_url:
+          description: Full name
+        avatar_url:
           type: string
           format: uri
           nullable: true
-          example: https://cdn.itqan.dev/orgs/icons/itqan.png
-        summary:
+          description: Profile picture URL
+        bio:
           type: string
           nullable: true
-          example: مركز متخصص في إنتاج وتوزيع البيانات القرآنية المعيارية
+          description: User biography
+        organization:
+          type: string
+          nullable: true
+          description: Organization name
+        location:
+          type: string
+          nullable: true
+          description: Geographic location
         website:
           type: string
           format: uri
           nullable: true
-        created_at:
-          $ref: '#/components/schemas/Timestamp'
-        updated_at:
-          $ref: '#/components/schemas/Timestamp'
-      required: [id, name, slug, created_at, updated_at]
+          description: Personal website URL
+        github_username:
+          type: string
+          nullable: true
+          description: GitHub username
+        email_verified:
+          type: boolean
+          description: Whether email is verified
+        profile_completed:
+          type: boolean
+          description: Whether profile setup is complete
+        auth_provider:
+          type: string
+          enum: [email, google, github]
+          description: Authentication provider used
+      required: [id, email, name, email_verified, profile_completed, auth_provider]
 
-    Resource:
+    AuthResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: JWT access token
+        refresh_token:
+          type: string
+          description: Refresh token for token renewal
+        user:
+          $ref: '#/components/schemas/User'
+      required: [access_token, refresh_token, user]
+
+    # License Schemas
+    License:
+      type: object
+      properties:
+        code:
+          type: string
+          description: License code identifier
+        name:
+          type: string
+          description: Full license name
+        short_name:
+          type: string
+          description: Abbreviated license name
+        url:
+          type: string
+          format: uri
+          description: Official license URL
+        icon_url:
+          type: string
+          format: uri
+          description: License icon URL
+        summary:
+          type: string
+          description: Brief license description
+        full_text:
+          type: string
+          description: Complete license text
+        legal_code_url:
+          type: string
+          format: uri
+          description: Legal code URL
+        license_terms:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              description:
+                type: string
+              order:
+                type: integer
+            required: [title, description, order]
+        permissions:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+              label:
+                type: string
+              description:
+                type: string
+            required: [key, label, description]
+        conditions:
+          type: array
+          items:
+            type: object
+        limitations:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+              label:
+                type: string
+              description:
+                type: string
+            required: [key, label, description]
+        usage_count:
+          type: integer
+          description: Number of assets using this license
+        is_default:
+          type: boolean
+          description: Whether this is the default license
+      required: [code, name]
+
+    LicenseSummary:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        short_name:
+          type: string
+        icon_url:
+          type: string
+          format: uri
+        is_default:
+          type: boolean
+      required: [code, name]
+
+    # Publisher Schemas
+    PublisherSummary:
       type: object
       properties:
         id:
-          $ref: '#/components/schemas/UUID'
-        publishing_organization_id:
-          $ref: '#/components/schemas/UUID'
+          type: integer
         name:
           type: string
-          example: تفسير ابن كثير CSV
-        slug:
+        thumbnail_url:
           type: string
-          example: tafsir-ibn-katheer-csv
+          format: uri
+        bio:
+          type: string
+          nullable: true
+        verified:
+          type: boolean
+      required: [id, name, thumbnail_url, verified]
+
+    Publisher:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
         description:
           type: string
-          nullable: true
-          example: تفسير القرآن الكريم للإمام ابن كثير بصيغة CSV
-        category:
+        bio:
           type: string
-          enum: [recitation, mushaf, tafsir, hadith, linguistics, other]
-          example: tafsir
-        status:
+        thumbnail_url:
           type: string
-          enum: [draft, ready, published, archived]
-          example: ready
-        default_license_id:
-          $ref: '#/components/schemas/UUID'
-        latest_version_id:
-          $ref: '#/components/schemas/UUID'
-          nullable: true
-        created_at:
-          $ref: '#/components/schemas/Timestamp'
-        updated_at:
-          $ref: '#/components/schemas/Timestamp'
-      required: [id, publishing_organization_id, name, slug, category, status, default_license_id, created_at, updated_at]
-
-    ResourceVersion:
-      type: object
-      properties:
-        id:
-          $ref: '#/components/schemas/UUID'
-        resource_id:
-          $ref: '#/components/schemas/UUID'
-        name:
-          type: string
-          example: v1.2 - إصلاح الأخطاء الإملائية
-        semver:
-          type: string
-          example: 1.2.0
-        changelog:
-          type: string
-          nullable: true
-          example: إصلاح الأخطاء الإملائية وتحسين جودة البيانات
-        storage_backend:
-          type: string
-          enum: [minio, s3, azure_blob]
-          example: minio
-        storage_path:
-          type: string
-          example: resources/tafsir-ibn-katheer/v1.2/
-        file_count:
-          type: integer
-          example: 3
-        total_size_bytes:
-          type: integer
-          example: 1048576
-        processed:
-          type: boolean
-          example: true
-        api_endpoint:
-          type: string
-          nullable: true
-          example: "/api/v1/tafsir/ibn-katheer"
-        docs_url:
+          format: uri
+        cover_url:
           type: string
           format: uri
           nullable: true
-        created_at:
-          $ref: '#/components/schemas/Timestamp'
-      required: [id, resource_id, name, semver, storage_backend, storage_path, file_count, total_size_bytes, processed, created_at]
+        location:
+          type: string
+          nullable: true
+        website:
+          type: string
+          format: uri
+          nullable: true
+        verified:
+          type: boolean
+        social_links:
+          type: object
+          properties:
+            twitter:
+              type: string
+              nullable: true
+            github:
+              type: string
+              nullable: true
+        stats:
+          type: object
+          properties:
+            resources_count:
+              type: integer
+            assets_count:
+              type: integer
+            total_downloads:
+              type: integer
+            joined_at:
+              type: string
+              format: date-time
+          required: [resources_count, assets_count, total_downloads, joined_at]
+        assets:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetSummary'
+      required: [id, name, thumbnail_url, verified]
 
-    ResourceVersionArtifact:
+    # Asset Schemas
+    AssetSummary:
       type: object
       properties:
         id:
-          $ref: '#/components/schemas/UUID'
-        version_id:
-          $ref: '#/components/schemas/UUID'
-        storage_key:
-          type: string
-          example: resources/abcd/v1/artifacts/archive.zip
-        file_type:
-          type: string
-          example: zip
-        size_bytes:
           type: integer
-          example: 102400
-        checksum:
+        title:
           type: string
-          example: sha256:deadbeef
+        description:
+          type: string
+        thumbnail_url:
+          type: string
+          format: uri
+        category:
+          type: string
+          enum: [mushaf, tafsir, recitation]
+        license:
+          $ref: '#/components/schemas/LicenseSummary'
+        publisher:
+          $ref: '#/components/schemas/PublisherSummary'
+        has_access:
+          type: boolean
+        download_count:
+          type: integer
+        file_size:
+          type: string
+      required: [id, title, description, thumbnail_url, category, license, publisher, has_access, download_count, file_size]
+
+    AssetSnapshot:
+      type: object
+      properties:
+        thumbnail_url:
+          type: string
+          format: uri
+        title:
+          type: string
+        description:
+          type: string
+      required: [thumbnail_url, title, description]
+
+    AssetResource:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+      required: [id, title, description]
+
+    AssetTechnicalDetails:
+      type: object
+      properties:
+        file_size:
+          type: string
+        format:
+          type: string
+        encoding:
+          type: string
+        version:
+          type: string
+        language:
+          type: string
+      required: [file_size, format, encoding, version, language]
+
+    AssetStats:
+      type: object
+      properties:
+        download_count:
+          type: integer
+        view_count:
+          type: integer
         created_at:
-          $ref: '#/components/schemas/Timestamp'
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required: [download_count, view_count, created_at, updated_at]
+
+    AssetAccess:
+      type: object
+      properties:
+        has_access:
+          type: boolean
+        requires_approval:
+          type: boolean
+      required: [has_access, requires_approval]
+
+    RelatedAsset:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        thumbnail_url:
+          type: string
+          format: uri
+      required: [id, title, thumbnail_url]
 
     Asset:
       type: object
       properties:
         id:
-          $ref: '#/components/schemas/UUID'
-        resource_version_id:
-          $ref: '#/components/schemas/UUID'
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        long_description:
+          type: string
+        thumbnail_url:
+          type: string
+          format: uri
+        category:
+          type: string
+          enum: [mushaf, tafsir, recitation]
+        license:
+          $ref: '#/components/schemas/License'
+        snapshots:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetSnapshot'
+        publisher:
+          $ref: '#/components/schemas/PublisherSummary'
+        resource:
+          $ref: '#/components/schemas/AssetResource'
+          nullable: true
+        technical_details:
+          $ref: '#/components/schemas/AssetTechnicalDetails'
+        stats:
+          $ref: '#/components/schemas/AssetStats'
+        access:
+          $ref: '#/components/schemas/AssetAccess'
+        related_assets:
+          type: array
+          items:
+            $ref: '#/components/schemas/RelatedAsset'
+      required: [id, title, description, long_description, thumbnail_url, category, license, publisher, technical_details, stats, access]
+
+    # Access Request Schemas
+    AccessRequestResponse:
+      type: object
+      properties:
+        request_id:
+          type: integer
+        status:
+          type: string
+          enum: [approved, rejected, pending]
+        message:
+          type: string
+        access:
+          type: object
+          properties:
+            download_url:
+              type: string
+            expires_at:
+              type: string
+              format: date-time
+              nullable: true
+            granted_at:
+              type: string
+              format: date-time
+          nullable: true
+      required: [request_id, status, message]
+
+    # Content Standards Schemas
+    ContentStandardsSubsection:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+      required: [title, content]
+
+    ContentStandardsSection:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        subsections:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContentStandardsSubsection'
+        required_fields:
+          type: array
+          items:
+            type: string
+        default_license:
+          type: string
+      required: [title, content]
+
+    FileFormatSpec:
+      type: object
+      properties:
+        schema_url:
+          type: string
+          format: uri
+        example_url:
+          type: string
+          format: uri
+      required: [schema_url, example_url]
+
+    ContentStandards:
+      type: object
+      properties:
+        version:
+          type: string
+        last_updated:
+          type: string
+          format: date-time
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContentStandardsSection'
+        file_formats:
+          type: object
+          properties:
+            supported:
+              type: array
+              items:
+                type: string
+            recommended:
+              type: array
+              items:
+                type: string
+            specifications:
+              type: object
+              additionalProperties:
+                $ref: '#/components/schemas/FileFormatSpec'
+          required: [supported, recommended, specifications]
+      required: [version, last_updated, sections, file_formats]
+
+    # System Configuration Schemas
+    AppFeatures:
+      type: object
+      properties:
+        auto_approve_access:
+          type: boolean
+        manual_license_review:
+          type: boolean
+        advanced_analytics:
+          type: boolean
+        api_access:
+          type: boolean
+      required: [auto_approve_access, manual_license_review, advanced_analytics, api_access]
+
+    AppLimits:
+      type: object
+      properties:
+        max_file_size_mb:
+          type: integer
+        max_files_per_resource:
+          type: integer
+        max_resources_per_publisher:
+          type: integer
+      required: [max_file_size_mb, max_files_per_resource, max_resources_per_publisher]
+
+    AppUI:
+      type: object
+      properties:
+        primary_color:
+          type: string
+        dark_color:
+          type: string
+        supported_locales:
+          type: array
+          items:
+            type: string
+        default_locale:
+          type: string
+      required: [primary_color, dark_color, supported_locales, default_locale]
+
+    AppCategory:
+      type: object
+      properties:
+        key:
+          type: string
         name:
           type: string
-          example: آيات القرآن - API
-        api_slug:
+        description:
           type: string
-          example: ayahs
-        type:
+      required: [key, name, description]
+
+    AppExternalLinks:
+      type: object
+      properties:
+        docs:
           type: string
-          enum: [api, download, package]
-          example: api
-        visibility:
+          format: uri
+        support:
           type: string
-          enum: [public, private, restricted]
-          example: public
-        access_requirements:
+          format: uri
+        github:
+          type: string
+          format: uri
+      required: [docs, support, github]
+
+    AppConfig:
+      type: object
+      properties:
+        version:
+          type: string
+        features:
+          $ref: '#/components/schemas/AppFeatures'
+        limits:
+          $ref: '#/components/schemas/AppLimits'
+        ui:
+          $ref: '#/components/schemas/AppUI'
+        categories:
           type: array
           items:
-            type: string
-          example: ["registration", "attribution"]
-        created_at:
-          $ref: '#/components/schemas/Timestamp'
-      required: [id, resource_version_id, name, api_slug, type, visibility, created_at]
+            $ref: '#/components/schemas/AppCategory'
+        external_links:
+          $ref: '#/components/schemas/AppExternalLinks'
+      required: [version, features, limits, ui, categories, external_links]
 
-    AssetVersion:
+    # Health Check Schema
+    HealthStatus:
       type: object
       properties:
-        id:
-          $ref: '#/components/schemas/UUID'
-        asset_id:
-          $ref: '#/components/schemas/UUID'
-        semver:
-          type: string
-          example: 1.0.0
-        api_path:
-          type: string
-          example: /v1/ayahs
-        package_name:
-          type: string
-          nullable: true
-          example: '@itqan/ayahs'
-        docs_url:
-          type: string
-          format: uri
-          nullable: true
-        created_at:
-          $ref: '#/components/schemas/Timestamp'
-
-    Distribution:
-      type: object
-      properties:
-        id:
-          $ref: '#/components/schemas/UUID'
-        asset_version_id:
-          $ref: '#/components/schemas/UUID'
-        distribution_type:
-          type: string
-          example: download
-        endpoint_url:
-          type: string
-          format: uri
-          nullable: true
-        package_name:
-          type: string
-          nullable: true
-        package_version:
-          type: string
-          nullable: true
-        is_active:
-          type: boolean
-          example: true
-        created_at:
-          $ref: '#/components/schemas/Timestamp'
-
-    User:
-      type: object
-      properties:
-        id:
-          $ref: '#/components/schemas/UUID'
-        first_name:
-          type: string
-          example: أحمد
-        last_name:
-          type: string
-          example: محمد
-        email:
-          type: string
-          format: email
-          example: user@example.com
-        phone_number:
-          type: string
-          nullable: true
-          pattern: '^\+[1-9]\d{1,14}$'
-          description: Phone number in E.164 format (e.g., +966501234567)
-          example: "+966501234567"
-        job_title:
-          type: string
-          nullable: true
-          example: مطور برمجيات
-        auth_provider:
-          type: string
-          example: auth0
-        is_active:
-          type: boolean
-          example: true
-        created_at:
-          $ref: '#/components/schemas/Timestamp'
-        updated_at:
-          $ref: '#/components/schemas/Timestamp'
-      required: [id, first_name, last_name, email, auth_provider, is_active, created_at, updated_at]
-
-    Developer:
-      type: object
-      properties:
-        id:
-          $ref: '#/components/schemas/UUID'
-        user_id:
-          $ref: '#/components/schemas/UUID'
-        handle:
-          type: string
-          example: dev_ahmad
-        bio:
-          type: string
-          nullable: true
-          example: مطور برمجيات مهتم بعلوم القرآن.
-        github_url:
-          type: string
-          format: uri
-          nullable: true
-          example: https://github.com/ahmad
-        created_at:
-          $ref: '#/components/schemas/Timestamp'
-
-    AccessRequest:
-      type: object
-      properties:
-        id:
-          $ref: '#/components/schemas/UUID'
-        developer_id:
-          $ref: '#/components/schemas/UUID'
-        asset_id:
-          $ref: '#/components/schemas/UUID'
         status:
           type: string
-          example: pending
-        justification:
+          enum: [healthy, unhealthy]
+        timestamp:
           type: string
-          example: "سأستخدم البيانات في مشروع بحثي مفتوح المصدر."
-        decided_by:
-          $ref: '#/components/schemas/UUID'
-          nullable: true
-        decided_at:
-          $ref: '#/components/schemas/Timestamp'
-          nullable: true
-        created_at:
-          $ref: '#/components/schemas/Timestamp'
-      required: [id, developer_id, asset_id, status, justification, created_at]
-
-    AssetAccess:
-      type: object
-      properties:
-        id:
-          $ref: '#/components/schemas/UUID'
-        access_request_id:
-          $ref: '#/components/schemas/UUID'
-        developer_id:
-          $ref: '#/components/schemas/UUID'
-        asset_version_id:
-          $ref: '#/components/schemas/UUID'
-        access_type:
+          format: date-time
+        version:
           type: string
-          enum: [download, api, package, stream]
-          example: download
-        token_id:
-          $ref: '#/components/schemas/UUID'
-          nullable: true
-        expires_at:
-          $ref: '#/components/schemas/Timestamp'
-          nullable: true
-        usage_limit:
-          type: integer
-          nullable: true
-          example: 1000
-        usage_count:
-          type: integer
-          default: 0
-          example: 42
-        granted_at:
-          $ref: '#/components/schemas/Timestamp'
-      required: [id, access_request_id, developer_id, asset_version_id, access_type, usage_count, granted_at]
-
-    PublishingOrganizationMember:
-      type: object
-      properties:
-        id:
-          $ref: '#/components/schemas/UUID'
-        user_id:
-          $ref: '#/components/schemas/UUID'
-        publishing_organization_id:
-          $ref: '#/components/schemas/UUID'
-        role:
-          type: string
-          enum: [owner, manager, contributor, viewer]
-          example: manager
-        status:
-          type: string
-          enum: [active, inactive, pending, suspended]
-          example: active
-        permissions:
-          type: array
-          items:
-            type: string
-          example: ["resource.create", "resource.edit", "resource.publish"]
-        joined_at:
-          $ref: '#/components/schemas/Timestamp'
-        created_at:
-          $ref: '#/components/schemas/Timestamp'
-      required: [id, user_id, publishing_organization_id, role, status, joined_at, created_at]
-
-    UsageEvent:
-      type: object
-      properties:
-        id:
-          $ref: '#/components/schemas/UUID'
-        asset_access_id:
-          $ref: '#/components/schemas/UUID'
-        developer_id:
-          $ref: '#/components/schemas/UUID'
-        asset_id:
-          $ref: '#/components/schemas/UUID'
-        event_type:
-          type: string
-          enum: [download, api_call, stream_start, stream_end, error]
-          example: api_call
-        endpoint:
-          type: string
-          nullable: true
-          example: "/api/v1/ayahs"
-        request_size:
-          type: integer
-          nullable: true
-          example: 1024
-        response_size:
-          type: integer
-          nullable: true
-          example: 4096
-        status_code:
-          type: integer
-          nullable: true
-          example: 200
-        error_message:
-          type: string
-          nullable: true
-        ip_address:
-          type: string
-          nullable: true
-          example: "192.168.1.100"
-        user_agent:
-          type: string
-          nullable: true
-          example: "Mozilla/5.0 (compatible; MyApp/1.0)"
-        created_at:
-          $ref: '#/components/schemas/Timestamp'
-      required: [id, asset_access_id, developer_id, asset_id, event_type, created_at]
+        services:
+          type: object
+          properties:
+            database:
+              type: string
+              enum: [healthy, unhealthy]
+            storage:
+              type: string
+              enum: [healthy, unhealthy]
+            auth:
+              type: string
+              enum: [healthy, unhealthy]
+          required: [database, storage, auth]
+      required: [status, timestamp, version, services]
 
 paths:
-  /health:
-    get:
-      tags: [Public]
-      summary: Health check
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-              examples:
-                sample:
-                  value:
-                    status: ok
-
-  /licenses:
-    get:
-      tags: [Licenses, Public]
-      summary: List licenses
-      parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/PageSizeParam'
-      responses:
-        '200':
-          description: List of licenses
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/PaginationMeta'
-                  - type: object
-                    properties:
-                      results:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/License'
-              examples:
-                sample:
-                  value:
-                    count: 2
-                    next: null
-                    previous: null
-                    results:
-                      - id: "0b7b3d03-9a7c-4a2a-b9dd-b3e7b4c4a111"
-                        code: cc0
-                        name: Creative Commons Zero v1.0 Universal
-                        url: https://creativecommons.org/publicdomain/zero/1.0/
-                      - id: "f3a9c0de-1b7f-4b4e-a3a2-8f0f7e4f2222"
-                        code: cc-by
-                        name: CC BY 4.0
-                        url: https://creativecommons.org/licenses/by/4.0/
-
-  /licenses/{id}:
-    get:
-      tags: [Licenses, Public]
-      summary: Get license by ID
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            $ref: '#/components/schemas/UUID'
-      responses:
-        '200':
-          description: License
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/License'
-              examples:
-                sample:
-                  value:
-                    id: "0b7b3d03-9a7c-4a2a-b9dd-b3e7b4c4a111"
-                    code: cc0
-                    name: Creative Commons Zero v1.0 Universal
-                    url: https://creativecommons.org/publicdomain/zero/1.0/
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /publishers:
-    get:
-      tags: [Publishers, Public]
-      summary: List publishing organizations
-      parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/PageSizeParam'
-        - name: q
-          in: query
-          schema:
-            type: string
-      responses:
-        '200':
-          description: List of publishers
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/PaginationMeta'
-                  - type: object
-                    properties:
-                      results:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/PublishingOrganization'
-              examples:
-                sample:
-                  value:
-                    count: 1
-                    next: null
-                    previous: null
-                    results:
-                      - id: "7f0b4f38-5e6f-4f3d-9a1c-7e0d8d300001"
-                        name: مركز إتقان
-                        slug: itqan
-                        icon_image_url: https://cdn.itqan.dev/orgs/icons/itqan.png
-                        summary: مركز متخصص في إنتاج وتوزيع البيانات القرآنية المعيارية
-                        website: https://www.itqan.dev
-                        created_at: "2025-01-01T10:00:00Z"
-                        updated_at: "2025-01-01T10:00:00Z"
-
-  /publishers/{slug}:
-    get:
-      tags: [Publishers, Public]
-      summary: Get publisher by slug
-      parameters:
-        - name: slug
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Publisher
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PublishingOrganization'
-              examples:
-                sample:
-                  value:
-                    id: "7f0b4f38-5e6f-4f3d-9a1c-7e0d8d300001"
-                    name: مركز إتقان
-                    slug: itqan
-                    icon_image_url: https://cdn.itqan.dev/orgs/icons/itqan.png
-                    summary: مركز متخصص في إنتاج وتوزيع البيانات القرآنية المعيارية
-                    website: https://www.itqan.dev
-                    created_at: "2025-01-01T10:00:00Z"
-                    updated_at: "2025-01-01T10:00:00Z"
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /resources:
-    get:
-      tags: [Resources, Public]
-      summary: List resources
-      parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/PageSizeParam'
-        - $ref: '#/components/parameters/SearchParam'
-        - name: org_slug
-          in: query
-          schema:
-            type: string
-        - name: license_code
-          in: query
-          schema:
-            type: string
-      responses:
-        '200':
-          description: List of resources
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/PaginationMeta'
-                  - type: object
-                    properties:
-                      results:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/Resource'
-              examples:
-                sample:
-                  value:
-                    count: 1
-                    next: null
-                    previous: null
-                    results:
-                      - id: "3e2c5a8b-1f1f-4e8f-8a2d-9e1f0a000123"
-                        publishing_organization_id: "7f0b4f38-5e6f-4f3d-9a1c-7e0d8d300001"
-                        name: تفسير ابن كثير
-                        slug: tafsir-ibn-katheer
-                        description: تفسير القرآن العظيم للإمام ابن كثير بصيغة منظّمة
-                        category: tafsir
-                        status: ready
-                        default_license_id: "0b7b3d03-9a7c-4a2a-b9dd-b3e7b4c4a111"
-                        latest_version_id: "8b8b8b8b-1111-2222-3333-444444444444"
-                        created_at: "2025-01-01T12:34:56Z"
-                        updated_at: "2025-01-02T12:34:56Z"
-
-  /resources/{slug}:
-    get:
-      tags: [Resources, Public]
-      summary: Get resource by slug
-      parameters:
-        - name: slug
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Resource
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Resource'
-              examples:
-                sample:
-                  value:
-                    id: "3e2c5a8b-1f1f-4e8f-8a2d-9e1f0a000123"
-                    publishing_organization_id: "7f0b4f38-5e6f-4f3d-9a1c-7e0d8d300001"
-                    name: تفسير ابن كثير
-                    slug: tafsir-ibn-katheer
-                    description: تفسير القرآن العظيم للإمام ابن كثير بصيغة منظّمة
-                    category: tafsir
-                    status: ready
-                    default_license_id: "0b7b3d03-9a7c-4a2a-b9dd-b3e7b4c4a111"
-                    latest_version_id: "8b8b8b8b-1111-2222-3333-444444444444"
-                    created_at: "2025-01-01T12:34:56Z"
-                    updated_at: "2025-01-02T12:34:56Z"
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /resources/{slug}/versions:
-    get:
-      tags: [Resources, Public]
-      summary: List versions for a resource
-      parameters:
-        - name: slug
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Versions
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ResourceVersion'
-              examples:
-                sample:
-                  value:
-                    - id: "8b8b8b8b-1111-2222-3333-444444444444"
-                      resource_id: "3e2c5a8b-1f1f-4e8f-8a2d-9e1f0a000123"
-                      name: "v1.0 - الإصدار الأول"
-                      semver: 1.0.0
-                      changelog: الإصدار الأول من تفسير ابن كثير
-                      storage_backend: minio
-                      storage_path: resources/tafsir-ibn-katheer/v1.0/
-                      file_count: 3
-                      total_size_bytes: 2097152
-                      processed: true
-                      api_endpoint: "/api/v1/tafsir/ibn-katheer"
-                      docs_url: https://docs.itqan.dev/tafsir-ibn-katheer/1.0.0
-                      created_at: "2025-01-01T12:34:56Z"
-
-  /resources/{slug}/versions/{semver}:
-    get:
-      tags: [Resources, Public]
-      summary: Get specific resource version
-      parameters:
-        - name: slug
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: semver
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Resource version
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ResourceVersion'
-              examples:
-                sample:
-                  value:
-                    id: "8b8b8b8b-1111-2222-3333-444444444444"
-                    resource_id: "3e2c5a8b-1f1f-4e8f-8a2d-9e1f0a000123"
-                    name: "v1.0 - الإصدار الأول"
-                    semver: 1.0.0
-                    changelog: الإصدار الأول من تفسير ابن كثير
-                    storage_backend: minio
-                    storage_path: resources/tafsir-ibn-katheer/v1.0/
-                    file_count: 3
-                    total_size_bytes: 2097152
-                    processed: true
-                    api_endpoint: "/api/v1/tafsir/ibn-katheer"
-                    docs_url: https://docs.itqan.dev/tafsir-ibn-katheer/1.0.0
-                    created_at: "2025-01-01T12:34:56Z"
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /assets:
-    get:
-      tags: [Assets, Public]
-      summary: List public assets
-      parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/PageSizeParam'
-        - $ref: '#/components/parameters/SearchParam'
-        - name: api_slug
-          in: query
-          schema:
-            type: string
-      responses:
-        '200':
-          description: List of assets
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/PaginationMeta'
-                  - type: object
-                    properties:
-                      results:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/Asset'
-              examples:
-                sample:
-                  value:
-                    count: 1
-                    next: null
-                    previous: null
-                    results:
-                      - id: "11111111-2222-3333-4444-555555555555"
-                        resource_version_id: "8b8b8b8b-1111-2222-3333-444444444444"
-                        name: آيات القرآن - API
-                        api_slug: ayahs
-                        type: api
-                        visibility: public
-                        access_requirements: ["registration", "attribution"]
-                        created_at: "2025-01-01T12:34:56Z"
-
-  /assets/{id}:
-    get:
-      tags: [Assets, Public]
-      summary: Get asset by ID
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            $ref: '#/components/schemas/UUID'
-      responses:
-        '200':
-          description: Asset
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Asset'
-              examples:
-                sample:
-                  value:
-                    id: "11111111-2222-3333-4444-555555555555"
-                    resource_version_id: "8b8b8b8b-1111-2222-3333-444444444444"
-                    name: آيات القرآن - API
-                    api_slug: ayahs
-                    type: api
-                    visibility: public
-                    access_requirements: ["registration", "attribution"]
-                    created_at: "2025-01-01T12:34:56Z"
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /assets/{id}/versions:
-    get:
-      tags: [Assets, Public]
-      summary: List asset versions
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            $ref: '#/components/schemas/UUID'
-      responses:
-        '200':
-          description: Asset versions
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/AssetVersion'
-              examples:
-                sample:
-                  value:
-                    - id: "aaaa1111-2222-3333-4444-555555555555"
-                      asset_id: "11111111-2222-3333-4444-555555555555"
-                      semver: 1.0.0
-                      api_path: /v1/ayahs
-                      package_name: '@itqan/ayahs'
-                      docs_url: https://docs.itqan.dev/ayahs/1.0.0
-                      created_at: "2025-01-01T12:34:56Z"
-
-  /assets/{id}/versions/{semver}:
-    get:
-      tags: [Assets, Public]
-      summary: Get asset version
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            $ref: '#/components/schemas/UUID'
-        - name: semver
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Asset version
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AssetVersion'
-              examples:
-                sample:
-                  value:
-                    id: "aaaa1111-2222-3333-4444-555555555555"
-                    asset_id: "11111111-2222-3333-4444-555555555555"
-                    semver: 1.0.0
-                    api_path: /v1/ayahs
-                    package_name: '@itqan/ayahs'
-                    docs_url: https://docs.itqan.dev/ayahs/1.0.0
-                    created_at: "2025-01-01T12:34:56Z"
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /distributions/{id}/download:
-    get:
-      tags: [Assets, Public]
-      summary: Get a presigned download URL for an active distribution
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            $ref: '#/components/schemas/UUID'
-      responses:
-        '200':
-          description: Presigned URL response
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  url:
-                    type: string
-                    format: uri
-                  expires_at:
-                    $ref: '#/components/schemas/Timestamp'
-              examples:
-                sample:
-                  value:
-                    url: https://minio.local/presigned/abc123?X-Amz-Signature=...
-                    expires_at: "2025-01-01T13:34:56Z"
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /access-requests:
+  # Authentication Endpoints
+  /auth/register:
     post:
-      tags: [AccessRequests]
-      summary: Create an access request (authenticated developer)
-      security:
-        - bearerAuth: []
+      tags: [Authentication]
+      summary: Register with email and password
+      description: Create a new user account using email and password
+      operationId: registerUser
+      security: []
       requestBody:
         required: true
         content:
@@ -1056,514 +680,693 @@ paths:
             schema:
               type: object
               properties:
-                asset_id:
-                  $ref: '#/components/schemas/UUID'
-                justification:
+                email:
                   type: string
-              required: [asset_id, justification]
-            examples:
-              sample:
-                value:
-                  asset_id: "11111111-2222-3333-4444-555555555555"
-                  justification: "أعمل على واجهة برمجية مفتوحة المصدر."
+                  format: email
+                  description: User email address
+                password:
+                  type: string
+                  minLength: 6
+                  description: User password
+                name:
+                  type: string
+                  description: Full name
+              required: [email, password, name]
+            example:
+              email: "user@example.com"
+              password: "secret123"
+              name: "Ahmed Hassan"
       responses:
         '201':
-          description: Access request created
+          description: Registration successful
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AccessRequest'
-              examples:
-                sample:
-                  value:
-                    id: "bbbb1111-2222-3333-4444-555555555555"
-                    developer_id: "cccc1111-2222-3333-4444-555555555555"
-                    asset_id: "11111111-2222-3333-4444-555555555555"
-                    status: pending
-                    justification: "أعمل على واجهة برمجية مفتوحة المصدر."
-                    created_at: "2025-01-01T12:40:00Z"
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: '#/components/schemas/AuthResponse'
+              example:
+                access_token: "jwt_token_here"
+                refresh_token: "refresh_token_here"
+                user:
+                  id: 1
+                  email: "user@example.com"
+                  name: "Ahmed Hassan"
+                  email_verified: false
+                  profile_completed: false
+                  auth_provider: "email"
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                error:
+                  code: "EMAIL_TAKEN"
+                  message: "Email already exists"
 
-    get:
-      tags: [AccessRequests]
-      summary: List my access requests (authenticated)
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/PageSizeParam'
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login with email and password
+      description: Authenticate user with email and password
+      operationId: loginUser
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+              required: [email, password]
+            example:
+              email: "user@example.com"
+              password: "secret123"
       responses:
         '200':
-          description: My access requests
+          description: Login successful
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/PaginationMeta'
-                  - type: object
-                    properties:
-                      results:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/AccessRequest'
-              examples:
-                sample:
-                  value:
-                    count: 1
-                    next: null
-                    previous: null
-                    results:
-                      - id: "bbbb1111-2222-3333-4444-555555555555"
-                        developer_id: "cccc1111-2222-3333-4444-555555555555"
-                        asset_id: "11111111-2222-3333-4444-555555555555"
-                        status: pending
-                        justification: "أعمل على واجهة برمجية مفتوحة المصدر."
-                        created_at: "2025-01-01T12:40:00Z"
+                $ref: '#/components/schemas/AuthResponse'
+              example:
+                access_token: "jwt_token_here"
+                refresh_token: "refresh_token_here"
+                user:
+                  id: 1
+                  email: "user@example.com"
+                  name: "Ahmed Hassan"
+                  email_verified: true
+                  profile_completed: true
+                  auth_provider: "email"
         '401':
-          $ref: '#/components/responses/Unauthorized'
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                error:
+                  code: "INVALID_CREDENTIALS"
+                  message: "Invalid email or password"
 
-  /access-requests/{id}:
+  /auth/oauth/google/start:
     get:
-      tags: [AccessRequests]
-      summary: Get an access request (owner or approver)
-      security:
-        - bearerAuth: []
+      tags: [Authentication]
+      summary: Start Google OAuth flow
+      description: Initiate Google OAuth authentication
+      operationId: startGoogleOAuth
+      security: []
+      responses:
+        '302':
+          description: Redirect to Google OAuth provider
+
+  /auth/oauth/github/start:
+    get:
+      tags: [Authentication]
+      summary: Start GitHub OAuth flow
+      description: Initiate GitHub OAuth authentication
+      operationId: startGitHubOAuth
+      security: []
+      responses:
+        '302':
+          description: Redirect to GitHub OAuth provider
+
+  /auth/oauth/google/callback:
+    get:
+      tags: [Authentication]
+      summary: Handle Google OAuth callback
+      description: Process Google OAuth callback and authenticate user
+      operationId: handleGoogleOAuthCallback
+      security: []
       parameters:
-        - name: id
-          in: path
+        - name: code
+          in: query
           required: true
           schema:
-            $ref: '#/components/schemas/UUID'
+            type: string
+          description: OAuth authorization code
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+          description: OAuth state parameter
       responses:
         '200':
-          description: Access request
+          description: OAuth authentication successful
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AccessRequest'
-              examples:
-                sample:
-                  value:
-                    id: "bbbb1111-2222-3333-4444-555555555555"
-                    developer_id: "cccc1111-2222-3333-4444-555555555555"
-                    asset_id: "11111111-2222-3333-4444-555555555555"
-                    status: pending
-                    justification: "أعمل على واجهة برمجية مفتوحة المصدر."
-                    created_at: "2025-01-01T12:40:00Z"
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                $ref: '#/components/schemas/AuthResponse'
 
-  /access-requests/{id}/decision:
-    post:
-      tags: [AccessRequests]
-      summary: Approve or reject an access request (manager role)
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                status:
-                  type: string
-                  enum: [approved, rejected]
-              required: [status]
-            examples:
-              approve:
-                value:
-                  status: approved
-              reject:
-                value:
-                  status: rejected
-      responses:
-        '200':
-          description: Decision recorded; may create AssetAccess
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AccessRequest'
-              examples:
-                approved:
-                  value:
-                    id: "bbbb1111-2222-3333-4444-555555555555"
-                    developer_id: "cccc1111-2222-3333-4444-555555555555"
-                    asset_id: "11111111-2222-3333-4444-555555555555"
-                    status: approved
-                    decided_by: "dddd1111-2222-3333-4444-555555555555"
-                    decided_at: "2025-01-01T13:00:00Z"
-                    created_at: "2025-01-01T12:40:00Z"
-                rejected:
-                  value:
-                    id: "bbbb1111-2222-3333-4444-555555555555"
-                    developer_id: "cccc1111-2222-3333-4444-555555555555"
-                    asset_id: "11111111-2222-3333-4444-555555555555"
-                    status: rejected
-                    decided_by: "dddd1111-2222-3333-4444-555555555555"
-                    decided_at: "2025-01-01T13:00:00Z"
-                    created_at: "2025-01-01T12:40:00Z"
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /me:
+  /auth/oauth/github/callback:
     get:
-      tags: [Me]
-      summary: Current user profile (User + Developer)
-      security:
-        - bearerAuth: []
+      tags: [Authentication]
+      summary: Handle GitHub OAuth callback
+      description: Process GitHub OAuth callback and authenticate user
+      operationId: handleGitHubOAuthCallback
+      security: []
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+          description: OAuth authorization code
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+          description: OAuth state parameter
       responses:
         '200':
-          description: Current profile
+          description: OAuth authentication successful
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  user:
-                    $ref: '#/components/schemas/User'
-                  developer:
-                    $ref: '#/components/schemas/Developer'
-              examples:
-                sample:
-                  value:
-                    user:
-                      id: "eeee1111-2222-3333-4444-555555555555"
-                      first_name: أحمد
-                      last_name: محمد
-                      email: user@example.com
-                      phone_number: "+966501234567"
-                      job_title: مطور برمجيات
-                      auth_provider: auth0
-                      is_active: true
-                      created_at: "2025-01-01T10:00:00Z"
-                      updated_at: "2025-01-01T10:00:00Z"
-                    developer:
-                      id: "cccc1111-2222-3333-4444-555555555555"
-                      user_id: "eeee1111-2222-3333-4444-555555555555"
-                      handle: dev_ahmad
-                      bio: مطور برمجيات مهتم بعلوم القرآن.
-                      github_url: https://github.com/ahmad
-                      created_at: "2025-01-01T10:05:00Z"
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: '#/components/schemas/AuthResponse'
 
-  /me/developer:
-    patch:
-      tags: [Me]
-      summary: Update developer profile
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                handle:
-                  type: string
-                bio:
-                  type: string
-                github_url:
-                  type: string
-                  format: uri
-            examples:
-              sample:
-                value:
-                  handle: dev_ahmad
-                  bio: "مهتم بمعايير المحتوى والتنقيح."
-                  github_url: https://github.com/ahmad
+  /auth/profile:
+    get:
+      tags: [Authentication]
+      summary: Get user profile
+      description: Retrieve the authenticated user's profile information
+      operationId: getUserProfile
       responses:
         '200':
-          description: Updated developer
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Developer'
-              examples:
-                sample:
-                  value:
-                    id: "cccc1111-2222-3333-4444-555555555555"
-                    user_id: "eeee1111-2222-3333-4444-555555555555"
-                    handle: dev_ahmad
-                    bio: مهتم بمعايير المحتوى والتنقيح.
-                    github_url: https://github.com/ahmad
-                    created_at: "2025-01-01T10:05:00Z"
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /me/profile:
-    patch:
-      tags: [Me]
-      summary: Update user profile information
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                first_name:
-                  type: string
-                last_name:
-                  type: string
-                phone_number:
-                  type: string
-                  nullable: true
-                  pattern: '^\+[1-9]\d{1,14}$'
-                  description: Phone number in E.164 format (e.g., +966501234567)
-                job_title:
-                  type: string
-                  nullable: true
-              required: [first_name, last_name]
-            examples:
-              sample:
-                value:
-                  first_name: أحمد
-                  last_name: محمد
-                  phone_number: "+966501234567"
-                  job_title: مطور برمجيات
-      responses:
-        '200':
-          description: Updated user profile
+          description: User profile retrieved successfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
-              examples:
-                sample:
-                  value:
-                    id: "eeee1111-2222-3333-4444-555555555555"
-                    first_name: أحمد
-                    last_name: محمد
-                    email: user@example.com
-                    phone_number: "+966501234567"
-                    job_title: مطور برمجيات
-                    auth_provider: auth0
-                    is_active: true
-                    created_at: "2025-01-01T10:00:00Z"
-                    updated_at: "2025-01-01T11:30:00Z"
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-              examples:
-                validation_error:
-                  value:
-                    detail: "Validation failed."
-                    field_errors:
-                      phone_number: ["Enter a valid phone number in E.164 format."]
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+              example:
+                id: 1
+                email: "user@example.com"
+                name: "Ahmed Hassan"
+                avatar_url: "https://..."
+                bio: "Developer interested in Quranic datasets"
+                organization: "Tech Solutions Inc"
+                location: "Cairo, Egypt"
+                website: "https://example.com"
+                github_username: "ahmeddev"
+                email_verified: true
+                profile_completed: true
+                auth_provider: "email"
 
-  /content/standards:
-    get:
-      tags: [Content, Public]
-      summary: Content and utilization standards page
-      parameters:
-        - $ref: '#/components/parameters/AcceptLanguage'
+    put:
+      tags: [Authentication]
+      summary: Update user profile
+      description: Update the authenticated user's profile information
+      operationId: updateUserProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                bio:
+                  type: string
+                organization:
+                  type: string
+                location:
+                  type: string
+                website:
+                  type: string
+                  format: uri
+                github_username:
+                  type: string
+            example:
+              name: "Ahmed Hassan"
+              bio: "Developer interested in Quranic datasets"
+              organization: "Tech Solutions Inc"
+              location: "Cairo, Egypt"
+              website: "https://example.com"
+              github_username: "ahmeddev"
       responses:
         '200':
-          description: Standards content (rendered or markdown)
+          description: Profile updated successfully
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  title:
+                  message:
                     type: string
-                  body_md:
-                    type: string
-                  updated_at:
-                    $ref: '#/components/schemas/Timestamp'
-              examples:
-                ar:
-                  value:
-                    title: "الوثائق: معايير الوصول إلى البيانات"
-                    body_md: |
-                      يوضح هذا المستند معايير الوصول إلى البيانات في الملفات...
-                    updated_at: "2025-01-01T09:00:00Z"
-                en:
-                  value:
-                    title: Standards for Content and Access
-                    body_md: |
-                      This page describes the standards for accessing the data...
-                    updated_at: "2025-01-01T09:00:00Z"
+                  profile:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      profile_completed:
+                        type: boolean
+                    required: [id, profile_completed]
+                required: [message, profile]
+              example:
+                message: "Profile updated successfully"
+                profile:
+                  id: 1
+                  profile_completed: true
 
-  /search:
-    get:
-      tags: [Search, Public]
-      summary: Full-text search across resources and publishers
-      parameters:
-        - $ref: '#/components/parameters/SearchParam'
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/PageSizeParam'
+  /auth/token/refresh:
+    post:
+      tags: [Authentication]
+      summary: Refresh access token
+      description: Generate a new access token using a refresh token
+      operationId: refreshToken
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token:
+                  type: string
+              required: [refresh_token]
+            example:
+              refresh_token: "refresh_token_here"
       responses:
         '200':
-          description: Search results
+          description: Token refreshed successfully
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  hits:
+                  access_token:
+                    type: string
+                required: [access_token]
+              example:
+                access_token: "new_jwt_token_here"
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Logout user
+      description: Invalidate the user's current session
+      operationId: logoutUser
+      responses:
+        '204':
+          description: Logout successful
+
+  # Assets Endpoints
+  /assets:
+    get:
+      tags: [Assets]
+      summary: List assets
+      description: Retrieve a list of available assets with optional filtering
+      operationId: listAssets
+      security: []
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [mushaf, tafsir, recitation]
+          description: Filter assets by category
+        - name: license_code
+          in: query
+          schema:
+            type: string
+          description: Filter assets by license code
+      responses:
+        '200':
+          description: List of assets retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  assets:
                     type: array
                     items:
-                      type: object
-                      properties:
-                        type:
-                          type: string
-                          enum: [resource, publisher, asset]
-                        id:
-                          $ref: '#/components/schemas/UUID'
-                        title:
-                          type: string
-                        snippet:
-                          type: string
-                  estimatedTotalHits:
-                    type: integer
-              examples:
-                sample:
-                  value:
-                    hits:
-                      - type: resource
-                        id: "3e2c5a8b-1f1f-4e8f-8a2d-9e1f0a000123"
-                        title: بيانات القرآن الوصفية
-                        snippet: "...بيانات وصفية عن الآيات..."
-                      - type: publisher
-                        id: "7f0b4f38-5e6f-4f3d-9a1c-7e0d8d300001"
-                        title: مركز إتقان
-                        snippet: "...الناشر ومجموعة الموارد..."
-                    estimatedTotalHits: 2
+                      $ref: '#/components/schemas/AssetSummary'
+                required: [assets]
+              example:
+                assets:
+                  - id: 1
+                    title: "Quran Uthmani"
+                    description: "Quran Uthmani Description Summary"
+                    thumbnail_url: "https://cdn.example.com/thumbnails/asset-1.jpg"
+                    category: "mushaf"
+                    license:
+                      code: "cc0"
+                      name: "CC0 - Public Domain"
+                    publisher:
+                      id: 1
+                      name: "Tafsir Center"
+                      thumbnail_url: "https://cdn.example.com/publishers/publisher-1.jpg"
+                    has_access: false
+                    download_count: 1250
+                    file_size: "2.5 MB"
 
-  /publishers/{slug}/members:
+  /assets/{asset_id}:
+    get:
+      tags: [Assets]
+      summary: Get asset details
+      description: Retrieve detailed information about a specific asset
+      operationId: getAssetDetails
+      security: []
+      parameters:
+        - name: asset_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Asset identifier
+      responses:
+        '200':
+          description: Asset details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        '404':
+          description: Asset not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /assets/{asset_id}/request-access:
+    post:
+      tags: [Assets]
+      summary: Request asset access
+      description: Request access to download a specific asset
+      operationId: requestAssetAccess
+      parameters:
+        - name: asset_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Asset identifier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                purpose:
+                  type: string
+                  description: Reason for requesting access
+                intended_use:
+                  type: string
+                  enum: [commercial, non-commercial]
+                  description: Intended use of the asset
+              required: [purpose, intended_use]
+            example:
+              purpose: "Academic research on Quranic linguistics"
+              intended_use: "non-commercial"
+      responses:
+        '200':
+          description: Access request processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessRequestResponse'
+              example:
+                request_id: 123
+                status: "approved"
+                message: "Access granted automatically"
+                access:
+                  download_url: "/assets/10/download"
+                  expires_at: null
+                  granted_at: "2024-01-25T15:30:00Z"
+
+  /assets/{asset_id}/download:
+    get:
+      tags: [Assets]
+      summary: Download asset file
+      description: Download the asset file (requires access)
+      operationId: downloadAsset
+      parameters:
+        - name: asset_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Asset identifier
+      responses:
+        '200':
+          description: File download successful
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: Attachment filename
+            Content-Length:
+              schema:
+                type: integer
+              description: File size in bytes
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                error:
+                  code: "ACCESS_DENIED"
+                  message: "You need to request access to download this asset"
+
+  # Resources Endpoints
+  /resources/{resource_id}/download:
+    get:
+      tags: [Resources]
+      summary: Download original resource
+      description: Download the complete resource package containing all accessible assets
+      operationId: downloadResource
+      parameters:
+        - name: resource_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Resource identifier
+      responses:
+        '200':
+          description: Resource download successful
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: Attachment filename
+            Content-Length:
+              schema:
+                type: integer
+              description: File size in bytes
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                error:
+                  code: "ACCESS_DENIED"
+                  message: "You need access to at least one asset in this resource to download"
+
+  # Publishers Endpoints
+  /publishers/{publisher_id}:
     get:
       tags: [Publishers]
-      summary: List organization members (requires authentication & permissions)
-      security:
-        - bearerAuth: []
+      summary: Get publisher details
+      description: Retrieve detailed information about a publisher and their assets
+      operationId: getPublisherDetails
+      security: []
       parameters:
-        - name: slug
+        - name: publisher_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Publisher identifier
+      responses:
+        '200':
+          description: Publisher details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Publisher'
+        '404':
+          description: Publisher not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  # Licenses Endpoints
+  /licenses/{license_code}:
+    get:
+      tags: [Licenses]
+      summary: Get license by code
+      description: Retrieve detailed information about a specific license
+      operationId: getLicenseByCode
+      security: []
+      parameters:
+        - name: license_code
           in: path
           required: true
           schema:
             type: string
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/PageSizeParam'
+          description: License code identifier
       responses:
         '200':
-          description: Organization members
+          description: License details retrieved successfully
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/PaginationMeta'
-                  - type: object
-                    properties:
-                      results:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/PublishingOrganizationMember'
-              examples:
-                sample:
-                  value:
-                    count: 2
-                    next: null
-                    previous: null
-                    results:
-                      - id: "member111-2222-3333-4444-555555555555"
-                        user_id: "user1111-2222-3333-4444-555555555555"
-                        publishing_organization_id: "7f0b4f38-5e6f-4f3d-9a1c-7e0d8d300001"
-                        role: owner
-                        status: active
-                        permissions: ["*"]
-                        joined_at: "2024-01-01T10:00:00Z"
-                        created_at: "2024-01-01T10:00:00Z"
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          description: Insufficient permissions
+                $ref: '#/components/schemas/License'
         '404':
-          $ref: '#/components/responses/NotFound'
+          description: License not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
 
-  /me/usage:
+  /licenses:
     get:
-      tags: [Me]
-      summary: Get my usage statistics
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: from_date
-          in: query
-          schema:
-            type: string
-            format: date
-          example: "2025-01-01"
-        - name: to_date
-          in: query
-          schema:
-            type: string
-            format: date
-          example: "2025-01-31"
-        - name: asset_id
-          in: query
-          schema:
-            $ref: '#/components/schemas/UUID'
+      tags: [Licenses]
+      summary: List all licenses
+      description: Retrieve a list of all available licenses
+      operationId: listLicenses
+      security: []
       responses:
         '200':
-          description: Usage statistics
+          description: List of licenses retrieved successfully
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  total_events:
-                    type: integer
-                    example: 1542
-                  api_calls:
-                    type: integer
-                    example: 1450
-                  downloads:
-                    type: integer
-                    example: 92
-                  data_transferred_bytes:
-                    type: integer
-                    example: 15728640
-                  recent_events:
+                  licenses:
                     type: array
                     items:
-                      $ref: '#/components/schemas/UsageEvent'
-              examples:
-                sample:
-                  value:
-                    total_events: 1542
-                    api_calls: 1450
-                    downloads: 92
-                    data_transferred_bytes: 15728640
-                    recent_events:
-                      - id: "event111-2222-3333-4444-555555555555"
-                        asset_access_id: "access11-2222-3333-4444-555555555555"
-                        developer_id: "cccc1111-2222-3333-4444-555555555555"
-                        asset_id: "11111111-2222-3333-4444-555555555555"
-                        event_type: api_call
-                        endpoint: "/api/v1/ayahs"
-                        request_size: 256
-                        response_size: 4096
-                        status_code: 200
-                        ip_address: "192.168.1.100"
-                        user_agent: "MyApp/1.0"
-                        created_at: "2025-01-15T14:30:00Z"
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                      $ref: '#/components/schemas/LicenseSummary'
+                required: [licenses]
+              example:
+                licenses:
+                  - code: "cc0"
+                    name: "CC0 - Public Domain"
+                    short_name: "CC0"
+                    icon_url: "https://cdn.example.com/licenses/cc0.svg"
+                    is_default: true
+                  - code: "cc-by-4.0"
+                    name: "Creative Commons Attribution 4.0"
+                    short_name: "CC BY 4.0"
+                    icon_url: "https://cdn.example.com/licenses/cc-by-4.0.svg"
+                    is_default: false
 
+  # Content Standards Endpoints
+  /content-standards:
+    get:
+      tags: [Content Standards]
+      summary: Get content standards
+      description: Retrieve content quality standards and guidelines
+      operationId: getContentStandards
+      security: []
+      responses:
+        '200':
+          description: Content standards retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentStandards'
 
+  # System Endpoints
+  /config:
+    get:
+      tags: [System]
+      summary: Get application configuration
+      description: Retrieve system configuration and feature flags
+      operationId: getAppConfig
+      security: []
+      responses:
+        '200':
+          description: Application configuration retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppConfig'
+              example:
+                version: "1.0.0"
+                features:
+                  auto_approve_access: true
+                  manual_license_review: false
+                  advanced_analytics: false
+                  api_access: false
+                limits:
+                  max_file_size_mb: 100
+                  max_files_per_resource: 10
+                  max_resources_per_publisher: 50
+                ui:
+                  primary_color: "#669B80"
+                  dark_color: "#22433D"
+                  supported_locales: ["en", "ar"]
+                  default_locale: "en"
+                categories:
+                  - key: "mushaf"
+                    name: "Mushaf"
+                    description: "Complete Quran text and manuscripts"
+                  - key: "tafsir"
+                    name: "Tafsir"
+                    description: "Quranic commentary and interpretation"
+                  - key: "recitation"
+                    name: "Recitation"
+                    description: "Audio recordings of Quranic recitation"
+                external_links:
+                  docs: "https://docs.itqan.dev"
+                  support: "https://support.itqan.dev"
+                  github: "https://github.com/itqan-dev"
+
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      description: Check system health and service status
+      operationId: healthCheck
+      security: []
+      responses:
+        '200':
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+              example:
+                status: "healthy"
+                timestamp: "2024-01-25T15:30:00Z"
+                version: "1.0.0"
+                services:
+                  database: "healthy"
+                  storage: "healthy"
+                  auth: "healthy"
+        '503':
+          description: System is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
