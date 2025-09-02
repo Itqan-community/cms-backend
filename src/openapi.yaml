@@ -9,11 +9,11 @@ info:
     - Content supports i18n. Use Accept-Language header when relevant.
 
 servers:
-  - url: https://cms.itqan.dev/api/v1
+  - url: https://api.cms.itqan.dev/api/v1
     description: Production
-  - url: https://staging.cms.itqan.dev/api/v1
+  - url: https://staging.api.cms.itqan.dev/api/v1
     description: Staging
-  - url: https://dev.cms.itqan.dev/api/v1
+  - url: https://develop.api.cms.itqan.dev/api/v1
     description: Develop
   - url: http://local.cms.itqan.dev:8000/api/v1
     description: Local development (requires hosts entry mapping local.cms.itqan.dev → 127.0.0.1)
