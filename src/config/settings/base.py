@@ -65,6 +65,7 @@ LOCAL_APPS = [
     'apps.api',
     'apps.medialib',
     'apps.api_keys',
+    'mock_api',  # Mock API for development and testing
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

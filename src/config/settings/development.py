@@ -80,20 +80,14 @@ SOCIALACCOUNT_PROVIDERS = {
             'access_type': 'online',
         },
         'OAUTH_PKCE_ENABLED': True,
-        'APP': {
-            'client_id': config('GOOGLE_OAUTH2_CLIENT_ID', ''),
-            'secret': config('GOOGLE_OAUTH2_CLIENT_SECRET', ''),
-        }
+        # Removed APP configuration to rely solely on database entries
     },
     'github': {
         'SCOPE': [
             'user:email',
         ],
         'VERIFIED_EMAIL': True,
-        'APP': {
-            'client_id': config('GITHUB_CLIENT_ID', 'Ov23li2pUIgtAglj9kSJ'),
-            'secret': config('GITHUB_CLIENT_SECRET', 'a8fd8929e6fb20183e3b167d3c2af5e9a2650aaf'),
-        }
+        # Removed APP configuration to rely solely on database entries
     }
 }
 
