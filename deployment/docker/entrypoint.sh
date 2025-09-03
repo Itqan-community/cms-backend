@@ -27,4 +27,4 @@ if [ -n "${DJANGO_SUPERUSER_USERNAME}" ] && [ -n "${DJANGO_SUPERUSER_EMAIL}" ] &
 fi
 
 echo "Starting Gunicorn server..."
-exec gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 120 itqan_cms.wsgi
+exec gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 120 config.wsgi

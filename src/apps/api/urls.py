@@ -84,6 +84,6 @@ urlpatterns = [
     # Search endpoints
     path('search/', include('apps.search.urls')),
     
-    # Authentication endpoints  
-    path('auth/', include('apps.authentication.urls')),
+    # Authentication endpoints are in main config/urls.py under /api/v1/auth/
+    # Using django-allauth based authentication
 ]

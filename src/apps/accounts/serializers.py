@@ -87,12 +87,15 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name', 'full_name',
-            'auth0_id', 'role', 'role_name', 'role_permissions', 'profile_data',
+            'role', 'role_name', 'role_permissions', 'profile_data',
+            'bio', 'organization', 'location', 'website', 'github_username',
+            'avatar_url', 'auth_provider', 'email_verified', 'profile_completed',
             'is_active', 'last_login', 'can_access_admin', 'created_at', 'updated_at'
         ]
         read_only_fields = [
-            'id', 'auth0_id', 'role_name', 'role_permissions', 'full_name',
-            'can_access_admin', 'last_login', 'created_at', 'updated_at'
+            'id', 'role_name', 'role_permissions', 'full_name',
+            'can_access_admin', 'last_login', 'created_at', 'updated_at',
+            'auth_provider', 'email_verified', 'profile_completed'
         ]
 
     def get_role_permissions(self, obj):
@@ -138,13 +141,28 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """
-        Create user with encrypted password
+        Create user with encrypted password and default role
         """
         validated_data.pop('confirm_password')
         password = validated_data.pop('password')
         
+        # Get or create default role (Developer for new registrations)
+        default_role, created = Role.objects.get_or_create(
+            name='Developer',
+            defaults={
+                'description': 'API access for application development',
+                'permissions': {
+                    'resources': ['read'],
+                    'distributions': ['read'],
+                    'access_requests': ['create', 'read_own'],
+                    'usage_events': ['read_own']
+                }
+            }
+        )
+        
         user = User(**validated_data)
         user.set_password(password)
+        user.role = default_role  # Assign default role
         user.save()
         
         return user

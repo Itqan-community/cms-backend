@@ -6,7 +6,7 @@ from .base import *
 # Development-specific settings
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'develop.api.cms.itqan.dev']
 
 # Additional development apps
 # INSTALLED_APPS += [
@@ -18,12 +18,36 @@ MIDDLEWARE.insert(0, 'django.middleware.security.SecurityMiddleware')
 
 # Development database (configured via environment variables)
 
+# Development cache configuration - Using dummy cache (no Redis needed)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+    }
+}
+
+# Disable Celery for development (no Redis broker needed)
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_EAGER_PROPAGATES = True
+
 # Email backend for development
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'
 
 # Development CORS settings
 CORS_ALLOW_ALL_ORIGINS = True  # Only for development
 CORS_ALLOW_CREDENTIALS = True
+
+# CSRF trusted origins for development
+CSRF_TRUSTED_ORIGINS = [
+    'https://develop.api.cms.itqan.dev',
+    'https://develop.cms.itqan.dev',
+    'https://staging.cms.itqan.dev',
+    'https://staging--itqan-cms.netlify.app',
+    'https://cms.itqan.dev',
+    'https://itqan-cms.netlify.app',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+]
 
 # Development security settings (relaxed)
 SECURE_CONTENT_TYPE_NOSNIFF = False

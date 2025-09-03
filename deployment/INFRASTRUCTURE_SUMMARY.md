@@ -82,7 +82,7 @@ cp deployment/docker/env.template deployment/docker/.env
 nano deployment/docker/.env  # Configure with database credentials
 
 # Start application
-docker compose -f deployment/docker/docker-compose.yml up -d --build
+docker compose -f deployment/docker/docker-compose.develop.yml up -d --build
 ```
 
 4. **Configure environment variables** for each droplet using the database connection strings above

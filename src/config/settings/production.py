@@ -1,3 +1,4 @@
+
 """
 Itqan CMS - Production Settings
 """
@@ -10,6 +11,10 @@ ALLOWED_HOSTS = [
     'api.itqan.com',
     'cms.itqan.com',
     '.itqan.com',  # Wildcard subdomain
+    'api.cms.itqan.dev',  # Production API domain
+    'develop.api.cms.itqan.dev',  # Development environment
+    'staging.api.cms.itqan.dev',  # Staging environment  
+    'localhost',  # For local Docker development
 ]
 
 # Security settings for production
@@ -28,6 +33,15 @@ X_FRAME_OPTIONS = 'DENY'
 CORS_ALLOWED_ORIGINS = [
     "https://cms.itqan.com",
     "https://api.itqan.com",
+    "https://cms.itqan.dev",
+    "https://itqan-cms.netlify.app",
+    "https://develop.cms.itqan.dev",
+    "https://develop--itqan-cms.netlify.app",
+    "https://staging.cms.itqan.dev",
+    "https://staging--itqan-cms.netlify.app",
+    # Local frontend development
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
 ]
 
 # Production database configuration
@@ -40,12 +54,20 @@ DATABASES['default'].update({
     },
 })
 
-# Production cache configuration
-CACHES['default']['LOCATION'] = config('REDIS_URL', 'redis://redis:6379/1')
+# Production cache configuration - Using dummy cache for now (no Redis in docker-compose)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+    }
+}
+
+# Disable Celery for now (no Redis broker available)
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_EAGER_PROPAGATES = True
 
 # Production file storage (Alibaba OSS)
-DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-STATICFILES_STORAGE = 'storages.backends.s3boto3.StaticS3Boto3Storage'
+DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 AWS_S3_ENDPOINT_URL = config('OSS_ENDPOINT_URL', '')
 AWS_ACCESS_KEY_ID = config('OSS_ACCESS_KEY_ID', '')
@@ -58,6 +80,21 @@ AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'max-age=86400',
 }
 
+# CSRF trusted origins for production
+CSRF_TRUSTED_ORIGINS = [
+    'https://api.cms.itqan.dev',
+    'https://cms.itqan.com',
+    'https://*.itqan.com',
+    'https://develop.cms.itqan.dev',
+    'https://develop--itqan-cms.netlify.app',
+    'https://staging.cms.itqan.dev',
+    'https://staging--itqan-cms.netlify.app',
+    'https://cms.itqan.dev',
+    'https://itqan-cms.netlify.app',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+]
+
 # Production email configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = config('EMAIL_HOST', 'smtp.mailgun.org')
@@ -68,26 +105,34 @@ EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', 'noreply@itqan.com')
 
 # Production logging
-LOGGING['handlers']['file']['filename'] = '/var/log/django/itqan_cms.log'
+# Write logs to an application directory that exists in the container
+LOGGING['handlers']['file']['filename'] = '/app/logs/django.log'
 LOGGING['handlers']['console']['level'] = 'WARNING'
 LOGGING['root']['level'] = 'INFO'
 
 # Error monitoring (Sentry)
-import sentry_sdk
-from sentry_sdk.integrations.django import DjangoIntegration
-from sentry_sdk.integrations.celery import CeleryIntegration
+try:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.celery import CeleryIntegration
 
-sentry_sdk.init(
-    dsn=config('SENTRY_DSN', ''),
-    integrations=[
-        DjangoIntegration(auto_enabling=True),
-        CeleryIntegration(auto_enabling=True),
-    ],
-    traces_sample_rate=0.1,
-    send_default_pii=True,
-    environment='production',
-)
+    sentry_sdk.init(
+        dsn=config('SENTRY_DSN', ''),
+        integrations=[
+            DjangoIntegration(),
+            CeleryIntegration(),
+        ],
+        traces_sample_rate=0.1,
+        send_default_pii=True,
+        environment='production',
+    )
+except ImportError:
+    # Sentry SDK not installed or configured; skipping error monitoring
+    pass
 
 # Production Wagtail settings
 WAGTAIL_CACHE = True
 WAGTAILADMIN_BASE_URL = 'https://cms.itqan.com'
+
+# Force HTTPS in allauth callback URLs
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'

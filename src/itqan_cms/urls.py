@@ -120,6 +120,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/', include('core.urls')),
     
+    # Mock API endpoints (dummy data)
+    path('mock-api/', include('mock_api.urls')),
+    
     # Static OpenAPI Specification (serves our custom openapi.yaml)
     path('openapi.yaml', serve_openapi_spec, name='openapi-yaml'),
     path('openapi.json', serve_openapi_spec, name='openapi-json'),

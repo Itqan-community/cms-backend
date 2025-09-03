@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     'developers',
     'publishers',
     'resources',
+    'mock_api',
 ]
 
 MIDDLEWARE = [
@@ -75,7 +76,6 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'core.auth0.Auth0Middleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -168,11 +168,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Custom User Model
 AUTH_USER_MODEL = 'core.User'
 
-# Auth0 Configuration
-AUTH0_DOMAIN = os.getenv('AUTH0_DOMAIN', 'dev-itqan.eu.auth0.com')
-AUTH0_CLIENT_ID = os.getenv('AUTH0_CLIENT_ID', 'h4NPegjClDuYxZefNBeXIhqXbu9SV6aC')
-AUTH0_CLIENT_SECRET = os.getenv('AUTH0_CLIENT_SECRET', 'nGzY1mx6DxrOQzsf-Y48NBCfwupmif6WZIvuGNK5FJcq4b3bPBY7p-Tp5mQJvuuI')
-AUTH0_AUDIENCE = os.getenv('AUTH0_AUDIENCE', 'https://api.itqan-cms.com')  # API audience for JWT validation
+# Authentication now handled by django-allauth
 
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = [
@@ -249,10 +245,6 @@ LOGGING = {
             'level': 'INFO',
             'propagate': True,
         },
-        'core.auth0': {
-            'handlers': ['file', 'console'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
+
     },
 }

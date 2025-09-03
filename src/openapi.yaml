@@ -96,6 +96,20 @@ components:
         name:
           type: string
           description: Full name
+        first_name:
+          type: string
+          description: User first name
+        last_name:
+          type: string
+          description: User last name
+        phone_number:
+          type: string
+          nullable: true
+          description: User phone number
+        title:
+          type: string
+          nullable: true
+          description: User professional title
         avatar_url:
           type: string
           format: uri
@@ -132,7 +146,7 @@ components:
           type: string
           enum: [email, google, github]
           description: Authentication provider used
-      required: [id, email, name, email_verified, profile_completed, auth_provider]
+      required: [id, email, name, first_name, last_name, email_verified, profile_completed, auth_provider]
 
     AuthResponse:
       type: object
@@ -688,14 +702,26 @@ paths:
                   type: string
                   minLength: 6
                   description: User password
-                name:
+                first_name:
                   type: string
-                  description: Full name
-              required: [email, password, name]
+                  description: User first name
+                last_name:
+                  type: string
+                  description: User last name
+                phone_number:
+                  type: string
+                  description: User phone number
+                title:
+                  type: string
+                  description: User professional title
+              required: [email, password, first_name, last_name]
             example:
-              email: "user@example.com"
+              email: "ahmed@example.com"
               password: "secret123"
-              name: "Ahmed Hassan"
+              first_name: "Ahmed"
+              last_name: "AlRajhy"
+              phone_number: "009650000000"
+              title: "Software Engineer"
       responses:
         '201':
           description: Registration successful
@@ -708,8 +734,12 @@ paths:
                 refresh_token: "refresh_token_here"
                 user:
                   id: 1
-                  email: "user@example.com"
-                  name: "Ahmed Hassan"
+                  email: "ahmed@example.com"
+                  name: "Ahmed AlRajhy"
+                  first_name: "Ahmed"
+                  last_name: "AlRajhy"
+                  phone_number: "009650000000"
+                  title: "Software Engineer"
                   email_verified: false
                   profile_completed: false
                   auth_provider: "email"
@@ -868,8 +898,12 @@ paths:
                 $ref: '#/components/schemas/User'
               example:
                 id: 1
-                email: "user@example.com"
-                name: "Ahmed Hassan"
+                email: "ahmed@example.com"
+                name: "Ahmed AlRajhy"
+                first_name: "Ahmed"
+                last_name: "AlRajhy"
+                phone_number: "009650000000"
+                title: "Software Engineer"
                 avatar_url: "https://..."
                 bio: "Developer interested in Quranic datasets"
                 organization: "Tech Solutions Inc"
@@ -894,6 +928,14 @@ paths:
               properties:
                 name:
                   type: string
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                phone_number:
+                  type: string
+                title:
+                  type: string
                 bio:
                   type: string
                 organization:
@@ -906,7 +948,11 @@ paths:
                 github_username:
                   type: string
             example:
-              name: "Ahmed Hassan"
+              name: "Ahmed AlRajhy"
+              first_name: "Ahmed"
+              last_name: "AlRajhy"
+              phone_number: "009650000000"
+              title: "Software Engineer"
               bio: "Developer interested in Quranic datasets"
               organization: "Tech Solutions Inc"
               location: "Cairo, Egypt"

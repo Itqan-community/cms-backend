@@ -33,13 +33,13 @@ cp env.example .env
 
 ```bash
 # Start all services
-docker-compose -f deployment/docker/docker-compose.yml up -d
+docker-compose -f deployment/docker/docker-compose.develop.yml up -d
 
 # Check service status
-docker-compose -f deployment/docker/docker-compose.yml ps
+docker-compose -f deployment/docker/docker-compose.develop.yml ps
 
 # View logs
-docker-compose -f deployment/docker/docker-compose.yml logs -f backend
+docker-compose -f deployment/docker/docker-compose.develop.yml logs -f backend
 ```
 
 ### 3. Access the Application
@@ -156,20 +156,20 @@ cms/
 
 ```bash
 # Start all services
-docker-compose -f deployment/docker/docker-compose.yml up -d
+docker-compose -f deployment/docker/docker-compose.develop.yml up -d
 
 # Stop all services
-docker-compose -f deployment/docker/docker-compose.yml down
+docker-compose -f deployment/docker/docker-compose.develop.yml down
 
 # Rebuild and restart
-docker-compose -f deployment/docker/docker-compose.yml up --build
+docker-compose -f deployment/docker/docker-compose.develop.yml up --build
 
 # View service logs
-docker-compose -f deployment/docker/docker-compose.yml logs -f [service-name]
+docker-compose -f deployment/docker/docker-compose.develop.yml logs -f [service-name]
 
 # Execute commands in containers
-docker-compose -f deployment/docker/docker-compose.yml exec backend python manage.py shell
-docker-compose -f deployment/docker/docker-compose.yml exec postgres psql -U itqan_user -d itqan_cms
+docker-compose -f deployment/docker/docker-compose.develop.yml exec backend python manage.py shell
+docker-compose -f deployment/docker/docker-compose.develop.yml exec postgres psql -U itqan_user -d itqan_cms
 ```
 
 ### Django Commands
