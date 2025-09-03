@@ -69,6 +69,34 @@ INTERNAL_IPS = [
 # Wagtail development settings
 WAGTAILADMIN_BASE_URL = 'http://localhost:8000'
 
+# OAuth providers configuration for development
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'OAUTH_PKCE_ENABLED': True,
+        'APP': {
+            'client_id': config('GOOGLE_OAUTH2_CLIENT_ID', ''),
+            'secret': config('GOOGLE_OAUTH2_CLIENT_SECRET', ''),
+        }
+    },
+    'github': {
+        'SCOPE': [
+            'user:email',
+        ],
+        'VERIFIED_EMAIL': True,
+        'APP': {
+            'client_id': config('GITHUB_CLIENT_ID', 'Ov23li2pUIgtAglj9kSJ'),
+            'secret': config('GITHUB_CLIENT_SECRET', 'a8fd8929e6fb20183e3b167d3c2af5e9a2650aaf'),
+        }
+    }
+}
+
 # Django Debug Toolbar (if installed)
 try:
     import debug_toolbar
