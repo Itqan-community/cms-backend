@@ -43,9 +43,12 @@ Accept: application/json
 - **Request Body:**
 ```json
 {
-  "email": "user@example.com",
+  "email": "ahmed@example.com",
   "password": "secret123",
-  "name": "Ahmed Hassan"
+  "first_name": "Ahmed",
+  "last_name": "AlRajhy",
+  "phone_number": "009650000000",
+  "title": "Software Engineer"
 }
 ```
 - **Response:**
@@ -56,10 +59,15 @@ Accept: application/json
   "refresh_token": "refresh_token_here",
   "user": {
     "id": 1,
-    "email": "user@example.com",
-    "name": "Ahmed Hassan",
+    "email": "ahmed@example.com",
+    "name": "Ahmed AlRajhy",
+    "first_name": "Ahmed",
+    "last_name": "AlRajhy",
+    "phone_number": "009650000000",
+    "title": "Software Engineer",
     "email_verified": false,
-    "profile_completed": false
+    "profile_completed": false,
+    "auth_provider": "email"
   }
 }
 ```
@@ -143,8 +151,12 @@ Accept: application/json
 ```json
 {
   "id": 1,
-  "email": "user@example.com",
-  "name": "Ahmed Hassan",
+  "email": "ahmed@example.com",
+  "name": "Ahmed AlRajhy",
+  "first_name": "Ahmed",
+  "last_name": "AlRajhy",
+  "phone_number": "009650000000",
+  "title": "Software Engineer",
   "avatar_url": "https://...",
   "bio": "Developer interested in Quranic datasets",
   "organization": "Tech Solutions Inc",
@@ -164,7 +176,11 @@ Accept: application/json
 - **Request Body:**
 ```json
 {
-  "name": "Ahmed Hassan",
+  "name": "Ahmed AlRajhy",
+  "first_name": "Ahmed",
+  "last_name": "AlRajhy",
+  "phone_number": "009650000000",
+  "title": "Software Engineer",
   "bio": "Developer interested in Quranic datasets",
   "organization": "Tech Solutions Inc",
   "location": "Cairo, Egypt",
