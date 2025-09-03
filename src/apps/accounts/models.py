@@ -139,6 +139,18 @@ class User(AbstractUser):
         help_text="User's GitHub username"
     )
     
+    phone_number = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text="User's phone number"
+    )
+    
+    title = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="User's professional title"
+    )
+    
     avatar_url = models.URLField(
         blank=True,
         help_text="User's avatar image URL"

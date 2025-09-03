@@ -15,8 +15,11 @@ class RegisterSerializer(serializers.Serializer):
     Serializer for email/password registration (API 1.1)
     """
     email = serializers.EmailField()
-    password = serializers.CharField(write_only=True, min_length=8)
-    name = serializers.CharField(max_length=255)
+    password = serializers.CharField(write_only=True, min_length=6)
+    first_name = serializers.CharField(max_length=150)
+    last_name = serializers.CharField(max_length=150)
+    phone_number = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    title = serializers.CharField(max_length=255, required=False, allow_blank=True)
     
     def validate_email(self, value):
         """Check if email is already taken"""
@@ -34,20 +37,16 @@ class RegisterSerializer(serializers.Serializer):
     
     def create(self, validated_data):
         """Create new user"""
-        name = validated_data.pop('name')
         password = validated_data.pop('password')
-        
-        # Split name into first and last name
-        name_parts = name.strip().split(' ', 1)
-        first_name = name_parts[0]
-        last_name = name_parts[1] if len(name_parts) > 1 else ''
         
         # Create user using standard create method and set password separately
         user = User(
             email=validated_data['email'],
             username=validated_data['email'],  # Use email as username
-            first_name=first_name,
-            last_name=last_name,
+            first_name=validated_data['first_name'],
+            last_name=validated_data['last_name'],
+            phone_number=validated_data.get('phone_number', ''),
+            title=validated_data.get('title', ''),
             auth_provider='email'
         )
         user.set_password(password)
@@ -97,9 +96,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'name', 'avatar_url', 'bio', 'organization',
-            'location', 'website', 'github_username', 'email_verified',
-            'profile_completed', 'auth_provider'
+            'id', 'email', 'name', 'first_name', 'last_name', 'phone_number', 'title',
+            'avatar_url', 'bio', 'organization', 'location', 'website', 'github_username', 
+            'email_verified', 'profile_completed', 'auth_provider'
         ]
         read_only_fields = ['id', 'email', 'email_verified', 'auth_provider']
     
@@ -117,7 +116,8 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'name', 'bio', 'organization', 'location', 'website', 'github_username'
+            'name', 'first_name', 'last_name', 'phone_number', 'title',
+            'bio', 'organization', 'location', 'website', 'github_username'
         ]
     
     def update(self, instance, validated_data):
@@ -179,6 +179,10 @@ def create_auth_response(user):
             'id': user.id,
             'email': user.email,
             'name': user.get_full_name(),
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'phone_number': user.phone_number,
+            'title': user.title,
             'avatar_url': user.avatar_url,
             'auth_provider': user.auth_provider,
             'email_verified': user.email_verified,
