@@ -51,35 +51,17 @@ class ResourceAdmin(admin.ModelAdmin):
         'published_at', 'created_at', 'publisher'
     ]
     search_fields = ['title', 'description', 'checksum', 'publisher__email']
-    readonly_fields = ['id', 'checksum', 'created_at', 'updated_at', 'asset_preview']
+    readonly_fields = ['id', 'checksum', 'created_at', 'updated_at']
     date_hierarchy = 'published_at'
     ordering = ['-created_at']
     
     actions = ['publish_resources', 'unpublish_resources', 'create_default_license']
     
-    fieldsets = (
-        ('Asset Information', {
-            'fields': ('title', 'description', 'resource_type', 'language', 'version'),
-            'description': 'Basic asset information visible to users'
-        }),
-        ('Publication', {
-            'fields': ('publisher', 'workflow_status', 'published_at'),
-            'description': 'Publication settings and status'
-        }),
-        ('Asset Preview', {
-            'fields': ('asset_preview',),
-            'description': 'Preview how this asset appears in the API'
-        }),
-        ('Technical Details', {
-            'fields': ('checksum', 'metadata'),
-            'classes': ('collapse',),
-            'description': 'Technical metadata and verification'
-        }),
-        ('System Information', {
-            'fields': ('id', 'is_active', 'created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-    )
+    # Temporarily simplified fieldsets to avoid template rendering issues
+    fields = [
+        'title', 'description', 'resource_type', 'language', 'version',
+        'publisher', 'workflow_status', 'published_at', 'checksum', 'metadata'
+    ]
     
     def asset_category(self, obj):
         """Display asset category (mapped from resource_type)"""
@@ -183,13 +165,13 @@ class ResourceAdmin(admin.ModelAdmin):
         <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; font-family: monospace;">
             <strong>API Endpoint:</strong> <code>/api/v1/assets/{obj.id}/</code><br><br>
             <strong>Asset Summary:</strong><br>
-            {{<br>
+            &#123;<br>
             &nbsp;&nbsp;"id": "{obj.id}",<br>
             &nbsp;&nbsp;"title": "{obj.title}",<br>
             &nbsp;&nbsp;"category": "{api_category}",<br>
-            &nbsp;&nbsp;"license": {{ "code": "{license_code}" }},<br>
+            &nbsp;&nbsp;"license": &#123; "code": "{license_code}" &#125;,<br>
             &nbsp;&nbsp;"has_access": false<br>
-            }}
+            &#125;
         </div>
         """
         return format_html(preview_html)
