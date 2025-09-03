@@ -71,12 +71,13 @@ jobs:
               exit 1
             fi
             
-            # Deploy with Docker Compose (recreate containers to pick up new env vars)
-            echo "🐳 Stopping existing containers..."
-            docker compose -f ${{ env.COMPOSE_FILE }} down || true
+            # Deploy with Docker Compose (recreate only web container, preserve caddy)
+            echo "🐳 Stopping web container only..."
+            docker compose -f ${{ env.COMPOSE_FILE }} stop web || true
+            docker compose -f ${{ env.COMPOSE_FILE }} rm -f web || true
             
-            echo "🔧 Building and recreating containers..."
-            docker compose -f ${{ env.COMPOSE_FILE }} up -d --build --force-recreate
+            echo "🔧 Building and starting web container (preserving caddy)..."
+            docker compose -f ${{ env.COMPOSE_FILE }} up -d --build web
             
             # Wait for services to be ready
             echo "⏳ Waiting for services to start..."

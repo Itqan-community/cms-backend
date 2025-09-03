@@ -56,11 +56,12 @@ ENVEOF
 
     echo "✅ Environment file created"
     
-    echo "🐳 Stopping existing containers..."
-    docker compose -f docker-compose.develop.yml down || true
+    echo "🐳 Stopping web container only (preserving caddy)..."
+    docker compose -f docker-compose.develop.yml stop web || true
+    docker compose -f docker-compose.develop.yml rm -f web || true
     
-    echo "🔨 Building and starting new containers..."
-    docker compose -f docker-compose.develop.yml up -d --build
+    echo "🔨 Building and starting web container (preserving caddy)..."
+    docker compose -f docker-compose.develop.yml up -d --build web
     
     echo "⏳ Waiting for application to start..."
     sleep 30
