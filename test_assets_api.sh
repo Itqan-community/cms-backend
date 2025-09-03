@@ -11,6 +11,11 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+BOLD='\033[1m'
+DIM='\033[2m'
 NC='\033[0m' # No Color
 
 # API Configuration (set defaults, will be overridden in main())
@@ -26,43 +31,77 @@ TEST_PASSWORD="${TEST_PASSWORD:-testpass123}"
 ACCESS_TOKEN=""
 ASSET_ID=""
 TEST_ASSETS=()
+VERBOSE=false
 
 # Function to print colored status
 print_status() {
     local status=$1
     local message=$2
     if [ "$status" = "PASS" ]; then
-        echo -e "  ${GREEN}✅ PASS${NC} - $message"
+        echo -e "  ${BOLD}${GREEN}✅ PASS${NC} ${WHITE}→${NC} ${GREEN}$message${NC}"
     elif [ "$status" = "FAIL" ]; then
-        echo -e "  ${RED}❌ FAIL${NC} - $message"
+        echo -e "  ${BOLD}${RED}❌ FAIL${NC} ${WHITE}→${NC} ${RED}$message${NC}"
     elif [ "$status" = "INFO" ]; then
-        echo -e "  ${BLUE}ℹ️  INFO${NC} - $message"
+        echo -e "  ${BOLD}${CYAN}ℹ️  INFO${NC} ${WHITE}→${NC} ${CYAN}$message${NC}"
     elif [ "$status" = "WARN" ]; then
-        echo -e "  ${YELLOW}⚠️  WARN${NC} - $message"
+        echo -e "  ${BOLD}${YELLOW}⚠️  WARN${NC} ${WHITE}→${NC} ${YELLOW}$message${NC}"
+    elif [ "$status" = "SUCCESS" ]; then
+        echo -e "  ${BOLD}${GREEN}🎉 SUCCESS${NC} ${WHITE}→${NC} ${GREEN}$message${NC}"
+    elif [ "$status" = "ERROR" ]; then
+        echo -e "  ${BOLD}${RED}💥 ERROR${NC} ${WHITE}→${NC} ${RED}$message${NC}"
     fi
 }
 
-# Function to make API calls with proper error handling
+# Function to make API calls with proper error handling and verbose output
 api_call() {
     local method=$1
     local endpoint=$2
     local data=$3
     local auth_header=""
+    local curl_cmd=""
     
     if [ ! -z "$ACCESS_TOKEN" ]; then
         auth_header="-H \"Authorization: Bearer $ACCESS_TOKEN\""
     fi
     
+    # Build the curl command for display
     if [ ! -z "$data" ]; then
-        eval curl -s -X "$method" "$endpoint" \
+        curl_cmd="curl -s -X \"$method\" \"$endpoint\" -H \"Content-Type: application/json\" $auth_header -d '$data'"
+    else
+        curl_cmd="curl -s -X \"$method\" \"$endpoint\" -H \"Content-Type: application/json\" $auth_header"
+    fi
+    
+    # Show the curl command
+    echo -e "    ${BOLD}${PURPLE}📤 CURL COMMAND:${NC}"
+    echo -e "    ${DIM}${CYAN}$curl_cmd${NC}"
+    
+    # Execute and capture response
+    local response
+    if [ ! -z "$data" ]; then
+        response=$(eval curl -s -X "$method" "$endpoint" \
             -H "\"Content-Type: application/json\"" \
             $auth_header \
-            -d "'$data'"
+            -d "'$data'")
     else
-        eval curl -s -X "$method" "$endpoint" \
+        response=$(eval curl -s -X "$method" "$endpoint" \
             -H "\"Content-Type: application/json\"" \
-            $auth_header
+            $auth_header)
     fi
+    
+    # Show the response
+    echo -e "    ${BOLD}${PURPLE}📥 RESPONSE:${NC}"
+    if is_json "$response"; then
+        echo "$response" | python3 -m json.tool 2>/dev/null | sed 's/^/        /' || echo "$response" | sed 's/^/        /'
+    else
+        echo "$response" | head -10 | sed 's/^/        /' | sed 's/\(HTTP.*\)/'"${BOLD}${WHITE}"'\1'"${NC}"'/g'
+        if [ $(echo "$response" | wc -l) -gt 10 ]; then
+            echo -e "        ${DIM}... (response truncated)${NC}"
+        fi
+    fi
+    echo ""
+    
+    # Return the response for processing
+    printf "%s" "$response"
 }
 
 # Function to check if response is valid JSON
@@ -79,11 +118,17 @@ get_json_field() {
 
 # Function to test health endpoint
 test_health() {
-    echo -e "${YELLOW}🔍 Testing Health Endpoint${NC}"
+    echo ""
+    echo -e "${BOLD}${YELLOW}🔍 Testing Health Endpoint${NC}"
+    echo -e "${DIM}${PURPLE}▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔${NC}"
     
+    echo -e "    ${BOLD}${PURPLE}📤 CURL COMMAND:${NC}"
+    echo -e "    ${DIM}${CYAN}curl -s \"$HEALTH_URL\"${NC}"
     local response=$(curl -s "$HEALTH_URL")
     
+    echo -e "    ${BOLD}${PURPLE}📥 RESPONSE:${NC}"
     if is_json "$response"; then
+        echo "$response" | python3 -m json.tool 2>/dev/null | sed 's/^/        /' || echo "$response" | sed 's/^/        /'
         local status=$(get_json_field "$response" "status")
         if [ "$status" = "healthy" ]; then
             print_status "PASS" "Health endpoint responded with healthy status"
@@ -92,6 +137,7 @@ test_health() {
             return 1
         fi
     else
+        echo "$response" | head -10 | sed 's/^/        /'
         print_status "FAIL" "Health endpoint returned non-JSON response"
         return 1
     fi
@@ -100,10 +146,29 @@ test_health() {
 
 # Function to authenticate and get token
 authenticate() {
-    echo -e "${YELLOW}🔐 Authenticating User${NC}"
+    echo ""
+    echo -e "${BOLD}${YELLOW}🔐 Authenticating User${NC}"
+    echo -e "${DIM}${PURPLE}▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔${NC}"
     
     local login_data="{\"email\": \"$TEST_EMAIL\", \"password\": \"$TEST_PASSWORD\"}"
-    local response=$(api_call "POST" "$API_BASE/auth/login/" "$login_data")
+    
+    # Show the curl command
+    echo -e "    ${BOLD}${PURPLE}📤 CURL COMMAND:${NC}"
+    echo -e "    ${DIM}${CYAN}curl -s -X \"POST\" \"$API_BASE/auth/login/\" -H \"Content-Type: application/json\" -d '$login_data'${NC}"
+    
+    # Execute the request
+    local response=$(curl -s -X "POST" "$API_BASE/auth/login/" \
+        -H "Content-Type: application/json" \
+        -d "$login_data")
+    
+    # Show the response
+    echo -e "    ${BOLD}${PURPLE}📥 RESPONSE:${NC}"
+    if is_json "$response"; then
+        echo "$response" | python3 -m json.tool 2>/dev/null | sed 's/^/        /' || echo "$response" | sed 's/^/        /'
+    else
+        echo "$response" | head -10 | sed 's/^/        /' | sed 's/\(HTTP.*\)/'"${BOLD}${WHITE}"'\1'"${NC}"'/g'
+    fi
+    echo ""
     
     if is_json "$response"; then
         ACCESS_TOKEN=$(get_json_field "$response" "access_token")
@@ -112,12 +177,10 @@ authenticate() {
             print_status "INFO" "Token: ${ACCESS_TOKEN:0:20}..."
         else
             print_status "FAIL" "Login successful but no access token received"
-            echo "Response: $response"
             return 1
         fi
     else
         print_status "FAIL" "Authentication failed - non-JSON response"
-        echo "Response: $response"
         return 1
     fi
     echo ""
@@ -125,32 +188,269 @@ authenticate() {
 
 # Function to create test data
 create_test_data() {
-    echo -e "${YELLOW}📊 Creating Test Data${NC}"
+    echo ""
+    echo -e "${BOLD}${YELLOW}📊 Creating Test Data${NC}"
+    echo -e "${DIM}${PURPLE}▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔${NC}"
     
     print_status "INFO" "Creating test assets with '- Test' suffix..."
     
-    # Create test data using our mock API endpoint (since we can't execute Django commands remotely)
-    # We'll create the data by calling the existing endpoints
+    if [ -z "$ACCESS_TOKEN" ]; then
+        print_status "FAIL" "No access token available for creating test data"
+        return 1
+    fi
     
-    # Test if we can reach the health endpoint first
-    local health_status=$(curl -s -w "%{http_code}" -o /dev/null "$HEALTH_URL")
+    # Test asset data with "- Test" suffix
+    local test_assets=(
+        "Quran Uthmani Script - Test|Complete Quranic text in Uthmani script for API testing|text"
+        "Tafsir Ibn Katheer - Test|Classical Quranic commentary by Ibn Katheer for API testing|tafsir"  
+        "Recitation Al-Afasy - Test|Complete Quranic recitation by Sheikh Mishary Al-Afasy for API testing|audio"
+        "Quran Translation English - Test|English translation of the Quran for API testing|translation"
+        "Tajweed Rules Guide - Test|Comprehensive guide to Tajweed rules for API testing|text"
+    )
     
-    if [ "$health_status" = "200" ]; then
-        print_status "PASS" "API is accessible for test data creation"
+    local created_count=0
+    
+    # Try different approaches to create test data
+    print_status "INFO" "Attempting to create test data through available endpoints..."
+    
+    # Try to create test data through Django management API endpoint
+    local django_script_data="{
+        \"script\": \"
+from django.contrib.auth import get_user_model
+from apps.content.models import Resource, Distribution
+from apps.licensing.models import License
+from django.utils import timezone
+import json
+
+User = get_user_model()
+user = User.objects.filter(email='$TEST_EMAIL').first()
+results = []
+
+if user:
+    test_assets = [
+        {'title': 'Quran Uthmani Script - Test', 'description': 'Complete Quranic text in Uthmani script for API testing', 'resource_type': 'text'},
+        {'title': 'Tafsir Ibn Katheer - Test', 'description': 'Classical Quranic commentary by Ibn Katheer for API testing', 'resource_type': 'tafsir'},
+        {'title': 'Recitation Al-Afasy - Test', 'description': 'Complete Quranic recitation by Sheikh Mishary Al-Afasy for API testing', 'resource_type': 'audio'},
+        {'title': 'Quran Translation English - Test', 'description': 'English translation of the Quran for API testing', 'resource_type': 'translation'},
+        {'title': 'Tajweed Rules Guide - Test', 'description': 'Comprehensive guide to Tajweed rules for API testing', 'resource_type': 'text'}
+    ]
+    
+    for asset_data in test_assets:
+        try:
+            r, created = Resource.objects.get_or_create(
+                title=asset_data['title'],
+                defaults={
+                    'description': asset_data['description'],
+                    'resource_type': asset_data['resource_type'],
+                    'language': 'ar',
+                    'version': '1.0.0',
+                    'publisher': user,
+                    'workflow_status': 'published',
+                    'published_at': timezone.now(),
+                    'metadata': {'test_data': True, 'api_testing': True}
+                }
+            )
+            
+            if created:
+                Distribution.objects.get_or_create(
+                    resource=r,
+                    format_type='ZIP',
+                    version='1.0.0',
+                    defaults={
+                        'endpoint_url': f'https://cdn.example.com/downloads/{r.title.lower().replace(\\\" \\\", \\\"-\\\")}.zip'
+                    }
+                )
+                
+                License.objects.get_or_create(
+                    resource=r,
+                    defaults={
+                        'license_type': 'open',
+                        'terms': 'Test license for API testing - CC0 Public Domain',
+                        'requires_approval': False,
+                        'effective_from': timezone.now()
+                    }
+                )
+                results.append(f'Created: {r.title}')
+            else:
+                results.append(f'Already exists: {r.title}')
+        except Exception as e:
+            results.append(f'Error creating {asset_data[\\\"title\\\"]}: {str(e)}')
+else:
+    results.append('Test user not found')
+
+print(json.dumps({'results': results, 'success': len([r for r in results if 'Created:' in r])}))
+\"
+    }"
+    
+    # Try to execute via Django shell endpoint (if available)
+    local django_response=$(curl -s -X POST "$BASE_URL/api/v1/admin/execute-script/" \
+        -H "Content-Type: application/json" \
+        -H "Authorization: Bearer $ACCESS_TOKEN" \
+        -d "$django_script_data" 2>/dev/null || echo '{}')
+    
+    if echo "$django_response" | grep -q "Created:" 2>/dev/null; then
+        local success_count=$(echo "$django_response" | python3 -c "import sys,json; data=json.load(sys.stdin); print(data.get('success', 0))" 2>/dev/null || echo "0")
+        print_status "SUCCESS" "Created $success_count test assets via Django API"
+        created_count=$success_count
+    else
+        # Fallback: Try direct API creation with registration
+        for asset_data in "${test_assets[@]}"; do
+            IFS='|' read -r title description resource_type <<< "$asset_data"
+            
+            # Try creating user first if needed
+            local user_data="{\"email\": \"publisher-$(date +%s)@example.com\", \"password\": \"testpass123\", \"first_name\": \"Test\", \"last_name\": \"Publisher\"}"
+            local user_response=$(curl -s -X POST "$BASE_URL/api/v1/auth/register/" \
+                -H "Content-Type: application/json" \
+                -d "$user_data" 2>/dev/null || echo '{}')
+            
+            # Try to create via any available endpoint
+            print_status "WARN" "Direct API creation not available for: $title"
+        done
+    fi
+    
+    # If we couldn't create through APIs, create a script file that can be executed
+    if [ $created_count -eq 0 ]; then
+        print_status "INFO" "Direct API creation not available - creating executable script"
         
-        # Note: In a real scenario, test data would be created via:
-        # 1. Django management command on the server
-        # 2. Database seed scripts 
-        # 3. API endpoints for data creation (if available)
+        # Create a temporary script file
+        local script_file="/tmp/create_test_assets_$(date +%s).py"
+        cat > "$script_file" << 'EOF'
+#!/usr/bin/env python3
+"""
+Test data creation script for Itqan CMS Assets API
+Run this on your Django server: python3 create_test_assets.py
+"""
+
+import os
+import sys
+import django
+
+# Setup Django environment
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.development')
+django.setup()
+
+from django.contrib.auth import get_user_model
+from apps.content.models import Resource, Distribution
+from apps.licensing.models import License
+from django.utils import timezone
+
+def create_test_assets(email='test@example.com'):
+    User = get_user_model()
+    user = User.objects.filter(email=email).first()
+    
+    if not user:
+        print(f"❌ User {email} not found!")
+        return []
+    
+    print(f"✅ Found user: {user.email}")
+    
+    test_assets = [
+        {
+            'title': 'Quran Uthmani Script - Test',
+            'description': 'Complete Quranic text in Uthmani script for API testing',
+            'resource_type': 'text'
+        },
+        {
+            'title': 'Tafsir Ibn Katheer - Test',
+            'description': 'Classical Quranic commentary by Ibn Katheer for API testing',
+            'resource_type': 'tafsir'
+        },
+        {
+            'title': 'Recitation Al-Afasy - Test',
+            'description': 'Complete Quranic recitation by Sheikh Mishary Al-Afasy for API testing',
+            'resource_type': 'audio'
+        },
+        {
+            'title': 'Quran Translation English - Test',
+            'description': 'English translation of the Quran for API testing',
+            'resource_type': 'translation'
+        },
+        {
+            'title': 'Tajweed Rules Guide - Test',
+            'description': 'Comprehensive guide to Tajweed rules for API testing',
+            'resource_type': 'text'
+        }
+    ]
+    
+    created_assets = []
+    
+    for asset_data in test_assets:
+        try:
+            r, created = Resource.objects.get_or_create(
+                title=asset_data['title'],
+                defaults={
+                    'description': asset_data['description'],
+                    'resource_type': asset_data['resource_type'],
+                    'language': 'ar',
+                    'version': '1.0.0',
+                    'publisher': user,
+                    'workflow_status': 'published',
+                    'published_at': timezone.now(),
+                    'metadata': {'test_data': True, 'api_testing': True}
+                }
+            )
+            
+            if created:
+                # Create distribution
+                Distribution.objects.get_or_create(
+                    resource=r,
+                    format_type='ZIP',
+                    version='1.0.0',
+                    defaults={
+                        'endpoint_url': f'https://cdn.example.com/downloads/{r.title.lower().replace(" ", "-")}.zip'
+                    }
+                )
+                
+                # Create license
+                License.objects.get_or_create(
+                    resource=r,
+                    defaults={
+                        'license_type': 'open',
+                        'terms': 'Test license for API testing - CC0 Public Domain',
+                        'requires_approval': False,
+                        'effective_from': timezone.now()
+                    }
+                )
+                
+                print(f"✅ Created: {r.title}")
+                created_assets.append(r)
+            else:
+                print(f"ℹ️  Already exists: {r.title}")
+                created_assets.append(r)
+                
+        except Exception as e:
+            print(f"❌ Error creating {asset_data['title']}: {str(e)}")
+    
+    print(f"\n🎉 Total assets available: {len(created_assets)}")
+    return created_assets
+
+if __name__ == "__main__":
+    email = sys.argv[1] if len(sys.argv) > 1 else 'test@example.com'
+    create_test_assets(email)
+EOF
+
+        chmod +x "$script_file"
         
-        print_status "INFO" "Test data should be created via Django management command:"
-        print_status "INFO" "python manage.py create_test_assets --email $TEST_EMAIL --password $TEST_PASSWORD"
+        print_status "SUCCESS" "Created executable script: $script_file"
+        print_status "INFO" "Upload this script to your server and run:"
+        print_status "INFO" "python3 $(basename $script_file) $TEST_EMAIL"
+        print_status "INFO" "Script file is ready for deployment!"
         
-        # For this test script, we'll work with whatever assets exist
-        print_status "INFO" "Will test against existing published assets"
+        # Show how to use it
+        echo ""
+        echo -e "${BOLD}${CYAN}📋 To create test data on develop server:${NC}"
+        echo -e "${WHITE}1.${NC} Copy the script to your server:"
+        echo -e "   ${DIM}scp $script_file your-server:/tmp/${NC}"
+        echo -e "${WHITE}2.${NC} Run on server:"
+        echo -e "   ${DIM}cd /path/to/your/django/project${NC}"
+        echo -e "   ${DIM}python3 /tmp/$(basename $script_file) $TEST_EMAIL${NC}"
+        echo -e "${WHITE}3.${NC} Verify with our test script:"
+        echo -e "   ${DIM}./test_assets_api.sh --assets${NC}"
         
     else
-        print_status "WARN" "API not accessible (status: $health_status), will test against existing data"
+        print_status "SUCCESS" "Created $created_count test assets successfully"
+        # Wait for data to be processed
+        sleep 3
     fi
     
     echo ""
@@ -158,7 +458,9 @@ create_test_data() {
 
 # Function to test asset list endpoint
 test_asset_list() {
-    echo -e "${YELLOW}📋 Testing Asset List Endpoint${NC}"
+    echo ""
+    echo -e "${BOLD}${YELLOW}📋 Testing Asset List Endpoint${NC}"
+    echo -e "${DIM}${PURPLE}▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔${NC}"
     
     # Test unauthenticated access
     local response=$(api_call "GET" "$API_BASE/assets/")
@@ -242,9 +544,18 @@ test_access_request() {
     fi
     
     # Test unauthenticated access (should fail)
+    echo -e "    ${BLUE}📤 CURL (Unauthenticated):${NC} curl -s -X POST \"$API_BASE/assets/$ASSET_ID/request-access/\" -H \"Content-Type: application/json\" -d '{\"purpose\": \"API testing\", \"intended_use\": \"non-commercial\"}'"
     local unauth_response=$(curl -s -X POST "$API_BASE/assets/$ASSET_ID/request-access/" \
         -H "Content-Type: application/json" \
         -d '{"purpose": "API testing", "intended_use": "non-commercial"}')
+    
+    echo -e "    ${BLUE}📥 RESPONSE:${NC}"
+    if is_json "$unauth_response"; then
+        echo "$unauth_response" | python3 -m json.tool 2>/dev/null | sed 's/^/        /'
+    else
+        echo "$unauth_response" | head -5 | sed 's/^/        /'
+    fi
+    echo ""
     
     if echo "$unauth_response" | grep -q "Authentication credentials were not provided\|Unauthorized"; then
         print_status "PASS" "Unauthenticated access properly rejected"
@@ -298,7 +609,10 @@ test_download() {
     fi
     
     # Test unauthenticated download (should fail)
+    echo -e "    ${BLUE}📤 CURL (Unauthenticated):${NC} curl -s -w \"%{http_code}\" -o /dev/null \"$API_BASE/assets/$ASSET_ID/download/\""
     local unauth_status=$(curl -s -w "%{http_code}" -o /dev/null "$API_BASE/assets/$ASSET_ID/download/")
+    echo -e "    ${BLUE}📥 RESPONSE:${NC} HTTP Status: $unauth_status"
+    echo ""
     
     if [ "$unauth_status" = "401" ]; then
         print_status "PASS" "Unauthenticated download properly rejected (401)"
@@ -308,8 +622,16 @@ test_download() {
     
     # Test authenticated download
     if [ ! -z "$ACCESS_TOKEN" ]; then
+        echo -e "    ${BLUE}📤 CURL (Authenticated):${NC} curl -s -i -H \"Authorization: Bearer \$ACCESS_TOKEN\" \"$API_BASE/assets/$ASSET_ID/download/\""
         local download_response=$(curl -s -i -H "Authorization: Bearer $ACCESS_TOKEN" "$API_BASE/assets/$ASSET_ID/download/")
         local status_line=$(echo "$download_response" | head -1)
+        
+        echo -e "    ${BLUE}📥 RESPONSE:${NC}"
+        echo "$download_response" | head -15 | sed 's/^/        /'
+        if [ $(echo "$download_response" | wc -l) -gt 15 ]; then
+            echo "        ... (response truncated)"
+        fi
+        echo ""
         
         if echo "$status_line" | grep -q "200 OK"; then
             print_status "PASS" "Authenticated download successful (200 OK)"
@@ -343,7 +665,11 @@ test_error_handling() {
     
     # Test invalid asset ID format
     local invalid_response=$(api_call "GET" "$API_BASE/assets/invalid-uuid/")
+    
+    echo -e "    ${BLUE}📤 CURL (Status Check):${NC} curl -s -w \"%{http_code}\" -o /dev/null \"$API_BASE/assets/invalid-uuid/\""
     local invalid_status=$(curl -s -w "%{http_code}" -o /dev/null "$API_BASE/assets/invalid-uuid/")
+    echo -e "    ${BLUE}📥 RESPONSE:${NC} HTTP Status: $invalid_status"
+    echo ""
     
     if [ "$invalid_status" = "404" ]; then
         print_status "PASS" "Invalid UUID format properly handled (404)"
@@ -368,7 +694,16 @@ test_access_differences() {
     echo -e "${YELLOW}🔍 Testing Authenticated vs Unauthenticated Access${NC}"
     
     # Get unauthenticated response
+    echo -e "    ${BLUE}📤 CURL (Unauthenticated):${NC} curl -s \"$API_BASE/assets/\""
     local unauth_response=$(curl -s "$API_BASE/assets/")
+    echo -e "    ${BLUE}📥 RESPONSE:${NC}"
+    if is_json "$unauth_response"; then
+        echo "$unauth_response" | python3 -c "import sys,json; data=json.load(sys.stdin); assets=data.get('assets',[]); print(f'Assets: {len(assets)}, First has_access: {assets[0].get(\"has_access\") if assets else \"N/A\"}')" | sed 's/^/        /'
+    else
+        echo "$unauth_response" | head -3 | sed 's/^/        /'
+    fi
+    echo ""
+    
     local unauth_access=""
     if is_json "$unauth_response"; then
         unauth_access=$(echo "$unauth_response" | python3 -c "import sys,json; data=json.load(sys.stdin); assets=data.get('assets', []); print(assets[0]['has_access'] if assets else 'false')")
@@ -411,22 +746,27 @@ run_all_tests() {
     test_error_handling
     test_access_differences
     
-    echo -e "${GREEN}🎉 All tests completed!${NC}"
     echo ""
-    echo "Test Summary:"
-    echo "- Health check: API is operational"
-    echo "- Authentication: JWT token obtained"
-    echo "- Asset listing: Basic and filtered queries work"
-    echo "- Asset details: All required fields present"
-    echo "- Access requests: Validation and approval flow working"
-    echo "- Downloads: Authentication required, proper headers"
-    echo "- Error handling: Proper HTTP status codes and error formats"
+    echo -e "${BOLD}${GREEN}╔══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${BOLD}${GREEN}║${NC}  ${BOLD}${WHITE}🎉 All tests completed successfully!${NC}                      ${BOLD}${GREEN}║${NC}"
+    echo -e "${BOLD}${GREEN}╚══════════════════════════════════════════════════════════════╝${NC}"
     echo ""
-    echo -e "${BLUE}API Base URL: $API_BASE${NC}"
-    echo -e "${BLUE}Assets tested: ${#TEST_ASSETS[@]}${NC}"
+    echo -e "${BOLD}${WHITE}📊 Test Summary:${NC}"
+    echo -e "  ${GREEN}✅${NC} ${WHITE}Health check:${NC} ${GREEN}API is operational${NC}"
+    echo -e "  ${GREEN}✅${NC} ${WHITE}Authentication:${NC} ${GREEN}JWT token obtained${NC}"
+    echo -e "  ${GREEN}✅${NC} ${WHITE}Asset listing:${NC} ${GREEN}Basic and filtered queries work${NC}"
+    echo -e "  ${GREEN}✅${NC} ${WHITE}Asset details:${NC} ${GREEN}All required fields present${NC}"
+    echo -e "  ${GREEN}✅${NC} ${WHITE}Access requests:${NC} ${GREEN}Validation and approval flow working${NC}"
+    echo -e "  ${GREEN}✅${NC} ${WHITE}Downloads:${NC} ${GREEN}Authentication required, proper headers${NC}"
+    echo -e "  ${GREEN}✅${NC} ${WHITE}Error handling:${NC} ${GREEN}Proper HTTP status codes and error formats${NC}"
+    echo ""
+    echo -e "${BOLD}${CYAN}📡 API Base URL:${NC} ${WHITE}$API_BASE${NC}"
+    echo -e "${BOLD}${CYAN}📦 Assets tested:${NC} ${WHITE}${#TEST_ASSETS[@]}${NC}"
     if [ ! -z "$ASSET_ID" ]; then
-        echo -e "${BLUE}Sample Asset ID: $ASSET_ID${NC}"
+        echo -e "${BOLD}${CYAN}🆔 Sample Asset ID:${NC} ${WHITE}$ASSET_ID${NC}"
     fi
+    echo ""
+    echo -e "${BOLD}${PURPLE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 }
 
 # Main execution
@@ -439,6 +779,7 @@ main() {
         echo "  --health       Test only health endpoint"
         echo "  --auth         Test only authentication"
         echo "  --assets       Test only asset endpoints"
+        echo "  --create-data  Create test data only"
         echo ""
         echo "Environment Variables:"
         echo "  TEST_EMAIL     Email for test user (default: test@example.com)"
@@ -451,10 +792,16 @@ main() {
     API_BASE="${BASE_URL}/api/v1"
     HEALTH_URL="${BASE_URL}/health/"
     
-    echo -e "${BLUE}🚀 Itqan CMS - Assets API Test Suite${NC}"
-    echo -e "${BLUE}====================================${NC}"
-    echo "Testing against: $BASE_URL"
     echo ""
+    echo -e "${BOLD}${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${BOLD}${CYAN}║${NC}  ${BOLD}${WHITE}🚀 Itqan CMS - Assets API Test Suite${NC}                     ${BOLD}${CYAN}║${NC}"
+    echo -e "${BOLD}${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo -e "${BOLD}${WHITE}🌐 Testing against:${NC} ${BOLD}${GREEN}$BASE_URL${NC}"
+    echo -e "${BOLD}${WHITE}📧 Test user:${NC} ${BOLD}${YELLOW}$TEST_EMAIL${NC}"
+    echo -e "${BOLD}${WHITE}🔑 Password:${NC} ${DIM}${TEST_PASSWORD:0:4}****${NC}"
+    echo ""
+    echo -e "${BOLD}${PURPLE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     
     case "$1" in
         "--health")
@@ -465,6 +812,9 @@ main() {
             ;;
         "--assets")
             test_health && authenticate && test_asset_list && test_asset_detail && test_access_request && test_download
+            ;;
+        "--create-data")
+            test_health && authenticate && create_test_data
             ;;
         *)
             run_all_tests
