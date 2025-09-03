@@ -27,6 +27,7 @@ RUN chmod +x /entrypoint.sh
 
 # Create logs directory
 RUN mkdir -p /app/logs
+RUN mkdir -p /app/static
 
 EXPOSE 8000
 
