@@ -44,8 +44,16 @@ DATABASES['default'].update({
     },
 })
 
-# Production cache configuration
-CACHES['default']['LOCATION'] = config('REDIS_URL', 'redis://redis:6379/1')
+# Production cache configuration - Using dummy cache for now (no Redis in docker-compose)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+    }
+}
+
+# Disable Celery for now (no Redis broker available)
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_EAGER_PROPAGATES = True
 
 # Production file storage (Alibaba OSS)
 DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
