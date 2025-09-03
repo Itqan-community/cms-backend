@@ -14,9 +14,8 @@ if [ -n "${DB_HOST}" ]; then
 fi
 
 # Run Django management commands
-echo "Running database migrations (handling existing migration history)..."
-# Run migrations, faking initial migrations where needed
-python manage.py migrate --fake-initial --noinput
+echo "Running database migrations..."
+python manage.py migrate --noinput
 
 echo "Collecting static files..."
 python manage.py collectstatic --noinput
