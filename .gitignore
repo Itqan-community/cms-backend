@@ -13,3 +13,4 @@ coverage/
 .mypy_cache/
 *.log
 venv/
+downloads/
