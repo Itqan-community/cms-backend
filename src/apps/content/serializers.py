@@ -263,3 +263,124 @@ class DistributionListSerializer(serializers.ModelSerializer):
     
     def get_access_request_count(self, obj):
         return obj.access_requests.filter(is_active=True).count()
+
+
+# Asset API Serializers (Simplified frontend interface)
+class LicenseSummarySerializer(serializers.Serializer):
+    """Serializer for license summary in asset responses"""
+    code = serializers.CharField()
+    name = serializers.CharField()
+    short_name = serializers.CharField(required=False)
+    icon_url = serializers.URLField(required=False)
+    is_default = serializers.BooleanField(default=False)
+
+
+class PublisherSummarySerializer(serializers.Serializer):
+    """Serializer for publisher summary in asset responses"""
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    thumbnail_url = serializers.URLField()
+    bio = serializers.CharField(required=False)
+    verified = serializers.BooleanField()
+
+
+class AssetSummarySerializer(serializers.Serializer):
+    """Serializer for asset summary in list view"""
+    id = serializers.UUIDField()
+    title = serializers.CharField()
+    description = serializers.CharField()
+    thumbnail_url = serializers.URLField()
+    category = serializers.ChoiceField(choices=['mushaf', 'tafsir', 'recitation'])
+    license = LicenseSummarySerializer()
+    publisher = PublisherSummarySerializer()
+    has_access = serializers.BooleanField()
+    download_count = serializers.IntegerField()
+    file_size = serializers.CharField()
+
+
+class AssetSnapshotSerializer(serializers.Serializer):
+    """Serializer for asset snapshots"""
+    thumbnail_url = serializers.URLField()
+    title = serializers.CharField()
+    description = serializers.CharField()
+
+
+class AssetResourceSerializer(serializers.Serializer):
+    """Serializer for asset resource reference"""
+    id = serializers.UUIDField()
+    title = serializers.CharField()
+    description = serializers.CharField()
+
+
+class AssetTechnicalDetailsSerializer(serializers.Serializer):
+    """Serializer for asset technical details"""
+    file_size = serializers.CharField()
+    format = serializers.CharField()
+    encoding = serializers.CharField()
+    version = serializers.CharField()
+    language = serializers.CharField()
+
+
+class AssetStatsSerializer(serializers.Serializer):
+    """Serializer for asset statistics"""
+    download_count = serializers.IntegerField()
+    view_count = serializers.IntegerField()
+    created_at = serializers.DateTimeField()
+    updated_at = serializers.DateTimeField()
+
+
+class AssetAccessSerializer(serializers.Serializer):
+    """Serializer for asset access information"""
+    has_access = serializers.BooleanField()
+    requires_approval = serializers.BooleanField()
+
+
+class RelatedAssetSerializer(serializers.Serializer):
+    """Serializer for related assets"""
+    id = serializers.UUIDField()
+    title = serializers.CharField()
+    thumbnail_url = serializers.URLField()
+
+
+class LicenseDetailSerializer(serializers.Serializer):
+    """Serializer for detailed license information"""
+    code = serializers.CharField()
+    name = serializers.CharField()
+    short_name = serializers.CharField()
+    url = serializers.URLField()
+    icon_url = serializers.URLField()
+    summary = serializers.CharField()
+    full_text = serializers.CharField()
+    legal_code_url = serializers.URLField()
+    license_terms = serializers.ListField(child=serializers.DictField(), default=list)
+    permissions = serializers.ListField(child=serializers.DictField(), default=list)
+    conditions = serializers.ListField(child=serializers.DictField(), default=list)
+    limitations = serializers.ListField(child=serializers.DictField(), default=list)
+    usage_count = serializers.IntegerField()
+    is_default = serializers.BooleanField()
+
+
+class AssetDetailSerializer(serializers.Serializer):
+    """Serializer for detailed asset view"""
+    id = serializers.UUIDField()
+    title = serializers.CharField()
+    description = serializers.CharField()
+    long_description = serializers.CharField()
+    thumbnail_url = serializers.URLField()
+    category = serializers.ChoiceField(choices=['mushaf', 'tafsir', 'recitation'])
+    license = LicenseDetailSerializer()
+    snapshots = AssetSnapshotSerializer(many=True)
+    publisher = PublisherSummarySerializer()
+    resource = AssetResourceSerializer(required=False, allow_null=True)
+    technical_details = AssetTechnicalDetailsSerializer()
+    stats = AssetStatsSerializer()
+    access = AssetAccessSerializer()
+    related_assets = RelatedAssetSerializer(many=True)
+
+
+class AccessRequestResponseSerializer(serializers.Serializer):
+    """Serializer for access request response"""
+    request_id = serializers.IntegerField()
+    status = serializers.ChoiceField(choices=['approved', 'rejected', 'pending'])
+    message = serializers.CharField()
+    access = serializers.DictField(required=False, allow_null=True)

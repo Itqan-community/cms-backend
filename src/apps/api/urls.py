@@ -28,6 +28,11 @@ from apps.api.views.landing import platform_statistics, platform_features, recen
 # Import Content Standards Views
 from apps.api.views.content_standards import ContentStandardsView, content_standards_simple
 
+# Import Asset Views
+from apps.content.asset_views import (
+    AssetListView, AssetDetailView, AssetRequestAccessView, AssetDownloadView
+)
+
 # Create API router
 router = DefaultRouter()
 
@@ -83,6 +88,12 @@ urlpatterns = [
     
     # Search endpoints
     path('search/', include('apps.search.urls')),
+    
+    # Asset endpoints (simplified frontend interface)
+    path('assets/', AssetListView.as_view(), name='asset_list'),
+    path('assets/<uuid:asset_id>/', AssetDetailView.as_view(), name='asset_detail'),
+    path('assets/<uuid:asset_id>/request-access/', AssetRequestAccessView.as_view(), name='asset_request_access'),
+    path('assets/<uuid:asset_id>/download/', AssetDownloadView.as_view(), name='asset_download'),
     
     # Authentication endpoints are in main config/urls.py under /api/v1/auth/
     # Using django-allauth based authentication
