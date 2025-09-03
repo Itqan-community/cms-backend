@@ -85,6 +85,14 @@ CSRF_TRUSTED_ORIGINS = [
     'https://api.cms.itqan.dev',
     'https://cms.itqan.com',
     'https://*.itqan.com',
+    'https://develop.cms.itqan.dev',
+    'https://develop--itqan-cms.netlify.app',
+    'https://staging.cms.itqan.dev',
+    'https://staging--itqan-cms.netlify.app',
+    'https://cms.itqan.dev',
+    'https://itqan-cms.netlify.app',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
 ]
 
 # Production email configuration

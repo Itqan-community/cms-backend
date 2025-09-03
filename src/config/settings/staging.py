@@ -40,7 +40,12 @@ DATABASES.update({
 CSRF_TRUSTED_ORIGINS = [
     'https://staging.api.cms.itqan.dev',
     'https://staging.cms.itqan.dev',
-    'http://localhost:4200',  # For local frontend development
+    'https://staging--itqan-cms.netlify.app',
+    'https://develop.api.cms.itqan.dev',
+    'https://develop.cms.itqan.dev',
+    'https://develop--itqan-cms.netlify.app',
+    'https://cms.itqan.dev',
+    'https://itqan-cms.netlify.app',
     'http://localhost:3000',
     'http://127.0.0.1:3000',
 ]

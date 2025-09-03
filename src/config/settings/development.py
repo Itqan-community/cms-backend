@@ -39,9 +39,11 @@ CORS_ALLOW_CREDENTIALS = True
 # CSRF trusted origins for development
 CSRF_TRUSTED_ORIGINS = [
     'https://develop.api.cms.itqan.dev',
-    'https://develop.cms.itqan.dev',  # Front-end develop domain
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
+    'https://develop.cms.itqan.dev',
+    'https://staging.cms.itqan.dev',
+    'https://staging--itqan-cms.netlify.app',
+    'https://cms.itqan.dev',
+    'https://itqan-cms.netlify.app',
     'http://localhost:3000',
     'http://127.0.0.1:3000',
 ]
