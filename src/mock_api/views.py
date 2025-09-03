@@ -21,22 +21,48 @@ from .dummy_data import (
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_user(request):
-    """Register with email and password"""
+    """Register with email and password - matches OpenAPI spec exactly"""
     data = request.data
     
+    # Validate required fields as per OpenAPI spec
+    required_fields = ['email', 'password', 'first_name', 'last_name']
+    for field in required_fields:
+        if not data.get(field):
+            return Response({
+                "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": f"Field '{field}' is required"
+                }
+            }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Check if email already exists (simulate)
+    existing_emails = [user['email'] for user in DUMMY_USERS]
+    if data.get('email') in existing_emails:
+        return Response({
+            "error": {
+                "code": "EMAIL_TAKEN",
+                "message": "Email already exists"
+            }
+        }, status=status.HTTP_409_CONFLICT)
+    
+    # Create user response matching OpenAPI AuthResponse schema
     user_data = {
         "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.dummy_token",
         "refresh_token": "refresh_token_dummy_12345",
         "user": {
-            "id": 3,
-            "email": data.get('email', 'new.user@example.com'),
-            "name": data.get('name', 'New User'),
-            "avatar_url": None,
-            "bio": None,
-            "organization": None,
-            "location": None,
-            "website": None,
-            "github_username": None,
+            "id": 99,  # New user ID
+            "email": data.get('email'),
+            "name": f"{data.get('first_name')} {data.get('last_name')}",
+            "first_name": data.get('first_name'),
+            "last_name": data.get('last_name'),
+            "phone_number": data.get('phone_number', ''),
+            "title": data.get('title', ''),
+            "avatar_url": '',
+            "bio": '',
+            "organization": '',
+            "location": '',
+            "website": '',
+            "github_username": '',
             "email_verified": False,
             "profile_completed": False,
             "auth_provider": "email"
@@ -133,30 +159,41 @@ def oauth_github_callback(request):
     }, status=status.HTTP_200_OK)
 
 
-@api_view(['GET'])
+@api_view(['GET', 'PUT'])
 @permission_classes([AllowAny])
-def get_user_profile(request):
-    """Get user profile"""
-    return Response(DUMMY_USERS[0], status=status.HTTP_200_OK)
-
-
-@api_view(['PUT'])
-@permission_classes([AllowAny])
-def update_user_profile(request):
-    """Update user profile"""
-    return Response({
-        "message": "Profile updated successfully",
-        "profile": {
-            "id": 1,
-            "profile_completed": True
-        }
-    }, status=status.HTTP_200_OK)
+def user_profile(request):
+    """Get or update user profile - matches OpenAPI spec exactly"""
+    if request.method == 'GET':
+        # Return user profile matching OpenAPI User schema
+        return Response(DUMMY_USERS[0], status=status.HTTP_200_OK)
+    
+    elif request.method == 'PUT':
+        # Update user profile
+        return Response({
+            "message": "Profile updated successfully",
+            "profile": {
+                "id": 1,
+                "profile_completed": True
+            }
+        }, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def refresh_token(request):
-    """Refresh access token"""
+    """Refresh access token - matches OpenAPI spec exactly"""
+    data = request.data
+    
+    # Validate required refresh_token field
+    if not data.get('refresh_token'):
+        return Response({
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Field 'refresh_token' is required"
+            }
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Return only access_token as per OpenAPI spec
     return Response({
         "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.new_refreshed_token"
     }, status=status.HTTP_200_OK)
