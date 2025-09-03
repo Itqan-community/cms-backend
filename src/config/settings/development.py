@@ -31,6 +31,7 @@ CELERY_TASK_EAGER_PROPAGATES = True
 
 # Email backend for development
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'
 
 # Development CORS settings
 CORS_ALLOW_ALL_ORIGINS = True  # Only for development
