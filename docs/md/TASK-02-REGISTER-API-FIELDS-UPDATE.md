@@ -36,6 +36,10 @@ Updated the user registration API specification and documentation to match the U
 | OpenAPI Validation | YAML Lint | ✅ |
 | Documentation Consistency | Manual Review | ✅ |
 | Field Mapping | UI vs API Comparison | ✅ |
+| Registration API | `POST /api/v1/auth/register/` | ✅ |
+| Profile API | `GET /api/v1/auth/profile/` | ✅ |
+| Database Migration | `python manage.py migrate` | ✅ |
+| Field Validation | Test script verification | ✅ |
 
 ## Acceptance Criteria Verification
 - [x] All UI form fields present in API specification  
@@ -45,9 +49,9 @@ Updated the user registration API specification and documentation to match the U
 - [x] User schema includes all new fields  
 
 ## Next Steps
-1. Implement backend validation for new fields  
-2. Update frontend to use new API structure  
-3. Add database migrations for new user fields  
+1. Update frontend registration form to use new API fields
+2. Test OAuth registration flow with new fields  
+3. Add field validation rules for phone number format  
 
 ## References
 - OpenAPI Spec: `src/openapi.yaml`  
