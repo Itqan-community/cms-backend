@@ -50,6 +50,9 @@ CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:3000',
 ]
 
+# Force HTTPS in allauth callback URLs
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'
+
 # Staging cache configuration - Using dummy cache for now (no Redis in docker-compose)
 CACHES = {
     'default': {

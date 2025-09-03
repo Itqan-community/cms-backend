@@ -133,3 +133,6 @@ except ImportError:
 # Production Wagtail settings
 WAGTAIL_CACHE = True
 WAGTAILADMIN_BASE_URL = 'https://cms.itqan.com'
+
+# Force HTTPS in allauth callback URLs
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'
