@@ -143,6 +143,11 @@ SOCIALACCOUNT_PROVIDERS = {
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
     "https://staging.cms.itqan.dev",  # Staging frontend
+    "https://staging--itqan-cms.netlify.app",
+    "https://develop.cms.itqan.dev",
+    "https://develop--itqan-cms.netlify.app",
+    "https://cms.itqan.dev",
+    "https://itqan-cms.netlify.app",
     "http://localhost:3000",  # Local frontend development
     "http://127.0.0.1:3000",
 ]
