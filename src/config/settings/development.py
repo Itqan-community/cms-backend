@@ -6,7 +6,7 @@ from .base import *
 # Development-specific settings
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'develop.api.cms.itqan.dev']
 
 # Additional development apps
 # INSTALLED_APPS += [
@@ -17,6 +17,17 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
 MIDDLEWARE.insert(0, 'django.middleware.security.SecurityMiddleware')
 
 # Development database (configured via environment variables)
+
+# Development cache configuration - Using dummy cache (no Redis needed)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+    }
+}
+
+# Disable Celery for development (no Redis broker needed)
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_EAGER_PROPAGATES = True
 
 # Email backend for development
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

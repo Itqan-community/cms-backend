@@ -11,6 +11,7 @@ ALLOWED_HOSTS = [
     'api.itqan.com',
     'cms.itqan.com',
     '.itqan.com',  # Wildcard subdomain
+    'api.cms.itqan.dev',  # Production API domain
     'develop.api.cms.itqan.dev',  # Development environment
     'staging.api.cms.itqan.dev',  # Staging environment  
     'localhost',  # For local Docker development
