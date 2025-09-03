@@ -200,6 +200,9 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:4200",  # Angular development server
     "http://127.0.0.1:4200",
+    # Local frontend running on port 3000
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
