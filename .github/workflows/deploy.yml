@@ -71,9 +71,12 @@ jobs:
               exit 1
             fi
             
-            # Deploy with Docker Compose
-            echo "🐳 Building and starting containers..."
-            docker compose -f ${{ env.COMPOSE_FILE }} up -d --build
+            # Deploy with Docker Compose (recreate containers to pick up new env vars)
+            echo "🐳 Stopping existing containers..."
+            docker compose -f ${{ env.COMPOSE_FILE }} down || true
+            
+            echo "🔧 Building and recreating containers..."
+            docker compose -f ${{ env.COMPOSE_FILE }} up -d --build --force-recreate
             
             # Wait for services to be ready
             echo "⏳ Waiting for services to start..."

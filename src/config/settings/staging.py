@@ -121,7 +121,8 @@ ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 ACCOUNT_LOGIN_ATTEMPTS_LIMIT = 5
 ACCOUNT_LOGIN_ATTEMPTS_TIMEOUT = 300
 
-# Social auth settings for staging (use test apps)
+# Social auth settings for staging (use database configuration only)
+# OAuth apps are configured via Django admin for better security and flexibility
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'SCOPE': [
@@ -131,19 +132,13 @@ SOCIALACCOUNT_PROVIDERS = {
         'AUTH_PARAMS': {
             'access_type': 'online',
         },
-        'APP': {
-            'client_id': config('GOOGLE_OAUTH2_CLIENT_ID_STAGING', ''),
-            'secret': config('GOOGLE_OAUTH2_CLIENT_SECRET_STAGING', ''),
-        }
+        'OAUTH_PKCE_ENABLED': True,
     },
     'github': {
         'SCOPE': [
             'user:email',
         ],
-        'APP': {
-            'client_id': config('GITHUB_CLIENT_ID_STAGING', ''),
-            'secret': config('GITHUB_CLIENT_SECRET_STAGING', ''),
-        }
+        'VERIFIED_EMAIL': True,
     }
 }
 
