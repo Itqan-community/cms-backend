@@ -36,6 +36,13 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 CORS_ALLOW_ALL_ORIGINS = True  # Only for development
 CORS_ALLOW_CREDENTIALS = True
 
+# CSRF trusted origins for development
+CSRF_TRUSTED_ORIGINS = [
+    'https://develop.api.cms.itqan.dev',
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+]
+
 # Development security settings (relaxed)
 SECURE_CONTENT_TYPE_NOSNIFF = False
 SECURE_BROWSER_XSS_FILTER = False
