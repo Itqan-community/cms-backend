@@ -1,3 +1,4 @@
+
 """
 Itqan CMS - Production Settings
 """
@@ -68,7 +69,8 @@ EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', 'noreply@itqan.com')
 
 # Production logging
-LOGGING['handlers']['file']['filename'] = '/var/log/django/itqan_cms.log'
+# Write logs to an application directory that exists in the container
+LOGGING['handlers']['file']['filename'] = '/app/logs/django.log'
 LOGGING['handlers']['console']['level'] = 'WARNING'
 LOGGING['root']['level'] = 'INFO'
 
@@ -80,8 +82,8 @@ from sentry_sdk.integrations.celery import CeleryIntegration
 sentry_sdk.init(
     dsn=config('SENTRY_DSN', ''),
     integrations=[
-        DjangoIntegration(auto_enabling=True),
-        CeleryIntegration(auto_enabling=True),
+        DjangoIntegration(),
+        CeleryIntegration(),
     ],
     traces_sample_rate=0.1,
     send_default_pii=True,
