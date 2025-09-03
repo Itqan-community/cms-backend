@@ -71,6 +71,13 @@ AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'max-age=86400',
 }
 
+# CSRF trusted origins for production
+CSRF_TRUSTED_ORIGINS = [
+    'https://api.cms.itqan.dev',
+    'https://cms.itqan.com',
+    'https://*.itqan.com',
+]
+
 # Production email configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = config('EMAIL_HOST', 'smtp.mailgun.org')

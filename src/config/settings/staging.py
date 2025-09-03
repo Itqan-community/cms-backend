@@ -36,6 +36,13 @@ DATABASES.update({
     }
 })
 
+# CSRF trusted origins for staging
+CSRF_TRUSTED_ORIGINS = [
+    'https://staging.api.cms.itqan.dev',
+    'https://staging.cms.itqan.dev',
+    'http://localhost:4200',  # For local frontend development
+]
+
 # Staging cache configuration - Using dummy cache for now (no Redis in docker-compose)
 CACHES = {
     'default': {
