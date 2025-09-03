@@ -70,39 +70,36 @@ class RegisterView(APIView):
                 )
         
         # Handle validation errors with detailed field information
-        if 'email' in serializer.errors:
-            error_message = serializer.errors['email'][0]
-            error_code = "EMAIL_TAKEN"
-            status_code = status.HTTP_409_CONFLICT
-        else:
-            # Return detailed validation errors for better debugging
-            error_code = "VALIDATION_ERROR"
-            status_code = status.HTTP_400_BAD_REQUEST
-            
-            # Create detailed error message with field-specific errors
-            error_details = {}
-            for field, errors in serializer.errors.items():
-                error_details[field] = errors if isinstance(errors, list) else [str(errors)]
-            
-            # Create a user-friendly error message
-            if 'password' in serializer.errors:
-                error_message = f"Password validation failed: {'; '.join(serializer.errors['password'])}"
-            else:
-                error_message = "Registration data validation failed"
-            
-            # Return response with detailed field errors
-            return Response({
-                "error": {
-                    "code": error_code,
-                    "message": error_message,
-                    "details": error_details
-                }
-            }, status=status_code)
+        error_code = "VALIDATION_ERROR"
+        status_code = status.HTTP_400_BAD_REQUEST
         
-        return Response(
-            create_error_response(error_code, error_message),
-            status=status_code
-        )
+        # Create detailed error message with field-specific errors
+        error_details = {}
+        for field, errors in serializer.errors.items():
+            error_details[field] = errors if isinstance(errors, list) else [str(errors)]
+        
+        # Check for specific error types and set appropriate status/code
+        if 'email' in serializer.errors:
+            email_error = serializer.errors['email'][0]
+            if "already exists" in email_error.lower():
+                error_code = "EMAIL_TAKEN"
+                status_code = status.HTTP_409_CONFLICT
+                error_message = email_error
+            else:
+                error_message = f"Email validation failed: {email_error}"
+        elif 'password' in serializer.errors:
+            error_message = f"Password validation failed: {'; '.join(serializer.errors['password'])}"
+        else:
+            error_message = "Registration data validation failed"
+        
+        # Return response with detailed field errors for all validation errors
+        return Response({
+            "error": {
+                "code": error_code,
+                "message": error_message,
+                "details": error_details
+            }
+        }, status=status_code)
 
 
 class LoginView(APIView):
