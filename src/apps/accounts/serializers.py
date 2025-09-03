@@ -141,13 +141,28 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """
-        Create user with encrypted password
+        Create user with encrypted password and default role
         """
         validated_data.pop('confirm_password')
         password = validated_data.pop('password')
         
+        # Get or create default role (Developer for new registrations)
+        default_role, created = Role.objects.get_or_create(
+            name='Developer',
+            defaults={
+                'description': 'API access for application development',
+                'permissions': {
+                    'resources': ['read'],
+                    'distributions': ['read'],
+                    'access_requests': ['create', 'read_own'],
+                    'usage_events': ['read_own']
+                }
+            }
+        )
+        
         user = User(**validated_data)
         user.set_password(password)
+        user.role = default_role  # Assign default role
         user.save()
         
         return user
