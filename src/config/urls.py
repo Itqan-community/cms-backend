@@ -36,6 +36,9 @@ urlpatterns = [
     # Authentication
     path('api/v1/auth/', include('apps.accounts.urls')),
     
+    # Mock API endpoints (dummy data for development/testing)
+    path('mock-api/', include('mock_api.urls')),
+    
     # Django Allauth URLs
     path('accounts/', include('allauth.urls')),
     
