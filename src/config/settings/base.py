@@ -24,6 +24,7 @@ DJANGO_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',  # Required for allauth
 ]
 
 THIRD_PARTY_APPS = [
@@ -33,6 +34,12 @@ THIRD_PARTY_APPS = [
     'corsheaders',
     'django_filters',
     'drf_spectacular',
+    # Django Allauth
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.github',
     'wagtail.contrib.forms',
     'wagtail.contrib.redirects',
     'wagtail.embeds',
@@ -55,7 +62,6 @@ LOCAL_APPS = [
     'apps.licensing',
     'apps.analytics',
     'apps.search',
-    'apps.authentication',
     'apps.api',
     'apps.medialib',
     'apps.api_keys',
@@ -71,6 +77,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
     'apps.api_keys.authentication.APIUsageMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -340,16 +347,16 @@ MEILISEARCH_INDEXES = {
 
 # Authentication backends
 AUTHENTICATION_BACKENDS = [
-    'apps.authentication.backends.Auth0JWTBackend',
-    'django.contrib.auth.backends.ModelBackend',  # Keep for admin access
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
 # Django REST Framework Configuration
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'apps.api_keys.authentication.APIKeyAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
+        'apps.api_keys.authentication.APIKeyAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
@@ -462,37 +469,47 @@ MEILISEARCH_INDEXES = {
     }
 }
 
-# Auth0 OIDC Configuration
-AUTH0_DOMAIN = config('AUTH0_DOMAIN', default='your-tenant.auth0.com')
-AUTH0_AUDIENCE = config('AUTH0_AUDIENCE', default='https://itqan-cms-api')
-AUTH0_CLIENT_ID = config('AUTH0_CLIENT_ID', default='your-client-id')
-AUTH0_CLIENT_SECRET = config('AUTH0_CLIENT_SECRET', default='your-client-secret')
-AUTH0_ALGORITHM = config('AUTH0_ALGORITHM', default='RS256')
-AUTH0_ISSUER = config('AUTH0_ISSUER', default=f'https://{AUTH0_DOMAIN}/')
-AUTH0_JWKS_URL = config('AUTH0_JWKS_URL', default=f'https://{AUTH0_DOMAIN}/.well-known/jwks.json')
-AUTH0_JWKS_CACHE_TTL = config('AUTH0_JWKS_CACHE_TTL', default=300, cast=int)  # 5 minutes
-AUTH0_TOKEN_LEEWAY = config('AUTH0_TOKEN_LEEWAY', default=10, cast=int)  # 10 seconds for clock skew
+# Site ID (required for allauth)
+SITE_ID = 1
 
-# Auth0 Role Mapping Configuration
-AUTH0_ROLE_MAPPING = {
-    'admin': 'Admin',
-    'publisher': 'Publisher', 
-    'developer': 'Developer',
-    'reviewer': 'Reviewer',
+# Django Allauth Configuration
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_EMAIL_VERIFICATION = 'optional'  # Set to 'mandatory' for production
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_USER_MODEL_EMAIL_FIELD = 'email'
+ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
+ACCOUNT_LOGOUT_ON_GET = False
+ACCOUNT_SESSION_REMEMBER = True
+ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_ADAPTER = 'apps.accounts.adapters.AccountAdapter'
+SOCIALACCOUNT_ADAPTER = 'apps.accounts.adapters.SocialAccountAdapter'
+
+# Social account configuration  
+SOCIALACCOUNT_EMAIL_VERIFICATION = 'optional'
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_QUERY_EMAIL = True
+
+# OAuth provider settings (will be configured with environment variables)
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'OAUTH_PKCE_ENABLED': True,
+    },
+    'github': {
+        'SCOPE': [
+            'user:email',
+        ],
+        'VERIFIED_EMAIL': True,
+    }
 }
-AUTH0_DEFAULT_ROLE = 'Developer'  # Default role for users without explicit role
-AUTH0_ROLE_CLAIM = config('AUTH0_ROLE_CLAIM', default='https://itqan-cms.com/roles')
-AUTH0_USER_INFO_CLAIMS = [
-    'email',
-    'email_verified',
-    'name',
-    'given_name', 
-    'family_name',
-    'picture',
-    'locale',
-    'updated_at',
-    AUTH0_ROLE_CLAIM,
-]
 
 # Cache Configuration
 CACHES = {

@@ -40,8 +40,8 @@ class RoleAdmin(admin.ModelAdmin):
 class UserAdmin(BaseUserAdmin):
     """Admin configuration for User model"""
     list_display = [
-        'email', 'get_full_name', 'role', 'is_active', 
-        'last_login', 'date_joined', 'auth0_status'
+        'email', 'get_full_name', 'role', 'auth_provider', 'email_verified',
+        'is_active', 'last_login', 'date_joined'
     ]
     list_filter = [
         'is_active', 'is_staff', 'is_superuser', 'role', 
@@ -49,7 +49,7 @@ class UserAdmin(BaseUserAdmin):
     ]
     search_fields = ['email', 'first_name', 'last_name', 'username']
     ordering = ['-date_joined']
-    readonly_fields = ['id', 'auth0_id', 'date_joined', 'last_login']
+    readonly_fields = ['id', 'date_joined', 'last_login', 'email_verified', 'profile_completed']
     
     fieldsets = (
         (None, {
@@ -58,8 +58,12 @@ class UserAdmin(BaseUserAdmin):
         ('Personal info', {
             'fields': ('first_name', 'last_name', 'username')
         }),
-        ('Auth0 Integration', {
-            'fields': ('auth0_id', 'profile_data'),
+        ('Profile Info', {
+            'fields': ('auth_provider', 'email_verified', 'profile_completed', 'bio', 'organization', 'location', 'website', 'github_username', 'avatar_url'),
+            'classes': ('collapse',)
+        }),
+        ('Additional Data', {
+            'fields': ('profile_data',),
             'classes': ('collapse',)
         }),
         ('Permissions', {
@@ -81,17 +85,6 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('email', 'password1', 'password2', 'first_name', 'last_name', 'role'),
         }),
     )
-    
-    def auth0_status(self, obj):
-        """Display Auth0 integration status"""
-        if obj.auth0_id:
-            return format_html(
-                '<span style="color: green;">✓ Connected</span>'
-            )
-        return format_html(
-            '<span style="color: red;">✗ Not Connected</span>'
-        )
-    auth0_status.short_description = 'Auth0'
     
     def get_queryset(self, request):
         """Optimize queryset with select_related"""

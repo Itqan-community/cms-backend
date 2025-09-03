@@ -36,6 +36,9 @@ urlpatterns = [
     # Authentication
     path('api/v1/auth/', include('apps.accounts.urls')),
     
+    # Django Allauth URLs
+    path('accounts/', include('allauth.urls')),
+    
     # Media Library
     path('', include('apps.medialib.urls')),
     

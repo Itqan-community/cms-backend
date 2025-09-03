@@ -56,10 +56,9 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     """
     
     AUTH_PROVIDER_CHOICES = [
-        ('auth0', 'Auth0'),
+        ('email', 'Email'),
         ('github', 'GitHub'),
         ('google', 'Google'),
-        ('email', 'Email'),
     ]
     
     email = models.EmailField(unique=True)
@@ -85,7 +84,7 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     website_url = models.URLField(blank=True)
     github_url = models.URLField(blank=True)
     
-    # Additional profile fields for Auth0 integration
+    # Additional profile fields
     job_title = models.CharField(max_length=200, blank=True)
     phone_number = models.CharField(max_length=20, blank=True)
     business_model = models.TextField(blank=True)

@@ -89,7 +89,7 @@ class Role(BaseModel):
 
 class User(AbstractUser):
     """
-    Custom User model extending Django's AbstractUser with Auth0 integration
+    Custom User model extending Django's AbstractUser with django-allauth integration
     and role-based access control for the Itqan CMS.
     """
     id = models.UUIDField(
@@ -99,12 +99,60 @@ class User(AbstractUser):
         help_text="Unique identifier for this user"
     )
     
-    auth0_id = models.CharField(
-        max_length=255,
-        unique=True,
-        null=True,
+    # Using django-allauth for authentication
+    email_verified = models.BooleanField(
+        default=False,
+        help_text="Whether the user's email has been verified"
+    )
+    
+    profile_completed = models.BooleanField(
+        default=False,
+        help_text="Whether the user has completed their profile setup"
+    )
+    
+    # Additional profile fields to match API contract
+    bio = models.TextField(
         blank=True,
-        help_text="Auth0 subject identifier (sub claim from JWT)"
+        help_text="User's biography"
+    )
+    
+    organization = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="User's organization"
+    )
+    
+    location = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="User's location"
+    )
+    
+    website = models.URLField(
+        blank=True,
+        help_text="User's website URL"
+    )
+    
+    github_username = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="User's GitHub username"
+    )
+    
+    avatar_url = models.URLField(
+        blank=True,
+        help_text="User's avatar image URL"
+    )
+    
+    auth_provider = models.CharField(
+        max_length=50,
+        default='email',
+        choices=[
+            ('email', 'Email/Password'),
+            ('google', 'Google'),
+            ('github', 'GitHub'),
+        ],
+        help_text="Authentication provider used for this account"
     )
     
     email = models.EmailField(
@@ -150,9 +198,10 @@ class User(AbstractUser):
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
 
-    # Managers
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
+    # Managers - use default manager first for Django auth compatibility
+    objects = models.Manager()  # Default manager for Django auth
+    active_objects = ActiveObjectsManager()  # Custom manager for active objects
+    all_objects = AllObjectsManager()  # Manager for all objects including inactive
 
     class Meta:
         db_table = 'user'
@@ -191,23 +240,16 @@ class User(AbstractUser):
         """Check if user has Reviewer role"""
         return self.role and self.role.name == 'Reviewer'
     
-    def get_auth0_roles(self):
-        """Get Auth0 role names from Django role"""
-        if not self.role:
-            return []
-        
-        # Reverse mapping from Django role to Auth0 role
-        try:
-            from django.conf import settings
-            role_mapping = settings.AUTH0_ROLE_MAPPING
-            
-            for auth0_role, django_role in role_mapping.items():
-                if django_role == self.role.name:
-                    return [auth0_role]
-        except:
-            pass  # Settings not available during migrations
-        
-        return []
+    def save(self, *args, **kwargs):
+        """Override save to set default role if none assigned"""
+        if not self.role_id:
+            # Set default role to Developer
+            try:
+                default_role = Role.objects.get(name='Developer')
+                self.role = default_role
+            except Role.DoesNotExist:
+                pass  # Handle in migrations or fixtures
+        super().save(*args, **kwargs)
 
     def has_permission(self, resource, action):
         """
@@ -264,40 +306,14 @@ class User(AbstractUser):
         else:
             return Resource.objects.none()
 
-    def get_auth0_metadata(self):
-        """
-        Get Auth0-specific metadata from profile_data
-        """
-        return self.profile_data.get('auth0_metadata', {})
-
-    def update_from_auth0(self, auth0_user_data):
-        """
-        Update user fields from Auth0 user data
-        """
-        if 'email' in auth0_user_data:
-            self.email = auth0_user_data['email']
-        
-        if 'given_name' in auth0_user_data:
-            self.first_name = auth0_user_data['given_name']
-        
-        if 'family_name' in auth0_user_data:
-            self.last_name = auth0_user_data['family_name']
-        
-        if 'nickname' in auth0_user_data and not self.username:
-            self.username = auth0_user_data['nickname']
-        
-        # Store additional Auth0 metadata
-        auth0_metadata = {
-            'picture': auth0_user_data.get('picture'),
-            'locale': auth0_user_data.get('locale'),
-            'updated_at': auth0_user_data.get('updated_at'),
-        }
-        
-        if not self.profile_data:
-            self.profile_data = {}
-        
-        self.profile_data['auth0_metadata'] = auth0_metadata
-        self.save()
+    def update_profile_completion_status(self):
+        """Check and update profile completion status"""
+        required_fields = [
+            self.first_name, self.last_name, self.bio, 
+            self.organization, self.location
+        ]
+        self.profile_completed = all(field.strip() for field in required_fields if field)
+        self.save(update_fields=['profile_completed'])
 
     def delete(self, using=None, keep_parents=False):
         """
