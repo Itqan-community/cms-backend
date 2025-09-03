@@ -9,13 +9,14 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     netcat-openbsd \
     postgresql-client \
+    libpq-dev \
     build-essential \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-COPY src/requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
+COPY src/requirements/ /tmp/requirements/
+RUN pip install --no-cache-dir -r /tmp/requirements/production.txt
 
 # Copy application code
 COPY src/ /app/
