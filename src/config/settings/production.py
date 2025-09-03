@@ -75,20 +75,24 @@ LOGGING['handlers']['console']['level'] = 'WARNING'
 LOGGING['root']['level'] = 'INFO'
 
 # Error monitoring (Sentry)
-import sentry_sdk
-from sentry_sdk.integrations.django import DjangoIntegration
-from sentry_sdk.integrations.celery import CeleryIntegration
+try:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.celery import CeleryIntegration
 
-sentry_sdk.init(
-    dsn=config('SENTRY_DSN', ''),
-    integrations=[
-        DjangoIntegration(),
-        CeleryIntegration(),
-    ],
-    traces_sample_rate=0.1,
-    send_default_pii=True,
-    environment='production',
-)
+    sentry_sdk.init(
+        dsn=config('SENTRY_DSN', ''),
+        integrations=[
+            DjangoIntegration(),
+            CeleryIntegration(),
+        ],
+        traces_sample_rate=0.1,
+        send_default_pii=True,
+        environment='production',
+    )
+except ImportError:
+    # Sentry SDK not installed or configured; skipping error monitoring
+    pass
 
 # Production Wagtail settings
 WAGTAIL_CACHE = True
