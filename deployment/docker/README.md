@@ -51,14 +51,14 @@ cp deployment/docker/env.template deployment/docker/.env
 nano deployment/docker/.env  # Configure your values
 
 # Start services
-docker compose -f deployment/docker/docker-compose.yml up -d --build
+docker compose -f deployment/docker/docker-compose.develop.yml up -d --build
 ```
 
 **Update deployment:**
 ```bash
 cd /srv/cms-backend
 git pull origin <branch>
-docker compose -f deployment/docker/docker-compose.yml up -d --build
+docker compose -f deployment/docker/docker-compose.develop.yml up -d --build
 ```
 
 ## Domain Configuration
@@ -78,12 +78,12 @@ Ensure your DNS A records point to the correct droplet IPs:
 
 **View application logs:**
 ```bash
-docker compose -f deployment/docker/docker-compose.yml logs -f web
+docker compose -f deployment/docker/docker-compose.develop.yml logs -f web
 ```
 
 **View Caddy logs:**
 ```bash
-docker compose -f deployment/docker/docker-compose.yml logs -f caddy
+docker compose -f deployment/docker/docker-compose.develop.yml logs -f caddy
 ```
 
 **Health check:**

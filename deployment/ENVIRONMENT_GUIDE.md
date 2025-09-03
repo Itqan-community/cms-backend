@@ -6,7 +6,7 @@ This guide explains how to deploy the CMS backend across different environments.
 
 | Environment | Settings Module | Domain | Docker Compose File |
 |-------------|----------------|---------|---------------------|
-| **Development** | `config.settings.development` | `develop.api.cms.itqan.dev` | `docker-compose.yml` |
+| **Development** | `config.settings.development` | `develop.api.cms.itqan.dev` | `docker-compose.develop.yml` |
 | **Staging** | `config.settings.staging` | `staging.api.cms.itqan.dev` | `docker-compose.staging.yml` |
 | **Production** | `config.settings.production` | `api.cms.itqan.dev` | `docker-compose.production.yml` |
 
@@ -15,11 +15,11 @@ This guide explains how to deploy the CMS backend across different environments.
 ### Development Environment
 
 ```bash
-# Use the default docker-compose.yml (already configured for development)
+# Use develop-specific compose file
 cd /srv/cms-backend/deployment/docker
 cp env.template .env
 # Edit .env with development values
-docker compose up -d --build
+docker compose -f docker-compose.develop.yml up -d --build
 ```
 
 ### Staging Environment

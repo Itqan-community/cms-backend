@@ -150,7 +150,7 @@ When switching from SQLite to PostgreSQL:
 3. Run migrations: `python manage.py migrate`
 
 ### Docker Setup
-PostgreSQL and Redis are configured via `docker-compose.yml`:
+PostgreSQL and Redis are configured via `docker-compose.develop.yml`:
 ```bash
 # Start services
 docker-compose up -d
