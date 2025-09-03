@@ -57,19 +57,19 @@ ENVEOF
     echo "✅ Environment file created"
     
     echo "🐳 Stopping existing containers..."
-    docker compose down || true
+    docker compose -f docker-compose.develop.yml down || true
     
     echo "🔨 Building and starting new containers..."
-    docker compose up -d --build
+    docker compose -f docker-compose.develop.yml up -d --build
     
     echo "⏳ Waiting for application to start..."
     sleep 30
     
     echo "🔍 Checking application status..."
-    docker compose ps
+    docker compose -f docker-compose.develop.yml ps
     
     echo "📋 Checking application logs..."
-    docker compose logs web --tail=20
+    docker compose -f docker-compose.develop.yml logs web --tail=20
     
     echo "🌐 Testing health endpoint..."
     curl -f http://localhost:8000/health || echo "❌ Health check failed"
@@ -85,4 +85,4 @@ echo "🎯 Deployment script completed!"
 echo "📍 Next steps:"
 echo "   1. Test API docs: https://develop.api.cms.itqan.dev/api/v1/docs/"
 echo "   2. Test auth endpoints with curl"
-echo "   3. Monitor logs: ssh root@$SERVER_IP 'cd /srv/cms-backend/deployment/docker && docker compose logs web'"
+echo "   3. Monitor logs: ssh root@$SERVER_IP 'cd /srv/cms-backend/deployment/docker && docker compose -f docker-compose.develop.yml logs web'"

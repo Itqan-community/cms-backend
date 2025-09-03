@@ -18,16 +18,19 @@ jobs:
             echo "BRANCH=develop" >> $GITHUB_ENV
             echo "ENV_NAME=development" >> $GITHUB_ENV
             echo "ENV_URL=https://develop.api.cms.itqan.dev" >> $GITHUB_ENV
+            echo "COMPOSE_FILE=deployment/docker/docker-compose.develop.yml" >> $GITHUB_ENV
           elif [[ "${GITHUB_REF_NAME}" == "staging" ]]; then
             echo "HOST=${{ secrets.STAGING_HOST }}" >> $GITHUB_ENV
             echo "BRANCH=staging" >> $GITHUB_ENV
             echo "ENV_NAME=staging" >> $GITHUB_ENV
             echo "ENV_URL=https://staging.api.cms.itqan.dev" >> $GITHUB_ENV
+            echo "COMPOSE_FILE=deployment/docker/docker-compose.staging.yml" >> $GITHUB_ENV
           elif [[ "${GITHUB_REF_NAME}" == "main" ]]; then
             echo "HOST=${{ secrets.PROD_HOST }}" >> $GITHUB_ENV
             echo "BRANCH=main" >> $GITHUB_ENV
             echo "ENV_NAME=production" >> $GITHUB_ENV
             echo "ENV_URL=https://api.cms.itqan.dev" >> $GITHUB_ENV
+            echo "COMPOSE_FILE=deployment/docker/docker-compose.production.yml" >> $GITHUB_ENV
           fi
 
       - name: Display deployment info
@@ -37,6 +40,7 @@ jobs:
           echo "   Environment: ${{ env.ENV_NAME }}"
           echo "   Branch: ${{ env.BRANCH }}"
           echo "   URL: ${{ env.ENV_URL }}"
+          echo "   Compose File: ${{ env.COMPOSE_FILE }}"
 
       - name: Deploy to ${{ env.ENV_NAME }}
         uses: appleboy/ssh-action@v1.0.3
@@ -69,7 +73,7 @@ jobs:
             
             # Deploy with Docker Compose
             echo "🐳 Building and starting containers..."
-            docker compose -f deployment/docker/docker-compose.yml up -d --build
+            docker compose -f ${{ env.COMPOSE_FILE }} up -d --build
             
             # Wait for services to be ready
             echo "⏳ Waiting for services to start..."
