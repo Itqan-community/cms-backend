@@ -4,8 +4,6 @@ Core models for the CMS application
 
 import uuid
 from django.db import models
-from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
-from django.contrib.auth.base_user import BaseUserManager
 from django.utils import timezone
 
 
@@ -23,107 +21,8 @@ class BaseModel(models.Model):
         abstract = True
 
 
-class UserManager(BaseUserManager):
-    """
-    Custom user manager
-    """
-    
-    def create_user(self, email, password=None, **extra_fields):
-        if not email:
-            raise ValueError('The Email field must be set')
-        email = self.normalize_email(email)
-        user = self.model(email=email, **extra_fields)
-        user.set_password(password)
-        user.save(using=self._db)
-        return user
-
-    def create_superuser(self, email, password=None, **extra_fields):
-        extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('is_active', True)
-
-        if extra_fields.get('is_staff') is not True:
-            raise ValueError('Superuser must have is_staff=True.')
-        if extra_fields.get('is_superuser') is not True:
-            raise ValueError('Superuser must have is_superuser=True.')
-
-        return self.create_user(email, password, **extra_fields)
-
-
-class User(AbstractBaseUser, PermissionsMixin, BaseModel):
-    """
-    Custom user model
-    """
-    
-    AUTH_PROVIDER_CHOICES = [
-        ('email', 'Email'),
-        ('github', 'GitHub'),
-        ('google', 'Google'),
-    ]
-    
-    email = models.EmailField(unique=True)
-    first_name = models.CharField(max_length=150, blank=True)
-    last_name = models.CharField(max_length=150, blank=True)
-    
-    # Auth provider information
-    auth_provider = models.CharField(
-        max_length=20, 
-        choices=AUTH_PROVIDER_CHOICES, 
-        default='email'
-    )
-    auth_provider_id = models.CharField(max_length=255, blank=True)
-    
-    # User status
-    is_active = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=False)
-    date_joined = models.DateTimeField(default=timezone.now)
-    
-    # Profile information
-    avatar_url = models.URLField(blank=True)
-    bio = models.TextField(blank=True)
-    website_url = models.URLField(blank=True)
-    github_url = models.URLField(blank=True)
-    
-    # Additional profile fields
-    job_title = models.CharField(max_length=200, blank=True)
-    phone_number = models.CharField(max_length=20, blank=True)
-    business_model = models.TextField(blank=True)
-    team_size = models.CharField(max_length=50, blank=True)
-    about_yourself = models.TextField(blank=True)
-    
-    # Localization
-    preferred_language = models.CharField(max_length=10, default='en')
-    timezone = models.CharField(max_length=50, default='UTC')
-    
-    objects = UserManager()
-    
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = []
-    
-    class Meta:
-        verbose_name = 'User'
-        verbose_name_plural = 'Users'
-        db_table = 'core_users'
-    
-    def __str__(self):
-        return self.email
-    
-    @property
-    def full_name(self):
-        return f"{self.first_name} {self.last_name}".strip()
-    
-    @property
-    def profile_completed(self):
-        """Check if user has completed their profile"""
-        return bool(
-            self.first_name and 
-            self.last_name and
-            self.job_title and
-            self.phone_number and
-            self.business_model and
-            self.team_size and
-            self.about_yourself
-        )
+# User model moved to apps.accounts.models to avoid conflicts
+# The User model is now defined in apps/accounts/models.py as specified in settings.AUTH_USER_MODEL
 
 
 class License(BaseModel):

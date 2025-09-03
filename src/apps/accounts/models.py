@@ -5,6 +5,7 @@ import uuid
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.core.validators import EmailValidator
+from django.contrib.auth.models import UserManager
 from apps.core.models import BaseModel, ActiveObjectsManager, AllObjectsManager
 
 
@@ -210,8 +211,8 @@ class User(AbstractUser):
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
 
-    # Managers - use default manager first for Django auth compatibility
-    objects = models.Manager()  # Default manager for Django auth
+    # Managers - explicitly set Django's UserManager for authentication
+    objects = UserManager()  # Provides create_user, create_superuser methods
     active_objects = ActiveObjectsManager()  # Custom manager for active objects
     all_objects = AllObjectsManager()  # Manager for all objects including inactive
 
