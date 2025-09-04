@@ -1,8 +1,11 @@
 """
 Mock API Views - Dummy data endpoints for all CMS API endpoints
+Fully compliant with OpenAPI 3.1.0 specification in src/openapi.yaml
 """
 
-from datetime import datetime, timezone
+import json
+import uuid
+from datetime import datetime, timezone, timedelta
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -12,6 +15,24 @@ from .dummy_data import (
     DUMMY_USERS, DUMMY_LICENSES, DUMMY_PUBLISHERS, DUMMY_ASSETS,
     CONTENT_STANDARDS, APP_CONFIG, TEST_CREDENTIALS
 )
+
+def generate_jwt_token(user_id, token_type="access"):
+    """Generate a realistic-looking JWT token for mock purposes"""
+    import base64
+    header = {"alg": "HS256", "typ": "JWT"}
+    payload = {
+        "user_id": user_id,
+        "type": token_type,
+        "exp": int((datetime.now() + timedelta(hours=24)).timestamp()),
+        "iat": int(datetime.now().timestamp())
+    }
+    
+    # Base64 encode header and payload (mock JWT structure)
+    header_b64 = base64.b64encode(json.dumps(header).encode()).decode().rstrip('=')
+    payload_b64 = base64.b64encode(json.dumps(payload).encode()).decode().rstrip('=')
+    signature = f"mock_signature_{user_id}_{token_type}"
+    
+    return f"{header_b64}.{payload_b64}.{signature}"
 
 
 # ============================================================================
@@ -46,11 +67,12 @@ def register_user(request):
         }, status=status.HTTP_409_CONFLICT)
     
     # Create user response matching OpenAPI AuthResponse schema
+    new_user_id = 99
     user_data = {
-        "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.dummy_token",
-        "refresh_token": "refresh_token_dummy_12345",
+        "access_token": generate_jwt_token(new_user_id, "access"),
+        "refresh_token": generate_jwt_token(new_user_id, "refresh"),
         "user": {
-            "id": 99,  # New user ID
+            "id": new_user_id,
             "email": data.get('email'),
             "name": f"{data.get('first_name')} {data.get('last_name')}",
             "first_name": data.get('first_name'),
@@ -103,8 +125,8 @@ def login_user(request):
         }, status=status.HTTP_401_UNAUTHORIZED)
     
     auth_response = {
-        "access_token": f"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.dummy_token_user_{user['id']}",
-        "refresh_token": f"refresh_token_user_{user['id']}_67890",
+        "access_token": generate_jwt_token(user['id'], "access"),
+        "refresh_token": generate_jwt_token(user['id'], "refresh"),
         "user": user
     }
     
@@ -138,8 +160,8 @@ def oauth_google_callback(request):
     user = google_users[0] if google_users else DUMMY_USERS[1]  # Fallback to Fatima Ali
     
     return Response({
-        "access_token": f"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.oauth_google_token_user_{user['id']}",
-        "refresh_token": f"refresh_token_google_user_{user['id']}_123",
+        "access_token": generate_jwt_token(user['id'], "access"),
+        "refresh_token": generate_jwt_token(user['id'], "refresh"),
         "user": user
     }, status=status.HTTP_200_OK)
 
@@ -153,8 +175,8 @@ def oauth_github_callback(request):
     user = github_users[0] if github_users else DUMMY_USERS[2]  # Fallback to Omar Ibrahim
     
     return Response({
-        "access_token": f"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.oauth_github_token_user_{user['id']}",
-        "refresh_token": f"refresh_token_github_user_{user['id']}_456",
+        "access_token": generate_jwt_token(user['id'], "access"),
+        "refresh_token": generate_jwt_token(user['id'], "refresh"),
         "user": user
     }, status=status.HTTP_200_OK)
 
@@ -193,9 +215,15 @@ def refresh_token(request):
             }
         }, status=status.HTTP_400_BAD_REQUEST)
     
+    # Extract user_id from refresh token (mock extraction)
+    refresh_token = data.get('refresh_token', '')
+    # In real implementation, you'd decode and validate the token
+    # For mock, we'll use a default user ID
+    user_id = 1  # Default to first user for mock
+    
     # Return only access_token as per OpenAPI spec
     return Response({
-        "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.new_refreshed_token"
+        "access_token": generate_jwt_token(user_id, "access")
     }, status=status.HTTP_200_OK)
 
 

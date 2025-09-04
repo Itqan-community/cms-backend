@@ -105,8 +105,16 @@ alwaysApply: true
 ## Development Workflow
 ### Branch Strategy
 - **develop**: Primary development branch for new features and bug fixes
-- **staging**: Pre-production branch for final testing and validation
+- **staging**: Pre-production branch for final testing and validation  
 - **main**: Production-ready code, only updated through PRs from staging
+
+### Deployment Rules (ENFORCED)
+🔒 **Strict branch flow enforcement via GitHub Actions:**
+1. **main** can ONLY be updated from **staging** via Pull Request
+2. **staging** can ONLY be updated from **develop** via Pull Request  
+3. **develop** allows direct pushes for active development
+4. Deployment triggers ONLY on successful PR merges (not direct pushes)
+5. Manual deployment available ONLY for develop branch (emergency hotfixes)
 
 ### Development Process
 1. **Local Development** (`develop` branch):
@@ -116,15 +124,16 @@ alwaysApply: true
    - Run comprehensive testing (unit tests, integration tests, manual testing)
 
 2. **Staging Promotion** (`develop` → `staging`):
-   - Once satisfied with local testing, promote changes to `staging` branch
-   - Deploy to staging environment: `https://staging.cms.itqan.dev`
+   - Create Pull Request from `develop` to `staging` branch
+   - PR review required before merge
+   - Automatic deployment to staging environment: `https://staging.cms.itqan.dev`
    - Perform final validation and acceptance testing
 
 3. **Production Promotion** (`staging` → `main`):
    - Create Pull Request from `staging` to `main` branch
    - Manual code review required before merge
-   - Deploy to production: `https://cms.itqan.dev`
-   - Manual deployment process (automated deployment will be added later)
+   - Automatic deployment to production: `https://cms.itqan.dev`
+   - Branch protection rules prevent direct pushes
 
 ### Environment Mapping
 - **develop** branch → `https://dev.cms.itqan.dev`

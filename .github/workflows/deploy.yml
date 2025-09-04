@@ -1,31 +1,92 @@
 name: Deploy to DigitalOcean
 
 on:
-  # Direct push triggers deployment for all branches
-  push:
+  # Deployment triggered by pull request merges to enforce branch flow
+  pull_request:
+    types: [closed]
     branches: [develop, staging, main]
+  
+  # Allow manual deployment trigger for develop branch only (for hotfixes)
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to deploy (develop only)'
+        required: true
+        default: 'develop'
+        type: choice
+        options:
+          - develop
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Only run if PR was merged or manual dispatch
+    if: |
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      (github.event_name == 'workflow_dispatch')
     
     steps:
+      - name: Validate branch flow rules
+        run: |
+          echo "🔍 Validating deployment rules..."
+          
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
+            HEAD_BRANCH="${{ github.event.pull_request.head.ref }}"
+            
+            echo "   Pull Request: $HEAD_BRANCH → $BASE_BRANCH"
+            
+            # Rule 1: Main can only receive merges from staging
+            if [[ "$BASE_BRANCH" == "main" && "$HEAD_BRANCH" != "staging" ]]; then
+              echo "❌ ERROR: Production (main) can only be updated from staging branch"
+              echo "   Attempted: $HEAD_BRANCH → main"
+              echo "   Required: staging → main"
+              exit 1
+            fi
+            
+            # Rule 2: Staging can only receive merges from develop
+            if [[ "$BASE_BRANCH" == "staging" && "$HEAD_BRANCH" != "develop" ]]; then
+              echo "❌ ERROR: Staging can only be updated from develop branch"
+              echo "   Attempted: $HEAD_BRANCH → staging" 
+              echo "   Required: develop → staging"
+              exit 1
+            fi
+            
+            echo "✅ Branch flow rules validated successfully"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            DISPATCH_BRANCH="${{ github.event.inputs.branch }}"
+            if [[ "$DISPATCH_BRANCH" != "develop" ]]; then
+              echo "❌ ERROR: Manual deployment only allowed for develop branch"
+              exit 1
+            fi
+            echo "✅ Manual deployment authorized for develop branch"
+          fi
+
       - name: Set deployment variables
         id: vars
         run: |
-          if [[ "${GITHUB_REF_NAME}" == "develop" ]]; then
+          # Determine target branch
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            TARGET_BRANCH="${{ github.event.pull_request.base.ref }}"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TARGET_BRANCH="${{ github.event.inputs.branch }}"
+          fi
+          
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> $GITHUB_ENV
+          
+          if [[ "$TARGET_BRANCH" == "develop" ]]; then
             echo "HOST=${{ secrets.DEVELOP_HOST }}" >> $GITHUB_ENV
             echo "BRANCH=develop" >> $GITHUB_ENV
             echo "ENV_NAME=development" >> $GITHUB_ENV
             echo "ENV_URL=https://develop.api.cms.itqan.dev" >> $GITHUB_ENV
             echo "COMPOSE_FILE=deployment/docker/docker-compose.develop.yml" >> $GITHUB_ENV
-          elif [[ "${GITHUB_REF_NAME}" == "staging" ]]; then
+          elif [[ "$TARGET_BRANCH" == "staging" ]]; then
             echo "HOST=${{ secrets.STAGING_HOST }}" >> $GITHUB_ENV
             echo "BRANCH=staging" >> $GITHUB_ENV
             echo "ENV_NAME=staging" >> $GITHUB_ENV
             echo "ENV_URL=https://staging.api.cms.itqan.dev" >> $GITHUB_ENV
             echo "COMPOSE_FILE=deployment/docker/docker-compose.staging.yml" >> $GITHUB_ENV
-          elif [[ "${GITHUB_REF_NAME}" == "main" ]]; then
+          elif [[ "$TARGET_BRANCH" == "main" ]]; then
             echo "HOST=${{ secrets.PROD_HOST }}" >> $GITHUB_ENV
             echo "BRANCH=main" >> $GITHUB_ENV
             echo "ENV_NAME=production" >> $GITHUB_ENV
