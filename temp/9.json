@@ -1,0 +1,135 @@
+{
+  "task_id": 9,
+  "task_name": "Database Migration Strategy",
+  "description": "Create comprehensive migration plan for existing data transformation",
+  "priority": "High",
+  "estimated_hours": 12,
+  "status": "Not Started",
+  "dependencies": [1, 2, 3, 4, 5, 6, 7, 8],
+  "detailed_requirements": {
+    "objective": "Safely migrate existing data to new ERD-aligned model structure without data loss",
+    "migration_phases": {
+      "phase_1_model_creation": {
+        "tasks": [
+          "Create all new models without dropping existing ones",
+          "Run initial migrations to create new tables",
+          "Verify all new table structures match ERD"
+        ],
+        "safety": "No data modification, only new table creation"
+      },
+      "phase_2_data_transformation": {
+        "tasks": [
+          "Create PublishingOrganization for each current publisher User",
+          "Create PublishingOrganizationMember linking users to organizations",
+          "Migrate Resource.publisher from User FK to PublishingOrganization FK",
+          "Create ResourceVersion for each existing Resource",
+          "Transform existing assets to new Asset model structure",
+          "Create default License records",
+          "Link all resources to default licenses"
+        ],
+        "safety": "Use data migration scripts with rollback capability"
+      },
+      "phase_3_cleanup": {
+        "tasks": [
+          "Remove old unused fields",
+          "Drop deprecated tables",
+          "Optimize indexes and constraints"
+        ],
+        "safety": "Only after full validation of data integrity"
+      }
+    }
+  },
+  "critical_data_transformations": {
+    "publisher_migration": {
+      "current_state": "Resource.publisher -> User (FK)",
+      "target_state": "Resource.publishing_organization -> PublishingOrganization (FK)",
+      "transformation_logic": [
+        "For each unique User who is a publisher:",
+        "1. Create PublishingOrganization with name=User.get_full_name()",
+        "2. Create PublishingOrganizationMember(user=user, org=new_org, role='owner')",
+        "3. Update all Resource.publisher=user to Resource.publishing_organization=new_org"
+      ],
+      "validation": "Verify every Resource has valid publishing_organization"
+    },
+    "resource_versioning": {
+      "current_state": "Single Resource records",
+      "target_state": "Resource + ResourceVersion relationship",
+      "transformation_logic": [
+        "For each existing Resource:",
+        "1. Keep Resource record with new publishing_organization FK",
+        "2. Create ResourceVersion with semvar='1.0.0', is_latest=true",
+        "3. Move file-related fields to ResourceVersion"
+      ],
+      "validation": "Verify every Resource has exactly one is_latest ResourceVersion"
+    },
+    "license_assignment": {
+      "current_state": "No license system",
+      "target_state": "All Resources linked to License", 
+      "transformation_logic": [
+        "1. Create default License records (CC0, CC-BY-4.0, etc)",
+        "2. Set Resource.default_license = CC0 for all existing resources",
+        "3. Create Asset.license = CC0 for all existing assets"
+      ],
+      "validation": "Verify every Resource and Asset has valid license"
+    }
+  },
+  "rollback_strategy": {
+    "data_backup": [
+      "Full database backup before migration",
+      "Table-specific backups for critical data",
+      "Export existing data to JSON for emergency recovery"
+    ],
+    "reversible_migrations": [
+      "All Django migrations must be reversible",
+      "Data transformations in separate reversible migrations",
+      "Test rollback on staging environment"
+    ],
+    "validation_checkpoints": [
+      "Verify data integrity after each phase",
+      "Compare record counts before/after migration",
+      "Validate all relationships are intact"
+    ]
+  },
+  "testing_strategy": {
+    "staging_environment": [
+      "Run complete migration on staging with production data copy",
+      "Validate all APIs still function correctly",
+      "Performance test with migrated data"
+    ],
+    "data_validation": [
+      "Count all records before/after migration",
+      "Verify all relationships are preserved",
+      "Test API responses match expected format"
+    ],
+    "rollback_testing": [
+      "Test migration rollback on staging",
+      "Verify rollback preserves original data exactly",
+      "Test re-migration after rollback"
+    ]
+  },
+  "deployment_plan": {
+    "maintenance_window": "Schedule appropriate downtime for migration",
+    "migration_order": [
+      "1. Deploy new model code (migrations not run)",
+      "2. Run database migrations in phases",
+      "3. Run data transformation scripts",
+      "4. Validate all data and APIs",
+      "5. Clean up old structures"
+    ],
+    "monitoring": [
+      "Monitor migration progress",
+      "Check for any data inconsistencies",
+      "Validate API functionality during migration"
+    ]
+  },
+  "acceptance_criteria": [
+    "All existing data preserved in new model structure",
+    "Every Resource linked to correct PublishingOrganization",
+    "All publisher Users have corresponding organization memberships",
+    "Resource versioning properly implemented with 1.0.0 initial versions",
+    "License system fully populated and linked",
+    "All API endpoints function with migrated data",
+    "Performance remains acceptable with new structure",
+    "Rollback capability verified and tested"
+  ]
+}

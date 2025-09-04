@@ -7,7 +7,7 @@ from django.utils import timezone
 from apps.core.models import BaseModel, ActiveObjectsManager, AllObjectsManager
 
 
-class License(BaseModel):
+class LegacyLicense(BaseModel):
     """
     License model defining legal terms and conditions for resource usage.
     Each resource can have multiple licenses for different use cases.
@@ -66,7 +66,7 @@ class License(BaseModel):
     all_objects = AllObjectsManager()
 
     class Meta:
-        db_table = 'license'
+        db_table = 'legacy_license'
         verbose_name = 'License'
         verbose_name_plural = 'Licenses'
         ordering = ['-created_at']

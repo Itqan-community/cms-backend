@@ -1,0 +1,90 @@
+{
+  "task_id": 5,
+  "task_name": "Resource and ResourceVersion Models",
+  "description": "Create Resource and ResourceVersion models with semantic versioning",
+  "priority": "High", 
+  "estimated_hours": 10,
+  "status": "Not Started",
+  "dependencies": [1],
+  "detailed_requirements": {
+    "objective": "Implement ERD Resource and ResourceVersion models with proper versioning system",
+    "resource_model": {
+      "erd_fields": [
+        "id (integer primary key)",
+        "publishing_organization_id: int (FK to PublishingOrganization)",
+        "name: string (e.g. 'Tafsir Ibn Katheer CSV')",
+        "slug: string (e.g. 'tafsir-ibn-katheer-csv')",
+        "description: text",
+        "category: enum('recitation', 'mushaf', 'tafsir')",
+        "status: enum('draft', 'ready')",
+        "default_license_id: int (FK to License)",
+        "created_at: datetime",
+        "updated_at: datetime"
+      ],
+      "v1_specifications": {
+        "categories": "Simple options in V1: recitation, mushaf, tafsir",
+        "status_meaning": "ready = ready to extract Assets from",
+        "publisher_relationship": "CRITICAL: Must point to PublishingOrganization, not User"
+      }
+    },
+    "resource_version_model": {
+      "erd_fields": [
+        "id (integer primary key)",
+        "resource_id: int (FK to Resource)",
+        "name: string (V1: same as resource name, V2: updates on content)",
+        "summary: text",
+        "semvar: string (semantic versioning e.g. '1.0.0')",
+        "storage_url: string (absolute URL for file on S3)",
+        "type: enum('csv', 'excel', 'json', 'zip', etc)",
+        "size_bytes: int",
+        "is_latest: bool",
+        "created_at: datetime",
+        "updated_at: datetime"
+      ],
+      "versioning_logic": {
+        "semantic_versioning": "Core to bind with AssetVersion",
+        "storage_integration": "Direct S3 URLs for file access",
+        "latest_tracking": "Only one version per resource can be is_latest=true"
+      }
+    }
+  },
+  "migration_strategy": {
+    "existing_resources": "Current Resource model needs major restructuring",
+    "publisher_migration": "Change Resource.publisher from User FK to PublishingOrganization FK", 
+    "data_transformation": [
+      "Create PublishingOrganization for each current publisher User",
+      "Create ResourceVersion for each existing Resource",
+      "Set initial version as 1.0.0 for all existing resources"
+    ],
+    "field_mapping": {
+      "current_Resource.publisher (User)": "new_Resource.publishing_organization",
+      "current_Resource": "new_ResourceVersion with semvar='1.0.0'"
+    }
+  },
+  "business_logic": {
+    "version_management": [
+      "Only one is_latest=true per resource",
+      "Semantic versioning follows semver.org",
+      "New versions automatically set is_latest=true",
+      "Previous latest version set to is_latest=false"
+    ],
+    "category_constraints": [
+      "V1: Simple enum choices",
+      "Must match Asset.category choices", 
+      "Align with OpenAPI category specifications"
+    ]
+  },
+  "api_integration": {
+    "resource_endpoints": "Support for /resources/{id}/download",
+    "version_tracking": "API must return latest version by default",
+    "publisher_data": "Resource API must return PublisherSummary data"
+  },
+  "acceptance_criteria": [
+    "Resource model points to PublishingOrganization not User",
+    "ResourceVersion model implements semantic versioning",
+    "Migration preserves all existing resource data",
+    "is_latest constraint works correctly",
+    "Category choices match OpenAPI specification",
+    "Storage URLs integrate with S3/MinIO properly"
+  ]
+}

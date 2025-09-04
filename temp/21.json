@@ -1,0 +1,163 @@
+{
+  "task_id": 21,
+  "task_name": "Performance Optimization",
+  "description": "Optimize database queries and add proper indexing for new models",
+  "priority": "Medium", 
+  "estimated_hours": 6,
+  "status": "Not Started",
+  "dependencies": [1, 10],
+  "detailed_requirements": {
+    "objective": "Ensure optimal performance for ERD-aligned models through proper indexing, query optimization, and caching strategies",
+    "database_optimization": {
+      "index_strategy": {
+        "foreign_keys": [
+          "All FK fields automatically indexed by Django",
+          "Verify proper indexes on publishing_organization_id",
+          "Index license_id fields for quick lookups",
+          "Index user_id fields in access tables"
+        ],
+        "query_patterns": [
+          "Index Asset.category for filtering",
+          "Index Resource.status for admin queries",
+          "Index UsageEvent.created_at for analytics",
+          "Composite index on (user_id, asset_id) for access checks"
+        ],
+        "unique_constraints": [
+          "Index unique_together constraints efficiently",
+          "Optimize PublishingOrganizationMember (user, organization)",
+          "Optimize AssetAccess (user, asset) lookups"
+        ]
+      },
+      "query_optimization": {
+        "select_related": [
+          "Asset queries should select_related('publishing_organization', 'license')",
+          "Resource queries should select_related('publishing_organization', 'default_license')",
+          "AssetAccess should select_related('user', 'asset', 'effective_license')"
+        ],
+        "prefetch_related": [
+          "PublishingOrganization should prefetch_related('assets', 'resources')",
+          "Asset queries should prefetch_related('versions', 'access_requests')",
+          "License queries should prefetch_related('assets', 'default_for_resources')"
+        ]
+      }
+    }
+  },
+  "api_performance": {
+    "asset_listing_optimization": {
+      "query_optimization": [
+        "Single query for asset list with publisher and license data",
+        "Annotate download_count and view_count from aggregations",
+        "Use exists() subquery for has_access calculation"
+      ],
+      "pagination": [
+        "Implement cursor-based pagination for large asset catalogs",
+        "Use database-level LIMIT/OFFSET efficiently",
+        "Cache total count for pagination metadata"
+      ]
+    },
+    "publisher_page_optimization": {
+      "statistics_caching": [
+        "Cache organization statistics (asset count, download totals)",
+        "Update statistics asynchronously when data changes",
+        "Use database aggregation rather than Python loops"
+      ],
+      "asset_list_optimization": [
+        "Limit asset list on publisher pages",
+        "Implement 'load more' for large publisher catalogs",
+        "Cache popular publisher asset lists"
+      ]
+    }
+  },
+  "caching_strategy": {
+    "redis_integration": {
+      "cache_targets": [
+        "Asset listings for anonymous users",
+        "Publisher profiles and statistics", 
+        "License details and terms",
+        "Popular content recommendations"
+      ],
+      "cache_keys": [
+        "assets:list:{category}:{license}",
+        "publisher:{id}:profile",
+        "license:{code}:details",
+        "stats:downloads:daily"
+      ],
+      "invalidation": [
+        "Invalidate asset caches on asset updates",
+        "Invalidate publisher caches on organization changes",
+        "Time-based expiration for statistics"
+      ]
+    },
+    "database_query_cache": [
+      "Cache expensive aggregation queries",
+      "Cache license usage counts",
+      "Cache publisher statistics"
+    ]
+  },
+  "analytics_performance": {
+    "usage_event_optimization": {
+      "async_processing": "Process analytics events in background tasks",
+      "batch_inserts": "Batch multiple usage events for efficiency",
+      "partitioning": "Partition usage_event table by date for better performance"
+    },
+    "aggregation_tables": {
+      "daily_stats": "Pre-computed daily download/view statistics",
+      "publisher_stats": "Cached publisher performance metrics",
+      "asset_popularity": "Ranked asset popularity for recommendations"
+    }
+  },
+  "database_tuning": {
+    "postgresql_optimization": {
+      "connection_pooling": "Optimize database connection management",
+      "vacuum_strategy": "Regular maintenance for large tables",
+      "analyze_statistics": "Keep query planner statistics current"
+    },
+    "monitoring": [
+      "Monitor slow query logs",
+      "Track database performance metrics",
+      "Alert on performance degradation"
+    ]
+  },
+  "load_testing": {
+    "performance_benchmarks": {
+      "api_response_times": [
+        "Asset listing < 200ms",
+        "Asset details < 100ms", 
+        "Publisher profiles < 150ms",
+        "Download initiation < 50ms"
+      ],
+      "concurrent_users": [
+        "Support 100 concurrent API users",
+        "Handle 50 simultaneous downloads",
+        "Maintain performance under load"
+      ]
+    },
+    "stress_testing": [
+      "Test with 10,000+ assets",
+      "Test with 1,000+ publishers",
+      "Test with 100,000+ usage events"
+    ]
+  },
+  "monitoring_and_alerting": {
+    "performance_monitoring": [
+      "API response time tracking",
+      "Database query performance monitoring",
+      "Cache hit rate monitoring"
+    ],
+    "alerting_thresholds": [
+      "Alert on API response times > 500ms",
+      "Alert on database query times > 1s",
+      "Alert on cache miss rates > 50%"
+    ]
+  },
+  "acceptance_criteria": [
+    "All critical queries use proper indexes",
+    "API response times meet benchmark requirements",
+    "Caching strategy reduces database load",
+    "Analytics processing doesn't impact API performance",
+    "Load testing passes with target concurrent users",
+    "Database queries optimized with select_related/prefetch_related",
+    "Monitoring and alerting systems track performance",
+    "Performance remains acceptable with large datasets"
+  ]
+}

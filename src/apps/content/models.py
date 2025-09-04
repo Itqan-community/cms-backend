@@ -1,5 +1,6 @@
 """
-Quranic content management models for Itqan CMS
+Complete ERD-aligned models for Itqan CMS
+Based on db_design_v1.drawio specification
 """
 from django.db import models
 from django.conf import settings
@@ -7,108 +8,285 @@ from django.core.validators import URLValidator
 from apps.core.models import BaseModel, ActiveObjectsManager, AllObjectsManager
 
 
+# ============================================================================
+# 1. PUBLISHING ORGANIZATION
+# ============================================================================
+class PublishingOrganization(BaseModel):
+    """
+    Publishing organization entity from ERD.
+    Organizations that publish resources and have multiple members.
+    """
+    # Core fields from ERD
+    name = models.CharField(
+        max_length=255,
+        help_text="Organization name e.g. 'Tafsir Center'"
+    )
+    
+    slug = models.SlugField(
+        unique=True,
+        help_text="URL-friendly slug e.g. 'tafsir-center'"
+    )
+    
+    icone_image_url = models.URLField(
+        blank=True,
+        help_text="Icon/logo image URL - used in V1 UI: Publisher Page"
+    )
+    
+    summary = models.TextField(
+        blank=True,
+        help_text="Organization summary - used in V1 UI: Publisher Page"
+    )
+    
+    # Additional fields for API support
+    description = models.TextField(
+        blank=True,
+        help_text="Detailed organization description"
+    )
+    
+    cover_url = models.URLField(
+        blank=True,
+        help_text="Cover image URL for organization"
+    )
+    
+    location = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Organization location"
+    )
+    
+    website = models.URLField(
+        blank=True,
+        help_text="Organization website"
+    )
+    
+    verified = models.BooleanField(
+        default=False,
+        help_text="Whether organization is verified"
+    )
+    
+    social_links = models.JSONField(
+        default=dict,
+        help_text="Social media links as JSON"
+    )
+    
+    # Relationships
+    members = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        through='PublishingOrganizationMember',
+        related_name='publishing_organizations'
+    )
+    
+    # Managers
+    objects = ActiveObjectsManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        db_table = 'publishing_organization'
+        verbose_name = 'Publishing Organization'
+        verbose_name_plural = 'Publishing Organizations'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+# ============================================================================
+# 2. PUBLISHING ORGANIZATION MEMBER
+# ============================================================================
+class PublishingOrganizationMember(BaseModel):
+    """
+    Junction table for User <-> PublishingOrganization relationships.
+    Defines membership roles within organizations.
+    """
+    ROLE_CHOICES = [
+        ('owner', 'Owner'),
+        ('manager', 'Manager'),  # V1: Itqan team to upload data on publishers behalf from Admin Panel. V2: more rules.
+    ]
+    
+    # Foreign keys from ERD
+    publishing_organization = models.ForeignKey(
+        PublishingOrganization,
+        on_delete=models.CASCADE,
+        related_name='memberships'
+    )
+    
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='organization_memberships'
+    )
+    
+    # Role field from ERD
+    role = models.CharField(
+        max_length=20,
+        choices=ROLE_CHOICES,
+        help_text="Member's role in the organization"
+    )
+    
+    # Managers
+    objects = ActiveObjectsManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        db_table = 'publishing_organization_member'
+        unique_together = ['publishing_organization', 'user']
+        verbose_name = 'Organization Member'
+        verbose_name_plural = 'Organization Members'
+
+    def __str__(self):
+        return f"{self.user.email} -> {self.publishing_organization.name} ({self.role})"
+
+
+# ============================================================================
+# 3. LICENSE
+# ============================================================================
+class License(BaseModel):
+    """
+    License definitions with terms and permissions.
+    Each resource has a default license.
+    """
+    # Core fields that would be in detailed license schema
+    code = models.CharField(
+        max_length=50,
+        unique=True,
+        help_text="License code e.g. 'cc0', 'cc-by-4.0'"
+    )
+    
+    name = models.CharField(
+        max_length=255,
+        help_text="Full license name"
+    )
+    
+    short_name = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Abbreviated name"
+    )
+    
+    url = models.URLField(
+        blank=True,
+        help_text="Official license URL"
+    )
+    
+    icon_url = models.URLField(
+        blank=True,
+        help_text="License icon URL"
+    )
+    
+    summary = models.TextField(
+        blank=True,
+        help_text="Brief license description"
+    )
+    
+    full_text = models.TextField(
+        blank=True,
+        help_text="Complete license text"
+    )
+    
+    legal_code_url = models.URLField(
+        blank=True,
+        help_text="Legal code URL"
+    )
+    
+    # JSON fields for structured data
+    license_terms = models.JSONField(
+        default=list,
+        help_text="License terms as JSON array"
+    )
+    
+    permissions = models.JSONField(
+        default=list,
+        help_text="Permissions as JSON array"
+    )
+    
+    conditions = models.JSONField(
+        default=list,
+        help_text="Conditions as JSON array"
+    )
+    
+    limitations = models.JSONField(
+        default=list,
+        help_text="Limitations as JSON array"
+    )
+    
+    is_default = models.BooleanField(
+        default=False,
+        help_text="Whether this is the default license"
+    )
+    
+    # Managers
+    objects = ActiveObjectsManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        db_table = 'license'
+        verbose_name = 'License'
+        verbose_name_plural = 'Licenses'
+        ordering = ['name']
+
+    def __str__(self):
+        return f"{self.name} ({self.code})"
+
+
+# ============================================================================
+# 4. RESOURCE
+# ============================================================================
 class Resource(BaseModel):
     """
-    Core model representing Quranic content (text, audio, translations, tafsir).
-    Published by users with Publisher role.
+    Core resource entity from ERD.
+    Original content packages published by organizations.
     """
-    RESOURCE_TYPE_CHOICES = [
-        ('text', 'Text'),
-        ('audio', 'Audio'),
-        ('translation', 'Translation'),
+    CATEGORY_CHOICES = [
+        ('recitation', 'Recitation'),
+        ('mushaf', 'Mushaf'),
         ('tafsir', 'Tafsir'),
     ]
     
-    title = models.CharField(
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('ready', 'Ready'),  # V1: ready = ready to extract Assets from
+    ]
+    
+    # Core fields from ERD
+    publishing_organization = models.ForeignKey(
+        PublishingOrganization,
+        on_delete=models.PROTECT,
+        related_name='resources'
+    )
+    
+    name = models.CharField(
         max_length=255,
-        help_text="Title of the Quranic resource"
+        help_text="Resource name e.g. 'Tafsir Ibn Katheer CSV'"
+    )
+    
+    slug = models.SlugField(
+        help_text="URL slug e.g. 'tafsir-ibn-katheer-csv'"
     )
     
     description = models.TextField(
-        help_text="Detailed description of the resource content"
+        help_text="Resource description"
     )
     
-    resource_type = models.CharField(
+    category = models.CharField(
         max_length=20,
-        choices=RESOURCE_TYPE_CHOICES,
-        help_text="Type of Quranic content"
+        choices=CATEGORY_CHOICES,
+        help_text="Simple options in V1"
     )
     
-    language = models.CharField(
-        max_length=10,
-        help_text="Language code (en, ar, ur, etc.)"
-    )
-    
-    version = models.CharField(
-        max_length=50,
-        help_text="Version identifier (e.g., 1.0, 2.1, etc.)"
-    )
-    
-    checksum = models.CharField(
-        max_length=64,
-        help_text="SHA-256 checksum for content integrity verification"
-    )
-    
-    publisher = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.PROTECT,
-        related_name='published_resources',
-        help_text="User who published this resource (must have Publisher role)"
-    )
-    
-    metadata = models.JSONField(
-        default=dict,
-        help_text="Additional resource-specific metadata (duration, reciter, etc.)"
-    )
-    
-    published_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="Timestamp when the resource was published"
-    )
-    
-    # Workflow fields
-    WORKFLOW_STATUS_CHOICES = [
-        ('draft', 'Draft'),
-        ('in_review', 'In Review'),
-        ('reviewed', 'Reviewed'),
-        ('published', 'Published'),
-        ('rejected', 'Rejected'),
-    ]
-    
-    workflow_status = models.CharField(
+    status = models.CharField(
         max_length=20,
-        choices=WORKFLOW_STATUS_CHOICES,
+        choices=STATUS_CHOICES,
         default='draft',
-        help_text="Current workflow status of the resource"
+        help_text="V1: ready = ready to extract Assets from"
     )
     
-    reviewed_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='reviewed_resources',
-        help_text="User who reviewed this resource (must have Reviewer role)"
+    default_license = models.ForeignKey(
+        License,
+        on_delete=models.PROTECT,
+        related_name='default_for_resources',
+        help_text="Default license for this resource"
     )
     
-    reviewed_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="Timestamp when the resource was reviewed"
-    )
-    
-    review_notes = models.TextField(
-        blank=True,
-        help_text="Notes from the reviewer about the resource"
-    )
-    
-    submitted_for_review_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="Timestamp when resource was submitted for review"
-    )
-
     # Managers
     objects = ActiveObjectsManager()
     all_objects = AllObjectsManager()
@@ -117,211 +295,498 @@ class Resource(BaseModel):
         db_table = 'resource'
         verbose_name = 'Resource'
         verbose_name_plural = 'Resources'
-        ordering = ['-published_at', '-created_at']
+        ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['resource_type']),
-            models.Index(fields=['language']),
-            models.Index(fields=['publisher']),
-            models.Index(fields=['published_at']),
-            models.Index(fields=['workflow_status']),
-            models.Index(fields=['reviewed_by']),
-            models.Index(fields=['submitted_for_review_at']),
+            models.Index(fields=['publishing_organization']),
+            models.Index(fields=['category']),
+            models.Index(fields=['status']),
+            models.Index(fields=['slug']),
         ]
 
     def __str__(self):
-        return f"{self.title} ({self.resource_type}, {self.language})"
-
-    def get_language_display(self):
-        """Get human-readable language name"""
-        language_map = {
-            'ar': 'Arabic',
-            'en': 'English',
-            'ur': 'Urdu',
-            'tr': 'Turkish',
-            'id': 'Indonesian',
-            'ms': 'Malay',
-            'fr': 'French',
-            'de': 'German',
-            'es': 'Spanish',
-        }
-        return language_map.get(self.language, self.language.upper())
-
-    def is_published(self):
-        """Check if resource is published"""
-        return self.published_at is not None
-
-    def get_file_count(self):
-        """Get number of associated media files"""
-        return self.media_files.filter(is_active=True).count()
-
-    def get_total_file_size(self):
-        """Get total size of all associated files in bytes"""
-        return self.media_files.filter(is_active=True).aggregate(
-            total_size=models.Sum('file_size')
-        )['total_size'] or 0
-    
-    # Workflow methods
-    def can_submit_for_review(self, user):
-        """Check if user can submit this resource for review"""
-        return (
-            self.workflow_status == 'draft' and
-            (self.publisher == user or user.is_admin())
-        )
-    
-    def can_review(self, user):
-        """Check if user can review this resource"""
-        return (
-            self.workflow_status == 'in_review' and
-            (user.is_reviewer() or user.is_admin())
-        )
-    
-    def can_publish(self, user):
-        """Check if user can publish this resource"""
-        return (
-            self.workflow_status == 'reviewed' and
-            (user.is_reviewer() or user.is_admin())
-        )
-    
-    def submit_for_review(self, user):
-        """Submit resource for review"""
-        if not self.can_submit_for_review(user):
-            raise ValueError("Cannot submit resource for review")
-        
-        from django.utils import timezone
-        self.workflow_status = 'in_review'
-        self.submitted_for_review_at = timezone.now()
-        self.save()
-        
-        # Send notification to reviewers
-        self._send_workflow_notification('submitted_for_review')
-    
-    def approve_review(self, user, notes=''):
-        """Approve resource review"""
-        if not self.can_review(user):
-            raise ValueError("Cannot approve resource")
-        
-        from django.utils import timezone
-        self.workflow_status = 'reviewed'
-        self.reviewed_by = user
-        self.reviewed_at = timezone.now()
-        self.review_notes = notes
-        self.save()
-        
-        # Send notification to publisher
-        self._send_workflow_notification('approved')
-    
-    def reject_review(self, user, notes=''):
-        """Reject resource review"""
-        if not self.can_review(user):
-            raise ValueError("Cannot reject resource")
-        
-        from django.utils import timezone
-        self.workflow_status = 'rejected'
-        self.reviewed_by = user
-        self.reviewed_at = timezone.now()
-        self.review_notes = notes
-        self.save()
-        
-        # Send notification to publisher
-        self._send_workflow_notification('rejected')
-    
-    def publish_resource(self, user):
-        """Publish the resource"""
-        if not self.can_publish(user):
-            raise ValueError("Cannot publish resource")
-        
-        from django.utils import timezone
-        self.workflow_status = 'published'
-        self.published_at = timezone.now()
-        self.save()
-        
-        # Send notification to publisher and team
-        self._send_workflow_notification('published')
-    
-    def reset_to_draft(self, user):
-        """Reset resource to draft status"""
-        if not (self.publisher == user or user.is_admin()):
-            raise ValueError("Cannot reset resource to draft")
-        
-        self.workflow_status = 'draft'
-        self.reviewed_by = None
-        self.reviewed_at = None
-        self.review_notes = ''
-        self.submitted_for_review_at = None
-        self.published_at = None
-        self.save()
-        
-        # Send notification
-        self._send_workflow_notification('reset_to_draft')
-    
-    def _send_workflow_notification(self, action):
-        """Send workflow notification via Celery"""
-        try:
-            from apps.licensing.tasks import send_workflow_notification
-            send_workflow_notification.delay(
-                resource_id=str(self.id),
-                action=action,
-                resource_title=self.title,
-                publisher_email=self.publisher.email
-            )
-        except ImportError:
-            # Handle case where Celery task doesn't exist yet
-            pass
-    
-    def get_workflow_status_display_color(self):
-        """Get color for workflow status display"""
-        color_map = {
-            'draft': 'default',
-            'in_review': 'processing',
-            'reviewed': 'success',
-            'published': 'green',
-            'rejected': 'error',
-        }
-        return color_map.get(self.workflow_status, 'default')
-    
-    def get_workflow_history(self):
-        """Get workflow transition history"""
-        history = []
-        
-        if self.created_at:
-            history.append({
-                'status': 'draft',
-                'timestamp': self.created_at,
-                'user': self.publisher,
-                'notes': 'Resource created'
-            })
-        
-        if self.submitted_for_review_at:
-            history.append({
-                'status': 'in_review',
-                'timestamp': self.submitted_for_review_at,
-                'user': self.publisher,
-                'notes': 'Submitted for review'
-            })
-        
-        if self.reviewed_at:
-            history.append({
-                'status': self.workflow_status,
-                'timestamp': self.reviewed_at,
-                'user': self.reviewed_by,
-                'notes': self.review_notes or f'Resource {self.workflow_status}'
-            })
-        
-        if self.published_at:
-            history.append({
-                'status': 'published',
-                'timestamp': self.published_at,
-                'user': self.reviewed_by or self.publisher,
-                'notes': 'Resource published'
-            })
-        
-        return sorted(history, key=lambda x: x['timestamp'])
+        return f"{self.name} ({self.category})"
 
 
+# ============================================================================
+# 5. RESOURCE VERSION
+# ============================================================================
+class ResourceVersion(BaseModel):
+    """
+    Versioned instances of resources with semantic versioning.
+    Links to storage URLs and file metadata.
+    """
+    TYPE_CHOICES = [
+        ('csv', 'CSV'),
+        ('excel', 'Excel'),
+        ('json', 'JSON'),
+        ('zip', 'ZIP'),
+    ]
+    
+    # Relationships
+    resource = models.ForeignKey(
+        Resource,
+        on_delete=models.CASCADE,
+        related_name='versions'
+    )
+    
+    # Version fields from ERD
+    name = models.CharField(
+        max_length=255,
+        help_text="Version name - V1: same as resource name, V2: updates on content"
+    )
+    
+    summary = models.TextField(
+        blank=True,
+        help_text="Version summary"
+    )
+    
+    semvar = models.CharField(
+        max_length=20,
+        help_text="Semantic versioning e.g. '1.0.0' - core to bind with an AssetVersion"
+    )
+    
+    storage_url = models.URLField(
+        help_text="Absolute URL for file on S3"
+    )
+    
+    type = models.CharField(
+        max_length=20,
+        choices=TYPE_CHOICES,
+        help_text="File type"
+    )
+    
+    size_bytes = models.PositiveBigIntegerField(
+        help_text="File size in bytes"
+    )
+    
+    is_latest = models.BooleanField(
+        default=False,
+        help_text="Whether this is the latest version"
+    )
+    
+    # Managers
+    objects = ActiveObjectsManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        db_table = 'resource_version'
+        verbose_name = 'Resource Version'
+        verbose_name_plural = 'Resource Versions'
+        ordering = ['-created_at']
+        unique_together = ['resource', 'semvar']
+
+    def __str__(self):
+        return f"{self.resource.name} v{self.semvar}"
+
+
+# ============================================================================
+# 6. ASSET
+# ============================================================================
+class Asset(BaseModel):
+    """
+    Individual assets that can be downloaded.
+    Part of resources, published by organizations.
+    """
+    # Relationships from ERD
+    publishing_organization = models.ForeignKey(
+        PublishingOrganization,
+        on_delete=models.PROTECT,
+        related_name='assets'
+    )
+    
+    # Core asset fields that would be in the detailed schema
+    name = models.CharField(
+        max_length=255,
+        help_text="Asset name"
+    )
+    
+    title = models.CharField(
+        max_length=255,
+        help_text="Display title for API"
+    )
+    
+    description = models.TextField(
+        help_text="Asset description"
+    )
+    
+    long_description = models.TextField(
+        blank=True,
+        help_text="Extended description"
+    )
+    
+    thumbnail_url = models.URLField(
+        blank=True,
+        help_text="Asset thumbnail image"
+    )
+    
+    category = models.CharField(
+        max_length=20,
+        choices=Resource.CATEGORY_CHOICES,
+        help_text="Asset category matching resource categories"
+    )
+    
+    # License relationship
+    license = models.ForeignKey(
+        License,
+        on_delete=models.PROTECT,
+        related_name='assets'
+    )
+    
+    # Technical details
+    file_size = models.CharField(
+        max_length=50,
+        help_text="Human readable file size e.g. '2.5 MB'"
+    )
+    
+    format = models.CharField(
+        max_length=50,
+        help_text="File format"
+    )
+    
+    encoding = models.CharField(
+        max_length=50,
+        default='UTF-8',
+        help_text="Text encoding"
+    )
+    
+    version = models.CharField(
+        max_length=50,
+        help_text="Asset version"
+    )
+    
+    language = models.CharField(
+        max_length=10,
+        help_text="Asset language code"
+    )
+    
+    # Stats
+    download_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of downloads"
+    )
+    
+    view_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of views"
+    )
+    
+    # Managers
+    objects = ActiveObjectsManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        db_table = 'asset'
+        verbose_name = 'Asset'
+        verbose_name_plural = 'Assets'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['publishing_organization']),
+            models.Index(fields=['category']),
+            models.Index(fields=['license']),
+        ]
+
+    def __str__(self):
+        return f"{self.title} ({self.category})"
+
+
+# ============================================================================
+# 7. ASSET VERSION
+# ============================================================================
+class AssetVersion(BaseModel):
+    """
+    Individual downloadable assets extracted from resource versions.
+    """
+    # Relationships
+    asset = models.ForeignKey(
+        Asset,
+        on_delete=models.CASCADE,
+        related_name='versions'
+    )
+    
+    resource_version = models.ForeignKey(
+        ResourceVersion,
+        on_delete=models.CASCADE,
+        related_name='asset_versions'
+    )
+    
+    # Asset version fields from ERD
+    name = models.CharField(
+        max_length=255,
+        help_text="Asset version name"
+    )
+    
+    summary = models.TextField(
+        blank=True,
+        help_text="Asset version summary"
+    )
+    
+    file_url = models.URLField(
+        help_text="Direct URL to asset file"
+    )
+    
+    size_bytes = models.PositiveBigIntegerField(
+        help_text="File size in bytes"
+    )
+    
+    # Managers
+    objects = ActiveObjectsManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        db_table = 'asset_version'
+        verbose_name = 'Asset Version'
+        verbose_name_plural = 'Asset Versions'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.asset.name} -> {self.resource_version.semvar}"
+
+
+# ============================================================================
+# 8. ASSET ACCESS REQUEST
+# ============================================================================
+class AssetAccessRequest(BaseModel):
+    """
+    User requests for asset access with approval workflow.
+    """
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+    
+    INTENDED_USE_CHOICES = [
+        ('commercial', 'Commercial'),
+        ('non-commercial', 'Non-Commercial'),
+    ]
+    
+    # Relationships from ERD
+    developer_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='asset_requests'
+    )
+    
+    asset = models.ForeignKey(
+        Asset,
+        on_delete=models.CASCADE,
+        related_name='access_requests'
+    )
+    
+    # Request fields from ERD
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending'
+    )
+    
+    developer_access_reason = models.TextField(
+        help_text="Reason for requesting access - used in V1 UI"
+    )
+    
+    intended_use = models.CharField(
+        max_length=20,
+        choices=INTENDED_USE_CHOICES,
+        help_text="Commercial or non-commercial use"
+    )
+    
+    # Admin response
+    admin_response = models.TextField(
+        blank=True,
+        help_text="Admin response message"
+    )
+    
+    approved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When request was approved"
+    )
+    
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_asset_requests'
+    )
+    
+    # Managers
+    objects = ActiveObjectsManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        db_table = 'asset_access_request'
+        verbose_name = 'Asset Access Request'
+        verbose_name_plural = 'Asset Access Requests'
+        ordering = ['-created_at']
+        unique_together = ['developer_user', 'asset']
+
+    def __str__(self):
+        return f"{self.developer_user.email} -> {self.asset.title} ({self.status})"
+
+
+# ============================================================================
+# 9. ASSET ACCESS
+# ============================================================================
+class AssetAccess(BaseModel):
+    """
+    Granted access to assets for users.
+    Created when access requests are approved.
+    """
+    # Relationships from ERD
+    asset_access_request = models.OneToOneField(
+        AssetAccessRequest,
+        on_delete=models.CASCADE,
+        related_name='access_grant'
+    )
+    
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='asset_accesses'
+    )
+    
+    asset = models.ForeignKey(
+        Asset,
+        on_delete=models.CASCADE,
+        related_name='user_accesses'
+    )
+    
+    # License snapshot from ERD
+    effective_license = models.ForeignKey(
+        License,
+        on_delete=models.PROTECT,
+        help_text="License snapshot at time of access grant"
+    )
+    
+    # Access details
+    granted_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When access was granted"
+    )
+    
+    expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When access expires (null = never expires)"
+    )
+    
+    download_url = models.URLField(
+        blank=True,
+        help_text="Direct download URL"
+    )
+    
+    # Managers
+    objects = ActiveObjectsManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        db_table = 'asset_access'
+        verbose_name = 'Asset Access'
+        verbose_name_plural = 'Asset Accesses'
+        ordering = ['-granted_at']
+        unique_together = ['user', 'asset']
+
+    def __str__(self):
+        return f"{self.user.email} has access to {self.asset.title}"
+
+
+# ============================================================================
+# 10. USAGE EVENT
+# ============================================================================
+class UsageEvent(BaseModel):
+    """
+    Analytics tracking for asset and resource usage.
+    Tracks downloads and other usage events.
+    """
+    USAGE_KIND_CHOICES = [
+        ('file_download', 'File Download'),
+        ('view', 'View'),
+        ('api_access', 'API Access'),
+    ]
+    
+    SUBJECT_KIND_CHOICES = [
+        ('resource', 'Resource'),
+        ('asset', 'Asset'),
+    ]
+    
+    # User tracking
+    developer_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='usage_events'
+    )
+    
+    # Event details from ERD
+    usage_kind = models.CharField(
+        max_length=20,
+        choices=USAGE_KIND_CHOICES,
+        help_text="Type of usage event"
+    )
+    
+    subject_kind = models.CharField(
+        max_length=20,
+        choices=SUBJECT_KIND_CHOICES,
+        help_text="Whether tracking resource or asset"
+    )
+    
+    # Conditional foreign keys based on subject_kind
+    resource_id = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Resource ID if subject_kind = 'resource'"
+    )
+    
+    asset_id = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Asset ID if subject_kind = 'asset'"
+    )
+    
+    # Event metadata
+    metadata = models.JSONField(
+        default=dict,
+        help_text="Additional event metadata"
+    )
+    
+    ip_address = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        help_text="User IP address"
+    )
+    
+    user_agent = models.TextField(
+        blank=True,
+        help_text="User browser/client information"
+    )
+    
+    # Managers
+    objects = ActiveObjectsManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        db_table = 'usage_event'
+        verbose_name = 'Usage Event'
+        verbose_name_plural = 'Usage Events'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['developer_user']),
+            models.Index(fields=['usage_kind']),
+            models.Index(fields=['subject_kind']),
+            models.Index(fields=['created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.developer_user.email} - {self.usage_kind} on {self.subject_kind}"
+
+
+# ============================================================================
+# 11. DISTRIBUTION (CHANNEL)
+# ============================================================================
 class Distribution(BaseModel):
     """
-    Delivery format/endpoint for accessing a Resource.
-    Defines how developers can access the content.
+    Distribution channels for accessing resource content.
+    Defines different delivery methods (API, ZIP download, etc).
     """
     FORMAT_TYPE_CHOICES = [
         ('REST_JSON', 'REST API (JSON)'),
@@ -330,6 +795,7 @@ class Distribution(BaseModel):
         ('API', 'Custom API'),
     ]
     
+    # Relationship
     resource = models.ForeignKey(
         Resource,
         on_delete=models.CASCADE,
@@ -337,6 +803,7 @@ class Distribution(BaseModel):
         help_text="Resource that this distribution provides access to"
     )
     
+    # Distribution details
     format_type = models.CharField(
         max_length=20,
         choices=FORMAT_TYPE_CHOICES,
@@ -362,7 +829,7 @@ class Distribution(BaseModel):
         default=dict,
         help_text="Format-specific metadata and configuration"
     )
-
+    
     # Managers
     objects = ActiveObjectsManager()
     all_objects = AllObjectsManager()
@@ -379,7 +846,7 @@ class Distribution(BaseModel):
         unique_together = [['resource', 'format_type', 'version']]
 
     def __str__(self):
-        return f"{self.resource.title} - {self.format_type} v{self.version}"
+        return f"{self.resource.name} - {self.format_type} v{self.version}"
 
     def get_access_method(self):
         """Get human-readable access method"""

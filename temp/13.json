@@ -1,0 +1,109 @@
+{
+  "task_id": 13,
+  "task_name": "Authentication Flow Updates",
+  "description": "Update auth endpoints to work with new User model fields",
+  "priority": "High",
+  "estimated_hours": 6,
+  "status": "Not Started",
+  "dependencies": [2],
+  "detailed_requirements": {
+    "objective": "Ensure all authentication endpoints work correctly with ERD-aligned User model",
+    "auth_endpoint_updates": {
+      "register_endpoint": {
+        "path": "/auth/register",
+        "updates": [
+          "Handle job_title field (renamed from title)",
+          "Ensure all ERD User fields are supported",
+          "Maintain OpenAPI AuthResponse format"
+        ],
+        "validation": "Validate required fields match ERD specifications"
+      },
+      "login_endpoint": {
+        "path": "/auth/login", 
+        "updates": [
+          "Return updated User schema in AuthResponse",
+          "Include all ERD-aligned fields",
+          "Maintain backward compatibility"
+        ]
+      },
+      "profile_endpoints": {
+        "get_profile": {
+          "path": "/auth/profile",
+          "updates": "Return all ERD User fields in OpenAPI User format"
+        },
+        "update_profile": {
+          "path": "/auth/profile (PUT)",
+          "updates": "Accept job_title and all ERD fields for updates"
+        }
+      },
+      "oauth_endpoints": {
+        "google_callback": "/auth/oauth/google/callback",
+        "github_callback": "/auth/oauth/github/callback", 
+        "updates": "Map OAuth provider data to ERD User fields"
+      }
+    }
+  },
+  "field_mapping": {
+    "existing_to_erd": {
+      "title": "job_title",
+      "first_name": "first_name (unchanged)",
+      "last_name": "last_name (unchanged)",
+      "email": "email (unchanged)",
+      "phone_number": "phone_number (unchanged)"
+    },
+    "oauth_mapping": {
+      "google": {
+        "given_name": "first_name",
+        "family_name": "last_name", 
+        "email": "email",
+        "picture": "avatar_url"
+      },
+      "github": {
+        "name": "Parse into first_name/last_name",
+        "email": "email",
+        "avatar_url": "avatar_url",
+        "login": "github_username"
+      }
+    }
+  },
+  "response_format_updates": {
+    "auth_response": {
+      "structure": {
+        "access_token": "string",
+        "refresh_token": "string", 
+        "user": "Updated User schema with ERD fields"
+      },
+      "user_object": "Must include job_title and all ERD-required fields"
+    },
+    "profile_response": {
+      "get": "Return complete User schema with all ERD fields",
+      "update": "Return success message with profile completion status"
+    }
+  },
+  "validation_updates": {
+    "registration_validation": [
+      "Validate email uniqueness",
+      "Ensure required fields are present",
+      "Validate field formats and lengths"
+    ],
+    "profile_validation": [
+      "Validate profile update data",
+      "Check field constraints",
+      "Update profile_completed status"
+    ]
+  },
+  "backward_compatibility": {
+    "api_versioning": "Maintain compatibility with existing clients",
+    "field_aliases": "Support 'title' as alias for 'job_title' temporarily",
+    "graceful_degradation": "Handle missing fields gracefully"
+  },
+  "acceptance_criteria": [
+    "All auth endpoints work with ERD-aligned User model",
+    "Registration includes all required ERD fields",
+    "OAuth flows map correctly to ERD User fields", 
+    "Profile endpoints support job_title field",
+    "API responses match OpenAPI User schema",
+    "Backward compatibility maintained for existing clients",
+    "Field validation enforces ERD constraints"
+  ]
+}

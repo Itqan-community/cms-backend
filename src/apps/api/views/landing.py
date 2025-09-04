@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 
 from apps.accounts.models import User
 from apps.content.models import Resource, Distribution
-from apps.analytics.models import UsageEvent
+from apps.analytics.models import LegacyUsageEvent
 from apps.licensing.models import AccessRequest
 
 

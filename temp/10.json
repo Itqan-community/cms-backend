@@ -1,0 +1,72 @@
+{
+  "task_id": 10,
+  "task_name": "Model Relationships Validation",
+  "description": "Validate all foreign key relationships and constraints match ERD",
+  "priority": "High",
+  "estimated_hours": 4,
+  "status": "Not Started",
+  "dependencies": [1, 2, 3, 4, 5, 6, 7, 8],
+  "detailed_requirements": {
+    "objective": "Ensure all model relationships exactly match ERD specifications and function correctly",
+    "relationship_validation": {
+      "user_organization_membership": {
+        "relationship": "User ←→ PublishingOrganizationMember ←→ PublishingOrganization",
+        "type": "ManyToMany through intermediate model",
+        "constraints": "Unique(user, organization), proper role choices"
+      },
+      "organization_resources": {
+        "relationship": "PublishingOrganization → Resource (OneToMany)",
+        "type": "ForeignKey with PROTECT",
+        "constraints": "Every Resource must have valid publishing_organization"
+      },
+      "resource_versions": {
+        "relationship": "Resource → ResourceVersion (OneToMany)",
+        "type": "ForeignKey with CASCADE", 
+        "constraints": "Unique(resource, semvar), only one is_latest per resource"
+      },
+      "license_relationships": {
+        "relationships": [
+          "Resource → License (default_license)",
+          "Asset → License", 
+          "AssetAccess → License (effective_license)"
+        ],
+        "type": "ForeignKey with PROTECT",
+        "constraints": "All must reference valid license records"
+      },
+      "asset_relationships": {
+        "relationships": [
+          "Asset → PublishingOrganization",
+          "Asset ← AssetVersion → ResourceVersion",
+          "Asset ← AssetAccessRequest ← User",
+          "Asset ← AssetAccess ← User"
+        ],
+        "constraints": "Proper cascade behavior, unique constraints on access"
+      }
+    }
+  },
+  "validation_tests": {
+    "relationship_integrity": [
+      "Test all foreign key constraints work correctly",
+      "Verify CASCADE vs PROTECT behavior",
+      "Test unique constraints prevent duplicates"
+    ],
+    "data_consistency": [
+      "Ensure Asset.publishing_organization matches Resource.publishing_organization",
+      "Verify only one is_latest ResourceVersion per Resource",
+      "Check AssetAccess references valid AssetAccessRequest"
+    ],
+    "constraint_validation": [
+      "Test unique_together constraints",
+      "Verify enum choices are enforced",
+      "Check required fields cannot be null"
+    ]
+  },
+  "acceptance_criteria": [
+    "All foreign key relationships work as designed",
+    "Cascade and protect behaviors function correctly", 
+    "Unique constraints prevent data inconsistencies",
+    "All enum choices are properly validated",
+    "Model validation passes Django checks",
+    "Relationship queries perform efficiently"
+  ]
+}

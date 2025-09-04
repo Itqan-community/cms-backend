@@ -9,7 +9,7 @@ from django.http import HttpRequest
 from django.utils import timezone
 
 from django.db import models
-from .models import AccessRequest, License
+from .models import AccessRequest, LegacyLicense
 
 logger = logging.getLogger(__name__)
 

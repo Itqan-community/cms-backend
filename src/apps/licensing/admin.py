@@ -5,10 +5,10 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.utils import timezone
-from .models import License, AccessRequest
+from .models import LegacyLicense, AccessRequest
 
 
-@admin.register(License)
+@admin.register(LegacyLicense)
 class LicenseAdmin(admin.ModelAdmin):
     """Admin configuration for License model"""
     list_display = [
@@ -74,7 +74,7 @@ class AccessRequestAdmin(admin.ModelAdmin):
     ]
     list_filter = [
         'status', 'requested_at', 'reviewed_at', 
-        'distribution__format_type', 'distribution__resource__resource_type'
+        'distribution__format_type'
     ]
     search_fields = [
         'requester__email', 'requester__first_name', 'requester__last_name',

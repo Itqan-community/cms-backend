@@ -17,7 +17,7 @@ from drf_spectacular.views import (
 # Import ViewSets
 from apps.accounts.views import RoleViewSet, UserViewSet
 from apps.content.views import ResourceViewSet, DistributionViewSet, WorkflowViewSet, workflow_permissions
-from apps.licensing.views import LicenseViewSet, AccessRequestViewSet
+# from apps.licensing.views import LicenseViewSet, AccessRequestViewSet  # Temporarily disabled
 from apps.analytics.views import UsageEventViewSet
 from apps.medialib.views import MediaFileViewSet, MediaFolderViewSet, MediaAttachmentViewSet
 from apps.api_keys.views import APIKeyViewSet, APIKeyUsageViewSet, RateLimitEventViewSet, APIKeyStatisticsViewSet
@@ -29,9 +29,9 @@ from apps.api.views.landing import platform_statistics, platform_features, recen
 from apps.api.views.content_standards import ContentStandardsView, content_standards_simple
 
 # Import Asset Views
-from apps.content.asset_views import (
-    AssetListView, AssetDetailView, AssetRequestAccessView, AssetDownloadView
-)
+# from apps.content.asset_views import (  # Temporarily disabled
+#     AssetListView, AssetDetailView, AssetRequestAccessView, AssetDownloadView
+# )
 
 # Create API router
 router = DefaultRouter()
@@ -41,8 +41,8 @@ router.register(r'roles', RoleViewSet, basename='role')
 router.register(r'users', UserViewSet, basename='user')
 router.register(r'resources', ResourceViewSet, basename='resource')
 router.register(r'distributions', DistributionViewSet, basename='distribution')
-router.register(r'licenses', LicenseViewSet, basename='license')
-router.register(r'access-requests', AccessRequestViewSet, basename='accessrequest')
+# router.register(r'licenses', LicenseViewSet, basename='license')  # Temporarily disabled
+# router.register(r'access-requests', AccessRequestViewSet, basename='accessrequest')  # Temporarily disabled
 router.register(r'usage-events', UsageEventViewSet, basename='usageevent')
 
 # Media Library ViewSets
@@ -90,10 +90,10 @@ urlpatterns = [
     path('search/', include('apps.search.urls')),
     
     # Asset endpoints (simplified frontend interface)
-    path('assets/', AssetListView.as_view(), name='asset_list'),
-    path('assets/<uuid:asset_id>/', AssetDetailView.as_view(), name='asset_detail'),
-    path('assets/<uuid:asset_id>/request-access/', AssetRequestAccessView.as_view(), name='asset_request_access'),
-    path('assets/<uuid:asset_id>/download/', AssetDownloadView.as_view(), name='asset_download'),
+    # path('assets/', AssetListView.as_view(), name='asset_list'),  # Temporarily disabled
+    # path('assets/<uuid:asset_id>/', AssetDetailView.as_view(), name='asset_detail'),  # Temporarily disabled
+    # path('assets/<uuid:asset_id>/request-access/', AssetRequestAccessView.as_view(), name='asset_request_access'),  # Temporarily disabled
+    # path('assets/<uuid:asset_id>/download/', AssetDownloadView.as_view(), name='asset_download'),  # Temporarily disabled
     
     # Authentication endpoints are in main config/urls.py under /api/v1/auth/
     # Using django-allauth based authentication

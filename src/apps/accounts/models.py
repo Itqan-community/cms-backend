@@ -1,7 +1,6 @@
 """
 User accounts and role management models for Itqan CMS
 """
-import uuid
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.core.validators import EmailValidator
@@ -43,7 +42,7 @@ class Role(BaseModel):
     all_objects = AllObjectsManager()
 
     class Meta:
-        db_table = 'role'
+        db_table = 'accounts_role'
         verbose_name = 'Role'
         verbose_name_plural = 'Roles'
         ordering = ['name']
@@ -93,10 +92,8 @@ class User(AbstractUser):
     Custom User model extending Django's AbstractUser with django-allauth integration
     and role-based access control for the Itqan CMS.
     """
-    id = models.UUIDField(
+    id = models.AutoField(
         primary_key=True,
-        default=uuid.uuid4,
-        editable=False,
         help_text="Unique identifier for this user"
     )
     
@@ -146,7 +143,7 @@ class User(AbstractUser):
         help_text="User's phone number"
     )
     
-    title = models.CharField(
+    job_title = models.CharField(
         max_length=255,
         blank=True,
         help_text="User's professional title"
@@ -217,7 +214,7 @@ class User(AbstractUser):
     all_objects = AllObjectsManager()  # Manager for all objects including inactive
 
     class Meta:
-        db_table = 'user'
+        db_table = 'accounts_user'
         verbose_name = 'User'
         verbose_name_plural = 'Users'
         ordering = ['-created_at']

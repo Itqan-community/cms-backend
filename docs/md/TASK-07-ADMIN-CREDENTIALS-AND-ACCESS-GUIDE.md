@@ -41,6 +41,10 @@ The Itqan CMS provides **two separate admin interfaces** serving different purpo
 
 ### Environment-Specific Credentials
 
+#### Local Environment
+** URL: http://localhost:8000/django-admin/
+** Credentials: admin@itqan.dev / admin123
+
 #### Development Environment
 **Base URL**: `https://develop.api.cms.itqan.dev/`
 

@@ -1,0 +1,43 @@
+{
+  "task_id": 22,
+  "task_name": "API Documentation Updates",
+  "description": "Update API documentation to reflect new model structure and endpoints",
+  "priority": "Low",
+  "estimated_hours": 4,
+  "status": "Not Started", 
+  "dependencies": [19],
+  "detailed_requirements": {
+    "objective": "Ensure all API documentation accurately reflects the ERD-aligned implementation",
+    "documentation_updates": {
+      "openapi_yaml": {
+        "schema_updates": "Verify all schemas match implemented models",
+        "endpoint_updates": "Update endpoint descriptions and examples",
+        "example_responses": "Provide realistic example data"
+      },
+      "api_documentation_md": {
+        "endpoint_documentation": "Document all API endpoints with examples",
+        "authentication_guide": "OAuth and JWT token usage",
+        "error_handling": "Common error responses and codes"
+      },
+      "postman_collection": {
+        "request_examples": "Working examples for all endpoints",
+        "environment_variables": "Proper environment setup",
+        "test_scripts": "Validation tests in Postman"
+      }
+    }
+  },
+  "content_areas": {
+    "publisher_apis": "Document organization-based publisher endpoints",
+    "asset_access_workflow": "Document request/approval/download flow",
+    "license_system": "Document license endpoints and terms structure",
+    "analytics_tracking": "Document usage tracking and privacy",
+    "versioning_system": "Document resource and asset versioning"
+  },
+  "acceptance_criteria": [
+    "OpenAPI spec matches implementation exactly",
+    "All endpoints have accurate documentation",
+    "Example responses use realistic data",
+    "Postman collection works with live API",
+    "Error handling is properly documented"
+  ]
+}

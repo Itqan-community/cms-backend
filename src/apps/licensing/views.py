@@ -6,7 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import License, AccessRequest
+from .models import LegacyLicense, AccessRequest
 from .serializers import (
     LicenseSerializer, AccessRequestSerializer, 
     AccessRequestApprovalSerializer, AccessRequestListSerializer,
@@ -21,7 +21,7 @@ class LicenseViewSet(viewsets.ModelViewSet):
     """
     ViewSet for License management
     """
-    queryset = License.objects.all()
+    queryset = LegacyLicense.objects.all()
     serializer_class = LicenseSerializer
     permission_classes = [LicensePermission]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -32,7 +32,7 @@ class LicenseViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Filter queryset based on user permissions"""
-        queryset = License.objects.all()
+        queryset = LegacyLicense.objects.all()
         
         if self.request.user.is_admin() or self.request.user.is_reviewer():
             # Admin and Reviewers can see all licenses
