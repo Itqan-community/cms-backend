@@ -88,7 +88,7 @@ The Itqan CMS provides **two separate admin interfaces** serving different purpo
 - **Username**: `admin`
 - **Email**: `admin@staging.cms.itqan.dev`
 - **Password**: `ItqanCMS2024!`
-- **Status**: ⚠️ Password updated, needs deployment verification
+- **Status**: ✅ Active and verified (Updated: 2025-01-08 via doctl SSH)
 - **Database**: Fresh DigitalOcean Managed PostgreSQL
 - **Branch**: `staging`
 - **Server IP**: `138.197.4.51`

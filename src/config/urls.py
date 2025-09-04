@@ -5,11 +5,12 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from wagtail.admin import urls as wagtailadmin_urls
 from wagtail import urls as wagtail_urls
 from wagtail.documents import urls as wagtaildocs_urls
+import os
 
 def health_check(request):
     """Simple health check endpoint for deployment verification"""
@@ -19,9 +20,29 @@ def health_check(request):
         'timestamp': str(timezone.now())
     })
 
+
+def serve_openapi_spec(request):
+    """Serve the static OpenAPI specification file"""
+    try:
+        # Path to the openapi.yaml file
+        openapi_path = os.path.join(settings.BASE_DIR, 'openapi.yaml')
+        
+        with open(openapi_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Return YAML content type
+        return HttpResponse(content, content_type='application/x-yaml')
+            
+    except FileNotFoundError:
+        return JsonResponse({'error': 'OpenAPI specification not found'}, status=404)
+
+
 urlpatterns = [
     # Health check endpoint
     path('health/', health_check, name='health_check'),
+    
+    # OpenAPI Specification
+    path('openapi.yaml', serve_openapi_spec, name='openapi-yaml'),
     
     # Django Admin
     path('django-admin/', admin.site.urls),

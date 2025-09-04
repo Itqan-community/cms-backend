@@ -64,7 +64,7 @@ class PublishingOrganizationAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'slug', 'icone_image_url')
+            'fields': ('name', 'slug', 'icone_image_url', 'cover_url')
         }),
         ('Content', {
             'fields': ('summary', 'description', 'bio')
@@ -86,8 +86,8 @@ class PublishingOrganizationAdmin(admin.ModelAdmin):
         return super().get_queryset(request).annotate(
             member_count=Count('members'),
             resource_count=Count('resources'),
-            asset_count=Count('resources__asset__id', distinct=True),
-            total_downloads=Sum('resources__asset__download_count')
+            asset_count=Count('assets', distinct=True),
+            total_downloads=Sum('assets__download_count')
         )
     
     def member_count(self, obj):
@@ -299,7 +299,7 @@ class AssetAdmin(admin.ModelAdmin):
         if latest_version and latest_version.file_url:
             return format_html(
                 '<a href="{}" target="_blank">Download</a>',
-                latest_version.file_url
+                latest_version.file_url.url
             )
         return "No download URL"
     download_url_display.short_description = 'Download'

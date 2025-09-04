@@ -3,9 +3,10 @@ User accounts and role management models for Itqan CMS
 """
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-from django.core.validators import EmailValidator
+from django.core.validators import EmailValidator, FileExtensionValidator
 from django.contrib.auth.models import UserManager
 from apps.core.models import BaseModel, ActiveObjectsManager, AllObjectsManager
+from apps.core.utils import upload_to_user_avatars
 
 
 class Role(BaseModel):
@@ -149,9 +150,11 @@ class User(AbstractUser):
         help_text="User's professional title"
     )
     
-    avatar_url = models.URLField(
+    avatar_url = models.ImageField(
+        upload_to=upload_to_user_avatars,
         blank=True,
-        help_text="User's avatar image URL"
+        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'gif', 'webp'])],
+        help_text="User's avatar image"
     )
     
     auth_provider = models.CharField(

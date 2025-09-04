@@ -23,9 +23,9 @@ class ResourceViewSet(viewsets.ModelViewSet):
     queryset = Resource.objects.all()
     permission_classes = [ResourcePermission]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['resource_type', 'language', 'publisher', 'is_active']
-    search_fields = ['title', 'description']
-    ordering_fields = ['title', 'published_at', 'created_at', 'updated_at']
+    filterset_fields = ['category', 'publishing_organization', 'is_active']
+    search_fields = ['name', 'description']
+    ordering_fields = ['name', 'created_at', 'updated_at']
     ordering = ['-created_at']
     
     def get_serializer_class(self):
