@@ -20,10 +20,10 @@ python manage.py migrate --noinput
 echo "Collecting static files..."
 python manage.py collectstatic --noinput
 
-# Create superuser if specified
-if [ -n "${DJANGO_SUPERUSER_USERNAME}" ] && [ -n "${DJANGO_SUPERUSER_EMAIL}" ] && [ -n "${DJANGO_SUPERUSER_PASSWORD}" ]; then
-    echo "Creating superuser..."
-    python manage.py createsuperuser --noinput || echo "Superuser already exists"
+# Ensure superuser exists with correct password
+if [ -n "${DJANGO_SUPERUSER_EMAIL}" ] && [ -n "${DJANGO_SUPERUSER_PASSWORD}" ]; then
+    echo "Ensuring superuser exists with correct password..."
+    python manage.py ensure_superuser --reset-password || echo "Failed to create/update superuser"
 fi
 
 echo "Starting Gunicorn server..."
