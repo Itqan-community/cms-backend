@@ -350,7 +350,7 @@ MEILISEARCH_INDEXES = {
     }
 }
 
-# Authentication backends
+# Authentication backends (configured after allauth settings below)
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
@@ -495,6 +495,14 @@ SOCIALACCOUNT_ADAPTER = 'apps.accounts.adapters.SocialAccountAdapter'
 SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'  # Disable to avoid allauth email tables
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_QUERY_EMAIL = True
+
+# NOTE: When ACCOUNT_EMAIL_VERIFICATION = 'none', the allauth authentication backend
+# is automatically excluded from AUTHENTICATION_BACKENDS to avoid database table dependencies
+
+# Update authentication backends based on email verification setting
+if ACCOUNT_EMAIL_VERIFICATION == 'none':
+    # Remove allauth authentication backend to avoid database table dependencies
+    AUTHENTICATION_BACKENDS = ['django.contrib.auth.backends.ModelBackend']
 
 # OAuth provider settings (will be configured with environment variables)
 SOCIALACCOUNT_PROVIDERS = {
