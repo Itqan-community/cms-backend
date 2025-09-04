@@ -468,7 +468,11 @@ class LicenseDetailSerializer(serializers.Serializer):
     def from_license_model(cls, license_obj):
         """Create LicenseDetail from License model with computed usage_count"""
         # Compute usage count from related assets
-        usage_count = license_obj.assets.filter(is_active=True).count()
+        try:
+            usage_count = license_obj.assets.filter(is_active=True).count()
+        except Exception:
+            # Asset table might not exist yet - return 0 for now
+            usage_count = 0
         
         return {
             'code': license_obj.code,
