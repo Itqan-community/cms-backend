@@ -834,6 +834,118 @@ class AssetAccessRequest(BaseModel):
     def __str__(self):
         return f"{self.developer_user.email} -> {self.asset.title} ({self.status})"
 
+    def approve_request(self, approved_by_user=None, auto_approved=True):
+        """
+        Approve the access request and create AssetAccess.
+        For V1: Auto-approval without admin intervention.
+        """
+        from django.utils import timezone
+        
+        if self.status != 'pending':
+            raise ValueError(f"Cannot approve request with status '{self.status}'")
+        
+        # Update request status
+        self.status = 'approved'
+        self.approved_at = timezone.now()
+        self.approved_by = approved_by_user
+        
+        if auto_approved:
+            self.admin_response = "Automatically approved (V1 policy)"
+        
+        self.save()
+        
+        # Create AssetAccess (use all_objects to bypass is_active filter)
+        access = AssetAccess.all_objects.create(
+            asset_access_request=self,
+            user=self.developer_user,
+            asset=self.asset,
+            effective_license=self.asset.license,
+            download_url=self._generate_download_url(),
+            expires_at=None  # V1: No expiration
+        )
+        
+        return access
+
+    def reject_request(self, rejected_by_user=None, reason=""):
+        """
+        Reject the access request.
+        """
+        from django.utils import timezone
+        
+        if self.status != 'pending':
+            raise ValueError(f"Cannot reject request with status '{self.status}'")
+        
+        self.status = 'rejected'
+        self.approved_at = timezone.now()
+        self.approved_by = rejected_by_user
+        self.admin_response = reason or "Request rejected"
+        self.save()
+
+    def _generate_download_url(self):
+        """
+        Generate download URL for the asset.
+        In V1: Direct file URL from asset version.
+        """
+        latest_version = self.asset.get_latest_version()
+        if latest_version:
+            return latest_version.file_url
+        return ""
+
+    @classmethod
+    def request_access(cls, user, asset, purpose, intended_use, auto_approve=True):
+        """
+        Create access request and optionally auto-approve for V1.
+        """
+        # Check if request already exists
+        existing_request = cls.objects.filter(
+            developer_user=user,
+            asset=asset
+        ).first()
+        
+        if existing_request:
+            if existing_request.status == 'approved':
+                try:
+                    access = existing_request.access_grant
+                except AssetAccess.DoesNotExist:
+                    access = None
+                return existing_request, access
+            elif existing_request.status == 'pending':
+                # Re-approve if auto_approve is enabled
+                if auto_approve:
+                    access = existing_request.approve_request(auto_approved=True)
+                    return existing_request, access
+                return existing_request, None
+        
+        # Create new request
+        request = cls.objects.create(
+            developer_user=user,
+            asset=asset,
+            developer_access_reason=purpose,
+            intended_use=intended_use
+        )
+        
+        # Auto-approve for V1
+        access = None
+        if auto_approve:
+            access = request.approve_request(auto_approved=True)
+        
+        return request, access
+
+    @property
+    def is_approved(self):
+        """Check if request is approved"""
+        return self.status == 'approved'
+
+    @property
+    def is_pending(self):
+        """Check if request is pending"""
+        return self.status == 'pending'
+
+    @property
+    def is_rejected(self):
+        """Check if request is rejected"""
+        return self.status == 'rejected'
+
 
 # ============================================================================
 # 9. ASSET ACCESS
@@ -899,6 +1011,62 @@ class AssetAccess(BaseModel):
 
     def __str__(self):
         return f"{self.user.email} has access to {self.asset.title}"
+
+    @property
+    def is_active(self):
+        """Check if access is currently active (not expired)"""
+        if not self.expires_at:
+            return True  # Never expires
+        
+        from django.utils import timezone
+        return timezone.now() < self.expires_at
+
+    @property
+    def is_expired(self):
+        """Check if access has expired"""
+        return not self.is_active
+
+    def get_download_url(self):
+        """Get the download URL for this access"""
+        return self.download_url or self.asset.get_latest_version().file_url
+
+    def create_usage_event(self, usage_kind='file_download', ip_address=None, user_agent=''):
+        """
+        Create a usage event when the asset is accessed.
+        """
+        
+        return UsageEvent.objects.create(
+            developer_user=self.user,
+            usage_kind=usage_kind,
+            subject_kind='asset',
+            asset_id=self.asset.id,
+            metadata={
+                'asset_title': self.asset.title,
+                'file_size': self.asset.file_size,
+                'format': self.asset.format,
+                'license': self.effective_license.code,
+                'access_id': self.id
+            },
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
+
+    @classmethod
+    def user_has_access(cls, user, asset):
+        """Check if user has active access to asset"""
+        try:
+            access = cls.all_objects.get(user=user, asset=asset)
+            return access.is_active
+        except cls.DoesNotExist:
+            return False
+
+    @classmethod
+    def get_user_access(cls, user, asset):
+        """Get user's access to asset if it exists"""
+        try:
+            return cls.all_objects.get(user=user, asset=asset)
+        except cls.DoesNotExist:
+            return None
 
 
 # ============================================================================
@@ -989,6 +1157,146 @@ class UsageEvent(BaseModel):
     def __str__(self):
         return f"{self.developer_user.email} - {self.usage_kind} on {self.subject_kind}"
 
+    def clean(self):
+        """Validate that only one of resource_id or asset_id is set"""
+        from django.core.exceptions import ValidationError
+        
+        if self.subject_kind == 'resource' and not self.resource_id:
+            raise ValidationError("resource_id must be set when subject_kind is 'resource'")
+        
+        if self.subject_kind == 'asset' and not self.asset_id:
+            raise ValidationError("asset_id must be set when subject_kind is 'asset'")
+        
+        if self.resource_id and self.asset_id:
+            raise ValidationError("Only one of resource_id or asset_id should be set")
+
+    def save(self, *args, **kwargs):
+        """Override save to run validation"""
+        self.clean()
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def track_asset_download(cls, user, asset, ip_address=None, user_agent=''):
+        """Track asset download event"""
+        return cls.objects.create(
+            developer_user=user,
+            usage_kind='file_download',
+            subject_kind='asset',
+            asset_id=asset.id,
+            metadata={
+                'asset_title': asset.title,
+                'file_size': asset.file_size,
+                'format': asset.format,
+                'category': asset.category
+            },
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
+
+    @classmethod
+    def track_asset_view(cls, user, asset, ip_address=None, user_agent=''):
+        """Track asset view event"""
+        return cls.objects.create(
+            developer_user=user,
+            usage_kind='view',
+            subject_kind='asset',
+            asset_id=asset.id,
+            metadata={
+                'asset_title': asset.title,
+                'category': asset.category
+            },
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
+
+    @classmethod
+    def track_resource_download(cls, user, resource, ip_address=None, user_agent=''):
+        """Track resource download event"""
+        latest_version = resource.get_latest_version()
+        return cls.objects.create(
+            developer_user=user,
+            usage_kind='file_download',
+            subject_kind='resource',
+            resource_id=resource.id,
+            metadata={
+                'resource_name': resource.name,
+                'version': latest_version.semvar if latest_version else 'unknown',
+                'category': resource.category
+            },
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
+
+    @classmethod
+    def track_api_access(cls, user, resource=None, asset=None, api_endpoint='', ip_address=None, user_agent=''):
+        """Track API access event"""
+        if resource:
+            return cls.objects.create(
+                developer_user=user,
+                usage_kind='api_access',
+                subject_kind='resource',
+                resource_id=resource.id,
+                metadata={
+                    'api_endpoint': api_endpoint,
+                    'resource_name': resource.name
+                },
+                ip_address=ip_address,
+                user_agent=user_agent
+            )
+        elif asset:
+            return cls.objects.create(
+                developer_user=user,
+                usage_kind='api_access',
+                subject_kind='asset',
+                asset_id=asset.id,
+                metadata={
+                    'api_endpoint': api_endpoint,
+                    'asset_title': asset.title
+                },
+                ip_address=ip_address,
+                user_agent=user_agent
+            )
+
+    @classmethod
+    def get_user_stats(cls, user):
+        """Get usage statistics for a user"""
+        events = cls.objects.filter(developer_user=user)
+        
+        return {
+            'total_events': events.count(),
+            'downloads': events.filter(usage_kind='file_download').count(),
+            'views': events.filter(usage_kind='view').count(),
+            'api_calls': events.filter(usage_kind='api_access').count(),
+            'asset_interactions': events.filter(subject_kind='asset').count(),
+            'resource_interactions': events.filter(subject_kind='resource').count()
+        }
+
+    @classmethod
+    def get_asset_stats(cls, asset):
+        """Get usage statistics for an asset"""
+        events = cls.objects.filter(asset_id=asset.id)
+        
+        return {
+            'total_events': events.count(),
+            'downloads': events.filter(usage_kind='file_download').count(),
+            'views': events.filter(usage_kind='view').count(),
+            'api_calls': events.filter(usage_kind='api_access').count(),
+            'unique_users': events.values('developer_user').distinct().count()
+        }
+
+    @classmethod
+    def get_resource_stats(cls, resource):
+        """Get usage statistics for a resource"""
+        events = cls.objects.filter(resource_id=resource.id)
+        
+        return {
+            'total_events': events.count(),
+            'downloads': events.filter(usage_kind='file_download').count(),
+            'views': events.filter(usage_kind='view').count(),
+            'api_calls': events.filter(usage_kind='api_access').count(),
+            'unique_users': events.values('developer_user').distinct().count()
+        }
+
 
 # ============================================================================
 # 11. DISTRIBUTION (CHANNEL)
@@ -1059,11 +1367,86 @@ class Distribution(BaseModel):
         return f"{self.resource.name} - {self.format_type} v{self.version}"
 
     def get_access_method(self):
-        """Get human-readable access method"""
-        return dict(self.FORMAT_TYPE_CHOICES).get(self.format_type, self.format_type)
+        """Get the appropriate access method based on format type"""
+        method_map = {
+            'REST_JSON': 'GET',
+            'GraphQL': 'POST',
+            'ZIP': 'GET',
+            'API': 'GET'
+        }
+        return method_map.get(self.format_type, 'GET')
+
+    def get_content_type(self):
+        """Get the content type for the distribution"""
+        content_type_map = {
+            'REST_JSON': 'application/json',
+            'GraphQL': 'application/json',
+            'ZIP': 'application/zip',
+            'API': 'application/json'
+        }
+        return content_type_map.get(self.format_type, 'application/octet-stream')
 
     def is_api_endpoint(self):
-        """Check if this is an API endpoint (vs download)"""
+        """Check if this distribution is an API endpoint"""
+        return self.format_type in ['REST_JSON', 'GraphQL', 'API']
+
+    def is_download_endpoint(self):
+        """Check if this distribution is a download endpoint"""
+        return self.format_type == 'ZIP'
+
+    def get_authentication_requirements(self):
+        """Get authentication requirements from access_config"""
+        return self.access_config.get('authentication', {})
+
+    def get_rate_limits(self):
+        """Get rate limit configuration"""
+        return self.access_config.get('rate_limits', {})
+
+    def get_api_keys(self):
+        """Get API key requirements"""
+        return self.access_config.get('api_keys', [])
+
+    @classmethod
+    def create_rest_api_distribution(cls, resource, endpoint_url, version, api_config=None):
+        """Create a REST API distribution for a resource"""
+        return cls.objects.create(
+            resource=resource,
+            format_type='REST_JSON',
+            endpoint_url=endpoint_url,
+            version=version,
+            access_config=api_config or {
+                'authentication': {'required': True},
+                'rate_limits': {'requests_per_minute': 100}
+            },
+            metadata={'response_format': 'json', 'pagination': True}
+        )
+
+    @classmethod
+    def create_zip_distribution(cls, resource, download_url, version):
+        """Create a ZIP download distribution for a resource"""
+        return cls.objects.create(
+            resource=resource,
+            format_type='ZIP',
+            endpoint_url=download_url,
+            version=version,
+            access_config={'authentication': {'required': True}},
+            metadata={'compression': 'zip', 'includes_all_assets': True}
+        )
+
+    @classmethod
+    def create_graphql_distribution(cls, resource, graphql_endpoint, version):
+        """Create a GraphQL distribution for a resource"""
+        return cls.objects.create(
+            resource=resource,
+            format_type='GraphQL',
+            endpoint_url=graphql_endpoint,
+            version=version,
+            access_config={
+                'authentication': {'required': True},
+                'rate_limits': {'requests_per_minute': 50}
+            },
+            metadata={'schema_version': version, 'supports_introspection': True}
+        )
         return self.format_type in ['REST_JSON', 'GraphQL', 'API']
 
     def is_download(self):
