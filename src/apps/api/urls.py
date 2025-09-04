@@ -13,6 +13,7 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
+from .views.scalar_docs import ScalarDocsView, ScalarAPIClientView
 
 # Import ViewSets
 from apps.accounts.views import RoleViewSet, UserViewSet
@@ -74,9 +75,12 @@ router.register(r'api-stats', APIKeyStatisticsViewSet, basename='apikeystats')
 
 # API URL patterns
 urlpatterns = [
-    # API Documentation
+    # API Documentation (Scalar - Modern OpenAPI UI)
     path('schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('docs/', ScalarDocsView.as_view(), name='scalar-docs'),
+    path('client/', ScalarAPIClientView.as_view(), name='scalar-client'),
+    # Legacy Swagger/ReDoc (for compatibility)
+    path('swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     
     # JWT Authentication
