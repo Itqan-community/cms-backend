@@ -4,14 +4,18 @@
 
 echo "🔍 Validating branch flow rules before push..."
 
-# Get current branch and remote branch being pushed to
+# Get current branch and parse push arguments
 current_branch=$(git rev-parse --abbrev-ref HEAD)
-remote_ref=$(echo $1 | cut -d'/' -f3)
 
-echo "   Pushing: $current_branch → $remote_ref"
+# Parse git push arguments to get target branch
+while read local_ref local_sha remote_ref remote_sha; do
+    remote_branch=$(echo $remote_ref | sed 's/refs\/heads\///')
+done
+
+echo "   Pushing: $current_branch → $remote_branch"
 
 # Rule 1: Only staging can push to main
-if [[ "$remote_ref" == "main" && "$current_branch" != "staging" ]]; then
+if [[ "$remote_branch" == "main" && "$current_branch" != "staging" ]]; then
     echo "❌ ERROR: Production (main) can only be updated from staging branch"
     echo "   Attempted: $current_branch → main"
     echo "   Required: staging → main"
@@ -20,7 +24,7 @@ if [[ "$remote_ref" == "main" && "$current_branch" != "staging" ]]; then
 fi
 
 # Rule 2: Only develop can push to staging  
-if [[ "$remote_ref" == "staging" && "$current_branch" != "develop" ]]; then
+if [[ "$remote_branch" == "staging" && "$current_branch" != "develop" ]]; then
     echo "❌ ERROR: Staging can only be updated from develop branch"
     echo "   Attempted: $current_branch → staging"
     echo "   Required: develop → staging"
