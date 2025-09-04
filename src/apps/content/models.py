@@ -43,6 +43,11 @@ class PublishingOrganization(BaseModel):
         help_text="Detailed organization description"
     )
     
+    bio = models.TextField(
+        blank=True,
+        help_text="Organization bio for API responses"
+    )
+    
     cover_url = models.URLField(
         blank=True,
         help_text="Cover image URL for organization"
