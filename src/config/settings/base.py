@@ -350,10 +350,11 @@ MEILISEARCH_INDEXES = {
     }
 }
 
-# Authentication backends
+# Authentication backends - Use ModelBackend only since we have custom User model with email field
+# Our custom User model (apps.accounts.models.User) has its own email field and email_verified field
+# We don't need allauth's account_emailaddress table since we store everything in our User model
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
-    'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
 # Django REST Framework Configuration
@@ -478,23 +479,28 @@ MEILISEARCH_INDEXES = {
 SITE_ID = 1
 
 # Django Allauth Configuration
+# NOTE: We primarily use our custom User model with built-in email management
+# Allauth is only used for OAuth (Google/GitHub) authentication, not email verification
 ACCOUNT_AUTHENTICATION_METHOD = 'email'
 ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_EMAIL_VERIFICATION = 'none'  # Disable email verification to avoid allauth email tables
+ACCOUNT_EMAIL_VERIFICATION = 'none'  # We handle email verification in our custom User model
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
-ACCOUNT_USER_MODEL_EMAIL_FIELD = 'email'
-ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = False  # Disable since we're not using email verification
+ACCOUNT_USER_MODEL_EMAIL_FIELD = 'email'  # Points to our custom User.email field
+ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = False  # We manage email verification manually
 ACCOUNT_LOGOUT_ON_GET = False
 ACCOUNT_SESSION_REMEMBER = True
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_ADAPTER = 'apps.accounts.adapters.AccountAdapter'
 SOCIALACCOUNT_ADAPTER = 'apps.accounts.adapters.SocialAccountAdapter'
 
-# Social account configuration  
-SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'  # Disable to avoid allauth email tables
+# Social account configuration - for OAuth only (Google/GitHub)
+SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'  # We handle email verification in User model
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_QUERY_EMAIL = True
+
+# NOTE: We use our custom User model with built-in email field and email_verified field
+# No need for allauth's account_emailaddress table since email data is stored in User model
 
 # OAuth provider settings (will be configured with environment variables)
 SOCIALACCOUNT_PROVIDERS = {
