@@ -10,8 +10,8 @@ from django.utils import timezone
 
 from ..models import Resource, Distribution
 from ..serializers import (
-    ResourceSerializer, ResourceListSerializer,
-    DistributionSerializer, DistributionListSerializer
+    ResourceSerializer,
+    DistributionSerializer
 )
 from apps.api.permissions import ResourcePermission, DistributionPermission
 
@@ -31,7 +31,7 @@ class ResourceViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         """Return appropriate serializer based on action"""
         if self.action == 'list':
-            return ResourceListSerializer
+            return ResourceSerializer
         return ResourceSerializer
     
     def get_queryset(self):
@@ -101,7 +101,7 @@ class DistributionViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         """Return appropriate serializer based on action"""
         if self.action == 'list':
-            return DistributionListSerializer
+            return DistributionSerializer
         return DistributionSerializer
     
     def get_queryset(self):
