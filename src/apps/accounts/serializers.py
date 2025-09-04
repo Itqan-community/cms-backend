@@ -5,6 +5,12 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import Role
 
+def get_file_url(file_field):
+    """Helper function to safely get URL from file field"""
+    if file_field and hasattr(file_field, 'url'):
+        return file_field.url
+    return ''
+
 User = get_user_model()
 
 
@@ -82,6 +88,7 @@ class UserSerializer(serializers.ModelSerializer):
     role_permissions = serializers.SerializerMethodField()
     full_name = serializers.CharField(read_only=True)
     can_access_admin = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
     
     class Meta:
         model = User
@@ -107,6 +114,10 @@ class UserSerializer(serializers.ModelSerializer):
     def get_can_access_admin(self, obj):
         """Check if user can access admin panel"""
         return obj.can_access_admin_panel()
+    
+    def get_avatar_url(self, obj):
+        """Get avatar URL from file field"""
+        return get_file_url(obj.avatar_url)
 
     def validate_email(self, value):
         """

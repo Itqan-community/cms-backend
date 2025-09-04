@@ -239,9 +239,22 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
-# Media files
+# Media files - will be overridden in environment-specific settings
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# File upload settings
+FILE_UPLOAD_MAX_MEMORY_SIZE = 26214400  # 25MB
+FILE_UPLOAD_TEMP_DIR = None  # Use system temp dir
+DATA_UPLOAD_MAX_MEMORY_SIZE = FILE_UPLOAD_MAX_MEMORY_SIZE
+
+# Allowed file types for uploads
+ALLOWED_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']
+ALLOWED_FILE_EXTENSIONS = ['pdf', 'doc', 'docx', 'txt', 'zip', 'tar', 'gz', 'json', 'xml', 'csv']
+
+# Maximum file sizes (in bytes)
+MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB
+MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
 
 # MinIO Configuration (S3-compatible storage)
 # These settings will be overridden in development/production settings

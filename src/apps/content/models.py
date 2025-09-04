@@ -4,8 +4,16 @@ Based on db_design_v1.drawio specification
 """
 from django.db import models
 from django.conf import settings
-from django.core.validators import URLValidator
+from django.core.validators import URLValidator, FileExtensionValidator
 from apps.core.models import BaseModel, ActiveObjectsManager, AllObjectsManager
+from apps.core.utils import (
+    upload_to_organization_icons, 
+    upload_to_organization_covers,
+    upload_to_asset_thumbnails,
+    upload_to_license_icons,
+    upload_to_asset_files,
+    upload_to_resource_files
+)
 
 
 # ============================================================================
@@ -27,9 +35,11 @@ class PublishingOrganization(BaseModel):
         help_text="URL-friendly slug e.g. 'tafsir-center'"
     )
     
-    icone_image_url = models.URLField(
+    icone_image_url = models.ImageField(
+        upload_to=upload_to_organization_icons,
         blank=True,
-        help_text="Icon/logo image URL - used in V1 UI: Publisher Page"
+        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'])],
+        help_text="Icon/logo image - used in V1 UI: Publisher Page"
     )
     
     summary = models.TextField(
@@ -48,9 +58,11 @@ class PublishingOrganization(BaseModel):
         help_text="Organization bio for API responses"
     )
     
-    cover_url = models.URLField(
+    cover_url = models.ImageField(
+        upload_to=upload_to_organization_covers,
         blank=True,
-        help_text="Cover image URL for organization"
+        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'gif', 'webp'])],
+        help_text="Cover image for organization"
     )
     
     location = models.CharField(
@@ -190,9 +202,11 @@ class License(BaseModel):
         help_text="Official license URL"
     )
     
-    icon_url = models.URLField(
+    icon_url = models.ImageField(
+        upload_to=upload_to_license_icons,
         blank=True,
-        help_text="License icon URL"
+        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'])],
+        help_text="License icon image"
     )
     
     summary = models.TextField(
@@ -399,8 +413,12 @@ class ResourceVersion(BaseModel):
         help_text="Semantic versioning e.g. '1.0.0' - core to bind with an AssetVersion"
     )
     
-    storage_url = models.URLField(
-        help_text="Absolute URL for file on S3"
+    storage_url = models.FileField(
+        upload_to=upload_to_resource_files,
+        blank=True,
+        null=True,
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx', 'txt', 'zip', 'tar', 'gz', 'json', 'xml', 'csv'])],
+        help_text="File storage for resource version"
     )
     
     type = models.CharField(
@@ -517,8 +535,10 @@ class Asset(BaseModel):
         help_text="Extended description"
     )
     
-    thumbnail_url = models.URLField(
+    thumbnail_url = models.ImageField(
+        upload_to=upload_to_asset_thumbnails,
         blank=True,
+        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'gif', 'webp'])],
         help_text="Asset thumbnail image"
     )
     
@@ -740,8 +760,12 @@ class AssetVersion(BaseModel):
         help_text="Asset version summary"
     )
     
-    file_url = models.URLField(
-        help_text="Direct URL to asset file"
+    file_url = models.FileField(
+        upload_to=upload_to_asset_files,
+        blank=True,
+        null=True,
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx', 'txt', 'zip', 'tar', 'gz', 'json', 'xml', 'csv'])],
+        help_text="Direct file for asset"
     )
     
     size_bytes = models.PositiveBigIntegerField(
@@ -783,7 +807,7 @@ class AssetVersion(BaseModel):
 
     def get_download_url(self):
         """Get the download URL for this asset version"""
-        return self.file_url
+        return self.file_url.url if self.file_url else None
 
     @property
     def resource_semvar(self):
@@ -1067,7 +1091,10 @@ class AssetAccess(BaseModel):
 
     def get_download_url(self):
         """Get the download URL for this access"""
-        return self.download_url or self.asset.get_latest_version().file_url
+        if self.download_url:
+            return self.download_url
+        latest_version = self.asset.get_latest_version()
+        return latest_version.file_url.url if latest_version and latest_version.file_url else None
 
     def create_usage_event(self, usage_kind='file_download', ip_address=None, user_agent=''):
         """
