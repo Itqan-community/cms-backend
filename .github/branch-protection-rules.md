@@ -54,11 +54,24 @@ The above rules combined with the GitHub Actions workflow ensure:
 
 ## Setup Instructions
 
+### For GitHub Organization/Enterprise Accounts:
 1. Go to GitHub repository → Settings → Branches
 2. Click "Add rule" for each branch above
 3. Configure each rule according to the specifications
 4. Ensure the Deploy workflow is properly configured
 5. Test the flow with a sample PR
+
+### For Personal/Team Accounts (Alternative):
+1. **Use GitHub Actions enforcement** (already configured in `deploy.yml`)
+2. **Install pre-push hook** for local validation:
+   ```bash
+   cp .github/pre-push-hook.sh .git/hooks/pre-push
+   chmod +x .git/hooks/pre-push
+   ```
+3. **Follow manual process discipline**:
+   - Always create PRs for staging/main updates
+   - Never push directly to staging/main branches
+   - Use the workflow validation as safety net
 
 ## Branch Flow Validation
 
