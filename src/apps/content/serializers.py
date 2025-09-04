@@ -273,20 +273,100 @@ class LicenseSummarySerializer(serializers.Serializer):
     short_name = serializers.CharField(required=False)
     icon_url = serializers.URLField(required=False)
     is_default = serializers.BooleanField(default=False)
+    
+    @classmethod
+    def from_license_model(cls, license_obj):
+        """Create LicenseSummary from License model"""
+        return {
+            'code': license_obj.code,
+            'name': license_obj.name,
+            'short_name': license_obj.short_name,
+            'icon_url': license_obj.icon_url,
+            'is_default': license_obj.is_default
+        }
 
 
 class PublisherSummarySerializer(serializers.Serializer):
-    """Serializer for publisher summary in asset responses"""
+    """Serializer for publisher summary in asset responses - maps PublishingOrganization to OpenAPI Publisher"""
     id = serializers.IntegerField()
     name = serializers.CharField()
     thumbnail_url = serializers.URLField()
     bio = serializers.CharField(required=False)
     verified = serializers.BooleanField()
+    
+    @classmethod
+    def from_publishing_organization(cls, org):
+        """Create PublisherSummary from PublishingOrganization model"""
+        return {
+            'id': org.id,
+            'name': org.name,
+            'thumbnail_url': org.icone_image_url or '',  # Map icone_image_url -> thumbnail_url
+            'bio': org.bio or '',
+            'verified': org.verified
+        }
+
+
+class PublisherSerializer(serializers.Serializer):
+    """Full Publisher serializer - maps PublishingOrganization to OpenAPI Publisher schema"""
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    description = serializers.CharField()
+    bio = serializers.CharField()
+    thumbnail_url = serializers.URLField()
+    cover_url = serializers.URLField(required=False, allow_null=True)
+    location = serializers.CharField(required=False, allow_null=True)
+    website = serializers.URLField(required=False, allow_null=True)
+    verified = serializers.BooleanField()
+    social_links = serializers.DictField()
+    stats = serializers.DictField()
+    assets = serializers.ListField(child=serializers.DictField(), default=list)
+    
+    @classmethod
+    def from_publishing_organization(cls, org, request=None):
+        """Create full Publisher from PublishingOrganization model with computed stats"""
+        # Compute stats
+        assets_count = org.assets.filter(is_active=True).count()
+        resources_count = org.resources.filter(is_active=True).count()
+        total_downloads = sum(asset.download_count for asset in org.assets.filter(is_active=True))
+        
+        # Get assets summary for this publisher
+        assets_data = []
+        for asset in org.assets.filter(is_active=True)[:10]:  # Limit to first 10 assets
+            assets_data.append({
+                'id': asset.id,
+                'title': asset.title,
+                'description': asset.description,
+                'thumbnail_url': asset.thumbnail_url,
+                'category': asset.category,
+                'has_access': False,  # Would be computed based on user access
+                'download_count': asset.download_count,
+                'file_size': asset.file_size
+            })
+        
+        return {
+            'id': org.id,
+            'name': org.name,
+            'description': org.description,
+            'bio': org.bio,
+            'thumbnail_url': org.icone_image_url or '',  # Map icone_image_url -> thumbnail_url
+            'cover_url': org.cover_url,
+            'location': org.location,
+            'website': org.website,
+            'verified': org.verified,
+            'social_links': org.social_links or {},
+            'stats': {
+                'resources_count': resources_count,
+                'assets_count': assets_count,
+                'total_downloads': total_downloads,
+                'joined_at': org.created_at.isoformat()
+            },
+            'assets': assets_data
+        }
 
 
 class AssetSummarySerializer(serializers.Serializer):
-    """Serializer for asset summary in list view"""
-    id = serializers.UUIDField()
+    """Serializer for asset summary in list view - maps Asset model to OpenAPI AssetSummary"""
+    id = serializers.IntegerField()  # Changed from UUIDField to IntegerField to match our model
     title = serializers.CharField()
     description = serializers.CharField()
     thumbnail_url = serializers.URLField()
@@ -296,6 +376,31 @@ class AssetSummarySerializer(serializers.Serializer):
     has_access = serializers.BooleanField()
     download_count = serializers.IntegerField()
     file_size = serializers.CharField()
+    
+    @classmethod
+    def from_asset_model(cls, asset, user=None):
+        """Create AssetSummary from Asset model with computed fields"""
+        # Check if user has access to this asset
+        has_access = False
+        if user and user.is_authenticated:
+            # Check if user has AssetAccess for this asset
+            from .models import AssetAccess
+            has_access = AssetAccess.objects.filter(
+                user=user, asset=asset, is_active=True
+            ).exists()
+        
+        return {
+            'id': asset.id,
+            'title': asset.title,
+            'description': asset.description,
+            'thumbnail_url': asset.thumbnail_url,
+            'category': asset.category,
+            'license': LicenseSummarySerializer.from_license_model(asset.license),
+            'publisher': PublisherSummarySerializer.from_publishing_organization(asset.publishing_organization),
+            'has_access': has_access,
+            'download_count': asset.download_count,
+            'file_size': asset.file_size
+        }
 
 
 class AssetSnapshotSerializer(serializers.Serializer):
@@ -343,7 +448,7 @@ class RelatedAssetSerializer(serializers.Serializer):
 
 
 class LicenseDetailSerializer(serializers.Serializer):
-    """Serializer for detailed license information"""
+    """Serializer for detailed license information with computed usage_count"""
     code = serializers.CharField()
     name = serializers.CharField()
     short_name = serializers.CharField()
@@ -358,11 +463,34 @@ class LicenseDetailSerializer(serializers.Serializer):
     limitations = serializers.ListField(child=serializers.DictField(), default=list)
     usage_count = serializers.IntegerField()
     is_default = serializers.BooleanField()
+    
+    @classmethod
+    def from_license_model(cls, license_obj):
+        """Create LicenseDetail from License model with computed usage_count"""
+        # Compute usage count from related assets
+        usage_count = license_obj.assets.filter(is_active=True).count()
+        
+        return {
+            'code': license_obj.code,
+            'name': license_obj.name,
+            'short_name': license_obj.short_name,
+            'url': license_obj.url,
+            'icon_url': license_obj.icon_url,
+            'summary': license_obj.summary,
+            'full_text': license_obj.full_text,
+            'legal_code_url': license_obj.legal_code_url,
+            'license_terms': license_obj.license_terms or [],
+            'permissions': license_obj.permissions or [],
+            'conditions': license_obj.conditions or [],
+            'limitations': license_obj.limitations or [],
+            'usage_count': usage_count,  # Computed field
+            'is_default': license_obj.is_default
+        }
 
 
 class AssetDetailSerializer(serializers.Serializer):
-    """Serializer for detailed asset view"""
-    id = serializers.UUIDField()
+    """Serializer for detailed asset view - maps Asset model to OpenAPI Asset schema"""
+    id = serializers.IntegerField()  # Changed from UUIDField to IntegerField
     title = serializers.CharField()
     description = serializers.CharField()
     long_description = serializers.CharField()
@@ -376,6 +504,74 @@ class AssetDetailSerializer(serializers.Serializer):
     stats = AssetStatsSerializer()
     access = AssetAccessSerializer()
     related_assets = RelatedAssetSerializer(many=True)
+    
+    @classmethod
+    def from_asset_model(cls, asset, user=None):
+        """Create AssetDetail from Asset model with computed fields"""
+        # Check if user has access to this asset
+        has_access = False
+        if user and user.is_authenticated:
+            from .models import AssetAccess
+            has_access = AssetAccess.objects.filter(
+                user=user, asset=asset, is_active=True
+            ).exists()
+        
+        # Generate snapshots (mock implementation - would use actual snapshot logic)
+        snapshots_data = []
+        if asset.thumbnail_url:
+            snapshots_data.append({
+                'thumbnail_url': asset.thumbnail_url,
+                'title': f"{asset.title} - Preview",
+                'description': f"Preview of {asset.title}"
+            })
+        
+        # Get related assets (same category/publisher)
+        related_assets = asset.publishing_organization.assets.filter(
+            category=asset.category, is_active=True
+        ).exclude(id=asset.id)[:5]
+        
+        related_data = []
+        for related in related_assets:
+            related_data.append({
+                'id': related.id,
+                'title': related.title,
+                'thumbnail_url': related.thumbnail_url
+            })
+        
+        return {
+            'id': asset.id,
+            'title': asset.title,
+            'description': asset.description,
+            'long_description': asset.long_description or asset.description,
+            'thumbnail_url': asset.thumbnail_url,
+            'category': asset.category,
+            'license': LicenseDetailSerializer.from_license_model(asset.license),
+            'snapshots': snapshots_data,
+            'publisher': PublisherSummarySerializer.from_publishing_organization(asset.publishing_organization),
+            'resource': {
+                'id': asset.resource.id,
+                'title': asset.resource.title,
+                'description': asset.resource.description
+            } if asset.resource else None,
+            'technical_details': {
+                'file_size': asset.file_size,
+                'format': asset.format or 'Unknown',
+                'encoding': asset.encoding or 'UTF-8',
+                'version': asset.version or '1.0',
+                'language': asset.language or 'ar'
+            },
+            'stats': {
+                'download_count': asset.download_count,
+                'view_count': asset.view_count,
+                'created_at': asset.created_at,
+                'updated_at': asset.updated_at
+            },
+            'access': {
+                'has_access': has_access,
+                'requires_approval': not asset.is_public
+            },
+            'related_assets': related_data
+        }
 
 
 class AccessRequestResponseSerializer(serializers.Serializer):
