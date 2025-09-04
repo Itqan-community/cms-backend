@@ -93,7 +93,6 @@ The Itqan CMS provides **two separate admin interfaces** serving different purpo
 - **Branch**: `staging`
 - **Server IP**: `138.197.4.51`
 - **Auto-created**: Yes (via deployment script with `ensure_superuser` command)
-- **Security**: ✅ Redis vulnerability fixed (exposed container removed 2025-01-08)
 
 #### Production Environment
 **Base URL**: `https://api.cms.itqan.dev/`
