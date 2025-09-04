@@ -40,6 +40,12 @@ from apps.content.publisher_views import (
     publisher_list, publisher_members
 )
 
+# Import License Views
+from apps.content.license_views import (
+    LicenseListView, LicenseDetailView, license_usage_statistics,
+    license_terms, search_licenses, default_license
+)
+
 # Create API router
 router = DefaultRouter()
 
@@ -110,6 +116,14 @@ urlpatterns = [
     path('publishers/<int:publisher_id>/assets/', publisher_assets, name='publisher_assets'),
     path('publishers/<int:publisher_id>/statistics/', publisher_statistics, name='publisher_statistics'),
     path('publishers/<int:publisher_id>/members/', publisher_members, name='publisher_members'),
+    
+    # License endpoints
+    path('licenses/', LicenseListView.as_view(), name='license_list'),
+    path('licenses/default/', default_license, name='default_license'),
+    path('licenses/search/', search_licenses, name='search_licenses'),
+    path('licenses/<str:license_code>/', LicenseDetailView.as_view(), name='license_detail'),
+    path('licenses/<str:license_code>/statistics/', license_usage_statistics, name='license_usage_statistics'),
+    path('licenses/<str:license_code>/terms/', license_terms, name='license_terms'),
     
     # Authentication endpoints are in main config/urls.py under /api/v1/auth/
     # Using django-allauth based authentication

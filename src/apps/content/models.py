@@ -664,13 +664,35 @@ class Asset(BaseModel):
         ).exclude(id=self.id)[:limit]
 
     def increment_download_count(self):
-        """Increment download counter atomically"""
+        """Increment download counter with async processing"""
+        try:
+            from .tasks import update_asset_stats_async
+            # Try async update first
+            if update_asset_stats_async(self.id, 'download_count'):
+                # Optimistically update local instance without DB hit
+                self.download_count += 1
+                return
+        except ImportError:
+            pass
+        
+        # Fallback to synchronous atomic update
         from django.db.models import F
         Asset.objects.filter(id=self.id).update(download_count=F('download_count') + 1)
         self.refresh_from_db(fields=['download_count'])
 
     def increment_view_count(self):
-        """Increment view counter atomically"""
+        """Increment view counter with async processing"""
+        try:
+            from .tasks import update_asset_stats_async
+            # Try async update first
+            if update_asset_stats_async(self.id, 'view_count'):
+                # Optimistically update local instance without DB hit
+                self.view_count += 1
+                return
+        except ImportError:
+            pass
+        
+        # Fallback to synchronous atomic update
         from django.db.models import F
         Asset.objects.filter(id=self.id).update(view_count=F('view_count') + 1)
         self.refresh_from_db(fields=['view_count'])
@@ -1194,7 +1216,30 @@ class UsageEvent(BaseModel):
 
     @classmethod
     def track_asset_download(cls, user, asset, ip_address=None, user_agent=''):
-        """Track asset download event"""
+        """Track asset download event with async processing"""
+        # Try async processing first
+        try:
+            from .tasks import track_event_async
+            event_data = {
+                'developer_user_id': user.id,
+                'usage_kind': 'file_download',
+                'subject_kind': 'asset',
+                'asset_id': asset.id,
+                'metadata': {
+                    'asset_title': asset.title,
+                    'file_size': asset.file_size,
+                    'format': asset.format,
+                    'category': asset.category
+                },
+                'ip_address': ip_address,
+                'user_agent': user_agent
+            }
+            if track_event_async(event_data):
+                return None  # Event queued for async processing
+        except ImportError:
+            pass
+        
+        # Fallback to synchronous creation
         return cls.objects.create(
             developer_user=user,
             usage_kind='file_download',
