@@ -14,7 +14,7 @@ from drf_spectacular.openapi import OpenApiTypes
 
 from .models import Resource, Distribution
 from .serializers import AssetSummarySerializer, AssetDetailSerializer
-from apps.licensing.models import License, AccessRequest
+from apps.licensing.models import LegacyLicense, AccessRequest
 from apps.licensing.access_control import DistributionAccessController
 from apps.licensing.serializers import AccessRequestSerializer
 

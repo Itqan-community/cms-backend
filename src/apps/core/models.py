@@ -1,7 +1,6 @@
 """
 Core models and base classes for Itqan CMS
 """
-import uuid
 from django.db import models
 from django.utils import timezone
 
@@ -9,14 +8,12 @@ from django.utils import timezone
 class BaseModel(models.Model):
     """
     Abstract base model providing common functionality for all Itqan CMS models:
-    - UUID primary key
+    - Integer primary key
     - Timestamp tracking (created_at, updated_at)
     - Soft delete functionality (is_active)
     """
-    id = models.UUIDField(
+    id = models.AutoField(
         primary_key=True,
-        default=uuid.uuid4,
-        editable=False,
         help_text="Unique identifier for this record"
     )
     

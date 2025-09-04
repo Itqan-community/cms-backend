@@ -7,7 +7,7 @@ from django.utils import timezone
 from apps.core.models import BaseModel, ActiveObjectsManager, AllObjectsManager
 
 
-class UsageEvent(BaseModel):
+class LegacyUsageEvent(BaseModel):
     """
     Model for tracking all resource usage events for analytics, billing, and compliance.
     High-volume table that should be partitioned by date in production.
@@ -21,21 +21,21 @@ class UsageEvent(BaseModel):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='usage_events',
+        related_name='legacy_usage_events',
         help_text="User who triggered the event"
     )
     
     resource = models.ForeignKey(
         'content.Resource',
         on_delete=models.CASCADE,
-        related_name='usage_events',
+        related_name='legacy_usage_events',
         help_text="Resource that was accessed"
     )
     
     distribution = models.ForeignKey(
         'content.Distribution',
         on_delete=models.CASCADE,
-        related_name='usage_events',
+        related_name='legacy_usage_events',
         help_text="Specific distribution that was used"
     )
     
@@ -89,7 +89,7 @@ class UsageEvent(BaseModel):
     all_objects = AllObjectsManager()
 
     class Meta:
-        db_table = 'usage_event'
+        db_table = 'legacy_usage_event'
         verbose_name = 'Usage Event'
         verbose_name_plural = 'Usage Events'
         ordering = ['-occurred_at']

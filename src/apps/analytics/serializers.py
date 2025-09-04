@@ -3,7 +3,7 @@ Serializers for UsageEvent model and analytics data
 """
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import UsageEvent
+from .models import LegacyUsageEvent
 
 User = get_user_model()
 
@@ -25,7 +25,7 @@ class UsageEventSerializer(serializers.ModelSerializer):
     client_info = serializers.SerializerMethodField()
     
     class Meta:
-        model = UsageEvent
+        model = LegacyUsageEvent
         fields = [
             'id', 'user', 'user_email', 'user_name',
             'resource', 'resource_title', 'resource_type',
@@ -110,7 +110,7 @@ class UsageEventListSerializer(serializers.ModelSerializer):
     is_successful = serializers.SerializerMethodField()
     
     class Meta:
-        model = UsageEvent
+        model = LegacyUsageEvent
         fields = [
             'id', 'user_email', 'resource_title', 'event_type', 'event_type_display',
             'endpoint', 'bandwidth_total', 'is_successful', 'occurred_at'

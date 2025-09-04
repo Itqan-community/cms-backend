@@ -3,18 +3,27 @@ Content model translations for Itqan CMS
 Configures django-modeltranslation for English/Arabic bilingual support
 """
 from modeltranslation.translator import translator, TranslationOptions
-from .models import Resource, Distribution
-from apps.licensing.models import License
+from .models import Resource, Distribution, License, Asset
 
 
 class ResourceTranslationOptions(TranslationOptions):
     """Translation configuration for Resource model"""
     fields = (
-        'title',           # Main resource title
-        'description',     # Resource description
+        'name',           # Main resource name (was title)
+        'description',    # Resource description
     )
-    # Don't translate: resource_type, language, version, checksum, publisher, metadata, published_at
+    # Don't translate: category, status, slug, publishing_organization, default_license
     # These are technical/structural fields that shouldn't vary by language
+
+
+class AssetTranslationOptions(TranslationOptions):
+    """Translation configuration for Asset model"""
+    fields = (
+        'title',          # Display title for API
+        'description',    # Asset description
+        'long_description',  # Extended description
+    )
+    # Don't translate: name, category, format, version, language, file_size, etc.
 
 
 class DistributionTranslationOptions(TranslationOptions):
@@ -30,13 +39,16 @@ class DistributionTranslationOptions(TranslationOptions):
 class LicenseTranslationOptions(TranslationOptions):
     """Translation configuration for License model"""
     fields = (
-        'terms',           # Legal terms and conditions for using the resource
+        'name',           # License name
+        'summary',        # Brief license description
+        'full_text',      # Complete license text
     )
-    # Don't translate: license_type, resource, geographic_restrictions, usage_restrictions (JSON)
-    # requires_approval, effective_from, expires_at - these are structural/technical fields
+    # Don't translate: code, url, icon_url, legal_code_url, license_terms (JSON)
+    # permissions, conditions, limitations (JSON) - these are structured data
 
 
 # Register translation options
 translator.register(Resource, ResourceTranslationOptions)
+translator.register(Asset, AssetTranslationOptions)
 translator.register(Distribution, DistributionTranslationOptions)
 translator.register(License, LicenseTranslationOptions)

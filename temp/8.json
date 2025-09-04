@@ -1,0 +1,110 @@
+{
+  "task_id": 8,
+  "task_name": "Analytics and Distribution Models",
+  "description": "Implement UsageEvent and Distribution models for tracking and delivery",
+  "priority": "Medium",
+  "estimated_hours": 6,
+  "status": "Not Started",
+  "dependencies": [1],
+  "detailed_requirements": {
+    "objective": "Create analytics tracking and content distribution channel models per ERD",
+    "usage_event_model": {
+      "erd_fields": [
+        "id (integer primary key)",
+        "developer_user_id: int (FK to User)",
+        "usage_kind: enum('file_download', 'view', 'api_access')",
+        "subject_kind: enum('resource', 'asset')",
+        "resource_id: int (nullable, if subject_kind = 'resource')",
+        "asset_id: int (nullable, if subject_kind = 'asset')",
+        "metadata: JSONField",
+        "ip_address: GenericIPAddressField",
+        "user_agent: text",
+        "created_at: datetime",
+        "updated_at: datetime"
+      ],
+      "conditional_logic": {
+        "resource_tracking": "resource_id populated when subject_kind = 'resource'",
+        "asset_tracking": "asset_id populated when subject_kind = 'asset'",
+        "mutual_exclusion": "Only one of resource_id or asset_id should be set"
+      }
+    },
+    "distribution_model": {
+      "erd_fields": [
+        "id (integer primary key)",
+        "resource_id: int (FK to Resource)",
+        "format_type: enum('REST_JSON', 'GraphQL', 'ZIP', 'API')",
+        "endpoint_url: URLField (API endpoint or download URL)",
+        "version: string (distribution version identifier)",
+        "access_config: JSONField (API keys, rate limits, auth)",
+        "metadata: JSONField (format-specific config)",
+        "created_at: datetime",
+        "updated_at: datetime"
+      ],
+      "channel_types": {
+        "REST_JSON": "REST API JSON endpoints",
+        "GraphQL": "GraphQL API access",
+        "ZIP": "Direct ZIP file download",
+        "API": "Custom API endpoints"
+      }
+    }
+  },
+  "analytics_functionality": {
+    "event_tracking": [
+      "Track all asset downloads",
+      "Track asset detail page views", 
+      "Track resource package downloads",
+      "Track API endpoint usage"
+    ],
+    "data_collection": [
+      "User identification (developer_user_id)",
+      "Event classification (usage_kind, subject_kind)",
+      "Target identification (resource_id or asset_id)",
+      "Session data (ip_address, user_agent)",
+      "Custom metadata (file format, download size, etc)"
+    ],
+    "privacy_compliance": [
+      "Hash or anonymize IP addresses if required",
+      "Respect user privacy settings",
+      "Provide opt-out mechanisms"
+    ]
+  },
+  "distribution_channels": {
+    "zip_downloads": {
+      "purpose": "Complete resource packages",
+      "endpoint_pattern": "/resources/{id}/download",
+      "access_config": "Download permissions and rate limits"
+    },
+    "api_endpoints": {
+      "purpose": "Programmatic access to resource data",
+      "endpoint_pattern": "/api/v1/resources/{id}/data",
+      "access_config": "API keys, rate limits, authentication"
+    },
+    "direct_files": {
+      "purpose": "Individual asset file access",
+      "endpoint_pattern": "/assets/{id}/download", 
+      "access_config": "User access permissions"
+    }
+  },
+  "integration_points": {
+    "download_endpoints": "Create UsageEvent on every download",
+    "view_tracking": "Create UsageEvent on asset/resource views",
+    "api_usage": "Track API endpoint usage through Distribution",
+    "admin_analytics": "Dashboard showing usage statistics",
+    "publisher_stats": "Per-organization usage reporting"
+  },
+  "performance_considerations": {
+    "async_logging": "Use Celery for async event logging to avoid blocking requests",
+    "data_retention": "Archive old events to maintain performance",
+    "indexing": "Proper indexes on user_id, subject_kind, created_at",
+    "aggregation": "Pre-compute common statistics"
+  },
+  "acceptance_criteria": [
+    "UsageEvent model tracks all download and view events",
+    "Distribution model supports multiple delivery channels",
+    "Conditional foreign keys work correctly for resource/asset tracking",
+    "Analytics data collection doesn't impact API performance",
+    "Usage statistics can be queried efficiently",
+    "Admin interface shows usage analytics",
+    "Publisher statistics are available per organization"
+  ]
+}

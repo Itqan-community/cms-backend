@@ -9,7 +9,7 @@ from django.db.models import Sum
 from django.utils import timezone
 from datetime import timedelta
 
-from .models import UsageEvent
+from .models import LegacyUsageEvent
 from .serializers import (
     UsageEventSerializer, UsageEventListSerializer,
     UsageStatsSerializer, DailyUsageStatsSerializer
@@ -21,7 +21,7 @@ class UsageEventViewSet(viewsets.ReadOnlyModelViewSet):
     """
     ViewSet for UsageEvent analytics (read-only)
     """
-    queryset = UsageEvent.objects.all()
+    queryset = LegacyUsageEvent.objects.all()
     permission_classes = [UsageEventPermission]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['event_type', 'user', 'resource', 'distribution']
@@ -37,7 +37,7 @@ class UsageEventViewSet(viewsets.ReadOnlyModelViewSet):
     
     def get_queryset(self):
         """Filter queryset based on user permissions"""
-        queryset = UsageEvent.objects.all()
+        queryset = LegacyUsageEvent.objects.all()
         
         if self.request.user.is_admin():
             # Admin can see all events

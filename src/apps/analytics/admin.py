@@ -6,10 +6,10 @@ from django.utils.html import format_html
 from django.db.models import Count, Sum
 from django.utils import timezone
 from datetime import timedelta
-from .models import UsageEvent
+from .models import LegacyUsageEvent
 
 
-@admin.register(UsageEvent)
+@admin.register(LegacyUsageEvent)
 class UsageEventAdmin(admin.ModelAdmin):
     """Admin configuration for UsageEvent model"""
     list_display = [
@@ -17,8 +17,8 @@ class UsageEventAdmin(admin.ModelAdmin):
         'endpoint_short', 'bandwidth_total', 'occurred_at', 'is_successful_event'
     ]
     list_filter = [
-        'event_type', 'occurred_at', 'resource__resource_type',
-        'distribution__format_type', 'user__role'
+        'event_type', 'occurred_at', 
+        'distribution__format_type'
     ]
     search_fields = [
         'user__email', 'resource__title', 'endpoint', 

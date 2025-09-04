@@ -40,6 +40,7 @@ THIRD_PARTY_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
     'allauth.socialaccount.providers.github',
+    # Wagtail
     'wagtail.contrib.forms',
     'wagtail.contrib.redirects',
     'wagtail.embeds',
@@ -78,7 +79,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'allauth.account.middleware.AccountMiddleware',
+    'allauth.account.middleware.AccountMiddleware',  # Required for allauth
     'apps.api_keys.authentication.APIUsageMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -479,11 +480,11 @@ SITE_ID = 1
 # Django Allauth Configuration
 ACCOUNT_AUTHENTICATION_METHOD = 'email'
 ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_EMAIL_VERIFICATION = 'optional'  # Set to 'mandatory' for production
+ACCOUNT_EMAIL_VERIFICATION = 'none'  # Disable email verification to avoid allauth email tables
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_USER_MODEL_EMAIL_FIELD = 'email'
-ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
+ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = False  # Disable since we're not using email verification
 ACCOUNT_LOGOUT_ON_GET = False
 ACCOUNT_SESSION_REMEMBER = True
 ACCOUNT_UNIQUE_EMAIL = True
@@ -491,7 +492,7 @@ ACCOUNT_ADAPTER = 'apps.accounts.adapters.AccountAdapter'
 SOCIALACCOUNT_ADAPTER = 'apps.accounts.adapters.SocialAccountAdapter'
 
 # Social account configuration  
-SOCIALACCOUNT_EMAIL_VERIFICATION = 'optional'
+SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'  # Disable to avoid allauth email tables
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_QUERY_EMAIL = True
 
@@ -576,3 +577,13 @@ LOGGING = {
         },
     },
 }
+
+# Disable django-allauth migrations since we use our own user/email tables
+MIGRATION_MODULES = {
+    'account': None,
+    'socialaccount': None,
+}
+
+# Additional allauth settings to prevent email table creation
+ACCOUNT_EMAIL_CONFIRMATION_HMAC = False  # Disable HMAC-based confirmations
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1  # Short expiry since we don't use it
