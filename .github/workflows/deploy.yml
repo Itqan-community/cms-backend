@@ -1,10 +1,14 @@
 name: Deploy to DigitalOcean
 
 on:
+  # Auto-deploy on direct pushes to develop branch (development workflow)
+  push:
+    branches: [develop]
+  
   # Deployment triggered by pull request merges to enforce branch flow
   pull_request:
     types: [closed]
-    branches: [develop, staging, main]
+    branches: [staging, main]  # Only staging and main require PRs
   
   # Allow manual deployment trigger for develop branch only (for hotfixes)
   workflow_dispatch:
@@ -20,8 +24,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # Only run if PR was merged or manual dispatch
+    # Run on: direct push to develop, merged PRs to staging/main, or manual dispatch
     if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/develop') ||
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
       (github.event_name == 'workflow_dispatch')
     
@@ -30,7 +35,20 @@ jobs:
         run: |
           echo "🔍 Validating deployment rules..."
           
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            PUSH_BRANCH="${{ github.ref_name }}"
+            echo "   Direct Push to: $PUSH_BRANCH"
+            
+            # Only develop branch allows direct pushes for auto-deployment
+            if [[ "$PUSH_BRANCH" == "develop" ]]; then
+              echo "✅ Direct push to develop branch - auto-deployment authorized"
+            else
+              echo "❌ ERROR: Direct pushes only allowed to develop branch"
+              echo "   Use Pull Requests for staging and main branches"
+              exit 1
+            fi
+            
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
             BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
             HEAD_BRANCH="${{ github.event.pull_request.head.ref }}"
             
@@ -66,7 +84,9 @@ jobs:
         id: vars
         run: |
           # Determine target branch
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            TARGET_BRANCH="${{ github.ref_name }}"
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
             TARGET_BRANCH="${{ github.event.pull_request.base.ref }}"
           elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             TARGET_BRANCH="${{ github.event.inputs.branch }}"
