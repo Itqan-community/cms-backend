@@ -3,8 +3,8 @@ task_id,task_name,description,priority,estimated_hours,dependencies,status,detai
 2,User Model Alignment,Update existing User model to match ERD field specifications,High,4,1,Completed,temp/2.json
 3,Publishing Organization Models,Create PublishingOrganization and PublishingOrganizationMember models,High,6,1,Completed,temp/3.json
 4,License System Implementation,Implement comprehensive License model with terms and permissions,High,8,1,Completed,temp/4.json
-5,Resource and ResourceVersion Models,Create Resource and ResourceVersion models with semantic versioning,High,10,1,Not Started,temp/5.json
-6,Asset and AssetVersion Models,Implement Asset and AssetVersion models with proper relationships,High,8,1,Not Started,temp/6.json
+5,Resource and ResourceVersion Models,Create Resource and ResourceVersion models with semantic versioning,High,10,1,Completed,temp/5.json
+6,Asset and AssetVersion Models,Implement Asset and AssetVersion models with proper relationships,High,8,1,Completed,temp/6.json
 7,Access Control Models,Create AssetAccessRequest and AssetAccess models for permission workflow,High,8,1,Not Started,temp/7.json
 8,Analytics and Distribution Models,Implement UsageEvent and Distribution models for tracking and delivery,Medium,6,1,Not Started,temp/8.json
 9,Database Migration Strategy,Create comprehensive migration plan for existing data transformation,High,12,"1,2,3,4,5,6,7,8",Not Started,temp/9.json

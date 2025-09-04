@@ -311,6 +311,38 @@ class Resource(BaseModel):
     def __str__(self):
         return f"{self.name} ({self.category})"
 
+    def get_latest_version(self):
+        """Get the latest version of this resource"""
+        return self.versions.filter(is_latest=True).first()
+
+    def get_all_versions(self):
+        """Get all versions ordered by semantic version"""
+        return self.versions.all().order_by('-created_at')
+
+    def create_version(self, semvar, storage_url, file_type, size_bytes, 
+                      name=None, summary='', set_as_latest=True):
+        """Create a new version for this resource"""
+        return ResourceVersion.create_new_version(
+            resource=self,
+            semvar=semvar,
+            storage_url=storage_url,
+            type=file_type,
+            size_bytes=size_bytes,
+            name=name or self.name,
+            summary=summary,
+            set_as_latest=set_as_latest
+        )
+
+    @property
+    def latest_version(self):
+        """Property to get the latest version"""
+        return self.get_latest_version()
+
+    @property 
+    def version_count(self):
+        """Get the number of versions for this resource"""
+        return self.versions.count()
+
 
 # ============================================================================
 # 5. RESOURCE VERSION
@@ -382,6 +414,55 @@ class ResourceVersion(BaseModel):
 
     def __str__(self):
         return f"{self.resource.name} v{self.semvar}"
+
+    def save(self, *args, **kwargs):
+        """
+        Override save to implement is_latest constraint.
+        Only one version per resource can be is_latest=True.
+        """
+        if self.is_latest:
+            # Set all other versions of this resource to is_latest=False
+            ResourceVersion.objects.filter(
+                resource=self.resource,
+                is_latest=True
+            ).exclude(pk=self.pk).update(is_latest=False)
+        
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def create_new_version(cls, resource, semvar, storage_url, type, size_bytes, 
+                          name=None, summary='', set_as_latest=True):
+        """
+        Create a new version of a resource with proper version management.
+        """
+        if name is None:
+            name = resource.name
+        
+        version = cls.objects.create(
+            resource=resource,
+            name=name,
+            summary=summary,
+            semvar=semvar,
+            storage_url=storage_url,
+            type=type,
+            size_bytes=size_bytes,
+            is_latest=set_as_latest
+        )
+        
+        return version
+
+    @property
+    def version_number(self):
+        """Get version number tuple for comparison"""
+        try:
+            parts = self.semvar.split('.')
+            return tuple(int(part) for part in parts)
+        except (ValueError, AttributeError):
+            return (0, 0, 0)
+
+    def is_newer_than(self, other_version):
+        """Check if this version is newer than another version"""
+        return self.version_number > other_version.version_number
 
 
 # ============================================================================
@@ -493,6 +574,101 @@ class Asset(BaseModel):
     def __str__(self):
         return f"{self.title} ({self.category})"
 
+    @classmethod
+    def create_from_resource_version(cls, resource_version, asset_data):
+        """
+        Create an asset extracted from a resource version.
+        Inherits publisher and category from resource.
+        """
+        resource = resource_version.resource
+        
+        # Extract AssetVersion-specific data
+        file_url = asset_data.pop('file_url', '')
+        version_summary = asset_data.pop('version_summary', f"Extracted from {resource_version}")
+        
+        # Set defaults from resource if not provided
+        asset_data.setdefault('publishing_organization', resource.publishing_organization)
+        asset_data.setdefault('license', resource.default_license)
+        asset_data.setdefault('category', resource.category)
+        
+        # Create the asset
+        asset = cls.objects.create(**asset_data)
+        
+        # Create the asset version linking to resource version
+        AssetVersion.objects.create(
+            asset=asset,
+            resource_version=resource_version,
+            name=asset.title,
+            summary=version_summary,
+            file_url=file_url,
+            size_bytes=cls._parse_file_size_to_bytes(asset.file_size)
+        )
+        
+        return asset
+
+    @staticmethod
+    def _parse_file_size_to_bytes(file_size_str):
+        """Convert human readable file size to bytes"""
+        if not file_size_str:
+            return 0
+        
+        import re
+        
+        # Extract number and unit from string like "2.5 MB"
+        match = re.match(r'([0-9.]+)\s*([KMGTPE]?B)', file_size_str.upper())
+        if not match:
+            return 0
+        
+        size, unit = match.groups()
+        size = float(size)
+        
+        units = {
+            'B': 1,
+            'KB': 1024,
+            'MB': 1024**2,
+            'GB': 1024**3,
+            'TB': 1024**4,
+            'PB': 1024**5,
+            'EB': 1024**6
+        }
+        
+        return int(size * units.get(unit, 1))
+
+    def get_latest_version(self):
+        """Get the most recent version of this asset"""
+        return self.versions.order_by('-created_at').first()
+
+    def get_related_assets(self, limit=5):
+        """Get related assets from same category and publisher"""
+        return Asset.objects.filter(
+            category=self.category,
+            publishing_organization=self.publishing_organization,
+            is_active=True
+        ).exclude(id=self.id)[:limit]
+
+    def increment_download_count(self):
+        """Increment download counter atomically"""
+        from django.db.models import F
+        Asset.objects.filter(id=self.id).update(download_count=F('download_count') + 1)
+        self.refresh_from_db(fields=['download_count'])
+
+    def increment_view_count(self):
+        """Increment view counter atomically"""
+        from django.db.models import F
+        Asset.objects.filter(id=self.id).update(view_count=F('view_count') + 1)
+        self.refresh_from_db(fields=['view_count'])
+
+    @property
+    def size_bytes(self):
+        """Get file size in bytes (computed from human readable)"""
+        return self._parse_file_size_to_bytes(self.file_size)
+
+    @property
+    def is_public(self):
+        """Check if asset is publicly accessible (based on license)"""
+        # This would be determined by license terms
+        return self.license.code in ['cc0', 'cc-by-4.0'] if self.license else False
+
 
 # ============================================================================
 # 7. ASSET VERSION
@@ -545,6 +721,35 @@ class AssetVersion(BaseModel):
 
     def __str__(self):
         return f"{self.asset.name} -> {self.resource_version.semvar}"
+
+    @property
+    def human_readable_size(self):
+        """Convert bytes to human readable format"""
+        if self.size_bytes == 0:
+            return "0 B"
+        
+        import math
+        
+        size = self.size_bytes
+        units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB']
+        
+        if size == 0:
+            return "0 B"
+        
+        i = int(math.floor(math.log(size, 1024)))
+        p = math.pow(1024, i)
+        s = round(size / p, 2)
+        
+        return f"{s} {units[i]}"
+
+    def get_download_url(self):
+        """Get the download URL for this asset version"""
+        return self.file_url
+
+    @property
+    def resource_semvar(self):
+        """Get the semantic version of the parent resource"""
+        return self.resource_version.semvar
 
 
 # ============================================================================
