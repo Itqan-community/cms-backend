@@ -48,7 +48,7 @@ GITHUB_CLIENT_SECRET=e396cee9a3687f3e4ff72fc5c6f0f084fe62477d
 # CORS Configuration
 CORS_ALLOWED_ORIGINS=https://develop.cms.itqan.dev,https://cms.itqan.dev
 
-# Optional: Django Superuser (for initial setup)
+# Django Superuser (for initial setup)
 DJANGO_SUPERUSER_USERNAME=admin
 DJANGO_SUPERUSER_EMAIL=admin@itqan.dev
 DJANGO_SUPERUSER_PASSWORD=ItqanCMS2024!
