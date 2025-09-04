@@ -19,7 +19,10 @@ class RegisterSerializer(serializers.Serializer):
     first_name = serializers.CharField(max_length=150)
     last_name = serializers.CharField(max_length=150)
     phone_number = serializers.CharField(max_length=20, required=False, allow_blank=True)
-    title = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    job_title = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    
+    # Backward compatibility alias
+    title = serializers.CharField(max_length=255, required=False, allow_blank=True, write_only=True)
     
     def validate_email(self, value):
         """Check if email is already taken"""
@@ -39,6 +42,10 @@ class RegisterSerializer(serializers.Serializer):
         """Create new user"""
         password = validated_data.pop('password')
         
+        # Handle backward compatibility: title -> job_title
+        job_title = validated_data.get('job_title', '') or validated_data.get('title', '')
+        validated_data.pop('title', None)  # Remove title if present
+        
         # Create user using standard create method and set password separately
         user = User(
             email=validated_data['email'],
@@ -46,7 +53,7 @@ class RegisterSerializer(serializers.Serializer):
             first_name=validated_data['first_name'],
             last_name=validated_data['last_name'],
             phone_number=validated_data.get('phone_number', ''),
-            title=validated_data.get('title', ''),
+            job_title=job_title,
             auth_provider='email'
         )
         user.set_password(password)
@@ -89,18 +96,20 @@ class LoginSerializer(serializers.Serializer):
 
 class UserProfileSerializer(serializers.ModelSerializer):
     """
-    Serializer for user profile (API 1.4 & 1.5)
+    Serializer for user profile (API 1.4 & 1.5) - Updated for ERD User model
     """
     name = serializers.SerializerMethodField()
+    # Backward compatibility alias
+    title = serializers.CharField(source='job_title', read_only=True)
     
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'name', 'first_name', 'last_name', 'phone_number', 'title',
+            'id', 'email', 'name', 'first_name', 'last_name', 'phone_number', 'job_title', 'title',
             'avatar_url', 'bio', 'organization', 'location', 'website', 'github_username', 
-            'email_verified', 'profile_completed', 'auth_provider'
+            'email_verified', 'profile_completed', 'auth_provider', 'profile_data'
         ]
-        read_only_fields = ['id', 'email', 'email_verified', 'auth_provider']
+        read_only_fields = ['id', 'email', 'email_verified', 'auth_provider', 'title']
     
     def get_name(self, obj):
         """Get full name"""
@@ -109,14 +118,16 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
     """
-    Serializer for updating user profile (API 1.5)
+    Serializer for updating user profile (API 1.5) - Updated for ERD User model
     """
     name = serializers.CharField(write_only=True, required=False)
+    # Backward compatibility alias
+    title = serializers.CharField(write_only=True, required=False)
     
     class Meta:
         model = User
         fields = [
-            'name', 'first_name', 'last_name', 'phone_number', 'title',
+            'name', 'first_name', 'last_name', 'phone_number', 'job_title', 'title',
             'bio', 'organization', 'location', 'website', 'github_username'
         ]
     
@@ -129,14 +140,21 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
             instance.first_name = name_parts[0]
             instance.last_name = name_parts[1] if len(name_parts) > 1 else ''
         
+        # Handle backward compatibility: title -> job_title
+        if 'title' in validated_data:
+            title = validated_data.pop('title')
+            if not validated_data.get('job_title'):
+                validated_data['job_title'] = title
+        
         # Update other fields
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         
         instance.save()
         
-        # Update profile completion status
-        instance.update_profile_completion_status()
+        # Update profile completion status if method exists
+        if hasattr(instance, 'update_profile_completion_status'):
+            instance.update_profile_completion_status()
         
         return instance
 
@@ -168,7 +186,7 @@ class ErrorResponseSerializer(serializers.Serializer):
 
 def create_auth_response(user):
     """
-    Create authentication response with tokens and user data
+    Create authentication response with tokens and user data - Updated for ERD User model
     """
     refresh = RefreshToken.for_user(user)
     
@@ -182,8 +200,14 @@ def create_auth_response(user):
             'first_name': user.first_name,
             'last_name': user.last_name,
             'phone_number': user.phone_number,
-            'title': user.title,
+            'job_title': user.job_title,
+            'title': user.job_title,  # Backward compatibility alias
             'avatar_url': user.avatar_url,
+            'bio': user.bio,
+            'organization': user.organization,
+            'location': user.location,
+            'website': user.website,
+            'github_username': user.github_username,
             'auth_provider': user.auth_provider,
             'email_verified': user.email_verified,
             'profile_completed': user.profile_completed

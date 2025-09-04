@@ -29,9 +29,16 @@ from apps.api.views.landing import platform_statistics, platform_features, recen
 from apps.api.views.content_standards import ContentStandardsView, content_standards_simple
 
 # Import Asset Views
-# from apps.content.asset_views import (  # Temporarily disabled
-#     AssetListView, AssetDetailView, AssetRequestAccessView, AssetDownloadView
-# )
+from apps.content.asset_views import (
+    AssetListView, AssetDetailView, AssetRequestAccessView, AssetDownloadView,
+    asset_access_status, asset_related
+)
+
+# Import Publisher Views  
+from apps.content.publisher_views import (
+    PublisherDetailView, publisher_assets, publisher_statistics, 
+    publisher_list, publisher_members
+)
 
 # Create API router
 router = DefaultRouter()
@@ -89,11 +96,20 @@ urlpatterns = [
     # Search endpoints
     path('search/', include('apps.search.urls')),
     
-    # Asset endpoints (simplified frontend interface)
-    # path('assets/', AssetListView.as_view(), name='asset_list'),  # Temporarily disabled
-    # path('assets/<uuid:asset_id>/', AssetDetailView.as_view(), name='asset_detail'),  # Temporarily disabled
-    # path('assets/<uuid:asset_id>/request-access/', AssetRequestAccessView.as_view(), name='asset_request_access'),  # Temporarily disabled
-    # path('assets/<uuid:asset_id>/download/', AssetDownloadView.as_view(), name='asset_download'),  # Temporarily disabled
+    # Asset endpoints (ERD-aligned implementation)
+    path('assets/', AssetListView.as_view(), name='asset_list'),
+    path('assets/<int:asset_id>/', AssetDetailView.as_view(), name='asset_detail'),
+    path('assets/<int:asset_id>/request-access/', AssetRequestAccessView.as_view(), name='asset_request_access'),
+    path('assets/<int:asset_id>/download/', AssetDownloadView.as_view(), name='asset_download'),
+    path('assets/<int:asset_id>/access-status/', asset_access_status, name='asset_access_status'),
+    path('assets/<int:asset_id>/related/', asset_related, name='asset_related'),
+    
+    # Publisher endpoints (PublishingOrganization-based)
+    path('publishers/', publisher_list, name='publisher_list'),
+    path('publishers/<int:publisher_id>/', PublisherDetailView.as_view(), name='publisher_detail'),
+    path('publishers/<int:publisher_id>/assets/', publisher_assets, name='publisher_assets'),
+    path('publishers/<int:publisher_id>/statistics/', publisher_statistics, name='publisher_statistics'),
+    path('publishers/<int:publisher_id>/members/', publisher_members, name='publisher_members'),
     
     # Authentication endpoints are in main config/urls.py under /api/v1/auth/
     # Using django-allauth based authentication
