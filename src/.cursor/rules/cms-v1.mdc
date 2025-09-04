@@ -103,10 +103,78 @@ alwaysApply: true
 - **Type Safety**: Maintain strict TypeScript typing across frontend and API contracts
 
 ## Development Workflow
-### Branch Strategy
+
+### Branch Strategy & Protection Rules
+- **main**: Production-ready code, **MERGE-ONLY** from staging
+- **staging**: Pre-production branch, **MERGE-ONLY** from develop
 - **develop**: Primary development branch for new features and bug fixes
-- **staging**: Pre-production branch for final testing and validation  
-- **main**: Production-ready code, only updated through PRs from staging
+- **feature/***: Feature branches created from develop, merged back to develop
+
+### 🔒 ENFORCED Git Workflow Rules
+**CRITICAL**: These rules are strictly enforced and cannot be bypassed:
+
+1. **Branch Protection**:
+   - ❌ **main** and **staging** branches: NO direct commits/pushes allowed
+   - ✅ **develop** branch: Direct commits allowed for active development
+   - ✅ **feature/** branches: Direct commits allowed for feature development
+
+2. **Mandatory Change Flow**:
+   - ALL changes MUST start on `develop` branch (or feature branch created from develop)
+   - Changes MUST be tested locally BEFORE any remote push
+   - Changes MUST commit with descriptive but concise messages
+   - Changes MUST push to `origin/develop` after local testing passes
+
+3. **Branch Transition Rules**:
+   - `develop` → `staging`: ONLY via Pull Request + code review
+   - `staging` → `main`: ONLY via Pull Request + code review  
+   - `feature/*` → `develop`: Via Pull Request or direct merge after testing
+
+4. **CMS Rules File Updates**:
+   - When CMS rules are modified, automatic commit with message "Update CMS workflow rules"
+   - Must test locally immediately after rules change
+   - Must push to develop origin once local testing confirms functionality
+
+### Development Process (MANDATORY SEQUENCE)
+
+#### Step 1: Local Development
+```bash
+# Ensure you're on develop branch
+git checkout develop
+git pull origin develop
+
+# Make your changes
+# ... code changes ...
+
+# Test locally FIRST
+./dev.sh  # or appropriate local test command
+# Verify at http://local.cms.itqan.dev:8000
+```
+
+#### Step 2: Commit & Local Validation
+```bash
+# Commit with descriptive message
+git add .
+git commit -m "Brief descriptive message"
+
+# MANDATORY: Test locally again after commit
+./dev.sh
+# Full functionality test required
+```
+
+#### Step 3: Push to Develop
+```bash
+# Only push after local testing passes
+git push origin develop
+```
+
+#### Step 4: Environment Promotion (Optional)
+```bash
+# Staging promotion (via PR only)
+gh pr create --base staging --head develop --title "Promote to staging"
+
+# Production promotion (via PR only)  
+gh pr create --base main --head staging --title "Release to production"
+```
 
 ### Deployment Rules (ENFORCED)
 🔒 **Strict branch flow enforcement via GitHub Actions:**
@@ -116,36 +184,23 @@ alwaysApply: true
 4. Deployment triggers ONLY on successful PR merges (not direct pushes)
 5. Manual deployment available ONLY for develop branch (emergency hotfixes)
 
-### Development Process
-1. **Local Development** (`develop` branch):
-   - Make all changes on the `develop` branch
-   - Test fully locally on `http://local.cms.itqan.dev:8000`
-   - Ensure all features work correctly before promotion
-   - Run comprehensive testing (unit tests, integration tests, manual testing)
-
-2. **Staging Promotion** (`develop` → `staging`):
-   - Create Pull Request from `develop` to `staging` branch
-   - PR review required before merge
-   - Automatic deployment to staging environment: `https://staging.cms.itqan.dev`
-   - Perform final validation and acceptance testing
-
-3. **Production Promotion** (`staging` → `main`):
-   - Create Pull Request from `staging` to `main` branch
-   - Manual code review required before merge
-   - Automatic deployment to production: `https://cms.itqan.dev`
-   - Branch protection rules prevent direct pushes
-
 ### Environment Mapping
 - **develop** branch → `https://dev.cms.itqan.dev`
 - **staging** branch → `https://staging.cms.itqan.dev`
 - **main** branch → `https://cms.itqan.dev`
 - **local** development → `http://local.cms.itqan.dev:8000` (add hosts entry: `local.cms.itqan.dev` → `127.0.0.1`)
 
-### Testing Requirements
-- Full local testing must be completed before any branch promotion
-- All existing functionality must remain working
-- New features must be thoroughly tested in isolation and integration
-- Manual testing of critical user workflows required
+### Testing Requirements (MANDATORY)
+- ✅ **Local testing**: MUST pass before any remote push
+- ✅ **Functionality testing**: All existing features must remain working
+- ✅ **New feature testing**: Thoroughly test in isolation and integration
+- ✅ **Manual testing**: Critical user workflows must be manually verified
+- ✅ **Regression testing**: Ensure no existing functionality breaks
+
+### Violation Consequences
+- Direct commits to `main` or `staging`: **Immediate revert required**
+- Pushing untested code: **Rollback and re-test locally**
+- Skipping local testing: **Deployment block until proper testing**
 
 ## Environments & URLs
 - Production: `https://cms.itqan.dev`

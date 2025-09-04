@@ -10,6 +10,12 @@ from .models import (
     UsageEvent, Distribution
 )
 
+def get_file_url(file_field):
+    """Helper function to safely get URL from file field"""
+    if file_field and hasattr(file_field, 'url'):
+        return file_field.url
+    return ''
+
 User = get_user_model()
 
 
@@ -32,7 +38,7 @@ class LicenseSummarySerializer(serializers.Serializer):
             'code': license_obj.code,
             'name': license_obj.name,
             'short_name': license_obj.short_name or '',
-            'icon_url': license_obj.icon_url or '',
+            'icon_url': get_file_url(license_obj.icon_url),
             'is_default': license_obj.is_default
         }
 
@@ -72,7 +78,7 @@ class LicenseDetailSerializer(serializers.Serializer):
             'name': license_obj.name,
             'short_name': license_obj.short_name or '',
             'url': license_obj.url or '',
-            'icon_url': license_obj.icon_url or '',
+            'icon_url': get_file_url(license_obj.icon_url),
             'summary': license_obj.summary or '',
             'full_text': license_obj.full_text or '',
             'legal_code_url': license_obj.legal_code_url or '',
@@ -103,7 +109,7 @@ class PublisherSummarySerializer(serializers.Serializer):
         return {
             'id': org.id,
             'name': org.name,
-            'thumbnail_url': org.icone_image_url or '',  # Map icone_image_url -> thumbnail_url
+            'thumbnail_url': get_file_url(org.icone_image_url),  # Map icone_image_url -> thumbnail_url
             'bio': org.bio or '',
             'verified': getattr(org, 'verified', False)
         }
@@ -147,7 +153,7 @@ class PublisherSerializer(serializers.Serializer):
                 'id': asset.id,
                 'title': asset.title,
                 'description': asset.description,
-                'thumbnail_url': asset.thumbnail_url or '',
+                'thumbnail_url': get_file_url(asset.thumbnail_url),
                 'category': asset.category,
                 'has_access': cls._check_user_access(asset, request),
                 'download_count': asset.download_count,
@@ -159,8 +165,8 @@ class PublisherSerializer(serializers.Serializer):
             'name': org.name,
             'description': org.description or '',
             'bio': org.bio or '',
-            'thumbnail_url': org.icone_image_url or '',
-            'cover_url': getattr(org, 'cover_url', None),
+            'thumbnail_url': get_file_url(org.icone_image_url),
+            'cover_url': get_file_url(getattr(org, 'cover_url', None)),
             'location': org.location or '',
             'website': org.website or '',
             'verified': getattr(org, 'verified', False),
@@ -206,7 +212,7 @@ class AssetSummarySerializer(serializers.Serializer):
             'id': asset.id,
             'title': asset.title,
             'description': asset.description or '',
-            'thumbnail_url': asset.thumbnail_url or '',
+            'thumbnail_url': get_file_url(asset.thumbnail_url),
             'category': asset.category,
             'license': LicenseSummarySerializer.from_license_model(asset.license),
             'publisher': PublisherSummarySerializer.from_publishing_organization(asset.publishing_organization),
@@ -331,7 +337,7 @@ class AssetDetailSerializer(serializers.Serializer):
             related_data.append({
                 'id': related.id,
                 'title': related.title,
-                'thumbnail_url': related.thumbnail_url or '',
+                'thumbnail_url': get_file_url(related.thumbnail_url),
                 'category': related.category,
                 'publisher': PublisherSummarySerializer.from_publishing_organization(related.publishing_organization)
             })
@@ -341,7 +347,7 @@ class AssetDetailSerializer(serializers.Serializer):
             'title': asset.title,
             'description': asset.description or '',
             'long_description': asset.long_description or '',
-            'thumbnail_url': asset.thumbnail_url or '',
+            'thumbnail_url': get_file_url(asset.thumbnail_url),
             'category': asset.category,
             'license': LicenseDetailSerializer.from_license_model(asset.license),
             'publisher': PublisherSummarySerializer.from_publishing_organization(asset.publishing_organization),

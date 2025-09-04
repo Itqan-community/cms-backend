@@ -93,6 +93,15 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
+# File storage configuration for development
+# Override base.py MinIO settings to use local filesystem
+DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+
+# Local media settings
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 # Django Debug Toolbar (if installed)
 try:
     import debug_toolbar
