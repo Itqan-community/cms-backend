@@ -52,3 +52,4 @@ fi
 
 ---
 *This test file demonstrates the branch flow enforcement is working correctly.*
+Testing invalid flow
