@@ -74,6 +74,23 @@ class PublishingOrganization(BaseModel):
         help_text="Social media links as JSON"
     )
     
+    # Additional fields for API compatibility
+    contact_email = models.EmailField(
+        blank=True,
+        help_text="Contact email for the organization"
+    )
+    
+    website = models.URLField(
+        blank=True,
+        help_text="Organization website URL"
+    )
+    
+    location = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Organization location"
+    )
+    
     # Relationships
     members = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
