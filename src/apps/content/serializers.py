@@ -553,10 +553,10 @@ class AssetDetailSerializer(serializers.Serializer):
             'snapshots': snapshots_data,
             'publisher': PublisherSummarySerializer.from_publishing_organization(asset.publishing_organization),
             'resource': {
-                'id': asset.resource.id,
-                'title': asset.resource.title,
-                'description': asset.resource.description
-            } if asset.resource else None,
+                'id': asset.get_latest_version().resource_version.resource.id,
+                'title': asset.get_latest_version().resource_version.resource.name,
+                'description': asset.get_latest_version().resource_version.resource.description
+            } if asset.get_latest_version() and asset.get_latest_version().resource_version else None,
             'technical_details': {
                 'file_size': asset.file_size,
                 'format': asset.format or 'Unknown',
