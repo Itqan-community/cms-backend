@@ -1,10 +1,11 @@
-# ruff: noqa: ERA001, E501
+# ruff: noqa: E501
 """Base settings to build other settings files upon."""
 
 import ssl
 from pathlib import Path
 
 import environ
+from django.utils.translation import gettext_lazy as _
 
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent.parent
 APPS_DIR = BASE_DIR / "apps"
@@ -25,14 +26,13 @@ DEBUG = env.bool("DJANGO_DEBUG", False)
 # In Windows, this must be set to your system time zone.
 TIME_ZONE = "Asia/Riyadh"
 # https://docs.djangoproject.com/en/dev/ref/settings/#language-code
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = "en"
 # https://docs.djangoproject.com/en/dev/ref/settings/#languages
-# from django.utils.translation import gettext_lazy as _
-# LANGUAGES = [
-#     ('en', _('English')),
-#     ('fr-fr', _('French')),
-#     ('pt-br', _('Portuguese')),
-# ]
+
+LANGUAGES = [
+    ("en", _("English")),
+    ("ar", _("Arabic")),
+]
 # https://docs.djangoproject.com/en/dev/ref/settings/#site-id
 SITE_ID = 1
 # https://docs.djangoproject.com/en/dev/ref/settings/#use-i18n
@@ -50,16 +50,18 @@ POSTGRES_USER = env("POSTGRES_USER")
 POSTGRES_PASSWORD = env("POSTGRES_PASSWORD")
 POSTGRES_HOST = env("POSTGRES_HOST")
 POSTGRES_PORT = env("POSTGRES_PORT")
-DATABASE_URL=f"postgres://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
-DATABASES = {"default": {
-    "ENGINE": "django.db.backends.postgresql_psycopg2",
-    "NAME": POSTGRES_DB,
-    "USER": POSTGRES_USER,
-    "PASSWORD": POSTGRES_PASSWORD,
-    "HOST": POSTGRES_HOST,
-    "PORT": POSTGRES_PORT,
-    "ATOMIC_REQUESTS": True,
-}}
+DATABASE_URL = f"postgres://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": POSTGRES_DB,
+        "USER": POSTGRES_USER,
+        "PASSWORD": POSTGRES_PASSWORD,
+        "HOST": POSTGRES_HOST,
+        "PORT": POSTGRES_PORT,
+        "ATOMIC_REQUESTS": True,
+    },
+}
 # https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-DEFAULT_AUTO_FIELD
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -83,9 +85,9 @@ DJANGO_APPS = [
 ]
 THIRD_PARTY_APPS = [
     # 'modeltranslation',
-    'rest_framework',
-    'corsheaders',
-    'django_filters',
+    "rest_framework",
+    "corsheaders",
+    "django_filters",
     "allauth",
     "allauth.account",
     "allauth.mfa",
@@ -95,7 +97,6 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     "apps.users",
-
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -324,7 +325,6 @@ SOCIALACCOUNT_ADAPTER = "apps.users.adapters.SocialAccountAdapter"
 # https://docs.allauth.org/en/latest/socialaccount/configuration.html
 SOCIALACCOUNT_FORMS = {"signup": "apps.users.forms.UserSocialSignupForm"}
 
-LOCAL = False
-TEST_CASE = False
-PRODUCTION = False
-
+LOCAL = False  # if running locally
+TEST_CASE = False  # if running unit tests
+PRODUCTION = False  # if running in production

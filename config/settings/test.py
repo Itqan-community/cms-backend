@@ -3,7 +3,10 @@ With these settings, tests run faster.
 """
 
 from .base import *  # noqa: F403
+from .base import TEMPLATES
+from .base import env
 
+CELERY_TASK_EAGER_PROPAGATES = True
 TEST_CASE = True
 # GENERAL
 # ------------------------------------------------------------------------------
@@ -33,7 +36,5 @@ TEMPLATES[0]["OPTIONS"]["debug"] = True  # type: ignore[index]
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#media-url
 MEDIA_URL = "http://media.testserver/"
-
-CELERY_TASK_EAGER_PROPAGATES = True
 # Your stuff...
 # ------------------------------------------------------------------------------

@@ -32,6 +32,10 @@ services:
     volumes:
       - itqan_cms_backend_local_postgres_data:/var/lib/postgresql/data
       - itqan_cms_backend_local_postgres_data_backups:/backups
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     env_file:
       - ./.env
 
@@ -46,6 +50,8 @@ services:
     container_name: itqan_cms_backend_local_redis
     volumes:
       - itqan_cms_backend_local_redis_data:/data
+    env_file:
+      - ./.env
 
   celeryworker:
     <<: *django
@@ -55,6 +61,7 @@ services:
       - redis
       - postgres
       - mailpit
+      - django
     ports: []
     command: /start-celeryworker
 
@@ -66,6 +73,7 @@ services:
       - redis
       - postgres
       - mailpit
+      - django
     ports: []
     command: /start-celerybeat
 

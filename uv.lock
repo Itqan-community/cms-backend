@@ -238,6 +238,20 @@ wheels = [
 ]
 
 [[package]]
+name = "collectfasta"
+version = "3.3.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "django-storages" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d4/c1/c682073f620635799feff603a3236d6a8df30f1275db9e769b07551e4358/collectfasta-3.3.1.tar.gz", hash = "sha256:ea4b1ce0de8d4ad14338a774639bc1f5b40a90173432bc9d5ae4cd04eec069ac", size = 21572, upload-time = "2025-08-24T09:15:09.704Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/74/7c/76a42753ccda28a19bb11044e92c490cc75af1a0ead2a0f41403ee3a6d2d/collectfasta-3.3.1-py2.py3-none-any.whl", hash = "sha256:8b1e538183d9f4db32c8822737b1618b913665616f10ae92d4f256326c75f160", size = 28405, upload-time = "2025-08-24T09:15:08.298Z" },
+]
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 source = { registry = "https://pypi.org/simple" }
@@ -868,6 +882,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "celery" },
+    { name = "collectfasta" },
     { name = "django" },
     { name = "django-allauth", extra = ["mfa"] },
     { name = "django-anymail" },
@@ -923,6 +938,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "celery", specifier = "==5.5.3" },
+    { name = "collectfasta", specifier = ">=3.3.1" },
     { name = "django", specifier = "==5.1.12" },
     { name = "django-allauth", extras = ["mfa"], specifier = "==65.11.1" },
     { name = "django-anymail", extras = ["mailjet"], specifier = "==13.1" },

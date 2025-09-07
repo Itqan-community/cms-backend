@@ -36,6 +36,4 @@ wait_for_db "${POSTGRES_HOST}" "${POSTGRES_PORT}" 30
 
 >&2 echo 'PostgreSQL is available'
 
->&2 echo 'PostgreSQL is available'
-
 exec "$@"

@@ -1,1 +1,60 @@
 Itqan Team
+# PostgreSQL
+# ------------------------------------------------------------------------------
+POSTGRES_HOST=HassaanPC.local
+POSTGRES_PORT=5433
+POSTGRES_DB=itqan
+POSTGRES_USER=hassaan
+POSTGRES_PASSWORD=root
+
+# General
+# ------------------------------------------------------------------------------
+# DJANGO_READ_DOT_ENV_FILE=True
+DJANGO_SETTINGS_MODULE=config.settings.local
+DJANGO_SECRET_KEY=gbmG61w2cMdB16100d95yGgyYIZVRW08ttAJoHTH2OI33un8rDsxeb95tY0wj7U3
+DJANGO_ADMIN_URL=aRKiwdjWKK3x8jk0BmL7SPqBtvMFaDHB/
+DJANGO_ALLOWED_HOSTS=.api.cms.itqan.dev
+
+# Security
+# ------------------------------------------------------------------------------
+# TIP: better off using DNS, however, redirect is OK too
+DJANGO_SECURE_SSL_REDIRECT=False
+
+# Email
+# ------------------------------------------------------------------------------
+DJANGO_SERVER_EMAIL=
+
+MAILJET_API_KEY=
+MAILJET_SECRET_KEY=
+
+
+# AWS
+# ------------------------------------------------------------------------------
+DJANGO_AWS_ACCESS_KEY_ID=
+DJANGO_AWS_SECRET_ACCESS_KEY=
+DJANGO_AWS_STORAGE_BUCKET_NAME=
+
+# django-allauth
+# ------------------------------------------------------------------------------
+DJANGO_ACCOUNT_ALLOW_REGISTRATION=True
+
+# Gunicorn
+# ------------------------------------------------------------------------------
+WEB_CONCURRENCY=4
+
+# Sentry
+# ------------------------------------------------------------------------------
+SENTRY_DSN=
+
+
+# Redis
+# ------------------------------------------------------------------------------
+REDIS_URL=redis://HassaanPC.local:6379
+
+# Celery
+# ------------------------------------------------------------------------------
+CELERY_BROKER_URL=redis://HassaanPC.local:6379
+
+# Flower
+CELERY_FLOWER_USER=debug
+CELERY_FLOWER_PASSWORD=debug

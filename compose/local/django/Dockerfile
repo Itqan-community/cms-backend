@@ -17,8 +17,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   build-essential \
   # psycopg dependencies
   libpq-dev \
-  gettext
-#  wait-for-it
+  gettext \
+  netcat-openbsd
 
 # Requirements are installed here to ensure they will be cached.
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -46,7 +46,7 @@ RUN groupadd --gid 1000 dev-user \
 ENV PATH="/${APP_HOME}/.venv/bin:$PATH"
 ENV PYTHONPATH="${APP_HOME}/.venv/lib/python3.13/site-packages:$PYTHONPATH"
 
-COPY ./compose/production/django/entrypoint /entrypoint
+COPY ./compose/local/django/entrypoint /entrypoint
 RUN sed -i 's/\r$//g' /entrypoint
 RUN chmod +x /entrypoint
 

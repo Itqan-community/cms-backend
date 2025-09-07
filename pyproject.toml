@@ -53,11 +53,13 @@ indent_size = 2
 indent_size = 2
 
 [tool.ruff]
-target-version = "py312"
+target-version = "py313"
 # Exclude a variety of commonly ignored directories.
 extend-exclude = [
     "*/migrations/*.py",
     "staticfiles/*",
+  ".idea/*",
+  ".venv/*",
 ]
 
 [tool.ruff.lint]
@@ -176,6 +178,7 @@ authors = [
 requires-python = "==3.13.*"
 dependencies = [
     "celery==5.5.3",
+    "collectfasta>=3.3.1",
     "django==5.1.12",
     "django-allauth[mfa]==65.11.1",
     "django-anymail[mailjet]==13.1",
