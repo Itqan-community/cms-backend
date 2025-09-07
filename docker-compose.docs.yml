@@ -1,0 +1,17 @@
+services:
+  docs:
+    image: itqan_cms_backend_local_docs
+    container_name: itqan_cms_backend_local_docs
+    build:
+      context: .
+      dockerfile: ./compose/local/docs/Dockerfile
+    env_file:
+      - ./.env
+    volumes:
+      - /app/.venv
+      - ./docs:/docs:z
+      - ./config:/app/config:z
+      - ./itqan_cms_backend:/app/itqan_cms_backend:z
+    ports:
+      - '9000:9000'
+    command: /start-docs

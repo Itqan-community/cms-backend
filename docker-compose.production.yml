@@ -1,0 +1,77 @@
+volumes:
+  production_postgres_data: {}
+  production_postgres_data_backups: {}
+  production_traefik: {}
+
+  production_redis_data: {}
+
+
+
+services:
+  django: &django
+    build:
+      context: .
+      dockerfile: ./compose/production/django/Dockerfile
+
+    image: itqan_cms_backend_production_django
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - ./.env
+    command: /start
+
+  postgres:
+    build:
+      context: .
+      dockerfile: ./compose/production/postgres/Dockerfile
+    image: itqan_cms_backend_production_postgres
+    volumes:
+      - production_postgres_data:/var/lib/postgresql/data
+      - production_postgres_data_backups:/backups
+    env_file:
+      - ./.env
+  traefik:
+    build:
+      context: .
+      dockerfile: ./compose/production/traefik/Dockerfile
+    image: itqan_cms_backend_production_traefik
+    depends_on:
+      - django
+    volumes:
+      - production_traefik:/etc/traefik/acme
+    ports:
+      - '0.0.0.0:80:80'
+      - '0.0.0.0:443:443'
+      - '0.0.0.0:5555:5555'
+
+  redis:
+    image: docker.io/redis:6
+
+    volumes:
+      - production_redis_data:/data
+
+
+  celeryworker:
+    <<: *django
+    image: itqan_cms_backend_production_celeryworker
+    command: /start-celeryworker
+
+  celerybeat:
+    <<: *django
+    image: itqan_cms_backend_production_celerybeat
+    command: /start-celerybeat
+
+  flower:
+    <<: *django
+    image: itqan_cms_backend_production_flower
+    command: /start-flower
+
+  awscli:
+    build:
+      context: .
+      dockerfile: ./compose/production/aws/Dockerfile
+    env_file:
+      - ./.env
+    volumes:
+      - production_postgres_data_backups:/backups:z

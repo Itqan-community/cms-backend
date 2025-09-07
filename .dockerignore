@@ -1,64 +1,12 @@
-# Git
-.git
+.editorconfig
+.gitattributes
+.github
 .gitignore
-
-# Docker
-Dockerfile*
-docker-compose*
-.dockerignore
-
-# Environment files
-.env*
-!.env.example
-
-# Dependencies
-node_modules
-npm-debug.log*
-
-# Build outputs
-.next
-dist
-build
-.strapi
-
-# Logs
-logs
-*.log
-
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Coverage directory used by tools like istanbul
-coverage
-*.lcov
-
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# IDE
-.vscode
+.gitlab-ci.yml
 .idea
-*.swp
-*.swo
-
-# Temporary files
-tmp
-temp
-
-# Cache
-.cache
-.parcel-cache
-
-# Documentation
-docs
-README*.md
-!README.md
+.pre-commit-config.yaml
+.readthedocs.yml
+.travis.yml
+venv
+.git
+.envs
