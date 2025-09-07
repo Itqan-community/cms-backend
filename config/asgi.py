@@ -25,7 +25,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.production")
 django_application = get_asgi_application()
 
 # Import websocket application here, so apps from django_application are loaded first
-from config.websocket import websocket_application  # noqa: E402
+from config.websocket import websocket_application
 
 
 async def application(scope, receive, send):

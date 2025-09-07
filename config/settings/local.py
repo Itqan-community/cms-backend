@@ -1,4 +1,4 @@
-from .base import *  # noqa: F403
+from .base import *
 from .base import INSTALLED_APPS
 from .base import MIDDLEWARE
 from .base import env
@@ -15,7 +15,7 @@ SECRET_KEY = env(
     default="bOMzpmEyRmInMG9Wk6VV1g8sBOFxkWawkqBN7TEChSBOF6MAntI3ClYjTykGsyrg",
 )
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1"]  # noqa: S104
+ALLOWED_HOSTS = ["*"]
 
 # CACHES
 # ------------------------------------------------------------------------------

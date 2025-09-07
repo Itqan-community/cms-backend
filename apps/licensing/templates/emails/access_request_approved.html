@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Access Request Approved - Itqan CMS</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .header {
+        color: #669B80;
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 20px;
+      }
+
+      .success {
+        color: #28a745;
+        font-weight: bold;
+        font-size: 18px;
+        margin-bottom: 15px;
+      }
+
+      .content {
+        line-height: 1.6;
+        color: #333;
+      }
+
+      .details {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 4px;
+        margin: 20px 0;
+      }
+
+      .api-info {
+        background-color: #e3f2fd;
+        padding: 15px;
+        border-radius: 4px;
+        margin: 20px 0;
+        border-left: 4px solid #2196f3;
+      }
+
+      .button {
+        display: inline-block;
+        background-color: #669B80;
+        color: white;
+        padding: 12px 24px;
+        text-decoration: none;
+        border-radius: 4px;
+        margin: 20px 0;
+      }
+
+      .footer {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+        font-size: 14px;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">Access Request Approved</div>
+      <div class="success">✅ Your access request has been approved!</div>
+      <div class="content">
+        <p>Hello {{ requester.get_full_name }},</p>
+        <p>Great news! Your access request for the following resource has been approved:</p>
+        <div class="details">
+          <strong>Resource:</strong> {{ resource.title }}
+          <br />
+          <strong>Distribution Format:</strong> {{ distribution.format_type }}
+          <br />
+          <strong>Approved by:</strong> {{ approved_by.get_full_name }}
+          <br />
+          <strong>Approved on:</strong> {{ access_request.reviewed_at|date:"F j, Y g:i A" }}
+          <br />
+          {% if expires_at %}
+            <strong>Access expires:</strong> {{ expires_at|date:"F j, Y g:i A" }}
+            <br />
+          {% endif %}
+        </div>
+        {% if access_request.admin_notes %}
+          <div class="details">
+            <strong>Admin Notes:</strong>
+            <br />
+            {{ access_request.admin_notes }}
+          </div>
+        {% endif %}
+        <div class="api-info">
+          <strong>API Access Information:</strong>
+          <br />
+          You can now access this resource through our API at:
+          <br />
+          <code>{{ api_endpoint }}</code>
+          <br />
+          <br />
+          Please ensure you include your authentication token in all API requests.
+        </div>
+        <p>Thank you for using Itqan CMS. If you have any questions, please contact our support team.</p>
+      </div>
+      <div class="footer">
+        <p>
+          This is an automated notification from Itqan CMS.
+          <br />
+          Please do not reply to this email.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

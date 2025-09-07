@@ -1,4 +1,3 @@
-# ruff: noqa: E501
 """Base settings to build other settings files upon."""
 
 import ssl
@@ -82,6 +81,7 @@ DJANGO_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.admin",
+    "django.forms",
 ]
 THIRD_PARTY_APPS = [
     # 'modeltranslation',

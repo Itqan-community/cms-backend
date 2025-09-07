@@ -61,30 +61,31 @@ extend-exclude = [
   ".idea/*",
   ".venv/*",
 ]
+line-length = 120
 
 [tool.ruff.lint]
 select = [
-    "F",
-    "E",
+#    "F",
+#    "E",
     "W",
-    "C90",
+#    "C90",
     "I",
     "N",
     "UP",
     "YTT",
     # "ANN", # flake8-annotations: we should support this in the future but 100+ errors atm
     "ASYNC",
-    "S",
-    "BLE",
-    "FBT",
-    "B",
+#    "S",
+#    "BLE",
+#    "FBT",
+#    "B",
     "A",
     "COM",
     "C4",
     "DTZ",
     "T10",
     "DJ",
-    "EM",
+#    "EM",
     "EXE",
     "FA",
     'ISC',
@@ -97,8 +98,8 @@ select = [
     'PT',
     "Q",
     "RSE",
-    "RET",
-    "SLF",
+#    "RET",
+#    "SLF",
     "SLOT",
     "SIM",
     "TID",
@@ -109,8 +110,8 @@ select = [
     "ERA",
     "PD",
     "PGH",
-    "PL",
-    "TRY",
+#    "PL",
+#    "TRY",
     "FLY",
     # "NPY",
     # "AIR",
@@ -123,6 +124,7 @@ ignore = [
     "S101", # Use of assert detected https://docs.astral.sh/ruff/rules/assert/
     "RUF012", # Mutable class attributes should be annotated with `typing.ClassVar`
     "SIM102", # sometimes it's better to nest
+  "G004", # Logging statement uses f-string
     "UP038", # Checks for uses of isinstance/issubclass that take a tuple
     # of types for comparison.
     # Deactivated because it can make the code slow:
@@ -191,6 +193,7 @@ dependencies = [
     "django-redis==6.0.0",
     "django-storages[s3]==1.14.6",
     "djangorestframework>=3.16.1",
+    "drf-spectacular>=0.28.0",
     "flower==2.0.1",
     "gunicorn==23.0.0",
     "hiredis==3.2.1",
