@@ -93,6 +93,11 @@ alwaysApply: true
 
 ## Development Guidelines
 - **Migration policy**: Never drop columns, mark deprecated
+- **Django Migrations**: ALWAYS use `python manage.py makemigrations` command for creating migrations
+- **Migration Workflow**: 
+  - Create migrations: `python manage.py makemigrations`
+  - Apply migrations: `python manage.py migrate`
+  - NEVER manually create migration files
 - **Scaling**: Design for read-heavy workloads
 - **Security**: Separate admin/public interfaces
 - **Testing**: Test Publisher and Consumer workflows separately

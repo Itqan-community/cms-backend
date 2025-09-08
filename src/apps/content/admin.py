@@ -223,15 +223,15 @@ class ResourceVersionAdmin(admin.ModelAdmin):
 @admin.register(Asset)
 class AssetAdmin(admin.ModelAdmin):
     """Enhanced admin for Assets"""
-    list_display = ['title', 'publishing_organization', 'category', 'license', 'download_count', 'view_count', 'access_requests_count', 'created_at']
-    list_filter = ['category', 'license', 'publishing_organization', 'format', 'created_at']
+    list_display = ['title', 'get_publishing_organization', 'category', 'license', 'download_count', 'view_count', 'access_requests_count', 'created_at']
+    list_filter = ['category', 'license', 'resource__publishing_organization', 'format', 'created_at']
     search_fields = ['title', 'name', 'description', 'long_description']
     inlines = [AssetVersionInline]
-    autocomplete_fields = ['publishing_organization', 'license']
+    autocomplete_fields = ['resource', 'license']
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('title', 'name', 'publishing_organization', 'category')
+            'fields': ('title', 'name', 'resource', 'category')
         }),
         ('Content', {
             'fields': ('description', 'long_description', 'thumbnail_url')
@@ -256,12 +256,18 @@ class AssetAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         """Optimize queryset with annotations"""
         return super().get_queryset(request).select_related(
-            'publishing_organization', 'license'
+            'resource__publishing_organization', 'license'
         ).annotate(
             access_requests_count=Count('access_requests'),
             user_accesses_count=Count('user_accesses')
         )
     
+    def get_publishing_organization(self, obj):
+        """Display publishing organization through resource"""
+        return obj.resource.publishing_organization if obj.resource else None
+    get_publishing_organization.short_description = 'Publisher'
+    get_publishing_organization.admin_order_field = 'resource__publishing_organization'
+
     def access_requests_count(self, obj):
         return obj.access_requests_count
     access_requests_count.short_description = 'Access Requests'
