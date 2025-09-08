@@ -130,9 +130,7 @@ except ImportError:
     # Sentry SDK not installed or configured; skipping error monitoring
     pass
 
-# Production Wagtail settings
-WAGTAIL_CACHE = True
-WAGTAILADMIN_BASE_URL = 'https://cms.itqan.com'
+# Production-specific settings
 
 # Force HTTPS in allauth callback URLs
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'

@@ -7,9 +7,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
-from wagtail.admin import urls as wagtailadmin_urls
-from wagtail import urls as wagtail_urls
-from wagtail.documents import urls as wagtaildocs_urls
+# Wagtail removed - using Django Admin in V1
 import os
 
 def health_check(request):
@@ -47,9 +45,7 @@ urlpatterns = [
     # Django Admin
     path('django-admin/', admin.site.urls),
     
-    # Wagtail CMS
-    path('cms/', include(wagtailadmin_urls)),
-    path('documents/', include(wagtaildocs_urls)),
+    # Wagtail CMS removed - using Django Admin in V1
     
     # API Routes
     path('api/v1/', include('apps.api.urls')),
@@ -66,8 +62,7 @@ urlpatterns = [
     # Media Library
     path('', include('apps.medialib.urls')),
     
-    # Wagtail frontend (catch-all for CMS pages)
-    path('', include(wagtail_urls)),
+    # Wagtail frontend removed - using Django Admin in V1
 ]
 
 # Serve media files in development
