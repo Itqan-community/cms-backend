@@ -20,7 +20,7 @@ from apps.accounts.views import RoleViewSet, UserViewSet
 from apps.content.views import ResourceViewSet, DistributionViewSet, WorkflowViewSet, workflow_permissions
 # from apps.licensing.views import LicenseViewSet, AccessRequestViewSet  # Temporarily disabled
 from apps.analytics.views import UsageEventViewSet
-from apps.medialib.views import MediaFileViewSet, MediaFolderViewSet, MediaAttachmentViewSet
+# MediaLib views removed in V1 cleanup
 from apps.api_keys.views import APIKeyViewSet, APIKeyUsageViewSet, RateLimitEventViewSet, APIKeyStatisticsViewSet
 
 # Import Landing Page Views
@@ -60,9 +60,7 @@ router.register(r'distributions', DistributionViewSet, basename='distribution')
 router.register(r'usage-events', UsageEventViewSet, basename='usageevent')
 
 # Media Library ViewSets
-router.register(r'media/files', MediaFileViewSet, basename='mediafile')
-router.register(r'media/folders', MediaFolderViewSet, basename='mediafolder')
-router.register(r'media/attachments', MediaAttachmentViewSet, basename='mediaattachment')
+# MediaLib API endpoints removed in V1 cleanup
 
 # Workflow Management ViewSet
 router.register(r'workflow', WorkflowViewSet, basename='workflow')
@@ -103,8 +101,7 @@ urlpatterns = [
     # Workflow endpoints
     path('workflow/permissions/', workflow_permissions, name='workflow_permissions'),
     
-    # Search endpoints
-    path('search/', include('apps.search.urls')),
+    # Search endpoints removed in V1 cleanup
     
     # Asset endpoints (ERD-aligned implementation)
     path('assets/', AssetListView.as_view(), name='asset_list'),

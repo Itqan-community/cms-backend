@@ -156,8 +156,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CORS_ALLOW_CREDENTIALS = True
 
-# Wagtail settings for staging
-WAGTAILADMIN_BASE_URL = 'https://staging.api.cms.itqan.dev'
+# Staging-specific settings
 
 # API Rate limiting for staging (more lenient than production)
 REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {

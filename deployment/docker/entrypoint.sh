@@ -20,10 +20,18 @@ python manage.py migrate --noinput
 echo "Collecting static files..."
 python manage.py collectstatic --noinput
 
-# Ensure superuser exists with correct password
+# Create superuser if it doesn't exist
 if [ -n "${DJANGO_SUPERUSER_EMAIL}" ] && [ -n "${DJANGO_SUPERUSER_PASSWORD}" ]; then
-    echo "Ensuring superuser exists with correct password..."
-    python manage.py ensure_superuser --reset-password || echo "Failed to create/update superuser"
+    echo "Creating superuser if not exists..."
+    python manage.py shell -c "
+from django.contrib.auth import get_user_model
+User = get_user_model()
+if not User.objects.filter(email='${DJANGO_SUPERUSER_EMAIL}').exists():
+    User.objects.create_superuser('${DJANGO_SUPERUSER_USERNAME:-admin}', '${DJANGO_SUPERUSER_EMAIL}', '${DJANGO_SUPERUSER_PASSWORD}')
+    print('Superuser created successfully')
+else:
+    print('Superuser already exists')
+" || echo "Failed to create superuser"
 fi
 
 echo "Starting Gunicorn server..."

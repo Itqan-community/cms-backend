@@ -40,20 +40,6 @@ THIRD_PARTY_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
     'allauth.socialaccount.providers.github',
-    # Wagtail
-    'wagtail.contrib.forms',
-    'wagtail.contrib.redirects',
-    'wagtail.embeds',
-    'wagtail.sites',
-    'wagtail.users',
-    'wagtail.snippets',
-    'wagtail.documents',
-    'wagtail.images',
-    'wagtail.search',
-    'wagtail.admin',
-    'wagtail',
-    'modelcluster',
-    'taggit',
 ]
 
 LOCAL_APPS = [
@@ -62,9 +48,7 @@ LOCAL_APPS = [
     'apps.content',
     'apps.licensing',
     'apps.analytics',
-    'apps.search',
     'apps.api',
-    'apps.medialib',
     'apps.api_keys',
     'mock_api',  # Mock API for development and testing
 ]
@@ -83,7 +67,6 @@ MIDDLEWARE = [
     'apps.api_keys.authentication.APIUsageMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'wagtail.contrib.redirects.middleware.RedirectMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -221,12 +204,8 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
-# Wagtail Settings
-WAGTAIL_SITE_NAME = 'Itqan CMS'
-WAGTAIL_I18N_ENABLED = True
-
-# Base URL to use when referring to full URLs within the Wagtail admin backend
-WAGTAILIMAGES_EXTENSIONS = ['gif', 'jpg', 'jpeg', 'png', 'webp']
+# Image file extensions for uploads
+ALLOWED_IMAGE_EXTENSIONS = ['gif', 'jpg', 'jpeg', 'png', 'webp']
 
 # Custom user model
 AUTH_USER_MODEL = 'accounts.User'

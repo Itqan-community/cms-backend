@@ -185,13 +185,14 @@ class ResourceAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related(
             'publishing_organization', 'default_license'
         ).annotate(
-            version_count=Count('versions')
+            annotated_version_count=Count('versions')
         )
     
     def version_count(self, obj):
-        return obj.version_count
+        # Prefer annotated value; fall back to model property
+        return getattr(obj, 'annotated_version_count', obj.version_count)
     version_count.short_description = 'Versions'
-    version_count.admin_order_field = 'version_count'
+    version_count.admin_order_field = 'annotated_version_count'
     
     def latest_version(self, obj):
         latest = obj.get_latest_version()
@@ -203,9 +204,10 @@ class ResourceAdmin(admin.ModelAdmin):
     def view_versions(self, obj):
         """Link to view resource versions"""
         url = reverse('admin:content_resourceversion_changelist')
+        count = getattr(obj, 'annotated_version_count', obj.version_count)
         return format_html(
             '<a href="{}?resource__id__exact={}">View Versions ({})</a>',
-            url, obj.pk, obj.version_count
+            url, obj.pk, count
         )
     view_versions.short_description = 'Versions'
 
