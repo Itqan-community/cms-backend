@@ -70,10 +70,18 @@ ENVEOF
     docker compose -f docker-compose.develop.yml ps
     
     echo "📋 Checking application logs..."
-    docker compose -f docker-compose.develop.yml logs web --tail=20
+    docker compose -f docker-compose.develop.yml logs web --tail=30
     
-    echo "🌐 Testing health endpoint..."
-    curl -f http://localhost:8000/health || echo "❌ Health check failed"
+    echo "🩺 Waiting for health check to pass..."
+    for i in {1..10}; do
+        if curl -f http://localhost:8000/health/; then
+            echo "✅ Health check passed!"
+            break
+        else
+            echo "⏳ Health check failed, attempt $i/10. Waiting 10 seconds..."
+            sleep 10
+        fi
+    done
     
     echo ""
     echo "✅ Deployment completed!"

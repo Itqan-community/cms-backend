@@ -34,8 +34,8 @@
         format json
     }
 
-    # Health check endpoint
-    handle /health {
-        respond "OK" 200
+    # Health check endpoints - proxy to Django for proper health checks
+    handle /health* {
+        reverse_proxy web:8000
     }
 }
