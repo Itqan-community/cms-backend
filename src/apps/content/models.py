@@ -1062,7 +1062,7 @@ class AssetAccess(BaseModel):
     )
     
     # Managers
-    objects = ActiveObjectsManager()
+    objects = AllObjectsManager()
     all_objects = AllObjectsManager()
 
     class Meta:
