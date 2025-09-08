@@ -18,8 +18,6 @@ def cleanup_admin_models():
         'content', 
         'licensing',
         'analytics',
-        'search',
-        'medialib',
         'api_keys',
         'mock_api',
         'core',

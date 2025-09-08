@@ -59,8 +59,7 @@ urlpatterns = [
     # Django Allauth URLs
     path('accounts/', include('allauth.urls')),
     
-    # Media Library
-    path('', include('apps.medialib.urls')),
+    # Media Library removed in V1 cleanup
     
     # Wagtail frontend removed - using Django Admin in V1
 ]

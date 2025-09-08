@@ -48,9 +48,7 @@ LOCAL_APPS = [
     'apps.content',
     'apps.licensing',
     'apps.analytics',
-    'apps.search',
     'apps.api',
-    'apps.medialib',
     'apps.api_keys',
     'mock_api',  # Mock API for development and testing
 ]
