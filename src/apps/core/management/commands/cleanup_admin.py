@@ -31,8 +31,6 @@ class Command(BaseCommand):
             'content', 
             'licensing',
             'analytics',
-            'search',
-            'medialib',
             'api_keys',
             'mock_api',
             'core',

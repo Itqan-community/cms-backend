@@ -48,7 +48,7 @@ class RoleSerializer(serializers.ModelSerializer):
         valid_categories = {
             'users', 'roles', 'resources', 'licenses', 'distributions',
             'access_requests', 'usage_events', 'system', 'workflow',
-            'media', 'search', 'api'
+            'api'
         }
         
         valid_actions = {
@@ -230,7 +230,7 @@ class PermissionCheckSerializer(serializers.Serializer):
         valid_resources = {
             'users', 'roles', 'resources', 'licenses', 'distributions',
             'access_requests', 'usage_events', 'system', 'workflow',
-            'media', 'search', 'api'
+            'api'
         }
         if value not in valid_resources:
             raise serializers.ValidationError(f"Invalid resource: {value}")

@@ -17,16 +17,7 @@ try:
 except ImportError:
     ALLAUTH_AVAILABLE = False
 
-# Import wagtail models to unregister
-try:
-    from wagtail.models import Page, Site as WagtailSite
-    from wagtail.users.models import UserProfile
-    from wagtail.images.models import Image, Rendition
-    from wagtail.documents.models import Document
-    from wagtail.snippets.models import register_snippet
-    WAGTAIL_AVAILABLE = True
-except ImportError:
-    WAGTAIL_AVAILABLE = False
+# Wagtail not used in V1
 
 # Import model translation models to unregister
 try:
@@ -55,8 +46,6 @@ class AdminConfig:
         'content', 
         'licensing',
         'analytics',
-        'search',
-        'medialib',
         'api_keys',
         'mock_api',
         'core',
@@ -82,20 +71,7 @@ class AdminConfig:
         ('socialaccount', 'SocialToken'),
     ]
     
-    # Wagtail models to hide
-    WAGTAIL_MODELS_TO_HIDE = [
-        ('wagtailcore', 'Page'),
-        ('wagtailcore', 'Site'),
-        ('wagtailusers', 'UserProfile'),
-        ('wagtailimages', 'Image'),
-        ('wagtailimages', 'Rendition'),
-        ('wagtaildocs', 'Document'),
-        ('wagtailforms', 'FormSubmission'),
-        ('wagtailredirects', 'Redirect'),
-        ('wagtailembeds', 'Embed'),
-        ('wagtailsearch', 'Query'),
-        ('wagtailsearch', 'QueryDailyHits'),
-    ]
+    # Wagtail models removed - not used in V1
     
     # Other third-party models to hide
     OTHER_MODELS_TO_HIDE = [
@@ -132,12 +108,7 @@ class AdminConfig:
                 if model:
                     models_to_unregister.append(model)
         
-        # Collect Wagtail models if available
-        if WAGTAIL_AVAILABLE:
-            for app_label, model_name in cls.WAGTAIL_MODELS_TO_HIDE:
-                model = cls.get_model_to_hide(app_label, model_name)
-                if model:
-                    models_to_unregister.append(model)
+        # Wagtail models removed - not used in V1
         
         # Collect other third-party models
         for app_label, model_name in cls.OTHER_MODELS_TO_HIDE:
@@ -187,8 +158,6 @@ def final_admin_cleanup():
         'content', 
         'licensing',
         'analytics',
-        'search',
-        'medialib',
         'api_keys',
         'mock_api',
         'core',

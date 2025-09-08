@@ -1,0 +1,33 @@
+Production API Test Results - Thu Sep  4 18:09:40 SAST 2025
+Testing Base URL: https://api.cms.itqan.dev/api/v1
+============================================
+[GET] /health - Status: 301 - Time: 0.799844s - Health check endpoint
+[GET] /config - Status: 301 - Time: 0.704360s - Application configuration
+[GET] /content-standards - Status: 301 - Time: 0.732225s - Content quality standards
+[GET] /licenses - Status: 301 - Time: 0.756001s - List all licenses
+[GET] /licenses/cc0 - Status: 301 - Time: 0.730582s - Get CC0 license details
+[GET] /licenses/cc-by-4.0 - Status: 301 - Time: 0.743192s - Get CC BY 4.0 license details
+[GET] /assets - Status: 301 - Time: 0.795782s - List all assets
+[GET] /assets?category=mushaf - Status: 301 - Time: 0.767949s - Filter assets by mushaf category
+[GET] /assets?category=tafsir - Status: 301 - Time: 0.750448s - Filter assets by tafsir category
+[GET] /assets?category=recitation - Status: 301 - Time: 0.702506s - Filter assets by recitation category
+[GET] /assets?license_code=cc0 - Status: 301 - Time: 0.728870s - Filter assets by CC0 license
+[GET] /assets/1 - Status: 301 - Time: 0.806779s - Get asset details for ID 1
+[GET] /assets/2 - Status: 301 - Time: 0.756629s - Get asset details for ID 2
+[GET] /assets/999 - Status: 301 - Time: 0.735560s - Test non-existent asset
+[GET] /publishers/1 - Status: 301 - Time: 0.725684s - Get publisher details for ID 1
+[GET] /publishers/999 - Status: 301 - Time: 0.732437s - Test non-existent publisher
+[POST] /auth/register - Status: 301 - Time: 0.767540s - User registration
+[POST] /auth/login - Status: 301 - Time: 0.726360s - User login
+[GET] /auth/oauth/google/start - Status: 301 - Time: 0.767317s - Google OAuth start
+[GET] /auth/oauth/github/start - Status: 301 - Time: 0.707084s - GitHub OAuth start
+[POST] /auth/token/refresh - Status: 301 - Time: 0.732884s - Token refresh
+[GET] /auth/profile - Status: 301 - Time: 0.735911s - Get user profile (protected)
+[PUT] /auth/profile - Status: 301 - Time: 0.766156s - Update user profile (protected)
+[POST] /auth/logout - Status: 301 - Time: 0.740669s - User logout (protected)
+[POST] /assets/1/request-access - Status: 301 - Time: 0.770720s - Request asset access (protected)
+[GET] /assets/1/download - Status: 301 - Time: 0.755084s - Download asset (protected)
+[GET] /resources/1/download - Status: 301 - Time: 0.744404s - Download resource (protected)
+[GET] /invalid - Status: 301 - Time: 0.735782s - Non-existent endpoint
+[GET] /assets/abc - Status: 301 - Time: 0.832417s - Invalid asset ID format
+[POST] /assets - Status: 301 - Time: 0.710167s - Unsupported method on assets

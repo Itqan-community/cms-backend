@@ -34,7 +34,7 @@ class Command(BaseCommand):
                     'system': ['admin_panel', 'system_settings', 'backup', 'restore'],
                     'workflow': ['manage', 'override'],
                     'media': ['upload', 'manage', 'delete'],
-                    'search': ['configure', 'reindex', 'manage'],
+                    # search app removed in V1 cleanup
                 }
             },
             {

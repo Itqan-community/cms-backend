@@ -21,16 +21,7 @@ app.autodiscover_tasks()
 from celery.schedules import crontab
 
 app.conf.beat_schedule = {
-    # Rebuild search indexes daily at 2 AM
-    'rebuild-search-indexes': {
-        'task': 'apps.search.tasks.rebuild_all_indexes',
-        'schedule': crontab(hour=2, minute=0),
-    },
-    # Clean up failed tasks weekly
-    'cleanup-failed-tasks': {
-        'task': 'apps.search.tasks.cleanup_failed_tasks',
-        'schedule': crontab(hour=3, minute=0, day_of_week=0),
-    },
+    # Search-related tasks removed with search app cleanup
     # Check for expiring access requests daily at 9 AM
     'check-expiring-access-requests': {
         'task': 'apps.licensing.tasks.check_expiring_access_requests',

@@ -68,8 +68,7 @@ INTERNAL_IPS = [
     'localhost',
 ]
 
-# Wagtail development settings
-WAGTAILADMIN_BASE_URL = 'http://localhost:8000'
+# Development-specific settings
 
 # OAuth providers configuration for development
 SOCIALACCOUNT_PROVIDERS = {
