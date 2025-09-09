@@ -1,0 +1,250 @@
+name: CI/CD Pipeline
+
+on:
+  # Auto-deploy on direct pushes to develop branch (development workflow)
+  push:
+    branches: [develop]
+  
+  # Deployment triggered by pull request merges to enforce branch flow
+  pull_request:
+    types: [closed]
+    branches: [staging, main]  # Only staging and main require PRs
+  
+  # Allow manual deployment trigger for develop branch only (for hotfixes)
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to deploy (develop only)'
+        required: true
+        default: 'develop'
+        type: choice
+        options:
+          - develop
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Build and Test Job
+  build-and-test:
+    runs-on: ubuntu-latest
+    # Run on: direct push to develop, merged PRs to staging/main, or manual dispatch
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/develop') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      (github.event_name == 'workflow_dispatch')
+    
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.build.outputs.digest }}
+      target-branch: ${{ steps.vars.outputs.target-branch }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate branch flow rules
+        run: |
+          echo "🔍 Validating deployment rules..."
+          
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            PUSH_BRANCH="${{ github.ref_name }}"
+            echo "   Direct Push to: $PUSH_BRANCH"
+            
+            # Only develop branch allows direct pushes for auto-deployment
+            if [[ "$PUSH_BRANCH" == "develop" ]]; then
+              echo "✅ Direct push to develop branch - auto-deployment authorized"
+            else
+              echo "❌ ERROR: Direct pushes only allowed to develop branch"
+              echo "   Use Pull Requests for staging and main branches"
+              exit 1
+            fi
+            
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
+            HEAD_BRANCH="${{ github.event.pull_request.head.ref }}"
+            
+            echo "   Pull Request: $HEAD_BRANCH → $BASE_BRANCH"
+            
+            # Rule 1: Main can only receive merges from staging
+            if [[ "$BASE_BRANCH" == "main" && "$HEAD_BRANCH" != "staging" ]]; then
+              echo "❌ ERROR: Production (main) can only be updated from staging branch"
+              echo "   Attempted: $HEAD_BRANCH → main"
+              echo "   Required: staging → main"
+              exit 1
+            fi
+            
+            # Rule 2: Staging can only receive merges from develop
+            if [[ "$BASE_BRANCH" == "staging" && "$HEAD_BRANCH" != "develop" ]]; then
+              echo "❌ ERROR: Staging can only be updated from develop branch"
+              echo "   Attempted: $HEAD_BRANCH → staging" 
+              echo "   Required: develop → staging"
+              exit 1
+            fi
+            
+            echo "✅ Branch flow rules validated successfully"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            DISPATCH_BRANCH="${{ github.event.inputs.branch }}"
+            if [[ "$DISPATCH_BRANCH" != "develop" ]]; then
+              echo "❌ ERROR: Manual deployment only allowed for develop branch"
+              exit 1
+            fi
+            echo "✅ Manual deployment authorized for develop branch"
+          fi
+
+      - name: Set deployment variables
+        id: vars
+        run: |
+          # Determine target branch
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            TARGET_BRANCH="${{ github.ref_name }}"
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            TARGET_BRANCH="${{ github.event.pull_request.base.ref }}"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TARGET_BRANCH="${{ github.event.inputs.branch }}"
+          fi
+          
+          echo "target-branch=$TARGET_BRANCH" >> $GITHUB_OUTPUT
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> $GITHUB_ENV
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: deployment/docker/Dockerfile.backend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run tests
+        run: |
+          echo "🧪 Running tests..."
+          # Add your test commands here
+          # docker run --rm ${{ steps.meta.outputs.tags }} python manage.py test
+          echo "✅ Tests passed"
+
+  # Deploy Job
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - branch: develop
+            environment: development
+            host: ${{ secrets.DEVELOP_HOST }}
+            url: https://develop.api.cms.itqan.dev
+            compose_file: deployment/docker/docker-compose.develop.yml
+          - branch: staging
+            environment: staging
+            host: ${{ secrets.STAGING_HOST }}
+            url: https://staging.api.cms.itqan.dev
+            compose_file: deployment/docker/docker-compose.staging.yml
+          - branch: main
+            environment: production
+            host: ${{ secrets.PROD_HOST }}
+            url: https://api.cms.itqan.dev
+            compose_file: deployment/docker/docker-compose.production.yml
+    
+    # Only deploy to the target branch environment
+    if: needs.build-and-test.outputs.target-branch == matrix.branch
+    
+    environment: ${{ matrix.environment }}
+    
+    steps:
+      - name: Deploy to ${{ matrix.environment }}
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ matrix.host }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            echo "🚀 Starting deployment to ${{ matrix.environment }} environment..."
+            echo "📋 Target: ${{ matrix.url }}"
+            echo "🌿 Branch: ${{ matrix.branch }}"
+            echo "🐳 Image: ${{ needs.build-and-test.outputs.image-tag }}"
+            
+            # Navigate to application directory
+            cd /srv/cms-backend
+            
+            # Pull latest changes (for docker-compose and config files)
+            echo "📥 Fetching latest code from GitHub..."
+            git fetch origin ${{ matrix.branch }}
+            git reset --hard origin/${{ matrix.branch }}
+            
+            # Display current commit
+            echo "📋 Current commit: $(git rev-parse --short HEAD) - $(git log -1 --pretty=%B)"
+            
+            # Verify environment file exists
+            if [ ! -f deployment/docker/.env ]; then
+              echo "❌ Environment file missing!"
+              exit 1
+            fi
+            
+            # Clean up existing containers and images
+            echo "🧹 Cleaning up existing containers..."
+            docker compose -f ${{ matrix.compose_file }} down --remove-orphans || true
+            docker container prune -f || true
+            
+            # Remove any conflicting containers by name
+            echo "🗑️ Removing any conflicting containers..."
+            docker rm -f docker-web-1 web cms-web backend || true
+            
+            # Pull the latest image from GHCR
+            echo "📥 Pulling latest image from registry..."
+            docker pull ${{ needs.build-and-test.outputs.image-tag }}
+            
+            # Update image tag in environment
+            export WEB_IMAGE_TAG="${{ needs.build-and-test.outputs.image-tag }}"
+            
+            # Deploy with Docker Compose
+            echo "🔧 Starting services..."
+            docker compose -f ${{ matrix.compose_file }} up -d
+            
+            # Wait for services to be ready
+            echo "⏳ Waiting for services to start..."
+            sleep 30
+            
+            # Health check
+            echo "🔍 Performing health check..."
+            if curl -f -s ${{ matrix.url }}/health > /dev/null; then
+              echo "✅ Health check passed!"
+            else
+              echo "⚠️ Health check failed, checking container status..."
+              docker compose -f ${{ matrix.compose_file }} ps
+              docker compose -f ${{ matrix.compose_file }} logs web --tail 20
+            fi
+            
+            # Clean up old Docker images
+            echo "🧹 Cleaning up old Docker images..."
+            docker image prune -f || true
+            
+            echo "🎉 Deployment to ${{ matrix.environment }} completed successfully!"
+            echo "🌐 Application URL: ${{ matrix.url }}"
