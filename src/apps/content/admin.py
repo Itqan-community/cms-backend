@@ -86,8 +86,8 @@ class PublishingOrganizationAdmin(admin.ModelAdmin):
         return super().get_queryset(request).annotate(
             member_count=Count('members'),
             resource_count=Count('resources'),
-            asset_count=Count('assets', distinct=True),
-            total_downloads=Sum('assets__download_count')
+            asset_count=Count('resources__assets', distinct=True),
+            total_downloads=Sum('resources__assets__download_count')
         )
     
     def member_count(self, obj):

@@ -75,9 +75,9 @@ class AssetListView(APIView):
         """Get list of assets with optional filtering"""
         # Start with all active assets
         queryset = Asset.objects.select_related(
-            'publishing_organization', 'license'
+            'resource__publishing_organization', 'license'
         ).prefetch_related(
-            'assetversion_set'
+            'versions'
         ).order_by('-created_at')
         
         # Apply filters
@@ -91,7 +91,7 @@ class AssetListView(APIView):
         
         publisher_id = request.query_params.get('publisher_id')
         if publisher_id:
-            queryset = queryset.filter(publishing_organization_id=publisher_id)
+            queryset = queryset.filter(resource__publishing_organization_id=publisher_id)
         
         search = request.query_params.get('search')
         if search:
@@ -149,9 +149,9 @@ class AssetDetailView(APIView):
         """Get detailed asset information"""
         try:
             asset = Asset.objects.select_related(
-                'publishing_organization', 'license'
+                'resource__publishing_organization', 'license'
             ).prefetch_related(
-                'assetversion_set__resource_version'
+                'versions__resource_version'
             ).get(id=asset_id)
         except Asset.DoesNotExist:
             return Response(
