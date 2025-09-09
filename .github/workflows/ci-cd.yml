@@ -134,7 +134,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
+          username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push image to GHCR
@@ -142,9 +142,30 @@ jobs:
         run: |
           echo "🛠️ Building image $IMAGE_REPO:$IMAGE_TAG for develop environment"
           docker build -f deployment/docker/Dockerfile.backend -t $IMAGE_REPO:$IMAGE_TAG .
+          
           echo "📤 Pushing image to GHCR..."
-          docker push $IMAGE_REPO:$IMAGE_TAG
-          echo "✅ Image pushed successfully to GHCR"
+          echo "🔍 Repository: $IMAGE_REPO"
+          echo "🏷️ Tag: $IMAGE_TAG"
+          
+          # Make the repository public on first push (GHCR requirement)
+          echo "📦 Creating/updating GHCR repository..."
+          
+          # Retry push up to 3 times with exponential backoff
+          for attempt in 1 2 3; do
+            echo "🔄 Push attempt $attempt/3..."
+            if docker push $IMAGE_REPO:$IMAGE_TAG; then
+              echo "✅ Image pushed successfully to GHCR on attempt $attempt"
+              break
+            else
+              if [ $attempt -eq 3 ]; then
+                echo "❌ All push attempts failed"
+                exit 1
+              fi
+              wait_time=$((attempt * 10))
+              echo "⏳ Waiting ${wait_time}s before retry..."
+              sleep $wait_time
+            fi
+          done
 
       - name: Deploy to ${{ env.ENV_NAME }}
         uses: appleboy/ssh-action@v1.0.3
@@ -245,7 +266,7 @@ jobs:
                   echo "❌ GHCR login failed on remote host"; exit 1; }
               else
                 echo "⚠️ GHCR_DEPLOY_USER/TOKEN not set; using GitHub token for develop environment"
-                echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin || {
+                echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin || {
                   echo "❌ GHCR login failed with GitHub token"; exit 1; }
               fi
             else
