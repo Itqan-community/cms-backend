@@ -18,6 +18,7 @@ services:
       retries: 3
       start_period: 40s
     volumes:
+      - ../../src:/app:rw
       - static_volume:/app/staticfiles
       - media_volume:/app/media
     restart: unless-stopped
