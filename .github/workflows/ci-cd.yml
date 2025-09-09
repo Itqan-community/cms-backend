@@ -153,42 +153,41 @@ jobs:
   deploy:
     needs: build-and-test
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - branch: develop
-            environment: development
-            host: ${{ secrets.DEVELOP_HOST }}
-            url: https://develop.api.cms.itqan.dev
-            compose_file: deployment/docker/docker-compose.develop.yml
-          - branch: staging
-            environment: staging
-            host: ${{ secrets.STAGING_HOST }}
-            url: https://staging.api.cms.itqan.dev
-            compose_file: deployment/docker/docker-compose.staging.yml
-          - branch: main
-            environment: production
-            host: ${{ secrets.PROD_HOST }}
-            url: https://api.cms.itqan.dev
-            compose_file: deployment/docker/docker-compose.production.yml
-    
-    # Only deploy to the target branch environment
-    if: needs.build-and-test.outputs.target-branch == matrix.branch
-    
-    environment: ${{ matrix.environment }}
     
     steps:
-      - name: Deploy to ${{ matrix.environment }}
+      - name: Set deployment variables
+        id: vars
+        run: |
+          TARGET_BRANCH="${{ needs.build-and-test.outputs.target-branch }}"
+          
+          if [[ "$TARGET_BRANCH" == "develop" ]]; then
+            echo "HOST=${{ secrets.DEVELOP_HOST }}" >> $GITHUB_ENV
+            echo "ENV_NAME=development" >> $GITHUB_ENV
+            echo "ENV_URL=https://develop.api.cms.itqan.dev" >> $GITHUB_ENV
+            echo "COMPOSE_FILE=deployment/docker/docker-compose.develop.yml" >> $GITHUB_ENV
+          elif [[ "$TARGET_BRANCH" == "staging" ]]; then
+            echo "HOST=${{ secrets.STAGING_HOST }}" >> $GITHUB_ENV
+            echo "ENV_NAME=staging" >> $GITHUB_ENV
+            echo "ENV_URL=https://staging.api.cms.itqan.dev" >> $GITHUB_ENV
+            echo "COMPOSE_FILE=deployment/docker/docker-compose.staging.yml" >> $GITHUB_ENV
+          elif [[ "$TARGET_BRANCH" == "main" ]]; then
+            echo "HOST=${{ secrets.PROD_HOST }}" >> $GITHUB_ENV
+            echo "ENV_NAME=production" >> $GITHUB_ENV
+            echo "ENV_URL=https://api.cms.itqan.dev" >> $GITHUB_ENV
+            echo "COMPOSE_FILE=deployment/docker/docker-compose.production.yml" >> $GITHUB_ENV
+          fi
+
+      - name: Deploy to ${{ env.ENV_NAME }}
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ matrix.host }}
+          host: ${{ env.HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
-            echo "🚀 Starting deployment to ${{ matrix.environment }} environment..."
-            echo "📋 Target: ${{ matrix.url }}"
-            echo "🌿 Branch: ${{ matrix.branch }}"
+            echo "🚀 Starting deployment to ${{ env.ENV_NAME }} environment..."
+            echo "📋 Target: ${{ env.ENV_URL }}"
+            echo "🌿 Branch: ${{ needs.build-and-test.outputs.target-branch }}"
             echo "🐳 Image: ${{ needs.build-and-test.outputs.image-tag }}"
             
             # Navigate to application directory
@@ -196,8 +195,8 @@ jobs:
             
             # Pull latest changes (for docker-compose and config files)
             echo "📥 Fetching latest code from GitHub..."
-            git fetch origin ${{ matrix.branch }}
-            git reset --hard origin/${{ matrix.branch }}
+            git fetch origin ${{ needs.build-and-test.outputs.target-branch }}
+            git reset --hard origin/${{ needs.build-and-test.outputs.target-branch }}
             
             # Display current commit
             echo "📋 Current commit: $(git rev-parse --short HEAD) - $(git log -1 --pretty=%B)"
@@ -210,7 +209,7 @@ jobs:
             
             # Clean up existing containers and images
             echo "🧹 Cleaning up existing containers..."
-            docker compose -f ${{ matrix.compose_file }} down --remove-orphans || true
+            docker compose -f ${{ env.COMPOSE_FILE }} down --remove-orphans || true
             docker container prune -f || true
             
             # Remove any conflicting containers by name
@@ -226,7 +225,7 @@ jobs:
             
             # Deploy with Docker Compose
             echo "🔧 Starting services..."
-            docker compose -f ${{ matrix.compose_file }} up -d
+            docker compose -f ${{ env.COMPOSE_FILE }} up -d
             
             # Wait for services to be ready
             echo "⏳ Waiting for services to start..."
@@ -234,17 +233,17 @@ jobs:
             
             # Health check
             echo "🔍 Performing health check..."
-            if curl -f -s ${{ matrix.url }}/health > /dev/null; then
+            if curl -f -s ${{ env.ENV_URL }}/health > /dev/null; then
               echo "✅ Health check passed!"
             else
               echo "⚠️ Health check failed, checking container status..."
-              docker compose -f ${{ matrix.compose_file }} ps
-              docker compose -f ${{ matrix.compose_file }} logs web --tail 20
+              docker compose -f ${{ env.COMPOSE_FILE }} ps
+              docker compose -f ${{ env.COMPOSE_FILE }} logs web --tail 20
             fi
             
             # Clean up old Docker images
             echo "🧹 Cleaning up old Docker images..."
             docker image prune -f || true
             
-            echo "🎉 Deployment to ${{ matrix.environment }} completed successfully!"
-            echo "🌐 Application URL: ${{ matrix.url }}"
+            echo "🎉 Deployment to ${{ env.ENV_NAME }} completed successfully!"
+            echo "🌐 Application URL: ${{ env.ENV_URL }}"
