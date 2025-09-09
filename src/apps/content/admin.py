@@ -174,7 +174,7 @@ class ResourceAdmin(admin.ModelAdmin):
     list_filter = ['category', 'status', 'publishing_organization', 'default_license', 'created_at']
     search_fields = ['name', 'description', 'slug']
     prepopulated_fields = {'slug': ('name',)}
-    inlines = [ResourceVersionInline, DistributionInline]
+    inlines = [ResourceVersionInline]
     autocomplete_fields = ['publishing_organization', 'default_license']
     
     fieldsets = (
@@ -453,7 +453,18 @@ class UsageEventAdmin(admin.ModelAdmin):
 
 @admin.register(Distribution)
 class DistributionAdmin(admin.ModelAdmin):
-    """Admin for Distributions"""
-    list_display = ['resource', 'format_type', 'version', 'created_at']
+    """Admin for Distributions - API contract fields only"""
+    list_display = ['resource', 'format_type', 'created_at']
     list_filter = ['format_type', 'created_at']
-    search_fields = ['resource__name', 'endpoint_url']
+    search_fields = ['resource__name']
+    
+    fieldsets = (
+        ('Distribution Information', {
+            'fields': ('resource', 'format_type')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+    readonly_fields = ['created_at', 'updated_at']
