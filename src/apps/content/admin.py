@@ -30,8 +30,14 @@ class ResourceVersionInline(admin.TabularInline):
     """Inline admin for resource versions"""
     model = ResourceVersion
     extra = 0
-    fields = ['semvar', 'type', 'is_latest', 'size_bytes', 'storage_url']
+    fields = ['semvar', 'type', 'is_latest', 'storage_url']
     readonly_fields = ['created_at']
+    
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        """Override form field configuration"""
+        if db_field.name == 'size_bytes':
+            kwargs['initial'] = 100
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
 
 
 class AssetVersionInline(admin.TabularInline):
@@ -46,7 +52,7 @@ class DistributionInline(admin.TabularInline):
     """Inline admin for resource distributions"""
     model = Distribution
     extra = 0
-    fields = ['format_type', 'version', 'endpoint_url']
+    fields = ['format_type']
 
 
 # ============================================================================
@@ -64,7 +70,7 @@ class PublishingOrganizationAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'slug', 'icone_image_url', 'cover_url')
+            'fields': ('name', 'slug', 'icone_image_url')
         }),
         ('Content', {
             'fields': ('summary', 'description', 'bio')
@@ -80,6 +86,12 @@ class PublishingOrganizationAdmin(admin.ModelAdmin):
         })
     )
     readonly_fields = ['created_at', 'updated_at']
+    
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        """Override form field configuration"""
+        if db_field.name == 'social_links':
+            kwargs['required'] = False
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
     
     def get_queryset(self, request):
         """Optimize queryset with annotations"""
@@ -139,10 +151,16 @@ class PublishingOrganizationMemberAdmin(admin.ModelAdmin):
 
 @admin.register(License)
 class LicenseAdmin(admin.ModelAdmin):
-    """Admin for Licenses"""
-    list_display = ['name', 'code', 'is_default', 'usage_count', 'created_at']
-    list_filter = ['is_default', 'created_at']
-    search_fields = ['name', 'code', 'summary']
+    """Admin for Licenses - API contract fields only"""
+    list_display = ['name', 'code', 'short_name', 'is_default', 'usage_count']
+    list_filter = ['is_default']
+    search_fields = ['name', 'code', 'short_name']
+    
+    fieldsets = (
+        ('License Information', {
+            'fields': ('code', 'name', 'short_name', 'icon_url', 'is_default')
+        }),
+    )
     
     def usage_count(self, obj):
         return obj.assets.count() + obj.default_for_resources.count()
@@ -156,7 +174,7 @@ class ResourceAdmin(admin.ModelAdmin):
     list_filter = ['category', 'status', 'publishing_organization', 'default_license', 'created_at']
     search_fields = ['name', 'description', 'slug']
     prepopulated_fields = {'slug': ('name',)}
-    inlines = [ResourceVersionInline, DistributionInline]
+    inlines = [ResourceVersionInline]
     autocomplete_fields = ['publishing_organization', 'default_license']
     
     fieldsets = (
@@ -435,7 +453,18 @@ class UsageEventAdmin(admin.ModelAdmin):
 
 @admin.register(Distribution)
 class DistributionAdmin(admin.ModelAdmin):
-    """Admin for Distributions"""
-    list_display = ['resource', 'format_type', 'version', 'created_at']
+    """Admin for Distributions - API contract fields only"""
+    list_display = ['resource', 'format_type', 'created_at']
     list_filter = ['format_type', 'created_at']
-    search_fields = ['resource__name', 'endpoint_url']
+    search_fields = ['resource__name']
+    
+    fieldsets = (
+        ('Distribution Information', {
+            'fields': ('resource', 'format_type')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+    readonly_fields = ['created_at', 'updated_at']
