@@ -244,7 +244,6 @@ class AssetTechnicalDetailsSerializer(serializers.Serializer):
     file_size = serializers.CharField()
     version = serializers.CharField(required=False, allow_blank=True)
     language = serializers.CharField(required=False, allow_blank=True)
-    checksum = serializers.CharField(required=False, allow_blank=True)
     
     @classmethod
     def from_asset_model(cls, asset):
@@ -255,8 +254,7 @@ class AssetTechnicalDetailsSerializer(serializers.Serializer):
             'encoding': asset.encoding or '',
             'file_size': asset.file_size or '',
             'version': asset.version or '',
-            'language': asset.language or '',
-            'checksum': latest_version.resource_version.storage_url if latest_version else ''
+            'language': asset.language or ''
         }
 
 
