@@ -145,10 +145,16 @@ class PublishingOrganizationMemberAdmin(admin.ModelAdmin):
 
 @admin.register(License)
 class LicenseAdmin(admin.ModelAdmin):
-    """Admin for Licenses"""
-    list_display = ['name', 'code', 'is_default', 'usage_count', 'created_at']
-    list_filter = ['is_default', 'created_at']
-    search_fields = ['name', 'code', 'summary']
+    """Admin for Licenses - API contract fields only"""
+    list_display = ['name', 'code', 'short_name', 'is_default', 'usage_count']
+    list_filter = ['is_default']
+    search_fields = ['name', 'code', 'short_name']
+    
+    fieldsets = (
+        ('License Information', {
+            'fields': ('code', 'name', 'short_name', 'icon_url', 'is_default')
+        }),
+    )
     
     def usage_count(self, obj):
         return obj.assets.count() + obj.default_for_resources.count()
