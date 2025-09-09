@@ -95,7 +95,7 @@ jobs:
           elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
             TARGET_BRANCH="${{ github.event.pull_request.base.ref }}"
           elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            TARGET_BRANCH="${{ github.event.inputs.branch }}"
+            TARGET_BRANCH="${{ github.ref_name }}"
           fi
           
           if [[ "$TARGET_BRANCH" == "develop" ]]; then
@@ -227,10 +227,12 @@ jobs:
             echo "🧹 Cleaning up existing containers..."
             docker compose -f ${{ env.COMPOSE_FILE }} down --remove-orphans || true
             docker container prune -f || true
+            docker system prune -f || true
             
-            # Remove any conflicting containers by name
+            # Remove any conflicting containers by name (more comprehensive)
             echo "🗑️ Removing any conflicting containers..."
-            docker rm -f docker-web-1 web cms-web backend || true
+            docker rm -f docker-web-1 docker-caddy-1 web caddy cms-web backend || true
+            docker network prune -f || true
             
             # Authenticate Docker to GHCR (required for pulling private images)
             if [ -n "${{ secrets.GHCR_DEPLOY_USER }}" ] && [ -n "${{ secrets.GHCR_DEPLOY_TOKEN }}" ]; then
