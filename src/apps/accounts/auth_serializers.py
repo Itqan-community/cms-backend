@@ -7,6 +7,12 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework_simplejwt.tokens import RefreshToken
 
+def get_file_url(file_field):
+    """Helper function to safely get URL from file field"""
+    if file_field and hasattr(file_field, 'url'):
+        return file_field.url
+    return ''
+
 User = get_user_model()
 
 
@@ -202,7 +208,7 @@ def create_auth_response(user):
             'phone_number': user.phone_number,
             'job_title': user.job_title,
             'title': user.job_title,  # Backward compatibility alias
-            'avatar_url': user.avatar_url,
+            'avatar_url': get_file_url(user.avatar_url),
             'bio': user.bio,
             'organization': user.organization,
             'location': user.location,
