@@ -93,6 +93,20 @@ alwaysApply: true
 
 ## Development Guidelines
 - **Migration policy**: Never drop columns, mark deprecated
+- **Django Migrations**: ALWAYS use `python manage.py makemigrations` command for creating migrations
+- **Migration Workflow**: 
+  - Create migrations: `python manage.py makemigrations`
+  - Apply migrations: `python manage.py migrate` 
+  - NEVER manually create migration files
+- **Schema Safety Protocol**: MANDATORY before any deployment or migration:
+  - Run: `python manage.py verify_schema` to check database schema matches models
+  - Use: `./deployment/pre-deploy-checks.sh [environment]` before deployments
+  - Use: `./deployment/scripts/safe_migration.sh [environment]` for migrations
+  - NEVER deploy if schema verification fails
+- **Deployment Safety**: 
+  - Always run pre-deployment checks: `./deployment/pre-deploy-checks.sh`
+  - Verify Asset-Resource relationship integrity before deployment
+  - Check all environments have consistent database schemas
 - **Scaling**: Design for read-heavy workloads
 - **Security**: Separate admin/public interfaces
 - **Testing**: Test Publisher and Consumer workflows separately

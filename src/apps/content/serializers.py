@@ -135,7 +135,7 @@ class PublisherSerializer(serializers.Serializer):
         """Create full Publisher from PublishingOrganization model"""
         # Get related objects efficiently
         assets = Asset.objects.filter(
-            publishing_organization=org
+            resource__publishing_organization=org
         ).select_related('license').order_by('-created_at')[:10]
         
         resources = Resource.objects.filter(
@@ -143,7 +143,7 @@ class PublisherSerializer(serializers.Serializer):
         ).count()
         
         # Calculate stats
-        assets_count = Asset.objects.filter(publishing_organization=org).count()
+        assets_count = Asset.objects.filter(resource__publishing_organization=org).count()
         total_downloads = sum(asset.download_count for asset in assets)
         
         # Prepare assets data
@@ -215,7 +215,7 @@ class AssetSummarySerializer(serializers.Serializer):
             'thumbnail_url': get_file_url(asset.thumbnail_url),
             'category': asset.category,
             'license': LicenseSummarySerializer.from_license_model(asset.license),
-            'publisher': PublisherSummarySerializer.from_publishing_organization(asset.publishing_organization),
+            'publisher': PublisherSummarySerializer.from_publishing_organization(asset.resource.publishing_organization),
             'has_access': cls._check_user_access(asset, request),
             'download_count': asset.download_count,
             'file_size': asset.file_size or ''
@@ -339,7 +339,7 @@ class AssetDetailSerializer(serializers.Serializer):
                 'title': related.title,
                 'thumbnail_url': get_file_url(related.thumbnail_url),
                 'category': related.category,
-                'publisher': PublisherSummarySerializer.from_publishing_organization(related.publishing_organization)
+                'publisher': PublisherSummarySerializer.from_publishing_organization(related.resource.publishing_organization)
             })
         
         return {
@@ -350,7 +350,7 @@ class AssetDetailSerializer(serializers.Serializer):
             'thumbnail_url': get_file_url(asset.thumbnail_url),
             'category': asset.category,
             'license': LicenseDetailSerializer.from_license_model(asset.license),
-            'publisher': PublisherSummarySerializer.from_publishing_organization(asset.publishing_organization),
+            'publisher': PublisherSummarySerializer.from_publishing_organization(asset.resource.publishing_organization),
             'snapshots': [],  # Could be implemented based on asset versions
             'technical_details': AssetTechnicalDetailsSerializer.from_asset_model(asset),
             'stats': AssetStatsSerializer.from_asset_model(asset),

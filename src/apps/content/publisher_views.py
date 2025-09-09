@@ -98,7 +98,7 @@ def publisher_assets(request, publisher_id):
     
     # Get assets query
     assets_query = Asset.objects.filter(
-        publishing_organization=organization
+        resource__publishing_organization=organization
     ).select_related('license').order_by('-created_at')
     
     # Apply category filter if provided

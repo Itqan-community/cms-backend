@@ -509,8 +509,8 @@ class Asset(BaseModel):
     Part of resources, published by organizations.
     """
     # Relationships from ERD
-    publishing_organization = models.ForeignKey(
-        PublishingOrganization,
+    resource = models.ForeignKey(
+        Resource,
         on_delete=models.PROTECT,
         related_name='assets'
     )
@@ -603,7 +603,7 @@ class Asset(BaseModel):
         verbose_name_plural = 'Assets'
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['publishing_organization']),
+            models.Index(fields=['resource']),
             models.Index(fields=['category']),
             models.Index(fields=['license']),
         ]
@@ -624,7 +624,7 @@ class Asset(BaseModel):
         version_summary = asset_data.pop('version_summary', f"Extracted from {resource_version}")
         
         # Set defaults from resource if not provided
-        asset_data.setdefault('publishing_organization', resource.publishing_organization)
+        asset_data.setdefault('resource', resource)
         asset_data.setdefault('license', resource.default_license)
         asset_data.setdefault('category', resource.category)
         
@@ -679,7 +679,7 @@ class Asset(BaseModel):
         """Get related assets from same category and publisher"""
         return Asset.objects.filter(
             category=self.category,
-            publishing_organization=self.publishing_organization,
+            resource__publishing_organization=self.resource.publishing_organization,
             is_active=True
         ).exclude(id=self.id)[:limit]
 
@@ -721,6 +721,11 @@ class Asset(BaseModel):
     def size_bytes(self):
         """Get file size in bytes (computed from human readable)"""
         return self._parse_file_size_to_bytes(self.file_size)
+
+    @property
+    def publishing_organization(self):
+        """Get the publishing organization through the resource"""
+        return self.resource.publishing_organization
 
     @property
     def is_public(self):
@@ -1062,7 +1067,7 @@ class AssetAccess(BaseModel):
     )
     
     # Managers
-    objects = ActiveObjectsManager()
+    objects = AllObjectsManager()
     all_objects = AllObjectsManager()
 
     class Meta:
