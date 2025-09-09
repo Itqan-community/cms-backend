@@ -25,6 +25,9 @@ jobs:
   # Deployment Job with Container Cleanup
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     # Run on: direct push to develop, merged PRs to staging/main, or manual dispatch
     if: |
       (github.event_name == 'push' && github.ref == 'refs/heads/develop') ||
@@ -84,6 +87,7 @@ jobs:
       - name: Set deployment variables
         id: vars
         run: |
+          OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}
           # Determine target branch
           if [[ "${{ github.event_name }}" == "push" ]]; then
             TARGET_BRANCH="${{ github.ref_name }}"
@@ -99,7 +103,7 @@ jobs:
             echo "ENV_URL=https://develop.api.cms.itqan.dev" >> $GITHUB_ENV
             echo "COMPOSE_FILE=deployment/docker/docker-compose.develop.yml" >> $GITHUB_ENV
             echo "BRANCH=develop" >> $GITHUB_ENV
-            echo "IMAGE_REPO=ghcr.io/${{ github.repository_owner }}/cms-backend" >> $GITHUB_ENV
+            echo "IMAGE_REPO=ghcr.io/${OWNER_LC}/cms-backend" >> $GITHUB_ENV
             echo "IMAGE_TAG=develop-${GITHUB_SHA::7}" >> $GITHUB_ENV
           elif [[ "$TARGET_BRANCH" == "staging" ]]; then
             echo "HOST=${{ secrets.STAGING_HOST }}" >> $GITHUB_ENV
@@ -107,7 +111,7 @@ jobs:
             echo "ENV_URL=https://staging.api.cms.itqan.dev" >> $GITHUB_ENV
             echo "COMPOSE_FILE=deployment/docker/docker-compose.staging.yml" >> $GITHUB_ENV
             echo "BRANCH=staging" >> $GITHUB_ENV
-            echo "IMAGE_REPO=ghcr.io/${{ github.repository_owner }}/cms-backend" >> $GITHUB_ENV
+            echo "IMAGE_REPO=ghcr.io/${OWNER_LC}/cms-backend" >> $GITHUB_ENV
             echo "IMAGE_TAG=staging-${GITHUB_SHA::7}" >> $GITHUB_ENV
           elif [[ "$TARGET_BRANCH" == "main" ]]; then
             echo "HOST=${{ secrets.PROD_HOST }}" >> $GITHUB_ENV
@@ -115,7 +119,7 @@ jobs:
             echo "ENV_URL=https://api.cms.itqan.dev" >> $GITHUB_ENV
             echo "COMPOSE_FILE=deployment/docker/docker-compose.production.yml" >> $GITHUB_ENV
             echo "BRANCH=main" >> $GITHUB_ENV
-            echo "IMAGE_REPO=ghcr.io/${{ github.repository_owner }}/cms-backend" >> $GITHUB_ENV
+            echo "IMAGE_REPO=ghcr.io/${OWNER_LC}/cms-backend" >> $GITHUB_ENV
             echo "IMAGE_TAG=prod-${GITHUB_SHA::7}" >> $GITHUB_ENV
           fi
 
