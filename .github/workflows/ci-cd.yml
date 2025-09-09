@@ -21,13 +21,9 @@ on:
         options:
           - develop
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-
 jobs:
-  # Build and Test Job
-  build-and-test:
+  # Deployment Job with Container Cleanup
+  deploy:
     runs-on: ubuntu-latest
     # Run on: direct push to develop, merged PRs to staging/main, or manual dispatch
     if: |
@@ -35,15 +31,7 @@ jobs:
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
       (github.event_name == 'workflow_dispatch')
     
-    outputs:
-      image-tag: ${{ steps.meta.outputs.tags }}
-      image-digest: ${{ steps.build.outputs.digest }}
-      target-branch: ${{ steps.vars.outputs.target-branch }}
-      
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Validate branch flow rules
         run: |
           echo "🔍 Validating deployment rules..."
@@ -105,76 +93,24 @@ jobs:
             TARGET_BRANCH="${{ github.event.inputs.branch }}"
           fi
           
-          echo "target-branch=$TARGET_BRANCH" >> $GITHUB_OUTPUT
-          echo "TARGET_BRANCH=$TARGET_BRANCH" >> $GITHUB_ENV
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push Docker image
-        id: build
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: deployment/docker/Dockerfile.backend
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Run tests
-        run: |
-          echo "🧪 Running tests..."
-          # Add your test commands here
-          # docker run --rm ${{ steps.meta.outputs.tags }} python manage.py test
-          echo "✅ Tests passed"
-
-  # Deploy Job
-  deploy:
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Set deployment variables
-        id: vars
-        run: |
-          TARGET_BRANCH="${{ needs.build-and-test.outputs.target-branch }}"
-          
           if [[ "$TARGET_BRANCH" == "develop" ]]; then
             echo "HOST=${{ secrets.DEVELOP_HOST }}" >> $GITHUB_ENV
             echo "ENV_NAME=development" >> $GITHUB_ENV
             echo "ENV_URL=https://develop.api.cms.itqan.dev" >> $GITHUB_ENV
             echo "COMPOSE_FILE=deployment/docker/docker-compose.develop.yml" >> $GITHUB_ENV
+            echo "BRANCH=develop" >> $GITHUB_ENV
           elif [[ "$TARGET_BRANCH" == "staging" ]]; then
             echo "HOST=${{ secrets.STAGING_HOST }}" >> $GITHUB_ENV
             echo "ENV_NAME=staging" >> $GITHUB_ENV
             echo "ENV_URL=https://staging.api.cms.itqan.dev" >> $GITHUB_ENV
             echo "COMPOSE_FILE=deployment/docker/docker-compose.staging.yml" >> $GITHUB_ENV
+            echo "BRANCH=staging" >> $GITHUB_ENV
           elif [[ "$TARGET_BRANCH" == "main" ]]; then
             echo "HOST=${{ secrets.PROD_HOST }}" >> $GITHUB_ENV
             echo "ENV_NAME=production" >> $GITHUB_ENV
             echo "ENV_URL=https://api.cms.itqan.dev" >> $GITHUB_ENV
             echo "COMPOSE_FILE=deployment/docker/docker-compose.production.yml" >> $GITHUB_ENV
+            echo "BRANCH=main" >> $GITHUB_ENV
           fi
 
       - name: Deploy to ${{ env.ENV_NAME }}
@@ -187,16 +123,15 @@ jobs:
             set -e
             echo "🚀 Starting deployment to ${{ env.ENV_NAME }} environment..."
             echo "📋 Target: ${{ env.ENV_URL }}"
-            echo "🌿 Branch: ${{ needs.build-and-test.outputs.target-branch }}"
-            echo "🐳 Image: ${{ needs.build-and-test.outputs.image-tag }}"
+            echo "🌿 Branch: ${{ env.BRANCH }}"
             
             # Navigate to application directory
             cd /srv/cms-backend
             
-            # Pull latest changes (for docker-compose and config files)
+            # Pull latest changes
             echo "📥 Fetching latest code from GitHub..."
-            git fetch origin ${{ needs.build-and-test.outputs.target-branch }}
-            git reset --hard origin/${{ needs.build-and-test.outputs.target-branch }}
+            git fetch origin ${{ env.BRANCH }}
+            git reset --hard origin/${{ env.BRANCH }}
             
             # Display current commit
             echo "📋 Current commit: $(git rev-parse --short HEAD) - $(git log -1 --pretty=%B)"
@@ -216,16 +151,9 @@ jobs:
             echo "🗑️ Removing any conflicting containers..."
             docker rm -f docker-web-1 web cms-web backend || true
             
-            # Pull the latest image from GHCR
-            echo "📥 Pulling latest image from registry..."
-            docker pull ${{ needs.build-and-test.outputs.image-tag }}
-            
-            # Update image tag in environment
-            export WEB_IMAGE_TAG="${{ needs.build-and-test.outputs.image-tag }}"
-            
-            # Deploy with Docker Compose
-            echo "🔧 Starting services..."
-            docker compose -f ${{ env.COMPOSE_FILE }} up -d
+            # Deploy with Docker Compose (build and start)
+            echo "🔧 Building and starting services..."
+            docker compose -f ${{ env.COMPOSE_FILE }} up -d --build
             
             # Wait for services to be ready
             echo "⏳ Waiting for services to start..."
