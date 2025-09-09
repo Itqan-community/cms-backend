@@ -148,8 +148,8 @@ alwaysApply: true
 - **Prohibited**: Skipping stages or merging directly into `staging` or `main` from any other branch is not allowed.
 
 ### Manual Promotion Trigger (DSH)
-- You MUST be able to initiate the promotion flow manually using `DSH`.
-- `DSH` MUST support opening the Pull Requests that follow the required sequence:
+- You MUST be able to initiate the promotion flow manually using `DSM`.
+- `DSM` MUST support opening the Pull Requests that follow the required sequence:
   - `develop` → `staging`
   - `staging` → `main`
   
