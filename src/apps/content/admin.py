@@ -30,8 +30,14 @@ class ResourceVersionInline(admin.TabularInline):
     """Inline admin for resource versions"""
     model = ResourceVersion
     extra = 0
-    fields = ['semvar', 'type', 'is_latest', 'size_bytes', 'storage_url']
+    fields = ['semvar', 'type', 'is_latest', 'storage_url']
     readonly_fields = ['created_at']
+    
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        """Override form field configuration"""
+        if db_field.name == 'size_bytes':
+            kwargs['initial'] = 100
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
 
 
 class AssetVersionInline(admin.TabularInline):
@@ -46,7 +52,7 @@ class DistributionInline(admin.TabularInline):
     """Inline admin for resource distributions"""
     model = Distribution
     extra = 0
-    fields = ['format_type', 'version', 'endpoint_url']
+    fields = ['format_type']
 
 
 # ============================================================================
