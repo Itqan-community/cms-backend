@@ -428,6 +428,7 @@ class ResourceVersion(BaseModel):
     )
     
     size_bytes = models.PositiveBigIntegerField(
+        default=0,
         help_text="File size in bytes"
     )
     
@@ -455,6 +456,14 @@ class ResourceVersion(BaseModel):
         Override save to implement is_latest constraint.
         Only one version per resource can be is_latest=True.
         """
+        # Auto-compute size_bytes from storage file when available and not set
+        if (not self.size_bytes or self.size_bytes == 0) and self.storage_url:
+            try:
+                # FileField provides size when the file is available
+                self.size_bytes = self.storage_url.size or 0
+            except Exception:
+                # If storage backend cannot determine size, leave as 0
+                pass
         if self.is_latest:
             # Set all other versions of this resource to is_latest=False
             ResourceVersion.objects.filter(
