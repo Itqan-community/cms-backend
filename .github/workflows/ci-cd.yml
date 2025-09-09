@@ -87,7 +87,8 @@ jobs:
       - name: Set deployment variables
         id: vars
         run: |
-          OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}
+          # Robust lowercase owner for GHCR (some shells reject ${var,,})
+          OWNER_LC=$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
           # Determine target branch
           if [[ "${{ github.event_name }}" == "push" ]]; then
             TARGET_BRANCH="${{ github.ref_name }}"
