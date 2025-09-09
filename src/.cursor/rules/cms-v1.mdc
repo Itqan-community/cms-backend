@@ -143,6 +143,17 @@ alwaysApply: true
    - `staging` → `main`: ONLY via Pull Request + code review  
    - `feature/*` → `develop`: Via Pull Request or direct merge after testing
 
+### Merge Order Rule (MANDATORY)
+- **Sequence**: `develop` MUST be merged into `staging`, then `staging` MUST be merged into `main`.
+- **Prohibited**: Skipping stages or merging directly into `staging` or `main` from any other branch is not allowed.
+
+### Manual Promotion Trigger (DSH)
+- You MUST be able to initiate the promotion flow manually using `DSH`.
+- `DSH` MUST support opening the Pull Requests that follow the required sequence:
+  - `develop` → `staging`
+  - `staging` → `main`
+  
+
 4. **CMS Rules File Updates**:
    - When CMS rules are modified, automatic commit with message "Update CMS workflow rules"
    - Must test locally immediately after rules change
