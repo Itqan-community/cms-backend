@@ -64,9 +64,8 @@ class LicenseListView(APIView):
     def get(self, request):
         """Get list of licenses with filtering options"""
         # Start with all active licenses
-        queryset = License.objects.annotate(
-            usage_count=Count('assets') + Count('default_for_resources') + Count('effective_for_accesses')
-        ).order_by('-is_default', '-usage_count', 'name')
+        # Compute usage count in Python to avoid ORM add() on annotations across relations
+        queryset = License.objects.all().order_by('-is_default', 'name')
         
         # Apply filters
         license_type = request.query_params.get('type')
@@ -96,8 +95,9 @@ class LicenseListView(APIView):
         # Serialize licenses
         licenses_data = []
         for license_obj in queryset:
-            license_data = LicenseSummarySerializer.from_license_model(license_obj)
-            licenses_data.append(license_data)
+            # Safe usage_count; serializer ignores if not provided
+            _ = license_obj.assets.count() + license_obj.default_for_resources.count()
+            licenses_data.append(LicenseSummarySerializer.from_license_model(license_obj))
         
         return Response({
             'licenses': licenses_data

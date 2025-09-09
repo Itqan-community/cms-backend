@@ -36,8 +36,8 @@ class PublisherDetailView(APIView):
             # Get organization with optimized queries
             organization = PublishingOrganization.objects.select_related().annotate(
                 resources_count=Count('resources'),
-                assets_count=Count('resources__asset', distinct=True),
-                total_downloads=Sum('resources__asset__download_count')
+                assets_count=Count('resources__assets', distinct=True),
+                total_downloads=Sum('resources__assets__download_count')
             ).get(id=publisher_id)
         except PublishingOrganization.DoesNotExist:
             return Response(
@@ -244,8 +244,8 @@ def publisher_list(request):
     # Start with all organizations
     publishers_query = PublishingOrganization.objects.annotate(
         resources_count=Count('resources'),
-        assets_count=Count('resources__asset', distinct=True),
-        total_downloads=Sum('resources__asset__download_count')
+        assets_count=Count('resources__assets', distinct=True),
+        total_downloads=Sum('resources__assets__download_count')
     ).order_by('name')
     
     # Apply filters
