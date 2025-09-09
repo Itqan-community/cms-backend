@@ -130,7 +130,7 @@ jobs:
           fetch-depth: 0
 
       - name: Log in to GHCR
-        if: always()
+        if: env.ENV_NAME == 'development'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -138,10 +138,13 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push image to GHCR
+        if: env.ENV_NAME == 'development'
         run: |
-          echo "🛠️ Building image $IMAGE_REPO:$IMAGE_TAG"
+          echo "🛠️ Building image $IMAGE_REPO:$IMAGE_TAG for develop environment"
           docker build -f deployment/docker/Dockerfile.backend -t $IMAGE_REPO:$IMAGE_TAG .
+          echo "📤 Pushing image to GHCR..."
           docker push $IMAGE_REPO:$IMAGE_TAG
+          echo "✅ Image pushed successfully to GHCR"
 
       - name: Deploy to ${{ env.ENV_NAME }}
         uses: appleboy/ssh-action@v1.0.3
@@ -234,22 +237,36 @@ jobs:
             docker rm -f docker-web-1 docker-caddy-1 web caddy cms-web backend || true
             docker network prune -f || true
             
-            # Authenticate Docker to GHCR (required for pulling private images)
-            if [ -n "${{ secrets.GHCR_DEPLOY_USER }}" ] && [ -n "${{ secrets.GHCR_DEPLOY_TOKEN }}" ]; then
-              echo "🔐 Logging in to GHCR on remote host..."
-              echo "${{ secrets.GHCR_DEPLOY_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_DEPLOY_USER }}" --password-stdin || {
-                echo "❌ GHCR login failed on remote host"; exit 1; }
+            # Authenticate Docker to GHCR (only for development environment)
+            if [ "${{ env.ENV_NAME }}" = "development" ]; then
+              if [ -n "${{ secrets.GHCR_DEPLOY_USER }}" ] && [ -n "${{ secrets.GHCR_DEPLOY_TOKEN }}" ]; then
+                echo "🔐 Logging in to GHCR on remote host for develop environment..."
+                echo "${{ secrets.GHCR_DEPLOY_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_DEPLOY_USER }}" --password-stdin || {
+                  echo "❌ GHCR login failed on remote host"; exit 1; }
+              else
+                echo "⚠️ GHCR_DEPLOY_USER/TOKEN not set; using GitHub token for develop environment"
+                echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin || {
+                  echo "❌ GHCR login failed with GitHub token"; exit 1; }
+              fi
             else
-              echo "⚠️ GHCR_DEPLOY_USER/TOKEN not set; ensure images are public or provide credentials"
+              echo "ℹ️ Using build context for ${{ env.ENV_NAME }} environment (not GHCR)"
             fi
 
-            # Deploy with Docker Compose (build and start)
-            echo "🔧 Building and starting services..."
+            # Deploy with Docker Compose (pull and start)
+            echo "🔧 Pulling and starting services..."
             IMG_REPO='${{ env.IMAGE_REPO }}'
             IMG_TAG='${{ env.IMAGE_TAG }}'
             echo "Using image: ${IMG_REPO}:${IMG_TAG}"
-            IMAGE_REPO="${IMG_REPO}" IMAGE_TAG="${IMG_TAG}" docker compose -f ${{ env.COMPOSE_FILE }} pull || true
-            IMAGE_REPO="${IMG_REPO}" IMAGE_TAG="${IMG_TAG}" docker compose -f ${{ env.COMPOSE_FILE }} up -d
+            
+            # For develop environment, pull from GHCR; for others, use build
+            if [ "${{ env.ENV_NAME }}" = "development" ]; then
+              echo "📦 Pulling image from GHCR for develop environment..."
+              IMAGE_REPO="${IMG_REPO}" IMAGE_TAG="${IMG_TAG}" docker compose -f ${{ env.COMPOSE_FILE }} pull
+              IMAGE_REPO="${IMG_REPO}" IMAGE_TAG="${IMG_TAG}" docker compose -f ${{ env.COMPOSE_FILE }} up -d
+            else
+              echo "🔨 Building and starting services for ${{ env.ENV_NAME }}..."
+              docker compose -f ${{ env.COMPOSE_FILE }} up -d --build
+            fi
             
             # Wait for services to be ready
             echo "⏳ Waiting for services to start..."
