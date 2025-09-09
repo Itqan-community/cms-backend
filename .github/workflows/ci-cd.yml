@@ -228,6 +228,15 @@ jobs:
             echo "🗑️ Removing any conflicting containers..."
             docker rm -f docker-web-1 web cms-web backend || true
             
+            # Authenticate Docker to GHCR (required for pulling private images)
+            if [ -n "${{ secrets.GHCR_DEPLOY_USER }}" ] && [ -n "${{ secrets.GHCR_DEPLOY_TOKEN }}" ]; then
+              echo "🔐 Logging in to GHCR on remote host..."
+              echo "${{ secrets.GHCR_DEPLOY_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_DEPLOY_USER }}" --password-stdin || {
+                echo "❌ GHCR login failed on remote host"; exit 1; }
+            else
+              echo "⚠️ GHCR_DEPLOY_USER/TOKEN not set; ensure images are public or provide credentials"
+            fi
+
             # Deploy with Docker Compose (build and start)
             echo "🔧 Building and starting services..."
             export IMAGE_REPO=${{ env.IMAGE_REPO }}
