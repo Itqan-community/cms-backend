@@ -25,6 +25,9 @@ jobs:
   # Deployment Job with Container Cleanup
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     # Run on: direct push to develop, merged PRs to staging/main, or manual dispatch
     if: |
       (github.event_name == 'push' && github.ref == 'refs/heads/develop') ||
@@ -84,6 +87,8 @@ jobs:
       - name: Set deployment variables
         id: vars
         run: |
+          # Robust lowercase owner for GHCR (some shells reject ${var,,})
+          OWNER_LC=$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
           # Determine target branch
           if [[ "${{ github.event_name }}" == "push" ]]; then
             TARGET_BRANCH="${{ github.ref_name }}"
@@ -99,7 +104,7 @@ jobs:
             echo "ENV_URL=https://develop.api.cms.itqan.dev" >> $GITHUB_ENV
             echo "COMPOSE_FILE=deployment/docker/docker-compose.develop.yml" >> $GITHUB_ENV
             echo "BRANCH=develop" >> $GITHUB_ENV
-            echo "IMAGE_REPO=ghcr.io/${{ github.repository_owner }}/cms-backend" >> $GITHUB_ENV
+            echo "IMAGE_REPO=ghcr.io/${OWNER_LC}/cms-backend" >> $GITHUB_ENV
             echo "IMAGE_TAG=develop-${GITHUB_SHA::7}" >> $GITHUB_ENV
           elif [[ "$TARGET_BRANCH" == "staging" ]]; then
             echo "HOST=${{ secrets.STAGING_HOST }}" >> $GITHUB_ENV
@@ -107,7 +112,7 @@ jobs:
             echo "ENV_URL=https://staging.api.cms.itqan.dev" >> $GITHUB_ENV
             echo "COMPOSE_FILE=deployment/docker/docker-compose.staging.yml" >> $GITHUB_ENV
             echo "BRANCH=staging" >> $GITHUB_ENV
-            echo "IMAGE_REPO=ghcr.io/${{ github.repository_owner }}/cms-backend" >> $GITHUB_ENV
+            echo "IMAGE_REPO=ghcr.io/${OWNER_LC}/cms-backend" >> $GITHUB_ENV
             echo "IMAGE_TAG=staging-${GITHUB_SHA::7}" >> $GITHUB_ENV
           elif [[ "$TARGET_BRANCH" == "main" ]]; then
             echo "HOST=${{ secrets.PROD_HOST }}" >> $GITHUB_ENV
@@ -115,9 +120,14 @@ jobs:
             echo "ENV_URL=https://api.cms.itqan.dev" >> $GITHUB_ENV
             echo "COMPOSE_FILE=deployment/docker/docker-compose.production.yml" >> $GITHUB_ENV
             echo "BRANCH=main" >> $GITHUB_ENV
-            echo "IMAGE_REPO=ghcr.io/${{ github.repository_owner }}/cms-backend" >> $GITHUB_ENV
+            echo "IMAGE_REPO=ghcr.io/${OWNER_LC}/cms-backend" >> $GITHUB_ENV
             echo "IMAGE_TAG=prod-${GITHUB_SHA::7}" >> $GITHUB_ENV
           fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Log in to GHCR
         if: always()
@@ -208,7 +218,10 @@ jobs:
                 echo "CORS_ALLOWED_ORIGINS=https://cms.itqan.dev";
               } > deployment/docker/.env
             fi
-            echo "✅ Environment file generated at deployment/docker/.env"
+            # Append image coordinates for docker compose variable substitution
+            echo "IMAGE_REPO=${{ env.IMAGE_REPO }}" >> deployment/docker/.env
+            echo "IMAGE_TAG=${{ env.IMAGE_TAG }}" >> deployment/docker/.env
+            echo "✅ Environment file generated at deployment/docker/.env (with IMAGE_REPO/IMAGE_TAG)"
             
             # Clean up existing containers and images
             echo "🧹 Cleaning up existing containers..."
@@ -219,12 +232,22 @@ jobs:
             echo "🗑️ Removing any conflicting containers..."
             docker rm -f docker-web-1 web cms-web backend || true
             
+            # Authenticate Docker to GHCR (required for pulling private images)
+            if [ -n "${{ secrets.GHCR_DEPLOY_USER }}" ] && [ -n "${{ secrets.GHCR_DEPLOY_TOKEN }}" ]; then
+              echo "🔐 Logging in to GHCR on remote host..."
+              echo "${{ secrets.GHCR_DEPLOY_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_DEPLOY_USER }}" --password-stdin || {
+                echo "❌ GHCR login failed on remote host"; exit 1; }
+            else
+              echo "⚠️ GHCR_DEPLOY_USER/TOKEN not set; ensure images are public or provide credentials"
+            fi
+
             # Deploy with Docker Compose (build and start)
             echo "🔧 Building and starting services..."
-            export IMAGE_REPO=${{ env.IMAGE_REPO }}
-            export IMAGE_TAG=${{ env.IMAGE_TAG }}
-            docker compose -f ${{ env.COMPOSE_FILE }} pull || true
-            docker compose -f ${{ env.COMPOSE_FILE }} up -d
+            IMG_REPO='${{ env.IMAGE_REPO }}'
+            IMG_TAG='${{ env.IMAGE_TAG }}'
+            echo "Using image: ${IMG_REPO}:${IMG_TAG}"
+            IMAGE_REPO="${IMG_REPO}" IMAGE_TAG="${IMG_TAG}" docker compose -f ${{ env.COMPOSE_FILE }} pull || true
+            IMAGE_REPO="${IMG_REPO}" IMAGE_TAG="${IMG_TAG}" docker compose -f ${{ env.COMPOSE_FILE }} up -d
             
             # Wait for services to be ready
             echo "⏳ Waiting for services to start..."
