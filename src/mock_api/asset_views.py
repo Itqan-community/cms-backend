@@ -3,12 +3,13 @@ Asset-related mock API views
 """
 
 from datetime import datetime, timezone
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from django.http import HttpResponse
 from .dummy_data import DUMMY_ASSETS
+from .authentication import MockTokenAuthentication, MockTokenPermission
 
 
 @api_view(['GET'])
@@ -71,7 +72,8 @@ def get_asset_details(request, asset_id):
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@authentication_classes([MockTokenAuthentication])
+@permission_classes([MockTokenPermission])
 def request_asset_access(request, asset_id):
     """Request asset access"""
     asset = next((a for a in DUMMY_ASSETS if a['id'] == int(asset_id)), None)
