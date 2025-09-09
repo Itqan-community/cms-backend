@@ -239,10 +239,11 @@ jobs:
 
             # Deploy with Docker Compose (build and start)
             echo "🔧 Building and starting services..."
-            export IMAGE_REPO=${{ env.IMAGE_REPO }}
-            export IMAGE_TAG=${{ env.IMAGE_TAG }}
-            docker compose -f ${{ env.COMPOSE_FILE }} pull || true
-            docker compose -f ${{ env.COMPOSE_FILE }} up -d
+            IMG_REPO='${{ env.IMAGE_REPO }}'
+            IMG_TAG='${{ env.IMAGE_TAG }}'
+            echo "Using image: ${IMG_REPO}:${IMG_TAG}"
+            IMAGE_REPO="${IMG_REPO}" IMAGE_TAG="${IMG_TAG}" docker compose -f ${{ env.COMPOSE_FILE }} pull || true
+            IMAGE_REPO="${IMG_REPO}" IMAGE_TAG="${IMG_TAG}" docker compose -f ${{ env.COMPOSE_FILE }} up -d
             
             # Wait for services to be ready
             echo "⏳ Waiting for services to start..."
