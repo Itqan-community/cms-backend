@@ -52,6 +52,21 @@ class RegisterSerializer(serializers.Serializer):
         job_title = validated_data.get('job_title', '') or validated_data.get('title', '')
         validated_data.pop('title', None)  # Remove title if present
         
+        # Get or create default role (Developer for new registrations)
+        from .models import Role
+        default_role, created = Role.objects.get_or_create(
+            name='Developer',
+            defaults={
+                'description': 'API access for application development',
+                'permissions': {
+                    'resources': ['read'],
+                    'distributions': ['read'], 
+                    'access_requests': ['create', 'read_own'],
+                    'usage_events': ['read_own']
+                }
+            }
+        )
+        
         # Create user using standard create method and set password separately
         user = User(
             email=validated_data['email'],
@@ -60,7 +75,8 @@ class RegisterSerializer(serializers.Serializer):
             last_name=validated_data['last_name'],
             phone_number=validated_data.get('phone_number', ''),
             job_title=job_title,
-            auth_provider='email'
+            auth_provider='email',
+            role=default_role  # Assign default role
         )
         user.set_password(password)
         user.save()
