@@ -86,12 +86,22 @@ def download_resource(request, resource_id):
     has_any_access = any(asset['has_access'] for asset in resource_assets)
     
     if not has_any_access:
-        return Response({
-            "error": {
-                "code": "ACCESS_DENIED",
-                "message": "You need access to at least one asset in this resource to download"
-            }
-        }, status=status.HTTP_403_FORBIDDEN)
+        # Honor auto-approve flag for resource-level download as well
+        if APP_CONFIG.get("features", {}).get("auto_approve_access", False):
+            has_any_access = True
+            # Grant access to all assets in this resource in-memory
+            for asset in resource_assets:
+                asset['has_access'] = True
+                if isinstance(asset.get('access'), dict):
+                    asset['access']['has_access'] = True
+                    asset['access']['requires_approval'] = False
+        else:
+            return Response({
+                "error": {
+                    "code": "ACCESS_DENIED",
+                    "message": "You need access to at least one asset in this resource to download"
+                }
+            }, status=status.HTTP_403_FORBIDDEN)
     
     # Return dummy package content
     dummy_content = f"Dummy resource package for resource {resource_id} containing {len(resource_assets)} assets"

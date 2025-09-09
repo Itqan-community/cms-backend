@@ -8,7 +8,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from django.http import HttpResponse
-from .dummy_data import DUMMY_ASSETS
+from .dummy_data import DUMMY_ASSETS, APP_CONFIG
 from .authentication import MockTokenAuthentication, MockTokenPermission
 
 
@@ -87,6 +87,11 @@ def request_asset_access(request, asset_id):
         }, status=status.HTTP_404_NOT_FOUND)
     
     # Simulate auto-approval for most assets
+    # Persist access flag so subsequent calls treat this asset as authorized
+    asset['has_access'] = True
+    if isinstance(asset.get('access'), dict):
+        asset['access']['has_access'] = True
+        asset['access']['requires_approval'] = False
     response_data = {
         "request_id": 123,
         "status": "approved",
@@ -116,12 +121,16 @@ def download_asset(request, asset_id):
         }, status=status.HTTP_404_NOT_FOUND)
     
     if not asset['has_access']:
-        return Response({
-            "error": {
-                "code": "ACCESS_DENIED",
-                "message": "You need to request access to download this asset"
-            }
-        }, status=status.HTTP_403_FORBIDDEN)
+        # If auto-approve is enabled in mock config, grant access on-the-fly
+        if APP_CONFIG.get("features", {}).get("auto_approve_access", False):
+            asset['has_access'] = True
+        else:
+            return Response({
+                "error": {
+                    "code": "ACCESS_DENIED",
+                    "message": "You need to request access to download this asset"
+                }
+            }, status=status.HTTP_403_FORBIDDEN)
     
     # Return dummy file content
     dummy_content = f"Dummy content for asset {asset_id}: {asset['title']}"
