@@ -217,7 +217,10 @@ jobs:
                 echo "CORS_ALLOWED_ORIGINS=https://cms.itqan.dev";
               } > deployment/docker/.env
             fi
-            echo "✅ Environment file generated at deployment/docker/.env"
+            # Append image coordinates for docker compose variable substitution
+            echo "IMAGE_REPO=${{ env.IMAGE_REPO }}" >> deployment/docker/.env
+            echo "IMAGE_TAG=${{ env.IMAGE_TAG }}" >> deployment/docker/.env
+            echo "✅ Environment file generated at deployment/docker/.env (with IMAGE_REPO/IMAGE_TAG)"
             
             # Clean up existing containers and images
             echo "🧹 Cleaning up existing containers..."
