@@ -2,9 +2,7 @@ version: '3.9'
 
 services:
   web:
-    build:
-      context: ../../
-      dockerfile: deployment/docker/Dockerfile.backend
+    image: ${WEB_IMAGE_TAG:-ghcr.io/itqan-community/cms-backend:main}
     env_file:
       - .env
     environment:
