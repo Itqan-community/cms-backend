@@ -123,6 +123,11 @@ jobs:
             echo "IMAGE_TAG=prod-${GITHUB_SHA::7}" >> $GITHUB_ENV
           fi
 
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Log in to GHCR
         if: always()
         uses: docker/login-action@v3
