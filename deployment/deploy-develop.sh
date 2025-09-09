@@ -52,16 +52,31 @@ CORS_ALLOWED_ORIGINS=https://develop.cms.itqan.dev,https://cms.itqan.dev
 DJANGO_SUPERUSER_USERNAME=admin
 DJANGO_SUPERUSER_EMAIL=admin@itqan.dev
 DJANGO_SUPERUSER_PASSWORD=ItqanCMS2024!
+
+# Docker Image Configuration
+IMAGE_REPO=ghcr.io/itqan-community/cms-backend
+IMAGE_TAG=develop-$(git rev-parse --short HEAD)
 ENVEOF
 
     echo "✅ Environment file created"
+    
+    echo "🔐 Logging in to GitHub Container Registry..."
+    echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin || {
+        echo "❌ GHCR login failed, trying with default token..."; 
+        echo "$GITHUB_TOKEN" | docker login ghcr.io -u "itqan-community" --password-stdin || {
+            echo "⚠️ GHCR login failed, will try to pull public image";
+        }
+    }
     
     echo "🐳 Stopping web container only (preserving caddy)..."
     docker compose -f docker-compose.develop.yml stop web || true
     docker compose -f docker-compose.develop.yml rm -f web || true
     
-    echo "🔨 Building and starting web container (preserving caddy)..."
-    docker compose -f docker-compose.develop.yml up -d --build web
+    echo "📥 Pulling latest image..."
+    docker compose -f docker-compose.develop.yml pull web || echo "⚠️ Pull failed, will use cached image"
+    
+    echo "🚀 Starting web container (preserving caddy)..."
+    docker compose -f docker-compose.develop.yml up -d web
     
     echo "⏳ Waiting for application to start..."
     sleep 30
