@@ -1,6 +1,8 @@
 services:
   web:
-    image: ${IMAGE_REPO}:${IMAGE_TAG}
+    build:
+      context: ../../
+      dockerfile: deployment/docker/Dockerfile.backend
     env_file:
       - .env
     environment:
