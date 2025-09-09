@@ -64,7 +64,7 @@ class PublishingOrganizationAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'slug', 'icone_image_url', 'cover_url')
+            'fields': ('name', 'slug', 'icone_image_url')
         }),
         ('Content', {
             'fields': ('summary', 'description', 'bio')
@@ -80,6 +80,12 @@ class PublishingOrganizationAdmin(admin.ModelAdmin):
         })
     )
     readonly_fields = ['created_at', 'updated_at']
+    
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        """Override form field configuration"""
+        if db_field.name == 'social_links':
+            kwargs['required'] = False
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
     
     def get_queryset(self, request):
         """Optimize queryset with annotations"""
