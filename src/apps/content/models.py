@@ -955,8 +955,9 @@ class AssetAccessRequest(BaseModel):
         In V1: Direct file URL from asset version.
         """
         latest_version = self.asset.get_latest_version()
-        if latest_version:
-            return latest_version.file_url
+        if latest_version and latest_version.file_url:
+            # Return the public URL for the stored file
+            return latest_version.file_url.url
         return ""
 
     @classmethod
