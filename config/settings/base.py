@@ -328,3 +328,5 @@ SOCIALACCOUNT_FORMS = {"signup": "apps.users.forms.UserSocialSignupForm"}
 LOCAL = False  # if running locally
 TEST_CASE = False  # if running unit tests
 PRODUCTION = False  # if running in production
+
+USER_PATH_THROTTLE_RATE = env.str("USER_PATH_THROTTLE_RATE", default="10/sec")
