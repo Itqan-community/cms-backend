@@ -40,6 +40,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://staging.cms.itqan.dev",
     "https://staging--itqan-cms.netlify.app",
     # Local frontend development
+    "http://localhost:4200",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
