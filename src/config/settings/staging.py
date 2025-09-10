@@ -151,6 +151,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://develop--itqan-cms.netlify.app",
     "https://cms.itqan.dev",
     "https://itqan-cms.netlify.app",
+    "http://localhost:4200",  # Angular dev server
     "http://localhost:3000",  # Local frontend development
     "http://127.0.0.1:3000",
 ]
