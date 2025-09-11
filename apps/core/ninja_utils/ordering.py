@@ -16,10 +16,7 @@ class Ordering(OrderingBase):
         ordering: str | None = Field(None)
 
     def __init__(
-        self,
-        ordering_fields: list[str] | None = None,
-        pass_parameter: str | None = None,
-        query_param: str = "ordering",
+        self, ordering_fields: list[str] | None = None, pass_parameter: str | None = None, query_param: str = "ordering"
     ) -> None:
         super().__init__(pass_parameter=pass_parameter)
         self.ordering_fields = ordering_fields or []
@@ -31,10 +28,7 @@ class Ordering(OrderingBase):
         if ordering_fields:
 
             class DynamicInput(Ordering.Input):
-                ordering: Query[
-                    str | None,
-                    P(example=", ".join(ordering_fields), alias=query_param),
-                ] = None  # type:ignore[type-arg,valid-type]
+                ordering: Query[str | None, P(example=", ".join(ordering_fields), alias=query_param)] = None  # type:ignore
 
             return DynamicInput
         return Ordering.Input

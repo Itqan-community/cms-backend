@@ -31,11 +31,7 @@ class SearchingBase(ABC):
     InputSource = Query(...)
 
     def __init__(
-        self,
-        *,
-        pass_parameter: str | None = None,
-        search_fields: list[str] | None = None,
-        **kwargs: Any,
+        self, *, pass_parameter: str | None = None, search_fields: list[str] | None = None, **kwargs: Any
     ) -> None:
         self.pass_parameter = pass_parameter
         self.search_fields = search_fields or []
@@ -90,9 +86,7 @@ def _inject_searcher(
     else:
         search_operation_class = SearchOperation
     searcher_operation = search_operation_class(
-        searcher=searcher,
-        view_func=func,
-        searcher_kwargs_name=searcher_kwargs_name,
+        searcher=searcher, view_func=func, searcher_kwargs_name=searcher_kwargs_name
     )
 
     return searcher_operation.as_view
@@ -100,11 +94,7 @@ def _inject_searcher(
 
 class SearchOperation:
     def __init__(
-        self,
-        *,
-        searcher: SearchingBase,
-        view_func: Callable,
-        searcher_kwargs_name: str = "searching",
+        self, *, searcher: SearchingBase, view_func: Callable, searcher_kwargs_name: str = "searching"
     ) -> None:
         self.searcher = searcher
         self.searcher_kwargs_name = searcher_kwargs_name

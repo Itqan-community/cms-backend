@@ -216,7 +216,7 @@ crashlytics.properties
 crashlytics-build.properties
 fabric.properties
 
-.idea/*
+.idea/
 
 ### Windows template
 # Windows thumbnail cache files

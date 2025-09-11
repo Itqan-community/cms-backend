@@ -51,10 +51,7 @@ class Searching(SearchingBase):
     }
 
     def __init__(
-        self,
-        search_fields: list[str] | None = None,
-        pass_parameter: str | None = None,
-        query_param: str = "search",
+        self, search_fields: list[str] | None = None, pass_parameter: str | None = None, query_param: str = "search"
     ) -> None:
         super().__init__(pass_parameter=pass_parameter)
         self.search_fields = search_fields or []

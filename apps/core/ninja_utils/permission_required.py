@@ -78,10 +78,7 @@ def _inject_permission_check(view: Callable) -> Callable:
 
         return result
 
-    contribute_operation_callback(
-        view_with_permission,
-        partial(add_error_response_schema, 403, NinjaErrorResponse),
-    )
+    contribute_operation_callback(view_with_permission, partial(add_error_response_schema, 403, NinjaErrorResponse))
 
     return view_with_permission
 

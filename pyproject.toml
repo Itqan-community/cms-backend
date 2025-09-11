@@ -65,7 +65,7 @@ line-length = 120
 
 [tool.ruff.lint]
 select = [
-#    "F",
+    "F",
 #    "E",
     "W",
 #    "C90",
@@ -126,6 +126,8 @@ ignore = [
     "SIM102", # sometimes it's better to nest
   "G004", # Logging statement uses f-string
     "UP038", # Checks for uses of isinstance/issubclass that take a tuple
+"PERF401", # Use a list comprehension to create a transformed list
+  "COM812", # Missing trailing comma in a list or tuple
     # of types for comparison.
     # Deactivated because it can make the code slow:
     # https://github.com/astral-sh/ruff/issues/7871

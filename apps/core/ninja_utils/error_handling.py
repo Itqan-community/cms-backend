@@ -19,9 +19,7 @@ from config.ninja_urls import ninja_api
 @ninja_api.exception_handler(PermissionDenied)
 def handle_permission_denied(request, exc: PermissionDenied):
     return ninja_api.create_response(
-        request,
-        NinjaErrorResponse(error_name="permission_denied", message=exc.detail),
-        status=403,
+        request, NinjaErrorResponse(error_name="permission_denied", message=exc.detail), status=403
     )
 
 
@@ -56,9 +54,7 @@ def handle_django_validation_error(request, exc: DjangoValidationError):
 @ninja_api.exception_handler(Http404)
 def handle_django_404(request, exc: Http404):
     return ninja_api.create_response(
-        request,
-        NinjaErrorResponse(error_name="not_found", message=exc.args[0]),
-        status=404,
+        request, NinjaErrorResponse(error_name="not_found", message=exc.args[0]), status=404
     )
 
 

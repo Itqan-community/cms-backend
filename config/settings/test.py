@@ -2,7 +2,7 @@
 With these settings, tests run faster.
 """
 
-from .base import *
+from .base import *  # noqa f401
 from .base import TEMPLATES
 from .base import env
 

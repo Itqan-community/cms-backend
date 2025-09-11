@@ -1,7 +1,3 @@
-"""
-Core models and base classes for Itqan CMS
-"""
-
 from django.db import models
 
 
@@ -13,25 +9,13 @@ class BaseModel(models.Model):
     - Soft delete functionality (is_active)
     """
 
-    id = models.AutoField(
-        primary_key=True,
-        help_text="Unique identifier for this record",
-    )
+    id = models.UUIDField(primary_key=True, help_text="Unique identifier for this record")
 
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        help_text="Timestamp when this record was created",
-    )
+    created_at = models.DateTimeField(auto_now_add=True, help_text="Timestamp when this record was created")
 
-    updated_at = models.DateTimeField(
-        auto_now=True,
-        help_text="Timestamp when this record was last updated",
-    )
+    updated_at = models.DateTimeField(auto_now=True, help_text="Timestamp when this record was last updated")
 
-    is_active = models.BooleanField(
-        default=True,
-        help_text="Whether this record is active (soft delete mechanism)",
-    )
+    is_active = models.BooleanField(default=True, help_text="Whether this record is active (soft delete mechanism)")
 
     class Meta:
         abstract = True
@@ -49,7 +33,7 @@ class BaseModel(models.Model):
 
     def hard_delete(self, using=None, keep_parents=False):
         """
-        Hard delete: Actually remove from database (use with caution)
+        Hard delete: Actually remove from a database (use with caution)
         """
         super().delete(using=using, keep_parents=keep_parents)
 

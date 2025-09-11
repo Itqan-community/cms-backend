@@ -4,7 +4,7 @@
     <facet type="django" name="Django">
       <configuration>
         <option name="rootFolder" value="$MODULE_DIR$" />
-        <option name="settingsModule" value="config/settings/local.py" />
+        <option name="settingsModule" value="//wsl$/Ubuntu20.04LTS/home/hassaan/itqan_cms_backend/config/settings/local.py" />
         <option name="manageScript" value="$MODULE_DIR$/manage.py" />
         <option name="environment" value="&lt;map/&gt;" />
         <option name="doNotUseTestRunner" value="true" />
@@ -19,24 +19,15 @@
     <orderEntry type="jdk" jdkName="Python 3.13.5 WSL (Ubuntu20.04LTS): (/home/hassaan/itqan_cms_backend/.venv/bin/python)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
-  <component name="PackageRequirementsSettings">
-    <option name="requirementsPath" value="$MODULE_DIR$/requirements/local.txt" />
-  </component>
   <component name="PyDocumentationSettings">
-    <option name="renderExternalDocumentation" value="true" />
-  </component>
-  <component name="ReSTService">
-    <option name="DOC_DIR" value="$MODULE_DIR$/docs" />
+    <option name="format" value="PLAIN" />
+    <option name="myDocStringFormat" value="Plain" />
   </component>
   <component name="TemplatesService">
-    <option name="TEMPLATE_CONFIGURATION" value="Django" />
     <option name="TEMPLATE_FOLDERS">
       <list>
-        <option value="$MODULE_DIR$/itqan_cms_backend/templates" />
+        <option value="$MODULE_DIR$/.venv/modeltranslation/templates" />
       </list>
     </option>
-  </component>
-  <component name="TestRunnerService">
-    <option name="PROJECT_TEST_RUNNER" value="pytest" />
   </component>
 </module>

@@ -1,6 +1,3 @@
-from typing import Generic
-from typing import TypeVar
-
 from ninja import Schema
 
 

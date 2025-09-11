@@ -1,4 +1,4 @@
-from .base import *
+from .base import *  # noqa f401
 from .base import INSTALLED_APPS
 from .base import MIDDLEWARE
 from .base import env

@@ -1,4 +1,3 @@
-from django.contrib.admin.views.decorators import staff_member_required
 from ninja import NinjaAPI
 
 from apps.core.ninja_utils.parser import NinjaParser
@@ -15,9 +14,8 @@ ninja_api = NinjaAPI(
     parser=NinjaParser(),
     # docs_decorator=staff_member_required,
 )
-from django.conf import settings
 
-from apps.core.ninja_utils.error_handling import *
+from apps.core.ninja_utils.error_handling import *  # noqa f401
 
 # ninja_api.add_router("/", "apps.users.views.activation_user_account_request.router")
 

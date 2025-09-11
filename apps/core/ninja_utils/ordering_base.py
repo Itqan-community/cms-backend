@@ -84,13 +84,7 @@ def _inject_sorter(
 
 
 class OrderingOperation:
-    def __init__(
-        self,
-        *,
-        sorter: OrderingBase,
-        view_func: Callable,
-        sorter_kwargs_name: str = "ordering",
-    ) -> None:
+    def __init__(self, *, sorter: OrderingBase, view_func: Callable, sorter_kwargs_name: str = "ordering") -> None:
         self.sorter = sorter
         self.sorter_kwargs_name = sorter_kwargs_name
         self.view_func = view_func

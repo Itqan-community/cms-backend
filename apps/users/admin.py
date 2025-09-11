@@ -40,11 +40,9 @@ class UserAdmin(auth_admin.UserAdmin):
     search_fields = ["name"]
     ordering = ["id"]
     add_fieldsets = (
-        (
-            None,
-            {
-                "classes": ("wide",),
-                "fields": ("email", "password1", "password2"),
-            },
-        ),
+        None,
+        {
+            "classes": ("wide",),
+            "fields": ("email", "password1", "password2"),
+        },
     )
