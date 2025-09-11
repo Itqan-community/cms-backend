@@ -48,7 +48,7 @@ class PublisherAdmin(admin.ModelAdmin):
         (
             "Basic Information",
             {
-                "fields": ("name", "slug", "icone_image_url"),
+                "fields": ("name", "slug"),
             },
         ),
         (
@@ -138,13 +138,6 @@ class LicenseAdmin(admin.ModelAdmin):
     list_display = ["name", "code", "short_name", "is_default"]
     list_filter = ["is_default"]
     search_fields = ["name", "code", "short_name"]
-
-    fieldsets = (
-        "License Information",
-        {
-            "fields": ("code", "name", "short_name", "icon_url", "is_default"),
-        },
-    )
 
 
 @admin.register(Resource)

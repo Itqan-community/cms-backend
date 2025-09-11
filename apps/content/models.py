@@ -227,8 +227,6 @@ class Asset(BaseModel):
 
     name = models.CharField(max_length=255, help_text="Asset name")
 
-    title = models.CharField(max_length=255, help_text="Display title for API")
-
     description = models.TextField(help_text="Asset description")
 
     long_description = models.TextField(blank=True, help_text="Extended description")
@@ -405,4 +403,4 @@ class AssetAccessRequest(BaseModel):
         unique_together = ["developer_user", "asset"]
 
     def __str__(self):
-        return f"{self.developer_user.email} -> {self.asset.title} ({self.status})"
+        return f"{self.developer_user.email} -> {self.asset.name} ({self.status})"

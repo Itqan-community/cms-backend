@@ -15,18 +15,22 @@ class User(AbstractUser):
     last_name = None  # type: ignore[assignment]
     username = None  # type: ignore[assignment]
     name = CharField(_("Name of User"), blank=True, max_length=255)
-    email = EmailField(_("email address"), db_index=True)
+    email = EmailField(_("email address"), db_index=True, unique=True)
+
+    # profile:
+    bio = models.TextField(_("Bio"), blank=True)
+    work_summary = models.TextField(_("Work Summary"), blank=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 
     objects: ClassVar[UserManager] = UserManager()
 
-    class Meta:
-        constraints = [
-            # unique together
-            models.UniqueConstraint()
-        ]
+    # class Meta:
+    #     constraints = [
+    #         # unique together
+    #         models.UniqueConstraint()
+    #     ]
 
     def __str__(self):
         return f"User(email={self.email} name={self.name})"
