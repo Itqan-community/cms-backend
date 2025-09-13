@@ -1,0 +1,8 @@
+---
+description: docs
+globs:
+alwaysApply: true
+---
+
+ninja docs: https://django-ninja.dev/
+django docs: https://docs.djangoproject.com/en/5.2/
