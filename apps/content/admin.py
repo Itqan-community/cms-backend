@@ -249,7 +249,6 @@ class AssetAdmin(admin.ModelAdmin):
     """Enhanced admin for Assets"""
 
     list_display = [
-        "title",
         "get_publisher",
         "category",
         "license",
@@ -257,7 +256,7 @@ class AssetAdmin(admin.ModelAdmin):
         "created_at",
     ]
     list_filter = ["category", "license", "resource__publisher", "format", "created_at"]
-    search_fields = ["title", "name", "description", "long_description"]
+    search_fields = ["name", "description", "long_description"]
     inlines = [AssetVersionInline]
     autocomplete_fields = ["resource", "license"]
 
@@ -265,7 +264,7 @@ class AssetAdmin(admin.ModelAdmin):
         (
             "Basic Information",
             {
-                "fields": ("title", "name", "resource", "category"),
+                "fields": ("name", "resource", "category"),
             },
         ),
         (
