@@ -331,3 +331,8 @@ TEST_CASE = False  # if running unit tests
 PRODUCTION = False  # if running in production
 
 USER_PATH_THROTTLE_RATE = env.str("USER_PATH_THROTTLE_RATE", default="10/sec")
+
+# Ninja configs
+NINJA_PAGINATION_CLASS = "apps.core.ninja_utils.paginations.NinjaPagination"
+NINJA_SEARCHING_CLASS = "apps.core.ninja_utils.searching.Searching"
+NINJA_ORDERING_CLASS = "apps.core.ninja_utils.ordering.Ordering"

@@ -149,16 +149,15 @@ class ResourceAdmin(admin.ModelAdmin):
         "publisher",
         "category",
         "status",
-        "default_license",
         "version_count",
         "latest_version",
         "created_at",
     ]
-    list_filter = ["category", "status", "publisher", "default_license", "created_at"]
+    list_filter = ["category", "status", "publisher", "created_at"]
     search_fields = ["name", "description", "slug"]
     prepopulated_fields = {"slug": ("name",)}
     inlines = [ResourceVersionInline]
-    autocomplete_fields = ["publisher", "default_license"]
+    raw_id_fields = ["publisher"]
 
     fieldsets = (
         (
@@ -171,12 +170,6 @@ class ResourceAdmin(admin.ModelAdmin):
             "Content",
             {
                 "fields": ("description", "category", "status"),
-            },
-        ),
-        (
-            "Licensing",
-            {
-                "fields": ("default_license",),
             },
         ),
         (
@@ -201,10 +194,7 @@ class ResourceAdmin(admin.ModelAdmin):
         return (
             super()
             .get_queryset(request)
-            .select_related(
-                "publisher",
-                "default_license",
-            )
+            .select_related("publisher")
             .annotate(
                 annotated_version_count=Count("versions"),
             )

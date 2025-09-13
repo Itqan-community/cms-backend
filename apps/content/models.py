@@ -55,6 +55,10 @@ class Publisher(BaseModel):
     def __str__(self):
         return f"Publisher(name={self.name})"
 
+    def save(self, *args, **kwargs):
+        self.slug = slugify(self.name[:50])
+        super().save(*args, **kwargs)
+
 
 class PublisherMember(BaseModel):  # TODO Think it
     """
@@ -132,13 +136,6 @@ class Resource(BaseModel):
         help_text="V1: ready = ready to extract Assets from",
     )
 
-    default_license = models.ForeignKey(
-        License,
-        on_delete=models.PROTECT,
-        related_name="default_for_resources",
-        help_text="Default license for this resource",
-    )
-
     # Managers
     objects = ActiveObjectsManager()
     all_objects = AllObjectsManager()
@@ -147,7 +144,7 @@ class Resource(BaseModel):
         return f"Resource(name={self.name} category={self.category})"
 
     def save(self, *args, **kwargs):
-        self.slug = slugify(f"{self.name}({self.publisher.slug})")
+        self.slug = slugify(f"{self.name}({self.publisher.slug})"[:50])
         super().save(*args, **kwargs)
 
 
@@ -218,7 +215,7 @@ class ResourceVersion(BaseModel):
 
 
 class Asset(BaseModel):
-    class AssetChoice(models.TextChoices):
+    class CategoryChoice(models.TextChoices):
         RECITATION = "recitation", _("Recitation")
         MUSHAF = "mushaf", _("Mushaf")
         TAFSIR = "tafsir", _("Tafsir")
@@ -239,7 +236,7 @@ class Asset(BaseModel):
     )
 
     category = models.CharField(
-        max_length=20, choices=AssetChoice.choices, help_text="Asset category matching resource categories"
+        max_length=20, choices=CategoryChoice.choices, help_text="Asset category matching resource categories"
     )
 
     license = models.ForeignKey(License, on_delete=models.PROTECT, related_name="assets")
@@ -259,7 +256,7 @@ class Asset(BaseModel):
     all_objects = AllObjectsManager()
 
     def __str__(self):
-        return f"Asset(title={self.title} category={self.category})"
+        return f"Asset(name={self.name} category={self.category})"
 
     @staticmethod
     def _parse_file_size_to_bytes(file_size_str):

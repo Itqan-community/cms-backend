@@ -19,8 +19,7 @@ ninja_api = NinjaAPI(
 from apps.core.ninja_utils.error_handling import *  # noqa f401
 
 # ninja_api.add_router("/", "apps.users.views.activation_user_account_request.router")
+auto_discover_ninja_routers(ninja_api, "views")
 
 if not all(isinstance(r[1], ItqanRouter) for r in ninja_api._routers):
     raise Exception("All routers must be of type ItqanRouter")
-
-auto_discover_ninja_routers(ninja_api, "views")

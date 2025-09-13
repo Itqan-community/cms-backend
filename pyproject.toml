@@ -128,6 +128,7 @@ ignore = [
     "UP038", # Checks for uses of isinstance/issubclass that take a tuple
 "PERF401", # Use a list comprehension to create a transformed list
   "COM812", # Missing trailing comma in a list or tuple
+  "PT009" , #  Use a regular `assert` instead of unittest-style `assertEqual`
     # of types for comparison.
     # Deactivated because it can make the code slow:
     # https://github.com/astral-sh/ruff/issues/7871
