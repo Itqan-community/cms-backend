@@ -124,14 +124,12 @@ ignore = [
     "S101", # Use of assert detected https://docs.astral.sh/ruff/rules/assert/
     "RUF012", # Mutable class attributes should be annotated with `typing.ClassVar`
     "SIM102", # sometimes it's better to nest
-  "G004", # Logging statement uses f-string
+    "G004", # Logging statement uses f-string
     "UP038", # Checks for uses of isinstance/issubclass that take a tuple
-"PERF401", # Use a list comprehension to create a transformed list
-  "COM812", # Missing trailing comma in a list or tuple
-  "PT009" , #  Use a regular `assert` instead of unittest-style `assertEqual`
-    # of types for comparison.
-    # Deactivated because it can make the code slow:
-    # https://github.com/astral-sh/ruff/issues/7871
+    "PERF401", # Use a list comprehension to create a transformed list
+    "COM812", # Missing trailing comma in a list or tuple
+    "PT009" , #  Use a regular `assert` instead of unittest-style `assertEqual`
+    "A002",# Function argument `id` is shadowing a Python builtin
 ]
 # The fixes in extend-unsafe-fixes will require
 # provide the `--unsafe-fixes` flag when fixing.

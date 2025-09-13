@@ -46,7 +46,7 @@ class ListAssetTest(BaseTestCase):
         )
 
         # Assert
-        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(200, response.status_code, response.content)
         response_body = response.json()
         self.assertEqual(1, len(response_body["results"]))
         self.assertEqual("Muhammad Refaat", response_body["results"][0]["name"])
@@ -64,7 +64,7 @@ class ListAssetTest(BaseTestCase):
         )
 
         # Assert
-        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(200, response.status_code, response.content)
         response_body = response.json()
         self.assertEqual(2, len(response_body["results"]))
         # self.assertEqual("Muhammad Refaat", response_body['results'][0]['name'])
@@ -79,7 +79,7 @@ class ListAssetTest(BaseTestCase):
         response = self.client.get("/content/assets/", data={"ordering": "-name"}, format="json")
 
         # Assert
-        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(200, response.status_code, response.content)
         response_body = response.json()
         self.assertEqual(3, len(response_body["results"]))
         self.assertEqual("C", response_body["results"][0]["name"])
@@ -96,7 +96,7 @@ class ListAssetTest(BaseTestCase):
         response = self.client.get("/content/assets/", data={"ordering": "name"}, format="json")
 
         # Assert
-        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(200, response.status_code, response.content)
         response_body = response.json()
         self.assertEqual(3, len(response_body["results"]))
         self.assertEqual("A", response_body["results"][0]["name"])
@@ -113,7 +113,7 @@ class ListAssetTest(BaseTestCase):
         response = self.client.get("/content/assets/", data={"ordering": "-category"}, format="json")
 
         # Assert
-        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(200, response.status_code, response.content)
         response_body = response.json()
         self.assertEqual(3, len(response_body["results"]))
         self.assertEqual(Asset.CategoryChoice.TAFSIR, response_body["results"][0]["category"])
@@ -130,7 +130,7 @@ class ListAssetTest(BaseTestCase):
         response = self.client.get("/content/assets/", data={"search": "tafsir"}, format="json")
 
         # Assert
-        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(200, response.status_code, response.content)
         response_body = response.json()
         self.assertEqual(1, len(response_body["results"]))
         self.assertEqual("Tafsir Al-Jalalayn", response_body["results"][0]["name"])
@@ -145,7 +145,7 @@ class ListAssetTest(BaseTestCase):
         response = self.client.get("/content/assets/", data={"search": "recitation book"}, format="json")
 
         # Assert
-        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(200, response.status_code, response.content)
         response_body = response.json()
         self.assertEqual(1, len(response_body["results"]))
         self.assertEqual("Muhammad Refaat", response_body["results"][0]["name"])
