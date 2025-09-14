@@ -988,6 +988,7 @@ dependencies = [
     { name = "psycopg2-binary" },
     { name = "python-slugify" },
     { name = "redis" },
+    { name = "scalar-django-ninja" },
     { name = "sentry-sdk" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "uvicorn-worker" },
@@ -1047,6 +1048,7 @@ requires-dist = [
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
     { name = "python-slugify", specifier = "==8.0.4" },
     { name = "redis", specifier = "==6.4.0" },
+    { name = "scalar-django-ninja", git = "https://github.com/scalar/scalar.git?subdirectory=integrations%2Fdjango-ninja" },
     { name = "sentry-sdk", specifier = "==2.37.0" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.35.0" },
     { name = "uvicorn-worker", specifier = "==0.3.0" },
@@ -1811,6 +1813,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/62/74/8d69dcb7a9efe8baa2046891735e5dfe433ad558ae23d9e3c14c633d1d58/s3transfer-0.14.0.tar.gz", hash = "sha256:eff12264e7c8b4985074ccce27a3b38a485bb7f7422cc8046fee9be4983e4125", size = 151547, upload-time = "2025-09-09T19:23:31.089Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/48/f0/ae7ca09223a81a1d890b2557186ea015f6e0502e9b8cb8e1813f1d8cfa4e/s3transfer-0.14.0-py3-none-any.whl", hash = "sha256:ea3b790c7077558ed1f02a3072fb3cb992bbbd253392f4b6e9e8976941c7d456", size = 85712, upload-time = "2025-09-09T19:23:30.041Z" },
+]
+
+[[package]]
+name = "scalar-django-ninja"
+version = "0.1.0"
+source = { git = "https://github.com/scalar/scalar.git?subdirectory=integrations%2Fdjango-ninja#7b3983b1917ef81ac050202d9cc5cfd310deac6f" }
+dependencies = [
+    { name = "django-ninja" },
+    { name = "typing-extensions" },
 ]
 
 [[package]]

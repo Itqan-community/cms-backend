@@ -142,6 +142,9 @@ extend-unsafe-fixes = [
 [tool.ruff.lint.isort]
 force-single-line = true
 
+[tool.uv.sources]
+scalar-django-ninja = { git = "https://github.com/scalar/scalar.git", subdirectory = "integrations/django-ninja" }
+
 [dependency-groups]
 dev = [
     "coverage==7.10.6",
@@ -206,6 +209,7 @@ dependencies = [
     "psycopg2-binary>=2.9.10",
     "python-slugify==8.0.4",
     "redis==6.4.0",
+    "scalar-django-ninja",
     "sentry-sdk==2.37.0",
     "uvicorn-worker==0.3.0",
     "uvicorn[standard]==0.35.0",
