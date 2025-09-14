@@ -8,6 +8,7 @@ env:
 on:
   pull_request:
     paths-ignore: ['docs/**']
+    types: [opened, synchronize, reopened, ready_for_review]
 
   push:
     branches: ['main']
