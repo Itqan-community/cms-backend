@@ -6,3 +6,4 @@ class NinjaTag(models.TextChoices):
     ASSETS = "Assets"
     LICENSES = "Licenses"
     PUBLISHERS = "Publishers"
+    RESOURCES = "Resources"

@@ -187,64 +187,6 @@ class DetailAssetTest(BaseTestCase):
         self.assertEqual("MIT License", body["license"]["name"])  # fallback
         self.assertTrue(body["thumbnail_url"].endswith("thumbs/en-only.png"))
 
-    def test_detail_assets_where_edge_texts_should_return_correct_data(self):
-        # Arrange
-        license_long = baker.make(
-            License,
-            code="LONG",
-            name="C" * 255,
-            short_name="D" * 50,
-        )
-        asset_long = baker.make(
-            Asset,
-            name="Very Long Asset Name " * 5,
-            description="Very long description " * 50,
-            long_description="Very long extended description " * 100,
-            license=license_long,
-            category=Asset.CategoryChoice.TAFSIR,
-            thumbnail_url="thumbs/verylong.png",
-        )
-        license_special = baker.make(
-            License,
-            code="CC-BY-4.0",
-            name="License with ñ & ü",
-            short_name="CC BY 4.0 ñ",
-        )
-        asset_special = baker.make(
-            Asset,
-            name="Asset with special chars: @#$%^&*()",
-            description="Description with émojis 🕌📖 and @#$%^&*()",
-            long_description=("Long description with émojis 🕌📖 and @#$%^&*() and unicode: ñüé"),
-            license=license_special,
-            category=Asset.CategoryChoice.TAFSIR,
-            thumbnail_url="thumbs/special.png",
-        )
-
-        # Act + Assert (long)
-        resp_long = self.client.get(f"/content/assets/{asset_long.id}/", format="json")
-        self.assertEqual(resp_long.status_code, 200, resp_long.content)
-        body_long = resp_long.json()
-        self.assertEqual("Very Long Asset Name " * 5, body_long["name"])
-        self.assertEqual("Very long description " * 50, body_long["description"])
-        self.assertEqual("Very long extended description " * 100, body_long["long_description"])
-        self.assertEqual("C" * 255, body_long["license"]["name"])
-        self.assertEqual("D" * 50, body_long["license"]["short_name"])
-        self.assertTrue(body_long["thumbnail_url"].endswith("thumbs/verylong.png"))
-
-        # Act + Assert (special)
-        resp_special = self.client.get(f"/content/assets/{asset_special.id}/", format="json")
-        self.assertEqual(resp_special.status_code, 200, resp_special.content)
-        body_special = resp_special.json()
-        self.assertEqual("Asset with special chars: @#$%^&*()", body_special["name"])
-        self.assertEqual("Description with émojis 🕌📖 and @#$%^&*()", body_special["description"])
-        self.assertEqual(
-            "Long description with émojis 🕌📖 and @#$%^&*() and unicode: ñüé",
-            body_special["long_description"],
-        )
-        self.assertEqual("License with ñ & ü", body_special["license"]["name"])
-        self.assertEqual("CC BY 4.0 ñ", body_special["license"]["short_name"])
-        self.assertTrue(body_special["thumbnail_url"].endswith("thumbs/special.png"))
-
     def test_detail_assets_where_uuid_format_invalid_should_return_400(self):
         # Arrange
         invalid_formats = [

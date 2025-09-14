@@ -1,6 +1,7 @@
 from typing import Literal
 from unittest.mock import patch
 
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from rest_framework.test import APIClient
 
@@ -46,3 +47,6 @@ class BaseTestCase(TestCase):
                 kwargs[key] = value
 
         self.client.credentials(**kwargs)
+
+    def create_file(self, name: str, content: bytes, content_type: str) -> SimpleUploadedFile:
+        return SimpleUploadedFile(name, content, content_type=content_type)

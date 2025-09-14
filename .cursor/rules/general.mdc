@@ -1,0 +1,7 @@
+---
+description: general
+globs:
+alwaysApply: true
+---
+always activate .venv
+you may be running in wsl if the directory contains wsl
