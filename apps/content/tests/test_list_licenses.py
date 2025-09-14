@@ -102,61 +102,38 @@ class ListLicenseTest(BaseTestCase):
         self.assertEqual("B", response_body["results"][1]["code"])
         self.assertEqual("C", response_body["results"][2]["code"])
 
-    def test_list_licenses_when_search_by_code_should_return_filtered_licenses(self):
+    def test_list_licenses_when_search_should_return_filtered_licenses_by_all_fields(self):
+        """Test search functionality across code, name, short_name fields and partial matches."""
         # Arrange
         baker.make(License, name="MIT License", code="MIT", short_name="MIT")
-        baker.make(License, name="Apache License", code="Apache-2.0", short_name="Apache")
-        baker.make(License, name="GPL License", code="GPL-3.0", short_name="GPL")
+        baker.make(License, name="Apache License 2.0", code="Apache-2.0", short_name="Apache")
+        baker.make(License, name="GPL License v3", code="GPL-3.0", short_name="GPL v3")
+        baker.make(License, name="Creative Commons Attribution 4.0", code="CC-BY-4.0", short_name="CC BY 4.0")
+        baker.make(License, name="Creative Commons ShareAlike 4.0", code="CC-SA-4.0", short_name="CC SA 4.0")
 
-        # Act
+        # Test search by code
         response = self.client.get("/content/licenses/", data={"search": "MIT"}, format="json")
-
-        # Assert
         self.assertEqual(200, response.status_code, response.content)
         response_body = response.json()
         self.assertEqual(1, len(response_body["results"]))
         self.assertEqual("MIT License", response_body["results"][0]["name"])
 
-    def test_list_licenses_when_search_by_name_should_return_filtered_licenses(self):
-        # Arrange
-        baker.make(License, name="MIT License", code="MIT", short_name="MIT")
-        baker.make(License, name="Apache License 2.0", code="Apache-2.0", short_name="Apache")
-        baker.make(License, name="GPL License v3", code="GPL-3.0", short_name="GPL")
-
-        # Act
+        # Test search by name
         response = self.client.get("/content/licenses/", data={"search": "Apache"}, format="json")
-
-        # Assert
         self.assertEqual(200, response.status_code, response.content)
         response_body = response.json()
         self.assertEqual(1, len(response_body["results"]))
         self.assertEqual("Apache License 2.0", response_body["results"][0]["name"])
 
-    def test_list_licenses_when_search_by_short_name_should_return_filtered_licenses(self):
-        # Arrange
-        baker.make(License, name="MIT License", code="MIT", short_name="MIT")
-        baker.make(License, name="Apache License", code="Apache-2.0", short_name="Apache 2.0")
-        baker.make(License, name="GPL License", code="GPL-3.0", short_name="GPL v3")
-
-        # Act
+        # Test search by short_name
         response = self.client.get("/content/licenses/", data={"search": "GPL"}, format="json")
-
-        # Assert
         self.assertEqual(200, response.status_code, response.content)
         response_body = response.json()
         self.assertEqual(1, len(response_body["results"]))
-        self.assertEqual("GPL License", response_body["results"][0]["name"])
+        self.assertEqual("GPL License v3", response_body["results"][0]["name"])
 
-    def test_list_licenses_when_search_partial_match_should_return_filtered_licenses(self):
-        # Arrange
-        baker.make(License, name="Creative Commons Attribution 4.0", code="CC-BY-4.0", short_name="CC BY 4.0")
-        baker.make(License, name="Creative Commons ShareAlike 4.0", code="CC-SA-4.0", short_name="CC SA 4.0")
-        baker.make(License, name="MIT License", code="MIT", short_name="MIT")
-
-        # Act
+        # Test partial match
         response = self.client.get("/content/licenses/", data={"search": "Creative"}, format="json")
-
-        # Assert
         self.assertEqual(200, response.status_code, response.content)
         response_body = response.json()
         self.assertEqual(2, len(response_body["results"]))

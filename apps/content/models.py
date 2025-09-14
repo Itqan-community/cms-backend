@@ -6,7 +6,6 @@ from django.utils.translation import gettext_lazy as _
 
 from apps.core.file_uploaders import upload_asset_files
 from apps.core.file_uploaders import upload_asset_thumbnails
-from apps.core.file_uploaders import upload_organization_covers
 from apps.core.file_uploaders import upload_publisher_icon
 from apps.core.file_uploaders import upload_resource_files
 from apps.core.models import ActiveObjectsManager
@@ -19,7 +18,7 @@ class Publisher(BaseModel):
 
     slug = models.SlugField(unique=True, help_text="URL-friendly slug e.g. 'tafsir-center'")
 
-    icon = models.ImageField(
+    icon_url = models.ImageField(
         upload_to=upload_publisher_icon,
         blank=True,
         validators=[FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "gif", "webp", "svg"])],
@@ -29,13 +28,6 @@ class Publisher(BaseModel):
     summary = models.TextField(blank=True, help_text="Organization summary - used in V1 UI: Publisher Page")
 
     description = models.TextField(blank=True, help_text="Detailed organization description")
-
-    cover_url = models.ImageField(
-        upload_to=upload_organization_covers,
-        blank=True,
-        validators=[FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "gif", "webp"])],
-        help_text="Cover image for organization",
-    )
 
     location = models.CharField(max_length=255, blank=True, help_text="Organization location")
 

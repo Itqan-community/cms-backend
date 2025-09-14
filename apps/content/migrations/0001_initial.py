@@ -168,7 +168,7 @@ class Migration(migrations.Migration):
                     models.ImageField(
                         blank=True,
                         help_text="Cover image for organization",
-                        upload_to=apps.core.file_uploaders.upload_organization_covers,
+                        upload_to=None,
                         validators=[
                             django.core.validators.FileExtensionValidator(
                                 allowed_extensions=["jpg", "jpeg", "png", "gif", "webp"]

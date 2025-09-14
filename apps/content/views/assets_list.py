@@ -36,7 +36,7 @@ class ListAssetOut(Schema):
 
 class AssetFilter(FilterSchema):
     category: list[Asset.CategoryChoice] | None = Field(None, q="category__in")
-    license_code: str | list[str] | None = Field(None, q="license__code")
+    license_code: list[str] | None = Field(None, q="license__code__in")
 
 
 @router.get("content/assets/", response=list[ListAssetOut])

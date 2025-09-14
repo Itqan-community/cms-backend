@@ -29,7 +29,7 @@ django.setup()
 # -- Project information -----------------------------------------------------
 
 project = "Itqan CMS Backend"
-copyright = """2025, Itqan Team"""  # noqa: A001
+copyright = """2025, Itqan Team"""
 author = "Itqan Team"
 
 

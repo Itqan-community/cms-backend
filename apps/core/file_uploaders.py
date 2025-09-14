@@ -6,16 +6,6 @@ if TYPE_CHECKING:
     from apps.content.models import Publisher
 
 
-def upload_organization_covers(instance, filename):
-    """
-    Generate upload path for organization cover images
-    Format: uploads/organizations/{org_slug}/cover.{ext}
-    """
-    ext = filename.split(".")[-1].lower()
-    filename = f"cover.{ext}"
-    return f"uploads/organizations/{instance.slug}/{filename}"
-
-
 def upload_asset_thumbnails(instance, filename):
     """
     Generate upload path for asset thumbnail images
