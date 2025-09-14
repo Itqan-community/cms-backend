@@ -1818,7 +1818,7 @@ wheels = [
 [[package]]
 name = "scalar-django-ninja"
 version = "0.1.0"
-source = { git = "https://github.com/scalar/scalar.git?subdirectory=integrations%2Fdjango-ninja#7b3983b1917ef81ac050202d9cc5cfd310deac6f" }
+source = { git = "https://github.com/scalar/scalar.git?subdirectory=integrations%2Fdjango-ninja#498f77113ad9725196f35d3b62fe6838e55be9fe" }
 dependencies = [
     { name = "django-ninja" },
     { name = "typing-extensions" },
