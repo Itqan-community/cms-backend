@@ -8,7 +8,6 @@ env:
 on:
   pull_request:
     paths-ignore: ['docs/**']
-    types: [opened, synchronize, reopened, ready_for_review]
 
   push:
     branches: ['main']
@@ -43,6 +42,31 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      - name: Create CI .env from example
+        run: |
+          echo "Creating .env file for CI..."
+          if [ -f .env.example ]; then
+            echo "Found .env.example, copying to .env"
+            cp .env.example .env
+          else
+            echo "No .env.example found; generating minimal CI .env"
+            echo "DJANGO_READ_DOT_ENV_FILE=True" > .env
+            echo "DJANGO_DEBUG=True" >> .env
+            echo "DJANGO_SECRET_KEY=ci-secret-key" >> .env
+            echo "POSTGRES_DB=itqan" >> .env
+            echo "POSTGRES_USER=postgres" >> .env
+            echo "POSTGRES_PASSWORD=postgres" >> .env
+            echo "POSTGRES_HOST=postgres" >> .env
+            echo "POSTGRES_PORT=5432" >> .env
+            echo "REDIS_URL=redis://redis:6379/0" >> .env
+            echo "CELERY_BROKER_URL=redis://redis:6379/0" >> .env
+            echo "EMAIL_HOST=mailpit" >> .env
+          fi
+          echo "Verifying .env file exists:"
+          ls -la .env
+          echo "Contents of .env:"
+          cat .env
 
       - name: Build and cache local backend
         uses: docker/bake-action@v6
