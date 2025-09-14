@@ -1,4 +1,4 @@
-name: CI
+name: Test and Lint
 
 # Enable Buildkit and let compose use it to speed up image building
 env:
