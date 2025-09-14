@@ -331,3 +331,4 @@ apps/media/
 .ipython/
 .env
 .envs/*
+.idea/
