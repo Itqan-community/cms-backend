@@ -1,0 +1,48 @@
+---
+alwaysApply: true
+fileTypes: ["md"]
+---
+
+# Markdown Generation Rule: Task Completion Report (Template A)
+
+Any Markdown (.md) file **generated or modified** by the AI must strictly follow the template below. Do not remove or rename headings; replace placeholders wrapped in `{{ }}` with concrete values.
+All .md files MUST be placed in this folder ./docs/md
+
+```markdown
+# {{TASK NUMBER}} – {{SHORT TITLE}}
+
+**Date:** {{YYYY-MM-DD}}
+**Author:** {{NAME}}
+
+## Overview
+_A concise 2–4 sentence summary of what was achieved and why._
+
+## Objectives
+- Objective 1
+- Objective 2
+- …
+
+## Implementation Details
+- Key changes introduced
+- Files / components affected
+- Architectural notes (if any)
+
+## Testing Results
+| Test | Method | Outcome |
+|------|--------|---------|
+| cURL | `curl -i http://localhost:3000/...` | ✅ |
+| Browser (EN) | Desktop / Mobile | ✅ |
+| Browser (AR RTL) | Desktop / Mobile | ✅ |
+
+## Acceptance Criteria Verification
+- [x] Criterion 1
+- [x] Criterion 2
+
+## Next Steps
+1. Follow-up task or enhancement
+2. Documentation to update
+
+## References
+- PR #{{PR_NUMBER}}
+- Related task JSON: `ai-memory-bank/tasks/{{TASK_NUMBER}}.json`
+```
