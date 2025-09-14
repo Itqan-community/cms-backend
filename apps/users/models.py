@@ -6,14 +6,17 @@ from django.db.models import CharField
 from django.db.models import EmailField
 from django.utils.translation import gettext_lazy as _
 
+from apps.core.models import BaseModel
+
 from .managers import UserManager
 
 
-class User(AbstractUser):
+class User(AbstractUser, BaseModel):
     # The First and last name do not cover name patterns around the globe
     first_name = None  # type: ignore[assignment]
     last_name = None  # type: ignore[assignment]
     username = None  # type: ignore[assignment]
+    date_joined = None  # type: ignore[assignment]
     name = CharField(_("Name of User"), blank=True, max_length=255)
     email = EmailField(_("email address"), db_index=True, unique=True)
 
