@@ -10,7 +10,7 @@ This is the **backend repository only** - the Angular frontend lives in a separa
 
 ### Tech Stack
 
-- **Backend**: Django 4.2 LTS + Wagtail CMS + Django REST Framework  
+- **Backend**: Django 4.2 LTS + Wagtail CMS + Django REST Framework
 - **Database**: PostgreSQL 16 with UUID primary keys
 - **Authentication**: Django Allauth + JWT tokens (Auth0 integration)
 - **Search**: MeiliSearch v1.6 for full-text search
@@ -105,7 +105,7 @@ Role (Admin/Publisher/Developer/Reviewer)
 **Critical Models:**
 - `User` (custom) - Extends AbstractUser with Auth0 integration
 - `PublishingOrganization` - Content publishers (e.g., Tafsir Center)
-- `Resource` - Original content packages (e.g., Tafsir Ibn Katheer CSV)  
+- `Resource` - Original content packages (e.g., Tafsir Ibn Katheer CSV)
 - `Asset` - Individual downloadable items extracted from resources
 - `License` - Content licensing terms (CC0, CC-BY, etc.)
 - `AssetAccessRequest` - Developer access approval workflow
@@ -114,7 +114,7 @@ Role (Admin/Publisher/Developer/Reviewer)
 ### Request Lifecycle
 
 1. **Authentication**: Auth0 → Django JWT validation
-2. **Authorization**: Role-based permissions check  
+2. **Authorization**: Role-based permissions check
 3. **API Routing**: `/api/v1/` → DRF views
 4. **Business Logic**: Model managers + custom methods
 5. **Response**: JSON via DRF serializers
@@ -151,7 +151,7 @@ docker-compose up -d postgres redis
 # Wait for services to be ready
 ```
 
-3. **Python Environment** 
+3. **Python Environment**
 ```bash
 cd src
 python -m venv venv
@@ -204,7 +204,7 @@ CELERY_BROKER_URL=redis://localhost:6379/0
 ## Development Workflow
 
 ### Git Branch Strategy (ENFORCED)
-- `main` - Production (PROTECTED: merge from staging only)  
+- `main` - Production (PROTECTED: merge from staging only)
 - `staging` - Pre-production (PROTECTED: merge from develop only)
 - `develop` - Active development (direct commits allowed)
 - `feature/*` - Feature branches (merge to develop)
@@ -217,7 +217,7 @@ CELERY_BROKER_URL=redis://localhost:6379/0
 git checkout develop
 git pull origin develop
 
-# Make changes and test locally  
+# Make changes and test locally
 ./dev.sh  # MANDATORY: Test locally before pushing
 # Verify at http://local.cms.itqaan.dev:8000 (add to /etc/hosts)
 
@@ -254,7 +254,7 @@ gh pr create --base staging --head develop --title "Promote to staging"
 ### Deployment Pipeline
 
 **Environment URLs:**
-- Local: `http://local.cms.itqaan.dev:8000` 
+- Local: `http://local.cms.itqaan.dev:8000`
 - Develop: `https://dev.cms.itqaan.dev`
 - Staging: `https://staging.cms.itqaan.dev`
 - Production: `https://cms.itqaan.dev`
@@ -289,7 +289,7 @@ The system uses a **hybrid authentication approach**:
 
 ### File Processing Pipeline
 - Resources contain raw uploaded files
-- Assets are extracted/processed from ResourceVersions  
+- Assets are extracted/processed from ResourceVersions
 - Each Asset can have multiple AssetVersions
 - File storage uses S3-compatible backends (MinIO/OSS)
 - Thumbnails and previews generated on upload
@@ -317,7 +317,7 @@ The project includes comprehensive Cursor AI rules in `.cursor/rules/`:
 ## Useful References
 
 - **API Documentation**: `/swagger/` and `/redoc/`
-- **Admin Interface**: `/django-admin/` (superuser required)  
+- **Admin Interface**: `/django-admin/` (superuser required)
 - **Wagtail CMS**: `/cms/` (for content management)
 - **OpenAPI Spec**: `/openapi.yaml`
 - **Health Check**: `/health/`

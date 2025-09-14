@@ -4,12 +4,12 @@ on:
   # Auto-deploy on direct pushes to develop branch (development workflow)
   push:
     branches: [develop]
-  
+
   # Deployment triggered by pull request merges to enforce branch flow
   pull_request:
     types: [closed]
     branches: [staging, main]  # Only staging and main require PRs
-  
+
   # Allow manual deployment trigger for develop branch only (for hotfixes)
   workflow_dispatch:
     inputs:
@@ -33,16 +33,16 @@ jobs:
       (github.event_name == 'push' && github.ref == 'refs/heads/develop') ||
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
       (github.event_name == 'workflow_dispatch')
-    
+
     steps:
       - name: Validate branch flow rules
         run: |
           echo "🔍 Validating deployment rules..."
-          
+
           if [[ "${{ github.event_name }}" == "push" ]]; then
             PUSH_BRANCH="${{ github.ref_name }}"
             echo "   Direct Push to: $PUSH_BRANCH"
-            
+
             # Only develop branch allows direct pushes for auto-deployment
             if [[ "$PUSH_BRANCH" == "develop" ]]; then
               echo "✅ Direct push to develop branch - auto-deployment authorized"
@@ -51,13 +51,13 @@ jobs:
               echo "   Use Pull Requests for staging and main branches"
               exit 1
             fi
-            
+
           elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
             BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
             HEAD_BRANCH="${{ github.event.pull_request.head.ref }}"
-            
+
             echo "   Pull Request: $HEAD_BRANCH → $BASE_BRANCH"
-            
+
             # Rule 1: Main can only receive merges from staging
             if [[ "$BASE_BRANCH" == "main" && "$HEAD_BRANCH" != "staging" ]]; then
               echo "❌ ERROR: Production (main) can only be updated from staging branch"
@@ -65,15 +65,15 @@ jobs:
               echo "   Required: staging → main"
               exit 1
             fi
-            
+
             # Rule 2: Staging can only receive merges from develop
             if [[ "$BASE_BRANCH" == "staging" && "$HEAD_BRANCH" != "develop" ]]; then
               echo "❌ ERROR: Staging can only be updated from develop branch"
-              echo "   Attempted: $HEAD_BRANCH → staging" 
+              echo "   Attempted: $HEAD_BRANCH → staging"
               echo "   Required: develop → staging"
               exit 1
             fi
-            
+
             echo "✅ Branch flow rules validated successfully"
           elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             DISPATCH_BRANCH="${{ github.event.inputs.branch }}"
@@ -97,7 +97,7 @@ jobs:
           elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             TARGET_BRANCH="${{ github.ref_name }}"
           fi
-          
+
           if [[ "$TARGET_BRANCH" == "develop" ]]; then
             echo "HOST=${{ secrets.DEVELOP_HOST }}" >> $GITHUB_ENV
             echo "ENV_NAME=development" >> $GITHUB_ENV
@@ -142,14 +142,14 @@ jobs:
         run: |
           echo "🛠️ Building image $IMAGE_REPO:$IMAGE_TAG for develop environment"
           docker build -f deployment/docker/Dockerfile.backend -t $IMAGE_REPO:$IMAGE_TAG .
-          
+
           echo "📤 Pushing image to GHCR..."
           echo "🔍 Repository: $IMAGE_REPO"
           echo "🏷️ Tag: $IMAGE_TAG"
-          
+
           # Make the repository public on first push (GHCR requirement)
           echo "📦 Creating/updating GHCR repository..."
-          
+
           # Retry push up to 3 times with exponential backoff
           for attempt in 1 2 3; do
             echo "🔄 Push attempt $attempt/3..."
@@ -178,18 +178,18 @@ jobs:
             echo "🚀 Starting deployment to ${{ env.ENV_NAME }} environment..."
             echo "📋 Target: ${{ env.ENV_URL }}"
             echo "🌿 Branch: ${{ env.BRANCH }}"
-            
+
             # Navigate to application directory
             cd /srv/cms-backend
-            
+
             # Pull latest changes
             echo "📥 Fetching latest code from GitHub..."
             git fetch origin ${{ env.BRANCH }}
             git reset --hard origin/${{ env.BRANCH }}
-            
+
             # Display current commit
             echo "📋 Current commit: $(git rev-parse --short HEAD) - $(git log -1 --pretty=%B)"
-            
+
             # Generate environment file from GitHub Secrets (per environment)
             echo "🧩 Generating environment file from secrets..."
             mkdir -p deployment/docker
@@ -246,18 +246,18 @@ jobs:
             echo "IMAGE_REPO=${{ env.IMAGE_REPO }}" >> deployment/docker/.env
             echo "IMAGE_TAG=${{ env.IMAGE_TAG }}" >> deployment/docker/.env
             echo "✅ Environment file generated at deployment/docker/.env (with IMAGE_REPO/IMAGE_TAG)"
-            
+
             # Clean up existing containers and images
             echo "🧹 Cleaning up existing containers..."
             docker compose -f ${{ env.COMPOSE_FILE }} down --remove-orphans || true
             docker container prune -f || true
             docker system prune -f || true
-            
+
             # Remove any conflicting containers by name (more comprehensive)
             echo "🗑️ Removing any conflicting containers..."
             docker rm -f docker-web-1 docker-caddy-1 web caddy cms-web backend || true
             docker network prune -f || true
-            
+
             # Authenticate Docker to GHCR (only for development environment)
             if [ "${{ env.ENV_NAME }}" = "development" ]; then
               if [ -n "${{ secrets.GHCR_DEPLOY_USER }}" ] && [ -n "${{ secrets.GHCR_DEPLOY_TOKEN }}" ]; then
@@ -278,7 +278,7 @@ jobs:
             IMG_REPO='${{ env.IMAGE_REPO }}'
             IMG_TAG='${{ env.IMAGE_TAG }}'
             echo "Using image: ${IMG_REPO}:${IMG_TAG}"
-            
+
             # For develop environment, pull from GHCR; for others, use build
             if [ "${{ env.ENV_NAME }}" = "development" ]; then
               echo "📦 Pulling image from GHCR for develop environment..."
@@ -288,11 +288,11 @@ jobs:
               echo "🔨 Building and starting services for ${{ env.ENV_NAME }}..."
               docker compose -f ${{ env.COMPOSE_FILE }} up -d --build
             fi
-            
+
             # Wait for services to be ready
             echo "⏳ Waiting for services to start..."
             sleep 30
-            
+
             # Health check
             echo "🔍 Performing health check..."
             if curl -f -s ${{ env.ENV_URL }}/health > /dev/null; then
@@ -302,10 +302,10 @@ jobs:
               docker compose -f ${{ env.COMPOSE_FILE }} ps
               docker compose -f ${{ env.COMPOSE_FILE }} logs web --tail 20
             fi
-            
+
             # Clean up old Docker images
             echo "🧹 Cleaning up old Docker images..."
             docker image prune -f || true
-            
+
             echo "🎉 Deployment to ${{ env.ENV_NAME }} completed successfully!"
             echo "🌐 Application URL: ${{ env.ENV_URL }}"
