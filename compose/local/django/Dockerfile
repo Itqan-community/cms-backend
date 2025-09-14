@@ -18,7 +18,9 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   # psycopg dependencies
   libpq-dev \
   gettext \
-  netcat-openbsd
+  netcat-openbsd \
+  # git is needed for uv to install packages from git repositories
+  git
 
 # Requirements are installed here to ensure they will be cached.
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -35,7 +37,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 # devcontainer dependencies and utils
 RUN apt-get update && apt-get install --no-install-recommends -y \
-  sudo git bash-completion nano ssh
+  sudo bash-completion nano ssh
 
 # Create devcontainer user and add it to sudoers
 RUN groupadd --gid 1000 dev-user \
