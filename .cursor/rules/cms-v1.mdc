@@ -1,7 +1,6 @@
 ---
 alwaysApply: true
 ---
-
 # CMS V1 Rules
 
 ### Interaction protocol
@@ -25,14 +24,14 @@ alwaysApply: true
 - **Website**: www.itqan.dev
 
 ## Database Design
-- **ER diagram**: Maintained in `ai-memory-bank/docs/db-design/db_design_v1.drawio`
+- **ER diagram**: Maintained in `.cursor/ai-memory-bank/docs/db-design/db_design_v1.drawio`
 - **Schema updates**: Edit diagram file, keep rules high-level
 - **Database**: PostgreSQL recommended
 - **IDs**: Use UUIDs as primary keys
 - **Naming**: snake_case for tables/columns
 
 ## Wireframes
-- **UI/UX designs**: Available in `ai-memory-bank/docs/screens/`
+- **UI/UX designs**: Available in `.cursor/ai-memory-bank/docs/screens/`
 - **Screen coverage**: Authentication flows, asset listings, publisher details, resource details
 - **Design system**: Consistent visual language across all screens
 

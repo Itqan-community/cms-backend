@@ -1,6 +1,0 @@
----
-alwaysApply: true
----
-You must start by reading either src/.cursor/rules/cms-v1.mdc for full context.
-
-This project is organized into two separate GitHub repositories: one for the backend and one for the frontend.
