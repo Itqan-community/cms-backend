@@ -47,7 +47,6 @@ LOCAL_APPS = [
     'apps.accounts',
     'apps.content',
     'apps.api',
-    'apps.api_keys',
     'mock_api',  # Mock API for development and testing
 ]
 
@@ -62,7 +61,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'allauth.account.middleware.AccountMiddleware',  # Required for allauth
-    'apps.api_keys.authentication.APIUsageMiddleware',
+    # 'apps.api_keys.authentication.APIUsageMiddleware',  # Removed with api_keys app
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -352,13 +351,13 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
-        'apps.api_keys.authentication.APIKeyAuthentication',
+        # 'apps.api_keys.authentication.APIKeyAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_THROTTLE_CLASSES': [
-        'apps.api_keys.authentication.APIKeyThrottle',
+        # 'apps.api_keys.authentication.APIKeyThrottle',
         'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.UserRateThrottle',
     ],

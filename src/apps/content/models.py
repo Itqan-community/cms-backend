@@ -1508,7 +1508,7 @@ class Distribution(BaseModel):
 
     def get_api_keys(self):
         """Get API key requirements"""
-        return self.access_config.get('api_keys', [])
+        return []  # api_keys app removed
 
     @classmethod
     def create_rest_api_distribution(cls, resource, endpoint_url, version, api_config=None):

@@ -20,7 +20,8 @@ from apps.accounts.views import RoleViewSet, UserViewSet
 from apps.content.views import ResourceViewSet, DistributionViewSet, WorkflowViewSet, workflow_permissions
 # from apps.licensing.views import LicenseViewSet, AccessRequestViewSet  # Temporarily disabled
 # MediaLib views removed in V1 cleanup
-from apps.api_keys.views import APIKeyViewSet, APIKeyUsageViewSet, RateLimitEventViewSet, APIKeyStatisticsViewSet
+## API Keys app removed in V1 cleanup
+# from apps.api_keys.views import APIKeyViewSet, APIKeyUsageViewSet, RateLimitEventViewSet, APIKeyStatisticsViewSet
 
 # Import Landing Page Views
 from apps.api.views.landing import platform_statistics, platform_features, recent_content
@@ -65,10 +66,10 @@ router.register(r'distributions', DistributionViewSet, basename='distribution')
 router.register(r'workflow', WorkflowViewSet, basename='workflow')
 
 # API Key Management ViewSets
-router.register(r'api-keys', APIKeyViewSet, basename='apikey')
-router.register(r'api-keys-usage', APIKeyUsageViewSet, basename='apikeyusage')
-router.register(r'rate-limit-events', RateLimitEventViewSet, basename='ratelimitevent')
-router.register(r'api-stats', APIKeyStatisticsViewSet, basename='apikeystats')
+# router.register(r'api-keys', APIKeyViewSet, basename='apikey')
+# router.register(r'api-keys-usage', APIKeyUsageViewSet, basename='apikeyusage')
+# router.register(r'rate-limit-events', RateLimitEventViewSet, basename='ratelimitevent')
+# router.register(r'api-stats', APIKeyStatisticsViewSet, basename='apikeystats')
 
 # API URL patterns
 urlpatterns = [
