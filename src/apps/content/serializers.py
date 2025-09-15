@@ -155,6 +155,7 @@ class PublisherSerializer(serializers.Serializer):
                 'description': asset.description,
                 'thumbnail_url': get_file_url(asset.thumbnail_url),
                 'category': asset.category,
+                'license': LicenseSummarySerializer.from_license_model(asset.license),
                 'has_access': cls._check_user_access(asset, request),
                 'download_count': asset.download_count,
                 'file_size': asset.file_size
