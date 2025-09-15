@@ -17,7 +17,7 @@ from .views.scalar_docs import ScalarDocsView, ScalarAPIClientView
 
 # Import ViewSets
 from apps.accounts.views import RoleViewSet, UserViewSet
-from apps.content.views import ResourceViewSet, DistributionViewSet
+from apps.content.views import ResourceViewSet
 # from apps.licensing.views import LicenseViewSet, AccessRequestViewSet  # Temporarily disabled
 # MediaLib views removed in V1 cleanup
 ## API Keys app removed in V1 cleanup
@@ -55,7 +55,7 @@ router = DefaultRouter()
 router.register(r'roles', RoleViewSet, basename='role')
 router.register(r'users', UserViewSet, basename='user')
 router.register(r'resources', ResourceViewSet, basename='resource')
-router.register(r'distributions', DistributionViewSet, basename='distribution')
+
 # router.register(r'licenses', LicenseViewSet, basename='license')  # Temporarily disabled
 # router.register(r'access-requests', AccessRequestViewSet, basename='accessrequest')  # Temporarily disabled
 

@@ -475,17 +475,4 @@ class UsageEventSerializer(serializers.ModelSerializer):
         return None
 
 
-# ============================================================================
-# DISTRIBUTION SERIALIZERS
-# ============================================================================
-
-class DistributionSerializer(serializers.ModelSerializer):
-    """Distribution channel serializer"""
-    resource_name = serializers.CharField(source='resource.name', read_only=True)
-    
-    class Meta:
-        model = Distribution
-        fields = [
-            'id', 'resource_name', 'format_type', 'endpoint_url', 'version',
-            'access_config', 'metadata', 'created_at'
-        ]
+## Distribution serializers removed in V1
