@@ -17,7 +17,7 @@ from .views.scalar_docs import ScalarDocsView, ScalarAPIClientView
 
 # Import ViewSets
 from apps.accounts.views import RoleViewSet, UserViewSet
-from apps.content.views import ResourceViewSet, DistributionViewSet, WorkflowViewSet, workflow_permissions
+from apps.content.views import ResourceViewSet, DistributionViewSet
 # from apps.licensing.views import LicenseViewSet, AccessRequestViewSet  # Temporarily disabled
 # MediaLib views removed in V1 cleanup
 ## API Keys app removed in V1 cleanup
@@ -63,8 +63,7 @@ router.register(r'distributions', DistributionViewSet, basename='distribution')
 # Media Library ViewSets
 # MediaLib API endpoints removed in V1 cleanup
 
-# Workflow Management ViewSet
-router.register(r'workflow', WorkflowViewSet, basename='workflow')
+# Workflow endpoints removed for V1
 
 # API Key Management ViewSets
 # router.register(r'api-keys', APIKeyViewSet, basename='apikey')
@@ -96,8 +95,7 @@ urlpatterns = [
     path('content-standards/', ContentStandardsView.as_view(), name='content_standards'),
     path('content-standards/simple/', content_standards_simple, name='content_standards_simple'),
     
-    # Workflow endpoints
-    path('workflow/permissions/', workflow_permissions, name='workflow_permissions'),
+    # Workflow endpoints removed for V1
     
     # Search endpoints removed in V1 cleanup
     
