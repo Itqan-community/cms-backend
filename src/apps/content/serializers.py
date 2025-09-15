@@ -308,6 +308,13 @@ class RelatedAssetSerializer(serializers.Serializer):
     publisher = PublisherSummarySerializer()
 
 
+class AssetResourceSerializer(serializers.Serializer):
+    """Minimal resource info nested under asset details (per OpenAPI AssetResource)"""
+    id = serializers.IntegerField()
+    title = serializers.CharField()
+    description = serializers.CharField(allow_blank=True)
+
+
 class AssetDetailSerializer(serializers.Serializer):
     """Complete asset details"""
     id = serializers.IntegerField()
@@ -318,6 +325,7 @@ class AssetDetailSerializer(serializers.Serializer):
     category = serializers.CharField()
     license = LicenseDetailSerializer()
     publisher = PublisherSummarySerializer()
+    resource = AssetResourceSerializer(required=False, allow_null=True)
     snapshots = serializers.ListField(child=AssetSnapshotSerializer(), default=list)
     technical_details = AssetTechnicalDetailsSerializer()
     stats = AssetStatsSerializer()
@@ -341,6 +349,16 @@ class AssetDetailSerializer(serializers.Serializer):
                 'publisher': PublisherSummarySerializer.from_publishing_organization(related.resource.publishing_organization)
             })
         
+        # Prepare resource info (nullable)
+        resource_obj = getattr(asset, 'resource', None)
+        resource_data = None
+        if resource_obj:
+            resource_data = {
+                'id': resource_obj.id,
+                'title': resource_obj.name or '',
+                'description': resource_obj.description or ''
+            }
+        
         return {
             'id': asset.id,
             'title': asset.title,
@@ -350,6 +368,7 @@ class AssetDetailSerializer(serializers.Serializer):
             'category': asset.category,
             'license': LicenseDetailSerializer.from_license_model(asset.license),
             'publisher': PublisherSummarySerializer.from_publishing_organization(asset.resource.publishing_organization),
+            'resource': resource_data,
             'snapshots': [],  # Could be implemented based on asset versions
             'technical_details': AssetTechnicalDetailsSerializer.from_asset_model(asset),
             'stats': AssetStatsSerializer.from_asset_model(asset),
