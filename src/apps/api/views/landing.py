@@ -14,7 +14,11 @@ from datetime import datetime, timedelta
 
 from apps.accounts.models import User
 from apps.content.models import Resource, Distribution
-from apps.licensing.models import AccessRequest
+try:
+    from apps.licensing.models import AccessRequest
+except Exception:  # licensing app removed in V1 cleanup
+    class AccessRequest:
+        objects = type('q', (), {'filter': staticmethod(lambda **kwargs: type('qs', (), {'count': staticmethod(lambda: 0)})())})()
 
 
 @api_view(['GET'])
