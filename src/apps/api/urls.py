@@ -19,7 +19,6 @@ from .views.scalar_docs import ScalarDocsView, ScalarAPIClientView
 from apps.accounts.views import RoleViewSet, UserViewSet
 from apps.content.views import ResourceViewSet, DistributionViewSet, WorkflowViewSet, workflow_permissions
 # from apps.licensing.views import LicenseViewSet, AccessRequestViewSet  # Temporarily disabled
-from apps.analytics.views import UsageEventViewSet
 # MediaLib views removed in V1 cleanup
 from apps.api_keys.views import APIKeyViewSet, APIKeyUsageViewSet, RateLimitEventViewSet, APIKeyStatisticsViewSet
 
@@ -57,7 +56,7 @@ router.register(r'resources', ResourceViewSet, basename='resource')
 router.register(r'distributions', DistributionViewSet, basename='distribution')
 # router.register(r'licenses', LicenseViewSet, basename='license')  # Temporarily disabled
 # router.register(r'access-requests', AccessRequestViewSet, basename='accessrequest')  # Temporarily disabled
-router.register(r'usage-events', UsageEventViewSet, basename='usageevent')
+
 
 # Media Library ViewSets
 # MediaLib API endpoints removed in V1 cleanup
