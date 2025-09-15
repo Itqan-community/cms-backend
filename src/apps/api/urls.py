@@ -24,7 +24,8 @@ from apps.content.views import ResourceViewSet, DistributionViewSet, WorkflowVie
 # from apps.api_keys.views import APIKeyViewSet, APIKeyUsageViewSet, RateLimitEventViewSet, APIKeyStatisticsViewSet
 
 # Import Landing Page Views
-from apps.api.views.landing import platform_statistics, platform_features, recent_content
+## Landing views removed
+# from apps.api.views.landing import platform_statistics, platform_features, recent_content
 
 # Import Content Standards Views
 from apps.api.views.content_standards import ContentStandardsView, content_standards_simple
@@ -89,10 +90,7 @@ urlpatterns = [
     # API endpoints
     path('', include(router.urls)),
     
-    # Landing page endpoints (public)
-    path('landing/statistics/', platform_statistics, name='landing_statistics'),
-    path('landing/features/', platform_features, name='landing_features'),
-    path('landing/recent-content/', recent_content, name='landing_recent_content'),
+    # Landing page endpoints removed
     
     # Content Standards endpoints (public - ADMIN-002 / SF-04)
     path('content-standards/', ContentStandardsView.as_view(), name='content_standards'),
