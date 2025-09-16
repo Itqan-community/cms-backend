@@ -231,11 +231,18 @@ class AssetSummarySerializer(serializers.Serializer):
 
 
 class AssetSnapshotSerializer(serializers.Serializer):
-    """Asset snapshots/previews"""
-    id = serializers.IntegerField()
-    type = serializers.CharField()
-    url = serializers.URLField()
+    """Asset snapshots/previews (OpenAPI: thumbnail_url, title, description)"""
+    thumbnail_url = serializers.URLField()
+    title = serializers.CharField()
     description = serializers.CharField(required=False, allow_blank=True)
+
+    @classmethod
+    def from_snapshot_model(cls, snapshot):
+        return {
+            'thumbnail_url': get_file_url(snapshot.snapshot),
+            'title': snapshot.title,
+            'description': snapshot.description or ''
+        }
 
 
 class AssetTechnicalDetailsSerializer(serializers.Serializer):
@@ -349,6 +356,14 @@ class AssetDetailSerializer(serializers.Serializer):
                 'publisher': PublisherSummarySerializer.from_publishing_organization(related.resource.publishing_organization)
             })
         
+        # Load snapshots (active, ordered)
+        snapshots_list = []
+        try:
+            for snap in asset.snapshots.filter(is_active=True).order_by('order'):
+                snapshots_list.append(AssetSnapshotSerializer.from_snapshot_model(snap))
+        except Exception:
+            snapshots_list = []
+
         # Prepare resource info (nullable)
         resource_obj = getattr(asset, 'resource', None)
         resource_data = None
@@ -368,8 +383,8 @@ class AssetDetailSerializer(serializers.Serializer):
             'category': asset.category,
             'license': LicenseDetailSerializer.from_license_model(asset.license),
             'publisher': PublisherSummarySerializer.from_publishing_organization(asset.resource.publishing_organization),
+            'snapshots': snapshots_list,
             'resource': resource_data,
-            'snapshots': [],  # Could be implemented based on asset versions
             'technical_details': AssetTechnicalDetailsSerializer.from_asset_model(asset),
             'stats': AssetStatsSerializer.from_asset_model(asset),
             'access': AssetAccessSerializer.from_asset_and_user(asset, user),
