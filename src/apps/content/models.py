@@ -12,7 +12,8 @@ from apps.core.utils import (
     upload_to_asset_thumbnails,
     upload_to_license_icons,
     upload_to_asset_files,
-    upload_to_resource_files
+    upload_to_resource_files,
+    upload_to_asset_snapshot_images
 )
 
 
@@ -828,6 +829,64 @@ class AssetVersion(BaseModel):
         """Get the semantic version of the parent resource"""
         return self.resource_version.semvar
 
+
+# ============================================================================
+# 7.1. ASSET SNAPSHOT (V1)
+# ============================================================================
+class AssetSnapshot(BaseModel):
+    """
+    Visual snapshots for an Asset
+    """
+    asset = models.ForeignKey(
+        'Asset',
+        on_delete=models.CASCADE,
+        related_name='snapshots'
+    )
+
+    title = models.CharField(
+        max_length=255,
+        help_text="Snapshot title displayed in UI"
+    )
+
+    description = models.TextField(
+        blank=True,
+        help_text="Optional snapshot description"
+    )
+
+    snapshot = models.ImageField(
+        upload_to=upload_to_asset_snapshot_images,
+        blank=True,
+        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'gif', 'webp'])],
+        help_text="Snapshot image"
+    )
+
+    order = models.PositiveIntegerField(
+        default=1,
+        help_text="Display order"
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Whether snapshot is visible"
+    )
+
+    # Managers
+    objects = ActiveObjectsManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        db_table = 'asset_snapshot'
+        verbose_name = 'Asset Snapshot'
+        verbose_name_plural = 'Asset Snapshots'
+        ordering = ['order', '-created_at']
+        indexes = [
+            models.Index(fields=['asset']),
+            models.Index(fields=['order']),
+            models.Index(fields=['is_active'])
+        ]
+
+    def __str__(self):
+        return f"{self.asset.title} -> {self.title}"
 
 # ============================================================================
 # 8. ASSET ACCESS REQUEST

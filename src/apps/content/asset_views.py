@@ -151,7 +151,8 @@ class AssetDetailView(APIView):
             asset = Asset.objects.select_related(
                 'resource__publishing_organization', 'license'
             ).prefetch_related(
-                'versions__resource_version'
+                'versions__resource_version',
+                'snapshots'
             ).get(id=asset_id)
         except Asset.DoesNotExist:
             return Response(

@@ -9,7 +9,7 @@ from django.utils.safestring import mark_safe
 from django.db.models import Count, Sum
 from .models import (
     PublishingOrganization, PublishingOrganizationMember, License, Resource, 
-    ResourceVersion, Asset, AssetVersion, AssetAccessRequest, AssetAccess, 
+    ResourceVersion, Asset, AssetVersion, AssetSnapshot, AssetAccessRequest, AssetAccess, 
     UsageEvent, Distribution
 )
 
@@ -46,6 +46,14 @@ class AssetVersionInline(admin.TabularInline):
     extra = 0
     fields = ['resource_version', 'name', 'size_bytes', 'file_url']
     readonly_fields = ['created_at']
+
+
+class AssetSnapshotInline(admin.TabularInline):
+    """Inline admin for asset snapshots"""
+    model = AssetSnapshot
+    extra = 0
+    fields = ['snapshot', 'title', 'description', 'order', 'is_active']
+    readonly_fields = []
 
 
 class DistributionInline(admin.TabularInline):
@@ -244,7 +252,7 @@ class AssetAdmin(admin.ModelAdmin):
     list_display = ['title', 'get_publishing_organization', 'category', 'license', 'download_count', 'view_count', 'access_requests_count', 'created_at']
     list_filter = ['category', 'license', 'resource__publishing_organization', 'format', 'created_at']
     search_fields = ['title', 'name', 'description', 'long_description']
-    inlines = [AssetVersionInline]
+    inlines = [AssetVersionInline, AssetSnapshotInline]
     autocomplete_fields = ['resource', 'license']
     
     fieldsets = (
@@ -338,6 +346,15 @@ class AssetVersionAdmin(admin.ModelAdmin):
     list_filter = ['created_at']
     search_fields = ['asset__title', 'name']
 
+
+@admin.register(AssetSnapshot)
+class AssetSnapshotAdmin(admin.ModelAdmin):
+    """Standalone admin for Asset Snapshots (in addition to inline)."""
+    list_display = ['asset', 'title', 'order', 'is_active', 'created_at']
+    list_filter = ['asset', 'is_active', 'created_at']
+    search_fields = ['asset__title', 'title']
+    readonly_fields = ['created_at', 'updated_at']
+    autocomplete_fields = ['asset']
 
 @admin.register(AssetAccessRequest)
 class AssetAccessRequestAdmin(admin.ModelAdmin):
@@ -448,7 +465,26 @@ class UsageEventAdmin(admin.ModelAdmin):
     list_display = ['developer_user', 'usage_kind', 'subject_kind', 'created_at']
     list_filter = ['usage_kind', 'subject_kind', 'created_at']
     search_fields = ['developer_user__email']
-    readonly_fields = ['created_at']
+    readonly_fields = [
+        'developer_user',
+        'usage_kind',
+        'subject_kind',
+        'resource_id',
+        'asset_id',
+        'metadata',
+        'ip_address',
+        'user_agent',
+        'created_at',
+        'updated_at',
+    ]
+
+    # Make the model read-only in admin
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
 
 
 @admin.register(Distribution)
