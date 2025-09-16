@@ -231,11 +231,18 @@ class AssetSummarySerializer(serializers.Serializer):
 
 
 class AssetSnapshotSerializer(serializers.Serializer):
-    """Asset snapshots/previews"""
-    id = serializers.IntegerField()
-    type = serializers.CharField()
-    url = serializers.URLField()
+    """Asset snapshots/previews (OpenAPI: thumbnail_url, title, description)"""
+    thumbnail_url = serializers.URLField()
+    title = serializers.CharField()
     description = serializers.CharField(required=False, allow_blank=True)
+
+    @classmethod
+    def from_snapshot_model(cls, snapshot):
+        return {
+            'thumbnail_url': get_file_url(snapshot.snapshot),
+            'title': snapshot.title,
+            'description': snapshot.description or ''
+        }
 
 
 class AssetTechnicalDetailsSerializer(serializers.Serializer):
@@ -308,6 +315,13 @@ class RelatedAssetSerializer(serializers.Serializer):
     publisher = PublisherSummarySerializer()
 
 
+class AssetResourceSerializer(serializers.Serializer):
+    """Minimal resource info nested under asset details (per OpenAPI AssetResource)"""
+    id = serializers.IntegerField()
+    title = serializers.CharField()
+    description = serializers.CharField(allow_blank=True)
+
+
 class AssetDetailSerializer(serializers.Serializer):
     """Complete asset details"""
     id = serializers.IntegerField()
@@ -318,6 +332,7 @@ class AssetDetailSerializer(serializers.Serializer):
     category = serializers.CharField()
     license = LicenseDetailSerializer()
     publisher = PublisherSummarySerializer()
+    resource = AssetResourceSerializer(required=False, allow_null=True)
     snapshots = serializers.ListField(child=AssetSnapshotSerializer(), default=list)
     technical_details = AssetTechnicalDetailsSerializer()
     stats = AssetStatsSerializer()
@@ -341,6 +356,24 @@ class AssetDetailSerializer(serializers.Serializer):
                 'publisher': PublisherSummarySerializer.from_publishing_organization(related.resource.publishing_organization)
             })
         
+        # Load snapshots (active, ordered)
+        snapshots_list = []
+        try:
+            for snap in asset.snapshots.filter(is_active=True).order_by('order'):
+                snapshots_list.append(AssetSnapshotSerializer.from_snapshot_model(snap))
+        except Exception:
+            snapshots_list = []
+
+        # Prepare resource info (nullable)
+        resource_obj = getattr(asset, 'resource', None)
+        resource_data = None
+        if resource_obj:
+            resource_data = {
+                'id': resource_obj.id,
+                'title': resource_obj.name or '',
+                'description': resource_obj.description or ''
+            }
+        
         return {
             'id': asset.id,
             'title': asset.title,
@@ -350,7 +383,8 @@ class AssetDetailSerializer(serializers.Serializer):
             'category': asset.category,
             'license': LicenseDetailSerializer.from_license_model(asset.license),
             'publisher': PublisherSummarySerializer.from_publishing_organization(asset.resource.publishing_organization),
-            'snapshots': [],  # Could be implemented based on asset versions
+            'snapshots': snapshots_list,
+            'resource': resource_data,
             'technical_details': AssetTechnicalDetailsSerializer.from_asset_model(asset),
             'stats': AssetStatsSerializer.from_asset_model(asset),
             'access': AssetAccessSerializer.from_asset_and_user(asset, user),
@@ -475,17 +509,4 @@ class UsageEventSerializer(serializers.ModelSerializer):
         return None
 
 
-# ============================================================================
-# DISTRIBUTION SERIALIZERS
-# ============================================================================
-
-class DistributionSerializer(serializers.ModelSerializer):
-    """Distribution channel serializer"""
-    resource_name = serializers.CharField(source='resource.name', read_only=True)
-    
-    class Meta:
-        model = Distribution
-        fields = [
-            'id', 'resource_name', 'format_type', 'endpoint_url', 'version',
-            'access_config', 'metadata', 'created_at'
-        ]
+## Distribution serializers removed in V1

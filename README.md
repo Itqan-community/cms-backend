@@ -128,7 +128,7 @@ cms/
 │   └── terraform/           # Infrastructure as Code
 │   
 ├── shared/                  # Shared types and utilities
-├── docs/                    # Documentation
+├── .cursor/docs/md/         # Documentation
 └── ai-memory-bank/          # Task management
 ```
 
@@ -265,8 +265,8 @@ npm run e2e
 
 ## 📚 Documentation
 
-- [API Documentation](docs/api/openapi-spec.yaml) - OpenAPI 3.0 specification
-- [Architecture Diagrams](docs/diagrams/) - C4 model diagrams
+- [API Documentation](/openapi.yaml) - OpenAPI 3.0 specification
+- [Architecture Diagrams](.cursor/ai-memory-bank/docs/screens/) - Screens & diagrams
 - [Task Management](ai-memory-bank/) - Development tasks and progress
 - [Database Schema](docs/diagrams/high-level-db-components-relationship.png) - ER diagram
 
@@ -285,7 +285,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 📞 Support
 
 - **Issues**: [GitHub Issues](https://github.com/Itqan-community/cms/issues)
-- **Documentation**: [Project Docs](docs/)
+- **Documentation**: [Project Docs](.cursor/docs/md/)
 - **Community**: [Itqan Community](https://itqan.com)
 
 ---
