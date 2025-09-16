@@ -6,7 +6,7 @@ import uuid
 from django.utils.text import slugify
 
 
-def upload_to_organization_icons(instance, filename):
+def upload_to_publisher_icons(instance, filename):
     """
     Generate upload path for organization icon images
     Format: uploads/organizations/{org_slug}/icon.{ext}
@@ -36,7 +36,7 @@ def upload_to_asset_thumbnails(instance, filename):
     return f"uploads/assets/{instance.id}/{filename}"
 
 
-def upload_to_asset_snapshot_images(instance, filename):
+def upload_to_asset_preview_images(instance, filename):
     """
     Generate upload path for asset snapshot images
     Format: uploads/assets/{asset_id}/snapshots/{filename}

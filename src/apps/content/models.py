@@ -2,462 +2,176 @@
 Complete ERD-aligned models for Itqan CMS
 Based on db_design_v1.drawio specification
 """
+from django.utils import timezone
+import re
+
 from django.db import models
 from django.conf import settings
 from django.core.validators import URLValidator, FileExtensionValidator
-from apps.core.models import BaseModel, ActiveObjectsManager, AllObjectsManager
-from apps.core.utils import (
-    upload_to_organization_icons, 
-    upload_to_organization_covers,
+from django.utils.text import slugify
+from django.utils.translation import gettext_lazy as _
+
+from src.apps.core.models import BaseModel, ActiveObjectsManager, AllObjectsManager
+from src.apps.core.utils import (
+    upload_to_publisher_icons,
     upload_to_asset_thumbnails,
     upload_to_license_icons,
     upload_to_asset_files,
     upload_to_resource_files,
-    upload_to_asset_snapshot_images
+    upload_to_asset_preview_images
 )
 
+class Publisher(BaseModel):
+    name = models.CharField(max_length=255, help_text="Publisher name e.g. 'Tafsir Center'")
 
-# ============================================================================
-# 1. PUBLISHING ORGANIZATION
-# ============================================================================
-class PublishingOrganization(BaseModel):
-    """
-    Publishing organization entity from ERD.
-    Organizations that publish resources and have multiple members.
-    """
-    # Core fields from ERD
-    name = models.CharField(
-        max_length=255,
-        help_text="Organization name e.g. 'Tafsir Center'"
-    )
-    
-    slug = models.SlugField(
-        unique=True,
-        help_text="URL-friendly slug e.g. 'tafsir-center'"
-    )
-    
-    icone_image_url = models.ImageField(
-        upload_to=upload_to_organization_icons,
-        blank=True,
-        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'])],
-        help_text="Icon/logo image - used in V1 UI: Publisher Page"
-    )
-    
-    summary = models.TextField(
-        blank=True,
-        help_text="Organization summary - used in V1 UI: Publisher Page"
-    )
-    
-    # Additional fields for API support
-    description = models.TextField(
-        blank=True,
-        help_text="Detailed organization description"
-    )
-    
-    bio = models.TextField(
-        blank=True,
-        help_text="Organization bio for API responses"
-    )
-    
-    cover_url = models.ImageField(
-        upload_to=upload_to_organization_covers,
-        blank=True,
-        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'gif', 'webp'])],
-        help_text="Cover image for organization"
-    )
-    
-    location = models.CharField(
-        max_length=255,
-        blank=True,
-        help_text="Organization location"
-    )
-    
-    website = models.URLField(
-        blank=True,
-        help_text="Organization website"
-    )
-    
-    verified = models.BooleanField(
-        default=False,
-        help_text="Whether organization is verified"
-    )
-    
-    social_links = models.JSONField(
-        default=dict,
-        help_text="Social media links as JSON"
-    )
-    
-    # Additional fields for API compatibility
-    contact_email = models.EmailField(
-        blank=True,
-        help_text="Contact email for the organization"
-    )
-    
-    website = models.URLField(
-        blank=True,
-        help_text="Organization website URL"
-    )
-    
-    location = models.CharField(
-        max_length=255,
-        blank=True,
-        help_text="Organization location"
-    )
-    
-    # Relationships
-    members = models.ManyToManyField(
-        settings.AUTH_USER_MODEL,
-        through='PublishingOrganizationMember',
-        related_name='publishing_organizations'
-    )
-    
-    # Managers
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
+    slug = models.SlugField(unique=True, help_text="URL-friendly slug e.g. 'tafsir-center'")
 
-    class Meta:
-        db_table = 'publishing_organization'
-        verbose_name = 'Publishing Organization'
-        verbose_name_plural = 'Publishing Organizations'
-        ordering = ['name']
-
-    def __str__(self):
-        return self.name
-
-
-# ============================================================================
-# 2. PUBLISHING ORGANIZATION MEMBER
-# ============================================================================
-class PublishingOrganizationMember(BaseModel):
-    """
-    Junction table for User <-> PublishingOrganization relationships.
-    Defines membership roles within organizations.
-    """
-    ROLE_CHOICES = [
-        ('owner', 'Owner'),
-        ('manager', 'Manager'),  # V1: Itqan team to upload data on publishers behalf from Admin Panel. V2: more rules.
-    ]
-    
-    # Foreign keys from ERD
-    publishing_organization = models.ForeignKey(
-        PublishingOrganization,
-        on_delete=models.CASCADE,
-        related_name='memberships'
-    )
-    
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='organization_memberships'
-    )
-    
-    # Role field from ERD
-    role = models.CharField(
-        max_length=20,
-        choices=ROLE_CHOICES,
-        help_text="Member's role in the organization"
-    )
-    
-    # Managers
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
-
-    class Meta:
-        db_table = 'publishing_organization_member'
-        unique_together = ['publishing_organization', 'user']
-        verbose_name = 'Organization Member'
-        verbose_name_plural = 'Organization Members'
-
-    def __str__(self):
-        return f"{self.user.email} -> {self.publishing_organization.name} ({self.role})"
-
-
-# ============================================================================
-# 3. LICENSE
-# ============================================================================
-class License(BaseModel):
-    """
-    License definitions with terms and permissions.
-    Each resource has a default license.
-    """
-    # Core fields that would be in detailed license schema
-    code = models.CharField(
-        max_length=50,
-        unique=True,
-        help_text="License code e.g. 'cc0', 'cc-by-4.0'"
-    )
-    
-    name = models.CharField(
-        max_length=255,
-        help_text="Full license name"
-    )
-    
-    short_name = models.CharField(
-        max_length=50,
-        blank=True,
-        help_text="Abbreviated name"
-    )
-    
-    url = models.URLField(
-        blank=True,
-        help_text="Official license URL"
-    )
-    
     icon_url = models.ImageField(
-        upload_to=upload_to_license_icons,
+        upload_to=upload_to_publisher_icons,
         blank=True,
-        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'])],
-        help_text="License icon image"
+        validators=[FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "gif", "webp", "svg"])],
+        help_text="Icon/logo image - used in V1 UI: Publisher Page",
     )
-    
-    summary = models.TextField(
-        blank=True,
-        help_text="Brief license description"
-    )
-    
-    full_text = models.TextField(
-        blank=True,
-        help_text="Complete license text"
-    )
-    
-    legal_code_url = models.URLField(
-        blank=True,
-        help_text="Legal code URL"
-    )
-    
-    # JSON fields for structured data
-    license_terms = models.JSONField(
-        default=list,
-        help_text="License terms as JSON array"
-    )
-    
-    permissions = models.JSONField(
-        default=list,
-        help_text="Permissions as JSON array"
-    )
-    
-    conditions = models.JSONField(
-        default=list,
-        help_text="Conditions as JSON array"
-    )
-    
-    limitations = models.JSONField(
-        default=list,
-        help_text="Limitations as JSON array"
-    )
-    
-    is_default = models.BooleanField(
-        default=False,
-        help_text="Whether this is the default license"
-    )
-    
-    # Managers
+
+    description = models.TextField(blank=True, help_text="Detailed publisher description")
+
+    address = models.CharField(max_length=255, blank=True, help_text="Publisher address")
+
+    website = models.URLField(blank=True, help_text="Publisher website")
+
+    is_verified = models.BooleanField(default=True, help_text="Whether publisher is verified")
+
+    contact_email = models.EmailField(blank=True, help_text="Contact email for the publisher")
+
+    members = models.ManyToManyField(settings.AUTH_USER_MODEL, through="PublisherMember", related_name="publishers")
+
     objects = ActiveObjectsManager()
     all_objects = AllObjectsManager()
 
-    class Meta:
-        db_table = 'license'
-        verbose_name = 'License'
-        verbose_name_plural = 'Licenses'
-        ordering = ['name']
-
     def __str__(self):
-        return f"{self.name} ({self.code})"
-
-
-# ============================================================================
-# 4. RESOURCE
-# ============================================================================
-class Resource(BaseModel):
-    """
-    Core resource entity from ERD.
-    Original content packages published by organizations.
-    """
-    CATEGORY_CHOICES = [
-        ('recitation', 'Recitation'),
-        ('mushaf', 'Mushaf'),
-        ('tafsir', 'Tafsir'),
-    ]
-    
-    STATUS_CHOICES = [
-        ('draft', 'Draft'),
-        ('ready', 'Ready'),  # V1: ready = ready to extract Assets from
-    ]
-    
-    # Core fields from ERD
-    publishing_organization = models.ForeignKey(
-        PublishingOrganization,
-        on_delete=models.PROTECT,
-        related_name='resources'
-    )
-    
-    name = models.CharField(
-        max_length=255,
-        help_text="Resource name e.g. 'Tafsir Ibn Katheer CSV'"
-    )
-    
-    slug = models.SlugField(
-        help_text="URL slug e.g. 'tafsir-ibn-katheer-csv'"
-    )
-    
-    description = models.TextField(
-        help_text="Resource description"
-    )
-    
-    category = models.CharField(
-        max_length=20,
-        choices=CATEGORY_CHOICES,
-        help_text="Simple options in V1"
-    )
-    
-    status = models.CharField(
-        max_length=20,
-        choices=STATUS_CHOICES,
-        default='draft',
-        help_text="V1: ready = ready to extract Assets from"
-    )
-    
-    default_license = models.ForeignKey(
-        License,
-        on_delete=models.PROTECT,
-        related_name='default_for_resources',
-        help_text="Default license for this resource"
-    )
-    
-    # Managers
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
-
-    class Meta:
-        db_table = 'resource'
-        verbose_name = 'Resource'
-        verbose_name_plural = 'Resources'
-        ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['publishing_organization']),
-            models.Index(fields=['category']),
-            models.Index(fields=['status']),
-            models.Index(fields=['slug']),
-        ]
-
-    def __str__(self):
-        return f"{self.name} ({self.category})"
-
-    def get_latest_version(self):
-        """Get the latest version of this resource"""
-        return self.versions.filter(is_latest=True).first()
-
-    def get_all_versions(self):
-        """Get all versions ordered by semantic version"""
-        return self.versions.all().order_by('-created_at')
-
-    def create_version(self, semvar, storage_url, file_type, size_bytes, 
-                      name=None, summary='', set_as_latest=True):
-        """Create a new version for this resource"""
-        return ResourceVersion.create_new_version(
-            resource=self,
-            semvar=semvar,
-            storage_url=storage_url,
-            type=file_type,
-            size_bytes=size_bytes,
-            name=name or self.name,
-            summary=summary,
-            set_as_latest=set_as_latest
-        )
-
-    @property
-    def latest_version(self):
-        """Property to get the latest version"""
-        return self.get_latest_version()
-
-    @property 
-    def version_count(self):
-        """Get the number of versions for this resource"""
-        return self.versions.count()
-
-
-# ============================================================================
-# 5. RESOURCE VERSION
-# ============================================================================
-class ResourceVersion(BaseModel):
-    """
-    Versioned instances of resources with semantic versioning.
-    Links to storage URLs and file metadata.
-    """
-    TYPE_CHOICES = [
-        ('csv', 'CSV'),
-        ('excel', 'Excel'),
-        ('json', 'JSON'),
-        ('zip', 'ZIP'),
-    ]
-    
-    # Relationships
-    resource = models.ForeignKey(
-        Resource,
-        on_delete=models.CASCADE,
-        related_name='versions'
-    )
-    
-    # Version fields from ERD
-    name = models.CharField(
-        max_length=255,
-        help_text="Version name - V1: same as resource name, V2: updates on content"
-    )
-    
-    summary = models.TextField(
-        blank=True,
-        help_text="Version summary"
-    )
-    
-    semvar = models.CharField(
-        max_length=20,
-        help_text="Semantic versioning e.g. '1.0.0' - core to bind with an AssetVersion"
-    )
-    
-    storage_url = models.FileField(
-        upload_to=upload_to_resource_files,
-        blank=True,
-        null=True,
-        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx', 'txt', 'zip', 'tar', 'gz', 'json', 'xml', 'csv'])],
-        help_text="File storage for resource version"
-    )
-    
-    type = models.CharField(
-        max_length=20,
-        choices=TYPE_CHOICES,
-        help_text="File type"
-    )
-    
-    size_bytes = models.PositiveBigIntegerField(
-        default=0,
-        help_text="File size in bytes"
-    )
-    
-    is_latest = models.BooleanField(
-        default=False,
-        help_text="Whether this is the latest version"
-    )
-    
-    # Managers
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
-
-    class Meta:
-        db_table = 'resource_version'
-        verbose_name = 'Resource Version'
-        verbose_name_plural = 'Resource Versions'
-        ordering = ['-created_at']
-        unique_together = ['resource', 'semvar']
-
-    def __str__(self):
-        return f"{self.resource.name} v{self.semvar}"
+        return f"Publisher(name={self.name})"
 
     def save(self, *args, **kwargs):
-        """
-        Override save to implement is_latest constraint.
-        Only one version per resource can be is_latest=True.
-        """
-        # Auto-compute size_bytes from storage file when available and not set
+        self.slug = slugify(self.name[:50])
+        super().save(*args, **kwargs)
+
+
+class PublisherMember(BaseModel):
+    """
+    Junction table for User <-> Publisher relationships.
+    Defines membership roles within organizations.
+    """
+
+    class RoleChoice(models.TextChoices):
+        OWNER = "owner", _("Owner")
+        MANAGER = "manager", _("Manager")
+
+    publisher = models.ForeignKey(Publisher, on_delete=models.CASCADE, related_name="memberships")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="publisher_memberships")
+    role = models.CharField(
+        max_length=20,
+        choices=RoleChoice.choices,
+        help_text="Member's role in the organization, just for information. This field WILL NOT be used for permission checks. or any code checks",
+    )
+
+    objects = ActiveObjectsManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        unique_together = ["publisher", "user"]
+
+    def __str__(self):
+        return f"PublisherMember(email={self.user.email} publisher={self.publisher.name} role={self.role})"
+
+
+
+
+class Resource(BaseModel):
+    class CategoryChoice(models.TextChoices):
+        RECITATION = "recitation", _("Recitation")
+        MUSHAF = "mushaf", _("Mushaf")
+        TAFSIR = "tafsir", _("Tafsir")
+
+    class StatusChoice(models.TextChoices):
+        DRAFT = "draft", _("Draft")
+        READY = "ready", _("Ready")
+
+    publisher = models.ForeignKey(Publisher, on_delete=models.PROTECT, related_name="resources")
+
+    name = models.CharField(max_length=255, help_text="Resource name e.g. 'Tafsir Ibn Katheer CSV'")
+
+    slug = models.SlugField(help_text="URL slug e.g. 'tafsir-ibn-katheer-csv'", db_index=True)
+
+    description = models.TextField(help_text="Resource description")
+
+    category = models.CharField(max_length=20, choices=CategoryChoice.choices, help_text="Simple options in V1")
+
+    status = models.CharField(
+        max_length=20,
+        choices=StatusChoice.choices,
+        default=StatusChoice.DRAFT,
+        help_text="V1: ready = ready to extract Assets from",
+    )
+
+    objects = ActiveObjectsManager()
+    all_objects = AllObjectsManager()
+
+    def __str__(self):
+        return f"Resource(name={self.name} category={self.category})"
+
+    def save(self, *args, **kwargs):
+        self.slug = slugify(f"{self.name}({self.publisher.slug})"[:50])
+        super().save(*args, **kwargs)
+
+
+class ResourceVersion(BaseModel):
+    class FileTypeChoice(models.TextChoices):
+        CSV = "csv", _("CSV")
+        EXCEL = "excel", _("Excel")
+        JSON = "json", _("JSON")
+        ZIP = "zip", _("ZIP")
+
+    resource = models.ForeignKey(Resource, on_delete=models.CASCADE, related_name="versions")
+
+    name = models.CharField(
+        max_length=255, help_text="Version name - V1: same as resource name, V2: updates on content"
+    )
+
+    summary = models.TextField(blank=True, help_text="Version summary")
+
+    semvar = models.CharField(
+        max_length=20, help_text="Semantic versioning e.g. '1.0.0' - core to bind with an AssetVersion"
+    )
+
+    storage_url = models.FileField(
+        upload_to=upload_to_resource_files,
+        validators=[
+            FileExtensionValidator(
+                allowed_extensions=["pdf", "doc", "docx", "txt", "zip", "tar", "gz", "json", "xml", "csv"],
+            ),
+        ],
+        help_text="File storage for resource version",
+    )
+
+    file_type = models.CharField(max_length=20, choices=FileTypeChoice.choices, help_text="File type")
+
+    size_bytes = models.PositiveBigIntegerField(default=0, help_text="File size in bytes")
+
+    is_latest = models.BooleanField(default=False, help_text="Whether this is the latest version")
+
+    objects = ActiveObjectsManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        verbose_name = "Resource Version"
+        verbose_name_plural = "Resource Versions"
+        unique_together = ["resource", "semvar"]
+
+    def __str__(self):
+        return f"ResourceVersion(resource={self.resource.name} semvar={self.semvar})"
+
+    def save(self, *args, **kwargs):
+        # Auto-compute human_readable_size from storage file when available and not set
         if (not self.size_bytes or self.size_bytes == 0) and self.storage_url:
             try:
                 # FileField provides size when the file is available
@@ -469,395 +183,171 @@ class ResourceVersion(BaseModel):
             # Set all other versions of this resource to is_latest=False
             ResourceVersion.objects.filter(
                 resource=self.resource,
-                is_latest=True
+                is_latest=True,
             ).exclude(pk=self.pk).update(is_latest=False)
-        
+
         super().save(*args, **kwargs)
 
-    @classmethod
-    def create_new_version(cls, resource, semvar, storage_url, type, size_bytes, 
-                          name=None, summary='', set_as_latest=True):
-        """
-        Create a new version of a resource with proper version management.
-        """
-        if name is None:
-            name = resource.name
-        
-        version = cls.objects.create(
-            resource=resource,
-            name=name,
-            summary=summary,
-            semvar=semvar,
-            storage_url=storage_url,
-            type=type,
-            size_bytes=size_bytes,
-            is_latest=set_as_latest
-        )
-        
-        return version
-
-    @property
-    def version_number(self):
-        """Get version number tuple for comparison"""
-        try:
-            parts = self.semvar.split('.')
-            return tuple(int(part) for part in parts)
-        except (ValueError, AttributeError):
-            return (0, 0, 0)
-
-    def is_newer_than(self, other_version):
-        """Check if this version is newer than another version"""
-        return self.version_number > other_version.version_number
+class LicenseChoice(models.TextChoices):
+    CC_BY = "CC BY", _("Creative Commons Attribution")
+    CC_BY_SA = "CC BY-SA", _("Creative Commons Attribution-ShareAlike")
+    CC_BY_ND = "CC BY-ND", _("Creative Commons Attribution-NoDerivs")
+    CC_BY_NC = "CC BY-NC", _("Creative Commons Attribution-NonCommercial")
+    CC_BY_NC_SA = "CC BY-NC-SA", _("Creative Commons Attribution-NonCommercial-ShareAlike")
+    CC_BY_NC_ND = "CC BY-NC-ND", _("Creative Commons Attribution-NonCommercial-NoDerivs")
+    PUBLIC_DOMAIN = "Public Domain", _("Public Domain")
+    PROPRIETARY = "Proprietary", _("Proprietary")
 
 
-# ============================================================================
-# 6. ASSET
-# ============================================================================
 class Asset(BaseModel):
-    """
-    Individual assets that can be downloaded.
-    Part of resources, published by organizations.
-    """
-    # Relationships from ERD
-    resource = models.ForeignKey(
-        Resource,
-        on_delete=models.PROTECT,
-        related_name='assets'
-    )
-    
-    # Core asset fields that would be in the detailed schema
-    name = models.CharField(
-        max_length=255,
-        help_text="Asset name"
-    )
-    
-    title = models.CharField(
-        max_length=255,
-        help_text="Display title for API"
-    )
-    
-    description = models.TextField(
-        help_text="Asset description"
-    )
-    
-    long_description = models.TextField(
-        blank=True,
-        help_text="Extended description"
-    )
-    
+    class CategoryChoice(models.TextChoices):
+        RECITATION = "recitation", _("Recitation")
+        MUSHAF = "mushaf", _("Mushaf")
+        TAFSIR = "tafsir", _("Tafsir")
+
+    resource = models.ForeignKey(Resource, on_delete=models.PROTECT, related_name="assets")
+
+    name = models.CharField(max_length=255, help_text="Asset name")
+
+    description = models.TextField(help_text="Asset description")
+
+    long_description = models.TextField(blank=True, help_text="Extended description")
+
     thumbnail_url = models.ImageField(
         upload_to=upload_to_asset_thumbnails,
         blank=True,
-        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'gif', 'webp'])],
-        help_text="Asset thumbnail image"
+        validators=[FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "gif", "webp"])],
+        help_text="Asset thumbnail image",
     )
-    
+
     category = models.CharField(
-        max_length=20,
-        choices=Resource.CATEGORY_CHOICES,
-        help_text="Asset category matching resource categories"
+        max_length=20, choices=CategoryChoice.choices, help_text="Asset category matching resource categories"
     )
-    
-    # License relationship
-    license = models.ForeignKey(
-        License,
-        on_delete=models.PROTECT,
-        related_name='assets'
-    )
-    
-    # Technical details
-    file_size = models.CharField(
-        max_length=50,
-        help_text="Human readable file size e.g. '2.5 MB'"
-    )
-    
-    format = models.CharField(
-        max_length=50,
-        help_text="File format"
-    )
-    
-    encoding = models.CharField(
-        max_length=50,
-        default='UTF-8',
-        help_text="Text encoding"
-    )
-    
-    version = models.CharField(
-        max_length=50,
-        help_text="Asset version"
-    )
-    
-    language = models.CharField(
-        max_length=10,
-        help_text="Asset language code"
-    )
-    
-    # Stats
-    download_count = models.PositiveIntegerField(
-        default=0,
-        help_text="Number of downloads"
-    )
-    
-    view_count = models.PositiveIntegerField(
-        default=0,
-        help_text="Number of views"
-    )
-    
-    # Managers
+
+    license = models.CharField(max_length=50, choices=LicenseChoice.choices, help_text="Asset license")
+
+    file_size = models.CharField(max_length=50, help_text="Human readable file size e.g. '2.5 MB'")
+
+    format = models.CharField(max_length=50, help_text="File format")
+
+    encoding = models.CharField(max_length=50, default="UTF-8", help_text="Text encoding")
+
+    version = models.CharField(max_length=50, help_text="Asset version")
+
+    language = models.CharField(max_length=10, help_text="Asset language code")
+
     objects = ActiveObjectsManager()
     all_objects = AllObjectsManager()
 
-    class Meta:
-        db_table = 'asset'
-        verbose_name = 'Asset'
-        verbose_name_plural = 'Assets'
-        ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['resource']),
-            models.Index(fields=['category']),
-            models.Index(fields=['license']),
-        ]
-
     def __str__(self):
-        return f"{self.title} ({self.category})"
-
-    @classmethod
-    def create_from_resource_version(cls, resource_version, asset_data):
-        """
-        Create an asset extracted from a resource version.
-        Inherits publisher and category from resource.
-        """
-        resource = resource_version.resource
-        
-        # Extract AssetVersion-specific data
-        file_url = asset_data.pop('file_url', '')
-        version_summary = asset_data.pop('version_summary', f"Extracted from {resource_version}")
-        
-        # Set defaults from resource if not provided
-        asset_data.setdefault('resource', resource)
-        asset_data.setdefault('license', resource.default_license)
-        asset_data.setdefault('category', resource.category)
-        
-        # Create the asset
-        asset = cls.objects.create(**asset_data)
-        
-        # Create the asset version linking to resource version
-        AssetVersion.objects.create(
-            asset=asset,
-            resource_version=resource_version,
-            name=asset.title,
-            summary=version_summary,
-            file_url=file_url,
-            size_bytes=cls._parse_file_size_to_bytes(asset.file_size)
-        )
-        
-        return asset
+        return f"Asset(name={self.name} category={self.category})"
 
     @staticmethod
     def _parse_file_size_to_bytes(file_size_str):
         """Convert human readable file size to bytes"""
         if not file_size_str:
             return 0
-        
-        import re
-        
+
+
         # Extract number and unit from string like "2.5 MB"
-        match = re.match(r'([0-9.]+)\s*([KMGTPE]?B)', file_size_str.upper())
+        match = re.match(r"([0-9.]+)\s*([KMGTPE]?B)", file_size_str.upper())
         if not match:
             return 0
-        
+
         size, unit = match.groups()
         size = float(size)
-        
-        units = {
-            'B': 1,
-            'KB': 1024,
-            'MB': 1024**2,
-            'GB': 1024**3,
-            'TB': 1024**4,
-            'PB': 1024**5,
-            'EB': 1024**6
-        }
-        
-        return int(size * units.get(unit, 1))
 
-    def get_latest_version(self):
-        """Get the most recent version of this asset"""
-        return self.versions.order_by('-created_at').first()
+        units = {
+            "B": 1,
+            "KB": 1024,
+            "MB": 1024**2,
+            "GB": 1024**3,
+            "TB": 1024**4,
+            "PB": 1024**5,
+            "EB": 1024**6,
+        }
+
+        return int(size * units.get(unit, 1))
 
     def get_related_assets(self, limit=5):
         """Get related assets from same category and publisher"""
         return Asset.objects.filter(
             category=self.category,
-            resource__publishing_organization=self.resource.publishing_organization,
-            is_active=True
+            resource__publishing_organization=self.resource.publisher,
+            is_active=True,
         ).exclude(id=self.id)[:limit]
 
-    def increment_download_count(self):
-        """Increment download counter with async processing"""
-        try:
-            from .tasks import update_asset_stats_async
-            # Try async update first
-            if update_asset_stats_async(self.id, 'download_count'):
-                # Optimistically update local instance without DB hit
-                self.download_count += 1
-                return
-        except ImportError:
-            pass
-        
-        # Fallback to synchronous atomic update
-        from django.db.models import F
-        Asset.objects.filter(id=self.id).update(download_count=F('download_count') + 1)
-        self.refresh_from_db(fields=['download_count'])
-
-    def increment_view_count(self):
-        """Increment view counter with async processing"""
-        try:
-            from .tasks import update_asset_stats_async
-            # Try async update first
-            if update_asset_stats_async(self.id, 'view_count'):
-                # Optimistically update local instance without DB hit
-                self.view_count += 1
-                return
-        except ImportError:
-            pass
-        
-        # Fallback to synchronous atomic update
-        from django.db.models import F
-        Asset.objects.filter(id=self.id).update(view_count=F('view_count') + 1)
-        self.refresh_from_db(fields=['view_count'])
-
     @property
-    def size_bytes(self):
+    def human_readable_size(self):
         """Get file size in bytes (computed from human readable)"""
         return self._parse_file_size_to_bytes(self.file_size)
 
-    @property
-    def publishing_organization(self):
-        """Get the publishing organization through the resource"""
-        return self.resource.publishing_organization
 
-    @property
-    def is_public(self):
-        """Check if asset is publicly accessible (based on license)"""
-        # This would be determined by license terms
-        return self.license.code in ['cc0', 'cc-by-4.0'] if self.license else False
-
-
-# ============================================================================
-# 7. ASSET VERSION
-# ============================================================================
 class AssetVersion(BaseModel):
-    """
-    Individual downloadable assets extracted from resource versions.
-    """
-    # Relationships
-    asset = models.ForeignKey(
-        Asset,
-        on_delete=models.CASCADE,
-        related_name='versions'
-    )
-    
-    resource_version = models.ForeignKey(
-        ResourceVersion,
-        on_delete=models.CASCADE,
-        related_name='asset_versions'
-    )
-    
-    # Asset version fields from ERD
-    name = models.CharField(
-        max_length=255,
-        help_text="Asset version name"
-    )
-    
-    summary = models.TextField(
-        blank=True,
-        help_text="Asset version summary"
-    )
-    
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="versions")
+
+    resource_version = models.ForeignKey(ResourceVersion, on_delete=models.CASCADE, related_name="asset_versions")
+
+    name = models.CharField(max_length=255, help_text="Asset version name")
+
+    summary = models.TextField(blank=True, help_text="Asset version summary")
+
     file_url = models.FileField(
         upload_to=upload_to_asset_files,
         blank=True,
         null=True,
-        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx', 'txt', 'zip', 'tar', 'gz', 'json', 'xml', 'csv'])],
-        help_text="Direct file for asset"
+        validators=[
+            FileExtensionValidator(
+                allowed_extensions=["pdf", "doc", "docx", "txt", "zip", "tar", "gz", "json", "xml", "csv"],
+            ),
+        ],
+        help_text="Direct file for asset",
     )
-    
-    size_bytes = models.PositiveBigIntegerField(
-        help_text="File size in bytes"
-    )
-    
-    # Managers
+
+    size_bytes = models.PositiveBigIntegerField(help_text="File size in bytes")
+
     objects = ActiveObjectsManager()
     all_objects = AllObjectsManager()
 
-    class Meta:
-        db_table = 'asset_version'
-        verbose_name = 'Asset Version'
-        verbose_name_plural = 'Asset Versions'
-        ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.asset.name} -> {self.resource_version.semvar}"
+        return f"AssetVersion(asset={self.asset.name} version={self.resource_version.semvar})"
 
     @property
     def human_readable_size(self):
         """Convert bytes to human readable format"""
         if self.size_bytes == 0:
             return "0 B"
-        
+
         import math
-        
+
         size = self.size_bytes
-        units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB']
-        
+        units = ["B", "KB", "MB", "GB", "TB", "PB", "EB"]
+
         if size == 0:
             return "0 B"
-        
-        i = int(math.floor(math.log(size, 1024)))
+
+        i = math.floor(math.log(size, 1024))
         p = math.pow(1024, i)
         s = round(size / p, 2)
-        
+
         return f"{s} {units[i]}"
 
-    def get_download_url(self):
-        """Get the download URL for this asset version"""
-        return self.file_url.url if self.file_url else None
-
-    @property
-    def resource_semvar(self):
-        """Get the semantic version of the parent resource"""
-        return self.resource_version.semvar
-
-
-# ============================================================================
-# 7.1. ASSET SNAPSHOT (V1)
-# ============================================================================
-class AssetSnapshot(BaseModel):
+class AssetPreview(BaseModel):
     """
-    Visual snapshots for an Asset
+    Visual images for an Asset
     """
     asset = models.ForeignKey(
         'Asset',
         on_delete=models.CASCADE,
-        related_name='snapshots'
+        related_name='previews'
     )
 
-    title = models.CharField(
-        max_length=255,
-        help_text="Snapshot title displayed in UI"
-    )
-
-    description = models.TextField(
-        blank=True,
-        help_text="Optional snapshot description"
-    )
-
-    snapshot = models.ImageField(
-        upload_to=upload_to_asset_snapshot_images,
+    image_url = models.ImageField(
+        upload_to=upload_to_asset_preview_images,
         blank=True,
         validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'gif', 'webp'])],
-        help_text="Snapshot image"
+        help_text="Preview image"
     )
 
     order = models.PositiveIntegerField(
@@ -865,48 +355,24 @@ class AssetSnapshot(BaseModel):
         help_text="Display order"
     )
 
-    is_active = models.BooleanField(
-        default=True,
-        help_text="Whether snapshot is visible"
-    )
-
-    # Managers
     objects = ActiveObjectsManager()
     all_objects = AllObjectsManager()
 
-    class Meta:
-        db_table = 'asset_snapshot'
-        verbose_name = 'Asset Snapshot'
-        verbose_name_plural = 'Asset Snapshots'
-        ordering = ['order', '-created_at']
-        indexes = [
-            models.Index(fields=['asset']),
-            models.Index(fields=['order']),
-            models.Index(fields=['is_active'])
-        ]
 
     def __str__(self):
-        return f"{self.asset.title} -> {self.title}"
+        return f"AssetPreview(asset={self.asset.name} order={self.order})"
 
-# ============================================================================
-# 8. ASSET ACCESS REQUEST
-# ============================================================================
+
 class AssetAccessRequest(BaseModel):
-    """
-    User requests for asset access with approval workflow.
-    """
-    STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('approved', 'Approved'),
-        ('rejected', 'Rejected'),
-    ]
-    
-    INTENDED_USE_CHOICES = [
-        ('commercial', 'Commercial'),
-        ('non-commercial', 'Non-Commercial'),
-    ]
-    
-    # Relationships from ERD
+    class StatusChoice(models.TextChoices):
+        PENDING = "pending", _("Pending")
+        APPROVED = "approved", _("Approved")
+        REJECTED = "rejected", _("Rejected")
+
+    class IntendedUseChoice(models.TextChoices):
+        COMMERCIAL = "commercial", _("Commercial")
+        NON_COMMERCIAL = "non-commercial", _("Non-Commercial")
+
     developer_user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -918,12 +384,11 @@ class AssetAccessRequest(BaseModel):
         on_delete=models.CASCADE,
         related_name='access_requests'
     )
-    
-    # Request fields from ERD
+
     status = models.CharField(
         max_length=20,
-        choices=STATUS_CHOICES,
-        default='pending'
+        choices=StatusChoice.choices,
+        default=StatusChoice.PENDING,
     )
     
     developer_access_reason = models.TextField(
@@ -932,11 +397,10 @@ class AssetAccessRequest(BaseModel):
     
     intended_use = models.CharField(
         max_length=20,
-        choices=INTENDED_USE_CHOICES,
+        choices=IntendedUseChoice.choices,
         help_text="Commercial or non-commercial use"
     )
-    
-    # Admin response
+
     admin_response = models.TextField(
         blank=True,
         help_text="Admin response message"
@@ -956,143 +420,17 @@ class AssetAccessRequest(BaseModel):
         related_name='approved_asset_requests'
     )
     
-    # Managers
+
     objects = ActiveObjectsManager()
     all_objects = AllObjectsManager()
 
-    class Meta:
-        db_table = 'asset_access_request'
-        verbose_name = 'Asset Access Request'
-        verbose_name_plural = 'Asset Access Requests'
-        ordering = ['-created_at']
-        unique_together = ['developer_user', 'asset']
+
 
     def __str__(self):
-        return f"{self.developer_user.email} -> {self.asset.title} ({self.status})"
-
-    def approve_request(self, approved_by_user=None, auto_approved=True):
-        """
-        Approve the access request and create AssetAccess.
-        For V1: Auto-approval without admin intervention.
-        """
-        from django.utils import timezone
-        
-        if self.status != 'pending':
-            raise ValueError(f"Cannot approve request with status '{self.status}'")
-        
-        # Update request status
-        self.status = 'approved'
-        self.approved_at = timezone.now()
-        self.approved_by = approved_by_user
-        
-        if auto_approved:
-            self.admin_response = "Automatically approved (V1 policy)"
-        
-        self.save()
-        
-        # Create AssetAccess (use all_objects to bypass is_active filter)
-        access = AssetAccess.all_objects.create(
-            asset_access_request=self,
-            user=self.developer_user,
-            asset=self.asset,
-            effective_license=self.asset.license,
-            download_url=self._generate_download_url(),
-            expires_at=None  # V1: No expiration
-        )
-        
-        return access
-
-    def reject_request(self, rejected_by_user=None, reason=""):
-        """
-        Reject the access request.
-        """
-        from django.utils import timezone
-        
-        if self.status != 'pending':
-            raise ValueError(f"Cannot reject request with status '{self.status}'")
-        
-        self.status = 'rejected'
-        self.approved_at = timezone.now()
-        self.approved_by = rejected_by_user
-        self.admin_response = reason or "Request rejected"
-        self.save()
-
-    def _generate_download_url(self):
-        """
-        Generate download URL for the asset.
-        In V1: Direct file URL from asset version.
-        """
-        latest_version = self.asset.get_latest_version()
-        if latest_version and latest_version.file_url:
-            # Return the public URL for the stored file
-            return latest_version.file_url.url
-        return ""
-
-    @classmethod
-    def request_access(cls, user, asset, purpose, intended_use, auto_approve=True):
-        """
-        Create access request and optionally auto-approve for V1.
-        """
-        # Check if request already exists
-        existing_request = cls.objects.filter(
-            developer_user=user,
-            asset=asset
-        ).first()
-        
-        if existing_request:
-            if existing_request.status == 'approved':
-                try:
-                    access = existing_request.access_grant
-                except AssetAccess.DoesNotExist:
-                    access = None
-                return existing_request, access
-            elif existing_request.status == 'pending':
-                # Re-approve if auto_approve is enabled
-                if auto_approve:
-                    access = existing_request.approve_request(auto_approved=True)
-                    return existing_request, access
-                return existing_request, None
-        
-        # Create new request
-        request = cls.objects.create(
-            developer_user=user,
-            asset=asset,
-            developer_access_reason=purpose,
-            intended_use=intended_use
-        )
-        
-        # Auto-approve for V1
-        access = None
-        if auto_approve:
-            access = request.approve_request(auto_approved=True)
-        
-        return request, access
-
-    @property
-    def is_approved(self):
-        """Check if request is approved"""
-        return self.status == 'approved'
-
-    @property
-    def is_pending(self):
-        """Check if request is pending"""
-        return self.status == 'pending'
-
-    @property
-    def is_rejected(self):
-        """Check if request is rejected"""
-        return self.status == 'rejected'
+        return f"AssetAccessRequest(user={self.developer_user.email} asset={self.asset.name} status={self.status})"
 
 
-# ============================================================================
-# 9. ASSET ACCESS
-# ============================================================================
 class AssetAccess(BaseModel):
-    """
-    Granted access to assets for users.
-    Created when access requests are approved.
-    """
-    # Relationships from ERD
     asset_access_request = models.OneToOneField(
         AssetAccessRequest,
         on_delete=models.CASCADE,
@@ -1110,15 +448,8 @@ class AssetAccess(BaseModel):
         on_delete=models.CASCADE,
         related_name='user_accesses'
     )
-    
-    # License snapshot from ERD
-    effective_license = models.ForeignKey(
-        License,
-        on_delete=models.PROTECT,
-        help_text="License snapshot at time of access grant"
-    )
-    
-    # Access details
+    effective_license = models.CharField(max_length=50, choices=LicenseChoice.choices, help_text="Access license at time of grant")
+
     granted_at = models.DateTimeField(
         auto_now_add=True,
         help_text="When access was granted"
@@ -1132,22 +463,17 @@ class AssetAccess(BaseModel):
     
     download_url = models.URLField(
         blank=True,
-        help_text="Direct download URL"
+        help_text="Direct download URL, can contain signed URL if needed",
     )
     
-    # Managers
     objects = AllObjectsManager()
     all_objects = AllObjectsManager()
 
     class Meta:
-        db_table = 'asset_access'
-        verbose_name = 'Asset Access'
-        verbose_name_plural = 'Asset Accesses'
-        ordering = ['-granted_at']
         unique_together = ['user', 'asset']
 
     def __str__(self):
-        return f"{self.user.email} has access to {self.asset.title}"
+        return f"AssetAccess(user_id={self.user_id} asset_id={self.asset_id})"
 
     @property
     def is_active(self):
@@ -1155,7 +481,6 @@ class AssetAccess(BaseModel):
         if not self.expires_at:
             return True  # Never expires
         
-        from django.utils import timezone
         return timezone.now() < self.expires_at
 
     @property
@@ -1163,92 +488,34 @@ class AssetAccess(BaseModel):
         """Check if access has expired"""
         return not self.is_active
 
-    def get_download_url(self):
-        """Get the download URL for this access"""
-        if self.download_url:
-            return self.download_url
-        latest_version = self.asset.get_latest_version()
-        return latest_version.file_url.url if latest_version and latest_version.file_url else None
 
-    def create_usage_event(self, usage_kind='file_download', ip_address=None, user_agent=''):
-        """
-        Create a usage event when the asset is accessed.
-        """
-        
-        return UsageEvent.objects.create(
-            developer_user=self.user,
-            usage_kind=usage_kind,
-            subject_kind='asset',
-            asset_id=self.asset.id,
-            metadata={
-                'asset_title': self.asset.title,
-                'file_size': self.asset.file_size,
-                'format': self.asset.format,
-                'license': self.effective_license.code,
-                'access_id': self.id
-            },
-            ip_address=ip_address,
-            user_agent=user_agent
-        )
-
-    @classmethod
-    def user_has_access(cls, user, asset):
-        """Check if user has active access to asset"""
-        try:
-            access = cls.all_objects.get(user=user, asset=asset)
-            return access.is_active
-        except cls.DoesNotExist:
-            return False
-
-    @classmethod
-    def get_user_access(cls, user, asset):
-        """Get user's access to asset if it exists"""
-        try:
-            return cls.all_objects.get(user=user, asset=asset)
-        except cls.DoesNotExist:
-            return None
-
-
-# ============================================================================
-# 10. USAGE EVENT
-# ============================================================================
 class UsageEvent(BaseModel):
-    """
-    Analytics tracking for asset and resource usage.
-    Tracks downloads and other usage events.
-    """
-    USAGE_KIND_CHOICES = [
-        ('file_download', 'File Download'),
-        ('view', 'View'),
-        ('api_access', 'API Access'),
-    ]
-    
-    SUBJECT_KIND_CHOICES = [
-        ('resource', 'Resource'),
-        ('asset', 'Asset'),
-    ]
-    
-    # User tracking
+    class UsageKindChoice(models.TextChoices):
+        FILE_DOWNLOAD = "file_download", _("File Download")
+        VIEW = "view", _("View")
+        API_ACCESS = "api_access", _("API Access")
+    class SubjectKindChoice(models.TextChoices):
+        RESOURCE = "resource", _("Resource")
+        ASSET = "asset", _("Asset")
+
     developer_user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='usage_events'
     )
     
-    # Event details from ERD
     usage_kind = models.CharField(
         max_length=20,
-        choices=USAGE_KIND_CHOICES,
+        choices=UsageKindChoice.choices,
         help_text="Type of usage event"
     )
     
     subject_kind = models.CharField(
         max_length=20,
-        choices=SUBJECT_KIND_CHOICES,
+        choices=SubjectKindChoice.choices,
         help_text="Whether tracking resource or asset"
     )
-    
-    # Conditional foreign keys based on subject_kind
+
     resource_id = models.PositiveIntegerField(
         null=True,
         blank=True,
@@ -1260,8 +527,7 @@ class UsageEvent(BaseModel):
         blank=True,
         help_text="Asset ID if subject_kind = 'asset'"
     )
-    
-    # Event metadata
+
     metadata = models.JSONField(
         default=dict,
         help_text="Additional event metadata"
@@ -1277,148 +543,23 @@ class UsageEvent(BaseModel):
         blank=True,
         help_text="User browser/client information"
     )
-    
-    # Managers
+    effective_license = models.CharField(max_length=50, choices=LicenseChoice.choices, help_text="License at time of usage")
+
     objects = ActiveObjectsManager()
     all_objects = AllObjectsManager()
 
     class Meta:
-        db_table = 'usage_event'
-        verbose_name = 'Usage Event'
-        verbose_name_plural = 'Usage Events'
-        ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['developer_user']),
-            models.Index(fields=['usage_kind']),
-            models.Index(fields=['subject_kind']),
-            models.Index(fields=['created_at']),
+        checks = [
+            models.CheckConstraint(
+                check=models.Q(subject_kind='resource', resource_id__isnull=False, asset_id__isnull=True) | models.Q(subject_kind='asset', asset_id__isnull=False, resource_id__isnull=True),
+                name='usage_event_subject_kind_consistency'
+            )
         ]
 
     def __str__(self):
-        return f"{self.developer_user.email} - {self.usage_kind} on {self.subject_kind}"
+        return f"UsageEvent(user={self.developer_user_id} kind={self.usage_kind} subject={self.subject_kind})"
 
-    def clean(self):
-        """Validate that only one of resource_id or asset_id is set"""
-        from django.core.exceptions import ValidationError
-        
-        if self.subject_kind == 'resource' and not self.resource_id:
-            raise ValidationError("resource_id must be set when subject_kind is 'resource'")
-        
-        if self.subject_kind == 'asset' and not self.asset_id:
-            raise ValidationError("asset_id must be set when subject_kind is 'asset'")
-        
-        if self.resource_id and self.asset_id:
-            raise ValidationError("Only one of resource_id or asset_id should be set")
 
-    def save(self, *args, **kwargs):
-        """Override save to run validation"""
-        self.clean()
-        super().save(*args, **kwargs)
-
-    @classmethod
-    def track_asset_download(cls, user, asset, ip_address=None, user_agent=''):
-        """Track asset download event with async processing"""
-        # Try async processing first
-        try:
-            from .tasks import track_event_async
-            event_data = {
-                'developer_user_id': user.id,
-                'usage_kind': 'file_download',
-                'subject_kind': 'asset',
-                'asset_id': asset.id,
-                'metadata': {
-                    'asset_title': asset.title,
-                    'file_size': asset.file_size,
-                    'format': asset.format,
-                    'category': asset.category
-                },
-                'ip_address': ip_address,
-                'user_agent': user_agent
-            }
-            if track_event_async(event_data):
-                return None  # Event queued for async processing
-        except ImportError:
-            pass
-        
-        # Fallback to synchronous creation
-        return cls.objects.create(
-            developer_user=user,
-            usage_kind='file_download',
-            subject_kind='asset',
-            asset_id=asset.id,
-            metadata={
-                'asset_title': asset.title,
-                'file_size': asset.file_size,
-                'format': asset.format,
-                'category': asset.category
-            },
-            ip_address=ip_address,
-            user_agent=user_agent
-        )
-
-    @classmethod
-    def track_asset_view(cls, user, asset, ip_address=None, user_agent=''):
-        """Track asset view event"""
-        return cls.objects.create(
-            developer_user=user,
-            usage_kind='view',
-            subject_kind='asset',
-            asset_id=asset.id,
-            metadata={
-                'asset_title': asset.title,
-                'category': asset.category
-            },
-            ip_address=ip_address,
-            user_agent=user_agent
-        )
-
-    @classmethod
-    def track_resource_download(cls, user, resource, ip_address=None, user_agent=''):
-        """Track resource download event"""
-        latest_version = resource.get_latest_version()
-        return cls.objects.create(
-            developer_user=user,
-            usage_kind='file_download',
-            subject_kind='resource',
-            resource_id=resource.id,
-            metadata={
-                'resource_name': resource.name,
-                'version': latest_version.semvar if latest_version else 'unknown',
-                'category': resource.category
-            },
-            ip_address=ip_address,
-            user_agent=user_agent
-        )
-
-    @classmethod
-    def track_api_access(cls, user, resource=None, asset=None, api_endpoint='', ip_address=None, user_agent=''):
-        """Track API access event"""
-        if resource:
-            return cls.objects.create(
-                developer_user=user,
-                usage_kind='api_access',
-                subject_kind='resource',
-                resource_id=resource.id,
-                metadata={
-                    'api_endpoint': api_endpoint,
-                    'resource_name': resource.name
-                },
-                ip_address=ip_address,
-                user_agent=user_agent
-            )
-        elif asset:
-            return cls.objects.create(
-                developer_user=user,
-                usage_kind='api_access',
-                subject_kind='asset',
-                asset_id=asset.id,
-                metadata={
-                    'api_endpoint': api_endpoint,
-                    'asset_title': asset.title
-                },
-                ip_address=ip_address,
-                user_agent=user_agent
-            )
 
     @classmethod
     def get_user_stats(cls, user):
@@ -1460,10 +601,6 @@ class UsageEvent(BaseModel):
             'unique_users': events.values('developer_user').distinct().count()
         }
 
-
-# ============================================================================
-# 11. DISTRIBUTION (CHANNEL)
-# ============================================================================
 class Distribution(BaseModel):
     """
     Distribution channels for accessing resource content.
@@ -1511,7 +648,6 @@ class Distribution(BaseModel):
         help_text="Format-specific metadata and configuration"
     )
     
-    # Managers
     objects = ActiveObjectsManager()
     all_objects = AllObjectsManager()
 

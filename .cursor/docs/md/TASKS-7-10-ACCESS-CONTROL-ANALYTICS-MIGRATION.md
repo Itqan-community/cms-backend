@@ -49,12 +49,13 @@ user_access = AssetAccess.get_user_access(user, asset)
 - **Analytics aggregation**: User stats, asset stats, resource stats
 
 #### Event Tracking Features:
+
 ```python
 # Track different event types
-UsageEvent.track_asset_download(user, asset, ip_address, user_agent)
-UsageEvent.track_asset_view(user, asset, ip_address, user_agent)  
-UsageEvent.track_resource_download(user, resource, ip_address, user_agent)
-UsageEvent.track_api_access(user, resource, api_endpoint, ip_address, user_agent)
+UsageEvent.log_asset_download(user, asset, ip_address, user_agent)
+UsageEvent.log_asset_view(user, asset, ip_address, user_agent)
+UsageEvent.log_resource_download(user, resource, ip_address, user_agent)
+UsageEvent.log_api_access(user, resource, api_endpoint, ip_address, user_agent)
 
 # Get analytics
 user_stats = UsageEvent.get_user_stats(user)

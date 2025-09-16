@@ -54,7 +54,7 @@ class Migration(migrations.Migration):
                     models.ImageField(
                         blank=True,
                         help_text="Snapshot image",
-                        upload_to=apps.core.utils.upload_to_asset_snapshot_images,
+                        upload_to=apps.core.utils.upload_to_asset_preview_images,
                         validators=[
                             django.core.validators.FileExtensionValidator(
                                 allowed_extensions=["jpg", "jpeg", "png", "gif", "webp"]

@@ -106,7 +106,7 @@ class AssetListView(APIView):
         for asset in queryset[:50]:  # Limit to 50 for now
             # Track view event for authenticated users
             if request.user.is_authenticated:
-                UsageEvent.track_asset_view(
+                UsageEvent.log_asset_view(
                     user=request.user,
                     asset=asset,
                     ip_address=self._get_client_ip(request),
@@ -162,7 +162,7 @@ class AssetDetailView(APIView):
         
         # Track view event for authenticated users
         if request.user.is_authenticated:
-            UsageEvent.track_asset_view(
+            UsageEvent.log_asset_view(
                 user=request.user,
                 asset=asset,
                 ip_address=self._get_client_ip(request),
@@ -308,7 +308,7 @@ class AssetDownloadView(APIView):
             )
         
         # Track download event
-        UsageEvent.track_asset_download(
+        UsageEvent.log_asset_download(
             user=request.user,
             asset=asset,
             ip_address=self._get_client_ip(request),

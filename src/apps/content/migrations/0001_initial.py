@@ -358,7 +358,7 @@ class Migration(migrations.Migration):
                     models.ImageField(
                         blank=True,
                         help_text="Icon/logo image - used in V1 UI: Publisher Page",
-                        upload_to=apps.core.utils.upload_to_organization_icons,
+                        upload_to=apps.core.utils.upload_to_publisher_icons,
                         validators=[
                             django.core.validators.FileExtensionValidator(
                                 allowed_extensions=[
