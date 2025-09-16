@@ -36,6 +36,20 @@ def upload_to_asset_thumbnails(instance, filename):
     return f"uploads/assets/{instance.id}/{filename}"
 
 
+def upload_to_asset_snapshot_images(instance, filename):
+    """
+    Generate upload path for asset snapshot images
+    Format: uploads/assets/{asset_id}/snapshots/{filename}
+    """
+    safe_filename = slugify(filename.rsplit('.', 1)[0]) + '.' + filename.split('.')[-1].lower()
+    asset_id = getattr(instance, 'asset_id', None) or getattr(instance, 'asset', None) or 'unknown'
+    try:
+        asset_id = asset_id if isinstance(asset_id, int) else asset_id.id
+    except Exception:
+        asset_id = 'unknown'
+    return f"uploads/assets/{asset_id}/snapshots/{safe_filename}"
+
+
 def upload_to_user_avatars(instance, filename):
     """
     Generate upload path for user avatar images

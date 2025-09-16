@@ -17,14 +17,15 @@ from .views.scalar_docs import ScalarDocsView, ScalarAPIClientView
 
 # Import ViewSets
 from apps.accounts.views import RoleViewSet, UserViewSet
-from apps.content.views import ResourceViewSet, DistributionViewSet, WorkflowViewSet, workflow_permissions
+from apps.content.views import ResourceViewSet
 # from apps.licensing.views import LicenseViewSet, AccessRequestViewSet  # Temporarily disabled
-from apps.analytics.views import UsageEventViewSet
 # MediaLib views removed in V1 cleanup
-from apps.api_keys.views import APIKeyViewSet, APIKeyUsageViewSet, RateLimitEventViewSet, APIKeyStatisticsViewSet
+## API Keys app removed in V1 cleanup
+# from apps.api_keys.views import APIKeyViewSet, APIKeyUsageViewSet, RateLimitEventViewSet, APIKeyStatisticsViewSet
 
 # Import Landing Page Views
-from apps.api.views.landing import platform_statistics, platform_features, recent_content
+## Landing views removed
+# from apps.api.views.landing import platform_statistics, platform_features, recent_content
 
 # Import Content Standards Views
 from apps.api.views.content_standards import ContentStandardsView, content_standards_simple
@@ -54,22 +55,21 @@ router = DefaultRouter()
 router.register(r'roles', RoleViewSet, basename='role')
 router.register(r'users', UserViewSet, basename='user')
 router.register(r'resources', ResourceViewSet, basename='resource')
-router.register(r'distributions', DistributionViewSet, basename='distribution')
+
 # router.register(r'licenses', LicenseViewSet, basename='license')  # Temporarily disabled
 # router.register(r'access-requests', AccessRequestViewSet, basename='accessrequest')  # Temporarily disabled
-router.register(r'usage-events', UsageEventViewSet, basename='usageevent')
+
 
 # Media Library ViewSets
 # MediaLib API endpoints removed in V1 cleanup
 
-# Workflow Management ViewSet
-router.register(r'workflow', WorkflowViewSet, basename='workflow')
+# Workflow endpoints removed for V1
 
 # API Key Management ViewSets
-router.register(r'api-keys', APIKeyViewSet, basename='apikey')
-router.register(r'api-keys-usage', APIKeyUsageViewSet, basename='apikeyusage')
-router.register(r'rate-limit-events', RateLimitEventViewSet, basename='ratelimitevent')
-router.register(r'api-stats', APIKeyStatisticsViewSet, basename='apikeystats')
+# router.register(r'api-keys', APIKeyViewSet, basename='apikey')
+# router.register(r'api-keys-usage', APIKeyUsageViewSet, basename='apikeyusage')
+# router.register(r'rate-limit-events', RateLimitEventViewSet, basename='ratelimitevent')
+# router.register(r'api-stats', APIKeyStatisticsViewSet, basename='apikeystats')
 
 # API URL patterns
 urlpatterns = [
@@ -89,17 +89,13 @@ urlpatterns = [
     # API endpoints
     path('', include(router.urls)),
     
-    # Landing page endpoints (public)
-    path('landing/statistics/', platform_statistics, name='landing_statistics'),
-    path('landing/features/', platform_features, name='landing_features'),
-    path('landing/recent-content/', recent_content, name='landing_recent_content'),
+    # Landing page endpoints removed
     
     # Content Standards endpoints (public - ADMIN-002 / SF-04)
     path('content-standards/', ContentStandardsView.as_view(), name='content_standards'),
     path('content-standards/simple/', content_standards_simple, name='content_standards_simple'),
     
-    # Workflow endpoints
-    path('workflow/permissions/', workflow_permissions, name='workflow_permissions'),
+    # Workflow endpoints removed for V1
     
     # Search endpoints removed in V1 cleanup
     
