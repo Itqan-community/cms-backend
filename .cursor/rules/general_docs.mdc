@@ -1,0 +1,9 @@
+---
+description: docs
+globs:
+alwaysApply: true
+---
+
+ninja docs: https://django-ninja.dev/
+django docs: https://docs.djangoproject.com/en/5.2/
+django-allauth docs: https://docs.allauth.org/en/dev/
