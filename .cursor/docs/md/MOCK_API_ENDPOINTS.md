@@ -19,12 +19,12 @@ Created a comprehensive mock API that returns dummy data for all endpoints defin
 - Implemented all authentication, assets, publishers, licenses, resources, content standards, and system endpoints
 
 ### Key Files Created
-- `src/mock_api/dummy_data.py` - All dummy data constants
-- `src/mock_api/views.py` - Authentication endpoints
-- `src/mock_api/asset_views.py` - Asset-related endpoints
-- `src/mock_api/other_views.py` - Publishers, licenses, resources, content standards, system endpoints
-- `src/mock_api/urls.py` - URL routing configuration
-- `src/mock_api/apps.py` - Django app configuration
+- `mock_api/dummy_data.py` - All dummy data constants
+- `mock_api/views.py` - Authentication endpoints
+- `mock_api/asset_views.py` - Asset-related endpoints
+- `mock_api/other_views.py` - Publishers, licenses, resources, content standards, system endpoints
+- `mock_api/urls.py` - URL routing configuration
+- `mock_api/apps.py` - Django app configuration
 
 ### URL Structure
 All mock API endpoints are available under the `/mock-api/` prefix:

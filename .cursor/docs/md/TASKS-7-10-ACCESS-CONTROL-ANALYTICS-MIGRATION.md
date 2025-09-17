@@ -192,7 +192,7 @@ Distribution.create_graphql_distribution(resource, graphql_endpoint, version)
 5. Task 15: Publisher API Implementation
 
 ## References
-- ERD Design: `src/ai-memory-bank/docs/db-design/db_design_v1.drawio`
+- ERD Design: `ai-memory-bank/docs/db-design/db_design_v1.drawio`
 - Task specifications: `temp/7.json`, `temp/8.json`, `temp/9.json`, `temp/10.json`
-- Migration file: `src/apps/content/migrations/0006_create_access_control_tables.py`
-- Models implementation: `src/apps/content/models.py`
+- Migration file: `apps/content/migrations/0006_create_access_control_tables.py`
+- Models implementation: `apps/content/models.py`

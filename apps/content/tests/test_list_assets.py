@@ -1,7 +1,6 @@
 from model_bakery import baker
 
 from apps.content.models import Asset
-from apps.content.models import License
 from apps.core.tests import BaseTestCase
 
 

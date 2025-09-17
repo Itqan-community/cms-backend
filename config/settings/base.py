@@ -7,7 +7,7 @@ from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-APPS_DIR = BASE_DIR / "src"/"apps"
+APPS_DIR = BASE_DIR / "apps"
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key-change-in-production')
@@ -474,3 +474,6 @@ MIGRATION_MODULES = {
     'account': None,
     'socialaccount': None,
 }
+
+# Custom throttle rate setting
+USER_PATH_THROTTLE_RATE = '1000/hour'

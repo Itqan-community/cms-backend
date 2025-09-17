@@ -15,7 +15,7 @@ This document establishes mandatory protocols to prevent database schema mismatc
 ## Prevention Tools Implemented
 
 ### 1. Schema Verification Command
-**File**: `src/apps/core/management/commands/verify_schema.py`
+**File**: `apps/core/management/commands/verify_schema.py`
 
 **Usage**:
 ```bash
@@ -136,7 +136,7 @@ All environments must have:
 ## Integration with Development Workflow
 
 ### Updated CMS Rules
-Added to `src/.cursor/rules/cms-v1.mdc`:
+Added to `.cursor/rules/cms-v1.mdc`:
 - **Schema Safety Protocol**: Mandatory verification before deployment/migration
 - **Deployment Safety**: Always run pre-deployment checks
 - **Migration Safety**: Use safe migration scripts
@@ -200,8 +200,8 @@ python manage.py verify_schema
 4. **Improve** tools based on usage feedback
 
 ## References
-- Schema Verification Command: `src/apps/core/management/commands/verify_schema.py`
+- Schema Verification Command: `apps/core/management/commands/verify_schema.py`
 - Safe Migration Script: `deployment/scripts/safe_migration.sh`
 - Pre-deployment Checks: `deployment/pre-deploy-checks.sh`
 - GitHub Actions: `.github/workflows/schema-verification.yml`
-- Updated CMS Rules: `src/.cursor/rules/cms-v1.mdc`
+- Updated CMS Rules: `.cursor/rules/cms-v1.mdc`

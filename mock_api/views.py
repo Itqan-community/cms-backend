@@ -1,6 +1,6 @@
 """
 Mock API Views - Dummy data endpoints for all CMS API endpoints
-Fully compliant with OpenAPI 3.1.0 specification in src/openapi.yaml
+Fully compliant with OpenAPI 3.1.0 specification in openapi.yaml
 """
 
 import json

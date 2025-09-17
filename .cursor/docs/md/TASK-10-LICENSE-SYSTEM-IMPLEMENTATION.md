@@ -209,7 +209,7 @@ terms = license.license_terms      # List of terms with order
 - **Migration**: `apps/content/migrations/0002_transform_license_table.py`
 - **Seeding Command**: `apps/content/management/commands/seed_default_licenses.py`
 - **Serializers**: `apps/content/serializers.py` (LicenseDetailSerializer, LicenseSummarySerializer)
-- **OpenAPI Schema**: `src/openapi.yaml` (Lines 165-240)
+- **OpenAPI Schema**: `openapi.yaml` (Lines 165-240)
 - **Task Requirements**: `temp/4.json`
 
 ---

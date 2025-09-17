@@ -54,6 +54,6 @@ Updated the user registration API specification and documentation to match the U
 3. Add field validation rules for phone number format  
 
 ## References
-- OpenAPI Spec: `src/openapi.yaml`  
-- CMS Contract: `src/ai-memory-bank/docs/apis-contract/cms-v1-apis-contract-notion-doc.md`
-- UI Design: `src/ai-memory-bank/docs/screens/2c-email-register.png`
+- OpenAPI Spec: `openapi.yaml`  
+- CMS Contract: `ai-memory-bank/docs/apis-contract/cms-v1-apis-contract-notion-doc.md`
+- UI Design: `ai-memory-bank/docs/screens/2c-email-register.png`
