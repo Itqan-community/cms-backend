@@ -2,7 +2,7 @@ from django.urls import URLPattern
 from django.urls import include
 from django.urls import path
 
-from src.apps.users import views
+from apps.users import views
 
 app_name = "users"
 

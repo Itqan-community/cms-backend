@@ -7,8 +7,8 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from src.apps.content.models import Resource
-from src.apps.content.serializers import ResourceSerializer
+from apps.content.models import Resource
+from apps.content.serializers import ResourceSerializer
 
 
 class ResourceViewSet(viewsets.ModelViewSet):

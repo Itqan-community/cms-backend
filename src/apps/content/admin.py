@@ -383,13 +383,13 @@ class UsageEventAdmin(admin.ModelAdmin):
 @admin.register(Distribution)
 class DistributionAdmin(admin.ModelAdmin):
     """Admin for Distributions - API contract fields only"""
-    list_display = ['asset_version', 'channel', 'created_at']
-    list_filter = ['channel', 'created_at']
-    search_fields = ['asset_version__asset__name']
+    list_display = ['resource', 'format_type', 'created_at']
+    list_filter = ['format_type', 'created_at']
+    search_fields = ['resource__name']
     
     fieldsets = (
         ('Distribution Information', {
-            'fields': ('asset_version', 'channel')
+            'fields': ('resource', 'format_type')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),

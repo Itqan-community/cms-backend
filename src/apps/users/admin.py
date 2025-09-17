@@ -8,7 +8,7 @@ from .forms import UserAdminChangeForm
 from .forms import UserAdminCreationForm
 from .models import User
 
-if settings.DJANGO_ADMIN_FORCE_ALLAUTH:
+if getattr(settings, "DJANGO_ADMIN_FORCE_ALLAUTH", False):
     # Force the `admin` sign in process to go through the `django-allauth` workflow:
     # https://docs.allauth.org/en/latest/common/admin.html#admin
     admin.autodiscover()

@@ -2,9 +2,9 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from .models import (
-    Publisher, PublisherMember, License, Resource, 
-    ResourceVersion, Asset, AssetVersion, AssetAccessRequest, AssetAccess, 
-    UsageEvent, Distribution
+    Resource,
+    Asset, AssetAccess,
+    UsageEvent, LicenseChoice
 )
 
 

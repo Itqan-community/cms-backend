@@ -3,7 +3,7 @@ from django.utils.text import slugify
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from src.apps.publishers.models import Publisher
+    from apps.publishers.models import Publisher
 
 
 def upload_to_publisher_icons(instance:"Publisher", filename):

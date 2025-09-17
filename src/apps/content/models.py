@@ -2,21 +2,21 @@
 import re
 
 from django.conf import settings
-from django.core.validators import FileExtensionValidator
+from django.core.validators import URLValidator, FileExtensionValidator
 from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
-from src.apps.core.models import BaseModel, ActiveObjectsManager, AllObjectsManager
-from src.apps.core.uploads import (
+from apps.core.models import BaseModel, ActiveObjectsManager, AllObjectsManager
+from apps.core.uploads import (
     upload_to_asset_thumbnails,
     upload_to_asset_files,
     upload_to_resource_files,
     upload_to_asset_preview_images
 )
-from src.apps.publishers.models import Publisher
-from src.apps.users.models import User
+from apps.publishers.models import Publisher
+from apps.users.models import User
 
 
 class LicenseChoice(models.TextChoices):
@@ -541,32 +541,160 @@ class UsageEvent(BaseModel):
         }
 
 class Distribution(BaseModel):
-    class ChannelChoice(models.TextChoices):
-        REST_JSON = "REST_JSON", _("REST API (JSON)")
-        GraphQL = "GraphQL", _("GraphQL API")
-        ZIP = "ZIP", _("ZIP Download")
-        API = "API", _("Custom API")
-
-    asset_version = models.ForeignKey(
-        AssetVersion,
+    """
+    Distribution channels for accessing resource content.
+    Defines different delivery methods (API, ZIP download, etc).
+    """
+    FORMAT_TYPE_CHOICES = [
+        ('REST_JSON', 'REST API (JSON)'),
+        ('GraphQL', 'GraphQL API'),
+        ('ZIP', 'ZIP Download'),
+        ('API', 'Custom API'),
+    ]
+    
+    # Relationship
+    resource = models.ForeignKey(
+        Resource,
         on_delete=models.CASCADE,
         related_name='distributions',
         help_text="Resource that this distribution provides access to"
     )
     
-    channel = models.CharField(
+    # Distribution details
+    format_type = models.CharField(
         max_length=20,
-        choices=ChannelChoice.choices,
-        help_text="Channel for accessing the asset"
+        choices=FORMAT_TYPE_CHOICES,
+        help_text="Format/method for accessing the resource"
     )
-
+    
+    endpoint_url = models.URLField(
+        validators=[URLValidator()],
+        help_text="API endpoint or download URL for accessing content"
+    )
+    
+    version = models.CharField(
+        max_length=50,
+        help_text="Distribution version identifier"
+    )
+    
+    access_config = models.JSONField(
+        default=dict,
+        help_text="Access configuration (API keys, rate limits, authentication)"
+    )
+    
+    metadata = models.JSONField(
+        default=dict,
+        help_text="Format-specific metadata and configuration"
+    )
+    
     objects = ActiveObjectsManager()
     all_objects = AllObjectsManager()
 
     class Meta:
-        unique_together = [['asset_version', 'channel']]
+        db_table = 'distribution'
+        verbose_name = 'Distribution'
+        verbose_name_plural = 'Distributions'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['resource']),
+            models.Index(fields=['format_type']),
+        ]
+        unique_together = [['resource', 'format_type', 'version']]
 
     def __str__(self):
-        return f"Distribution(asset_version={self.asset_version_id} channel={self.channel})"
+        return f"{self.resource.name} - {self.format_type} v{self.version}"
 
+    def get_access_method(self):
+        """Get the appropriate access method based on format type"""
+        method_map = {
+            'REST_JSON': 'GET',
+            'GraphQL': 'POST',
+            'ZIP': 'GET',
+            'API': 'GET'
+        }
+        return method_map.get(self.format_type, 'GET')
 
+    def get_content_type(self):
+        """Get the content type for the distribution"""
+        content_type_map = {
+            'REST_JSON': 'application/json',
+            'GraphQL': 'application/json',
+            'ZIP': 'application/zip',
+            'API': 'application/json'
+        }
+        return content_type_map.get(self.format_type, 'application/octet-stream')
+
+    def is_api_endpoint(self):
+        """Check if this distribution is an API endpoint"""
+        return self.format_type in ['REST_JSON', 'GraphQL', 'API']
+
+    def is_download_endpoint(self):
+        """Check if this distribution is a download endpoint"""
+        return self.format_type == 'ZIP'
+
+    def get_authentication_requirements(self):
+        """Get authentication requirements from access_config"""
+        return self.access_config.get('authentication', {})
+
+    def get_rate_limits(self):
+        """Get rate limit configuration"""
+        return self.access_config.get('rate_limits', {})
+
+    def get_api_keys(self):
+        """Get API key requirements"""
+        return []  # api_keys app removed
+
+    @classmethod
+    def create_rest_api_distribution(cls, resource, endpoint_url, version, api_config=None):
+        """Create a REST API distribution for a resource"""
+        return cls.objects.create(
+            resource=resource,
+            format_type='REST_JSON',
+            endpoint_url=endpoint_url,
+            version=version,
+            access_config=api_config or {
+                'authentication': {'required': True},
+                'rate_limits': {'requests_per_minute': 100}
+            },
+            metadata={'response_format': 'json', 'pagination': True}
+        )
+
+    @classmethod
+    def create_zip_distribution(cls, resource, download_url, version):
+        """Create a ZIP download distribution for a resource"""
+        return cls.objects.create(
+            resource=resource,
+            format_type='ZIP',
+            endpoint_url=download_url,
+            version=version,
+            access_config={'authentication': {'required': True}},
+            metadata={'compression': 'zip', 'includes_all_assets': True}
+        )
+
+    @classmethod
+    def create_graphql_distribution(cls, resource, graphql_endpoint, version):
+        """Create a GraphQL distribution for a resource"""
+        return cls.objects.create(
+            resource=resource,
+            format_type='GraphQL',
+            endpoint_url=graphql_endpoint,
+            version=version,
+            access_config={
+                'authentication': {'required': True},
+                'rate_limits': {'requests_per_minute': 50}
+            },
+            metadata={'schema_version': version, 'supports_introspection': True}
+        )
+        return self.format_type in ['REST_JSON', 'GraphQL', 'API']
+
+    def is_download(self):
+        """Check if this is a downloadable resource"""
+        return self.format_type == 'ZIP'
+
+    def get_rate_limit(self):
+        """Get rate limit from access config"""
+        return self.access_config.get('rate_limit', {})
+
+    def requires_api_key(self):
+        """Check if API key is required"""
+        return self.access_config.get('requires_api_key', False)

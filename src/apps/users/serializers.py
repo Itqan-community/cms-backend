@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from src.apps.users.models import User
+from apps.users.models import User
 
 
 def get_file_url(file_field):

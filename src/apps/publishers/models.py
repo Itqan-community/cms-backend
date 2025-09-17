@@ -1,9 +1,9 @@
-from src.apps.core.models import BaseModel, ActiveObjectsManager, AllObjectsManager
-from src.apps.core.uploads import (
+from apps.core.models import BaseModel, ActiveObjectsManager, AllObjectsManager
+from apps.core.uploads import (
     upload_to_publisher_icons,
 
 )
-from src.apps.users.models import User
+from apps.users.models import User
 from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils.text import slugify
