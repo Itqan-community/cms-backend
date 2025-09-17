@@ -1,3 +1,52 @@
-from django.test import TestCase
+from typing import Literal
+from unittest.mock import patch
 
-# Create your tests here.
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase
+from rest_framework.test import APIClient
+
+from apps.users.models import User
+
+
+class BaseTestCase(TestCase):
+    client_class = APIClient
+    client: APIClient
+
+    @classmethod
+    def patch_on_commit(cls):
+        patcher = patch("django.db.transaction.on_commit", side_effect=lambda f: f())
+        patcher.start()
+        cls.addClassCleanup(patcher.stop)
+
+    def authenticate_user(
+        self,
+        user: User | None,
+        language: Literal["en", "ar"] | None = "en",
+        **kwargs,
+    ):
+        """
+        if `user` is supplied with None, the authentication header will be removed
+        if `user` is supplied with a `User`, it will be authenticated
+        """
+        if not kwargs:
+            kwargs = {}
+
+        if user is None:
+            kwargs.pop("HTTP_AUTHORIZATION", None)
+
+        else:
+            token = NotImplemented
+            kwargs["HTTP_AUTHORIZATION"] = f"Token {token.key}"
+
+        headers = {
+            "HTTP_ACCEPT_LANGUAGE": language,
+        }
+
+        for key, value in headers.items():
+            if value and value is not None:
+                kwargs[key] = value
+
+        self.client.credentials(**kwargs)
+
+    def create_file(self, name: str, content: bytes, content_type: str) -> SimpleUploadedFile:
+        return SimpleUploadedFile(name, content, content_type=content_type)
