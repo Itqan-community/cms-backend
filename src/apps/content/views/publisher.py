@@ -46,7 +46,7 @@ class PublisherDetailView(APIView):
             )
 
         # Serialize publisher data
-        publisher_data = PublisherSerializer.from_publishing_organization(organization, request)
+        publisher_data = PublisherSerializer.from_publisher(organization, request)
 
         return Response(publisher_data)
 
@@ -98,7 +98,7 @@ def publisher_assets(request, publisher_id):
 
     # Get assets query
     assets_query = Asset.objects.filter(
-        resource__publishing_organization=organization
+        resource__publisher=organization
     ).select_related('license').order_by('-created_at')
 
     # Apply category filter if provided
@@ -112,7 +112,7 @@ def publisher_assets(request, publisher_id):
     total_count = assets_query.count()
 
     # Serialize data
-    publisher_data = PublisherSerializer.from_publishing_organization(organization, request)
+    publisher_data = PublisherSerializer.from_publisher(organization, request)
     assets_data = []
 
     for asset in assets:
@@ -171,8 +171,8 @@ def publisher_statistics(request, publisher_id):
         )
 
     # Calculate comprehensive statistics
-    assets = Asset.objects.filter(publishing_organization=organization)
-    resources = Resource.objects.filter(publishing_organization=organization)
+    assets = Asset.objects.filter(publisher=organization)
+    resources = Resource.objects.filter(publisher=organization)
 
     # Basic counts
     resources_count = resources.count()
@@ -265,7 +265,7 @@ def publisher_list(request):
     # Serialize data
     publishers_data = []
     for publisher in publishers:
-        publisher_data = PublisherSerializer.from_publishing_organization(publisher, request)
+        publisher_data = PublisherSerializer.from_publisher(publisher, request)
         publishers_data.append(publisher_data)
 
     return Response({

@@ -73,7 +73,7 @@ class AssetListView(APIView):
         """Get list of assets with optional filtering"""
         # Start with all active assets
         queryset = Asset.objects.select_related(
-            'resource__publishing_organization', 'license'
+            'resource__publisher', 'license'
         ).prefetch_related(
             'versions'
         ).order_by('-created_at')
@@ -89,7 +89,7 @@ class AssetListView(APIView):
         
         publisher_id = request.query_params.get('publisher_id')
         if publisher_id:
-            queryset = queryset.filter(resource__publishing_organization_id=publisher_id)
+            queryset = queryset.filter(resource__publisher_id=publisher_id)
         
         search = request.query_params.get('search')
         if search:
@@ -147,7 +147,7 @@ class AssetDetailView(APIView):
         """Get detailed asset information"""
         try:
             asset = Asset.objects.select_related(
-                'resource__publishing_organization', 'license'
+                'resource__publisher', 'license'
             ).prefetch_related(
                 'versions__resource_version',
                 'snapshots'

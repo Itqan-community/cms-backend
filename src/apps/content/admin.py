@@ -1,38 +1,17 @@
-"""
-Django admin configuration for ERD-aligned Content models
-Enhanced admin interface for comprehensive content management
-"""
-from django.contrib import admin
-from django.utils.html import format_html
-from django.urls import reverse
-from django.utils.safestring import mark_safe
-from django.db.models import Count, Sum
-from .models import (
-    Publisher, PublisherMember, Resource,
-    ResourceVersion, Asset, AssetVersion, AssetAccessRequest, AssetAccess,
-    UsageEvent, Distribution
-)
 
 from django.contrib import admin
 from django.db.models import Count
-from django.db.models import Sum
 from django.urls import reverse
 from django.utils.html import format_html
 
 from .models import Asset
+from .models import (
+    AssetAccessRequest, AssetAccess,
+    UsageEvent, Distribution
+)
 from .models import AssetVersion
-from .models import Publisher
-from .models import PublisherMember
 from .models import Resource
 from .models import ResourceVersion
-
-
-class PublisherMemberInline(admin.TabularInline):
-    model = PublisherMember
-    extra = 0
-    fields = ["user", "role"]
-    autocomplete_fields = ["user"]
-    raw_id_fields = ["user"]
 
 
 class ResourceVersionInline(admin.TabularInline):
@@ -48,105 +27,6 @@ class AssetVersionInline(admin.TabularInline):
     extra = 0
     fields = ["resource_version", "name", "human_readable_size", "file_url"]
     readonly_fields = ["created_at"]
-
-
-@admin.register(Publisher)
-class PublisherAdmin(admin.ModelAdmin):
-    list_display = ["name", "slug", "member_count", "resource_count", "asset_count", "total_downloads", "created_at"]
-    list_filter = ["created_at", "updated_at"]
-    search_fields = ["name", "slug", "description"]
-    prepopulated_fields = {"slug": ("name",)}
-    inlines = [PublisherMemberInline]
-
-    fieldsets = (
-        (
-            "Basic Information",
-            {
-                "fields": ("name", "slug"),
-            },
-        ),
-        (
-            "Content",
-            {
-                "fields": ("description",),
-            },
-        ),
-        (
-            "Additional Information",
-            {
-                "fields": ("contact_email", "website", "address"),
-                "classes": ("collapse",),
-            },
-        ),
-        (
-            "Timestamps",
-            {
-                "fields": ("created_at", "updated_at"),
-                "classes": ("collapse",),
-                "description": "Automatically managed timestamps",
-            },
-        ),
-    )
-    readonly_fields = ["created_at", "updated_at"]
-
-    def get_queryset(self, request):
-        return (
-            super()
-            .get_queryset(request)
-            .annotate(
-                member_count=Count("members"),
-                resource_count=Count("resources"),
-                asset_count=Count("resources__assets", distinct=True),
-                total_downloads=Sum("resources__assets__download_count"),
-            )
-        )
-
-    @admin.display(description="Members", ordering="member_count")
-    def member_count(self, obj):
-        return obj.member_count
-
-    @admin.display(description="Resources", ordering="resource_count")
-    def resource_count(self, obj):
-        return obj.resource_count
-
-    @admin.display(description="Assets", ordering="asset_count")
-    def asset_count(self, obj):
-        return obj.asset_count or 0
-
-    @admin.display(description="Total Downloads", ordering="total_downloads")
-    def total_downloads(self, obj):
-        return obj.total_downloads or 0
-
-    @admin.display(description="Resources")
-    def view_resources(self, obj):
-        """Link to view organization's resources"""
-        url = reverse("admin:content_resource_changelist")
-        return format_html(
-            '<a href="{}?publishing_organization__id__exact={}">View Resources ({})</a>',
-            url,
-            obj.pk,
-            obj.resource_count,
-        )
-
-    @admin.display(description="Assets")
-    def view_assets(self, obj):
-        """Link to view organization's assets"""
-        url = reverse("admin:content_asset_changelist")
-        return format_html(
-            '<a href="{}?publishing_organization__id__exact={}">View Assets ({})</a>',
-            url,
-            obj.pk,
-            obj.asset_count or 0,
-        )
-
-
-@admin.register(PublisherMember)
-class PublishingOrganizationMemberAdmin(admin.ModelAdmin):
-    list_display = ["user", "publisher", "role", "created_at"]
-    list_filter = ["role", "created_at"]
-    search_fields = ["user__email", "publisher__name"]
-
-
 
 
 @admin.register(Resource)
@@ -311,7 +191,7 @@ class AssetAdmin(admin.ModelAdmin):
 
     @admin.display(description="Publisher", ordering="resource__publisher")
     def get_publisher(self, obj):
-        """Display publishing organization through resource"""
+        """Display publisher through resource"""
         return obj.resource.publisher if obj.resource else None
 
     @admin.display(description="Access Requests", ordering="access_requests_count")
@@ -465,7 +345,6 @@ class AssetAccessAdmin(admin.ModelAdmin):
 
     def usage_count(self, obj):
         """Count usage events for this access"""
-        from django.db.models import Q
         return UsageEvent.objects.filter(
             developer_user=obj.user,
             asset_id=obj.asset.id
@@ -504,13 +383,13 @@ class UsageEventAdmin(admin.ModelAdmin):
 @admin.register(Distribution)
 class DistributionAdmin(admin.ModelAdmin):
     """Admin for Distributions - API contract fields only"""
-    list_display = ['resource', 'format_type', 'created_at']
-    list_filter = ['format_type', 'created_at']
-    search_fields = ['resource__name']
+    list_display = ['asset_version', 'channel', 'created_at']
+    list_filter = ['channel', 'created_at']
+    search_fields = ['asset_version__asset__name']
     
     fieldsets = (
         ('Distribution Information', {
-            'fields': ('resource', 'format_type')
+            'fields': ('asset_version', 'channel')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),

@@ -1,14 +1,12 @@
-"""
-Enhanced DRF Serializers for ERD-aligned Content models
-Updated for complete OpenAPI compliance with new model relationships
-"""
-from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from rest_framework import serializers
+
 from .models import (
-    Publisher, PublisherMember, Resource,
-    ResourceVersion, Asset, AssetVersion, AssetAccessRequest, AssetAccess,
-    UsageEvent, Distribution, LicenseChoice
+    Publisher, PublisherMember, License, Resource, 
+    ResourceVersion, Asset, AssetVersion, AssetAccessRequest, AssetAccess, 
+    UsageEvent, Distribution
 )
+
 
 def get_file_url(file_field):
     """Helper function to safely get URL from file field"""
@@ -100,7 +98,7 @@ class PublisherSummarySerializer(serializers.Serializer):
     verified = serializers.BooleanField(default=False)
     
     @classmethod
-    def from_publishing_organization(cls, org):
+    def from_publisher(cls, org):
         """Create PublisherSummary from Publisher model"""
         return {
             'id': org.id,
@@ -112,7 +110,6 @@ class PublisherSummarySerializer(serializers.Serializer):
 
 
 class PublisherSerializer(serializers.Serializer):
-    """Full Publisher serializer for detailed organization information"""
     id = serializers.IntegerField()
     name = serializers.CharField()
     description = serializers.CharField(allow_blank=True)
@@ -127,19 +124,18 @@ class PublisherSerializer(serializers.Serializer):
     assets = serializers.ListField(child=serializers.DictField(), default=list)
     
     @classmethod
-    def from_publishing_organization(cls, org, request=None):
-        """Create full Publisher from Publisher model"""
+    def from_publisher(cls, org, request=None):
         # Get related objects efficiently
         assets = Asset.objects.filter(
-            resource__publishing_organization=org
+            resource__publisher=org
         ).order_by('-created_at')[:10]
         
         resources = Resource.objects.filter(
-            publishing_organization=org
+            publisher=org
         ).count()
         
         # Calculate stats
-        assets_count = Asset.objects.filter(resource__publishing_organization=org).count()
+        assets_count = Asset.objects.filter(resource__publisher=org).count()
         total_downloads = sum(asset.download_count for asset in assets)
         
         # Prepare assets data
@@ -212,7 +208,7 @@ class AssetSummarySerializer(serializers.Serializer):
             'thumbnail_url': get_file_url(asset.thumbnail_url),
             'category': asset.category,
             'license': LicenseSummarySerializer.from_license_code(asset.license),
-            'publisher': PublisherSummarySerializer.from_publishing_organization(asset.resource.publishing_organization),
+            'publisher': PublisherSummarySerializer.from_publisher(asset.resource.publisher),
             'has_access': cls._check_user_access(asset, request),
             'download_count': asset.download_count,
             'file_size': asset.file_size or ''
@@ -349,7 +345,7 @@ class AssetDetailSerializer(serializers.Serializer):
                 'title': related.title,
                 'thumbnail_url': get_file_url(related.thumbnail_url),
                 'category': related.category,
-                'publisher': PublisherSummarySerializer.from_publishing_organization(related.resource.publishing_organization)
+                'publisher': PublisherSummarySerializer.from_publisher(related.resource.publisher)
             })
         
         # Load snapshots (active, ordered)
@@ -378,7 +374,7 @@ class AssetDetailSerializer(serializers.Serializer):
             'thumbnail_url': get_file_url(asset.thumbnail_url),
             'category': asset.category,
             'license': LicenseDetailSerializer.from_license_code(asset.license),
-            'publisher': PublisherSummarySerializer.from_publishing_organization(asset.resource.publishing_organization),
+            'publisher': PublisherSummarySerializer.from_publisher(asset.resource.publisher),
             'snapshots': snapshots_list,
             'resource': resource_data,
             'technical_details': AssetTechnicalDetailsSerializer.from_asset_model(asset),
@@ -414,7 +410,7 @@ class ResourceVersionSerializer(serializers.Serializer):
 
 class ResourceSerializer(serializers.ModelSerializer):
     """Complete resource serializer"""
-    publishing_organization = PublisherSummarySerializer(read_only=True)
+    publisher = PublisherSummarySerializer(read_only=True)
     default_license = LicenseSummarySerializer(read_only=True)
     latest_version = serializers.SerializerMethodField()
     version_count = serializers.SerializerMethodField()
@@ -423,7 +419,7 @@ class ResourceSerializer(serializers.ModelSerializer):
         model = Resource
         fields = [
             'id', 'name', 'slug', 'description', 'category', 'status',
-            'publishing_organization', 'default_license', 'latest_version',
+            'publisher', 'default_license', 'latest_version',
             'version_count', 'created_at', 'updated_at'
         ]
     

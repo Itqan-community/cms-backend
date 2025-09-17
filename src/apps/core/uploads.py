@@ -1,29 +1,19 @@
-"""
-Core utility functions for Itqan CMS
-"""
-import os
-import uuid
+
 from django.utils.text import slugify
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.apps.publishers.models import Publisher
 
 
-def upload_to_publisher_icons(instance, filename):
+def upload_to_publisher_icons(instance:"Publisher", filename):
     """
-    Generate upload path for organization icon images
-    Format: uploads/organizations/{org_slug}/icon.{ext}
+    Generate upload path for publisher icon images
+    Format: uploads/publishers/{slug}/icon.{ext}
     """
     ext = filename.split('.')[-1].lower()
     filename = f"icon.{ext}"
-    return f"uploads/organizations/{instance.slug}/{filename}"
-
-
-def upload_to_organization_covers(instance, filename):
-    """
-    Generate upload path for organization cover images
-    Format: uploads/organizations/{org_slug}/cover.{ext}
-    """
-    ext = filename.split('.')[-1].lower()
-    filename = f"cover.{ext}"
-    return f"uploads/organizations/{instance.slug}/{filename}"
+    return f"uploads/publishers/{instance.slug}/{filename}"
 
 
 def upload_to_asset_thumbnails(instance, filename):
@@ -50,25 +40,6 @@ def upload_to_asset_preview_images(instance, filename):
     return f"uploads/assets/{asset_id}/snapshots/{safe_filename}"
 
 
-def upload_to_user_avatars(instance, filename):
-    """
-    Generate upload path for user avatar images
-    Format: uploads/users/{user_id}/avatar.{ext}
-    """
-    ext = filename.split('.')[-1].lower()
-    filename = f"avatar.{ext}"
-    return f"uploads/users/{instance.id}/{filename}"
-
-
-def upload_to_license_icons(instance, filename):
-    """
-    Generate upload path for license icon images
-    Format: uploads/licenses/{license_code}/icon.{ext}
-    """
-    ext = filename.split('.')[-1].lower()
-    filename = f"icon.{ext}"
-    safe_code = slugify(instance.code)
-    return f"uploads/licenses/{safe_code}/{filename}"
 
 
 def upload_to_asset_files(instance, filename):

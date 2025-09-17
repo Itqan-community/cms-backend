@@ -1,6 +1,6 @@
-from dotenv.variables import Literal
+from typing import Literal
 
-from apps.content.models import UsageEvent, AssetAccess
+from src.apps.content.models import UsageEvent, AssetAccess
 
 
 def create_usage_event(asset_access:AssetAccess, usage_kind=Literal['file_download'], ip_address=None, user_agent:str=''):

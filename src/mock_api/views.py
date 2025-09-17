@@ -81,7 +81,7 @@ def register_user(request):
             "title": data.get('title', ''),
             "avatar_url": '',
             "bio": '',
-            "organization": '',
+            "publisher": '',
             "location": '',
             "website": '',
             "github_username": '',
@@ -249,7 +249,7 @@ def list_test_users(request):
             "name": user["name"],
             "email": user["email"],
             "auth_provider": user["auth_provider"],
-            "organization": user["organization"],
+            "publisher": user["publisher"],
             "location": user["location"],
             "github_username": user.get("github_username"),
             "password": credential["password"] if credential else "N/A"

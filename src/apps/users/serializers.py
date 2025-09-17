@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.users.models import User
+from src.apps.users.models import User
 
 
 def get_file_url(file_field):
@@ -383,7 +383,7 @@ def create_auth_response(user):
             "title": user.job_title,  # Backward compatibility alias
             "avatar_url": get_file_url(user.avatar_url),
             "bio": user.bio,
-            "organization": user.organization,
+            "publisher": user.publisher,
             "location": user.location,
             "website": user.website,
             "github_username": user.github_username,

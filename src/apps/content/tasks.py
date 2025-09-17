@@ -221,13 +221,13 @@ def compute_daily_analytics_task():
         top_publishers = UsageEvent.objects.filter(
             created_at__date=today,
             asset_id__isnull=False
-        ).values('asset__publishing_organization').annotate(
+        ).values('asset__publisher').annotate(
             activity_count=Count('id')
         ).order_by('-activity_count')[:10]
         
         for pub_stat in top_publishers:
             try:
-                pub_id = pub_stat['asset__publishing_organization']
+                pub_id = pub_stat['asset__publisher']
                 publisher = Publisher.objects.get(id=pub_id)
                 daily_stats['top_publishers'].append({
                     'publisher_id': publisher.id,
@@ -302,8 +302,8 @@ def update_publisher_statistics_task(publisher_id):
         publisher = Publisher.objects.get(id=publisher_id)
         
         # Calculate fresh statistics
-        assets = Asset.objects.filter(publishing_organization=publisher)
-        resources = Resource.objects.filter(publishing_organization=publisher)
+        assets = Asset.objects.filter(publisher=publisher)
+        resources = Resource.objects.filter(publisher=publisher)
         
         stats = {
             'resources_count': resources.count(),

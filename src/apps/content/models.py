@@ -1,26 +1,24 @@
-"""
-Complete ERD-aligned models for Itqan CMS
-Based on db_design_v1.drawio specification
-"""
-from django.utils import timezone
+
 import re
 
-from django.db import models
 from django.conf import settings
-from django.core.validators import URLValidator, FileExtensionValidator
+from django.core.validators import FileExtensionValidator
+from django.db import models
+from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
-from apps.core.models import BaseModel, ActiveObjectsManager, AllObjectsManager
-from apps.core.utils import (
-    upload_to_publisher_icons,
+from src.apps.core.models import BaseModel, ActiveObjectsManager, AllObjectsManager
+from src.apps.core.uploads import (
     upload_to_asset_thumbnails,
-    upload_to_license_icons,
     upload_to_asset_files,
     upload_to_resource_files,
     upload_to_asset_preview_images
 )
-from apps.users.models import User
+from src.apps.publishers.models import Publisher
+from src.apps.users.models import User
+
+
 class LicenseChoice(models.TextChoices):
     CC0 = "CC0", _("Creative Commons Zero")
     CC_BY = "CC BY", _("Creative Commons Attribution")
@@ -31,71 +29,6 @@ class LicenseChoice(models.TextChoices):
     CC_BY_NC_ND = "CC BY-NC-ND", _("Creative Commons Attribution-NonCommercial-NoDerivs")
     PUBLIC_DOMAIN = "Public Domain", _("Public Domain")
     PROPRIETARY = "Proprietary", _("Proprietary")
-
-class Publisher(BaseModel):
-    name = models.CharField(max_length=255, help_text="Publisher name e.g. 'Tafsir Center'")
-
-    slug = models.SlugField(unique=True, help_text="URL-friendly slug e.g. 'tafsir-center'")
-
-    icon_url = models.ImageField(
-        upload_to=upload_to_publisher_icons,
-        blank=True,
-        validators=[FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "gif", "webp", "svg"])],
-        help_text="Icon/logo image - used in V1 UI: Publisher Page",
-    )
-
-    description = models.TextField(blank=True, help_text="Detailed publisher description")
-
-    address = models.CharField(max_length=255, blank=True, help_text="Publisher address")
-
-    website = models.URLField(blank=True, help_text="Publisher website")
-
-    is_verified = models.BooleanField(default=True, help_text="Whether publisher is verified")
-
-    contact_email = models.EmailField(blank=True, help_text="Contact email for the publisher")
-
-    members = models.ManyToManyField(User, through="PublisherMember", related_name="publishers")
-
-
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
-
-    def __str__(self):
-        return f"Publisher(name={self.name})"
-
-    def save(self, *args, **kwargs):
-        self.slug = slugify(self.name[:50])
-        super().save(*args, **kwargs)
-
-
-class PublisherMember(BaseModel):
-    """
-    Junction table for User <-> Publisher relationships.
-    Defines membership roles within organizations.
-    """
-
-    class RoleChoice(models.TextChoices):
-        OWNER = "owner", _("Owner")
-        MANAGER = "manager", _("Manager")
-
-    publisher = models.ForeignKey(Publisher, on_delete=models.CASCADE, related_name="memberships")
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="publisher_memberships")
-    role = models.CharField(
-        max_length=20,
-        choices=RoleChoice.choices,
-        help_text="Member's role in the organization, just for information. This field WILL NOT be used for permission checks. or any code checks",
-    )
-
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
-
-    class Meta:
-        unique_together = ["publisher", "user"]
-
-    def __str__(self):
-        return f"PublisherMember(email={self.user.email} publisher={self.publisher.name} role={self.role})"
-
-
 
 
 class Resource(BaseModel):
@@ -279,7 +212,7 @@ class Asset(BaseModel):
         """Get related assets from same category and publisher"""
         return Asset.objects.filter(
             category=self.category,
-            resource__publishing_organization=self.resource.publisher,
+            resource__publisher=self.resource.publisher,
             is_active=True,
         ).exclude(id=self.id)[:limit]
 
@@ -608,160 +541,32 @@ class UsageEvent(BaseModel):
         }
 
 class Distribution(BaseModel):
-    """
-    Distribution channels for accessing resource content.
-    Defines different delivery methods (API, ZIP download, etc).
-    """
-    FORMAT_TYPE_CHOICES = [
-        ('REST_JSON', 'REST API (JSON)'),
-        ('GraphQL', 'GraphQL API'),
-        ('ZIP', 'ZIP Download'),
-        ('API', 'Custom API'),
-    ]
-    
-    # Relationship
-    resource = models.ForeignKey(
-        Resource,
+    class ChannelChoice(models.TextChoices):
+        REST_JSON = "REST_JSON", _("REST API (JSON)")
+        GraphQL = "GraphQL", _("GraphQL API")
+        ZIP = "ZIP", _("ZIP Download")
+        API = "API", _("Custom API")
+
+    asset_version = models.ForeignKey(
+        AssetVersion,
         on_delete=models.CASCADE,
         related_name='distributions',
         help_text="Resource that this distribution provides access to"
     )
     
-    # Distribution details
-    format_type = models.CharField(
+    channel = models.CharField(
         max_length=20,
-        choices=FORMAT_TYPE_CHOICES,
-        help_text="Format/method for accessing the resource"
+        choices=ChannelChoice.choices,
+        help_text="Channel for accessing the asset"
     )
-    
-    endpoint_url = models.URLField(
-        validators=[URLValidator()],
-        help_text="API endpoint or download URL for accessing content"
-    )
-    
-    version = models.CharField(
-        max_length=50,
-        help_text="Distribution version identifier"
-    )
-    
-    access_config = models.JSONField(
-        default=dict,
-        help_text="Access configuration (API keys, rate limits, authentication)"
-    )
-    
-    metadata = models.JSONField(
-        default=dict,
-        help_text="Format-specific metadata and configuration"
-    )
-    
+
     objects = ActiveObjectsManager()
     all_objects = AllObjectsManager()
 
     class Meta:
-        db_table = 'distribution'
-        verbose_name = 'Distribution'
-        verbose_name_plural = 'Distributions'
-        ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['resource']),
-            models.Index(fields=['format_type']),
-        ]
-        unique_together = [['resource', 'format_type', 'version']]
+        unique_together = [['asset_version', 'channel']]
 
     def __str__(self):
-        return f"{self.resource.name} - {self.format_type} v{self.version}"
+        return f"Distribution(asset_version={self.asset_version_id} channel={self.channel})"
 
-    def get_access_method(self):
-        """Get the appropriate access method based on format type"""
-        method_map = {
-            'REST_JSON': 'GET',
-            'GraphQL': 'POST',
-            'ZIP': 'GET',
-            'API': 'GET'
-        }
-        return method_map.get(self.format_type, 'GET')
 
-    def get_content_type(self):
-        """Get the content type for the distribution"""
-        content_type_map = {
-            'REST_JSON': 'application/json',
-            'GraphQL': 'application/json',
-            'ZIP': 'application/zip',
-            'API': 'application/json'
-        }
-        return content_type_map.get(self.format_type, 'application/octet-stream')
-
-    def is_api_endpoint(self):
-        """Check if this distribution is an API endpoint"""
-        return self.format_type in ['REST_JSON', 'GraphQL', 'API']
-
-    def is_download_endpoint(self):
-        """Check if this distribution is a download endpoint"""
-        return self.format_type == 'ZIP'
-
-    def get_authentication_requirements(self):
-        """Get authentication requirements from access_config"""
-        return self.access_config.get('authentication', {})
-
-    def get_rate_limits(self):
-        """Get rate limit configuration"""
-        return self.access_config.get('rate_limits', {})
-
-    def get_api_keys(self):
-        """Get API key requirements"""
-        return []  # api_keys app removed
-
-    @classmethod
-    def create_rest_api_distribution(cls, resource, endpoint_url, version, api_config=None):
-        """Create a REST API distribution for a resource"""
-        return cls.objects.create(
-            resource=resource,
-            format_type='REST_JSON',
-            endpoint_url=endpoint_url,
-            version=version,
-            access_config=api_config or {
-                'authentication': {'required': True},
-                'rate_limits': {'requests_per_minute': 100}
-            },
-            metadata={'response_format': 'json', 'pagination': True}
-        )
-
-    @classmethod
-    def create_zip_distribution(cls, resource, download_url, version):
-        """Create a ZIP download distribution for a resource"""
-        return cls.objects.create(
-            resource=resource,
-            format_type='ZIP',
-            endpoint_url=download_url,
-            version=version,
-            access_config={'authentication': {'required': True}},
-            metadata={'compression': 'zip', 'includes_all_assets': True}
-        )
-
-    @classmethod
-    def create_graphql_distribution(cls, resource, graphql_endpoint, version):
-        """Create a GraphQL distribution for a resource"""
-        return cls.objects.create(
-            resource=resource,
-            format_type='GraphQL',
-            endpoint_url=graphql_endpoint,
-            version=version,
-            access_config={
-                'authentication': {'required': True},
-                'rate_limits': {'requests_per_minute': 50}
-            },
-            metadata={'schema_version': version, 'supports_introspection': True}
-        )
-        return self.format_type in ['REST_JSON', 'GraphQL', 'API']
-
-    def is_download(self):
-        """Check if this is a downloadable resource"""
-        return self.format_type == 'ZIP'
-
-    def get_rate_limit(self):
-        """Get rate limit from access config"""
-        return self.access_config.get('rate_limit', {})
-
-    def requires_api_key(self):
-        """Check if API key is required"""
-        return self.access_config.get('requires_api_key', False)

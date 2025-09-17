@@ -7,8 +7,8 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.content.models import Resource
-from apps.content.serializers import ResourceSerializer
+from src.apps.content.models import Resource
+from src.apps.content.serializers import ResourceSerializer
 
 
 class ResourceViewSet(viewsets.ModelViewSet):
@@ -18,7 +18,7 @@ class ResourceViewSet(viewsets.ModelViewSet):
     queryset = Resource.objects.all()
     permission_classes = []
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['category', 'publishing_organization', 'is_active']
+    filterset_fields = ['category', 'publisher', 'is_active']
     search_fields = ['name', 'description']
     ordering_fields = ['name', 'created_at', 'updated_at']
     ordering = ['-created_at']

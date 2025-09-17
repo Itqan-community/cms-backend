@@ -7,7 +7,7 @@ from django.db.models import EmailField
 from django.utils.translation import gettext_lazy as _
 from phonenumber_field.modelfields import PhoneNumberField
 
-from apps.core.models import BaseModel
+from src.apps.core.models import BaseModel
 
 from .managers import UserManager
 
