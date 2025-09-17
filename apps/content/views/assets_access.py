@@ -2,8 +2,7 @@ from django.shortcuts import get_object_or_404
 from ninja import Schema
 
 from apps.content.models import Asset, AssetAccessRequest
-from apps.content.services.asset_access import request_access
-from apps.core.ninja_utils.errors import ItqanError
+from apps.content.services.asset_access import request_access, user_has_access
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
 
@@ -28,7 +27,6 @@ class AccessGrantOut(Schema):
     id: int
     asset_id: int
     expires_at: str | None
-    download_url: str | None
     is_active: bool
 
 
@@ -67,9 +65,30 @@ def request_asset_access(request, asset_id: int, data: RequestAccessIn):
             "id": access_grant.id if access_grant else 0,
             "asset_id": asset.id,
             "expires_at": access_grant.expires_at.isoformat() if access_grant and access_grant.expires_at else None,
-            "download_url": None,  # Would be generated dynamically
             "is_active": access_grant.is_active if access_grant else False
         } if access_grant else None
     }
 
 
+class AssetAccessStatusOut(Schema):
+    has_access: bool
+    requires_approval: bool
+
+
+@router.get("content/assets/{asset_id}/access-status/", response=AssetAccessStatusOut)
+def asset_access_status(request, asset_id: int):
+    """Get asset access status for the authenticated user"""
+    asset = get_object_or_404(Asset, id=asset_id)
+
+    if not request.user.is_authenticated:
+        return {
+            "has_access": False,
+            "requires_approval": False,  # V1: Auto-approval
+        }
+
+    has_access = user_has_access(request.user, asset)
+
+    return {
+        "has_access": has_access,
+        "requires_approval": False,  # V1: Auto-approval
+    }

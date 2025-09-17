@@ -25,18 +25,19 @@ class BaseTestCase(TestCase):
         **kwargs,
     ):
         """
-        if `user` is supplied with None, the authentication header will be removed
-        if `user` is supplied with a `User`, it will be authenticated
+        if `user` is supplied with None, the authentication will be cleared
+        if `user` is supplied with a `User`, it will be authenticated using force_authenticate
         """
         if not kwargs:
             kwargs = {}
 
         if user is None:
+            # Clear authentication
+            self.client.force_authenticate(user=None)
             kwargs.pop("HTTP_AUTHORIZATION", None)
-
         else:
-            token = NotImplemented
-            kwargs["HTTP_AUTHORIZATION"] = f"Token {token.key}"
+            # Use Django REST framework's force_authenticate for testing
+            self.client.force_authenticate(user=user)
 
         headers = {
             "HTTP_ACCEPT_LANGUAGE": language,
