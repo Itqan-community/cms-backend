@@ -28,7 +28,7 @@ class DistributionTranslationOptions(TranslationOptions):
     """Translation configuration for Distribution model"""
     fields = (
         # No fields need translation - Distribution is technical configuration
-        # endpoint_url, format_type, version, access_config are technical
+        # endpoint_url, channel, version, access_config are technical
         # We could add description field in future if needed for UI
     )
     empty = True  # Explicitly mark as having no translatable fields for now
