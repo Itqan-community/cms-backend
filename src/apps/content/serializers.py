@@ -1,4 +1,3 @@
-from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from .models import (
@@ -13,8 +12,6 @@ def get_file_url(file_field):
     if file_field and hasattr(file_field, 'url'):
         return file_field.url
     return ''
-
-User = get_user_model()
 
 
 # ============================================================================

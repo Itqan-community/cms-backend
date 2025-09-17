@@ -1,17 +1,13 @@
-"""
-Authentication views implementing the API contract
-"""
 import logging
-from django.contrib.auth import get_user_model
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
 
-from drf_spectacular.utils import extend_schema, OpenApiResponse
 from django.urls import reverse
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema, OpenApiResponse
+from rest_framework import status
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from .serializers import (
     RegisterSerializer, LoginSerializer, UserProfileSerializer,
@@ -19,7 +15,6 @@ from .serializers import (
     create_auth_response, create_error_response
 )
 
-User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
@@ -28,7 +23,7 @@ class RegisterView(APIView):
     API 1.1: Register with Email/Password
     """
     permission_classes = [AllowAny]
-    
+
     @extend_schema(
         summary="Register with email/password",
         description="Create new user account with email and password",
@@ -47,33 +42,33 @@ class RegisterView(APIView):
     def post(self, request):
         """Register new user with email/password"""
         serializer = RegisterSerializer(data=request.data)
-        
+
         if serializer.is_valid():
             try:
                 user = serializer.save()
-                
+
                 # Create response with tokens
                 response_data = create_auth_response(user)
-                
+
                 logger.info(f"User {user.email} registered successfully")
                 return Response(response_data, status=status.HTTP_201_CREATED)
-                
+
             except Exception as e:
                 logger.error(f"Registration error: {e}")
                 return Response(
                     create_error_response("REGISTRATION_FAILED", "Registration failed"),
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
-        
+
         # Handle validation errors with detailed field information
         error_code = "VALIDATION_ERROR"
         status_code = status.HTTP_400_BAD_REQUEST
-        
+
         # Create detailed error message with field-specific errors
         error_details = {}
         for field, errors in serializer.errors.items():
             error_details[field] = errors if isinstance(errors, list) else [str(errors)]
-        
+
         # Check for specific error types and set appropriate status/code
         if 'email' in serializer.errors:
             email_error = serializer.errors['email'][0]
@@ -87,7 +82,7 @@ class RegisterView(APIView):
             error_message = f"Password validation failed: {'; '.join(serializer.errors['password'])}"
         else:
             error_message = "Registration data validation failed"
-        
+
         # Return response with detailed field errors for all validation errors
         return Response({
             "error": {
@@ -103,7 +98,7 @@ class LoginView(APIView):
     API 1.2: Login with Email/Password
     """
     permission_classes = [AllowAny]
-    
+
     @extend_schema(
         summary="Login with email/password",
         description="Authenticate user with email and password",
@@ -122,20 +117,20 @@ class LoginView(APIView):
     def post(self, request):
         """Login user with email/password"""
         serializer = LoginSerializer(data=request.data)
-        
+
         if serializer.is_valid():
             user = serializer.validated_data['user']
-            
+
             # Update last login
             user.last_login = timezone.now()
             user.save(update_fields=['last_login'])
-            
+
             # Create response with tokens
             response_data = create_auth_response(user)
-            
+
             logger.info(f"User {user.email} logged in successfully")
             return Response(response_data, status=status.HTTP_200_OK)
-        
+
         return Response(
             create_error_response("INVALID_CREDENTIALS", "Invalid email or password"),
             status=status.HTTP_401_UNAUTHORIZED
@@ -147,7 +142,7 @@ class OAuthStartView(APIView):
     API 1.3: OAuth2 - Google/GitHub Login Start
     """
     permission_classes = [AllowAny]
-    
+
     @extend_schema(
         summary="Start OAuth2 authentication",
         description="Redirect to OAuth provider for authentication",
@@ -160,13 +155,13 @@ class OAuthStartView(APIView):
         # Get provider from URL kwargs if not in path
         if not provider:
             provider = self.kwargs.get('provider')
-        
+
         if provider not in ['google', 'github']:
             return Response(
                 create_error_response("INVALID_PROVIDER", "Unsupported OAuth provider"),
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         try:
             # Try to build the OAuth URL using allauth's URL patterns
             # Use provider-specific URL name (e.g., 'github_login', 'google_login')
@@ -181,7 +176,7 @@ class OAuthStartView(APIView):
                 'provider': provider,
                 'error': 'OAuth provider not configured'
             }, status=status.HTTP_501_NOT_IMPLEMENTED)
-        
+
         return Response({
             'auth_url': oauth_url,
             'provider': provider
@@ -194,7 +189,7 @@ class OAuthCallbackView(APIView):
     This will be handled by allauth's built-in views, but we provide this for documentation
     """
     permission_classes = [AllowAny]
-    
+
     @extend_schema(
         summary="OAuth2 callback",
         description="Handle OAuth provider callback",
@@ -210,7 +205,7 @@ class OAuthCallbackView(APIView):
         # Get provider from URL kwargs if not in path
         if not provider:
             provider = self.kwargs.get('provider')
-            
+
         # This view is for documentation purposes
         # Actual OAuth callback is handled by allauth's built-in views
         return Response({
@@ -223,7 +218,7 @@ class UserProfileView(APIView):
     API 1.4: Get User Profile & API 1.5: Update User Profile
     """
     permission_classes = [IsAuthenticated]
-    
+
     @extend_schema(
         summary="Get user profile",
         description="Get authenticated user's profile information",
@@ -238,7 +233,7 @@ class UserProfileView(APIView):
         """Get current user's profile"""
         serializer = UserProfileSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
     @extend_schema(
         summary="Update user profile",
         description="Update authenticated user's profile information",
@@ -252,14 +247,14 @@ class UserProfileView(APIView):
     def put(self, request):
         """Update current user's profile"""
         serializer = UserProfileUpdateSerializer(
-            request.user, 
-            data=request.data, 
+            request.user,
+            data=request.data,
             partial=True
         )
-        
+
         if serializer.is_valid():
             user = serializer.save()
-            
+
             return Response({
                 'message': 'Profile updated successfully',
                 'profile': {
@@ -267,7 +262,7 @@ class UserProfileView(APIView):
                     'profile_completed': user.profile_completed
                 }
             }, status=status.HTTP_200_OK)
-        
+
         return Response(
             create_error_response("VALIDATION_ERROR", "Invalid profile data"),
             status=status.HTTP_400_BAD_REQUEST
@@ -279,7 +274,7 @@ class LogoutView(APIView):
     API 1.7: Logout
     """
     permission_classes = [IsAuthenticated]
-    
+
     @extend_schema(
         summary="Logout user",
         description="Logout authenticated user and invalidate tokens",
@@ -292,15 +287,15 @@ class LogoutView(APIView):
         try:
             # Get refresh token from request body
             refresh_token = request.data.get('refresh_token')
-            
+
             if refresh_token:
                 # Blacklist the refresh token
                 token = RefreshToken(refresh_token)
                 token.blacklist()
-            
+
             logger.info(f"User {request.user.email} logged out successfully")
             return Response(status=status.HTTP_204_NO_CONTENT)
-            
+
         except Exception as e:
             logger.warning(f"Logout error for user {request.user.email}: {e}")
             # Even if token blacklisting fails, consider logout successful
