@@ -1,19 +1,12 @@
 from model_bakery import baker
 
-from apps.content.models import Asset
-from apps.content.models import License
+from apps.content.models import Asset, LicenseChoice
 from apps.core.tests import BaseTestCase
 
 
 class DetailAssetTest(BaseTestCase):
     def test_detail_assets_where_valid_id_should_return_full_payload_en(self):
         # Arrange
-        license_obj = baker.make(
-            License,
-            code="CC-BY-SA-4.0",
-            name="Creative Commons Attribution-ShareAlike 4.0",
-            short_name="CC BY-SA 4.0",
-        )
         asset = baker.make(
             Asset,
             name="Tafsir Ibn Katheer",
@@ -23,7 +16,7 @@ class DetailAssetTest(BaseTestCase):
                 "Islamic interpretation."
             ),
             category=Asset.CategoryChoice.TAFSIR,
-            license=license_obj,
+            license=LicenseChoice.CC_BY_SA,
             thumbnail_url="thumbnails/tafseer.png",
         )
 
@@ -48,15 +41,12 @@ class DetailAssetTest(BaseTestCase):
 
     def test_detail_assets_where_response_schema_should_include_all_required_fields(self):
         # Arrange
-        license_obj = baker.make(
-            License, code="CC-BY-4.0", name="Creative Commons Attribution 4.0", short_name="CC BY 4.0"
-        )
         asset = baker.make(
             Asset,
             name="Schema Test Asset",
             description="Test asset for schema validation",
             long_description="Extended description for schema testing",
-            license=license_obj,
+            license=LicenseChoice.CC_BY,
             category=Asset.CategoryChoice.MUSHAF,
             thumbnail_url="thumbs/schema.png",
         )
@@ -86,14 +76,13 @@ class DetailAssetTest(BaseTestCase):
 
     def test_detail_assets_where_various_categories_should_return_correct_category_and_thumbnail(self):
         # Arrange
-        license_obj = baker.make(License, code="CC0", name="Public Domain", short_name="CC0")
         assets = [
             baker.make(
                 Asset,
                 name="Tafsir Asset",
                 description="desc",
                 category=Asset.CategoryChoice.TAFSIR,
-                license=license_obj,
+                license=LicenseChoice.CC0,
                 thumbnail_url="thumbs/tafsir.png",
             ),
             baker.make(
@@ -101,7 +90,7 @@ class DetailAssetTest(BaseTestCase):
                 name="Recitation Asset",
                 description="desc",
                 category=Asset.CategoryChoice.RECITATION,
-                license=license_obj,
+                license=LicenseChoice.CC0,
                 thumbnail_url="thumbs/recitation.png",
             ),
             baker.make(
@@ -109,7 +98,7 @@ class DetailAssetTest(BaseTestCase):
                 name="Mushaf Asset",
                 description="desc",
                 category=Asset.CategoryChoice.MUSHAF,
-                license=license_obj,
+                license=LicenseChoice.CC0,
                 thumbnail_url="thumbs/mushaf.png",
             ),
         ]
@@ -130,19 +119,13 @@ class DetailAssetTest(BaseTestCase):
     def test_detail_assets_where_language_ar_should_return_arabic_content_if_present(self):
         # Arrange
         self.authenticate_user(None, language="ar")
-        license_obj = baker.make(
-            License,
-            code="AR-CODE",
-            name="رخصة عربية",
-            short_name="AR",
-        )
         asset = baker.make(
             Asset,
             name="اسم الأصل",
             description="وصف عربي",
             long_description="وصف عربي مطول",
             category=Asset.CategoryChoice.TAFSIR,
-            license=license_obj,
+            license=LicenseChoice.CC0,
             thumbnail_url="thumbs/localized.png",
         )
 
@@ -160,19 +143,13 @@ class DetailAssetTest(BaseTestCase):
     def test_detail_assets_where_language_ar_missing_translations_should_fallback(self):
         # Arrange
         self.authenticate_user(None, language="ar")
-        license_obj = baker.make(
-            License,
-            code="MIT",
-            name="MIT License",
-            short_name="MIT",
-        )
         asset = baker.make(
             Asset,
             name="Asset Name",
             description="English description",
             long_description="English long description",
             category=Asset.CategoryChoice.RECITATION,
-            license=license_obj,
+            license=LicenseChoice.CC0,
             thumbnail_url="thumbs/en-only.png",
         )
 

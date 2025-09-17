@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import Asset
+from apps.content.models import Asset, LicenseChoice
 from apps.core.tests import BaseTestCase
 
 
@@ -20,13 +20,11 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_asset_filter_by_license_code_should_return_filtered_assets(self):
         # Arrange
-        license1 = baker.make(License, code="CC-BY-SA-4.0")
-        license2 = baker.make(License, code="CC-BY-NC-4.0")
-        baker.make(Asset, name="Tafsir Al-Jalalayn", license=license1)
-        baker.make(Asset, name="Tafsir Ibn Katheer", license=license2)
+        baker.make(Asset, name="Tafsir Al-Jalalayn", license=LicenseChoice.CC_BY_SA)
+        baker.make(Asset, name="Tafsir Ibn Katheer", license=LicenseChoice.CC_BY_NC)
 
         # Act
-        response = self.client.get("/content/assets/", data={"license_code": "CC-BY-SA-4.0"}, format="json")
+        response = self.client.get("/content/assets/", data={"license_code": "CC BY-SA"}, format="json")
 
         # Assert
         self.assertEqual(response.status_code, 200, response.content)

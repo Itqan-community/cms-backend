@@ -1,7 +1,3 @@
-"""
-Itqan CMS - Base Django Settings
-"""
-import os
 from pathlib import Path
 from decouple import config
 
@@ -142,7 +138,7 @@ LOCALE_PATHS = [
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [
-    BASE_DIR /'apps' /'core' /'static',
+    str(APPS_DIR / 'core' /'static'),
 ]
 
 # Media files
@@ -314,27 +310,6 @@ SIMPLE_JWT = {
     'JTI_CLAIM': 'jti',
 }
 
-# DRF Spectacular Configuration (API Documentation)
-SPECTACULAR_SETTINGS = {
-    'TITLE': 'Itqan CMS API',
-    'DESCRIPTION': 'API for managing and distributing Quranic content, including text, audio, and translations.',
-    'VERSION': '1.0.0',
-    'SERVE_INCLUDE_SCHEMA': False,
-    'SCHEMA_PATH_PREFIX': '/api/v1',
-    'COMPONENT_SPLIT_REQUEST': True,
-    'SORT_OPERATIONS': False,
-    'TAGS': [
-        {'name': 'Authentication', 'description': 'User authentication and token management'},
-        {'name': 'Users', 'description': 'User account management'},
-        {'name': 'Roles', 'description': 'Role-based access control'},
-        {'name': 'Resources', 'description': 'Quranic content resources'},
-        {'name': 'Licenses', 'description': 'Content licensing and terms'},
-        {'name': 'Distributions', 'description': 'Content access formats'},
-        {'name': 'Access Requests', 'description': 'Developer access approval workflow'},
-        {'name': 'Usage Events', 'description': 'Analytics and usage tracking'},
-    ],
-}
-
 # Celery Configuration
 CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://localhost:6379/0')
@@ -475,5 +450,10 @@ MIGRATION_MODULES = {
     'socialaccount': None,
 }
 
-# Custom throttle rate setting
-USER_PATH_THROTTLE_RATE = '1000/hour'
+
+USER_PATH_THROTTLE_RATE = config("USER_PATH_THROTTLE_RATE", default="10/sec")
+
+# Ninja configs
+NINJA_PAGINATION_CLASS = "apps.core.ninja_utils.paginations.NinjaPagination"
+NINJA_SEARCHING_CLASS = "apps.core.ninja_utils.searching.Searching"
+NINJA_ORDERING_CLASS = "apps.core.ninja_utils.ordering.Ordering"
