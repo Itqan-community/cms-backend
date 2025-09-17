@@ -1,5 +1,5 @@
-from src.apps.accounts.models import User
-from src.apps.content.models import AssetAccess, AssetAccessRequest, Asset
+from apps.users.models import User
+from apps.content.models import AssetAccess, AssetAccessRequest, Asset
 
 from django.utils import timezone
 

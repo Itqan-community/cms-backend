@@ -5,9 +5,9 @@ Updated for complete OpenAPI compliance with new model relationships
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import (
-    PublishingOrganization, PublishingOrganizationMember, License, Resource, 
-    ResourceVersion, Asset, AssetVersion, AssetAccessRequest, AssetAccess, 
-    UsageEvent, Distribution
+    Publisher, PublisherMember, Resource,
+    ResourceVersion, Asset, AssetVersion, AssetAccessRequest, AssetAccess,
+    UsageEvent, Distribution, LicenseChoice
 )
 
 def get_file_url(file_field):
@@ -32,14 +32,17 @@ class LicenseSummarySerializer(serializers.Serializer):
     is_default = serializers.BooleanField(default=False)
     
     @classmethod
-    def from_license_model(cls, license_obj):
-        """Create LicenseSummary from License model"""
+    def from_license_code(cls, license_code: str | None):
+        """Create LicenseSummary from License code (no License model in V1)."""
+        code = (license_code or '').strip()
+        choices = dict(LicenseChoice.choices)
+        name = choices.get(code, code or 'CC0')
         return {
-            'code': license_obj.code,
-            'name': license_obj.name,
-            'short_name': license_obj.short_name or '',
-            'icon_url': get_file_url(license_obj.icon_url),
-            'is_default': license_obj.is_default
+            'code': code or 'CC0',
+            'name': name,
+            'short_name': '',
+            'icon_url': '',
+            'is_default': code == 'CC0'
         }
 
 
@@ -61,33 +64,26 @@ class LicenseDetailSerializer(serializers.Serializer):
     is_default = serializers.BooleanField(default=False)
     
     @classmethod
-    def from_license_model(cls, license_obj):
-        """Create LicenseDetail from License model"""
-        # Calculate usage count safely
-        try:
-            usage_count = (
-                license_obj.assets.count() + 
-                license_obj.default_for_resources.count() +
-                license_obj.effective_for_accesses.count()
-            )
-        except:
-            usage_count = 0
-            
+    def from_license_code(cls, license_code: str | None):
+        """Create LicenseDetail from License code (no License model in V1)."""
+        code = (license_code or '').strip()
+        choices = dict(LicenseChoice.choices)
+        name = choices.get(code, code or 'CC0')
         return {
-            'code': license_obj.code,
-            'name': license_obj.name,
-            'short_name': license_obj.short_name or '',
-            'url': license_obj.url or '',
-            'icon_url': get_file_url(license_obj.icon_url),
-            'summary': license_obj.summary or '',
-            'full_text': license_obj.full_text or '',
-            'legal_code_url': license_obj.legal_code_url or '',
-            'usage_count': usage_count,
-            'license_terms': license_obj.license_terms or {},
-            'permissions': license_obj.permissions or {},
-            'conditions': license_obj.conditions or {},
-            'limitations': license_obj.limitations or {},
-            'is_default': license_obj.is_default
+            'code': code or 'CC0',
+            'name': name,
+            'short_name': '',
+            'url': '',
+            'icon_url': '',
+            'summary': '',
+            'full_text': '',
+            'legal_code_url': '',
+            'usage_count': 0,
+            'license_terms': {},
+            'permissions': {},
+            'conditions': {},
+            'limitations': {},
+            'is_default': code == 'CC0'
         }
 
 
@@ -105,7 +101,7 @@ class PublisherSummarySerializer(serializers.Serializer):
     
     @classmethod
     def from_publishing_organization(cls, org):
-        """Create PublisherSummary from PublishingOrganization model"""
+        """Create PublisherSummary from Publisher model"""
         return {
             'id': org.id,
             'name': org.name,
@@ -132,11 +128,11 @@ class PublisherSerializer(serializers.Serializer):
     
     @classmethod
     def from_publishing_organization(cls, org, request=None):
-        """Create full Publisher from PublishingOrganization model"""
+        """Create full Publisher from Publisher model"""
         # Get related objects efficiently
         assets = Asset.objects.filter(
             resource__publishing_organization=org
-        ).select_related('license').order_by('-created_at')[:10]
+        ).order_by('-created_at')[:10]
         
         resources = Resource.objects.filter(
             publishing_organization=org
@@ -155,7 +151,7 @@ class PublisherSerializer(serializers.Serializer):
                 'description': asset.description,
                 'thumbnail_url': get_file_url(asset.thumbnail_url),
                 'category': asset.category,
-                'license': LicenseSummarySerializer.from_license_model(asset.license),
+                'license': LicenseSummarySerializer.from_license_code(asset.license),
                 'has_access': cls._check_user_access(asset, request),
                 'download_count': asset.download_count,
                 'file_size': asset.file_size
@@ -215,7 +211,7 @@ class AssetSummarySerializer(serializers.Serializer):
             'description': asset.description or '',
             'thumbnail_url': get_file_url(asset.thumbnail_url),
             'category': asset.category,
-            'license': LicenseSummarySerializer.from_license_model(asset.license),
+            'license': LicenseSummarySerializer.from_license_code(asset.license),
             'publisher': PublisherSummarySerializer.from_publishing_organization(asset.resource.publishing_organization),
             'has_access': cls._check_user_access(asset, request),
             'download_count': asset.download_count,
@@ -381,7 +377,7 @@ class AssetDetailSerializer(serializers.Serializer):
             'long_description': asset.long_description or '',
             'thumbnail_url': get_file_url(asset.thumbnail_url),
             'category': asset.category,
-            'license': LicenseDetailSerializer.from_license_model(asset.license),
+            'license': LicenseDetailSerializer.from_license_code(asset.license),
             'publisher': PublisherSummarySerializer.from_publishing_organization(asset.resource.publishing_organization),
             'snapshots': snapshots_list,
             'resource': resource_data,

@@ -1,6 +1,4 @@
-"""
-Core models and base classes for Itqan CMS
-"""
+
 from django.db import models
 from django.utils import timezone
 
@@ -18,7 +16,7 @@ class BaseModel(models.Model):
     )
     
     created_at = models.DateTimeField(
-        auto_now_add=True,
+        default=timezone.now,
         help_text="Timestamp when this record was created"
     )
     
@@ -34,7 +32,6 @@ class BaseModel(models.Model):
 
     class Meta:
         abstract = True
-        ordering = ['-created_at']
 
     def delete(self, using=None, keep_parents=False):
         """

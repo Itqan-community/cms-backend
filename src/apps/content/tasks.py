@@ -174,7 +174,7 @@ def compute_daily_analytics_task():
     Daily task to compute analytics aggregations
     """
     try:
-        from .models import UsageEvent, Asset, PublishingOrganization
+        from .models import UsageEvent, Asset, Publisher
         from django.db.models import Count, Sum
         
         today = timezone.now().date()
@@ -228,13 +228,13 @@ def compute_daily_analytics_task():
         for pub_stat in top_publishers:
             try:
                 pub_id = pub_stat['asset__publishing_organization']
-                publisher = PublishingOrganization.objects.get(id=pub_id)
+                publisher = Publisher.objects.get(id=pub_id)
                 daily_stats['top_publishers'].append({
                     'publisher_id': publisher.id,
                     'name': publisher.name,
                     'activity_count': pub_stat['activity_count']
                 })
-            except PublishingOrganization.DoesNotExist:
+            except Publisher.DoesNotExist:
                 continue
         
         # Store or cache the daily stats
@@ -294,12 +294,12 @@ def update_publisher_statistics_task(publisher_id):
     Update cached statistics for a publisher
     
     Args:
-        publisher_id: PublishingOrganization ID
+        publisher_id: Publisher ID
     """
     try:
-        from .models import PublishingOrganization, Asset, Resource
+        from .models import Publisher, Asset, Resource
         
-        publisher = PublishingOrganization.objects.get(id=publisher_id)
+        publisher = Publisher.objects.get(id=publisher_id)
         
         # Calculate fresh statistics
         assets = Asset.objects.filter(publishing_organization=publisher)
@@ -318,7 +318,7 @@ def update_publisher_statistics_task(publisher_id):
         
         return stats
         
-    except PublishingOrganization.DoesNotExist:
+    except Publisher.DoesNotExist:
         logger.error(f"Publisher {publisher_id} not found for statistics update")
         return None
     except Exception as exc:

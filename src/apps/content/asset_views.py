@@ -1,7 +1,5 @@
-"""
-Asset API Views implementing OpenAPI specification
-Updated for ERD-aligned models with access control integration
-"""
+
+'''
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -423,3 +421,5 @@ def asset_related(request, asset_id):
     return Response({
         'related_assets': related_data
     })
+
+'''

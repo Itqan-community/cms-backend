@@ -11,8 +11,8 @@ from django.core.validators import URLValidator, FileExtensionValidator
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
-from src.apps.core.models import BaseModel, ActiveObjectsManager, AllObjectsManager
-from src.apps.core.utils import (
+from apps.core.models import BaseModel, ActiveObjectsManager, AllObjectsManager
+from apps.core.utils import (
     upload_to_publisher_icons,
     upload_to_asset_thumbnails,
     upload_to_license_icons,
@@ -20,6 +20,17 @@ from src.apps.core.utils import (
     upload_to_resource_files,
     upload_to_asset_preview_images
 )
+from apps.users.models import User
+class LicenseChoice(models.TextChoices):
+    CC0 = "CC0", _("Creative Commons Zero")
+    CC_BY = "CC BY", _("Creative Commons Attribution")
+    CC_BY_SA = "CC BY-SA", _("Creative Commons Attribution-ShareAlike")
+    CC_BY_ND = "CC BY-ND", _("Creative Commons Attribution-NoDerivs")
+    CC_BY_NC = "CC BY-NC", _("Creative Commons Attribution-NonCommercial")
+    CC_BY_NC_SA = "CC BY-NC-SA", _("Creative Commons Attribution-NonCommercial-ShareAlike")
+    CC_BY_NC_ND = "CC BY-NC-ND", _("Creative Commons Attribution-NonCommercial-NoDerivs")
+    PUBLIC_DOMAIN = "Public Domain", _("Public Domain")
+    PROPRIETARY = "Proprietary", _("Proprietary")
 
 class Publisher(BaseModel):
     name = models.CharField(max_length=255, help_text="Publisher name e.g. 'Tafsir Center'")
@@ -43,7 +54,8 @@ class Publisher(BaseModel):
 
     contact_email = models.EmailField(blank=True, help_text="Contact email for the publisher")
 
-    members = models.ManyToManyField(settings.AUTH_USER_MODEL, through="PublisherMember", related_name="publishers")
+    members = models.ManyToManyField(User, through="PublisherMember", related_name="publishers")
+
 
     objects = ActiveObjectsManager()
     all_objects = AllObjectsManager()
@@ -67,7 +79,7 @@ class PublisherMember(BaseModel):
         MANAGER = "manager", _("Manager")
 
     publisher = models.ForeignKey(Publisher, on_delete=models.CASCADE, related_name="memberships")
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="publisher_memberships")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="publisher_memberships")
     role = models.CharField(
         max_length=20,
         choices=RoleChoice.choices,
@@ -112,6 +124,8 @@ class Resource(BaseModel):
         default=StatusChoice.DRAFT,
         help_text="V1: ready = ready to extract Assets from",
     )
+
+    license = models.CharField(max_length=50, choices=LicenseChoice.choices,default=LicenseChoice.CC0, help_text="Asset license")
 
     objects = ActiveObjectsManager()
     all_objects = AllObjectsManager()
@@ -188,15 +202,7 @@ class ResourceVersion(BaseModel):
 
         super().save(*args, **kwargs)
 
-class LicenseChoice(models.TextChoices):
-    CC_BY = "CC BY", _("Creative Commons Attribution")
-    CC_BY_SA = "CC BY-SA", _("Creative Commons Attribution-ShareAlike")
-    CC_BY_ND = "CC BY-ND", _("Creative Commons Attribution-NoDerivs")
-    CC_BY_NC = "CC BY-NC", _("Creative Commons Attribution-NonCommercial")
-    CC_BY_NC_SA = "CC BY-NC-SA", _("Creative Commons Attribution-NonCommercial-ShareAlike")
-    CC_BY_NC_ND = "CC BY-NC-ND", _("Creative Commons Attribution-NonCommercial-NoDerivs")
-    PUBLIC_DOMAIN = "Public Domain", _("Public Domain")
-    PROPRIETARY = "Proprietary", _("Proprietary")
+
 
 
 class Asset(BaseModel):
@@ -374,7 +380,7 @@ class AssetAccessRequest(BaseModel):
         NON_COMMERCIAL = "non-commercial", _("Non-Commercial")
 
     developer_user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        User,
         on_delete=models.CASCADE,
         related_name='asset_requests'
     )
@@ -438,7 +444,7 @@ class AssetAccess(BaseModel):
     )
     
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        User,
         on_delete=models.CASCADE,
         related_name='asset_accesses'
     )
@@ -499,7 +505,7 @@ class UsageEvent(BaseModel):
         ASSET = "asset", _("Asset")
 
     developer_user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        User,
         on_delete=models.CASCADE,
         related_name='usage_events'
     )
@@ -549,7 +555,7 @@ class UsageEvent(BaseModel):
     all_objects = AllObjectsManager()
 
     class Meta:
-        checks = [
+        constraints = [
             models.CheckConstraint(
                 check=models.Q(subject_kind='resource', resource_id__isnull=False, asset_id__isnull=True) | models.Q(subject_kind='asset', asset_id__isnull=False, resource_id__isnull=True),
                 name='usage_event_subject_kind_consistency'

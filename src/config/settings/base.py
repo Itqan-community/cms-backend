@@ -44,9 +44,8 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     'apps.core',
-    'apps.accounts',
     'apps.content',
-    'apps.api',
+    'apps.users',
     'mock_api',  # Mock API for development and testing
 ]
 
@@ -122,7 +121,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 LANGUAGE_CODE = 'en'
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Riyadh'
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
@@ -141,7 +140,7 @@ LOCALE_PATHS = [
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [
-    BASE_DIR / 'static',
+    BASE_DIR /'apps' /'core' /'static',
 ]
 
 # Media files
@@ -201,23 +200,9 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
-# Image file extensions for uploads
-ALLOWED_IMAGE_EXTENSIONS = ['gif', 'jpg', 'jpeg', 'png', 'webp']
 
 # Custom user model
-AUTH_USER_MODEL = 'accounts.User'
-
-# Static files (CSS, JavaScript, Images)
-STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-
-STATICFILES_DIRS = [
-    BASE_DIR / 'static',
-]
-
-# Media files - will be overridden in environment-specific settings
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+AUTH_USER_MODEL = 'users.User'
 
 # File upload settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = 26214400  # 25MB
@@ -257,91 +242,7 @@ AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'max-age=86400',
 }
 
-# MeiliSearch Configuration
-MEILISEARCH_URL = config('MEILISEARCH_URL', default='http://localhost:7700')
-MEILISEARCH_MASTER_KEY = config('MEILISEARCH_MASTER_KEY', default='itqan-meili-master-key-dev')
-MEILISEARCH_TIMEOUT = config('MEILISEARCH_TIMEOUT', default=30, cast=int)
 
-# MeiliSearch Index Configuration
-MEILISEARCH_INDEXES = {
-    'resources': {
-        'primary_key': 'id',
-        'searchable_attributes': [
-            'title',
-            'title_ar',
-            'description', 
-            'description_ar',
-            'content',
-            'content_ar',
-            'tags'
-        ],
-        'filterable_attributes': [
-            'resource_type',
-            'language',
-            'status',
-            'created_by',
-            'license_type',
-            'is_public'
-        ],
-        'sortable_attributes': [
-            'created_at',
-            'updated_at',
-            'title',
-            'title_ar'
-        ],
-        'ranking_rules': [
-            'words',
-            'typo',
-            'proximity',
-            'attribute',
-            'sort',
-            'exactness'
-        ]
-    },
-    'users': {
-        'primary_key': 'id',
-        'searchable_attributes': [
-            'first_name',
-            'last_name',
-            'email',
-            'organization'
-        ],
-        'filterable_attributes': [
-            'role',
-            'is_active',
-            'email_verified'
-        ],
-        'sortable_attributes': [
-            'created_at',
-            'last_login',
-            'first_name',
-            'last_name'
-        ]
-    },
-    'media': {
-        'primary_key': 'id',
-        'searchable_attributes': [
-            'title',
-            'description',
-            'original_filename',
-            'tags'
-        ],
-        'filterable_attributes': [
-            'media_type',
-            'uploaded_by',
-            'folder'
-        ],
-        'sortable_attributes': [
-            'created_at',
-            'file_size',
-            'title'
-        ]
-    }
-}
-
-# Authentication backends - Use ModelBackend only since we have custom User model with email field
-# Our custom User model (apps.accounts.models.User) has its own email field and email_verified field
-# We don't need allauth's account_emailaddress table since we store everything in our User model
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
@@ -440,48 +341,41 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_ALWAYS_EAGER = config('CELERY_TASK_ALWAYS_EAGER', default=False, cast=bool)
-
-# MeiliSearch Configuration
-MEILISEARCH_URL = config('MEILISEARCH_URL', default='http://localhost:7700')
-MEILISEARCH_MASTER_KEY = config('MEILISEARCH_MASTER_KEY', default='masterKey')
-MEILISEARCH_TIMEOUT = config('MEILISEARCH_TIMEOUT', default=30, cast=int)
-MEILISEARCH_INDEXES = {
-    'resources': {
-        'uid': 'resources',
-        'primary_key': 'id',
-        'searchable_attributes': ['title', 'description', 'language'],
-        'filterable_attributes': ['resource_type', 'language', 'publisher_id', 'is_active'],
-        'sortable_attributes': ['created_at', 'updated_at', 'published_at'],
-        'ranking_rules': [
-            'words',
-            'typo',
-            'proximity',
-            'attribute',
-            'sort',
-            'exactness',
-            'published_at:desc'
-        ]
-    }
-}
-
 # Site ID (required for allauth)
 SITE_ID = 1
 
+DJANGO_ADMIN_FORCE_ALLAUTH = config("DJANGO_ADMIN_FORCE_ALLAUTH", default=False, cast=bool)
+
+# Additional allauth settings to prevent email table creation
+ACCOUNT_EMAIL_CONFIRMATION_HMAC = False  # Disable HMAC-based confirmations
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1  # Short expiry since we don't use it
+
+# django-allauth
+# ------------------------------------------------------------------------------
+ACCOUNT_ALLOW_REGISTRATION = config("DJANGO_ACCOUNT_ALLOW_REGISTRATION", True, cast=bool)
+# https://docs.allauth.org/en/latest/account/configuration.html
+ACCOUNT_LOGIN_METHODS = {"email"}
+# https://docs.allauth.org/en/latest/account/configuration.html
+ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
+# https://docs.allauth.org/en/latest/account/configuration.html
+ACCOUNT_USER_MODEL_USERNAME_FIELD = "email"
+# https://docs.allauth.org/en/latest/account/configuration.html
+ACCOUNT_ADAPTER = "apps.users.adapters.AccountAdapter"
+# https://docs.allauth.org/en/latest/account/forms.html
+ACCOUNT_FORMS = {"signup": "apps.users.forms.UserSignupForm"}
+# https://docs.allauth.org/en/latest/socialaccount/configuration.html
+SOCIALACCOUNT_ADAPTER = "apps.users.adapters.SocialAccountAdapter"
+# https://docs.allauth.org/en/latest/socialaccount/configuration.html
+SOCIALACCOUNT_FORMS = {"signup": "apps.users.forms.UserSocialSignupForm"}
 # Django Allauth Configuration
 # NOTE: We primarily use our custom User model with built-in email management
 # Allauth is only used for OAuth (Google/GitHub) authentication, not email verification
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_EMAIL_VERIFICATION = 'none'  # We handle email verification in our custom User model
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_EMAIL_VERIFICATION = 'none'  # We handle email verification in our custom User model # or "mandatory"
 ACCOUNT_USER_MODEL_EMAIL_FIELD = 'email'  # Points to our custom User.email field
 ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = False  # We manage email verification manually
 ACCOUNT_LOGOUT_ON_GET = False
 ACCOUNT_SESSION_REMEMBER = True
 ACCOUNT_UNIQUE_EMAIL = True
-ACCOUNT_ADAPTER = 'apps.accounts.adapters.AccountAdapter'
-SOCIALACCOUNT_ADAPTER = 'apps.accounts.adapters.SocialAccountAdapter'
 
 # Social account configuration - for OAuth only (Google/GitHub)
 SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'  # We handle email verification in User model
@@ -548,12 +442,12 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
         },
-        'file': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs' / 'django.log',
-            'formatter': 'verbose',
-        },
+        # 'file': {
+        #     'level': 'DEBUG',
+        #     'class': 'logging.FileHandler',
+        #     'filename': BASE_DIR / 'logs' / 'django.log',
+        #     'formatter': 'verbose',
+        # },
     },
     'root': {
         'handlers': ['console'],
@@ -561,12 +455,12 @@ LOGGING = {
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
         },
         'apps': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': False,
         },
@@ -578,7 +472,3 @@ MIGRATION_MODULES = {
     'account': None,
     'socialaccount': None,
 }
-
-# Additional allauth settings to prevent email table creation
-ACCOUNT_EMAIL_CONFIRMATION_HMAC = False  # Disable HMAC-based confirmations
-ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1  # Short expiry since we don't use it

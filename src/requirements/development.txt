@@ -16,7 +16,3 @@ isort==5.12.*
 flake8==6.0.*
 mypy==1.5.*
 django-stubs==4.2.*
-
-# Documentation
-mkdocs==1.5.*
-mkdocs-material==9.2.*

@@ -3,7 +3,7 @@ Content model translations for Itqan CMS
 Configures django-modeltranslation for English/Arabic bilingual support
 """
 from modeltranslation.translator import translator, TranslationOptions
-from .models import Resource, Distribution, License, Asset
+from .models import Resource, Distribution, Asset
 
 
 class ResourceTranslationOptions(TranslationOptions):
@@ -19,7 +19,7 @@ class ResourceTranslationOptions(TranslationOptions):
 class AssetTranslationOptions(TranslationOptions):
     """Translation configuration for Asset model"""
     fields = (
-        'title',          # Display title for API
+        'name',          # Display name for API
         'description',    # Asset description
         'long_description',  # Extended description
     )
@@ -36,19 +36,8 @@ class DistributionTranslationOptions(TranslationOptions):
     empty = True  # Explicitly mark as having no translatable fields for now
 
 
-class LicenseTranslationOptions(TranslationOptions):
-    """Translation configuration for License model"""
-    fields = (
-        'name',           # License name
-        'summary',        # Brief license description
-        'full_text',      # Complete license text
-    )
-    # Don't translate: code, url, icon_url, legal_code_url, license_terms (JSON)
-    # permissions, conditions, limitations (JSON) - these are structured data
-
 
 # Register translation options
 translator.register(Resource, ResourceTranslationOptions)
 translator.register(Asset, AssetTranslationOptions)
 translator.register(Distribution, DistributionTranslationOptions)
-translator.register(License, LicenseTranslationOptions)

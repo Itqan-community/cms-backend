@@ -1,18 +1,14 @@
 """
 API ViewSets for Content models
 """
+from django.utils import timezone
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Q
-from django.utils import timezone
 
-from ..models import Resource
-from ..serializers import (
-    ResourceSerializer
-)
-from apps.api.permissions import ResourcePermission
+from apps.content.models import Resource
+from apps.content.serializers import ResourceSerializer
 
 
 class ResourceViewSet(viewsets.ModelViewSet):
@@ -20,7 +16,7 @@ class ResourceViewSet(viewsets.ModelViewSet):
     ViewSet for Resource management
     """
     queryset = Resource.objects.all()
-    permission_classes = [ResourcePermission]
+    permission_classes = []
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['category', 'publishing_organization', 'is_active']
     search_fields = ['name', 'description']

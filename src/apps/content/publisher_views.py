@@ -1,6 +1,6 @@
-"""
+'''"""
 Publisher API Views implementing OpenAPI specification
-Maps PublishingOrganization model to Publisher API endpoints
+Maps Publisher model to Publisher API endpoints
 """
 from rest_framework import status
 from rest_framework.views import APIView
@@ -11,17 +11,17 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiRespon
 from django.shortcuts import get_object_or_404
 from django.db.models import Count, Sum
 
-from .models import PublishingOrganization, Asset, Resource
+from .models import Publisher, Asset, Resource
 from .serializers import PublisherSerializer, AssetSummarySerializer
 
 
 class PublisherDetailView(APIView):
     """
     API Endpoint: GET /publishers/{publisher_id}
-    Get detailed publisher information using PublishingOrganization model
+    Get detailed publisher information using Publisher model
     """
     permission_classes = [IsAuthenticatedOrReadOnly]
-    
+
     @extend_schema(
         summary="Get publisher details",
         description="Get complete publisher information with statistics and published assets",
@@ -34,20 +34,20 @@ class PublisherDetailView(APIView):
         """Get detailed publisher information"""
         try:
             # Get organization with optimized queries
-            organization = PublishingOrganization.objects.select_related().annotate(
+            organization = Publisher.objects.select_related().annotate(
                 resources_count=Count('resources'),
                 assets_count=Count('resources__assets', distinct=True),
                 total_downloads=Sum('resources__assets__download_count')
             ).get(id=publisher_id)
-        except PublishingOrganization.DoesNotExist:
+        except Publisher.DoesNotExist:
             return Response(
                 {'error': {'code': 'PUBLISHER_NOT_FOUND', 'message': 'Publisher not found'}},
                 status=status.HTTP_404_NOT_FOUND
             )
-        
+
         # Serialize publisher data
         publisher_data = PublisherSerializer.from_publishing_organization(organization, request)
-        
+
         return Response(publisher_data)
 
 
@@ -89,36 +89,36 @@ class PublisherDetailView(APIView):
 def publisher_assets(request, publisher_id):
     """Get assets published by the organization"""
     try:
-        organization = PublishingOrganization.objects.get(id=publisher_id)
-    except PublishingOrganization.DoesNotExist:
+        organization = Publisher.objects.get(id=publisher_id)
+    except Publisher.DoesNotExist:
         return Response(
             {'error': {'code': 'PUBLISHER_NOT_FOUND', 'message': 'Publisher not found'}},
             status=status.HTTP_404_NOT_FOUND
         )
-    
+
     # Get assets query
     assets_query = Asset.objects.filter(
         resource__publishing_organization=organization
     ).select_related('license').order_by('-created_at')
-    
+
     # Apply category filter if provided
     category = request.query_params.get('category')
     if category:
         assets_query = assets_query.filter(category=category)
-    
+
     # Apply limit
     limit = min(int(request.query_params.get('limit', 20)), 50)
     assets = assets_query[:limit]
     total_count = assets_query.count()
-    
+
     # Serialize data
     publisher_data = PublisherSerializer.from_publishing_organization(organization, request)
     assets_data = []
-    
+
     for asset in assets:
         asset_data = AssetSummarySerializer.from_asset_model(asset, request)
         assets_data.append(asset_data)
-    
+
     return Response({
         'publisher': publisher_data,
         'assets': assets_data,
@@ -163,30 +163,30 @@ def publisher_assets(request, publisher_id):
 def publisher_statistics(request, publisher_id):
     """Get comprehensive statistics for a publisher"""
     try:
-        organization = PublishingOrganization.objects.get(id=publisher_id)
-    except PublishingOrganization.DoesNotExist:
+        organization = Publisher.objects.get(id=publisher_id)
+    except Publisher.DoesNotExist:
         return Response(
             {'error': {'code': 'PUBLISHER_NOT_FOUND', 'message': 'Publisher not found'}},
             status=status.HTTP_404_NOT_FOUND
         )
-    
+
     # Calculate comprehensive statistics
     assets = Asset.objects.filter(publishing_organization=organization)
     resources = Resource.objects.filter(publishing_organization=organization)
-    
+
     # Basic counts
     resources_count = resources.count()
     assets_count = assets.count()
     total_downloads = sum(asset.download_count for asset in assets)
     total_views = sum(asset.view_count for asset in assets)
-    
+
     # Category breakdown
     categories = {
         'mushaf': assets.filter(category='mushaf').count(),
         'tafsir': assets.filter(category='tafsir').count(),
         'recitation': assets.filter(category='recitation').count(),
     }
-    
+
     return Response({
         'publisher_id': organization.id,
         'name': organization.name,
@@ -242,32 +242,32 @@ def publisher_statistics(request, publisher_id):
 def publisher_list(request):
     """Get list of all publishers"""
     # Start with all organizations
-    publishers_query = PublishingOrganization.objects.annotate(
+    publishers_query = Publisher.objects.annotate(
         resources_count=Count('resources'),
         assets_count=Count('resources__assets', distinct=True),
         total_downloads=Sum('resources__assets__download_count')
     ).order_by('name')
-    
+
     # Apply filters
     verified_only = request.query_params.get('verified_only', '').lower() == 'true'
     if verified_only:
         publishers_query = publishers_query.filter(verified=True)
-    
+
     has_assets = request.query_params.get('has_assets', '').lower() == 'true'
     if has_assets:
         publishers_query = publishers_query.filter(assets_count__gt=0)
-    
+
     # Apply limit
     limit = min(int(request.query_params.get('limit', 20)), 50)
     publishers = publishers_query[:limit]
     total_count = publishers_query.count()
-    
+
     # Serialize data
     publishers_data = []
     for publisher in publishers:
         publisher_data = PublisherSerializer.from_publishing_organization(publisher, request)
         publishers_data.append(publisher_data)
-    
+
     return Response({
         'publishers': publishers_data,
         'total_count': total_count
@@ -306,16 +306,16 @@ def publisher_list(request):
 def publisher_members(request, publisher_id):
     """Get organization members and their roles"""
     try:
-        organization = PublishingOrganization.objects.get(id=publisher_id)
-    except PublishingOrganization.DoesNotExist:
+        organization = Publisher.objects.get(id=publisher_id)
+    except Publisher.DoesNotExist:
         return Response(
             {'error': {'code': 'PUBLISHER_NOT_FOUND', 'message': 'Publisher not found'}},
             status=status.HTTP_404_NOT_FOUND
         )
-    
+
     # Get members through the membership relationship
     memberships = organization.memberships.select_related('user').order_by('-created_at')
-    
+
     members_data = []
     for membership in memberships:
         members_data.append({
@@ -325,9 +325,10 @@ def publisher_members(request, publisher_id):
             'role': membership.role,
             'joined_at': membership.created_at.isoformat() if membership.created_at else None
         })
-    
+
     return Response({
         'publisher_id': organization.id,
         'name': organization.name,
         'members': members_data
     })
+'''
