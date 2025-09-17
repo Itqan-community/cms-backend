@@ -4,6 +4,26 @@ globs:
 alwaysApply: true
 ---
 
+# docs
 ninja docs: https://django-ninja.dev/
 django docs: https://docs.djangoproject.com/en/5.2/
-django-allauth docs: https://docs.allauth.org/en/dev/
+django-allauth: https://docs.allauth.org/en/dev/ is used for handling social auth and OAuth2
+dj-rest-auth: https://dj-rest-auth.readthedocs.io/en/latest/ is used for handling authentication and registration
+djangorestframework-simplejwt: https://django-rest-framework-simplejwt.readthedocs.io/en/latest/ is used for handling JWT authentication
+
+
+# raising errors
+If you want to return an error to the user especially if it is 400 error use apps.core.ninja_utils.errors.ItqanError
+If you want to raise 403 Error, use from rest_framework.exceptions.PermissionDenied
+if a endpoint view may raise an error, document it with apps.core.ninja_utils.errors.NinjaErrorResponse as in 
+```python
+response={
+        200: OkSchema,
+        400: NinjaErrorResponse[Literal["activation_request_failed"], Literal[None]],
+        404: NinjaErrorResponse[Literal["user_not_found"], Literal[None]]
+        | NinjaErrorResponse[Literal["admin_not_found"], Literal[None]],
+    }
+```
+
+# general
+1- any function you define should be type hinted
