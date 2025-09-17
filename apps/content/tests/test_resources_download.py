@@ -1,5 +1,4 @@
 import tempfile
-import uuid
 from pathlib import Path
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -114,11 +113,11 @@ class DownloadResourceTest(BaseTestCase):
                 self.assertEqual(404, response.status_code, getattr(response, "content", b""))
 
     def test_download_returns_404_when_resource_not_found(self):
-        # Arrange
-        random_id = uuid.uuid4()
+        # Arrange - Use a non-existent integer ID
+        non_existent_id = 99999
 
         # Act
-        response = self.client.get(f"/content/resources/{random_id}/download/", format="json")
+        response = self.client.get(f"/content/resources/{non_existent_id}/download/", format="json")
 
         # Assert
         self.assertEqual(404, response.status_code, getattr(response, "content", b""))

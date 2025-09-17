@@ -181,6 +181,7 @@ class Asset(BaseModel):
     def __str__(self):
         return f"Asset(name={self.name} category={self.category})"
 
+
     @staticmethod
     def _parse_file_size_to_bytes(file_size_str):
         """Convert human readable file size to bytes"""

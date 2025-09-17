@@ -1,5 +1,3 @@
-from uuid import UUID
-
 from django.shortcuts import get_object_or_404
 from ninja import Schema
 from pydantic import Field
@@ -12,29 +10,23 @@ router = ItqanRouter(tags=[NinjaTag.ASSETS])
 
 
 class DetailAssetPublisherOut(Schema):
-    id: UUID
+    id: int
     name: str
     description: str
 
 
-class DetailAssetLicenseOut(Schema):
-    code: str
-    name: str
-    short_name: str
-
-
 class DetailAssetOut(Schema):
-    id: UUID
+    id: int
     category: str
     name: str
     description: str
     long_description: str
     thumbnail_url: str
     publisher: DetailAssetPublisherOut = Field(alias="resource.publisher")
-    license: DetailAssetLicenseOut
+    license: str
 
 
 @router.get("content/assets/{id}/", response=DetailAssetOut)
-def detail_assets(request, id: UUID):
+def detail_assets(request, id: int):
     asset = get_object_or_404(Asset, id=id)
     return asset

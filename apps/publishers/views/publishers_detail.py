@@ -1,10 +1,7 @@
-from typing import Any
-from uuid import UUID
-
 from django.shortcuts import get_object_or_404
 from ninja import Schema
 
-from apps.content.models import Publisher
+from apps.publishers.models import Publisher
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
 
@@ -12,20 +9,18 @@ router = ItqanRouter(tags=[NinjaTag.PUBLISHERS])
 
 
 class DetailPublisherOut(Schema):
-    id: UUID
+    id: int
     name: str
     slug: str
-    summary: str
     description: str
-    location: str
+    address: str
     website: str
-    verified: bool
+    is_verified: bool
     contact_email: str
     icon_url: str | None
-    social_links: dict[str, Any]
 
 
 @router.get("content/publishers/{id}/", response=DetailPublisherOut)
-def detail_publishers(request, id: UUID):
+def detail_publishers(request, id: int):
     publisher = get_object_or_404(Publisher, id=id)
     return publisher

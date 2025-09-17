@@ -24,7 +24,7 @@ class ListAssetTest(BaseTestCase):
         baker.make(Asset, name="Tafsir Ibn Katheer", license=LicenseChoice.CC_BY_NC)
 
         # Act
-        response = self.client.get("/content/assets/", data={"license_code": "CC BY-SA"}, format="json")
+        response = self.client.get("/content/assets/", data={"license_code": LicenseChoice.CC_BY_SA}, format="json")
 
         # Assert
         self.assertEqual(response.status_code, 200, response.content)

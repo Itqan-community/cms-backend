@@ -26,7 +26,7 @@ class DetailAssetTest(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
-        self.assertEqual(str(asset.id), body["id"])
+        self.assertEqual(asset.id, body["id"])
         self.assertEqual("Tafsir Ibn Katheer", body["name"])
         self.assertEqual("tafsir", body["category"])
         self.assertEqual("A comprehensive tafsir of the Quran", body["description"])
@@ -35,9 +35,7 @@ class DetailAssetTest(BaseTestCase):
         self.assertIn("name", body["publisher"])  # Publisher structure
         self.assertIn("description", body["publisher"])  # Publisher structure
         self.assertTrue(body["thumbnail_url"].endswith("thumbnails/tafseer.png"))
-        self.assertEqual("Creative Commons Attribution-ShareAlike 4.0", body["license"]["name"])
-        self.assertEqual("CC-BY-SA-4.0", body["license"]["code"])
-        self.assertEqual("CC BY-SA 4.0", body["license"]["short_name"])
+        self.assertEqual("CC BY-SA", body["license"])
 
     def test_detail_assets_where_response_schema_should_include_all_required_fields(self):
         # Arrange
@@ -71,8 +69,8 @@ class DetailAssetTest(BaseTestCase):
             self.assertIn(field, body, f"Missing required field: {field}")
         for field in ["id", "name", "description"]:
             self.assertIn(field, body["publisher"], f"Missing publisher field: {field}")
-        for field in ["code", "name", "short_name"]:
-            self.assertIn(field, body["license"], f"Missing license field: {field}")
+        # Verify license is a string
+        self.assertIsInstance(body["license"], str, "License should be a string")
 
     def test_detail_assets_where_various_categories_should_return_correct_category_and_thumbnail(self):
         # Arrange
@@ -137,7 +135,7 @@ class DetailAssetTest(BaseTestCase):
         body = response.json()
         self.assertEqual("وصف عربي", body["description"])  # Arabic content preserved
         self.assertEqual("وصف عربي مطول", body["long_description"])  # Arabic content preserved
-        self.assertEqual("رخصة عربية", body["license"]["name"])  # Arabic license name preserved
+        self.assertEqual("CC0", body["license"])  # CC0 license code
         self.assertTrue(body["thumbnail_url"].endswith("thumbs/localized.png"))
 
     def test_detail_assets_where_language_ar_missing_translations_should_fallback(self):
@@ -161,16 +159,15 @@ class DetailAssetTest(BaseTestCase):
         body = response.json()
         self.assertEqual("English description", body["description"])  # fallback
         self.assertEqual("English long description", body["long_description"])  # fallback
-        self.assertEqual("MIT License", body["license"]["name"])  # fallback
+        self.assertEqual("CC0", body["license"])  # CC0 license code
         self.assertTrue(body["thumbnail_url"].endswith("thumbs/en-only.png"))
 
-    def test_detail_assets_where_uuid_format_invalid_should_return_400(self):
-        # Arrange
+    def test_detail_assets_where_id_format_invalid_should_return_400(self):
+        # Arrange - Invalid integer formats should return 400 validation error
         invalid_formats = [
-            "123",  # Too short
-            "not-a-uuid-at-all",  # Not UUID format
-            "12345678-1234-1234-1234-1234567890123",  # Too long
-            "12345678-1234-1234-1234-12345678901",  # Invalid characters
+            "not-a-number",  # Non-numeric
+            "123.45",  # Decimal
+            "abc123",  # Mixed alphanumeric
         ]
 
         for invalid_format in invalid_formats:
@@ -178,7 +175,7 @@ class DetailAssetTest(BaseTestCase):
                 # Act
                 response = self.client.get(f"/content/assets/{invalid_format}/", format="json")
 
-                # Assert
+                # Assert - Invalid formats result in 400 validation error
                 self.assertEqual(
                     400,
                     response.status_code,

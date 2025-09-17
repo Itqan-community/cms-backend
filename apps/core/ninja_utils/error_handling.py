@@ -93,7 +93,7 @@ def handle_ninja_http_error(request, exc: HttpError):
 
 @ninja_api.exception_handler(Exception)
 def handle_generic_exception(request, exc: Exception):
-    if settings.DEBUG or settings.TEST_CASE or (request.user and getattr(request.user, "is_superuser", False)):
+    if settings.DEBUG or (request.user and getattr(request.user, "is_superuser", False)):
         # let it propagate to be handled by django, and show detailed error page
         raise exc
     logger = logging.getLogger(__name__)

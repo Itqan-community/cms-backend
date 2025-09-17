@@ -87,7 +87,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': config('DB_NAME', default='itqan_cms'),
         'USER': config('DB_USER', default='itqan_user'),
         'PASSWORD': config('DB_PASSWORD', default='itqan_password'),
@@ -442,12 +442,6 @@ LOGGING = {
             'propagate': False,
         },
     },
-}
-
-# Disable django-allauth migrations since we use our own user/email tables
-MIGRATION_MODULES = {
-    'account': None,
-    'socialaccount': None,
 }
 
 

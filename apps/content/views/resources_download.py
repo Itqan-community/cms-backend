@@ -1,5 +1,3 @@
-from uuid import UUID
-
 from django.http import FileResponse
 from django.http import Http404
 from django.shortcuts import get_object_or_404
@@ -13,7 +11,7 @@ router = ItqanRouter(tags=[NinjaTag.RESOURCES])
 
 
 @router.get("content/resources/{id}/download/")
-def download_resource(request, id: UUID):
+def download_resource(request, id: int):
     """
     Download the latest version of a resource.
     Returns the file directly for download.
