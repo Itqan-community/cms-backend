@@ -6,12 +6,13 @@ from apps.content.models import Resource
 from apps.content.models import ResourceVersion
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.core.ninja_utils.request import Request
 
 router = ItqanRouter(tags=[NinjaTag.RESOURCES])
 
 
 @router.get("content/resources/{id}/download/")
-def download_resource(request, id: int):
+def download_resource(request: Request, id: int):
     """
     Download the latest version of a resource.
     Returns the file directly for download.

@@ -5,6 +5,7 @@ from apps.content.models import Asset, AssetAccessRequest
 from apps.content.services.asset_access import request_access, user_has_access
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.core.ninja_utils.request import Request
 
 router = ItqanRouter(tags=[NinjaTag.ASSETS])
 
@@ -36,7 +37,7 @@ class AccessRequestResponseOut(Schema):
 
 
 @router.post("content/assets/{asset_id}/request-access/", response=AccessRequestResponseOut)
-def request_asset_access(request, asset_id: int, data: RequestAccessIn):
+def request_asset_access(request: Request, asset_id: int, data: RequestAccessIn):
     """Request access to an asset (V1: auto-approval)"""
     asset = get_object_or_404(Asset, id=asset_id)
     
@@ -76,7 +77,7 @@ class AssetAccessStatusOut(Schema):
 
 
 @router.get("content/assets/{asset_id}/access-status/", response=AssetAccessStatusOut)
-def asset_access_status(request, asset_id: int):
+def asset_access_status(request: Request, asset_id: int):
     """Get asset access status for the authenticated user"""
     asset = get_object_or_404(Asset, id=asset_id)
 

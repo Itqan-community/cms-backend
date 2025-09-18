@@ -8,6 +8,7 @@ from apps.core.ninja_utils.tags import NinjaTag
 
 from ._schemas import RefreshTokenSchema
 from ...core.ninja_utils.auth import ninja_jwt_auth
+from apps.core.ninja_utils.request import Request
 
 router = ItqanRouter(tags=[NinjaTag.AUTH])
 
@@ -16,7 +17,7 @@ router = ItqanRouter(tags=[NinjaTag.AUTH])
     "auth/logout/",
     description="Logout user and blacklist refresh token"
 )
-def logout_user(request: HttpRequest, logout_data: RefreshTokenSchema = None):
+def logout_user(request: Request, logout_data: RefreshTokenSchema = None):
     """Logout user and blacklist tokens"""
     # If refresh token is provided, blacklist it
     if logout_data and logout_data.refresh:

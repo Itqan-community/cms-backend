@@ -10,6 +10,7 @@ from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.errors import ItqanError
 from apps.core.ninja_utils.tags import NinjaTag
 from ._schemas import OAuth2AuthorizeResponseSchema
+from apps.core.ninja_utils.request import Request
 
 router = ItqanRouter(tags=[NinjaTag.SOCIAL_AUTH])
 
@@ -21,7 +22,7 @@ auth=None,
     summary="Start Google OAuth2 authorization",
     description="Redirect user to Google OAuth2 authorization page"
 )
-def google_oauth_authorize(request: HttpRequest):
+def google_oauth_authorize(request: Request):
     """Start Google OAuth2 authorization flow"""
     try:
         # Get Google social app configuration
@@ -72,7 +73,7 @@ auth=None,
     summary="Start GitHub OAuth2 authorization",
     description="Redirect user to GitHub OAuth2 authorization page"
 )
-def github_oauth_authorize(request: HttpRequest):
+def github_oauth_authorize(request: Request):
     """Start GitHub OAuth2 authorization flow"""
     try:
         # Get GitHub social app configuration
@@ -117,7 +118,7 @@ auth=None,
     summary="Google OAuth2 callback redirect",
     description="Redirects to allauth Google callback for processing"
 )
-def google_oauth_callback(request: HttpRequest):
+def google_oauth_callback(request: Request):
     """Redirect to allauth Google callback"""
     return HttpResponseRedirect('/accounts/google/login/callback/')
 
@@ -128,6 +129,6 @@ auth=None,
     summary="GitHub OAuth2 callback redirect", 
     description="Redirects to allauth GitHub callback for processing"
 )
-def github_oauth_callback(request: HttpRequest):
+def github_oauth_callback(request: Request):
     """Redirect to allauth GitHub callback"""
     return HttpResponseRedirect('/accounts/github/login/callback/')

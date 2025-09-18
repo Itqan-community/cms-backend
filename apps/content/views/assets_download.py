@@ -10,6 +10,7 @@ from apps.content.services.asset_access import user_has_access
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.core.ninja_utils.request import Request
 
 router = ItqanRouter(tags=[NinjaTag.ASSETS])
 
@@ -24,7 +25,7 @@ router = ItqanRouter(tags=[NinjaTag.ASSETS])
         | NinjaErrorResponse[Literal["file_not_accessible"], Literal[None]]
     }
 )
-def download_asset(request, id: int):
+def download_asset(request: Request, id: int):
     """
     Download the latest version of an asset.
     Returns the file directly for download.

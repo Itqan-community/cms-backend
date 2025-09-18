@@ -6,6 +6,7 @@ from apps.core.ninja_utils.errors import ItqanError
 from apps.core.ninja_utils.tags import NinjaTag
 from apps.users.models import User
 from ._schemas import RegisterSchema, TokenResponseSchema
+from apps.core.ninja_utils.request import Request
 
 router = ItqanRouter(tags=[NinjaTag.AUTH])
 
@@ -17,7 +18,7 @@ auth=None,
     summary="Register",
     description="Register new user with email and password"
 )
-def register_user(request: HttpRequest, registration_data: RegisterSchema):
+def register_user(request: Request, registration_data: RegisterSchema):
     """Register new user"""
     # Check if user already exists
     if User.objects.filter(email=registration_data.email).exists():

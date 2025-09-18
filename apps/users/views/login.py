@@ -7,7 +7,7 @@ from apps.core.ninja_utils.errors import ItqanError
 from apps.core.ninja_utils.tags import NinjaTag
 from apps.users.models import User
 from ._schemas import LoginSchema, TokenResponseSchema
-from ...core.ninja_utils.request import Request
+from apps.core.ninja_utils.request import Request
 
 router = ItqanRouter(tags=[NinjaTag.AUTH])
 

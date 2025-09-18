@@ -35,7 +35,7 @@ def get_user_profile(request: Request):
     summary="Update user profile",
     description="Update authenticated user's profile information"
 )
-def update_user_profile(request: HttpRequest, profile_data: UserUpdateSchema):
+def update_user_profile(request: Request, profile_data: UserUpdateSchema):
     """Update authenticated user's profile"""
     user = request.auth  # JWT auth provides the user
     

@@ -14,6 +14,7 @@ from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.core.ninja_utils.request import Request
 
 router = ItqanRouter(tags=[NinjaTag.RESOURCES])
 
@@ -91,7 +92,7 @@ class DetailResourceOut(Schema):
 @paginate
 @ordering(ordering_fields=["name", "category", "created_at", "updated_at"])
 @searching(search_fields=["name", "description", "publisher__name"])
-def list_resources(request, filters: ResourceFilter = Query()):
+def list_resources(request: Request, filters: ResourceFilter = Query()):
     resources = Resource.objects.select_related("publisher").all()
     resources = filters.filter(resources)
     return resources
@@ -99,7 +100,7 @@ def list_resources(request, filters: ResourceFilter = Query()):
 
 # POST /content/resources/ - Create a new resource
 @router.post("content/resources/", response=ResourceOut)
-def create_resource(request, data: CreateResourceIn):
+def create_resource(request: Request, data: CreateResourceIn):
     resource = Resource.objects.create(
         name=data.name,
         description=data.description,
@@ -110,7 +111,7 @@ def create_resource(request, data: CreateResourceIn):
 
 
 @router.put("content/resources/{id}/", response=ResourceOut)
-def update_resource(request, id: int, data: UpdateResourceIn):
+def update_resource(request: Request, id: int, data: UpdateResourceIn):
     resource = get_object_or_404(Resource, id=id)
     
     for field, value in data.dict(exclude_unset=True).items():
@@ -121,7 +122,7 @@ def update_resource(request, id: int, data: UpdateResourceIn):
 
 
 @router.patch("content/resources/{id}/", response=ResourceOut)
-def partial_update_resource(request, id: int, data: UpdateResourceIn):
+def partial_update_resource(request: Request, id: int, data: UpdateResourceIn):
     resource = get_object_or_404(Resource, id=id)
     
     for field, value in data.dict(exclude_unset=True).items():
@@ -132,7 +133,7 @@ def partial_update_resource(request, id: int, data: UpdateResourceIn):
 
 
 @router.delete("content/resources/{id}/")
-def delete_resource(request, id: int):
+def delete_resource(request: Request, id: int):
     resource = get_object_or_404(Resource, id=id)
     resource.delete()
     return {"success": True}
@@ -146,7 +147,7 @@ def delete_resource(request, id: int):
         404: NinjaErrorResponse[Literal["not_found"], Literal[None]]
     }
 )
-def publish_resource(request, id: int):
+def publish_resource(request: Request, id: int):
     resource = get_object_or_404(Resource, id=id)
     
     if resource.status == Resource.StatusChoice.READY:
@@ -165,7 +166,7 @@ def publish_resource(request, id: int):
         404: NinjaErrorResponse[Literal["not_found"], Literal[None]]
     }
 )
-def unpublish_resource(request, id: int):
+def unpublish_resource(request: Request, id: int):
     resource = get_object_or_404(Resource, id=id)
     
     if resource.status == Resource.StatusChoice.DRAFT:
@@ -177,6 +178,6 @@ def unpublish_resource(request, id: int):
 
 
 @router.get("content/resources/{id}/", response=DetailResourceOut)
-def detail_resource(request, id: int):
+def detail_resource(request: Request, id: int):
     resource = get_object_or_404(Resource.objects.select_related("publisher"), id=id)
     return resource

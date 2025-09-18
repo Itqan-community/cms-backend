@@ -1,4 +1,3 @@
-from typing import Dict
 from django.http import HttpRequest
 from django.conf import settings
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -9,17 +8,18 @@ from apps.core.ninja_utils.errors import ItqanError
 from apps.core.ninja_utils.tags import NinjaTag
 from apps.users.models import User
 from ._schemas import RefreshTokenSchema
+from apps.core.ninja_utils.request import Request
 
 router = ItqanRouter(tags=[NinjaTag.AUTH])
 
 
 @router.post(
     "auth/token/refresh/",
-    response={200: Dict[str, str]},
+    response={200: dict[str, str]},
     summary="Refresh JWT access token",
     description="Refresh expired JWT access token using refresh token"
 )
-def refresh_token(request: HttpRequest, refresh_data: RefreshTokenSchema):
+def refresh_token(request: Request, refresh_data: RefreshTokenSchema):
     """Refresh JWT access token"""
     try:
         # Use rest_framework_simplejwt to refresh token
