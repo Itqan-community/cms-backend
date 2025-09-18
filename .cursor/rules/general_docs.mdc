@@ -27,3 +27,4 @@ response={
 
 # general
 1- any function you define should be type hinted
+2- All code should be python 3.13 compatible and django 5.2 compatible

@@ -62,7 +62,7 @@ def handle_django_404(request, exc: Http404):
 def handle_ninja_authentication_error(request, exc: AuthenticationError):
     return ninja_api.create_response(
         request,
-        NinjaErrorResponse(error_name="not_found", message=exc.args[0] if exc.args else _("Authentication Error")),
+        NinjaErrorResponse(error_name="authentication_error", message=exc.message or _("Authentication Error")),
         status=401,
     )
 

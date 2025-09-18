@@ -1,39 +1,83 @@
-from __future__ import annotations
-
-import typing
+"""
+Django Allauth adapters for custom user registration and social account handling
+"""
 
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
-from django.conf import settings
+from django.contrib.auth import get_user_model
 
-if typing.TYPE_CHECKING:
-    from allauth.socialaccount.models import SocialLogin
-    from django.http import HttpRequest
-
-    from apps.users.models import User
+User = get_user_model()
 
 
 class AccountAdapter(DefaultAccountAdapter):
-    def is_open_for_signup(self, request: HttpRequest) -> bool:
-        return getattr(settings, "ACCOUNT_ALLOW_REGISTRATION", True)
+    """
+    Custom account adapter for handling user registration
+    """
+    
+    def is_open_for_signup(self, request):
+        """
+        Allow user registration
+        """
+        return True
+    
+    def save_user(self, request, user, form, commit=True):
+        """
+        Save user with custom fields
+        """
+        user = super().save_user(request, user, form, commit=False)
+        
+        # Set additional fields if needed
+        if hasattr(form, 'cleaned_data'):
+            user.name = form.cleaned_data.get('name', '')
+        
+        if commit:
+            user.save()
+        
+        return user
 
 
 class SocialAccountAdapter(DefaultSocialAccountAdapter):
-    def is_open_for_signup(self, request: HttpRequest, sociallogin: SocialLogin) -> bool:
-        return getattr(settings, "ACCOUNT_ALLOW_REGISTRATION", True)
-
-    def populate_user(self, request: HttpRequest, sociallogin: SocialLogin, data: dict[str, typing.Any]) -> User:
+    """
+    Custom social account adapter for handling OAuth2 registration
+    """
+    
+    def is_open_for_signup(self, request, sociallogin):
         """
-        Populates user information from social provider info.
-
-        See: https://docs.allauth.org/en/latest/socialaccount/advanced.html#creating-and-populating-user-instances
+        Allow social account signup
+        """
+        return True
+    
+    def save_user(self, request, sociallogin, form=None):
+        """
+        Save user from social account data
+        """
+        user = sociallogin.user
+        
+        # Extract data from social account
+        if sociallogin.account.provider == 'google':
+            extra_data = sociallogin.account.extra_data
+            user.name = extra_data.get('name', '')
+            
+        elif sociallogin.account.provider == 'github':
+            extra_data = sociallogin.account.extra_data
+            user.name = extra_data.get('name') or extra_data.get('login', '')
+        
+        user.save()
+        return user
+    
+    def populate_user(self, request, sociallogin, data):
+        """
+        Populate user from social account data
         """
         user = super().populate_user(request, sociallogin, data)
-        if not user.name:
-            if name := data.get("name"):
-                user.name = name
-            elif first_name := data.get("first_name"):
-                user.name = first_name
-                if last_name := data.get("last_name"):
-                    user.name += f" {last_name}"
+        
+        # Set additional fields based on provider
+        if sociallogin.account.provider == 'google':
+            extra_data = sociallogin.account.extra_data
+            user.name = extra_data.get('name', '')
+            
+        elif sociallogin.account.provider == 'github':
+            extra_data = sociallogin.account.extra_data
+            user.name = extra_data.get('name') or extra_data.get('login', '')
+        
         return user

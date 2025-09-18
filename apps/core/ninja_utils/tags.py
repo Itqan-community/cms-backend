@@ -6,3 +6,6 @@ class NinjaTag(models.TextChoices):
     ASSETS = "Assets"
     PUBLISHERS = "Publishers"
     RESOURCES = "Resources"
+    AUTH = "Authentication"
+    SOCIAL_AUTH = "Social Authentication"
+
