@@ -36,17 +36,17 @@ Successfully implemented a complete User Signup + Login + Profile authentication
 7. **URL Configuration**: Updated URL patterns to match exact API contract paths
 
 ### Files/Components Affected
-- `src/requirements/base.txt` - Added django-allauth dependency
-- `src/config/settings/base.py` - Added allauth configuration, removed Auth0 settings
-- `src/apps/accounts/models.py` - Enhanced User model with new fields
-- `src/apps/accounts/adapters.py` - New custom allauth adapters
-- `src/apps/accounts/auth_serializers.py` - New authentication serializers
-- `src/apps/accounts/auth_views.py` - New authentication views implementing API contract
-- `src/apps/accounts/urls.py` - Updated URL patterns for exact API paths
-- `src/apps/accounts/admin.py` - Updated admin interface for new User fields
-- `src/config/urls.py` - Added allauth URLs and updated authentication routing
-- `src/apps/api/urls.py` - Removed old Auth0 authentication URLs
-- `src/manage.py` - Updated to use correct settings module
+- `requirements/base.txt` - Added django-allauth dependency
+- `config/settings/base.py` - Added allauth configuration, removed Auth0 settings
+- `apps/accounts/models.py` - Enhanced User model with new fields
+- `apps/accounts/adapters.py` - New custom allauth adapters
+- `apps/accounts/auth_serializers.py` - New authentication serializers
+- `apps/accounts/auth_views.py` - New authentication views implementing API contract
+- `apps/accounts/urls.py` - Updated URL patterns for exact API paths
+- `apps/accounts/admin.py` - Updated admin interface for new User fields
+- `config/urls.py` - Added allauth URLs and updated authentication routing
+- `apps/api/urls.py` - Removed old Auth0 authentication URLs
+- `manage.py` - Updated to use correct settings module
 
 ### Architectural Notes
 - Uses django-allauth for social authentication with custom adapters
@@ -86,9 +86,9 @@ Successfully implemented a complete User Signup + Login + Profile authentication
 6. Configure CORS settings for frontend integration
 
 ## References
-- API Contract: `src/ai-memory-bank/docs/apis-contract/cms-v1-apis-contract-notion-doc.md`
-- OpenAPI Spec: `src/openapi.yaml`
-- Migration files: `src/apps/accounts/migrations/0002_*.py`
+- API Contract: `ai-memory-bank/docs/apis-contract/cms-v1-apis-contract-notion-doc.md`
+- OpenAPI Spec: `openapi.yaml`
+- Migration files: `apps/accounts/migrations/0002_*.py`
 
 ## API Endpoints Implemented
 

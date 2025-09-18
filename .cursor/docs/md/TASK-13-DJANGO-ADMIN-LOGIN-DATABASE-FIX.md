@@ -46,7 +46,7 @@ Updated allauth configuration to clarify its role:
 ```
 
 ### Key Changes
-- **File Modified**: `src/config/settings/base.py`
+- **File Modified**: `config/settings/base.py`
 - **Logic Added**: Conditional authentication backend configuration
 - **Documentation**: Added explanatory comments about the conditional logic
 

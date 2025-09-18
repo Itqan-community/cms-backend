@@ -70,19 +70,19 @@ urlpatterns = [
 #### 3.1 Analyze Before Removing
 ```bash
 # Verify no unique code in duplicate directories
-find src/core/ -name "*.py" -exec grep -l "class\|def\|import" {} \;
-find src/itqan_cms/ -name "*.py" -exec grep -l "class\|def\|import" {} \;
+find core/ -name "*.py" -exec grep -l "class\|def\|import" {} \;
+find itqan_cms/ -name "*.py" -exec grep -l "class\|def\|import" {} \;
 
 # Check for any imports
-grep -r "from core\." src/ --exclude-dir=apps
-grep -r "from itqan_cms" src/
+grep -r "from core\." / --exclude-dir=apps
+grep -r "from itqan_cms" /
 ```
 
 #### 3.2 Safe Removal Process
 ```bash
 # Move rather than delete initially
-mv src/core/ src/core.backup/
-mv src/itqan_cms/ src/itqan_cms.backup/
+mv core/ core.backup/
+mv itqan_cms/ itqan_cms.backup/
 
 # Test everything still works
 python manage.py test

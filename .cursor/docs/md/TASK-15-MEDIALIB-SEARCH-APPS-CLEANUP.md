@@ -15,22 +15,22 @@ Successfully removed the `medialib` and `search` apps from the Django codebase t
 
 ## Implementation Details
 - **Apps removed**: `apps.medialib` and `apps.search` directories and all contents
-- **Settings updated**: Removed from `INSTALLED_APPS` in `src/config/settings/base.py`
-- **URL patterns cleaned**: Removed references from `src/config/urls.py` and `src/apps/api/urls.py`
-- **Celery tasks removed**: Search-related periodic tasks removed from `src/config/celery.py`
-- **Admin cleanup updated**: Removed from `CUSTOM_APPS` in `src/config/admin_cleanup.py`
+- **Settings updated**: Removed from `INSTALLED_APPS` in `config/settings/base.py`
+- **URL patterns cleaned**: Removed references from `config/urls.py` and `apps/api/urls.py`
+- **Celery tasks removed**: Search-related periodic tasks removed from `config/celery.py`
+- **Admin cleanup updated**: Removed from `CUSTOM_APPS` in `config/admin_cleanup.py`
 - **Migrations**: Both app migration files removed with directory deletion
 
 ### Files Modified
-- `src/config/settings/base.py` - Removed apps from LOCAL_APPS
-- `src/config/urls.py` - Removed medialib URL include
-- `src/apps/api/urls.py` - Removed medialib imports and search URL include
-- `src/config/admin_cleanup.py` - Removed from CUSTOM_APPS list
-- `src/config/celery.py` - Removed search-related Celery beat schedule tasks
+- `config/settings/base.py` - Removed apps from LOCAL_APPS
+- `config/urls.py` - Removed medialib URL include
+- `apps/api/urls.py` - Removed medialib imports and search URL include
+- `config/admin_cleanup.py` - Removed from CUSTOM_APPS list
+- `config/celery.py` - Removed search-related Celery beat schedule tasks
 
 ### Files Deleted
-- `src/apps/medialib/` - Complete directory and contents
-- `src/apps/search/` - Complete directory and contents
+- `apps/medialib/` - Complete directory and contents
+- `apps/search/` - Complete directory and contents
 
 ## Testing Results
 | Test | Method | Outcome |
@@ -60,5 +60,5 @@ Successfully removed the `medialib` and `search` apps from the Django codebase t
 
 ## References
 - Related task: V1 scope simplification
-- Apps were not referenced in current OpenAPI specification (`src/openapi.yaml`)
+- Apps were not referenced in current OpenAPI specification (`openapi.yaml`)
 - Default Django search capabilities sufficient for current V1 requirements

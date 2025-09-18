@@ -23,7 +23,7 @@ The GitHub OAuth login was failing because:
 ### Changes Made
 
 #### 1. Updated Development Settings
-- **File**: `src/config/settings/development.py`
+- **File**: `config/settings/development.py`
 - **Added**: OAuth provider configuration with correct Client ID
 - **Configured**: Fallback to hardcoded Client ID if environment variable not set
 

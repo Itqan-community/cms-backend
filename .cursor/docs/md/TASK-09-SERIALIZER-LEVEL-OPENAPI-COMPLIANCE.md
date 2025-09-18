@@ -203,8 +203,8 @@ def get_asset_detail(request, asset_id):
 
 - **Implementation files**: `apps/content/serializers.py`, `apps/accounts/serializers.py`
 - **Model files**: `apps/content/models.py`, `apps/accounts/models.py`
-- **OpenAPI specification**: `src/openapi.yaml`
-- **ERD design**: `src/ai-memory-bank/docs/db-design/db_design_v1.drawio`
+- **OpenAPI specification**: `openapi.yaml`
+- **ERD design**: `ai-memory-bank/docs/db-design/db_design_v1.drawio`
 
 ---
 

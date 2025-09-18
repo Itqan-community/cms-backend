@@ -15,11 +15,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-COPY src/requirements/ /tmp/requirements/
+COPY requirements/ /tmp/requirements/
 RUN pip install --no-cache-dir -r /tmp/requirements/production.txt
 
 # Copy application code
-COPY src/ /app/
+COPY / /app/
 
 # Copy and set up entrypoint
 COPY deployment/docker/entrypoint.sh /entrypoint.sh

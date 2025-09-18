@@ -21,15 +21,15 @@ This document outlines a comprehensive approach to modernize the Itqan CMS Djang
 #### 1.1 Remove Duplicate Directories
 ```bash
 # Remove these duplicate/legacy directories:
-src/core/                    # Duplicate of apps/core/
-src/itqan_cms/              # Old project structure
-src/developers/             # Appears unused
-src/publishers/             # If empty, integrate into content app
-src/resources/              # If empty, integrate into content app
+core/                    # Duplicate of apps/core/
+itqan_cms/              # Old project structure
+developers/             # Appears unused
+publishers/             # If empty, integrate into content app
+resources/              # If empty, integrate into content app
 ```
 
 #### 1.2 Consolidate Project Configuration
-- Keep `src/config/` as the main project configuration
+- Keep `config/` as the main project configuration
 - Remove any references to the old `itqan_cms` module
 - Update all import statements to use `config.*`
 
@@ -165,7 +165,7 @@ else:
 
 #### 5.1 Create Shared Libraries
 ```
-src/libs/
+libs/
 ├── __init__.py
 ├── auth/                  # Authentication utilities
 ├── storage/              # Storage backends
@@ -254,4 +254,4 @@ docs/
 - [Django 5.2 Official Tutorial](https://docs.djangoproject.com/en/5.2/intro/tutorial01/)
 - [Django Unleashed Guide](https://medium.com/django-unleashed/django-project-structure-a-comprehensive-guide-4b2ddbf2b6b8)
 - Related task JSON: `ai-memory-bank/tasks/DJANGO-01.json`
-- Project rules: `src/.cursor/rules/cms-v1.mdc`
+- Project rules: `.cursor/rules/cms-v1.mdc`

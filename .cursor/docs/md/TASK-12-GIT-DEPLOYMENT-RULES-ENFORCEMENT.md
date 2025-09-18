@@ -35,7 +35,7 @@ Implemented strict Git deployment rules to enforce proper branch flow: main can 
 - **Enforcement**: Linear history, no force pushes, administrator compliance
 
 ### Documentation Updates
-- **File Modified**: `src/.cursor/rules/cms-v1.mdc`
+- **File Modified**: `.cursor/rules/cms-v1.mdc`
 - **Updates**: Deployment Rules section with enforcement indicators
 - **Process Clarification**: Updated development process to reflect PR-only flow
 
@@ -72,7 +72,7 @@ Implemented strict Git deployment rules to enforce proper branch flow: main can 
 ## References
 - Configuration file: `.github/branch-protection-rules.md`
 - Workflow file: `.github/workflows/deploy.yml`
-- Updated rules: `src/.cursor/rules/cms-v1.mdc`
+- Updated rules: `.cursor/rules/cms-v1.mdc`
 - Related task JSON: `ai-memory-bank/tasks/TASK-12.json`
 
 ## Implementation Notes
