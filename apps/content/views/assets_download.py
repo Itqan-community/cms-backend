@@ -16,7 +16,7 @@ router = ItqanRouter(tags=[NinjaTag.ASSETS])
 
 
 @router.get(
-    "content/assets/{id}/download/",
+    "assets/{id}/download/",
     response={
         403: NinjaErrorResponse[Literal["permission_denied"], Literal[None]],
         404: NinjaErrorResponse[Literal["not_found"], Literal[None]]

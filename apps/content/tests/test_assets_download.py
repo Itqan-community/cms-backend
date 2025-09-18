@@ -47,7 +47,7 @@ class AssetDownloadTest(BaseTestCase):
 
         # Act
         self.authenticate_user(self.user)
-        response = self.client.get(f"/content/assets/{self.asset.id}/download/")
+        response = self.client.get(f"/assets/{self.asset.id}/download/")
 
         # Assert
         self.assertEqual(403, response.status_code, response.content)
@@ -55,7 +55,7 @@ class AssetDownloadTest(BaseTestCase):
 
     def test_download_asset_without_authentication_should_return_401(self):
         # Act (without authentication)
-        response = self.client.get(f"/content/assets/{self.asset.id}/download/")
+        response = self.client.get(f"/assets/{self.asset.id}/download/")
 
         # Assert
         self.assertEqual(401, response.status_code, response.content)
@@ -66,7 +66,7 @@ class AssetDownloadTest(BaseTestCase):
 
         # Act
         self.authenticate_user(self.user)
-        response = self.client.get(f"/content/assets/{non_existent_asset_id}/download/")
+        response = self.client.get(f"/assets/{non_existent_asset_id}/download/")
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
@@ -79,7 +79,7 @@ class AssetDownloadTest(BaseTestCase):
 
         # Act
         self.authenticate_user(self.user)
-        response = self.client.get(f"/content/assets/{self.asset.id}/download/")
+        response = self.client.get(f"/assets/{self.asset.id}/download/")
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
@@ -92,7 +92,7 @@ class AssetDownloadTest(BaseTestCase):
 
         # Act
         self.authenticate_user(self.user)
-        response = self.client.get(f"/content/assets/{self.asset.id}/download/")
+        response = self.client.get(f"/assets/{self.asset.id}/download/")
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
@@ -110,7 +110,7 @@ class AssetDownloadTest(BaseTestCase):
 
         # Act
         self.authenticate_user(self.user)
-        response = self.client.get(f"/content/assets/{self.asset.id}/download/")
+        response = self.client.get(f"/assets/{self.asset.id}/download/")
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
@@ -133,7 +133,7 @@ class AssetDownloadTest(BaseTestCase):
 
         # Act
         self.authenticate_user(self.user)
-        response = self.client.get(f"/content/assets/{self.asset.id}/download/")
+        response = self.client.get(f"/assets/{self.asset.id}/download/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -157,7 +157,7 @@ class AssetDownloadTest(BaseTestCase):
 
         # Act
         self.authenticate_user(self.user)
-        response = self.client.get(f"/content/assets/{self.asset.id}/download/")
+        response = self.client.get(f"/assets/{self.asset.id}/download/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -187,7 +187,7 @@ class AssetDownloadTest(BaseTestCase):
 
         # Act
         self.authenticate_user(self.user)
-        response = self.client.get(f"/content/assets/{self.asset.id}/download/")
+        response = self.client.get(f"/assets/{self.asset.id}/download/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -206,7 +206,7 @@ class AssetDownloadTest(BaseTestCase):
             with self.subTest(invalid_format=invalid_format):
                 # Act
                 self.authenticate_user(self.user)
-                response = self.client.get(f"/content/assets/{invalid_format}/download/")
+                response = self.client.get(f"/assets/{invalid_format}/download/")
 
                 # Assert
                 self.assertEqual(

@@ -37,7 +37,7 @@ class AccessRequestResponseOut(Schema):
     access: AccessGrantOut | None
 
 
-@router.post("content/assets/{asset_id}/request-access/", response=AccessRequestResponseOut)
+@router.post("assets/{asset_id}/request-access/", response=AccessRequestResponseOut)
 def request_asset_access(request: Request, asset_id: int, data: RequestAccessIn):
     """Request access to an asset (V1: auto-approval)"""
     asset = get_object_or_404(Asset, id=asset_id)
@@ -77,7 +77,7 @@ class AssetAccessStatusOut(Schema):
     requires_approval: bool
 
 
-@router.get("content/assets/{asset_id}/access-status/", response=AssetAccessStatusOut)
+@router.get("assets/{asset_id}/access-status/", response=AssetAccessStatusOut)
 def asset_access_status(request: Request, asset_id: int):
     """Get asset access status for the authenticated user"""
     asset = get_object_or_404(Asset, id=asset_id)

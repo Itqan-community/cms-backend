@@ -84,7 +84,7 @@ class DetailResourceOut(Schema):
     updated_at: AwareDatetime
 
 
-@router.get("content/resources/", response=list[ListResourceOut])
+@router.get("resources/", response=list[ListResourceOut])
 @paginate
 @ordering(ordering_fields=["name", "category", "created_at", "updated_at"])
 @searching(search_fields=["name", "description", "publisher__name"])
@@ -94,7 +94,7 @@ def list_resources(request: Request, filters: ResourceFilter = Query()):
     return resources
 
 
-@router.post("content/resources/", response=ResourceOut)
+@router.post("resources/", response=ResourceOut)
 def create_resource(request: Request, data: CreateResourceIn):
     resource = Resource.objects.create(
         name=data.name,
@@ -105,7 +105,7 @@ def create_resource(request: Request, data: CreateResourceIn):
     return resource
 
 
-@router.put("content/resources/{id}/", response=ResourceOut)
+@router.put("resources/{id}/", response=ResourceOut)
 def update_resource(request: Request, id: int, data: UpdateResourceIn):
     resource = get_object_or_404(Resource, id=id)
     
@@ -116,7 +116,7 @@ def update_resource(request: Request, id: int, data: UpdateResourceIn):
     return resource
 
 
-@router.patch("content/resources/{id}/", response=ResourceOut)
+@router.patch("resources/{id}/", response=ResourceOut)
 def partial_update_resource(request: Request, id: int, data: UpdateResourceIn):
     resource = get_object_or_404(Resource, id=id)
     
@@ -127,7 +127,7 @@ def partial_update_resource(request: Request, id: int, data: UpdateResourceIn):
     return resource
 
 
-@router.delete("content/resources/{id}/", response=OkSchema)
+@router.delete("resources/{id}/", response=OkSchema)
 def delete_resource(request: Request, id: int):
     resource = get_object_or_404(Resource, id=id)
     resource.delete()
@@ -135,7 +135,7 @@ def delete_resource(request: Request, id: int):
 
 
 
-@router.get("content/resources/{id}/", response=DetailResourceOut)
+@router.get("resources/{id}/", response=DetailResourceOut)
 def detail_resource(request: Request, id: int):
     resource = get_object_or_404(Resource.objects.select_related("publisher"), id=id)
     return resource

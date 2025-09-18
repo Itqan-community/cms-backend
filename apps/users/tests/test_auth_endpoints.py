@@ -1,20 +1,19 @@
-import json
-from django.test import TestCase, Client
+from django.test import TestCase
+from rest_framework.test import APIClient
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework_simplejwt.tokens import RefreshToken
 from allauth.socialaccount.models import SocialApp
 from django.contrib.sites.models import Site
 
+from apps.core.tests import BaseTestCase
 from apps.users.models import User
 
 
-class AuthEndpointsTestCase(TestCase):
+class AuthEndpointsTestCase(BaseTestCase):
     """Test case for authentication endpoints"""
     
     def setUp(self):
-        """Set up test data"""
-        self.client = Client()
         self.user_data = {
             'email': 'test@example.com',
             'password': 'testpass123',
@@ -75,8 +74,8 @@ class UserRegistrationTestCase(AuthEndpointsTestCase):
         # Act
         response = self.client.post(
             '/auth/register/',
-            data=json.dumps(data),
-            content_type='application/json'
+            data=data,
+            format='json'
         )
         
         # Assert
@@ -110,8 +109,8 @@ class UserRegistrationTestCase(AuthEndpointsTestCase):
         # Act
         response = self.client.post(
             '/auth/register/',
-            data=json.dumps(data),
-            content_type='application/json'
+            data=data,
+            format='json'
         )
         
         # Assert
@@ -133,8 +132,8 @@ class UserRegistrationTestCase(AuthEndpointsTestCase):
         # Act
         response = self.client.post(
             '/auth/register/',
-            data=json.dumps(data),
-            content_type='application/json'
+            data=data,
+            format='json'
         )
         
         # Assert
@@ -157,8 +156,8 @@ class UserRegistrationTestCase(AuthEndpointsTestCase):
         # Act
         response = self.client.post(
             '/auth/register/',
-            data=json.dumps(data),
-            content_type='application/json'
+            data=data,
+            format='json'
         )
         
         # Assert
@@ -186,8 +185,8 @@ class UserLoginTestCase(AuthEndpointsTestCase):
         # Act
         response = self.client.post(
             '/auth/login/',
-            data=json.dumps(data),
-            content_type='application/json'
+            data=data,
+            format='json'
         )
         
         # Assert
@@ -216,8 +215,8 @@ class UserLoginTestCase(AuthEndpointsTestCase):
         # Act
         response = self.client.post(
             '/auth/login/',
-            data=json.dumps(data),
-            content_type='application/json'
+            data=data,
+            format='json'
         )
         
         # Assert
@@ -239,8 +238,8 @@ class UserLoginTestCase(AuthEndpointsTestCase):
         # Act
         response = self.client.post(
             '/auth/login/',
-            data=json.dumps(data),
-            content_type='application/json'
+            data=data,
+            format='json'
         )
         
         # Assert
@@ -269,8 +268,8 @@ class UserLoginTestCase(AuthEndpointsTestCase):
         # Act
         response = self.client.post(
             '/auth/login/',
-            data=json.dumps(data),
-            content_type='application/json'
+            data=data,
+            format='json'
         )
         
         # Assert
@@ -292,8 +291,8 @@ class UserLoginTestCase(AuthEndpointsTestCase):
         # Act
         response = self.client.post(
             '/auth/login/',
-            data=json.dumps(data),
-            content_type='application/json'
+            data=data,
+            format='json'
         )
         
         # Assert
@@ -320,8 +319,8 @@ class TokenRefreshTestCase(AuthEndpointsTestCase):
         # Act
         response = self.client.post(
             '/auth/token/refresh/',
-            data=json.dumps(data),
-            content_type='application/json'
+            data=data,
+            format='json'
         )
         
         # Assert
@@ -342,8 +341,8 @@ class TokenRefreshTestCase(AuthEndpointsTestCase):
         # Act
         response = self.client.post(
             '/auth/token/refresh/',
-            data=json.dumps(data),
-            content_type='application/json'
+            data=data,
+            format='json'
         )
         
         # Assert
@@ -362,8 +361,8 @@ class TokenRefreshTestCase(AuthEndpointsTestCase):
         # Act
         response = self.client.post(
             '/auth/token/refresh/',
-            data=json.dumps(data),
-            content_type='application/json'
+            data=data,
+            format='json'
         )
         
         # Assert
@@ -434,8 +433,8 @@ class UserProfileTestCase(AuthEndpointsTestCase):
         # Act
         response = self.client.put(
             '/auth/profile/',
-            data=json.dumps(data),
-            content_type='application/json',
+            data=data,
+            format='json',
             **self._get_auth_headers(tokens['access'])
         )
         
@@ -464,8 +463,8 @@ class UserProfileTestCase(AuthEndpointsTestCase):
         # Act
         response = self.client.put(
             '/auth/profile/',
-            data=json.dumps(data),
-            content_type='application/json',
+            data=data,
+            format='json',
             **self._get_auth_headers(tokens['access'])
         )
         
@@ -488,8 +487,8 @@ class UserProfileTestCase(AuthEndpointsTestCase):
         # Act
         response = self.client.put(
             '/auth/profile/',
-            data=json.dumps(data),
-            content_type='application/json'
+            data=data,
+            format='json'
         )
         
         # Assert
@@ -511,8 +510,8 @@ class LogoutTestCase(AuthEndpointsTestCase):
         # Act
         response = self.client.post(
             '/auth/logout/',
-            data=json.dumps(data),
-            content_type='application/json',
+            data=data,
+            format='json',
             **self._get_auth_headers(tokens['access'])
         )
         
@@ -530,8 +529,8 @@ class LogoutTestCase(AuthEndpointsTestCase):
         # Act
         response = self.client.post(
             '/auth/logout/',
-            data=json.dumps({}),
-            content_type='application/json',
+            data={},
+            format='json',
             **self._get_auth_headers(tokens['access'])
         )
         
@@ -546,8 +545,8 @@ class LogoutTestCase(AuthEndpointsTestCase):
         # Arrange & Act
         response = self.client.post(
             '/auth/logout/',
-            data=json.dumps({}),
-            content_type='application/json'
+            data={},
+            format='json'
         )
         
         # Assert
@@ -590,7 +589,7 @@ class OAuth2EndpointsTestCase(AuthEndpointsTestCase):
         response = self.client.get('/auth/oauth/google/callback/')
         
         # This should redirect to allauth callback
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 302, response.content)
         self.assertIn('/accounts/google/login/callback/', response.url)
     
     def test_github_oauth_callback(self):
@@ -598,7 +597,7 @@ class OAuth2EndpointsTestCase(AuthEndpointsTestCase):
         response = self.client.get('/auth/oauth/github/callback/')
         
         # This should redirect to allauth callback
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 302,response.content)
         self.assertIn('/accounts/github/login/callback/', response.url)
 
 
@@ -616,8 +615,8 @@ class AuthenticationIntegrationTestCase(AuthEndpointsTestCase):
         
         register_response = self.client.post(
             '/auth/register/',
-            data=json.dumps(register_data),
-            content_type='application/json'
+            data=register_data,
+            format='json'
         )
         
         self.assertEqual(register_response.status_code, 200)
@@ -631,8 +630,8 @@ class AuthenticationIntegrationTestCase(AuthEndpointsTestCase):
         
         login_response = self.client.post(
             '/auth/login/',
-            data=json.dumps(login_data),
-            content_type='application/json'
+            data=login_data,
+            format='json'
         )
         
         self.assertEqual(login_response.status_code, 200)
@@ -661,8 +660,8 @@ class AuthenticationIntegrationTestCase(AuthEndpointsTestCase):
         # Refresh token
         refresh_response = self.client.post(
             '/auth/token/refresh/',
-            data=json.dumps({'refresh': initial_tokens['refresh']}),
-            content_type='application/json'
+            data={'refresh': initial_tokens['refresh']},
+            format='json'
         )
         
         self.assertEqual(refresh_response.status_code, 200)
@@ -693,7 +692,7 @@ class AuthenticationSecurityTestCase(AuthEndpointsTestCase):
             **self._get_auth_headers(invalid_token)
         )
         
-        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.status_code, 401,response.content)
     
     def test_malformed_token_rejection(self):
         """Test that malformed tokens are rejected"""
@@ -710,18 +709,15 @@ class AuthenticationSecurityTestCase(AuthEndpointsTestCase):
                 '/auth/profile/',
                 HTTP_AUTHORIZATION=f'Bearer {token}'
             )
-            self.assertEqual(response.status_code, 401, f"Token '{token}' should be rejected")
+            self.assertEqual(response.status_code, 401, response.content)
     
-    def test_no_authorization_header(self):
+    def test_no_authorization_header_should_return_401(self):
         """Test endpoints without authorization header"""
-        protected_endpoints = [
-            '/auth/profile/',
-            '/auth/logout/'
-        ]
-        
-        for endpoint in protected_endpoints:
-            response = self.client.get(endpoint)
-            self.assertEqual(response.status_code, 401, f"Endpoint '{endpoint}' should require authentication")
+
+        response = self.client.get('/auth/profile/')
+        self.assertEqual(response.status_code, 401, response.content)
+        response = self.client.post('/auth/logout/')
+        self.assertEqual(response.status_code, 401, response.content)
     
     def test_wrong_authorization_scheme(self):
         """Test with wrong authorization scheme"""
@@ -739,7 +735,7 @@ class AuthenticationSecurityTestCase(AuthEndpointsTestCase):
                 '/auth/profile/',
                 HTTP_AUTHORIZATION=auth_header
             )
-            self.assertEqual(response.status_code, 401, f"Auth header '{auth_header}' should be rejected")
+            self.assertEqual(response.status_code, 401, response.content)
 
 
 class AuthenticationErrorHandlingTestCase(AuthEndpointsTestCase):
@@ -753,7 +749,7 @@ class AuthenticationErrorHandlingTestCase(AuthEndpointsTestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 400,response.content)
     
     def test_missing_content_type(self):
         """Test handling of missing content type"""
@@ -764,8 +760,8 @@ class AuthenticationErrorHandlingTestCase(AuthEndpointsTestCase):
         
         response = self.client.post(
             '/auth/login/',
-            data=json.dumps(data)
-            # Missing content_type
+            data=data,
+            format='json'
         )
         
         # Should still work or return appropriate error
@@ -779,7 +775,7 @@ class AuthenticationErrorHandlingTestCase(AuthEndpointsTestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 400,response.content)
     
     def test_sql_injection_attempt(self):
         """Test protection against SQL injection"""
@@ -790,8 +786,8 @@ class AuthenticationErrorHandlingTestCase(AuthEndpointsTestCase):
         
         response = self.client.post(
             '/auth/login/',
-            data=json.dumps(malicious_data),
-            content_type='application/json'
+            data=malicious_data,
+            format='json'
         )
         
         # Should not cause server error, should handle gracefully

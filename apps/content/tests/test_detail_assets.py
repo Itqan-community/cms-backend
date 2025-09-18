@@ -21,7 +21,7 @@ class DetailAssetTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get(f"/content/assets/{asset.id}/", format="json")
+        response = self.client.get(f"/assets/{asset.id}/", format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -50,7 +50,7 @@ class DetailAssetTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get(f"/content/assets/{asset.id}/", format="json")
+        response = self.client.get(f"/assets/{asset.id}/", format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -108,7 +108,7 @@ class DetailAssetTest(BaseTestCase):
             ("mushaf", "thumbs/mushaf.png", assets[2]),
         ]:
             with self.subTest(asset=target.name):
-                response = self.client.get(f"/content/assets/{target.id}/", format="json")
+                response = self.client.get(f"/assets/{target.id}/", format="json")
                 self.assertEqual(200, response.status_code, response.content)
                 body = response.json()
                 self.assertEqual(expected_category, body["category"])
@@ -128,7 +128,7 @@ class DetailAssetTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get(f"/content/assets/{asset.id}/", format="json")
+        response = self.client.get(f"/assets/{asset.id}/", format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -152,7 +152,7 @@ class DetailAssetTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get(f"/content/assets/{asset.id}/", format="json")
+        response = self.client.get(f"/assets/{asset.id}/", format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -173,7 +173,7 @@ class DetailAssetTest(BaseTestCase):
         for invalid_format in invalid_formats:
             with self.subTest(invalid_format=invalid_format):
                 # Act
-                response = self.client.get(f"/content/assets/{invalid_format}/", format="json")
+                response = self.client.get(f"/assets/{invalid_format}/", format="json")
 
                 # Assert - Invalid formats result in 400 validation error
                 self.assertEqual(
@@ -187,7 +187,7 @@ class DetailAssetTest(BaseTestCase):
         empty_path = ""
 
         # Act
-        response = self.client.get(f"/content/assets/{empty_path}/", format="json")
+        response = self.client.get(f"/assets/{empty_path}/", format="json")
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)

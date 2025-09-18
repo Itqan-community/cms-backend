@@ -37,7 +37,7 @@ class DownloadResourceTest(BaseTestCase):
                 )
 
                 # Act
-                response = self.client.get(f"/content/resources/{resource.id}/download/", format="json")
+                response = self.client.get(f"/resources/{resource.id}/download/", format="json")
 
                 # Assert
                 self.assertEqual(200, response.status_code, getattr(response, "content", b""))
@@ -75,7 +75,7 @@ class DownloadResourceTest(BaseTestCase):
                 )
 
                 # Act
-                response = self.client.get(f"/content/resources/{resource.id}/download/", format="json")
+                response = self.client.get(f"/resources/{resource.id}/download/", format="json")
 
                 # Assert
                 self.assertEqual(200, response.status_code, getattr(response, "content", b""))
@@ -89,7 +89,7 @@ class DownloadResourceTest(BaseTestCase):
         resource = baker.make(Resource)
 
         # Act
-        response = self.client.get(f"/content/resources/{resource.id}/download/", format="json")
+        response = self.client.get(f"/resources/{resource.id}/download/", format="json")
 
         # Assert
         self.assertEqual(404, response.status_code, getattr(response, "content", b""))
@@ -116,7 +116,7 @@ class DownloadResourceTest(BaseTestCase):
                     file_path.unlink()
 
                 # Act
-                response = self.client.get(f"/content/resources/{resource.id}/download/", format="json")
+                response = self.client.get(f"/resources/{resource.id}/download/", format="json")
 
                 # Assert
                 self.assertEqual(404, response.status_code, getattr(response, "content", b""))
@@ -127,7 +127,7 @@ class DownloadResourceTest(BaseTestCase):
         non_existent_id = 99999
 
         # Act
-        response = self.client.get(f"/content/resources/{non_existent_id}/download/", format="json")
+        response = self.client.get(f"/resources/{non_existent_id}/download/", format="json")
 
         # Assert
         self.assertEqual(404, response.status_code, getattr(response, "content", b""))
@@ -138,7 +138,7 @@ class DownloadResourceTest(BaseTestCase):
         resource = baker.make(Resource, is_active=False)
 
         # Act
-        response = self.client.get(f"/content/resources/{resource.id}/download/", format="json")
+        response = self.client.get(f"/resources/{resource.id}/download/", format="json")
 
         # Assert
         self.assertEqual(404, response.status_code, getattr(response, "content", b""))
@@ -162,7 +162,7 @@ class DownloadResourceTest(BaseTestCase):
                 )
 
                 # Act
-                response = self.client.get(f"/content/resources/{resource.id}/download/", format="json")
+                response = self.client.get(f"/resources/{resource.id}/download/", format="json")
 
                 # Assert
                 self.assertEqual(404, response.status_code, getattr(response, "content", b""))
@@ -188,7 +188,7 @@ class DownloadResourceTest(BaseTestCase):
                 version.save(update_fields=["storage_url"])
 
                 # Act
-                response = self.client.get(f"/content/resources/{resource.id}/download/", format="json")
+                response = self.client.get(f"/resources/{resource.id}/download/", format="json")
 
                 # Assert
                 self.assertEqual(404, response.status_code, getattr(response, "content", b""))

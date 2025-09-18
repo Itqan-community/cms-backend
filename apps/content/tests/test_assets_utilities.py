@@ -25,7 +25,7 @@ class AssetUtilitiesTest(BaseTestCase):
 
     def test_asset_access_status_without_authentication_should_return_no_access(self):
         # Act (without authentication)
-        response = self.client.get(f"/content/assets/{self.asset.id}/access-status/")
+        response = self.client.get(f"/assets/{self.asset.id}/access-status/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -41,7 +41,7 @@ class AssetUtilitiesTest(BaseTestCase):
 
         # Act
         self.authenticate_user(self.user)
-        response = self.client.get(f"/content/assets/{self.asset.id}/access-status/")
+        response = self.client.get(f"/assets/{self.asset.id}/access-status/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -58,7 +58,7 @@ class AssetUtilitiesTest(BaseTestCase):
 
         # Act
         self.authenticate_user(self.user)
-        response = self.client.get(f"/content/assets/{self.asset.id}/access-status/")
+        response = self.client.get(f"/assets/{self.asset.id}/access-status/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -66,7 +66,7 @@ class AssetUtilitiesTest(BaseTestCase):
         
         self.assertTrue(body["has_access"])
         self.assertFalse(body["requires_approval"])  # V1: Auto-approval
-        self.assertEqual(f"/content/assets/{self.asset.id}/download/", body["download_url"])
+        self.assertEqual(f"/assets/{self.asset.id}/download/", body["download_url"])
         mock_user_has_access.assert_called_once_with(self.user, self.asset)
 
     def test_asset_access_status_with_non_existent_asset_should_return_404(self):
@@ -75,14 +75,14 @@ class AssetUtilitiesTest(BaseTestCase):
 
         # Act
         self.authenticate_user(self.user)
-        response = self.client.get(f"/content/assets/{non_existent_asset_id}/access-status/")
+        response = self.client.get(f"/assets/{non_existent_asset_id}/access-status/")
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
 
     def test_asset_access_status_should_include_all_required_fields(self):
         # Act
-        response = self.client.get(f"/content/assets/{self.asset.id}/access-status/")
+        response = self.client.get(f"/assets/{self.asset.id}/access-status/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -95,7 +95,7 @@ class AssetUtilitiesTest(BaseTestCase):
     def test_asset_access_status_field_types_should_match_expected_schema(self):
         # Act
         self.authenticate_user(self.user)
-        response = self.client.get(f"/content/assets/{self.asset.id}/access-status/")
+        response = self.client.get(f"/assets/{self.asset.id}/access-status/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -119,7 +119,7 @@ class AssetUtilitiesTest(BaseTestCase):
 
         # Act & Assert for user with access
         self.authenticate_user(user_with_access)
-        response = self.client.get(f"/content/assets/{self.asset.id}/access-status/")
+        response = self.client.get(f"/assets/{self.asset.id}/access-status/")
         
         self.assertEqual(200, response.status_code)
         body = response.json()
@@ -128,7 +128,7 @@ class AssetUtilitiesTest(BaseTestCase):
 
         # Act & Assert for user without access
         self.authenticate_user(user_without_access)
-        response = self.client.get(f"/content/assets/{self.asset.id}/access-status/")
+        response = self.client.get(f"/assets/{self.asset.id}/access-status/")
         
         self.assertEqual(200, response.status_code)
         body = response.json()
@@ -149,7 +149,7 @@ class AssetUtilitiesTest(BaseTestCase):
                 else:
                     self.client.logout()
                 
-                response = self.client.get(f"/content/assets/{self.asset.id}/access-status/")
+                response = self.client.get(f"/assets/{self.asset.id}/access-status/")
 
                 # Assert
                 self.assertEqual(200, response.status_code, response.content)
@@ -170,7 +170,7 @@ class AssetUtilitiesTest(BaseTestCase):
             with self.subTest(invalid_format=invalid_format):
                 # Act
                 self.authenticate_user(self.user)
-                response = self.client.get(f"/content/assets/{invalid_format}/access-status/")
+                response = self.client.get(f"/assets/{invalid_format}/access-status/")
 
                 # Assert
                 self.assertEqual(

@@ -27,7 +27,7 @@ class DetailAssetOut(Schema):
     license: str
 
 
-@router.get("content/assets/{id}/", response=DetailAssetOut, auth=None)
+@router.get("assets/{id}/", response=DetailAssetOut, auth=None)
 def detail_assets(request: Request, id: int):
     asset = get_object_or_404(Asset, id=id)
     return asset

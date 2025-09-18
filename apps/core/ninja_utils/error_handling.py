@@ -4,12 +4,14 @@ from json import JSONDecodeError
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import Http404
+from django.utils.encoding import force_str
 from django.utils.translation import gettext as _
 from ninja.errors import AuthenticationError
 from ninja.errors import HttpError
 from ninja.errors import ValidationError as NinjaValidationError
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.serializers import as_serializer_error
+from rest_framework_simplejwt.exceptions import InvalidToken, AuthenticationFailed
 
 from apps.core.ninja_utils.errors import ItqanError
 from apps.core.ninja_utils.errors import NinjaErrorResponse
@@ -66,7 +68,21 @@ def handle_ninja_authentication_error(request, exc: AuthenticationError):
         status=401,
     )
 
+@ninja_api.exception_handler(InvalidToken)
+def handle_ninja_authentication_error(request, exc: InvalidToken):
+    return ninja_api.create_response(
+        request,
+        NinjaErrorResponse(error_name="token_not_valid", message=force_str(exc.default_detail)),
+        status=401,
+    )
 
+@ninja_api.exception_handler(AuthenticationFailed)
+def handle_ninja_authentication_error(request, exc: AuthenticationFailed):
+    return ninja_api.create_response(
+        request,
+        NinjaErrorResponse(error_name="token_not_valid", message=force_str(exc.default_detail)),
+        status=401,
+    )
 @ninja_api.exception_handler(HttpError)
 def handle_ninja_http_error(request, exc: HttpError):
     # ninja throws HttpError with `__cause__`

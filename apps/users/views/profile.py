@@ -34,7 +34,7 @@ def get_user_profile(request: Request):
 )
 def update_user_profile(request: Request, profile_data: UserUpdateSchema):
     """Update authenticated user's profile"""
-    user = request.auth  # JWT auth provides the user
+    user = request.user
     
     # Update allowed fields
     if profile_data.name is not None:

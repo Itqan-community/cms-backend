@@ -10,10 +10,10 @@ from allauth.socialaccount.providers.google.provider import GoogleProvider
 from allauth.socialaccount.providers.github.provider import GitHubProvider
 from django.contrib.sites.models import Site
 
-from apps.users.adapters import AccountAdapter, SocialAccountAdapter
+from apps.users.adapters import AccountAdapter, SocialAccountAdapter, User
 from apps.users.forms import UserSignupForm, UserSocialSignupForm
 
-User = get_user_model()
+
 
 
 class AccountAdapterTestCase(TestCase):

@@ -31,7 +31,7 @@ class AssetAccessTest(BaseTestCase):
         # Act
         self.authenticate_user(self.user)
         response = self.client.post(
-            f"/content/assets/{self.asset.id}/request-access/", 
+            f"/assets/{self.asset.id}/request-access/", 
             data=data, 
             format='json'
         )
@@ -69,7 +69,7 @@ class AssetAccessTest(BaseTestCase):
         # Act
         self.authenticate_user(self.user)
         response = self.client.post(
-            f"/content/assets/{self.asset.id}/request-access/", 
+            f"/assets/{self.asset.id}/request-access/", 
             data=data, 
             format='json'
         )
@@ -91,7 +91,7 @@ class AssetAccessTest(BaseTestCase):
         # Act
         self.authenticate_user(self.user)
         response = self.client.post(
-            f"/content/assets/{self.asset.id}/request-access/", 
+            f"/assets/{self.asset.id}/request-access/", 
             data=data, 
             format='json'
         )
@@ -109,7 +109,7 @@ class AssetAccessTest(BaseTestCase):
         # Act
         self.authenticate_user(self.user)
         response = self.client.post(
-            f"/content/assets/{self.asset.id}/request-access/", 
+            f"/assets/{self.asset.id}/request-access/", 
             data=data, 
             format='json'
         )
@@ -128,7 +128,7 @@ class AssetAccessTest(BaseTestCase):
         # Act
         self.authenticate_user(self.user)
         response = self.client.post(
-            f"/content/assets/{non_existent_asset_id}/request-access/", 
+            f"/assets/{non_existent_asset_id}/request-access/", 
             data=data, 
             format='json'
         )
@@ -145,7 +145,7 @@ class AssetAccessTest(BaseTestCase):
 
         # Act (without authentication)
         response = self.client.post(
-            f"/content/assets/{self.asset.id}/request-access/", 
+            f"/assets/{self.asset.id}/request-access/", 
             data=data, 
             format='json'
         )
@@ -163,7 +163,7 @@ class AssetAccessTest(BaseTestCase):
         # Act - First request
         self.authenticate_user(self.user)
         first_response = self.client.post(
-            f"/content/assets/{self.asset.id}/request-access/", 
+            f"/assets/{self.asset.id}/request-access/", 
             data=data, 
             format='json'
         )
@@ -171,7 +171,7 @@ class AssetAccessTest(BaseTestCase):
         # Act - Second request with different purpose
         data["purpose"] = "Second request"
         second_response = self.client.post(
-            f"/content/assets/{self.asset.id}/request-access/", 
+            f"/assets/{self.asset.id}/request-access/", 
             data=data, 
             format='json'
         )
@@ -197,7 +197,7 @@ class AssetAccessTest(BaseTestCase):
         # Act
         self.authenticate_user(self.user)
         response = self.client.post(
-            f"/content/assets/{self.asset.id}/request-access/", 
+            f"/assets/{self.asset.id}/request-access/", 
             data=data, 
             format='json'
         )
@@ -240,7 +240,7 @@ class AssetAccessTest(BaseTestCase):
                 # Act
                 self.authenticate_user(self.user)
                 response = self.client.post(
-                    f"/content/assets/{invalid_format}/request-access/", 
+                    f"/assets/{invalid_format}/request-access/", 
                     data=data, 
                     format='json'
                 )
