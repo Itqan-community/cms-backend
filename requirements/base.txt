@@ -19,7 +19,6 @@ django-filter==25.1
 
 # Background Tasks
 celery[redis]==5.5.*
-redis==5.0.*
 
 # File Storage
 django-storages[s3]==1.14.*
@@ -35,5 +34,6 @@ requests==2.31.*
 
 django-ninja==1.4.*
 django-redis==6.0.*
+redis==6.4.0
 django-cors-headers>=4.7.0
 git+https://github.com/scalar/scalar.git#subdirectory=integrations/django-ninja
