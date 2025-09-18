@@ -1,14 +1,11 @@
-from django.http import HttpRequest
-from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.errors import ItqanError
-from apps.core.ninja_utils.tags import NinjaTag
-
-from ._schemas import RefreshTokenSchema
-from ...core.ninja_utils.auth import ninja_jwt_auth
 from apps.core.ninja_utils.request import Request
+from apps.core.ninja_utils.router import ItqanRouter
+from apps.core.ninja_utils.tags import NinjaTag
+from ._schemas import RefreshTokenSchema
 
 router = ItqanRouter(tags=[NinjaTag.AUTH])
 

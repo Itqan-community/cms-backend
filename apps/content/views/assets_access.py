@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
 from ninja import Schema
+from pydantic import AwareDatetime
 
 from apps.content.models import Asset, AssetAccessRequest
 from apps.content.services.asset_access import request_access, user_has_access
@@ -21,13 +22,13 @@ class AccessRequestOut(Schema):
     purpose: str
     intended_use: str
     status: str
-    created_at: str
+    created_at: AwareDatetime
 
 
 class AccessGrantOut(Schema):
     id: int
     asset_id: int
-    expires_at: str | None
+    expires_at: AwareDatetime | None
     is_active: bool
 
 
@@ -60,12 +61,12 @@ def request_asset_access(request: Request, asset_id: int, data: RequestAccessIn)
             "purpose": access_request.developer_access_reason,
             "intended_use": access_request.intended_use,
             "status": access_request.status,
-            "created_at": access_request.created_at.isoformat()
+            "created_at": access_request.created_at
         },
         "access": {
             "id": access_grant.id if access_grant else 0,
             "asset_id": asset.id,
-            "expires_at": access_grant.expires_at.isoformat() if access_grant and access_grant.expires_at else None,
+            "expires_at": access_grant.expires_at if access_grant else None,
             "is_active": access_grant.is_active if access_grant else False
         } if access_grant else None
     }

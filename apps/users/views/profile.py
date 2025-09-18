@@ -1,6 +1,3 @@
-from django.http import HttpRequest
-
-
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
 from ._schemas import UserProfileSchema, UserUpdateSchema
@@ -24,8 +21,8 @@ def get_user_profile(request: Request):
         "name": user.name,
         "phone": str(user.phone) if user.phone else None,
         "is_active": user.is_active,
-        "created_at": user.created_at.isoformat(),
-        "updated_at": user.updated_at.isoformat(),
+        "created_at": user.created_at,
+        "updated_at": user.updated_at,
     }
 
 
@@ -53,6 +50,6 @@ def update_user_profile(request: Request, profile_data: UserUpdateSchema):
         "name": user.name,
         "phone": str(user.phone) if user.phone else None,
         "is_active": user.is_active,
-        "created_at": user.created_at.isoformat(),
-        "updated_at": user.updated_at.isoformat(),
+        "created_at": user.created_at,
+        "updated_at": user.updated_at,
     }

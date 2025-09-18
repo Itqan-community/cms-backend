@@ -37,7 +37,7 @@ class AssetDownloadTest(BaseTestCase):
             user=self.user,
             asset=self.asset,
             asset_access_request=self.access_request,
-            is_active=True
+            expires_at=None  # Never expires, so is_active will be True
         )
 
     @patch('apps.content.views.assets_download.user_has_access')

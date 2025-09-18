@@ -1,20 +1,19 @@
-from datetime import datetime
 from django.shortcuts import get_object_or_404
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext as _
 from ninja import FilterSchema
 from ninja import Query
 from ninja import Schema
 from ninja.pagination import paginate
 from pydantic import Field
-from typing import Literal
+from pydantic import AwareDatetime
 
 from apps.content.models import Resource
-from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
+from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
+from apps.core.ninja_utils.schemas import OkSchema
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
-from apps.core.ninja_utils.request import Request
 
 router = ItqanRouter(tags=[NinjaTag.RESOURCES])
 
@@ -31,8 +30,8 @@ class ListResourceOut(Schema):
     description: str
     status: str
     publisher: ListResourcePublisherOut = Field(alias="publisher")
-    created_at: datetime
-    updated_at: datetime
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
 
 
 class ResourceFilter(FilterSchema):
@@ -41,7 +40,6 @@ class ResourceFilter(FilterSchema):
     publisher_id: list[int] | None = Field(None, q="publisher_id__in")
 
 
-# Input schemas for CRUD operations
 class CreateResourceIn(Schema):
     name: str
     description: str
@@ -64,11 +62,10 @@ class ResourceOut(Schema):
     description: str
     status: str
     publisher_id: int
-    created_at: datetime
-    updated_at: datetime
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
 
 
-# Detail view specific schemas
 class DetailResourcePublisherOut(Schema):
     id: int
     name: str
@@ -83,11 +80,10 @@ class DetailResourceOut(Schema):
     description: str
     status: str
     publisher: DetailResourcePublisherOut = Field(alias="publisher")
-    created_at: datetime
-    updated_at: datetime
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
 
 
-# GET /content/resources/ - List resources with filtering, searching, ordering, and pagination
 @router.get("content/resources/", response=list[ListResourceOut])
 @paginate
 @ordering(ordering_fields=["name", "category", "created_at", "updated_at"])
@@ -98,7 +94,6 @@ def list_resources(request: Request, filters: ResourceFilter = Query()):
     return resources
 
 
-# POST /content/resources/ - Create a new resource
 @router.post("content/resources/", response=ResourceOut)
 def create_resource(request: Request, data: CreateResourceIn):
     resource = Resource.objects.create(
@@ -132,49 +127,12 @@ def partial_update_resource(request: Request, id: int, data: UpdateResourceIn):
     return resource
 
 
-@router.delete("content/resources/{id}/")
+@router.delete("content/resources/{id}/", response=OkSchema)
 def delete_resource(request: Request, id: int):
     resource = get_object_or_404(Resource, id=id)
     resource.delete()
-    return {"success": True}
+    return OkSchema(message=_("Resource deleted successfully."))
 
-
-@router.post(
-    "content/resources/{id}/publish/", 
-    response={
-        200: ResourceOut,
-        400: NinjaErrorResponse[Literal["resource_already_published"], Literal[None]],
-        404: NinjaErrorResponse[Literal["not_found"], Literal[None]]
-    }
-)
-def publish_resource(request: Request, id: int):
-    resource = get_object_or_404(Resource, id=id)
-    
-    if resource.status == Resource.StatusChoice.READY:
-        raise ItqanError("resource_already_published", _("Resource is already published"))
-    
-    resource.status = Resource.StatusChoice.READY
-    resource.save()
-    return resource
-
-
-@router.post(
-    "content/resources/{id}/unpublish/", 
-    response={
-        200: ResourceOut,
-        400: NinjaErrorResponse[Literal["resource_already_unpublished"], Literal[None]],
-        404: NinjaErrorResponse[Literal["not_found"], Literal[None]]
-    }
-)
-def unpublish_resource(request: Request, id: int):
-    resource = get_object_or_404(Resource, id=id)
-    
-    if resource.status == Resource.StatusChoice.DRAFT:
-        raise ItqanError("resource_already_unpublished", _("Resource is already unpublished"))
-    
-    resource.status = Resource.StatusChoice.DRAFT
-    resource.save()
-    return resource
 
 
 @router.get("content/resources/{id}/", response=DetailResourceOut)

@@ -2,6 +2,7 @@
 from typing import Any
 
 from ninja import Schema
+from pydantic import AwareDatetime
 
 
 class LoginSchema(Schema):
@@ -25,8 +26,8 @@ class UserProfileSchema(Schema):
     name: str
     phone: str | None= None
     is_active: bool
-    created_at: str
-    updated_at: str
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
     
     class Config:
         from_attributes = True

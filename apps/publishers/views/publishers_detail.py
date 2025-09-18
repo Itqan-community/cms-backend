@@ -21,7 +21,7 @@ class DetailPublisherOut(Schema):
     icon_url: str | None
 
 
-@router.get("content/publishers/{id}/", response=DetailPublisherOut)
+@router.get("publishers/{id}/", response=DetailPublisherOut, auth=None)
 def detail_publishers(request: Request, id: int):
     publisher = get_object_or_404(Publisher, id=id)
     return publisher

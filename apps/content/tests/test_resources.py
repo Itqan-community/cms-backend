@@ -3,17 +3,20 @@ from model_bakery import baker
 
 from apps.content.models import Resource
 from apps.publishers.models import Publisher
+from apps.users.models import User
 from apps.core.tests import BaseTestCase
 
 
 class ResourceListTest(BaseTestCase):
     def setUp(self):
         super().setUp()
+        self.user = baker.make(User, email="test@example.com", is_active=True)
         self.publisher1 = baker.make(Publisher, name="Publisher One")
         self.publisher2 = baker.make(Publisher, name="Publisher Two")
 
     def test_list_resources_should_return_all_resources(self):
         # Arrange
+        self.authenticate_user(self.user)
         resource1 = baker.make(Resource, publisher=self.publisher1, name="Resource 1", category=Resource.CategoryChoice.TAFSIR)
         resource2 = baker.make(Resource, publisher=self.publisher2, name="Resource 2", category=Resource.CategoryChoice.MUSHAF)
 
@@ -57,6 +60,7 @@ class ResourceListTest(BaseTestCase):
 
     def test_list_resources_filter_by_category_should_return_filtered_resources(self):
         # Arrange
+        self.authenticate_user(self.user)
         tafsir_resource = baker.make(Resource, publisher=self.publisher1, category=Resource.CategoryChoice.TAFSIR)
         mushaf_resource = baker.make(Resource, publisher=self.publisher2, category=Resource.CategoryChoice.MUSHAF)
 
@@ -73,6 +77,7 @@ class ResourceListTest(BaseTestCase):
 
     def test_list_resources_filter_by_status_should_return_filtered_resources(self):
         # Arrange
+        self.authenticate_user(self.user)
         draft_resource = baker.make(Resource, publisher=self.publisher1, status=Resource.StatusChoice.DRAFT)
         ready_resource = baker.make(Resource, publisher=self.publisher2, status=Resource.StatusChoice.READY)
 
@@ -89,6 +94,7 @@ class ResourceListTest(BaseTestCase):
 
     def test_list_resources_filter_by_publisher_should_return_filtered_resources(self):
         # Arrange
+        self.authenticate_user(self.user)
         resource1 = baker.make(Resource, publisher=self.publisher1)
         resource2 = baker.make(Resource, publisher=self.publisher2)
 
@@ -105,6 +111,7 @@ class ResourceListTest(BaseTestCase):
 
     def test_list_resources_search_should_return_matching_resources(self):
         # Arrange
+        self.authenticate_user(self.user)
         resource1 = baker.make(Resource, publisher=self.publisher1, name="Tafsir Ibn Katheer", description="Classic tafsir")
         resource2 = baker.make(Resource, publisher=self.publisher2, name="Mushaf Uthmani", description="Uthmani script")
 
@@ -121,6 +128,7 @@ class ResourceListTest(BaseTestCase):
 
     def test_list_resources_ordering_by_name_should_return_sorted_resources(self):
         # Arrange
+        self.authenticate_user(self.user)
         baker.make(Resource, publisher=self.publisher1, name="Zebra Resource")
         baker.make(Resource, publisher=self.publisher2, name="Alpha Resource")
 
@@ -138,6 +146,7 @@ class ResourceListTest(BaseTestCase):
 
     def test_list_resources_ordering_by_created_at_descending_should_return_sorted_resources(self):
         # Arrange
+        self.authenticate_user(self.user)
         resource1 = baker.make(Resource, publisher=self.publisher1, name="First Resource")
         resource2 = baker.make(Resource, publisher=self.publisher2, name="Second Resource")
 
@@ -156,6 +165,7 @@ class ResourceListTest(BaseTestCase):
 
     def test_list_resources_with_multiple_filters_should_return_correctly_filtered_resources(self):
         # Arrange
+        self.authenticate_user(self.user)
         baker.make(Resource, publisher=self.publisher1, category=Resource.CategoryChoice.TAFSIR, status=Resource.StatusChoice.DRAFT)
         baker.make(Resource, publisher=self.publisher1, category=Resource.CategoryChoice.TAFSIR, status=Resource.StatusChoice.READY)
         baker.make(Resource, publisher=self.publisher2, category=Resource.CategoryChoice.MUSHAF, status=Resource.StatusChoice.READY)
@@ -176,6 +186,7 @@ class ResourceListTest(BaseTestCase):
     # CRUD Tests
     def test_create_resource_should_return_200_with_resource_data(self):
         # Arrange
+        self.authenticate_user(self.user)
         data = {
             "name": "Test Resource",
             "description": "A test resource description",
@@ -205,6 +216,7 @@ class ResourceListTest(BaseTestCase):
 
     def test_create_resource_with_invalid_data_should_return_422(self):
         # Arrange
+        self.authenticate_user(self.user)
         data = {
             "name": "",  # Invalid: empty name
             "description": "A test resource description",
@@ -220,6 +232,7 @@ class ResourceListTest(BaseTestCase):
 
     def test_update_resource_should_return_200_with_updated_data(self):
         # Arrange
+        self.authenticate_user(self.user)
         resource = baker.make(Resource, publisher=self.publisher1, name="Original Name")
         data = {
             "name": "Updated Name",
@@ -237,6 +250,7 @@ class ResourceListTest(BaseTestCase):
 
     def test_partial_update_resource_should_return_200_with_updated_data(self):
         # Arrange
+        self.authenticate_user(self.user)
         resource = baker.make(Resource, publisher=self.publisher1, name="Original Name", description="Original description")
         data = {
             "name": "Partially Updated Name"
@@ -253,6 +267,7 @@ class ResourceListTest(BaseTestCase):
 
     def test_delete_resource_should_return_200_and_remove_resource(self):
         # Arrange
+        self.authenticate_user(self.user)
         resource = baker.make(Resource, publisher=self.publisher1)
 
         # Act
@@ -268,6 +283,7 @@ class ResourceListTest(BaseTestCase):
 
     def test_publish_resource_should_change_status_to_ready(self):
         # Arrange
+        self.authenticate_user(self.user)
         resource = baker.make(Resource, publisher=self.publisher1, status=Resource.StatusChoice.DRAFT)
 
         # Act
@@ -284,6 +300,7 @@ class ResourceListTest(BaseTestCase):
 
     def test_unpublish_resource_should_change_status_to_draft(self):
         # Arrange
+        self.authenticate_user(self.user)
         resource = baker.make(Resource, publisher=self.publisher1, status=Resource.StatusChoice.READY)
 
         # Act
@@ -300,6 +317,7 @@ class ResourceListTest(BaseTestCase):
 
     def test_publish_already_published_resource_should_return_400(self):
         # Arrange
+        self.authenticate_user(self.user)
         resource = baker.make(Resource, publisher=self.publisher1, status=Resource.StatusChoice.READY)
 
         # Act
@@ -310,6 +328,7 @@ class ResourceListTest(BaseTestCase):
 
     def test_unpublish_already_unpublished_resource_should_return_400(self):
         # Arrange
+        self.authenticate_user(self.user)
         resource = baker.make(Resource, publisher=self.publisher1, status=Resource.StatusChoice.DRAFT)
 
         # Act
@@ -320,6 +339,7 @@ class ResourceListTest(BaseTestCase):
 
     def test_resource_operations_with_non_existent_id_should_return_404(self):
         # Arrange
+        self.authenticate_user(self.user)
         non_existent_id = 99999
 
         # Test different operations

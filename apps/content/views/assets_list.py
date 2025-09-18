@@ -33,7 +33,7 @@ class AssetFilter(FilterSchema):
     license_code: list[str] | None = Field(None, q="license__in")
 
 
-@router.get("content/assets/", response=list[ListAssetOut])
+@router.get("content/assets/", response=list[ListAssetOut], auth=None)
 @paginate
 @ordering(ordering_fields=["name", "category"])
 @searching(search_fields=["name", "description", "resource__publisher__name", "category"])
