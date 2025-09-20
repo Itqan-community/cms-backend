@@ -21,14 +21,12 @@ from apps.users.models import User
 
 class LicenseChoice(models.TextChoices):
     CC0 = "CC0", _("Creative Commons Zero")
-    CC_BY = "CC BY", _("Creative Commons Attribution")
-    CC_BY_SA = "CC BY-SA", _("Creative Commons Attribution-ShareAlike")
-    CC_BY_ND = "CC BY-ND", _("Creative Commons Attribution-NoDerivs")
-    CC_BY_NC = "CC BY-NC", _("Creative Commons Attribution-NonCommercial")
-    CC_BY_NC_SA = "CC BY-NC-SA", _("Creative Commons Attribution-NonCommercial-ShareAlike")
-    CC_BY_NC_ND = "CC BY-NC-ND", _("Creative Commons Attribution-NonCommercial-NoDerivs")
-    PUBLIC_DOMAIN = "Public Domain", _("Public Domain")
-    PROPRIETARY = "Proprietary", _("Proprietary")
+    CC_BY = "CC-BY", _("Creative Commons Attribution")
+    CC_BY_SA = "CC-BY-SA", _("Creative Commons Attribution-ShareAlike")
+    CC_BY_ND = "CC-BY-ND", _("Creative Commons Attribution-NoDerivs")
+    CC_BY_NC = "CC-BY-NC", _("Creative Commons Attribution-NonCommercial")
+    CC_BY_NC_SA = "CC-BY-NC-SA", _("Creative Commons Attribution-NonCommercial-ShareAlike")
+    CC_BY_NC_ND = "CC-BY-NC-ND", _("Creative Commons Attribution-NonCommercial-NoDerivs")
 
 
 class Resource(BaseModel):
@@ -69,6 +67,9 @@ class Resource(BaseModel):
     def save(self, *args, **kwargs):
         self.slug = slugify(f"{self.name}({self.publisher.slug})"[:50])
         super().save(*args, **kwargs)
+
+    def get_latest_version(self):
+        self.versions.filter(is_latest=True).first()
 
 
 class ResourceVersion(BaseModel):
@@ -179,7 +180,7 @@ class Asset(BaseModel):
     all_objects = AllObjectsManager()
 
     def __str__(self):
-        return f"Asset(name={self.name} category={self.category})"
+        return f"Asset(name={self.name}, category={self.category})"
 
 
     @staticmethod
@@ -244,14 +245,14 @@ class AssetVersion(BaseModel):
         help_text="Direct file for asset",
     )
 
-    size_bytes = models.PositiveBigIntegerField(help_text="File size in bytes")
+    size_bytes = models.PositiveBigIntegerField(default=0, help_text="File size in bytes")
 
     objects = ActiveObjectsManager()
     all_objects = AllObjectsManager()
 
 
     def __str__(self):
-        return f"AssetVersion(asset={self.asset.name} version={self.resource_version.semvar})"
+        return f"AssetVersion(asset={self.asset.name}, version={self.resource_version.semvar})"
 
     @property
     def human_readable_size(self):
@@ -272,6 +273,7 @@ class AssetVersion(BaseModel):
         s = round(size / p, 2)
 
         return f"{s} {units[i]}"
+
 
 class AssetPreview(BaseModel):
     """
@@ -300,7 +302,7 @@ class AssetPreview(BaseModel):
 
 
     def __str__(self):
-        return f"AssetPreview(asset={self.asset.name} order={self.order})"
+        return f"AssetPreview(asset={self.asset.name}, order={self.order})"
 
 
 class AssetAccessRequest(BaseModel):
@@ -367,7 +369,7 @@ class AssetAccessRequest(BaseModel):
 
 
     def __str__(self):
-        return f"AssetAccessRequest(user={self.developer_user.email} asset={self.asset.name} status={self.status})"
+        return f"AssetAccessRequest(user={self.developer_user.email}, asset={self.asset.name}, status={self.status})"
 
 
 class AssetAccess(BaseModel):
@@ -413,7 +415,7 @@ class AssetAccess(BaseModel):
         unique_together = ['user', 'asset']
 
     def __str__(self):
-        return f"AssetAccess(user_id={self.user_id} asset_id={self.asset_id})"
+        return f"AssetAccess(user_id={self.user_id}, asset_id={self.asset_id})"
 
     @property
     def is_active(self):
@@ -434,6 +436,7 @@ class UsageEvent(BaseModel):
         FILE_DOWNLOAD = "file_download", _("File Download")
         VIEW = "view", _("View")
         API_ACCESS = "api_access", _("API Access")
+
     class SubjectKindChoice(models.TextChoices):
         RESOURCE = "resource", _("Resource")
         ASSET = "asset", _("Asset")
@@ -497,9 +500,7 @@ class UsageEvent(BaseModel):
         ]
 
     def __str__(self):
-        return f"UsageEvent(user={self.developer_user_id} kind={self.usage_kind} subject={self.subject_kind})"
-
-
+        return f"UsageEvent(user={self.developer_user_id}, kind={self.usage_kind}, subject={self.subject_kind})"
 
     @classmethod
     def get_user_stats(cls, user):
@@ -541,23 +542,24 @@ class UsageEvent(BaseModel):
             'unique_users': events.values('developer_user').distinct().count()
         }
 
+
 class Distribution(BaseModel):
     class ChannelChoice(models.TextChoices):
-        REST_JSON = "REST_JSON", _("REST API (JSON)")
-        GRAPHQL = "GraphQL", _("GraphQL API")
-        ZIP = "ZIP", _("ZIP Download")
-        API = "API", _("Custom API")
+        FILE_DOWNLOAD = "FILE_DOWNLOAD", _("File Download")
+        API = "API", _("API")
+        PACKAGE = "PACKAGE", _("Package")
+
     asset_version = models.ForeignKey(
         AssetVersion,
         on_delete=models.CASCADE,
         related_name='distributions',
-        help_text="Asset that this distribution provides access to"
+        help_text="Asset version that this distribution provides access to"
     )
 
     channel = models.CharField(
         max_length=20,
         choices=ChannelChoice.choices,
-        help_text="Format/method for accessing the asset"
+        help_text="Channel for accessing the asset"
     )
 
     
@@ -569,4 +571,4 @@ class Distribution(BaseModel):
         unique_together = [['asset_version', 'channel']]
 
     def __str__(self):
-        return f"Distribution(asset={self.asset_version.asset.name} channel={self.channel})"
+        return f"Distribution(asset={self.asset_version.asset.name}, channel={self.channel})"
