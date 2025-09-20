@@ -5,6 +5,7 @@ from django.urls import reverse
 from django.utils.html import format_html
 
 from .models import Asset
+from .models import AssetPreview
 from .models import (
     AssetAccessRequest, AssetAccess,
     UsageEvent, Distribution
@@ -238,6 +239,13 @@ class AssetVersionAdmin(admin.ModelAdmin):
     list_display = ["asset", "resource_version", "name", "size_bytes", "created_at"]
     list_filter = ["created_at"]
     search_fields = ["asset__name", "name"]
+    readonly_fields = ["created_at", "updated_at"]
+
+
+@admin.register(AssetPreview)
+class AssetPreviewAdmin(admin.ModelAdmin):
+    list_display = ["asset", "image_url", "title", "description", "order", "created_at"]
+    search_fields = ["asset__name"]
     readonly_fields = ["created_at", "updated_at"]
 
 

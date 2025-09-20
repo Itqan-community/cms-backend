@@ -284,14 +284,14 @@ class AssetPreview(BaseModel):
         on_delete=models.CASCADE,
         related_name='previews'
     )
-
     image_url = models.ImageField(
         upload_to=upload_to_asset_preview_images,
         blank=True,
         validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'gif', 'webp'])],
         help_text="Preview image"
     )
-
+    title = models.CharField(max_length=255, blank=True, default="")
+    description = models.TextField(blank=True, default="")
     order = models.PositiveIntegerField(
         default=1,
         help_text="Display order"

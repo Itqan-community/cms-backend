@@ -9,6 +9,12 @@ from apps.core.ninja_utils.tags import NinjaTag
 router = ItqanRouter(tags=[NinjaTag.ASSETS])
 
 
+class DetailAssetSnapshotOut(Schema):
+    image_url: str
+    title: str
+    description: str
+
+
 class DetailAssetPublisherOut(Schema):
     id: int
     name: str
@@ -24,6 +30,7 @@ class DetailAssetOut(Schema):
     thumbnail_url: str
     publisher: DetailAssetPublisherOut = Field(alias="resource.publisher")
     license: str
+    snapshots: list[DetailAssetSnapshotOut] = Field(default_factory=list, alias="previews")
 
 
 @router.get("content/assets/{id}/", response=DetailAssetOut)
