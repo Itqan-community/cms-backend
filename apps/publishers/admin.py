@@ -17,7 +17,7 @@ class PublisherMemberInline(admin.TabularInline):
     raw_id_fields = ["user"]
 @admin.register(Publisher)
 class PublisherAdmin(admin.ModelAdmin):
-    list_display = ["name", "slug", "member_count", "resource_count", "asset_count", "total_downloads", "created_at"]
+    list_display = ["name", "slug", "member_count", "resource_count", "asset_count", "created_at"]
     list_filter = ["created_at", "updated_at"]
     search_fields = ["name", "slug", "description"]
     prepopulated_fields = {"slug": ("name",)}
@@ -61,8 +61,7 @@ class PublisherAdmin(admin.ModelAdmin):
             .annotate(
                 member_count=Count("members"),
                 resource_count=Count("resources"),
-                asset_count=Count("resources__assets", distinct=True),
-                total_downloads=Sum("resources__assets__download_count"),
+                asset_count=Count("resources__assets", distinct=True)
             )
         )
 
@@ -77,10 +76,6 @@ class PublisherAdmin(admin.ModelAdmin):
     @admin.display(description="Assets", ordering="asset_count")
     def asset_count(self, obj):
         return obj.asset_count or 0
-
-    @admin.display(description="Total Downloads", ordering="total_downloads")
-    def total_downloads(self, obj):
-        return obj.total_downloads or 0
 
     @admin.display(description="Resources")
     def view_resources(self, obj):

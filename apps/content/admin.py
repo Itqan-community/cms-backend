@@ -17,7 +17,7 @@ from .models import ResourceVersion
 class ResourceVersionInline(admin.TabularInline):
     model = ResourceVersion
     extra = 0
-    fields = ["semvar", "type", "is_latest", "storage_url"]
+    fields = ["semvar", "file_type", "is_latest", "storage_url"]
     readonly_fields = ["created_at"]
     raw_id_fields = ["resource"]
 
@@ -25,20 +25,17 @@ class ResourceVersionInline(admin.TabularInline):
 class AssetVersionInline(admin.TabularInline):
     model = AssetVersion
     extra = 0
-    fields = ["resource_version", "name", "human_readable_size", "file_url"]
+    fields = ["resource_version", "name", "file_url"]
     readonly_fields = ["created_at"]
 
 
 @admin.register(Resource)
 class ResourceAdmin(admin.ModelAdmin):
-    """Enhanced admin for Resources"""
-
     list_display = [
         "name",
         "publisher",
         "category",
         "status",
-        "version_count",
         "latest_version",
         "created_at",
     ]
@@ -116,17 +113,14 @@ class ResourceAdmin(admin.ModelAdmin):
 
 @admin.register(ResourceVersion)
 class ResourceVersionAdmin(admin.ModelAdmin):
-    """Admin for Resource Versions"""
-
     list_display = ["resource", "semvar", "file_type", "is_latest", "size_bytes", "created_at"]
     list_filter = ["file_type", "is_latest", "created_at"]
     search_fields = ["resource__name", "semvar"]
+    readonly_fields = ["created_at", "updated_at"]
 
 
 @admin.register(Asset)
 class AssetAdmin(admin.ModelAdmin):
-    """Enhanced admin for Assets"""
-
     list_display = [
         "get_publisher",
         "category",
@@ -180,8 +174,7 @@ class AssetAdmin(admin.ModelAdmin):
             super()
             .get_queryset(request)
             .select_related(
-                "resource__publisher",
-                "license",
+                "resource__publisher"
             )
             .annotate(
                 access_requests_count=Count("access_requests"),
@@ -242,17 +235,14 @@ class AssetAdmin(admin.ModelAdmin):
 
 @admin.register(AssetVersion)
 class AssetVersionAdmin(admin.ModelAdmin):
-    """Admin for Asset Versions"""
-
     list_display = ["asset", "resource_version", "name", "size_bytes", "created_at"]
     list_filter = ["created_at"]
     search_fields = ["asset__name", "name"]
-
+    readonly_fields = ["created_at", "updated_at"]
 
 
 @admin.register(AssetAccessRequest)
 class AssetAccessRequestAdmin(admin.ModelAdmin):
-    """Enhanced admin for Asset Access Requests"""
     list_display = ['developer_user', 'asset', 'status', 'intended_use', 'created_at', 'approved_at', 'approved_by']
     list_filter = ['status', 'intended_use', 'created_at', 'approved_at']
     search_fields = ['developer_user__email', 'asset__name', 'developer_access_reason']
@@ -309,7 +299,6 @@ class AssetAccessRequestAdmin(admin.ModelAdmin):
 
 @admin.register(AssetAccess)
 class AssetAccessAdmin(admin.ModelAdmin):
-    """Enhanced admin for Asset Access"""
     list_display = ['user', 'asset', 'effective_license', 'granted_at', 'expires_at', 'is_active_status', 'usage_count']
     list_filter = ['granted_at', 'expires_at', 'effective_license']
     search_fields = ['user__email', 'asset__name']
@@ -324,7 +313,8 @@ class AssetAccessAdmin(admin.ModelAdmin):
             'fields': ('effective_license',)
         }),
         ('Access Details', {
-            'fields': ('granted_at', 'expires_at', 'download_url')
+            'fields': ('granted_at', 'expires_at', 'download_url'),
+            'classes': ('collapse',)
         }),
         ('Statistics', {
             'fields': ('usage_count',),
@@ -335,7 +325,7 @@ class AssetAccessAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         """Optimize queryset"""
         return super().get_queryset(request).select_related(
-            'user', 'asset', 'effective_license', 'asset_access_request'
+            'user', 'asset', 'asset_access_request'
         )
     
     def is_active_status(self, obj):
@@ -377,7 +367,6 @@ class UsageEventAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
-
 
 
 @admin.register(Distribution)
