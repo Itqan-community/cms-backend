@@ -62,3 +62,4 @@ temp
 docs
 README*.md
 !README.md
+venv

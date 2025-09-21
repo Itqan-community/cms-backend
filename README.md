@@ -59,7 +59,7 @@ docker-compose -f deployment/docker/docker-compose.develop.yml logs -f backend
 cd backend
 
 # Install dependencies
-pip install -r requirements/development.txt
+uv sync
 
 # Run migrations
 python manage.py migrate

@@ -8,10 +8,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'develop.api.cms.itqan.dev']
 
-# Additional development apps
-# INSTALLED_APPS += [
-#     'django_extensions',  # Install if needed: pip install django-extensions
-# ]
 
 # Development middleware
 MIDDLEWARE.insert(0, 'django.middleware.security.SecurityMiddleware')

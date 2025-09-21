@@ -139,7 +139,7 @@ jobs:
       - name: Build and push image to GHCR
         run: |
           echo "🛠️ Building image $IMAGE_REPO:$IMAGE_TAG for ${{ env.ENV_NAME }} environment"
-          docker build -f deployment/docker/Dockerfile.backend -t $IMAGE_REPO:$IMAGE_TAG .
+          docker build -f deployment/docker/Dockerfile -t $IMAGE_REPO:$IMAGE_TAG .
           
           echo "📤 Pushing image to GHCR..."
           echo "🔍 Repository: $IMAGE_REPO"
