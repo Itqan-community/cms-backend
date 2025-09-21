@@ -1,3 +1,3 @@
 # Content views package
-from .content import ResourceViewSet
-__all__ = ['ResourceViewSet']
+from .content import ResourceViewSet, ResourceDownloadView
+__all__ = ['ResourceViewSet', 'ResourceDownloadView']
