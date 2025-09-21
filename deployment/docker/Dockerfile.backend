@@ -15,12 +15,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-COPY requirements/ /tmp/requirements/
-RUN uv sync --no-dev --locked
-
 # Copy application code
 COPY / /app/
+
+# Install Python dependencies
+RUN uv sync --no-dev --locked
 
 # Copy and set up entrypoint
 COPY deployment/docker/entrypoint.sh /entrypoint.sh
