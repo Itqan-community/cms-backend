@@ -4,3 +4,5 @@ alwaysApply: false
 ---
 All tests should be written as AAA Arrange, Act, Assert
 All tests should be writen test_<function_name>_where<criteria>_should<expected_results>
+When using self.authenticate_user in tests, put it into the test case itself not in `setUp` or `setUpClass` methods to be more explicit
+Use `pytest` to run test NOT `python manage.py test`

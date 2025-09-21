@@ -7,15 +7,21 @@ from model_bakery import baker
 
 from apps.content.models import Resource
 from apps.content.models import ResourceVersion
+from apps.users.models import User
 from apps.core.tests import BaseTestCase
 
 
 class DownloadResourceTest(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.user = baker.make(User, email="test@example.com", is_active=True)
+
     def create_file(self, name: str, content: bytes, content_type: str) -> SimpleUploadedFile:
         return SimpleUploadedFile(name, content, content_type=content_type)
 
     def test_download_returns_latest_version_file_with_correct_headers_csv(self):
         # Arrange
+        self.authenticate_user(self.user)
         with tempfile.TemporaryDirectory() as tmpdir:
             with override_settings(MEDIA_ROOT=tmpdir):
                 resource = baker.make(Resource, name="Dataset A")
@@ -31,7 +37,7 @@ class DownloadResourceTest(BaseTestCase):
                 )
 
                 # Act
-                response = self.client.get(f"/content/resources/{resource.id}/download/", format="json")
+                response = self.client.get(f"/resources/{resource.id}/download/", format="json")
 
                 # Assert
                 self.assertEqual(200, response.status_code, getattr(response, "content", b""))
@@ -41,6 +47,7 @@ class DownloadResourceTest(BaseTestCase):
 
     def test_download_fallbacks_to_most_recent_when_no_latest_marked(self):
         # Arrange
+        self.authenticate_user(self.user)
         with tempfile.TemporaryDirectory() as tmpdir:
             with override_settings(MEDIA_ROOT=tmpdir):
                 resource = baker.make(Resource, name="Dataset B")
@@ -68,7 +75,7 @@ class DownloadResourceTest(BaseTestCase):
                 )
 
                 # Act
-                response = self.client.get(f"/content/resources/{resource.id}/download/", format="json")
+                response = self.client.get(f"/resources/{resource.id}/download/", format="json")
 
                 # Assert
                 self.assertEqual(200, response.status_code, getattr(response, "content", b""))
@@ -78,16 +85,18 @@ class DownloadResourceTest(BaseTestCase):
 
     def test_download_returns_404_when_no_versions_exist(self):
         # Arrange
+        self.authenticate_user(self.user)
         resource = baker.make(Resource)
 
         # Act
-        response = self.client.get(f"/content/resources/{resource.id}/download/", format="json")
+        response = self.client.get(f"/resources/{resource.id}/download/", format="json")
 
         # Assert
         self.assertEqual(404, response.status_code, getattr(response, "content", b""))
 
     def test_download_returns_404_when_file_missing_on_disk(self):
         # Arrange
+        self.authenticate_user(self.user)
         with tempfile.TemporaryDirectory() as tmpdir:
             with override_settings(MEDIA_ROOT=tmpdir):
                 resource = baker.make(Resource, name="Dataset C")
@@ -107,33 +116,36 @@ class DownloadResourceTest(BaseTestCase):
                     file_path.unlink()
 
                 # Act
-                response = self.client.get(f"/content/resources/{resource.id}/download/", format="json")
+                response = self.client.get(f"/resources/{resource.id}/download/", format="json")
 
                 # Assert
                 self.assertEqual(404, response.status_code, getattr(response, "content", b""))
 
     def test_download_returns_404_when_resource_not_found(self):
         # Arrange - Use a non-existent integer ID
+        self.authenticate_user(self.user)
         non_existent_id = 99999
 
         # Act
-        response = self.client.get(f"/content/resources/{non_existent_id}/download/", format="json")
+        response = self.client.get(f"/resources/{non_existent_id}/download/", format="json")
 
         # Assert
         self.assertEqual(404, response.status_code, getattr(response, "content", b""))
 
     def test_download_returns_404_when_resource_is_inactive(self):
         # Arrange
+        self.authenticate_user(self.user)
         resource = baker.make(Resource, is_active=False)
 
         # Act
-        response = self.client.get(f"/content/resources/{resource.id}/download/", format="json")
+        response = self.client.get(f"/resources/{resource.id}/download/", format="json")
 
         # Assert
         self.assertEqual(404, response.status_code, getattr(response, "content", b""))
 
     def test_download_returns_404_when_only_inactive_versions_exist(self):
         # Arrange
+        self.authenticate_user(self.user)
         with tempfile.TemporaryDirectory() as tmpdir:
             with override_settings(MEDIA_ROOT=tmpdir):
                 resource = baker.make(Resource, name="Dataset D")
@@ -150,13 +162,14 @@ class DownloadResourceTest(BaseTestCase):
                 )
 
                 # Act
-                response = self.client.get(f"/content/resources/{resource.id}/download/", format="json")
+                response = self.client.get(f"/resources/{resource.id}/download/", format="json")
 
                 # Assert
                 self.assertEqual(404, response.status_code, getattr(response, "content", b""))
 
     def test_download_returns_404_when_version_has_no_storage_url_value(self):
         # Arrange
+        self.authenticate_user(self.user)
         with tempfile.TemporaryDirectory() as tmpdir:
             with override_settings(MEDIA_ROOT=tmpdir):
                 resource = baker.make(Resource, name="Dataset E")
@@ -175,7 +188,7 @@ class DownloadResourceTest(BaseTestCase):
                 version.save(update_fields=["storage_url"])
 
                 # Act
-                response = self.client.get(f"/content/resources/{resource.id}/download/", format="json")
+                response = self.client.get(f"/resources/{resource.id}/download/", format="json")
 
                 # Assert
                 self.assertEqual(404, response.status_code, getattr(response, "content", b""))

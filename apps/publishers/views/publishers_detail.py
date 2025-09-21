@@ -4,6 +4,7 @@ from ninja import Schema
 from apps.publishers.models import Publisher
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.core.ninja_utils.request import Request
 
 router = ItqanRouter(tags=[NinjaTag.PUBLISHERS])
 
@@ -20,7 +21,7 @@ class DetailPublisherOut(Schema):
     icon_url: str | None
 
 
-@router.get("content/publishers/{id}/", response=DetailPublisherOut)
-def detail_publishers(request, id: int):
+@router.get("publishers/{id}/", response=DetailPublisherOut, auth=None)
+def detail_publishers(request: Request, id: int):
     publisher = get_object_or_404(Publisher, id=id)
     return publisher

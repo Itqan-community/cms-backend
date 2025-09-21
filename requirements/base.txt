@@ -8,7 +8,7 @@ psycopg2-binary==2.9.10
 PyJWT==2.8.*
 cryptography==41.*
 django-oauth-toolkit==1.7.*
-djangorestframework-simplejwt==5.3.*
+djangorestframework-simplejwt==5.5.*
 django-allauth==65.11.2
 django-phonenumber-field[phonenumbers]==8.1.0
 

@@ -19,7 +19,7 @@ def approve_request(asset_access_request:AssetAccessRequest, approved_by:User|No
     asset_access_request.save()
 
     access = AssetAccess.all_objects.create(
-        asset_access_request_request=asset_access_request,
+        asset_access_request=asset_access_request,
         user=asset_access_request.developer_user,
         asset=asset_access_request.asset,
         effective_license=asset_access_request.asset.license,

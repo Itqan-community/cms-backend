@@ -4,6 +4,7 @@ from unittest.mock import patch
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from rest_framework.test import APIClient
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.users.models import User
 
@@ -26,18 +27,19 @@ class BaseTestCase(TestCase):
     ):
         """
         if `user` is supplied with None, the authentication will be cleared
-        if `user` is supplied with a `User`, it will be authenticated using force_authenticate
+        if `user` is supplied with a `User`, it will be authenticated using JWT tokens
         """
         if not kwargs:
             kwargs = {}
 
         if user is None:
             # Clear authentication
-            self.client.force_authenticate(user=None)
             kwargs.pop("HTTP_AUTHORIZATION", None)
         else:
-            # Use Django REST framework's force_authenticate for testing
-            self.client.force_authenticate(user=user)
+            # Generate JWT token for the user
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
+            kwargs["HTTP_AUTHORIZATION"] = f"Bearer {access_token}"
 
         headers = {
             "HTTP_ACCEPT_LANGUAGE": language,

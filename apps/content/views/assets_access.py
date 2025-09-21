@@ -1,10 +1,12 @@
 from django.shortcuts import get_object_or_404
 from ninja import Schema
+from pydantic import AwareDatetime
 
 from apps.content.models import Asset, AssetAccessRequest
 from apps.content.services.asset_access import request_access, user_has_access
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.core.ninja_utils.request import Request
 
 router = ItqanRouter(tags=[NinjaTag.ASSETS])
 
@@ -20,13 +22,13 @@ class AccessRequestOut(Schema):
     purpose: str
     intended_use: str
     status: str
-    created_at: str
+    created_at: AwareDatetime
 
 
 class AccessGrantOut(Schema):
     id: int
     asset_id: int
-    expires_at: str | None
+    expires_at: AwareDatetime | None
     is_active: bool
 
 
@@ -35,8 +37,8 @@ class AccessRequestResponseOut(Schema):
     access: AccessGrantOut | None
 
 
-@router.post("content/assets/{asset_id}/request-access/", response=AccessRequestResponseOut)
-def request_asset_access(request, asset_id: int, data: RequestAccessIn):
+@router.post("assets/{asset_id}/request-access/", response=AccessRequestResponseOut)
+def request_asset_access(request: Request, asset_id: int, data: RequestAccessIn):
     """Request access to an asset (V1: auto-approval)"""
     asset = get_object_or_404(Asset, id=asset_id)
     
@@ -59,12 +61,12 @@ def request_asset_access(request, asset_id: int, data: RequestAccessIn):
             "purpose": access_request.developer_access_reason,
             "intended_use": access_request.intended_use,
             "status": access_request.status,
-            "created_at": access_request.created_at.isoformat()
+            "created_at": access_request.created_at
         },
         "access": {
             "id": access_grant.id if access_grant else 0,
             "asset_id": asset.id,
-            "expires_at": access_grant.expires_at.isoformat() if access_grant and access_grant.expires_at else None,
+            "expires_at": access_grant.expires_at if access_grant else None,
             "is_active": access_grant.is_active if access_grant else False
         } if access_grant else None
     }
@@ -75,8 +77,8 @@ class AssetAccessStatusOut(Schema):
     requires_approval: bool
 
 
-@router.get("content/assets/{asset_id}/access-status/", response=AssetAccessStatusOut)
-def asset_access_status(request, asset_id: int):
+@router.get("assets/{asset_id}/access-status/", response=AssetAccessStatusOut)
+def asset_access_status(request: Request, asset_id: int):
     """Get asset access status for the authenticated user"""
     asset = get_object_or_404(Asset, id=asset_id)
 
