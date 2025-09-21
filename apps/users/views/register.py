@@ -1,10 +1,9 @@
-from django.http import HttpRequest
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.errors import ItqanError
 from apps.core.ninja_utils.tags import NinjaTag
-from apps.users.models import User
+from apps.users.models import User, Developer
 from ._schemas import RegisterSchema, TokenResponseSchema
 from apps.core.ninja_utils.request import Request
 
@@ -34,9 +33,14 @@ def register_user(request: Request, registration_data: RegisterSchema):
             email=registration_data.email,
             password=registration_data.password,
             name=registration_data.name,
+            phone=registration_data.phone,
             is_active=True
         )
-        
+        # Auto-create developer profile for the user
+        Developer.objects.get_or_create(user=user, defaults={
+            "job_title": registration_data.job_title
+        })
+
         # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
         access = refresh.access_token
@@ -48,8 +52,10 @@ def register_user(request: Request, registration_data: RegisterSchema):
                 "id": str(user.id),
                 "email": user.email,
                 "name": user.name,
+                "phone": user.phone,
                 "is_active": user.is_active,
-                "created": True
+                "created": True,
+                "is_profile_completed": user.developer_profile.profile_completed if user.developer_profile else False
             }
         }
     except Exception as e:

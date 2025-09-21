@@ -48,5 +48,6 @@ def login_user(request: Request, credentials: LoginSchema):
             "email": user.email,
             "name": user.name,
             "is_active": user.is_active,
+            "is_profile_completed": user.developer_profile.profile_completed if user.developer_profile else False
         }
     }

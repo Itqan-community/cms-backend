@@ -26,6 +26,11 @@ class UserProfileSchema(Schema):
     name: str
     phone: str | None= None
     is_active: bool
+    is_profile_completed: bool
+    bio: str = ""
+    project_summary: str = ""
+    project_url: str = ""
+    job_title: str = ""
     created_at: AwareDatetime
     updated_at: AwareDatetime
     
@@ -36,12 +41,18 @@ class UserProfileSchema(Schema):
 class UserUpdateSchema(Schema):
     name: str|None = None
     phone: str|None = None
+    bio: str = ""
+    project_summary: str = ""
+    project_url: str = ""
+    job_title: str = ""
 
 
 class RegisterSchema(Schema):
     email: str
     password: str
     name: str = ""
+    phone: str = ""
+    job_title: str = ""
 
 
 class OAuth2AuthorizeResponseSchema(Schema):

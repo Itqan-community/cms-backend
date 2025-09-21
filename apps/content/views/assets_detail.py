@@ -22,6 +22,10 @@ class DetailAssetPublisherOut(Schema):
     description: str
 
 
+class DetailAssetResourceOut(Schema):
+    id: int
+
+
 class DetailAssetOut(Schema):
     id: int
     category: str
@@ -30,6 +34,7 @@ class DetailAssetOut(Schema):
     long_description: str
     thumbnail_url: str
     publisher: DetailAssetPublisherOut = Field(alias="resource.publisher")
+    resource: DetailAssetResourceOut
     license: str
     snapshots: list[DetailAssetSnapshotOut] = Field(default_factory=list, alias="previews")
 
