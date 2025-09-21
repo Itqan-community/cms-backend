@@ -37,9 +37,12 @@ def register_user(request: Request, registration_data: RegisterSchema):
             is_active=True
         )
         # Auto-create developer profile for the user
-        Developer.objects.get_or_create(user=user, defaults={
-            "job_title": registration_data.job_title
-        })
+        developer_profile, _ = Developer.objects.get_or_create(
+            user=user,
+            defaults={
+                "job_title": registration_data.job_title
+            }
+        )
 
         # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
@@ -55,7 +58,7 @@ def register_user(request: Request, registration_data: RegisterSchema):
                 "phone": user.phone,
                 "is_active": user.is_active,
                 "created": True,
-                "is_profile_completed": user.developer_profile.profile_completed if user.developer_profile else False
+                "is_profile_completed": developer_profile.profile_completed
             }
         }
     except Exception as e:

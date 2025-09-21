@@ -2,6 +2,7 @@ from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
 from ._schemas import UserProfileSchema, UserUpdateSchema
 from ...core.ninja_utils.request import Request
+from apps.users.models import Developer
 
 router = ItqanRouter(tags=[NinjaTag.USERS])
 
@@ -15,7 +16,7 @@ router = ItqanRouter(tags=[NinjaTag.USERS])
 def get_user_profile(request: Request):
     """Get authenticated user's profile"""
     user = request.user
-    user_developer_profile = getattr(user, 'developer_profile', None)
+    user_developer_profile, _ = Developer.objects.get_or_create(user=user)
     return {
         "id": str(user.id),
         "email": user.email,
@@ -41,7 +42,7 @@ def get_user_profile(request: Request):
 def update_user_profile(request: Request, profile_data: UserUpdateSchema):
     """Update authenticated user's profile"""
     user = request.user
-    user_developer_profile = getattr(user, 'developer_profile', None)
+    user_developer_profile, _ = Developer.objects.get_or_create(user=user)
     
     # Update allowed fields
     if profile_data.name is not None:
