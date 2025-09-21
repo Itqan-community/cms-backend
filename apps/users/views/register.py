@@ -55,7 +55,7 @@ def register_user(request: Request, registration_data: RegisterSchema):
                 "id": str(user.id),
                 "email": user.email,
                 "name": user.name,
-                "phone": user.phone,
+                "phone": str(user.phone) if user.phone else "",
                 "is_active": user.is_active,
                 "created": True,
                 "is_profile_completed": developer_profile.profile_completed

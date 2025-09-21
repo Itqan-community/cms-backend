@@ -49,6 +49,7 @@ def login_user(request: Request, credentials: LoginSchema):
             "id": str(user.id),
             "email": user.email,
             "name": user.name,
+            "phone": str(user.phone) if user.phone else "",
             "is_active": user.is_active,
             "is_profile_completed": developer_profile.profile_completed
         }
