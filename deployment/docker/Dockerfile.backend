@@ -1,4 +1,4 @@
-FROM python:3.13-slim
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS python-build-stage
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install Python dependencies
 COPY requirements/ /tmp/requirements/
-RUN pip install --no-cache-dir -r /tmp/requirements/production.txt
+RUN uv sync --no-dev --locked
 
 # Copy application code
 COPY / /app/
