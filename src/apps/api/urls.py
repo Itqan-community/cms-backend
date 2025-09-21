@@ -17,7 +17,7 @@ from .views.scalar_docs import ScalarDocsView, ScalarAPIClientView
 
 # Import ViewSets
 from apps.accounts.views import RoleViewSet, UserViewSet
-from apps.content.views import ResourceViewSet
+from apps.content.views import ResourceViewSet, ResourceDownloadView
 # from apps.licensing.views import LicenseViewSet, AccessRequestViewSet  # Temporarily disabled
 # MediaLib views removed in V1 cleanup
 ## API Keys app removed in V1 cleanup
@@ -106,6 +106,9 @@ urlpatterns = [
     path('assets/<int:asset_id>/download/', AssetDownloadView.as_view(), name='asset_download'),
     path('assets/<int:asset_id>/access-status/', asset_access_status, name='asset_access_status'),
     path('assets/<int:asset_id>/related/', asset_related, name='asset_related'),
+
+    # Resource download endpoint
+    path('resources/<int:resource_id>/download/', ResourceDownloadView.as_view(), name='resource_download'),
     
     # Publisher endpoints (PublishingOrganization-based)
     path('publishers/', publisher_list, name='publisher_list'),
