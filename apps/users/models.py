@@ -54,3 +54,14 @@ class Developer(BaseModel):
 
     def __str__(self):
         return f"Developer(user={self.user_id})"
+
+    def save(self, *args, **kwargs):
+        # Compute completion: all key fields must be non-empty
+        fields_filled = all([
+            bool((self.bio or "").strip()),
+            bool((self.project_summary or "").strip()),
+            bool((self.project_url or "").strip()),
+            bool((self.job_title or "").strip()),
+        ])
+        self.profile_completed = fields_filled
+        super().save(*args, **kwargs)
