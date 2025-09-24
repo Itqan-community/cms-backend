@@ -2,16 +2,27 @@
 Celery tasks for async analytics processing
 Handles usage event tracking and analytics computations
 """
+from __future__ import annotations
 import logging
+from typing import TypedDict, TYPE_CHECKING
 
 from celery import shared_task
 from django.db import transaction
 from django.utils import timezone
-
-from apps.users.models import User
+if TYPE_CHECKING:
+    from apps.content.models import UsageEvent
 
 logger = logging.getLogger(__name__)
 
+class EventData(TypedDict):
+    developer_user_id: int
+    usage_kind: UsageEvent.UsageKindChoice
+    subject_kind: UsageEvent.SubjectKindChoice
+    asset_id: int | None
+    resource_id: int | None
+    metadata: dict |None
+    ip_address: str | None
+    user_agent: str | None
 
 @shared_task(bind=True, max_retries=3)
 def create_usage_event_task(self, event_data):
@@ -40,6 +51,7 @@ def create_usage_event_task(self, event_data):
                 return False
 
         # Get user
+        from apps.users.models import User
         try:
             user = User.objects.get(id=event_data['developer_user_id'])
         except User.DoesNotExist:
@@ -73,7 +85,8 @@ def create_usage_event_task(self, event_data):
                 resource_id=resource_id,
                 metadata=event_data.get('metadata', {}),
                 ip_address=event_data.get('ip_address'),
-                user_agent=event_data.get('user_agent', '')
+                user_agent=event_data.get('user_agent', ''),
+                effective_license=event_data.get('effective_license', '')
             )
 
             logger.info(f"Created usage event {usage_event.id} for user {user.id}")
@@ -137,6 +150,7 @@ def batch_create_usage_events_task(events_data):
         for event_data in events_data:
             try:
                 # Validate and prepare event
+                from apps.users.models import User
                 user = User.objects.get(id=event_data['developer_user_id'])
 
                 event = UsageEvent(
@@ -147,7 +161,8 @@ def batch_create_usage_events_task(events_data):
                     resource_id=event_data.get('resource_id'),
                     metadata=event_data.get('metadata', {}),
                     ip_address=event_data.get('ip_address'),
-                    user_agent=event_data.get('user_agent', '')
+                    user_agent=event_data.get('user_agent', ''),
+                    effective_license=event_data.get('effective_license', '')
                 )
                 events_to_create.append(event)
 

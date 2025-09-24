@@ -2,10 +2,12 @@ from django.shortcuts import get_object_or_404
 from ninja import Schema
 from pydantic import Field
 
-from apps.content.models import Asset
+from apps.content.models import Asset, UsageEvent
+from apps.content.tasks import create_usage_event_task
+from apps.core.ninja_utils.auth import ninja_jwt_auth_optional
+from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
-from apps.core.ninja_utils.request import Request
 
 router = ItqanRouter(tags=[NinjaTag.ASSETS])
 
@@ -39,7 +41,22 @@ class DetailAssetOut(Schema):
     snapshots: list[DetailAssetSnapshotOut] = Field(default_factory=list, alias="previews")
 
 
-@router.get("assets/{id}/", response=DetailAssetOut, auth=None)
+@router.get("assets/{id}/", response=DetailAssetOut, auth=ninja_jwt_auth_optional)
 def detail_assets(request: Request, id: int):
     asset = get_object_or_404(Asset, id=id)
+    
+    # Only create usage event for authenticated users
+    if hasattr(request, 'user') and request.user and request.user.is_authenticated:
+        create_usage_event_task.delay({
+            "developer_user_id": request.user.id,
+            "usage_kind": UsageEvent.UsageKindChoice.VIEW,
+            "subject_kind": UsageEvent.SubjectKindChoice.ASSET,
+            "asset_id": asset.id,
+            "resource_id": None,
+            "metadata": {},
+            "ip_address": getattr(request, 'client', {}).get('host') if hasattr(request, 'client') else request.META.get('REMOTE_ADDR'),
+            "user_agent": request.headers.get('User-Agent', ''),
+            "effective_license": asset.license
+        })
+    
     return asset
