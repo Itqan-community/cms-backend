@@ -18,14 +18,14 @@ Successfully implemented PublishingOrganization and PublishingOrganizationMember
 ### PublishingOrganization Model
 - **ERD Fields**: `id`, `name`, `slug`, `icone_image_url`, `summary`, `created_at`, `updated_at`
 - **Additional API Fields**: `description`, `bio`, `cover_url`, `location`, `website`, `verified`, `social_links`
-- **Location**: `src/apps/content/models.py` (lines 14-91)
+- **Location**: `apps/content/models.py` (lines 14-91)
 - **Database Table**: `publishing_organization`
 - **Inheritance**: Extends `BaseModel` for soft delete and timestamp functionality
 
 ### PublishingOrganizationMember Model  
 - **ERD Fields**: `id`, `publishing_organization_id`, `user_id`, `role`, `created_at`, `updated_at`
 - **Role Types**: `owner` (full control), `manager` (Itqan team upload access)
-- **Location**: `src/apps/content/models.py` (lines 96-138)
+- **Location**: `apps/content/models.py` (lines 96-138)
 - **Database Table**: `publishing_organization_member`
 - **Constraints**: Unique constraint on `(publishing_organization, user)` pairs
 
@@ -69,6 +69,6 @@ Due to existing database state and previous task completions, encountered migrat
 
 ## References
 - Task definition: `temp/3.json`  
-- ERD specification: `src/ai-memory-bank/docs/db-design/db_design_v1.drawio`
-- OpenAPI schema: `src/openapi.yaml` (Publisher and PublisherSummary schemas)
-- Implementation: `src/apps/content/models.py`
+- ERD specification: `ai-memory-bank/docs/db-design/db_design_v1.drawio`
+- OpenAPI schema: `openapi.yaml` (Publisher and PublisherSummary schemas)
+- Implementation: `apps/content/models.py`

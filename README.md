@@ -100,7 +100,7 @@ celery -A config beat --loglevel=info
 ```
 cms/
 ├── frontend/                 # Angular 19 application
-│   ├── src/app/
+│   ├── app/
 │   │   ├── core/            # Core services (Auth, HTTP)
 │   │   ├── features/        # Feature modules
 │   │   │   ├── auth/        # Authentication

@@ -234,16 +234,16 @@ def publisher_statistics(request, publisher_id):
 
 ## Files Created/Updated
 ### New Files:
-- `src/apps/content/asset_views.py`: Complete asset API implementation
-- `src/apps/content/publisher_views.py`: Publisher API endpoints
-- `src/apps/content/migrations/0007_*`: Database schema updates
+- `apps/content/asset_views.py`: Complete asset API implementation
+- `apps/content/publisher_views.py`: Publisher API endpoints
+- `apps/content/migrations/0007_*`: Database schema updates
 
 ### Updated Files:
-- `src/apps/content/admin.py`: Enhanced admin interface with inlines and bulk operations
-- `src/apps/content/serializers.py`: Complete serializer rewrite for ERD compliance
-- `src/apps/accounts/auth_serializers.py`: ERD User model integration
-- `src/apps/api/urls.py`: API endpoint registration
-- `src/apps/content/models.py`: Additional fields for admin compatibility
+- `apps/content/admin.py`: Enhanced admin interface with inlines and bulk operations
+- `apps/content/serializers.py`: Complete serializer rewrite for ERD compliance
+- `apps/accounts/auth_serializers.py`: ERD User model integration
+- `apps/api/urls.py`: API endpoint registration
+- `apps/content/models.py`: Additional fields for admin compatibility
 
 ## Performance Optimizations
 ### Database Query Optimization:
@@ -266,9 +266,9 @@ def publisher_statistics(request, publisher_id):
 5. Task 20: Data Seeding and Testing
 
 ## References
-- ERD Design: `src/ai-memory-bank/docs/db-design/db_design_v1.drawio`
+- ERD Design: `ai-memory-bank/docs/db-design/db_design_v1.drawio`
 - OpenAPI Specification: `openapi.yaml`
 - Task specifications: `temp/11.json` through `temp/15.json`
-- Django Admin: `src/apps/content/admin.py`
-- API Implementation: `src/apps/content/asset_views.py`, `src/apps/content/publisher_views.py`
-- Serializers: `src/apps/content/serializers.py`
+- Django Admin: `apps/content/admin.py`
+- API Implementation: `apps/content/asset_views.py`, `apps/content/publisher_views.py`
+- Serializers: `apps/content/serializers.py`

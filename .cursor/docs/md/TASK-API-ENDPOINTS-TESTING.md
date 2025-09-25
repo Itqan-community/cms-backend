@@ -107,4 +107,4 @@ Created automated test scripts (`simple_api_test.sh`) to systematically test all
 ## References
 - Production API URL: https://api.cms.itqan.dev/api/v1/docs/
 - Test scripts: `simple_api_test.sh`, `test_production_api_fixed.sh`
-- OpenAPI specification: `/src/openapi.yaml`
+- OpenAPI specification: `/openapi.yaml`

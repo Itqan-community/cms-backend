@@ -192,8 +192,8 @@ asset_data = AssetSummarySerializer.from_asset_model(asset.resource.publishing_o
 - Asset → PublishingOrganization (incorrect - property only)
 
 ## References
-- ER Diagram: `src/ai-memory-bank/docs/db-design/db_design_v1.drawio`
-- Django Models: `src/apps/content/models.py`
-- API Views: `src/apps/content/asset_views.py`
+- ER Diagram: `ai-memory-bank/docs/db-design/db_design_v1.drawio`
+- Django Models: `apps/content/models.py`
+- API Views: `apps/content/asset_views.py`
 - Test Script: `test_all_models_api.sh`
 - Django Admin: `http://127.0.0.1:8000/django-admin/`
