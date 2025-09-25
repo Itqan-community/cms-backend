@@ -83,18 +83,8 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', 'staging-noreply@itqan.dev')
 
-# Staging logging - More verbose than production for debugging
-LOGGING['handlers']['file']['filename'] = '/app/logs/django.log'
-LOGGING['handlers']['console']['level'] = 'INFO'  # More verbose than production
+LOGGING['handlers']['console']['level'] = 'INFO'
 LOGGING['root']['level'] = 'INFO'
-
-# Add file handler for staging
-LOGGING['handlers']['file'] = {
-    'level': 'INFO',
-    'class': 'logging.FileHandler',
-    'filename': '/app/logs/django.log',
-    'formatter': 'verbose',
-}
 
 # Error monitoring (Sentry) - Optional for staging
 try:
@@ -118,8 +108,7 @@ except ImportError:
 
 # Django-allauth settings for staging
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
-ACCOUNT_LOGIN_ATTEMPTS_LIMIT = 5
-ACCOUNT_LOGIN_ATTEMPTS_TIMEOUT = 300
+ACCOUNT_RATE_LIMITS = 'login_failed'
 
 # Social auth settings for staging (use database configuration only)
 # OAuth apps are configured via Django admin for better security and flexibility
