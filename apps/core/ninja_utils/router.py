@@ -10,6 +10,8 @@ from ninja.utils import normalize_path
 
 __all__ = ["ItqanRouter"]
 
+from apps.core.ninja_utils.auth import ninja_jwt_auth_optional
+
 
 class ItqanRouter(Router):
     def api_operation(
@@ -40,7 +42,7 @@ class ItqanRouter(Router):
         return super().api_operation(
             methods=methods,
             path=path,
-            auth=auth,
+            auth=ninja_jwt_auth_optional if auth is None else auth,
             throttle=throttle,
             response=response,
             operation_id=operation_id,

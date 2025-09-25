@@ -4,7 +4,6 @@ from pydantic import Field
 
 from apps.content.models import Asset, UsageEvent
 from apps.content.tasks import create_usage_event_task
-from apps.core.ninja_utils.auth import ninja_jwt_auth_optional
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
@@ -41,7 +40,7 @@ class DetailAssetOut(Schema):
     snapshots: list[DetailAssetSnapshotOut] = Field(default_factory=list, alias="previews")
 
 
-@router.get("assets/{id}/", response=DetailAssetOut, auth=ninja_jwt_auth_optional)
+@router.get("assets/{id}/", response=DetailAssetOut, auth=None)
 def detail_assets(request: Request, id: int):
     asset = get_object_or_404(Asset, id=id)
     

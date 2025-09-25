@@ -1,3 +1,4 @@
+from django.contrib.auth.models import AnonymousUser
 from rest_framework_simplejwt.authentication import JWTAuthentication, JWTStatelessUserAuthentication
 
 
@@ -8,7 +9,7 @@ class JWTAuth(JWTAuthentication):
 
         ret  = self.authenticate(request)
         if ret is None:
-            return None
+            return AnonymousUser()
         request.user = ret[0]
         return ret
 
@@ -18,7 +19,7 @@ class JWTAuthStateless(JWTStatelessUserAuthentication):
     def __call__(self, request):
         ret = self.authenticate(request)
         if ret is None:
-            return None
+            return AnonymousUser()
         request.user = ret[0]
         return ret
 

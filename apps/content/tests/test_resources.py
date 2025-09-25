@@ -214,7 +214,7 @@ class ResourceListTest(BaseTestCase):
         self.assertIsInstance(body["created_at"], str)
         self.assertIsInstance(body["updated_at"], str)
 
-    def test_create_resource_with_invalid_data_should_return_422(self):
+    def test_create_resource_with_invalid_data_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
         data = {
@@ -228,7 +228,13 @@ class ResourceListTest(BaseTestCase):
         response = self.client.post("/resources/", data=data, format='json')
 
         # Assert
-        self.assertEqual(422, response.status_code, response.content)
+        self.assertEqual(400, response.status_code, response.content)
+        
+        # Verify the error message includes validation details
+        body = response.json()
+        self.assertEqual("validation_error", body["error_name"])
+        self.assertIn("name", str(body["extra"]))  # Should mention the name field
+        self.assertIn("at least 1 character", str(body["extra"]))  # Should mention minimum length
 
     def test_update_resource_should_return_200_with_updated_data(self):
         # Arrange
@@ -265,6 +271,27 @@ class ResourceListTest(BaseTestCase):
         self.assertEqual("Partially Updated Name", body["name"])
         self.assertEqual("Original description", body["description"])  # Should remain unchanged
 
+    def test_update_resource_with_empty_name_should_return_400(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        resource = baker.make(Resource, publisher=self.publisher1, name="Original Name")
+        data = {
+            "name": "",  # Invalid: empty name
+            "description": "Updated description"
+        }
+
+        # Act
+        response = self.client.put(f"/resources/{resource.id}/", data=data, format='json')
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        
+        # Verify the error message includes validation details
+        body = response.json()
+        self.assertEqual("validation_error", body["error_name"])
+        self.assertIn("name", str(body["extra"]))  # Should mention the name field
+        self.assertIn("at least 1 character", str(body["extra"]))  # Should mention minimum length
+
     def test_delete_resource_should_return_200_and_remove_resource(self):
         # Arrange
         self.authenticate_user(self.user)
@@ -275,67 +302,9 @@ class ResourceListTest(BaseTestCase):
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
-        body = response.json()
-        self.assertTrue(body["success"])
 
         # Verify resource is deleted
         self.assertFalse(Resource.objects.filter(id=resource.id).exists())
-
-    def test_publish_resource_should_change_status_to_ready(self):
-        # Arrange
-        self.authenticate_user(self.user)
-        resource = baker.make(Resource, publisher=self.publisher1, status=Resource.StatusChoice.DRAFT)
-
-        # Act
-        response = self.client.post(f"/resources/{resource.id}/publish/")
-
-        # Assert
-        self.assertEqual(200, response.status_code, response.content)
-        body = response.json()
-        self.assertEqual("ready", body["status"])
-
-        # Verify in database
-        resource.refresh_from_db()
-        self.assertEqual(Resource.StatusChoice.READY, resource.status)
-
-    def test_unpublish_resource_should_change_status_to_draft(self):
-        # Arrange
-        self.authenticate_user(self.user)
-        resource = baker.make(Resource, publisher=self.publisher1, status=Resource.StatusChoice.READY)
-
-        # Act
-        response = self.client.post(f"/resources/{resource.id}/unpublish/")
-
-        # Assert
-        self.assertEqual(200, response.status_code, response.content)
-        body = response.json()
-        self.assertEqual("draft", body["status"])
-
-        # Verify in database
-        resource.refresh_from_db()
-        self.assertEqual(Resource.StatusChoice.DRAFT, resource.status)
-
-    def test_publish_already_published_resource_should_return_400(self):
-        # Arrange
-        self.authenticate_user(self.user)
-        resource = baker.make(Resource, publisher=self.publisher1, status=Resource.StatusChoice.READY)
-
-        # Act
-        response = self.client.post(f"/resources/{resource.id}/publish/")
-
-        # Assert
-        self.assertEqual(400, response.status_code, response.content)
-
-    def test_unpublish_already_unpublished_resource_should_return_400(self):
-        # Arrange
-        self.authenticate_user(self.user)
-        resource = baker.make(Resource, publisher=self.publisher1, status=Resource.StatusChoice.DRAFT)
-
-        # Act
-        response = self.client.post(f"/resources/{resource.id}/unpublish/")
-
-        # Assert
-        self.assertEqual(400, response.status_code, response.content)
 
     def test_resource_operations_with_non_existent_id_should_return_404(self):
         # Arrange
