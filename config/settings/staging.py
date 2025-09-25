@@ -86,26 +86,6 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', 'staging-noreply@itqan.dev')
 LOGGING['handlers']['console']['level'] = 'INFO'
 LOGGING['root']['level'] = 'INFO'
 
-# Error monitoring (Sentry) - Optional for staging
-try:
-    import sentry_sdk
-    from sentry_sdk.integrations.django import DjangoIntegration
-    from sentry_sdk.integrations.celery import CeleryIntegration
-
-    sentry_sdk.init(
-        dsn=config('SENTRY_DSN', ''),
-        integrations=[
-            DjangoIntegration(),
-            CeleryIntegration(),
-        ],
-        traces_sample_rate=0.2,  # Higher sampling than production
-        send_default_pii=True,
-        environment='staging',
-    )
-except ImportError:
-    # Sentry SDK not installed or configured
-    pass
-
 # Django-allauth settings for staging
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 ACCOUNT_RATE_LIMITS = 'login_failed'
