@@ -13,7 +13,7 @@ router = ItqanRouter(tags=[NinjaTag.ASSETS])
 
 
 class DetailAssetSnapshotOut(Schema):
-    image_url: str
+    image_url: str | None
     title: str
     description: str
 
@@ -34,7 +34,7 @@ class DetailAssetOut(Schema):
     name: str
     description: str
     long_description: str
-    thumbnail_url: str
+    thumbnail_url: str | None
     publisher: DetailAssetPublisherOut = Field(alias="resource.publisher")
     resource: DetailAssetResourceOut
     license: str
@@ -54,7 +54,7 @@ def detail_assets(request: Request, id: int):
             "asset_id": asset.id,
             "resource_id": None,
             "metadata": {},
-            "ip_address": getattr(request, 'client', {}).get('host') if hasattr(request, 'client') else request.META.get('REMOTE_ADDR'),
+            "ip_address": request.META.get('REMOTE_ADDR'),
             "user_agent": request.headers.get('User-Agent', ''),
             "effective_license": asset.license
         })

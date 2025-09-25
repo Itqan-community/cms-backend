@@ -28,7 +28,7 @@ def download_resource(request: Request, id: int):
         "asset_id": None,
         "resource_id": resource.id,
         "metadata": {},
-        "ip_address": getattr(request, 'client', {}).get('host') if hasattr(request, 'client') else request.META.get('REMOTE_ADDR'),
+        "ip_address": request.META.get('REMOTE_ADDR'),
         "user_agent": request.headers.get('User-Agent', ''),
         "effective_license": ""  # Resources don't have license field
     })

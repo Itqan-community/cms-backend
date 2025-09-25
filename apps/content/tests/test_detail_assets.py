@@ -293,3 +293,29 @@ class DetailAssetTest(BaseTestCase):
         self.assertEqual(usage_event.user_agent, "Test Agent/1.0")
         # Note: IP address capture depends on Django test client configuration
         # In real requests, this would capture the client IP
+    def test_detail_assets_where_thumbnail_url_is_null_should_return_valid_response(self):
+        # Arrange
+        asset = baker.make(
+            Asset,
+            name="Asset Without Thumbnail",
+            description="Test asset without thumbnail",
+            long_description="This asset has no thumbnail URL to test optional field",
+            category=Asset.CategoryChoice.TAFSIR,
+            license=LicenseChoice.CC0,
+            thumbnail_url=None,  # Test the optional field
+        )
+
+        # Act
+        response = self.client.get(f"/assets/{asset.id}/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(asset.id, body["id"])
+        self.assertEqual("Asset Without Thumbnail", body["name"])
+        self.assertIsNone(body["thumbnail_url"])  # Should be null/None
+        self.assertEqual("CC0", body["license"])
+        
+        # Verify other required fields are still present
+        self.assertIn("publisher", body)
+        self.assertIn("snapshots", body)
