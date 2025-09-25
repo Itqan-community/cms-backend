@@ -16,7 +16,7 @@ Successfully implemented the real `/assets/` API endpoints and enhanced Django a
 ## Implementation Details
 
 ### 🔧 Asset API Endpoints
-Created `src/apps/content/asset_views.py` with four main endpoint classes:
+Created `apps/content/asset_views.py` with four main endpoint classes:
 
 1. **AssetListView** (`GET /api/v1/assets/`)
    - Lists published assets with optional category/license filtering
@@ -67,18 +67,18 @@ Created `src/apps/content/asset_views.py` with four main endpoint classes:
 
 ### 🗂️ File Structure
 ```
-src/apps/content/
+apps/content/
 ├── asset_views.py          # New asset API endpoints
 ├── admin.py               # Enhanced admin with asset focus
 └── serializers.py         # Added asset-specific serializers
 
-src/apps/api/
+apps/api/
 └── urls.py               # Added asset endpoint routing
 
-src/templates/admin/content/
+templates/admin/content/
 └── assets_dashboard.html  # Custom admin dashboard
 
-src/test_assets_api.py     # API testing script
+test_assets_api.py     # API testing script
 ```
 
 ### 🔄 Asset Workflow Integration
@@ -143,7 +143,7 @@ Resource types are mapped to API categories as follows:
 5. V1: Auto-approve all requests for simplified workflow
 
 ## References
-- OpenAPI Spec: `src/openapi.yaml` (lines 1029-1195)
-- API Contract: `src/ai-memory-bank/docs/apis-contract/cms-v1-apis-contract-notion-doc.md`
+- OpenAPI Spec: `openapi.yaml` (lines 1029-1195)
+- API Contract: `ai-memory-bank/docs/apis-contract/cms-v1-apis-contract-notion-doc.md`
 - Asset Endpoints: `/api/v1/assets/`, `/api/v1/assets/{id}/`, `/api/v1/assets/{id}/request-access/`, `/api/v1/assets/{id}/download/`
 - Admin Dashboard: `/django-admin/content/assets-dashboard/`

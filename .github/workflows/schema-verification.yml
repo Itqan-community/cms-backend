@@ -3,13 +3,13 @@ name: DISABLED - Schema Verification
 on:
   pull_request:
     paths:
-      - 'src/apps/*/models.py'
-      - 'src/apps/*/migrations/*.py'
+      - 'apps/*/models.py'
+      - 'apps/*/migrations/*.py'
   push:
     branches: [main, develop, staging]
     paths:
-      - 'src/apps/*/models.py'
-      - 'src/apps/*/migrations/*.py'
+      - 'apps/*/models.py'
+      - 'apps/*/migrations/*.py'
 
 jobs:
   verify-schema:
@@ -41,7 +41,6 @@ jobs:
 
     - name: Install dependencies
       run: |
-        cd src
         pip install -r requirements/base.txt
 
     - name: Set up test database
@@ -49,7 +48,6 @@ jobs:
         DATABASE_URL: postgres://postgres:postgres@localhost:5432/cms_test
         DJANGO_SETTINGS_MODULE: config.settings.base
       run: |
-        cd src
         python manage.py migrate
 
     - name: Verify schema consistency
@@ -57,7 +55,6 @@ jobs:
         DATABASE_URL: postgres://postgres:postgres@localhost:5432/cms_test
         DJANGO_SETTINGS_MODULE: config.settings.base
       run: |
-        cd src
         echo "🔍 Verifying database schema matches model definitions..."
         python manage.py verify_schema
         
@@ -71,7 +68,6 @@ jobs:
         DATABASE_URL: postgres://postgres:postgres@localhost:5432/cms_test
         DJANGO_SETTINGS_MODULE: config.settings.base
       run: |
-        cd src
         python manage.py shell -c "
         from apps.content.models import Asset, Resource, PublishingOrganization
         from django.db import connection
@@ -105,14 +101,12 @@ jobs:
 
     - name: Install dependencies
       run: |
-        cd src
         pip install -r requirements/base.txt
 
     - name: Check migration conflicts
       env:
         DJANGO_SETTINGS_MODULE: config.settings.base
       run: |
-        cd src
         echo "🔍 Checking for migration conflicts..."
         
         # Check if any apps have multiple leaf migrations
