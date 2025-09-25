@@ -2,8 +2,8 @@ from django.http import FileResponse
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 
-from apps.content.models import Resource
-from apps.content.models import ResourceVersion
+from apps.content.models import Resource, ResourceVersion, UsageEvent
+from apps.content.tasks import create_usage_event_task
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
 from apps.core.ninja_utils.request import Request
@@ -19,6 +19,19 @@ def download_resource(request: Request, id: int):
     """
     # Get the resource
     resource = get_object_or_404(Resource, id=id)
+
+    # Create usage event for file download
+    create_usage_event_task.delay({
+        "developer_user_id": request.user.id,
+        "usage_kind": UsageEvent.UsageKindChoice.FILE_DOWNLOAD,
+        "subject_kind": UsageEvent.SubjectKindChoice.RESOURCE,
+        "asset_id": None,
+        "resource_id": resource.id,
+        "metadata": {},
+        "ip_address": getattr(request, 'client', {}).get('host') if hasattr(request, 'client') else request.META.get('REMOTE_ADDR'),
+        "user_agent": request.headers.get('User-Agent', ''),
+        "effective_license": ""  # Resources don't have license field
+    })
 
     # Pick the latest by is_latest flag first, otherwise most recent by created_at
     latest_version = ResourceVersion.objects.filter(resource=resource).order_by("-is_latest", "-created_at").first()

@@ -1,7 +1,7 @@
 from django.test import TestCase
 from model_bakery import baker
 
-from apps.content.models import Resource
+from apps.content.models import Resource, UsageEvent
 from apps.publishers.models import Publisher
 from apps.users.models import User
 from apps.core.tests import BaseTestCase
@@ -365,3 +365,98 @@ class ResourceListTest(BaseTestCase):
 
                 # Assert
                 self.assertEqual(404, response.status_code, f"Failed for {method} {url}: {response.content}")
+
+    def test_detail_resource_where_authenticated_user_should_create_usage_event(self):
+        # Arrange
+        user = baker.make(User, email="usage-event-test@example.com", is_active=True)
+        self.authenticate_user(user)
+        resource = baker.make(
+            Resource,
+            publisher=self.publisher1,
+            name="Usage Event Test Resource",
+            description="Test resource for usage event tracking"
+        )
+
+        # Act
+        response = self.client.get(f"/resources/{resource.id}/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        
+        # Verify usage event was created in database
+        usage_events = UsageEvent.objects.filter(
+            developer_user=user,
+            usage_kind=UsageEvent.UsageKindChoice.VIEW,
+            subject_kind=UsageEvent.SubjectKindChoice.RESOURCE,
+            resource_id=resource.id
+        )
+        self.assertEqual(1, usage_events.count())
+        
+        usage_event = usage_events.first()
+        self.assertEqual(usage_event.developer_user, user)
+        self.assertEqual(usage_event.usage_kind, UsageEvent.UsageKindChoice.VIEW)
+        self.assertEqual(usage_event.subject_kind, UsageEvent.SubjectKindChoice.RESOURCE)
+        self.assertEqual(usage_event.resource_id, resource.id)
+        self.assertIsNone(usage_event.asset_id)
+        self.assertEqual(usage_event.effective_license, "")
+        self.assertIsInstance(usage_event.metadata, dict)
+
+    def test_detail_resource_where_anonymous_user_should_not_create_usage_event(self):
+        # Arrange - Clear authentication for anonymous user
+        self.authenticate_user(None)
+        resource = baker.make(
+            Resource,
+            publisher=self.publisher1,
+            name="Anonymous Test Resource",
+            description="Test resource for anonymous access"
+        )
+
+        # Act
+        response = self.client.get(f"/resources/{resource.id}/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        
+        # Verify no usage event was created for anonymous user
+        usage_events = UsageEvent.objects.filter(
+            usage_kind=UsageEvent.UsageKindChoice.VIEW,
+            subject_kind=UsageEvent.SubjectKindChoice.RESOURCE,
+            resource_id=resource.id
+        )
+        self.assertEqual(0, usage_events.count())
+
+    def test_detail_resource_where_authenticated_user_should_include_request_metadata(self):
+        # Arrange
+        user = baker.make(User, email="metadata@example.com", is_active=True)
+        self.authenticate_user(user)
+        resource = baker.make(
+            Resource,
+            publisher=self.publisher1,
+            name="Metadata Test Resource",
+            description="Test resource for request metadata"
+        )
+
+        # Act - Include custom headers
+        response = self.client.get(
+            f"/resources/{resource.id}/",
+            format="json",
+            HTTP_USER_AGENT="Test Agent/1.0",
+            HTTP_X_FORWARDED_FOR="192.168.1.100"
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        
+        # Verify usage event was created with correct metadata
+        usage_events = UsageEvent.objects.filter(
+            developer_user=user,
+            usage_kind=UsageEvent.UsageKindChoice.VIEW,
+            subject_kind=UsageEvent.SubjectKindChoice.RESOURCE,
+            resource_id=resource.id
+        )
+        self.assertEqual(1, usage_events.count())
+        
+        usage_event = usage_events.first()
+        self.assertEqual(usage_event.user_agent, "Test Agent/1.0")
+        # Note: IP address capture depends on Django test client configuration
+        # In real requests, this would capture the client IP

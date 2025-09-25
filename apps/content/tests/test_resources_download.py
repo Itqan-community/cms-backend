@@ -5,8 +5,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from model_bakery import baker
 
-from apps.content.models import Resource
-from apps.content.models import ResourceVersion
+from apps.content.models import Resource, ResourceVersion, UsageEvent
 from apps.users.models import User
 from apps.core.tests import BaseTestCase
 
@@ -192,3 +191,84 @@ class DownloadResourceTest(BaseTestCase):
 
                 # Assert
                 self.assertEqual(404, response.status_code, getattr(response, "content", b""))
+
+    def test_download_resource_should_create_usage_event_for_authenticated_user(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with override_settings(MEDIA_ROOT=tmpdir):
+                resource = baker.make(Resource, name="Usage Event Test Resource")
+                file_obj = self.create_file("test.csv", b"test,data\n1,2\n", "text/csv")
+                version = baker.make(
+                    ResourceVersion,
+                    resource=resource,
+                    semvar="1.0.0",
+                    storage_url=file_obj,
+                    file_type=ResourceVersion.FileTypeChoice.CSV,
+                    is_latest=True,
+                )
+
+                # Act
+                response = self.client.get(f"/resources/{resource.id}/download/", format="json")
+
+                # Assert
+                self.assertEqual(200, response.status_code, getattr(response, "content", b""))
+                
+                # Verify usage event was created in database
+                usage_events = UsageEvent.objects.filter(
+                    developer_user=self.user,
+                    usage_kind=UsageEvent.UsageKindChoice.FILE_DOWNLOAD,
+                    subject_kind=UsageEvent.SubjectKindChoice.RESOURCE,
+                    resource_id=resource.id
+                )
+                self.assertEqual(1, usage_events.count())
+                
+                usage_event = usage_events.first()
+                self.assertEqual(usage_event.developer_user, self.user)
+                self.assertEqual(usage_event.usage_kind, UsageEvent.UsageKindChoice.FILE_DOWNLOAD)
+                self.assertEqual(usage_event.subject_kind, UsageEvent.SubjectKindChoice.RESOURCE)
+                self.assertEqual(usage_event.resource_id, resource.id)
+                self.assertIsNone(usage_event.asset_id)
+                self.assertEqual(usage_event.effective_license, "")
+                self.assertIsInstance(usage_event.metadata, dict)
+
+    def test_download_resource_should_include_request_metadata_in_usage_event(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with override_settings(MEDIA_ROOT=tmpdir):
+                resource = baker.make(Resource, name="Metadata Test Resource")
+                file_obj = self.create_file("metadata.json", b'{"test": "data"}', "application/json")
+                version = baker.make(
+                    ResourceVersion,
+                    resource=resource,
+                    semvar="2.0.0",
+                    storage_url=file_obj,
+                    file_type=ResourceVersion.FileTypeChoice.JSON,
+                    is_latest=True,
+                )
+
+                # Act - Include custom headers
+                response = self.client.get(
+                    f"/resources/{resource.id}/download/",
+                    format="json",
+                    HTTP_USER_AGENT="Resource Download Agent/3.0",
+                    HTTP_X_FORWARDED_FOR="192.168.1.300"
+                )
+
+                # Assert
+                self.assertEqual(200, response.status_code, getattr(response, "content", b""))
+                
+                # Verify usage event was created with correct metadata
+                usage_events = UsageEvent.objects.filter(
+                    developer_user=self.user,
+                    usage_kind=UsageEvent.UsageKindChoice.FILE_DOWNLOAD,
+                    subject_kind=UsageEvent.SubjectKindChoice.RESOURCE,
+                    resource_id=resource.id
+                )
+                self.assertEqual(1, usage_events.count())
+                
+                usage_event = usage_events.first()
+                self.assertEqual(usage_event.user_agent, "Resource Download Agent/3.0")
+                # Note: IP address capture depends on Django test client configuration
+                # In real requests, this would capture the client IP

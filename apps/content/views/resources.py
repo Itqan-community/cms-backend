@@ -7,7 +7,9 @@ from ninja.pagination import paginate
 from pydantic import Field
 from pydantic import AwareDatetime
 
-from apps.content.models import Resource
+from apps.content.models import Resource, UsageEvent
+from apps.content.tasks import create_usage_event_task
+from apps.core.ninja_utils.auth import ninja_jwt_auth_optional
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -135,7 +137,22 @@ def delete_resource(request: Request, id: int):
 
 
 
-@router.get("resources/{id}/", response=DetailResourceOut)
+@router.get("resources/{id}/", response=DetailResourceOut, auth=ninja_jwt_auth_optional)
 def detail_resource(request: Request, id: int):
     resource = get_object_or_404(Resource.objects.select_related("publisher"), id=id)
+    
+    # Only create usage event for authenticated users
+    if hasattr(request, 'user') and request.user and request.user.is_authenticated:
+        create_usage_event_task.delay({
+            "developer_user_id": request.user.id,
+            "usage_kind": UsageEvent.UsageKindChoice.VIEW,
+            "subject_kind": UsageEvent.SubjectKindChoice.RESOURCE,
+            "asset_id": None,
+            "resource_id": resource.id,
+            "metadata": {},
+            "ip_address": getattr(request, 'client', {}).get('host') if hasattr(request, 'client') else request.META.get('REMOTE_ADDR'),
+            "user_agent": request.headers.get('User-Agent', ''),
+            "effective_license": ""  # Resources don't have license field
+        })
+    
     return resource
