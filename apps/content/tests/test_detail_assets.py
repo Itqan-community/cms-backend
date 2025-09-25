@@ -1,7 +1,8 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, LicenseChoice
+from apps.content.models import Asset, LicenseChoice, UsageEvent
 from apps.core.tests import BaseTestCase
+from apps.users.models import User
 
 
 class DetailAssetTest(BaseTestCase):
@@ -35,7 +36,7 @@ class DetailAssetTest(BaseTestCase):
         self.assertIn("name", body["publisher"])  # Publisher structure
         self.assertIn("description", body["publisher"])  # Publisher structure
         self.assertTrue(body["thumbnail_url"].endswith("thumbnails/tafseer.png"))
-        self.assertEqual("CC BY-SA", body["license"])
+        self.assertEqual("CC-BY-SA", body["license"])
 
     def test_detail_assets_where_response_schema_should_include_all_required_fields(self):
         # Arrange
@@ -191,3 +192,130 @@ class DetailAssetTest(BaseTestCase):
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
+
+    def test_detail_assets_where_authenticated_user_should_create_usage_event(self):
+        # Arrange
+        user = baker.make(User, email="test@example.com", is_active=True)
+        self.authenticate_user(user)
+        asset = baker.make(
+            Asset,
+            name="Usage Event Test Asset",
+            description="Test asset for usage event tracking",
+            category=Asset.CategoryChoice.TAFSIR,
+            license=LicenseChoice.CC_BY,
+            thumbnail_url="thumbnails/test.png",
+        )
+
+        # Act
+        response = self.client.get(f"/assets/{asset.id}/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        
+        # Verify usage event was created in database
+        usage_events = UsageEvent.objects.filter(
+            developer_user=user,
+            usage_kind=UsageEvent.UsageKindChoice.VIEW,
+            subject_kind=UsageEvent.SubjectKindChoice.ASSET,
+            asset_id=asset.id
+        )
+        self.assertEqual(1, usage_events.count())
+        
+        usage_event = usage_events.first()
+        self.assertEqual(usage_event.developer_user, user)
+        self.assertEqual(usage_event.usage_kind, UsageEvent.UsageKindChoice.VIEW)
+        self.assertEqual(usage_event.subject_kind, UsageEvent.SubjectKindChoice.ASSET)
+        self.assertEqual(usage_event.asset_id, asset.id)
+        self.assertIsNone(usage_event.resource_id)
+        self.assertEqual(usage_event.effective_license, asset.license)
+        self.assertIsInstance(usage_event.metadata, dict)
+
+    def test_detail_assets_where_anonymous_user_should_not_create_usage_event(self):
+        # Arrange - Clear authentication for anonymous user
+        self.authenticate_user(None)
+        asset = baker.make(
+            Asset,
+            name="Anonymous Test Asset",
+            description="Test asset for anonymous access",
+            category=Asset.CategoryChoice.MUSHAF,
+            license=LicenseChoice.CC0,
+            thumbnail_url="thumbnails/anonymous.png",
+        )
+
+        # Act
+        response = self.client.get(f"/assets/{asset.id}/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        
+        # Verify no usage event was created for anonymous user
+        usage_events = UsageEvent.objects.filter(
+            usage_kind=UsageEvent.UsageKindChoice.VIEW,
+            subject_kind=UsageEvent.SubjectKindChoice.ASSET,
+            asset_id=asset.id
+        )
+        self.assertEqual(0, usage_events.count())
+
+    def test_detail_assets_where_authenticated_user_should_include_request_metadata(self):
+        # Arrange
+        user = baker.make(User, email="metadata@example.com", is_active=True)
+        self.authenticate_user(user)
+        asset = baker.make(
+            Asset,
+            name="Metadata Test Asset",
+            description="Test asset for request metadata",
+            category=Asset.CategoryChoice.RECITATION,
+            license=LicenseChoice.CC_BY_SA,
+            thumbnail_url="thumbnails/metadata.png",
+        )
+
+        # Act - Include custom headers
+        response = self.client.get(
+            f"/assets/{asset.id}/",
+            format="json",
+            HTTP_USER_AGENT="Test Agent/1.0",
+            HTTP_X_FORWARDED_FOR="192.168.1.100"
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        
+        # Verify usage event was created with correct metadata
+        usage_events = UsageEvent.objects.filter(
+            developer_user=user,
+            usage_kind=UsageEvent.UsageKindChoice.VIEW,
+            subject_kind=UsageEvent.SubjectKindChoice.ASSET,
+            asset_id=asset.id
+        )
+        self.assertEqual(1, usage_events.count())
+        
+        usage_event = usage_events.first()
+        self.assertEqual(usage_event.user_agent, "Test Agent/1.0")
+        # Note: IP address capture depends on Django test client configuration
+        # In real requests, this would capture the client IP
+    def test_detail_assets_where_thumbnail_url_is_null_should_return_valid_response(self):
+        # Arrange
+        asset = baker.make(
+            Asset,
+            name="Asset Without Thumbnail",
+            description="Test asset without thumbnail",
+            long_description="This asset has no thumbnail URL to test optional field",
+            category=Asset.CategoryChoice.TAFSIR,
+            license=LicenseChoice.CC0,
+            thumbnail_url=None,  # Test the optional field
+        )
+
+        # Act
+        response = self.client.get(f"/assets/{asset.id}/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(asset.id, body["id"])
+        self.assertEqual("Asset Without Thumbnail", body["name"])
+        self.assertIsNone(body["thumbnail_url"])  # Should be null/None
+        self.assertEqual("CC0", body["license"])
+        
+        # Verify other required fields are still present
+        self.assertIn("publisher", body)
+        self.assertIn("snapshots", body)

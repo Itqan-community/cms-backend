@@ -7,7 +7,8 @@ from ninja.pagination import paginate
 from pydantic import Field
 from pydantic import AwareDatetime
 
-from apps.content.models import Resource
+from apps.content.models import Resource, UsageEvent
+from apps.content.tasks import create_usage_event_task
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -41,14 +42,14 @@ class ResourceFilter(FilterSchema):
 
 
 class CreateResourceIn(Schema):
-    name: str
+    name: str = Field(min_length=1, description="Name cannot be empty")
     description: str
     category: Resource.CategoryChoice
     publisher_id: int
 
 
 class UpdateResourceIn(Schema):
-    name: str | None = None
+    name: str | None = Field(None, min_length=1, description="Name cannot be empty when provided")
     description: str | None = None
     category: Resource.CategoryChoice | None = None
     status: Resource.StatusChoice | None = None
@@ -135,7 +136,22 @@ def delete_resource(request: Request, id: int):
 
 
 
-@router.get("resources/{id}/", response=DetailResourceOut)
+@router.get("resources/{id}/", response=DetailResourceOut, auth=None)
 def detail_resource(request: Request, id: int):
     resource = get_object_or_404(Resource.objects.select_related("publisher"), id=id)
+    
+    # Only create usage event for authenticated users
+    if hasattr(request, 'user') and request.user and request.user.is_authenticated:
+        create_usage_event_task.delay({
+            "developer_user_id": request.user.id,
+            "usage_kind": UsageEvent.UsageKindChoice.VIEW,
+            "subject_kind": UsageEvent.SubjectKindChoice.RESOURCE,
+            "asset_id": None,
+            "resource_id": resource.id,
+            "metadata": {},
+            "ip_address": request.META.get('REMOTE_ADDR'),
+            "user_agent": request.headers.get('User-Agent', ''),
+            "effective_license": ""  # Resources don't have license field
+        })
+    
     return resource

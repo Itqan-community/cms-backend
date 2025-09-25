@@ -4,7 +4,7 @@ from django.utils import timezone
 from model_bakery import baker
 from unittest.mock import patch, MagicMock
 
-from apps.content.models import Asset, AssetVersion, AssetAccess, AssetAccessRequest, LicenseChoice
+from apps.content.models import Asset, AssetVersion, AssetAccess, AssetAccessRequest, LicenseChoice, UsageEvent
 from apps.publishers.models import Publisher
 from apps.users.models import User
 from apps.core.tests import BaseTestCase
@@ -214,3 +214,102 @@ class AssetDownloadTest(BaseTestCase):
                     response.status_code,
                     f"Failed for format: {invalid_format}, response: {response.content}",
                 )
+
+    @patch('apps.content.views.assets_download.user_has_access')
+    @patch('django.core.files.storage.default_storage.exists')
+    @patch('django.core.files.storage.default_storage.open')
+    def test_download_asset_should_create_usage_event_for_authenticated_user(self, mock_open, mock_exists, mock_user_has_access):
+        # Arrange
+        mock_user_has_access.return_value = True
+        mock_exists.return_value = True
+        mock_file_content = MagicMock()
+        mock_open.return_value = mock_file_content
+        
+        # Create a mock file
+        mock_file = SimpleUploadedFile("test.pdf", b"fake pdf content", content_type="application/pdf")
+        asset_version = baker.make(AssetVersion, asset=self.asset, name="Download Test", file_url=mock_file)
+
+        # Act
+        self.authenticate_user(self.user)
+        response = self.client.get(f"/assets/{self.asset.id}/download/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        
+        # Verify usage event was created in database
+        usage_events = UsageEvent.objects.filter(
+            developer_user=self.user,
+            usage_kind=UsageEvent.UsageKindChoice.FILE_DOWNLOAD,
+            subject_kind=UsageEvent.SubjectKindChoice.ASSET,
+            asset_id=self.asset.id
+        )
+        self.assertEqual(1, usage_events.count())
+        
+        usage_event = usage_events.first()
+        self.assertEqual(usage_event.developer_user, self.user)
+        self.assertEqual(usage_event.usage_kind, UsageEvent.UsageKindChoice.FILE_DOWNLOAD)
+        self.assertEqual(usage_event.subject_kind, UsageEvent.SubjectKindChoice.ASSET)
+        self.assertEqual(usage_event.asset_id, self.asset.id)
+        self.assertIsNone(usage_event.resource_id)
+        self.assertEqual(usage_event.effective_license, self.asset.license)
+        self.assertIsInstance(usage_event.metadata, dict)
+
+    @patch('apps.content.views.assets_download.user_has_access')
+    def test_download_asset_should_not_create_usage_event_when_permission_denied(self, mock_user_has_access):
+        # Arrange
+        mock_user_has_access.return_value = False  # No access
+
+        # Act
+        self.authenticate_user(self.user)
+        response = self.client.get(f"/assets/{self.asset.id}/download/")
+
+        # Assert
+        self.assertEqual(403, response.status_code, response.content)
+        
+        # Verify no usage event was created when access denied
+        usage_events = UsageEvent.objects.filter(
+            developer_user=self.user,
+            usage_kind=UsageEvent.UsageKindChoice.FILE_DOWNLOAD,
+            subject_kind=UsageEvent.SubjectKindChoice.ASSET,
+            asset_id=self.asset.id
+        )
+        self.assertEqual(0, usage_events.count())
+
+    @patch('apps.content.views.assets_download.user_has_access')
+    @patch('django.core.files.storage.default_storage.exists')
+    @patch('django.core.files.storage.default_storage.open')
+    def test_download_asset_should_include_request_metadata_in_usage_event(self, mock_open, mock_exists, mock_user_has_access):
+        # Arrange
+        mock_user_has_access.return_value = True
+        mock_exists.return_value = True
+        mock_file_content = MagicMock()
+        mock_open.return_value = mock_file_content
+        
+        # Create a mock file
+        mock_file = SimpleUploadedFile("test.csv", b"fake csv content", content_type="text/csv")
+        asset_version = baker.make(AssetVersion, asset=self.asset, name="Metadata Test", file_url=mock_file)
+
+        # Act - Include custom headers
+        self.authenticate_user(self.user)
+        response = self.client.get(
+            f"/assets/{self.asset.id}/download/",
+            HTTP_USER_AGENT="Download Agent/2.0",
+            HTTP_X_FORWARDED_FOR="192.168.1.200"
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        
+        # Verify usage event was created with correct metadata
+        usage_events = UsageEvent.objects.filter(
+            developer_user=self.user,
+            usage_kind=UsageEvent.UsageKindChoice.FILE_DOWNLOAD,
+            subject_kind=UsageEvent.SubjectKindChoice.ASSET,
+            asset_id=self.asset.id
+        )
+        self.assertEqual(1, usage_events.count())
+        
+        usage_event = usage_events.first()
+        self.assertEqual(usage_event.user_agent, "Download Agent/2.0")
+        # Note: IP address capture depends on Django test client configuration
+        # In real requests, this would capture the client IP
