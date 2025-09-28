@@ -17,7 +17,7 @@ class PublisherMemberInline(admin.TabularInline):
     raw_id_fields = ["user"]
 @admin.register(Publisher)
 class PublisherAdmin(admin.ModelAdmin):
-    list_display = ["name", "slug", "member_count", "resource_count", "asset_count", "created_at"]
+    list_display = ["name", "slug", "icon_url", "member_count", "resource_count", "asset_count", "created_at"]
     list_filter = ["created_at", "updated_at"]
     search_fields = ["name", "slug", "description"]
     prepopulated_fields = {"slug": ("name",)}
@@ -27,7 +27,7 @@ class PublisherAdmin(admin.ModelAdmin):
         (
             "Basic Information",
             {
-                "fields": ("name", "slug"),
+                "fields": ("name", "slug", "icon_url"),
             },
         ),
         (
