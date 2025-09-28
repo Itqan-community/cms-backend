@@ -1,12 +1,12 @@
-from django.http import FileResponse
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import PermissionDenied
 from typing import Literal
+from ninja import Schema
 
-from apps.content.models import Asset, AssetVersion, UsageEvent
 from apps.content.services.asset_access import user_has_access
+from apps.content.models import Asset, AssetAccess, UsageEvent
 from apps.content.tasks import create_usage_event_task
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.router import ItqanRouter
@@ -16,9 +16,14 @@ from apps.core.ninja_utils.request import Request
 router = ItqanRouter(tags=[NinjaTag.ASSETS])
 
 
+class DownloadAssetOut(Schema):
+    download_url: str
+
+
 @router.get(
     "assets/{id}/download/",
     response={
+        200: DownloadAssetOut,
         403: NinjaErrorResponse[Literal["permission_denied"], Literal[None]],
         404: NinjaErrorResponse[Literal["not_found"], Literal[None]]
         | NinjaErrorResponse[Literal["no_file_versions"], Literal[None]]
@@ -28,8 +33,7 @@ router = ItqanRouter(tags=[NinjaTag.ASSETS])
 )
 def download_asset(request: Request, id: int):
     """
-    Download the latest version of an asset.
-    Returns the file directly for download.
+    Return a direct download URL for the latest asset version
     """
     # Get the asset
     asset = get_object_or_404(Asset, id=id)
@@ -37,6 +41,11 @@ def download_asset(request: Request, id: int):
     # Check if user has access using the service function
     if not user_has_access(request.user, asset):
         raise PermissionDenied(_("You do not have access to this asset"))
+
+    # Get download URL
+    download_url = AssetAccess.all_objects.get(user=request.user, asset=asset).get_download_url()
+    if not download_url:
+        raise Http404("Download URL not available")
 
     # Create usage event for file download
     create_usage_event_task.delay({
@@ -51,47 +60,4 @@ def download_asset(request: Request, id: int):
         "effective_license": asset.license
     })
 
-    # Get the latest asset version with file
-    latest_version = AssetVersion.objects.filter(
-        asset=asset,
-        file_url__isnull=False
-    ).order_by("-created_at").first()
-
-    if not latest_version:
-        raise Http404("No file versions found for this asset")
-
-    if not latest_version.file_url:
-        raise Http404("No file available for download")
-
-    storage = latest_version.file_url.storage
-    name = latest_version.file_url.name
-    if not storage.exists(name):
-        raise Http404("File not accessible: missing from storage")
-
-    # Get file extension for content type
-    file_extension = name.split('.')[-1].lower() if '.' in name else ''
-    
-    response = FileResponse(
-        latest_version.file_url.open("rb"),
-        as_attachment=True,
-        filename=f"{asset.name}_{latest_version.name}.{file_extension}",
-    )
-
-    # Set content type based on file extension
-    content_types = {
-        "csv": "text/csv",
-        "pdf": "application/pdf",
-        "doc": "application/msword",
-        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "txt": "text/plain",
-        "json": "application/json",
-        "xml": "application/xml",
-        "zip": "application/zip",
-        "tar": "application/x-tar",
-        "gz": "application/gzip",
-    }
-
-    if file_extension in content_types:
-        response["Content-Type"] = content_types[file_extension]
-
-    return response
+    return 200, DownloadAssetOut(download_url=download_url)
