@@ -39,12 +39,9 @@ class UserProfileSchema(Schema):
 
 
 class UserUpdateSchema(Schema):
-    name: str|None = None
-    phone: str|None = None
     bio: str = ""
     project_summary: str = ""
     project_url: str = ""
-    job_title: str = ""
 
 
 class RegisterSchema(Schema):
