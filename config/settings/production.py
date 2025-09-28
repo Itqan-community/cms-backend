@@ -105,33 +105,8 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', 'noreply@itqan.com')
 
-# Production logging
-# Write logs to an application directory that exists in the container
-LOGGING['handlers']['file']['filename'] = '/app/logs/django.log'
 LOGGING['handlers']['console']['level'] = 'WARNING'
 LOGGING['root']['level'] = 'INFO'
-
-# Error monitoring (Sentry)
-try:
-    import sentry_sdk
-    from sentry_sdk.integrations.django import DjangoIntegration
-    from sentry_sdk.integrations.celery import CeleryIntegration
-
-    sentry_sdk.init(
-        dsn=config('SENTRY_DSN', ''),
-        integrations=[
-            DjangoIntegration(),
-            CeleryIntegration(),
-        ],
-        traces_sample_rate=0.1,
-        send_default_pii=True,
-        environment='production',
-    )
-except ImportError:
-    # Sentry SDK not installed or configured; skipping error monitoring
-    pass
-
-# Production-specific settings
 
 # Force HTTPS in allauth callback URLs
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'
