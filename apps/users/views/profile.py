@@ -45,20 +45,13 @@ def update_user_profile(request: Request, profile_data: UserUpdateSchema):
     user_developer_profile, _ = Developer.objects.get_or_create(user=user)
     
     # Update allowed fields
-    if profile_data.name is not None:
-        user.name = profile_data.name
-    if profile_data.phone is not None:
-        user.phone = profile_data.phone
     if profile_data.bio is not None:
         user_developer_profile.bio = profile_data.bio
     if profile_data.project_summary is not None:
         user_developer_profile.project_summary = profile_data.project_summary
     if profile_data.project_url is not None:
         user_developer_profile.project_url = profile_data.project_url
-    if profile_data.job_title is not None:
-        user_developer_profile.job_title = profile_data.job_title
     
-    user.save()
     user_developer_profile.save()
 
     return {
