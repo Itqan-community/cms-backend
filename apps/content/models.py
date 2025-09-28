@@ -69,7 +69,7 @@ class Resource(BaseModel):
         super().save(*args, **kwargs)
 
     def get_latest_version(self):
-        self.versions.filter(is_latest=True).first()
+        return self.versions.order_by('-created_at').first()
 
 
 class ResourceVersion(BaseModel):
@@ -217,6 +217,9 @@ class Asset(BaseModel):
             resource__publisher=self.resource.publisher,
             is_active=True,
         ).exclude(id=self.id)[:limit]
+
+    def get_latest_version(self):
+        return self.versions.order_by('-created_at').first()
 
     @property
     def human_readable_size(self):
@@ -429,6 +432,13 @@ class AssetAccess(BaseModel):
     def is_expired(self):
         """Check if access has expired"""
         return not self.is_active
+    
+    def get_download_url(self):
+        """Get the download URL for this access"""
+        if self.download_url:
+            return self.download_url
+        latest_version = self.asset.get_latest_version()
+        return latest_version.file_url.url if latest_version and latest_version.file_url else None
 
 
 class UsageEvent(BaseModel):

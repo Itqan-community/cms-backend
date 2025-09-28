@@ -376,20 +376,3 @@ class UsageEventAdmin(admin.ModelAdmin):
     def has_change_permission(self, request, obj=None):
         return False
 
-
-@admin.register(Distribution)
-class DistributionAdmin(admin.ModelAdmin):
-    """Admin for Distributions - API contract fields only"""
-    list_display = ['asset_version', 'channel', 'created_at']
-    list_filter = ['channel', 'created_at']
-    
-    fieldsets = (
-        ('Distribution Information', {
-            'fields': ('asset_version', 'channel')
-        }),
-        ('Timestamps', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        })
-    )
-    readonly_fields = ['created_at', 'updated_at']
