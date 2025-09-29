@@ -96,7 +96,7 @@ class ResourceAdmin(admin.ModelAdmin):
     def latest_version(self, obj):
         latest = obj.get_latest_version()
         if latest:
-            return f"{latest.semvar} ({latest.type})"
+            return f"{latest.semvar}"
         return "No versions"
 
     @admin.display(description="Versions")
