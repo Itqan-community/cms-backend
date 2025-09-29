@@ -1,0 +1,33 @@
+-r base.txt
+
+django-silk==5.0.*
+
+# Code Quality
+black==23.7.*
+isort==5.12.*
+flake8==6.0.*
+
+coverage==7.10.6
+
+django-coverage-plugin==3.1.1
+django-debug-toolbar==6.0.0
+django-extensions==4.1
+django-stubs-ext>=5.2.2
+django-stubs[compatible-mypy]==5.2.2
+djlint==1.36.4
+freezegun>=1.5.5
+ipdb==0.13.13
+model-bakery>=1.20.5
+moto>=5.1.11
+mypy==1.17.1
+pre-commit==4.3.0
+pytest==8.4.2
+pytest-cov>=6.3.0
+pytest-django==4.11.1
+pytest-sugar==1.1.1
+responses>=0.25.8
+ruff==0.12.12
+sphinx==8.2.3
+sphinx-autobuild==2025.8.25
+watchfiles==1.1.0
+werkzeug[watchdog]==3.1.3

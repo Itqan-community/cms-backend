@@ -131,10 +131,10 @@ DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 4. Implement file cleanup for deleted records
 
 ## References
-- **Models**: `src/apps/content/models.py`, `src/apps/accounts/models.py`
-- **Admin**: `src/apps/content/admin.py`, `src/apps/accounts/admin.py`
-- **Serializers**: `src/apps/content/serializers.py`, `src/apps/accounts/serializers.py`
-- **Utils**: `src/apps/core/utils.py`
-- **Settings**: `src/config/settings/base.py`, `src/config/settings/development.py`
+- **Models**: `apps/content/models.py`, `apps/accounts/models.py`
+- **Admin**: `apps/content/admin.py`, `apps/accounts/admin.py`
+- **Serializers**: `apps/content/serializers.py`, `apps/accounts/serializers.py`
+- **Utils**: `apps/core/utils.py`
+- **Settings**: `config/settings/base.py`, `config/settings/development.py`
 - **Test**: `test_file_upload_contract.py`
-- **OpenAPI**: `src/openapi.yaml`
+- **OpenAPI**: `openapi.yaml`

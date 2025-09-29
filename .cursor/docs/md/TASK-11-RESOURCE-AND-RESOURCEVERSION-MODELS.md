@@ -222,7 +222,7 @@ count = resource.version_count
 
 - **Model Implementation**: `apps/content/models.py` (Lines 239-433)
 - **Migration**: `apps/content/migrations/0003_transform_resource_and_add_resource_version.py`
-- **ERD Design**: `src/ai-memory-bank/docs/db-design/db_design_v1.drawio`
+- **ERD Design**: `ai-memory-bank/docs/db-design/db_design_v1.drawio`
 - **Task Requirements**: `temp/5.json`
 
 ---

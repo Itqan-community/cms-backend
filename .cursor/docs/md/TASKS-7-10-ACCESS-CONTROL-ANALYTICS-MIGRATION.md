@@ -49,12 +49,13 @@ user_access = AssetAccess.get_user_access(user, asset)
 - **Analytics aggregation**: User stats, asset stats, resource stats
 
 #### Event Tracking Features:
+
 ```python
 # Track different event types
-UsageEvent.track_asset_download(user, asset, ip_address, user_agent)
-UsageEvent.track_asset_view(user, asset, ip_address, user_agent)  
-UsageEvent.track_resource_download(user, resource, ip_address, user_agent)
-UsageEvent.track_api_access(user, resource, api_endpoint, ip_address, user_agent)
+UsageEvent.log_asset_download(user, asset, ip_address, user_agent)
+UsageEvent.log_asset_view(user, asset, ip_address, user_agent)
+UsageEvent.log_resource_download(user, resource, ip_address, user_agent)
+UsageEvent.log_api_access(user, resource, api_endpoint, ip_address, user_agent)
 
 # Get analytics
 user_stats = UsageEvent.get_user_stats(user)
@@ -191,7 +192,7 @@ Distribution.create_graphql_distribution(resource, graphql_endpoint, version)
 5. Task 15: Publisher API Implementation
 
 ## References
-- ERD Design: `src/ai-memory-bank/docs/db-design/db_design_v1.drawio`
+- ERD Design: `ai-memory-bank/docs/db-design/db_design_v1.drawio`
 - Task specifications: `temp/7.json`, `temp/8.json`, `temp/9.json`, `temp/10.json`
-- Migration file: `src/apps/content/migrations/0006_create_access_control_tables.py`
-- Models implementation: `src/apps/content/models.py`
+- Migration file: `apps/content/migrations/0006_create_access_control_tables.py`
+- Models implementation: `apps/content/models.py`
