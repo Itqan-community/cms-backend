@@ -1,0 +1,8 @@
+# ==== pytest ====
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "--ds=config.settings.development --reuse-db --import-mode=importlib"
+python_files = [
+    "tests.py",
+    "test_*.py",
+]

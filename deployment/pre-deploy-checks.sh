@@ -35,7 +35,7 @@ log_error() {
 }
 
 # Check if we're in the right directory
-if [ ! -f "src/manage.py" ]; then
+if [ ! -f "manage.py" ]; then
     log_error "Must be run from project root directory"
     exit 1
 fi

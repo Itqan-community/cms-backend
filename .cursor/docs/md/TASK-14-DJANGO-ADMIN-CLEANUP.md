@@ -13,18 +13,18 @@ Successfully configured Django admin interface to show only custom project model
 - Ensure the solution is maintainable and extensible
 
 ## Implementation Details
-### Core Admin Configuration (`src/apps/core/admin.py`)
+### Core Admin Configuration (`apps/core/admin.py`)
 - Created comprehensive `AdminConfig` class to manage model visibility
 - Implemented automatic detection and unregistration of third-party models
 - Added support for allauth, wagtail, taggit, and Django contrib models
 - Built robust error handling for missing models
 
-### App Integration (`src/apps/core/apps.py`)
+### App Integration (`apps/core/apps.py`)
 - Modified `CoreConfig.ready()` method to load admin configuration
 - Ensured cleanup runs after all apps are loaded
 - Added final cleanup to catch any late-registered models
 
-### Management Command (`src/apps/core/management/commands/cleanup_admin.py`)
+### Management Command (`apps/core/management/commands/cleanup_admin.py`)
 - Created `cleanup_admin` management command for manual execution
 - Added `--show-stats` flag to display current registration state
 - Included `--dry-run` option for testing without changes
@@ -81,4 +81,4 @@ Successfully configured Django admin interface to show only custom project model
 ## References
 - Admin interface accessible at: `http://localhost:8000/django-admin/`
 - Management command: `python manage.py cleanup_admin --show-stats`
-- Configuration files: `src/apps/core/admin.py`, `src/apps/core/apps.py`
+- Configuration files: `apps/core/admin.py`, `apps/core/apps.py`

@@ -131,6 +131,6 @@ SOCIALACCOUNT_PROVIDERS = {
 
 ## References
 - GitHub Actions Workflow: `.github/workflows/deploy.yml`
-- Staging Settings: `src/config/settings/staging.py`
-- Production Settings: `src/config/settings/production.py`
-- Development Settings: `src/config/settings/development.py`
+- Staging Settings: `config/settings/staging.py`
+- Production Settings: `config/settings/production.py`
+- Development Settings: `config/settings/development.py`

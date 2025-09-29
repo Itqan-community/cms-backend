@@ -4,26 +4,26 @@
 
 ### 1.1 Directory Cleanup
 - [ ] **Backup current structure** (create git branch: `backup/pre-restructure`)
-- [ ] **Remove duplicate `src/core/`**
-  - [ ] Verify no unique code exists in `src/core/`
-  - [ ] Remove directory: `rm -rf src/core/`
+- [ ] **Remove duplicate `core/`**
+  - [ ] Verify no unique code exists in `core/`
+  - [ ] Remove directory: `rm -rf core/`
   - [ ] Update any imports that reference old `core.`
-- [ ] **Remove legacy `src/itqan_cms/`**
+- [ ] **Remove legacy `itqan_cms/`**
   - [ ] Verify all functionality moved to `config/`
-  - [ ] Remove directory: `rm -rf src/itqan_cms/`
+  - [ ] Remove directory: `rm -rf itqan_cms/`
   - [ ] Search and replace any remaining `itqan_cms` imports
 - [ ] **Clean up unused apps**
-  - [ ] Analyze `src/developers/` - remove if empty
-  - [ ] Analyze `src/publishers/` - merge into `content` or remove
-  - [ ] Analyze `src/resources/` - merge into `content` or remove
+  - [ ] Analyze `developers/` - remove if empty
+  - [ ] Analyze `publishers/` - merge into `content` or remove
+  - [ ] Analyze `resources/` - merge into `content` or remove
   - [ ] Update `INSTALLED_APPS` in settings
 
 ### 1.2 Import Statement Updates
 - [ ] **Search for old imports**
   ```bash
-  grep -r "from itqan_cms" src/
-  grep -r "import itqan_cms" src/
-  grep -r "from core\." src/
+  grep -r "from itqan_cms" /
+  grep -r "import itqan_cms" /
+  grep -r "from core\." /
   ```
 - [ ] **Update all references to use `config.*`**
 
@@ -89,7 +89,7 @@
 ## Phase 4: Shared Libraries (MEDIUM PRIORITY)
 
 ### 4.1 Create Libraries Structure
-- [ ] **Create `src/libs/` directory**
+- [ ] **Create `libs/` directory**
 - [ ] **Create subdirectories:**
   - [ ] `libs/auth/` - Authentication utilities
   - [ ] `libs/storage/` - Storage backends

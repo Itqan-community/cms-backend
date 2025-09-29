@@ -63,12 +63,12 @@ jobs:
             fi
             
             # Rule 2: Staging can only receive merges from develop
-            # if [[ "$BASE_BRANCH" == "staging" && "$HEAD_BRANCH" != "develop" ]]; then
-            # echo "❌ ERROR: Staging can only be updated from develop branch"
-            # echo "   Attempted: $HEAD_BRANCH → staging" 
-            # echo "   Required: develop → staging"
-            # exit 1
-            # fi
+            if [[ "$BASE_BRANCH" == "staging" && "$HEAD_BRANCH" != "develop" ]]; then
+              echo "❌ ERROR: Staging can only be updated from develop branch"
+              echo "   Attempted: $HEAD_BRANCH → staging" 
+              echo "   Required: develop → staging"
+              exit 1
+            fi
             
             echo "✅ Branch flow rules validated successfully"
           elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then

@@ -24,13 +24,13 @@ if [[ "$remote_branch" == "main" && "$current_branch" != "staging" ]]; then
 fi
 
 # Rule 2: Only develop can push to staging  
-# if [[ "$remote_branch" == "staging" && "$current_branch" != "develop" ]]; then
-#     echo "❌ ERROR: Staging can only be updated from develop branch"
-#     echo "   Attempted: $current_branch → staging"
-#     echo "   Required: develop → staging"
-#     echo "   Use: git checkout develop && git merge $current_branch"
-#     exit 1
-# fi
+if [[ "$remote_branch" == "staging" && "$current_branch" != "develop" ]]; then
+    echo "❌ ERROR: Staging can only be updated from develop branch"
+    echo "   Attempted: $current_branch → staging"
+    echo "   Required: develop → staging"
+    echo "   Use: git checkout develop && git merge $current_branch"
+    exit 1
+fi
 
 echo "✅ Branch flow rules validated successfully"
 exit 0
