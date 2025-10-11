@@ -44,8 +44,7 @@ LOCAL_APPS = [
     'apps.core',
     'apps.content',
     'apps.users',
-    'apps.publishers',
-    'mock_api',  # Mock API for development and testing
+    'apps.publishers'
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
