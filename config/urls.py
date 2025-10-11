@@ -52,13 +52,6 @@ urlpatterns = [
     # Django Admin
     path('django-admin/', admin.site.urls),
     
-    # Wagtail CMS removed - using Django Admin in V1
-    
-    # API Routes (optional include if module exists)
-    
-    # Mock API endpoints (dummy data for development/testing)
-    path('mock-api/', include('mock_api.urls')),
-    
     # Django Allauth URLs
     path('accounts/', include('allauth.urls')),
 
