@@ -128,6 +128,8 @@ LANGUAGES = [
     ('en', 'English'),
     ('ar', 'Arabic'),
 ]
+MODELTRANSLATION_DEFAULT_LANGUAGE = 'en'
+MODELTRANSLATION_FALLBACK_LANGUAGES = ('en', 'ar')
 
 LOCALE_PATHS = [
     BASE_DIR / 'locale',

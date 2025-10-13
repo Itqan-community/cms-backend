@@ -123,10 +123,12 @@ class ResourceVersionAdmin(admin.ModelAdmin):
 @admin.register(Asset)
 class AssetAdmin(admin.ModelAdmin):
     list_display = [
-        "get_publisher",
+        "name",
+        "publisher_name",
         "category",
+        "file_size",
+        "format",
         "license",
-        "access_requests_count",
         "created_at",
     ]
     list_filter = ["category", "license", "resource__publisher", "format", "created_at"]
@@ -145,6 +147,13 @@ class AssetAdmin(admin.ModelAdmin):
             "Content",
             {
                 "fields": ("description", "long_description", "thumbnail_url"),
+            },
+        ),
+        (
+            "Multilingual Fields",
+            {
+                "fields": ("name_en", "name_ar", "description_en", "description_ar", "long_description_en", "long_description_ar"),
+                "classes": ("collapse",),
             },
         ),
         (
@@ -184,9 +193,8 @@ class AssetAdmin(admin.ModelAdmin):
         )
 
     @admin.display(description="Publisher", ordering="resource__publisher")
-    def get_publisher(self, obj):
-        """Display publisher through resource"""
-        return obj.resource.publisher if obj.resource else None
+    def publisher_name(self, obj):
+        return obj.resource.publisher.name
 
     @admin.display(description="Access Requests", ordering="access_requests_count")
     def access_requests_count(self, obj):

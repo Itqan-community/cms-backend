@@ -37,10 +37,16 @@ class PublisherAdmin(admin.ModelAdmin):
             },
         ),
         (
+            "Multilingual Fields",
+            {
+                "fields": ("name_en", "name_ar", "description_en", "description_ar"),
+                "classes": ("collapse",),
+            },
+        ),
+        (
             "Additional Information",
             {
-                "fields": ("contact_email", "website", "address"),
-                "classes": ("collapse",),
+                "fields": ("contact_email", "website", "address")
             },
         ),
         (

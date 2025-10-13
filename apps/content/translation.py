@@ -1,7 +1,7 @@
 
 from modeltranslation.decorators import register
 from modeltranslation.translator import TranslationOptions
-from .models import Resource, Asset, Publisher
+from .models import Resource, Asset
 
 @register(Resource)
 class ResourceTranslationOptions(TranslationOptions):
@@ -18,12 +18,4 @@ class AssetTranslationOptions(TranslationOptions):
         'name',
         'description',
         'long_description',
-    )
-
-@register(Publisher)
-class PublisherTranslationOptions(TranslationOptions):
-    """Translation configuration for Publisher model"""
-    fields = (
-        'name',
-        'description',
     )
