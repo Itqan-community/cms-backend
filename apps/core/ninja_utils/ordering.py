@@ -10,7 +10,9 @@ from pydantic import Field
 
 from apps.core.ninja_utils.ordering_base import OrderingBase
 
-
+"""
+ordering class, influences heavily by django-ninja-extra
+"""
 class Ordering(OrderingBase):
     class Input(Schema):
         ordering: str | None = Field(None)
