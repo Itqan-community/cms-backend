@@ -75,7 +75,7 @@ python manage.py runserver
 
 ### 4) Access
 
-- API Docs (Django Ninja): http://localhost:8000/docs/
+- API Docs: http://localhost:8000/docs/
 - Health check: http://localhost:8000/health/
 - Django Admin: http://localhost:8000/django-admin/
 
@@ -127,11 +127,6 @@ Rules:
 - Test locally before pushing; use descriptive commits
 - Push to origin/develop after tests pass
 
-## 🌍 Environments & URLs
-
-- Production: https://cms.itqan.dev
-- Staging: https://staging.cms.itqan.dev
-- Develop: https://develop.cms.itqan.dev
 
 ## 🚚 Deployment
 
@@ -149,4 +144,4 @@ MIT License. See `LICENSE` for details.
 
 ---
 
-Built with ❤️ by the Itqan Community
+Built with ❤️ by Itqan Community
