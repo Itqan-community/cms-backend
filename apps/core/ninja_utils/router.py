@@ -14,6 +14,9 @@ from apps.core.ninja_utils.auth import ninja_jwt_auth_optional
 
 
 class ItqanRouter(Router):
+    """
+    This Router is made to enforce some rules about paths, and how auth is handled.
+    """
     def api_operation(
         self,
         methods: list[str],
