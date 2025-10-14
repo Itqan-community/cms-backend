@@ -1,26 +1,28 @@
-# Itqan CMS - Quranic Content Management System
+## Itqan CMS — Quranic Content Management System
 
 
+Itqan CMS helps Quranic data publishers distribute high-quality, licensed content while enabling developers to integrate it reliably across apps and platforms.
 
-## 🌍 Overview
+## 🔮 Goals
+- Empower publishers to upload, manage, and govern Quranic resources with versioning and clear licensing.
+- Provide developers with standardized, well-documented access via download, APIs, and packages.
+- Maintain authenticity and consistency across formats (audio, text, tafsir, translation).
+- Foster a collaborative, open-source ecosystem that advances Quranic accessibility.
 
-### Vision
-Empower the islamic community targeting all Quranic data Producers and Consumers to build authentic, high-quality Quranic applications quickly and responsibly.
- 
-
-### Mission
-Provide a central, trustworthy platform for publishers to distribute and govern their resources, and for developers to integrate them easily via standardized distributions.
-
-### Main Objectives
-
-- Consolidate Quranic resources into a single, well-structured repository
-- Enable controlled access, licensing, and transparent usage analytics for publishers
-- Offer developers consistent, systematic interfaces
-- Foster an open, collaborative, community-driven ecosystem
+## ✨ Main Features
+- **Content publishing**: Upload and manage Quranic resources with metadata, categories, and ownership.
+- **Licensing & versioning**: Attach clear licenses (e.g., Creative Commons) and maintain version history.
+- **Access control**: Govern who can view, download, or integrate specific assets.
+- **Developer APIs**: Clean REST APIs with documentation for easy integration.
+- **File/resource distribution**: Offer standardized downloads and resource endpoints.
+- **Usage & analytics**: Track access and usage patterns to inform curation and scaling.
+- **Admin & workflows**: Robust admin tools and flows to review, publish, and maintain content quality.
+- **Internationalization**: Support multilingual descriptions and metadata.
+- **Extensible architecture**: Modular apps-based design for new content types and integrations.
 
 ## 🏗️ Architecture / Tech Stack
 
-- **Backend**: Django + Django Ninja (Python 3.11+)
+- **Backend**: Django + Django Ninja (Python 3.13+)
 - **Database**: PostgreSQL
 - **Containerization**: Docker & Docker Compose
 - **CI/CD**: GitHub Actions
@@ -31,7 +33,7 @@ Provide a central, trustworthy platform for publishers to distribute and govern 
 ### Prerequisites
 
 - Docker and Docker Compose
-- Python 3.11+ (for native setup)
+- Python 3.13+ (for native setup)
 
 ### 1) Clone & Environment
 
