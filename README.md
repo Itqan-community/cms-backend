@@ -1,301 +1,147 @@
-# Itqan CMS - Quranic Content Management System
+## Itqan CMS — Quranic Content Management System
 
-A modern, headless CMS designed to aggregate, license, and distribute verified Quranic content (text, audio, translations, tafsir) to developers and publishers through controlled APIs with proper licensing workflows.
 
-## 🏗️ Architecture
+Itqan CMS helps Quranic data publishers distribute high-quality, licensed content while enabling developers to integrate it reliably across apps and platforms.
 
-- **Frontend**: Angular 19 (CSR) with NG-ZORRO UI components
-- **Backend**: Django 4.2 LTS + Wagtail CMS + Django REST Framework
-- **Database**: PostgreSQL 16 with UUID primary keys
-- **Search**: MeiliSearch v1.6 for full-text search
-- **Cache/Queue**: Redis for caching and Celery task queue
-- **Storage**: MinIO (dev) / Alibaba OSS (prod)
-- **Auth**: Auth0 (SPA SDK on Angular, OIDC/JWKS on Django)
+## 🔮 Goals
+- Empower publishers to upload, manage, and govern Quranic resources with versioning and clear licensing.
+- Provide developers with standardized, well-documented access via download, APIs, and packages.
+- Maintain authenticity and consistency across formats (audio, text, tafsir, translation).
+- Foster a collaborative, open-source ecosystem that advances Quranic accessibility.
+
+## ✨ Main Features
+- **Content publishing**: Upload and manage Quranic resources with metadata, categories, and ownership.
+- **Licensing & versioning**: Attach clear licenses (e.g., Creative Commons) and maintain version history.
+- **Access control**: Govern who can view, download, or integrate specific assets.
+- **Developer APIs**: Clean REST APIs with documentation for easy integration.
+- **File/resource distribution**: Offer standardized downloads and resource endpoints.
+- **Usage & analytics**: Track access and usage patterns to inform curation and scaling.
+- **Admin & workflows**: Robust admin tools and flows to review, publish, and maintain content quality.
+- **Internationalization**: Support multilingual descriptions and metadata.
+- **Extensible architecture**: Modular apps-based design for new content types and integrations.
+
+## 🏗️ Architecture / Tech Stack
+
+- **Backend**: Django + Django Ninja (Python 3.13+)
+- **Database**: PostgreSQL
+- **Containerization**: Docker & Docker Compose
+- **CI/CD**: GitHub Actions
+- **Hosting/Infra**: DigitalOcean (e.g., Droplets, Managed PostgreSQL)
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- Docker & Docker Compose
-- Node.js 20+ (for local Angular development)
-- Python 3.11+ (for local Django development)
+- Docker and Docker Compose
+- Python 3.13+ (for native setup)
 
-### 1. Clone & Setup
+### 1) Clone & Environment
 
 ```bash
-git clone https://github.com/Itqan-community/cms.git
-cd cms
+git clone https://github.com/Itqan-community/cms-backend.git
+cd cms-backend
+
+# Native dev env
 cp env.example .env
-# Edit .env with your configuration
+
+# Docker env (used by compose)
+cp deployment/docker/env.template deployment/docker/.env
+# edit deployment/docker/.env with your DB_*, SECRET_KEY, and SITE_DOMAIN
 ```
 
-### 2. Start with Docker
+### 2) Start with Docker (recommended)
 
 ```bash
-# Start all services
-docker-compose -f deployment/docker/docker-compose.develop.yml up -d
+# Start services (web + caddy)
+docker compose -f deployment/docker/docker-compose.develop.yml up -d
 
-# Check service status
-docker-compose -f deployment/docker/docker-compose.develop.yml ps
+# Check status
+docker compose -f deployment/docker/docker-compose.develop.yml ps
 
-# View logs
-docker-compose -f deployment/docker/docker-compose.develop.yml logs -f backend
+# Tail logs
+docker compose -f deployment/docker/docker-compose.develop.yml logs -f web
 ```
 
-### 3. Access the Application
-
-- **Angular Frontend**: http://localhost:4200
-- **Django API**: http://localhost:8000/api/v1/
-- **Wagtail Admin**: http://localhost:8000/cms/
-- **Django Admin**: http://localhost:8000/django-admin/
-- **MeiliSearch**: http://localhost:7700
-- **MinIO Console**: http://localhost:9001
-
-## 🔧 Development Setup
-
-### Backend (Django)
+### 3) Native Development (alternative)
 
 ```bash
-cd backend
-
-# Install dependencies
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements/development.txt
 
-# Run migrations
 python manage.py migrate
-
-# Create superuser
 python manage.py createsuperuser
-
-# Start development server
 python manage.py runserver
 ```
 
-### Frontend (Angular)
+### 4) Access
 
-```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Start development server
-npm run start
-```
-
-### Background Tasks (Celery)
-
-```bash
-cd backend
-
-# Start Celery worker
-celery -A config worker --loglevel=info
-
-# Start Celery beat (for scheduled tasks)
-celery -A config beat --loglevel=info
-```
+- API Docs: http://localhost:8000/docs/
+- Health check: http://localhost:8000/health/
+- Django Admin: http://localhost:8000/django-admin/
 
 ## 📁 Project Structure
 
 ```
-cms/
-├── frontend/                 # Angular 19 application
-│   ├── app/
-│   │   ├── core/            # Core services (Auth, HTTP)
-│   │   ├── features/        # Feature modules
-│   │   │   ├── auth/        # Authentication
-│   │   │   ├── dashboard/   # User dashboard
-│   │   │   ├── admin/       # Admin panels
-│   │   │   ├── public/      # Public content
-│   │   │   ├── search/      # Search interface
-│   │   │   └── licensing/   # License workflows
-│   │   ├── layouts/         # Layout components
-│   │   └── shared/          # Shared components
-│   
-├── backend/                  # Django + Wagtail backend
-│   ├── apps/
-│   │   ├── accounts/        # User management
-│   │   ├── content/         # Quranic content
-│   │   ├── licensing/       # License management
-│   │   ├── analytics/       # Usage analytics
-│   │   ├── core/            # Core utilities
-│   │   └── api/             # REST API endpoints
-│   └── config/              # Django configuration
-│   
-├── deployment/              # Infrastructure & deployment
-│   ├── docker/              # Docker configurations
-│   ├── k8s/                 # Kubernetes manifests
-│   └── terraform/           # Infrastructure as Code
-│   
-├── shared/                  # Shared types and utilities
-├── .cursor/docs/md/         # Documentation
-└── ai-memory-bank/          # Task management
+cms-backend/
+├── apps/
+│   ├── core/
+│   │   ├── models.py
+│   │   ├── views/
+│   │   ├── services/
+│   │   └── tests/
+│   ├── content/
+│   │   ├── models.py
+│   │   ├── views/
+│   │   ├── services/
+│   │   └── tests/
+│   ├── users/
+│   │   ├── models.py
+│   │   ├── views/
+│   │   └── tests/
+│   └── publishers/
+│       ├── models.py
+│       ├── views/
+│       └── tests/
+├── config/
+│   ├── settings/            # base.py, development.py, staging.py, production.py
+│   ├── ninja_urls.py        # API setup and docs
+│   └── urls.py              # Root URLs (health, admin, accounts, ninja)
+├── deployment/
+│   └── docker/              # Dockerfile, compose, Caddyfile, env.template
+├── requirements/            # base.txt, development.txt, production.txt
+├── manage.py
+└── ...
 ```
 
-## 🔐 Authentication Flow
-
-1. **Frontend**: User logs in via Auth0 SPA SDK
-2. **Auth0**: Returns access token to Angular app
-3. **Backend**: Validates Auth0 token via OIDC/JWKS
-4. **Backend**: Issues internal JWT for API access
-5. **API**: All endpoints protected by JWT + role-based permissions
-
-## 📊 Core Data Models
-
-- **User**: Account representing developers, publishers, admins, reviewers
-- **Role**: RBAC role (Admin, Publisher, Developer, Reviewer)
-- **Resource**: Any Qur'anic asset (text corpus, audio set, tafsir, translation)
-- **License**: Legal terms attached to a Resource
-- **Distribution**: Deliverable package/API endpoint for a Resource
-- **AccessRequest**: Developer's request to use a Distribution under a License
-- **UsageEvent**: Logged event for analytics and rate limiting
-
-## 🛠️ Available Commands
-
-### Docker Commands
-
-```bash
-# Start all services
-docker-compose -f deployment/docker/docker-compose.develop.yml up -d
-
-# Stop all services
-docker-compose -f deployment/docker/docker-compose.develop.yml down
-
-# Rebuild and restart
-docker-compose -f deployment/docker/docker-compose.develop.yml up --build
-
-# View service logs
-docker-compose -f deployment/docker/docker-compose.develop.yml logs -f [service-name]
-
-# Execute commands in containers
-docker-compose -f deployment/docker/docker-compose.develop.yml exec backend python manage.py shell
-docker-compose -f deployment/docker/docker-compose.develop.yml exec postgres psql -U itqan_user -d itqan_cms
-```
-
-### Django Commands
-
-```bash
-# Database operations
-python manage.py makemigrations
-python manage.py migrate
-python manage.py createsuperuser
-
-# Collect static files
-python manage.py collectstatic
-
-# Run tests
-python manage.py test
-
-# Django shell
-python manage.py shell
-
-# Check deployment
-python manage.py check --deploy
-```
-
-### Angular Commands
-
-```bash
-# Development server
-npm run start
-
-# Build for production
-npm run build
-
-# Run tests
-npm run test
-
-# Run e2e tests
-npm run e2e
-
-# Lint code
-npm run lint
-```
-
-## 🧪 Testing
-
-### Backend Testing
-
-```bash
-cd backend
-python manage.py test
-```
-
-### Frontend Testing
-
-```bash
-cd frontend
-npm run test
-npm run e2e
-```
-
-## 📈 Monitoring & Observability
-
-- **Application Logs**: Structured logging with Django + Angular
-- **Error Tracking**: Sentry integration (production)
-- **Performance**: Django Debug Toolbar (development)
-- **Health Checks**: Built-in Docker health checks
-
-## 🔒 Security
-
-- **Authentication**: Auth0 with JWT tokens
-- **Authorization**: Role-based access control (RBAC)
-- **CORS**: Configured for secure cross-origin requests
-- **HTTPS**: SSL/TLS termination at load balancer
-- **Secrets**: Environment variables, never committed
-
-## 🚚 Deployment
-
-### Development
-- **Environment**: Docker Compose
-- **Database**: PostgreSQL container
-- **Storage**: MinIO container
-
-### Production (Phase 1 - DigitalOcean)
-- **Platform**: DigitalOcean Kubernetes (DOKS)
-- **Database**: DigitalOcean Managed PostgreSQL
-- **Storage**: DigitalOcean Spaces
-- **Load Balancer**: DigitalOcean Load Balancer
-
-### Production (Phase 2 - Alibaba Cloud)
-- **Platform**: Alibaba Cloud Container Service (ACK)
-- **Database**: ApsaraDB for PostgreSQL
-- **Storage**: Object Storage Service (OSS)
-- **CDN**: Alibaba Cloud CDN
-
-## 📚 Documentation
-
-- [API Documentation](/openapi.yaml) - OpenAPI 3.0 specification
-- [Architecture Diagrams](.cursor/ai-memory-bank/docs/screens/) - Screens & diagrams
-- [Task Management](ai-memory-bank/) - Development tasks and progress
-- [Database Schema](docs/diagrams/high-level-db-components-relationship.png) - ER diagram
+ 
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
+Branch strategy and protection:
+- main and staging: no direct commits; updates via PRs only
+- develop: primary branch for active development
+- Flow: develop → staging (PR) → main (PR). Do not skip stages
+
+Rules:
+- Start all changes from develop (or feature/* based on develop)
+- Test locally before pushing; use descriptive commits
+- Push to origin/develop after tests pass
+
+
+## 🚚 Deployment
+
+Containerized deployment uses Caddy (TLS, static) and the Django app container. See `deployment/docker/README.md` for end-to-end steps (environment variables, logs, and health checks). Database is typically a managed PostgreSQL instance; configure `DB_*` env vars accordingly.
+
+## 🔒 Security Notes
+
+- Use strong unique `SECRET_KEY` per environment; keep it out of VCS
+- CORS/CSRF configured per environment settings
+- JWT via SimpleJWT; OAuth via allauth providers (Google/GitHub)
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 📞 Support
-
-- **Issues**: [GitHub Issues](https://github.com/Itqan-community/cms/issues)
-- **Documentation**: [Project Docs](.cursor/docs/md/)
-- **Community**: [Itqan Community](https://itqan.com)
+MIT License. See `LICENSE` for details.
 
 ---
 
-**Built with ❤️ by the Itqan Community**
-
-## 🚀 Test Deployment - Mon Sep  1 18:09:26 SAST 2025
-
-Testing the improved CI/CD pipeline with git pull functionality.
-
-🌟 Testing PRODUCTION auto-deployment - Mon Sep  1 21:54:26 SAST 2025
-✅ SSH key updated - testing deployment
-🧪 Final CI/CD pipeline test - Mon Sep  1 22:21:57 SAST 2025
+Built with ❤️ by Itqan Community

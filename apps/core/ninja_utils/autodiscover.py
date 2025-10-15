@@ -6,6 +6,9 @@ from ninja import NinjaAPI
 
 
 def auto_discover_ninja_routers(ninja_api: NinjaAPI, pattern: str) -> None:
+    """
+    Auto-discover and register Ninja routers from local Django apps.
+    """
     for app in apps.get_app_configs():
         if app.name not in settings.LOCAL_APPS:
             continue

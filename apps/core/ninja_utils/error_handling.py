@@ -17,7 +17,9 @@ from apps.core.ninja_utils.errors import ItqanError
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from config.ninja_urls import ninja_api
 
-
+"""
+Unify Error Responses from Django Ninja into a standard format.
+"""
 @ninja_api.exception_handler(PermissionDenied)
 def handle_permission_denied(request, exc: PermissionDenied):
     return ninja_api.create_response(
