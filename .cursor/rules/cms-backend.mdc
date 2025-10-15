@@ -1,0 +1,129 @@
+---
+alwaysApply: true
+---
+# CMS Backend Rules
+
+### Interaction protocol
+1) First response to any user message:
+- Ask clarifying questions needed to fully understand the task.
+- Number of questions depends on complexity; ask only what is necessary.
+- Do not take any action (no edits, commands, or irreversible steps) until answers are received.
+
+2) After clarifications are provided:
+- Convert the request and clarifications into a single JSON object using the schema below.
+- Display the JSON to the user before acting, in a fenced json code block.
+- Then act on the task, using the JSON as the source of truth. If anything remains ambiguous, ask a brief follow-up before acting.
+
+3) Ongoing:
+- If new information arrives, update and redisplay the JSON before any further action.
+
+### JSON schema
+Use exactly this shape when converting inputs:
+```json
+{
+  "task": "",
+  "context": "",
+  "requirements": [],
+  "constraints": [],
+  "inputs": [],
+  "assumptions": [],
+  "deliverables": [],
+  "acceptance_criteria": [],
+  "priority": "low|medium|high",
+  "risk_flags": []
+}
+```
+
+### Rules
+- Always display the JSON version of the user's input before acting and act on that
+- Always wait for answers to clarifying questions before taking any action.
+- **NEVER commit changes to Git** - user handles all commits manually
+- Keep language direct and clear.
+- Keep questions proportionate to complexity.
+
+## Project Overview
+- **Mission**: Build platform for Quranic data distribution
+- **Two main actors**: Publishers (upload data) and Consumers/Developers (access data)
+- **Non-profit**: Community-first, open-source approach
+
+### Branch Strategy & Protection Rules
+- **main**: Production-ready code, **MERGE-ONLY** from staging
+- **staging**: Pre-production branch, **MERGE-ONLY** from develop
+- **develop**: Primary development branch for new features and bug fixes
+
+### 🔒 ENFORCED Git Workflow Rules
+**CRITICAL**: These rules are strictly enforced and cannot be bypassed:
+
+1. **Branch Protection**:
+   - ❌ **main** and **staging** branches: NO direct commits/pushes allowed
+   - ✅ **develop** branch: Direct commits allowed for active development
+   - ✅ **feature/** branches: Direct commits allowed for feature development
+
+2. **Mandatory Change Flow**:
+   - ALL changes MUST start on `develop` branch (or feature branch created from develop)
+   - Changes MUST be tested locally BEFORE any remote push
+   - Changes MUST commit with descriptive but concise messages
+   - Changes MUST push to `origin/develop` after local testing passes
+
+3. **Branch Transition Rules**:
+   - `develop` → `staging`: ONLY via Pull Request + code review
+   - `staging` → `main`: ONLY via Pull Request + code review  
+   - `feature/*` → `develop`: Via Pull Request or direct merge after testing
+
+### Merge Order Rule (MANDATORY)
+- **Sequence**: `develop` MUST be merged into `staging`, then `staging` MUST be merged into `main`.
+- **Prohibited**: Skipping stages or merging directly into `staging` or `main` from any other branch is not allowed.
+  
+
+4. **CMS Rules File Updates**:
+   - When CMS rules are modified, automatic commit with message "Update CMS workflow rules"
+   - Must test locally immediately after rules change
+   - Must push to develop origin once local testing confirms functionality
+
+
+### Deployment Rules (ENFORCED)
+🔒 **Strict branch flow enforcement via GitHub Actions:**
+1. **main** can ONLY be updated from **staging** via Pull Request
+2. **staging** can ONLY be updated from **develop** via Pull Request  
+3. **develop** allows direct pushes for active development
+4. Deployment triggers ONLY on successful PR merges (not direct pushes)
+5. Manual deployment available ONLY for develop branch (emergency hotfixes)
+
+
+## Environments & URLs
+- Production: `https://cms.itqan.dev`
+- Staging: `https://staging.cms.itqan.dev`
+- Develop: `https://develop.cms.itqan.dev`
+
+## Dependencies docs
+- ninja docs: https://django-ninja.dev/
+- django docs: https://docs.djangoproject.com/en/5.2/
+- django-allauth docs: https://docs.allauth.org/en/dev/ is used for handling social auth and OAuth2
+- dj-rest-auth docs: https://dj-rest-auth.readthedocs.io/en/latest/ is used for handling authentication and registration
+- djangorestframework-simplejwt docs: https://django-rest-framework-simplejwt.readthedocs.io/en/latest/ is used for handling JWT authentication
+
+
+## Raising errors
+- If you want to return an error to the user especially if it is 400 error use `apps.core.ninja_utils.errors.ItqanError`
+- If you want to raise 403 Error, use `from rest_framework.exceptions.PermissionDenied`
+- If an endpoint view may raise an error, document it with `apps.core.ninja_utils.errors.NinjaErrorResponse` as in 
+```python
+response={
+        200: OkSchema,
+        400: NinjaErrorResponse[Literal["activation_request_failed"], Literal[None]],
+        404: NinjaErrorResponse[Literal["user_not_found"], Literal[None]]
+        | NinjaErrorResponse[Literal["admin_not_found"], Literal[None]],
+    }
+```
+
+## Tests
+- All tests should be written as AAA Arrange, Act, Assert
+- All tests should be writen test_<function_name>_where<criteria>_should<expected_results>
+- When using self.authenticate_user in tests, put it into the test case itself not in `setUp` or `setUpClass` methods to be more explicit
+- Use `pytest` to run test NOT `python manage.py test`
+
+
+## General
+- any function you define should be type hinted
+- All code should be python 3.13 compatible and django 5.2 compatible
+- always use `AwareDateTime` instead of `datetime` in `Schema`

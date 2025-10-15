@@ -1,7 +1,9 @@
 from django.contrib.auth.models import AnonymousUser
 from rest_framework_simplejwt.authentication import JWTAuthentication, JWTStatelessUserAuthentication
 
-
+"""
+Custom Connector for Django Ninja to use JWT authentication from djangorestframework-simplejwt.
+"""
 class JWTAuth(JWTAuthentication):
 
 
