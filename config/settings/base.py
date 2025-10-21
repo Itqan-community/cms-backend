@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 from decouple import config
 
@@ -466,3 +467,10 @@ USER_PATH_THROTTLE_RATE = config("USER_PATH_THROTTLE_RATE", default="10/sec")
 NINJA_PAGINATION_CLASS = "apps.core.ninja_utils.paginations.NinjaPagination"
 NINJA_SEARCHING_CLASS = "apps.core.ninja_utils.searching.Searching"
 NINJA_ORDERING_CLASS = "apps.core.ninja_utils.ordering.Ordering"
+
+RUNNING_TESTS = False
+if (
+    (len(sys.argv) >= 2 and sys.argv[0].endswith("manage.py") and sys.argv[1] == "test")
+    or ("pytest" in sys.argv[0])
+):
+    RUNNING_TESTS = True

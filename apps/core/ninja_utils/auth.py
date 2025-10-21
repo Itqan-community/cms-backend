@@ -9,21 +9,21 @@ class JWTAuth(JWTAuthentication):
 
     def __call__(self, request):
 
-        ret  = self.authenticate(request)
-        if ret is None:
-            return AnonymousUser()
-        request.user = ret[0]
-        return ret
+        res = self.authenticate(request)
+        if res is None:
+            return None
+        request.user = res[0]
+        return res
 
 
 class JWTAuthStateless(JWTStatelessUserAuthentication):
 
     def __call__(self, request):
-        ret = self.authenticate(request)
-        if ret is None:
-            return AnonymousUser()
-        request.user = ret[0]
-        return ret
+        res = self.authenticate(request)
+        if res is None:
+            return None
+        request.user = res[0]
+        return res
 
 
 ninja_jwt_auth = [JWTAuth(), JWTAuthStateless()]

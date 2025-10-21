@@ -81,7 +81,7 @@ class AssetAccessTest(BaseTestCase):
         self.assertEqual("commercial", body["request"]["intended_use"])
         self.assertEqual("approved", body["request"]["status"])
 
-    def test_request_asset_access_with_invalid_intended_use_should_return_422(self):
+    def test_request_asset_access_with_invalid_intended_use_should_return_400(self):
         # Arrange
         data = {
             "purpose": "Test purpose",
@@ -97,9 +97,9 @@ class AssetAccessTest(BaseTestCase):
         )
 
         # Assert
-        self.assertEqual(422, response.status_code, response.content)
+        self.assertEqual(400, response.status_code, response.content)
 
-    def test_request_asset_access_with_missing_purpose_should_return_422(self):
+    def test_request_asset_access_with_missing_purpose_should_return_400(self):
         # Arrange
         data = {
             # Missing purpose
@@ -115,7 +115,7 @@ class AssetAccessTest(BaseTestCase):
         )
 
         # Assert
-        self.assertEqual(422, response.status_code, response.content)
+        self.assertEqual(400, response.status_code, response.content)
 
     def test_request_asset_access_for_non_existent_asset_should_return_404(self):
         # Arrange
