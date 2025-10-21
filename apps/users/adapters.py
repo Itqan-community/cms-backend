@@ -24,15 +24,14 @@ class AccountAdapter(DefaultAccountAdapter):
         """
         Save user with custom fields
         """
-        user = super().save_user(request, user, form, commit=False)
-        
+
         # Set additional fields if needed
         if hasattr(form, 'cleaned_data'):
             user.name = form.cleaned_data.get('name', '')
-        
+
         if commit:
             user.save()
-        
+
         return user
 
 

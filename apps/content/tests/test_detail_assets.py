@@ -196,7 +196,6 @@ class DetailAssetTest(BaseTestCase):
     def test_detail_assets_where_authenticated_user_should_create_usage_event(self):
         # Arrange
         user = baker.make(User, email="test@example.com", is_active=True)
-        self.authenticate_user(user)
         asset = baker.make(
             Asset,
             name="Usage Event Test Asset",
@@ -207,6 +206,7 @@ class DetailAssetTest(BaseTestCase):
         )
 
         # Act
+        self.authenticate_user(user)
         response = self.client.get(f"/assets/{asset.id}/", format="json")
 
         # Assert

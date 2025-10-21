@@ -1,7 +1,3 @@
-from django.test import TestCase
-from rest_framework.test import APIClient
-from django.contrib.auth import get_user_model
-from django.urls import reverse
 from rest_framework_simplejwt.tokens import RefreshToken
 from allauth.socialaccount.models import SocialApp
 from django.contrib.sites.models import Site
@@ -426,8 +422,8 @@ class UserProfileTestCase(AuthEndpointsTestCase):
         tokens = self._get_jwt_token()
         
         data = {
-            'name': 'Updated Name',
-            'phone': '+1234567890'
+            'bio': 'Updated bio',
+            'project_summary': 'Updated Project Summary',
         }
         
         # Act
@@ -443,13 +439,13 @@ class UserProfileTestCase(AuthEndpointsTestCase):
         response_data = response.json()
         
         # Check updated data
-        self.assertEqual(data['name'], response_data['name'])
-        self.assertEqual(data['phone'], response_data['phone'])
-        
+        self.assertEqual(data['bio'], response_data['bio'])
+        self.assertEqual(data['project_summary'], response_data['project_summary'])
+
         # Verify database update
         self.user.refresh_from_db()
-        self.assertEqual(data['name'], self.user.name)
-        self.assertEqual(data['phone'], str(self.user.phone))
+        self.assertEqual(data['bio'], self.user.developer_profile.bio)
+        self.assertEqual(data['project_summary'], str(self.user.developer_profile.project_summary))
     
     def test_update_profile_where_partial_data_should_return_200_with_partial_update(self):
         """Test partial profile update with only some fields"""
@@ -457,7 +453,7 @@ class UserProfileTestCase(AuthEndpointsTestCase):
         tokens = self._get_jwt_token()
         
         data = {
-            'name': 'Only Name Updated'
+            'bio': 'Only bio updated'
         }
         
         # Act
@@ -473,10 +469,11 @@ class UserProfileTestCase(AuthEndpointsTestCase):
         response_data = response.json()
         
         # Check updated data
-        self.assertEqual(data['name'], response_data['name'])
-        # Phone should remain unchanged (None)
-        self.assertIsNone(response_data['phone'])
-    
+        self.assertEqual(data['bio'], response_data['bio'])
+        # Other fields should remain unchanged
+        self.assertEqual("", response_data['project_summary'])
+        self.assertEqual("", response_data['project_url'])
+
     def test_update_profile_where_unauthenticated_should_return_401(self):
         """Test profile update without authentication returns error"""
         # Arrange
