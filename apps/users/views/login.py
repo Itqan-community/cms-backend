@@ -1,5 +1,4 @@
 from django.contrib.auth import authenticate
-from django.http import HttpRequest
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.core.ninja_utils.router import ItqanRouter

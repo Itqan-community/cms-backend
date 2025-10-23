@@ -1,4 +1,3 @@
-from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from model_bakery import baker
@@ -98,81 +97,47 @@ class AssetDownloadTest(BaseTestCase):
         self.assertEqual(404, response.status_code, response.content)
 
     @patch('apps.content.views.assets_download.user_has_access')
-    @patch('django.core.files.storage.default_storage.exists')
-    def test_download_asset_with_missing_file_in_storage_should_return_404(self, mock_exists, mock_user_has_access):
+    def test_download_asset_with_valid_file_should_return_file_response(self, mock_user_has_access):
         # Arrange
         mock_user_has_access.return_value = True
-        mock_exists.return_value = False  # File doesn't exist in storage
         
         # Create a mock file
         mock_file = SimpleUploadedFile("test.pdf", b"fake pdf content", content_type="application/pdf")
-        asset_version = baker.make(AssetVersion, asset=self.asset, file_url=mock_file)
+        baker.make(AssetVersion, asset=self.asset, name="Version 1", file_url=mock_file)
 
         # Act
         self.authenticate_user(self.user)
         response = self.client.get(f"/assets/{self.asset.id}/download/")
+        body = response.json()
 
         # Assert
-        self.assertEqual(404, response.status_code, response.content)
+        self.assertEqual(200, response.status_code)
+        self.assertIn("download_url", body)
+        self.assertIn("/test.pdf", body["download_url"])
 
     @patch('apps.content.views.assets_download.user_has_access')
-    @patch('django.core.files.storage.default_storage.exists')
-    @patch('django.core.files.storage.default_storage.open')
-    def test_download_asset_with_valid_file_should_return_file_response(self, mock_open, mock_exists, mock_user_has_access):
+    def test_download_asset_with_csv_file_should_return_correct_content_type(self, mock_user_has_access):
         # Arrange
         mock_user_has_access.return_value = True
-        mock_exists.return_value = True
-        
-        # Mock file content
-        mock_file_content = MagicMock()
-        mock_open.return_value = mock_file_content
-        
-        # Create a mock file
-        mock_file = SimpleUploadedFile("test.pdf", b"fake pdf content", content_type="application/pdf")
-        asset_version = baker.make(AssetVersion, asset=self.asset, name="Version 1", file_url=mock_file)
-
-        # Act
-        self.authenticate_user(self.user)
-        response = self.client.get(f"/assets/{self.asset.id}/download/")
-
-        # Assert
-        self.assertEqual(200, response.status_code, response.content)
-        self.assertEqual('application/pdf', response.get('Content-Type'))
-        self.assertIn('attachment', response.get('Content-Disposition', ''))
-        self.assertIn('Test Asset_Version 1.pdf', response.get('Content-Disposition', ''))
-
-    @patch('apps.content.views.assets_download.user_has_access')
-    @patch('django.core.files.storage.default_storage.exists')
-    @patch('django.core.files.storage.default_storage.open')
-    def test_download_asset_with_csv_file_should_return_correct_content_type(self, mock_open, mock_exists, mock_user_has_access):
-        # Arrange
-        mock_user_has_access.return_value = True
-        mock_exists.return_value = True
-        mock_file_content = MagicMock()
-        mock_open.return_value = mock_file_content
         
         # Create a CSV file
         mock_file = SimpleUploadedFile("test.csv", b"fake csv content", content_type="text/csv")
-        asset_version = baker.make(AssetVersion, asset=self.asset, name="CSV Version", file_url=mock_file)
+        baker.make(AssetVersion, asset=self.asset, name="CSV Version", file_url=mock_file)
 
         # Act
         self.authenticate_user(self.user)
         response = self.client.get(f"/assets/{self.asset.id}/download/")
+        body = response.json()
 
         # Assert
-        self.assertEqual(200, response.status_code, response.content)
-        self.assertEqual('text/csv', response.get('Content-Type'))
-        self.assertIn('Test Asset_CSV Version.csv', response.get('Content-Disposition', ''))
+        self.assertEqual(200, response.status_code)
+        self.assertIn("download_url", body)
+        self.assertIn("/test.csv", body["download_url"])
 
     @patch('apps.content.views.assets_download.user_has_access')
-    @patch('django.core.files.storage.default_storage.exists')
-    @patch('django.core.files.storage.default_storage.open')
-    def test_download_asset_should_return_latest_version(self, mock_open, mock_exists, mock_user_has_access):
+    def test_download_asset_should_return_latest_version(self, mock_user_has_access):
         # Arrange
         mock_user_has_access.return_value = True
-        mock_exists.return_value = True
-        mock_file_content = MagicMock()
-        mock_open.return_value = mock_file_content
         
         # Create multiple versions
         older_file = SimpleUploadedFile("old.pdf", b"old content", content_type="application/pdf")
@@ -188,11 +153,12 @@ class AssetDownloadTest(BaseTestCase):
         # Act
         self.authenticate_user(self.user)
         response = self.client.get(f"/assets/{self.asset.id}/download/")
+        body = response.json()
 
         # Assert
-        self.assertEqual(200, response.status_code, response.content)
-        # Should download the newer version
-        self.assertIn('Test Asset_New Version.pdf', response.get('Content-Disposition', ''))
+        self.assertEqual(200, response.status_code)
+        self.assertIn("download_url", body)
+        self.assertIn("/new.pdf", body["download_url"])
 
     def test_download_asset_with_invalid_id_format_should_return_400(self):
         # Arrange
@@ -216,25 +182,20 @@ class AssetDownloadTest(BaseTestCase):
                 )
 
     @patch('apps.content.views.assets_download.user_has_access')
-    @patch('django.core.files.storage.default_storage.exists')
-    @patch('django.core.files.storage.default_storage.open')
-    def test_download_asset_should_create_usage_event_for_authenticated_user(self, mock_open, mock_exists, mock_user_has_access):
+    def test_download_asset_should_create_usage_event_for_authenticated_user(self, mock_user_has_access):
         # Arrange
         mock_user_has_access.return_value = True
-        mock_exists.return_value = True
-        mock_file_content = MagicMock()
-        mock_open.return_value = mock_file_content
-        
+
         # Create a mock file
         mock_file = SimpleUploadedFile("test.pdf", b"fake pdf content", content_type="application/pdf")
-        asset_version = baker.make(AssetVersion, asset=self.asset, name="Download Test", file_url=mock_file)
+        baker.make(AssetVersion, asset=self.asset, name="Download Test", file_url=mock_file)
 
         # Act
         self.authenticate_user(self.user)
         response = self.client.get(f"/assets/{self.asset.id}/download/")
 
         # Assert
-        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(200, response.status_code)
         
         # Verify usage event was created in database
         usage_events = UsageEvent.objects.filter(
@@ -264,7 +225,7 @@ class AssetDownloadTest(BaseTestCase):
         response = self.client.get(f"/assets/{self.asset.id}/download/")
 
         # Assert
-        self.assertEqual(403, response.status_code, response.content)
+        self.assertEqual(403, response.status_code)
         
         # Verify no usage event was created when access denied
         usage_events = UsageEvent.objects.filter(
@@ -276,18 +237,13 @@ class AssetDownloadTest(BaseTestCase):
         self.assertEqual(0, usage_events.count())
 
     @patch('apps.content.views.assets_download.user_has_access')
-    @patch('django.core.files.storage.default_storage.exists')
-    @patch('django.core.files.storage.default_storage.open')
-    def test_download_asset_should_include_request_metadata_in_usage_event(self, mock_open, mock_exists, mock_user_has_access):
+    def test_download_asset_should_include_request_metadata_in_usage_event(self, mock_user_has_access):
         # Arrange
         mock_user_has_access.return_value = True
-        mock_exists.return_value = True
-        mock_file_content = MagicMock()
-        mock_open.return_value = mock_file_content
         
         # Create a mock file
         mock_file = SimpleUploadedFile("test.csv", b"fake csv content", content_type="text/csv")
-        asset_version = baker.make(AssetVersion, asset=self.asset, name="Metadata Test", file_url=mock_file)
+        baker.make(AssetVersion, asset=self.asset, name="Metadata Test", file_url=mock_file)
 
         # Act - Include custom headers
         self.authenticate_user(self.user)
@@ -298,7 +254,7 @@ class AssetDownloadTest(BaseTestCase):
         )
 
         # Assert
-        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(200, response.status_code)
         
         # Verify usage event was created with correct metadata
         usage_events = UsageEvent.objects.filter(

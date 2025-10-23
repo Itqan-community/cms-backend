@@ -26,7 +26,7 @@ class DownloadResourceTest(BaseTestCase):
                 resource = baker.make(Resource, name="Dataset A")
 
                 file_obj = self.create_file("data.csv", b"a,b\n1,2\n", "text/csv")
-                version = baker.make(
+                baker.make(
                     ResourceVersion,
                     resource=resource,
                     semvar="1.0.0",
@@ -37,12 +37,13 @@ class DownloadResourceTest(BaseTestCase):
 
                 # Act
                 response = self.client.get(f"/resources/{resource.id}/download/", format="json")
+                body = response.json()
 
                 # Assert
-                self.assertEqual(200, response.status_code, getattr(response, "content", b""))
-                content_disposition = response["Content-Disposition"]
-                self.assertIn(f"{resource.name}_v{version.semvar}.csv", content_disposition)
-                self.assertEqual("text/csv", response.get("Content-Type"))
+                self.assertEqual(200, response.status_code)
+                self.assertIn("download_url", body)
+                self.assertIn("/data.csv", body["download_url"])
+
 
     def test_download_fallbacks_to_most_recent_when_no_latest_marked(self):
         # Arrange
@@ -63,7 +64,7 @@ class DownloadResourceTest(BaseTestCase):
                     is_latest=False,
                     created_at="2024-01-01T00:00:00Z",
                 )
-                newer = baker.make(
+                baker.make(
                     ResourceVersion,
                     resource=resource,
                     semvar="1.1.0",
@@ -75,12 +76,12 @@ class DownloadResourceTest(BaseTestCase):
 
                 # Act
                 response = self.client.get(f"/resources/{resource.id}/download/", format="json")
+                body = response.json()
 
                 # Assert
-                self.assertEqual(200, response.status_code, getattr(response, "content", b""))
-                content_disposition = response["Content-Disposition"]
-                self.assertIn(f"{resource.name}_v{newer.semvar}.json", content_disposition)
-                self.assertEqual("application/json", response.get("Content-Type"))
+                self.assertEqual(200, response.status_code)
+                self.assertIn("download_url", body)
+                self.assertIn("/new.json", body["download_url"])
 
     def test_download_returns_404_when_no_versions_exist(self):
         # Arrange
@@ -91,34 +92,7 @@ class DownloadResourceTest(BaseTestCase):
         response = self.client.get(f"/resources/{resource.id}/download/", format="json")
 
         # Assert
-        self.assertEqual(404, response.status_code, getattr(response, "content", b""))
-
-    def test_download_returns_404_when_file_missing_on_disk(self):
-        # Arrange
-        self.authenticate_user(self.user)
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with override_settings(MEDIA_ROOT=tmpdir):
-                resource = baker.make(Resource, name="Dataset C")
-                file_obj = self.create_file("archive.zip", b"PK\x03\x04...", "application/zip")
-                version = baker.make(
-                    ResourceVersion,
-                    resource=resource,
-                    semvar="2.0.0",
-                    storage_url=file_obj,
-                    file_type=ResourceVersion.FileTypeChoice.ZIP,
-                    is_latest=True,
-                )
-
-                # Remove the stored file to simulate missing file on disk
-                file_path = Path(version.storage_url.path)
-                if file_path.exists():
-                    file_path.unlink()
-
-                # Act
-                response = self.client.get(f"/resources/{resource.id}/download/", format="json")
-
-                # Assert
-                self.assertEqual(404, response.status_code, getattr(response, "content", b""))
+        self.assertEqual(404, response.status_code)
 
     def test_download_returns_404_when_resource_not_found(self):
         # Arrange - Use a non-existent integer ID
@@ -129,7 +103,7 @@ class DownloadResourceTest(BaseTestCase):
         response = self.client.get(f"/resources/{non_existent_id}/download/", format="json")
 
         # Assert
-        self.assertEqual(404, response.status_code, getattr(response, "content", b""))
+        self.assertEqual(404, response.status_code)
 
     def test_download_returns_404_when_resource_is_inactive(self):
         # Arrange
@@ -140,7 +114,7 @@ class DownloadResourceTest(BaseTestCase):
         response = self.client.get(f"/resources/{resource.id}/download/", format="json")
 
         # Assert
-        self.assertEqual(404, response.status_code, getattr(response, "content", b""))
+        self.assertEqual(404, response.status_code)
 
     def test_download_returns_404_when_only_inactive_versions_exist(self):
         # Arrange
@@ -164,7 +138,7 @@ class DownloadResourceTest(BaseTestCase):
                 response = self.client.get(f"/resources/{resource.id}/download/", format="json")
 
                 # Assert
-                self.assertEqual(404, response.status_code, getattr(response, "content", b""))
+                self.assertEqual(404, response.status_code)
 
     def test_download_returns_404_when_version_has_no_storage_url_value(self):
         # Arrange
@@ -190,7 +164,7 @@ class DownloadResourceTest(BaseTestCase):
                 response = self.client.get(f"/resources/{resource.id}/download/", format="json")
 
                 # Assert
-                self.assertEqual(404, response.status_code, getattr(response, "content", b""))
+                self.assertEqual(404, response.status_code)
 
     def test_download_resource_should_create_usage_event_for_authenticated_user(self):
         # Arrange
@@ -199,7 +173,7 @@ class DownloadResourceTest(BaseTestCase):
             with override_settings(MEDIA_ROOT=tmpdir):
                 resource = baker.make(Resource, name="Usage Event Test Resource")
                 file_obj = self.create_file("test.csv", b"test,data\n1,2\n", "text/csv")
-                version = baker.make(
+                baker.make(
                     ResourceVersion,
                     resource=resource,
                     semvar="1.0.0",
@@ -210,9 +184,12 @@ class DownloadResourceTest(BaseTestCase):
 
                 # Act
                 response = self.client.get(f"/resources/{resource.id}/download/", format="json")
+                body = response.json()
 
                 # Assert
-                self.assertEqual(200, response.status_code, getattr(response, "content", b""))
+                self.assertEqual(200, response.status_code)
+                self.assertIn("download_url", body)
+                self.assertIn("/test.csv", body["download_url"])
                 
                 # Verify usage event was created in database
                 usage_events = UsageEvent.objects.filter(
@@ -229,7 +206,7 @@ class DownloadResourceTest(BaseTestCase):
                 self.assertEqual(usage_event.subject_kind, UsageEvent.SubjectKindChoice.RESOURCE)
                 self.assertEqual(usage_event.resource_id, resource.id)
                 self.assertIsNone(usage_event.asset_id)
-                self.assertEqual(usage_event.effective_license, "")
+                self.assertEqual(usage_event.effective_license, "CC0")
                 self.assertIsInstance(usage_event.metadata, dict)
 
     def test_download_resource_should_include_request_metadata_in_usage_event(self):
@@ -239,7 +216,7 @@ class DownloadResourceTest(BaseTestCase):
             with override_settings(MEDIA_ROOT=tmpdir):
                 resource = baker.make(Resource, name="Metadata Test Resource")
                 file_obj = self.create_file("metadata.json", b'{"test": "data"}', "application/json")
-                version = baker.make(
+                baker.make(
                     ResourceVersion,
                     resource=resource,
                     semvar="2.0.0",
@@ -255,9 +232,12 @@ class DownloadResourceTest(BaseTestCase):
                     HTTP_USER_AGENT="Resource Download Agent/3.0",
                     HTTP_X_FORWARDED_FOR="192.168.1.300"
                 )
+                body = response.json()
 
                 # Assert
-                self.assertEqual(200, response.status_code, getattr(response, "content", b""))
+                self.assertEqual(200, response.status_code)
+                self.assertIn("download_url", body)
+                self.assertIn("/metadata.json", body["download_url"])
                 
                 # Verify usage event was created with correct metadata
                 usage_events = UsageEvent.objects.filter(
