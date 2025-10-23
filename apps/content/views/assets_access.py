@@ -70,27 +70,3 @@ def request_asset_access(request: Request, asset_id: int, data: RequestAccessIn)
             "is_active": access_grant.is_active if access_grant else False
         } if access_grant else None
     }
-
-
-class AssetAccessStatusOut(Schema):
-    has_access: bool
-    requires_approval: bool
-
-
-@router.get("assets/{asset_id}/access-status/", response=AssetAccessStatusOut)
-def asset_access_status(request: Request, asset_id: int):
-    """Get asset access status for the authenticated user"""
-    asset = get_object_or_404(Asset, id=asset_id)
-
-    if not request.user.is_authenticated:
-        return {
-            "has_access": False,
-            "requires_approval": False,  # V1: Auto-approval
-        }
-
-    has_access = user_has_access(request.user, asset)
-
-    return {
-        "has_access": has_access,
-        "requires_approval": False,  # V1: Auto-approval
-    }

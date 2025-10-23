@@ -6,13 +6,14 @@ from apps.core.ninja_utils.errors import ItqanError
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
-from ._schemas import RefreshTokenSchema
 from ...core.ninja_utils.schemas import OkSchema
 from django.utils.translation import gettext as _
 router = ItqanRouter(tags=[NinjaTag.AUTH])
 
+
 class LogoutIn(Schema):
     refresh: str | None = None
+
 
 @router.post(
     "auth/logout/",
