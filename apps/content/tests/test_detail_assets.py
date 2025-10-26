@@ -73,7 +73,9 @@ class DetailAssetTest(BaseTestCase):
         # Verify license is a string
         self.assertIsInstance(body["license"], str, "License should be a string")
 
-    def test_detail_assets_where_various_categories_should_return_correct_category_and_thumbnail(self):
+    def test_detail_assets_where_various_categories_should_return_correct_category_and_thumbnail(
+        self,
+    ):
         # Arrange
         assets = [
             baker.make(
@@ -211,16 +213,16 @@ class DetailAssetTest(BaseTestCase):
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
-        
+
         # Verify usage event was created in database
         usage_events = UsageEvent.objects.filter(
             developer_user=user,
             usage_kind=UsageEvent.UsageKindChoice.VIEW,
             subject_kind=UsageEvent.SubjectKindChoice.ASSET,
-            asset_id=asset.id
+            asset_id=asset.id,
         )
         self.assertEqual(1, usage_events.count())
-        
+
         usage_event = usage_events.first()
         self.assertEqual(usage_event.developer_user, user)
         self.assertEqual(usage_event.usage_kind, UsageEvent.UsageKindChoice.VIEW)
@@ -247,12 +249,12 @@ class DetailAssetTest(BaseTestCase):
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
-        
+
         # Verify no usage event was created for anonymous user
         usage_events = UsageEvent.objects.filter(
             usage_kind=UsageEvent.UsageKindChoice.VIEW,
             subject_kind=UsageEvent.SubjectKindChoice.ASSET,
-            asset_id=asset.id
+            asset_id=asset.id,
         )
         self.assertEqual(0, usage_events.count())
 
@@ -273,26 +275,26 @@ class DetailAssetTest(BaseTestCase):
         response = self.client.get(
             f"/assets/{asset.id}/",
             format="json",
-            HTTP_USER_AGENT="Test Agent/1.0",
-            HTTP_X_FORWARDED_FOR="192.168.1.100"
+            headers={"user-agent": "Test Agent/1.0", "x-forwarded-for": "192.168.1.100"},
         )
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
-        
+
         # Verify usage event was created with correct metadata
         usage_events = UsageEvent.objects.filter(
             developer_user=user,
             usage_kind=UsageEvent.UsageKindChoice.VIEW,
             subject_kind=UsageEvent.SubjectKindChoice.ASSET,
-            asset_id=asset.id
+            asset_id=asset.id,
         )
         self.assertEqual(1, usage_events.count())
-        
+
         usage_event = usage_events.first()
         self.assertEqual(usage_event.user_agent, "Test Agent/1.0")
         # Note: IP address capture depends on Django test client configuration
         # In real requests, this would capture the client IP
+
     def test_detail_assets_where_thumbnail_url_is_null_should_return_valid_response(self):
         # Arrange
         asset = baker.make(
@@ -315,7 +317,7 @@ class DetailAssetTest(BaseTestCase):
         self.assertEqual("Asset Without Thumbnail", body["name"])
         self.assertIsNone(body["thumbnail_url"])  # Should be null/None
         self.assertEqual("CC0", body["license"])
-        
+
         # Verify other required fields are still present
         self.assertIn("publisher", body)
         self.assertIn("snapshots", body)

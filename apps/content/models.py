@@ -1,19 +1,18 @@
-
 import re
 
 from django.conf import settings
-from django.core.validators import URLValidator, FileExtensionValidator
+from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
-from apps.core.models import BaseModel, ActiveObjectsManager, AllObjectsManager
+from apps.core.models import ActiveObjectsManager, AllObjectsManager, BaseModel
 from apps.core.uploads import (
-    upload_to_asset_thumbnails,
     upload_to_asset_files,
+    upload_to_asset_preview_images,
+    upload_to_asset_thumbnails,
     upload_to_resource_files,
-    upload_to_asset_preview_images
 )
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -47,7 +46,9 @@ class Resource(BaseModel):
 
     description = models.TextField(help_text="Resource description")
 
-    category = models.CharField(max_length=20, choices=CategoryChoice.choices, help_text="Simple options in V1")
+    category = models.CharField(
+        max_length=20, choices=CategoryChoice.choices, help_text="Simple options in V1"
+    )
 
     status = models.CharField(
         max_length=20,
@@ -56,7 +57,12 @@ class Resource(BaseModel):
         help_text="V1: ready = ready to extract Assets from",
     )
 
-    license = models.CharField(max_length=50, choices=LicenseChoice.choices,default=LicenseChoice.CC0, help_text="Asset license")
+    license = models.CharField(
+        max_length=50,
+        choices=LicenseChoice,
+        default=LicenseChoice.CC0,
+        help_text="Asset license",
+    )
 
     objects = ActiveObjectsManager()
     all_objects = AllObjectsManager()
@@ -69,7 +75,7 @@ class Resource(BaseModel):
         super().save(*args, **kwargs)
 
     def get_latest_version(self):
-        return self.versions.order_by('-created_at').first()
+        return self.versions.order_by("-created_at").first()
 
 
 class ResourceVersion(BaseModel):
@@ -88,20 +94,34 @@ class ResourceVersion(BaseModel):
     summary = models.TextField(blank=True, help_text="Version summary")
 
     semvar = models.CharField(
-        max_length=20, help_text="Semantic versioning e.g. '1.0.0' - core to bind with an AssetVersion"
+        max_length=20,
+        help_text="Semantic versioning e.g. '1.0.0' - core to bind with an AssetVersion",
     )
 
     storage_url = models.FileField(
         upload_to=upload_to_resource_files,
         validators=[
             FileExtensionValidator(
-                allowed_extensions=["pdf", "doc", "docx", "txt", "zip", "tar", "gz", "json", "xml", "csv"],
+                allowed_extensions=[
+                    "pdf",
+                    "doc",
+                    "docx",
+                    "txt",
+                    "zip",
+                    "tar",
+                    "gz",
+                    "json",
+                    "xml",
+                    "csv",
+                ],
             ),
         ],
         help_text="File storage for resource version",
     )
 
-    file_type = models.CharField(max_length=20, choices=FileTypeChoice.choices, help_text="File type")
+    file_type = models.CharField(
+        max_length=20, choices=FileTypeChoice.choices, help_text="File type"
+    )
 
     size_bytes = models.PositiveBigIntegerField(default=0, help_text="File size in bytes")
 
@@ -132,11 +152,11 @@ class ResourceVersion(BaseModel):
             ResourceVersion.objects.filter(
                 resource=self.resource,
                 is_latest=True,
-            ).exclude(pk=self.pk).update(is_latest=False)
+            ).exclude(
+                pk=self.pk
+            ).update(is_latest=False)
 
         super().save(*args, **kwargs)
-
-
 
 
 class Asset(BaseModel):
@@ -156,15 +176,19 @@ class Asset(BaseModel):
     thumbnail_url = models.ImageField(
         upload_to=upload_to_asset_thumbnails,
         blank=True,
-        validators=[FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "gif", "webp"])],
+        validators=[
+            FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "gif", "webp"])
+        ],
         help_text="Asset thumbnail image",
     )
 
     category = models.CharField(
-        max_length=20, choices=CategoryChoice.choices, help_text="Asset category matching resource categories"
+        max_length=20,
+        choices=CategoryChoice.choices,
+        help_text="Asset category matching resource categories",
     )
 
-    license = models.CharField(max_length=50, choices=LicenseChoice.choices, help_text="Asset license")
+    license = models.CharField(max_length=50, choices=LicenseChoice, help_text="Asset license")
 
     file_size = models.CharField(max_length=50, help_text="Human readable file size e.g. '2.5 MB'")
 
@@ -182,13 +206,11 @@ class Asset(BaseModel):
     def __str__(self):
         return f"Asset(name={self.name}, category={self.category})"
 
-
     @staticmethod
     def _parse_file_size_to_bytes(file_size_str):
         """Convert human readable file size to bytes"""
         if not file_size_str:
             return 0
-
 
         # Extract number and unit from string like "2.5 MB"
         match = re.match(r"([0-9.]+)\s*([KMGTPE]?B)", file_size_str.upper())
@@ -219,7 +241,7 @@ class Asset(BaseModel):
         ).exclude(id=self.id)[:limit]
 
     def get_latest_version(self):
-        return self.versions.order_by('-created_at').first()
+        return self.versions.order_by("-created_at").first()
 
     @property
     def human_readable_size(self):
@@ -230,7 +252,9 @@ class Asset(BaseModel):
 class AssetVersion(BaseModel):
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="versions")
 
-    resource_version = models.ForeignKey(ResourceVersion, on_delete=models.CASCADE, related_name="asset_versions")
+    resource_version = models.ForeignKey(
+        ResourceVersion, on_delete=models.CASCADE, related_name="asset_versions"
+    )
 
     name = models.CharField(max_length=255, help_text="Asset version name")
 
@@ -242,7 +266,18 @@ class AssetVersion(BaseModel):
         null=True,
         validators=[
             FileExtensionValidator(
-                allowed_extensions=["pdf", "doc", "docx", "txt", "zip", "tar", "gz", "json", "xml", "csv"],
+                allowed_extensions=[
+                    "pdf",
+                    "doc",
+                    "docx",
+                    "txt",
+                    "zip",
+                    "tar",
+                    "gz",
+                    "json",
+                    "xml",
+                    "csv",
+                ],
             ),
         ],
         help_text="Direct file for asset",
@@ -252,7 +287,6 @@ class AssetVersion(BaseModel):
 
     objects = ActiveObjectsManager()
     all_objects = AllObjectsManager()
-
 
     def __str__(self):
         return f"AssetVersion(asset={self.asset.name}, version={self.resource_version.semvar})"
@@ -282,27 +316,22 @@ class AssetPreview(BaseModel):
     """
     Visual images for an Asset
     """
-    asset = models.ForeignKey(
-        'Asset',
-        on_delete=models.CASCADE,
-        related_name='previews'
-    )
+
+    asset = models.ForeignKey("Asset", on_delete=models.CASCADE, related_name="previews")
     image_url = models.ImageField(
         upload_to=upload_to_asset_preview_images,
         blank=True,
-        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'gif', 'webp'])],
-        help_text="Preview image"
+        validators=[
+            FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "gif", "webp"])
+        ],
+        help_text="Preview image",
     )
     title = models.CharField(max_length=255, blank=True, default="")
     description = models.TextField(blank=True, default="")
-    order = models.PositiveIntegerField(
-        default=1,
-        help_text="Display order"
-    )
+    order = models.PositiveIntegerField(default=1, help_text="Display order")
 
     objects = ActiveObjectsManager()
     all_objects = AllObjectsManager()
-
 
     def __str__(self):
         return f"AssetPreview(asset={self.asset.name}, order={self.order})"
@@ -319,57 +348,41 @@ class AssetAccessRequest(BaseModel):
         NON_COMMERCIAL = "non-commercial", _("Non-Commercial")
 
     developer_user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='asset_requests'
+        User, on_delete=models.CASCADE, related_name="asset_requests"
     )
-    
-    asset = models.ForeignKey(
-        Asset,
-        on_delete=models.CASCADE,
-        related_name='access_requests'
-    )
+
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="access_requests")
 
     status = models.CharField(
         max_length=20,
         choices=StatusChoice.choices,
         default=StatusChoice.PENDING,
     )
-    
+
     developer_access_reason = models.TextField(
         help_text="Reason for requesting access - used in V1 UI"
     )
-    
+
     intended_use = models.CharField(
         max_length=20,
         choices=IntendedUseChoice.choices,
-        help_text="Commercial or non-commercial use"
+        help_text="Commercial or non-commercial use",
     )
 
-    admin_response = models.TextField(
-        blank=True,
-        help_text="Admin response message"
-    )
-    
-    approved_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="When request was approved"
-    )
-    
+    admin_response = models.TextField(blank=True, help_text="Admin response message")
+
+    approved_at = models.DateTimeField(null=True, blank=True, help_text="When request was approved")
+
     approved_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='approved_asset_requests'
+        related_name="approved_asset_requests",
     )
-    
 
     objects = ActiveObjectsManager()
     all_objects = AllObjectsManager()
-
-
 
     def __str__(self):
         return f"AssetAccessRequest(user={self.developer_user.email}, asset={self.asset.name}, status={self.status})"
@@ -377,45 +390,32 @@ class AssetAccessRequest(BaseModel):
 
 class AssetAccess(BaseModel):
     asset_access_request = models.OneToOneField(
-        AssetAccessRequest,
-        on_delete=models.CASCADE,
-        related_name='access_grant'
+        AssetAccessRequest, on_delete=models.CASCADE, related_name="access_grant"
     )
-    
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='asset_accesses'
-    )
-    
-    asset = models.ForeignKey(
-        Asset,
-        on_delete=models.CASCADE,
-        related_name='user_accesses'
-    )
-    effective_license = models.CharField(max_length=50, choices=LicenseChoice.choices, help_text="Access license at time of grant")
 
-    granted_at = models.DateTimeField(
-        auto_now_add=True,
-        help_text="When access was granted"
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="asset_accesses")
+
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="user_accesses")
+    effective_license = models.CharField(
+        max_length=50, choices=LicenseChoice, help_text="Access license at time of grant"
     )
-    
+
+    granted_at = models.DateTimeField(auto_now_add=True, help_text="When access was granted")
+
     expires_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="When access expires (null = never expires)"
+        null=True, blank=True, help_text="When access expires (null = never expires)"
     )
-    
+
     download_url = models.URLField(
         blank=True,
         help_text="Direct download URL, can contain signed URL if needed",
     )
-    
+
     objects = AllObjectsManager()
     all_objects = AllObjectsManager()
 
     class Meta:
-        unique_together = ['user', 'asset']
+        unique_together = ["user", "asset"]
 
     def __str__(self):
         return f"AssetAccess(user_id={self.user_id}, asset_id={self.asset_id})"
@@ -425,14 +425,14 @@ class AssetAccess(BaseModel):
         """Check if access is currently active (not expired)"""
         if not self.expires_at:
             return True  # Never expires
-        
+
         return timezone.now() < self.expires_at
 
     @property
     def is_expired(self):
         """Check if access has expired"""
         return not self.is_active
-    
+
     def get_download_url(self):
         """Get the download URL for this access"""
         if self.download_url:
@@ -451,52 +451,34 @@ class UsageEvent(BaseModel):
         RESOURCE = "resource", _("Resource")
         ASSET = "asset", _("Asset")
 
-    developer_user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='usage_events'
-    )
-    
+    developer_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="usage_events")
+
     usage_kind = models.CharField(
-        max_length=20,
-        choices=UsageKindChoice.choices,
-        help_text="Type of usage event"
+        max_length=20, choices=UsageKindChoice.choices, help_text="Type of usage event"
     )
-    
+
     subject_kind = models.CharField(
         max_length=20,
         choices=SubjectKindChoice.choices,
-        help_text="Whether tracking resource or asset"
+        help_text="Whether tracking resource or asset",
     )
 
     resource_id = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        help_text="Resource ID if subject_kind = 'resource'"
-    )
-    
-    asset_id = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        help_text="Asset ID if subject_kind = 'asset'"
+        null=True, blank=True, help_text="Resource ID if subject_kind = 'resource'"
     )
 
-    metadata = models.JSONField(
-        default=dict,
-        help_text="Additional event metadata"
+    asset_id = models.PositiveIntegerField(
+        null=True, blank=True, help_text="Asset ID if subject_kind = 'asset'"
     )
-    
-    ip_address = models.GenericIPAddressField(
-        null=True,
-        blank=True,
-        help_text="User IP address"
+
+    metadata = models.JSONField(default=dict, help_text="Additional event metadata")
+
+    ip_address = models.GenericIPAddressField(null=True, blank=True, help_text="User IP address")
+
+    user_agent = models.TextField(blank=True, help_text="User browser/client information")
+    effective_license = models.CharField(
+        max_length=50, choices=LicenseChoice, help_text="License at time of usage"
     )
-    
-    user_agent = models.TextField(
-        blank=True,
-        help_text="User browser/client information"
-    )
-    effective_license = models.CharField(max_length=50, choices=LicenseChoice.choices, help_text="License at time of usage")
 
     objects = ActiveObjectsManager()
     all_objects = AllObjectsManager()
@@ -504,8 +486,11 @@ class UsageEvent(BaseModel):
     class Meta:
         constraints = [
             models.CheckConstraint(
-                check=models.Q(subject_kind='resource', resource_id__isnull=False, asset_id__isnull=True) | models.Q(subject_kind='asset', asset_id__isnull=False, resource_id__isnull=True),
-                name='usage_event_subject_kind_consistency'
+                condition=models.Q(
+                    subject_kind="resource", resource_id__isnull=False, asset_id__isnull=True
+                )
+                | models.Q(subject_kind="asset", asset_id__isnull=False, resource_id__isnull=True),
+                name="usage_event_subject_kind_consistency",
             )
         ]
 
@@ -516,40 +501,40 @@ class UsageEvent(BaseModel):
     def get_user_stats(cls, user):
         """Get usage statistics for a user"""
         events = cls.objects.filter(developer_user=user)
-        
+
         return {
-            'total_events': events.count(),
-            'downloads': events.filter(usage_kind='file_download').count(),
-            'views': events.filter(usage_kind='view').count(),
-            'api_calls': events.filter(usage_kind='api_access').count(),
-            'asset_interactions': events.filter(subject_kind='asset').count(),
-            'resource_interactions': events.filter(subject_kind='resource').count()
+            "total_events": events.count(),
+            "downloads": events.filter(usage_kind="file_download").count(),
+            "views": events.filter(usage_kind="view").count(),
+            "api_calls": events.filter(usage_kind="api_access").count(),
+            "asset_interactions": events.filter(subject_kind="asset").count(),
+            "resource_interactions": events.filter(subject_kind="resource").count(),
         }
 
     @classmethod
     def get_asset_stats(cls, asset):
         """Get usage statistics for an asset"""
         events = cls.objects.filter(asset_id=asset.id)
-        
+
         return {
-            'total_events': events.count(),
-            'downloads': events.filter(usage_kind='file_download').count(),
-            'views': events.filter(usage_kind='view').count(),
-            'api_calls': events.filter(usage_kind='api_access').count(),
-            'unique_users': events.values('developer_user').distinct().count()
+            "total_events": events.count(),
+            "downloads": events.filter(usage_kind="file_download").count(),
+            "views": events.filter(usage_kind="view").count(),
+            "api_calls": events.filter(usage_kind="api_access").count(),
+            "unique_users": events.values("developer_user").distinct().count(),
         }
 
     @classmethod
     def get_resource_stats(cls, resource):
         """Get usage statistics for a resource"""
         events = cls.objects.filter(resource_id=resource.id)
-        
+
         return {
-            'total_events': events.count(),
-            'downloads': events.filter(usage_kind='file_download').count(),
-            'views': events.filter(usage_kind='view').count(),
-            'api_calls': events.filter(usage_kind='api_access').count(),
-            'unique_users': events.values('developer_user').distinct().count()
+            "total_events": events.count(),
+            "downloads": events.filter(usage_kind="file_download").count(),
+            "views": events.filter(usage_kind="view").count(),
+            "api_calls": events.filter(usage_kind="api_access").count(),
+            "unique_users": events.values("developer_user").distinct().count(),
         }
 
 
@@ -562,23 +547,20 @@ class Distribution(BaseModel):
     asset_version = models.ForeignKey(
         AssetVersion,
         on_delete=models.CASCADE,
-        related_name='distributions',
-        help_text="Asset version that this distribution provides access to"
+        related_name="distributions",
+        help_text="Asset version that this distribution provides access to",
     )
 
     channel = models.CharField(
-        max_length=20,
-        choices=ChannelChoice.choices,
-        help_text="Channel for accessing the asset"
+        max_length=20, choices=ChannelChoice.choices, help_text="Channel for accessing the asset"
     )
 
-    
     objects = ActiveObjectsManager()
     all_objects = AllObjectsManager()
 
     class Meta:
 
-        unique_together = [['asset_version', 'channel']]
+        unique_together = [["asset_version", "channel"]]
 
     def __str__(self):
         return f"Distribution(asset={self.asset_version.asset.name}, channel={self.channel})"

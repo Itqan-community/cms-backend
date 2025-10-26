@@ -1,15 +1,13 @@
-from ninja import FilterSchema
-from ninja import Query
-from ninja import Schema
+from ninja import FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import Field
 
 from apps.content.models import Asset
 from apps.core.ninja_utils.ordering_base import ordering
+from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
-from apps.core.ninja_utils.request import Request
 
 router = ItqanRouter(tags=[NinjaTag.ASSETS])
 

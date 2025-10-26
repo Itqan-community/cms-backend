@@ -46,17 +46,20 @@ def detail_assets(request: Request, id: int):
     asset = get_object_or_404(Asset, id=id)
 
     # Only create usage event for authenticated users
-    if hasattr(request, 'user') and request.user and request.user.is_authenticated:
-        run_task(create_usage_event_task, {
-            "developer_user_id": request.user.id,
-            "usage_kind": UsageEvent.UsageKindChoice.VIEW,
-            "subject_kind": UsageEvent.SubjectKindChoice.ASSET,
-            "asset_id": asset.id,
-            "resource_id": None,
-            "metadata": {},
-            "ip_address": request.META.get('REMOTE_ADDR'),
-            "user_agent": request.headers.get('User-Agent', ''),
-            "effective_license": asset.license
-        })
+    if hasattr(request, "user") and request.user and request.user.is_authenticated:
+        run_task(
+            create_usage_event_task,
+            {
+                "developer_user_id": request.user.id,
+                "usage_kind": UsageEvent.UsageKindChoice.VIEW,
+                "subject_kind": UsageEvent.SubjectKindChoice.ASSET,
+                "asset_id": asset.id,
+                "resource_id": None,
+                "metadata": {},
+                "ip_address": request.META.get("REMOTE_ADDR"),
+                "user_agent": request.headers.get("User-Agent", ""),
+                "effective_license": asset.license,
+            },
+        )
 
     return asset

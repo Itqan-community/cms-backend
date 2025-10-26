@@ -24,7 +24,9 @@ class ListAssetTest(BaseTestCase):
         baker.make(Asset, name="Tafsir Ibn Katheer", license=LicenseChoice.CC_BY_NC)
 
         # Act
-        response = self.client.get("/assets/", data={"license_code": LicenseChoice.CC_BY_SA}, format="json")
+        response = self.client.get(
+            "/assets/", data={"license_code": LicenseChoice.CC_BY_SA}, format="json"
+        )
 
         # Assert
         self.assertEqual(response.status_code, 200, response.content)
@@ -121,7 +123,10 @@ class ListAssetTest(BaseTestCase):
         """Test search functionality across name, description, category, and publisher fields."""
         # Arrange
         baker.make(
-            Asset, name="Tafsir Al-Jalalayn", description="This is a tafsir book", category=Asset.CategoryChoice.TAFSIR
+            Asset,
+            name="Tafsir Al-Jalalayn",
+            description="This is a tafsir book",
+            category=Asset.CategoryChoice.TAFSIR,
         )
         baker.make(
             Asset,
@@ -129,7 +134,12 @@ class ListAssetTest(BaseTestCase):
             description="This is a recitation book",
             category=Asset.CategoryChoice.RECITATION,
         )
-        baker.make(Asset, name="King Fahd", description="This is a mushaf book", category=Asset.CategoryChoice.MUSHAF)
+        baker.make(
+            Asset,
+            name="King Fahd",
+            description="This is a mushaf book",
+            category=Asset.CategoryChoice.MUSHAF,
+        )
 
         # Test search by name/category
         response = self.client.get("/assets/", data={"search": "tafsir"}, format="json")

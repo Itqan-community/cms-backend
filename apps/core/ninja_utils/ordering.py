@@ -1,24 +1,24 @@
-from _operator import attrgetter
-from _operator import itemgetter
-
+from _operator import attrgetter, itemgetter
 from django.db.models import QuerySet
-from ninja import P
-from ninja import Query
-from ninja import Schema
-from pydantic import BaseModel
-from pydantic import Field
+from ninja import P, Query, Schema
+from pydantic import BaseModel, Field
 
 from apps.core.ninja_utils.ordering_base import OrderingBase
 
 """
 ordering class, influences heavily by django-ninja-extra
 """
+
+
 class Ordering(OrderingBase):
     class Input(Schema):
         ordering: str | None = Field(None)
 
     def __init__(
-        self, ordering_fields: list[str] | None = None, pass_parameter: str | None = None, query_param: str = "ordering"
+        self,
+        ordering_fields: list[str] | None = None,
+        pass_parameter: str | None = None,
+        query_param: str = "ordering",
     ) -> None:
         super().__init__(pass_parameter=pass_parameter)
         self.ordering_fields = ordering_fields or []
@@ -30,7 +30,9 @@ class Ordering(OrderingBase):
         if ordering_fields:
 
             class DynamicInput(Ordering.Input):
-                ordering: Query[str | None, P(example=", ".join(ordering_fields), alias=query_param)] = None  # type:ignore
+                ordering: Query[
+                    str | None, P(example=", ".join(ordering_fields), alias=query_param)
+                ] = None  # type:ignore
 
             return DynamicInput
         return Ordering.Input
@@ -82,7 +84,9 @@ class Ordering(OrderingBase):
         return valid_fields
 
     def get_all_valid_fields_from_queryset(self, items: QuerySet) -> list[str]:
-        return [str(field.name) for field in items.model._meta.fields] + [str(key) for key in items.query.annotations]
+        return [str(field.name) for field in items.model._meta.fields] + [
+            str(key) for key in items.query.annotations
+        ]
 
     def get_all_valid_fields_from_list(self, items: list) -> list[str]:
         if not items:

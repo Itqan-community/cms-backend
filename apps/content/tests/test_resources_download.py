@@ -6,8 +6,8 @@ from django.test import override_settings
 from model_bakery import baker
 
 from apps.content.models import Resource, ResourceVersion, UsageEvent
-from apps.users.models import User
 from apps.core.tests import BaseTestCase
+from apps.users.models import User
 
 
 class DownloadResourceTest(BaseTestCase):
@@ -43,7 +43,6 @@ class DownloadResourceTest(BaseTestCase):
                 self.assertEqual(200, response.status_code)
                 self.assertIn("download_url", body)
                 self.assertIn("/data.csv", body["download_url"])
-
 
     def test_download_fallbacks_to_most_recent_when_no_latest_marked(self):
         # Arrange
@@ -190,16 +189,16 @@ class DownloadResourceTest(BaseTestCase):
                 self.assertEqual(200, response.status_code)
                 self.assertIn("download_url", body)
                 self.assertIn("/test.csv", body["download_url"])
-                
+
                 # Verify usage event was created in database
                 usage_events = UsageEvent.objects.filter(
                     developer_user=self.user,
                     usage_kind=UsageEvent.UsageKindChoice.FILE_DOWNLOAD,
                     subject_kind=UsageEvent.SubjectKindChoice.RESOURCE,
-                    resource_id=resource.id
+                    resource_id=resource.id,
                 )
                 self.assertEqual(1, usage_events.count())
-                
+
                 usage_event = usage_events.first()
                 self.assertEqual(usage_event.developer_user, self.user)
                 self.assertEqual(usage_event.usage_kind, UsageEvent.UsageKindChoice.FILE_DOWNLOAD)
@@ -215,7 +214,9 @@ class DownloadResourceTest(BaseTestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             with override_settings(MEDIA_ROOT=tmpdir):
                 resource = baker.make(Resource, name="Metadata Test Resource")
-                file_obj = self.create_file("metadata.json", b'{"test": "data"}', "application/json")
+                file_obj = self.create_file(
+                    "metadata.json", b'{"test": "data"}', "application/json"
+                )
                 baker.make(
                     ResourceVersion,
                     resource=resource,
@@ -229,8 +230,10 @@ class DownloadResourceTest(BaseTestCase):
                 response = self.client.get(
                     f"/resources/{resource.id}/download/",
                     format="json",
-                    HTTP_USER_AGENT="Resource Download Agent/3.0",
-                    HTTP_X_FORWARDED_FOR="192.168.1.300"
+                    headers={
+                        "user-agent": "Resource Download Agent/3.0",
+                        "x-forwarded-for": "192.168.1.300",
+                    },
                 )
                 body = response.json()
 
@@ -238,16 +241,16 @@ class DownloadResourceTest(BaseTestCase):
                 self.assertEqual(200, response.status_code)
                 self.assertIn("download_url", body)
                 self.assertIn("/metadata.json", body["download_url"])
-                
+
                 # Verify usage event was created with correct metadata
                 usage_events = UsageEvent.objects.filter(
                     developer_user=self.user,
                     usage_kind=UsageEvent.UsageKindChoice.FILE_DOWNLOAD,
                     subject_kind=UsageEvent.SubjectKindChoice.RESOURCE,
-                    resource_id=resource.id
+                    resource_id=resource.id,
                 )
                 self.assertEqual(1, usage_events.count())
-                
+
                 usage_event = usage_events.first()
                 self.assertEqual(usage_event.user_agent, "Resource Download Agent/3.0")
                 # Note: IP address capture depends on Django test client configuration

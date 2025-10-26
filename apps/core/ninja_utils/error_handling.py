@@ -6,20 +6,20 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import Http404
 from django.utils.encoding import force_str
 from django.utils.translation import gettext as _
-from ninja.errors import AuthenticationError
-from ninja.errors import HttpError
+from ninja.errors import AuthenticationError, HttpError
 from ninja.errors import ValidationError as NinjaValidationError
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.serializers import as_serializer_error
-from rest_framework_simplejwt.exceptions import InvalidToken, AuthenticationFailed
+from rest_framework_simplejwt.exceptions import AuthenticationFailed, InvalidToken
 
-from apps.core.ninja_utils.errors import ItqanError
-from apps.core.ninja_utils.errors import NinjaErrorResponse
+from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from config.ninja_urls import ninja_api
 
 """
 Unify Error Responses from Django Ninja into a standard format.
 """
+
+
 @ninja_api.exception_handler(PermissionDenied)
 def handle_permission_denied(request, exc: PermissionDenied):
     return ninja_api.create_response(
@@ -40,7 +40,9 @@ def handle_itqan_error(request, exc: ItqanError):
 def handle_ninja_validation_error(request, exc: NinjaValidationError):
     return ninja_api.create_response(
         request,
-        NinjaErrorResponse(error_name="validation_error", message=_("Invalid Input"), extra=exc.errors),
+        NinjaErrorResponse(
+            error_name="validation_error", message=_("Invalid Input"), extra=exc.errors
+        ),
         status=400,
     )
 
@@ -50,7 +52,11 @@ def handle_django_validation_error(request, exc: DjangoValidationError):
     error: dict[str, list] = as_serializer_error(exc)
     return ninja_api.create_response(
         request,
-        NinjaErrorResponse(error_name="validation_error", message=_("Invalid Input"), extra=error["non_field_errors"]),
+        NinjaErrorResponse(
+            error_name="validation_error",
+            message=_("Invalid Input"),
+            extra=error["non_field_errors"],
+        ),
         status=400,
     )
 
@@ -66,9 +72,12 @@ def handle_django_404(request, exc: Http404):
 def handle_ninja_authentication_error(request, exc: AuthenticationError):
     return ninja_api.create_response(
         request,
-        NinjaErrorResponse(error_name="authentication_error", message=exc.message or _("Authentication Error")),
+        NinjaErrorResponse(
+            error_name="authentication_error", message=exc.message or _("Authentication Error")
+        ),
         status=401,
     )
+
 
 @ninja_api.exception_handler(InvalidToken)
 def handle_ninja_authentication_error(request, exc: InvalidToken):
@@ -78,6 +87,7 @@ def handle_ninja_authentication_error(request, exc: InvalidToken):
         status=401,
     )
 
+
 @ninja_api.exception_handler(AuthenticationFailed)
 def handle_ninja_authentication_error(request, exc: AuthenticationFailed):
     return ninja_api.create_response(
@@ -85,6 +95,8 @@ def handle_ninja_authentication_error(request, exc: AuthenticationFailed):
         NinjaErrorResponse(error_name="token_not_valid", message=force_str(exc.default_detail)),
         status=401,
     )
+
+
 @ninja_api.exception_handler(HttpError)
 def handle_ninja_http_error(request, exc: HttpError):
     # ninja throws HttpError with `__cause__`
@@ -119,6 +131,8 @@ def handle_generic_exception(request, exc: Exception):
     # in production
     return ninja_api.create_response(
         request,
-        NinjaErrorResponse(error_name="internal_error", message=_("Something went wrong - Internal Server Error")),
+        NinjaErrorResponse(
+            error_name="internal_error", message=_("Something went wrong - Internal Server Error")
+        ),
         status=500,
     )

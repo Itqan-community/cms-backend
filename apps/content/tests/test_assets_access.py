@@ -1,9 +1,9 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetAccessRequest, AssetAccess, LicenseChoice
+from apps.content.models import Asset, AssetAccess, AssetAccessRequest, LicenseChoice
+from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
-from apps.core.tests import BaseTestCase
 
 
 class AssetAccessTest(BaseTestCase):
@@ -17,7 +17,7 @@ class AssetAccessTest(BaseTestCase):
             name="Test Asset",
             description="Test asset description",
             category=Asset.CategoryChoice.TAFSIR,
-            license=LicenseChoice.CC_BY_SA
+            license=LicenseChoice.CC_BY_SA,
         )
         self.user = baker.make(User, email="test@example.com")
 
@@ -25,21 +25,19 @@ class AssetAccessTest(BaseTestCase):
         # Arrange
         data = {
             "purpose": "Academic research on Quranic studies",
-            "intended_use": AssetAccessRequest.IntendedUseChoice.NON_COMMERCIAL
+            "intended_use": AssetAccessRequest.IntendedUseChoice.NON_COMMERCIAL,
         }
 
         # Act
         self.authenticate_user(self.user)
         response = self.client.post(
-            f"/assets/{self.asset.id}/request-access/", 
-            data=data, 
-            format='json'
+            f"/assets/{self.asset.id}/request-access/", data=data, format="json"
         )
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
-        
+
         # Check request structure
         self.assertIn("request", body)
         request_data = body["request"]
@@ -49,7 +47,7 @@ class AssetAccessTest(BaseTestCase):
         self.assertEqual("non-commercial", request_data["intended_use"])
         self.assertEqual("approved", request_data["status"])  # V1: Auto-approval
         self.assertIn("created_at", request_data)
-        
+
         # Check access structure
         self.assertIn("access", body)
         access_data = body["access"]
@@ -63,37 +61,30 @@ class AssetAccessTest(BaseTestCase):
         # Arrange
         data = {
             "purpose": "Commercial application development",
-            "intended_use": AssetAccessRequest.IntendedUseChoice.COMMERCIAL
+            "intended_use": AssetAccessRequest.IntendedUseChoice.COMMERCIAL,
         }
 
         # Act
         self.authenticate_user(self.user)
         response = self.client.post(
-            f"/assets/{self.asset.id}/request-access/", 
-            data=data, 
-            format='json'
+            f"/assets/{self.asset.id}/request-access/", data=data, format="json"
         )
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
-        
+
         self.assertEqual("commercial", body["request"]["intended_use"])
         self.assertEqual("approved", body["request"]["status"])
 
     def test_request_asset_access_with_invalid_intended_use_should_return_400(self):
         # Arrange
-        data = {
-            "purpose": "Test purpose",
-            "intended_use": "invalid_use"  # Invalid enum value
-        }
+        data = {"purpose": "Test purpose", "intended_use": "invalid_use"}  # Invalid enum value
 
         # Act
         self.authenticate_user(self.user)
         response = self.client.post(
-            f"/assets/{self.asset.id}/request-access/", 
-            data=data, 
-            format='json'
+            f"/assets/{self.asset.id}/request-access/", data=data, format="json"
         )
 
         # Assert
@@ -109,9 +100,7 @@ class AssetAccessTest(BaseTestCase):
         # Act
         self.authenticate_user(self.user)
         response = self.client.post(
-            f"/assets/{self.asset.id}/request-access/", 
-            data=data, 
-            format='json'
+            f"/assets/{self.asset.id}/request-access/", data=data, format="json"
         )
 
         # Assert
@@ -122,15 +111,13 @@ class AssetAccessTest(BaseTestCase):
         non_existent_asset_id = 99999
         data = {
             "purpose": "Test purpose",
-            "intended_use": AssetAccessRequest.IntendedUseChoice.NON_COMMERCIAL
+            "intended_use": AssetAccessRequest.IntendedUseChoice.NON_COMMERCIAL,
         }
 
         # Act
         self.authenticate_user(self.user)
         response = self.client.post(
-            f"/assets/{non_existent_asset_id}/request-access/", 
-            data=data, 
-            format='json'
+            f"/assets/{non_existent_asset_id}/request-access/", data=data, format="json"
         )
 
         # Assert
@@ -140,14 +127,12 @@ class AssetAccessTest(BaseTestCase):
         # Arrange
         data = {
             "purpose": "Test purpose",
-            "intended_use": AssetAccessRequest.IntendedUseChoice.NON_COMMERCIAL
+            "intended_use": AssetAccessRequest.IntendedUseChoice.NON_COMMERCIAL,
         }
 
         # Act (without authentication)
         response = self.client.post(
-            f"/assets/{self.asset.id}/request-access/", 
-            data=data, 
-            format='json'
+            f"/assets/{self.asset.id}/request-access/", data=data, format="json"
         )
 
         # Assert
@@ -157,33 +142,29 @@ class AssetAccessTest(BaseTestCase):
         # Arrange
         data = {
             "purpose": "First request",
-            "intended_use": AssetAccessRequest.IntendedUseChoice.NON_COMMERCIAL
+            "intended_use": AssetAccessRequest.IntendedUseChoice.NON_COMMERCIAL,
         }
 
         # Act - First request
         self.authenticate_user(self.user)
         first_response = self.client.post(
-            f"/assets/{self.asset.id}/request-access/", 
-            data=data, 
-            format='json'
+            f"/assets/{self.asset.id}/request-access/", data=data, format="json"
         )
-        
+
         # Act - Second request with different purpose
         data["purpose"] = "Second request"
         second_response = self.client.post(
-            f"/assets/{self.asset.id}/request-access/", 
-            data=data, 
-            format='json'
+            f"/assets/{self.asset.id}/request-access/", data=data, format="json"
         )
 
         # Assert
         self.assertEqual(200, first_response.status_code, first_response.content)
         self.assertEqual(200, second_response.status_code, second_response.content)
-        
+
         # Both should return the same access (existing one)
         first_body = first_response.json()
         second_body = second_response.json()
-        
+
         # The access ID should be the same (existing access returned)
         self.assertEqual(first_body["access"]["id"], second_body["access"]["id"])
 
@@ -191,35 +172,31 @@ class AssetAccessTest(BaseTestCase):
         # Arrange
         data = {
             "purpose": "Database verification test",
-            "intended_use": AssetAccessRequest.IntendedUseChoice.NON_COMMERCIAL
+            "intended_use": AssetAccessRequest.IntendedUseChoice.NON_COMMERCIAL,
         }
 
         # Act
         self.authenticate_user(self.user)
         response = self.client.post(
-            f"/assets/{self.asset.id}/request-access/", 
-            data=data, 
-            format='json'
+            f"/assets/{self.asset.id}/request-access/", data=data, format="json"
         )
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
-        
+
         # Verify access request is created in database
         access_request = AssetAccessRequest.objects.filter(
-            developer_user=self.user,
-            asset=self.asset
+            developer_user=self.user, asset=self.asset
         ).first()
         self.assertIsNotNone(access_request)
         self.assertEqual("Database verification test", access_request.developer_access_reason)
-        self.assertEqual(AssetAccessRequest.IntendedUseChoice.NON_COMMERCIAL, access_request.intended_use)
+        self.assertEqual(
+            AssetAccessRequest.IntendedUseChoice.NON_COMMERCIAL, access_request.intended_use
+        )
         self.assertEqual(AssetAccessRequest.StatusChoice.APPROVED, access_request.status)
-        
+
         # Verify access grant is created in database
-        access_grant = AssetAccess.objects.filter(
-            user=self.user,
-            asset=self.asset
-        ).first()
+        access_grant = AssetAccess.objects.filter(user=self.user, asset=self.asset).first()
         self.assertIsNotNone(access_grant)
         self.assertTrue(access_grant.is_active)
 
@@ -232,7 +209,7 @@ class AssetAccessTest(BaseTestCase):
         ]
         data = {
             "purpose": "Test purpose",
-            "intended_use": AssetAccessRequest.IntendedUseChoice.NON_COMMERCIAL
+            "intended_use": AssetAccessRequest.IntendedUseChoice.NON_COMMERCIAL,
         }
 
         for invalid_format in invalid_formats:
@@ -240,9 +217,7 @@ class AssetAccessTest(BaseTestCase):
                 # Act
                 self.authenticate_user(self.user)
                 response = self.client.post(
-                    f"/assets/{invalid_format}/request-access/", 
-                    data=data, 
-                    format='json'
+                    f"/assets/{invalid_format}/request-access/", data=data, format="json"
                 )
 
                 # Assert

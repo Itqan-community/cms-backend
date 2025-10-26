@@ -2,8 +2,7 @@ from collections.abc import Callable
 from typing import Any
 
 from ninja import Router
-from ninja.constants import NOT_SET
-from ninja.constants import NOT_SET_TYPE
+from ninja.constants import NOT_SET, NOT_SET_TYPE
 from ninja.throttling import BaseThrottle
 from ninja.types import TCallable
 from ninja.utils import normalize_path
@@ -17,6 +16,7 @@ class ItqanRouter(Router):
     """
     This Router is made to enforce some rules about paths, and how auth is handled.
     """
+
     def api_operation(
         self,
         methods: list[str],

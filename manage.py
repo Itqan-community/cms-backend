@@ -7,7 +7,7 @@ from pathlib import Path
 
 def main():
     """Run administrative tasks."""
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.development')
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.development")
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
@@ -20,5 +20,6 @@ def main():
     current_path = Path(__file__).parent.resolve()
     sys.path.append(str(current_path / "apps"))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

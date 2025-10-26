@@ -26,5 +26,5 @@ def auto_discover_ninja_routers(ninja_api: NinjaAPI, pattern: str) -> None:
                         pass
                 else:
                     # Skip files starting with underscore (utility files)
-                    if not view_file.stem.startswith('_'):
+                    if not view_file.stem.startswith("_"):
                         ninja_api.add_router("/", f"{app.name}.{pattern}.{view_file.stem}.router")
