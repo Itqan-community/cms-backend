@@ -1,4 +1,3 @@
-from django.test import TestCase
 from model_bakery import baker
 
 from apps.content.models import Resource, UsageEvent

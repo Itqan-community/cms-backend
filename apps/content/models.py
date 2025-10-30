@@ -559,7 +559,6 @@ class Distribution(BaseModel):
     all_objects = AllObjectsManager()
 
     class Meta:
-
         unique_together = [["asset_version", "channel"]]
 
     def __str__(self):

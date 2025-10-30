@@ -3,7 +3,7 @@ from ninja import Schema
 from pydantic import AwareDatetime
 
 from apps.content.models import Asset, AssetAccessRequest
-from apps.content.services.asset_access import request_access, user_has_access
+from apps.content.services.asset_access import request_access
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag

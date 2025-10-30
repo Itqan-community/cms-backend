@@ -7,7 +7,6 @@ from apps.users.models import User
 def approve_request(
     asset_access_request: AssetAccessRequest, approved_by: User | None, admin_response: str
 ):
-
     if asset_access_request.status != AssetAccessRequest.StatusChoice.PENDING:
         raise ValueError(f"Cannot approve request with status '{asset_access_request.status}'")
 
@@ -31,7 +30,6 @@ def approve_request(
 
 
 def reject_request(asset_access_request: AssetAccessRequest, rejected_by_user=None, reason=""):
-
     if asset_access_request.status != AssetAccessRequest.StatusChoice.PENDING:
         raise ValueError(f"Cannot reject request with status '{asset_access_request.status}'")
 

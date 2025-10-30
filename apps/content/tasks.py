@@ -199,7 +199,7 @@ def compute_daily_analytics_task():
     Daily task to compute analytics aggregations
     """
     try:
-        from django.db.models import Count, Sum
+        from django.db.models import Count
 
         from .models import Asset, Publisher, UsageEvent
 

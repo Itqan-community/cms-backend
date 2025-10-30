@@ -25,7 +25,7 @@ def serve_openapi_spec(request):
         # Path to the openapi.yaml file
         openapi_path = os.path.join(settings.BASE_DIR, "openapi.yaml")
 
-        with open(openapi_path, "r", encoding="utf-8") as f:
+        with open(openapi_path, encoding="utf-8") as f:
             content = f.read()
 
         # Return YAML content type

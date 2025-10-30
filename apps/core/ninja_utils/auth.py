@@ -9,9 +9,7 @@ Custom Connector for Django Ninja to use JWT authentication from djangorestframe
 
 
 class JWTAuth(JWTAuthentication):
-
     def __call__(self, request):
-
         res = self.authenticate(request)
         if res is None:
             return None
@@ -20,7 +18,6 @@ class JWTAuth(JWTAuthentication):
 
 
 class JWTAuthStateless(JWTStatelessUserAuthentication):
-
     def __call__(self, request):
         res = self.authenticate(request)
         if res is None:

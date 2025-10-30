@@ -61,7 +61,7 @@ def refresh_token(request: Request, refresh_data: RefreshTokenIn):
                 )
 
         return response_data
-    except (InvalidToken, TokenError) as e:
+    except (InvalidToken, TokenError):
         raise ItqanError(
             error_name="invalid_refresh_token",
             message="Invalid or expired refresh token",

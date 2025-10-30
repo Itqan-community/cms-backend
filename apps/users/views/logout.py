@@ -26,7 +26,7 @@ def logout_user(request: Request, logout_data: LogoutIn = None):
         try:
             refresh = RefreshToken(logout_data.refresh)
             refresh.blacklist()
-        except (InvalidToken, TokenError) as e:
+        except (InvalidToken, TokenError):
             raise ItqanError(
                 error_name="invalid_refresh_token",
                 message="Invalid refresh token provided for blacklisting",

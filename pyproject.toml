@@ -6,3 +6,20 @@ python_files = [
     "tests.py",
     "test_*.py",
 ]
+
+# ==== Ruff ====
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+extend-exclude = ["migrations"]
+
+
+select = ["E", "F", "W", "I", "B", "UP", "DJ", "SIM", "C90", "PL"]
+
+ignore = [
+    "E203",
+    "E501",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/migrations/*.py" = ["E402", "E501", "DJ001", "DJ008"]

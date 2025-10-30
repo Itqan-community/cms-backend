@@ -1,5 +1,4 @@
 import tempfile
-from pathlib import Path
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
