@@ -2,8 +2,7 @@ from typing import ClassVar
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-from django.db.models import CharField
-from django.db.models import EmailField
+from django.db.models import CharField, EmailField
 from django.utils.translation import gettext_lazy as _
 from phonenumber_field.modelfields import PhoneNumberField
 
@@ -36,11 +35,12 @@ class User(BaseModel, AbstractUser):
         super().save(*args, **kwargs)
 
 
-
 class Developer(BaseModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="developer_profile")
     bio = models.TextField(_("Bio"), blank=True, help_text="Tell us more about you and your team")
-    project_summary = models.TextField(_("Project Summary"), blank=True, help_text="Tell us about your project")
+    project_summary = models.TextField(
+        _("Project Summary"), blank=True, help_text="Tell us about your project"
+    )
     project_url = models.URLField(
         _("Project URL"),
         blank=True,
@@ -48,8 +48,7 @@ class Developer(BaseModel):
     )
     job_title = models.CharField(_("Job Title"), max_length=255, blank=True)
     profile_completed = models.BooleanField(
-        default=False,
-        help_text="Whether the user has completed their profile setup"
+        default=False, help_text="Whether the user has completed their profile setup"
     )
 
     def __str__(self):
@@ -57,11 +56,13 @@ class Developer(BaseModel):
 
     def save(self, *args, **kwargs):
         # Compute completion: all key fields must be non-empty
-        fields_filled = all([
-            bool((self.bio or "").strip()),
-            bool((self.project_summary or "").strip()),
-            bool((self.project_url or "").strip()),
-            bool((self.job_title or "").strip()),
-        ])
+        fields_filled = all(
+            [
+                bool((self.bio or "").strip()),
+                bool((self.project_summary or "").strip()),
+                bool((self.project_url or "").strip()),
+                bool((self.job_title or "").strip()),
+            ]
+        )
         self.profile_completed = fields_filled
         super().save(*args, **kwargs)

@@ -1,13 +1,11 @@
-from apps.core.models import BaseModel, ActiveObjectsManager, AllObjectsManager
-from apps.core.uploads import (
-    upload_to_publisher_icons,
-
-)
-from apps.users.models import User
 from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
+
+from apps.core.models import ActiveObjectsManager, AllObjectsManager, BaseModel
+from apps.core.uploads import upload_to_publisher_icons
+from apps.users.models import User
 
 
 class Publisher(BaseModel):
@@ -18,7 +16,9 @@ class Publisher(BaseModel):
     icon_url = models.ImageField(
         upload_to=upload_to_publisher_icons,
         blank=True,
-        validators=[FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "gif", "webp", "svg"])],
+        validators=[
+            FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "gif", "webp", "svg"])
+        ],
         help_text="Icon/logo image - used in V1 UI: Publisher Page",
     )
 
@@ -33,7 +33,6 @@ class Publisher(BaseModel):
     contact_email = models.EmailField(blank=True, help_text="Contact email for the publisher")
 
     members = models.ManyToManyField(User, through="PublisherMember", related_name="publishers")
-
 
     objects = ActiveObjectsManager()
     all_objects = AllObjectsManager()
@@ -72,4 +71,3 @@ class PublisherMember(BaseModel):
 
     def __str__(self):
         return f"PublisherMember(email={self.user.email} publisher={self.publisher.name} role={self.role})"
-

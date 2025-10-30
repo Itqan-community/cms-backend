@@ -1,4 +1,3 @@
-
 from typing import Any
 
 from ninja import Schema
@@ -24,7 +23,7 @@ class UserProfileSchema(Schema):
     id: str
     email: str
     name: str
-    phone: str | None= None
+    phone: str | None = None
     is_active: bool
     is_profile_completed: bool
     bio: str = ""
@@ -33,7 +32,7 @@ class UserProfileSchema(Schema):
     job_title: str = ""
     created_at: AwareDatetime
     updated_at: AwareDatetime
-    
+
     class Config:
         from_attributes = True
 

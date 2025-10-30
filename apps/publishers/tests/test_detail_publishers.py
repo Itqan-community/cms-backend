@@ -1,7 +1,7 @@
 from model_bakery import baker
 
-from apps.publishers.models import Publisher
 from apps.core.tests import BaseTestCase
+from apps.publishers.models import Publisher
 
 
 class DetailPublisherTest(BaseTestCase):
@@ -29,7 +29,8 @@ class DetailPublisherTest(BaseTestCase):
         self.assertEqual("Tafsir Center", body["name"])
         self.assertEqual("tafsir-center", body["slug"])
         self.assertEqual(
-            "A comprehensive Islamic research center focused on Quranic studies and tafsir", body["description"]
+            "A comprehensive Islamic research center focused on Quranic studies and tafsir",
+            body["description"],
         )
         self.assertEqual("Riyadh, Saudi Arabia", body["address"])
         self.assertEqual("https://tafsircenter.org", body["website"])
@@ -83,7 +84,9 @@ class DetailPublisherTest(BaseTestCase):
 
     def test_detail_publishers_where_verified_status_should_return_correct_boolean(self):
         # Arrange
-        verified_publisher = baker.make(Publisher, name="Verified Publisher", is_verified=True, icon_url="verified.png")
+        verified_publisher = baker.make(
+            Publisher, name="Verified Publisher", is_verified=True, icon_url="verified.png"
+        )
         unverified_publisher = baker.make(
             Publisher, name="Unverified Publisher", is_verified=False, icon_url="unverified.png"
         )
@@ -96,7 +99,9 @@ class DetailPublisherTest(BaseTestCase):
         self.assertEqual("Verified Publisher", body_verified["name"])
 
         # Act + Assert (unverified)
-        response_unverified = self.client.get(f"/publishers/{unverified_publisher.id}/", format="json")
+        response_unverified = self.client.get(
+            f"/publishers/{unverified_publisher.id}/", format="json"
+        )
         self.assertEqual(200, response_unverified.status_code, response_unverified.content)
         body_unverified = response_unverified.json()
         self.assertFalse(body_unverified["is_verified"])
@@ -137,11 +142,12 @@ class DetailPublisherTest(BaseTestCase):
             "youtube": "publisherchannel",
             "linkedin": "company/publisher",
             "website": "https://publisher.com",
-            "custom_links": {"blog": "https://blog.publisher.com", "newsletter": "https://newsletter.publisher.com"},
+            "custom_links": {
+                "blog": "https://blog.publisher.com",
+                "newsletter": "https://newsletter.publisher.com",
+            },
         }
-        publisher = baker.make(
-            Publisher, name="Social Media Publisher", icon_url="social-icon.png"
-        )
+        publisher = baker.make(Publisher, name="Social Media Publisher", icon_url="social-icon.png")
 
         # Act
         response = self.client.get(f"/publishers/{publisher.id}/", format="json")
@@ -176,7 +182,9 @@ class DetailPublisherTest(BaseTestCase):
         response = self.client.get("/publishers/", format="json")
         self.assertEqual(404, response.status_code, response.content)
 
-    def test_detail_publishers_where_multiple_publishers_should_return_correct_specific_publisher(self):
+    def test_detail_publishers_where_multiple_publishers_should_return_correct_specific_publisher(
+        self,
+    ):
         # Arrange
         baker.make(
             Publisher,

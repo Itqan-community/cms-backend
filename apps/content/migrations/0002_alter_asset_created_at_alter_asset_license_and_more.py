@@ -94,9 +94,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="assetversion",
             name="size_bytes",
-            field=models.PositiveBigIntegerField(
-                default=0, help_text="File size in bytes"
-            ),
+            field=models.PositiveBigIntegerField(default=0, help_text="File size in bytes"),
         ),
         migrations.AlterField(
             model_name="distribution",

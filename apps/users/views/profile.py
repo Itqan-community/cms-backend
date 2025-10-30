@@ -1,8 +1,9 @@
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
-from ._schemas import UserProfileSchema, UserUpdateSchema
-from ...core.ninja_utils.request import Request
 from apps.users.models import Developer
+
+from ...core.ninja_utils.request import Request
+from ._schemas import UserProfileSchema, UserUpdateSchema
 
 router = ItqanRouter(tags=[NinjaTag.USERS])
 
@@ -11,7 +12,7 @@ router = ItqanRouter(tags=[NinjaTag.USERS])
     "auth/profile/",
     response=UserProfileSchema,
     summary="Get user profile",
-    description="Get authenticated user's profile information"
+    description="Get authenticated user's profile information",
 )
 def get_user_profile(request: Request):
     """Get authenticated user's profile"""
@@ -23,7 +24,9 @@ def get_user_profile(request: Request):
         "name": user.name,
         "phone": str(user.phone) if user.phone else None,
         "is_active": user.is_active,
-        "is_profile_completed": user.developer_profile.profile_completed if user.developer_profile else False,
+        "is_profile_completed": (
+            user.developer_profile.profile_completed if user.developer_profile else False
+        ),
         "bio": user_developer_profile.bio if user_developer_profile else "",
         "project_summary": user_developer_profile.project_summary if user_developer_profile else "",
         "project_url": user_developer_profile.project_url if user_developer_profile else "",
@@ -37,13 +40,13 @@ def get_user_profile(request: Request):
     "auth/profile/",
     response=UserProfileSchema,
     summary="Update user profile",
-    description="Update authenticated user's profile information"
+    description="Update authenticated user's profile information",
 )
 def update_user_profile(request: Request, profile_data: UserUpdateSchema):
     """Update authenticated user's profile"""
     user = request.user
     user_developer_profile, _ = Developer.objects.get_or_create(user=user)
-    
+
     # Update allowed fields
     if profile_data.bio is not None:
         user_developer_profile.bio = profile_data.bio
@@ -51,7 +54,7 @@ def update_user_profile(request: Request, profile_data: UserUpdateSchema):
         user_developer_profile.project_summary = profile_data.project_summary
     if profile_data.project_url is not None:
         user_developer_profile.project_url = profile_data.project_url
-    
+
     user_developer_profile.save()
 
     return {
@@ -60,7 +63,9 @@ def update_user_profile(request: Request, profile_data: UserUpdateSchema):
         "name": user.name,
         "phone": str(user.phone) if user.phone else None,
         "is_active": user.is_active,
-        "is_profile_completed": user_developer_profile.profile_completed if user_developer_profile else False,
+        "is_profile_completed": (
+            user_developer_profile.profile_completed if user_developer_profile else False
+        ),
         "bio": user_developer_profile.bio if user_developer_profile else "",
         "project_summary": user_developer_profile.project_summary if user_developer_profile else "",
         "project_url": user_developer_profile.project_url if user_developer_profile else "",

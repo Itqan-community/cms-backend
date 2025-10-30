@@ -14,16 +14,16 @@ echo "📡 Connecting to development server..."
 # SSH into server and execute deployment commands
 ssh $SERVER_USER@$SERVER_IP << 'EOF'
     set -e
-    
+
     echo "📁 Navigating to application directory..."
     cd /srv/cms-backend
-    
+
     echo "🔄 Pulling latest changes..."
     git pull origin develop
-    
+
     echo "📝 Creating production environment file..."
     cd deployment/docker
-    
+
     # Create .env file with production settings
     cat > .env << 'ENVEOF'
 # Django Configuration
@@ -59,34 +59,34 @@ IMAGE_TAG=develop-$(git rev-parse --short HEAD)
 ENVEOF
 
     echo "✅ Environment file created"
-    
+
     echo "🔐 Logging in to GitHub Container Registry..."
     echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin || {
-        echo "❌ GHCR login failed, trying with default token..."; 
+        echo "❌ GHCR login failed, trying with default token...";
         echo "$GITHUB_TOKEN" | docker login ghcr.io -u "itqan-community" --password-stdin || {
             echo "⚠️ GHCR login failed, will try to pull public image";
         }
     }
-    
+
     echo "🐳 Stopping web container only (preserving caddy)..."
     docker compose -f docker-compose.develop.yml stop web || true
     docker compose -f docker-compose.develop.yml rm -f web || true
-    
+
     echo "📥 Pulling latest image..."
     docker compose -f docker-compose.develop.yml pull web || echo "⚠️ Pull failed, will use cached image"
-    
+
     echo "🚀 Starting web container (preserving caddy)..."
     docker compose -f docker-compose.develop.yml up -d web
-    
+
     echo "⏳ Waiting for application to start..."
     sleep 30
-    
+
     echo "🔍 Checking application status..."
     docker compose -f docker-compose.develop.yml ps
-    
+
     echo "📋 Checking application logs..."
     docker compose -f docker-compose.develop.yml logs web --tail=30
-    
+
     echo "🩺 Waiting for health check to pass..."
     for i in {1..10}; do
         if curl -f http://localhost:8000/health/; then
@@ -97,7 +97,7 @@ ENVEOF
             sleep 10
         fi
     done
-    
+
     echo ""
     echo "✅ Deployment completed!"
     echo "🌐 API Documentation: https://develop.api.cms.itqan.dev/api/v1/docs/"

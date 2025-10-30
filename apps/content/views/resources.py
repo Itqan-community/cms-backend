@@ -1,11 +1,8 @@
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
-from ninja import FilterSchema
-from ninja import Query
-from ninja import Schema
+from ninja import FilterSchema, Query, Schema
 from ninja.pagination import paginate
-from pydantic import Field
-from pydantic import AwareDatetime
+from pydantic import AwareDatetime, Field
 
 from apps.content.models import Resource, UsageEvent
 from apps.content.tasks import create_usage_event_task
@@ -101,7 +98,7 @@ def create_resource(request: Request, data: CreateResourceIn):
         name=data.name,
         description=data.description,
         category=data.category,
-        publisher_id=data.publisher_id
+        publisher_id=data.publisher_id,
     )
     return resource
 
@@ -109,10 +106,10 @@ def create_resource(request: Request, data: CreateResourceIn):
 @router.put("resources/{id}/", response=ResourceOut)
 def update_resource(request: Request, id: int, data: UpdateResourceIn):
     resource = get_object_or_404(Resource, id=id)
-    
+
     for field, value in data.dict(exclude_unset=True).items():
         setattr(resource, field, value)
-    
+
     resource.save()
     return resource
 
@@ -120,10 +117,10 @@ def update_resource(request: Request, id: int, data: UpdateResourceIn):
 @router.patch("resources/{id}/", response=ResourceOut)
 def partial_update_resource(request: Request, id: int, data: UpdateResourceIn):
     resource = get_object_or_404(Resource, id=id)
-    
+
     for field, value in data.dict(exclude_unset=True).items():
         setattr(resource, field, value)
-    
+
     resource.save()
     return resource
 
@@ -135,23 +132,24 @@ def delete_resource(request: Request, id: int):
     return OkSchema(message=_("Resource deleted successfully."))
 
 
-
 @router.get("resources/{id}/", response=DetailResourceOut, auth=None)
 def detail_resource(request: Request, id: int):
     resource = get_object_or_404(Resource.objects.select_related("publisher"), id=id)
-    
+
     # Only create usage event for authenticated users
-    if hasattr(request, 'user') and request.user and request.user.is_authenticated:
-        create_usage_event_task.delay({
-            "developer_user_id": request.user.id,
-            "usage_kind": UsageEvent.UsageKindChoice.VIEW,
-            "subject_kind": UsageEvent.SubjectKindChoice.RESOURCE,
-            "asset_id": None,
-            "resource_id": resource.id,
-            "metadata": {},
-            "ip_address": request.META.get('REMOTE_ADDR'),
-            "user_agent": request.headers.get('User-Agent', ''),
-            "effective_license": ""  # Resources don't have license field
-        })
-    
+    if hasattr(request, "user") and request.user and request.user.is_authenticated:
+        create_usage_event_task.delay(
+            {
+                "developer_user_id": request.user.id,
+                "usage_kind": UsageEvent.UsageKindChoice.VIEW,
+                "subject_kind": UsageEvent.SubjectKindChoice.RESOURCE,
+                "asset_id": None,
+                "resource_id": resource.id,
+                "metadata": {},
+                "ip_address": request.META.get("REMOTE_ADDR"),
+                "user_agent": request.headers.get("User-Agent", ""),
+                "effective_license": "",  # Resources don't have license field
+            }
+        )
+
     return resource

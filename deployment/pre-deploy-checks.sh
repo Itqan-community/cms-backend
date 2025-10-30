@@ -144,7 +144,7 @@ fi
 if [ "$SKIP_VERIFICATION" != "true" ]; then
     echo ""
     log_info "Check 5: Database Schema Verification"
-    
+
     if run_docker_cmd python manage.py verify_schema > /dev/null 2>&1; then
         log_success "Database schema matches model definitions"
     else

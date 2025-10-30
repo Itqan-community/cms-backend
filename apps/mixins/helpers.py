@@ -4,7 +4,6 @@ from celery.result import AsyncResult, EagerResult
 
 from config.settings.base import RUNNING_TESTS
 
-
 logger = logging.getLogger(__name__)
 
 

@@ -1,7 +1,5 @@
-from collections.abc import Callable
-from collections.abc import Iterable
-from functools import partial
-from functools import wraps
+from collections.abc import Callable, Iterable
+from functools import partial, wraps
 from typing import Any
 
 from django.http import HttpRequest
@@ -9,8 +7,7 @@ from ninja import Schema
 from ninja.operation import Operation
 from ninja.utils import contribute_operation_callback
 from rest_framework.exceptions import PermissionDenied
-from rest_framework.permissions import BasePermission
-from rest_framework.permissions import OperationHolderMixin
+from rest_framework.permissions import BasePermission, OperationHolderMixin
 
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 
@@ -40,7 +37,9 @@ def check_permissions(request, view) -> None:
     Check if the request should be permitted.
     Raises an appropriate exception if the request is not permitted.
     """
-    permission_classes: Iterable[type[BasePermission | OperationHolderMixin]] = view.permission_classes
+    permission_classes: Iterable[type[BasePermission | OperationHolderMixin]] = (
+        view.permission_classes
+    )
     for permission in _get_permissions(permission_classes):
         if not permission.has_permission(request=request, view=view):
             permission_denied(permission)
@@ -78,12 +77,16 @@ def _inject_permission_check(view: Callable) -> Callable:
 
         return result
 
-    contribute_operation_callback(view_with_permission, partial(add_error_response_schema, 403, NinjaErrorResponse))
+    contribute_operation_callback(
+        view_with_permission, partial(add_error_response_schema, 403, NinjaErrorResponse)
+    )
 
     return view_with_permission
 
 
-def add_error_response_schema(status_code: int, response_schema: type[Schema], op: Operation) -> None:
+def add_error_response_schema(
+    status_code: int, response_schema: type[Schema], op: Operation
+) -> None:
     """
     Add a response schema to the operation
     takes the status code and the response schema for the error

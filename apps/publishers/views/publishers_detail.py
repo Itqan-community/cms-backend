@@ -1,10 +1,10 @@
 from django.shortcuts import get_object_or_404
 from ninja import Schema
 
-from apps.publishers.models import Publisher
+from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
-from apps.core.ninja_utils.request import Request
+from apps.publishers.models import Publisher
 
 router = ItqanRouter(tags=[NinjaTag.PUBLISHERS])
 
