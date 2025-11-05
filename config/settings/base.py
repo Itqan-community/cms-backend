@@ -1,4 +1,5 @@
 import sys
+from datetime import timedelta
 from pathlib import Path
 
 from decouple import config
@@ -207,7 +208,18 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = FILE_UPLOAD_MAX_MEMORY_SIZE
 
 # Allowed file types for uploads
 ALLOWED_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "gif", "webp", "svg"]
-ALLOWED_FILE_EXTENSIONS = ["pdf", "doc", "docx", "txt", "zip", "tar", "gz", "json", "xml", "csv"]
+ALLOWED_FILE_EXTENSIONS = [
+    "pdf",
+    "doc",
+    "docx",
+    "txt",
+    "zip",
+    "tar",
+    "gz",
+    "json",
+    "xml",
+    "csv",
+]
 
 # Maximum file sizes (in bytes)
 MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB
@@ -293,7 +305,6 @@ REST_FRAMEWORK = {
 }
 
 # Simple JWT Configuration
-from datetime import timedelta
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
@@ -474,7 +485,10 @@ NINJA_SEARCHING_CLASS = "apps.core.ninja_utils.searching.Searching"
 NINJA_ORDERING_CLASS = "apps.core.ninja_utils.ordering.Ordering"
 
 RUNNING_TESTS = False
-if (len(sys.argv) >= 2 and sys.argv[0].endswith("manage.py") and sys.argv[1] == "test") or (
-    "pytest" in sys.argv[0]
-):
+MANAGE_PY_ARG_LENGTH = 2  # Length of sys.argv to check for manage.py test command
+if (
+    len(sys.argv) >= MANAGE_PY_ARG_LENGTH
+    and sys.argv[0].endswith("manage.py")
+    and sys.argv[1] == "test"
+) or ("pytest" in sys.argv[0]):
     RUNNING_TESTS = True

@@ -5,6 +5,7 @@ Celery configuration for Itqan CMS
 import os
 
 from celery import Celery
+from celery.schedules import crontab
 
 # Set default Django settings module
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.development")
@@ -19,7 +20,6 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
 
 # Optional: Define periodic tasks
-from celery.schedules import crontab
 
 app.conf.beat_schedule = {
     # Search-related tasks removed with search app cleanup

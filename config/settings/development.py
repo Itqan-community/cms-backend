@@ -2,12 +2,12 @@
 Itqan CMS - Development Settings
 """
 
-from .base import *
+from .base import *  # noqa: F403, F401
 
 # Development-specific settings
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0", "develop.api.cms.itqan.dev"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0", "develop.api.cms.itqan.dev"]  # nosec B104
 
 # Additional development apps
 # INSTALLED_APPS += [
@@ -15,7 +15,7 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0", "develop.api.cms.itqan.dev
 # ]
 
 # Development middleware
-MIDDLEWARE.insert(0, "django.middleware.security.SecurityMiddleware")
+MIDDLEWARE.insert(0, "django.middleware.security.SecurityMiddleware")  # noqa: F405
 
 # Development database (configured via environment variables)
 
@@ -60,8 +60,8 @@ SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
 
 # Development logging
-LOGGING["handlers"]["console"]["level"] = "DEBUG"
-LOGGING["root"]["level"] = "DEBUG"
+LOGGING["handlers"]["console"]["level"] = "DEBUG"  # noqa: F405
+LOGGING["root"]["level"] = "DEBUG"  # noqa: F405
 
 # Additional development settings
 INTERNAL_IPS = [
@@ -106,13 +106,13 @@ STORAGES = {
 
 # Local media settings
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_ROOT = BASE_DIR / "media"  # noqa: F405
 
 # Django Debug Toolbar (if installed)
 try:
-    import debug_toolbar
+    import debug_toolbar  # noqa: F401
 
-    INSTALLED_APPS.append("debug_toolbar")
-    MIDDLEWARE.insert(1, "debug_toolbar.middleware.DebugToolbarMiddleware")
+    INSTALLED_APPS.append("debug_toolbar")  # noqa: F405
+    MIDDLEWARE.insert(1, "debug_toolbar.middleware.DebugToolbarMiddleware")  # noqa: F405
 except ImportError:
     pass

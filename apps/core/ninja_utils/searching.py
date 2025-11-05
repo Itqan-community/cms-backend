@@ -114,7 +114,7 @@ class Searching(SearchingBase):
     ) -> dict[str, list[tuple[Callable, str]]]:
         lookups = self.construct_search_for_list()
         conditions: dict[str, list[tuple[Callable, str]]] = {
-            field_name: [] for field_name in lookups.keys()
+            field_name: [] for field_name in lookups
         }
         for search_term in search_terms:
             for field_name, lookup in lookups.items():

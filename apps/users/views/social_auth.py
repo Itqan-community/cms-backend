@@ -3,6 +3,7 @@ import secrets
 from allauth.socialaccount.models import SocialApp
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
+from black import err
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 
@@ -33,7 +34,7 @@ def google_oauth_authorize(request: Request):
             error_name="google_app_not_configured",
             message="Google OAuth2 application is not configured",
             status_code=500,
-        )
+        ) from err
 
     try:
         # Create OAuth2 client
@@ -57,7 +58,7 @@ def google_oauth_authorize(request: Request):
             error_name="google_oauth_setup_failed",
             message=f"Failed to generate Google authorization URL: {str(e)}",
             status_code=500,
-        )
+        ) from e
 
 
 @router.get(
@@ -72,12 +73,12 @@ def github_oauth_authorize(request: Request):
     try:
         # Get GitHub social app configuration
         github_app = SocialApp.objects.get(provider="github")
-    except SocialApp.DoesNotExist:
+    except SocialApp.DoesNotExist as err:
         raise ItqanError(
             error_name="github_app_not_configured",
             message="GitHub OAuth2 application is not configured",
             status_code=500,
-        )
+        ) from err
 
     try:
         # Generate state for security
@@ -100,7 +101,7 @@ def github_oauth_authorize(request: Request):
             error_name="github_oauth_setup_failed",
             message=f"Failed to generate GitHub authorization URL: {str(e)}",
             status_code=500,
-        )
+        ) from e
 
 
 @router.get(

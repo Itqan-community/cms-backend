@@ -26,6 +26,9 @@ class BaseModel(models.Model):
     class Meta:
         abstract = True
 
+    def __str__(self):
+        return f"{self.__class__.__name__}({self.id})"
+
     def delete(self, using=None, keep_parents=False):
         """
         Soft delete: Mark as inactive instead of actually deleting
@@ -45,9 +48,6 @@ class BaseModel(models.Model):
         """
         self.is_active = True
         self.save()
-
-    def __str__(self):
-        return f"{self.__class__.__name__}({self.id})"
 
 
 class ActiveObjectsManager(models.Manager):

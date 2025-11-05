@@ -38,7 +38,9 @@ class DetailAssetTest(BaseTestCase):
         self.assertTrue(body["thumbnail_url"].endswith("thumbnails/tafseer.png"))
         self.assertEqual("CC-BY-SA", body["license"])
 
-    def test_detail_assets_where_response_schema_should_include_all_required_fields(self):
+    def test_detail_assets_where_response_schema_should_include_all_required_fields(
+        self,
+    ):
         # Arrange
         asset = baker.make(
             Asset,
@@ -117,7 +119,9 @@ class DetailAssetTest(BaseTestCase):
                 self.assertEqual(expected_category, body["category"])
                 self.assertTrue(body["thumbnail_url"].endswith(expected_thumb))
 
-    def test_detail_assets_where_language_ar_should_return_arabic_content_if_present(self):
+    def test_detail_assets_where_language_ar_should_return_arabic_content_if_present(
+        self,
+    ):
         # Arrange
         self.authenticate_user(None, language="ar")
         asset = baker.make(
@@ -258,7 +262,9 @@ class DetailAssetTest(BaseTestCase):
         )
         self.assertEqual(0, usage_events.count())
 
-    def test_detail_assets_where_authenticated_user_should_include_request_metadata(self):
+    def test_detail_assets_where_authenticated_user_should_include_request_metadata(
+        self,
+    ):
         # Arrange
         user = baker.make(User, email="metadata@example.com", is_active=True)
         self.authenticate_user(user)
@@ -275,7 +281,10 @@ class DetailAssetTest(BaseTestCase):
         response = self.client.get(
             f"/assets/{asset.id}/",
             format="json",
-            headers={"user-agent": "Test Agent/1.0", "x-forwarded-for": "192.168.1.100"},
+            headers={
+                "user-agent": "Test Agent/1.0",
+                "x-forwarded-for": "192.168.1.100",
+            },
         )
 
         # Assert
@@ -295,7 +304,9 @@ class DetailAssetTest(BaseTestCase):
         # Note: IP address capture depends on Django test client configuration
         # In real requests, this would capture the client IP
 
-    def test_detail_assets_where_thumbnail_url_is_null_should_return_valid_response(self):
+    def test_detail_assets_where_thumbnail_url_is_null_should_return_valid_response(
+        self,
+    ):
         # Arrange
         asset = baker.make(
             Asset,

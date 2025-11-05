@@ -85,7 +85,11 @@ def _inject_sorter(
 
 class OrderingOperation:
     def __init__(
-        self, *, sorter: OrderingBase, view_func: Callable, sorter_kwargs_name: str = "ordering"
+        self,
+        *,
+        sorter: OrderingBase,
+        view_func: Callable,
+        sorter_kwargs_name: str = "ordering",
     ) -> None:
         self.sorter = sorter
         self.sorter_kwargs_name = sorter_kwargs_name
@@ -94,7 +98,10 @@ class OrderingOperation:
         sorter_view = self.get_view_function()
         self.as_view = wraps(view_func)(sorter_view)
         contribute_operation_args(
-            self.as_view, self.sorter_kwargs_name, self.sorter.Input, self.sorter.InputSource
+            self.as_view,
+            self.sorter_kwargs_name,
+            self.sorter.Input,
+            self.sorter.InputSource,
         )
 
         sorter_view.sorter_operation = self  # type:ignore[attr-defined]

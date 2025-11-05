@@ -114,7 +114,14 @@ class ResourceAdmin(admin.ModelAdmin):
 
 @admin.register(ResourceVersion)
 class ResourceVersionAdmin(admin.ModelAdmin):
-    list_display = ["resource", "semvar", "file_type", "is_latest", "size_bytes", "created_at"]
+    list_display = [
+        "resource",
+        "semvar",
+        "file_type",
+        "is_latest",
+        "size_bytes",
+        "created_at",
+    ]
     list_filter = ["file_type", "is_latest", "created_at"]
     search_fields = ["resource__name", "semvar"]
     readonly_fields = ["created_at", "updated_at"]
@@ -281,10 +288,20 @@ class AssetAccessRequestAdmin(admin.ModelAdmin):
     fieldsets = (
         (
             "Request Information",
-            {"fields": ("developer_user", "asset", "developer_access_reason", "intended_use")},
+            {
+                "fields": (
+                    "developer_user",
+                    "asset",
+                    "developer_access_reason",
+                    "intended_use",
+                )
+            },
         ),
         ("Admin Review", {"fields": ("status", "admin_response", "approved_by")}),
-        ("Timestamps", {"fields": ("created_at", "approved_at"), "classes": ("collapse",)}),
+        (
+            "Timestamps",
+            {"fields": ("created_at", "approved_at"), "classes": ("collapse",)},
+        ),
     )
 
     actions = ["approve_requests", "reject_requests"]
@@ -299,7 +316,9 @@ class AssetAccessRequestAdmin(admin.ModelAdmin):
                 count += 1
             except Exception as e:
                 self.message_user(
-                    request, f"Error approving request {access_request.id}: {e}", level="ERROR"
+                    request,
+                    f"Error approving request {access_request.id}: {e}",
+                    level="ERROR",
                 )
 
         self.message_user(request, f"Successfully approved {count} requests.")
@@ -316,7 +335,9 @@ class AssetAccessRequestAdmin(admin.ModelAdmin):
                 count += 1
             except Exception as e:
                 self.message_user(
-                    request, f"Error rejecting request {access_request.id}: {e}", level="ERROR"
+                    request,
+                    f"Error rejecting request {access_request.id}: {e}",
+                    level="ERROR",
                 )
 
         self.message_user(request, f"Successfully rejected {count} requests.")
@@ -349,7 +370,10 @@ class AssetAccessAdmin(admin.ModelAdmin):
         ("License Information", {"fields": ("effective_license",)}),
         (
             "Access Details",
-            {"fields": ("granted_at", "expires_at", "download_url"), "classes": ("collapse",)},
+            {
+                "fields": ("granted_at", "expires_at", "download_url"),
+                "classes": ("collapse",),
+            },
         ),
         ("Statistics", {"fields": ("usage_count",), "classes": ("collapse",)}),
     )

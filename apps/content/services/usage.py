@@ -30,7 +30,9 @@ def create_usage_event(
     )
 
 
-def log_asset_view(user, asset, ip_address=None, user_agent=""):
+def log_asset_view(
+    user, asset, *, ip_address=None, user_agent=""
+):  # Add * to make ip_address and user_agent keyword-only
     """Track asset view event"""
     return UsageEvent.objects.create(
         developer_user=user,
@@ -62,7 +64,7 @@ def log_resource_download(user, resource, ip_address=None, user_agent=""):
 
 
 def log_api_access(
-    user, resource=None, asset=None, api_endpoint="", ip_address=None, user_agent=""
+    user, *, api_endpoint="", ip_address=None, user_agent="", resource=None, asset=None
 ) -> None:
     """Track API access event"""
     if resource:

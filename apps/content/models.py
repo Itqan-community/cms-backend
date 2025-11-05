@@ -24,8 +24,14 @@ class LicenseChoice(models.TextChoices):
     CC_BY_SA = "CC-BY-SA", _("Creative Commons Attribution-ShareAlike")
     CC_BY_ND = "CC-BY-ND", _("Creative Commons Attribution-NoDerivs")
     CC_BY_NC = "CC-BY-NC", _("Creative Commons Attribution-NonCommercial")
-    CC_BY_NC_SA = "CC-BY-NC-SA", _("Creative Commons Attribution-NonCommercial-ShareAlike")
-    CC_BY_NC_ND = "CC-BY-NC-ND", _("Creative Commons Attribution-NonCommercial-NoDerivs")
+    CC_BY_NC_SA = (
+        "CC-BY-NC-SA",
+        _("Creative Commons Attribution-NonCommercial-ShareAlike"),
+    )
+    CC_BY_NC_ND = (
+        "CC-BY-NC-ND",
+        _("Creative Commons Attribution-NonCommercial-NoDerivs"),
+    )
 
 
 class Resource(BaseModel):
@@ -88,7 +94,8 @@ class ResourceVersion(BaseModel):
     resource = models.ForeignKey(Resource, on_delete=models.CASCADE, related_name="versions")
 
     name = models.CharField(
-        max_length=255, help_text="Version name - V1: same as resource name, V2: updates on content"
+        max_length=255,
+        help_text="Version name - V1: same as resource name, V2: updates on content",
     )
 
     summary = models.TextField(blank=True, help_text="Version summary")
@@ -141,12 +148,12 @@ class ResourceVersion(BaseModel):
     def save(self, *args, **kwargs):
         # Auto-compute human_readable_size from storage file when available and not set
         if (not self.size_bytes or self.size_bytes == 0) and self.storage_url:
-            try:
+            from contextlib import suppress
+
+            # Replace try-except-pass block
+            with suppress(Exception):
                 # FileField provides size when the file is available
                 self.size_bytes = self.storage_url.size or 0
-            except Exception:
-                # If storage backend cannot determine size, leave as 0
-                pass
         if self.is_latest:
             # Set all other versions of this resource to is_latest=False
             ResourceVersion.objects.filter(
@@ -397,7 +404,9 @@ class AssetAccess(BaseModel):
 
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="user_accesses")
     effective_license = models.CharField(
-        max_length=50, choices=LicenseChoice, help_text="Access license at time of grant"
+        max_length=50,
+        choices=LicenseChoice,
+        help_text="Access license at time of grant",
     )
 
     granted_at = models.DateTimeField(auto_now_add=True, help_text="When access was granted")
@@ -487,9 +496,15 @@ class UsageEvent(BaseModel):
         constraints = [
             models.CheckConstraint(
                 condition=models.Q(
-                    subject_kind="resource", resource_id__isnull=False, asset_id__isnull=True
+                    subject_kind="resource",
+                    resource_id__isnull=False,
+                    asset_id__isnull=True,
                 )
-                | models.Q(subject_kind="asset", asset_id__isnull=False, resource_id__isnull=True),
+                | models.Q(
+                    subject_kind="asset",
+                    asset_id__isnull=False,
+                    resource_id__isnull=True,
+                ),
                 name="usage_event_subject_kind_consistency",
             )
         ]
@@ -552,7 +567,9 @@ class Distribution(BaseModel):
     )
 
     channel = models.CharField(
-        max_length=20, choices=ChannelChoice.choices, help_text="Channel for accessing the asset"
+        max_length=20,
+        choices=ChannelChoice.choices,
+        help_text="Channel for accessing the asset",
     )
 
     objects = ActiveObjectsManager()

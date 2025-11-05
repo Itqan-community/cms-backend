@@ -64,4 +64,4 @@ def register_user(request: Request, registration_data: RegisterSchema):
             error_name="registration_failed",
             message=f"Registration failed: {str(e)}",
             status_code=400,
-        )
+        ) from e

@@ -41,7 +41,9 @@ class ListAssetTest(BaseTestCase):
 
         # Act
         response = self.client.get(
-            "/assets/", data={"category": Asset.CategoryChoice.RECITATION}, format="json"
+            "/assets/",
+            data={"category": Asset.CategoryChoice.RECITATION},
+            format="json",
         )
 
         # Assert
@@ -50,7 +52,9 @@ class ListAssetTest(BaseTestCase):
         self.assertEqual(1, len(response_body["results"]))
         self.assertEqual("Muhammad Refaat", response_body["results"][0]["name"])
 
-    def test_list_asset_filter_by_multiple_categories_should_return_filtered_assets(self):
+    def test_list_asset_filter_by_multiple_categories_should_return_filtered_assets(
+        self,
+    ):
         # Arrange
         baker.make(Asset, name="Tafsir Al-Jalalayn", category=Asset.CategoryChoice.TAFSIR)
         baker.make(Asset, name="Muhammad Refaat", category=Asset.CategoryChoice.RECITATION)
@@ -119,7 +123,9 @@ class ListAssetTest(BaseTestCase):
         self.assertEqual(Asset.CategoryChoice.TAFSIR, response_body["results"][1]["category"])
         self.assertEqual(Asset.CategoryChoice.RECITATION, response_body["results"][2]["category"])
 
-    def test_list_assets_when_search_should_return_filtered_assets_by_multiple_fields(self):
+    def test_list_assets_when_search_should_return_filtered_assets_by_multiple_fields(
+        self,
+    ):
         """Test search functionality across name, description, category, and publisher fields."""
         # Arrange
         baker.make(

@@ -85,10 +85,7 @@ def _inject_searcher(
 ) -> Callable[..., Any]:
     searcher: SearchingBase = searching_class(**searching_params)
     searcher_kwargs_name = "searching"
-    if is_async(func):
-        search_operation_class = AsyncSearchOperation
-    else:
-        search_operation_class = SearchOperation
+    search_operation_class = AsyncSearchOperation if is_async(func) else SearchOperation
     searcher_operation = search_operation_class(
         searcher=searcher, view_func=func, searcher_kwargs_name=searcher_kwargs_name
     )

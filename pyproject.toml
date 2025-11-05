@@ -1,4 +1,15 @@
-# ==== pytest ====
+# ========================
+# Project Configuration
+# ========================
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+# ========================
+# Pytest
+# ========================
+
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "--ds=config.settings.development --reuse-db --import-mode=importlib"
@@ -7,19 +18,64 @@ python_files = [
     "test_*.py",
 ]
 
-# ==== Ruff ====
-[tool.ruff]
-target-version = "py310"
+# ========================
+# Black (Formatter)
+# ========================
+
+[tool.black]
 line-length = 100
-extend-exclude = ["migrations"]
+target-version = ["py310"]
+skip-string-normalization = false
 
+# ========================
+# Ruff (Linter & Sorter)
+# ========================
 
-select = ["E", "F", "W", "I", "B", "UP", "DJ", "SIM", "C90", "PL"]
+[tool.ruff]
+line-length = 100
+target-version = "py310"
 
+[tool.ruff.lint]
+select = [
+    "E", # pycodestyle errors
+    "W", # pycodestyle warnings
+    "F", # pyflakes
+    "I", # isort
+    "B", # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
 ignore = [
-    "E203",
-    "E501",
+    "E501", # line too long, handled by Black
+    "B008", # do not perform function calls in argument defaults
+    "C901", # too complex
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"**/migrations/*.py" = ["E402", "E501", "DJ001", "DJ008"]
+"__init__.py" = ["F401"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps", "config"]
+
+# ========================
+# Bandit (Security)
+# ========================
+
+[tool.bandit]
+targets = ["apps", "config"]
+skips = ["B101"]  # optional: skip assert-use warning
+
+# ========================
+# Coverage (Optional)
+# ========================
+
+[tool.coverage.run]
+source = ["apps"]
+omit = [
+    "*/migrations/*",
+    "*/tests/*",
+]
+
+[tool.coverage.report]
+skip_covered = true
+show_missing = true

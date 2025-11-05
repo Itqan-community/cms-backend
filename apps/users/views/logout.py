@@ -18,7 +18,9 @@ class LogoutIn(Schema):
 
 
 @router.post(
-    "auth/logout/", response=OkSchema, description="Logout user and blacklist refresh token"
+    "auth/logout/",
+    response=OkSchema,
+    description="Logout user and blacklist refresh token",
 )
 def logout_user(request: Request, logout_data: LogoutIn = None):
     """Logout user and blacklist tokens"""
@@ -31,6 +33,5 @@ def logout_user(request: Request, logout_data: LogoutIn = None):
                 error_name="invalid_refresh_token",
                 message="Invalid refresh token provided for blacklisting",
                 status_code=400,
-            )
-
+            ) from None
     return OkSchema(message=_("Successfully logged out"))

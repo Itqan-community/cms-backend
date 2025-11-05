@@ -2,7 +2,11 @@
 Itqan CMS - Staging Settings
 """
 
-from .base import *
+# Keep the star import for Django settings composition, but silence F403 for this line
+from .base import *  # noqa: F403
+
+# Explicitly import the names you reference so flake8 knows they're defined
+from .base import DATABASES, LOGGING, REST_FRAMEWORK, config  # noqa: F401
 
 # Staging-specific settings
 DEBUG = False  # Production-like behavior but with more verbose logging
@@ -18,11 +22,12 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
+# SECURE_BROWSER_XSS_FILTER is deprecated — safe to remove if Django >= 4.0
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = "DENY"
 
 # Staging database configuration
-DATABASES.update(
+DATABASES.update(  # noqa: F405
     {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
@@ -92,15 +97,14 @@ EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", "staging-noreply@itqan.dev")
 
-LOGGING["handlers"]["console"]["level"] = "INFO"
-LOGGING["root"]["level"] = "INFO"
+LOGGING["handlers"]["console"]["level"] = "INFO"  # noqa: F405
+LOGGING["root"]["level"] = "INFO"  # noqa: F405
 
 # Django-allauth settings for staging
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_RATE_LIMITS = "login_failed"
 
 # Social auth settings for staging (use database configuration only)
-# OAuth apps are configured via Django admin for better security and flexibility
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
         "SCOPE": [
@@ -135,10 +139,8 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CORS_ALLOW_CREDENTIALS = True
 
-# Staging-specific settings
-
 # API Rate limiting for staging (more lenient than production)
-REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
+REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {  # noqa: F405
     "anon": "100/hour",
     "user": "1000/hour",
     "login": "10/minute",

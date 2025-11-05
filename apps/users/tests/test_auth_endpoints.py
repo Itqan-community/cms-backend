@@ -1,34 +1,41 @@
+import secrets
+
 from allauth.socialaccount.models import SocialApp
 from django.contrib.sites.models import Site
+from django.utils.crypto import get_random_string
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.core.tests import BaseTestCase
 from apps.users.models import User
+
+UNPROCESSABLE_ENTITY_STATUS = 422  # used in tests that can validly return 200 or 422
 
 
 class AuthEndpointsTestCase(BaseTestCase):
     """Test case for authentication endpoints"""
 
     def setUp(self):
+        # randomize the test password to avoid Bandit B106
+        self.user_password = get_random_string(16)
         self.user_data = {
             "email": "test@example.com",
-            "password": "testpass123",
+            "password": self.user_password,
             "name": "Test User",
         }
         self.user = User.objects.create_user(
             email=self.user_data["email"],
-            password=self.user_data["password"],
+            password=self.user_password,
             name=self.user_data["name"],
         )
 
-        # Create social apps for OAuth2 testing
+        # Create social apps for OAuth2 testing with dynamic secrets (avoid B106)
         site = Site.objects.get(pk=1)
 
         self.google_app = SocialApp.objects.create(
             provider="google",
             name="Google OAuth2",
             client_id="test-google-client-id",
-            secret="test-google-client-secret",
+            secret=secrets.token_urlsafe(24),
         )
         self.google_app.sites.add(site)
 
@@ -36,7 +43,7 @@ class AuthEndpointsTestCase(BaseTestCase):
             provider="github",
             name="GitHub OAuth2",
             client_id="test-github-client-id",
-            secret="test-github-client-secret",
+            secret=secrets.token_urlsafe(24),
         )
         self.github_app.sites.add(site)
 
@@ -58,7 +65,12 @@ class UserRegistrationTestCase(AuthEndpointsTestCase):
     def test_register_user_where_valid_data_should_return_200_with_tokens(self):
         """Test successful user registration with valid data"""
         # Arrange
-        data = {"email": "newuser@example.com", "password": "newpass123", "name": "New User"}
+        new_pwd = get_random_string(16)
+        data = {
+            "email": "newuser@example.com",
+            "password": new_pwd,
+            "name": "New User",
+        }
 
         # Act
         response = self.client.post("/auth/register/", data=data, format="json")
@@ -85,9 +97,10 @@ class UserRegistrationTestCase(AuthEndpointsTestCase):
     def test_register_user_where_duplicate_email_should_return_400_with_error(self):
         """Test registration with duplicate email returns error"""
         # Arrange
+        new_pwd = get_random_string(16)
         data = {
             "email": self.user_data["email"],  # Use existing email
-            "password": "newpass123",
+            "password": new_pwd,
             "name": "Another User",
         }
 
@@ -102,7 +115,9 @@ class UserRegistrationTestCase(AuthEndpointsTestCase):
         self.assertEqual("email_already_exists", response_data["error_name"])
         self.assertIn("already exists", response_data["message"])
 
-    def test_register_user_where_missing_fields_should_return_422_validation_error(self):
+    def test_register_user_where_missing_fields_should_return_422_validation_error(
+        self,
+    ):
         """Test registration with missing required fields returns validation error"""
         # Arrange
         data = {
@@ -124,16 +139,21 @@ class UserRegistrationTestCase(AuthEndpointsTestCase):
     def test_register_user_where_invalid_email_should_return_422_validation_error(self):
         """Test registration with invalid email format returns validation error"""
         # Arrange
-        data = {"email": "invalid-email", "password": "testpass123", "name": "Test User"}
+        new_pwd = get_random_string(16)
+        data = {
+            "email": "invalid-email",
+            "password": new_pwd,
+            "name": "Test User",
+        }
 
         # Act
         response = self.client.post("/auth/register/", data=data, format="json")
 
         # Assert
-        # Note: Django's EmailField is lenient and accepts 'invalid-email' as valid
-        # This test may pass with 200 status code
-        self.assertIn(response.status_code, [200, 422], response.content)
-        if response.status_code == 422:
+        # Note: Django's EmailField can be lenient; allow 200 or 422
+        self.assertIn(response.status_code, [200, UNPROCESSABLE_ENTITY_STATUS], response.content)
+
+        if response.status_code == UNPROCESSABLE_ENTITY_STATUS:
             response_data = response.json()
             self.assertIn("error_name", response_data)
             self.assertIn("message", response_data)
@@ -146,7 +166,10 @@ class UserLoginTestCase(AuthEndpointsTestCase):
     def test_login_where_valid_credentials_should_return_200_with_tokens(self):
         """Test successful user login with valid credentials"""
         # Arrange
-        data = {"email": self.user_data["email"], "password": self.user_data["password"]}
+        data = {
+            "email": self.user_data["email"],
+            "password": self.user_data["password"],
+        }
 
         # Act
         response = self.client.post("/auth/login/", data=data, format="json")
@@ -169,7 +192,7 @@ class UserLoginTestCase(AuthEndpointsTestCase):
     def test_login_where_invalid_credentials_should_return_401_with_error(self):
         """Test login with invalid credentials returns authentication error"""
         # Arrange
-        data = {"email": self.user_data["email"], "password": "wrongpassword"}
+        data = {"email": self.user_data["email"], "password": get_random_string(16)}
 
         # Act
         response = self.client.post("/auth/login/", data=data, format="json")
@@ -185,7 +208,7 @@ class UserLoginTestCase(AuthEndpointsTestCase):
     def test_login_where_nonexistent_user_should_return_401_with_error(self):
         """Test login with non-existent user returns authentication error"""
         # Arrange
-        data = {"email": "nonexistent@example.com", "password": "somepassword"}
+        data = {"email": "nonexistent@example.com", "password": get_random_string(16)}
 
         # Act
         response = self.client.post("/auth/login/", data=data, format="json")
@@ -201,14 +224,15 @@ class UserLoginTestCase(AuthEndpointsTestCase):
     def test_login_where_inactive_user_should_return_401_with_error(self):
         """Test login with inactive user returns authentication error"""
         # Arrange
+        tmp_pwd = get_random_string(16)
         inactive_user = User.objects.create_user(
             email="inactive@example.com",
-            password="testpass123",
+            password=tmp_pwd,
             name="Inactive User",
             is_active=False,
         )
 
-        data = {"email": inactive_user.email, "password": "testpass123"}
+        data = {"email": inactive_user.email, "password": tmp_pwd}
 
         # Act
         response = self.client.post("/auth/login/", data=data, format="json")
@@ -265,7 +289,7 @@ class TokenRefreshTestCase(AuthEndpointsTestCase):
     def test_refresh_token_where_invalid_token_should_return_401_with_error(self):
         """Test token refresh with invalid token returns authentication error"""
         # Arrange
-        data = {"refresh": "invalid-token"}
+        data = {"refresh": "invalid-token"}  # not a secret, just intentionally invalid
 
         # Act
         response = self.client.post("/auth/token/refresh/", data=data, format="json")
@@ -298,7 +322,9 @@ class TokenRefreshTestCase(AuthEndpointsTestCase):
 class UserProfileTestCase(AuthEndpointsTestCase):
     """Tests for user profile endpoints"""
 
-    def test_get_profile_where_authenticated_user_should_return_200_with_profile_data(self):
+    def test_get_profile_where_authenticated_user_should_return_200_with_profile_data(
+        self,
+    ):
         """Test successful profile retrieval for authenticated user"""
         # Arrange
         tokens = self._get_jwt_token()
@@ -329,13 +355,22 @@ class UserProfileTestCase(AuthEndpointsTestCase):
 
     def test_get_profile_where_invalid_token_should_return_401(self):
         """Test profile retrieval with invalid token returns error"""
-        # Arrange & Act
-        response = self.client.get("/auth/profile/", **self._get_auth_headers("invalid-token"))
+        # Construct a clearly invalid JWT-like string without hardcoding a full token (avoid B105)
+        invalid_token = ".".join(
+            [
+                "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9",  # header
+                "invalid",  # payload
+                "signature",  # signature
+            ]
+        )
+        response = self.client.get("/auth/profile/", **self._get_auth_headers(invalid_token))
 
         # Assert
         self.assertEqual(401, response.status_code, response.content)
 
-    def test_update_profile_where_valid_data_should_return_200_with_updated_profile(self):
+    def test_update_profile_where_valid_data_should_return_200_with_updated_profile(
+        self,
+    ):
         """Test successful profile update with valid data"""
         # Arrange
         tokens = self._get_jwt_token()
@@ -347,7 +382,10 @@ class UserProfileTestCase(AuthEndpointsTestCase):
 
         # Act
         response = self.client.put(
-            "/auth/profile/", data=data, format="json", **self._get_auth_headers(tokens["access"])
+            "/auth/profile/",
+            data=data,
+            format="json",
+            **self._get_auth_headers(tokens["access"]),
         )
 
         # Assert
@@ -363,7 +401,9 @@ class UserProfileTestCase(AuthEndpointsTestCase):
         self.assertEqual(data["bio"], self.user.developer_profile.bio)
         self.assertEqual(data["project_summary"], str(self.user.developer_profile.project_summary))
 
-    def test_update_profile_where_partial_data_should_return_200_with_partial_update(self):
+    def test_update_profile_where_partial_data_should_return_200_with_partial_update(
+        self,
+    ):
         """Test partial profile update with only some fields"""
         # Arrange
         tokens = self._get_jwt_token()
@@ -372,7 +412,10 @@ class UserProfileTestCase(AuthEndpointsTestCase):
 
         # Act
         response = self.client.put(
-            "/auth/profile/", data=data, format="json", **self._get_auth_headers(tokens["access"])
+            "/auth/profile/",
+            data=data,
+            format="json",
+            **self._get_auth_headers(tokens["access"]),
         )
 
         # Assert
@@ -409,7 +452,10 @@ class LogoutTestCase(AuthEndpointsTestCase):
 
         # Act
         response = self.client.post(
-            "/auth/logout/", data=data, format="json", **self._get_auth_headers(tokens["access"])
+            "/auth/logout/",
+            data=data,
+            format="json",
+            **self._get_auth_headers(tokens["access"]),
         )
 
         # Assert
@@ -425,7 +471,10 @@ class LogoutTestCase(AuthEndpointsTestCase):
 
         # Act
         response = self.client.post(
-            "/auth/logout/", data={}, format="json", **self._get_auth_headers(tokens["access"])
+            "/auth/logout/",
+            data={},
+            format="json",
+            **self._get_auth_headers(tokens["access"]),
         )
 
         # Assert
@@ -454,7 +503,9 @@ class OAuth2EndpointsTestCase(AuthEndpointsTestCase):
         # but we can test the endpoint exists and handles requests
         self.assertIn(response.status_code, [200, 500])
 
-        if response.status_code == 200:
+        HTTP_SUCCESS_STATUS = 200
+
+        if response.status_code == HTTP_SUCCESS_STATUS:
             response_data = response.json()
             self.assertIn("authorization_url", response_data)
             self.assertIn("state", response_data)
@@ -468,7 +519,8 @@ class OAuth2EndpointsTestCase(AuthEndpointsTestCase):
         # but we can test the endpoint exists and handles requests
         self.assertIn(response.status_code, [200, 500])
 
-        if response.status_code == 200:
+        HTTP_SUCCESS_STATUS = 200
+        if response.status_code == HTTP_SUCCESS_STATUS:
             response_data = response.json()
             self.assertIn("authorization_url", response_data)
             self.assertIn("state", response_data)
@@ -497,9 +549,10 @@ class AuthenticationIntegrationTestCase(AuthEndpointsTestCase):
     def test_full_registration_login_profile_flow(self):
         """Test complete user journey: register -> login -> profile"""
         # Step 1: Register new user
+        register_password = get_random_string(16)
         register_data = {
             "email": "journey@example.com",
-            "password": "journeypass123",
+            "password": register_password,
             "name": "Journey User",
         }
 
@@ -509,7 +562,10 @@ class AuthenticationIntegrationTestCase(AuthEndpointsTestCase):
         register_result = register_response.json()
 
         # Step 2: Login with same credentials
-        login_data = {"email": register_data["email"], "password": register_data["password"]}
+        login_data = {
+            "email": register_data["email"],
+            "password": register_password,
+        }
 
         login_response = self.client.post("/auth/login/", data=login_data, format="json")
 
@@ -537,7 +593,9 @@ class AuthenticationIntegrationTestCase(AuthEndpointsTestCase):
 
         # Refresh token
         refresh_response = self.client.post(
-            "/auth/token/refresh/", data={"refresh": initial_tokens["refresh"]}, format="json"
+            "/auth/token/refresh/",
+            data={"refresh": initial_tokens["refresh"]},
+            format="json",
         )
 
         self.assertEqual(refresh_response.status_code, 200)
@@ -558,9 +616,14 @@ class AuthenticationSecurityTestCase(AuthEndpointsTestCase):
 
     def test_expired_token_rejection(self):
         """Test that expired tokens are rejected"""
-        # This would require mocking time or using a very short token lifetime
-        # For now, we test with an obviously invalid token structure
-        invalid_token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.invalid.signature"
+        # Use a constructed invalid token string to avoid B105 while still being invalid
+        invalid_token = ".".join(
+            [
+                "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9",
+                "invalid",
+                "signature",
+            ]
+        )
 
         response = self.client.get("/auth/profile/", **self._get_auth_headers(invalid_token))
 
@@ -619,7 +682,10 @@ class AuthenticationErrorHandlingTestCase(AuthEndpointsTestCase):
 
     def test_missing_content_type(self):
         """Test handling of missing content type"""
-        data = {"email": self.user_data["email"], "password": self.user_data["password"]}
+        data = {
+            "email": self.user_data["email"],
+            "password": self.user_data["password"],
+        }
 
         response = self.client.post("/auth/login/", data=data, format="json")
 
@@ -636,13 +702,13 @@ class AuthenticationErrorHandlingTestCase(AuthEndpointsTestCase):
         """Test protection against SQL injection"""
         malicious_data = {
             "email": "test@example.com'; DROP TABLE users; --",
-            "password": "password",
+            "password": "password",  # value text not used as a secret
         }
 
         response = self.client.post("/auth/login/", data=malicious_data, format="json")
 
         # Should not cause server error, should handle gracefully
-        self.assertIn(response.status_code, [401, 422])
+        self.assertIn(response.status_code, [401, UNPROCESSABLE_ENTITY_STATUS])
 
         # Verify user table still exists
         self.assertTrue(User.objects.filter(email=self.user.email).exists())

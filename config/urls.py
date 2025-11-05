@@ -15,7 +15,11 @@ from config.ninja_urls import ninja_api
 def health_check(request):
     """Simple health check endpoint for deployment verification"""
     return JsonResponse(
-        {"status": "healthy", "service": "Itqan CMS API", "timestamp": str(timezone.now())}
+        {
+            "status": "healthy",
+            "service": "Itqan CMS API",
+            "timestamp": str(timezone.now()),
+        }
     )
 
 

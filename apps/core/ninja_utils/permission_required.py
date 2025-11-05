@@ -20,7 +20,7 @@ def _get_permissions(permission_classes) -> Iterable[BasePermission]:
     """
 
     for permission_class in permission_classes:
-        if isinstance(permission_class, (type, OperationHolderMixin)):
+        if isinstance(permission_class, type | OperationHolderMixin):
             permission_instance = permission_class()  # type: ignore[operator]
         else:
             permission_instance = permission_class
@@ -78,7 +78,8 @@ def _inject_permission_check(view: Callable) -> Callable:
         return result
 
     contribute_operation_callback(
-        view_with_permission, partial(add_error_response_schema, 403, NinjaErrorResponse)
+        view_with_permission,
+        partial(add_error_response_schema, 403, NinjaErrorResponse),
     )
 
     return view_with_permission

@@ -26,12 +26,16 @@ def login_user(request: Request, credentials: LoginSchema):
 
     if user is None:
         raise ItqanError(
-            error_name="invalid_credentials", message="Invalid email or password", status_code=401
+            error_name="invalid_credentials",
+            message="Invalid email or password",
+            status_code=401,
         )
 
     if not user.is_active:
         raise ItqanError(
-            error_name="account_disabled", message="Account is disabled", status_code=401
+            error_name="account_disabled",
+            message="Account is disabled",
+            status_code=401,
         )
 
     # Generate JWT tokens using rest_framework_simplejwt

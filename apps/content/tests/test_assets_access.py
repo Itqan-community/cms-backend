@@ -21,7 +21,9 @@ class AssetAccessTest(BaseTestCase):
         )
         self.user = baker.make(User, email="test@example.com")
 
-    def test_request_asset_access_with_valid_data_should_return_201_with_access_granted(self):
+    def test_request_asset_access_with_valid_data_should_return_201_with_access_granted(
+        self,
+    ):
         # Arrange
         data = {
             "purpose": "Academic research on Quranic studies",
@@ -79,7 +81,10 @@ class AssetAccessTest(BaseTestCase):
 
     def test_request_asset_access_with_invalid_intended_use_should_return_400(self):
         # Arrange
-        data = {"purpose": "Test purpose", "intended_use": "invalid_use"}  # Invalid enum value
+        data = {
+            "purpose": "Test purpose",
+            "intended_use": "invalid_use",
+        }  # Invalid enum value
 
         # Act
         self.authenticate_user(self.user)
@@ -191,7 +196,8 @@ class AssetAccessTest(BaseTestCase):
         self.assertIsNotNone(access_request)
         self.assertEqual("Database verification test", access_request.developer_access_reason)
         self.assertEqual(
-            AssetAccessRequest.IntendedUseChoice.NON_COMMERCIAL, access_request.intended_use
+            AssetAccessRequest.IntendedUseChoice.NON_COMMERCIAL,
+            access_request.intended_use,
         )
         self.assertEqual(AssetAccessRequest.StatusChoice.APPROVED, access_request.status)
 
@@ -217,7 +223,9 @@ class AssetAccessTest(BaseTestCase):
                 # Act
                 self.authenticate_user(self.user)
                 response = self.client.post(
-                    f"/assets/{invalid_format}/request-access/", data=data, format="json"
+                    f"/assets/{invalid_format}/request-access/",
+                    data=data,
+                    format="json",
                 )
 
                 # Assert

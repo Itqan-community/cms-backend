@@ -100,8 +100,8 @@ def create_usage_event_task(self, event_data):
 
     except Exception as exc:
         logger.error(f"Failed to create usage event: {exc}")
-        # Retry the task
-        raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1))
+        # Retry the task with explicit exception chaining
+        raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1)) from exc
 
 
 @shared_task(bind=True, max_retries=3)
@@ -135,8 +135,7 @@ def update_asset_statistics_task(self, asset_id, stat_type, increment=1):
         logger.error(f"Asset {asset_id} not found for statistics update")
         return False
     except Exception as exc:
-        logger.error(f"Failed to update asset statistics: {exc}")
-        raise self.retry(exc=exc, countdown=30 * (self.request.retries + 1))
+        raise self.retry(exc=exc, countdown=30 * (self.request.retries + 1)) from exc
 
 
 @shared_task
@@ -225,7 +224,9 @@ def compute_daily_analytics_task():
         # Get top assets by downloads today
         top_assets = (
             UsageEvent.objects.filter(
-                created_at__date=today, usage_kind="file_download", asset_id__isnull=False
+                created_at__date=today,
+                usage_kind="file_download",
+                asset_id__isnull=False,
             )
             .values("asset_id")
             .annotate(download_count=Count("id"))

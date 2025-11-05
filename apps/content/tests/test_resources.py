@@ -16,19 +16,6 @@ class ResourceListTest(BaseTestCase):
     def test_list_resources_should_return_all_resources(self):
         # Arrange
         self.authenticate_user(self.user)
-        resource1 = baker.make(
-            Resource,
-            publisher=self.publisher1,
-            name="Resource 1",
-            category=Resource.CategoryChoice.TAFSIR,
-        )
-        resource2 = baker.make(
-            Resource,
-            publisher=self.publisher2,
-            name="Resource 2",
-            category=Resource.CategoryChoice.MUSHAF,
-        )
-
         # Act
         response = self.client.get("/resources/")
 
@@ -70,12 +57,6 @@ class ResourceListTest(BaseTestCase):
     def test_list_resources_filter_by_category_should_return_filtered_resources(self):
         # Arrange
         self.authenticate_user(self.user)
-        tafsir_resource = baker.make(
-            Resource, publisher=self.publisher1, category=Resource.CategoryChoice.TAFSIR
-        )
-        mushaf_resource = baker.make(
-            Resource, publisher=self.publisher2, category=Resource.CategoryChoice.MUSHAF
-        )
 
         # Act
         response = self.client.get("/resources/?category=tafsir")
@@ -91,12 +72,6 @@ class ResourceListTest(BaseTestCase):
     def test_list_resources_filter_by_status_should_return_filtered_resources(self):
         # Arrange
         self.authenticate_user(self.user)
-        draft_resource = baker.make(
-            Resource, publisher=self.publisher1, status=Resource.StatusChoice.DRAFT
-        )
-        ready_resource = baker.make(
-            Resource, publisher=self.publisher2, status=Resource.StatusChoice.READY
-        )
 
         # Act
         response = self.client.get("/resources/?status=ready")
@@ -112,8 +87,6 @@ class ResourceListTest(BaseTestCase):
     def test_list_resources_filter_by_publisher_should_return_filtered_resources(self):
         # Arrange
         self.authenticate_user(self.user)
-        resource1 = baker.make(Resource, publisher=self.publisher1)
-        resource2 = baker.make(Resource, publisher=self.publisher2)
 
         # Act
         response = self.client.get(f"/resources/?publisher_id={self.publisher1.id}")
@@ -129,16 +102,6 @@ class ResourceListTest(BaseTestCase):
     def test_list_resources_search_should_return_matching_resources(self):
         # Arrange
         self.authenticate_user(self.user)
-        resource1 = baker.make(
-            Resource,
-            publisher=self.publisher1,
-            name="Tafsir Ibn Katheer",
-            description="Classic tafsir",
-        )
-        resource2 = baker.make(
-            Resource, publisher=self.publisher2, name="Mushaf Uthmani", description="Uthmani script"
-        )
-
         # Act
         response = self.client.get("/resources/?search=tafsir")
 
@@ -168,12 +131,11 @@ class ResourceListTest(BaseTestCase):
         self.assertEqual("Alpha Resource", items[0]["name"])
         self.assertEqual("Zebra Resource", items[1]["name"])
 
-    def test_list_resources_ordering_by_created_at_descending_should_return_sorted_resources(self):
+    def test_list_resources_ordering_by_created_at_descending_should_return_sorted_resources(
+        self,
+    ):
         # Arrange
         self.authenticate_user(self.user)
-        resource1 = baker.make(Resource, publisher=self.publisher1, name="First Resource")
-        resource2 = baker.make(Resource, publisher=self.publisher2, name="Second Resource")
-
         # Act
         response = self.client.get("/resources/?ordering=-created_at")
 
@@ -187,7 +149,9 @@ class ResourceListTest(BaseTestCase):
         self.assertEqual("Second Resource", items[0]["name"])
         self.assertEqual("First Resource", items[1]["name"])
 
-    def test_list_resources_with_multiple_filters_should_return_correctly_filtered_resources(self):
+    def test_list_resources_with_multiple_filters_should_return_correctly_filtered_resources(
+        self,
+    ):
         # Arrange
         self.authenticate_user(self.user)
         baker.make(
@@ -372,7 +336,9 @@ class ResourceListTest(BaseTestCase):
 
                 # Assert
                 self.assertEqual(
-                    404, response.status_code, f"Failed for {method} {url}: {response.content}"
+                    404,
+                    response.status_code,
+                    f"Failed for {method} {url}: {response.content}",
                 )
 
     def test_detail_resource_where_authenticated_user_should_create_usage_event(self):
@@ -434,7 +400,9 @@ class ResourceListTest(BaseTestCase):
         )
         self.assertEqual(0, usage_events.count())
 
-    def test_detail_resource_where_authenticated_user_should_include_request_metadata(self):
+    def test_detail_resource_where_authenticated_user_should_include_request_metadata(
+        self,
+    ):
         # Arrange
         user = baker.make(User, email="metadata@example.com", is_active=True)
         self.authenticate_user(user)
@@ -449,7 +417,10 @@ class ResourceListTest(BaseTestCase):
         response = self.client.get(
             f"/resources/{resource.id}/",
             format="json",
-            headers={"user-agent": "Test Agent/1.0", "x-forwarded-for": "192.168.1.100"},
+            headers={
+                "user-agent": "Test Agent/1.0",
+                "x-forwarded-for": "192.168.1.100",
+            },
         )
 
         # Assert

@@ -273,7 +273,10 @@ class AssetDownloadTest(BaseTestCase):
         self.authenticate_user(self.user)
         response = self.client.get(
             f"/assets/{self.asset.id}/download/",
-            headers={"user-agent": "Download Agent/2.0", "x-forwarded-for": "192.168.1.200"},
+            headers={
+                "user-agent": "Download Agent/2.0",
+                "x-forwarded-for": "192.168.1.200",
+            },
         )
 
         # Assert

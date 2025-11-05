@@ -2,10 +2,13 @@
 Tests for Django Allauth integration (adapters and forms)
 """
 
+import secrets
+
 import pytest
 from allauth.socialaccount.models import SocialAccount, SocialApp, SocialLogin
 from django.contrib.sites.models import Site
 from django.test import RequestFactory, TestCase
+from django.utils.crypto import get_random_string
 
 from apps.users.adapters import AccountAdapter, SocialAccountAdapter, User
 from apps.users.forms import UserSignupForm, UserSocialSignupForm
@@ -67,7 +70,7 @@ class SocialAccountAdapterTestCase(TestCase):
             provider="google",
             name="Google OAuth2",
             client_id="test-google-client-id",
-            secret="test-google-client-secret",
+            secret=secrets.token_urlsafe(24),  # dynamic to avoid Bandit B106
         )
         self.google_app.sites.add(site)
 
@@ -75,7 +78,7 @@ class SocialAccountAdapterTestCase(TestCase):
             provider="github",
             name="GitHub OAuth2",
             client_id="test-github-client-id",
-            secret="test-github-client-secret",
+            secret=secrets.token_urlsafe(24),  # dynamic to avoid Bandit B106
         )
         self.github_app.sites.add(site)
 
@@ -83,9 +86,7 @@ class SocialAccountAdapterTestCase(TestCase):
         """Helper method to create social login"""
         user = User(email="social@example.com")
         account = SocialAccount(provider=provider, uid="123456", extra_data=extra_data)
-
-        social_login = SocialLogin(user=user, account=account)
-        return social_login
+        return SocialLogin(user=user, account=account)
 
     def test_is_open_for_signup(self):
         """Test that social signup is allowed"""
@@ -95,19 +96,22 @@ class SocialAccountAdapterTestCase(TestCase):
     def test_save_user_google(self):
         """Test saving user from Google social login"""
         extra_data = {"name": "Google User", "email": "google@example.com"}
-
         social_login = self._create_social_login("google", extra_data)
 
         saved_user = self.adapter.save_user(self.request, social_login)
 
         self.assertEqual(saved_user.name, "Google User")
-        self.assertEqual(saved_user.email, "social@example.com")  # From user object
+        # Email comes from the SocialLogin.user, not provider payload
+        self.assertEqual(saved_user.email, "social@example.com")
         self.assertTrue(User.objects.filter(email="social@example.com").exists())
 
     def test_save_user_github(self):
         """Test saving user from GitHub social login"""
-        extra_data = {"name": "GitHub User", "login": "githubuser", "email": "github@example.com"}
-
+        extra_data = {
+            "name": "GitHub User",
+            "login": "githubuser",
+            "email": "github@example.com",
+        }
         social_login = self._create_social_login("github", extra_data)
 
         saved_user = self.adapter.save_user(self.request, social_login)
@@ -119,7 +123,6 @@ class SocialAccountAdapterTestCase(TestCase):
     def test_save_user_github_no_name(self):
         """Test saving user from GitHub with no name (uses login)"""
         extra_data = {"login": "githubuser", "email": "github@example.com"}
-
         social_login = self._create_social_login("github", extra_data)
 
         saved_user = self.adapter.save_user(self.request, social_login)
@@ -129,7 +132,6 @@ class SocialAccountAdapterTestCase(TestCase):
     def test_populate_user_google(self):
         """Test populating user from Google data"""
         extra_data = {"name": "Populated Google User", "email": "populated@example.com"}
-
         social_login = self._create_social_login("google", extra_data)
 
         user = self.adapter.populate_user(self.request, social_login, {})
@@ -139,7 +141,6 @@ class SocialAccountAdapterTestCase(TestCase):
     def test_populate_user_github(self):
         """Test populating user from GitHub data"""
         extra_data = {"name": "Populated GitHub User", "login": "populateduser"}
-
         social_login = self._create_social_login("github", extra_data)
 
         user = self.adapter.populate_user(self.request, social_login, {})
@@ -152,10 +153,11 @@ class UserSignupFormTestCase(TestCase):
 
     def test_form_valid_data(self):
         """Test form with valid data"""
+        pwd = get_random_string(16)
         form_data = {
             "email": "signup@example.com",
-            "password1": "testpass123",
-            "password2": "testpass123",
+            "password1": pwd,
+            "password2": pwd,
             "name": "Signup User",
         }
 
@@ -164,10 +166,11 @@ class UserSignupFormTestCase(TestCase):
 
     def test_form_missing_name(self):
         """Test form without name (should still be valid)"""
+        pwd = get_random_string(16)
         form_data = {
             "email": "noname@example.com",
-            "password1": "testpass123",
-            "password2": "testpass123",
+            "password1": pwd,
+            "password2": pwd,
         }
 
         form = UserSignupForm(data=form_data)
@@ -175,10 +178,11 @@ class UserSignupFormTestCase(TestCase):
 
     def test_form_invalid_email(self):
         """Test form with invalid email"""
+        pwd = get_random_string(16)
         form_data = {
             "email": "invalid-email",
-            "password1": "testpass123",
-            "password2": "testpass123",
+            "password1": pwd,
+            "password2": pwd,
             "name": "Test User",
         }
 
@@ -188,10 +192,12 @@ class UserSignupFormTestCase(TestCase):
 
     def test_form_password_mismatch(self):
         """Test form with password mismatch"""
+        pwd1 = get_random_string(16)
+        pwd2 = get_random_string(16)
         form_data = {
             "email": "mismatch@example.com",
-            "password1": "testpass123",
-            "password2": "differentpass",
+            "password1": pwd1,
+            "password2": pwd2,
             "name": "Test User",
         }
 
@@ -201,10 +207,11 @@ class UserSignupFormTestCase(TestCase):
     @pytest.mark.skip(reason="fix it -if needed- when using login via google or github (OAuth2)")
     def test_form_save(self):
         """Test form save method"""
+        pwd = get_random_string(16)
         form_data = {
             "email": "formsave@example.com",
-            "password1": "testpass123",
-            "password2": "testpass123",
+            "password1": pwd,
+            "password2": pwd,
             "name": "Form Save User",
         }
 
@@ -218,7 +225,7 @@ class UserSignupFormTestCase(TestCase):
 
         self.assertEqual(user.email, "formsave@example.com")
         self.assertEqual(user.name, "Form Save User")
-        self.assertTrue(user.check_password("testpass123"))
+        self.assertTrue(user.check_password(pwd))
         self.assertTrue(User.objects.filter(email="formsave@example.com").exists())
 
 
@@ -241,8 +248,9 @@ class UserSocialSignupFormTestCase(TestCase):
     def test_social_form_save_with_name(self):
         """Test social form save with name"""
         # Create a user first (would normally be done by allauth)
+        tmp_password = get_random_string(20)
         user = User.objects.create_user(
-            email="social@example.com", password="temppass", name="Original Name"
+            email="social@example.com", password=tmp_password, name="Original Name"
         )
 
         form_data = {"name": "Updated Social Name"}
@@ -262,8 +270,11 @@ class UserSocialSignupFormTestCase(TestCase):
     def test_social_form_save_without_name(self):
         """Test social form save without name"""
         # Create a user first
+        tmp_password = get_random_string(20)
         user = User.objects.create_user(
-            email="nosocialname@example.com", password="temppass", name="Original Name"
+            email="nosocialname@example.com",
+            password=tmp_password,
+            name="Original Name",
         )
 
         form = UserSocialSignupForm(data={})

@@ -13,7 +13,9 @@ class UserSignupForm(SignupForm):
     """
 
     name = forms.CharField(
-        max_length=255, required=False, widget=forms.TextInput(attrs={"placeholder": "Full Name"})
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={"placeholder": "Full Name"}),
     )
 
     def save(self, request):
@@ -29,7 +31,9 @@ class UserSocialSignupForm(SocialSignupForm):
     """
 
     name = forms.CharField(
-        max_length=255, required=False, widget=forms.TextInput(attrs={"placeholder": "Full Name"})
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={"placeholder": "Full Name"}),
     )
 
     def save(self, request):
