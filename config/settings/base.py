@@ -14,7 +14,7 @@ SECRET_KEY = config("SECRET_KEY", default="django-insecure-dev-key-change-in-pro
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=True, cast=bool)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS: list[str] = []
 
 # Application definition
 DJANGO_APPS = [
@@ -56,7 +56,6 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "allauth.account.middleware.AccountMiddleware",  # Required for allauth
-    # 'apps.api_keys.authentication.APIUsageMiddleware',  # Removed with api_keys app
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -82,10 +81,9 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 # Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
+        "ENGINE": "django.db.backends.postgresql_psycopg2",
         "NAME": config("DB_NAME", default="itqan_cms"),
         "USER": config("DB_USER", default="itqan_user"),
         "PASSWORD": config("DB_PASSWORD", default="itqan_password"),
@@ -98,27 +96,18 @@ DATABASES = {
 }
 
 # Password validation
-# https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
-    },
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
 # Internationalization
-# https://docs.djangoproject.com/en/4.2/topics/i18n/
 LANGUAGE_CODE = "en"
 TIME_ZONE = "Asia/Riyadh"
 USE_I18N = True
+USE_L10N = True
 USE_TZ = True
 
 LANGUAGES = [
@@ -128,163 +117,38 @@ LANGUAGES = [
 MODELTRANSLATION_DEFAULT_LANGUAGE = "en"
 MODELTRANSLATION_FALLBACK_LANGUAGES = ("en", "ar")
 
-LOCALE_PATHS = [
-    BASE_DIR / "locale",
-]
+LOCALE_PATHS = [BASE_DIR / "locale"]
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.2/howto/static-files/
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = [
-    str(APPS_DIR / "core" / "static"),
-]
+STATICFILES_DIRS = [str(APPS_DIR / "core" / "static")]
 
 # Media files
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 # Default primary key field type
-# https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Django REST Framework
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.SessionAuthentication",
-        "rest_framework.authentication.TokenAuthentication",
-    ],
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
-    ],
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": 20,
-    "DEFAULT_FILTER_BACKENDS": [
-        "django_filters.rest_framework.DjangoFilterBackend",
-        "rest_framework.filters.SearchFilter",
-        "rest_framework.filters.OrderingFilter",
-    ],
-    "DEFAULT_RENDERER_CLASSES": [
-        "rest_framework.renderers.JSONRenderer",
-    ],
-    "DEFAULT_PARSER_CLASSES": [
-        "rest_framework.parsers.JSONParser",
-        "rest_framework.parsers.FormParser",
-        "rest_framework.parsers.MultiPartParser",
-    ],
-}
-
-# CORS Settings
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:4200",  # Angular development server
-    "http://127.0.0.1:4200",
-    # Local frontend running on port 3000
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
-
-CORS_ALLOW_CREDENTIALS = True
-
-CORS_ALLOW_HEADERS = [
-    "accept",
-    "accept-encoding",
-    "authorization",
-    "content-type",
-    "dnt",
-    "origin",
-    "user-agent",
-    "x-csrftoken",
-    "x-requested-with",
-]
-
-
-# Custom user model
-AUTH_USER_MODEL = "users.User"
-
-# File upload settings
-FILE_UPLOAD_MAX_MEMORY_SIZE = 26214400  # 25MB
-FILE_UPLOAD_TEMP_DIR = None  # Use system temp dir
-DATA_UPLOAD_MAX_MEMORY_SIZE = FILE_UPLOAD_MAX_MEMORY_SIZE
-
-# Allowed file types for uploads
-ALLOWED_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "gif", "webp", "svg"]
-ALLOWED_FILE_EXTENSIONS = [
-    "pdf",
-    "doc",
-    "docx",
-    "txt",
-    "zip",
-    "tar",
-    "gz",
-    "json",
-    "xml",
-    "csv",
-]
-
-# Maximum file sizes (in bytes)
-MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB
-MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
-
-# MinIO Configuration (S3-compatible storage)
-# These settings will be overridden in development/production settings
-MINIO_ENDPOINT = config("MINIO_ENDPOINT", default="localhost:9000")
-MINIO_ACCESS_KEY = config("MINIO_ACCESS_KEY", default="minioadmin")
-MINIO_SECRET_KEY = config("MINIO_SECRET_KEY", default="minioadmin")
-MINIO_USE_HTTPS = config("MINIO_USE_HTTPS", default=False, cast=bool)
-MINIO_BUCKET_NAME = config("MINIO_BUCKET_NAME", default="itqan-uploads")
-
-# Configure MinIO as S3-compatible storage
-STORAGES = {
-    "default": {
-        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
-    },
-    "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-    },
-}
-
-# AWS S3 settings for MinIO compatibility
-AWS_ACCESS_KEY_ID = MINIO_ACCESS_KEY
-AWS_SECRET_ACCESS_KEY = MINIO_SECRET_KEY
-AWS_S3_ENDPOINT_URL = f"http{'s' if MINIO_USE_HTTPS else ''}://{MINIO_ENDPOINT}"
-AWS_STORAGE_BUCKET_NAME = MINIO_BUCKET_NAME
-AWS_S3_REGION_NAME = "us-east-1"  # MinIO default
-AWS_S3_USE_SSL = MINIO_USE_HTTPS
-AWS_S3_VERIFY = False  # Disable SSL verification for local development
-AWS_S3_FORCE_PATH_STYLE = True  # Required for MinIO
-AWS_DEFAULT_ACL = "public-read"  # Make uploaded files publicly accessible
-AWS_S3_OBJECT_PARAMETERS = {
-    "CacheControl": "max-age=86400",
-}
-
-
-AUTHENTICATION_BACKENDS = [
-    "django.contrib.auth.backends.ModelBackend",
-]
-
-# Django REST Framework Configuration
-REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",
-        # 'apps.api_keys.authentication.APIKeyAuthentication',
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_THROTTLE_CLASSES": [
-        # 'apps.api_keys.authentication.APIKeyThrottle',
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
         "anon": "100/hour",
         "user": "1000/hour",
-        "api_key": "1000/hour",  # Default rate, overridden by individual key settings
     },
-    "DEFAULT_RENDERER_CLASSES": [
-        "rest_framework.renderers.JSONRenderer",
-    ],
+    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_PARSER_CLASSES": [
         "rest_framework.parsers.JSONParser",
         "rest_framework.parsers.FormParser",
@@ -305,7 +169,6 @@ REST_FRAMEWORK = {
 }
 
 # Simple JWT Configuration
-
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
@@ -335,17 +198,11 @@ CELERY_TASK_SERIALIZER = "pickle"
 CELERY_RESULT_SERIALIZER = "pickle"
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_ALWAYS_EAGER = config("CELERY_TASK_ALWAYS_EAGER", default=False, cast=bool)
-# https://docs.celeryq.dev/en/stable/userguide/configuration.html#task-time-limit
 CELERY_TASK_TIME_LIMIT = 5 * 60
-# https://docs.celeryq.dev/en/stable/userguide/configuration.html#task-soft-time-limit
 CELERY_TASK_SOFT_TIME_LIMIT = 60
-# https://docs.celeryq.dev/en/stable/userguide/configuration.html#beat-scheduler
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
-# https://docs.celeryq.dev/en/stable/userguide/configuration.html#worker-send-task-events
 CELERY_WORKER_SEND_TASK_EVENTS = True
-# https://docs.celeryq.dev/en/stable/userguide/configuration.html#std-setting-task_send_sent_event
 CELERY_TASK_SEND_SENT_EVENT = True
-# https://docs.celeryq.dev/en/stable/userguide/configuration.html#worker-hijack-root-logger
 CELERY_WORKER_HIJACK_ROOT_LOGGER = False
 
 # Site ID (required for allauth)
@@ -353,65 +210,36 @@ SITE_ID = 1
 
 DJANGO_ADMIN_FORCE_ALLAUTH = config("DJANGO_ADMIN_FORCE_ALLAUTH", default=False, cast=bool)
 
-# Additional allauth settings to prevent email table creation
-ACCOUNT_EMAIL_CONFIRMATION_HMAC = False  # Disable HMAC-based confirmations
-ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1  # Short expiry since we don't use it
+ACCOUNT_EMAIL_CONFIRMATION_HMAC = False
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
 
-# django-allauth
-# ------------------------------------------------------------------------------
 ACCOUNT_ALLOW_REGISTRATION = config("DJANGO_ACCOUNT_ALLOW_REGISTRATION", True, cast=bool)
-# https://docs.allauth.org/en/latest/account/configuration.html
 ACCOUNT_LOGIN_METHODS = {"email"}
-# https://docs.allauth.org/en/latest/account/configuration.html
 ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
-# https://docs.allauth.org/en/latest/account/configuration.html
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
-# https://docs.allauth.org/en/latest/account/configuration.html
 ACCOUNT_ADAPTER = "apps.users.adapters.AccountAdapter"
-# https://docs.allauth.org/en/latest/account/forms.html
 ACCOUNT_FORMS = {"signup": "apps.users.forms.UserSignupForm"}
-# https://docs.allauth.org/en/latest/socialaccount/configuration.html
 SOCIALACCOUNT_ADAPTER = "apps.users.adapters.SocialAccountAdapter"
-# https://docs.allauth.org/en/latest/socialaccount/configuration.html
 SOCIALACCOUNT_FORMS = {"signup": "apps.users.forms.UserSocialSignupForm"}
-# Django Allauth Configuration
-# NOTE: We primarily use our custom User model with built-in email management
-# Allauth is only used for OAuth (Google/GitHub) authentication, not email verification
-ACCOUNT_EMAIL_VERIFICATION = (
-    "none"  # We handle email verification in our custom User model # or "mandatory"
-)
-ACCOUNT_USER_MODEL_EMAIL_FIELD = "email"  # Points to our custom User.email field
-ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = False  # We manage email verification manually
+
+ACCOUNT_EMAIL_VERIFICATION = "none"
+ACCOUNT_USER_MODEL_EMAIL_FIELD = "email"
+ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = False
 ACCOUNT_LOGOUT_ON_GET = False
 ACCOUNT_SESSION_REMEMBER = True
 ACCOUNT_UNIQUE_EMAIL = True
 
-# Social account configuration - for OAuth only (Google/GitHub)
-SOCIALACCOUNT_EMAIL_VERIFICATION = "none"  # We handle email verification in User model
+SOCIALACCOUNT_EMAIL_VERIFICATION = "none"
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_QUERY_EMAIL = True
 
-# NOTE: We use our custom User model with built-in email field and email_verified field
-# No need for allauth's account_emailaddress table since email data is stored in User model
-
-# OAuth provider settings (will be configured with environment variables)
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
-        "SCOPE": [
-            "profile",
-            "email",
-        ],
-        "AUTH_PARAMS": {
-            "access_type": "online",
-        },
+        "SCOPE": ["profile", "email"],
+        "AUTH_PARAMS": {"access_type": "online"},
         "OAUTH_PKCE_ENABLED": True,
     },
-    "github": {
-        "SCOPE": [
-            "user:email",
-        ],
-        "VERIFIED_EMAIL": True,
-    },
+    "github": {"SCOPE": ["user:email"], "VERIFIED_EMAIL": True},
 }
 
 # Cache Configuration
@@ -422,16 +250,14 @@ CACHES = {
     }
 }
 
-# Session Configuration
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
 SESSION_CACHE_ALIAS = "default"
 
-# Security Settings
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = "DENY"
 
-# Logging Configuration
+# Logging
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -440,10 +266,7 @@ LOGGING = {
             "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
             "style": "{",
         },
-        "simple": {
-            "format": "{levelname} {message}",
-            "style": "{",
-        },
+        "simple": {"format": "{levelname} {message}", "style": "{"},
     },
     "handlers": {
         "console": {
@@ -451,31 +274,13 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "formatter": "simple",
         },
-        # 'file': {
-        #     'level': 'DEBUG',
-        #     'class': 'logging.FileHandler',
-        #     'filename': BASE_DIR / 'logs' / 'django.log',
-        #     'formatter': 'verbose',
-        # },
     },
-    "root": {
-        "handlers": ["console"],
-        "level": "INFO",
-    },
+    "root": {"handlers": ["console"], "level": "INFO"},
     "loggers": {
-        "django": {
-            "handlers": ["console"],
-            "level": "INFO",
-            "propagate": False,
-        },
-        "apps": {
-            "handlers": ["console"],
-            "level": "DEBUG",
-            "propagate": False,
-        },
+        "django": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "apps": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
     },
 }
-
 
 USER_PATH_THROTTLE_RATE = config("USER_PATH_THROTTLE_RATE", default="10/sec")
 
@@ -485,10 +290,7 @@ NINJA_SEARCHING_CLASS = "apps.core.ninja_utils.searching.Searching"
 NINJA_ORDERING_CLASS = "apps.core.ninja_utils.ordering.Ordering"
 
 RUNNING_TESTS = False
-MANAGE_PY_ARG_LENGTH = 2  # Length of sys.argv to check for manage.py test command
-if (
-    len(sys.argv) >= MANAGE_PY_ARG_LENGTH
-    and sys.argv[0].endswith("manage.py")
-    and sys.argv[1] == "test"
-) or ("pytest" in sys.argv[0]):
+if (len(sys.argv) >= 2 and sys.argv[0].endswith("manage.py") and sys.argv[1] == "test") or (
+    "pytest" in sys.argv[0]
+):
     RUNNING_TESTS = True

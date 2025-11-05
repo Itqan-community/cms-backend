@@ -2,32 +2,40 @@
 Itqan CMS - Staging Settings
 """
 
-# Keep the star import for Django settings composition, but silence F403 for this line
-from .base import *  # noqa: F403
+from decouple import config
+from django.conf import settings
 
-# Explicitly import the names you reference so flake8 knows they're defined
-from .base import DATABASES, LOGGING, REST_FRAMEWORK, config  # noqa: F401
+from .base import *  # noqa: F401, F403
 
-# Staging-specific settings
-DEBUG = False  # Production-like behavior but with more verbose logging
+# ============================================================
+# General
+# ============================================================
+
+# Production-like behavior but with more verbose logging
+DEBUG = False
 
 ALLOWED_HOSTS = [
     "staging.api.cms.itqan.dev",  # Staging environment
     "localhost",  # For local Docker development
 ]
 
-# Security settings for staging (similar to production but less strict)
+# ============================================================
+# Security (staging; slightly less strict than prod)
+# ============================================================
+
 SECURE_SSL_REDIRECT = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
-# SECURE_BROWSER_XSS_FILTER is deprecated — safe to remove if Django >= 4.0
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = "DENY"
 
-# Staging database configuration
-DATABASES.update(  # noqa: F405
+# ============================================================
+# Database
+# ============================================================
+
+settings.DATABASES.update(
     {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
@@ -44,7 +52,10 @@ DATABASES.update(  # noqa: F405
     }
 )
 
-# CSRF trusted origins for staging
+# ============================================================
+# CSRF
+# ============================================================
+
 CSRF_TRUSTED_ORIGINS = [
     "https://staging.api.cms.itqan.dev",
     "https://staging.cms.itqan.dev",
@@ -61,35 +72,42 @@ CSRF_TRUSTED_ORIGINS = [
 # Force HTTPS in allauth callback URLs
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https"
 
-# Staging cache configuration - Using dummy cache for now (no Redis in docker-compose)
+# ============================================================
+# Cache
+# ============================================================
+
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.dummy.DummyCache",
     }
 }
 
-# Disable Celery for staging (no Redis broker available)
+# ============================================================
+# Celery (disabled in staging; no Redis broker)
+# ============================================================
+
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
 
-# Staging file storage (local filesystem for now)
-STORAGES = {
-    "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
-    },
-    "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-    },
-}
+# ============================================================
+# File Storage (local for staging)
+# ============================================================
 
-# Staging media and static files
+DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
+STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
+
+# Media / Static
 MEDIA_URL = "/media/"
 MEDIA_ROOT = "/app/media"
 STATIC_URL = "/static/"
 STATIC_ROOT = "/app/staticfiles"
 
-# Email configuration for staging
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"  # Log emails to console
+# ============================================================
+# Email
+# ============================================================
+
+# Log emails to console
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 EMAIL_HOST = config("EMAIL_HOST", default="localhost")
 EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
 EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
@@ -97,34 +115,37 @@ EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", "staging-noreply@itqan.dev")
 
-LOGGING["handlers"]["console"]["level"] = "INFO"  # noqa: F405
-LOGGING["root"]["level"] = "INFO"  # noqa: F405
+# ============================================================
+# Logging
+# ============================================================
 
-# Django-allauth settings for staging
+settings.LOGGING["handlers"]["console"]["level"] = "INFO"
+settings.LOGGING["root"]["level"] = "INFO"
+
+# ============================================================
+# Django-Allauth
+# ============================================================
+
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_RATE_LIMITS = "login_failed"
 
-# Social auth settings for staging (use database configuration only)
+# OAuth apps are configured via Django admin for better security and flexibility
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
-        "SCOPE": [
-            "profile",
-            "email",
-        ],
-        "AUTH_PARAMS": {
-            "access_type": "online",
-        },
+        "SCOPE": ["profile", "email"],
+        "AUTH_PARAMS": {"access_type": "online"},
         "OAUTH_PKCE_ENABLED": True,
     },
     "github": {
-        "SCOPE": [
-            "user:email",
-        ],
+        "SCOPE": ["user:email"],
         "VERIFIED_EMAIL": True,
     },
 }
 
-# CORS settings for staging
+# ============================================================
+# CORS
+# ============================================================
+
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
     "https://staging.cms.itqan.dev",  # Staging frontend
@@ -139,13 +160,20 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CORS_ALLOW_CREDENTIALS = True
 
+# ============================================================
+# DRF
+# ============================================================
+
 # API Rate limiting for staging (more lenient than production)
-REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {  # noqa: F405
+settings.REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
     "anon": "100/hour",
     "user": "1000/hour",
     "login": "10/minute",
 }
 
-# Staging-specific feature flags
+# ============================================================
+# Feature flags
+# ============================================================
+
 ENABLE_DEBUG_TOOLBAR = False  # Disable even in staging for security
 ENABLE_API_DOCS = True  # Keep API docs available in staging
