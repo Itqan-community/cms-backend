@@ -1,7 +1,7 @@
-import inspect
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from functools import wraps
+import inspect
 from typing import Any, cast, overload
 
 from asgiref.sync import sync_to_async

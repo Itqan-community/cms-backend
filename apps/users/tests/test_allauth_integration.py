@@ -4,11 +4,11 @@ Tests for Django Allauth integration (adapters and forms)
 
 import secrets
 
-import pytest
 from allauth.socialaccount.models import SocialAccount, SocialApp, SocialLogin
 from django.contrib.sites.models import Site
 from django.test import RequestFactory, TestCase
 from django.utils.crypto import get_random_string
+import pytest
 
 from apps.users.adapters import AccountAdapter, SocialAccountAdapter, User
 from apps.users.forms import UserSignupForm, UserSocialSignupForm

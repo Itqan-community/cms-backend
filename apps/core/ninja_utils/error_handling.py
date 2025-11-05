@@ -1,13 +1,12 @@
-import logging
 from json import JSONDecodeError
+import logging
 
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import Http404
 from django.utils.encoding import force_str
 from django.utils.translation import gettext as _
-from ninja.errors import AuthenticationError, HttpError
-from ninja.errors import ValidationError as NinjaValidationError
+from ninja.errors import AuthenticationError, HttpError, ValidationError as NinjaValidationError
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.serializers import as_serializer_error
 from rest_framework_simplejwt.exceptions import AuthenticationFailed, InvalidToken

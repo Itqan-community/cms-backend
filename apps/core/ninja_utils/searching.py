@@ -1,7 +1,7 @@
-import operator
-import re
 from collections.abc import Callable
 from functools import reduce
+import operator
+import re
 from typing import Any
 
 from django.db.models import Q, QuerySet

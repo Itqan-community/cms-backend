@@ -28,7 +28,7 @@ target-version = ["py310"]
 skip-string-normalization = false
 
 # ========================
-# Ruff (Linter & Sorter)
+# Ruff (Linter & Import rules)
 # ========================
 
 [tool.ruff]
@@ -40,7 +40,6 @@ select = [
     "E", # pycodestyle errors
     "W", # pycodestyle warnings
     "F", # pyflakes
-    "I", # isort
     "B", # flake8-bugbear
     "C4", # flake8-comprehensions
     "UP", # pyupgrade
@@ -56,6 +55,17 @@ ignore = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["apps", "config"]
+
+# ========================
+# isort (Import sorter)
+# ========================
+
+[tool.isort]
+profile = "black"
+line_length = 100
+known_first_party = ["apps", "config"]
+force_sort_within_sections = true
+combine_as_imports = true
 
 # ========================
 # Bandit (Security)
