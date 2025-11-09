@@ -1,18 +1,14 @@
-import inspect
-from abc import ABC
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Callable
 from functools import wraps
-from typing import Any
-from typing import cast
-from typing import overload
+import inspect
+from typing import Any, cast, overload
 
 from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.db.models import QuerySet
 from django.utils.module_loading import import_string
-from ninja import Query
-from ninja import Schema
+from ninja import Query, Schema
 from ninja.constants import NOT_SET
 from ninja.signature import is_async
 from ninja.utils import contribute_operation_args
@@ -31,13 +27,19 @@ class SearchingBase(ABC):
     InputSource = Query(...)
 
     def __init__(
-        self, *, pass_parameter: str | None = None, search_fields: list[str] | None = None, **kwargs: Any
+        self,
+        *,
+        pass_parameter: str | None = None,
+        search_fields: list[str] | None = None,
+        **kwargs: Any,
     ) -> None:
         self.pass_parameter = pass_parameter
         self.search_fields = search_fields or []
 
     @abstractmethod
-    def searching_queryset(self, items: QuerySet | list, searching_input: Any) -> QuerySet | list: ...
+    def searching_queryset(
+        self, items: QuerySet | list, searching_input: Any
+    ) -> QuerySet | list: ...
 
 
 @overload
@@ -53,7 +55,9 @@ def searching(
     ...
 
 
-def searching(func_or_searching_class: Any = NOT_SET, **searching_params: Any) -> Callable[..., Any]:
+def searching(
+    func_or_searching_class: Any = NOT_SET, **searching_params: Any
+) -> Callable[..., Any]:
     isfunction = inspect.isfunction(func_or_searching_class)
     isnotset = func_or_searching_class == NOT_SET
 
@@ -81,10 +85,7 @@ def _inject_searcher(
 ) -> Callable[..., Any]:
     searcher: SearchingBase = searching_class(**searching_params)
     searcher_kwargs_name = "searching"
-    if is_async(func):
-        search_operation_class = AsyncSearchOperation
-    else:
-        search_operation_class = SearchOperation
+    search_operation_class = AsyncSearchOperation if is_async(func) else SearchOperation
     searcher_operation = search_operation_class(
         searcher=searcher, view_func=func, searcher_kwargs_name=searcher_kwargs_name
     )
@@ -94,7 +95,11 @@ def _inject_searcher(
 
 class SearchOperation:
     def __init__(
-        self, *, searcher: SearchingBase, view_func: Callable, searcher_kwargs_name: str = "searching"
+        self,
+        *,
+        searcher: SearchingBase,
+        view_func: Callable,
+        searcher_kwargs_name: str = "searching",
     ) -> None:
         self.searcher = searcher
         self.searcher_kwargs_name = searcher_kwargs_name

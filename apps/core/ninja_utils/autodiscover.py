@@ -1,3 +1,4 @@
+import contextlib
 import pathlib
 
 from django.apps import apps
@@ -20,11 +21,8 @@ def auto_discover_ninja_routers(ninja_api: NinjaAPI, pattern: str) -> None:
         if views_module.is_dir():
             for view_file in views_module.glob("**/*.py"):
                 if view_file.stem == "__init__":
-                    try:
+                    with contextlib.suppress(ImportError):
                         ninja_api.add_router("/", f"{app.name}.{pattern}.router")
-                    except ImportError:
-                        pass
-                else:
-                    # Skip files starting with underscore (utility files)
-                    if not view_file.stem.startswith('_'):
-                        ninja_api.add_router("/", f"{app.name}.{pattern}.{view_file.stem}.router")
+                # Skip files starting with underscore (utility files)
+                elif not view_file.stem.startswith("_"):
+                    ninja_api.add_router("/", f"{app.name}.{pattern}.{view_file.stem}.router")

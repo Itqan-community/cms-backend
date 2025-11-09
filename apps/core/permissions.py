@@ -1,5 +1,4 @@
-from rest_framework import exceptions
-from rest_framework import permissions
+from rest_framework import exceptions, permissions
 
 from apps.users.models import User
 

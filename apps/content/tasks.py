@@ -2,17 +2,21 @@
 Celery tasks for async analytics processing
 Handles usage event tracking and analytics computations
 """
+
 from __future__ import annotations
+
 import logging
-from typing import TypedDict, TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 from celery import shared_task
 from django.db import transaction
 from django.utils import timezone
+
 if TYPE_CHECKING:
     from apps.content.models import UsageEvent
 
 logger = logging.getLogger(__name__)
+
 
 class EventData(TypedDict):
     developer_user_id: int
@@ -20,9 +24,10 @@ class EventData(TypedDict):
     subject_kind: UsageEvent.SubjectKindChoice
     asset_id: int | None
     resource_id: int | None
-    metadata: dict |None
+    metadata: dict | None
     ip_address: str | None
     user_agent: str | None
+
 
 @shared_task(bind=True, max_retries=3)
 def create_usage_event_task(self, event_data):
@@ -41,10 +46,10 @@ def create_usage_event_task(self, event_data):
             - user_agent: Client user agent
     """
     try:
-        from .models import UsageEvent, Asset, Resource
+        from .models import Asset, Resource, UsageEvent
 
         # Validate required fields
-        required_fields = ['developer_user_id', 'usage_kind', 'subject_kind']
+        required_fields = ["developer_user_id", "usage_kind", "subject_kind"]
         for field in required_fields:
             if field not in event_data:
                 logger.error(f"Missing required field '{field}' in usage event data")
@@ -52,23 +57,24 @@ def create_usage_event_task(self, event_data):
 
         # Get user
         from apps.users.models import User
+
         try:
-            user = User.objects.get(id=event_data['developer_user_id'])
+            user = User.objects.get(id=event_data["developer_user_id"])
         except User.DoesNotExist:
             logger.error(f"User {event_data['developer_user_id']} not found for usage event")
             return False
 
         # Validate subject references
-        asset_id = event_data.get('asset_id')
-        resource_id = event_data.get('resource_id')
+        asset_id = event_data.get("asset_id")
+        resource_id = event_data.get("resource_id")
 
-        if event_data['subject_kind'] == 'asset' and asset_id:
+        if event_data["subject_kind"] == "asset" and asset_id:
             try:
                 Asset.objects.get(id=asset_id)
             except Asset.DoesNotExist:
                 logger.error(f"Asset {asset_id} not found for usage event")
                 return False
-        elif event_data['subject_kind'] == 'resource' and resource_id:
+        elif event_data["subject_kind"] == "resource" and resource_id:
             try:
                 Resource.objects.get(id=resource_id)
             except Resource.DoesNotExist:
@@ -79,14 +85,14 @@ def create_usage_event_task(self, event_data):
         with transaction.atomic():
             usage_event = UsageEvent.objects.create(
                 developer_user=user,
-                usage_kind=event_data['usage_kind'],
-                subject_kind=event_data['subject_kind'],
+                usage_kind=event_data["usage_kind"],
+                subject_kind=event_data["subject_kind"],
                 asset_id=asset_id,
                 resource_id=resource_id,
-                metadata=event_data.get('metadata', {}),
-                ip_address=event_data.get('ip_address'),
-                user_agent=event_data.get('user_agent', ''),
-                effective_license=event_data.get('effective_license', '')
+                metadata=event_data.get("metadata", {}),
+                ip_address=event_data.get("ip_address"),
+                user_agent=event_data.get("user_agent", ""),
+                effective_license=event_data.get("effective_license", ""),
             )
 
             logger.info(f"Created usage event {usage_event.id} for user {user.id}")
@@ -94,8 +100,8 @@ def create_usage_event_task(self, event_data):
 
     except Exception as exc:
         logger.error(f"Failed to create usage event: {exc}")
-        # Retry the task
-        raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1))
+        # Retry the task with explicit exception chaining
+        raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1)) from exc
 
 
 @shared_task(bind=True, max_retries=3)
@@ -113,15 +119,15 @@ def update_asset_statistics_task(self, asset_id, stat_type, increment=1):
 
         asset = Asset.objects.get(id=asset_id)
 
-        if stat_type == 'download_count':
+        if stat_type == "download_count":
             asset.download_count += increment
-        elif stat_type == 'view_count':
+        elif stat_type == "view_count":
             asset.view_count += increment
         else:
             logger.error(f"Invalid stat_type: {stat_type}")
             return False
 
-        asset.save(update_fields=[stat_type, 'updated_at'])
+        asset.save(update_fields=[stat_type, "updated_at"])
         logger.info(f"Updated {stat_type} for asset {asset_id} by {increment}")
         return True
 
@@ -129,8 +135,7 @@ def update_asset_statistics_task(self, asset_id, stat_type, increment=1):
         logger.error(f"Asset {asset_id} not found for statistics update")
         return False
     except Exception as exc:
-        logger.error(f"Failed to update asset statistics: {exc}")
-        raise self.retry(exc=exc, countdown=30 * (self.request.retries + 1))
+        raise self.retry(exc=exc, countdown=30 * (self.request.retries + 1)) from exc
 
 
 @shared_task
@@ -151,18 +156,19 @@ def batch_create_usage_events_task(events_data):
             try:
                 # Validate and prepare event
                 from apps.users.models import User
-                user = User.objects.get(id=event_data['developer_user_id'])
+
+                user = User.objects.get(id=event_data["developer_user_id"])
 
                 event = UsageEvent(
                     developer_user=user,
-                    usage_kind=event_data['usage_kind'],
-                    subject_kind=event_data['subject_kind'],
-                    asset_id=event_data.get('asset_id'),
-                    resource_id=event_data.get('resource_id'),
-                    metadata=event_data.get('metadata', {}),
-                    ip_address=event_data.get('ip_address'),
-                    user_agent=event_data.get('user_agent', ''),
-                    effective_license=event_data.get('effective_license', '')
+                    usage_kind=event_data["usage_kind"],
+                    subject_kind=event_data["subject_kind"],
+                    asset_id=event_data.get("asset_id"),
+                    resource_id=event_data.get("resource_id"),
+                    metadata=event_data.get("metadata", {}),
+                    ip_address=event_data.get("ip_address"),
+                    user_agent=event_data.get("user_agent", ""),
+                    effective_license=event_data.get("effective_license", ""),
                 )
                 events_to_create.append(event)
 
@@ -176,7 +182,9 @@ def batch_create_usage_events_task(events_data):
                 UsageEvent.objects.bulk_create(events_to_create)
                 successful_events = len(events_to_create)
 
-        logger.info(f"Batch created {successful_events} usage events from {len(events_data)} attempts")
+        logger.info(
+            f"Batch created {successful_events} usage events from {len(events_data)} attempts"
+        )
         return successful_events
 
     except Exception as exc:
@@ -190,66 +198,73 @@ def compute_daily_analytics_task():
     Daily task to compute analytics aggregations
     """
     try:
-        from .models import UsageEvent, Asset, Publisher
-        from django.db.models import Count, Sum
+        from django.db.models import Count
+
+        from .models import Asset, Publisher, UsageEvent
 
         today = timezone.now().date()
 
         # Compute daily statistics
         daily_stats = {
-            'date': today.isoformat(),
-            'total_downloads': UsageEvent.objects.filter(
-                created_at__date=today,
-                usage_kind='file_download'
+            "date": today.isoformat(),
+            "total_downloads": UsageEvent.objects.filter(
+                created_at__date=today, usage_kind="file_download"
             ).count(),
-            'total_views': UsageEvent.objects.filter(
-                created_at__date=today,
-                usage_kind='view'
+            "total_views": UsageEvent.objects.filter(
+                created_at__date=today, usage_kind="view"
             ).count(),
-            'unique_users': UsageEvent.objects.filter(
-                created_at__date=today
-            ).values('developer_user').distinct().count(),
-            'top_assets': [],
-            'top_publishers': []
+            "unique_users": UsageEvent.objects.filter(created_at__date=today)
+            .values("developer_user")
+            .distinct()
+            .count(),
+            "top_assets": [],
+            "top_publishers": [],
         }
 
         # Get top assets by downloads today
-        top_assets = UsageEvent.objects.filter(
-            created_at__date=today,
-            usage_kind='file_download',
-            asset_id__isnull=False
-        ).values('asset_id').annotate(
-            download_count=Count('id')
-        ).order_by('-download_count')[:10]
+        top_assets = (
+            UsageEvent.objects.filter(
+                created_at__date=today,
+                usage_kind="file_download",
+                asset_id__isnull=False,
+            )
+            .values("asset_id")
+            .annotate(download_count=Count("id"))
+            .order_by("-download_count")[:10]
+        )
 
         for asset_stat in top_assets:
             try:
-                asset = Asset.objects.get(id=asset_stat['asset_id'])
-                daily_stats['top_assets'].append({
-                    'asset_id': asset.id,
-                    'title': asset.title,
-                    'download_count': asset_stat['download_count']
-                })
+                asset = Asset.objects.get(id=asset_stat["asset_id"])
+                daily_stats["top_assets"].append(
+                    {
+                        "asset_id": asset.id,
+                        "title": asset.title,
+                        "download_count": asset_stat["download_count"],
+                    }
+                )
             except Asset.DoesNotExist:
                 continue
 
         # Get top publishers by activity today
-        top_publishers = UsageEvent.objects.filter(
-            created_at__date=today,
-            asset_id__isnull=False
-        ).values('asset__publisher').annotate(
-            activity_count=Count('id')
-        ).order_by('-activity_count')[:10]
+        top_publishers = (
+            UsageEvent.objects.filter(created_at__date=today, asset_id__isnull=False)
+            .values("asset__publisher")
+            .annotate(activity_count=Count("id"))
+            .order_by("-activity_count")[:10]
+        )
 
         for pub_stat in top_publishers:
             try:
-                pub_id = pub_stat['asset__publisher']
+                pub_id = pub_stat["asset__publisher"]
                 publisher = Publisher.objects.get(id=pub_id)
-                daily_stats['top_publishers'].append({
-                    'publisher_id': publisher.id,
-                    'name': publisher.name,
-                    'activity_count': pub_stat['activity_count']
-                })
+                daily_stats["top_publishers"].append(
+                    {
+                        "publisher_id": publisher.id,
+                        "name": publisher.name,
+                        "activity_count": pub_stat["activity_count"],
+                    }
+                )
             except Publisher.DoesNotExist:
                 continue
 
@@ -283,9 +298,9 @@ def cleanup_old_usage_events_task(days_to_keep=90):
 
         while True:
             with transaction.atomic():
-                old_events = UsageEvent.objects.filter(
-                    created_at__lt=cutoff_date
-                ).values_list('id', flat=True)[:batch_size]
+                old_events = UsageEvent.objects.filter(created_at__lt=cutoff_date).values_list(
+                    "id", flat=True
+                )[:batch_size]
 
                 old_events_list = list(old_events)
                 if not old_events_list:
@@ -296,7 +311,9 @@ def cleanup_old_usage_events_task(days_to_keep=90):
 
                 logger.info(f"Deleted {len(old_events_list)} old usage events")
 
-        logger.info(f"Cleanup completed: deleted {deleted_count} usage events older than {days_to_keep} days")
+        logger.info(
+            f"Cleanup completed: deleted {deleted_count} usage events older than {days_to_keep} days"
+        )
         return deleted_count
 
     except Exception as exc:
@@ -313,7 +330,7 @@ def update_publisher_statistics_task(publisher_id):
         publisher_id: Publisher ID
     """
     try:
-        from .models import Publisher, Asset, Resource
+        from .models import Asset, Publisher, Resource
 
         publisher = Publisher.objects.get(id=publisher_id)
 
@@ -322,11 +339,11 @@ def update_publisher_statistics_task(publisher_id):
         resources = Resource.objects.filter(publisher=publisher)
 
         stats = {
-            'resources_count': resources.count(),
-            'assets_count': assets.count(),
-            'total_downloads': sum(asset.download_count for asset in assets),
-            'total_views': sum(asset.view_count for asset in assets),
-            'last_updated': timezone.now().isoformat()
+            "resources_count": resources.count(),
+            "assets_count": assets.count(),
+            "total_downloads": sum(asset.download_count for asset in assets),
+            "total_views": sum(asset.view_count for asset in assets),
+            "last_updated": timezone.now().isoformat(),
         }
 
         # Store stats (could be cached in Redis or database)
@@ -359,6 +376,7 @@ def track_event_async(event_data):
         # Fallback to synchronous creation if Celery is unavailable
         try:
             from .models import UsageEvent
+
             UsageEvent.objects.create(**event_data)
             return True
         except Exception as sync_e:

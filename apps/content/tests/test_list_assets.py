@@ -24,7 +24,9 @@ class ListAssetTest(BaseTestCase):
         baker.make(Asset, name="Tafsir Ibn Katheer", license=LicenseChoice.CC_BY_NC)
 
         # Act
-        response = self.client.get("/assets/", data={"license_code": LicenseChoice.CC_BY_SA}, format="json")
+        response = self.client.get(
+            "/assets/", data={"license_code": LicenseChoice.CC_BY_SA}, format="json"
+        )
 
         # Assert
         self.assertEqual(response.status_code, 200, response.content)
@@ -39,7 +41,9 @@ class ListAssetTest(BaseTestCase):
 
         # Act
         response = self.client.get(
-            "/assets/", data={"category": Asset.CategoryChoice.RECITATION}, format="json"
+            "/assets/",
+            data={"category": Asset.CategoryChoice.RECITATION},
+            format="json",
         )
 
         # Assert
@@ -48,7 +52,9 @@ class ListAssetTest(BaseTestCase):
         self.assertEqual(1, len(response_body["results"]))
         self.assertEqual("Muhammad Refaat", response_body["results"][0]["name"])
 
-    def test_list_asset_filter_by_multiple_categories_should_return_filtered_assets(self):
+    def test_list_asset_filter_by_multiple_categories_should_return_filtered_assets(
+        self,
+    ):
         # Arrange
         baker.make(Asset, name="Tafsir Al-Jalalayn", category=Asset.CategoryChoice.TAFSIR)
         baker.make(Asset, name="Muhammad Refaat", category=Asset.CategoryChoice.RECITATION)
@@ -117,11 +123,16 @@ class ListAssetTest(BaseTestCase):
         self.assertEqual(Asset.CategoryChoice.TAFSIR, response_body["results"][1]["category"])
         self.assertEqual(Asset.CategoryChoice.RECITATION, response_body["results"][2]["category"])
 
-    def test_list_assets_when_search_should_return_filtered_assets_by_multiple_fields(self):
+    def test_list_assets_when_search_should_return_filtered_assets_by_multiple_fields(
+        self,
+    ):
         """Test search functionality across name, description, category, and publisher fields."""
         # Arrange
         baker.make(
-            Asset, name="Tafsir Al-Jalalayn", description="This is a tafsir book", category=Asset.CategoryChoice.TAFSIR
+            Asset,
+            name="Tafsir Al-Jalalayn",
+            description="This is a tafsir book",
+            category=Asset.CategoryChoice.TAFSIR,
         )
         baker.make(
             Asset,
@@ -129,7 +140,12 @@ class ListAssetTest(BaseTestCase):
             description="This is a recitation book",
             category=Asset.CategoryChoice.RECITATION,
         )
-        baker.make(Asset, name="King Fahd", description="This is a mushaf book", category=Asset.CategoryChoice.MUSHAF)
+        baker.make(
+            Asset,
+            name="King Fahd",
+            description="This is a mushaf book",
+            category=Asset.CategoryChoice.MUSHAF,
+        )
 
         # Test search by name/category
         response = self.client.get("/assets/", data={"search": "tafsir"}, format="json")

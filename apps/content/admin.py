@@ -1,18 +1,18 @@
-
 from django.contrib import admin
 from django.db.models import Count
 from django.urls import reverse
 from django.utils.html import format_html
 
-from .models import Asset
-from .models import AssetPreview
 from .models import (
-    AssetAccessRequest, AssetAccess,
-    UsageEvent, Distribution
+    Asset,
+    AssetAccess,
+    AssetAccessRequest,
+    AssetPreview,
+    AssetVersion,
+    Resource,
+    ResourceVersion,
+    UsageEvent,
 )
-from .models import AssetVersion
-from .models import Resource
-from .models import ResourceVersion
 
 
 class ResourceVersionInline(admin.TabularInline):
@@ -114,7 +114,14 @@ class ResourceAdmin(admin.ModelAdmin):
 
 @admin.register(ResourceVersion)
 class ResourceVersionAdmin(admin.ModelAdmin):
-    list_display = ["resource", "semvar", "file_type", "is_latest", "size_bytes", "created_at"]
+    list_display = [
+        "resource",
+        "semvar",
+        "file_type",
+        "is_latest",
+        "size_bytes",
+        "created_at",
+    ]
     list_filter = ["file_type", "is_latest", "created_at"]
     search_fields = ["resource__name", "semvar"]
     readonly_fields = ["created_at", "updated_at"]
@@ -152,7 +159,14 @@ class AssetAdmin(admin.ModelAdmin):
         (
             "Multilingual Fields",
             {
-                "fields": ("name_en", "name_ar", "description_en", "description_ar", "long_description_en", "long_description_ar"),
+                "fields": (
+                    "name_en",
+                    "name_ar",
+                    "description_en",
+                    "description_ar",
+                    "long_description_en",
+                    "long_description_ar",
+                ),
                 "classes": ("collapse",),
             },
         ),
@@ -183,9 +197,7 @@ class AssetAdmin(admin.ModelAdmin):
         return (
             super()
             .get_queryset(request)
-            .select_related(
-                "resource__publisher"
-            )
+            .select_related("resource__publisher")
             .annotate(
                 access_requests_count=Count("access_requests"),
                 user_accesses_count=Count("user_accesses"),
@@ -259,122 +271,146 @@ class AssetPreviewAdmin(admin.ModelAdmin):
 
 @admin.register(AssetAccessRequest)
 class AssetAccessRequestAdmin(admin.ModelAdmin):
-    list_display = ['developer_user', 'asset', 'status', 'intended_use', 'created_at', 'approved_at', 'approved_by']
-    list_filter = ['status', 'intended_use', 'created_at', 'approved_at']
-    search_fields = ['developer_user__email', 'asset__name', 'developer_access_reason']
-    readonly_fields = ['created_at', 'approved_at']
-    autocomplete_fields = ['developer_user', 'asset', 'approved_by']
-    
+    list_display = [
+        "developer_user",
+        "asset",
+        "status",
+        "intended_use",
+        "created_at",
+        "approved_at",
+        "approved_by",
+    ]
+    list_filter = ["status", "intended_use", "created_at", "approved_at"]
+    search_fields = ["developer_user__email", "asset__name", "developer_access_reason"]
+    readonly_fields = ["created_at", "approved_at"]
+    autocomplete_fields = ["developer_user", "asset", "approved_by"]
+
     fieldsets = (
-        ('Request Information', {
-            'fields': ('developer_user', 'asset', 'developer_access_reason', 'intended_use')
-        }),
-        ('Admin Review', {
-            'fields': ('status', 'admin_response', 'approved_by')
-        }),
-        ('Timestamps', {
-            'fields': ('created_at', 'approved_at'),
-            'classes': ('collapse',)
-        })
+        (
+            "Request Information",
+            {
+                "fields": (
+                    "developer_user",
+                    "asset",
+                    "developer_access_reason",
+                    "intended_use",
+                )
+            },
+        ),
+        ("Admin Review", {"fields": ("status", "admin_response", "approved_by")}),
+        (
+            "Timestamps",
+            {"fields": ("created_at", "approved_at"), "classes": ("collapse",)},
+        ),
     )
-    
-    actions = ['approve_requests', 'reject_requests']
-    
+
+    actions = ["approve_requests", "reject_requests"]
+
+    @admin.action(description="Approve selected requests")
     def approve_requests(self, request, queryset):
         """Bulk approve access requests"""
         count = 0
-        for access_request in queryset.filter(status='pending'):
+        for access_request in queryset.filter(status="pending"):
             try:
                 access_request.approve_request(approved_by_user=request.user, auto_approved=False)
                 count += 1
             except Exception as e:
-                self.message_user(request, f"Error approving request {access_request.id}: {e}", level='ERROR')
-        
+                self.message_user(
+                    request,
+                    f"Error approving request {access_request.id}: {e}",
+                    level="ERROR",
+                )
+
         self.message_user(request, f"Successfully approved {count} requests.")
-    approve_requests.short_description = "Approve selected requests"
-    
+
+    @admin.action(description="Reject selected requests")
     def reject_requests(self, request, queryset):
         """Bulk reject access requests"""
         count = 0
-        for access_request in queryset.filter(status='pending'):
+        for access_request in queryset.filter(status="pending"):
             try:
-                access_request.reject_request(rejected_by_user=request.user, reason="Bulk rejection from admin")
+                access_request.reject_request(
+                    rejected_by_user=request.user, reason="Bulk rejection from admin"
+                )
                 count += 1
             except Exception as e:
-                self.message_user(request, f"Error rejecting request {access_request.id}: {e}", level='ERROR')
-        
+                self.message_user(
+                    request,
+                    f"Error rejecting request {access_request.id}: {e}",
+                    level="ERROR",
+                )
+
         self.message_user(request, f"Successfully rejected {count} requests.")
-    reject_requests.short_description = "Reject selected requests"
-    
+
     def get_queryset(self, request):
         """Optimize queryset"""
-        return super().get_queryset(request).select_related(
-            'developer_user', 'asset', 'approved_by'
+        return (
+            super().get_queryset(request).select_related("developer_user", "asset", "approved_by")
         )
 
 
 @admin.register(AssetAccess)
 class AssetAccessAdmin(admin.ModelAdmin):
-    list_display = ['user', 'asset', 'effective_license', 'granted_at', 'expires_at', 'is_active_status', 'usage_count']
-    list_filter = ['granted_at', 'expires_at', 'effective_license']
-    search_fields = ['user__email', 'asset__name']
-    readonly_fields = ['granted_at', 'usage_count']
-    raw_id_fields = ['user', 'asset']
-    
+    list_display = [
+        "user",
+        "asset",
+        "effective_license",
+        "granted_at",
+        "expires_at",
+        "is_active_status",
+        "usage_count",
+    ]
+    list_filter = ["granted_at", "expires_at", "effective_license"]
+    search_fields = ["user__email", "asset__name"]
+    readonly_fields = ["granted_at", "usage_count"]
+    raw_id_fields = ["user", "asset"]
+
     fieldsets = (
-        ('Access Information', {
-            'fields': ('asset_access_request', 'user', 'asset')
-        }),
-        ('License Information', {
-            'fields': ('effective_license',)
-        }),
-        ('Access Details', {
-            'fields': ('granted_at', 'expires_at', 'download_url'),
-            'classes': ('collapse',)
-        }),
-        ('Statistics', {
-            'fields': ('usage_count',),
-            'classes': ('collapse',)
-        })
+        ("Access Information", {"fields": ("asset_access_request", "user", "asset")}),
+        ("License Information", {"fields": ("effective_license",)}),
+        (
+            "Access Details",
+            {
+                "fields": ("granted_at", "expires_at", "download_url"),
+                "classes": ("collapse",),
+            },
+        ),
+        ("Statistics", {"fields": ("usage_count",), "classes": ("collapse",)}),
     )
-    
+
     def get_queryset(self, request):
         """Optimize queryset"""
-        return super().get_queryset(request).select_related(
-            'user', 'asset', 'asset_access_request'
-        )
-    
+        return super().get_queryset(request).select_related("user", "asset", "asset_access_request")
+
+    @admin.display(description="Status")
     def is_active_status(self, obj):
         """Show if access is currently active"""
         return "✅ Active" if obj.is_active else "❌ Expired"
-    is_active_status.short_description = 'Status'
 
+    @admin.display(description="Usage Events")
     def usage_count(self, obj):
         """Count usage events for this access"""
-        return UsageEvent.objects.filter(
-            developer_user=obj.user,
-            asset_id=obj.asset.id
-        ).count()
-    usage_count.short_description = 'Usage Events'
+        return UsageEvent.objects.filter(developer_user=obj.user, asset_id=obj.asset.id).count()
 
 
 @admin.register(UsageEvent)
 class UsageEventAdmin(admin.ModelAdmin):
     """Admin for Usage Events"""
-    list_display = ['developer_user', 'usage_kind', 'subject_kind', 'created_at']
-    list_filter = ['usage_kind', 'subject_kind', 'created_at']
-    search_fields = ['developer_user__email']
+
+    list_display = ["developer_user", "usage_kind", "subject_kind", "created_at"]
+    list_filter = ["usage_kind", "subject_kind", "created_at"]
+    search_fields = ["developer_user__email"]
     readonly_fields = [
-        'developer_user',
-        'usage_kind',
-        'subject_kind',
-        'resource_id',
-        'asset_id',
-        'metadata',
-        'ip_address',
-        'user_agent',
-        'created_at',
-        'updated_at',
+        "developer_user",
+        "usage_kind",
+        "subject_kind",
+        "resource_id",
+        "asset_id",
+        "metadata",
+        "ip_address",
+        "user_agent",
+        "created_at",
+        "updated_at",
     ]
 
     # Make the model read-only in admin
@@ -383,4 +419,3 @@ class UsageEventAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
-

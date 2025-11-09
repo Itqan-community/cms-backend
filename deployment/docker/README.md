@@ -71,7 +71,7 @@ The Caddyfile automatically handles:
 
 Ensure your DNS A records point to the correct droplet IPs:
 - `develop.api.cms.itqan.dev` → develop droplet IP
-- `staging.api.cms.itqan.dev` → staging droplet IP  
+- `staging.api.cms.itqan.dev` → staging droplet IP
 - `api.cms.itqan.dev` → production droplet IP
 
 ## Monitoring and Logs
