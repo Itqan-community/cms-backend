@@ -14,9 +14,6 @@ from .base import *  # noqa: F401, F403
 DEBUG = False
 
 ALLOWED_HOSTS = [
-    "api.itqan.com",
-    "cms.itqan.com",
-    ".itqan.com",  # Wildcard subdomain
     "api.cms.itqan.dev",  # Production API domain
     "develop.api.cms.itqan.dev",  # Development environment
     "staging.api.cms.itqan.dev",  # Staging environment
@@ -43,8 +40,6 @@ X_FRAME_OPTIONS = "DENY"
 # ============================================================
 
 CORS_ALLOWED_ORIGINS = [
-    "https://cms.itqan.com",
-    "https://api.itqan.com",
     "https://cms.itqan.dev",
     "https://itqan-cms.netlify.app",
     "https://develop.cms.itqan.dev",
@@ -113,8 +108,6 @@ AWS_S3_OBJECT_PARAMETERS = {
 
 CSRF_TRUSTED_ORIGINS = [
     "https://api.cms.itqan.dev",
-    "https://cms.itqan.com",
-    "https://*.itqan.com",
     "https://develop.cms.itqan.dev",
     "https://develop--itqan-cms.netlify.app",
     "https://staging.cms.itqan.dev",
