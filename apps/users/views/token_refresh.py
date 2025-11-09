@@ -1,6 +1,5 @@
 from typing import Literal
 
-from black import err
 from django.conf import settings
 from ninja import Schema
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
@@ -62,13 +61,13 @@ def refresh_token(request: Request, refresh_data: RefreshTokenIn):
                 ) from e
 
         return response_data
-    except (InvalidToken, TokenError):
+    except (InvalidToken, TokenError) as err:
         raise ItqanError(
             error_name="invalid_refresh_token",
             message="Invalid or expired refresh token",
             status_code=401,
         ) from err
-    except User.DoesNotExist:
+    except User.DoesNotExist as err:
         raise ItqanError(
             error_name="user_not_found",
             message="User associated with token not found",

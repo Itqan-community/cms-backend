@@ -55,12 +55,22 @@ class DownloadResourceTest(BaseTestCase):
             resource = baker.make(Resource, name="Dataset B")
 
             older_file = self.create_file("old.json", b'{"a":1}', "application/json")
+            newer_file = self.create_file("new.json", b'{"a":2}', "application/json")
 
             baker.make(
                 ResourceVersion,
                 resource=resource,
                 semvar="0.9.0",
                 storage_url=older_file,
+                file_type=ResourceVersion.FileTypeChoice.JSON,
+                is_latest=False,
+                created_at="2024-01-01T00:00:00Z",
+            )
+            baker.make(
+                ResourceVersion,
+                resource=resource,
+                semvar="1.1.0",
+                storage_url=newer_file,
                 file_type=ResourceVersion.FileTypeChoice.JSON,
                 is_latest=False,
                 created_at="2025-01-01T00:00:00Z",

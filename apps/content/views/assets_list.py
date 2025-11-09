@@ -4,6 +4,7 @@ from pydantic import Field
 
 from apps.content.models import Asset
 from apps.core.ninja_utils.ordering_base import ordering
+from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
@@ -35,9 +36,7 @@ class AssetFilter(FilterSchema):
 @paginate
 @ordering(ordering_fields=["name", "category"])
 @searching(search_fields=["name", "description", "resource__publisher__name", "category"])
-def list_assets(filters: AssetFilter = None):
-    if filters is None:
-        filters = AssetFilter(Query())
+def list_assets(request: Request, filters: AssetFilter = Query()):
     assets = Asset.objects.all()
     assets = filters.filter(assets)
     return assets

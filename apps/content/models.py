@@ -150,7 +150,6 @@ class ResourceVersion(BaseModel):
         if (not self.size_bytes or self.size_bytes == 0) and self.storage_url:
             from contextlib import suppress
 
-            # Replace try-except-pass block
             with suppress(Exception):
                 # FileField provides size when the file is available
                 self.size_bytes = self.storage_url.size or 0

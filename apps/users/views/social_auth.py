@@ -3,7 +3,6 @@ import secrets
 from allauth.socialaccount.models import SocialApp
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
-from black import err
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 
@@ -29,7 +28,7 @@ def google_oauth_authorize(request: Request):
     try:
         # Get Google social app configuration
         google_app = SocialApp.objects.get(provider="google")
-    except SocialApp.DoesNotExist:
+    except SocialApp.DoesNotExist as err:
         raise ItqanError(
             error_name="google_app_not_configured",
             message="Google OAuth2 application is not configured",

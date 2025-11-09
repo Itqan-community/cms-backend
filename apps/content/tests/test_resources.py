@@ -16,6 +16,19 @@ class ResourceListTest(BaseTestCase):
     def test_list_resources_should_return_all_resources(self):
         # Arrange
         self.authenticate_user(self.user)
+        baker.make(
+            Resource,
+            publisher=self.publisher1,
+            name="Resource 1",
+            category=Resource.CategoryChoice.TAFSIR,
+        )
+        baker.make(
+            Resource,
+            publisher=self.publisher2,
+            name="Resource 2",
+            category=Resource.CategoryChoice.MUSHAF,
+        )
+
         # Act
         response = self.client.get("/resources/")
 
@@ -57,6 +70,8 @@ class ResourceListTest(BaseTestCase):
     def test_list_resources_filter_by_category_should_return_filtered_resources(self):
         # Arrange
         self.authenticate_user(self.user)
+        baker.make(Resource, publisher=self.publisher1, category=Resource.CategoryChoice.TAFSIR)
+        baker.make(Resource, publisher=self.publisher2, category=Resource.CategoryChoice.MUSHAF)
 
         # Act
         response = self.client.get("/resources/?category=tafsir")
@@ -72,6 +87,8 @@ class ResourceListTest(BaseTestCase):
     def test_list_resources_filter_by_status_should_return_filtered_resources(self):
         # Arrange
         self.authenticate_user(self.user)
+        baker.make(Resource, publisher=self.publisher1, status=Resource.StatusChoice.DRAFT)
+        baker.make(Resource, publisher=self.publisher2, status=Resource.StatusChoice.READY)
 
         # Act
         response = self.client.get("/resources/?status=ready")
@@ -87,6 +104,8 @@ class ResourceListTest(BaseTestCase):
     def test_list_resources_filter_by_publisher_should_return_filtered_resources(self):
         # Arrange
         self.authenticate_user(self.user)
+        baker.make(Resource, publisher=self.publisher1)
+        baker.make(Resource, publisher=self.publisher2)
 
         # Act
         response = self.client.get(f"/resources/?publisher_id={self.publisher1.id}")
@@ -102,6 +121,16 @@ class ResourceListTest(BaseTestCase):
     def test_list_resources_search_should_return_matching_resources(self):
         # Arrange
         self.authenticate_user(self.user)
+        baker.make(
+            Resource,
+            publisher=self.publisher1,
+            name="Tafsir Ibn Katheer",
+            description="Classic tafsir",
+        )
+        baker.make(
+            Resource, publisher=self.publisher2, name="Mushaf Uthmani", description="Uthmani script"
+        )
+
         # Act
         response = self.client.get("/resources/?search=tafsir")
 
@@ -136,6 +165,9 @@ class ResourceListTest(BaseTestCase):
     ):
         # Arrange
         self.authenticate_user(self.user)
+        baker.make(Resource, publisher=self.publisher1, name="First Resource")
+        baker.make(Resource, publisher=self.publisher2, name="Second Resource")
+
         # Act
         response = self.client.get("/resources/?ordering=-created_at")
 

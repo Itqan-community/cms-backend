@@ -1,6 +1,6 @@
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
-from ninja import FilterSchema, Schema
+from ninja import FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
@@ -86,10 +86,9 @@ class DetailResourceOut(Schema):
 @paginate
 @ordering(ordering_fields=["name", "category", "created_at", "updated_at"])
 @searching(search_fields=["name", "description", "publisher__name"])
-def list_resources(request: Request, filters: ResourceFilter = None):
+def list_resources(request: Request, filters: ResourceFilter = Query()):
     resources = Resource.objects.select_related("publisher").all()
-    if filters:
-        resources = filters.filter(resources)
+    resources = filters.filter(resources)
     return resources
 
 
