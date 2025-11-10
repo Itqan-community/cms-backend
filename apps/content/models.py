@@ -14,8 +14,248 @@ from apps.core.uploads import (
     upload_to_asset_thumbnails,
     upload_to_resource_files,
 )
+from apps.mixins.helpers import get_mp3_duration_ms
 from apps.publishers.models import Publisher
 from apps.users.models import User
+
+SURAH_NAMES_EN: list[str] = [
+    "Al-Fatihah",
+    "Al-Baqarah",
+    "Aal-Imran",
+    "An-Nisa",
+    "Al-Maidah",
+    "Al-Anam",
+    "Al-Araf",
+    "Al-Anfal",
+    "At-Tawbah",
+    "Yunus",
+    "Hud",
+    "Yusuf",
+    "Ar-Rad",
+    "Ibrahim",
+    "Al-Hijr",
+    "An-Nahl",
+    "Al-Isra",
+    "Al-Kahf",
+    "Maryam",
+    "Ta-Ha",
+    "Al-Anbiya",
+    "Al-Hajj",
+    "Al-Muminun",
+    "An-Nur",
+    "Al-Furqan",
+    "Ash-Shuara",
+    "An-Naml",
+    "Al-Qasas",
+    "Al-Ankabut",
+    "Ar-Rum",
+    "Luqman",
+    "As-Sajdah",
+    "Al-Ahzab",
+    "Saba",
+    "Fatir",
+    "Ya-Sin",
+    "As-Saffat",
+    "Sad",
+    "Az-Zumar",
+    "Ghafir",
+    "Fussilat",
+    "Ash-Shura",
+    "Az-Zukhruf",
+    "Ad-Dukhan",
+    "Al-Jathiyah",
+    "Al-Ahqaf",
+    "Muhammad",
+    "Al-Fath",
+    "Al-Hujurat",
+    "Qaf",
+    "Adh-Dhariyat",
+    "At-Tur",
+    "An-Najm",
+    "Al-Qamar",
+    "Ar-Rahman",
+    "Al-Waqiah",
+    "Al-Hadid",
+    "Al-Mujadila",
+    "Al-Hashr",
+    "Al-Mumtahanah",
+    "As-Saff",
+    "Al-Jumuah",
+    "Al-Munafiqun",
+    "At-Taghabun",
+    "At-Talaq",
+    "At-Tahrim",
+    "Al-Mulk",
+    "Al-Qalam",
+    "Al-Haqqah",
+    "Al-Maarij",
+    "Nuh",
+    "Al-Jinn",
+    "Al-Muzzammil",
+    "Al-Muddaththir",
+    "Al-Qiyamah",
+    "Al-Insan",
+    "Al-Mursalat",
+    "An-Naba",
+    "An-Naziat",
+    "Abasa",
+    "At-Takwir",
+    "Al-Infitar",
+    "Al-Mutaffifin",
+    "Al-Inshiqaq",
+    "Al-Buruj",
+    "At-Tariq",
+    "Al-Ala",
+    "Al-Ghashiyah",
+    "Al-Fajr",
+    "Al-Balad",
+    "Ash-Shams",
+    "Al-Layl",
+    "Ad-Duha",
+    "Ash-Sharh",
+    "At-Tin",
+    "Al-Alaq",
+    "Al-Qadr",
+    "Al-Bayyinah",
+    "Az-Zalzalah",
+    "Al-Adiyat",
+    "Al-Qariah",
+    "At-Takathur",
+    "Al-Asr",
+    "Al-Humazah",
+    "Al-Fil",
+    "Quraysh",
+    "Al-Maun",
+    "Al-Kawthar",
+    "Al-Kafirun",
+    "An-Nasr",
+    "Al-Masad",
+    "Al-Ikhlas",
+    "Al-Falaq",
+    "An-Nas",
+]
+SURAH_NAMES_AR: list[str] = [
+    "الفاتحة",
+    "البقرة",
+    "آل عمران",
+    "النساء",
+    "المائدة",
+    "الانعام",
+    "الاعراف",
+    "الانفال",
+    "التوبة",
+    "يونس",
+    "هود",
+    "يوسف",
+    "الرعد",
+    "ابراهيم",
+    "الحجر",
+    "النحل",
+    "الاسراء",
+    "الكهف",
+    "مريم",
+    "طه",
+    "الانبياء",
+    "الحج",
+    "المؤمنون",
+    "النور",
+    "الفرقان",
+    "الشعراء",
+    "النمل",
+    "القصص",
+    "العنكبوت",
+    "الروم",
+    "لقمان",
+    "السجدة",
+    "الاحزاب",
+    "سبأ",
+    "فاطر",
+    "يس",
+    "الصافات",
+    "ص",
+    "الزمر",
+    "غافر",
+    "فصلت",
+    "الشورى",
+    "الزخرف",
+    "الدخان",
+    "الجاثية",
+    "الاحقاف",
+    "محمد",
+    "الفتح",
+    "الحجرات",
+    "ق",
+    "الذاريات",
+    "الطور",
+    "النجم",
+    "القمر",
+    "الرحمن",
+    "الواقعة",
+    "الحديد",
+    "المجادلة",
+    "الحشر",
+    "الممتحنة",
+    "الصف",
+    "الجمعة",
+    "المنافقون",
+    "التغابن",
+    "الطلاق",
+    "التحريم",
+    "الملك",
+    "القلم",
+    "الحاقة",
+    "المعارج",
+    "نوح",
+    "الجن",
+    "المزمل",
+    "المدثر",
+    "القيامة",
+    "الانسان",
+    "المرسلات",
+    "النبإ",
+    "النازعات",
+    "عبس",
+    "التكوير",
+    "الانفطار",
+    "المطففين",
+    "الانشقاق",
+    "البروج",
+    "الطارق",
+    "الاعلى",
+    "الغاشية",
+    "الفجر",
+    "البلد",
+    "الشمس",
+    "الليل",
+    "الضحى",
+    "الشرح",
+    "التين",
+    "العلق",
+    "القدر",
+    "البينة",
+    "الزلزلة",
+    "العاديات",
+    "القارعة",
+    "التكاثر",
+    "العصر",
+    "الهمزة",
+    "الفيل",
+    "قريش",
+    "الماعون",
+    "الكوثر",
+    "الكافرون",
+    "النصر",
+    "المسد",
+    "الاخلاص",
+    "الفلق",
+    "الناس",
+]
+SURAH_NAME_CHOICES_EN: list[tuple[str, str]] = [("", "---------")] + [
+    (n, n) for n in SURAH_NAMES_EN
+]
+SURAH_NAME_CHOICES_AR: list[tuple[str, str]] = [("", "---------")] + [
+    (n, n) for n in SURAH_NAMES_AR
+]
 
 
 class LicenseChoice(models.TextChoices):
@@ -205,6 +445,24 @@ class Asset(BaseModel):
     version = models.CharField(max_length=50, help_text="Asset version")
 
     language = models.CharField(max_length=10, help_text="Asset language code")
+
+    # Recitation-specific fields (maybe needs normalizations later)
+    reciter = models.ForeignKey(
+        "Reciter",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="assets",
+        help_text="Reciter for recitation assets",
+    )
+    riwayah = models.ForeignKey(
+        "Riwayah",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="assets",
+        help_text="Riwayah for recitation assets",
+    )
 
     objects = ActiveObjectsManager()
     all_objects = AllObjectsManager()
@@ -579,3 +837,139 @@ class Distribution(BaseModel):
 
     def __str__(self):
         return f"Distribution(asset={self.asset_version.asset.name}, channel={self.channel})"
+
+
+class Reciter(BaseModel):
+    """Quran reciter/qari (e.g. Mshari Al-Afasi, Saad Al-Ghamidi, etc)"""
+
+    name = models.CharField(max_length=255, unique=True)
+    name_ar = models.CharField(max_length=255, unique=True)
+    slug = models.SlugField(unique=True, db_index=True)
+    is_active = models.BooleanField(default=True)
+
+    objects = ActiveObjectsManager()
+    all_objects = AllObjectsManager()
+
+    def save(self, *args, **kwargs) -> None:
+        if not self.slug:
+            self.slug = slugify(self.name)[:50]
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return f"Reciter(name={self.name})"
+
+
+class Riwayah(BaseModel):
+    """Quran recitation tradition/transmission (e.g. Hafs, Warsh, etc)"""
+
+    name = models.CharField(max_length=255, unique=True)
+    name_ar = models.CharField(max_length=255, unique=True)
+    slug = models.SlugField(unique=True, db_index=True)
+    is_active = models.BooleanField(default=True)
+
+    objects = ActiveObjectsManager()
+    all_objects = AllObjectsManager()
+
+    def save(self, *args, **kwargs) -> None:
+        if not self.slug:
+            self.slug = slugify(self.name)[:50]
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return f"Riwayah(name={self.name})"
+
+
+class RecitationSurahTrack(BaseModel):
+    """Audio track per-surah for a recitation Asset"""
+
+    asset = models.ForeignKey(
+        Asset,
+        on_delete=models.CASCADE,
+        related_name="recitation_tracks",
+        help_text="Parent Asset representing the recitation set",
+    )
+    surah_number = models.PositiveSmallIntegerField(help_text="Surah number (1..114)")
+    surah_name = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        choices=SURAH_NAME_CHOICES_EN,
+        help_text="Surah name (English) - selectable. Auto-sync not enforced.",
+    )
+    surah_name_ar = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        choices=SURAH_NAME_CHOICES_AR,
+        help_text="Surah name (Arabic) - selectable. Auto-sync not enforced.",
+    )
+    chapter_number = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text="Juz/Chapter number (1..30)"
+    )
+    audio_file = models.FileField(
+        upload_to=upload_to_asset_files,
+        validators=[FileExtensionValidator(allowed_extensions=["mp3"])],
+        help_text="Per-surah audio file (MP3)",
+    )
+    duration_ms = models.PositiveIntegerField(
+        default=0,
+        help_text="Audio track duration in milliseconds (auto-calculated upon uploading file)",
+    )
+    size_bytes = models.PositiveBigIntegerField(
+        default=0, help_text="Audio file size in bytes (auto-calculated upon uploading file)"
+    )
+
+    objects = ActiveObjectsManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        unique_together = [["asset", "surah_number"]]
+        indexes = [
+            models.Index(fields=["asset", "surah_number"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"RecitationSurahTrack(asset={self.asset_id}, surah={self.surah_number})"
+
+    def save(self, *args, **kwargs) -> None:
+        # Auto-compute duration and size when an MP3 file is present
+        if self.audio_file:
+            try:
+                self.size_bytes = int(getattr(self.audio_file, "size", 0) or 0)
+            except Exception:
+                self.size_bytes = 0
+            self.duration_ms = get_mp3_duration_ms(self.audio_file)
+        super().save(*args, **kwargs)
+
+
+class RecitationAyahTiming(BaseModel):
+    """Timing information per-ayah within a RecitationSurahTrack"""
+
+    track = models.ForeignKey(
+        RecitationSurahTrack, on_delete=models.CASCADE, related_name="ayah_timings"
+    )
+    ayah_key = models.CharField(
+        max_length=20, help_text='Format "surah_number:ayah_number" e.g. "2:255"'
+    )
+    start_ms = models.PositiveIntegerField(help_text="Start offset in milliseconds")
+    end_ms = models.PositiveIntegerField(help_text="End offset in milliseconds")
+    duration_ms = models.PositiveIntegerField(
+        default=0, help_text="Duration in milliseconds (auto-calculated as end_ms - start_ms)"
+    )
+
+    objects = ActiveObjectsManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        unique_together = [["track", "ayah_key"]]
+
+    def __str__(self) -> str:
+        return f"RecitationAyahTiming(track={self.track_id}, ayah_key={self.ayah_key})"
+
+    def save(self, *args, **kwargs) -> None:
+        # Auto compute ayah duration
+        try:
+            self.duration_ms = max(0, int(self.end_ms) - int(self.start_ms))
+        except Exception:
+            self.duration_ms = 0
+        super().save(*args, **kwargs)

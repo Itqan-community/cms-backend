@@ -47,3 +47,4 @@ black==23.7.*
 isort==5.12.*
 ruff==0.14.*
 pre-commit==4.3.0
+mutagen>=1.47.0
