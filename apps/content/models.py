@@ -8,7 +8,7 @@ from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
 from apps.core.mixins.constants import SURAH_NAMES_AR, SURAH_NAMES_EN
-from apps.core.models import ActiveObjectsManager, AllObjectsManager, BaseModel
+from apps.core.models import BaseModel
 from apps.core.uploads import (
     upload_to_asset_files,
     upload_to_asset_preview_images,
@@ -73,9 +73,6 @@ class Resource(BaseModel):
         help_text="Asset license",
     )
 
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
-
     def __str__(self):
         return f"Resource(name={self.name} category={self.category})"
 
@@ -136,9 +133,6 @@ class ResourceVersion(BaseModel):
     size_bytes = models.PositiveBigIntegerField(default=0, help_text="File size in bytes")
 
     is_latest = models.BooleanField(default=False, help_text="Whether this is the latest version")
-
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
 
     class Meta:
         verbose_name = "Resource Version"
@@ -227,9 +221,6 @@ class Asset(BaseModel):
         help_text="Riwayah for recitation assets",
     )
 
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
-
     def __str__(self):
         return f"Asset(name={self.name}, category={self.category})"
 
@@ -264,7 +255,6 @@ class Asset(BaseModel):
         return Asset.objects.filter(
             category=self.category,
             resource__publisher=self.resource.publisher,
-            is_active=True,
         ).exclude(id=self.id)[:limit]
 
     def get_latest_version(self):
@@ -312,9 +302,6 @@ class AssetVersion(BaseModel):
 
     size_bytes = models.PositiveBigIntegerField(default=0, help_text="File size in bytes")
 
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
-
     def __str__(self):
         return f"AssetVersion(asset={self.asset.name}, version={self.resource_version.semvar})"
 
@@ -356,9 +343,6 @@ class AssetPreview(BaseModel):
     title = models.CharField(max_length=255, blank=True, default="")
     description = models.TextField(blank=True, default="")
     order = models.PositiveIntegerField(default=1, help_text="Display order")
-
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
 
     def __str__(self):
         return f"AssetPreview(asset={self.asset.name}, order={self.order})"
@@ -408,9 +392,6 @@ class AssetAccessRequest(BaseModel):
         related_name="approved_asset_requests",
     )
 
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
-
     def __str__(self):
         return f"AssetAccessRequest(user={self.developer_user.email}, asset={self.asset.name}, status={self.status})"
 
@@ -439,9 +420,6 @@ class AssetAccess(BaseModel):
         blank=True,
         help_text="Direct download URL, can contain signed URL if needed",
     )
-
-    objects = AllObjectsManager()
-    all_objects = AllObjectsManager()
 
     class Meta:
         unique_together = ["user", "asset"]
@@ -508,9 +486,6 @@ class UsageEvent(BaseModel):
     effective_license = models.CharField(
         max_length=50, choices=LicenseChoice, help_text="License at time of usage"
     )
-
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
 
     class Meta:
         constraints = [
@@ -592,9 +567,6 @@ class Distribution(BaseModel):
         help_text="Channel for accessing the asset",
     )
 
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
-
     class Meta:
         unique_together = [["asset_version", "channel"]]
 
@@ -609,9 +581,6 @@ class Reciter(BaseModel):
     name_ar = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(unique=True, db_index=True)
     is_active = models.BooleanField(default=True)
-
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
 
     def save(self, *args, **kwargs) -> None:
         if not self.slug:
@@ -629,9 +598,6 @@ class Riwayah(BaseModel):
     name_ar = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(unique=True, db_index=True)
     is_active = models.BooleanField(default=True)
-
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
 
     def save(self, *args, **kwargs) -> None:
         if not self.slug:
@@ -690,9 +656,6 @@ class RecitationSurahTrack(BaseModel):
         default=0, help_text="Audio file size in bytes (auto-calculated upon uploading file)"
     )
 
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
-
     class Meta:
         unique_together = [["asset", "surah_number"]]
         indexes = [
@@ -727,9 +690,6 @@ class RecitationAyahTiming(BaseModel):
     duration_ms = models.PositiveIntegerField(
         default=0, help_text="Duration in milliseconds (auto-calculated as end_ms - start_ms)"
     )
-
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
 
     class Meta:
         unique_together = [["track", "ayah_key"]]

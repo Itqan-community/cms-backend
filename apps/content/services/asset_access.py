@@ -20,7 +20,7 @@ def approve_request(
 
     asset_access_request.save()
 
-    access = AssetAccess.all_objects.create(
+    access = AssetAccess.objects.create(
         asset_access_request=asset_access_request,
         user=asset_access_request.developer_user,
         asset=asset_access_request.asset,
@@ -82,7 +82,7 @@ def request_access(
 
 def user_has_access(user: User, asset: Asset) -> bool:
     try:
-        access = AssetAccess.all_objects.get(user=user, asset=asset)
+        access = AssetAccess.objects.get(user=user, asset=asset)
         return access.is_active
     except AssetAccess.DoesNotExist:
         return False
