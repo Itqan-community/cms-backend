@@ -17,7 +17,7 @@ from apps.publishers.models import Publisher
 from apps.users.models import User
 
 
-class AssetDownloadTest(BaseTestCase):
+class TestAssetDownload(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.publisher = baker.make(Publisher, name="Test Publisher")

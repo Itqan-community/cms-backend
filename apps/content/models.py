@@ -7,13 +7,16 @@ from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
-from apps.core.models import ActiveObjectsManager, AllObjectsManager, BaseModel
+from apps.core.mixins.constants import SURAH_NAMES_AR, SURAH_NAMES_EN
+from apps.core.models import BaseModel
 from apps.core.uploads import (
     upload_to_asset_files,
     upload_to_asset_preview_images,
     upload_to_asset_thumbnails,
+    upload_to_recitation_surah_track_files,
     upload_to_resource_files,
 )
+from apps.mixins.helpers import get_mp3_duration_ms
 from apps.publishers.models import Publisher
 from apps.users.models import User
 
@@ -69,9 +72,6 @@ class Resource(BaseModel):
         default=LicenseChoice.CC0,
         help_text="Asset license",
     )
-
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
 
     def __str__(self):
         return f"Resource(name={self.name} category={self.category})"
@@ -133,9 +133,6 @@ class ResourceVersion(BaseModel):
     size_bytes = models.PositiveBigIntegerField(default=0, help_text="File size in bytes")
 
     is_latest = models.BooleanField(default=False, help_text="Whether this is the latest version")
-
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
 
     class Meta:
         verbose_name = "Resource Version"
@@ -206,8 +203,23 @@ class Asset(BaseModel):
 
     language = models.CharField(max_length=10, help_text="Asset language code")
 
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
+    # Recitation-specific fields (maybe needs normalizations later)
+    reciter = models.ForeignKey(
+        "Reciter",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="assets",
+        help_text="Reciter for recitation assets",
+    )
+    riwayah = models.ForeignKey(
+        "Riwayah",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="assets",
+        help_text="Riwayah for recitation assets",
+    )
 
     def __str__(self):
         return f"Asset(name={self.name}, category={self.category})"
@@ -243,7 +255,6 @@ class Asset(BaseModel):
         return Asset.objects.filter(
             category=self.category,
             resource__publisher=self.resource.publisher,
-            is_active=True,
         ).exclude(id=self.id)[:limit]
 
     def get_latest_version(self):
@@ -291,9 +302,6 @@ class AssetVersion(BaseModel):
 
     size_bytes = models.PositiveBigIntegerField(default=0, help_text="File size in bytes")
 
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
-
     def __str__(self):
         return f"AssetVersion(asset={self.asset.name}, version={self.resource_version.semvar})"
 
@@ -335,9 +343,6 @@ class AssetPreview(BaseModel):
     title = models.CharField(max_length=255, blank=True, default="")
     description = models.TextField(blank=True, default="")
     order = models.PositiveIntegerField(default=1, help_text="Display order")
-
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
 
     def __str__(self):
         return f"AssetPreview(asset={self.asset.name}, order={self.order})"
@@ -387,9 +392,6 @@ class AssetAccessRequest(BaseModel):
         related_name="approved_asset_requests",
     )
 
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
-
     def __str__(self):
         return f"AssetAccessRequest(user={self.developer_user.email}, asset={self.asset.name}, status={self.status})"
 
@@ -418,9 +420,6 @@ class AssetAccess(BaseModel):
         blank=True,
         help_text="Direct download URL, can contain signed URL if needed",
     )
-
-    objects = AllObjectsManager()
-    all_objects = AllObjectsManager()
 
     class Meta:
         unique_together = ["user", "asset"]
@@ -487,9 +486,6 @@ class UsageEvent(BaseModel):
     effective_license = models.CharField(
         max_length=50, choices=LicenseChoice, help_text="License at time of usage"
     )
-
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
 
     class Meta:
         constraints = [
@@ -571,11 +567,140 @@ class Distribution(BaseModel):
         help_text="Channel for accessing the asset",
     )
 
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
-
     class Meta:
         unique_together = [["asset_version", "channel"]]
 
     def __str__(self):
         return f"Distribution(asset={self.asset_version.asset.name}, channel={self.channel})"
+
+
+class Reciter(BaseModel):
+    """Quran reciter/qari (e.g. Mshari Al-Afasi, Saad Al-Ghamidi, etc)"""
+
+    name = models.CharField(max_length=255, unique=True)
+    name_ar = models.CharField(max_length=255, unique=True)
+    slug = models.SlugField(unique=True, db_index=True)
+    is_active = models.BooleanField(default=True)
+
+    def save(self, *args, **kwargs) -> None:
+        if not self.slug:
+            self.slug = slugify(self.name)[:50]
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return f"Reciter(name={self.name})"
+
+
+class Riwayah(BaseModel):
+    """Quran recitation tradition/transmission (e.g. Hafs, Warsh, etc)"""
+
+    name = models.CharField(max_length=255, unique=True)
+    name_ar = models.CharField(max_length=255, unique=True)
+    slug = models.SlugField(unique=True, db_index=True)
+    is_active = models.BooleanField(default=True)
+
+    def save(self, *args, **kwargs) -> None:
+        if not self.slug:
+            self.slug = slugify(self.name)[:50]
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return f"Riwayah(name={self.name})"
+
+
+SURAH_NAME_CHOICES_EN: list[tuple[str, str]] = [("", "---------")] + [
+    (n, n) for n in SURAH_NAMES_EN
+]
+SURAH_NAME_CHOICES_AR: list[tuple[str, str]] = [("", "---------")] + [
+    (n, n) for n in SURAH_NAMES_AR
+]
+
+
+class RecitationSurahTrack(BaseModel):
+    """Audio track per-surah for a recitation Asset"""
+
+    asset = models.ForeignKey(
+        Asset,
+        on_delete=models.CASCADE,
+        related_name="recitation_tracks",
+        help_text="Parent Asset representing the recitation set",
+    )
+    surah_number = models.PositiveSmallIntegerField(help_text="Surah number (1..114)")
+    surah_name = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        choices=SURAH_NAME_CHOICES_EN,
+        help_text="Surah name (English) - selectable. Auto-sync not enforced.",
+    )
+    surah_name_ar = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        choices=SURAH_NAME_CHOICES_AR,
+        help_text="Surah name (Arabic) - selectable. Auto-sync not enforced.",
+    )
+    chapter_number = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text="Juz/Chapter number (1..30)"
+    )
+    audio_file = models.FileField(
+        upload_to=upload_to_recitation_surah_track_files,
+        validators=[FileExtensionValidator(allowed_extensions=["mp3"])],
+        help_text="Per-surah audio file (MP3)",
+    )
+    duration_ms = models.PositiveIntegerField(
+        default=0,
+        help_text="Audio track duration in milliseconds (auto-calculated upon uploading file)",
+    )
+    size_bytes = models.PositiveBigIntegerField(
+        default=0, help_text="Audio file size in bytes (auto-calculated upon uploading file)"
+    )
+
+    class Meta:
+        unique_together = [["asset", "surah_number"]]
+        indexes = [
+            models.Index(fields=["asset", "surah_number"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"RecitationSurahTrack(asset={self.asset_id}, surah={self.surah_number})"
+
+    def save(self, *args, **kwargs) -> None:
+        # Auto-compute duration and size when an MP3 file is present
+        if self.audio_file:
+            try:
+                self.size_bytes = int(getattr(self.audio_file, "size", 0) or 0)
+            except Exception:
+                self.size_bytes = 0
+            self.duration_ms = get_mp3_duration_ms(self.audio_file)
+        super().save(*args, **kwargs)
+
+
+class RecitationAyahTiming(BaseModel):
+    """Timing information per-ayah within a RecitationSurahTrack"""
+
+    track = models.ForeignKey(
+        RecitationSurahTrack, on_delete=models.CASCADE, related_name="ayah_timings"
+    )
+    ayah_key = models.CharField(
+        max_length=20, help_text='Format "surah_number:ayah_number" e.g. "2:255"'
+    )
+    start_ms = models.PositiveIntegerField(help_text="Start offset in milliseconds")
+    end_ms = models.PositiveIntegerField(help_text="End offset in milliseconds")
+    duration_ms = models.PositiveIntegerField(
+        default=0, help_text="Duration in milliseconds (auto-calculated as end_ms - start_ms)"
+    )
+
+    class Meta:
+        unique_together = [["track", "ayah_key"]]
+
+    def __str__(self) -> str:
+        return f"RecitationAyahTiming(track={self.track_id}, ayah_key={self.ayah_key})"
+
+    def save(self, *args, **kwargs) -> None:
+        # Auto compute ayah duration
+        try:
+            self.duration_ms = max(0, int(self.end_ms) - int(self.start_ms))
+        except Exception:
+            self.duration_ms = 0
+        super().save(*args, **kwargs)

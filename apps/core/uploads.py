@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from django.utils.text import slugify
 
 if TYPE_CHECKING:
+    from apps.content.models import RecitationSurahTrack
     from apps.publishers.models import Publisher
 
 
@@ -59,3 +60,12 @@ def upload_to_resource_files(instance, filename):
     safe_filename = slugify(filename.rsplit(".", 1)[0]) + "." + filename.split(".")[-1].lower()
     safe_semvar = slugify(instance.semvar)
     return f"uploads/resources/{instance.resource.id}/versions/{safe_semvar}/{safe_filename}"
+
+
+def upload_to_recitation_surah_track_files(instance: "RecitationSurahTrack", filename: str) -> str:
+    """
+    Generate upload path for recitation surah track audio files.
+    Format: uploads/assets/{asset_id}/recitations/{safe_filename}
+    """
+    safe_filename = slugify(filename.rsplit(".", 1)[0]) + "." + filename.split(".")[-1].lower()
+    return f"uploads/assets/{instance.asset_id}/recitations/{safe_filename}"

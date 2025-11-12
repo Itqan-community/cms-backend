@@ -107,43 +107,6 @@ class DownloadResourceTest(BaseTestCase):
         # Assert
         self.assertEqual(404, response.status_code)
 
-    def test_download_returns_404_when_resource_is_inactive(self):
-        # Arrange
-        self.authenticate_user(self.user)
-        resource = baker.make(Resource, is_active=False)
-
-        # Act
-        response = self.client.get(f"/resources/{resource.id}/download/", format="json")
-
-        # Assert
-        self.assertEqual(404, response.status_code)
-
-    def test_download_returns_404_when_only_inactive_versions_exist(self):
-        # Arrange
-        self.authenticate_user(self.user)
-        with (
-            tempfile.TemporaryDirectory() as tmpdir,
-            override_settings(MEDIA_ROOT=tmpdir),
-        ):
-            resource = baker.make(Resource, name="Dataset D")
-            file_obj = self.create_file("data.csv", b"x,y\n3,4\n", "text/csv")
-            # Create only inactive versions (is_active=False) which default manager will not return
-            baker.make(
-                ResourceVersion,
-                resource=resource,
-                semvar="0.1.0",
-                storage_url=file_obj,
-                file_type=ResourceVersion.FileTypeChoice.CSV,
-                is_latest=True,
-                is_active=False,
-            )
-
-            # Act
-            response = self.client.get(f"/resources/{resource.id}/download/", format="json")
-
-            # Assert
-            self.assertEqual(404, response.status_code)
-
     def test_download_returns_404_when_version_has_no_storage_url_value(self):
         # Arrange
         self.authenticate_user(self.user)

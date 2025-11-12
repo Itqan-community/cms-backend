@@ -44,7 +44,7 @@ def download_asset(request: Request, id: int):
         raise PermissionDenied(_("You do not have access to this asset"))
 
     # Get download URL
-    download_url = AssetAccess.all_objects.get(user=request.user, asset=asset).get_download_url()
+    download_url = AssetAccess.objects.get(user=request.user, asset=asset).get_download_url()
     if not download_url:
         raise Http404("Download URL not available")
 

@@ -3,7 +3,7 @@ from django.db import models
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
-from apps.core.models import ActiveObjectsManager, AllObjectsManager, BaseModel
+from apps.core.models import BaseModel
 from apps.core.uploads import upload_to_publisher_icons
 from apps.users.models import User
 
@@ -34,9 +34,6 @@ class Publisher(BaseModel):
 
     members = models.ManyToManyField(User, through="PublisherMember", related_name="publishers")
 
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
-
     def __str__(self):
         return f"Publisher(name={self.name})"
 
@@ -62,9 +59,6 @@ class PublisherMember(BaseModel):
         choices=RoleChoice.choices,
         help_text="Member's role in the publisher, just for information. This field WILL NOT be used for permission checks. or any code checks",
     )
-
-    objects = ActiveObjectsManager()
-    all_objects = AllObjectsManager()
 
     class Meta:
         unique_together = ["publisher", "user"]

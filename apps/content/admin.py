@@ -9,8 +9,12 @@ from .models import (
     AssetAccessRequest,
     AssetPreview,
     AssetVersion,
+    RecitationAyahTiming,
+    RecitationSurahTrack,
+    Reciter,
     Resource,
     ResourceVersion,
+    Riwayah,
     UsageEvent,
 )
 
@@ -419,3 +423,53 @@ class UsageEventAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+
+@admin.register(Reciter)
+class ReciterAdmin(admin.ModelAdmin):
+    list_display = ["id", "name", "name_ar", "slug", "is_active", "created_at"]
+    list_filter = ["is_active", "created_at"]
+    search_fields = ["name", "slug"]
+    prepopulated_fields = {"slug": ("name",)}
+    readonly_fields = ["created_at", "updated_at"]
+
+
+@admin.register(Riwayah)
+class RiwayahAdmin(admin.ModelAdmin):
+    list_display = ["id", "name", "name_ar", "slug", "is_active", "created_at"]
+    list_filter = ["is_active", "created_at"]
+    search_fields = ["name", "slug"]
+    prepopulated_fields = {"slug": ("name",)}
+    readonly_fields = ["created_at", "updated_at"]
+
+
+@admin.register(RecitationSurahTrack)
+class RecitationSurahTrackAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "asset",
+        "surah_number",
+        "surah_name",
+        "duration_ms",
+        "size_bytes",
+        "created_at",
+    ]
+    list_filter = ["asset", "chapter_number", "created_at"]
+    search_fields = ["asset__name", "surah_name", "surah_name_ar"]
+    readonly_fields = ["created_at", "updated_at", "size_bytes", "duration_ms"]
+    raw_id_fields = ["asset"]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("asset")
+
+
+@admin.register(RecitationAyahTiming)
+class RecitationAyahTimingAdmin(admin.ModelAdmin):
+    list_display = ["id", "track", "ayah_key", "start_ms", "end_ms", "duration_ms"]
+    list_filter = ["track__asset", "track__surah_number"]
+    search_fields = ["ayah_key", "track__surah_name"]
+    readonly_fields = ["created_at", "updated_at", "duration_ms"]
+    raw_id_fields = ["track"]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("track", "track__asset")
