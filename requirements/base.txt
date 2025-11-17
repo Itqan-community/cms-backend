@@ -38,9 +38,7 @@ python-dateutil==2.8.*
 requests==2.31.*
 
 # Scalar (Django Ninja integration)
-# The upstream package requires Python >= 3.11.
-# Enable automatically only on Python >= 3.11; skip on 3.10 to avoid install errors.
-git+https://github.com/scalar/scalar.git#subdirectory=integrations/django-ninja ; python_version >= "3.11"
+git+https://github.com/scalar/scalar.git#subdirectory=integrations/django-ninja
 
 # Dev / Tooling
 black==23.7.*
