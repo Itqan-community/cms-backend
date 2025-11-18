@@ -1,7 +1,7 @@
 from model_bakery import baker
 
-from apps.publishers.models import Publisher
 from apps.core.tests import BaseTestCase
+from apps.publishers.models import Publisher
 
 
 class DetailPublisherTest(BaseTestCase):
@@ -29,7 +29,8 @@ class DetailPublisherTest(BaseTestCase):
         self.assertEqual("Tafsir Center", body["name"])
         self.assertEqual("tafsir-center", body["slug"])
         self.assertEqual(
-            "A comprehensive Islamic research center focused on Quranic studies and tafsir", body["description"]
+            "A comprehensive Islamic research center focused on Quranic studies and tafsir",
+            body["description"],
         )
         self.assertEqual("Riyadh, Saudi Arabia", body["address"])
         self.assertEqual("https://tafsircenter.org", body["website"])
@@ -47,7 +48,9 @@ class DetailPublisherTest(BaseTestCase):
         # Assert
         self.assertEqual(404, response.status_code, response.content)
 
-    def test_detail_publishers_where_response_schema_should_include_all_required_fields(self):
+    def test_detail_publishers_where_response_schema_should_include_all_required_fields(
+        self,
+    ):
         # Arrange
         publisher = baker.make(
             Publisher,
@@ -81,11 +84,21 @@ class DetailPublisherTest(BaseTestCase):
         for field in required_fields:
             self.assertIn(field, body, f"Missing required field: {field}")
 
-    def test_detail_publishers_where_verified_status_should_return_correct_boolean(self):
+    def test_detail_publishers_where_verified_status_should_return_correct_boolean(
+        self,
+    ):
         # Arrange
-        verified_publisher = baker.make(Publisher, name="Verified Publisher", is_verified=True, icon_url="verified.png")
+        verified_publisher = baker.make(
+            Publisher,
+            name="Verified Publisher",
+            is_verified=True,
+            icon_url="verified.png",
+        )
         unverified_publisher = baker.make(
-            Publisher, name="Unverified Publisher", is_verified=False, icon_url="unverified.png"
+            Publisher,
+            name="Unverified Publisher",
+            is_verified=False,
+            icon_url="unverified.png",
         )
 
         # Act + Assert (verified)
@@ -96,13 +109,17 @@ class DetailPublisherTest(BaseTestCase):
         self.assertEqual("Verified Publisher", body_verified["name"])
 
         # Act + Assert (unverified)
-        response_unverified = self.client.get(f"/publishers/{unverified_publisher.id}/", format="json")
+        response_unverified = self.client.get(
+            f"/publishers/{unverified_publisher.id}/", format="json"
+        )
         self.assertEqual(200, response_unverified.status_code, response_unverified.content)
         body_unverified = response_unverified.json()
         self.assertFalse(body_unverified["is_verified"])
         self.assertEqual("Unverified Publisher", body_unverified["name"])
 
-    def test_detail_publishers_where_empty_optional_fields_should_return_empty_values(self):
+    def test_detail_publishers_where_empty_optional_fields_should_return_empty_values(
+        self,
+    ):
         # Arrange
         publisher = baker.make(
             Publisher,
@@ -128,30 +145,22 @@ class DetailPublisherTest(BaseTestCase):
         # icon_url can be None or empty string when no file is uploaded
         self.assertTrue(body["icon_url"] == "" or body["icon_url"] is None)
 
-    def test_detail_publishers_where_complex_social_links_should_return_correct_json(self):
+    def test_detail_publishers_where_complex_social_links_should_return_correct_json(
+        self,
+    ):
         # Arrange
-        complex_social_links = {
-            "twitter": "@publisher_handle",
-            "facebook": "publisherpage",
-            "instagram": "publisher_insta",
-            "youtube": "publisherchannel",
-            "linkedin": "company/publisher",
-            "website": "https://publisher.com",
-            "custom_links": {"blog": "https://blog.publisher.com", "newsletter": "https://newsletter.publisher.com"},
-        }
-        publisher = baker.make(
-            Publisher, name="Social Media Publisher", icon_url="social-icon.png"
-        )
+        publisher = baker.make(Publisher, name="Social Media Publisher", icon_url="social-icon.png")
 
         # Act
         response = self.client.get(f"/publishers/{publisher.id}/", format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
-        body = response.json()
         # social_links field no longer exists in the API
 
-    def test_detail_publishers_where_invalid_requests_should_return_appropriate_errors(self):
+    def test_detail_publishers_where_invalid_requests_should_return_appropriate_errors(
+        self,
+    ):
         """Test error handling for invalid integer formats and empty paths."""
         # Test invalid integer formats - should return 400
         invalid_formats = [
@@ -176,7 +185,9 @@ class DetailPublisherTest(BaseTestCase):
         response = self.client.get("/publishers/", format="json")
         self.assertEqual(404, response.status_code, response.content)
 
-    def test_detail_publishers_where_multiple_publishers_should_return_correct_specific_publisher(self):
+    def test_detail_publishers_where_multiple_publishers_should_return_correct_specific_publisher(
+        self,
+    ):
         # Arrange
         baker.make(
             Publisher,
@@ -232,4 +243,4 @@ class DetailPublisherTest(BaseTestCase):
         self.assertIsInstance(body["website"], str)
         self.assertIsInstance(body["is_verified"], bool)
         self.assertIsInstance(body["contact_email"], str)
-        self.assertTrue(isinstance(body["icon_url"], (str, type(None))))
+        self.assertTrue(isinstance(body["icon_url"], str | type(None)))

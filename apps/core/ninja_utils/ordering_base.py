@@ -1,19 +1,15 @@
-import inspect
-from abc import ABC
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Callable
 from functools import wraps
-from typing import Any
-from typing import cast
-from typing import overload
+import inspect
+from typing import Any, cast, overload
 
 from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.db.models import QuerySet
 from django.http import HttpRequest
 from django.utils.module_loading import import_string
-from ninja import Query
-from ninja import Schema
+from ninja import Query, Schema
 from ninja.constants import NOT_SET
 from ninja.signature import is_async
 from ninja.utils import contribute_operation_args
@@ -44,7 +40,9 @@ def ordering() -> Callable[..., Any]:  # pragma: no cover
 
 
 @overload
-def ordering(func_or_ordering_class: Any = NOT_SET, **paginator_params: Any) -> Callable[..., Any]:  # pragma: no cover
+def ordering(
+    func_or_ordering_class: Any = NOT_SET, **paginator_params: Any
+) -> Callable[..., Any]:  # pragma: no cover
     ...
 
 
@@ -78,20 +76,33 @@ def _inject_sorter(
     sorter_operation_class = OrderingOperation
     if is_async(func):
         sorter_operation_class = AsyncOrderingOperation
-    sorter_operation = sorter_operation_class(sorter=sorter, view_func=func, sorter_kwargs_name=sorter_kwargs_name)
+    sorter_operation = sorter_operation_class(
+        sorter=sorter, view_func=func, sorter_kwargs_name=sorter_kwargs_name
+    )
 
     return sorter_operation.as_view
 
 
 class OrderingOperation:
-    def __init__(self, *, sorter: OrderingBase, view_func: Callable, sorter_kwargs_name: str = "ordering") -> None:
+    def __init__(
+        self,
+        *,
+        sorter: OrderingBase,
+        view_func: Callable,
+        sorter_kwargs_name: str = "ordering",
+    ) -> None:
         self.sorter = sorter
         self.sorter_kwargs_name = sorter_kwargs_name
         self.view_func = view_func
 
         sorter_view = self.get_view_function()
         self.as_view = wraps(view_func)(sorter_view)
-        contribute_operation_args(self.as_view, self.sorter_kwargs_name, self.sorter.Input, self.sorter.InputSource)
+        contribute_operation_args(
+            self.as_view,
+            self.sorter_kwargs_name,
+            self.sorter.Input,
+            self.sorter.InputSource,
+        )
 
         sorter_view.sorter_operation = self  # type:ignore[attr-defined]
 

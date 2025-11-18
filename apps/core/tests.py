@@ -4,7 +4,7 @@ from unittest.mock import patch
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.tokens import AccessToken
 
 from apps.users.models import User
 
@@ -37,8 +37,8 @@ class BaseTestCase(TestCase):
             kwargs.pop("HTTP_AUTHORIZATION", None)
         else:
             # Generate JWT token for the user
-            refresh = RefreshToken.for_user(user)
-            access_token = str(refresh.access_token)
+            # Use AccessToken directly to avoid creating OutstandingToken entries during tests
+            access_token = str(AccessToken.for_user(user))
             kwargs["HTTP_AUTHORIZATION"] = f"Bearer {access_token}"
 
         headers = {

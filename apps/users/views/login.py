@@ -1,12 +1,13 @@
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.errors import ItqanError
-from apps.core.ninja_utils.tags import NinjaTag
-from apps.users.models import User, Developer
-from ._schemas import LoginSchema, TokenResponseSchema
 from apps.core.ninja_utils.request import Request
+from apps.core.ninja_utils.router import ItqanRouter
+from apps.core.ninja_utils.tags import NinjaTag
+from apps.users.models import Developer, User
+
+from ._schemas import LoginSchema, TokenResponseSchema
 
 router = ItqanRouter(tags=[NinjaTag.AUTH])
 
@@ -15,32 +16,34 @@ router = ItqanRouter(tags=[NinjaTag.AUTH])
     "auth/login/",
     auth=None,
     response=TokenResponseSchema,
-    description="Authenticate user with email and password, returns JWT tokens"
+    description="Authenticate user with email and password, returns JWT tokens",
 )
 def login_user(request: Request, credentials: LoginSchema):
     """Login user with email and password"""
-    user :User|None = authenticate(request, username=credentials.email, password=credentials.password)
-    
+    user: User | None = authenticate(
+        request, username=credentials.email, password=credentials.password
+    )
+
     if user is None:
         raise ItqanError(
             error_name="invalid_credentials",
             message="Invalid email or password",
-            status_code=401
+            status_code=401,
         )
-    
+
     if not user.is_active:
         raise ItqanError(
             error_name="account_disabled",
             message="Account is disabled",
-            status_code=401
+            status_code=401,
         )
-    
+
     # Generate JWT tokens using rest_framework_simplejwt
     refresh = RefreshToken.for_user(user)
     access = refresh.access_token
     # Ensure Developer profile exists for legacy users
     developer_profile, _ = Developer.objects.get_or_create(user=user)
-    
+
     return {
         "access": str(access),
         "refresh": str(refresh),
@@ -50,6 +53,6 @@ def login_user(request: Request, credentials: LoginSchema):
             "name": user.name,
             "phone": str(user.phone) if user.phone else "",
             "is_active": user.is_active,
-            "is_profile_completed": developer_profile.profile_completed
-        }
+            "is_profile_completed": developer_profile.profile_completed,
+        },
     }

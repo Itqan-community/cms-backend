@@ -1,12 +1,9 @@
 from django.contrib import admin
 from django.db.models import Count
-from django.db.models import Sum
 from django.urls import reverse
 from django.utils.html import format_html
 
-from .models import (
-    Publisher, PublisherMember,
-)
+from .models import Publisher, PublisherMember
 
 
 class PublisherMemberInline(admin.TabularInline):
@@ -15,9 +12,19 @@ class PublisherMemberInline(admin.TabularInline):
     fields = ["user", "role"]
     autocomplete_fields = ["user"]
     raw_id_fields = ["user"]
+
+
 @admin.register(Publisher)
 class PublisherAdmin(admin.ModelAdmin):
-    list_display = ["name", "slug", "icon_url", "member_count", "resource_count", "asset_count", "created_at"]
+    list_display = [
+        "name",
+        "slug",
+        "icon_url",
+        "member_count",
+        "resource_count",
+        "asset_count",
+        "created_at",
+    ]
     list_filter = ["created_at", "updated_at"]
     search_fields = ["name", "slug", "description"]
     prepopulated_fields = {"slug": ("name",)}
@@ -45,9 +52,7 @@ class PublisherAdmin(admin.ModelAdmin):
         ),
         (
             "Additional Information",
-            {
-                "fields": ("contact_email", "website", "address")
-            },
+            {"fields": ("contact_email", "website", "address")},
         ),
         (
             "Timestamps",
@@ -67,7 +72,7 @@ class PublisherAdmin(admin.ModelAdmin):
             .annotate(
                 member_count=Count("members"),
                 resource_count=Count("resources"),
-                asset_count=Count("resources__assets", distinct=True)
+                asset_count=Count("resources__assets", distinct=True),
             )
         )
 
@@ -111,4 +116,3 @@ class PublisherMemberAdmin(admin.ModelAdmin):
     list_display = ["user", "publisher", "role", "created_at"]
     list_filter = ["role", "created_at"]
     search_fields = ["user__email", "publisher__name"]
-

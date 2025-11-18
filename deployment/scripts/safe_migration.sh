@@ -51,13 +51,13 @@ run_django_cmd() {
 # Function to backup database schema
 backup_schema() {
     echo "💾 Creating schema backup..."
-    
+
     if [ -z "$DOCKER_EXEC" ]; then
         pg_dump_cmd="pg_dump"
     else
         pg_dump_cmd="$DOCKER_EXEC pg_dump"
     fi
-    
+
     # This would need to be customized for your specific DB connection
     echo "📝 Schema backup would be created here (customize for your DB setup)"
     # $pg_dump_cmd --schema-only $DATABASE_URL > "backup_schema_${BACKUP_TIMESTAMP}.sql"
