@@ -15,7 +15,7 @@ jobs:
   verify-schema:
     runs-on: ubuntu-latest
     if: ${{ false }}
-    
+
     services:
       postgres:
         image: postgres:15
@@ -57,10 +57,10 @@ jobs:
       run: |
         echo "🔍 Verifying database schema matches model definitions..."
         python manage.py verify_schema
-        
+
         echo "🔍 Checking for missing migrations..."
         python manage.py makemigrations --check --dry-run
-        
+
         echo "✅ Schema verification completed successfully!"
 
     - name: Test critical models
@@ -71,18 +71,18 @@ jobs:
         python manage.py shell -c "
         from apps.content.models import Asset, Resource, PublishingOrganization
         from django.db import connection
-        
+
         # Test Asset-Resource relationship
         cursor = connection.cursor()
         cursor.execute('''
-            SELECT column_name FROM information_schema.columns 
+            SELECT column_name FROM information_schema.columns
             WHERE table_name = 'asset' AND column_name = 'resource_id'
         ''')
-        
+
         if not cursor.fetchone():
             print('❌ CRITICAL: Asset table missing resource_id column!')
             exit(1)
-        
+
         print('✅ Asset-Resource relationship verified')
         print('✅ Critical model verification passed')
         "
@@ -108,10 +108,10 @@ jobs:
         DJANGO_SETTINGS_MODULE: config.settings.base
       run: |
         echo "🔍 Checking for migration conflicts..."
-        
+
         # Check if any apps have multiple leaf migrations
         python manage.py showmigrations | grep -E "^\s*\[\s*\]\s*[0-9]" > pending.txt || true
-        
+
         if [ -s pending.txt ]; then
           echo "⚠️ Found pending migrations:"
           cat pending.txt
@@ -120,5 +120,5 @@ jobs:
         else
           echo "✅ No migration conflicts detected"
         fi
-        
+
         rm -f pending.txt

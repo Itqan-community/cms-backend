@@ -7,7 +7,7 @@ class ItqanError(Exception):
         error_name: is a unique name for the error should not contain spaces
         message: is a human-readable message, this should be localized
         """
-        assert " " not in error_name
+        assert " " not in error_name  # nosec B101
 
         self.error_name = error_name
         self.message = str(message)

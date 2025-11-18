@@ -1,4 +1,15 @@
-# ==== pytest ====
+# ========================
+# Project Configuration
+# ========================
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+# ========================
+# Pytest
+# ========================
+
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "--ds=config.settings.development --reuse-db --import-mode=importlib"
@@ -6,3 +17,75 @@ python_files = [
     "tests.py",
     "test_*.py",
 ]
+
+# ========================
+# Black (Formatter)
+# ========================
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+skip-string-normalization = false
+
+# ========================
+# Ruff (Linter & Import rules)
+# ========================
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E", # pycodestyle errors
+    "W", # pycodestyle warnings
+    "F", # pyflakes
+    "B", # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = [
+    "E501", # line too long, handled by Black
+    "B008", # do not perform function calls in argument defaults
+    "C901", # too complex
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps", "config"]
+
+# ========================
+# isort (Import sorter)
+# ========================
+
+[tool.isort]
+profile = "black"
+line_length = 100
+known_first_party = ["apps", "config"]
+force_sort_within_sections = true
+combine_as_imports = true
+
+# ========================
+# Bandit (Security)
+# ========================
+
+[tool.bandit]
+targets = ["apps", "config"]
+skips = ["B101"]  # optional: skip assert-use warning
+
+# ========================
+# Coverage (Optional)
+# ========================
+
+[tool.coverage.run]
+source = ["apps"]
+omit = [
+    "*/migrations/*",
+    "*/tests/*",
+]
+
+[tool.coverage.report]
+skip_covered = true
+show_missing = true

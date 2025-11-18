@@ -23,7 +23,10 @@ class NinjaUserPathRateThrottle(NinjaUserRateThrottle):
         else:
             ident = self.get_ident(request)
 
-        return self.cache_format % {"scope": f"{self.scope}-{request.path}", "ident": ident}
+        return self.cache_format % {
+            "scope": f"{self.scope}-{request.path}",
+            "ident": ident,
+        }
 
     def throttle_failure(self) -> bool:
         logger = logging.getLogger(__name__)
@@ -43,7 +46,10 @@ class DRFUserPathRateThrottle(DRFUserRateThrottle):
         else:
             ident = self.get_ident(request)
 
-        return self.cache_format % {"scope": f"{self.scope}-{request.path}", "ident": ident}
+        return self.cache_format % {
+            "scope": f"{self.scope}-{request.path}",
+            "ident": ident,
+        }
 
     def throttle_failure(self) -> bool:
         logger = logging.getLogger(__name__)

@@ -2,8 +2,7 @@ from collections.abc import Callable
 from typing import Any
 
 from ninja import Router
-from ninja.constants import NOT_SET
-from ninja.constants import NOT_SET_TYPE
+from ninja.constants import NOT_SET, NOT_SET_TYPE
 from ninja.throttling import BaseThrottle
 from ninja.types import TCallable
 from ninja.utils import normalize_path
@@ -17,26 +16,15 @@ class ItqanRouter(Router):
     """
     This Router is made to enforce some rules about paths, and how auth is handled.
     """
+
     def api_operation(
         self,
         methods: list[str],
         path: str,
-        *,
         auth: Any = NOT_SET,
         throttle: BaseThrottle | list[BaseThrottle] | NOT_SET_TYPE = NOT_SET,
         response: Any = NOT_SET,
-        operation_id: str | None = None,
-        summary: str | None = None,
-        description: str | None = None,
-        tags: list[str] | None = None,
-        deprecated: bool | None = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
-        url_name: str | None = None,
-        include_in_schema: bool = True,
-        openapi_extra: dict[str, Any] | None = None,
+        **kwargs: Any,
     ) -> Callable[[TCallable], TCallable]:
         if not path.endswith("/"):
             raise ValueError("Path must end with /")
@@ -48,18 +36,7 @@ class ItqanRouter(Router):
             auth=ninja_jwt_auth_optional if auth is None else auth,
             throttle=throttle,
             response=response,
-            operation_id=operation_id,
-            summary=summary,
-            description=description,
-            tags=tags,
-            deprecated=deprecated,
-            by_alias=by_alias,
-            exclude_unset=exclude_unset,
-            exclude_defaults=exclude_defaults,
-            exclude_none=exclude_none,
-            url_name=url_name,
-            include_in_schema=include_in_schema,
-            openapi_extra=openapi_extra,
+            **kwargs,
         )
 
     def build_routers(self, prefix: str) -> list[tuple[str, "Router"]]:

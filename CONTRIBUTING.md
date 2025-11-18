@@ -61,5 +61,3 @@ We deeply appreciate every contributor—maintainers, reviewers, issue reporters
 - All contributors will be acknowledged on the GitHub contributors page
 
 Jazakum Allahu khairan for advancing Quranic accessibility!
-
- 

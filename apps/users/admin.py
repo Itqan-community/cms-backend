@@ -1,8 +1,7 @@
 from allauth.account.decorators import secure_admin_login
 from django.conf import settings
 from django.contrib import admin
-from django.contrib.auth import admin as auth_admin
-from django.contrib.auth import forms as admin_forms
+from django.contrib.auth import admin as auth_admin, forms as admin_forms
 from django.forms import EmailField
 from django.utils.translation import gettext_lazy as _
 
