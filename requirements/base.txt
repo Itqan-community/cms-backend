@@ -37,8 +37,7 @@ Pillow>=10.3.0
 python-dateutil==2.8.*
 requests==2.31.*
 
-# Scalar (Django Ninja integration)
-git+https://github.com/scalar/scalar.git#subdirectory=integrations/django-ninja
+scalar-django-ninja==0.1.4
 
 # Dev / Tooling
 black==23.7.*
