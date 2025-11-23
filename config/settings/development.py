@@ -97,15 +97,6 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 # =========================
-# File storage (local for dev)
-# =========================
-DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
-STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
-
-MEDIA_URL = "/media/"
-MEDIA_ROOT = settings.BASE_DIR / "media"  # use settings.BASE_DIR to avoid F405
-
-# =========================
 # Debug Toolbar (optional)
 # =========================
 if importlib.util.find_spec("debug_toolbar"):
