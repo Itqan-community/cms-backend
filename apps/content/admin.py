@@ -456,6 +456,7 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
         "asset",
         "surah_number",
         "surah_name",
+        "surah_name_ar",
         "duration_ms",
         "size_bytes",
         "created_at",
@@ -463,12 +464,12 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
     list_filter = ["asset", "created_at"]
     search_fields = ["asset__name", "surah_name", "surah_name_ar"]
     readonly_fields = [
-        "created_at",
-        "updated_at",
-        "size_bytes",
-        "duration_ms",
         "surah_name",
         "surah_name_ar",
+        "size_bytes",
+        "duration_ms",
+        "created_at",
+        "updated_at",
     ]
     raw_id_fields = ["asset"]
 
@@ -599,11 +600,16 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
         else:
             form = BulkRecitationUploadForm()
 
+        # Provide surah name maps for client preview
+        from apps.core.mixins.constants import SURAH_NUMBER_NAME_AR, SURAH_NUMBER_NAME_EN
+
         context = {
             **self.admin_site.each_context(request),
             "title": "Bulk upload recitation surah tracks",
             "form": form,
             "redirect_url": reverse("admin:content_recitationsurahtrack_changelist"),
+            "surah_map_en": SURAH_NUMBER_NAME_EN,
+            "surah_map_ar": SURAH_NUMBER_NAME_AR,
         }
         return render(
             request,

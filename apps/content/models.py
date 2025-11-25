@@ -1,18 +1,19 @@
 import re
 
 from django.conf import settings
-from django.core.validators import FileExtensionValidator
+from django.core.validators import FileExtensionValidator, MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
 from apps.core.mixins.constants import (
-    SURAH_NAME_BY_NUMBER_AR,
-    SURAH_NAME_BY_NUMBER_EN,
     SURAH_NAMES_AR,
     SURAH_NAMES_EN,
+    SURAH_NUMBER_NAME_AR,
+    SURAH_NUMBER_NAME_EN,
 )
+from apps.core.mixins.storage import DeleteFilesOnDeleteMixin
 from apps.core.models import BaseModel
 from apps.core.uploads import (
     upload_to_asset_files,
@@ -89,7 +90,7 @@ class Resource(BaseModel):
         return self.versions.order_by("-created_at").first()
 
 
-class ResourceVersion(BaseModel):
+class ResourceVersion(DeleteFilesOnDeleteMixin, BaseModel):
     class FileTypeChoice(models.TextChoices):
         CSV = "csv", _("CSV")
         EXCEL = "excel", _("Excel")
@@ -167,7 +168,7 @@ class ResourceVersion(BaseModel):
         super().save(*args, **kwargs)
 
 
-class Asset(BaseModel):
+class Asset(DeleteFilesOnDeleteMixin, BaseModel):
     class CategoryChoice(models.TextChoices):
         RECITATION = "recitation", _("Recitation")
         MUSHAF = "mushaf", _("Mushaf")
@@ -271,7 +272,7 @@ class Asset(BaseModel):
         return self._parse_file_size_to_bytes(self.file_size)
 
 
-class AssetVersion(BaseModel):
+class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="versions")
 
     resource_version = models.ForeignKey(
@@ -331,7 +332,7 @@ class AssetVersion(BaseModel):
         return f"{s} {units[i]}"
 
 
-class AssetPreview(BaseModel):
+class AssetPreview(DeleteFilesOnDeleteMixin, BaseModel):
     """
     Visual images for an Asset
     """
@@ -621,7 +622,7 @@ SURAH_NAME_CHOICES_AR: list[tuple[str, str]] = [("", "---------")] + [
 ]
 
 
-class RecitationSurahTrack(BaseModel):
+class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
     """Audio track per-surah for a recitation Asset"""
 
     asset = models.ForeignKey(
@@ -630,23 +631,29 @@ class RecitationSurahTrack(BaseModel):
         related_name="recitation_tracks",
         help_text="Parent Asset representing the recitation set",
     )
-    surah_number = models.PositiveSmallIntegerField(help_text="Surah number (1..114)")
+    surah_number = models.PositiveSmallIntegerField(
+        help_text="Surah number (1..114)",
+        validators=[MinValueValidator(1), MaxValueValidator(114)],
+    )
     surah_name = models.CharField(
         max_length=255,
         blank=True,
         default="",
         choices=SURAH_NAME_CHOICES_EN,
-        help_text="Surah name (English) - selectable. Auto-sync not enforced.",
+        help_text="Surah name in English (auto-calculated based on surah_number)",
     )
     surah_name_ar = models.CharField(
         max_length=255,
         blank=True,
         default="",
         choices=SURAH_NAME_CHOICES_AR,
-        help_text="Surah name (Arabic) - selectable. Auto-sync not enforced.",
+        help_text="Surah name in Arabic (auto-calculated based on surah_number)",
     )
     chapter_number = models.PositiveSmallIntegerField(
-        null=True, blank=True, help_text="Juz/Chapter number (1..30)"
+        null=True,
+        blank=True,
+        help_text="Juz/Chapter number (1..30)",
+        validators=[MinValueValidator(1), MaxValueValidator(30)],
     )
     audio_file = models.FileField(
         upload_to=upload_to_recitation_surah_track_files,
@@ -673,8 +680,8 @@ class RecitationSurahTrack(BaseModel):
     def save(self, *args, **kwargs) -> None:
         # Auto-fill names from surah_number when present
         if self.surah_number:
-            self.surah_name = SURAH_NAME_BY_NUMBER_EN.get(int(self.surah_number), "")
-            self.surah_name_ar = SURAH_NAME_BY_NUMBER_AR.get(int(self.surah_number), "")
+            self.surah_name = SURAH_NUMBER_NAME_EN.get(int(self.surah_number), "")
+            self.surah_name_ar = SURAH_NUMBER_NAME_AR.get(int(self.surah_number), "")
 
         # Auto-compute duration and size when an MP3 file is present
         if self.audio_file:

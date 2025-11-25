@@ -2,6 +2,8 @@
 {% load static %}
 
 {% block content %}
+  {{ surah_map_en|json_script:"surah-map-en" }}
+  {{ surah_map_ar|json_script:"surah-map-ar" }}
   <form id="bulkUploadForm" method="post" enctype="multipart/form-data" action="" style="max-width:900px;">
       {% csrf_token %}
       <table style="margin-bottom:12px;">
@@ -25,6 +27,9 @@
   </form>
   <script>
     (function() {
+      // Surah name maps injected by server (safe via json_script)
+      const SURAH_MAP_EN = JSON.parse(document.getElementById('surah-map-en').textContent);
+      const SURAH_MAP_AR = JSON.parse(document.getElementById('surah-map-ar').textContent);
       const form = document.getElementById('bulkUploadForm');
       if (!form) return;
       const fileInput = form.querySelector('input[name="audio_files"]');
@@ -83,7 +88,9 @@
               dupWithin++;
             } else {
               seen.add(sn);
-              li.textContent = `${f.name} — surah ${sn}`;
+              const en = SURAH_MAP_EN[String(sn)] || SURAH_MAP_EN[sn] || '';
+              const ar = SURAH_MAP_AR[String(sn)] || SURAH_MAP_AR[sn] || '';
+              li.textContent = `${f.name} — surah ${sn} ${en ? `(${en})` : ''} ${ar ? `- ${ar}` : ''}`;
             }
           }
           filePreviewList.appendChild(li);
