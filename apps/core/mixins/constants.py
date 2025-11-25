@@ -233,3 +233,8 @@ SURAH_NAMES_AR: list[str] = [
     "الفلق",
     "الناس",
 ]
+
+# Derived mappings: surah number (1..114) -> name
+# Keep the original lists above and derive dicts to avoid duplication.
+SURAH_NAME_BY_NUMBER_EN: dict[int, str] = {i + 1: name for i, name in enumerate(SURAH_NAMES_EN)}
+SURAH_NAME_BY_NUMBER_AR: dict[int, str] = {i + 1: name for i, name in enumerate(SURAH_NAMES_AR)}

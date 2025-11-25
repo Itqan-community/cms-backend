@@ -7,7 +7,12 @@ from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
-from apps.core.mixins.constants import SURAH_NAMES_AR, SURAH_NAMES_EN
+from apps.core.mixins.constants import (
+    SURAH_NAME_BY_NUMBER_AR,
+    SURAH_NAME_BY_NUMBER_EN,
+    SURAH_NAMES_AR,
+    SURAH_NAMES_EN,
+)
 from apps.core.models import BaseModel
 from apps.core.uploads import (
     upload_to_asset_files,
@@ -16,7 +21,7 @@ from apps.core.uploads import (
     upload_to_recitation_surah_track_files,
     upload_to_resource_files,
 )
-from apps.mixins.helpers import get_mp3_duration_ms
+from apps.mixins.recitations_helpers import get_mp3_duration_ms
 from apps.publishers.models import Publisher
 from apps.users.models import User
 
@@ -666,6 +671,11 @@ class RecitationSurahTrack(BaseModel):
         return f"RecitationSurahTrack(asset={self.asset_id}, surah={self.surah_number})"
 
     def save(self, *args, **kwargs) -> None:
+        # Auto-fill names from surah_number when present
+        if self.surah_number:
+            self.surah_name = SURAH_NAME_BY_NUMBER_EN.get(int(self.surah_number), "")
+            self.surah_name_ar = SURAH_NAME_BY_NUMBER_AR.get(int(self.surah_number), "")
+
         # Auto-compute duration and size when an MP3 file is present
         if self.audio_file:
             try:

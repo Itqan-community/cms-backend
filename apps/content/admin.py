@@ -1,8 +1,14 @@
-from django.contrib import admin
+from django.contrib import admin, messages
+from django.db import transaction
 from django.db.models import Count
-from django.urls import reverse
+from django.http import HttpResponse
+from django.shortcuts import redirect, render
+from django.urls import path, reverse
 from django.utils.html import format_html
 
+from ..mixins.recitations_helpers import extract_surah_number_from_filename
+from .forms.bulk_recitations_upload_form import BulkRecitationUploadForm
+from .forms.download_recitations_json_form import DownloadRecitationsJsonForm
 from .models import (
     Asset,
     AssetAccess,
@@ -454,13 +460,202 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
         "size_bytes",
         "created_at",
     ]
-    list_filter = ["asset", "chapter_number", "created_at"]
+    list_filter = ["asset", "created_at"]
     search_fields = ["asset__name", "surah_name", "surah_name_ar"]
-    readonly_fields = ["created_at", "updated_at", "size_bytes", "duration_ms"]
+    readonly_fields = [
+        "created_at",
+        "updated_at",
+        "size_bytes",
+        "duration_ms",
+        "surah_name",
+        "surah_name_ar",
+    ]
     raw_id_fields = ["asset"]
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("asset")
+
+    change_list_template = "content/admin/recitationsurahtrack_changelist.html"
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "bulk-upload/",
+                self.admin_site.admin_view(self.bulk_upload_view),
+                name="recitationsurahtrack_bulk_upload",
+            ),
+            path(
+                "download-json/",
+                self.admin_site.admin_view(self.download_json_view),
+                name="recitationsurahtrack_download_json",
+            ),
+        ]
+        return custom_urls + urls
+
+    def bulk_upload_view(self, request):
+        if request.method == "POST":
+            form = BulkRecitationUploadForm(request.POST, request.FILES)
+            if form.is_valid():
+                asset = form.cleaned_data["asset"]
+                files = request.FILES.getlist("audio_files")
+
+                created = 0
+                filename_errors = 0
+                skipped_duplicates = 0
+                other_errors = 0
+                duplicate_details: list[str] = []
+                other_error_details: list[str] = []
+                uploaded_file_names: list[str] = []  # for best-effort cleanup on rollback
+                seen_surahs: set[int] = set()  # duplicates within the same selection
+
+                try:
+                    with transaction.atomic():
+                        for f in files:
+                            try:
+                                surah_number = extract_surah_number_from_filename(f.name)
+                            except ValueError as e:
+                                messages.error(request, str(e))
+                                filename_errors += 1
+                                continue
+
+                            # Skip duplicate surah within this same upload selection
+                            if surah_number in seen_surahs:
+                                skipped_duplicates += 1
+                                duplicate_details.append(f"{f.name} (duplicate in selection)")
+                                continue
+                            seen_surahs.add(surah_number)
+
+                            # Skip if already exists in DB
+                            if RecitationSurahTrack.objects.filter(
+                                asset=asset, surah_number=surah_number
+                            ).exists():
+                                skipped_duplicates += 1
+                                duplicate_details.append(f"{f.name} (already exists)")
+                                continue
+
+                            # Simple path: let Django storage handle the upload and create DB row
+                            obj = RecitationSurahTrack.objects.create(
+                                asset=asset,
+                                surah_number=surah_number,
+                                audio_file=f,
+                            )
+                            try:
+                                if obj.audio_file and getattr(obj.audio_file, "name", None):
+                                    uploaded_file_names.append(obj.audio_file.name)
+                            except Exception:
+                                pass
+                            created += 1
+                except Exception as e:
+                    # Best-effort cleanup of any uploaded files when the DB transaction rolls back
+                    try:
+                        from django.core.files.storage import default_storage
+
+                        for name in uploaded_file_names:
+                            try:
+                                default_storage.delete(name)
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+
+                    other_errors += 1
+                    other_error_details.append(str(e))
+
+                if created:
+                    messages.success(
+                        request,
+                        f"Created {created} recitation tracks for asset {asset}.",
+                    )
+                if filename_errors:
+                    messages.warning(
+                        request,
+                        f"{filename_errors} files were skipped due to filename issues.",
+                    )
+                if skipped_duplicates:
+                    preview = ", ".join(duplicate_details[:10])
+                    more = (
+                        ""
+                        if len(duplicate_details) <= 10
+                        else f" and {len(duplicate_details) - 10} more"
+                    )
+                    messages.warning(
+                        request,
+                        f"Skipped {skipped_duplicates} files due to duplicates: {preview}{more}.",
+                    )
+                if other_errors:
+                    preview = "; ".join(other_error_details[:5])
+                    more = (
+                        ""
+                        if len(other_error_details) <= 5
+                        else f" and {len(other_error_details) - 5} more"
+                    )
+                    messages.error(
+                        request,
+                        f"Upload encountered errors: {preview}{more}. All changes rolled back.",
+                    )
+
+                return redirect("admin:content_recitationsurahtrack_changelist")
+        else:
+            form = BulkRecitationUploadForm()
+
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Bulk upload recitation surah tracks",
+            "form": form,
+            "redirect_url": reverse("admin:content_recitationsurahtrack_changelist"),
+        }
+        return render(
+            request,
+            "content/admin/recitationsurahtrack_bulk_upload.html",
+            context,
+        )
+
+    def download_json_view(self, request):
+        if request.method == "POST":
+            form = DownloadRecitationsJsonForm(request.POST)
+            if form.is_valid():
+                import json
+
+                asset = form.cleaned_data["asset"]
+                tracks = (
+                    RecitationSurahTrack.objects.filter(asset=asset)
+                    .order_by("surah_number")
+                    .only("surah_number", "audio_file", "duration_ms")
+                )
+                result: list[dict] = []
+                for t in tracks:
+                    try:
+                        url = request.build_absolute_uri(t.audio_file.url) if t.audio_file else ""
+                    except Exception:
+                        url = ""
+                    result.append(
+                        {
+                            "surah_number": int(t.surah_number),
+                            "audio_file": url,
+                            "duration_ms": int(t.duration_ms or 0),
+                            "ayah_timings": [],
+                        }
+                    )
+
+                payload = json.dumps(result, ensure_ascii=False, indent=2)
+                filename = f"asset_{asset.id}_recitations.json"
+                response = HttpResponse(payload, content_type="application/json; charset=utf-8")
+                response["Content-Disposition"] = f'attachment; filename="{filename}"'
+                return response
+        else:
+            form = DownloadRecitationsJsonForm()
+
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Download JSON file for Mushaf tracks",
+            "form": form,
+        }
+        return render(
+            request,
+            "content/admin/recitationsurahtrack_download_json.html",
+            context,
+        )
 
 
 @admin.register(RecitationAyahTiming)

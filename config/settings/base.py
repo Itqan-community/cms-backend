@@ -128,6 +128,11 @@ STATICFILES_DIRS = [str(APPS_DIR / "core" / "static")]
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Max size of a single in-memory upload; larger files go to TemporaryUploadedFile
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB
+
+# Total request size limit (body) before Django complains
+DATA_UPLOAD_MAX_MEMORY_SIZE = 500 * 1024 * 1024  # 500 MB
 # Cloudflare R2 credentials and settings
 CLOUDFLARE_R2_BUCKET = config("CLOUDFLARE_R2_BUCKET", default="")
 CLOUDFLARE_R2_ENDPOINT = config("CLOUDFLARE_R2_ENDPOINT", default="")
