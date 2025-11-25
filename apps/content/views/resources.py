@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from django.db.models import Q, Count
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
@@ -92,6 +94,23 @@ class ContentReciterOut(Schema):
         description="Number of READY recitation assets for this reciter",
     )
 
+class RecitationFilter(FilterSchema):
+
+    publisher_id: list[int] | None = Field(None, q="resource__publisher_id__in")
+    reciter_id: list[int] | None = Field(None, q="reciter_id__in")
+    riwayah_id: list[int] | None = Field(None, q="riwayah_id__in")
+
+
+class ContentRecitationListOut(Schema):
+    id: int
+    resource_id: int
+    name: str
+    slug: str
+    description: str
+    reciter_id: int | None = None
+    riwayah_id: int | None = None
+    created_at: datetime
+    updated_at: datetime
 @router.get("resources/", response=list[ListResourceOut])
 @paginate
 @ordering(ordering_fields=["name", "category", "created_at", "updated_at"])
@@ -206,5 +225,25 @@ def list_content_reciters(request: Request):
         )
         .order_by("name")
     )
+
+    return qs
+
+@router.get(
+    "recitations",
+    response=list[ContentRecitationListOut],
+    auth=None,
+)
+@paginate
+@ordering(ordering_fields=["name", "created_at", "updated_at"])
+@searching(search_fields=["name", "description", "resource__publisher__name", "reciter__name"])
+def list_recitations(request, filters: RecitationFilter = Query()):
+
+    qs = Asset.objects.select_related("resource", "reciter").filter(
+        category=Asset.CategoryChoice.RECITATION,
+        resource__category=Resource.CategoryChoice.RECITATION,
+        resource__status=Resource.StatusChoice.READY,
+    )
+
+    qs = filters.filter(qs)
 
     return qs
