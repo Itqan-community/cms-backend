@@ -5,7 +5,7 @@ from ninja import FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
-from apps.content.models import Resource, UsageEvent, Asset, Reciter
+from apps.content.models import Resource, UsageEvent, Asset, Reciter, RecitationSurahTrack
 from apps.content.tasks import create_usage_event_task
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
@@ -82,6 +82,7 @@ class DetailResourceOut(Schema):
     created_at: AwareDatetime
     updated_at: AwareDatetime
 
+
 class ContentReciterOut(Schema):
     id: int
     slug: str
@@ -91,6 +92,20 @@ class ContentReciterOut(Schema):
         0,
         description="Number of READY recitation assets for this reciter",
     )
+
+
+class ContentRecitationSurahTrackOut(Schema):
+    surah_number: int
+    surah_name: str
+    surah_name_ar: str
+    chapter_number: int | None = None
+    audio_url: str | None = Field(
+        None,
+        description="Absolute URL to the per-surah audio file (MP3)",
+    )
+    duration_ms: int
+    size_bytes: int
+
 
 @router.get("resources/", response=list[ListResourceOut])
 @paginate
@@ -165,9 +180,6 @@ def detail_resource(request: Request, id: int):
     return resource
 
 
-
-
-
 @router.get("reciters", response=list[ContentReciterOut], auth=None)
 @paginate
 @ordering(ordering_fields=["name", "name_ar", "slug"])
@@ -208,3 +220,45 @@ def list_content_reciters(request: Request):
     )
 
     return qs
+
+
+@router.get(
+    "recitations/{asset_id}",
+    response=list[ContentRecitationSurahTrackOut],
+    auth=None,
+)
+@paginate
+def list_recitation_tracks(request: Request, asset_id: int):
+
+    asset = get_object_or_404(
+        Asset.objects.filter(
+            id=asset_id,
+            category=Asset.CategoryChoice.RECITATION,
+            resource__category=Resource.CategoryChoice.RECITATION,
+            resource__status=Resource.StatusChoice.READY,
+        )
+    )
+
+    tracks = RecitationSurahTrack.objects.filter(asset=asset).order_by("surah_number")
+
+    results: list[ContentRecitationSurahTrackOut] = []
+
+    for track in tracks:
+        if track.audio_file:
+            audio_url = request.build_absolute_uri(track.audio_file.url)
+        else:
+            audio_url = None
+
+        results.append(
+            ContentRecitationSurahTrackOut(
+                surah_number=track.surah_number,
+                surah_name=track.surah_name,
+                surah_name_ar=track.surah_name_ar,
+                chapter_number=track.chapter_number,
+                audio_url=audio_url,
+                duration_ms=track.duration_ms,
+                size_bytes=track.size_bytes,
+            )
+        )
+
+    return results
