@@ -1,11 +1,11 @@
-from django.db.models import Q, Count
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
 from ninja import FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
-from apps.content.models import Resource, UsageEvent, Asset, Reciter
+from apps.content.models import Asset, Reciter, Resource, UsageEvent
 from apps.content.tasks import create_usage_event_task
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
@@ -82,6 +82,7 @@ class DetailResourceOut(Schema):
     created_at: AwareDatetime
     updated_at: AwareDatetime
 
+
 class ContentReciterOut(Schema):
     id: int
     slug: str
@@ -91,6 +92,7 @@ class ContentReciterOut(Schema):
         0,
         description="Number of READY recitation assets for this reciter",
     )
+
 
 @router.get("resources/", response=list[ListResourceOut])
 @paginate
@@ -163,9 +165,6 @@ def detail_resource(request: Request, id: int):
         )
 
     return resource
-
-
-
 
 
 @router.get("reciters", response=list[ContentReciterOut], auth=None)
