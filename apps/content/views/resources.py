@@ -1,11 +1,11 @@
-from django.db.models import Q, Count
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
 from ninja import FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
-from apps.content.models import Resource, UsageEvent, Asset, Reciter, RecitationSurahTrack
+from apps.content.models import Asset, RecitationSurahTrack, Reciter, Resource, UsageEvent
 from apps.content.tasks import create_usage_event_task
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
