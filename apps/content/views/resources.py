@@ -5,7 +5,7 @@ from ninja import FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
-from apps.content.models import Resource, UsageEvent, Riwayah, Asset
+from apps.content.models import Asset, Resource, Riwayah, UsageEvent
 from apps.content.tasks import create_usage_event_task
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
@@ -82,6 +82,7 @@ class DetailResourceOut(Schema):
     created_at: AwareDatetime
     updated_at: AwareDatetime
 
+
 class ContentRiwayahOut(Schema):
     id: int
     slug: str
@@ -91,6 +92,7 @@ class ContentRiwayahOut(Schema):
         0,
         description="Number of READY recitation assets for this riwayah",
     )
+
 
 @router.get("resources/", response=list[ListResourceOut])
 @paginate
@@ -163,9 +165,6 @@ def detail_resource(request: Request, id: int):
         )
 
     return resource
-
-
-
 
 
 @router.get("riwayahs", response=list[ContentRiwayahOut], auth=None)
