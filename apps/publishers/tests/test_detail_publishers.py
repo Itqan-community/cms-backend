@@ -36,7 +36,8 @@ class DetailPublisherTest(BaseTestCase):
         self.assertEqual("https://tafsircenter.org", body["website"])
         self.assertTrue(body["is_verified"])
         self.assertEqual("info@tafsircenter.org", body["contact_email"])
-        self.assertTrue(body["icon_url"].endswith("icons/tafsir-center.png"))
+        self.assertTrue(body["icon_url"].startswith("https"))
+        self.assertIn("icons/tafsir-center.png", body["icon_url"])
 
     def test_detail_publishers_where_publisher_does_not_exist_should_return_404(self):
         # Arrange

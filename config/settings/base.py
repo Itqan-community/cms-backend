@@ -122,7 +122,6 @@ LOCALE_PATHS = [BASE_DIR / "locale"]
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = [str(APPS_DIR / "core" / "static")]
 
 # Media files
 MEDIA_URL = "/media/"
