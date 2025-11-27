@@ -1,6 +1,7 @@
 from django.shortcuts import get_object_or_404
 from ninja import Schema
-from pydantic import Field
+from pydantic import Field, field_serializer
+from pydantic_core.core_schema import SerializationInfo
 
 from apps.content.models import Asset, UsageEvent
 from apps.content.tasks import create_usage_event_task
@@ -16,6 +17,14 @@ class DetailAssetSnapshotOut(Schema):
     image_url: str | None
     title: str
     description: str
+
+    @field_serializer("image_url")
+    def serialize_image_url(self, value, info: SerializationInfo) -> str:
+        request = info.context.get("request")
+        if request and isinstance(value, str) and not value.startswith("https"):
+            return request.build_absolute_uri(value)
+
+        return value if isinstance(value, str) else ""
 
 
 class DetailAssetPublisherOut(Schema):
@@ -39,6 +48,14 @@ class DetailAssetOut(Schema):
     resource: DetailAssetResourceOut
     license: str
     snapshots: list[DetailAssetSnapshotOut] = Field(default_factory=list, alias="previews")
+
+    @field_serializer("thumbnail_url")
+    def serialize_thumbnail_url(self, value, info: SerializationInfo) -> str:
+        request = info.context.get("request")
+        if request and isinstance(value, str) and not value.startswith("https"):
+            return request.build_absolute_uri(value)
+
+        return value if isinstance(value, str) else ""
 
 
 @router.get("assets/{id}/", response=DetailAssetOut, auth=None)

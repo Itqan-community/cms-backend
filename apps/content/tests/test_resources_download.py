@@ -43,6 +43,7 @@ class DownloadResourceTest(BaseTestCase):
             # Assert
             self.assertEqual(200, response.status_code)
             self.assertIn("download_url", body)
+            self.assertTrue(body["download_url"].startswith("https"))
             self.assertIn("/data.csv", body["download_url"])
 
     def test_download_fallbacks_to_most_recent_when_no_latest_marked(self):
@@ -83,6 +84,7 @@ class DownloadResourceTest(BaseTestCase):
             # Assert
             self.assertEqual(200, response.status_code)
             self.assertIn("download_url", body)
+            self.assertTrue(body["download_url"].startswith("https"))
             self.assertIn("/new.json", body["download_url"])
 
     def test_download_returns_404_when_no_versions_exist(self):
@@ -160,6 +162,7 @@ class DownloadResourceTest(BaseTestCase):
             # Assert
             self.assertEqual(200, response.status_code)
             self.assertIn("download_url", body)
+            self.assertTrue(body["download_url"].startswith("https"))
             self.assertIn("/test.csv", body["download_url"])
 
             # Verify usage event was created in database
@@ -212,6 +215,7 @@ class DownloadResourceTest(BaseTestCase):
             # Assert
             self.assertEqual(200, response.status_code)
             self.assertIn("download_url", body)
+            self.assertTrue(body["download_url"].startswith("https"))
             self.assertIn("/metadata.json", body["download_url"])
 
             # Verify usage event was created with correct metadata
