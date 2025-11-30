@@ -35,4 +35,4 @@ else:
 fi
 
 echo "Starting Gunicorn server..."
-exec gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 120 config.wsgi
+exec gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 600 config.wsgi

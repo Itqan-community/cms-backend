@@ -233,3 +233,6 @@ SURAH_NAMES_AR: list[str] = [
     "الفلق",
     "الناس",
 ]
+
+SURAH_NUMBER_NAME_EN: dict[int, str] = {i + 1: name for i, name in enumerate(SURAH_NAMES_EN)}
+SURAH_NUMBER_NAME_AR: dict[int, str] = {i + 1: name for i, name in enumerate(SURAH_NAMES_AR)}

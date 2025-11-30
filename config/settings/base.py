@@ -35,12 +35,12 @@ THIRD_PARTY_APPS = [
     "corsheaders",
     "django_filters",
     "drf_spectacular",
-    # Django Allauth
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",
     "allauth.socialaccount.providers.github",
+    "storages",
 ]
 
 LOCAL_APPS = ["apps.core", "apps.content", "apps.users", "apps.publishers"]
@@ -122,11 +122,42 @@ LOCALE_PATHS = [BASE_DIR / "locale"]
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = [str(APPS_DIR / "core" / "static")]
 
 # Media files
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# Max size of a single in-memory upload; larger files go to TemporaryUploadedFile
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB
+
+# Total request size limit (body) before Django complains
+DATA_UPLOAD_MAX_MEMORY_SIZE = 500 * 1024 * 1024  # 500 MB
+# Cloudflare R2 credentials and settings
+CLOUDFLARE_R2_BUCKET = config("CLOUDFLARE_R2_BUCKET", default="")
+CLOUDFLARE_R2_ENDPOINT = config("CLOUDFLARE_R2_ENDPOINT", default="")
+CLOUDFLARE_R2_ACCESS_KEY_ID = config("CLOUDFLARE_R2_ACCESS_KEY_ID", default="")
+CLOUDFLARE_R2_SECRET_ACCESS_KEY = config("CLOUDFLARE_R2_SECRET_ACCESS_KEY", default="")
+CLOUDFLARE_R2_PUBLIC_BASE_URL = config("CLOUDFLARE_R2_PUBLIC_BASE_URL", default="")
+
+CLOUDFLARE_R2_CONFIG_OPTIONS = {
+    "bucket_name": CLOUDFLARE_R2_BUCKET,
+    "endpoint_url": CLOUDFLARE_R2_ENDPOINT,
+    "access_key": CLOUDFLARE_R2_ACCESS_KEY_ID,
+    "secret_key": CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+    "region_name": "auto",
+    "signature_version": "s3v4",
+}
+
+STORAGES = {
+    "default": {  # MEDIA
+        "BACKEND": "config.helpers.cloudflare.storages.MediaFileStorage",
+        "OPTIONS": CLOUDFLARE_R2_CONFIG_OPTIONS,
+    },
+    "staticfiles": {  # STATIC
+        "BACKEND": "config.helpers.cloudflare.storages.StaticFileStorage",
+        "OPTIONS": CLOUDFLARE_R2_CONFIG_OPTIONS,
+    },
+}
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
