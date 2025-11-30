@@ -38,7 +38,7 @@ class Publisher(BaseModel):
         return f"Publisher(name={self.name})"
 
     def save(self, *args, **kwargs):
-        self.slug = slugify(self.name[:50])
+        self.slug = slugify(self.name[:50], allow_unicode=True)
         super().save(*args, **kwargs)
 
 
