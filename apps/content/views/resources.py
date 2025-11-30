@@ -1,10 +1,13 @@
+from datetime import datetime
+
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
 from ninja import FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
-from apps.content.models import Resource, UsageEvent
+from apps.content.models import Asset, Reciter, Resource, UsageEvent
 from apps.content.tasks import create_usage_event_task
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
@@ -82,6 +85,36 @@ class DetailResourceOut(Schema):
     updated_at: AwareDatetime
 
 
+class ContentReciterOut(Schema):
+    id: int
+    slug: str
+    name: str
+    name_ar: str
+    recitations_count: int = Field(
+        0,
+        description="Number of READY recitation assets for this reciter",
+    )
+
+
+class RecitationFilter(FilterSchema):
+
+    publisher_id: list[int] | None = Field(None, q="resource__publisher_id__in")
+    reciter_id: list[int] | None = Field(None, q="reciter_id__in")
+    riwayah_id: list[int] | None = Field(None, q="riwayah_id__in")
+
+
+class ContentRecitationListOut(Schema):
+    id: int
+    resource_id: int
+    name: str
+    slug: str
+    description: str
+    reciter_id: int | None = None
+    riwayah_id: int | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
 @router.get("resources/", response=list[ListResourceOut])
 @paginate
 @ordering(ordering_fields=["name", "category", "created_at", "updated_at"])
@@ -153,3 +186,66 @@ def detail_resource(request: Request, id: int):
         )
 
     return resource
+
+
+@router.get("reciters", response=list[ContentReciterOut], auth=None)
+@paginate
+@ordering(ordering_fields=["name", "name_ar", "slug"])
+def list_content_reciters(request: Request):
+    """
+    Public Content API (V2):
+
+    List reciters that have at least one READY recitation Asset.
+
+    Conditions:
+    - Reciter.is_active = True
+    - Asset.category = RECITATION
+    - Asset.reciter = this Reciter
+    - Asset.resource.category = RECITATION
+    - Asset.resource.status = READY
+    """
+
+    recitation_filter = Q(
+        assets__category=Asset.CategoryChoice.RECITATION,
+        assets__reciter__isnull=False,
+        assets__resource__category=Resource.CategoryChoice.RECITATION,
+        assets__resource__status=Resource.StatusChoice.READY,
+    )
+
+    qs = (
+        Reciter.objects.filter(
+            is_active=True,
+        )
+        .filter(recitation_filter)
+        .distinct()
+        .annotate(
+            recitations_count=Count(
+                "assets",
+                filter=recitation_filter,
+            )
+        )
+        .order_by("name")
+    )
+
+    return qs
+
+
+@router.get(
+    "recitations",
+    response=list[ContentRecitationListOut],
+    auth=None,
+)
+@paginate
+@ordering(ordering_fields=["name", "created_at", "updated_at"])
+@searching(search_fields=["name", "description", "resource__publisher__name", "reciter__name"])
+def list_recitations(request, filters: RecitationFilter = Query()):
+
+    qs = Asset.objects.select_related("resource", "reciter").filter(
+        category=Asset.CategoryChoice.RECITATION,
+        resource__category=Resource.CategoryChoice.RECITATION,
+        resource__status=Resource.StatusChoice.READY,
+    )
+
+    qs = filters.filter(qs)
+
+    return qs
