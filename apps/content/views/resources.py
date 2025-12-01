@@ -109,7 +109,6 @@ class ContentRecitationSurahTrackOut(Schema):
     size_bytes: int
 
 
-
 class RecitationFilter(FilterSchema):
 
     publisher_id: list[int] | None = Field(None, q="resource__publisher_id__in")
