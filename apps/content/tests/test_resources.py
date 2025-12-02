@@ -507,7 +507,7 @@ class ContentRecitersListTest(BaseTestCase):
         # Asset with non-RECITATION category should NOT be counted
         self.other_category_asset = baker.make(
             Asset,
-            category=Asset.CategoryChoice.BOOK,  # assuming another category exists
+            category=Asset.CategoryChoice.RECITATION,  # assuming another category exists
             reciter=self.active_reciter,
             resource=self.recitation_resource,
         )
@@ -542,7 +542,7 @@ class ContentRecitersListTest(BaseTestCase):
 
     def test_list_reciters_should_return_only_active_reciters_with_ready_recitations(self):
         # Act
-        response = self.client.get("/reciters", format="json")
+        response = self.client.get("/reciters/", format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -576,7 +576,7 @@ class ContentRecitersListTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get("/reciters?ordering=name", format="json")
+        response = self.client.get("/reciters/?ordering=name", format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -618,7 +618,7 @@ class ContentRiwayahsListTest(BaseTestCase):
         # Asset with non-RECITATION category – should not count
         baker.make(
             Asset,
-            category=Asset.CategoryChoice.BOOK,
+            category=Asset.CategoryChoice.TAFSIR,
             riwayah=self.active_riwayah,
             resource=self.recitation_resource,
         )
@@ -653,7 +653,7 @@ class ContentRiwayahsListTest(BaseTestCase):
 
     def test_list_riwayahs_should_return_only_active_with_ready_recitations(self):
         # Act
-        response = self.client.get("/riwayahs", format="json")
+        response = self.client.get("/riwayahs/", format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -682,7 +682,7 @@ class ContentRiwayahsListTest(BaseTestCase):
             resource=self.recitation_resource,
         )
 
-        response = self.client.get("/riwayahs?ordering=name", format="json")
+        response = self.client.get("/riwayahs/?ordering=name", format="json")
 
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
@@ -760,13 +760,13 @@ class ContentRecitationsListTest(BaseTestCase):
         )
         baker.make(
             Asset,
-            category=Asset.CategoryChoice.BOOK,
+            category=Asset.CategoryChoice.TAFSIR,
             resource=self.ready_recitation_resource_pub1,
             reciter=self.reciter1,
         )
 
     def test_list_recitations_should_return_only_ready_recitation_assets(self):
-        response = self.client.get("/recitations", format="json")
+        response = self.client.get("/recitations/", format="json")
 
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
@@ -789,7 +789,9 @@ class ContentRecitationsListTest(BaseTestCase):
             self.assertIn("updated_at", item)
 
     def test_list_recitations_filter_by_publisher(self):
-        response = self.client.get(f"/recitations?publisher_id={self.publisher1.id}", format="json")
+        response = self.client.get(
+            f"/recitations/?publisher_id={self.publisher1.id}", format="json"
+        )
 
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
@@ -799,7 +801,7 @@ class ContentRecitationsListTest(BaseTestCase):
         self.assertEqual(self.ready_recitation_resource_pub1.id, items[0]["resource_id"])
 
     def test_list_recitations_filter_by_reciter(self):
-        response = self.client.get(f"/recitations?reciter_id={self.reciter2.id}", format="json")
+        response = self.client.get(f"/recitations/?reciter_id={self.reciter2.id}", format="json")
 
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
@@ -808,7 +810,7 @@ class ContentRecitationsListTest(BaseTestCase):
         self.assertEqual(self.asset2.id, items[0]["id"])
 
     def test_list_recitations_filter_by_riwayah(self):
-        response = self.client.get(f"/recitations?riwayah_id={self.riwayah1.id}", format="json")
+        response = self.client.get(f"/recitations/?riwayah_id={self.riwayah1.id}", format="json")
 
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
@@ -818,7 +820,7 @@ class ContentRecitationsListTest(BaseTestCase):
 
     def test_list_recitations_search_should_match_name_description_publisher_or_reciter(self):
         # Search by part of description
-        response = self.client.get("/recitations?search=Beautiful", format="json")
+        response = self.client.get("/recitations/?search=Beautiful", format="json")
 
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
@@ -826,14 +828,14 @@ class ContentRecitationsListTest(BaseTestCase):
         self.assertEqual(self.asset1.id, items[0]["id"])
 
         # Search by reciter name
-        response = self.client.get("/recitations?search=Reciter Two", format="json")
+        response = self.client.get("/recitations/?search=Reciter Two", format="json")
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
         self.assertEqual(1, len(items))
         self.assertEqual(self.asset2.id, items[0]["id"])
 
     def test_list_recitations_ordering_by_name(self):
-        response = self.client.get("/recitations?ordering=name", format="json")
+        response = self.client.get("/recitations/?ordering=name", format="json")
 
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
@@ -882,7 +884,7 @@ class ContentRecitationTracksTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get(f"/recitations/{self.asset.id}", format="json")
+        response = self.client.get(f"/recitations/{self.asset.id}/", format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -916,7 +918,7 @@ class ContentRecitationTracksTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get(f"/recitations/{self.asset.id}", format="json")
+        response = self.client.get(f"/recitations/{self.asset.id}/", format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -943,7 +945,7 @@ class ContentRecitationTracksTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get(f"/recitations/{self.asset.id}", format="json")
+        response = self.client.get(f"/recitations/{self.asset.id}/", format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -953,7 +955,7 @@ class ContentRecitationTracksTest(BaseTestCase):
 
     def test_list_recitation_tracks_for_nonexistent_or_invalid_asset_should_return_404(self):
         # Non-existent asset
-        response = self.client.get("/recitations/999999", format="json")
+        response = self.client.get("/recitations/999999/", format="json")
         self.assertEqual(404, response.status_code, response.content)
 
         # Asset with wrong category should also 404 due to queryset filter
@@ -965,11 +967,11 @@ class ContentRecitationTracksTest(BaseTestCase):
         )
         non_recitation_asset = baker.make(
             Asset,
-            category=Asset.CategoryChoice.BOOK,
+            category=Asset.CategoryChoice.TAFSIR,
             resource=non_recitation_resource,
         )
 
-        response = self.client.get(f"/recitations/{non_recitation_asset.id}", format="json")
+        response = self.client.get(f"/recitations/{non_recitation_asset.id}/", format="json")
         self.assertEqual(404, response.status_code, response.content)
 
         # Asset with RECITATION category but non-READY resource should 404
@@ -985,5 +987,5 @@ class ContentRecitationTracksTest(BaseTestCase):
             resource=draft_resource,
         )
 
-        response = self.client.get(f"/recitations/{draft_asset.id}", format="json")
+        response = self.client.get(f"/recitations/{draft_asset.id}/", format="json")
         self.assertEqual(404, response.status_code, response.content)

@@ -1,13 +1,10 @@
-from datetime import datetime
-
-from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
 from ninja import FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
-from apps.content.models import Asset, RecitationSurahTrack, Reciter, Resource, Riwayah, UsageEvent
+from apps.content.models import Resource, UsageEvent
 from apps.content.tasks import create_usage_event_task
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
@@ -85,58 +82,11 @@ class DetailResourceOut(Schema):
     updated_at: AwareDatetime
 
 
-class ContentRiwayahOut(Schema):
-    id: int
-    slug: str
-    name: str
-    name_ar: str
-    recitations_count: int = Field(
-        0,
-        description="Number of READY recitation assets for this riwayah",
-    )
-
-
-class ContentReciterOut(Schema):
-    id: int
-    slug: str
-    name: str
-    name_ar: str
-    recitations_count: int = Field(
-        0,
-        description="Number of READY recitation assets for this reciter",
-    )
-
-
-class ContentRecitationSurahTrackOut(Schema):
-    surah_number: int
-    surah_name: str
-    surah_name_ar: str
-    chapter_number: int | None = None
-    audio_url: str | None = Field(
-        None,
-        description="Absolute URL to the per-surah audio file (MP3)",
-    )
-    duration_ms: int
-    size_bytes: int
-
-
 class RecitationFilter(FilterSchema):
 
     publisher_id: list[int] | None = Field(None, q="resource__publisher_id__in")
     reciter_id: list[int] | None = Field(None, q="reciter_id__in")
     riwayah_id: list[int] | None = Field(None, q="riwayah_id__in")
-
-
-class ContentRecitationListOut(Schema):
-    id: int
-    resource_id: int
-    name: str
-    slug: str
-    description: str
-    reciter_id: int | None = None
-    riwayah_id: int | None = None
-    created_at: datetime
-    updated_at: datetime
 
 
 @router.get("resources/", response=list[ListResourceOut])
@@ -210,149 +160,3 @@ def detail_resource(request: Request, id: int):
         )
 
     return resource
-
-
-@router.get("reciters/", response=list[ContentReciterOut], auth=None)
-@paginate
-@ordering(ordering_fields=["name", "name_ar", "slug"])
-def list_content_reciters(request: Request):
-    """
-    Public Content API (V2):
-
-    List reciters that have at least one READY recitation Asset.
-
-    Conditions:
-    - Reciter.is_active = True
-    - Asset.category = RECITATION
-    - Asset.reciter = this Reciter
-    - Asset.resource.category = RECITATION
-    - Asset.resource.status = READY
-    """
-
-    recitation_filter = Q(
-        assets__category=Asset.CategoryChoice.RECITATION,
-        assets__reciter__isnull=False,
-        assets__resource__category=Resource.CategoryChoice.RECITATION,
-        assets__resource__status=Resource.StatusChoice.READY,
-    )
-
-    qs = (
-        Reciter.objects.filter(
-            is_active=True,
-        )
-        .filter(recitation_filter)
-        .distinct()
-        .annotate(
-            recitations_count=Count(
-                "assets",
-                filter=recitation_filter,
-            )
-        )
-        .order_by("name")
-    )
-
-    return qs
-
-
-@router.get(
-    "recitations/",
-    response=list[ContentRecitationListOut],
-    auth=None,
-)
-@paginate
-@ordering(ordering_fields=["name", "created_at", "updated_at"])
-@searching(search_fields=["name", "description", "resource__publisher__name", "reciter__name"])
-def list_recitations(request, filters: RecitationFilter = Query()):
-
-    qs = Asset.objects.select_related("resource", "reciter").filter(
-        category=Asset.CategoryChoice.RECITATION,
-        resource__category=Resource.CategoryChoice.RECITATION,
-        resource__status=Resource.StatusChoice.READY,
-    )
-
-    qs = filters.filter(qs)
-
-    return qs
-
-
-@router.get(
-    "recitations/{asset_id}/",
-    response=list[ContentRecitationSurahTrackOut],
-    auth=None,
-)
-@paginate
-def list_recitation_tracks(request: Request, asset_id: int):
-    asset = get_object_or_404(
-        Asset.objects.filter(
-            id=asset_id,
-            category=Asset.CategoryChoice.RECITATION,
-            resource__category=Resource.CategoryChoice.RECITATION,
-            resource__status=Resource.StatusChoice.READY,
-        )
-    )
-
-    tracks = RecitationSurahTrack.objects.filter(asset=asset).order_by("surah_number")
-
-    results: list[ContentRecitationSurahTrackOut] = []
-
-    for track in tracks:
-        if track.audio_file:
-            audio_url = request.build_absolute_uri(track.audio_file.url)
-        else:
-            audio_url = None
-
-        results.append(
-            ContentRecitationSurahTrackOut(
-                surah_number=track.surah_number,
-                surah_name=track.surah_name,
-                surah_name_ar=track.surah_name_ar,
-                chapter_number=track.chapter_number,
-                audio_url=audio_url,
-                duration_ms=track.duration_ms,
-                size_bytes=track.size_bytes,
-            )
-        )
-
-    return results
-
-
-@router.get("riwayahs/", response=list[ContentRiwayahOut], auth=None)
-@paginate
-@ordering(ordering_fields=["name", "name_ar", "slug"])
-def list_content_riwayahs(request: Request):
-    """
-    Public Content API (V2):
-
-    List riwayahs that have at least one READY recitation Asset.
-
-    Conditions:
-    - Riwayah.is_active = True
-    - Asset.category = RECITATION
-    - Asset.riwayah = this Riwayah
-    - Asset.resource.category = RECITATION
-    - Asset.resource.status = READY
-    """
-
-    recitation_filter = Q(
-        assets__category=Asset.CategoryChoice.RECITATION,
-        assets__riwayah__isnull=False,
-        assets__resource__category=Resource.CategoryChoice.RECITATION,
-        assets__resource__status=Resource.StatusChoice.READY,
-    )
-
-    qs = (
-        Riwayah.objects.filter(
-            is_active=True,
-        )
-        .filter(recitation_filter)
-        .distinct()
-        .annotate(
-            recitations_count=Count(
-                "assets",
-                filter=recitation_filter,
-            )
-        )
-        .order_by("name")
-    )
-
-    return qs
