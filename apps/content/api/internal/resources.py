@@ -212,7 +212,7 @@ def detail_resource(request: Request, id: int):
     return resource
 
 
-@router.get("reciters", response=list[ContentReciterOut], auth=None)
+@router.get("reciters/", response=list[ContentReciterOut], auth=None)
 @paginate
 @ordering(ordering_fields=["name", "name_ar", "slug"])
 def list_content_reciters(request: Request):
@@ -255,7 +255,7 @@ def list_content_reciters(request: Request):
 
 
 @router.get(
-    "recitations",
+    "recitations/",
     response=list[ContentRecitationListOut],
     auth=None,
 )
@@ -276,7 +276,7 @@ def list_recitations(request, filters: RecitationFilter = Query()):
 
 
 @router.get(
-    "recitations/{asset_id}",
+    "recitations/{asset_id}/",
     response=list[ContentRecitationSurahTrackOut],
     auth=None,
 )
@@ -316,7 +316,7 @@ def list_recitation_tracks(request: Request, asset_id: int):
     return results
 
 
-@router.get("riwayahs", response=list[ContentRiwayahOut], auth=None)
+@router.get("riwayahs/", response=list[ContentRiwayahOut], auth=None)
 @paginate
 @ordering(ordering_fields=["name", "name_ar", "slug"])
 def list_content_riwayahs(request: Request):
