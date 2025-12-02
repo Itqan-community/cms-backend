@@ -33,11 +33,11 @@ class AssetAccessTest(BaseTestCase):
         # Act
         self.authenticate_user(self.user)
         response = self.client.post(
-            f"/assets/{self.asset.id}/request-access/", data=data, format="json"
+            f"/cms-api/assets/{self.asset.id}/request-access/", data=data, format="json"
         )
 
         # Assert
-        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(200, response.status_code)
         body = response.json()
 
         # Check request structure
@@ -69,7 +69,7 @@ class AssetAccessTest(BaseTestCase):
         # Act
         self.authenticate_user(self.user)
         response = self.client.post(
-            f"/assets/{self.asset.id}/request-access/", data=data, format="json"
+            f"/cms-api/assets/{self.asset.id}/request-access/", data=data, format="json"
         )
 
         # Assert
@@ -89,7 +89,7 @@ class AssetAccessTest(BaseTestCase):
         # Act
         self.authenticate_user(self.user)
         response = self.client.post(
-            f"/assets/{self.asset.id}/request-access/", data=data, format="json"
+            f"/cms-api/assets/{self.asset.id}/request-access/", data=data, format="json"
         )
 
         # Assert
@@ -105,7 +105,7 @@ class AssetAccessTest(BaseTestCase):
         # Act
         self.authenticate_user(self.user)
         response = self.client.post(
-            f"/assets/{self.asset.id}/request-access/", data=data, format="json"
+            f"/cms-api/assets/{self.asset.id}/request-access/", data=data, format="json"
         )
 
         # Assert
@@ -122,7 +122,7 @@ class AssetAccessTest(BaseTestCase):
         # Act
         self.authenticate_user(self.user)
         response = self.client.post(
-            f"/assets/{non_existent_asset_id}/request-access/", data=data, format="json"
+            f"/cms-api/assets/{non_existent_asset_id}/request-access/", data=data, format="json"
         )
 
         # Assert
@@ -137,7 +137,7 @@ class AssetAccessTest(BaseTestCase):
 
         # Act (without authentication)
         response = self.client.post(
-            f"/assets/{self.asset.id}/request-access/", data=data, format="json"
+            f"/cms-api/assets/{self.asset.id}/request-access/", data=data, format="json"
         )
 
         # Assert
@@ -153,13 +153,13 @@ class AssetAccessTest(BaseTestCase):
         # Act - First request
         self.authenticate_user(self.user)
         first_response = self.client.post(
-            f"/assets/{self.asset.id}/request-access/", data=data, format="json"
+            f"/cms-api/assets/{self.asset.id}/request-access/", data=data, format="json"
         )
 
         # Act - Second request with different purpose
         data["purpose"] = "Second request"
         second_response = self.client.post(
-            f"/assets/{self.asset.id}/request-access/", data=data, format="json"
+            f"/cms-api/assets/{self.asset.id}/request-access/", data=data, format="json"
         )
 
         # Assert
@@ -183,7 +183,7 @@ class AssetAccessTest(BaseTestCase):
         # Act
         self.authenticate_user(self.user)
         response = self.client.post(
-            f"/assets/{self.asset.id}/request-access/", data=data, format="json"
+            f"/cms-api/assets/{self.asset.id}/request-access/", data=data, format="json"
         )
 
         # Assert
@@ -223,7 +223,7 @@ class AssetAccessTest(BaseTestCase):
                 # Act
                 self.authenticate_user(self.user)
                 response = self.client.post(
-                    f"/assets/{invalid_format}/request-access/",
+                    f"/cms-api/assets/{invalid_format}/request-access/",
                     data=data,
                     format="json",
                 )

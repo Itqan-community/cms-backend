@@ -1,8 +1,8 @@
+from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
 from apps.users.models import Developer
 
-from ...core.ninja_utils.request import Request
 from ._schemas import UserProfileSchema, UserUpdateSchema
 
 router = ItqanRouter(tags=[NinjaTag.USERS])
