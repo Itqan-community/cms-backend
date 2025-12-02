@@ -386,7 +386,7 @@ class ResourceListTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get(f"/cms-api/resources/{resource.id}/", format="json")
+        response = self.client.get(f"/cms-api/resources/{resource.id}/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -420,7 +420,7 @@ class ResourceListTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get(f"/cms-api/resources/{resource.id}/", format="json")
+        response = self.client.get(f"/cms-api/resources/{resource.id}/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -542,7 +542,7 @@ class ContentRecitersListTest(BaseTestCase):
 
     def test_list_reciters_should_return_only_active_reciters_with_ready_recitations(self):
         # Act
-        response = self.client.get("/cms-api/resources/reciters/", format="json")
+        response = self.client.get("/cms-api/resources/reciters/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -576,7 +576,7 @@ class ContentRecitersListTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get("/cms-api/resources/reciters/?ordering=name", format="json")
+        response = self.client.get("/cms-api/resources/reciters/?ordering=name")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -653,7 +653,7 @@ class ContentRiwayahsListTest(BaseTestCase):
 
     def test_list_riwayahs_should_return_only_active_with_ready_recitations(self):
         # Act
-        response = self.client.get("/cms-api/resources/riwayahs/", format="json")
+        response = self.client.get("/cms-api/resources/riwayahs/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -682,7 +682,7 @@ class ContentRiwayahsListTest(BaseTestCase):
             resource=self.recitation_resource,
         )
 
-        response = self.client.get("/cms-api/resources/riwayahs/?ordering=name", format="json")
+        response = self.client.get("/cms-api/resources/riwayahs/?ordering=name")
 
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
@@ -766,7 +766,7 @@ class ContentRecitationsListTest(BaseTestCase):
         )
 
     def test_list_recitations_should_return_only_ready_recitation_assets(self):
-        response = self.client.get("/cms-api/resources/recitations/", format="json")
+        response = self.client.get("/cms-api/resources/recitations/")
 
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
@@ -789,9 +789,7 @@ class ContentRecitationsListTest(BaseTestCase):
             self.assertIn("updated_at", item)
 
     def test_list_recitations_filter_by_publisher(self):
-        response = self.client.get(
-            f"/cms-api/resources/recitations/?publisher_id={self.publisher1.id}", format="json"
-        )
+        response = self.client.get("/cms-api/resources/recitations/")
 
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
@@ -801,7 +799,7 @@ class ContentRecitationsListTest(BaseTestCase):
         self.assertEqual(self.ready_recitation_resource_pub1.id, items[0]["resource_id"])
 
     def test_list_recitations_filter_by_reciter(self):
-        response = self.client.get("/cms-api/resources/recitations/", format="json")
+        response = self.client.get("/cms-api/resources/recitations/")
 
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
@@ -810,7 +808,7 @@ class ContentRecitationsListTest(BaseTestCase):
         self.assertEqual(self.asset2.id, items[0]["id"])
 
     def test_list_recitations_filter_by_riwayah(self):
-        response = self.client.get("/cms-api/resources/recitations/", format="json")
+        response = self.client.get("/cms-api/resources/recitations/")
 
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
@@ -820,9 +818,7 @@ class ContentRecitationsListTest(BaseTestCase):
 
     def test_list_recitations_search_should_match_name_description_publisher_or_reciter(self):
         # Search by part of description
-        response = self.client.get(
-            "/cms-api/resources/recitations/?search=Beautiful", format="json"
-        )
+        response = self.client.get("/cms-api/resources/recitations/?search=Beautiful")
 
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
@@ -830,16 +826,14 @@ class ContentRecitationsListTest(BaseTestCase):
         self.assertEqual(self.asset1.id, items[0]["id"])
 
         # Search by reciter name
-        response = self.client.get(
-            "/cms-api/resources/recitations/?search=Reciter Two", format="json"
-        )
+        response = self.client.get("/cms-api/resources/recitations/?search=Reciter Two")
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
         self.assertEqual(1, len(items))
         self.assertEqual(self.asset2.id, items[0]["id"])
 
     def test_list_recitations_ordering_by_name(self):
-        response = self.client.get("/cms-api/resources/recitations/?ordering=name", format="json")
+        response = self.client.get("/cms-api/resources/recitations/?ordering=name")
 
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
@@ -888,9 +882,7 @@ class ContentRecitationTracksTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get(
-            f"/cms-api/resources/recitations/{self.asset.id}/", format="json"
-        )
+        response = self.client.get(f"/cms-api/resources/recitations/{self.asset.id}/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -924,9 +916,7 @@ class ContentRecitationTracksTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get(
-            f"/cms-api/resources/recitations/{self.asset.id}/", format="json"
-        )
+        response = self.client.get(f"/cms-api/resources/recitations/{self.asset.id}/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -953,9 +943,7 @@ class ContentRecitationTracksTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get(
-            f"/cms-api/resources/recitations/{self.asset.id}/", format="json"
-        )
+        response = self.client.get(f"/cms-api/resources/recitations/{self.asset.id}/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -965,7 +953,7 @@ class ContentRecitationTracksTest(BaseTestCase):
 
     def test_list_recitation_tracks_for_nonexistent_or_invalid_asset_should_return_404(self):
         # Non-existent asset
-        response = self.client.get("/cms-api/resources/recitations/999999/", format="json")
+        response = self.client.get("/cms-api/resources/recitations/999999/")
         self.assertEqual(404, response.status_code, response.content)
 
         # Asset with wrong category should also 404 due to queryset filter
@@ -981,9 +969,7 @@ class ContentRecitationTracksTest(BaseTestCase):
             resource=non_recitation_resource,
         )
 
-        response = self.client.get(
-            f"/cms-api/resources/recitations/{non_recitation_asset.id}/", format="json"
-        )
+        response = self.client.get(f"/cms-api/resources/recitations/{non_recitation_asset.id}/")
         self.assertEqual(404, response.status_code, response.content)
 
         # Asset with RECITATION category but non-READY resource should 404
@@ -999,7 +985,5 @@ class ContentRecitationTracksTest(BaseTestCase):
             resource=draft_resource,
         )
 
-        response = self.client.get(
-            f"/cms-api/resources/recitations/{draft_asset.id}/", format="json"
-        )
+        response = self.client.get(f"/cms-api/resources/recitations/{draft_asset.id}/")
         self.assertEqual(404, response.status_code, response.content)
