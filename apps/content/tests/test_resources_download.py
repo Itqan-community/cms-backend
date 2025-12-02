@@ -37,7 +37,7 @@ class DownloadResourceTest(BaseTestCase):
             )
 
             # Act
-            response = self.client.get(f"/resources/{resource.id}/download/", format="json")
+            response = self.client.get(f"/cms-api/resources/{resource.id}/download/", format="json")
             body = response.json()
 
             # Assert
@@ -78,7 +78,7 @@ class DownloadResourceTest(BaseTestCase):
             )
 
             # Act
-            response = self.client.get(f"/resources/{resource.id}/download/", format="json")
+            response = self.client.get(f"/cms-api/resources/{resource.id}/download/", format="json")
             body = response.json()
 
             # Assert
@@ -93,7 +93,7 @@ class DownloadResourceTest(BaseTestCase):
         resource = baker.make(Resource)
 
         # Act
-        response = self.client.get(f"/resources/{resource.id}/download/", format="json")
+        response = self.client.get(f"/cms-api/resources/{resource.id}/download/", format="json")
 
         # Assert
         self.assertEqual(404, response.status_code)
@@ -104,7 +104,7 @@ class DownloadResourceTest(BaseTestCase):
         non_existent_id = 99999
 
         # Act
-        response = self.client.get(f"/resources/{non_existent_id}/download/", format="json")
+        response = self.client.get(f"/cms-api/resources/{non_existent_id}/download/", format="json")
 
         # Assert
         self.assertEqual(404, response.status_code)
@@ -132,7 +132,7 @@ class DownloadResourceTest(BaseTestCase):
             version.save(update_fields=["storage_url"])
 
             # Act
-            response = self.client.get(f"/resources/{resource.id}/download/", format="json")
+            response = self.client.get(f"/cms-api/resources/{resource.id}/download/", format="json")
 
             # Assert
             self.assertEqual(404, response.status_code)
@@ -156,7 +156,7 @@ class DownloadResourceTest(BaseTestCase):
             )
 
             # Act
-            response = self.client.get(f"/resources/{resource.id}/download/", format="json")
+            response = self.client.get(f"/cms-api/resources/{resource.id}/download/", format="json")
             body = response.json()
 
             # Assert
@@ -203,7 +203,7 @@ class DownloadResourceTest(BaseTestCase):
 
             # Act - Include custom headers
             response = self.client.get(
-                f"/resources/{resource.id}/download/",
+                f"/cms-api/resources/{resource.id}/download/",
                 format="json",
                 headers={
                     "user-agent": "Resource Download Agent/3.0",

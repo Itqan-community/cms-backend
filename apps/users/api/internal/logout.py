@@ -6,9 +6,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from apps.core.ninja_utils.errors import ItqanError
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
+from apps.core.ninja_utils.schemas import OkSchema
 from apps.core.ninja_utils.tags import NinjaTag
-
-from ...core.ninja_utils.schemas import OkSchema
 
 router = ItqanRouter(tags=[NinjaTag.AUTH])
 

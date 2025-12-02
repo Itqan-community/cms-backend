@@ -6,6 +6,9 @@ from django.shortcuts import redirect, render
 from django.urls import path, reverse
 from django.utils.html import format_html
 
+from config.settings.base import CLOUDFLARE_R2_PUBLIC_BASE_URL
+
+from ..core.mixins.constants import SURAH_NUMBER_NAME_AR, SURAH_NUMBER_NAME_EN
 from ..mixins.recitations_helpers import extract_surah_number_from_filename
 from .forms.bulk_recitations_upload_form import BulkRecitationUploadForm
 from .forms.download_recitations_json_form import DownloadRecitationsJsonForm
@@ -632,12 +635,18 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
                 result: list[dict] = []
                 for t in tracks:
                     try:
-                        url = request.build_absolute_uri(t.audio_file.url) if t.audio_file else ""
+                        url = (
+                            f"{CLOUDFLARE_R2_PUBLIC_BASE_URL}/media/{t.audio_file.name}"
+                            if t.audio_file
+                            else ""
+                        )
                     except Exception:
                         url = ""
                     result.append(
                         {
                             "surah_number": int(t.surah_number),
+                            "surah_name": SURAH_NUMBER_NAME_EN[int(t.surah_number)],
+                            "surah_name_ar": SURAH_NUMBER_NAME_AR[int(t.surah_number)],
                             "audio_file": url,
                             "duration_ms": int(t.duration_ms or 0),
                             "ayah_timings": [],

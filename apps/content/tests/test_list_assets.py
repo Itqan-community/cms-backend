@@ -10,7 +10,7 @@ class ListAssetTest(BaseTestCase):
         baker.make(Asset, name="Tafsir Ibn Katheer")
 
         # Act
-        response = self.client.get("/assets/", format="json")
+        response = self.client.get("/cms-api/assets/", format="json")
 
         # Assert
         self.assertEqual(response.status_code, 200, response.content)
@@ -25,7 +25,7 @@ class ListAssetTest(BaseTestCase):
 
         # Act
         response = self.client.get(
-            "/assets/", data={"license_code": LicenseChoice.CC_BY_SA}, format="json"
+            "/cms-api/assets/", data={"license_code": LicenseChoice.CC_BY_SA}, format="json"
         )
 
         # Assert
@@ -41,7 +41,7 @@ class ListAssetTest(BaseTestCase):
 
         # Act
         response = self.client.get(
-            "/assets/",
+            "/cms-api/assets/",
             data={"category": Asset.CategoryChoice.RECITATION},
             format="json",
         )
@@ -62,7 +62,7 @@ class ListAssetTest(BaseTestCase):
 
         # Act
         response = self.client.get(
-            f"/assets/?category={Asset.CategoryChoice.RECITATION}&category={Asset.CategoryChoice.TAFSIR}",
+            f"/cms-api/assets/?category={Asset.CategoryChoice.RECITATION}&category={Asset.CategoryChoice.TAFSIR}",
             format="json",
         )
 
@@ -79,7 +79,7 @@ class ListAssetTest(BaseTestCase):
         baker.make(Asset, name="B")
 
         # Act
-        response = self.client.get("/assets/", data={"ordering": "-name"}, format="json")
+        response = self.client.get("/cms-api/assets/", data={"ordering": "-name"}, format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -96,7 +96,7 @@ class ListAssetTest(BaseTestCase):
         baker.make(Asset, name="B")
 
         # Act
-        response = self.client.get("/assets/", data={"ordering": "name"}, format="json")
+        response = self.client.get("/cms-api/assets/", data={"ordering": "name"}, format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -113,7 +113,9 @@ class ListAssetTest(BaseTestCase):
         baker.make(Asset, name="B", category=Asset.CategoryChoice.TAFSIR)
 
         # Act
-        response = self.client.get("/assets/", data={"ordering": "-category"}, format="json")
+        response = self.client.get(
+            "/cms-api/assets/", data={"ordering": "-category"}, format="json"
+        )
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -148,14 +150,16 @@ class ListAssetTest(BaseTestCase):
         )
 
         # Test search by name/category
-        response = self.client.get("/assets/", data={"search": "tafsir"}, format="json")
+        response = self.client.get("/cms-api/assets/", data={"search": "tafsir"}, format="json")
         self.assertEqual(200, response.status_code, response.content)
         response_body = response.json()
         self.assertEqual(1, len(response_body["results"]))
         self.assertEqual("Tafsir Al-Jalalayn", response_body["results"][0]["name"])
 
         # Test search by description
-        response = self.client.get("/assets/", data={"search": "recitation book"}, format="json")
+        response = self.client.get(
+            "/cms-api/assets/", data={"search": "recitation book"}, format="json"
+        )
         self.assertEqual(200, response.status_code, response.content)
         response_body = response.json()
         self.assertEqual(1, len(response_body["results"]))
