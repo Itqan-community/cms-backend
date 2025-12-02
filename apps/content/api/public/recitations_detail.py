@@ -6,7 +6,6 @@ from pydantic import Field
 from apps.content.models import Asset, RecitationSurahTrack, Resource
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
-
 from apps.core.ninja_utils.tags import NinjaTag
 
 
