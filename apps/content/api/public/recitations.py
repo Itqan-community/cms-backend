@@ -2,6 +2,7 @@ from datetime import datetime
 
 from ninja import Query, Schema
 from ninja.pagination import paginate
+from pydantic import Field
 
 from apps.content.api.internal.resources import RecitationFilter
 from apps.content.models import Asset, Resource

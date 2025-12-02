@@ -1,7 +1,7 @@
-from django.db.models import Field
 from django.shortcuts import get_object_or_404
 from ninja import Schema
 from ninja.pagination import paginate
+from pydantic import Field
 
 from apps.content.models import Asset, RecitationSurahTrack, Resource
 from apps.core.ninja_utils.request import Request
