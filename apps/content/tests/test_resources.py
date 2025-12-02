@@ -30,7 +30,7 @@ class ResourceListTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get("/resources/")
+        response = self.client.get("/cms-api/resources/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -74,7 +74,7 @@ class ResourceListTest(BaseTestCase):
         baker.make(Resource, publisher=self.publisher2, category=Resource.CategoryChoice.MUSHAF)
 
         # Act
-        response = self.client.get("/resources/?category=tafsir")
+        response = self.client.get("/cms-api/resources/?category=tafsir")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -91,7 +91,7 @@ class ResourceListTest(BaseTestCase):
         baker.make(Resource, publisher=self.publisher2, status=Resource.StatusChoice.READY)
 
         # Act
-        response = self.client.get("/resources/?status=ready")
+        response = self.client.get("/cms-api/resources/?status=ready")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -108,7 +108,7 @@ class ResourceListTest(BaseTestCase):
         baker.make(Resource, publisher=self.publisher2)
 
         # Act
-        response = self.client.get(f"/resources/?publisher_id={self.publisher1.id}")
+        response = self.client.get(f"/cms-api/resources/?publisher_id={self.publisher1.id}")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -132,7 +132,7 @@ class ResourceListTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get("/resources/?search=tafsir")
+        response = self.client.get("/cms-api/resources/?search=tafsir")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -149,7 +149,7 @@ class ResourceListTest(BaseTestCase):
         baker.make(Resource, publisher=self.publisher2, name="Alpha Resource")
 
         # Act
-        response = self.client.get("/resources/?ordering=name")
+        response = self.client.get("/cms-api/resources/?ordering=name")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -169,7 +169,7 @@ class ResourceListTest(BaseTestCase):
         baker.make(Resource, publisher=self.publisher2, name="Second Resource")
 
         # Act
-        response = self.client.get("/resources/?ordering=-created_at")
+        response = self.client.get("/cms-api/resources/?ordering=-created_at")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -207,7 +207,7 @@ class ResourceListTest(BaseTestCase):
 
         # Act
         response = self.client.get(
-            f"/resources/?category=tafsir&status=ready&publisher_id={self.publisher1.id}"
+            f"/cms-api/resources/?category=tafsir&status=ready&publisher_id={self.publisher1.id}"
         )
 
         # Assert
@@ -232,7 +232,7 @@ class ResourceListTest(BaseTestCase):
         }
 
         # Act
-        response = self.client.post("/resources/", data=data, format="json")
+        response = self.client.post("/cms-api/resources/", data=data, format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -262,7 +262,7 @@ class ResourceListTest(BaseTestCase):
         }
 
         # Act
-        response = self.client.post("/resources/", data=data, format="json")
+        response = self.client.post("/cms-api/resources/", data=data, format="json")
 
         # Assert
         self.assertEqual(400, response.status_code, response.content)
@@ -280,7 +280,7 @@ class ResourceListTest(BaseTestCase):
         data = {"name": "Updated Name", "description": "Updated description"}
 
         # Act
-        response = self.client.put(f"/resources/{resource.id}/", data=data, format="json")
+        response = self.client.put(f"/cms-api/resources/{resource.id}/", data=data, format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -300,7 +300,7 @@ class ResourceListTest(BaseTestCase):
         data = {"name": "Partially Updated Name"}
 
         # Act
-        response = self.client.patch(f"/resources/{resource.id}/", data=data, format="json")
+        response = self.client.patch(f"/cms-api/resources/{resource.id}/", data=data, format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -315,7 +315,7 @@ class ResourceListTest(BaseTestCase):
         data = {"name": "", "description": "Updated description"}  # Invalid: empty name
 
         # Act
-        response = self.client.put(f"/resources/{resource.id}/", data=data, format="json")
+        response = self.client.put(f"/cms-api/resources/{resource.id}/", data=data, format="json")
 
         # Assert
         self.assertEqual(400, response.status_code, response.content)
@@ -332,7 +332,7 @@ class ResourceListTest(BaseTestCase):
         resource = baker.make(Resource, publisher=self.publisher1)
 
         # Act
-        response = self.client.delete(f"/resources/{resource.id}/")
+        response = self.client.delete(f"/cms-api/resources/{resource.id}/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -385,7 +385,7 @@ class ResourceListTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get(f"/resources/{resource.id}/", format="json")
+        response = self.client.get(f"/cms-api/resources/{resource.id}/", format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -419,7 +419,7 @@ class ResourceListTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get(f"/resources/{resource.id}/", format="json")
+        response = self.client.get(f"/cms-api/resources/{resource.id}/", format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -447,7 +447,7 @@ class ResourceListTest(BaseTestCase):
 
         # Act - Include custom headers
         response = self.client.get(
-            f"/resources/{resource.id}/",
+            f"/cms-api/resources/{resource.id}/",
             format="json",
             headers={
                 "user-agent": "Test Agent/1.0",

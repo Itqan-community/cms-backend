@@ -9,7 +9,8 @@ from django.utils import timezone
 from drf_spectacular.views import SpectacularRedocView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
 
-from config.ninja_urls import ninja_api
+from config.cms_api import cms_api
+from config.developers_api import developers_api
 
 
 def health_check(request):
@@ -54,7 +55,10 @@ urlpatterns = [
     path("django-admin/", admin.site.urls),
     # Django Allauth URLs
     path("accounts/", include("allauth.urls")),
-    path("", ninja_api.urls),
+    # Internal CMS API mount
+    path("cms-api/", cms_api.urls),
+    # Public developers API mount
+    path("developers-api/", developers_api.urls),
 ]
 
 # Serve media files in development

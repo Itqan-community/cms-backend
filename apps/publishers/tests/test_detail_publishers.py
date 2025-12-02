@@ -20,7 +20,7 @@ class DetailPublisherTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get(f"/publishers/{publisher.id}/", format="json")
+        response = self.client.get(f"/cms-api/publishers/{publisher.id}/", format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -44,7 +44,7 @@ class DetailPublisherTest(BaseTestCase):
         non_existent_id = 99999
 
         # Act
-        response = self.client.get(f"/publishers/{non_existent_id}/", format="json")
+        response = self.client.get(f"/cms-api/publishers/{non_existent_id}/", format="json")
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
@@ -66,7 +66,7 @@ class DetailPublisherTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get(f"/publishers/{publisher.id}/", format="json")
+        response = self.client.get(f"/cms-api/publishers/{publisher.id}/", format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -103,7 +103,9 @@ class DetailPublisherTest(BaseTestCase):
         )
 
         # Act + Assert (verified)
-        response_verified = self.client.get(f"/publishers/{verified_publisher.id}/", format="json")
+        response_verified = self.client.get(
+            f"/cms-api/publishers/{verified_publisher.id}/", format="json"
+        )
         self.assertEqual(200, response_verified.status_code, response_verified.content)
         body_verified = response_verified.json()
         self.assertTrue(body_verified["is_verified"])
@@ -111,7 +113,7 @@ class DetailPublisherTest(BaseTestCase):
 
         # Act + Assert (unverified)
         response_unverified = self.client.get(
-            f"/publishers/{unverified_publisher.id}/", format="json"
+            f"/cms-api/publishers/{unverified_publisher.id}/", format="json"
         )
         self.assertEqual(200, response_unverified.status_code, response_unverified.content)
         body_unverified = response_unverified.json()
@@ -134,7 +136,7 @@ class DetailPublisherTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get(f"/publishers/{publisher.id}/", format="json")
+        response = self.client.get(f"/cms-api/publishers/{publisher.id}/", format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -153,7 +155,7 @@ class DetailPublisherTest(BaseTestCase):
         publisher = baker.make(Publisher, name="Social Media Publisher", icon_url="social-icon.png")
 
         # Act
-        response = self.client.get(f"/publishers/{publisher.id}/", format="json")
+        response = self.client.get(f"/cms-api/publishers/{publisher.id}/", format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -173,7 +175,7 @@ class DetailPublisherTest(BaseTestCase):
         for invalid_format in invalid_formats:
             with self.subTest(invalid_format=invalid_format):
                 # Act
-                response = self.client.get(f"/publishers/{invalid_format}/", format="json")
+                response = self.client.get(f"/cms-api/publishers/{invalid_format}/", format="json")
 
                 # Assert
                 self.assertEqual(
@@ -183,7 +185,7 @@ class DetailPublisherTest(BaseTestCase):
                 )
 
         # Test empty path - should return 404
-        response = self.client.get("/publishers/", format="json")
+        response = self.client.get("/cms-api/publishers/", format="json")
         self.assertEqual(404, response.status_code, response.content)
 
     def test_detail_publishers_where_multiple_publishers_should_return_correct_specific_publisher(
@@ -208,7 +210,7 @@ class DetailPublisherTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get(f"/publishers/{publisher2.id}/", format="json")
+        response = self.client.get(f"/cms-api/publishers/{publisher2.id}/", format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -229,7 +231,7 @@ class DetailPublisherTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get(f"/publishers/{publisher.id}/", format="json")
+        response = self.client.get(f"/cms-api/publishers/{publisher.id}/", format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
