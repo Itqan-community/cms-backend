@@ -590,7 +590,7 @@ class Reciter(BaseModel):
 
     def save(self, *args, **kwargs) -> None:
         if not self.slug:
-            self.slug = slugify(self.name)[:50]
+            self.slug = slugify(self.name[:50], allow_unicode=True)
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
@@ -607,7 +607,7 @@ class Riwayah(BaseModel):
 
     def save(self, *args, **kwargs) -> None:
         if not self.slug:
-            self.slug = slugify(self.name)[:50]
+            self.slug = slugify(self.name[:50], allow_unicode=True)
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
