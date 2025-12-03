@@ -47,14 +47,14 @@ class TestAssetDownload(BaseTestCase):
             expires_at=None,  # Never expires, so is_active will be True
         )
 
-    @patch("apps.content.views.assets_download.user_has_access")
+    @patch("apps.content.api.internal.assets_download.user_has_access")
     def test_download_asset_without_access_should_return_403(self, mock_user_has_access):
         # Arrange
         mock_user_has_access.return_value = False
 
         # Act
         self.authenticate_user(self.user)
-        response = self.client.get(f"/assets/{self.asset.id}/download/")
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/download/")
 
         # Assert
         self.assertEqual(403, response.status_code, response.content)
@@ -62,7 +62,7 @@ class TestAssetDownload(BaseTestCase):
 
     def test_download_asset_without_authentication_should_return_401(self):
         # Act (without authentication)
-        response = self.client.get(f"/assets/{self.asset.id}/download/")
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/download/")
 
         # Assert
         self.assertEqual(401, response.status_code, response.content)
@@ -73,12 +73,12 @@ class TestAssetDownload(BaseTestCase):
 
         # Act
         self.authenticate_user(self.user)
-        response = self.client.get(f"/assets/{non_existent_asset_id}/download/")
+        response = self.client.get(f"/cms-api/assets/{non_existent_asset_id}/download/")
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
 
-    @patch("apps.content.views.assets_download.user_has_access")
+    @patch("apps.content.api.internal.assets_download.user_has_access")
     def test_download_asset_with_no_versions_should_return_404(self, mock_user_has_access):
         # Arrange
         mock_user_has_access.return_value = True
@@ -86,12 +86,12 @@ class TestAssetDownload(BaseTestCase):
 
         # Act
         self.authenticate_user(self.user)
-        response = self.client.get(f"/assets/{self.asset.id}/download/")
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/download/")
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
 
-    @patch("apps.content.views.assets_download.user_has_access")
+    @patch("apps.content.api.internal.assets_download.user_has_access")
     def test_download_asset_with_no_file_should_return_404(self, mock_user_has_access):
         # Arrange
         mock_user_has_access.return_value = True
@@ -99,12 +99,12 @@ class TestAssetDownload(BaseTestCase):
 
         # Act
         self.authenticate_user(self.user)
-        response = self.client.get(f"/assets/{self.asset.id}/download/")
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/download/")
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
 
-    @patch("apps.content.views.assets_download.user_has_access")
+    @patch("apps.content.api.internal.assets_download.user_has_access")
     def test_download_asset_with_valid_file_should_return_file_response(self, mock_user_has_access):
         # Arrange
         mock_user_has_access.return_value = True
@@ -117,15 +117,16 @@ class TestAssetDownload(BaseTestCase):
 
         # Act
         self.authenticate_user(self.user)
-        response = self.client.get(f"/assets/{self.asset.id}/download/")
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/download/")
         body = response.json()
 
         # Assert
         self.assertEqual(200, response.status_code)
         self.assertIn("download_url", body)
+        self.assertTrue(body["download_url"].startswith("https"))
         self.assertIn("/test.pdf", body["download_url"])
 
-    @patch("apps.content.views.assets_download.user_has_access")
+    @patch("apps.content.api.internal.assets_download.user_has_access")
     def test_download_asset_with_csv_file_should_return_correct_content_type(
         self, mock_user_has_access
     ):
@@ -138,15 +139,16 @@ class TestAssetDownload(BaseTestCase):
 
         # Act
         self.authenticate_user(self.user)
-        response = self.client.get(f"/assets/{self.asset.id}/download/")
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/download/")
         body = response.json()
 
         # Assert
         self.assertEqual(200, response.status_code)
         self.assertIn("download_url", body)
+        self.assertTrue(body["download_url"].startswith("https"))
         self.assertIn("/test.csv", body["download_url"])
 
-    @patch("apps.content.views.assets_download.user_has_access")
+    @patch("apps.content.api.internal.assets_download.user_has_access")
     def test_download_asset_should_return_latest_version(self, mock_user_has_access):
         # Arrange
         mock_user_has_access.return_value = True
@@ -168,12 +170,13 @@ class TestAssetDownload(BaseTestCase):
 
         # Act
         self.authenticate_user(self.user)
-        response = self.client.get(f"/assets/{self.asset.id}/download/")
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/download/")
         body = response.json()
 
         # Assert
         self.assertEqual(200, response.status_code)
         self.assertIn("download_url", body)
+        self.assertTrue(body["download_url"].startswith("https"))
         self.assertIn("/new.pdf", body["download_url"])
 
     def test_download_asset_with_invalid_id_format_should_return_400(self):
@@ -188,7 +191,7 @@ class TestAssetDownload(BaseTestCase):
             with self.subTest(invalid_format=invalid_format):
                 # Act
                 self.authenticate_user(self.user)
-                response = self.client.get(f"/assets/{invalid_format}/download/")
+                response = self.client.get(f"/cms-api/assets/{invalid_format}/download/")
 
                 # Assert
                 self.assertEqual(
@@ -197,7 +200,7 @@ class TestAssetDownload(BaseTestCase):
                     f"Failed for format: {invalid_format}, response: {response.content}",
                 )
 
-    @patch("apps.content.views.assets_download.user_has_access")
+    @patch("apps.content.api.internal.assets_download.user_has_access")
     def test_download_asset_should_create_usage_event_for_authenticated_user(
         self, mock_user_has_access
     ):
@@ -212,7 +215,7 @@ class TestAssetDownload(BaseTestCase):
 
         # Act
         self.authenticate_user(self.user)
-        response = self.client.get(f"/assets/{self.asset.id}/download/")
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/download/")
 
         # Assert
         self.assertEqual(200, response.status_code)
@@ -235,7 +238,7 @@ class TestAssetDownload(BaseTestCase):
         self.assertEqual(usage_event.effective_license, self.asset.license)
         self.assertIsInstance(usage_event.metadata, dict)
 
-    @patch("apps.content.views.assets_download.user_has_access")
+    @patch("apps.content.api.internal.assets_download.user_has_access")
     def test_download_asset_should_not_create_usage_event_when_permission_denied(
         self, mock_user_has_access
     ):
@@ -244,7 +247,7 @@ class TestAssetDownload(BaseTestCase):
 
         # Act
         self.authenticate_user(self.user)
-        response = self.client.get(f"/assets/{self.asset.id}/download/")
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/download/")
 
         # Assert
         self.assertEqual(403, response.status_code)
@@ -258,7 +261,7 @@ class TestAssetDownload(BaseTestCase):
         )
         self.assertEqual(0, usage_events.count())
 
-    @patch("apps.content.views.assets_download.user_has_access")
+    @patch("apps.content.api.internal.assets_download.user_has_access")
     def test_download_asset_should_include_request_metadata_in_usage_event(
         self, mock_user_has_access
     ):
@@ -272,7 +275,7 @@ class TestAssetDownload(BaseTestCase):
         # Act - Include custom headers
         self.authenticate_user(self.user)
         response = self.client.get(
-            f"/assets/{self.asset.id}/download/",
+            f"/cms-api/assets/{self.asset.id}/download/",
             headers={
                 "user-agent": "Download Agent/2.0",
                 "x-forwarded-for": "192.168.1.200",

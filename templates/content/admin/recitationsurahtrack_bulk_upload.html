@@ -1,0 +1,182 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+  {{ surah_map_en|json_script:"surah-map-en" }}
+  {{ surah_map_ar|json_script:"surah-map-ar" }}
+  <form id="bulkUploadForm" method="post" enctype="multipart/form-data" action="" style="max-width:900px;">
+      {% csrf_token %}
+      <table style="margin-bottom:12px;">
+          {{ form.as_table }}
+      </table>
+      <div id="filePreview" style="display:none; margin:12px 0; padding:10px; border:1px solid #444; border-radius:6px;">
+        <div style="margin-bottom:8px; font-weight:600;">Selected files</div>
+        <ul id="filePreviewList" style="list-style: none; padding-left: 0; margin:0;"></ul>
+        <div id="filePreviewSummary" style="margin-top:8px; font-size:12px; color:#aaa;"></div>
+      </div>
+      <div id="progressWrap" style="margin-top:12px; display:none;">
+        <progress id="uploadProgress" max="100" value="0" style="width:100%;"></progress>
+        <div id="progressText" style="margin-top:6px; font-size:12px;">Preparing upload…</div>
+        <div id="uploadStatus" style="margin-top:6px; font-size:12px; color:#555;">
+          Please do not close or navigate away from this page until the upload is fully finished.
+        </div>
+      </div>
+      <div style="margin-top:12px; display:flex; gap:8px;">
+        <input type="submit" value="Upload" class="default" id="submitBtn">
+      </div>
+  </form>
+  <script>
+    (function() {
+      // Surah name maps injected by server (safe via json_script)
+      const SURAH_MAP_EN = JSON.parse(document.getElementById('surah-map-en').textContent);
+      const SURAH_MAP_AR = JSON.parse(document.getElementById('surah-map-ar').textContent);
+      const form = document.getElementById('bulkUploadForm');
+      if (!form) return;
+      const fileInput = form.querySelector('input[name="audio_files"]');
+      const filePreview = document.getElementById('filePreview');
+      const filePreviewList = document.getElementById('filePreviewList');
+      const filePreviewSummary = document.getElementById('filePreviewSummary');
+      let currentXhr = null;
+
+      function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+      }
+
+      function bytesToReadable(bytes) {
+        if (!bytes || isNaN(bytes)) return '0 B';
+        const units = ['B','KB','MB','GB','TB'];
+        let i = 0;
+        let num = bytes;
+        while (num >= 1024 && i < units.length - 1) {
+          num = num / 1024;
+          i++;
+        }
+        return `${num.toFixed(1)} ${units[i]}`;
+      }
+
+      function parseSurahNumber(filename) {
+        const m = /^(\d{1,3})/.exec(filename || '');
+        return m ? parseInt(m[1], 10) : null;
+      }
+
+      function refreshPreview() {
+        if (!fileInput) return;
+        const files = Array.from(fileInput.files || []);
+        if (!files.length) {
+          filePreview.style.display = 'none';
+          return;
+        }
+        filePreview.style.display = 'block';
+        filePreviewList.innerHTML = '';
+        const seen = new Set();
+        let invalid = 0;
+        let dupWithin = 0;
+        for (const f of files) {
+          const li = document.createElement('li');
+          li.style.margin = '4px 0';
+          const sn = parseSurahNumber(f.name);
+          if (sn === null || sn < 1 || sn > 114) {
+            li.style.color = '#ff6b6b';
+            li.textContent = `${f.name} — invalid surah number`;
+            invalid++;
+          } else {
+            if (seen.has(sn)) {
+              li.style.color = '#f0ad4e';
+              li.textContent = `${f.name} — duplicate in selection (surah ${sn})`;
+              dupWithin++;
+            } else {
+              seen.add(sn);
+              const en = SURAH_MAP_EN[String(sn)] || SURAH_MAP_EN[sn] || '';
+              const ar = SURAH_MAP_AR[String(sn)] || SURAH_MAP_AR[sn] || '';
+              li.textContent = `${f.name} — surah ${sn} ${en ? `(${en})` : ''} ${ar ? `- ${ar}` : ''}`;
+            }
+          }
+          filePreviewList.appendChild(li);
+        }
+        const warnings = [];
+        if (invalid) warnings.push(`${invalid} invalid filename(s)`);
+        if (dupWithin) warnings.push(`${dupWithin} duplicate(s) in selection`);
+        filePreviewSummary.textContent = warnings.length ? `Warnings: ${warnings.join(', ')}. Existing tracks in the database will also be skipped automatically.` : 'Looks good. Existing tracks in the database will be skipped automatically.';
+        // Optional: disable submit if there are invalid filenames
+        document.getElementById('submitBtn').disabled = invalid > 0;
+      }
+
+      if (fileInput) {
+        fileInput.addEventListener('change', refreshPreview);
+        // Initialize on load if files are kept by browser
+        if (fileInput.files && fileInput.files.length) {
+          refreshPreview();
+        }
+      }
+
+      form.addEventListener('submit', function(e) {
+        // Use XHR to get upload progress while preserving server-side messages
+        e.preventDefault();
+
+        const progressWrap = document.getElementById('progressWrap');
+        const progressBar = document.getElementById('uploadProgress');
+        const progressText = document.getElementById('progressText');
+        const statusText = document.getElementById('uploadStatus');
+        const submitBtn = document.getElementById('submitBtn');
+
+        progressWrap.style.display = 'block';
+        progressBar.value = 0;
+        progressText.textContent = '0%';
+        statusText.textContent = 'Uploading files… Please do not close this page.';
+        submitBtn.disabled = true;
+
+        const xhr = new XMLHttpRequest();
+        currentXhr = xhr;
+        xhr.open('POST', form.getAttribute('action') || window.location.href, true);
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        const csrftoken = getCookie('csrftoken');
+        if (csrftoken) {
+          xhr.setRequestHeader('X-CSRFToken', csrftoken);
+        }
+
+        xhr.upload.onprogress = function(event) {
+          if (event.lengthComputable) {
+            const percent = Math.round((event.loaded / event.total) * 100);
+            progressBar.value = percent;
+            progressText.textContent = percent + '% (' + bytesToReadable(event.loaded) + ' / ' + bytesToReadable(event.total) + ')';
+            if (percent >= 100) {
+              // Phase 2: client finished sending; server is finalizing (writing chunks, creating DB rows, etc.)
+              // Switch to indeterminate progress to reflect server-side processing time.
+              progressBar.removeAttribute('value');
+              progressText.textContent = 'Upload sent. Finalizing on server…';
+              statusText.textContent = 'Please do not close this page until the upload is fully finished.';
+            }
+          } else {
+            // Unknown length -> indeterminate
+            progressBar.removeAttribute('value');
+            progressText.textContent = 'Uploading…';
+            statusText.textContent = 'Please do not close this page until the upload is fully finished.';
+          }
+        };
+
+        xhr.onload = function() {
+          // After server sets messages and redirects, navigate to final URL to show messages
+          try {
+            // Restore to complete state just before redirect for a better UX
+            progressBar.setAttribute('value', '100');
+            progressText.textContent = 'Completed. Redirecting…';
+            statusText.textContent = 'Upload finished.';
+          } catch (e) {}
+          const target = xhr.responseURL || "{{ redirect_url|default:'' }}";
+          window.location.href = target || window.location.href;
+        };
+
+        xhr.onerror = function() {
+          // As a fallback, submit the form normally
+          statusText.textContent = 'Network error encountered. Retrying with standard submission…';
+          form.submit();
+        };
+
+        const formData = new FormData(form);
+        xhr.send(formData);
+      });
+    })();
+  </script>
+{% endblock %}

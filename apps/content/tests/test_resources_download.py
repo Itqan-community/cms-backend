@@ -37,12 +37,13 @@ class DownloadResourceTest(BaseTestCase):
             )
 
             # Act
-            response = self.client.get(f"/resources/{resource.id}/download/", format="json")
+            response = self.client.get(f"/cms-api/resources/{resource.id}/download/", format="json")
             body = response.json()
 
             # Assert
             self.assertEqual(200, response.status_code)
             self.assertIn("download_url", body)
+            self.assertTrue(body["download_url"].startswith("https"))
             self.assertIn("/data.csv", body["download_url"])
 
     def test_download_fallbacks_to_most_recent_when_no_latest_marked(self):
@@ -77,12 +78,13 @@ class DownloadResourceTest(BaseTestCase):
             )
 
             # Act
-            response = self.client.get(f"/resources/{resource.id}/download/", format="json")
+            response = self.client.get(f"/cms-api/resources/{resource.id}/download/", format="json")
             body = response.json()
 
             # Assert
             self.assertEqual(200, response.status_code)
             self.assertIn("download_url", body)
+            self.assertTrue(body["download_url"].startswith("https"))
             self.assertIn("/new.json", body["download_url"])
 
     def test_download_returns_404_when_no_versions_exist(self):
@@ -91,7 +93,7 @@ class DownloadResourceTest(BaseTestCase):
         resource = baker.make(Resource)
 
         # Act
-        response = self.client.get(f"/resources/{resource.id}/download/", format="json")
+        response = self.client.get(f"/cms-api/resources/{resource.id}/download/", format="json")
 
         # Assert
         self.assertEqual(404, response.status_code)
@@ -102,7 +104,7 @@ class DownloadResourceTest(BaseTestCase):
         non_existent_id = 99999
 
         # Act
-        response = self.client.get(f"/resources/{non_existent_id}/download/", format="json")
+        response = self.client.get(f"/cms-api/resources/{non_existent_id}/download/", format="json")
 
         # Assert
         self.assertEqual(404, response.status_code)
@@ -130,7 +132,7 @@ class DownloadResourceTest(BaseTestCase):
             version.save(update_fields=["storage_url"])
 
             # Act
-            response = self.client.get(f"/resources/{resource.id}/download/", format="json")
+            response = self.client.get(f"/cms-api/resources/{resource.id}/download/", format="json")
 
             # Assert
             self.assertEqual(404, response.status_code)
@@ -154,12 +156,13 @@ class DownloadResourceTest(BaseTestCase):
             )
 
             # Act
-            response = self.client.get(f"/resources/{resource.id}/download/", format="json")
+            response = self.client.get(f"/cms-api/resources/{resource.id}/download/", format="json")
             body = response.json()
 
             # Assert
             self.assertEqual(200, response.status_code)
             self.assertIn("download_url", body)
+            self.assertTrue(body["download_url"].startswith("https"))
             self.assertIn("/test.csv", body["download_url"])
 
             # Verify usage event was created in database
@@ -200,7 +203,7 @@ class DownloadResourceTest(BaseTestCase):
 
             # Act - Include custom headers
             response = self.client.get(
-                f"/resources/{resource.id}/download/",
+                f"/cms-api/resources/{resource.id}/download/",
                 format="json",
                 headers={
                     "user-agent": "Resource Download Agent/3.0",
@@ -212,6 +215,7 @@ class DownloadResourceTest(BaseTestCase):
             # Assert
             self.assertEqual(200, response.status_code)
             self.assertIn("download_url", body)
+            self.assertTrue(body["download_url"].startswith("https"))
             self.assertIn("/metadata.json", body["download_url"])
 
             # Verify usage event was created with correct metadata
