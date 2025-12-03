@@ -82,13 +82,6 @@ class DetailResourceOut(Schema):
     updated_at: AwareDatetime
 
 
-class RecitationFilter(FilterSchema):
-
-    publisher_id: list[int] | None = Field(None, q="resource__publisher_id__in")
-    reciter_id: list[int] | None = Field(None, q="reciter_id__in")
-    riwayah_id: list[int] | None = Field(None, q="riwayah_id__in")
-
-
 @router.get("resources/", response=list[ListResourceOut])
 @paginate
 @ordering(ordering_fields=["name", "category", "created_at", "updated_at"])

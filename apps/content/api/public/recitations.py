@@ -1,10 +1,10 @@
 from datetime import datetime
 
 from django.db.models import F
-from ninja import Query, Schema
+from ninja import FilterSchema, Query, Schema
 from ninja.pagination import paginate
+from pydantic import Field
 
-from apps.content.api.internal.resources import RecitationFilter
 from apps.content.models import Asset, Resource
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.router import ItqanRouter
@@ -25,6 +25,12 @@ class RecitationListOut(Schema):
     riwayah_id: int | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class RecitationFilter(FilterSchema):
+    publisher_id: list[int] | None = Field(None, q="resource__publisher_id__in")
+    reciter_id: list[int] | None = Field(None, q="reciter_id__in")
+    riwayah_id: list[int] | None = Field(None, q="riwayah_id__in")
 
 
 @router.get(

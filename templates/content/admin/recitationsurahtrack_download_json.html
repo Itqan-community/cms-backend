@@ -2,11 +2,11 @@
 {% load static %}
 
 {% block content %}
-    <form method="post">
-        {% csrf_token %}
-        <table>
-            {{ form.as_table }}
-        </table>
-        <input type="submit" value="Generate JSON" class="default">
-    </form>
+  <form method="post">
+      {% csrf_token %}
+      <table>
+          {{ form.as_table }}
+      </table>
+      <input type="submit" value="Generate JSON" class="default">
+  </form>
 {% endblock %}

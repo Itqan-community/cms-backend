@@ -385,7 +385,7 @@ class ResourceListTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get(f"/cms-api/resources/{resource.id}/")
+        response = self.client.get(f"/cms-api/resources/{resource.id}/", format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -419,7 +419,7 @@ class ResourceListTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get(f"/cms-api/resources/{resource.id}/")
+        response = self.client.get(f"/cms-api/resources/{resource.id}/", format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
