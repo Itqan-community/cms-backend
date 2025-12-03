@@ -55,7 +55,6 @@ class ResourceAdmin(admin.ModelAdmin):
     ]
     list_filter = ["category", "status", "publisher", "created_at"]
     search_fields = ["name", "description", "slug"]
-    prepopulated_fields = {"slug": ("name",)}
     inlines = [ResourceVersionInline]
     raw_id_fields = ["publisher"]
 
@@ -160,7 +159,7 @@ class AssetAdmin(admin.ModelAdmin):
         (
             "Basic Information",
             {
-                "fields": ("name", "resource", "category"),
+                "fields": ("name", "resource", "category", "reciter", "riwayah"),
             },
         ),
         (
