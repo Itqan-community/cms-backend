@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from django.db.models import F
 from ninja import Query, Schema
 from ninja.pagination import paginate
 
@@ -11,10 +12,10 @@ from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
 
 # Base router for /developers-api/recitations
-router = ItqanRouter(tags=[NinjaTag.RESOURCES])
+router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
 
 
-class ContentRecitationListOut(Schema):
+class RecitationListOut(Schema):
     id: int
     resource_id: int
     name: str
@@ -28,7 +29,7 @@ class ContentRecitationListOut(Schema):
 
 @router.get(
     "recitations/",
-    response=list[ContentRecitationListOut],
+    response=list[RecitationListOut],
     auth=None,
 )
 @paginate
@@ -42,5 +43,8 @@ def list_recitations(request, filters: RecitationFilter = Query()):
     )
 
     qs = filters.filter(qs)
+
+    # Ensure required slug comes from related Resource. Temp solution until we add slug to Asset model.
+    qs = qs.annotate(slug=F("resource__slug"))
 
     return qs

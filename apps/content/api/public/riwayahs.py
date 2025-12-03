@@ -9,8 +9,11 @@ from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
 
+# Base router for /developers-api/riwayahs
+router = ItqanRouter(tags=[NinjaTag.RIWAYAHS])
 
-class ContentRiwayahOut(Schema):
+
+class RiwayahOut(Schema):
     id: int
     slug: str
     name: str
@@ -21,14 +24,10 @@ class ContentRiwayahOut(Schema):
     )
 
 
-# Base router for /developers-api/riwayahs
-router = ItqanRouter(tags=[NinjaTag.RESOURCES])
-
-
-@router.get("riwayahs/", response=list[ContentRiwayahOut], auth=None)
+@router.get("riwayahs/", response=list[RiwayahOut], auth=None)
 @paginate
 @ordering(ordering_fields=["name", "name_ar", "slug"])
-def list_content_riwayahs(request: Request):
+def list_riwayahs(request: Request):
     """
     Public Content API (V2):
 

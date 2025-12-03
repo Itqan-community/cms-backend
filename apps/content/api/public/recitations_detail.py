@@ -8,8 +8,11 @@ from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
 
+# Base router for /developers-api/recitations/{id}
+router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
 
-class ContentRecitationSurahTrackOut(Schema):
+
+class RecitationSurahTrackOut(Schema):
     surah_number: int
     surah_name: str
     surah_name_ar: str
@@ -22,13 +25,9 @@ class ContentRecitationSurahTrackOut(Schema):
     size_bytes: int
 
 
-# Base router for /developers-api/recitations/{id}
-router = ItqanRouter(tags=[NinjaTag.RESOURCES])
-
-
 @router.get(
     "recitations/{asset_id}/",
-    response=list[ContentRecitationSurahTrackOut],
+    response=list[RecitationSurahTrackOut],
     auth=None,
 )
 @paginate
@@ -44,7 +43,7 @@ def list_recitation_tracks(request: Request, asset_id: int):
 
     tracks = RecitationSurahTrack.objects.filter(asset=asset).order_by("surah_number")
 
-    results: list[ContentRecitationSurahTrackOut] = []
+    results: list[RecitationSurahTrackOut] = []
 
     for track in tracks:
         if track.audio_file:
@@ -53,7 +52,7 @@ def list_recitation_tracks(request: Request, asset_id: int):
             audio_url = None
 
         results.append(
-            ContentRecitationSurahTrackOut(
+            RecitationSurahTrackOut(
                 surah_number=track.surah_number,
                 surah_name=track.surah_name,
                 surah_name_ar=track.surah_name_ar,

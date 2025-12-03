@@ -10,10 +10,10 @@ from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
 
 # Base router for /developers-api/reciters
-router = ItqanRouter(tags=[NinjaTag.RESOURCES])
+router = ItqanRouter(tags=[NinjaTag.RECITERS])
 
 
-class ContentReciterOut(Schema):
+class ReciterOut(Schema):
     id: int
     slug: str
     name: str
@@ -24,10 +24,10 @@ class ContentReciterOut(Schema):
     )
 
 
-@router.get("reciters/", response=list[ContentReciterOut], auth=None)
+@router.get("reciters/", response=list[ReciterOut], auth=None)
 @paginate
 @ordering(ordering_fields=["name", "name_ar", "slug"])
-def list_content_reciters(request: Request):
+def list_reciters(request: Request):
     """
     Public Content API (V2):
 
