@@ -6,15 +6,16 @@ import secrets
 
 from allauth.socialaccount.models import SocialAccount, SocialApp, SocialLogin
 from django.contrib.sites.models import Site
-from django.test import RequestFactory, TestCase
+from django.test import RequestFactory
 from django.utils.crypto import get_random_string
 import pytest
 
+from apps.core.tests import BaseTestCase
 from apps.users.adapters import AccountAdapter, SocialAccountAdapter, User
 from apps.users.forms import UserSignupForm, UserSocialSignupForm
 
 
-class AccountAdapterTestCase(TestCase):
+class AccountAdapterTestCase(BaseTestCase):
     """Test case for custom AccountAdapter"""
 
     def setUp(self):
@@ -54,7 +55,7 @@ class AccountAdapterTestCase(TestCase):
         self.assertTrue(User.objects.filter(email="noform@example.com").exists())
 
 
-class SocialAccountAdapterTestCase(TestCase):
+class SocialAccountAdapterTestCase(BaseTestCase):
     """Test case for custom SocialAccountAdapter"""
 
     def setUp(self):
@@ -148,7 +149,7 @@ class SocialAccountAdapterTestCase(TestCase):
         self.assertEqual(user.name, "Populated GitHub User")
 
 
-class UserSignupFormTestCase(TestCase):
+class UserSignupFormTestCase(BaseTestCase):
     """Test case for custom UserSignupForm"""
 
     def test_form_valid_data(self):
@@ -230,7 +231,7 @@ class UserSignupFormTestCase(TestCase):
 
 
 @pytest.mark.skip(reason="fix them -if needed- when using login via google or github (OAuth2)")
-class UserSocialSignupFormTestCase(TestCase):
+class UserSocialSignupFormTestCase(BaseTestCase):
     """Test case for custom UserSocialSignupForm"""
 
     def test_social_form_valid_data(self):
