@@ -1,0 +1,55 @@
+services:
+  django:
+    build:
+      context: .
+      dockerfile: deployment/docker/Dockerfile.backend
+      args:
+        REQUIREMENTS_FILE: development.txt
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.development
+      PYTHONUNBUFFERED: "1"
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/itqan
+      DB_ENGINE: django.db.backends.postgresql
+      DB_NAME: itqan
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: postgres
+      DB_PORT: 5432
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    volumes:
+      - .:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: tail -f /dev/null  # Keep container running for tests
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: itqan
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  postgres_data:

@@ -1,11 +1,11 @@
+"""
+Custom Connector for Django Ninja to use JWT authentication from djangorestframework-simplejwt.
+"""
+
 from rest_framework_simplejwt.authentication import (
     JWTAuthentication,
     JWTStatelessUserAuthentication,
 )
-
-"""
-Custom Connector for Django Ninja to use JWT authentication from djangorestframework-simplejwt.
-"""
 
 
 class JWTAuth(JWTAuthentication):
