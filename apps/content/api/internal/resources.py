@@ -87,25 +87,29 @@ class DetailResourceOut(Schema):
 @ordering(ordering_fields=["name", "category", "created_at", "updated_at"])
 @searching(search_fields=["name", "description", "publisher__name"])
 def list_resources(request: Request, filters: ResourceFilter = Query()):
-    resources = Resource.objects.select_related("publisher").all()
+    resources = Resource.objects.select_related("publisher").filter(request.publisher_q())
     resources = filters.filter(resources)
     return resources
 
 
 @router.post("resources/", response=ResourceOut)
 def create_resource(request: Request, data: CreateResourceIn):
+    if request.publisher:
+        publisher_id = request.publisher.id
+    else:
+        publisher_id = data.publisher_id
     resource = Resource.objects.create(
         name=data.name,
         description=data.description,
         category=data.category,
-        publisher_id=data.publisher_id,
+        publisher_id=publisher_id,
     )
     return resource
 
 
 @router.put("resources/{id}/", response=ResourceOut)
 def update_resource(request: Request, id: int, data: UpdateResourceIn):
-    resource = get_object_or_404(Resource, id=id)
+    resource = get_object_or_404(Resource, request.publisher_q(), id=id)
 
     for field, value in data.dict(exclude_unset=True).items():
         setattr(resource, field, value)
@@ -116,7 +120,7 @@ def update_resource(request: Request, id: int, data: UpdateResourceIn):
 
 @router.patch("resources/{id}/", response=ResourceOut)
 def partial_update_resource(request: Request, id: int, data: UpdateResourceIn):
-    resource = get_object_or_404(Resource, id=id)
+    resource = get_object_or_404(Resource, request.publisher_q(), id=id)
 
     for field, value in data.dict(exclude_unset=True).items():
         setattr(resource, field, value)
@@ -127,14 +131,16 @@ def partial_update_resource(request: Request, id: int, data: UpdateResourceIn):
 
 @router.delete("resources/{id}/", response=OkSchema)
 def delete_resource(request: Request, id: int):
-    resource = get_object_or_404(Resource, id=id)
+    resource = get_object_or_404(Resource, request.publisher_q(), id=id)
     resource.delete()
     return OkSchema(message=_("Resource deleted successfully."))
 
 
 @router.get("resources/{id}/", response=DetailResourceOut, auth=None)
 def detail_resource(request: Request, id: int):
-    resource = get_object_or_404(Resource.objects.select_related("publisher"), id=id)
+    resource = get_object_or_404(
+        Resource.objects.select_related("publisher"), request.publisher_q(), id=id
+    )
 
     # Only create usage event for authenticated users
     if hasattr(request, "user") and request.user and request.user.is_authenticated:
