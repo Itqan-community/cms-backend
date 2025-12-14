@@ -1,3 +1,8 @@
+"""
+Unify Error Responses from Django Ninja into a standard format.
+This module provides a registrar to attach handlers to any NinjaAPI instance.
+"""
+
 from json import JSONDecodeError
 import logging
 
@@ -13,11 +18,6 @@ from rest_framework.serializers import as_serializer_error
 from rest_framework_simplejwt.exceptions import AuthenticationFailed, InvalidToken
 
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
-
-"""
-Unify Error Responses from Django Ninja into a standard format.
-This module provides a registrar to attach handlers to any NinjaAPI instance.
-"""
 
 
 def register_exception_handlers(api: NinjaAPI) -> None:

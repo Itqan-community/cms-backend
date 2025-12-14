@@ -16,8 +16,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
+ARG REQUIREMENTS_FILE=production.txt
 COPY requirements/ /tmp/requirements/
-RUN pip install --no-cache-dir -r /tmp/requirements/production.txt
+RUN pip install --no-cache-dir -r /tmp/requirements/${REQUIREMENTS_FILE}
 
 # Copy application code
 COPY / /app/

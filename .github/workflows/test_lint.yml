@@ -1,0 +1,99 @@
+name: CI Pipeline
+
+env:
+  DOCKER_BUILDKIT: 1
+  COMPOSE_DOCKER_CLI_BUILD: 1
+
+on:
+  pull_request:
+    paths-ignore: ['docs/**']
+
+  push:
+    branches: ['main']
+    paths-ignore: ['docs/**']
+
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Linting...
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: '.python-version'
+      # Consider using pre-commit.ci for open source project
+      - name: Run pre-commit
+        uses: pre-commit/action@v3.0.1
+
+
+  pytest:
+    name: Pytest
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Create CI .env from example
+        run: |
+          echo "Creating .env file for CI..."
+          if [ -f env.example ]; then
+            echo "Found env.example, copying to .env"
+            cp env.example .env
+            # Override with CI-specific values
+            sed -i 's/^SECRET_KEY=.*/SECRET_KEY=ci-secret-key-for-testing-only/' .env
+            sed -i 's/^DEBUG=.*/DEBUG=True/' .env
+            sed -i 's/^DB_NAME=.*/DB_NAME=itqan/' .env
+            sed -i 's/^DB_USER=.*/DB_USER=postgres/' .env
+            sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD=postgres/' .env
+            sed -i 's/^DB_HOST=.*/DB_HOST=postgres/' .env
+            sed -i 's/^DB_PORT=.*/DB_PORT=5432/' .env
+            sed -i 's|^REDIS_URL=.*|REDIS_URL=redis://redis:6379/0|' .env
+            sed -i 's|^CELERY_BROKER_URL=.*|CELERY_BROKER_URL=redis://redis:6379/0|' .env
+            sed -i 's|^CELERY_RESULT_BACKEND=.*|CELERY_RESULT_BACKEND=redis://redis:6379/0|' .env
+          else
+            echo "No env.example found; generating minimal CI .env"
+            echo "SECRET_KEY=ci-secret-key-for-testing-only" > .env
+            echo "DEBUG=True" >> .env
+            echo "ALLOWED_HOSTS=localhost,127.0.0.1" >> .env
+            echo "DB_NAME=itqan" >> .env
+            echo "DB_USER=postgres" >> .env
+            echo "DB_PASSWORD=postgres" >> .env
+            echo "DB_HOST=postgres" >> .env
+            echo "DB_PORT=5432" >> .env
+            echo "REDIS_URL=redis://redis:6379/0" >> .env
+            echo "CELERY_BROKER_URL=redis://redis:6379/0" >> .env
+            echo "CELERY_RESULT_BACKEND=redis://redis:6379/0" >> .env
+          fi
+          echo "Verifying .env file exists:"
+          ls -la .env
+          echo "Contents of .env:"
+          cat .env
+
+      - name: Build Django service
+        run: docker compose -f docker-compose.local.yml build django
+
+      - name: Start services
+        run: docker compose -f docker-compose.local.yml up -d postgres redis
+
+      - name: Check DB Migrations
+        run: docker compose -f docker-compose.local.yml run --rm django python manage.py makemigrations --check
+
+      - name: Run DB Migrations
+        run: docker compose -f docker-compose.local.yml run --rm django python manage.py migrate
+
+      - name: Run Django Tests
+        run: docker compose -f docker-compose.local.yml run --rm django pytest
+
+      - name: Tear down the Stack
+        run: docker compose -f docker-compose.local.yml down
