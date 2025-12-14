@@ -1,3 +1,4 @@
+import os
 from typing import Literal
 
 from django.http import Http404
@@ -9,6 +10,7 @@ from rest_framework.exceptions import PermissionDenied
 from apps.content.models import Asset, AssetAccess, UsageEvent
 from apps.content.services.asset_access import user_has_access
 from apps.content.tasks import create_usage_event_task
+from apps.core.mixins.storage import generate_presigned_download_url
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -43,10 +45,23 @@ def download_asset(request: Request, id: int):
     if not user_has_access(request.user, asset):
         raise PermissionDenied(_("You do not have access to this asset"))
 
+    # Get latest asset version
+    asset_latest_version = asset.get_latest_version()
+    if not asset_latest_version:
+        raise Http404("No versions found for this asset")
+
+    if not asset_latest_version.file_url:
+        raise Http404("No file available for this asset")
+
     # Get download URL
     download_url = AssetAccess.objects.get(user=request.user, asset=asset).get_download_url()
     if not download_url:
         raise Http404("Download URL not available")
+
+    # Generate pre-signed download url
+    key = asset_latest_version.file_url.name
+    filename = os.path.basename(key)
+    download_url = generate_presigned_download_url(key=key, filename=filename, expires_in=3600)
 
     # Create usage event for file download
     create_usage_event_task.delay(
