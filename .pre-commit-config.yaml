@@ -1,14 +1,28 @@
+exclude: '^docs/|/migrations/|devcontainer.json'
+default_stages: [pre-commit]
+minimum_pre_commit_version: "3.2.0"
+
+default_language_version:
+  python: python3.13
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v6.0.0
     hooks:
-      - id: check-yaml
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
       - id: check-json
       - id: check-toml
-      - id: end-of-file-fixer
-      - id: trailing-whitespace
-      - id: check-merge-conflict
-      - id: check-added-large-files
+      - id: check-xml
+      - id: check-yaml
+      - id: debug-statements
+      - id: check-builtin-literals
+      - id: check-case-conflict
+      - id: check-docstring-first
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args:
+          - --fix=auto
 
   - repo: https://github.com/pycqa/isort
     rev: 5.13.2
@@ -20,7 +34,7 @@ repos:
     rev: 24.10.0
     hooks:
       - id: black
-        language_version: python3.10
+        language_version: python3.13
         args: [--line-length=100]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit

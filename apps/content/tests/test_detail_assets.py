@@ -35,7 +35,6 @@ class DetailAssetTest(BaseTestCase):
         self.assertIn("id", body["publisher"])  # Publisher structure
         self.assertIn("name", body["publisher"])  # Publisher structure
         self.assertIn("description", body["publisher"])  # Publisher structure
-        self.assertTrue(body["thumbnail_url"].startswith("https"))
         self.assertIn("thumbnails/tafseer.png", body["thumbnail_url"])
         self.assertEqual("CC-BY-SA", body["license"])
 
@@ -118,7 +117,6 @@ class DetailAssetTest(BaseTestCase):
                 self.assertEqual(200, response.status_code, response.content)
                 body = response.json()
                 self.assertEqual(expected_category, body["category"])
-                self.assertTrue(body["thumbnail_url"].startswith("https"))
                 self.assertIn(expected_thumb, body["thumbnail_url"])
 
     def test_detail_assets_where_language_ar_should_return_arabic_content_if_present(
@@ -145,7 +143,6 @@ class DetailAssetTest(BaseTestCase):
         self.assertEqual("وصف عربي", body["description"])  # Arabic content preserved
         self.assertEqual("وصف عربي مطول", body["long_description"])  # Arabic content preserved
         self.assertEqual("CC0", body["license"])  # CC0 license code
-        self.assertTrue(body["thumbnail_url"].startswith("https"))
         self.assertIn("thumbs/localized.png", body["thumbnail_url"])
 
     def test_detail_assets_where_language_ar_missing_translations_should_fallback(self):

@@ -1,8 +1,11 @@
 from typing import Literal
 from unittest.mock import patch
 
+import boto3
+from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
+from moto import mock_aws
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import AccessToken
 
@@ -12,6 +15,43 @@ from apps.users.models import User
 class BaseTestCase(TestCase):
     client_class = APIClient
     client: APIClient
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        cls.mock_storage()
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        # Disable storage override
+        try:
+            cls._storage_override.disable()
+        except Exception:
+            pass
+        # Stop moto mock to clean up between tests
+        try:
+            cls.mock_aws.stop()
+        except Exception:
+            pass
+
+    @classmethod
+    def mock_storage(cls):
+        cls.mock_aws = mock_aws()
+        cls.mock_aws.start()
+        cls.bucket_name = "test-bucket"
+        s3_client = boto3.client("s3", region_name="us-east-1")
+        s3_client.create_bucket(Bucket=cls.bucket_name)
+        cls._storage_override = override_settings(
+            STORAGES={
+                "default": {
+                    "BACKEND": "django.core.files.storage.FileSystemStorage",
+                },
+                "staticfiles": {
+                    "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+                },
+            },
+            MEDIA_ROOT=settings.MEDIA_ROOT,
+        )
+        cls._storage_override.enable()
 
     @classmethod
     def patch_on_commit(cls):
