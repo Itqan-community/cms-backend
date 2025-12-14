@@ -4,6 +4,8 @@ import sys
 
 from decouple import config
 
+from config.helpers.sentry import enable_sentry
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 APPS_DIR = BASE_DIR / "apps"
@@ -59,6 +61,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = "config.urls"
 
@@ -357,3 +361,12 @@ if (len(sys.argv) >= 2 and sys.argv[0].endswith("manage.py") and sys.argv[1] == 
     "pytest" in sys.argv[0]
 ):
     RUNNING_TESTS = True
+
+try:
+    import sentry_sdk
+except ImportError:
+    sentry_sdk = None
+SENTRY_ENABLED = config("SENTRY_ENABLED", cast=bool, default=False)
+
+if SENTRY_ENABLED and sentry_sdk:
+    enable_sentry()

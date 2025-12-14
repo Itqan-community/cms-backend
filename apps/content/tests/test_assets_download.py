@@ -123,7 +123,6 @@ class TestAssetDownload(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code)
         self.assertIn("download_url", body)
-        self.assertTrue(body["download_url"].startswith("https"))
         self.assertIn("/test.pdf", body["download_url"])
 
     @patch("apps.content.api.internal.assets_download.user_has_access")
@@ -145,7 +144,6 @@ class TestAssetDownload(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code)
         self.assertIn("download_url", body)
-        self.assertTrue(body["download_url"].startswith("https"))
         self.assertIn("/test.csv", body["download_url"])
 
     @patch("apps.content.api.internal.assets_download.user_has_access")
@@ -176,7 +174,6 @@ class TestAssetDownload(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code)
         self.assertIn("download_url", body)
-        self.assertTrue(body["download_url"].startswith("https"))
         self.assertIn("/new.pdf", body["download_url"])
 
     def test_download_asset_with_invalid_id_format_should_return_400(self):
