@@ -1,6 +1,6 @@
 from django.http import HttpRequest
 
-from apps.core.middlewares.publisher_middleware import PublisherQ
+from apps.publishers.middlewares.publisher_middleware import PublisherQ
 from apps.publishers.models import Domain, Publisher
 from apps.users.models import User
 

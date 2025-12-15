@@ -3,8 +3,8 @@ from unittest.mock import Mock, patch
 from django.test import RequestFactory, override_settings
 from model_bakery import baker
 
-from apps.core.middlewares.publisher_middleware import PublisherMiddleware
 from apps.core.tests import BaseTestCase
+from apps.publishers.middlewares.publisher_middleware import PublisherMiddleware
 from apps.publishers.models import Domain, Publisher
 from apps.users.models import User
 
