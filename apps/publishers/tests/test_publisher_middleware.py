@@ -1,4 +1,4 @@
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 from django.test import RequestFactory, override_settings
 from model_bakery import baker
@@ -33,11 +33,11 @@ class PublisherMiddlewareTest(BaseTestCase):
 
         # Assert
         # Verify middleware attributes are set correctly
-        self.assertEqual(request.publisher, self.publisher)
-        self.assertEqual(request.publisher_domain, self.domain)
+        self.assertEqual(self.publisher, request.publisher)
+        self.assertEqual(self.domain, request.publisher_domain)
         # Verify execution proceeded to the next middleware/view
         mock_get_response.assert_called_once_with(request)
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(200, response.status_code)
 
     def test_middleware_with_www_domain_should_strip_www_prefix_and_match_publisher(self):
         # Arrange
@@ -48,7 +48,7 @@ class PublisherMiddlewareTest(BaseTestCase):
         # Assert - If www was stripped and matched 'test.com', then request.publisher is set.
         # If request.publisher is set, then filtering applies.
         # We can verify that we get a 200 OK (and not some error).
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(200, response.status_code)
 
     def test_middleware_with_unknown_domain_should_proceed_without_publisher(self):
         # Arrange
@@ -61,13 +61,15 @@ class PublisherMiddlewareTest(BaseTestCase):
 
     def test_middleware_with_inactive_publisher_should_return_423(self):
         # Arrange
-        with patch.object(PublisherMiddleware, "is_publisher_active", return_value=False):
-            # Act
-            response = self.client.get(self.url, HTTP_HOST="test.com")
+        self.domain.is_active = False
+        self.domain.save()
 
-            # Assert
-            self.assertEqual(response.status_code, 423)
-            self.assertEqual(
-                response.json(),
-                {"error": "Publisher's page is closed for maintenance, please try again later"},
-            )
+        # Act
+        response = self.client.get(self.url, HTTP_HOST="test.com")
+
+        # Assert
+        self.assertEqual(423, response.status_code)
+        self.assertEqual(
+            {"error": "Publisher's page is closed for maintenance, please try again later"},
+            response.json(),
+        )

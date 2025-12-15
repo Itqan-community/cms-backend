@@ -3,17 +3,18 @@ from typing import Protocol
 
 from django.core.cache import cache
 from django.db.models import Q
-from django.http import JsonResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from rest_framework import status
 
+from apps.core.ninja_utils.request import Request
 from apps.publishers.models import Domain, Publisher
 
 
 class PublisherMiddleware:
-    def __init__(self, get_response):
+    def __init__(self, get_response) -> None:
         self.get_response = get_response
 
-    def __call__(self, request):
+    def __call__(self, request: Request) -> HttpResponse | JsonResponse:
 
         active = self.is_publisher_active(request)
         if active is None:
@@ -35,10 +36,12 @@ class PublisherMiddleware:
         request.publisher_q = functools.partial(publisher_q, request.publisher)
         if domain is None:
             return None
+        if not domain.is_active:
+            return False
         return True
 
 
-def remove_www(hostname):
+def remove_www(hostname: str) -> str:
     """
     Removes www. from the beginning of the address. Only for
     routing purposes. www.test.com/login/ and test.com/login/ should
@@ -50,7 +53,7 @@ def remove_www(hostname):
     return hostname
 
 
-def get_publisher_domain(request) -> Domain | None:
+def get_publisher_domain(request: HttpRequest) -> Domain | None:
     """
     Retrieve a domain based on the Host header
     """
