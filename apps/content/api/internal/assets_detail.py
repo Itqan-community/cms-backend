@@ -20,7 +20,7 @@ class DetailAssetSnapshotOut(Schema):
 
     @field_serializer("image_url")
     def serialize_image_url(self, value, info: SerializationInfo) -> str:
-        request = info.context.get("request")
+        request = info.context.get("request") if info.context else None
         if request and isinstance(value, str) and not value.startswith("https"):
             return request.build_absolute_uri(value)
 
@@ -51,7 +51,7 @@ class DetailAssetOut(Schema):
 
     @field_serializer("thumbnail_url")
     def serialize_thumbnail_url(self, value, info: SerializationInfo) -> str:
-        request = info.context.get("request")
+        request = info.context.get("request") if info.context else None
         if request and isinstance(value, str) and not value.startswith("https"):
             return request.build_absolute_uri(value)
 

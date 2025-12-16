@@ -1,5 +1,10 @@
+from typing import TYPE_CHECKING
+
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import UserManager as DjangoUserManager
+
+if TYPE_CHECKING:
+    pass
 
 
 class UserManager(DjangoUserManager["User"]):

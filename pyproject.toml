@@ -19,6 +19,33 @@ python_files = [
 ]
 
 # ========================
+# MyPy (Type Checker)
+# ========================
+
+[tool.mypy]
+explicit_package_bases = true
+files = ["apps", "config"]
+exclude = ["migrations"]
+plugins = ["mypy_django_plugin.main"]
+
+[tool.django-stubs]
+django_settings_module = "config.settings.development"
+
+[[tool.mypy.overrides]]
+module = [
+    "celery.*",
+    "storages.*",
+    "allauth.*",
+    "boto3.*",
+    "rest_framework.*",
+    "phonenumber_field.*",
+    "scalar_django_ninja.*",
+    "decouple.*",
+    "debug_toolbar.*",
+]
+ignore_missing_imports = true
+
+# ========================
 # Black (Formatter)
 # ========================
 

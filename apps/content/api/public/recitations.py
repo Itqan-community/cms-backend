@@ -28,9 +28,9 @@ class RecitationListOut(Schema):
 
 
 class RecitationFilter(FilterSchema):
-    publisher_id: list[int] | None = Field(None, q="resource__publisher_id__in")
-    reciter_id: list[int] | None = Field(None, q="reciter_id__in")
-    riwayah_id: list[int] | None = Field(None, q="riwayah_id__in")
+    publisher_id: list[int] | None = Field(None, q="resource__publisher_id__in")  # type: ignore[call-overload]
+    reciter_id: list[int] | None = Field(None, q="reciter_id__in")  # type: ignore[call-overload]
+    riwayah_id: list[int] | None = Field(None, q="riwayah_id__in")  # type: ignore[call-overload]
 
 
 @router.get(

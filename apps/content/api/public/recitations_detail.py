@@ -32,7 +32,7 @@ class RecitationSurahTrackOut(Schema):
 )
 @paginate
 def list_recitation_tracks(request: Request, asset_id: int):
-    asset = get_object_or_404(
+    asset: Asset = get_object_or_404(
         Asset.objects.filter(
             id=asset_id,
             category=Asset.CategoryChoice.RECITATION,

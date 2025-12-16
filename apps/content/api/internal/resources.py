@@ -33,9 +33,9 @@ class ListResourceOut(Schema):
 
 
 class ResourceFilter(FilterSchema):
-    category: list[Resource.CategoryChoice] | None = Field(None, q="category__in")
-    status: list[Resource.StatusChoice] | None = Field(None, q="status__in")
-    publisher_id: list[int] | None = Field(None, q="publisher_id__in")
+    category: list[Resource.CategoryChoice] | None = Field(None, q="category__in")  # type: ignore[call-overload]
+    status: list[Resource.StatusChoice] | None = Field(None, q="status__in")  # type: ignore[call-overload]
+    publisher_id: list[int] | None = Field(None, q="publisher_id__in")  # type: ignore[call-overload]
 
 
 class CreateResourceIn(Schema):
@@ -138,7 +138,7 @@ def delete_resource(request: Request, id: int):
 
 @router.get("resources/{id}/", response=DetailResourceOut, auth=None)
 def detail_resource(request: Request, id: int):
-    resource = get_object_or_404(
+    resource: Resource = get_object_or_404(
         Resource.objects.select_related("publisher"), request.publisher_q(), id=id
     )
 

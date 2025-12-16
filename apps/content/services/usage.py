@@ -1,4 +1,4 @@
-from dotenv.variables import Literal
+from typing import Literal
 
 from apps.content.models import AssetAccess, UsageEvent
 
@@ -65,7 +65,7 @@ def log_resource_download(user, resource, ip_address=None, user_agent=""):
 
 def log_api_access(
     user, *, api_endpoint="", ip_address=None, user_agent="", resource=None, asset=None
-) -> None:
+) -> UsageEvent | None:
     """Track API access event"""
     if resource:
         return UsageEvent.objects.create(
@@ -94,7 +94,7 @@ def log_asset_download(user, asset, ip_address=None, user_agent=""):
     """Track asset download event with async processing"""
 
     try:
-        from .tasks import track_event_async
+        from apps.content.tasks import track_event_async
 
         event_data = {
             "developer_user_id": user.id,
