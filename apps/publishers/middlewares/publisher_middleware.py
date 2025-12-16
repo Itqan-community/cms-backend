@@ -1,20 +1,22 @@
 import functools
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from django.core.cache import cache
 from django.db.models import Q
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from rest_framework import status
 
-from apps.core.ninja_utils.request import Request
 from apps.publishers.models import Domain, Publisher
+
+if TYPE_CHECKING:
+    from apps.core.ninja_utils.request import Request
 
 
 class PublisherMiddleware:
     def __init__(self, get_response) -> None:
         self.get_response = get_response
 
-    def __call__(self, request: Request) -> HttpResponse | JsonResponse:
+    def __call__(self, request: "Request") -> HttpResponse | JsonResponse:
 
         active = self.is_publisher_active(request)
         if active is None:
