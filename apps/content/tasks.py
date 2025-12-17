@@ -13,7 +13,7 @@ from django.db import transaction
 from django.utils import timezone
 
 if TYPE_CHECKING:
-    from apps.content.models import UsageEvent
+    from apps.content.models import Asset, Resource, UsageEvent
 
 logger = logging.getLogger(__name__)
 
@@ -30,77 +30,92 @@ class EventData(TypedDict):
 
 
 @shared_task(bind=True, max_retries=3)
-def create_usage_event_task(self, event_data):
+def create_usage_event_task(self, event_data: dict):
     """
-    Async task to create usage events without blocking API requests
-
-    Args:
-        event_data: Dictionary containing:
-            - developer_user_id: User ID
-            - usage_kind: Type of usage (view, file_download, api_access)
-            - subject_kind: What was accessed (asset, resource, publisher)
-            - asset_id: Asset ID (optional)
-            - resource_id: Resource ID (optional)
-            - metadata: Additional event metadata
-            - ip_address: Client IP address
-            - user_agent: Client user agent
+    Async task to create usage events without blocking API requests.
+    Supports anonymous/public calls by allowing developer_user_id = None.
     """
     try:
-        from .models import Asset, Resource, UsageEvent
+        from apps.users.models import User
 
-        # Validate required fields
-        required_fields = ["developer_user_id", "usage_kind", "subject_kind"]
+        # Validate required fields (developer_user_id is optional now)
+        required_fields = ["usage_kind", "subject_kind"]
         for field in required_fields:
-            if field not in event_data:
+            if not event_data.get(field):
                 logger.error(f"Missing required field '{field}' in usage event data")
                 return False
 
-        # Get user
-        from apps.users.models import User
+        subject_kind = event_data["subject_kind"]
+        usage_kind = event_data["usage_kind"]
 
-        try:
-            user = User.objects.get(id=event_data["developer_user_id"])
-        except User.DoesNotExist:
-            logger.error(f"User {event_data['developer_user_id']} not found for usage event")
-            return False
+        developer_user = None
+        developer_user_id = event_data.get("developer_user_id")
+        if developer_user_id:
+            developer_user = User.objects.filter(id=developer_user_id).first()
+            if not developer_user:
+                logger.error(f"User {developer_user_id} not found for usage event")
+                return False
 
-        # Validate subject references
         asset_id = event_data.get("asset_id")
         resource_id = event_data.get("resource_id")
 
-        if event_data["subject_kind"] == "asset" and asset_id:
-            try:
-                Asset.objects.get(id=asset_id)
-            except Asset.DoesNotExist:
+        # Strict subject validation (matches DB constraint)
+        if subject_kind == UsageEvent.SubjectKindChoice.ASSET:
+            if not asset_id or resource_id is not None:
+                logger.error("subject_kind=asset requires asset_id and forbids resource_id")
+                return False
+
+            # Optional: validate the referenced object exists
+            if not Asset.objects.filter(id=asset_id).exists():
                 logger.error(f"Asset {asset_id} not found for usage event")
                 return False
-        elif event_data["subject_kind"] == "resource" and resource_id:
-            try:
-                Resource.objects.get(id=resource_id)
-            except Resource.DoesNotExist:
+
+        elif subject_kind == UsageEvent.SubjectKindChoice.RESOURCE:
+            if not resource_id or asset_id is not None:
+                logger.error("subject_kind=resource requires resource_id and forbids asset_id")
+                return False
+
+            if not Resource.objects.filter(id=resource_id).exists():
                 logger.error(f"Resource {resource_id} not found for usage event")
                 return False
 
-        # Create usage event
+        elif subject_kind == UsageEvent.SubjectKindChoice.PUBLIC_API:
+            if asset_id is not None or resource_id is not None:
+                logger.error("subject_kind=public_api forbids asset_id and resource_id")
+                return False
+
+        else:
+            logger.error(f"Invalid subject_kind '{subject_kind}'")
+            return False
+
+        # Effective license: must match your LicenseChoice
+        # Use event_data value if valid; otherwise fallback to a safe known choice.
+        effective_license = event_data.get("effective_license")
+        if not effective_license:
+            # pick one that exists in your LicenseChoice:
+            effective_license = "free"
+
         with transaction.atomic():
             usage_event = UsageEvent.objects.create(
-                developer_user=user,
-                usage_kind=event_data["usage_kind"],
-                subject_kind=event_data["subject_kind"],
+                developer_user=developer_user,  # may be None
+                usage_kind=usage_kind,
+                subject_kind=subject_kind,
                 asset_id=asset_id,
                 resource_id=resource_id,
                 metadata=event_data.get("metadata", {}),
                 ip_address=event_data.get("ip_address"),
                 user_agent=event_data.get("user_agent", ""),
-                effective_license=event_data.get("effective_license", ""),
+                effective_license=effective_license,
             )
 
-            logger.info(f"Created usage event {usage_event.id} for user {user.id}")
-            return True
+        logger.info(
+            f"Created usage event {usage_event.id} "
+            f"(user={developer_user_id}, kind={usage_kind}, subject={subject_kind})"
+        )
+        return True
 
     except Exception as exc:
-        logger.error(f"Failed to create usage event: {exc}")
-        # Retry the task with explicit exception chaining
+        logger.exception(f"Failed to create usage event: {exc}")
         raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1)) from exc
 
 
