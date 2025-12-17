@@ -449,8 +449,15 @@ class UsageEvent(BaseModel):
     class SubjectKindChoice(models.TextChoices):
         RESOURCE = "resource", _("Resource")
         ASSET = "asset", _("Asset")
+        PUBLIC_API = "public_api", _("Public API")
 
-    developer_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="usage_events")
+    developer_user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="usage_events",
+    )
 
     usage_kind = models.CharField(max_length=20, choices=UsageKindChoice.choices, help_text="Type of usage event")
 
@@ -485,6 +492,9 @@ class UsageEvent(BaseModel):
                     subject_kind="asset",
                     asset_id__isnull=False,
                     resource_id__isnull=True,
+                )
+                | models.Q(
+                    subject_kind="public_api", asset_id__isnull=True, resource_id__isnull=True
                 ),
                 name="usage_event_subject_kind_consistency",
             )
