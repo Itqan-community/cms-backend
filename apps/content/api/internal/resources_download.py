@@ -44,7 +44,7 @@ def download_resource(request: Request, id: int):
         raise Http404("No file available for download")
 
     # Generate pre-signed download url
-    key = resource_latest_version.storage_url.name  # object key within the bucket
+    key = f"media/{resource_latest_version.storage_url.name}"  # object key within the bucket
     filename = os.path.basename(key)
     download_url = generate_presigned_download_url(key=key, filename=filename, expires_in=3600)
 
