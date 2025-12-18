@@ -6,11 +6,10 @@ from django.contrib import admin
 from django.http import HttpResponse, JsonResponse
 from django.urls import include, path
 from django.utils import timezone
-from drf_spectacular.views import SpectacularRedocView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
 
 from config.cms_api import cms_api
-from config.developers_api import developers_api
+from config.developers_api import deprecated_developers_api, developers_api
 
 
 def health_check(request):
@@ -44,13 +43,7 @@ router = DefaultRouter()
 
 
 urlpatterns = [
-    # Legacy Swagger/ReDoc (for compatibility)
-    path("swagger/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
-    path("redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
-    # Health check endpoint
     path("health/", health_check, name="health_check"),
-    # OpenAPI Specification
-    path("openapi.yaml", serve_openapi_spec, name="openapi-yaml"),
     # Django Admin
     path("django-admin/", admin.site.urls),
     # Django Allauth URLs
@@ -58,7 +51,8 @@ urlpatterns = [
     # Internal CMS API mount
     path("cms-api/", cms_api.urls),
     # Public developers API mount
-    path("developers-api/", developers_api.urls),
+    path("developers-api/", deprecated_developers_api.urls),
+    path("", developers_api.urls),
 ]
 
 # Serve media files in development
