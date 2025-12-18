@@ -4,17 +4,16 @@ from apps.core.ninja_utils.error_handling import register_exception_handlers
 from .ninja_api import assert_all_itqan_routers, create_ninja_api
 
 deprecated_developers_api = create_ninja_api(
-    title="Itqan CMS Developers API",
+    title="Itqan CMS Developers API (Deprecated)",
     description="Itqan APIs for developers",
-    docs_base_path="/developers-api-docs",
     urls_namespace="developers-api",
+    docs_base_path="/developers-api",
     auth=None,
 )  # deprecated (keep for backward compatibility)
 developers_api = create_ninja_api(
     title="Itqan CMS Developers API",
     description="Itqan APIs for developers",
-    docs_base_path="/docs",
-    urls_namespace="api",
+    urls_namespace="",
     auth=None,
 )
 

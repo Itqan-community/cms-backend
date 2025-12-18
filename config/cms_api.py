@@ -8,7 +8,7 @@ from .ninja_api import assert_all_itqan_routers, create_ninja_api
 cms_api = create_ninja_api(
     title="Itqan CMS Internal API",
     description="Internal APIs for CMS frontend",
-    docs_base_path="/cms-docs/",
+    docs_base_path="/cms-api",
     urls_namespace="cms-api",
     auth=ninja_jwt_auth,
 )
