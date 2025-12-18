@@ -346,6 +346,9 @@ LOGGING = {
     "loggers": {
         "django": {"handlers": ["console"], "level": "INFO", "propagate": False},
         "apps": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
+        "botocore": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "boto3": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "s3transfer": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
 
