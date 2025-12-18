@@ -28,8 +28,8 @@ class RecitationTracksTest(BaseTestCase):
             RecitationSurahTrack,
             asset=self.asset,
             surah_number=2,
-            surah_name="Al-Baqarah",
-            surah_name_ar="البقرة",
+            surah_name_en="Al-Baqarah",
+            surah_name="البقرة",
             chapter_number=2,
             duration_ms=2000,
             size_bytes=1024,
@@ -38,8 +38,8 @@ class RecitationTracksTest(BaseTestCase):
             RecitationSurahTrack,
             asset=self.asset,
             surah_number=1,
-            surah_name="Al-Fatihah",
-            surah_name_ar="الفاتحة",
+            surah_name_en="Al-Fatihah",
+            surah_name="الفاتحة",
             chapter_number=1,
             duration_ms=1000,
             size_bytes=512,
@@ -60,9 +60,9 @@ class RecitationTracksTest(BaseTestCase):
 
         # Ordered by surah_number ascending
         self.assertEqual(1, items[0]["surah_number"])
-        self.assertEqual("Al-Fatihah", items[0]["surah_name"])
+        self.assertEqual("Al-Fatihah", items[0]["surah_name_en"])
         self.assertEqual(2, items[1]["surah_number"])
-        self.assertEqual("Al-Baqarah", items[1]["surah_name"])
+        self.assertEqual("Al-Baqarah", items[1]["surah_name_en"])
 
     def test_list_recitation_tracks_should_include_audio_url_when_audio_file_exists(self):
         # Arrange
@@ -71,8 +71,8 @@ class RecitationTracksTest(BaseTestCase):
             RecitationSurahTrack,
             asset=self.asset,
             surah_number=1,
-            surah_name="Al-Fatihah",
-            surah_name_ar="الفاتحة",
+            surah_name_en="Al-Fatihah",
+            surah_name="الفاتحة",
             chapter_number=1,
             duration_ms=1000,
             size_bytes=512,
@@ -97,8 +97,8 @@ class RecitationTracksTest(BaseTestCase):
             RecitationSurahTrack,
             asset=self.asset,
             surah_number=1,
-            surah_name="Al-Fatihah",
-            surah_name_ar="الفاتحة",
+            surah_name_en="Al-Fatihah",
+            surah_name="الفاتحة",
             chapter_number=1,
             duration_ms=1000,
             size_bytes=512,

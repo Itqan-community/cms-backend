@@ -48,8 +48,8 @@ class RecitationModelsTest(BaseTestCase):
             track = RecitationSurahTrack.objects.create(
                 asset=asset,
                 surah_number=2,
-                surah_name=SURAH_NAMES_EN[1],
-                surah_name_ar=SURAH_NAMES_AR[1],
+                surah_name_en=SURAH_NAMES_EN[1],
+                surah_name=SURAH_NAMES_AR[1],
                 audio_file=mp3,
             )
 

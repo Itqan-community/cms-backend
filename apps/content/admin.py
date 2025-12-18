@@ -457,17 +457,17 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
         "id",
         "asset",
         "surah_number",
+        "surah_name_en",
         "surah_name",
-        "surah_name_ar",
         "duration_ms",
         "size_bytes",
         "created_at",
     ]
     list_filter = ["asset", "created_at"]
-    search_fields = ["asset__name", "surah_name", "surah_name_ar"]
+    search_fields = ["asset__name", "surah_name_en", "surah_name"]
     readonly_fields = [
+        "surah_name_en",
         "surah_name",
-        "surah_name_ar",
         "size_bytes",
         "duration_ms",
         "created_at",
@@ -644,8 +644,8 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
                     result.append(
                         {
                             "surah_number": int(t.surah_number),
-                            "surah_name": SURAH_NUMBER_NAME_EN[int(t.surah_number)],
-                            "surah_name_ar": SURAH_NUMBER_NAME_AR[int(t.surah_number)],
+                            "surah_name_en": SURAH_NUMBER_NAME_EN[int(t.surah_number)],
+                            "surah_name": SURAH_NUMBER_NAME_AR[int(t.surah_number)],
                             "audio_file": url,
                             "duration_ms": int(t.duration_ms or 0),
                             "ayah_timings": [],
