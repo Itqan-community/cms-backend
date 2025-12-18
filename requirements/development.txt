@@ -5,8 +5,8 @@ coverage==7.10.6
 django-coverage-plugin==3.1.1
 django-debug-toolbar==6.0.0
 django-extensions==4.1
-django-stubs-ext>=5.2.2
-django-stubs[compatible-mypy]==5.2.2
+django-stubs-ext>=5.2.8
+django-stubs[compatible-mypy]==5.2.8
 djlint==1.36.4
 freezegun>=1.5.5
 ipdb==0.13.13
