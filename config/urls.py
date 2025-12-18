@@ -59,6 +59,7 @@ urlpatterns = [
     path("cms-api/", cms_api.urls),
     # Public developers API mount
     path("developers-api/", developers_api.urls),
+    path("api/", developers_api.urls),
 ]
 
 # Serve media files in development
