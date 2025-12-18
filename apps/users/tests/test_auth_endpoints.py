@@ -666,9 +666,9 @@ class AuthenticationSecurityTestCase(AuthEndpointsTestCase):
         tokens = self._get_jwt_token()
 
         wrong_schemes = [
-            f'Basic {tokens["access"]}',
-            f'Token {tokens["access"]}',
-            f'JWT {tokens["access"]}',
+            f"Basic {tokens['access']}",
+            f"Token {tokens['access']}",
+            f"JWT {tokens['access']}",
             tokens["access"],  # No scheme
         ]
 
