@@ -59,7 +59,7 @@ def download_asset(request: Request, id: int):
         raise Http404("Download URL not available")
 
     # Generate pre-signed download url
-    key = asset_latest_version.file_url.name
+    key = f"media/{asset_latest_version.file_url.name}"  # object key within the bucket
     filename = os.path.basename(key)
     download_url = generate_presigned_download_url(key=key, filename=filename, expires_in=3600)
 

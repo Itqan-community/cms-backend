@@ -653,7 +653,12 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
                     )
 
                 payload = json.dumps(result, ensure_ascii=False, indent=2)
-                filename = f"asset_{asset.id}_recitations.json"
+                reciter_slug = asset.reciter.slug if asset.reciter else ""
+                filename = (
+                    f"asset_{asset.id}_{reciter_slug}_recitations.json"
+                    if reciter_slug
+                    else f"asset_{asset.id}_recitations.json"
+                )
                 response = HttpResponse(payload, content_type="application/json; charset=utf-8")
                 response["Content-Disposition"] = f'attachment; filename="{filename}"'
                 return response
