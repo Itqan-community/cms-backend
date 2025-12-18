@@ -88,8 +88,14 @@ CELERY_TASK_EAGER_PROPAGATES = True
 # File Storage (Alibaba OSS)
 # ============================================================
 
-DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
-STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
 
 AWS_S3_ENDPOINT_URL = config("OSS_ENDPOINT_URL", "")
 AWS_ACCESS_KEY_ID = config("OSS_ACCESS_KEY_ID", "")

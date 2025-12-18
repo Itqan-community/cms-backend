@@ -87,7 +87,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Database
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql_psycopg2",
+        "ENGINE": "django.db.backends.postgresql",
         "NAME": config("DB_NAME", default="itqan_cms"),
         "USER": config("DB_USER", default="itqan_user"),
         "PASSWORD": config("DB_PASSWORD", default="itqan_password"),
@@ -111,7 +111,6 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = "en"
 TIME_ZONE = "Asia/Riyadh"
 USE_I18N = True
-USE_L10N = True
 USE_TZ = True
 
 LANGUAGES = [
