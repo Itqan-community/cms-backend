@@ -50,6 +50,10 @@ class BaseTestCase(TestCase):
                 },
             },
             MEDIA_ROOT=settings.MEDIA_ROOT,
+            CLOUDFLARE_R2_BUCKET=cls.bucket_name,
+            CLOUDFLARE_R2_ENDPOINT="http://localhost:5000",
+            CLOUDFLARE_R2_ACCESS_KEY_ID="testing",
+            CLOUDFLARE_R2_SECRET_ACCESS_KEY="testing",
         )
         cls._storage_override.enable()
 

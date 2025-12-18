@@ -81,7 +81,7 @@ class RecitationsListTest(BaseTestCase):
         )
 
     def test_list_recitations_should_return_only_ready_recitation_assets(self):
-        response = self.client.get("/developers-api/recitations/")
+        response = self.client.get("/recitations/")
 
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
@@ -104,9 +104,7 @@ class RecitationsListTest(BaseTestCase):
             self.assertIn("updated_at", item)
 
     def test_list_recitations_filter_by_publisher(self):
-        response = self.client.get(
-            f"/developers-api/recitations/?publisher_id={self.publisher1.id}"
-        )
+        response = self.client.get(f"/recitations/?publisher_id={self.publisher1.id}")
 
         self.assertEqual(200, response.status_code)
         items = response.json()["results"]
@@ -116,7 +114,7 @@ class RecitationsListTest(BaseTestCase):
         self.assertEqual(self.ready_recitation_resource_pub1.id, items[0]["resource_id"])
 
     def test_list_recitations_filter_by_reciter(self):
-        response = self.client.get(f"/developers-api/recitations/?reciter_id={self.reciter2.id}")
+        response = self.client.get(f"/recitations/?reciter_id={self.reciter2.id}")
 
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
@@ -125,7 +123,7 @@ class RecitationsListTest(BaseTestCase):
         self.assertEqual(self.asset2.id, items[0]["id"])
 
     def test_list_recitations_filter_by_riwayah(self):
-        response = self.client.get(f"/developers-api/recitations/?riwayah_id={self.riwayah1.id}")
+        response = self.client.get(f"/recitations/?riwayah_id={self.riwayah1.id}")
 
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
@@ -135,7 +133,7 @@ class RecitationsListTest(BaseTestCase):
 
     def test_list_recitations_search_should_match_name_description_publisher_or_reciter(self):
         # Search by part of description
-        response = self.client.get("/developers-api/recitations/?search=Beautiful")
+        response = self.client.get("/recitations/?search=Beautiful")
 
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
@@ -143,14 +141,14 @@ class RecitationsListTest(BaseTestCase):
         self.assertEqual(self.asset1.id, items[0]["id"])
 
         # Search by reciter name
-        response = self.client.get("/developers-api/recitations/?search=Reciter Two")
+        response = self.client.get("/recitations/?search=Reciter Two")
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
         self.assertEqual(1, len(items))
         self.assertEqual(self.asset2.id, items[0]["id"])
 
     def test_list_recitations_ordering_by_name(self):
-        response = self.client.get("/developers-api/recitations/?ordering=name")
+        response = self.client.get("/recitations/?ordering=name")
 
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]

@@ -11,7 +11,6 @@ from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
 
-# Base router for /developers-api/recitations
 router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
 
 
