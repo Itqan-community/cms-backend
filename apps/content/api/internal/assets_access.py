@@ -40,7 +40,7 @@ class AccessRequestResponseOut(Schema):
 @router.post("assets/{asset_id}/request-access/", response=AccessRequestResponseOut)
 def request_asset_access(request: Request, asset_id: int, data: RequestAccessIn):
     """Request access to an asset (V1: auto-approval)"""
-    asset = get_object_or_404(Asset, id=asset_id)
+    asset = get_object_or_404(Asset, request.publisher_q("resource__publisher"), id=asset_id)
 
     # Validation is now handled by the schema using IntendedUseChoice
     # No need for manual validation since Django Ninja will validate the enum

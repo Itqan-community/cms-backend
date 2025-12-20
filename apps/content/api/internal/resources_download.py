@@ -34,7 +34,7 @@ def download_resource(request: Request, id: int):
     Return a direct download URL for the latest resource version
     """
     # Get the resource
-    resource = get_object_or_404(Resource, id=id)
+    resource = get_object_or_404(Resource, request.publisher_q(), id=id)
 
     resource_latest_version = resource.get_latest_version()
     if not resource_latest_version:

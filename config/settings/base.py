@@ -56,6 +56,7 @@ MIDDLEWARE = [
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "apps.publishers.middlewares.publisher_middleware.PublisherMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "allauth.account.middleware.AccountMiddleware",  # Required for allauth
     "django.contrib.messages.middleware.MessageMiddleware",

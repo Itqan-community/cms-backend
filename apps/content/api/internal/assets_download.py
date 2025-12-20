@@ -39,7 +39,7 @@ def download_asset(request: Request, id: int):
     Return a direct download URL for the latest asset version
     """
     # Get the asset
-    asset = get_object_or_404(Asset, id=id)
+    asset = get_object_or_404(Asset, request.publisher_q("resource__publisher"), id=id)
 
     # Check if user has access using the service function
     if not user_has_access(request.user, asset):
