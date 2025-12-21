@@ -73,7 +73,7 @@ class RecitersListTest(BaseTestCase):
 
     def test_list_reciters_should_return_only_active_reciters_with_ready_recitations(self):
         # Act
-        response = self.client.get("/developers-api/reciters/")
+        response = self.client.get("/reciters/")
 
         # Assert
         self.assertEqual(200, response.status_code)
@@ -107,7 +107,7 @@ class RecitersListTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get("/developers-api/reciters/?ordering=name")
+        response = self.client.get("/reciters/?ordering=name")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)

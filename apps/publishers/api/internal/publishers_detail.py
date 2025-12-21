@@ -33,5 +33,5 @@ class DetailPublisherOut(Schema):
 
 @router.get("publishers/{id}/", response=DetailPublisherOut, auth=None)
 def detail_publishers(request: Request, id: int):
-    publisher = get_object_or_404(Publisher, id=id)
+    publisher = get_object_or_404(Publisher, request.publisher_q("id"), id=id)
     return publisher

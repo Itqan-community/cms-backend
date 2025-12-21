@@ -645,14 +645,14 @@ class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
         help_text="Surah number (1..114)",
         validators=[MinValueValidator(1), MaxValueValidator(114)],
     )
-    surah_name = models.CharField(
+    surah_name_en = models.CharField(
         max_length=255,
         blank=True,
         default="",
         choices=SURAH_NAME_CHOICES_EN,
         help_text="Surah name in English (auto-calculated based on surah_number)",
     )
-    surah_name_ar = models.CharField(
+    surah_name = models.CharField(
         max_length=255,
         blank=True,
         default="",
@@ -690,8 +690,8 @@ class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
     def save(self, *args, **kwargs) -> None:
         # Auto-fill names from surah_number when present
         if self.surah_number:
-            self.surah_name = SURAH_NUMBER_NAME_EN.get(int(self.surah_number), "")
-            self.surah_name_ar = SURAH_NUMBER_NAME_AR.get(int(self.surah_number), "")
+            self.surah_name_en = SURAH_NUMBER_NAME_EN.get(int(self.surah_number), "")
+            self.surah_name = SURAH_NUMBER_NAME_AR.get(int(self.surah_number), "")
 
         # Auto-compute duration and size when an MP3 file is present
         if self.audio_file:

@@ -8,14 +8,13 @@ from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
 
-# Base router for /developers-api/recitations/{id}
 router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
 
 
 class RecitationSurahTrackOut(Schema):
     surah_number: int
+    surah_name_en: str
     surah_name: str
-    surah_name_ar: str
     chapter_number: int | None = None
     audio_url: str | None = Field(
         None,
@@ -54,8 +53,8 @@ def list_recitation_tracks(request: Request, asset_id: int):
         results.append(
             RecitationSurahTrackOut(
                 surah_number=track.surah_number,
+                surah_name_en=track.surah_name_en,
                 surah_name=track.surah_name,
-                surah_name_ar=track.surah_name_ar,
                 chapter_number=track.chapter_number,
                 audio_url=audio_url,
                 duration_ms=track.duration_ms,

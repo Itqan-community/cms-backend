@@ -56,6 +56,7 @@ MIDDLEWARE = [
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "apps.publishers.middlewares.publisher_middleware.PublisherMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -88,7 +89,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Database
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql_psycopg2",
+        "ENGINE": "django.db.backends.postgresql",
         "NAME": config("DB_NAME", default="itqan_cms"),
         "USER": config("DB_USER", default="itqan_user"),
         "PASSWORD": config("DB_PASSWORD", default="itqan_password"),
@@ -112,7 +113,6 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = "en"
 TIME_ZONE = "Asia/Riyadh"
 USE_I18N = True
-USE_L10N = True
 USE_TZ = True
 
 LANGUAGES = [
@@ -347,6 +347,9 @@ LOGGING = {
     "loggers": {
         "django": {"handlers": ["console"], "level": "INFO", "propagate": False},
         "apps": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
+        "botocore": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "boto3": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "s3transfer": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
 

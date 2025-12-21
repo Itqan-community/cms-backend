@@ -72,7 +72,7 @@ class RiwayahsListTest(BaseTestCase):
 
     def test_list_riwayahs_should_return_only_active_with_ready_recitations(self):
         # Act
-        response = self.client.get("/developers-api/riwayahs/")
+        response = self.client.get("/riwayahs/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -101,7 +101,7 @@ class RiwayahsListTest(BaseTestCase):
             resource=self.recitation_resource,
         )
 
-        response = self.client.get("/developers-api/riwayahs/?ordering=name")
+        response = self.client.get("/riwayahs/?ordering=name")
 
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
