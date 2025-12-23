@@ -1,10 +1,13 @@
 # apps/usage/middleware.py
 import time
+
 from django.utils.deprecation import MiddlewareMixin
+
 from apps.content.tasks import create_usage_event_task
 
+
 def _get_client_ip(request):
-    xff = request.META.get("HTTP_X_FORWARDED_FOR")
+    xff = request.headers.get("x-forwarded-for")
     if xff:
         return xff.split(",")[0].strip()
     return request.META.get("REMOTE_ADDR")
@@ -22,7 +25,9 @@ class PublicApiUsageLoggingMiddleware(MiddlewareMixin):
 
     def process_request(self, request):
         path = request.path
-        is_public = path.startswith(self.PUBLIC_PREFIXES) and not path.startswith(self.EXCLUDE_PREFIXES)
+        is_public = path.startswith(self.PUBLIC_PREFIXES) and not path.startswith(
+            self.EXCLUDE_PREFIXES
+        )
         request._usage_log_is_public = is_public
         if is_public:
             request._usage_log_start = time.monotonic()
@@ -41,7 +46,7 @@ class PublicApiUsageLoggingMiddleware(MiddlewareMixin):
             "asset_id": None,
             "resource_id": None,
             "ip_address": _get_client_ip(request),
-            "user_agent": request.META.get("HTTP_USER_AGENT", ""),
+            "user_agent": request.headers.get("user-agent", ""),
             "effective_license": "free",
             "metadata": {
                 "path": request.path,
