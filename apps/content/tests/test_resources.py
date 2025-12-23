@@ -127,9 +127,7 @@ class ResourceListTest(BaseTestCase):
             name="Tafsir Ibn Katheer",
             description="Classic tafsir",
         )
-        baker.make(
-            Resource, publisher=self.publisher2, name="Mushaf Uthmani", description="Uthmani script"
-        )
+        baker.make(Resource, publisher=self.publisher2, name="Mushaf Uthmani", description="Uthmani script")
 
         # Act
         response = self.client.get("/cms-api/resources/?search=tafsir")

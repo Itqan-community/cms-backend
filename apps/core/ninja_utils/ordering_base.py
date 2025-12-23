@@ -40,9 +40,7 @@ def ordering() -> Callable[..., Any]:  # pragma: no cover
 
 
 @overload
-def ordering(
-    func_or_ordering_class: Any = NOT_SET, **paginator_params: Any
-) -> Callable[..., Any]:  # pragma: no cover
+def ordering(func_or_ordering_class: Any = NOT_SET, **paginator_params: Any) -> Callable[..., Any]:  # pragma: no cover
     ...
 
 
@@ -76,9 +74,7 @@ def _inject_sorter(
     sorter_operation_class = OrderingOperation
     if is_async(func):
         sorter_operation_class = AsyncOrderingOperation
-    sorter_operation = sorter_operation_class(
-        sorter=sorter, view_func=func, sorter_kwargs_name=sorter_kwargs_name
-    )
+    sorter_operation = sorter_operation_class(sorter=sorter, view_func=func, sorter_kwargs_name=sorter_kwargs_name)
 
     return sorter_operation.as_view
 

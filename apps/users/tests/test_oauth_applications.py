@@ -10,9 +10,7 @@ class OAuth2ApplicationTests(BaseTestCase):
 
     def setUp(self):
         super().setUp()
-        self.user = User.objects.create_user(
-            email="appuser@example.com", password="password123", name="App User"
-        )
+        self.user = User.objects.create_user(email="appuser@example.com", password="password123", name="App User")
         # Get JWT token for Ninja authentication
         refresh = RefreshToken.for_user(self.user)
         self.auth_headers = {"HTTP_AUTHORIZATION": f"Bearer {refresh.access_token}"}
@@ -25,9 +23,7 @@ class OAuth2ApplicationTests(BaseTestCase):
             "authorization_grant_type": "password",
             "redirect_uris": "http://localhost/cb",
         }
-        response = self.client.post(
-            "/cms-api/applications/", data=data, format="json", **self.auth_headers
-        )
+        response = self.client.post("/cms-api/applications/", data=data, format="json", **self.auth_headers)
         self.assertEqual(200, response.status_code, response.content)
         res_data = response.json()
         self.assertEqual("New App", res_data["name"])
@@ -67,9 +63,7 @@ class OAuth2ApplicationTests(BaseTestCase):
             authorization_grant_type="password",
         )
         data = {"name": "Updated App"}
-        response = self.client.put(
-            f"/cms-api/applications/{app.id}/", data=data, format="json", **self.auth_headers
-        )
+        response = self.client.put(f"/cms-api/applications/{app.id}/", data=data, format="json", **self.auth_headers)
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual("Updated App", response.json()["name"])
         app.refresh_from_db()
