@@ -14,7 +14,9 @@ class PublisherMiddlewareTest(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.publisher = baker.make(Publisher, name="Test Publisher")
-        self.domain = baker.make(Domain, domain="test.com", publisher=self.publisher, is_primary=True)
+        self.domain = baker.make(
+            Domain, domain="test.com", publisher=self.publisher, is_primary=True
+        )
         self.user = baker.make(User, email="test@example.com", is_active=True)
         self.authenticate_user(self.user)
         self.factory = RequestFactory()

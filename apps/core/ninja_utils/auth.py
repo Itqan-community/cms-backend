@@ -41,13 +41,7 @@ class OptionalJWTAuth:
 
     def __call__(self, request):
         # Try JWT authentication first
-        for auth_method in ninja_jwt_auth:
-            result = auth_method(request)
-            if result is not None:
-                return result
-
-        # Try OAuth2 authentication
-        for auth_method in ninja_oauth2_auth:
+        for auth_method in ninja_jwt_auth + ninja_oauth2_auth:
             result = auth_method(request)
             if result is not None:
                 return result

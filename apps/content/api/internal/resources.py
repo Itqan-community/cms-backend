@@ -138,7 +138,9 @@ def delete_resource(request: Request, id: int):
 
 @router.get("resources/{id}/", response=DetailResourceOut, auth=None)
 def detail_resource(request: Request, id: int):
-    resource = get_object_or_404(Resource.objects.select_related("publisher"), request.publisher_q(), id=id)
+    resource = get_object_or_404(
+        Resource.objects.select_related("publisher"), request.publisher_q(), id=id
+    )
 
     # Only create usage event for authenticated users
     if hasattr(request, "user") and request.user and request.user.is_authenticated:

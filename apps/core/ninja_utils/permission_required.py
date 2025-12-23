@@ -37,7 +37,9 @@ def check_permissions(request, view) -> None:
     Check if the request should be permitted.
     Raises an appropriate exception if the request is not permitted.
     """
-    permission_classes: Iterable[type[BasePermission | OperationHolderMixin]] = view.permission_classes
+    permission_classes: Iterable[type[BasePermission | OperationHolderMixin]] = (
+        view.permission_classes
+    )
     for permission in _get_permissions(permission_classes):
         if not permission.has_permission(request=request, view=view):
             permission_denied(permission)
@@ -83,7 +85,9 @@ def _inject_permission_check(view: Callable) -> Callable:
     return view_with_permission
 
 
-def add_error_response_schema(status_code: int, response_schema: type[Schema], op: Operation) -> None:
+def add_error_response_schema(
+    status_code: int, response_schema: type[Schema], op: Operation
+) -> None:
     """
     Add a response schema to the operation
     takes the status code and the response schema for the error

@@ -102,14 +102,18 @@ class DetailPublisherTest(BaseTestCase):
         )
 
         # Act + Assert (verified)
-        response_verified = self.client.get(f"/cms-api/publishers/{verified_publisher.id}/", format="json")
+        response_verified = self.client.get(
+            f"/cms-api/publishers/{verified_publisher.id}/", format="json"
+        )
         self.assertEqual(200, response_verified.status_code, response_verified.content)
         body_verified = response_verified.json()
         self.assertTrue(body_verified["is_verified"])
         self.assertEqual("Verified Publisher", body_verified["name"])
 
         # Act + Assert (unverified)
-        response_unverified = self.client.get(f"/cms-api/publishers/{unverified_publisher.id}/", format="json")
+        response_unverified = self.client.get(
+            f"/cms-api/publishers/{unverified_publisher.id}/", format="json"
+        )
         self.assertEqual(200, response_unverified.status_code, response_unverified.content)
         body_unverified = response_unverified.json()
         self.assertFalse(body_unverified["is_verified"])

@@ -22,7 +22,7 @@ class OAuth2WorkflowTestCase(BaseTestCase):
             "job_title": "E2E Tester",
         }
 
-        reg_res = self.client.post("/register/", data=reg_data, format="json")
+        reg_res = self.client.post("/cms-api/auth/register/", data=reg_data, format="json")
         self.assertEqual(200, reg_res.status_code, reg_res.content)
         reg_json = reg_res.json()
 
@@ -38,7 +38,9 @@ class OAuth2WorkflowTestCase(BaseTestCase):
         }
         headers = {"HTTP_AUTHORIZATION": f"Bearer {jwt_access_token}"}
 
-        app_res = self.client.post("/applications/", data=app_data, format="json", **headers)
+        app_res = self.client.post(
+            "/cms-api/applications/", data=app_data, format="json", **headers
+        )
         self.assertEqual(200, app_res.status_code, app_res.content)
         app_json = app_res.json()
 
@@ -60,18 +62,10 @@ class OAuth2WorkflowTestCase(BaseTestCase):
         token_res = self.client.post("/token/", data=token_data, **token_headers)
         self.assertEqual(200, token_res.status_code, token_res.content)
         token_json = token_res.json()
-
         oauth2_access_token = token_json["access_token"]
         self.assertEqual("Bearer", token_json["token_type"])
 
         # --- STEP 4: Access Protected API (Authenticated via OAuth2 Token) ---
-        # accessing profile endpoint at /cms-api/auth/profile/
         final_headers = {"HTTP_AUTHORIZATION": f"Bearer {oauth2_access_token}"}
-
-        profile_res = self.client.get("/cms-api/auth/profile/", **final_headers)
-        self.assertEqual(200, profile_res.status_code, profile_res.content)
-        profile_json = profile_res.json()
-
-        self.assertEqual(email, profile_json["email"])
-        self.assertEqual("Workflow User", profile_json["name"])
-        self.assertEqual("E2E Tester", profile_json["job_title"])
+        res = self.client.get("/recitations/", **final_headers)
+        self.assertEqual(200, res.status_code, res.content)

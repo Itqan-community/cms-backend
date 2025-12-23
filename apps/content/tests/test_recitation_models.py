@@ -85,7 +85,9 @@ class RecitationModelsTest(BaseTestCase):
         )
 
         # Act
-        timing = RecitationAyahTiming.objects.create(track=track, ayah_key="1:1", start_ms=100, end_ms=345)
+        timing = RecitationAyahTiming.objects.create(
+            track=track, ayah_key="1:1", start_ms=100, end_ms=345
+        )
 
         # Assert
         self.assertEqual(timing.duration_ms, 245)

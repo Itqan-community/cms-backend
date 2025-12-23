@@ -41,7 +41,9 @@ def register_exception_handlers(api: NinjaAPI) -> None:
     def handle_ninja_validation_error(request, exc: NinjaValidationError):
         return api.create_response(
             request,
-            NinjaErrorResponse(error_name="validation_error", message=_("Invalid Input"), extra=exc.errors),
+            NinjaErrorResponse(
+                error_name="validation_error", message=_("Invalid Input"), extra=exc.errors
+            ),
             status=400,
         )
 

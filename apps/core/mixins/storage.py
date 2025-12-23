@@ -78,4 +78,6 @@ def generate_presigned_download_url(key: str, filename: str, expires_in: int = 3
         "Key": key,
         "ResponseContentDisposition": f'attachment; filename="{filename}"',
     }
-    return _get_s3_client().generate_presigned_url("get_object", Params=params, ExpiresIn=expires_in)
+    return _get_s3_client().generate_presigned_url(
+        "get_object", Params=params, ExpiresIn=expires_in
+    )

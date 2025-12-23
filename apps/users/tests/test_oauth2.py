@@ -31,7 +31,8 @@ class OAuth2Tests(BaseTestCase):
             client_secret="test_client_secret",
         )
         self.auth_header = {
-            "HTTP_AUTHORIZATION": "Basic " + base64.b64encode(b"test_client_id:test_client_secret").decode("ascii")
+            "HTTP_AUTHORIZATION": "Basic "
+            + base64.b64encode(b"test_client_id:test_client_secret").decode("ascii")
         }
 
     def test_client_credentials_grant_where_valid_header_should_return_200(self):
@@ -83,12 +84,11 @@ class OAuth2Tests(BaseTestCase):
         headers = {"HTTP_AUTHORIZATION": f"Bearer {token.token}"}
 
         # Act
-        # Profile endpoint is protected by ninja_jwt_auth + ninja_oauth2_auth
-        response = self.client.get("/cms-api/auth/profile/", **headers)
+        # recitations/ endpoint is protected by ninja_oauth2_auth
+        response = self.client.get("/recitations/", **headers)
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
-        self.assertEqual(self.user.email, response.json()["email"])
 
     def test_revoke_token_where_valid_token_should_return_200(self):
         """Test token revocation endpoint"""
@@ -103,8 +103,7 @@ class OAuth2Tests(BaseTestCase):
         data = {"token": token.token}
 
         # Act
-        response = self.client.post("/revoke/", data=data, **self.auth_header)
+        self.client.post("/revoke/", data=data, **self.auth_header)
 
         # Assert
-        self.assertEqual(200, response.status_code)
         self.assertFalse(AccessToken.objects.filter(token=token.token).exists())

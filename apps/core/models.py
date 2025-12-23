@@ -10,9 +10,13 @@ class BaseModel(models.Model):
 
     id = models.AutoField(primary_key=True, help_text="Unique identifier for this record")
 
-    created_at = models.DateTimeField(auto_now_add=True, help_text="Timestamp when this record was created")
+    created_at = models.DateTimeField(
+        auto_now_add=True, help_text="Timestamp when this record was created"
+    )
 
-    updated_at = models.DateTimeField(auto_now=True, help_text="Timestamp when this record was last updated")
+    updated_at = models.DateTimeField(
+        auto_now=True, help_text="Timestamp when this record was last updated"
+    )
 
     class Meta:
         abstract = True

@@ -37,7 +37,9 @@ class SearchingBase(ABC):
         self.search_fields = search_fields or []
 
     @abstractmethod
-    def searching_queryset(self, items: QuerySet | list, searching_input: Any) -> QuerySet | list: ...
+    def searching_queryset(
+        self, items: QuerySet | list, searching_input: Any
+    ) -> QuerySet | list: ...
 
 
 @overload
@@ -53,7 +55,9 @@ def searching(
     ...
 
 
-def searching(func_or_searching_class: Any = NOT_SET, **searching_params: Any) -> Callable[..., Any]:
+def searching(
+    func_or_searching_class: Any = NOT_SET, **searching_params: Any
+) -> Callable[..., Any]:
     isfunction = inspect.isfunction(func_or_searching_class)
     isnotset = func_or_searching_class == NOT_SET
 

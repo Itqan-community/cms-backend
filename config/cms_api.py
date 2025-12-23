@@ -1,4 +1,4 @@
-from apps.core.ninja_utils.auth import ninja_jwt_auth, ninja_oauth2_auth
+from apps.core.ninja_utils.auth import ninja_jwt_auth
 from apps.core.ninja_utils.autodiscover import auto_discover_ninja_routers
 from apps.core.ninja_utils.error_handling import register_exception_handlers
 
@@ -10,7 +10,7 @@ cms_api = create_ninja_api(
     description="Internal APIs for CMS frontend",
     docs_base_path="/cms-api",
     urls_namespace="cms-api",
-    auth=ninja_jwt_auth + ninja_oauth2_auth,
+    auth=ninja_jwt_auth,
 )
 
 # Register standard exception handlers

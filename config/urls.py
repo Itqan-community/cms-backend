@@ -6,6 +6,7 @@ from django.contrib import admin
 from django.http import HttpResponse, JsonResponse
 from django.urls import include, path
 from django.utils import timezone
+from oauth2_provider import urls as oauth2_urls
 from rest_framework.routers import DefaultRouter
 
 from config.cms_api import cms_api
@@ -48,6 +49,7 @@ urlpatterns = [
     path("django-admin/", admin.site.urls),
     # Django Allauth URLs
     path("accounts/", include("allauth.urls")),
+    path("o/", include(oauth2_urls)),
     # Internal CMS API mount
     path("cms-api/", cms_api.urls),
     # Public developers API mount

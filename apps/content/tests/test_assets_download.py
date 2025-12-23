@@ -110,7 +110,9 @@ class TestAssetDownload(BaseTestCase):
         mock_user_has_access.return_value = True
 
         # Create a mock file
-        mock_file = SimpleUploadedFile("test.pdf", b"fake pdf content", content_type="application/pdf")
+        mock_file = SimpleUploadedFile(
+            "test.pdf", b"fake pdf content", content_type="application/pdf"
+        )
         baker.make(AssetVersion, asset=self.asset, name="Version 1", file_url=mock_file)
 
         # Act
@@ -124,7 +126,9 @@ class TestAssetDownload(BaseTestCase):
         self.assertIn("/test.pdf", body["download_url"])
 
     @patch("apps.content.api.internal.assets_download.user_has_access")
-    def test_download_asset_with_csv_file_should_return_correct_content_type(self, mock_user_has_access):
+    def test_download_asset_with_csv_file_should_return_correct_content_type(
+        self, mock_user_has_access
+    ):
         # Arrange
         mock_user_has_access.return_value = True
 
@@ -151,8 +155,12 @@ class TestAssetDownload(BaseTestCase):
         older_file = SimpleUploadedFile("old.pdf", b"old content", content_type="application/pdf")
         newer_file = SimpleUploadedFile("new.pdf", b"new content", content_type="application/pdf")
 
-        older_version = baker.make(AssetVersion, asset=self.asset, name="Old Version", file_url=older_file)
-        newer_version = baker.make(AssetVersion, asset=self.asset, name="New Version", file_url=newer_file)
+        older_version = baker.make(
+            AssetVersion, asset=self.asset, name="Old Version", file_url=older_file
+        )
+        newer_version = baker.make(
+            AssetVersion, asset=self.asset, name="New Version", file_url=newer_file
+        )
 
         # Make newer version actually newer by setting created_at
         newer_version.created_at = older_version.created_at + timezone.timedelta(days=1)
@@ -190,12 +198,16 @@ class TestAssetDownload(BaseTestCase):
                 )
 
     @patch("apps.content.api.internal.assets_download.user_has_access")
-    def test_download_asset_should_create_usage_event_for_authenticated_user(self, mock_user_has_access):
+    def test_download_asset_should_create_usage_event_for_authenticated_user(
+        self, mock_user_has_access
+    ):
         # Arrange
         mock_user_has_access.return_value = True
 
         # Create a mock file
-        mock_file = SimpleUploadedFile("test.pdf", b"fake pdf content", content_type="application/pdf")
+        mock_file = SimpleUploadedFile(
+            "test.pdf", b"fake pdf content", content_type="application/pdf"
+        )
         baker.make(AssetVersion, asset=self.asset, name="Download Test", file_url=mock_file)
 
         # Act
@@ -224,7 +236,9 @@ class TestAssetDownload(BaseTestCase):
         self.assertIsInstance(usage_event.metadata, dict)
 
     @patch("apps.content.api.internal.assets_download.user_has_access")
-    def test_download_asset_should_not_create_usage_event_when_permission_denied(self, mock_user_has_access):
+    def test_download_asset_should_not_create_usage_event_when_permission_denied(
+        self, mock_user_has_access
+    ):
         # Arrange
         mock_user_has_access.return_value = False  # No access
 
@@ -245,7 +259,9 @@ class TestAssetDownload(BaseTestCase):
         self.assertEqual(0, usage_events.count())
 
     @patch("apps.content.api.internal.assets_download.user_has_access")
-    def test_download_asset_should_include_request_metadata_in_usage_event(self, mock_user_has_access):
+    def test_download_asset_should_include_request_metadata_in_usage_event(
+        self, mock_user_has_access
+    ):
         # Arrange
         mock_user_has_access.return_value = True
 

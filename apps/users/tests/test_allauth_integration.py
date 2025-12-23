@@ -250,7 +250,9 @@ class UserSocialSignupFormTestCase(BaseTestCase):
         """Test social form save with name"""
         # Create a user first (would normally be done by allauth)
         tmp_password = get_random_string(20)
-        user = User.objects.create_user(email="social@example.com", password=tmp_password, name="Original Name")
+        user = User.objects.create_user(
+            email="social@example.com", password=tmp_password, name="Original Name"
+        )
 
         form_data = {"name": "Updated Social Name"}
 
