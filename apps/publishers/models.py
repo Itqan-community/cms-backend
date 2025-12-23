@@ -16,9 +16,7 @@ class Publisher(BaseModel):
     icon_url = models.ImageField(
         upload_to=upload_to_publisher_icons,
         blank=True,
-        validators=[
-            FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "gif", "webp", "svg"])
-        ],
+        validators=[FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "gif", "webp", "svg"])],
         help_text="Icon/logo image - used in V1 UI: Publisher Page",
     )
 
@@ -79,9 +77,7 @@ class Domain(BaseModel):
     @transaction.atomic
     def save(self, *args, **kwargs):
         # Get all other primary domains with the same tenant
-        domain_list = Domain.objects.filter(publisher=self.publisher, is_primary=True).exclude(
-            pk=self.pk
-        )
+        domain_list = Domain.objects.filter(publisher=self.publisher, is_primary=True).exclude(pk=self.pk)
         # If we have no primary domain yet, set as primary domain by default
         self.is_primary = self.is_primary or (not domain_list.exists())
         if self.is_primary:

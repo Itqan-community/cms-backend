@@ -43,6 +43,7 @@ THIRD_PARTY_APPS = [
     "allauth.socialaccount.providers.google",
     "allauth.socialaccount.providers.github",
     "storages",
+    "oauth2_provider",
 ]
 
 LOCAL_APPS = ["apps.core", "apps.content", "apps.users", "apps.publishers"]
@@ -61,6 +62,7 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",  # Required for allauth
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "oauth2_provider.middleware.OAuth2TokenMiddleware",
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
@@ -233,6 +235,7 @@ AUTH_USER_MODEL = "users.User"
 
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
+    "oauth2_provider.backends.OAuth2Backend",
 ]
 
 # Simple JWT Configuration
@@ -309,6 +312,15 @@ SOCIALACCOUNT_PROVIDERS = {
     "github": {"SCOPE": ["user:email"], "VERIFIED_EMAIL": True},
 }
 
+# OAuth2 Provider Configuration
+OAUTH2_PROVIDER = {
+    "ALLOWED_CLIENT_AUTHENTICATION_METHODS": ["client_secret_basic"],
+    "PKCE_REQUIRED": True,
+    "ACCESS_TOKEN_EXPIRE_SECONDS": 3600,
+    "REFRESH_TOKEN_EXPIRE_SECONDS": 86400 * 30,  # 30 days
+    "OIDC_ENABLED": False,
+}
+
 # Cache Configuration
 CACHES = {
     "default": {
@@ -344,8 +356,16 @@ LOGGING = {
     },
     "root": {"handlers": ["console"], "level": "INFO"},
     "loggers": {
-        "django": {"handlers": ["console"], "level": "INFO", "propagate": False},
-        "apps": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
+        "django": {
+            "handlers": ["console"],
+            "level": config("LOGGING_LEVEL", default="INFO"),
+            "propagate": False,
+        },
+        "apps": {
+            "handlers": ["console"],
+            "level": config("LOGGING_LEVEL", default="INFO"),
+            "propagate": False,
+        },
         "botocore": {"handlers": ["console"], "level": "INFO", "propagate": False},
         "boto3": {"handlers": ["console"], "level": "INFO", "propagate": False},
         "s3transfer": {"handlers": ["console"], "level": "INFO", "propagate": False},
@@ -360,9 +380,7 @@ NINJA_SEARCHING_CLASS = "apps.core.ninja_utils.searching.Searching"
 NINJA_ORDERING_CLASS = "apps.core.ninja_utils.ordering.Ordering"
 
 RUNNING_TESTS = False
-if (len(sys.argv) >= 2 and sys.argv[0].endswith("manage.py") and sys.argv[1] == "test") or (
-    "pytest" in sys.argv[0]
-):
+if (len(sys.argv) >= 2 and sys.argv[0].endswith("manage.py") and sys.argv[1] == "test") or ("pytest" in sys.argv[0]):
     RUNNING_TESTS = True
 
 try:

@@ -11,7 +11,7 @@ from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
 
-from ._schemas import OAuth2AuthorizeResponseSchema
+from ..public.oauth2 import OAuth2AuthorizeResponseSchema
 
 router = ItqanRouter(tags=[NinjaTag.SOCIAL_AUTH])
 

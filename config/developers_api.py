@@ -1,3 +1,4 @@
+from apps.core.ninja_utils.auth import ninja_jwt_auth, ninja_oauth2_auth
 from apps.core.ninja_utils.autodiscover import auto_discover_ninja_routers
 from apps.core.ninja_utils.error_handling import register_exception_handlers
 
@@ -8,13 +9,13 @@ deprecated_developers_api = create_ninja_api(
     description="Itqan APIs for developers",
     urls_namespace="developers-api",
     docs_base_path="/developers-api",
-    auth=None,
+    auth=ninja_jwt_auth + ninja_oauth2_auth,
 )  # deprecated (keep for backward compatibility)
 developers_api = create_ninja_api(
     title="Itqan CMS Developers API",
     description="Itqan APIs for developers",
     urls_namespace="",
-    auth=None,
+    auth=ninja_jwt_auth + ninja_oauth2_auth,
 )
 
 register_exception_handlers(deprecated_developers_api)

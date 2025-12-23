@@ -38,9 +38,7 @@ class User(BaseModel, AbstractUser):
 class Developer(BaseModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="developer_profile")
     bio = models.TextField(_("Bio"), blank=True, help_text="Tell us more about you and your team")
-    project_summary = models.TextField(
-        _("Project Summary"), blank=True, help_text="Tell us about your project"
-    )
+    project_summary = models.TextField(_("Project Summary"), blank=True, help_text="Tell us about your project")
     project_url = models.URLField(
         _("Project URL"),
         blank=True,

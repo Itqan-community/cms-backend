@@ -14,9 +14,7 @@ class PublisherMiddlewareTest(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.publisher = baker.make(Publisher, name="Test Publisher")
-        self.domain = baker.make(
-            Domain, domain="test.com", publisher=self.publisher, is_primary=True
-        )
+        self.domain = baker.make(Domain, domain="test.com", publisher=self.publisher, is_primary=True)
         self.user = baker.make(User, email="test@example.com", is_active=True)
         self.authenticate_user(self.user)
         self.factory = RequestFactory()
@@ -43,7 +41,7 @@ class PublisherMiddlewareTest(BaseTestCase):
         # Arrange
 
         # Act
-        response = self.client.get(self.url, HTTP_HOST="www.test.com")
+        response = self.client.get(self.url, headers={"host": "www.test.com"})
 
         # Assert - If www was stripped and matched 'test.com', then request.publisher is set.
         # If request.publisher is set, then filtering applies.
@@ -54,7 +52,7 @@ class PublisherMiddlewareTest(BaseTestCase):
         # Arrange
 
         # Act
-        response = self.client.get(self.url, HTTP_HOST="unknown.com")
+        response = self.client.get(self.url, headers={"host": "unknown.com"})
 
         # Assert
         self.assertEqual(response.status_code, 200)
@@ -65,7 +63,7 @@ class PublisherMiddlewareTest(BaseTestCase):
         self.domain.save()
 
         # Act
-        response = self.client.get(self.url, HTTP_HOST="test.com")
+        response = self.client.get(self.url, headers={"host": "test.com"})
 
         # Assert
         self.assertEqual(423, response.status_code)
