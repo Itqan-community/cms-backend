@@ -182,9 +182,7 @@ def batch_create_usage_events_task(events_data):
                 UsageEvent.objects.bulk_create(events_to_create)
                 successful_events = len(events_to_create)
 
-        logger.info(
-            f"Batch created {successful_events} usage events from {len(events_data)} attempts"
-        )
+        logger.info(f"Batch created {successful_events} usage events from {len(events_data)} attempts")
         return successful_events
 
     except Exception as exc:
@@ -207,12 +205,8 @@ def compute_daily_analytics_task():
         # Compute daily statistics
         daily_stats = {
             "date": today.isoformat(),
-            "total_downloads": UsageEvent.objects.filter(
-                created_at__date=today, usage_kind="file_download"
-            ).count(),
-            "total_views": UsageEvent.objects.filter(
-                created_at__date=today, usage_kind="view"
-            ).count(),
+            "total_downloads": UsageEvent.objects.filter(created_at__date=today, usage_kind="file_download").count(),
+            "total_views": UsageEvent.objects.filter(created_at__date=today, usage_kind="view").count(),
             "unique_users": UsageEvent.objects.filter(created_at__date=today)
             .values("developer_user")
             .distinct()
@@ -298,9 +292,9 @@ def cleanup_old_usage_events_task(days_to_keep=90):
 
         while True:
             with transaction.atomic():
-                old_events = UsageEvent.objects.filter(created_at__lt=cutoff_date).values_list(
-                    "id", flat=True
-                )[:batch_size]
+                old_events = UsageEvent.objects.filter(created_at__lt=cutoff_date).values_list("id", flat=True)[
+                    :batch_size
+                ]
 
                 old_events_list = list(old_events)
                 if not old_events_list:
@@ -311,9 +305,7 @@ def cleanup_old_usage_events_task(days_to_keep=90):
 
                 logger.info(f"Deleted {len(old_events_list)} old usage events")
 
-        logger.info(
-            f"Cleanup completed: deleted {deleted_count} usage events older than {days_to_keep} days"
-        )
+        logger.info(f"Cleanup completed: deleted {deleted_count} usage events older than {days_to_keep} days")
         return deleted_count
 
     except Exception as exc:

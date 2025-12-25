@@ -32,12 +32,10 @@ class AssetAccessTest(BaseTestCase):
 
         # Act
         self.authenticate_user(self.user)
-        response = self.client.post(
-            f"/cms-api/assets/{self.asset.id}/request-access/", data=data, format="json"
-        )
+        response = self.client.post(f"/cms-api/assets/{self.asset.id}/request-access/", data=data, format="json")
 
         # Assert
-        self.assertEqual(200, response.status_code)
+        self.assertEqual(200, response.status_code, response.content)
         body = response.json()
 
         # Check request structure
@@ -68,9 +66,7 @@ class AssetAccessTest(BaseTestCase):
 
         # Act
         self.authenticate_user(self.user)
-        response = self.client.post(
-            f"/cms-api/assets/{self.asset.id}/request-access/", data=data, format="json"
-        )
+        response = self.client.post(f"/cms-api/assets/{self.asset.id}/request-access/", data=data, format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -88,9 +84,7 @@ class AssetAccessTest(BaseTestCase):
 
         # Act
         self.authenticate_user(self.user)
-        response = self.client.post(
-            f"/cms-api/assets/{self.asset.id}/request-access/", data=data, format="json"
-        )
+        response = self.client.post(f"/cms-api/assets/{self.asset.id}/request-access/", data=data, format="json")
 
         # Assert
         self.assertEqual(400, response.status_code, response.content)
@@ -104,9 +98,7 @@ class AssetAccessTest(BaseTestCase):
 
         # Act
         self.authenticate_user(self.user)
-        response = self.client.post(
-            f"/cms-api/assets/{self.asset.id}/request-access/", data=data, format="json"
-        )
+        response = self.client.post(f"/cms-api/assets/{self.asset.id}/request-access/", data=data, format="json")
 
         # Assert
         self.assertEqual(400, response.status_code, response.content)
@@ -136,9 +128,7 @@ class AssetAccessTest(BaseTestCase):
         }
 
         # Act (without authentication)
-        response = self.client.post(
-            f"/cms-api/assets/{self.asset.id}/request-access/", data=data, format="json"
-        )
+        response = self.client.post(f"/cms-api/assets/{self.asset.id}/request-access/", data=data, format="json")
 
         # Assert
         self.assertEqual(401, response.status_code, response.content)
@@ -152,15 +142,11 @@ class AssetAccessTest(BaseTestCase):
 
         # Act - First request
         self.authenticate_user(self.user)
-        first_response = self.client.post(
-            f"/cms-api/assets/{self.asset.id}/request-access/", data=data, format="json"
-        )
+        first_response = self.client.post(f"/cms-api/assets/{self.asset.id}/request-access/", data=data, format="json")
 
         # Act - Second request with different purpose
         data["purpose"] = "Second request"
-        second_response = self.client.post(
-            f"/cms-api/assets/{self.asset.id}/request-access/", data=data, format="json"
-        )
+        second_response = self.client.post(f"/cms-api/assets/{self.asset.id}/request-access/", data=data, format="json")
 
         # Assert
         self.assertEqual(200, first_response.status_code, first_response.content)
@@ -182,17 +168,13 @@ class AssetAccessTest(BaseTestCase):
 
         # Act
         self.authenticate_user(self.user)
-        response = self.client.post(
-            f"/cms-api/assets/{self.asset.id}/request-access/", data=data, format="json"
-        )
+        response = self.client.post(f"/cms-api/assets/{self.asset.id}/request-access/", data=data, format="json")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
 
         # Verify access request is created in database
-        access_request = AssetAccessRequest.objects.filter(
-            developer_user=self.user, asset=self.asset
-        ).first()
+        access_request = AssetAccessRequest.objects.filter(developer_user=self.user, asset=self.asset).first()
         self.assertIsNotNone(access_request)
         self.assertEqual("Database verification test", access_request.developer_access_reason)
         self.assertEqual(

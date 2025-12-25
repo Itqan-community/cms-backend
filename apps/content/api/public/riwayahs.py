@@ -23,7 +23,7 @@ class RiwayahOut(Schema):
     )
 
 
-@router.get("riwayahs/", response=list[RiwayahOut], auth=None)
+@router.get("riwayahs/", response=list[RiwayahOut])
 @paginate
 @ordering(ordering_fields=["name", "name_ar", "slug"])
 def list_riwayahs(request: Request):

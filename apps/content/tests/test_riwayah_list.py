@@ -1,8 +1,10 @@
 from model_bakery import baker
+from oauth2_provider.models import Application
 
 from apps.content.models import Asset, Resource, Riwayah
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
+from apps.users.models import User
 
 
 class RiwayahsListTest(BaseTestCase):
@@ -69,8 +71,18 @@ class RiwayahsListTest(BaseTestCase):
             riwayah=self.active_riwayah,
             resource=tafsir_resource,
         )
+        self.user = User.objects.create_user(email="oauthuser@example.com", name="OAuth User")
+        self.app = Application.objects.create(
+            user=self.user,
+            name="App 1",
+            client_type="confidential",
+            authorization_grant_type="password",
+        )
 
     def test_list_riwayahs_should_return_only_active_with_ready_recitations(self):
+        # Arrange
+        self.authenticate_client(self.app)
+
         # Act
         response = self.client.get("/riwayahs/")
 
@@ -93,6 +105,8 @@ class RiwayahsListTest(BaseTestCase):
         self.assertEqual(1, riwayah_item["recitations_count"])
 
     def test_list_riwayahs_ordering_by_name(self):
+        # Arrange
+        self.authenticate_client(self.app)
         other_riwayah = baker.make(Riwayah, is_active=True, name="A Riwayah")
         baker.make(
             Asset,
@@ -101,8 +115,10 @@ class RiwayahsListTest(BaseTestCase):
             resource=self.recitation_resource,
         )
 
+        # Act
         response = self.client.get("/riwayahs/?ordering=name")
 
+        # Assert
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
         names = [item["name"] for item in items]

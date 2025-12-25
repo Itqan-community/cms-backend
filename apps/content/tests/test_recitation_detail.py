@@ -1,9 +1,11 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
+from oauth2_provider.models import Application
 
 from apps.content.models import Asset, RecitationSurahTrack, Resource
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
+from apps.users.models import User
 
 
 class RecitationTracksTest(BaseTestCase):
@@ -20,6 +22,13 @@ class RecitationTracksTest(BaseTestCase):
             Asset,
             category=Asset.CategoryChoice.RECITATION,
             resource=self.recitation_resource,
+        )
+        self.user = User.objects.create_user(email="oauthuser@example.com", name="OAuth User")
+        self.app = Application.objects.create(
+            user=self.user,
+            name="App 1",
+            client_type="confidential",
+            authorization_grant_type="password",
         )
 
     def test_list_recitation_tracks_should_return_tracks_ordered_by_surah_number(self):
@@ -44,6 +53,7 @@ class RecitationTracksTest(BaseTestCase):
             duration_ms=1000,
             size_bytes=512,
         )
+        self.authenticate_client(self.app)
 
         # Act
         response = self.client.get(f"/recitations/{self.asset.id}/")
@@ -78,6 +88,7 @@ class RecitationTracksTest(BaseTestCase):
             size_bytes=512,
             audio_file=audio_file,
         )
+        self.authenticate_client(self.app)
 
         # Act
         response = self.client.get(f"/recitations/{self.asset.id}/")
@@ -104,6 +115,7 @@ class RecitationTracksTest(BaseTestCase):
             size_bytes=512,
             audio_file=None,
         )
+        self.authenticate_client(self.app)
 
         # Act
         response = self.client.get(f"/recitations/{self.asset.id}/")
@@ -115,6 +127,7 @@ class RecitationTracksTest(BaseTestCase):
         self.assertIsNone(items[0]["audio_url"])
 
     def test_list_recitation_tracks_for_nonexistent_or_invalid_asset_should_return_404(self):
+        self.authenticate_client(self.app)
         # Non-existent asset
         response = self.client.get("/recitations/999999/")
         self.assertEqual(404, response.status_code, response.content)
