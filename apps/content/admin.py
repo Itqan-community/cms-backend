@@ -8,8 +8,9 @@ from django.utils.html import format_html
 
 from config.settings.base import CLOUDFLARE_R2_PUBLIC_BASE_URL
 
-from ..core.mixins.constants import SURAH_NUMBER_NAME_AR, SURAH_NUMBER_NAME_EN
+from ..core.mixins.constants import QURAN_SURAHS
 from ..mixins.recitations_helpers import extract_surah_number_from_filename
+from .api.public.recitations_detail import RecitationSurahTrackOut
 from .forms.bulk_recitations_upload_form import BulkRecitationUploadForm
 from .forms.download_recitations_json_form import DownloadRecitationsJsonForm
 from .models import (
@@ -55,6 +56,7 @@ class ResourceAdmin(admin.ModelAdmin):
     ]
     list_filter = ["category", "status", "publisher", "created_at"]
     search_fields = ["name", "description", "slug"]
+    prepopulated_fields = {"slug": ("name",)}
     inlines = [ResourceVersionInline]
     raw_id_fields = ["publisher"]
 
@@ -435,20 +437,72 @@ class UsageEventAdmin(admin.ModelAdmin):
 
 @admin.register(Reciter)
 class ReciterAdmin(admin.ModelAdmin):
-    list_display = ["id", "name", "name_ar", "slug", "is_active", "created_at"]
+    list_display = ["id", "name", "slug", "is_active", "created_at"]
     list_filter = ["is_active", "created_at"]
     search_fields = ["name", "slug"]
     prepopulated_fields = {"slug": ("name",)}
     readonly_fields = ["created_at", "updated_at"]
+
+    fieldsets = (
+        (
+            "Basic Information",
+            {
+                "fields": ("name", "slug", "is_active"),
+            },
+        ),
+        (
+            "Multilingual Fields",
+            {
+                "fields": (
+                    "name_en",
+                    "name_ar",
+                ),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            "Timestamps",
+            {
+                "fields": ("created_at", "updated_at"),
+                "classes": ("collapse",),
+            },
+        ),
+    )
 
 
 @admin.register(Riwayah)
 class RiwayahAdmin(admin.ModelAdmin):
-    list_display = ["id", "name", "name_ar", "slug", "is_active", "created_at"]
+    list_display = ["id", "name", "slug", "is_active", "created_at"]
     list_filter = ["is_active", "created_at"]
     search_fields = ["name", "slug"]
     prepopulated_fields = {"slug": ("name",)}
     readonly_fields = ["created_at", "updated_at"]
+
+    fieldsets = (
+        (
+            "Basic Information",
+            {
+                "fields": ("name", "slug", "is_active"),
+            },
+        ),
+        (
+            "Multilingual Fields",
+            {
+                "fields": (
+                    "name_en",
+                    "name_ar",
+                ),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            "Timestamps",
+            {
+                "fields": ("created_at", "updated_at"),
+                "classes": ("collapse",),
+            },
+        ),
+    )
 
 
 @admin.register(RecitationSurahTrack)
@@ -457,23 +511,31 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
         "id",
         "asset",
         "surah_number",
-        "surah_name_en",
         "surah_name",
+        "surah_name_en",
         "duration_ms",
         "size_bytes",
         "created_at",
     ]
     list_filter = ["asset", "created_at"]
-    search_fields = ["asset__name", "surah_name_en", "surah_name"]
+    search_fields = ["asset__name", "surah_name", "surah_name_en"]
     readonly_fields = [
-        "surah_name_en",
         "surah_name",
+        "surah_name_en",
         "size_bytes",
         "duration_ms",
         "created_at",
         "updated_at",
     ]
     raw_id_fields = ["asset"]
+
+    @admin.display(description="Surah Name (AR)", ordering="surah_number")
+    def surah_name(self, obj: RecitationSurahTrack) -> str:
+        return QURAN_SURAHS.get(obj.surah_number).get("name")
+
+    @admin.display(description="Surah Name (EN)", ordering="surah_number")
+    def surah_name_en(self, obj: RecitationSurahTrack) -> str:
+        return QURAN_SURAHS.get(obj.surah_number).get("name_en")
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("asset")
@@ -603,15 +665,15 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
             form = BulkRecitationUploadForm()
 
         # Provide surah name maps for client preview
-        from apps.core.mixins.constants import SURAH_NUMBER_NAME_AR, SURAH_NUMBER_NAME_EN
+        from apps.core.mixins.constants import QURAN_SURAHS
 
         context = {
             **self.admin_site.each_context(request),
             "title": "Bulk upload recitation surah tracks",
             "form": form,
             "redirect_url": reverse("admin:content_recitationsurahtrack_changelist"),
-            "surah_map_en": SURAH_NUMBER_NAME_EN,
-            "surah_map_ar": SURAH_NUMBER_NAME_AR,
+            "surah_map_ar": {k: v.get("name", "") for k, v in QURAN_SURAHS.items()},
+            "surah_map_en": {k: v.get("name_en", "") for k, v in QURAN_SURAHS.items()},
         }
         return render(
             request,
@@ -631,28 +693,30 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
                     .order_by("surah_number")
                     .only("surah_number", "audio_file", "duration_ms")
                 )
-                result: list[dict] = []
-                for t in tracks:
-                    try:
-                        url = (
-                            f"{CLOUDFLARE_R2_PUBLIC_BASE_URL}/media/{t.audio_file.name}"
-                            if t.audio_file
-                            else ""
-                        )
-                    except Exception:
-                        url = ""
+                result: list[RecitationSurahTrackOut] = []
+                for track in tracks:
+                    url = f"{CLOUDFLARE_R2_PUBLIC_BASE_URL}/media/{track.audio_file.name}"
                     result.append(
-                        {
-                            "surah_number": int(t.surah_number),
-                            "surah_name_en": SURAH_NUMBER_NAME_EN[int(t.surah_number)],
-                            "surah_name": SURAH_NUMBER_NAME_AR[int(t.surah_number)],
-                            "audio_file": url,
-                            "duration_ms": int(t.duration_ms or 0),
-                            "ayah_timings": [],
-                        }
+                        RecitationSurahTrackOut(
+                            surah_number=track.surah_number,
+                            surah_name=QURAN_SURAHS.get(track.surah_number).get("name"),
+                            surah_name_en=QURAN_SURAHS.get(track.surah_number).get("name_en"),
+                            audio_url=url,
+                            duration_ms=track.duration_ms,
+                            size_bytes=track.size_bytes,
+                            revelation_order=QURAN_SURAHS.get(track.surah_number).get(
+                                "revelation_order"
+                            ),
+                            revelation_place=QURAN_SURAHS.get(track.surah_number).get(
+                                "revelation_place"
+                            ),
+                            ayahs_count=QURAN_SURAHS.get(track.surah_number).get("ayahs_count"),
+                            ayahs_timings=[],
+                        )
                     )
 
-                payload = json.dumps(result, ensure_ascii=False, indent=2)
+                result_serialized = [i.model_dump() for i in result]
+                payload = json.dumps(result_serialized, ensure_ascii=False, indent=2)
                 reciter_slug = asset.reciter.slug if asset.reciter else ""
                 filename = (
                     f"asset_{asset.id}_{reciter_slug}_recitations.json"

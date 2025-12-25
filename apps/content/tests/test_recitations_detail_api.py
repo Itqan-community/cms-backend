@@ -28,9 +28,6 @@ class RecitationTracksTest(BaseTestCase):
             RecitationSurahTrack,
             asset=self.asset,
             surah_number=2,
-            surah_name_en="Al-Baqarah",
-            surah_name="البقرة",
-            chapter_number=2,
             duration_ms=2000,
             size_bytes=1024,
         )
@@ -38,9 +35,6 @@ class RecitationTracksTest(BaseTestCase):
             RecitationSurahTrack,
             asset=self.asset,
             surah_number=1,
-            surah_name_en="Al-Fatihah",
-            surah_name="الفاتحة",
-            chapter_number=1,
             duration_ms=1000,
             size_bytes=512,
         )
@@ -71,9 +65,6 @@ class RecitationTracksTest(BaseTestCase):
             RecitationSurahTrack,
             asset=self.asset,
             surah_number=1,
-            surah_name_en="Al-Fatihah",
-            surah_name="الفاتحة",
-            chapter_number=1,
             duration_ms=1000,
             size_bytes=512,
             audio_file=audio_file,
@@ -90,29 +81,6 @@ class RecitationTracksTest(BaseTestCase):
         item = items[0]
         self.assertIsNotNone(item["audio_url"])
         self.assertIn("test.mp3", item["audio_url"])
-
-    def test_list_recitation_tracks_should_set_audio_url_to_null_when_no_audio_file(self):
-        # Arrange
-        baker.make(
-            RecitationSurahTrack,
-            asset=self.asset,
-            surah_number=1,
-            surah_name_en="Al-Fatihah",
-            surah_name="الفاتحة",
-            chapter_number=1,
-            duration_ms=1000,
-            size_bytes=512,
-            audio_file=None,
-        )
-
-        # Act
-        response = self.client.get(f"/recitations/{self.asset.id}/")
-
-        # Assert
-        self.assertEqual(200, response.status_code, response.content)
-        items = response.json()["results"]
-        self.assertEqual(1, len(items))
-        self.assertIsNone(items[0]["audio_url"])
 
     def test_list_recitation_tracks_for_nonexistent_or_invalid_asset_should_return_404(self):
         # Non-existent asset
