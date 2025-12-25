@@ -433,20 +433,72 @@ class UsageEventAdmin(admin.ModelAdmin):
 
 @admin.register(Reciter)
 class ReciterAdmin(admin.ModelAdmin):
-    list_display = ["id", "name", "name_ar", "slug", "is_active", "created_at"]
+    list_display = ["id", "name", "slug", "is_active", "created_at"]
     list_filter = ["is_active", "created_at"]
     search_fields = ["name", "slug"]
     prepopulated_fields = {"slug": ("name",)}
     readonly_fields = ["created_at", "updated_at"]
+
+    fieldsets = (
+        (
+            "Basic Information",
+            {
+                "fields": ("name", "slug", "is_active"),
+            },
+        ),
+        (
+            "Multilingual Fields",
+            {
+                "fields": (
+                    "name_en",
+                    "name_ar",
+                ),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            "Timestamps",
+            {
+                "fields": ("created_at", "updated_at"),
+                "classes": ("collapse",),
+            },
+        ),
+    )
 
 
 @admin.register(Riwayah)
 class RiwayahAdmin(admin.ModelAdmin):
-    list_display = ["id", "name", "name_ar", "slug", "is_active", "created_at"]
+    list_display = ["id", "name", "slug", "is_active", "created_at"]
     list_filter = ["is_active", "created_at"]
     search_fields = ["name", "slug"]
     prepopulated_fields = {"slug": ("name",)}
     readonly_fields = ["created_at", "updated_at"]
+
+    fieldsets = (
+        (
+            "Basic Information",
+            {
+                "fields": ("name", "slug", "is_active"),
+            },
+        ),
+        (
+            "Multilingual Fields",
+            {
+                "fields": (
+                    "name_en",
+                    "name_ar",
+                ),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            "Timestamps",
+            {
+                "fields": ("created_at", "updated_at"),
+                "classes": ("collapse",),
+            },
+        ),
+    )
 
 
 @admin.register(RecitationSurahTrack)
@@ -455,23 +507,31 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
         "id",
         "asset",
         "surah_number",
-        "surah_name_en",
         "surah_name",
+        "surah_name_en",
         "duration_ms",
         "size_bytes",
         "created_at",
     ]
     list_filter = ["asset", "created_at"]
-    search_fields = ["asset__name", "surah_name_en", "surah_name"]
+    search_fields = ["asset__name", "surah_name", "surah_name_en"]
     readonly_fields = [
-        "surah_name_en",
         "surah_name",
+        "surah_name_en",
         "size_bytes",
         "duration_ms",
         "created_at",
         "updated_at",
     ]
     raw_id_fields = ["asset"]
+
+    @admin.display(description="Surah Name (AR)", ordering="surah_number")
+    def surah_name(self, obj: RecitationSurahTrack) -> str:
+        return QURAN_SURAHS.get(obj.surah_number).get("name")
+
+    @admin.display(description="Surah Name (EN)", ordering="surah_number")
+    def surah_name_en(self, obj: RecitationSurahTrack) -> str:
+        return QURAN_SURAHS.get(obj.surah_number).get("name_en")
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("asset")
@@ -620,30 +680,24 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
                     .only("surah_number", "audio_file", "duration_ms")
                 )
                 result: list[RecitationSurahTrackOut] = []
-                for t in tracks:
-                    try:
-                        url = f"{CLOUDFLARE_R2_PUBLIC_BASE_URL}/media/{t.audio_file.name}" if t.audio_file else ""
-                    except Exception:
-                        url = ""
+                for track in tracks:
+                    url = f"{CLOUDFLARE_R2_PUBLIC_BASE_URL}/media/{track.audio_file.name}"
                     result.append(
                         RecitationSurahTrackOut(
-                            surah_number=int(t.surah_number),
-                            surah_name=QURAN_SURAHS.get(int(t.surah_number), {}).get("name", ""),
-                            surah_name_en=QURAN_SURAHS.get(int(t.surah_number), {}).get(
-                                "name_en", ""
-                            ),
+                            surah_number=track.surah_number,
+                            surah_name=QURAN_SURAHS.get(track.surah_number).get("name"),
+                            surah_name_en=QURAN_SURAHS.get(track.surah_number).get("name_en"),
                             audio_url=url,
-                            duration_ms=t.duration_ms,
-                            size_bytes=t.size_bytes,
-                            revelation_order=QURAN_SURAHS.get(int(t.surah_number), {}).get(
-                                "revelation_order", 0
+                            duration_ms=track.duration_ms,
+                            size_bytes=track.size_bytes,
+                            revelation_order=QURAN_SURAHS.get(track.surah_number).get(
+                                "revelation_order"
                             ),
-                            revelation_place=QURAN_SURAHS.get(int(t.surah_number), {}).get(
-                                "revelation_place", ""
+                            revelation_place=QURAN_SURAHS.get(track.surah_number).get(
+                                "revelation_place"
                             ),
-                            ayahs_count=QURAN_SURAHS.get(int(t.surah_number), {}).get(
-                                "ayahs_count", 0
-                            ),
+                            ayahs_count=QURAN_SURAHS.get(track.surah_number).get("ayahs_count"),
+                            ayahs_timings=[],
                         )
                     )
 

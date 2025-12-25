@@ -3,13 +3,13 @@ from typing import Literal
 from django.shortcuts import get_object_or_404
 from ninja import Schema
 from ninja.pagination import paginate
-from pydantic import Field
 
 from apps.content.models import Asset, RecitationSurahTrack, Resource
 from apps.core.mixins.constants import QURAN_SURAHS
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
+from config.settings.base import CLOUDFLARE_R2_PUBLIC_BASE_URL
 
 router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
 
@@ -18,15 +18,13 @@ class RecitationSurahTrackOut(Schema):
     surah_number: int
     surah_name: str
     surah_name_en: str
-    audio_url: str | None = Field(
-        None,
-        description="Absolute URL to the per-surah audio file (MP3)",
-    )
+    audio_url: str
     duration_ms: int
     size_bytes: int
     revelation_order: int
     revelation_place: Literal["Makkah", "Madinah"]
     ayahs_count: int
+    ayahs_timings: list[dict]
 
 
 @router.get("recitations/{asset_id}/", response=list[RecitationSurahTrackOut])
@@ -46,22 +44,20 @@ def list_recitation_tracks(request: Request, asset_id: int):
     results: list[RecitationSurahTrackOut] = []
 
     for track in tracks:
-        if track.audio_file:
-            audio_url = request.build_absolute_uri(track.audio_file.url)
-        else:
-            audio_url = None
+        audio_url = f"{CLOUDFLARE_R2_PUBLIC_BASE_URL}/media/{track.audio_file.name}"
 
         results.append(
             RecitationSurahTrackOut(
                 surah_number=track.surah_number,
-                surah_name=track.surah_name,
-                surah_name_en=track.surah_name_en,
+                surah_name=QURAN_SURAHS[track.surah_number]["name"],
+                surah_name_en=QURAN_SURAHS[track.surah_number]["name_en"],
                 audio_url=audio_url,
                 duration_ms=track.duration_ms,
                 size_bytes=track.size_bytes,
                 revelation_order=QURAN_SURAHS[track.surah_number]["revelation_order"],
                 revelation_place=QURAN_SURAHS[track.surah_number]["revelation_place"],
                 ayahs_count=QURAN_SURAHS[track.surah_number]["ayahs_count"],
+                ayahs_timings=[],
             )
         )
 
