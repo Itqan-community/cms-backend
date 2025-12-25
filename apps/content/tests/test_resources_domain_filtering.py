@@ -16,15 +16,11 @@ class ResourceDomainFilteringTest(BaseTestCase):
 
         # Publisher 1
         cls.publisher1 = baker.make(Publisher, name="Publisher One")
-        cls.domain1 = baker.make(
-            Domain, domain="publisher1.com", publisher=cls.publisher1, is_primary=True
-        )
+        cls.domain1 = baker.make(Domain, domain="publisher1.com", publisher=cls.publisher1, is_primary=True)
 
         # Publisher 2
         cls.publisher2 = baker.make(Publisher, name="Publisher Two")
-        cls.domain2 = baker.make(
-            Domain, domain="publisher2.com", publisher=cls.publisher2, is_primary=True
-        )
+        cls.domain2 = baker.make(Domain, domain="publisher2.com", publisher=cls.publisher2, is_primary=True)
 
         # Resources
         cls.resource1 = baker.make(Resource, publisher=cls.publisher1, name="P1 Resource")
@@ -35,7 +31,7 @@ class ResourceDomainFilteringTest(BaseTestCase):
         self.authenticate_user(self.user)
 
         # Act - Request to Publisher 1's domain
-        response = self.client.get("/cms-api/resources/", HTTP_HOST="publisher1.com")
+        response = self.client.get("/cms-api/resources/", headers={"host": "publisher1.com"})
 
         # Assert
         self.assertEqual(200, response.status_code)
@@ -49,7 +45,7 @@ class ResourceDomainFilteringTest(BaseTestCase):
         self.authenticate_user(self.user)
 
         # Act - Request to Publisher 2's domain
-        response = self.client.get("/cms-api/resources/", HTTP_HOST="publisher2.com")
+        response = self.client.get("/cms-api/resources/", headers={"host": "publisher2.com"})
 
         # Assert
         self.assertEqual(200, response.status_code)
@@ -63,7 +59,7 @@ class ResourceDomainFilteringTest(BaseTestCase):
         self.authenticate_user(self.user)
 
         # Act
-        response = self.client.get("/cms-api/resources/", HTTP_HOST="unknown.com")
+        response = self.client.get("/cms-api/resources/", headers={"host": "unknown.com"})
 
         # Assert
         self.assertEqual(200, response.status_code)
@@ -82,9 +78,7 @@ class ResourceDomainFilteringTest(BaseTestCase):
         }
 
         # Act
-        response = self.client.post(
-            "/cms-api/resources/", data=data, format="json", HTTP_HOST="publisher1.com"
-        )
+        response = self.client.post("/cms-api/resources/", data=data, format="json", headers={"host": "publisher1.com"})
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -102,9 +96,7 @@ class ResourceDomainFilteringTest(BaseTestCase):
         self.authenticate_user(self.user)
 
         # Act - Try to access Publisher 2's resource via Publisher 1's domain
-        response = self.client.get(
-            f"/cms-api/resources/{self.resource2.id}/", HTTP_HOST="publisher1.com"
-        )
+        response = self.client.get(f"/cms-api/resources/{self.resource2.id}/", headers={"host": "publisher1.com"})
 
         # Assert
         self.assertEqual(404, response.status_code)
@@ -119,7 +111,7 @@ class ResourceDomainFilteringTest(BaseTestCase):
             f"/cms-api/resources/{self.resource2.id}/",
             data=data,
             format="json",
-            HTTP_HOST="publisher1.com",
+            headers={"host": "publisher1.com"},
         )
 
         # Assert

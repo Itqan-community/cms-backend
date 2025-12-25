@@ -341,9 +341,7 @@ class AssetAccessRequestAdmin(admin.ModelAdmin):
         count = 0
         for access_request in queryset.filter(status="pending"):
             try:
-                access_request.reject_request(
-                    rejected_by_user=request.user, reason="Bulk rejection from admin"
-                )
+                access_request.reject_request(rejected_by_user=request.user, reason="Bulk rejection from admin")
                 count += 1
             except Exception as e:
                 self.message_user(
@@ -356,9 +354,7 @@ class AssetAccessRequestAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         """Optimize queryset"""
-        return (
-            super().get_queryset(request).select_related("developer_user", "asset", "approved_by")
-        )
+        return super().get_queryset(request).select_related("developer_user", "asset", "approved_by")
 
 
 @admin.register(AssetAccess)
@@ -530,9 +526,7 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
                             seen_surahs.add(surah_number)
 
                             # Skip if already exists in DB
-                            if RecitationSurahTrack.objects.filter(
-                                asset=asset, surah_number=surah_number
-                            ).exists():
+                            if RecitationSurahTrack.objects.filter(asset=asset, surah_number=surah_number).exists():
                                 skipped_duplicates += 1
                                 duplicate_details.append(f"{f.name} (already exists)")
                                 continue
@@ -577,22 +571,14 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
                     )
                 if skipped_duplicates:
                     preview = ", ".join(duplicate_details[:10])
-                    more = (
-                        ""
-                        if len(duplicate_details) <= 10
-                        else f" and {len(duplicate_details) - 10} more"
-                    )
+                    more = "" if len(duplicate_details) <= 10 else f" and {len(duplicate_details) - 10} more"
                     messages.warning(
                         request,
                         f"Skipped {skipped_duplicates} files due to duplicates: {preview}{more}.",
                     )
                 if other_errors:
                     preview = "; ".join(other_error_details[:5])
-                    more = (
-                        ""
-                        if len(other_error_details) <= 5
-                        else f" and {len(other_error_details) - 5} more"
-                    )
+                    more = "" if len(other_error_details) <= 5 else f" and {len(other_error_details) - 5} more"
                     messages.error(
                         request,
                         f"Upload encountered errors: {preview}{more}. All changes rolled back.",
@@ -634,11 +620,7 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
                 result: list[dict] = []
                 for t in tracks:
                     try:
-                        url = (
-                            f"{CLOUDFLARE_R2_PUBLIC_BASE_URL}/media/{t.audio_file.name}"
-                            if t.audio_file
-                            else ""
-                        )
+                        url = f"{CLOUDFLARE_R2_PUBLIC_BASE_URL}/media/{t.audio_file.name}" if t.audio_file else ""
                     except Exception:
                         url = ""
                     result.append(

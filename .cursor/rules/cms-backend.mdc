@@ -122,6 +122,10 @@ response={
 - When using self.authenticate_user in tests, put it into the test case itself not in `setUp` or `setUpClass` methods to be more explicit
 - Use `pytest` to run test NOT `python manage.py test`
 
+## 🏗️ API Architecture
+- **cms_api**: Internal API mounted at `/cms-api/`. Used by the frontend SPA. Primarily uses JWT/Session authentication.
+- **developers_api**: Public API used by external developers/consumers. Primarily uses OAuth2.0 authentication.
+
 
 ## General
 - any function you define should be type hinted
