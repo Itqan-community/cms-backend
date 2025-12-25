@@ -581,7 +581,6 @@ class Reciter(BaseModel):
     """Quran reciter/qari (e.g. Mshari Al-Afasi, Saad Al-Ghamidi, etc)"""
 
     name = models.CharField(max_length=255, unique=True)
-    name_ar = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(unique=True, allow_unicode=True, db_index=True)
     is_active = models.BooleanField(default=True)
 
@@ -598,7 +597,6 @@ class Riwayah(BaseModel):
     """Quran recitation tradition/transmission (e.g. Hafs, Warsh, etc)"""
 
     name = models.CharField(max_length=255, unique=True)
-    name_ar = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(unique=True, allow_unicode=True, db_index=True)
     is_active = models.BooleanField(default=True)
 
@@ -627,20 +625,6 @@ class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
     surah_number = models.PositiveSmallIntegerField(
         help_text="Surah number (1..114)",
         validators=[MinValueValidator(1), MaxValueValidator(114)],
-    )
-    surah_name_en = models.CharField(
-        max_length=255,
-        blank=True,
-        default="",
-        choices=SURAH_NAME_CHOICES_EN,
-        help_text="Surah name in English (auto-calculated based on surah_number)",
-    )
-    surah_name = models.CharField(
-        max_length=255,
-        blank=True,
-        default="",
-        choices=SURAH_NAME_CHOICES_AR,
-        help_text="Surah name in Arabic (auto-calculated based on surah_number)",
     )
     audio_file = models.FileField(
         upload_to=upload_to_recitation_surah_track_files,

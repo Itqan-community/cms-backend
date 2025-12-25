@@ -3,7 +3,6 @@ from unittest.mock import patch
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from apps.content.models import Asset, RecitationAyahTiming, RecitationSurahTrack, Resource
-from apps.core.mixins.constants import QURAN_SURAHS
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 
@@ -42,8 +41,6 @@ class RecitationModelsTest(BaseTestCase):
             track = RecitationSurahTrack.objects.create(
                 asset=asset,
                 surah_number=2,
-                surah_name_en=QURAN_SURAHS[1]["name_en"],
-                surah_name=QURAN_SURAHS[1]["name"],
                 audio_file=mp3,
             )
 
