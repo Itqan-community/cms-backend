@@ -35,7 +35,7 @@ class AssetAccessTest(BaseTestCase):
         response = self.client.post(f"/cms-api/assets/{self.asset.id}/request-access/", data=data, format="json")
 
         # Assert
-        self.assertEqual(200, response.status_code)
+        self.assertEqual(200, response.status_code, response.content)
         body = response.json()
 
         # Check request structure

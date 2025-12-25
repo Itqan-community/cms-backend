@@ -125,7 +125,7 @@ class RecitationsListTest(BaseTestCase):
         response = self.client.get(f"/recitations/?publisher_id={self.publisher1.id}")
 
         # Assert
-        self.assertEqual(200, response.status_code)
+        self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
 
         self.assertEqual(1, len(items))

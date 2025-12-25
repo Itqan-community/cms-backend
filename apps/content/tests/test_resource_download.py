@@ -41,7 +41,7 @@ class DownloadResourceTest(BaseTestCase):
             body = response.json()
 
             # Assert
-            self.assertEqual(200, response.status_code)
+            self.assertEqual(200, response.status_code, response.content)
             self.assertIn("download_url", body)
             self.assertIn("/data.csv", body["download_url"])
 
@@ -81,7 +81,7 @@ class DownloadResourceTest(BaseTestCase):
             body = response.json()
 
             # Assert
-            self.assertEqual(200, response.status_code)
+            self.assertEqual(200, response.status_code, response.content)
             self.assertIn("download_url", body)
             self.assertIn("/new.json", body["download_url"])
 
@@ -94,7 +94,7 @@ class DownloadResourceTest(BaseTestCase):
         response = self.client.get(f"/cms-api/resources/{resource.id}/download/", format="json")
 
         # Assert
-        self.assertEqual(404, response.status_code)
+        self.assertEqual(404, response.status_code, response.content)
 
     def test_download_returns_404_when_resource_not_found(self):
         # Arrange - Use a non-existent integer ID
@@ -105,7 +105,7 @@ class DownloadResourceTest(BaseTestCase):
         response = self.client.get(f"/cms-api/resources/{non_existent_id}/download/", format="json")
 
         # Assert
-        self.assertEqual(404, response.status_code)
+        self.assertEqual(404, response.status_code, response.content)
 
     def test_download_returns_404_when_version_has_no_storage_url_value(self):
         # Arrange
@@ -133,7 +133,7 @@ class DownloadResourceTest(BaseTestCase):
             response = self.client.get(f"/cms-api/resources/{resource.id}/download/", format="json")
 
             # Assert
-            self.assertEqual(404, response.status_code)
+            self.assertEqual(404, response.status_code, response.content)
 
     def test_download_resource_should_create_usage_event_for_authenticated_user(self):
         # Arrange
@@ -158,7 +158,7 @@ class DownloadResourceTest(BaseTestCase):
             body = response.json()
 
             # Assert
-            self.assertEqual(200, response.status_code)
+            self.assertEqual(200, response.status_code, response.content)
             self.assertIn("download_url", body)
             self.assertIn("/test.csv", body["download_url"])
 
@@ -210,7 +210,7 @@ class DownloadResourceTest(BaseTestCase):
             body = response.json()
 
             # Assert
-            self.assertEqual(200, response.status_code)
+            self.assertEqual(200, response.status_code, response.content)
             self.assertIn("download_url", body)
             self.assertIn("/metadata.json", body["download_url"])
 

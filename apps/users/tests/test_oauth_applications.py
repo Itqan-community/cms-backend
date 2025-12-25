@@ -78,5 +78,5 @@ class OAuth2ApplicationTests(BaseTestCase):
             authorization_grant_type="password",
         )
         response = self.client.delete(f"/cms-api/applications/{app.id}/", **self.auth_headers)
-        self.assertEqual(204, response.status_code)
+        self.assertEqual(204, response.status_code, response.content)
         self.assertFalse(Application.objects.filter(id=app.id).exists())
