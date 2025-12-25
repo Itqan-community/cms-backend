@@ -76,12 +76,6 @@ SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
 
 # =========================
-# Logging (use settings.LOGGING to avoid F405)
-# =========================
-settings.LOGGING["handlers"]["console"]["level"] = "DEBUG"
-settings.LOGGING["root"]["level"] = "DEBUG"
-
-# =========================
 # OAuth providers (DB-backed)
 # =========================
 SOCIALACCOUNT_PROVIDERS = {

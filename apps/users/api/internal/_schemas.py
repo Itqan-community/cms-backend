@@ -49,8 +49,3 @@ class RegisterSchema(Schema):
     name: str = ""
     phone: str = ""
     job_title: str = ""
-
-
-class OAuth2AuthorizeResponseSchema(Schema):
-    authorization_url: str
-    state: str
