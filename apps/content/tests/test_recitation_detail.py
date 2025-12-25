@@ -39,7 +39,6 @@ class RecitationTracksTest(BaseTestCase):
             surah_number=2,
             surah_name_en="Al-Baqarah",
             surah_name="البقرة",
-            chapter_number=2,
             duration_ms=2000,
             size_bytes=1024,
         )
@@ -49,7 +48,6 @@ class RecitationTracksTest(BaseTestCase):
             surah_number=1,
             surah_name_en="Al-Fatihah",
             surah_name="الفاتحة",
-            chapter_number=1,
             duration_ms=1000,
             size_bytes=512,
         )
@@ -83,7 +81,6 @@ class RecitationTracksTest(BaseTestCase):
             surah_number=1,
             surah_name_en="Al-Fatihah",
             surah_name="الفاتحة",
-            chapter_number=1,
             duration_ms=1000,
             size_bytes=512,
             audio_file=audio_file,
@@ -110,7 +107,6 @@ class RecitationTracksTest(BaseTestCase):
             surah_number=1,
             surah_name_en="Al-Fatihah",
             surah_name="الفاتحة",
-            chapter_number=1,
             duration_ms=1000,
             size_bytes=512,
             audio_file=None,

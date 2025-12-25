@@ -8,8 +8,9 @@ from django.utils.html import format_html
 
 from config.settings.base import CLOUDFLARE_R2_PUBLIC_BASE_URL
 
-from ..core.mixins.constants import SURAH_NUMBER_NAME_AR, SURAH_NUMBER_NAME_EN
+from ..core.mixins.constants import QURAN_SURAHS
 from ..mixins.recitations_helpers import extract_surah_number_from_filename
+from .api.public.recitations_detail import RecitationSurahTrackOut
 from .forms.bulk_recitations_upload_form import BulkRecitationUploadForm
 from .forms.download_recitations_json_form import DownloadRecitationsJsonForm
 from .models import (
@@ -55,6 +56,7 @@ class ResourceAdmin(admin.ModelAdmin):
     ]
     list_filter = ["category", "status", "publisher", "created_at"]
     search_fields = ["name", "description", "slug"]
+    prepopulated_fields = {"slug": ("name",)}
     inlines = [ResourceVersionInline]
     raw_id_fields = ["publisher"]
 
@@ -589,15 +591,15 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
             form = BulkRecitationUploadForm()
 
         # Provide surah name maps for client preview
-        from apps.core.mixins.constants import SURAH_NUMBER_NAME_AR, SURAH_NUMBER_NAME_EN
+        from apps.core.mixins.constants import QURAN_SURAHS
 
         context = {
             **self.admin_site.each_context(request),
             "title": "Bulk upload recitation surah tracks",
             "form": form,
             "redirect_url": reverse("admin:content_recitationsurahtrack_changelist"),
-            "surah_map_en": SURAH_NUMBER_NAME_EN,
-            "surah_map_ar": SURAH_NUMBER_NAME_AR,
+            "surah_map_ar": {k: v.get("name", "") for k, v in QURAN_SURAHS.items()},
+            "surah_map_en": {k: v.get("name_en", "") for k, v in QURAN_SURAHS.items()},
         }
         return render(
             request,
@@ -617,24 +619,36 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
                     .order_by("surah_number")
                     .only("surah_number", "audio_file", "duration_ms")
                 )
-                result: list[dict] = []
+                result: list[RecitationSurahTrackOut] = []
                 for t in tracks:
                     try:
                         url = f"{CLOUDFLARE_R2_PUBLIC_BASE_URL}/media/{t.audio_file.name}" if t.audio_file else ""
                     except Exception:
                         url = ""
                     result.append(
-                        {
-                            "surah_number": int(t.surah_number),
-                            "surah_name_en": SURAH_NUMBER_NAME_EN[int(t.surah_number)],
-                            "surah_name": SURAH_NUMBER_NAME_AR[int(t.surah_number)],
-                            "audio_file": url,
-                            "duration_ms": int(t.duration_ms or 0),
-                            "ayah_timings": [],
-                        }
+                        RecitationSurahTrackOut(
+                            surah_number=int(t.surah_number),
+                            surah_name=QURAN_SURAHS.get(int(t.surah_number), {}).get("name", ""),
+                            surah_name_en=QURAN_SURAHS.get(int(t.surah_number), {}).get(
+                                "name_en", ""
+                            ),
+                            audio_url=url,
+                            duration_ms=t.duration_ms,
+                            size_bytes=t.size_bytes,
+                            revelation_order=QURAN_SURAHS.get(int(t.surah_number), {}).get(
+                                "revelation_order", 0
+                            ),
+                            revelation_place=QURAN_SURAHS.get(int(t.surah_number), {}).get(
+                                "revelation_place", ""
+                            ),
+                            ayahs_count=QURAN_SURAHS.get(int(t.surah_number), {}).get(
+                                "ayahs_count", 0
+                            ),
+                        )
                     )
 
-                payload = json.dumps(result, ensure_ascii=False, indent=2)
+                result_serialized = [i.model_dump() for i in result]
+                payload = json.dumps(result_serialized, ensure_ascii=False, indent=2)
                 reciter_slug = asset.reciter.slug if asset.reciter else ""
                 filename = (
                     f"asset_{asset.id}_{reciter_slug}_recitations.json"
