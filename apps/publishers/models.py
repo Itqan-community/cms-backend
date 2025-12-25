@@ -11,7 +11,9 @@ from apps.users.models import User
 class Publisher(BaseModel):
     name = models.CharField(max_length=255, help_text="Publisher name e.g. 'Tafsir Center'")
 
-    slug = models.SlugField(unique=True, help_text="URL-friendly slug e.g. 'tafsir-center'")
+    slug = models.SlugField(
+        unique=True, allow_unicode=True, help_text="URL-friendly slug e.g. 'tafsir-center'"
+    )
 
     icon_url = models.ImageField(
         upload_to=upload_to_publisher_icons,
