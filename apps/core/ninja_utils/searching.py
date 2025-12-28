@@ -99,9 +99,7 @@ class Searching(SearchingBase):
         return LOOKUP_SEP.join([field_name, lookup])
 
     def construct_conditions_for_queryset(self, search_terms: list[str]) -> list[Q]:
-        orm_lookups = [
-            self.construct_search(str(search_field)) for search_field in self.search_fields
-        ]
+        orm_lookups = [self.construct_search(str(search_field)) for search_field in self.search_fields]
 
         conditions = []
         for search_term in search_terms:
@@ -109,13 +107,9 @@ class Searching(SearchingBase):
             conditions.append(reduce(operator.or_, queries))
         return conditions
 
-    def construct_conditions_for_list(
-        self, search_terms: list[str]
-    ) -> dict[str, list[tuple[Callable, str]]]:
+    def construct_conditions_for_list(self, search_terms: list[str]) -> dict[str, list[tuple[Callable, str]]]:
         lookups = self.construct_search_for_list()
-        conditions: dict[str, list[tuple[Callable, str]]] = {
-            field_name: [] for field_name in lookups
-        }
+        conditions: dict[str, list[tuple[Callable, str]]] = {field_name: [] for field_name in lookups}
         for search_term in search_terms:
             for field_name, lookup in lookups.items():
                 conditions[field_name].append((lookup, search_term))
@@ -126,18 +120,15 @@ class Searching(SearchingBase):
             return self.lookup_prefixes_list.get(prefix, _isicontains)
 
         return {
-            (
-                field_name[1:] if (self.lookup_prefixes_list.get(field_name[0])) else field_name
-            ): get_lookup(field_name[0])
+            (field_name[1:] if (self.lookup_prefixes_list.get(field_name[0])) else field_name): get_lookup(
+                field_name[0]
+            )
             for field_name in self.search_fields
         }
 
     def filter_spec(self, item: Any, conditions: dict[str, list[tuple[Callable, str]]]) -> bool:
         item_getter = operator.itemgetter if isinstance(item, dict) else operator.attrgetter
         for field, lookup in conditions.items():
-            if not any(
-                lookup_func(item_getter(field)(item), lookup_value)
-                for lookup_func, lookup_value in lookup
-            ):
+            if not any(lookup_func(item_getter(field)(item), lookup_value) for lookup_func, lookup_value in lookup):
                 return False
         return True

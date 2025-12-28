@@ -24,18 +24,14 @@ class ApplicationResponseSchema(Schema):
 class ApplicationCreateSchema(Schema):
     name: str
     client_type: Literal["confidential", "public"] = "confidential"
-    authorization_grant_type: Literal["password", "client-credentials", "authorization-code"] = (
-        "password"
-    )
+    authorization_grant_type: Literal["password", "client-credentials", "authorization-code"] = "password"
     redirect_uris: str = ""
 
 
 class ApplicationUpdateSchema(Schema):
     name: str | None = None
     client_type: Literal["confidential", "public"] | None = None
-    authorization_grant_type: (
-        Literal["password", "client-credentials", "authorization-code"] | None
-    ) = None
+    authorization_grant_type: Literal["password", "client-credentials", "authorization-code"] | None = None
     redirect_uris: str | None = None
 
 
@@ -71,17 +67,13 @@ def create_application(request: Request, data: ApplicationCreateSchema):
     }
 
 
-@router.get(
-    "applications/", response=list[ApplicationResponseSchema], summary="List OAuth2 Applications"
-)
+@router.get("applications/", response=list[ApplicationResponseSchema], summary="List OAuth2 Applications")
 def list_applications(request: Request):
     """List all OAuth2 applications owned by the user"""
     return Application.objects.filter(user=request.user)
 
 
-@router.get(
-    "applications/{app_id}/", response=ApplicationResponseSchema, summary="Get OAuth2 Application"
-)
+@router.get("applications/{app_id}/", response=ApplicationResponseSchema, summary="Get OAuth2 Application")
 def get_application(request: Request, app_id: int):
     """Get details of a specific OAuth2 application"""
     return get_object_or_404(Application, id=app_id, user=request.user)

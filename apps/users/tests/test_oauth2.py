@@ -31,8 +31,7 @@ class OAuth2Tests(BaseTestCase):
             client_secret="test_client_secret",
         )
         self.auth_header = {
-            "HTTP_AUTHORIZATION": "Basic "
-            + base64.b64encode(b"test_client_id:test_client_secret").decode("ascii")
+            "HTTP_AUTHORIZATION": "Basic " + base64.b64encode(b"test_client_id:test_client_secret").decode("ascii")
         }
 
     def test_client_credentials_grant_where_valid_header_should_return_200(self):

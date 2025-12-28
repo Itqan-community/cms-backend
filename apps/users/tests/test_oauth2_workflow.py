@@ -38,9 +38,7 @@ class OAuth2WorkflowTestCase(BaseTestCase):
         }
         headers = {"HTTP_AUTHORIZATION": f"Bearer {jwt_access_token}"}
 
-        app_res = self.client.post(
-            "/cms-api/applications/", data=app_data, format="json", **headers
-        )
+        app_res = self.client.post("/cms-api/applications/", data=app_data, format="json", **headers)
         self.assertEqual(200, app_res.status_code, app_res.content)
         app_json = app_res.json()
 

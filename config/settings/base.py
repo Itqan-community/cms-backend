@@ -379,9 +379,7 @@ NINJA_SEARCHING_CLASS = "apps.core.ninja_utils.searching.Searching"
 NINJA_ORDERING_CLASS = "apps.core.ninja_utils.ordering.Ordering"
 
 RUNNING_TESTS = False
-if (len(sys.argv) >= 2 and sys.argv[0].endswith("manage.py") and sys.argv[1] == "test") or (
-    "pytest" in sys.argv[0]
-):
+if (len(sys.argv) >= 2 and sys.argv[0].endswith("manage.py") and sys.argv[1] == "test") or ("pytest" in sys.argv[0]):
     RUNNING_TESTS = True
 
 try:
