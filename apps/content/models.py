@@ -7,7 +7,6 @@ from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
-from apps.core.mixins.constants import QURAN_SURAHS
 from apps.core.mixins.storage import DeleteFilesOnDeleteMixin
 from apps.core.models import BaseModel
 from apps.core.uploads import (
@@ -587,10 +586,6 @@ class Riwayah(BaseModel):
 
     def __str__(self) -> str:
         return f"Riwayah(name={self.name})"
-
-
-SURAH_NAME_CHOICES_EN: list[tuple[int, str]] = [(k, v["name_en"]) for k, v in QURAN_SURAHS.items()]
-SURAH_NAME_CHOICES_AR: list[tuple[int, str]] = [(k, v["name"]) for k, v in QURAN_SURAHS.items()]
 
 
 class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):

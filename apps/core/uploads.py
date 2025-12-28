@@ -36,7 +36,7 @@ def upload_to_asset_thumbnails(instance: "Asset", filename: str) -> str:
 def upload_to_asset_preview_images(instance: "AssetPreview", filename: str) -> str:
     """
     Generate upload path for asset preview images
-    Format: uploads/assets/{asset_id}/snapshots/{filename}
+    Format: uploads/assets/{asset_id}/preview/{filename}
     """
     safe_filename = slugify(filename.rsplit(".", 1)[0]) + "." + filename.split(".")[-1].lower()
     return f"uploads/assets/{instance.asset_id}/preview/{safe_filename}"

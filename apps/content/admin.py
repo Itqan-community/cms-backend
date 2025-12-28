@@ -650,9 +650,6 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
         else:
             form = BulkRecitationUploadForm()
 
-        # Provide surah name maps for client preview
-        from apps.core.mixins.constants import QURAN_SURAHS
-
         context = {
             **self.admin_site.each_context(request),
             "title": "Bulk upload recitation surah tracks",
