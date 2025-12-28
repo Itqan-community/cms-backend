@@ -220,6 +220,8 @@ class RecitationsListTest(BaseTestCase):
 
     def test_list_recitations_where_surahs_count_should_reflect_related_tracks(self):
         # Arrange done in setUp: asset1 has 2 tracks, asset2 has 1 track
+        self.authenticate_client(application=self.app)
+
         # Act
         response = self.client.get("/recitations/")
         self.assertEqual(200, response.status_code, response.content)

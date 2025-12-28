@@ -10,7 +10,7 @@ from config.settings.base import CLOUDFLARE_R2_PUBLIC_BASE_URL
 
 from ..core.mixins.constants import QURAN_SURAHS
 from ..mixins.recitations_helpers import extract_surah_number_from_filename
-from .api.public.recitations_detail import RecitationSurahTrackOut
+from .api.public.recitation_detail import RecitationSurahTrackOut
 from .forms.bulk_recitations_upload_form import BulkRecitationUploadForm
 from .forms.download_recitations_json_form import DownloadRecitationsJsonForm
 from .models import (

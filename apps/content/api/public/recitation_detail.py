@@ -14,13 +14,14 @@ from config.settings.base import CLOUDFLARE_R2_PUBLIC_BASE_URL
 router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
 
 
-class RecitationSurahTrackOut(Schema):
-    class RecitationAyahTimingOut(Schema):
-        ayah_key: str
-        start_ms: int
-        end_ms: int
-        duration_ms: int
+class RecitationAyahTimingOut(Schema):
+    ayah_key: str
+    start_ms: int
+    end_ms: int
+    duration_ms: int
 
+
+class RecitationSurahTrackOut(Schema):
     surah_number: int
     surah_name: str
     surah_name_en: str

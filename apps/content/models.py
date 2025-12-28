@@ -51,9 +51,7 @@ class Resource(BaseModel):
 
     name = models.CharField(max_length=255, help_text="Resource name e.g. 'Tafsir Ibn Katheer CSV'")
 
-    slug = models.SlugField(
-        allow_unicode=True, help_text="URL slug e.g. 'tafsir-ibn-katheer-csv'", db_index=True
-    )
+    slug = models.SlugField(allow_unicode=True, help_text="URL slug e.g. 'tafsir-ibn-katheer-csv'", db_index=True)
 
     description = models.TextField(help_text="Resource description")
 

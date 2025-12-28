@@ -18,6 +18,7 @@ class ReciterOut(Schema):
     name: str
     recitations_count: int = Field(0, description="Number of READY recitation assets for this reciter")
 
+
 class ReciterFilter(FilterSchema):
     name: list[str] | None = Field(None, q="name__in")
     name_ar: list[str] | None = Field(None, q="name_ar__in")

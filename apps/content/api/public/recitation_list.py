@@ -1,6 +1,6 @@
 from ninja import FilterSchema, Query, Schema
 from ninja.pagination import paginate
-from pydantic import AwareDatetime, Field
+from pydantic import Field
 
 from apps.content.models import Asset, Resource
 from apps.core.ninja_utils.ordering_base import ordering
@@ -11,19 +11,22 @@ from apps.core.ninja_utils.tags import NinjaTag
 router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
 
 
+class RecitationPublisherOut(Schema):
+    id: int
+    name: str
+
+
+class RecitationReciterOut(Schema):
+    id: int
+    name: str
+
+
+class RecitationRiwayahOut(Schema):
+    id: int
+    name: str
+
+
 class RecitationListOut(Schema):
-    class RecitationPublisherOut(Schema):
-        id: int
-        name: str
-
-    class RecitationReciterOut(Schema):
-        id: int
-        name: str
-
-    class RecitationRiwayahOut(Schema):
-        id: int
-        name: str
-
     id: int
     name: str
     description: str
@@ -38,7 +41,7 @@ class RecitationListOut(Schema):
         return {
             "id": publisher.id,
             "name": publisher.name,
-        }  # modeltranslation chooses name_* based on active language
+        }  # django-modeltranslation chooses name_* based on active language (en or ar)
 
     @staticmethod
     def resolve_reciter(obj):
@@ -64,9 +67,7 @@ class RecitationFilter(FilterSchema):
 @ordering(ordering_fields=["name", "created_at", "updated_at"])
 @searching(search_fields=["name", "description", "resource__publisher__name", "reciter__name"])
 def list_recitations(request, filters: RecitationFilter = Query()):
-    qs = Asset.objects.select_related(
-        "resource", "resource__publisher", "reciter", "riwayah"
-    ).filter(
+    qs = Asset.objects.select_related("resource", "resource__publisher", "reciter", "riwayah").filter(
         category=Asset.CategoryChoice.RECITATION,
         resource__category=Resource.CategoryChoice.RECITATION,
         resource__status=Resource.StatusChoice.READY,
