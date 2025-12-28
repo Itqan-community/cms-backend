@@ -1,3 +1,4 @@
+from django.db.models import Count
 from ninja import FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import Field
@@ -53,7 +54,7 @@ class RecitationListOut(Schema):
 
     @staticmethod
     def resolve_surahs_count(obj):
-        return obj.recitation_tracks.count()
+        return getattr(obj, "surahs_count", 0)
 
 
 class RecitationFilter(FilterSchema):
@@ -67,10 +68,14 @@ class RecitationFilter(FilterSchema):
 @ordering(ordering_fields=["name", "created_at", "updated_at"])
 @searching(search_fields=["name", "description", "resource__publisher__name", "reciter__name"])
 def list_recitations(request, filters: RecitationFilter = Query()):
-    qs = Asset.objects.select_related("resource", "resource__publisher", "reciter", "riwayah").filter(
-        category=Asset.CategoryChoice.RECITATION,
-        resource__category=Resource.CategoryChoice.RECITATION,
-        resource__status=Resource.StatusChoice.READY,
+    qs = (
+        Asset.objects.select_related("resource", "resource__publisher", "reciter", "riwayah")
+        .filter(
+            category=Asset.CategoryChoice.RECITATION,
+            resource__category=Resource.CategoryChoice.RECITATION,
+            resource__status=Resource.StatusChoice.READY,
+        )
+        .annotate(surahs_count=Count("recitation_tracks"))
     )
 
     qs = filters.filter(qs)
