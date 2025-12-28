@@ -35,7 +35,7 @@ class ResourceDomainFilteringTest(BaseTestCase):
         self.authenticate_user(self.user)
 
         # Act - Request to Publisher 1's domain
-        response = self.client.get("/cms-api/resources/", HTTP_HOST="publisher1.com")
+        response = self.client.get("/cms-api/resources/", headers={"host": "publisher1.com"})
 
         # Assert
         self.assertEqual(200, response.status_code)
@@ -49,7 +49,7 @@ class ResourceDomainFilteringTest(BaseTestCase):
         self.authenticate_user(self.user)
 
         # Act - Request to Publisher 2's domain
-        response = self.client.get("/cms-api/resources/", HTTP_HOST="publisher2.com")
+        response = self.client.get("/cms-api/resources/", headers={"host": "publisher2.com"})
 
         # Assert
         self.assertEqual(200, response.status_code)
@@ -63,7 +63,7 @@ class ResourceDomainFilteringTest(BaseTestCase):
         self.authenticate_user(self.user)
 
         # Act
-        response = self.client.get("/cms-api/resources/", HTTP_HOST="unknown.com")
+        response = self.client.get("/cms-api/resources/", headers={"host": "unknown.com"})
 
         # Assert
         self.assertEqual(200, response.status_code)
@@ -83,7 +83,7 @@ class ResourceDomainFilteringTest(BaseTestCase):
 
         # Act
         response = self.client.post(
-            "/cms-api/resources/", data=data, format="json", HTTP_HOST="publisher1.com"
+            "/cms-api/resources/", data=data, format="json", headers={"host": "publisher1.com"}
         )
 
         # Assert
@@ -103,7 +103,7 @@ class ResourceDomainFilteringTest(BaseTestCase):
 
         # Act - Try to access Publisher 2's resource via Publisher 1's domain
         response = self.client.get(
-            f"/cms-api/resources/{self.resource2.id}/", HTTP_HOST="publisher1.com"
+            f"/cms-api/resources/{self.resource2.id}/", headers={"host": "publisher1.com"}
         )
 
         # Assert
@@ -119,7 +119,7 @@ class ResourceDomainFilteringTest(BaseTestCase):
             f"/cms-api/resources/{self.resource2.id}/",
             data=data,
             format="json",
-            HTTP_HOST="publisher1.com",
+            headers={"host": "publisher1.com"},
         )
 
         # Assert

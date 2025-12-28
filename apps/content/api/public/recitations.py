@@ -6,6 +6,7 @@ from ninja.pagination import paginate
 from pydantic import Field
 
 from apps.content.models import Asset, Resource
+from apps.core.ninja_utils.auth import ninja_oauth2_auth
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
@@ -32,11 +33,7 @@ class RecitationFilter(FilterSchema):
     riwayah_id: list[int] | None = Field(None, q="riwayah_id__in")
 
 
-@router.get(
-    "recitations/",
-    response=list[RecitationListOut],
-    auth=None,
-)
+@router.get("recitations/", response=list[RecitationListOut], auth=ninja_oauth2_auth)
 @paginate
 @ordering(ordering_fields=["name", "created_at", "updated_at"])
 @searching(search_fields=["name", "description", "resource__publisher__name", "reciter__name"])

@@ -1,8 +1,10 @@
 from model_bakery import baker
+from oauth2_provider.models import Application
 
 from apps.content.models import Asset, Reciter, Resource, Riwayah
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
+from apps.users.models import User
 
 
 class RecitationsListTest(BaseTestCase):
@@ -79,10 +81,22 @@ class RecitationsListTest(BaseTestCase):
             resource=self.ready_recitation_resource_pub1,
             reciter=self.reciter1,
         )
+        self.user = User.objects.create_user(email="oauthuser@example.com", name="OAuth User")
+        self.app = Application.objects.create(
+            user=self.user,
+            name="App 1",
+            client_type="confidential",
+            authorization_grant_type="password",
+        )
 
     def test_list_recitations_should_return_only_ready_recitation_assets(self):
+        # Arrange
+        self.authenticate_client(application=self.app)
+
+        # Act
         response = self.client.get("/recitations/")
 
+        # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
         items = body["results"]
@@ -104,8 +118,13 @@ class RecitationsListTest(BaseTestCase):
             self.assertIn("updated_at", item)
 
     def test_list_recitations_filter_by_publisher(self):
+        # Arrange
+        self.authenticate_client(application=self.app)
+
+        # Act
         response = self.client.get(f"/recitations/?publisher_id={self.publisher1.id}")
 
+        # Assert
         self.assertEqual(200, response.status_code)
         items = response.json()["results"]
 
@@ -114,8 +133,13 @@ class RecitationsListTest(BaseTestCase):
         self.assertEqual(self.ready_recitation_resource_pub1.id, items[0]["resource_id"])
 
     def test_list_recitations_filter_by_reciter(self):
+        # Arrange
+        self.authenticate_client(application=self.app)
+
+        # Act
         response = self.client.get(f"/recitations/?reciter_id={self.reciter2.id}")
 
+        # Assert
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
 
@@ -123,8 +147,13 @@ class RecitationsListTest(BaseTestCase):
         self.assertEqual(self.asset2.id, items[0]["id"])
 
     def test_list_recitations_filter_by_riwayah(self):
+        # Arrange
+        self.authenticate_client(application=self.app)
+
+        # Act
         response = self.client.get(f"/recitations/?riwayah_id={self.riwayah1.id}")
 
+        # Assert
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
 
@@ -132,6 +161,10 @@ class RecitationsListTest(BaseTestCase):
         self.assertEqual(self.asset1.id, items[0]["id"])
 
     def test_list_recitations_search_should_match_name_description_publisher_or_reciter(self):
+        # Arrange
+        self.authenticate_client(application=self.app)
+
+        # Act
         # Search by part of description
         response = self.client.get("/recitations/?search=Beautiful")
 
@@ -140,6 +173,7 @@ class RecitationsListTest(BaseTestCase):
         self.assertEqual(1, len(items))
         self.assertEqual(self.asset1.id, items[0]["id"])
 
+        # Assert
         # Search by reciter name
         response = self.client.get("/recitations/?search=Reciter Two")
         self.assertEqual(200, response.status_code, response.content)
@@ -148,8 +182,13 @@ class RecitationsListTest(BaseTestCase):
         self.assertEqual(self.asset2.id, items[0]["id"])
 
     def test_list_recitations_ordering_by_name(self):
+        # Arrange
+        self.authenticate_client(application=self.app)
+
+        # Act
         response = self.client.get("/recitations/?ordering=name")
 
+        # Assert
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
 

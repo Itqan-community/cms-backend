@@ -1,6 +1,8 @@
+from typing import Literal
+
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.core.ninja_utils.errors import ItqanError
+from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
@@ -14,7 +16,10 @@ router = ItqanRouter(tags=[NinjaTag.AUTH])
 @router.post(
     "auth/register/",
     auth=None,
-    response=TokenResponseSchema,
+    response={
+        200: TokenResponseSchema,
+        400: NinjaErrorResponse[Literal["registration_failed"], Literal[None]],
+    },
     summary="Register",
     description="Register new user with email and password",
 )

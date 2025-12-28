@@ -1,3 +1,5 @@
+import base64
+import secrets
 from typing import Literal
 from unittest.mock import patch
 
@@ -5,9 +7,11 @@ import boto3
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
+from django.utils import timezone
 from moto import mock_aws
+from oauth2_provider.models import AccessToken as OAuth2AccessToken, Application
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework_simplejwt.tokens import AccessToken as JWTAccessToken
 
 from apps.users.models import User
 
@@ -82,8 +86,56 @@ class BaseTestCase(TestCase):
         else:
             # Generate JWT token for the user
             # Use AccessToken directly to avoid creating OutstandingToken entries during tests
-            access_token = str(AccessToken.for_user(user))
+            access_token = str(JWTAccessToken.for_user(user))
             kwargs["HTTP_AUTHORIZATION"] = f"Bearer {access_token}"
+
+        headers = {
+            "HTTP_ACCEPT_LANGUAGE": language,
+        }
+
+        for key, value in headers.items():
+            if value and value is not None:
+                kwargs[key] = value
+
+        self.client.credentials(**kwargs)
+
+    def authenticate_client(
+        self,
+        application: Application | None,
+        user: User | None = None,
+        grant_type: Literal["basic", "bearer"] = "bearer",
+        language: Literal["en", "ar"] | None = "en",
+        **kwargs,
+    ):
+        """
+        if `application` is supplied with None, the authentication will be cleared
+        if `application` is supplied with an `Application`, it will be authenticated
+        using either Basic auth (client credentials) or Bearer token depending on `grant_type`.
+        """
+        if not kwargs:
+            kwargs = {}
+
+        if application is None:
+            # Clear authentication
+            kwargs.pop("HTTP_AUTHORIZATION", None)
+        else:
+            if grant_type == "bearer":
+                # Generate OAuth2 access token
+                token = OAuth2AccessToken.objects.create(
+                    user=user or application.user,
+                    application=application,
+                    token=secrets.token_hex(20),
+                    expires=timezone.now() + timezone.timedelta(days=1),
+                    scope="read write",
+                )
+                auth_value = f"Bearer {token.token}"
+            else:
+                # Use Basic Auth with client_id and client_secret
+                auth_str = f"{application.client_id}:{application.client_secret}"
+                encoded_auth = base64.b64encode(auth_str.encode("ascii")).decode("ascii")
+                auth_value = f"Basic {encoded_auth}"
+
+            kwargs["HTTP_AUTHORIZATION"] = auth_value
 
         headers = {
             "HTTP_ACCEPT_LANGUAGE": language,
