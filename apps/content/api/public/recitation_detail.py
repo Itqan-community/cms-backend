@@ -15,6 +15,12 @@ router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
 
 
 class RecitationSurahTrackOut(Schema):
+    class RecitationAyahTimingOut(Schema):
+        ayah_key: str
+        start_ms: int
+        end_ms: int
+        duration_ms: int
+
     surah_number: int
     surah_name: str
     surah_name_en: str
@@ -24,7 +30,7 @@ class RecitationSurahTrackOut(Schema):
     revelation_order: int
     revelation_place: Literal["Makkah", "Madinah"]
     ayahs_count: int
-    ayahs_timings: list[dict]
+    ayahs_timings: list[RecitationAyahTimingOut]
 
 
 @router.get("recitations/{asset_id}/", response=list[RecitationSurahTrackOut])

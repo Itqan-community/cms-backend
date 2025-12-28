@@ -1,5 +1,3 @@
-from django.db.models import Count, F
-from django.db.models.functions import JSONObject
 from ninja import FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
@@ -14,13 +12,45 @@ router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
 
 
 class RecitationListOut(Schema):
+    class RecitationPublisherOut(Schema):
+        id: int
+        name: str
+
+    class RecitationReciterOut(Schema):
+        id: int
+        name: str
+
+    class RecitationRiwayahOut(Schema):
+        id: int
+        name: str
+
     id: int
     name: str
     description: str
-    publisher: dict = Field(validation_alias="publisher_dict")
-    reciter: dict = Field(validation_alias="reciter_dict")
-    riwayah: dict = Field(validation_alias="riwayah_dict")
+    publisher: RecitationPublisherOut
+    reciter: RecitationReciterOut
+    riwayah: RecitationRiwayahOut
     surahs_count: int
+
+    @staticmethod
+    def resolve_publisher(obj):
+        publisher = obj.resource.publisher
+        return {
+            "id": publisher.id,
+            "name": publisher.name,
+        }  # modeltranslation chooses name_* based on active language
+
+    @staticmethod
+    def resolve_reciter(obj):
+        return {"id": obj.reciter_id, "name": obj.reciter.name}
+
+    @staticmethod
+    def resolve_riwayah(obj):
+        return {"id": obj.riwayah_id, "name": obj.riwayah.name}
+
+    @staticmethod
+    def resolve_surahs_count(obj):
+        return obj.recitation_tracks.count()
 
 
 class RecitationFilter(FilterSchema):
@@ -34,7 +64,6 @@ class RecitationFilter(FilterSchema):
 @ordering(ordering_fields=["name", "created_at", "updated_at"])
 @searching(search_fields=["name", "description", "resource__publisher__name", "reciter__name"])
 def list_recitations(request, filters: RecitationFilter = Query()):
-    lang = request.LANGUAGE_CODE  # "ar" or "en"
     qs = Asset.objects.select_related(
         "resource", "resource__publisher", "reciter", "riwayah"
     ).filter(
@@ -44,27 +73,4 @@ def list_recitations(request, filters: RecitationFilter = Query()):
     )
 
     qs = filters.filter(qs)
-    qs = qs.annotate(
-        surahs_count=Count("recitation_tracks", distinct=True),
-        publisher_dict=JSONObject(
-            id=F("resource__publisher__id"), name=F(f"resource__publisher__name_{lang}")
-        ),
-        reciter_dict=JSONObject(
-            id=F("reciter__id"),
-            name=F(f"reciter__name_{lang}"),
-        ),
-        riwayah_dict=JSONObject(
-            id=F("riwayah__id"),
-            name=F(f"riwayah__name_{lang}"),
-        ),
-    ).values(
-        "id",
-        "name",
-        "description",
-        "publisher_dict",
-        "reciter_dict",
-        "riwayah_dict",
-        "surahs_count",
-    )
-
     return qs

@@ -527,11 +527,11 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
 
     @admin.display(description="Surah Name (AR)", ordering="surah_number")
     def surah_name(self, obj: RecitationSurahTrack) -> str:
-        return QURAN_SURAHS.get(obj.surah_number).get("name")
+        return QURAN_SURAHS[obj.surah_number]["name"]
 
     @admin.display(description="Surah Name (EN)", ordering="surah_number")
     def surah_name_en(self, obj: RecitationSurahTrack) -> str:
-        return QURAN_SURAHS.get(obj.surah_number).get("name_en")
+        return QURAN_SURAHS[obj.surah_number]["name_en"]
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("asset")
@@ -682,18 +682,14 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
                     result.append(
                         RecitationSurahTrackOut(
                             surah_number=track.surah_number,
-                            surah_name=QURAN_SURAHS.get(track.surah_number).get("name"),
-                            surah_name_en=QURAN_SURAHS.get(track.surah_number).get("name_en"),
+                            surah_name=QURAN_SURAHS[track.surah_number]["name"],
+                            surah_name_en=QURAN_SURAHS[track.surah_number]["name_en"],
                             audio_url=url,
                             duration_ms=track.duration_ms,
                             size_bytes=track.size_bytes,
-                            revelation_order=QURAN_SURAHS.get(track.surah_number).get(
-                                "revelation_order"
-                            ),
-                            revelation_place=QURAN_SURAHS.get(track.surah_number).get(
-                                "revelation_place"
-                            ),
-                            ayahs_count=QURAN_SURAHS.get(track.surah_number).get("ayahs_count"),
+                            revelation_order=QURAN_SURAHS[track.surah_number]["revelation_order"],
+                            revelation_place=QURAN_SURAHS[track.surah_number]["revelation_place"],
+                            ayahs_count=QURAN_SURAHS[track.surah_number]["ayahs_count"],
                             ayahs_timings=[],
                         )
                     )
