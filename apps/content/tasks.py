@@ -6,14 +6,13 @@ Handles usage event tracking and analytics computations
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, TypedDict
+from typing import TypedDict
 
 from celery import shared_task
 from django.db import transaction
 from django.utils import timezone
 
-if TYPE_CHECKING:
-    from apps.content.models import Asset, Resource, UsageEvent
+from apps.content.models import Asset, Resource, UsageEvent
 
 logger = logging.getLogger(__name__)
 
