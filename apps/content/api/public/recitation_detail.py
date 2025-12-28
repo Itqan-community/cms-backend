@@ -24,11 +24,7 @@ class RecitationSurahTrackOut(Schema):
     size_bytes: int
 
 
-@router.get(
-    "recitations/{asset_id}/",
-    response=list[RecitationSurahTrackOut],
-    auth=None,
-)
+@router.get("recitations/{asset_id}/", response=list[RecitationSurahTrackOut])
 @paginate
 def list_recitation_tracks(request: Request, asset_id: int):
     asset = get_object_or_404(

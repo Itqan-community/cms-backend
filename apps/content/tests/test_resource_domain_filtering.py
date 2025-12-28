@@ -9,22 +9,20 @@ from apps.users.models import User
 
 @override_settings(ALLOWED_HOSTS=["*"])
 class ResourceDomainFilteringTest(BaseTestCase):
-    @classmethod
-    def setUpTestData(cls):
-        super().setUpTestData()
-        cls.user = baker.make(User, email="user@example.com", is_active=True)
+    def setUp(self):
+        self.user = baker.make(User, email="user@example.com", is_active=True)
 
         # Publisher 1
-        cls.publisher1 = baker.make(Publisher, name="Publisher One")
-        cls.domain1 = baker.make(Domain, domain="publisher1.com", publisher=cls.publisher1, is_primary=True)
+        self.publisher1 = baker.make(Publisher, name="Publisher One")
+        self.domain1 = baker.make(Domain, domain="publisher1.com", publisher=self.publisher1, is_primary=True)
 
         # Publisher 2
-        cls.publisher2 = baker.make(Publisher, name="Publisher Two")
-        cls.domain2 = baker.make(Domain, domain="publisher2.com", publisher=cls.publisher2, is_primary=True)
+        self.publisher2 = baker.make(Publisher, name="Publisher Two")
+        self.domain2 = baker.make(Domain, domain="publisher2.com", publisher=self.publisher2, is_primary=True)
 
         # Resources
-        cls.resource1 = baker.make(Resource, publisher=cls.publisher1, name="P1 Resource")
-        cls.resource2 = baker.make(Resource, publisher=cls.publisher2, name="P2 Resource")
+        self.resource1 = baker.make(Resource, publisher=self.publisher1, name="P1 Resource")
+        self.resource2 = baker.make(Resource, publisher=self.publisher2, name="P2 Resource")
 
     def test_list_resources_via_domain_should_return_only_publisher_resources(self):
         # Arrange
@@ -34,7 +32,7 @@ class ResourceDomainFilteringTest(BaseTestCase):
         response = self.client.get("/cms-api/resources/", headers={"host": "publisher1.com"})
 
         # Assert
-        self.assertEqual(200, response.status_code)
+        self.assertEqual(200, response.status_code, response.content)
         results = response.json()["results"]
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0]["id"], self.resource1.id)
@@ -48,7 +46,7 @@ class ResourceDomainFilteringTest(BaseTestCase):
         response = self.client.get("/cms-api/resources/", headers={"host": "publisher2.com"})
 
         # Assert
-        self.assertEqual(200, response.status_code)
+        self.assertEqual(200, response.status_code, response.content)
         results = response.json()["results"]
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0]["id"], self.resource2.id)
@@ -62,7 +60,7 @@ class ResourceDomainFilteringTest(BaseTestCase):
         response = self.client.get("/cms-api/resources/", headers={"host": "unknown.com"})
 
         # Assert
-        self.assertEqual(200, response.status_code)
+        self.assertEqual(200, response.status_code, response.content)
         results = response.json()["results"]
         # Should see all resources because Q() filters nothing
         self.assertEqual(len(results), 2)
@@ -99,7 +97,7 @@ class ResourceDomainFilteringTest(BaseTestCase):
         response = self.client.get(f"/cms-api/resources/{self.resource2.id}/", headers={"host": "publisher1.com"})
 
         # Assert
-        self.assertEqual(404, response.status_code)
+        self.assertEqual(404, response.status_code, response.content)
 
     def test_update_resource_via_wrong_domain_should_return_404(self):
         # Arrange
@@ -115,6 +113,6 @@ class ResourceDomainFilteringTest(BaseTestCase):
         )
 
         # Assert
-        self.assertEqual(404, response.status_code)
+        self.assertEqual(404, response.status_code, response.content)
         self.resource2.refresh_from_db()
         self.assertNotEqual(self.resource2.name, "Hacked Update")

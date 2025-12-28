@@ -1,11 +1,14 @@
 from model_bakery import baker
+from oauth2_provider.models import Application
 
 from apps.content.models import Asset, Reciter, Resource
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
+from apps.users.adapters import User
 
 
 class RecitersListTest(BaseTestCase):
+
     def setUp(self):
         super().setUp()
         self.publisher = baker.make(Publisher)
@@ -70,13 +73,23 @@ class RecitersListTest(BaseTestCase):
             reciter=self.active_reciter,
             resource=self.other_resource,
         )
+        self.user = User.objects.create_user(email="oauthuser@example.com", name="OAuth User")
+        self.app = Application.objects.create(
+            user=self.user,
+            name="App 1",
+            client_type="confidential",
+            authorization_grant_type="password",
+        )
 
     def test_list_reciters_should_return_only_active_reciters_with_ready_recitations(self):
+        # Arrange
+        self.authenticate_client(self.app)
+
         # Act
         response = self.client.get("/reciters/")
 
         # Assert
-        self.assertEqual(200, response.status_code)
+        self.assertEqual(200, response.status_code, response.content)
         body = response.json()
 
         self.assertIn("results", body)
@@ -105,6 +118,7 @@ class RecitersListTest(BaseTestCase):
             reciter=other_reciter,
             resource=self.recitation_resource,
         )
+        self.authenticate_client(self.app)
 
         # Act
         response = self.client.get("/reciters/?ordering=name")

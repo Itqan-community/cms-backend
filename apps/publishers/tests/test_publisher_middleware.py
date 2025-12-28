@@ -35,7 +35,7 @@ class PublisherMiddlewareTest(BaseTestCase):
         self.assertEqual(self.domain, request.publisher_domain)
         # Verify execution proceeded to the next middleware/view
         mock_get_response.assert_called_once_with(request)
-        self.assertEqual(200, response.status_code)
+        self.assertEqual(200, response.status_code, response.content)
 
     def test_middleware_with_www_domain_should_strip_www_prefix_and_match_publisher(self):
         # Arrange
@@ -46,7 +46,7 @@ class PublisherMiddlewareTest(BaseTestCase):
         # Assert - If www was stripped and matched 'test.com', then request.publisher is set.
         # If request.publisher is set, then filtering applies.
         # We can verify that we get a 200 OK (and not some error).
-        self.assertEqual(200, response.status_code)
+        self.assertEqual(200, response.status_code, response.content)
 
     def test_middleware_with_unknown_domain_should_proceed_without_publisher(self):
         # Arrange
@@ -66,7 +66,7 @@ class PublisherMiddlewareTest(BaseTestCase):
         response = self.client.get(self.url, headers={"host": "test.com"})
 
         # Assert
-        self.assertEqual(423, response.status_code)
+        self.assertEqual(423, response.status_code, response.content)
         self.assertEqual(
             {"error": "Publisher's page is closed for maintenance, please try again later"},
             response.json(),

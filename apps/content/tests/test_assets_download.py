@@ -119,7 +119,7 @@ class TestAssetDownload(BaseTestCase):
         body = response.json()
 
         # Assert
-        self.assertEqual(200, response.status_code)
+        self.assertEqual(200, response.status_code, response.content)
         self.assertIn("download_url", body)
         self.assertIn("/test.pdf", body["download_url"])
 
@@ -138,7 +138,7 @@ class TestAssetDownload(BaseTestCase):
         body = response.json()
 
         # Assert
-        self.assertEqual(200, response.status_code)
+        self.assertEqual(200, response.status_code, response.content)
         self.assertIn("download_url", body)
         self.assertIn("/test.csv", body["download_url"])
 
@@ -164,7 +164,7 @@ class TestAssetDownload(BaseTestCase):
         body = response.json()
 
         # Assert
-        self.assertEqual(200, response.status_code)
+        self.assertEqual(200, response.status_code, response.content)
         self.assertIn("download_url", body)
         self.assertIn("/new.pdf", body["download_url"])
 
@@ -203,7 +203,7 @@ class TestAssetDownload(BaseTestCase):
         response = self.client.get(f"/cms-api/assets/{self.asset.id}/download/")
 
         # Assert
-        self.assertEqual(200, response.status_code)
+        self.assertEqual(200, response.status_code, response.content)
 
         # Verify usage event was created in database
         usage_events = UsageEvent.objects.filter(
@@ -233,7 +233,7 @@ class TestAssetDownload(BaseTestCase):
         response = self.client.get(f"/cms-api/assets/{self.asset.id}/download/")
 
         # Assert
-        self.assertEqual(403, response.status_code)
+        self.assertEqual(403, response.status_code, response.content)
 
         # Verify no usage event was created when access denied
         usage_events = UsageEvent.objects.filter(
@@ -264,7 +264,7 @@ class TestAssetDownload(BaseTestCase):
         )
 
         # Assert
-        self.assertEqual(200, response.status_code)
+        self.assertEqual(200, response.status_code, response.content)
 
         # Verify usage event was created with correct metadata
         usage_events = UsageEvent.objects.filter(
