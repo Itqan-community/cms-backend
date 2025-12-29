@@ -403,7 +403,7 @@ class ResourceListTest(BaseTestCase):
         self.assertEqual(usage_event.subject_kind, UsageEvent.SubjectKindChoice.RESOURCE)
         self.assertEqual(usage_event.resource_id, resource.id)
         self.assertIsNone(usage_event.asset_id)
-        self.assertEqual(usage_event.effective_license, "free")
+        self.assertEqual(usage_event.effective_license, "CC0")
         self.assertIsInstance(usage_event.metadata, dict)
 
     def test_detail_resource_where_anonymous_user_should_not_create_usage_event(self):

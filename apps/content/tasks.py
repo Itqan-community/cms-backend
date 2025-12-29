@@ -92,7 +92,7 @@ def create_usage_event_task(self, event_data: dict):
         effective_license = event_data.get("effective_license")
         if not effective_license:
             # pick one that exists in your LicenseChoice:
-            effective_license = "free"
+            effective_license = "CC0"
 
         with transaction.atomic():
             usage_event = UsageEvent.objects.create(
