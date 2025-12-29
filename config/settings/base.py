@@ -390,3 +390,5 @@ SENTRY_ENABLED = config("SENTRY_ENABLED", cast=bool, default=False)
 
 if SENTRY_ENABLED and sentry_sdk:
     enable_sentry()
+
+ENABLE_OAUTH2 = config("ENABLE_OAUTH2", cast=bool, default=False)

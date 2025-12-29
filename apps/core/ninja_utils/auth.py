@@ -1,3 +1,4 @@
+from django.conf import settings
 from oauth2_provider.contrib.rest_framework import OAuth2Authentication
 from rest_framework_simplejwt.authentication import (
     JWTAuthentication,
@@ -32,8 +33,23 @@ class OAuth2Auth(OAuth2Authentication):
         return res
 
 
+class OAuth2OptionalAuth(OAuth2Auth):
+    def __call__(self, request):
+        ret = super().__call__(request)
+        if ret is not None:
+            return ret
+        from django.contrib.auth.models import AnonymousUser
+
+        anonymous_user = AnonymousUser()
+        request.user = anonymous_user
+        return anonymous_user
+
+
 ninja_jwt_auth = [JWTAuth(), JWTAuthStateless()]
-ninja_oauth2_auth = [OAuth2Auth()]
+if settings.ENABLE_OAUTH2:
+    ninja_oauth2_auth = [OAuth2Auth()]
+else:
+    ninja_oauth2_auth = [OAuth2OptionalAuth()]
 
 
 class OptionalJWTAuth:
