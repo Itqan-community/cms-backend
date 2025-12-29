@@ -7,12 +7,6 @@ from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
-from apps.core.mixins.constants import (
-    SURAH_NAMES_AR,
-    SURAH_NAMES_EN,
-    SURAH_NUMBER_NAME_AR,
-    SURAH_NUMBER_NAME_EN,
-)
 from apps.core.mixins.storage import DeleteFilesOnDeleteMixin
 from apps.core.models import BaseModel
 from apps.core.uploads import (
@@ -57,7 +51,7 @@ class Resource(BaseModel):
 
     name = models.CharField(max_length=255, help_text="Resource name e.g. 'Tafsir Ibn Katheer CSV'")
 
-    slug = models.SlugField(help_text="URL slug e.g. 'tafsir-ibn-katheer-csv'", db_index=True)
+    slug = models.SlugField(allow_unicode=True, help_text="URL slug e.g. 'tafsir-ibn-katheer-csv'", db_index=True)
 
     description = models.TextField(help_text="Resource description")
 
@@ -81,7 +75,7 @@ class Resource(BaseModel):
         return f"Resource(name={self.name} category={self.category})"
 
     def save(self, *args, **kwargs):
-        self.slug = slugify(f"{self.name}({self.publisher.slug})"[:50])
+        self.slug = slugify(self.name[:50], allow_unicode=True)
         super().save(*args, **kwargs)
 
     def get_latest_version(self):
@@ -564,8 +558,7 @@ class Reciter(BaseModel):
     """Quran reciter/qari (e.g. Mshari Al-Afasi, Saad Al-Ghamidi, etc)"""
 
     name = models.CharField(max_length=255, unique=True)
-    name_ar = models.CharField(max_length=255, unique=True)
-    slug = models.SlugField(unique=True, db_index=True)
+    slug = models.SlugField(unique=True, allow_unicode=True, db_index=True)
     is_active = models.BooleanField(default=True)
 
     def save(self, *args, **kwargs) -> None:
@@ -581,8 +574,7 @@ class Riwayah(BaseModel):
     """Quran recitation tradition/transmission (e.g. Hafs, Warsh, etc)"""
 
     name = models.CharField(max_length=255, unique=True)
-    name_ar = models.CharField(max_length=255, unique=True)
-    slug = models.SlugField(unique=True, db_index=True)
+    slug = models.SlugField(unique=True, allow_unicode=True, db_index=True)
     is_active = models.BooleanField(default=True)
 
     def save(self, *args, **kwargs) -> None:
@@ -592,10 +584,6 @@ class Riwayah(BaseModel):
 
     def __str__(self) -> str:
         return f"Riwayah(name={self.name})"
-
-
-SURAH_NAME_CHOICES_EN: list[tuple[str, str]] = [("", "---------")] + [(n, n) for n in SURAH_NAMES_EN]
-SURAH_NAME_CHOICES_AR: list[tuple[str, str]] = [("", "---------")] + [(n, n) for n in SURAH_NAMES_AR]
 
 
 class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
@@ -610,26 +598,6 @@ class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
     surah_number = models.PositiveSmallIntegerField(
         help_text="Surah number (1..114)",
         validators=[MinValueValidator(1), MaxValueValidator(114)],
-    )
-    surah_name_en = models.CharField(
-        max_length=255,
-        blank=True,
-        default="",
-        choices=SURAH_NAME_CHOICES_EN,
-        help_text="Surah name in English (auto-calculated based on surah_number)",
-    )
-    surah_name = models.CharField(
-        max_length=255,
-        blank=True,
-        default="",
-        choices=SURAH_NAME_CHOICES_AR,
-        help_text="Surah name in Arabic (auto-calculated based on surah_number)",
-    )
-    chapter_number = models.PositiveSmallIntegerField(
-        null=True,
-        blank=True,
-        help_text="Juz/Chapter number (1..30)",
-        validators=[MinValueValidator(1), MaxValueValidator(30)],
     )
     audio_file = models.FileField(
         upload_to=upload_to_recitation_surah_track_files,
@@ -654,11 +622,6 @@ class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
         return f"RecitationSurahTrack(asset={self.asset_id}, surah={self.surah_number})"
 
     def save(self, *args, **kwargs) -> None:
-        # Auto-fill names from surah_number when present
-        if self.surah_number:
-            self.surah_name_en = SURAH_NUMBER_NAME_EN.get(int(self.surah_number), "")
-            self.surah_name = SURAH_NUMBER_NAME_AR.get(int(self.surah_number), "")
-
         # Auto-compute duration and size when an MP3 file is present
         if self.audio_file:
             try:

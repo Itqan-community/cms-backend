@@ -1,7 +1,8 @@
+from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 from oauth2_provider.models import Application
 
-from apps.content.models import Asset, Reciter, Resource, Riwayah
+from apps.content.models import Asset, RecitationSurahTrack, Reciter, Resource, Riwayah
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -62,6 +63,13 @@ class RecitationsListTest(BaseTestCase):
             description="Calm recitation",
         )
 
+        mp3_file = SimpleUploadedFile("a.mp3", b"fake-bytes")
+        RecitationSurahTrack.objects.create(asset=self.asset1, surah_number=1, audio_file=mp3_file)
+        mp3_file2 = SimpleUploadedFile("b.mp3", b"fake-bytes-2")
+        RecitationSurahTrack.objects.create(asset=self.asset1, surah_number=2, audio_file=mp3_file2)
+        mp3_file3 = SimpleUploadedFile("c.mp3", b"fake-bytes-3")
+        RecitationSurahTrack.objects.create(asset=self.asset2, surah_number=1, audio_file=mp3_file3)
+
         # Assets that should NOT be returned
         baker.make(
             Asset,
@@ -107,15 +115,27 @@ class RecitationsListTest(BaseTestCase):
         self.assertIn(self.asset1.id, returned_ids)
         self.assertIn(self.asset2.id, returned_ids)
 
-        # Check required fields
+        # Check required fields and shapes
         for item in items:
             self.assertIn("id", item)
-            self.assertIn("resource_id", item)
             self.assertIn("name", item)
-            self.assertIn("slug", item)
             self.assertIn("description", item)
-            self.assertIn("created_at", item)
-            self.assertIn("updated_at", item)
+            self.assertIn("publisher", item)
+            self.assertIn("reciter", item)
+            self.assertIn("riwayah", item)
+            self.assertIn("surahs_count", item)
+            self.assertIsInstance(item["publisher"], dict)
+            self.assertIsInstance(item["reciter"], dict)
+            self.assertIsInstance(item["riwayah"], dict)
+            self.assertSetEqual(set(item["publisher"].keys()), {"id", "name"})
+            self.assertSetEqual(set(item["reciter"].keys()), {"id", "name"})
+            self.assertSetEqual(set(item["riwayah"].keys()), {"id", "name"})
+
+        # Validate surahs_count by asset
+        asset1_item = next(i for i in items if i["id"] == self.asset1.id)
+        asset2_item = next(i for i in items if i["id"] == self.asset2.id)
+        self.assertEqual(2, asset1_item["surahs_count"])
+        self.assertEqual(1, asset2_item["surahs_count"])
 
     def test_list_recitations_filter_by_publisher(self):
         # Arrange
@@ -130,7 +150,8 @@ class RecitationsListTest(BaseTestCase):
 
         self.assertEqual(1, len(items))
         self.assertEqual(self.asset1.id, items[0]["id"])
-        self.assertEqual(self.ready_recitation_resource_pub1.id, items[0]["resource_id"])
+        self.assertEqual(self.publisher1.id, items[0]["publisher"]["id"])
+        self.assertEqual(self.publisher1.name, items[0]["publisher"]["name"])
 
     def test_list_recitations_filter_by_reciter(self):
         # Arrange
@@ -144,7 +165,8 @@ class RecitationsListTest(BaseTestCase):
         items = response.json()["results"]
 
         self.assertEqual(1, len(items))
-        self.assertEqual(self.asset2.id, items[0]["id"])
+        self.assertEqual(self.reciter2.id, items[0]["reciter"]["id"])
+        self.assertEqual(self.reciter2.name, items[0]["reciter"]["name"])
 
     def test_list_recitations_filter_by_riwayah(self):
         # Arrange
@@ -158,7 +180,8 @@ class RecitationsListTest(BaseTestCase):
         items = response.json()["results"]
 
         self.assertEqual(1, len(items))
-        self.assertEqual(self.asset1.id, items[0]["id"])
+        self.assertEqual(self.riwayah1.id, items[0]["riwayah"]["id"])
+        self.assertEqual(self.riwayah1.name, items[0]["riwayah"]["name"])
 
     def test_list_recitations_search_should_match_name_description_publisher_or_reciter(self):
         # Arrange
@@ -194,3 +217,18 @@ class RecitationsListTest(BaseTestCase):
 
         names = [item["name"] for item in items]
         self.assertEqual(sorted(names), names)
+
+    def test_list_recitations_where_surahs_count_should_reflect_related_tracks(self):
+        # Arrange done in setUp: asset1 has 2 tracks, asset2 has 1 track
+        self.authenticate_client(application=self.app)
+
+        # Act
+        response = self.client.get("/recitations/")
+        self.assertEqual(200, response.status_code, response.content)
+        items = response.json()["results"]
+
+        # Assert
+        asset1_item = next(i for i in items if i["id"] == self.asset1.id)
+        asset2_item = next(i for i in items if i["id"] == self.asset2.id)
+        self.assertEqual(2, asset1_item["surahs_count"])
+        self.assertEqual(1, asset2_item["surahs_count"])
