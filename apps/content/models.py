@@ -493,9 +493,7 @@ class UsageEvent(BaseModel):
                     asset_id__isnull=False,
                     resource_id__isnull=True,
                 )
-                | models.Q(
-                    subject_kind="public_api", asset_id__isnull=True, resource_id__isnull=True
-                ),
+                | models.Q(subject_kind="public_api", asset_id__isnull=True, resource_id__isnull=True),
                 name="usage_event_subject_kind_consistency",
             )
         ]

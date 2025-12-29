@@ -25,9 +25,7 @@ class PublicApiUsageLoggingMiddleware(MiddlewareMixin):
 
     def process_request(self, request):
         path = request.path
-        is_public = path.startswith(self.PUBLIC_PREFIXES) and not path.startswith(
-            self.EXCLUDE_PREFIXES
-        )
+        is_public = path.startswith(self.PUBLIC_PREFIXES) and not path.startswith(self.EXCLUDE_PREFIXES)
         request._usage_log_is_public = is_public
         if is_public:
             request._usage_log_start = time.monotonic()
