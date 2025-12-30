@@ -89,19 +89,6 @@ CACHES = {
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
 
-# ============================================================
-# File Storage (local for staging)
-# ============================================================
-
-STORAGES = {
-    "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
-    },
-    "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-    },
-}
-
 # Media / Static
 MEDIA_URL = "/media/"
 MEDIA_ROOT = "/app/media"
