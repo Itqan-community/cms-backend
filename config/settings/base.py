@@ -145,25 +145,36 @@ CLOUDFLARE_R2_ACCESS_KEY_ID = config("CLOUDFLARE_R2_ACCESS_KEY_ID", default="")
 CLOUDFLARE_R2_SECRET_ACCESS_KEY = config("CLOUDFLARE_R2_SECRET_ACCESS_KEY", default="")
 CLOUDFLARE_R2_PUBLIC_BASE_URL = config("CLOUDFLARE_R2_PUBLIC_BASE_URL", default="")
 
-CLOUDFLARE_R2_CONFIG_OPTIONS = {
-    "bucket_name": CLOUDFLARE_R2_BUCKET,
-    "endpoint_url": CLOUDFLARE_R2_ENDPOINT,
-    "access_key": CLOUDFLARE_R2_ACCESS_KEY_ID,
-    "secret_key": CLOUDFLARE_R2_SECRET_ACCESS_KEY,
-    "region_name": "auto",
-    "signature_version": "s3v4",
-}
-
-STORAGES = {
-    "default": {  # MEDIA
-        "BACKEND": "config.helpers.cloudflare.storages.MediaFileStorage",
-        "OPTIONS": CLOUDFLARE_R2_CONFIG_OPTIONS,
-    },
-    "staticfiles": {  # STATIC
-        "BACKEND": "config.helpers.cloudflare.storages.StaticFileStorage",
-        "OPTIONS": CLOUDFLARE_R2_CONFIG_OPTIONS,
-    },
-}
+# Use R2 if configured, otherwise fall back to local storage
+if CLOUDFLARE_R2_ENDPOINT:
+    CLOUDFLARE_R2_CONFIG_OPTIONS = {
+        "bucket_name": CLOUDFLARE_R2_BUCKET,
+        "endpoint_url": CLOUDFLARE_R2_ENDPOINT,
+        "access_key": CLOUDFLARE_R2_ACCESS_KEY_ID,
+        "secret_key": CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+        "region_name": "auto",
+        "signature_version": "s3v4",
+    }
+    STORAGES = {
+        "default": {
+            "BACKEND": "config.helpers.cloudflare.storages.MediaFileStorage",
+            "OPTIONS": CLOUDFLARE_R2_CONFIG_OPTIONS,
+        },
+        "staticfiles": {
+            "BACKEND": "config.helpers.cloudflare.storages.StaticFileStorage",
+            "OPTIONS": CLOUDFLARE_R2_CONFIG_OPTIONS,
+        },
+    }
+else:
+    # Local storage for development without R2 credentials
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
