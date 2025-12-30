@@ -9,24 +9,21 @@ from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
 
-# Base router for /developers-api/riwayahs
 router = ItqanRouter(tags=[NinjaTag.RIWAYAHS])
 
 
 class RiwayahOut(Schema):
     id: int
-    slug: str
     name: str
-    name_ar: str
     recitations_count: int = Field(
         0,
         description="Number of READY recitation assets for this riwayah",
     )
 
 
-@router.get("riwayahs/", response=list[RiwayahOut], auth=None)
+@router.get("riwayahs/", response=list[RiwayahOut])
 @paginate
-@ordering(ordering_fields=["name", "name_ar", "slug"])
+@ordering(ordering_fields=["name"])
 def list_riwayahs(request: Request):
     """
     Public Content API (V2):

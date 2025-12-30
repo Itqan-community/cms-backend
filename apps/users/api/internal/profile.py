@@ -24,9 +24,7 @@ def get_user_profile(request: Request):
         "name": user.name,
         "phone": str(user.phone) if user.phone else None,
         "is_active": user.is_active,
-        "is_profile_completed": (
-            user.developer_profile.profile_completed if user.developer_profile else False
-        ),
+        "is_profile_completed": (user.developer_profile.profile_completed if user.developer_profile else False),
         "bio": user_developer_profile.bio if user_developer_profile else "",
         "project_summary": user_developer_profile.project_summary if user_developer_profile else "",
         "project_url": user_developer_profile.project_url if user_developer_profile else "",
@@ -63,9 +61,7 @@ def update_user_profile(request: Request, profile_data: UserUpdateSchema):
         "name": user.name,
         "phone": str(user.phone) if user.phone else None,
         "is_active": user.is_active,
-        "is_profile_completed": (
-            user_developer_profile.profile_completed if user_developer_profile else False
-        ),
+        "is_profile_completed": (user_developer_profile.profile_completed if user_developer_profile else False),
         "bio": user_developer_profile.bio if user_developer_profile else "",
         "project_summary": user_developer_profile.project_summary if user_developer_profile else "",
         "project_url": user_developer_profile.project_url if user_developer_profile else "",

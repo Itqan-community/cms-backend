@@ -1,7 +1,7 @@
 from decouple import config
 
 
-def enable_sentry():
+def enable_sentry() -> None:
     from sentry_sdk import init
     from sentry_sdk.integrations.celery import CeleryIntegration
     from sentry_sdk.integrations.django import DjangoIntegration

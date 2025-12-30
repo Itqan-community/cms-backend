@@ -330,9 +330,7 @@ class UserProfileTestCase(AuthEndpointsTestCase):
         tokens = self._get_jwt_token()
 
         # Act
-        response = self.client.get(
-            "/cms-api/auth/profile/", **self._get_auth_headers(tokens["access"])
-        )
+        response = self.client.get("/cms-api/auth/profile/", **self._get_auth_headers(tokens["access"]))
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -365,9 +363,7 @@ class UserProfileTestCase(AuthEndpointsTestCase):
                 "signature",  # signature
             ]
         )
-        response = self.client.get(
-            "/cms-api/auth/profile/", **self._get_auth_headers(invalid_token)
-        )
+        response = self.client.get("/cms-api/auth/profile/", **self._get_auth_headers(invalid_token))
 
         # Assert
         self.assertEqual(401, response.status_code, response.content)
@@ -560,9 +556,7 @@ class AuthenticationIntegrationTestCase(AuthEndpointsTestCase):
             "name": "Journey User",
         }
 
-        register_response = self.client.post(
-            "/cms-api/auth/register/", data=register_data, format="json"
-        )
+        register_response = self.client.post("/cms-api/auth/register/", data=register_data, format="json")
 
         self.assertEqual(register_response.status_code, 200)
         register_result = register_response.json()
@@ -579,9 +573,7 @@ class AuthenticationIntegrationTestCase(AuthEndpointsTestCase):
         login_result = login_response.json()
 
         # Step 3: Access profile with login token
-        profile_response = self.client.get(
-            "/cms-api/auth/profile/", **self._get_auth_headers(login_result["access"])
-        )
+        profile_response = self.client.get("/cms-api/auth/profile/", **self._get_auth_headers(login_result["access"]))
 
         self.assertEqual(profile_response.status_code, 200)
         profile_result = profile_response.json()
@@ -608,9 +600,7 @@ class AuthenticationIntegrationTestCase(AuthEndpointsTestCase):
         refresh_result = refresh_response.json()
 
         # Use new access token
-        profile_response = self.client.get(
-            "/cms-api/auth/profile/", **self._get_auth_headers(refresh_result["access"])
-        )
+        profile_response = self.client.get("/cms-api/auth/profile/", **self._get_auth_headers(refresh_result["access"]))
 
         self.assertEqual(profile_response.status_code, 200)
         profile_result = profile_response.json()
@@ -631,9 +621,7 @@ class AuthenticationSecurityTestCase(AuthEndpointsTestCase):
             ]
         )
 
-        response = self.client.get(
-            "/cms-api/auth/profile/", **self._get_auth_headers(invalid_token)
-        )
+        response = self.client.get("/cms-api/auth/profile/", **self._get_auth_headers(invalid_token))
 
         self.assertEqual(response.status_code, 401, response.content)
 
@@ -648,9 +636,7 @@ class AuthenticationSecurityTestCase(AuthEndpointsTestCase):
         ]
 
         for token in malformed_tokens:
-            response = self.client.get(
-                "/cms-api/auth/profile/", headers={"authorization": f"Bearer {token}"}
-            )
+            response = self.client.get("/cms-api/auth/profile/", headers={"authorization": f"Bearer {token}"})
             self.assertEqual(response.status_code, 401, response.content)
 
     def test_no_authorization_header_should_return_401(self):
@@ -666,16 +652,14 @@ class AuthenticationSecurityTestCase(AuthEndpointsTestCase):
         tokens = self._get_jwt_token()
 
         wrong_schemes = [
-            f'Basic {tokens["access"]}',
-            f'Token {tokens["access"]}',
-            f'JWT {tokens["access"]}',
+            f"Basic {tokens['access']}",
+            f"Token {tokens['access']}",
+            f"JWT {tokens['access']}",
             tokens["access"],  # No scheme
         ]
 
         for auth_header in wrong_schemes:
-            response = self.client.get(
-                "/cms-api/auth/profile/", headers={"authorization": auth_header}
-            )
+            response = self.client.get("/cms-api/auth/profile/", headers={"authorization": auth_header})
             self.assertEqual(response.status_code, 401, response.content)
 
 
@@ -684,9 +668,7 @@ class AuthenticationErrorHandlingTestCase(AuthEndpointsTestCase):
 
     def test_invalid_json_request(self):
         """Test handling of invalid JSON in requests"""
-        response = self.client.post(
-            "/cms-api/auth/login/", data="invalid-json", content_type="application/json"
-        )
+        response = self.client.post("/cms-api/auth/login/", data="invalid-json", content_type="application/json")
 
         self.assertEqual(response.status_code, 400, response.content)
 
@@ -704,9 +686,7 @@ class AuthenticationErrorHandlingTestCase(AuthEndpointsTestCase):
 
     def test_empty_request_body(self):
         """Test handling of empty request body"""
-        response = self.client.post(
-            "/cms-api/auth/login/", data="", content_type="application/json"
-        )
+        response = self.client.post("/cms-api/auth/login/", data="", content_type="application/json")
 
         self.assertEqual(response.status_code, 400, response.content)
 
