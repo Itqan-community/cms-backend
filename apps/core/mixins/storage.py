@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from functools import lru_cache
+import os
 
+import boto3
+from django.conf import settings
 from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
@@ -43,3 +47,35 @@ def delete_associated_files_on_delete(sender, instance, **kwargs):
     except Exception:
         # Do not raise from signals
         pass
+
+
+# ===========================
+# Cloudflare R2 presign utils
+# ===========================
+
+
+@lru_cache(maxsize=1)
+def _get_s3_client():
+    return boto3.client(
+        service_name="s3",
+        endpoint_url=settings.CLOUDFLARE_R2_ENDPOINT,
+        aws_access_key_id=settings.CLOUDFLARE_R2_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+        region_name="auto",
+    )
+
+
+def generate_presigned_download_url(key: str, filename: str, expires_in: int = 3600) -> str:
+    """
+    Generate a presigned GET URL for Cloudflare R2 with forced download.
+    - key: object key within the bucket
+    - filename: suggested filename for download (simple ascii acceptable)
+    - expires_in: seconds until URL expiry
+    """
+    filename = os.path.basename(filename) if filename else "download"
+    params = {
+        "Bucket": settings.CLOUDFLARE_R2_BUCKET,
+        "Key": key,
+        "ResponseContentDisposition": f'attachment; filename="{filename}"',
+    }
+    return _get_s3_client().generate_presigned_url("get_object", Params=params, ExpiresIn=expires_in)

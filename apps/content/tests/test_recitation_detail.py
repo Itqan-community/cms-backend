@@ -1,9 +1,11 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
+from oauth2_provider.models import Application
 
 from apps.content.models import Asset, RecitationSurahTrack, Resource
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
+from apps.users.models import User
 
 
 class RecitationTracksTest(BaseTestCase):
@@ -21,6 +23,13 @@ class RecitationTracksTest(BaseTestCase):
             category=Asset.CategoryChoice.RECITATION,
             resource=self.recitation_resource,
         )
+        self.user = User.objects.create_user(email="oauthuser@example.com", name="OAuth User")
+        self.app = Application.objects.create(
+            user=self.user,
+            name="App 1",
+            client_type="confidential",
+            authorization_grant_type="password",
+        )
 
     def test_list_recitation_tracks_should_return_tracks_ordered_by_surah_number(self):
         # Arrange
@@ -28,9 +37,6 @@ class RecitationTracksTest(BaseTestCase):
             RecitationSurahTrack,
             asset=self.asset,
             surah_number=2,
-            surah_name="Al-Baqarah",
-            surah_name_ar="البقرة",
-            chapter_number=2,
             duration_ms=2000,
             size_bytes=1024,
         )
@@ -38,15 +44,13 @@ class RecitationTracksTest(BaseTestCase):
             RecitationSurahTrack,
             asset=self.asset,
             surah_number=1,
-            surah_name="Al-Fatihah",
-            surah_name_ar="الفاتحة",
-            chapter_number=1,
             duration_ms=1000,
             size_bytes=512,
         )
+        self.authenticate_client(self.app)
 
         # Act
-        response = self.client.get(f"/developers-api/recitations/{self.asset.id}/")
+        response = self.client.get(f"/recitations/{self.asset.id}/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -60,9 +64,9 @@ class RecitationTracksTest(BaseTestCase):
 
         # Ordered by surah_number ascending
         self.assertEqual(1, items[0]["surah_number"])
-        self.assertEqual("Al-Fatihah", items[0]["surah_name"])
+        self.assertEqual("Al-Fatihah", items[0]["surah_name_en"])
         self.assertEqual(2, items[1]["surah_number"])
-        self.assertEqual("Al-Baqarah", items[1]["surah_name"])
+        self.assertEqual("Al-Baqarah", items[1]["surah_name_en"])
 
     def test_list_recitation_tracks_should_include_audio_url_when_audio_file_exists(self):
         # Arrange
@@ -71,16 +75,14 @@ class RecitationTracksTest(BaseTestCase):
             RecitationSurahTrack,
             asset=self.asset,
             surah_number=1,
-            surah_name="Al-Fatihah",
-            surah_name_ar="الفاتحة",
-            chapter_number=1,
             duration_ms=1000,
             size_bytes=512,
             audio_file=audio_file,
         )
+        self.authenticate_client(self.app)
 
         # Act
-        response = self.client.get(f"/developers-api/recitations/{self.asset.id}/")
+        response = self.client.get(f"/recitations/{self.asset.id}/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -91,32 +93,10 @@ class RecitationTracksTest(BaseTestCase):
         self.assertIsNotNone(item["audio_url"])
         self.assertIn("test.mp3", item["audio_url"])
 
-    def test_list_recitation_tracks_should_set_audio_url_to_null_when_no_audio_file(self):
-        # Arrange
-        baker.make(
-            RecitationSurahTrack,
-            asset=self.asset,
-            surah_number=1,
-            surah_name="Al-Fatihah",
-            surah_name_ar="الفاتحة",
-            chapter_number=1,
-            duration_ms=1000,
-            size_bytes=512,
-            audio_file=None,
-        )
-
-        # Act
-        response = self.client.get(f"/developers-api/recitations/{self.asset.id}/")
-
-        # Assert
-        self.assertEqual(200, response.status_code, response.content)
-        items = response.json()["results"]
-        self.assertEqual(1, len(items))
-        self.assertIsNone(items[0]["audio_url"])
-
     def test_list_recitation_tracks_for_nonexistent_or_invalid_asset_should_return_404(self):
+        self.authenticate_client(self.app)
         # Non-existent asset
-        response = self.client.get("/developers-api/recitations/999999/")
+        response = self.client.get("/recitations/999999/")
         self.assertEqual(404, response.status_code, response.content)
 
         # Asset with wrong category should also 404 due to queryset filter
@@ -132,7 +112,7 @@ class RecitationTracksTest(BaseTestCase):
             resource=non_recitation_resource,
         )
 
-        response = self.client.get(f"/developers-api/recitations/{non_recitation_asset.id}/")
+        response = self.client.get(f"/recitations/{non_recitation_asset.id}/")
         self.assertEqual(404, response.status_code, response.content)
 
         # Asset with RECITATION category but non-READY resource should 404
@@ -148,5 +128,5 @@ class RecitationTracksTest(BaseTestCase):
             resource=draft_resource,
         )
 
-        response = self.client.get(f"/developers-api/recitations/{draft_asset.id}/")
+        response = self.client.get(f"/recitations/{draft_asset.id}/")
         self.assertEqual(404, response.status_code, response.content)

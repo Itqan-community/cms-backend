@@ -76,10 +76,16 @@ SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
 
 # =========================
-# Logging (use settings.LOGGING to avoid F405)
+# File Storage (local for development)
 # =========================
-settings.LOGGING["handlers"]["console"]["level"] = "DEBUG"
-settings.LOGGING["root"]["level"] = "DEBUG"
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
 
 # =========================
 # OAuth providers (DB-backed)

@@ -8,7 +8,7 @@ psycopg2-binary==2.9.10
 # Authentication & Security
 PyJWT==2.8.*
 cryptography==41.*
-django-oauth-toolkit==1.7.*
+django-oauth-toolkit==3.1.0
 djangorestframework-simplejwt==5.5.*
 django-allauth==65.11.2
 django-cors-headers>=4.7.0
@@ -39,10 +39,3 @@ python-dateutil==2.8.*
 requests==2.31.*
 
 scalar-django-ninja==0.1.4
-
-# Dev / Tooling
-black==23.7.*
-isort==5.12.*
-ruff==0.14.*
-pre-commit==4.3.0
-mutagen>=1.47.0

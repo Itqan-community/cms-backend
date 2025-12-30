@@ -294,7 +294,24 @@ jobs:
 
             # Clean up old Docker images
             echo "🧹 Cleaning up old Docker images..."
+
+            # Remove dangling images
             docker image prune -f || true
+
+            # Remove old CMS images, keeping only the 3 most recent for rollback
+            echo "📦 CMS images before cleanup: $(docker images 'ghcr.io/*/cms-backend' -q | wc -l)"
+            docker images "ghcr.io/*/cms-backend" --format "{{.ID}} {{.CreatedAt}}" | \
+              sort -k2,3 -r | tail -n +4 | awk '{print $1}' | \
+              xargs -r docker rmi -f 2>/dev/null || true
+            echo "📦 CMS images after cleanup: $(docker images 'ghcr.io/*/cms-backend' -q | wc -l)"
+
+            # Remove old caddy images, keeping 2 recent
+            docker images "caddy" --format "{{.ID}} {{.CreatedAt}}" | \
+              sort -k2,3 -r | tail -n +3 | awk '{print $1}' | \
+              xargs -r docker rmi -f 2>/dev/null || true
+
+            # Final cleanup of orphaned layers
+            docker system prune -f || true
 
             echo "🎉 Deployment to ${{ env.ENV_NAME }} completed successfully!"
             echo "🌐 Application URL: ${{ env.ENV_URL }}"

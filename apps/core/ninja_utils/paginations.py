@@ -30,9 +30,9 @@ class NinjaPagination(NinjaPageNumberPagination):
         pagination: Input,
         **params: Any,
     ) -> Any:
-        offset = (pagination.page - 1) * self.page_size
+        offset = (pagination.page - 1) * pagination.page_size
         return {
-            "results": queryset[offset : offset + self.page_size],
+            "results": queryset[offset : offset + pagination.page_size],
             "count": self._items_count(queryset),
         }
 
@@ -42,8 +42,8 @@ class NinjaPagination(NinjaPageNumberPagination):
         pagination: Input,
         **params: Any,
     ) -> Any:
-        offset = (pagination.page - 1) * self.page_size
+        offset = (pagination.page - 1) * pagination.page_size
         return {
-            "results": queryset[offset : offset + self.page_size],
+            "results": queryset[offset : offset + pagination.page_size],
             "count": await self._aitems_count(queryset),
         }

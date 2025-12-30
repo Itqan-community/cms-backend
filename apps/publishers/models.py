@@ -1,5 +1,5 @@
 from django.core.validators import FileExtensionValidator
-from django.db import models
+from django.db import models, transaction
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
@@ -11,14 +11,12 @@ from apps.users.models import User
 class Publisher(BaseModel):
     name = models.CharField(max_length=255, help_text="Publisher name e.g. 'Tafsir Center'")
 
-    slug = models.SlugField(unique=True, help_text="URL-friendly slug e.g. 'tafsir-center'")
+    slug = models.SlugField(unique=True, allow_unicode=True, help_text="URL-friendly slug e.g. 'tafsir-center'")
 
     icon_url = models.ImageField(
         upload_to=upload_to_publisher_icons,
         blank=True,
-        validators=[
-            FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "gif", "webp", "svg"])
-        ],
+        validators=[FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "gif", "webp", "svg"])],
         help_text="Icon/logo image - used in V1 UI: Publisher Page",
     )
 
@@ -64,4 +62,25 @@ class PublisherMember(BaseModel):
         unique_together = ["publisher", "user"]
 
     def __str__(self):
-        return f"PublisherMember(email={self.user.email} publisher={self.publisher.name} role={self.role})"
+        return f"PublisherMember(email={self.user.email} publisher={self.publisher_id} role={self.role})"
+
+
+class Domain(BaseModel):
+    domain = models.CharField(max_length=100, unique=True, help_text="www.domain.com")
+    publisher = models.ForeignKey(Publisher, on_delete=models.CASCADE, related_name="domains")
+    is_primary = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"Domain(domain={self.domain} publisher={self.publisher_id})"
+
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        # Get all other primary domains with the same tenant
+        domain_list = Domain.objects.filter(publisher=self.publisher, is_primary=True).exclude(pk=self.pk)
+        # If we have no primary domain yet, set as primary domain by default
+        self.is_primary = self.is_primary or (not domain_list.exists())
+        if self.is_primary:
+            # Remove primary status of existing domains for tenant
+            domain_list.update(is_primary=False)
+        super().save(*args, **kwargs)

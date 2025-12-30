@@ -20,9 +20,7 @@ router = ItqanRouter(tags=[NinjaTag.AUTH])
 )
 def login_user(request: Request, credentials: LoginSchema):
     """Login user with email and password"""
-    user: User | None = authenticate(
-        request, username=credentials.email, password=credentials.password
-    )
+    user: User | None = authenticate(request, username=credentials.email, password=credentials.password)
 
     if user is None:
         raise ItqanError(

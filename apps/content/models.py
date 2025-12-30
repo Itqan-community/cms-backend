@@ -7,12 +7,6 @@ from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
-from apps.core.mixins.constants import (
-    SURAH_NAMES_AR,
-    SURAH_NAMES_EN,
-    SURAH_NUMBER_NAME_AR,
-    SURAH_NUMBER_NAME_EN,
-)
 from apps.core.mixins.storage import DeleteFilesOnDeleteMixin
 from apps.core.models import BaseModel
 from apps.core.uploads import (
@@ -57,13 +51,11 @@ class Resource(BaseModel):
 
     name = models.CharField(max_length=255, help_text="Resource name e.g. 'Tafsir Ibn Katheer CSV'")
 
-    slug = models.SlugField(help_text="URL slug e.g. 'tafsir-ibn-katheer-csv'", db_index=True)
+    slug = models.SlugField(allow_unicode=True, help_text="URL slug e.g. 'tafsir-ibn-katheer-csv'", db_index=True)
 
     description = models.TextField(help_text="Resource description")
 
-    category = models.CharField(
-        max_length=20, choices=CategoryChoice.choices, help_text="Simple options in V1"
-    )
+    category = models.CharField(max_length=20, choices=CategoryChoice.choices, help_text="Simple options in V1")
 
     status = models.CharField(
         max_length=20,
@@ -83,7 +75,7 @@ class Resource(BaseModel):
         return f"Resource(name={self.name} category={self.category})"
 
     def save(self, *args, **kwargs):
-        self.slug = slugify(f"{self.name}({self.publisher.slug})"[:50])
+        self.slug = slugify(self.name[:50], allow_unicode=True)
         super().save(*args, **kwargs)
 
     def get_latest_version(self):
@@ -132,9 +124,7 @@ class ResourceVersion(DeleteFilesOnDeleteMixin, BaseModel):
         help_text="File storage for resource version",
     )
 
-    file_type = models.CharField(
-        max_length=20, choices=FileTypeChoice.choices, help_text="File type"
-    )
+    file_type = models.CharField(max_length=20, choices=FileTypeChoice.choices, help_text="File type")
 
     size_bytes = models.PositiveBigIntegerField(default=0, help_text="File size in bytes")
 
@@ -185,9 +175,7 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
     thumbnail_url = models.ImageField(
         upload_to=upload_to_asset_thumbnails,
         blank=True,
-        validators=[
-            FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "gif", "webp"])
-        ],
+        validators=[FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "gif", "webp"])],
         help_text="Asset thumbnail image",
     )
 
@@ -261,7 +249,9 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         return Asset.objects.filter(
             category=self.category,
             resource__publisher=self.resource.publisher,
-        ).exclude(id=self.id)[:limit]
+        ).exclude(
+            id=self.id
+        )[:limit]
 
     def get_latest_version(self):
         return self.versions.order_by("-created_at").first()
@@ -275,9 +265,7 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
 class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="versions")
 
-    resource_version = models.ForeignKey(
-        ResourceVersion, on_delete=models.CASCADE, related_name="asset_versions"
-    )
+    resource_version = models.ForeignKey(ResourceVersion, on_delete=models.CASCADE, related_name="asset_versions")
 
     name = models.CharField(max_length=255, help_text="Asset version name")
 
@@ -341,9 +329,7 @@ class AssetPreview(DeleteFilesOnDeleteMixin, BaseModel):
     image_url = models.ImageField(
         upload_to=upload_to_asset_preview_images,
         blank=True,
-        validators=[
-            FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "gif", "webp"])
-        ],
+        validators=[FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "gif", "webp"])],
         help_text="Preview image",
     )
     title = models.CharField(max_length=255, blank=True, default="")
@@ -364,9 +350,7 @@ class AssetAccessRequest(BaseModel):
         COMMERCIAL = "commercial", _("Commercial")
         NON_COMMERCIAL = "non-commercial", _("Non-Commercial")
 
-    developer_user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="asset_requests"
-    )
+    developer_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="asset_requests")
 
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="access_requests")
 
@@ -376,9 +360,7 @@ class AssetAccessRequest(BaseModel):
         default=StatusChoice.PENDING,
     )
 
-    developer_access_reason = models.TextField(
-        help_text="Reason for requesting access - used in V1 UI"
-    )
+    developer_access_reason = models.TextField(help_text="Reason for requesting access - used in V1 UI")
 
     intended_use = models.CharField(
         max_length=20,
@@ -418,9 +400,7 @@ class AssetAccess(BaseModel):
 
     granted_at = models.DateTimeField(auto_now_add=True, help_text="When access was granted")
 
-    expires_at = models.DateTimeField(
-        null=True, blank=True, help_text="When access expires (null = never expires)"
-    )
+    expires_at = models.DateTimeField(null=True, blank=True, help_text="When access expires (null = never expires)")
 
     download_url = models.URLField(
         blank=True,
@@ -466,9 +446,7 @@ class UsageEvent(BaseModel):
 
     developer_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="usage_events")
 
-    usage_kind = models.CharField(
-        max_length=20, choices=UsageKindChoice.choices, help_text="Type of usage event"
-    )
+    usage_kind = models.CharField(max_length=20, choices=UsageKindChoice.choices, help_text="Type of usage event")
 
     subject_kind = models.CharField(
         max_length=20,
@@ -480,18 +458,14 @@ class UsageEvent(BaseModel):
         null=True, blank=True, help_text="Resource ID if subject_kind = 'resource'"
     )
 
-    asset_id = models.PositiveIntegerField(
-        null=True, blank=True, help_text="Asset ID if subject_kind = 'asset'"
-    )
+    asset_id = models.PositiveIntegerField(null=True, blank=True, help_text="Asset ID if subject_kind = 'asset'")
 
     metadata = models.JSONField(default=dict, help_text="Additional event metadata")
 
     ip_address = models.GenericIPAddressField(null=True, blank=True, help_text="User IP address")
 
     user_agent = models.TextField(blank=True, help_text="User browser/client information")
-    effective_license = models.CharField(
-        max_length=50, choices=LicenseChoice, help_text="License at time of usage"
-    )
+    effective_license = models.CharField(max_length=50, choices=LicenseChoice, help_text="License at time of usage")
 
     class Meta:
         constraints = [
@@ -584,8 +558,7 @@ class Reciter(BaseModel):
     """Quran reciter/qari (e.g. Mshari Al-Afasi, Saad Al-Ghamidi, etc)"""
 
     name = models.CharField(max_length=255, unique=True)
-    name_ar = models.CharField(max_length=255, unique=True)
-    slug = models.SlugField(unique=True, db_index=True)
+    slug = models.SlugField(unique=True, allow_unicode=True, db_index=True)
     is_active = models.BooleanField(default=True)
 
     def save(self, *args, **kwargs) -> None:
@@ -601,8 +574,7 @@ class Riwayah(BaseModel):
     """Quran recitation tradition/transmission (e.g. Hafs, Warsh, etc)"""
 
     name = models.CharField(max_length=255, unique=True)
-    name_ar = models.CharField(max_length=255, unique=True)
-    slug = models.SlugField(unique=True, db_index=True)
+    slug = models.SlugField(unique=True, allow_unicode=True, db_index=True)
     is_active = models.BooleanField(default=True)
 
     def save(self, *args, **kwargs) -> None:
@@ -612,14 +584,6 @@ class Riwayah(BaseModel):
 
     def __str__(self) -> str:
         return f"Riwayah(name={self.name})"
-
-
-SURAH_NAME_CHOICES_EN: list[tuple[str, str]] = [("", "---------")] + [
-    (n, n) for n in SURAH_NAMES_EN
-]
-SURAH_NAME_CHOICES_AR: list[tuple[str, str]] = [("", "---------")] + [
-    (n, n) for n in SURAH_NAMES_AR
-]
 
 
 class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
@@ -634,26 +598,6 @@ class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
     surah_number = models.PositiveSmallIntegerField(
         help_text="Surah number (1..114)",
         validators=[MinValueValidator(1), MaxValueValidator(114)],
-    )
-    surah_name = models.CharField(
-        max_length=255,
-        blank=True,
-        default="",
-        choices=SURAH_NAME_CHOICES_EN,
-        help_text="Surah name in English (auto-calculated based on surah_number)",
-    )
-    surah_name_ar = models.CharField(
-        max_length=255,
-        blank=True,
-        default="",
-        choices=SURAH_NAME_CHOICES_AR,
-        help_text="Surah name in Arabic (auto-calculated based on surah_number)",
-    )
-    chapter_number = models.PositiveSmallIntegerField(
-        null=True,
-        blank=True,
-        help_text="Juz/Chapter number (1..30)",
-        validators=[MinValueValidator(1), MaxValueValidator(30)],
     )
     audio_file = models.FileField(
         upload_to=upload_to_recitation_surah_track_files,
@@ -678,11 +622,6 @@ class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
         return f"RecitationSurahTrack(asset={self.asset_id}, surah={self.surah_number})"
 
     def save(self, *args, **kwargs) -> None:
-        # Auto-fill names from surah_number when present
-        if self.surah_number:
-            self.surah_name = SURAH_NUMBER_NAME_EN.get(int(self.surah_number), "")
-            self.surah_name_ar = SURAH_NUMBER_NAME_AR.get(int(self.surah_number), "")
-
         # Auto-compute duration and size when an MP3 file is present
         if self.audio_file:
             try:
@@ -696,12 +635,8 @@ class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
 class RecitationAyahTiming(BaseModel):
     """Timing information per-ayah within a RecitationSurahTrack"""
 
-    track = models.ForeignKey(
-        RecitationSurahTrack, on_delete=models.CASCADE, related_name="ayah_timings"
-    )
-    ayah_key = models.CharField(
-        max_length=20, help_text='Format "surah_number:ayah_number" e.g. "2:255"'
-    )
+    track = models.ForeignKey(RecitationSurahTrack, on_delete=models.CASCADE, related_name="ayah_timings")
+    ayah_key = models.CharField(max_length=20, help_text='Format "surah_number:ayah_number" e.g. "2:255"')
     start_ms = models.PositiveIntegerField(help_text="Start offset in milliseconds")
     end_ms = models.PositiveIntegerField(help_text="End offset in milliseconds")
     duration_ms = models.PositiveIntegerField(

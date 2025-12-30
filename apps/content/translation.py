@@ -1,12 +1,11 @@
 from modeltranslation.decorators import register
 from modeltranslation.translator import TranslationOptions
 
-from .models import Asset, Resource
+from .models import Asset, Reciter, Resource, Riwayah
 
 
 @register(Resource)
 class ResourceTranslationOptions(TranslationOptions):
-    """Translation configuration for Resource model"""
 
     fields = (
         "name",
@@ -16,10 +15,21 @@ class ResourceTranslationOptions(TranslationOptions):
 
 @register(Asset)
 class AssetTranslationOptions(TranslationOptions):
-    """Translation configuration for Asset model"""
 
     fields = (
         "name",
         "description",
         "long_description",
     )
+
+
+@register(Reciter)
+class ReciterTranslationOptions(TranslationOptions):
+
+    fields = ("name",)
+
+
+@register(Riwayah)
+class RiwayahTranslationOptions(TranslationOptions):
+
+    fields = ("name",)
