@@ -10,7 +10,7 @@ from config.settings.base import CLOUDFLARE_R2_PUBLIC_BASE_URL
 
 from ..core.mixins.constants import QURAN_SURAHS
 from ..mixins.recitations_helpers import extract_surah_number_from_filename
-from .api.public.recitation_detail import RecitationSurahTrackOut
+from .api.public.recitation_detail import RecitationAyahTimingOut, RecitationSurahTrackOut
 from .forms.bulk_recitations_upload_form import BulkRecitationUploadForm
 from .forms.download_recitations_json_form import DownloadRecitationsJsonForm
 from .models import (
@@ -679,6 +679,20 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
                 result: list[RecitationSurahTrackOut] = []
                 for track in tracks:
                     url = f"{CLOUDFLARE_R2_PUBLIC_BASE_URL}/media/{track.audio_file.name}"
+                    timings_qs = (
+                        track.ayah_timings.all()
+                        .only("ayah_key", "start_ms", "end_ms", "duration_ms")
+                        .order_by("ayah_key")
+                    )
+                    ayahs_timings = [
+                        RecitationAyahTimingOut(
+                            ayah_key=t.ayah_key,
+                            start_ms=t.start_ms,
+                            end_ms=t.end_ms,
+                            duration_ms=t.duration_ms,
+                        )
+                        for t in timings_qs
+                    ]
                     result.append(
                         RecitationSurahTrackOut(
                             surah_number=track.surah_number,
@@ -690,7 +704,7 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
                             revelation_order=QURAN_SURAHS[track.surah_number]["revelation_order"],
                             revelation_place=QURAN_SURAHS[track.surah_number]["revelation_place"],
                             ayahs_count=QURAN_SURAHS[track.surah_number]["ayahs_count"],
-                            ayahs_timings=[],
+                            ayahs_timings=ayahs_timings,
                         )
                     )
 
