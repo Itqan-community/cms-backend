@@ -37,7 +37,7 @@ def create_ninja_api(
         throttle=throttle,
         parser=parser,
         docs=ScalarViewer(openapi_url=f"{docs_base_path}/openapi.json"),
-        docs_url="/docs",
+        docs_url="/docs/",
         urls_namespace=urls_namespace,
     )
     return api
