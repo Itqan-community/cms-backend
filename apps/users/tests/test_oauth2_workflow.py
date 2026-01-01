@@ -1,10 +1,13 @@
 import base64
 
+from django.conf import settings
 from django.utils.crypto import get_random_string
+import pytest
 
 from apps.core.tests import BaseTestCase
 
 
+@pytest.mark.skipif(not settings.ENABLE_OAUTH2, reason="OAuth2 disabled in settings")
 class OAuth2WorkflowTestCase(BaseTestCase):
     """
     End-to-End test for the OAuth2 workflow:

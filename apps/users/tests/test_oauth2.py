@@ -1,13 +1,17 @@
 import base64
+import datetime
 import secrets
 
+from django.conf import settings
 from django.utils import timezone
 from oauth2_provider.models import AccessToken, Application
+import pytest
 
 from apps.core.tests import BaseTestCase
 from apps.users.models import User
 
 
+@pytest.mark.skipif(not settings.ENABLE_OAUTH2, reason="OAuth2 disabled in settings")
 class OAuth2Tests(BaseTestCase):
     """
     Test suite for OAuth2.0 implementation.
@@ -77,7 +81,7 @@ class OAuth2Tests(BaseTestCase):
             user=self.user,
             application=self.app,
             token=secrets.token_hex(20),
-            expires=timezone.now() + timezone.timedelta(days=1),  # Future date
+            expires=timezone.now() + datetime.timedelta(days=1),  # Future date
             scope="read write",
         )
         headers = {"HTTP_AUTHORIZATION": f"Bearer {token.token}"}
@@ -96,7 +100,7 @@ class OAuth2Tests(BaseTestCase):
             user=self.user,
             application=self.app,
             token=secrets.token_hex(20),
-            expires=timezone.now() + timezone.timedelta(days=1),
+            expires=timezone.now() + datetime.timedelta(days=1),
             scope="read write",
         )
         data = {"token": token.token}
