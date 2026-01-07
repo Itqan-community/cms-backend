@@ -1,5 +1,4 @@
 from oauth2_provider.models import Application
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.core.tests import BaseTestCase
 from apps.users.models import User
@@ -11,9 +10,7 @@ class OAuth2ApplicationTests(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.user = User.objects.create_user(email="appuser@example.com", password="password123", name="App User")
-        # Get JWT token for Ninja authentication
-        refresh = RefreshToken.for_user(self.user)
-        self.auth_headers = {"HTTP_AUTHORIZATION": f"Bearer {refresh.access_token}"}
+        self.authenticate_user(self.user)
 
     def test_create_application_where_valid_data_should_return_200(self):
         """Test creating an application"""
@@ -23,7 +20,7 @@ class OAuth2ApplicationTests(BaseTestCase):
             "authorization_grant_type": "password",
             "redirect_uris": "http://localhost/cb",
         }
-        response = self.client.post("/cms-api/applications/", data=data, format="json", **self.auth_headers)
+        response = self.client.post("/cms-api/applications/", data=data, format="json")
         self.assertEqual(200, response.status_code, response.content)
         res_data = response.json()
         self.assertEqual("New App", res_data["name"])
@@ -38,7 +35,7 @@ class OAuth2ApplicationTests(BaseTestCase):
             client_type="confidential",
             authorization_grant_type="password",
         )
-        response = self.client.get("/cms-api/applications/", **self.auth_headers)
+        response = self.client.get("/cms-api/applications/")
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual(1, len(response.json()))
 
@@ -50,7 +47,7 @@ class OAuth2ApplicationTests(BaseTestCase):
             client_type="confidential",
             authorization_grant_type="password",
         )
-        response = self.client.get(f"/cms-api/applications/{app.id}/", **self.auth_headers)
+        response = self.client.get(f"/cms-api/applications/{app.id}/")
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual("App 1", response.json()["name"])
 
@@ -63,7 +60,7 @@ class OAuth2ApplicationTests(BaseTestCase):
             authorization_grant_type="password",
         )
         data = {"name": "Updated App"}
-        response = self.client.put(f"/cms-api/applications/{app.id}/", data=data, format="json", **self.auth_headers)
+        response = self.client.put(f"/cms-api/applications/{app.id}/", data=data, format="json")
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual("Updated App", response.json()["name"])
         app.refresh_from_db()
@@ -77,6 +74,6 @@ class OAuth2ApplicationTests(BaseTestCase):
             client_type="confidential",
             authorization_grant_type="password",
         )
-        response = self.client.delete(f"/cms-api/applications/{app.id}/", **self.auth_headers)
+        response = self.client.delete(f"/cms-api/applications/{app.id}/")
         self.assertEqual(204, response.status_code, response.content)
         self.assertFalse(Application.objects.filter(id=app.id).exists())

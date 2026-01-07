@@ -1,10 +1,13 @@
 import base64
 
+from django.conf import settings
 from django.utils.crypto import get_random_string
+import pytest
 
 from apps.core.tests import BaseTestCase
 
 
+@pytest.mark.skipif(condition=not settings.ENABLE_ALLAUTH, reason="related only to allauth headless flow")
 class OAuth2WorkflowTestCase(BaseTestCase):
     """
     End-to-End test for the OAuth2 workflow:
@@ -18,17 +21,25 @@ class OAuth2WorkflowTestCase(BaseTestCase):
         reg_data = {
             "email": email,
             "password": password,
-            "name": "Workflow User",
-            "job_title": "E2E Tester",
         }
 
-        reg_res = self.client.post("/cms-api/auth/register/", data=reg_data, format="json")
+        reg_res = self.client.post("/cms-api/auth/app/v1/auth/signup", data=reg_data, format="json")
         self.assertEqual(200, reg_res.status_code, reg_res.content)
-        reg_json = reg_res.json()
 
-        jwt_access_token = reg_json["access"]
-        self.assertIn("access", reg_json)
-        self.assertEqual(email, reg_json["user"]["email"])
+        # Verify login works to get JWT access token
+        client2 = self.client_class()
+        login_res = client2.post("/cms-api/auth/app/v1/auth/login", data=reg_data, format="json")
+        self.assertEqual(200, login_res.status_code, login_res.content)
+
+        refresh_token = login_res.json()["meta"]["refresh_token"]
+        access_token = login_res.json()["meta"]["access_token"]
+
+        refresh_res = client2.post(
+            "/cms-api/auth/app/v1/tokens/refresh", data={"refresh_token": refresh_token}, format="json"
+        )
+        self.assertEqual(200, refresh_res.status_code, refresh_res.content)
+        new_access_token = refresh_res.json()["data"]["access_token"]
+        self.assertNotEqual(new_access_token, access_token)
 
         # --- STEP 2: Create OAuth2 Application (Authenticated via JWT) ---
         app_data = {
@@ -36,7 +47,7 @@ class OAuth2WorkflowTestCase(BaseTestCase):
             "client_type": "confidential",
             "authorization_grant_type": "password",
         }
-        headers = {"HTTP_AUTHORIZATION": f"Bearer {jwt_access_token}"}
+        headers = {"HTTP_AUTHORIZATION": f"Bearer {new_access_token}"}
 
         app_res = self.client.post("/cms-api/applications/", data=app_data, format="json", **headers)
         self.assertEqual(200, app_res.status_code, app_res.content)

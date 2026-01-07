@@ -18,6 +18,10 @@ DEBUG = config("DEBUG", default=True, cast=bool)
 
 ALLOWED_HOSTS: list[str] = []
 
+# Feature flags
+ENABLE_OAUTH2 = config("ENABLE_OAUTH2", cast=bool, default=False)
+ENABLE_ALLAUTH = config("ENABLE_ALLAUTH", cast=bool, default=False)
+
 # Application definition
 DJANGO_APPS = [
     "django.contrib.admin",
@@ -37,14 +41,24 @@ THIRD_PARTY_APPS = [
     "corsheaders",
     "django_filters",
     "drf_spectacular",
-    "allauth",
-    "allauth.account",
-    "allauth.socialaccount",
-    "allauth.socialaccount.providers.google",
-    "allauth.socialaccount.providers.github",
+    *(
+        [
+            "allauth",
+            "allauth.account",
+            "allauth.headless",
+            "allauth.mfa",
+            "allauth.usersessions",
+            "allauth.socialaccount",
+            "allauth.socialaccount.providers.google",
+            "allauth.socialaccount.providers.github",
+        ]
+        if ENABLE_ALLAUTH
+        else []
+    ),
     "storages",
     "oauth2_provider",
 ]
+
 
 LOCAL_APPS = ["apps.core", "apps.content", "apps.users", "apps.publishers"]
 
@@ -59,7 +73,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "apps.publishers.middlewares.publisher_middleware.PublisherMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "allauth.account.middleware.AccountMiddleware",  # Required for allauth
+    *(["allauth.account.middleware.AccountMiddleware"] if ENABLE_ALLAUTH else []),
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "oauth2_provider.middleware.OAuth2TokenMiddleware",
@@ -234,6 +248,7 @@ AUTH_USER_MODEL = "users.User"
 
 
 AUTHENTICATION_BACKENDS = [
+    *(["allauth.account.auth_backends.AuthenticationBackend"] if ENABLE_ALLAUTH else []),
     "django.contrib.auth.backends.ModelBackend",
     "oauth2_provider.backends.OAuth2Backend",
 ]
@@ -287,21 +302,43 @@ ACCOUNT_ALLOW_REGISTRATION = config("DJANGO_ACCOUNT_ALLOW_REGISTRATION", True, c
 ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
-ACCOUNT_ADAPTER = "apps.users.adapters.AccountAdapter"
+# ACCOUNT_ADAPTER = "apps.users.adapters.AccountAdapter"
 ACCOUNT_FORMS = {"signup": "apps.users.forms.UserSignupForm"}
-SOCIALACCOUNT_ADAPTER = "apps.users.adapters.SocialAccountAdapter"
-SOCIALACCOUNT_FORMS = {"signup": "apps.users.forms.UserSocialSignupForm"}
-
 ACCOUNT_EMAIL_VERIFICATION = "none"
+ACCOUNT_EMAIL_VERIFICATION_BY_CODE_ENABLED = False
 ACCOUNT_USER_MODEL_EMAIL_FIELD = "email"
 ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = False
 ACCOUNT_LOGOUT_ON_GET = False
 ACCOUNT_SESSION_REMEMBER = True
 ACCOUNT_UNIQUE_EMAIL = True
 
-SOCIALACCOUNT_EMAIL_VERIFICATION = "none"
+SOCIALACCOUNT_EMAIL_VERIFICATION = "mandatory"
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_QUERY_EMAIL = True
+SOCIALACCOUNT_ADAPTER = "apps.users.adapters.SocialAccountAdapter"
+SOCIALACCOUNT_FORMS = {"signup": "apps.users.forms.UserSocialSignupForm"}
+
+HEADLESS_ONLY = True
+HEADLESS_FRONTEND_URLS = {
+    "account_confirm_email": "/account/verify-email/{key}",
+    "account_reset_password": "/account/password/reset",
+    "account_reset_password_from_key": "/account/password/reset/key/{key}",
+    "account_signup": "/account/signup",
+    "socialaccount_login_error": "/account/provider/callback",
+}
+HEADLESS_CLIENTS = ["app", "browser"]
+HEADLESS_SERVE_SPECIFICATION = True
+HEADLESS_SPECIFICATION_TEMPLATE_NAME = None  # disable html docs
+HEADLESS_TOKEN_STRATEGY = "allauth.headless.tokens.strategies.jwt.JWTTokenStrategy"
+if ENABLE_ALLAUTH:
+    with open(config("ALLAUTH_JWT_PRIVATE_KEY")) as jwt_key:
+        HEADLESS_JWT_PRIVATE_KEY = jwt_key.read()
+    # Create Private key from here https://docs.allauth.org/en/latest/headless/token-strategies/jwt-tokens.html
+
+MFA_SUPPORTED_TYPES = ["totp", "recovery_codes", "webauthn"]
+MFA_PASSKEY_LOGIN_ENABLED = True
+MFA_PASSKEY_SIGNUP_ENABLED = False
+MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = True
 
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
@@ -312,7 +349,7 @@ SOCIALACCOUNT_PROVIDERS = {
     "github": {"SCOPE": ["user:email"], "VERIFIED_EMAIL": True},
 }
 
-# OAuth2 Provider Configuration
+# Django Oauth2 Toolkit: OAuth2 Provider Configuration
 OAUTH2_PROVIDER = {
     "PKCE_REQUIRED": True,
     "ACCESS_TOKEN_EXPIRE_SECONDS": 3600,
@@ -390,5 +427,3 @@ SENTRY_ENABLED = config("SENTRY_ENABLED", cast=bool, default=False)
 
 if SENTRY_ENABLED and sentry_sdk:
     enable_sentry()
-
-ENABLE_OAUTH2 = config("ENABLE_OAUTH2", cast=bool, default=False)

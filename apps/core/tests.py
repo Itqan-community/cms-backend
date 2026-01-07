@@ -3,6 +3,7 @@ import secrets
 from typing import Literal
 from unittest.mock import patch
 
+from allauth.headless.tokens.strategies.jwt.internal import create_access_token
 import boto3
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -75,19 +76,23 @@ class BaseTestCase(TestCase):
     ):
         """
         if `user` is supplied with None, the authentication will be cleared
-        if `user` is supplied with a `User`, it will be authenticated using JWT tokens
+        if `user` is supplied with a `User`, it will be authenticated using Django allauth session tokens
         """
         if not kwargs:
             kwargs = {}
 
         if user is None:
             # Clear authentication
+            kwargs.pop("HTTP_X_SESSION_TOKEN", None)
             kwargs.pop("HTTP_AUTHORIZATION", None)
         else:
-            # Generate JWT token for the user
-            # Use AccessToken directly to avoid creating OutstandingToken entries during tests
-            access_token = str(JWTAccessToken.for_user(user))
-            kwargs["HTTP_AUTHORIZATION"] = f"Bearer {access_token}"
+            if settings.ENABLE_ALLAUTH:
+                self.client.force_login(user=user, **kwargs)
+                token = create_access_token(user, session=self.client.session, claims={})
+                kwargs["HTTP_AUTHORIZATION"] = f"Bearer {token}"
+            else:
+                access_token = str(JWTAccessToken.for_user(user))
+                kwargs["HTTP_AUTHORIZATION"] = f"Bearer {access_token}"
 
         headers = {
             "HTTP_ACCEPT_LANGUAGE": language,
