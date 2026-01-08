@@ -46,16 +46,19 @@ def list_recitation_tracks(request: Request, asset_id: int):
         )
     )
 
-    tracks = RecitationSurahTrack.objects.filter(asset=asset).order_by("surah_number")
+    tracks = RecitationSurahTrack.objects.filter(asset=asset).prefetch_related("ayah_timings").order_by("surah_number")
 
     results: list[RecitationSurahTrackOut] = []
 
     for track in tracks:
         audio_url = f"{CLOUDFLARE_R2_PUBLIC_BASE_URL}/media/{track.audio_file.name}"
 
-        # Build ayah timings list from RecitationAyahTiming model (related_name='ayah_timings')
         ayah_timings: list[RecitationAyahTimingOut] = []
-        for t in track.ayah_timings.all().only("ayah_key", "start_ms", "end_ms", "duration_ms").order_by("ayah_key"):
+        sorted_ayah_timings_qs = sorted(
+            track.ayah_timings.all(),
+            key=lambda a: (int(a.ayah_key.split(":")[0]), int(a.ayah_key.split(":")[1])),
+        )
+        for t in sorted_ayah_timings_qs:
             ayah_timings.append(
                 RecitationAyahTimingOut(
                     ayah_key=t.ayah_key,

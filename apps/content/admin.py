@@ -673,16 +673,16 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
                 asset = form.cleaned_data["asset"]
                 tracks = (
                     RecitationSurahTrack.objects.filter(asset=asset)
+                    .prefetch_related("ayah_timings")
                     .order_by("surah_number")
                     .only("surah_number", "audio_file", "duration_ms")
                 )
                 result: list[RecitationSurahTrackOut] = []
                 for track in tracks:
                     url = f"{CLOUDFLARE_R2_PUBLIC_BASE_URL}/media/{track.audio_file.name}"
-                    timings_qs = (
-                        track.ayah_timings.all()
-                        .only("ayah_key", "start_ms", "end_ms", "duration_ms")
-                        .order_by("ayah_key")
+                    sorted_ayah_timings_qs = sorted(
+                        track.ayah_timings.all(),
+                        key=lambda a: (int(a.ayah_key.split(":")[0]), int(a.ayah_key.split(":")[1])),
                     )
                     ayahs_timings = [
                         RecitationAyahTimingOut(
@@ -691,7 +691,7 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
                             end_ms=t.end_ms,
                             duration_ms=t.duration_ms,
                         )
-                        for t in timings_qs
+                        for t in sorted_ayah_timings_qs
                     ]
                     result.append(
                         RecitationSurahTrackOut(
