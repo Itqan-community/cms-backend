@@ -1,10 +1,13 @@
+from django.conf import settings
 from oauth2_provider.models import Application
+import pytest
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.core.tests import BaseTestCase
 from apps.users.models import User
 
 
+@pytest.mark.skipif(not settings.ENABLE_OAUTH2, reason="OAuth2 disabled in settings")
 class OAuth2ApplicationTests(BaseTestCase):
     """Test suite for OAuth2 Application CRUD endpoints"""
 
