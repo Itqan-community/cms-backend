@@ -37,5 +37,15 @@ Proceed?
       })();
     </script>
   </li>
+  <li>
+    <a href="{% url 'admin:asset_bulk_upload_tracks' original.pk %}">
+      {% translate "Bulk Upload Mushaf Tracks" %}
+    </a>
+  </li>
+  <li>
+    <a href="{% url 'admin:asset_import_ayah_timings' original.pk %}">
+      {% translate "Import Ayah Timings from JSON Files" %}
+    </a>
+  </li>
 {% endif %}
 {% endblock %}

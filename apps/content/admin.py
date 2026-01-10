@@ -1,12 +1,10 @@
-from django.contrib import admin, messages
-from django.db import transaction
+from django.contrib import admin
 from django.db.models import Count
 from django.shortcuts import redirect, render
 from django.urls import path, reverse
 from django.utils.html import format_html
 
 from ..core.mixins.constants import QURAN_SURAHS
-from ..mixins.recitations_helpers import extract_surah_number_from_filename
 from .forms.bulk_recitation_timings_upload_form import BulkRecitationTimingsUploadForm
 from .forms.bulk_recitations_upload_form import BulkRecitationUploadForm
 from .models import (
@@ -23,14 +21,15 @@ from .models import (
     Riwayah,
     UsageEvent,
 )
+from .services.admin.bulk_recitations_upload import upload_recitation_tracks_for_asset
+from .services.admin.import_ayah_timings import import_recitation_ayah_timings_for_asset
 from .services.asset_recitations_sync import sync_asset_recitations_downloadable_json_file
-from .services.ayah_timings_import import parse_json_bytes
 
 
 class ResourceVersionInline(admin.TabularInline):
     model = ResourceVersion
     extra = 0
-    fields = ["semvar", "file_type", "is_latest", "storage_url"]
+    fields = ["semvar", "storage_url"]
     readonly_fields = ["created_at"]
 
 
@@ -127,12 +126,10 @@ class ResourceVersionAdmin(admin.ModelAdmin):
     list_display = [
         "resource",
         "semvar",
-        "file_type",
-        "is_latest",
         "size_bytes",
         "created_at",
     ]
-    list_filter = ["file_type", "is_latest", "created_at"]
+    list_filter = ["created_at"]
     search_fields = ["resource__name", "semvar"]
     readonly_fields = ["created_at", "updated_at"]
 
@@ -273,6 +270,16 @@ class AssetAdmin(admin.ModelAdmin):
                 self.admin_site.admin_view(self.sync_recitations_json_view),
                 name="asset_sync_recitations_json",
             ),
+            path(
+                "<int:asset_id>/bulk-upload-tracks/",
+                self.admin_site.admin_view(self.bulk_upload_tracks_view),
+                name="asset_bulk_upload_tracks",
+            ),
+            path(
+                "<int:asset_id>/import-ayah-timings/",
+                self.admin_site.admin_view(self.import_ayah_timings_view),
+                name="asset_import_ayah_timings",
+            ),
         ]
         return custom_urls + urls
 
@@ -288,6 +295,103 @@ class AssetAdmin(admin.ModelAdmin):
 
         self.message_user(request, "Asset Recitation Downloaded JSON File Synced Successfully.")
         return redirect(reverse("admin:content_asset_change", args=[asset_id]))
+
+    def bulk_upload_tracks_view(self, request, asset_id: int):
+        if request.method == "POST":
+            form = BulkRecitationUploadForm(request.POST, request.FILES)
+            if form.is_valid():
+                files = request.FILES.getlist("audio_files")
+                stats = upload_recitation_tracks_for_asset(asset_id=asset_id, files=files)
+
+                if stats.get("created"):
+                    self.message_user(request, f"Created {stats['created']} recitation tracks.")
+                if stats.get("filename_errors"):
+                    self.message_user(
+                        request,
+                        f"{stats['filename_errors']} files were skipped due to filename issues.",
+                        level="WARNING",
+                    )
+                if stats.get("skipped_duplicates"):
+                    preview_details = stats.get("duplicate_details") or []
+                    preview = ", ".join(preview_details[:10])
+                    more = "" if len(preview_details) <= 10 else f" and {len(preview_details) - 10} more"
+                    self.message_user(
+                        request,
+                        f"Skipped {stats['skipped_duplicates']} files due to duplicates: {preview}{more}.",
+                        level="WARNING",
+                    )
+                if stats.get("other_errors"):
+                    error_details = stats.get("other_error_details") or []
+                    preview = "; ".join(error_details[:5])
+                    more = "" if len(error_details) <= 5 else f" and {len(error_details) - 5} more"
+                    self.message_user(
+                        request, f"Upload encountered errors: {preview}{more}. All changes rolled back.", level="ERROR"
+                    )
+
+                return redirect(reverse("admin:content_asset_change", args=[asset_id]))
+        else:
+            form = BulkRecitationUploadForm()
+
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Bulk upload recitation surah tracks",
+            "form": form,
+            "redirect_url": reverse("admin:content_asset_change", args=[asset_id]),
+            "surah_map_ar": {k: v.get("name", "") for k, v in QURAN_SURAHS.items()},
+            "surah_map_en": {k: v.get("name_en", "") for k, v in QURAN_SURAHS.items()},
+        }
+        return render(
+            request,
+            "content/admin/recitationsurahtrack_bulk_upload.html",
+            context,
+        )
+
+    def import_ayah_timings_view(self, request, asset_id: int):
+        if request.method == "POST":
+            form = BulkRecitationTimingsUploadForm(request.POST, request.FILES)
+            if form.is_valid():
+                files = request.FILES.getlist("json_files")
+                overwrite: bool = form.cleaned_data.get("overwrite", False)
+                dry_run: bool = form.cleaned_data.get("dry_run", True)
+
+                stats = import_recitation_ayah_timings_for_asset(
+                    asset_id=asset_id,
+                    files=files,
+                    overwrite=overwrite,
+                    dry_run=dry_run,
+                )
+
+                if stats.get("missing_tracks"):
+                    self.message_user(
+                        request,
+                        f"Missing RecitationSurahTrack for surah(s): {stats['missing_tracks']} (asset_id={asset_id})",
+                        level="WARNING",
+                    )
+                if stats.get("file_errors"):
+                    preview = "; ".join(stats["file_errors"][:5])
+                    more = "" if len(stats["file_errors"]) <= 5 else f" and {len(stats['file_errors']) - 5} more"
+                    self.message_user(request, f"Some files failed to parse: {preview}{more}", level="WARNING")
+
+                self.message_user(
+                    request,
+                    f"Done. created={stats.get('created_total',0)}, updated={stats.get('updated_total',0)}, "
+                    f"skipped={stats.get('skipped_total',0)}, files={len(files)}, asset_id={asset_id}, "
+                    f"dry_run={dry_run}, overwrite={overwrite}",
+                )
+                return redirect(reverse("admin:content_asset_change", args=[asset_id]))
+        else:
+            form = BulkRecitationTimingsUploadForm(initial={"dry_run": True})
+
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Import ayah timings from JSON files",
+            "form": form,
+        }
+        return render(
+            request,
+            "content/admin/recitationayahtiming_import.html",
+            context,
+        )
 
 
 @admin.register(AssetVersion)
@@ -556,129 +660,6 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("asset")
 
-    change_list_template = "content/admin/recitationsurahtrack_changelist.html"
-
-    def get_urls(self):
-        urls = super().get_urls()
-        custom_urls = [
-            path(
-                "bulk-upload/",
-                self.admin_site.admin_view(self.bulk_upload_view),
-                name="recitationsurahtrack_bulk_upload",
-            ),
-        ]
-        return custom_urls + urls
-
-    def bulk_upload_view(self, request):
-        if request.method == "POST":
-            form = BulkRecitationUploadForm(request.POST, request.FILES)
-            if form.is_valid():
-                asset = form.cleaned_data["asset"]
-                files = request.FILES.getlist("audio_files")
-
-                created = 0
-                filename_errors = 0
-                skipped_duplicates = 0
-                other_errors = 0
-                duplicate_details: list[str] = []
-                other_error_details: list[str] = []
-                uploaded_file_names: list[str] = []  # for best-effort cleanup on rollback
-                seen_surahs: set[int] = set()  # duplicates within the same selection
-
-                try:
-                    with transaction.atomic():
-                        for f in files:
-                            try:
-                                surah_number = extract_surah_number_from_filename(f.name)
-                            except ValueError as e:
-                                messages.error(request, str(e))
-                                filename_errors += 1
-                                continue
-
-                            # Skip duplicate surah within this same upload selection
-                            if surah_number in seen_surahs:
-                                skipped_duplicates += 1
-                                duplicate_details.append(f"{f.name} (duplicate in selection)")
-                                continue
-                            seen_surahs.add(surah_number)
-
-                            # Skip if already exists in DB
-                            if RecitationSurahTrack.objects.filter(asset=asset, surah_number=surah_number).exists():
-                                skipped_duplicates += 1
-                                duplicate_details.append(f"{f.name} (already exists)")
-                                continue
-
-                            # Simple path: let Django storage handle the upload and create DB row
-                            obj = RecitationSurahTrack.objects.create(
-                                asset=asset,
-                                surah_number=surah_number,
-                                audio_file=f,
-                            )
-                            try:
-                                if obj.audio_file and getattr(obj.audio_file, "name", None):
-                                    uploaded_file_names.append(obj.audio_file.name)
-                            except Exception:
-                                pass
-                            created += 1
-                except Exception as e:
-                    # Best-effort cleanup of any uploaded files when the DB transaction rolls back
-                    try:
-                        from django.core.files.storage import default_storage
-
-                        for name in uploaded_file_names:
-                            try:
-                                default_storage.delete(name)
-                            except Exception:
-                                pass
-                    except Exception:
-                        pass
-
-                    other_errors += 1
-                    other_error_details.append(str(e))
-
-                if created:
-                    messages.success(
-                        request,
-                        f"Created {created} recitation tracks for asset {asset}.",
-                    )
-                if filename_errors:
-                    messages.warning(
-                        request,
-                        f"{filename_errors} files were skipped due to filename issues.",
-                    )
-                if skipped_duplicates:
-                    preview = ", ".join(duplicate_details[:10])
-                    more = "" if len(duplicate_details) <= 10 else f" and {len(duplicate_details) - 10} more"
-                    messages.warning(
-                        request,
-                        f"Skipped {skipped_duplicates} files due to duplicates: {preview}{more}.",
-                    )
-                if other_errors:
-                    preview = "; ".join(other_error_details[:5])
-                    more = "" if len(other_error_details) <= 5 else f" and {len(other_error_details) - 5} more"
-                    messages.error(
-                        request,
-                        f"Upload encountered errors: {preview}{more}. All changes rolled back.",
-                    )
-
-                return redirect("admin:content_recitationsurahtrack_changelist")
-        else:
-            form = BulkRecitationUploadForm()
-
-        context = {
-            **self.admin_site.each_context(request),
-            "title": "Bulk upload recitation surah tracks",
-            "form": form,
-            "redirect_url": reverse("admin:content_recitationsurahtrack_changelist"),
-            "surah_map_ar": {k: v.get("name", "") for k, v in QURAN_SURAHS.items()},
-            "surah_map_en": {k: v.get("name_en", "") for k, v in QURAN_SURAHS.items()},
-        }
-        return render(
-            request,
-            "content/admin/recitationsurahtrack_bulk_upload.html",
-            context,
-        )
-
 
 @admin.register(RecitationAyahTiming)
 class RecitationAyahTimingAdmin(admin.ModelAdmin):
@@ -686,144 +667,10 @@ class RecitationAyahTimingAdmin(admin.ModelAdmin):
     list_filter = ["track__asset", "track__surah_number"]
     search_fields = ["ayah_key", "track__surah_number"]
     readonly_fields = ["created_at", "updated_at"]
-    change_list_template = "content/admin/recitationayahtiming_changelist.html"
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("track", "track__asset")
 
-    @admin.display(description="Surah Name", ordering="track__surah_number")
+    @admin.display(description="Surah Name (AR)", ordering="track__surah_number")
     def surah_name(self, obj: RecitationAyahTiming) -> str:
         return QURAN_SURAHS[obj.track.surah_number]["name"]
-
-    def get_urls(self):
-        urls = super().get_urls()
-        custom_urls = [
-            path(
-                "import-ayah-timings/",
-                self.admin_site.admin_view(self.import_ayah_timings_view),
-                name="recitationayahtiming_import",
-            ),
-        ]
-        return custom_urls + urls
-
-    def import_ayah_timings_view(self, request):
-        if request.method == "POST":
-            form = BulkRecitationTimingsUploadForm(request.POST, request.FILES)
-            if form.is_valid():
-                asset = form.cleaned_data["asset"]
-                files = request.FILES.getlist("json_files")
-                overwrite: bool = form.cleaned_data.get("overwrite", False)
-                dry_run: bool = form.cleaned_data.get("dry_run", True)
-
-                # Preload tracks for the asset
-                tracks = RecitationSurahTrack.objects.filter(asset=asset).only("id", "surah_number")
-                track_by_surah = {t.surah_number: t for t in tracks}
-
-                created_total = 0
-                updated_total = 0
-                skipped_total = 0
-                missing_tracks: list[int] = []
-                file_errors: list[str] = []
-
-                try:
-                    with transaction.atomic():
-                        for f in files:
-                            try:
-                                surah_number, rows = parse_json_bytes(f.read())
-                            except Exception as e:
-                                file_errors.append(f"{f.name}: {e}")
-                                continue
-
-                            track = track_by_surah.get(surah_number)
-                            if not track:
-                                missing_tracks.append(surah_number)
-                                continue
-
-                            existing = {
-                                t.ayah_key: t
-                                for t in RecitationAyahTiming.objects.filter(track=track).only(
-                                    "id", "ayah_key", "start_ms", "end_ms", "duration_ms"
-                                )
-                            }
-
-                            to_create: list[RecitationAyahTiming] = []
-                            to_update: list[RecitationAyahTiming] = []
-
-                            for row in rows:
-                                obj: RecitationAyahTiming | None = existing.get(row.ayah_key)
-                                if not obj:
-                                    to_create.append(
-                                        RecitationAyahTiming(
-                                            track=track,
-                                            ayah_key=row.ayah_key,
-                                            start_ms=row.start_ms,
-                                            end_ms=row.end_ms,
-                                            duration_ms=row.duration_ms,
-                                        )
-                                    )
-                                    continue
-
-                                if not overwrite:
-                                    skipped_total += 1
-                                    continue
-
-                                changed = (
-                                    obj.start_ms != row.start_ms
-                                    or obj.end_ms != row.end_ms
-                                    or obj.duration_ms != row.duration_ms
-                                )
-                                if changed:
-                                    obj.start_ms = row.start_ms
-                                    obj.end_ms = row.end_ms
-                                    obj.duration_ms = row.duration_ms
-                                    to_update.append(obj)
-                                else:
-                                    skipped_total += 1
-
-                            if to_create and not dry_run:
-                                RecitationAyahTiming.objects.bulk_create(to_create, batch_size=2000)
-                            if to_update and not dry_run:
-                                RecitationAyahTiming.objects.bulk_update(
-                                    to_update, fields=["start_ms", "end_ms", "duration_ms"], batch_size=2000
-                                )
-
-                            created_total += len(to_create)
-                            updated_total += len(to_update)
-
-                        if dry_run:
-                            transaction.set_rollback(True)
-                except Exception as e:
-                    messages.error(request, f"Import failed: {e}")
-                    return redirect("admin:content_recitationayahtiming_changelist")
-
-                if missing_tracks:
-                    missing_tracks = sorted(set(missing_tracks))
-                    messages.warning(
-                        request,
-                        f"Missing RecitationSurahTrack for surah(s): {missing_tracks} (asset_id={asset.id})",
-                    )
-                if file_errors:
-                    preview = "; ".join(file_errors[:5])
-                    more = "" if len(file_errors) <= 5 else f" and {len(file_errors) - 5} more"
-                    messages.warning(request, f"Some files failed to parse: {preview}{more}")
-
-                messages.success(
-                    request,
-                    f"Done. created={created_total}, updated={updated_total}, skipped={skipped_total}, "
-                    f"files={len(files)}, asset_id={asset.id}, dry_run={dry_run}, overwrite={overwrite}",
-                )
-                return redirect("admin:content_recitationayahtiming_changelist")
-        else:
-            # Default dry_run enabled
-            form = BulkRecitationTimingsUploadForm(initial={"dry_run": True})
-
-        context = {
-            **self.admin_site.each_context(request),
-            "title": "Import ayah timings from JSON files",
-            "form": form,
-        }
-        return render(
-            request,
-            "content/admin/recitationayahtiming_import.html",
-            context,
-        )

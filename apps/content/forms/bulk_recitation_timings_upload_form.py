@@ -1,7 +1,5 @@
 from django import forms
 
-from apps.content.models import Asset
-
 
 class MultipleFileInput(forms.ClearableFileInput):
     allow_multiple_selected = True
@@ -22,10 +20,6 @@ class MultipleFileField(forms.FileField):
 
 
 class BulkRecitationTimingsUploadForm(forms.Form):
-    asset = forms.ModelChoiceField(
-        queryset=Asset.objects.filter(category="recitation"),
-        label="Asset (Mushaf)",
-    )
     json_files = MultipleFileField(
         label="JSON Files",
         help_text="Upload one or multiple .json files (one per surah)",
