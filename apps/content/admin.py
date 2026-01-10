@@ -1,19 +1,14 @@
 from django.contrib import admin, messages
 from django.db import transaction
 from django.db.models import Count
-from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import path, reverse
 from django.utils.html import format_html
 
-from config.settings.base import CLOUDFLARE_R2_PUBLIC_BASE_URL
-
 from ..core.mixins.constants import QURAN_SURAHS
 from ..mixins.recitations_helpers import extract_surah_number_from_filename
-from .api.public.recitation_detail import RecitationAyahTimingOut, RecitationSurahTrackOut
 from .forms.bulk_recitation_timings_upload_form import BulkRecitationTimingsUploadForm
 from .forms.bulk_recitations_upload_form import BulkRecitationUploadForm
-from .forms.download_recitations_json_form import DownloadRecitationsJsonForm
 from .models import (
     Asset,
     AssetAccess,
@@ -28,6 +23,7 @@ from .models import (
     Riwayah,
     UsageEvent,
 )
+from .services.asset_recitations_sync import sync_asset_recitations_downloadable_json_file
 from .services.ayah_timings_import import parse_json_bytes
 
 
@@ -156,6 +152,9 @@ class AssetAdmin(admin.ModelAdmin):
     search_fields = ["name", "description", "long_description"]
     inlines = [AssetVersionInline]
 
+    # Custom change form for actions for recitation assets
+    change_form_template = "content/admin/asset_change_form.html"
+
     fieldsets = (
         (
             "Basic Information",
@@ -265,6 +264,30 @@ class AssetAdmin(admin.ModelAdmin):
                 latest_version.file_url.url,
             )
         return "No download URL"
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "<int:asset_id>/sync-recitations-json/",
+                self.admin_site.admin_view(self.sync_recitations_json_view),
+                name="asset_sync_recitations_json",
+            ),
+        ]
+        return custom_urls + urls
+
+    def sync_recitations_json_view(self, request, asset_id: int):
+        if request.method != "POST":
+            return redirect(reverse("admin:content_asset_change", args=[asset_id]))
+
+        try:
+            sync_asset_recitations_downloadable_json_file(asset_id=asset_id)
+        except Exception as e:
+            self.message_user(request, f"Sync failed: {e}", level="ERROR")
+            return redirect(reverse("admin:content_asset_change", args=[asset_id]))
+
+        self.message_user(request, "Asset Recitation Downloaded JSON File Synced Successfully.")
+        return redirect(reverse("admin:content_asset_change", args=[asset_id]))
 
 
 @admin.register(AssetVersion)
@@ -543,11 +566,6 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
                 self.admin_site.admin_view(self.bulk_upload_view),
                 name="recitationsurahtrack_bulk_upload",
             ),
-            path(
-                "download-json/",
-                self.admin_site.admin_view(self.download_json_view),
-                name="recitationsurahtrack_download_json",
-            ),
         ]
         return custom_urls + urls
 
@@ -658,75 +676,6 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
         return render(
             request,
             "content/admin/recitationsurahtrack_bulk_upload.html",
-            context,
-        )
-
-    def download_json_view(self, request):
-        if request.method == "POST":
-            form = DownloadRecitationsJsonForm(request.POST)
-            if form.is_valid():
-                import json
-
-                asset = form.cleaned_data["asset"]
-                tracks = (
-                    RecitationSurahTrack.objects.filter(asset=asset)
-                    .prefetch_related("ayah_timings")
-                    .order_by("surah_number")
-                    .only("surah_number", "audio_file", "duration_ms")
-                )
-                result: list[RecitationSurahTrackOut] = []
-                for track in tracks:
-                    url = f"{CLOUDFLARE_R2_PUBLIC_BASE_URL}/media/{track.audio_file.name}"
-                    sorted_ayah_timings_qs = sorted(
-                        track.ayah_timings.all(),
-                        key=lambda a: (int(a.ayah_key.split(":")[0]), int(a.ayah_key.split(":")[1])),
-                    )
-                    ayahs_timings = [
-                        RecitationAyahTimingOut(
-                            ayah_key=t.ayah_key,
-                            start_ms=t.start_ms,
-                            end_ms=t.end_ms,
-                            duration_ms=t.duration_ms,
-                        )
-                        for t in sorted_ayah_timings_qs
-                    ]
-                    result.append(
-                        RecitationSurahTrackOut(
-                            surah_number=track.surah_number,
-                            surah_name=QURAN_SURAHS[track.surah_number]["name"],
-                            surah_name_en=QURAN_SURAHS[track.surah_number]["name_en"],
-                            audio_url=url,
-                            duration_ms=track.duration_ms,
-                            size_bytes=track.size_bytes,
-                            revelation_order=QURAN_SURAHS[track.surah_number]["revelation_order"],
-                            revelation_place=QURAN_SURAHS[track.surah_number]["revelation_place"],
-                            ayahs_count=QURAN_SURAHS[track.surah_number]["ayahs_count"],
-                            ayahs_timings=ayahs_timings,
-                        )
-                    )
-
-                result_serialized = [i.model_dump() for i in result]
-                payload = json.dumps(result_serialized, ensure_ascii=False, indent=2)
-                reciter_slug = asset.reciter.slug if asset.reciter else ""
-                filename = (
-                    f"asset_{asset.id}_{reciter_slug}_recitations.json"
-                    if reciter_slug
-                    else f"asset_{asset.id}_recitations.json"
-                )
-                response = HttpResponse(payload, content_type="application/json; charset=utf-8")
-                response["Content-Disposition"] = f'attachment; filename="{filename}"'
-                return response
-        else:
-            form = DownloadRecitationsJsonForm()
-
-        context = {
-            **self.admin_site.each_context(request),
-            "title": "Download JSON file for Mushaf tracks",
-            "form": form,
-        }
-        return render(
-            request,
-            "content/admin/recitationsurahtrack_download_json.html",
             context,
         )
 
