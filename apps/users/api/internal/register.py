@@ -1,6 +1,7 @@
 from typing import Literal
 
 from django.conf import settings
+from django.db import transaction
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
@@ -25,6 +26,7 @@ if not settings.ENABLE_ALLAUTH:
         summary="Register",
         description="Register new user with email and password",
     )
+    @transaction.atomic
     def register_user(request: Request, registration_data: RegisterSchema):
         """Register new user"""
         # Check if user already exists

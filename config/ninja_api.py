@@ -22,7 +22,7 @@ def create_ninja_api(
     enable_throttle: bool = True,
     enable_parser: bool = True,
     urls_namespace: str | None = None,
-    docs_decorator: Callable[[TCallable], TCallable] = None,
+    docs_decorator: Callable[[TCallable], TCallable] | None = None,
     openapi_extra: dict[str, Any] | None = None,
 ) -> NinjaAPI:
     """

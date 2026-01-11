@@ -76,7 +76,7 @@ class BaseTestCase(TestCase):
     ):
         """
         if `user` is supplied with None, the authentication will be cleared
-        if `user` is supplied with a `User`, it will be authenticated using Django allauth session tokens
+        if `user` is supplied with a `User`, it will be authenticated using JWT tokens
         """
         if not kwargs:
             kwargs = {}
