@@ -285,7 +285,7 @@ class AssetAdmin(admin.ModelAdmin):
                 name="asset_bulk_upload_recitation_audio_tracks",
             ),
             path(
-                "<int:asset_id>/bulk-upload--ayahs-timestamps/",
+                "<int:asset_id>/bulk-upload-ayahs-timestamps/",
                 self.admin_site.admin_view(self.bulk_upload_ayahs_timestamps_view),
                 name="asset_bulk_upload_recitation_ayah_timestamps",
             ),

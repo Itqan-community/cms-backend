@@ -19,7 +19,7 @@ def _build_recitations_json(asset: Asset) -> tuple[str, str]:
         RecitationSurahTrack.objects.filter(asset=asset)
         .prefetch_related("ayah_timings")
         .order_by("surah_number")
-        .only("surah_number", "audio_file", "duration_ms")
+        .only("surah_number", "audio_file", "duration_ms", "size_bytes")
     )
 
     result: list[RecitationSurahTrackOut] = []
