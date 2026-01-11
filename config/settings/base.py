@@ -68,7 +68,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "apps.publishers.middlewares.publisher_middleware.PublisherMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    *(["allauth.account.middleware.AccountMiddleware"] if ENABLE_ALLAUTH else []),
+    "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "oauth2_provider.middleware.OAuth2TokenMiddleware",
