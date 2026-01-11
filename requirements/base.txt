@@ -37,5 +37,6 @@ python-decouple==3.8
 Pillow>=10.3.0
 python-dateutil==2.8.*
 requests==2.31.*
+mutagen>=1.47.0
 
 scalar-django-ninja==0.1.4
