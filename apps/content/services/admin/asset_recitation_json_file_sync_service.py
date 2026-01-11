@@ -61,7 +61,7 @@ def _build_recitations_json(asset: Asset) -> tuple[str, str]:
     return payload, filename
 
 
-def sync_asset_recitations_downloadable_json_file(asset_id: int) -> tuple[AssetVersion, str]:
+def sync_asset_recitations_json_file(asset_id: int) -> tuple[AssetVersion, str]:
     """
     Build the recitation JSON for the Asset and save it into the LATEST AssetVersion.file_url.
     - Raises ValueError if the Asset does not exist or if there is no latest AssetVersion.

@@ -4,6 +4,10 @@ from django.shortcuts import redirect, render
 from django.urls import path, reverse
 from django.utils.html import format_html
 
+from apps.content.services.admin.asset_recitation_json_file_sync_service import (
+    sync_asset_recitations_json_file,
+)
+
 from ..core.mixins.constants import QURAN_SURAHS
 from .forms.recitation_audio_tracks_bulk_upload_form import RecitationAudioTracksBulkUploadForm
 from .forms.recitation_ayah_timestamps_bulk_upload_form import (
@@ -23,13 +27,12 @@ from .models import (
     Riwayah,
     UsageEvent,
 )
-from .services.admin.recitation_audio_tracks_bulk_upload_service import (
+from .services.admin.asset_recitation_audio_tracks_upload_service import (
     bulk_upload_recitation_audio_tracks,
 )
-from .services.admin.recitation_ayah_timestamps_bulk_upload_service import (
+from .services.admin.asset_recitation_ayah_timestamps_upload_service import (
     bulk_upload_recitation_ayah_timestamps,
 )
-from .services.asset_recitations_sync import sync_asset_recitations_downloadable_json_file
 
 
 class ResourceVersionInline(admin.TabularInline):
@@ -42,7 +45,7 @@ class ResourceVersionInline(admin.TabularInline):
 class AssetVersionInline(admin.TabularInline):
     model = AssetVersion
     extra = 0
-    fields = ["resource_version", "name", "file_url"]
+    fields = ["resource_version", "file_url"]
     readonly_fields = ["created_at"]
 
 
@@ -294,7 +297,7 @@ class AssetAdmin(admin.ModelAdmin):
             return redirect(reverse("admin:content_asset_change", args=[asset_id]))
 
         try:
-            sync_asset_recitations_downloadable_json_file(asset_id=asset_id)
+            sync_asset_recitations_json_file(asset_id=asset_id)
         except Exception as e:
             self.message_user(request, f"Sync failed: {e}", level="ERROR")
             return redirect(reverse("admin:content_asset_change", args=[asset_id]))
@@ -340,7 +343,7 @@ class AssetAdmin(admin.ModelAdmin):
 
         context = {
             **self.admin_site.each_context(request),
-            "title": "Bulk upload recitation surah tracks",
+            "title": "Bulk Upload Recitation Audio Tracks",
             "form": form,
             "redirect_url": reverse("admin:content_asset_change", args=[asset_id]),
             "surah_map_ar": {k: v.get("name", "") for k, v in QURAN_SURAHS.items()},
@@ -390,7 +393,7 @@ class AssetAdmin(admin.ModelAdmin):
 
         context = {
             **self.admin_site.each_context(request),
-            "title": "Import ayah timings from JSON files",
+            "title": "Import Recitation Ayah Timestamps from JSON Files",
             "form": form,
         }
         return render(
