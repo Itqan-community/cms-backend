@@ -41,20 +41,14 @@ THIRD_PARTY_APPS = [
     "corsheaders",
     "django_filters",
     "drf_spectacular",
-    *(
-        [
-            "allauth",
-            "allauth.account",
-            "allauth.headless",
-            "allauth.mfa",
-            "allauth.usersessions",
-            "allauth.socialaccount",
-            "allauth.socialaccount.providers.google",
-            "allauth.socialaccount.providers.github",
-        ]
-        if ENABLE_ALLAUTH
-        else []
-    ),
+    "allauth",
+    "allauth.account",
+    "allauth.headless",
+    "allauth.mfa",
+    "allauth.usersessions",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
+    "allauth.socialaccount.providers.github",
     "storages",
     "oauth2_provider",
 ]
@@ -349,7 +343,7 @@ if ENABLE_ALLAUTH:
 MFA_SUPPORTED_TYPES = ["totp", "recovery_codes", "webauthn"]
 MFA_PASSKEY_LOGIN_ENABLED = True
 MFA_PASSKEY_SIGNUP_ENABLED = False
-MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = True
+MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = DEBUG
 
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
