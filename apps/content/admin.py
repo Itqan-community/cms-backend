@@ -5,8 +5,10 @@ from django.urls import path, reverse
 from django.utils.html import format_html
 
 from ..core.mixins.constants import QURAN_SURAHS
-from .forms.bulk_recitation_timings_upload_form import BulkRecitationTimingsUploadForm
-from .forms.bulk_recitations_upload_form import BulkRecitationUploadForm
+from .forms.recitation_audio_tracks_bulk_upload_form import RecitationAudioTracksBulkUploadForm
+from .forms.recitation_ayah_timestamps_bulk_upload_form import (
+    RecitationAyahTimestampsBulkUploadForm,
+)
 from .models import (
     Asset,
     AssetAccess,
@@ -21,8 +23,12 @@ from .models import (
     Riwayah,
     UsageEvent,
 )
-from .services.admin.bulk_recitations_upload import upload_recitation_tracks_for_asset
-from .services.admin.import_ayah_timings import import_recitation_ayah_timings_for_asset
+from .services.admin.recitation_audio_tracks_bulk_upload_service import (
+    bulk_upload_recitation_audio_tracks,
+)
+from .services.admin.recitation_ayah_timestamps_bulk_upload_service import (
+    bulk_upload_recitation_ayah_timestamps,
+)
 from .services.asset_recitations_sync import sync_asset_recitations_downloadable_json_file
 
 
@@ -271,14 +277,14 @@ class AssetAdmin(admin.ModelAdmin):
                 name="asset_sync_recitations_json",
             ),
             path(
-                "<int:asset_id>/bulk-upload-tracks/",
-                self.admin_site.admin_view(self.bulk_upload_tracks_view),
-                name="asset_bulk_upload_tracks",
+                "<int:asset_id>/bulk-upload-audio-tracks/",
+                self.admin_site.admin_view(self.bulk_upload_audio_tracks_view),
+                name="asset_bulk_upload_recitation_audio_tracks",
             ),
             path(
-                "<int:asset_id>/import-ayah-timings/",
-                self.admin_site.admin_view(self.import_ayah_timings_view),
-                name="asset_import_ayah_timings",
+                "<int:asset_id>/bulk-upload-ayahs-timestamps/",
+                self.admin_site.admin_view(self.bulk_upload_ayahs_timestamps_view),
+                name="asset_bulk_upload_recitation_ayah_timestamps",
             ),
         ]
         return custom_urls + urls
@@ -296,12 +302,12 @@ class AssetAdmin(admin.ModelAdmin):
         self.message_user(request, "Asset Recitation Downloaded JSON File Synced Successfully.")
         return redirect(reverse("admin:content_asset_change", args=[asset_id]))
 
-    def bulk_upload_tracks_view(self, request, asset_id: int):
+    def bulk_upload_audio_tracks_view(self, request, asset_id: int):
         if request.method == "POST":
-            form = BulkRecitationUploadForm(request.POST, request.FILES)
+            form = RecitationAudioTracksBulkUploadForm(request.POST, request.FILES)
             if form.is_valid():
                 files = request.FILES.getlist("audio_files")
-                stats = upload_recitation_tracks_for_asset(asset_id=asset_id, files=files)
+                stats = bulk_upload_recitation_audio_tracks(asset_id=asset_id, files=files)
 
                 if stats.get("created"):
                     self.message_user(request, f"Created {stats['created']} recitation tracks.")
@@ -330,11 +336,11 @@ class AssetAdmin(admin.ModelAdmin):
 
                 return redirect(reverse("admin:content_asset_change", args=[asset_id]))
         else:
-            form = BulkRecitationUploadForm()
+            form = RecitationAudioTracksBulkUploadForm()
 
         context = {
             **self.admin_site.each_context(request),
-            "title": "Bulk upload recitation surah tracks",
+            "title": "Bulk Upload Recitation Audio Tracks",
             "form": form,
             "redirect_url": reverse("admin:content_asset_change", args=[asset_id]),
             "surah_map_ar": {k: v.get("name", "") for k, v in QURAN_SURAHS.items()},
@@ -346,19 +352,15 @@ class AssetAdmin(admin.ModelAdmin):
             context,
         )
 
-    def import_ayah_timings_view(self, request, asset_id: int):
+    def bulk_upload_ayahs_timestamps_view(self, request, asset_id: int):
         if request.method == "POST":
-            form = BulkRecitationTimingsUploadForm(request.POST, request.FILES)
+            form = RecitationAyahTimestampsBulkUploadForm(request.POST, request.FILES)
             if form.is_valid():
                 files = request.FILES.getlist("json_files")
-                overwrite: bool = form.cleaned_data.get("overwrite", False)
-                dry_run: bool = form.cleaned_data.get("dry_run", True)
 
-                stats = import_recitation_ayah_timings_for_asset(
+                stats = bulk_upload_recitation_ayah_timestamps(
                     asset_id=asset_id,
                     files=files,
-                    overwrite=overwrite,
-                    dry_run=dry_run,
                 )
 
                 if stats.get("missing_tracks"):
@@ -375,21 +377,20 @@ class AssetAdmin(admin.ModelAdmin):
                 self.message_user(
                     request,
                     f"Done. created={stats.get('created_total',0)}, updated={stats.get('updated_total',0)}, "
-                    f"skipped={stats.get('skipped_total',0)}, files={len(files)}, asset_id={asset_id}, "
-                    f"dry_run={dry_run}, overwrite={overwrite}",
+                    f"skipped={stats.get('skipped_total',0)}, files={len(files)}, asset_id={asset_id}",
                 )
                 return redirect(reverse("admin:content_asset_change", args=[asset_id]))
         else:
-            form = BulkRecitationTimingsUploadForm(initial={"dry_run": True})
+            form = RecitationAyahTimestampsBulkUploadForm()
 
         context = {
             **self.admin_site.each_context(request),
-            "title": "Import ayah timings from JSON files",
+            "title": "Bulk Upload Recitation Ayah Timestamps",
             "form": form,
         }
         return render(
             request,
-            "content/admin/recitationayahtiming_import.html",
+            "content/admin/recitationayahtiming_bulk_upload.html",
             context,
         )
 

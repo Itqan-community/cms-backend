@@ -19,22 +19,10 @@ class MultipleFileField(forms.FileField):
         return result
 
 
-class BulkRecitationTimingsUploadForm(forms.Form):
+class RecitationAyahTimestampsBulkUploadForm(forms.Form):
     json_files = MultipleFileField(
         label="JSON Files",
         help_text="Upload one or multiple .json files (one per surah)",
-    )
-    overwrite = forms.BooleanField(
-        required=False,
-        initial=False,
-        label="Overwrite existing timings",
-        help_text="If enabled, existing timings will be updated when different.",
-    )
-    dry_run = forms.BooleanField(
-        required=False,
-        initial=True,
-        label="Dry run (no database writes)",
-        help_text="Validates and shows a summary without saving any changes.",
     )
 
     def clean_json_files(self):

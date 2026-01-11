@@ -19,7 +19,7 @@ class MultipleFileField(forms.FileField):
         return result
 
 
-class BulkRecitationUploadForm(forms.Form):
+class RecitationAudioTracksBulkUploadForm(forms.Form):
     audio_files = MultipleFileField(
         label="Audio Files",
         help_text="Upload one or multiple recitation .mp3 files",

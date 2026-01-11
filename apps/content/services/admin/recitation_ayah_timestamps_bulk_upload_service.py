@@ -8,12 +8,15 @@ from apps.content.models import Asset, RecitationAyahTiming, RecitationSurahTrac
 from apps.content.services.ayah_timings_import import parse_json_bytes
 
 
-def import_recitation_ayah_timings_for_asset(asset_id: int, files: Iterable, *, overwrite: bool, dry_run: bool) -> dict:
+def bulk_upload_recitation_ayah_timestamps(asset_id: int, files: Iterable) -> dict:
     """
     Import ayah timings JSON files for a given asset.
     - files: iterable of UploadedFile objects (each file for a surah)
-    - overwrite: update existing timings if different
-    - dry_run: validate and compute changes without writing to DB
+    Behavior:
+    - Create new timings when missing
+    - Update existing timings only when values differ
+    - Skip when identical
+    All changes are executed within a single atomic transaction.
     Returns a stats dict with counts and details.
     """
     asset = Asset.objects.get(pk=asset_id)
@@ -66,10 +69,6 @@ def import_recitation_ayah_timings_for_asset(asset_id: int, files: Iterable, *, 
                         )
                         continue
 
-                    if not overwrite:
-                        skipped_total += 1
-                        continue
-
                     changed = (
                         obj.start_ms != row.start_ms or obj.end_ms != row.end_ms or obj.duration_ms != row.duration_ms
                     )
@@ -81,9 +80,9 @@ def import_recitation_ayah_timings_for_asset(asset_id: int, files: Iterable, *, 
                     else:
                         skipped_total += 1
 
-                if to_create and not dry_run:
+                if to_create:
                     RecitationAyahTiming.objects.bulk_create(to_create, batch_size=2000)
-                if to_update and not dry_run:
+                if to_update:
                     RecitationAyahTiming.objects.bulk_update(
                         to_update, fields=["start_ms", "end_ms", "duration_ms"], batch_size=2000
                     )
@@ -91,8 +90,6 @@ def import_recitation_ayah_timings_for_asset(asset_id: int, files: Iterable, *, 
                 created_total += len(to_create)
                 updated_total += len(to_update)
 
-            if dry_run:
-                transaction.set_rollback(True)
     except Exception as e:
         file_errors.append(str(e))
 

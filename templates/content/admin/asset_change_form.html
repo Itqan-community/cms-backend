@@ -5,9 +5,19 @@
 {{ block.super }}
 {% if original.category == "recitation" %}
   <li>
+    <a href="{% url 'admin:asset_bulk_upload_recitation_audio_tracks' original.pk %}">
+      {% translate "Bulk Upload Recitation Audio Tracks" %}
+    </a>
+  </li>
+  <li>
+    <a href="{% url 'admin:asset_bulk_upload_recitation_ayah_timestamps' original.pk %}">
+      {% translate "Bulk Upload Recitation Ayahs Timestamps" %}
+    </a>
+  </li>
+  <li>
     <a href="#" id="sync-recitations-json-link"
        title="{% translate 'Constructs the recitation JSON from all linked RecitationSurahTrack and RecitationAyahTiming, then saves it into the latest Asset version as the file. Runs in a single atomic transaction.' %}">
-      {% translate "Sync Asset Recitation Downloaded Json File" %}
+      {% translate "Sync Asset Recitation Json File" %}
     </a>
     <form id="sync-recitations-json-form" method="post" action="{% url 'admin:asset_sync_recitations_json' original.pk %}" style="display:none;">
       {% csrf_token %}
@@ -36,16 +46,6 @@ Proceed?
         }
       })();
     </script>
-  </li>
-  <li>
-    <a href="{% url 'admin:asset_bulk_upload_tracks' original.pk %}">
-      {% translate "Bulk Upload Mushaf Tracks" %}
-    </a>
-  </li>
-  <li>
-    <a href="{% url 'admin:asset_import_ayah_timings' original.pk %}">
-      {% translate "Import Ayah Timings from JSON Files" %}
-    </a>
   </li>
 {% endif %}
 {% endblock %}

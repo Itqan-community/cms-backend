@@ -8,7 +8,7 @@ from apps.content.models import Asset, RecitationSurahTrack
 from apps.mixins.recitations_helpers import extract_surah_number_from_filename
 
 
-def upload_recitation_tracks_for_asset(asset_id: int, files: Iterable) -> dict:
+def bulk_upload_recitation_audio_tracks(asset_id: int, files: Iterable) -> dict:
     """
     Upload multiple MP3 files as RecitationSurahTrack rows for the given asset.
     - Skips duplicates within selection and already-existing tracks in DB.
