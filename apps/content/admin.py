@@ -360,14 +360,10 @@ class AssetAdmin(admin.ModelAdmin):
             form = RecitationAyahTimestampsBulkUploadForm(request.POST, request.FILES)
             if form.is_valid():
                 files = request.FILES.getlist("json_files")
-                overwrite: bool = form.cleaned_data.get("overwrite", False)
-                dry_run: bool = form.cleaned_data.get("dry_run", True)
 
                 stats = bulk_upload_recitation_ayah_timestamps(
                     asset_id=asset_id,
                     files=files,
-                    overwrite=overwrite,
-                    dry_run=dry_run,
                 )
 
                 if stats.get("missing_tracks"):
@@ -384,16 +380,15 @@ class AssetAdmin(admin.ModelAdmin):
                 self.message_user(
                     request,
                     f"Done. created={stats.get('created_total',0)}, updated={stats.get('updated_total',0)}, "
-                    f"skipped={stats.get('skipped_total',0)}, files={len(files)}, asset_id={asset_id}, "
-                    f"dry_run={dry_run}, overwrite={overwrite}",
+                    f"skipped={stats.get('skipped_total',0)}, files={len(files)}, asset_id={asset_id}",
                 )
                 return redirect(reverse("admin:content_asset_change", args=[asset_id]))
         else:
-            form = RecitationAyahTimestampsBulkUploadForm(initial={"dry_run": True})
+            form = RecitationAyahTimestampsBulkUploadForm()
 
         context = {
             **self.admin_site.each_context(request),
-            "title": "Import Recitation Ayah Timestamps from JSON Files",
+            "title": "Bulk Upload Recitation Ayah Timestamps",
             "form": form,
         }
         return render(
