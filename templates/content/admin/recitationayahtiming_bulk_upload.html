@@ -1,0 +1,24 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+  <form method="post" enctype="multipart/form-data" action="" style="max-width:900px;">
+      {% csrf_token %}
+      <table style="margin-bottom:12px;">
+          {{ form.as_table }}
+      </table>
+      <div style="margin: 8px 0 16px 0; color:#444; font-size:13px;">
+        <strong>Import behavior:</strong>
+        <ul style="margin:6px 0 0 18px; list-style: disc;">
+          <li>New timings are created when missing.</li>
+          <li>Existing timings are updated only when values differ.</li>
+          <li>Identical timings are left unchanged (skipped).</li>
+          <li>All changes run in a single atomic transaction.</li>
+          <li>Upload one or multiple .json files (one per surah).</li>
+        </ul>
+      </div>
+      <div style="margin-top:12px; display:flex; gap:8px;">
+        <input type="submit" value="Import" class="default">
+      </div>
+  </form>
+{% endblock %}

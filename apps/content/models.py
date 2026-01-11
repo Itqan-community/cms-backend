@@ -83,12 +83,6 @@ class Resource(BaseModel):
 
 
 class ResourceVersion(DeleteFilesOnDeleteMixin, BaseModel):
-    class FileTypeChoice(models.TextChoices):
-        CSV = "csv", _("CSV")
-        EXCEL = "excel", _("Excel")
-        JSON = "json", _("JSON")
-        ZIP = "zip", _("ZIP")
-
     resource = models.ForeignKey(Resource, on_delete=models.CASCADE, related_name="versions")
 
     name = models.CharField(
@@ -105,6 +99,8 @@ class ResourceVersion(DeleteFilesOnDeleteMixin, BaseModel):
 
     storage_url = models.FileField(
         upload_to=upload_to_resource_files,
+        blank=True,
+        null=True,
         validators=[
             FileExtensionValidator(
                 allowed_extensions=[
@@ -124,11 +120,7 @@ class ResourceVersion(DeleteFilesOnDeleteMixin, BaseModel):
         help_text="File storage for resource version",
     )
 
-    file_type = models.CharField(max_length=20, choices=FileTypeChoice.choices, help_text="File type")
-
     size_bytes = models.PositiveBigIntegerField(default=0, help_text="File size in bytes")
-
-    is_latest = models.BooleanField(default=False, help_text="Whether this is the latest version")
 
     class Meta:
         verbose_name = "Resource Version"
@@ -146,14 +138,6 @@ class ResourceVersion(DeleteFilesOnDeleteMixin, BaseModel):
             with suppress(Exception):
                 # FileField provides size when the file is available
                 self.size_bytes = self.storage_url.size or 0
-        if self.is_latest:
-            # Set all other versions of this resource to is_latest=False
-            ResourceVersion.objects.filter(
-                resource=self.resource,
-                is_latest=True,
-            ).exclude(
-                pk=self.pk
-            ).update(is_latest=False)
 
         super().save(*args, **kwargs)
 

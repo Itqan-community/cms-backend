@@ -1,7 +1,5 @@
 from django import forms
 
-from apps.content.models import Asset
-
 
 class MultipleFileInput(forms.ClearableFileInput):
     allow_multiple_selected = True
@@ -21,11 +19,7 @@ class MultipleFileField(forms.FileField):
         return result
 
 
-class BulkRecitationUploadForm(forms.Form):
-    asset = forms.ModelChoiceField(
-        queryset=Asset.objects.filter(category="recitation"),
-        label="Asset (Mushaf)",
-    )
+class RecitationAudioTracksBulkUploadForm(forms.Form):
     audio_files = MultipleFileField(
         label="Audio Files",
         help_text="Upload one or multiple recitation .mp3 files",
