@@ -46,12 +46,27 @@ def list_recitation_tracks(request: Request, asset_id: int):
         )
     )
 
-    tracks = RecitationSurahTrack.objects.filter(asset=asset).order_by("surah_number")
+    tracks = RecitationSurahTrack.objects.filter(asset=asset).prefetch_related("ayah_timings").order_by("surah_number")
 
     results: list[RecitationSurahTrackOut] = []
 
     for track in tracks:
         audio_url = f"{CLOUDFLARE_R2_PUBLIC_BASE_URL}/media/{track.audio_file.name}"
+
+        ayah_timings: list[RecitationAyahTimingOut] = []
+        sorted_ayah_timings_qs = sorted(
+            track.ayah_timings.all(),
+            key=lambda a: (int(a.ayah_key.split(":")[0]), int(a.ayah_key.split(":")[1])),
+        )
+        for t in sorted_ayah_timings_qs:
+            ayah_timings.append(
+                RecitationAyahTimingOut(
+                    ayah_key=t.ayah_key,
+                    start_ms=t.start_ms,
+                    end_ms=t.end_ms,
+                    duration_ms=t.duration_ms,
+                )
+            )
 
         results.append(
             RecitationSurahTrackOut(
@@ -64,7 +79,7 @@ def list_recitation_tracks(request: Request, asset_id: int):
                 revelation_order=QURAN_SURAHS[track.surah_number]["revelation_order"],
                 revelation_place=QURAN_SURAHS[track.surah_number]["revelation_place"],
                 ayahs_count=QURAN_SURAHS[track.surah_number]["ayahs_count"],
-                ayahs_timings=[],
+                ayahs_timings=ayah_timings,
             )
         )
 

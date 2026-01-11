@@ -84,29 +84,6 @@ CACHES = {
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
 
-# ============================================================
-# File Storage (Alibaba OSS)
-# ============================================================
-
-STORAGES = {
-    "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
-    },
-    "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-    },
-}
-
-AWS_S3_ENDPOINT_URL = config("OSS_ENDPOINT_URL", "")
-AWS_ACCESS_KEY_ID = config("OSS_ACCESS_KEY_ID", "")
-AWS_SECRET_ACCESS_KEY = config("OSS_SECRET_ACCESS_KEY", "")
-AWS_STORAGE_BUCKET_NAME = config("OSS_BUCKET_NAME", "itqan-cms")
-AWS_S3_REGION_NAME = config("OSS_REGION", "oss-me-east-1")
-AWS_S3_CUSTOM_DOMAIN = config("OSS_CUSTOM_DOMAIN", "")
-AWS_DEFAULT_ACL = "public-read"
-AWS_S3_OBJECT_PARAMETERS = {
-    "CacheControl": "max-age=86400",
-}
 
 # ============================================================
 # CSRF

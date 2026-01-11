@@ -2,7 +2,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 from oauth2_provider.models import Application
 
-from apps.content.models import Asset, RecitationSurahTrack, Resource
+from apps.content.models import Asset, RecitationAyahTiming, RecitationSurahTrack, Resource
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -130,3 +130,67 @@ class RecitationTracksTest(BaseTestCase):
 
         response = self.client.get(f"/recitations/{draft_asset.id}/")
         self.assertEqual(404, response.status_code, response.content)
+
+    def test_list_recitation_tracks_where_timings_exist_should_embed_timings(self):
+        # Arrange
+        track = baker.make(
+            RecitationSurahTrack,
+            asset=self.asset,
+            surah_number=1,
+            duration_ms=1000,
+            size_bytes=512,
+        )
+        # Create two ayah timings for the track
+        baker.make(
+            RecitationAyahTiming,
+            track=track,
+            ayah_key="1:1",
+            start_ms=0,
+            end_ms=500,
+            duration_ms=500,
+        )
+        baker.make(
+            RecitationAyahTiming,
+            track=track,
+            ayah_key="1:2",
+            start_ms=500,
+            end_ms=900,
+            duration_ms=400,
+        )
+        self.authenticate_client(self.app)
+
+        # Act
+        response = self.client.get(f"/recitations/{self.asset.id}/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertIn("results", body)
+        items = body["results"]
+        self.assertEqual(1, len(items))
+        timings = items[0]["ayahs_timings"]
+        self.assertEqual(2, len(timings))
+        # Verify shape and values
+        self.assertEqual({"ayah_key": "1:1", "start_ms": 0, "end_ms": 500, "duration_ms": 500}, timings[0])
+        self.assertEqual({"ayah_key": "1:2", "start_ms": 500, "end_ms": 900, "duration_ms": 400}, timings[1])
+
+    def test_list_recitation_tracks_where_no_timings_should_return_empty_ayahs_timings(self):
+        # Arrange
+        baker.make(
+            RecitationSurahTrack,
+            asset=self.asset,
+            surah_number=1,
+            duration_ms=1000,
+            size_bytes=512,
+        )
+        self.authenticate_client(self.app)
+
+        # Act
+        response = self.client.get(f"/recitations/{self.asset.id}/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        items = body["results"]
+        self.assertEqual(1, len(items))
+        self.assertEqual([], items[0]["ayahs_timings"])

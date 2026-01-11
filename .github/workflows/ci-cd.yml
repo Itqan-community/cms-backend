@@ -206,6 +206,11 @@ jobs:
                 echo "PGSSLMODE=require";
                 echo "ALLOWED_HOSTS=develop.api.cms.itqan.dev";
                 echo "CORS_ALLOWED_ORIGINS=https://dev.cms.itqan.dev,http://localhost:3000";
+                echo "CLOUDFLARE_R2_BUCKET=${{ secrets.DEVELOP_CLOUDFLARE_R2_BUCKET }}";
+                echo "CLOUDFLARE_R2_ENDPOINT=${{ secrets.CLOUDFLARE_R2_ENDPOINT }}";
+                echo "CLOUDFLARE_R2_ACCESS_KEY_ID=${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}";
+                echo "CLOUDFLARE_R2_SECRET_ACCESS_KEY=${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}";
+                echo "CLOUDFLARE_R2_PUBLIC_BASE_URL=${{ secrets.DEVELOP_CLOUDFLARE_R2_PUBLIC_BASE_URL }}";
               } > deployment/docker/.env
             elif [ "${{ env.ENV_NAME }}" = "staging" ]; then
               {
@@ -222,6 +227,11 @@ jobs:
                 echo "PGSSLMODE=require";
                 echo "ALLOWED_HOSTS=staging.api.cms.itqan.dev";
                 echo "CORS_ALLOWED_ORIGINS=https://staging.cms.itqan.dev,http://localhost:3000";
+                echo "CLOUDFLARE_R2_BUCKET=${{ secrets.STAGING_CLOUDFLARE_R2_BUCKET }}";
+                echo "CLOUDFLARE_R2_ENDPOINT=${{ secrets.CLOUDFLARE_R2_ENDPOINT }}";
+                echo "CLOUDFLARE_R2_ACCESS_KEY_ID=${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}";
+                echo "CLOUDFLARE_R2_SECRET_ACCESS_KEY=${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}";
+                echo "CLOUDFLARE_R2_PUBLIC_BASE_URL=${{ secrets.STAGING_CLOUDFLARE_R2_PUBLIC_BASE_URL }}";
               } > deployment/docker/.env
             elif [ "${{ env.ENV_NAME }}" = "production" ]; then
               {
@@ -238,6 +248,11 @@ jobs:
                 echo "PGSSLMODE=require";
                 echo "ALLOWED_HOSTS=api.cms.itqan.dev";
                 echo "CORS_ALLOWED_ORIGINS=https://cms.itqan.dev";
+                echo "CLOUDFLARE_R2_BUCKET=${{ secrets.PROD_CLOUDFLARE_R2_BUCKET }}";
+                echo "CLOUDFLARE_R2_ENDPOINT=${{ secrets.CLOUDFLARE_R2_ENDPOINT }}";
+                echo "CLOUDFLARE_R2_ACCESS_KEY_ID=${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}";
+                echo "CLOUDFLARE_R2_SECRET_ACCESS_KEY=${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}";
+                echo "CLOUDFLARE_R2_PUBLIC_BASE_URL=${{ secrets.PROD_CLOUDFLARE_R2_PUBLIC_BASE_URL }}";
               } > deployment/docker/.env
             fi
             # Append image coordinates for docker compose variable substitution
@@ -294,7 +309,24 @@ jobs:
 
             # Clean up old Docker images
             echo "🧹 Cleaning up old Docker images..."
+
+            # Remove dangling images
             docker image prune -f || true
+
+            # Remove old CMS images, keeping only the 3 most recent for rollback
+            echo "📦 CMS images before cleanup: $(docker images 'ghcr.io/*/cms-backend' -q | wc -l)"
+            docker images "ghcr.io/*/cms-backend" --format "{{.ID}} {{.CreatedAt}}" | \
+              sort -k2,3 -r | tail -n +4 | awk '{print $1}' | \
+              xargs -r docker rmi -f 2>/dev/null || true
+            echo "📦 CMS images after cleanup: $(docker images 'ghcr.io/*/cms-backend' -q | wc -l)"
+
+            # Remove old caddy images, keeping 2 recent
+            docker images "caddy" --format "{{.ID}} {{.CreatedAt}}" | \
+              sort -k2,3 -r | tail -n +3 | awk '{print $1}' | \
+              xargs -r docker rmi -f 2>/dev/null || true
+
+            # Final cleanup of orphaned layers
+            docker system prune -f || true
 
             echo "🎉 Deployment to ${{ env.ENV_NAME }} completed successfully!"
             echo "🌐 Application URL: ${{ env.ENV_URL }}"

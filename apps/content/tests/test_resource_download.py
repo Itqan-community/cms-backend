@@ -32,8 +32,6 @@ class DownloadResourceTest(BaseTestCase):
                 resource=resource,
                 semvar="1.0.0",
                 storage_url=file_obj,
-                file_type=ResourceVersion.FileTypeChoice.CSV,
-                is_latest=True,
             )
 
             # Act
@@ -44,46 +42,6 @@ class DownloadResourceTest(BaseTestCase):
             self.assertEqual(200, response.status_code, response.content)
             self.assertIn("download_url", body)
             self.assertIn("/data.csv", body["download_url"])
-
-    def test_download_fallbacks_to_most_recent_when_no_latest_marked(self):
-        # Arrange
-        self.authenticate_user(self.user)
-        with (
-            tempfile.TemporaryDirectory() as tmpdir,
-            override_settings(MEDIA_ROOT=tmpdir),
-        ):
-            resource = baker.make(Resource, name="Dataset B")
-
-            older_file = self.create_file("old.json", b'{"a":1}', "application/json")
-            newer_file = self.create_file("new.json", b'{"a":2}', "application/json")
-
-            baker.make(
-                ResourceVersion,
-                resource=resource,
-                semvar="0.9.0",
-                storage_url=older_file,
-                file_type=ResourceVersion.FileTypeChoice.JSON,
-                is_latest=False,
-                created_at="2024-01-01T00:00:00Z",
-            )
-            baker.make(
-                ResourceVersion,
-                resource=resource,
-                semvar="1.1.0",
-                storage_url=newer_file,
-                file_type=ResourceVersion.FileTypeChoice.JSON,
-                is_latest=False,
-                created_at="2025-01-01T00:00:00Z",
-            )
-
-            # Act
-            response = self.client.get(f"/cms-api/resources/{resource.id}/download/", format="json")
-            body = response.json()
-
-            # Assert
-            self.assertEqual(200, response.status_code, response.content)
-            self.assertIn("download_url", body)
-            self.assertIn("/new.json", body["download_url"])
 
     def test_download_returns_404_when_no_versions_exist(self):
         # Arrange
@@ -121,8 +79,6 @@ class DownloadResourceTest(BaseTestCase):
                 resource=resource,
                 semvar="3.0.0",
                 storage_url=file_obj,
-                file_type=ResourceVersion.FileTypeChoice.CSV,
-                is_latest=True,
             )
 
             # Force empty storage path to simulate corrupted data
@@ -149,8 +105,6 @@ class DownloadResourceTest(BaseTestCase):
                 resource=resource,
                 semvar="1.0.0",
                 storage_url=file_obj,
-                file_type=ResourceVersion.FileTypeChoice.CSV,
-                is_latest=True,
             )
 
             # Act
@@ -194,8 +148,6 @@ class DownloadResourceTest(BaseTestCase):
                 resource=resource,
                 semvar="2.0.0",
                 storage_url=file_obj,
-                file_type=ResourceVersion.FileTypeChoice.JSON,
-                is_latest=True,
             )
 
             # Act - Include custom headers
