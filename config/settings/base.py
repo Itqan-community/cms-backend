@@ -31,6 +31,7 @@ DJANGO_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.sites",  # Required for allauth
+    "django.contrib.humanize",
 ]
 
 THIRD_PARTY_APPS = [
@@ -47,7 +48,7 @@ THIRD_PARTY_APPS = [
             "allauth.account",
             "allauth.headless",
             "allauth.mfa",
-            "allauth.usersessions",
+            # "allauth.usersessions",
             "allauth.socialaccount",
             "allauth.socialaccount.providers.google",
             "allauth.socialaccount.providers.github",
@@ -301,6 +302,16 @@ CELERY_WORKER_SEND_TASK_EVENTS = True
 CELERY_TASK_SEND_SENT_EVENT = True
 CELERY_WORKER_HIJACK_ROOT_LOGGER = False
 
+# Email server
+EMAIL_BACKEND = config("EMAIL_BACKEND")
+EMAIL_HOST = config("EMAIL_HOST", default="")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+EMAIL_PORT = config("EMAIL_PORT", cast=int)
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
+EMAIL_USE_SSL = config("EMAIL_USE_SSL", default=True, cast=bool)
+
 # Site ID (required for allauth)
 SITE_ID = 1
 
@@ -322,16 +333,19 @@ ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = False
 ACCOUNT_LOGOUT_ON_GET = False
 ACCOUNT_SESSION_REMEMBER = True
 ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_LOGIN_BY_CODE_ENABLED = True
+ACCOUNT_PASSWORD_RESET_BY_CODE_ENABLED = True
 
 SOCIALACCOUNT_EMAIL_VERIFICATION = "mandatory"
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_QUERY_EMAIL = True
+SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_ADAPTER = "apps.users.adapters.SocialAccountAdapter"
 SOCIALACCOUNT_FORMS = {"signup": "apps.users.forms.UserSocialSignupForm"}
 
-HEADLESS_ONLY = True
+# HEADLESS_ONLY = True
 HEADLESS_FRONTEND_URLS = {
-    "account_confirm_email": "/account/verify-email/{key}",
+    "account_confirm_email": "/accounts/confirm-email/{key}/",
     "account_reset_password": "/account/password/reset",
     "account_reset_password_from_key": "/account/password/reset/key/{key}",
     "account_signup": "/account/signup",
@@ -444,3 +458,5 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000
 
 # Allow uploading many files in one request - used for bulk uploading mushaf recitations timestamps .json files
 DATA_UPLOAD_MAX_NUMBER_FILES = 114
+
+LOGOUT_REDIRECT_URL = "/accounts/login"

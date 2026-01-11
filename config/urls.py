@@ -4,6 +4,7 @@ from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path
 from django.utils import timezone
+from django.views.generic import TemplateView
 from oauth2_provider import urls as oauth2_urls
 
 from config.cms_api import cms_api, cms_auth_api
@@ -27,6 +28,8 @@ urlpatterns = [
     path("django-admin/", admin.site.urls),
     # Django Allauth URLs
     path("accounts/", include("allauth.urls")),
+    path("accounts/profile/", TemplateView.as_view(template_name="profile.html")),
+    path("i18n/", include("django.conf.urls.i18n")),
     path("o/", include(oauth2_urls)),
     # Internal CMS API mount
     path("cms-api/", cms_api.urls),
