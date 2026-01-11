@@ -1,0 +1,51 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls %}
+
+{% block object-tools-items %}
+{{ block.super }}
+{% if original.category == "recitation" %}
+  <li>
+    <a href="{% url 'admin:asset_bulk_upload_recitation_audio_tracks' original.pk %}">
+      {% translate "Bulk Upload Recitation Audio Tracks" %}
+    </a>
+  </li>
+  <li>
+    <a href="{% url 'admin:asset_bulk_upload_recitation_ayah_timestamps' original.pk %}">
+      {% translate "Bulk Upload Recitation Ayahs Timestamps" %}
+    </a>
+  </li>
+  <li>
+    <a href="#" id="sync-recitations-json-link"
+       title="{% translate 'Constructs the recitation JSON from all linked RecitationSurahTrack and RecitationAyahTiming, then saves it into the latest Asset version as the file. Runs in a single atomic transaction.' %}">
+      {% translate "Sync Asset Recitation Json File" %}
+    </a>
+    <form id="sync-recitations-json-form" method="post" action="{% url 'admin:asset_sync_recitations_json' original.pk %}" style="display:none;">
+      {% csrf_token %}
+    </form>
+    {% blocktranslate asvar confirm_message %}
+This action will:
+1) Collect all related RecitationSurahTrack and RecitationAyahTiming records linked with this Asset
+2) Construct a fresh JSON from these records
+3) Overwrite the file of the latest Asset version with this JSON
+
+Proceed?
+    {% endblocktranslate %}
+    <script>
+      (function() {
+        var link = document.getElementById('sync-recitations-json-link');
+        if (link) {
+          link.addEventListener('click', function(e) {
+            e.preventDefault();
+            var msg = "{{ confirm_message|escapejs }}";
+            if (!window.confirm(msg)) {
+              return false;
+            }
+            var form = document.getElementById('sync-recitations-json-form');
+            if (form) form.submit();
+          });
+        }
+      })();
+    </script>
+  </li>
+{% endif %}
+{% endblock %}

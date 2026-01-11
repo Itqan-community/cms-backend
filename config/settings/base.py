@@ -403,3 +403,9 @@ if SENTRY_ENABLED and sentry_sdk:
     enable_sentry()
 
 ENABLE_OAUTH2 = config("ENABLE_OAUTH2", cast=bool, default=False)
+
+# Allow large admin bulk actions - used for bulk updating/deleting mushaf recitations timestamps objects data
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000
+
+# Allow uploading many files in one request - used for bulk uploading mushaf recitations timestamps .json files
+DATA_UPLOAD_MAX_NUMBER_FILES = 114
