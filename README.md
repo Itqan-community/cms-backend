@@ -28,6 +28,18 @@ Itqan CMS helps Quranic data publishers distribute high-quality, licensed conten
 - **CI/CD**: GitHub Actions
 - **Hosting/Infra**: DigitalOcean (e.g., Droplets, Managed PostgreSQL)
 
+## 🔐 Authentication
+
+Itqan CMS uses **two distinct authentication systems** for different user types:
+
+| User Type | API | Authentication | Documentation |
+|-----------|-----|----------------|---------------|
+| **Publishers** | `cms-api` | django-allauth (JWT) | Account creation, social login (Google/GitHub) |
+| **Developers** | `developers-api` | django-oauth-toolkit (OAuth2) | Client credentials flow |
+
+**📖 For detailed authentication flows, security practices, and developer guides, see [AUTHENTICATION.md](./AUTHENTICATION.md)**
+
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -136,7 +148,7 @@ Containerized deployment uses Caddy (TLS, static) and the Django app container. 
 
 - Use strong unique `SECRET_KEY` per environment; keep it out of VCS
 - CORS/CSRF configured per environment settings
-- JWT via SimpleJWT; OAuth via allauth providers (Google/GitHub)
+-
 
 ## 📄 License
 
