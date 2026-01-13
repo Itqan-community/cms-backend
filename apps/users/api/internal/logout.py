@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.utils.translation import gettext as _
 from ninja import Schema
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
@@ -11,26 +12,26 @@ from apps.core.ninja_utils.tags import NinjaTag
 
 router = ItqanRouter(tags=[NinjaTag.AUTH])
 
+if not settings.ENABLE_ALLAUTH:
 
-class LogoutIn(Schema):
-    refresh: str | None = None
+    class LogoutIn(Schema):
+        refresh: str | None = None
 
-
-@router.post(
-    "auth/logout/",
-    response=OkSchema,
-    description="Logout user and blacklist refresh token",
-)
-def logout_user(request: Request, logout_data: LogoutIn = None):
-    """Logout user and blacklist tokens"""
-    if logout_data and logout_data.refresh:
-        try:
-            refresh = RefreshToken(logout_data.refresh)
-            refresh.blacklist()
-        except (InvalidToken, TokenError) as err:
-            raise ItqanError(
-                error_name="invalid_refresh_token",
-                message="Invalid refresh token provided for blacklisting",
-                status_code=400,
-            ) from err
-    return OkSchema(message=_("Successfully logged out"))
+    @router.post(
+        "auth/logout/",
+        response=OkSchema,
+        description="Logout user and blacklist refresh token",
+    )
+    def logout_user(request: Request, logout_data: LogoutIn = None):
+        """Logout user and blacklist tokens"""
+        if logout_data and logout_data.refresh:
+            try:
+                refresh = RefreshToken(logout_data.refresh)
+                refresh.blacklist()
+            except (InvalidToken, TokenError) as err:
+                raise ItqanError(
+                    error_name="invalid_refresh_token",
+                    message="Invalid refresh token provided for blacklisting",
+                    status_code=400,
+                ) from err
+        return OkSchema(message=_("Successfully logged out"))

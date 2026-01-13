@@ -47,7 +47,6 @@ CELERY_TASK_EAGER_PROPAGATES = True
 # =========================
 # Email / CORS / CSRF
 # =========================
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https"
 
 CORS_ALLOW_ALL_ORIGINS = True  # Dev only
