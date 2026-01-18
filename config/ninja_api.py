@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import Any
+
 from ninja import NinjaAPI
+from ninja.types import TCallable
 from scalar_django_ninja import ScalarViewer
 
 from apps.core.ninja_utils.parser import NinjaParser
@@ -18,6 +22,8 @@ def create_ninja_api(
     enable_throttle: bool = True,
     enable_parser: bool = True,
     urls_namespace: str | None = None,
+    docs_decorator: Callable[[TCallable], TCallable] | None = None,
+    openapi_extra: dict[str, Any] | None = None,
 ) -> NinjaAPI:
     """
     Factory to create a NinjaAPI instance with Itqan defaults.
@@ -39,7 +45,10 @@ def create_ninja_api(
         docs=ScalarViewer(openapi_url=f"{docs_base_path}/openapi.json"),
         docs_url="/docs/",
         urls_namespace=urls_namespace,
+        docs_decorator=docs_decorator,
+        openapi_extra=openapi_extra,
     )
+
     return api
 
 
