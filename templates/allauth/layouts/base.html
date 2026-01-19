@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+{% load i18n %}
+<html lang="en" data-bs-theme="auto">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="">
+        <meta name="generator" content="Hugo 0.118.2">
+        <title>
+            {% block head_title %}{% endblock %}
+        </title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+              rel="stylesheet"
+              integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+              crossorigin="anonymous">
+    </head>
+    <body class="min-vh-100 d-flex flex-shrink-0 flex-column" style="color:#000000d9;">
+        <a class="visually-hidden-focusable" href="#content">{% translate "Skip to main content" %}</a>
+        <header >
+            <nav class="navbar navbar-expand-lg">
+                <div class="container-fluid">
+                    <a class="navbar-brand" href="/">Itqan</a>
+                    <button class="navbar-toggler"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#navbarText"
+                            aria-controls="navbarText"
+                            aria-expanded="false"
+                            aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarText">
+                        <ul role="navigation"
+                            aria-label="Project links"
+                            class="navbar-nav me-auto mb-2 mb-lg-0">
+                            <li class="nav-item">
+                                <a class="nav-link active" href="/docs/">Documentation</a>
+                            </li>
+                        </ul>
+                        <div class="d-flex flex-column flex-sm-row gap-2 col-lg-3 justify-content-lg-end text-nowrap">
+                            <form class="d-flex" method="post" action="{% url 'set_language' %}">
+                                {% csrf_token %}
+                                {% get_available_languages as LANGUAGES %}
+                                {% get_current_language as LANGUAGE_CODE %}
+                                <label for="language-dropdown" class="visually-hidden">{% translate "Select Language" %}</label>
+                                <select id="language-dropdown"
+                                        aria-label="{% translate 'Select Language' %}"
+                                        name="language"
+                                        onchange="this.form.submit()">
+                                    {% get_language_info_list for LANGUAGES as languages %}
+                                    {% for lang in languages %}
+                                        <option lang="{{ lang.code }}"
+                                                {% if lang.code == LANGUAGE_CODE %}selected{% endif %}
+                                                value="{{ lang.code }}">{{ lang.name_local }}</option>
+                                    {% endfor %}
+                                </select>
+                            </form>
+                            {% if user.is_authenticated %}
+                                {% url 'account_email' as email_url_ %}
+                                {% url 'socialaccount_connections' as socialaccount_url_ %}
+                                {% if email_url_ or socialaccount_url_ %}
+                                    <a href="{% if email_url_ %}{{ email_url_ }}{% else %}{{ socialaccount_url_ }}{% endif %}"
+                                       class="btn btn-secondary">Manage Account</a>
+                                {% endif %}
+                                <a href="{% url 'account_logout' %}" class="btn btn-danger">{% translate "Sign Out" %}</a>
+                            {% else %}
+                                <a href="{% url 'account_login' %}" class="btn btn-outline-light">{% translate "Sign In" %}</a>
+                                {% url 'account_signup' as signup_url_ %}
+                                {% if signup_url_ %}
+                                    <a href="{{ signup_url_ }}" class="btn btn-success">{% translate "Sign Up" %}</a>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </header>
+        {% block body %}
+            {% block content %}
+            {% endblock content %}
+        {% endblock body %}
+        {% block extra_body %}
+        {% endblock extra_body %}
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+                integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+                crossorigin="anonymous"></script>
+    </body>
+</html>
