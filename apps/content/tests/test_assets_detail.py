@@ -326,7 +326,7 @@ class DetailAssetTest(BaseTestCase):
         body = response.json()
         self.assertEqual(asset.id, body["id"])
         self.assertEqual("Asset Without Thumbnail", body["name"])
-        self.assertEqual(body["thumbnail_url"], "")
+        self.assertEqual(body["thumbnail_url"], None)
         self.assertEqual("CC0", body["license"])
 
         # Verify other required fields are still present

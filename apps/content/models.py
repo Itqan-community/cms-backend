@@ -14,6 +14,7 @@ from apps.core.uploads import (
     upload_to_asset_preview_images,
     upload_to_asset_thumbnails,
     upload_to_recitation_surah_track_files,
+    upload_to_reciter_image,
     upload_to_resource_files,
 )
 from apps.mixins.recitations_helpers import get_mp3_duration_ms
@@ -148,6 +149,14 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         MUSHAF = "mushaf", _("Mushaf")
         TAFSIR = "tafsir", _("Tafsir")
 
+    class MaddLevelChoice(models.TextChoices):
+        TWASSUT = "twassut", _("Twassut")
+        QASR = "qasr", _("Qasr")
+
+    class MeemBehaviorChoice(models.TextChoices):
+        SILAH = "silah", _("Silah")
+        SKOUN = "skoun", _("Skoun")
+
     resource = models.ForeignKey(Resource, on_delete=models.PROTECT, related_name="assets")
 
     name = models.CharField(max_length=255, help_text="Asset name")
@@ -197,6 +206,25 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         blank=True,
         related_name="assets",
         help_text="Riwayah for recitation assets",
+    )
+    madd_level = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        choices=MaddLevelChoice.choices,
+        help_text="Madd level for recitation assets",
+    )
+    meem_behaviour = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        choices=MeemBehaviorChoice.choices,
+        help_text="Meem behaviour for recitation assets",
+    )
+    year = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Year of recording for recitation assets",
     )
 
     def __str__(self):
@@ -543,6 +571,13 @@ class Reciter(BaseModel):
 
     name = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(unique=True, allow_unicode=True, db_index=True)
+    image_url = models.ImageField(
+        upload_to=upload_to_reciter_image,
+        blank=True,
+        validators=[FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "gif", "webp", "svg"])],
+        help_text="Icon/logo image - used in V1 UI: Publisher Page",
+    )
+    bio = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
 
     def save(self, *args, **kwargs) -> None:

@@ -165,7 +165,13 @@ class AssetAdmin(admin.ModelAdmin):
         (
             "Basic Information",
             {
-                "fields": ("name", "resource", "category", "reciter", "riwayah"),
+                "fields": ("name", "resource", "category", "riwayah"),
+            },
+        ),
+        (
+            "Recitation Details",
+            {
+                "fields": ("reciter", "madd_level", "meem_behaviour", "year"),
             },
         ),
         (
@@ -654,12 +660,14 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
     ]
 
     @admin.display(description="Surah Name (AR)", ordering="surah_number")
-    def surah_name(self, obj: RecitationSurahTrack) -> str:
-        return QURAN_SURAHS[obj.surah_number]["name"]
+    def surah_name(self, obj: RecitationSurahTrack) -> str | None:
+        if obj.surah_number:
+            return QURAN_SURAHS[obj.surah_number]["name"]
 
     @admin.display(description="Surah Name (EN)", ordering="surah_number")
-    def surah_name_en(self, obj: RecitationSurahTrack) -> str:
-        return QURAN_SURAHS[obj.surah_number]["name_en"]
+    def surah_name_en(self, obj: RecitationSurahTrack) -> str | None:
+        if obj.surah_number:
+            return QURAN_SURAHS[obj.surah_number]["name_en"]
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("asset")

@@ -34,7 +34,7 @@ class RecitationSurahTrackOut(Schema):
     ayahs_timings: list[RecitationAyahTimingOut]
 
 
-@router.get("recitations/{asset_id}/", response=list[RecitationSurahTrackOut])
+@router.get("recitation-tracks/{asset_id}/", response=list[RecitationSurahTrackOut])
 @paginate
 def list_recitation_tracks(request: Request, asset_id: int):
     asset = get_object_or_404(
