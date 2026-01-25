@@ -227,6 +227,23 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         help_text="Year of recording for recitation assets",
     )
 
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(
+                    category="recitation",
+                    reciter__isnull=False,
+                    riwayah__isnull=False,
+                )
+                | models.Q(
+                    ~models.Q(category="recitation"),
+                    reciter__isnull=True,
+                    riwayah__isnull=True,
+                ),
+                name="asset_recitation_fields_consistency",
+            )
+        ]
+
     def __str__(self):
         return f"Asset(name={self.name}, category={self.category})"
 
@@ -574,7 +591,7 @@ class Reciter(BaseModel):
     image_url = models.ImageField(
         upload_to=upload_to_reciter_image,
         blank=True,
-        validators=[FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "gif", "webp", "svg"])],
+        validators=[FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "gif", "webp"])],
         help_text="Icon/logo image - used in V1 UI: Publisher Page",
     )
     bio = models.TextField(blank=True)

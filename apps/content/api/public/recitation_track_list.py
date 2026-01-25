@@ -6,6 +6,7 @@ from ninja.pagination import paginate
 
 from apps.content.models import Asset, RecitationSurahTrack, Resource
 from apps.core.mixins.constants import QURAN_SURAHS
+from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
@@ -34,7 +35,10 @@ class RecitationSurahTrackOut(Schema):
     ayahs_timings: list[RecitationAyahTimingOut]
 
 
-@router.get("recitation-tracks/{asset_id}/", response=list[RecitationSurahTrackOut])
+@router.get(
+    "recitation-tracks/{asset_id}/",
+    response={200: list[RecitationSurahTrackOut], 404: NinjaErrorResponse[Literal["not_found"], Literal[None]]},
+)
 @paginate
 def list_recitation_tracks(request: Request, asset_id: int):
     asset = get_object_or_404(

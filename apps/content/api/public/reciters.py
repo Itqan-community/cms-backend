@@ -50,7 +50,6 @@ def list_reciters(request: Request, filters: ReciterFilter = Query()):
 
     qs = (
         Reciter.objects.filter(
-            request.publisher_q("assets__resources__publisher"),
             is_active=True,
         )
         .filter(recitation_filter)

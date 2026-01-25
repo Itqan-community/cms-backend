@@ -1,3 +1,5 @@
+from typing import Literal
+
 from django.shortcuts import get_object_or_404
 from ninja import Schema
 from ninja.pagination import paginate
@@ -5,6 +7,7 @@ from pydantic import Field
 
 from apps.content.models import Asset, RecitationSurahTrack, Resource
 from apps.core.mixins.constants import QURAN_SURAHS
+from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
@@ -34,15 +37,19 @@ class RecitationSurahTrackOut(Schema):
         return QURAN_SURAHS[obj.surah_number]["name"]
 
     @staticmethod
-    def resolve_surah_name_en(obj: RecitationSurahTrack):
+    def resolve_surah_name_en(obj: RecitationSurahTrack) -> str:
         return QURAN_SURAHS[obj.surah_number]["name_en"]
 
 
-@router.get("recitation-tracks/{asset_id}/", response=list[RecitationSurahTrackOut])
+@router.get(
+    "recitation-tracks/{asset_id}/",
+    response={200: list[RecitationSurahTrackOut], 404: NinjaErrorResponse[Literal["not_found"], Literal[None]]},
+)
 @paginate
 def list_recitation_tracks(request: Request, asset_id: int):
     asset = get_object_or_404(
         Asset.objects.filter(
+            request.publisher_q("resource_publisher"),
             id=asset_id,
             category=Asset.CategoryChoice.RECITATION,
             resource__category=Resource.CategoryChoice.RECITATION,
@@ -50,6 +57,6 @@ def list_recitation_tracks(request: Request, asset_id: int):
         )
     )
 
-    tracks = RecitationSurahTrack.objects.filter(asset=asset).order_by("surah_number")
+    tracks = RecitationSurahTrack.objects.select_related("asset__reciter").filter(asset=asset).order_by("surah_number")
 
     return tracks

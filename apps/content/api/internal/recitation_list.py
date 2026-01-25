@@ -4,6 +4,7 @@ from pydantic import Field
 
 from apps.content.models import Asset, Resource
 from apps.core.ninja_utils.ordering_base import ordering
+from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
@@ -42,8 +43,9 @@ class RecitationFilter(FilterSchema):
 @paginate
 @ordering(ordering_fields=["name", "created_at", "updated_at"])
 @searching(search_fields=["name", "description", "resource__publisher__name", "reciter__name"])
-def list_recitations(request, filters: RecitationFilter = Query()):
+def list_recitations(request: Request, filters: RecitationFilter = Query()):
     qs = Asset.objects.select_related("resource", "reciter", "riwayah").filter(
+        request.publisher_q("resource__publisher"),
         category=Asset.CategoryChoice.RECITATION,
         resource__category=Resource.CategoryChoice.RECITATION,
         resource__status=Resource.StatusChoice.READY,
