@@ -22,6 +22,8 @@ class RecitationTracksTest(BaseTestCase):
             Asset,
             category=Asset.CategoryChoice.RECITATION,
             resource=self.recitation_resource,
+            reciter=baker.make("content.Reciter", name="Test Reciter"),
+            riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
         )
         self.user = User.objects.create_user(email="oauthuser@example.com", name="OAuth User")
         self.app = Application.objects.create(
@@ -126,6 +128,8 @@ class RecitationTracksTest(BaseTestCase):
             Asset,
             category=Asset.CategoryChoice.RECITATION,
             resource=draft_resource,
+            reciter=baker.make("content.Reciter", name="Test Reciter1"),
+            riwayah=baker.make("content.Riwayah", name="Test Riwayah1"),
         )
 
         response = self.client.get(f"/recitation-tracks/{draft_asset.id}/")

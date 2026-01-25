@@ -22,11 +22,13 @@ class RecitersListTest(BaseTestCase):
         )
         self.active_reciter = baker.make(Reciter, is_active=True, name="Active Reciter")
 
-        self.valid_asset = baker.make(
+        riwayah = baker.make("content.Riwayah", name="Test Riwayah")
+        self.valid_asset = self.valid_asset = baker.make(
             Asset,
             category=Asset.CategoryChoice.RECITATION,
             reciter=self.active_reciter,
             resource=self.recitation_resource,
+            riwayah=riwayah,
         )
 
         # Inactive reciter should NOT appear
@@ -36,13 +38,13 @@ class RecitersListTest(BaseTestCase):
             category=Asset.CategoryChoice.RECITATION,
             reciter=self.inactive_reciter,
             resource=self.recitation_resource,
+            riwayah=riwayah,
         )
 
         # Asset with non-RECITATION category should NOT be counted
         self.other_category_asset = baker.make(
             Asset,
             category=Asset.CategoryChoice.TAFSIR,  # assuming another category exists
-            reciter=self.active_reciter,
             resource=self.recitation_resource,
         )
 
@@ -58,6 +60,7 @@ class RecitersListTest(BaseTestCase):
             category=Asset.CategoryChoice.RECITATION,
             reciter=self.active_reciter,
             resource=self.draft_resource,
+            riwayah=riwayah,
         )
 
         # Resource with non-RECITATION category should NOT be counted
@@ -72,6 +75,7 @@ class RecitersListTest(BaseTestCase):
             category=Asset.CategoryChoice.RECITATION,
             reciter=self.active_reciter,
             resource=self.other_resource,
+            riwayah=riwayah,
         )
         self.user = User.objects.create_user(email="oauthuser@example.com", name="OAuth User")
         self.app = Application.objects.create(
@@ -117,6 +121,7 @@ class RecitersListTest(BaseTestCase):
             category=Asset.CategoryChoice.RECITATION,
             reciter=other_reciter,
             resource=self.recitation_resource,
+            riwayah=baker.make("content.Riwayah", name="Test Riwayah1"),
         )
         self.authenticate_client(self.app)
 

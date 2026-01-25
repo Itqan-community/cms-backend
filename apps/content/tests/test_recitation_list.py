@@ -76,18 +76,19 @@ class RecitationsListTest(BaseTestCase):
             category=Asset.CategoryChoice.RECITATION,
             resource=self.draft_recitation_resource,
             reciter=self.reciter1,
+            riwayah=baker.make("content.Riwayah", name="Test Riwayah1"),
         )
         baker.make(
             Asset,
             category=Asset.CategoryChoice.RECITATION,
             resource=self.other_category_resource,
             reciter=self.reciter1,
+            riwayah=baker.make("content.Riwayah", name="Test Riwayah2"),
         )
         baker.make(
             Asset,
             category=Asset.CategoryChoice.TAFSIR,
             resource=self.ready_recitation_resource_pub1,
-            reciter=self.reciter1,
         )
         self.user = User.objects.create_user(email="oauthuser@example.com", name="OAuth User")
         self.app = Application.objects.create(

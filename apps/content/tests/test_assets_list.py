@@ -7,7 +7,7 @@ from apps.core.tests import BaseTestCase
 class ListAssetTest(BaseTestCase):
     def test_list_asset_should_return_all_available_assets(self):
         # Arrange
-        baker.make(Asset, name="Tafsir Ibn Katheer")
+        baker.make(Asset, name="Tafsir Ibn Katheer", category=Asset.CategoryChoice.TAFSIR)
 
         # Act
         response = self.client.get("/cms-api/assets/", format="json")
@@ -20,8 +20,12 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_asset_filter_by_license_code_should_return_filtered_assets(self):
         # Arrange
-        baker.make(Asset, name="Tafsir Al-Jalalayn", license=LicenseChoice.CC_BY_SA)
-        baker.make(Asset, name="Tafsir Ibn Katheer", license=LicenseChoice.CC_BY_NC)
+        baker.make(
+            Asset, name="Tafsir Al-Jalalayn", license=LicenseChoice.CC_BY_SA, category=Asset.CategoryChoice.TAFSIR
+        )
+        baker.make(
+            Asset, name="Tafsir Ibn Katheer", license=LicenseChoice.CC_BY_NC, category=Asset.CategoryChoice.TAFSIR
+        )
 
         # Act
         response = self.client.get("/cms-api/assets/", data={"license_code": LicenseChoice.CC_BY_SA}, format="json")
@@ -35,7 +39,13 @@ class ListAssetTest(BaseTestCase):
     def test_list_asset_filter_by_category_should_return_filtered_assets(self):
         # Arrange
         baker.make(Asset, name="Tafsir Al-Jalalayn", category=Asset.CategoryChoice.TAFSIR)
-        baker.make(Asset, name="Muhammad Refaat", category=Asset.CategoryChoice.RECITATION)
+        baker.make(
+            Asset,
+            name="Muhammad Refaat",
+            category=Asset.CategoryChoice.RECITATION,
+            reciter=baker.make("content.Reciter", name="Test Reciter"),
+            riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
+        )
 
         # Act
         response = self.client.get(
@@ -55,7 +65,13 @@ class ListAssetTest(BaseTestCase):
     ):
         # Arrange
         baker.make(Asset, name="Tafsir Al-Jalalayn", category=Asset.CategoryChoice.TAFSIR)
-        baker.make(Asset, name="Muhammad Refaat", category=Asset.CategoryChoice.RECITATION)
+        baker.make(
+            Asset,
+            name="Muhammad Refaat",
+            category=Asset.CategoryChoice.RECITATION,
+            reciter=baker.make("content.Reciter", name="Test Reciter"),
+            riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
+        )
         baker.make(Asset, name="King Fahd", category=Asset.CategoryChoice.MUSHAF)
 
         # Act
@@ -72,9 +88,9 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_order_by_name_descending_should_return_sorted_assets(self):
         # Arrange
-        baker.make(Asset, name="A")
-        baker.make(Asset, name="C")
-        baker.make(Asset, name="B")
+        baker.make(Asset, name="A", category=Asset.CategoryChoice.TAFSIR)
+        baker.make(Asset, name="C", category=Asset.CategoryChoice.TAFSIR)
+        baker.make(Asset, name="B", category=Asset.CategoryChoice.TAFSIR)
 
         # Act
         response = self.client.get("/cms-api/assets/", data={"ordering": "-name"}, format="json")
@@ -89,9 +105,9 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_order_by_name_ascending_should_return_sorted_assets(self):
         # Arrange
-        baker.make(Asset, name="A")
-        baker.make(Asset, name="C")
-        baker.make(Asset, name="B")
+        baker.make(Asset, name="A", category=Asset.CategoryChoice.TAFSIR)
+        baker.make(Asset, name="C", category=Asset.CategoryChoice.TAFSIR)
+        baker.make(Asset, name="B", category=Asset.CategoryChoice.TAFSIR)
 
         # Act
         response = self.client.get("/cms-api/assets/", data={"ordering": "name"}, format="json")
@@ -107,7 +123,13 @@ class ListAssetTest(BaseTestCase):
     def test_list_assets_order_by_category_descending_should_return_sorted_assets(self):
         # Arrange
         baker.make(Asset, name="A", category=Asset.CategoryChoice.TAFSIR)
-        baker.make(Asset, name="C", category=Asset.CategoryChoice.RECITATION)
+        baker.make(
+            Asset,
+            name="C",
+            category=Asset.CategoryChoice.RECITATION,
+            reciter=baker.make("content.Reciter", name="Test Reciter"),
+            riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
+        )
         baker.make(Asset, name="B", category=Asset.CategoryChoice.TAFSIR)
 
         # Act
@@ -137,6 +159,8 @@ class ListAssetTest(BaseTestCase):
             name="Muhammad Refaat",
             description="This is a recitation book",
             category=Asset.CategoryChoice.RECITATION,
+            reciter=baker.make("content.Reciter", name="Test Reciter"),
+            riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
         )
         baker.make(
             Asset,

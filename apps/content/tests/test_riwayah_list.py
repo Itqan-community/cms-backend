@@ -11,7 +11,7 @@ class RiwayahsListTest(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.publisher = baker.make(Publisher)
-
+        self.reciter = baker.make("content.Reciter", name="Test Reciter")
         self.recitation_resource = baker.make(
             Resource,
             publisher=self.publisher,
@@ -25,6 +25,7 @@ class RiwayahsListTest(BaseTestCase):
             category=Asset.CategoryChoice.RECITATION,
             riwayah=self.active_riwayah,
             resource=self.recitation_resource,
+            reciter=self.reciter,
         )
 
         # Inactive riwayah – should not appear
@@ -34,13 +35,13 @@ class RiwayahsListTest(BaseTestCase):
             category=Asset.CategoryChoice.RECITATION,
             riwayah=self.inactive_riwayah,
             resource=self.recitation_resource,
+            reciter=self.reciter,
         )
 
         # Asset with non-RECITATION category – should not count
         baker.make(
             Asset,
             category=Asset.CategoryChoice.TAFSIR,
-            riwayah=self.active_riwayah,
             resource=self.recitation_resource,
         )
 
@@ -56,6 +57,7 @@ class RiwayahsListTest(BaseTestCase):
             category=Asset.CategoryChoice.RECITATION,
             riwayah=self.active_riwayah,
             resource=draft_resource,
+            reciter=self.reciter,
         )
 
         # Resource not RECITATION – should not count
@@ -70,6 +72,7 @@ class RiwayahsListTest(BaseTestCase):
             category=Asset.CategoryChoice.RECITATION,
             riwayah=self.active_riwayah,
             resource=tafsir_resource,
+            reciter=self.reciter,
         )
         self.user = User.objects.create_user(email="oauthuser@example.com", name="OAuth User")
         self.app = Application.objects.create(
@@ -113,6 +116,7 @@ class RiwayahsListTest(BaseTestCase):
             category=Asset.CategoryChoice.RECITATION,
             riwayah=other_riwayah,
             resource=self.recitation_resource,
+            reciter=self.reciter,
         )
 
         # Act
