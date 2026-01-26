@@ -23,7 +23,7 @@ class RecitersListTest(BaseTestCase):
         self.active_reciter = baker.make(Reciter, is_active=True, name="Active Reciter")
 
         riwayah = baker.make("content.Riwayah", name="Test Riwayah")
-        self.valid_asset = self.valid_asset = baker.make(
+        self.valid_asset = baker.make(
             Asset,
             category=Asset.CategoryChoice.RECITATION,
             reciter=self.active_reciter,
