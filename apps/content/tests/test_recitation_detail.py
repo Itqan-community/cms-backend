@@ -22,6 +22,8 @@ class RecitationTracksTest(BaseTestCase):
             Asset,
             category=Asset.CategoryChoice.RECITATION,
             resource=self.recitation_resource,
+            reciter=baker.make("content.Reciter", name="Test Reciter"),
+            riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
         )
         self.user = User.objects.create_user(email="oauthuser@example.com", name="OAuth User")
         self.app = Application.objects.create(
@@ -50,7 +52,7 @@ class RecitationTracksTest(BaseTestCase):
         self.authenticate_client(self.app)
 
         # Act
-        response = self.client.get(f"/recitations/{self.asset.id}/")
+        response = self.client.get(f"/recitation-tracks/{self.asset.id}/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -82,7 +84,7 @@ class RecitationTracksTest(BaseTestCase):
         self.authenticate_client(self.app)
 
         # Act
-        response = self.client.get(f"/recitations/{self.asset.id}/")
+        response = self.client.get(f"/recitation-tracks/{self.asset.id}/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -96,7 +98,7 @@ class RecitationTracksTest(BaseTestCase):
     def test_list_recitation_tracks_for_nonexistent_or_invalid_asset_should_return_404(self):
         self.authenticate_client(self.app)
         # Non-existent asset
-        response = self.client.get("/recitations/999999/")
+        response = self.client.get("/recitation-tracks/999999/")
         self.assertEqual(404, response.status_code, response.content)
 
         # Asset with wrong category should also 404 due to queryset filter
@@ -112,7 +114,7 @@ class RecitationTracksTest(BaseTestCase):
             resource=non_recitation_resource,
         )
 
-        response = self.client.get(f"/recitations/{non_recitation_asset.id}/")
+        response = self.client.get(f"/recitation-tracks/{non_recitation_asset.id}/")
         self.assertEqual(404, response.status_code, response.content)
 
         # Asset with RECITATION category but non-READY resource should 404
@@ -126,9 +128,11 @@ class RecitationTracksTest(BaseTestCase):
             Asset,
             category=Asset.CategoryChoice.RECITATION,
             resource=draft_resource,
+            reciter=baker.make("content.Reciter", name="Test Reciter1"),
+            riwayah=baker.make("content.Riwayah", name="Test Riwayah1"),
         )
 
-        response = self.client.get(f"/recitations/{draft_asset.id}/")
+        response = self.client.get(f"/recitation-tracks/{draft_asset.id}/")
         self.assertEqual(404, response.status_code, response.content)
 
     def test_list_recitation_tracks_where_timings_exist_should_embed_timings(self):
@@ -160,7 +164,7 @@ class RecitationTracksTest(BaseTestCase):
         self.authenticate_client(self.app)
 
         # Act
-        response = self.client.get(f"/recitations/{self.asset.id}/")
+        response = self.client.get(f"/recitation-tracks/{self.asset.id}/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -186,7 +190,7 @@ class RecitationTracksTest(BaseTestCase):
         self.authenticate_client(self.app)
 
         # Act
-        response = self.client.get(f"/recitations/{self.asset.id}/")
+        response = self.client.get(f"/recitation-tracks/{self.asset.id}/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)

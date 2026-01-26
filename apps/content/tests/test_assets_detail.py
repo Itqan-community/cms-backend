@@ -95,6 +95,8 @@ class DetailAssetTest(BaseTestCase):
                 category=Asset.CategoryChoice.RECITATION,
                 license=LicenseChoice.CC0,
                 thumbnail_url="thumbs/recitation.png",
+                reciter=baker.make("content.Reciter", name="Test Reciter"),
+                riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
             ),
             baker.make(
                 Asset,
@@ -156,6 +158,8 @@ class DetailAssetTest(BaseTestCase):
             category=Asset.CategoryChoice.RECITATION,
             license=LicenseChoice.CC0,
             thumbnail_url="thumbs/en-only.png",
+            reciter=baker.make("content.Reciter", name="Test Reciter"),
+            riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
         )
 
         # Act
@@ -275,6 +279,8 @@ class DetailAssetTest(BaseTestCase):
             category=Asset.CategoryChoice.RECITATION,
             license=LicenseChoice.CC_BY_SA,
             thumbnail_url="thumbnails/metadata.png",
+            reciter=baker.make("content.Reciter", name="Test Reciter"),
+            riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
         )
 
         # Act - Include custom headers
@@ -326,7 +332,7 @@ class DetailAssetTest(BaseTestCase):
         body = response.json()
         self.assertEqual(asset.id, body["id"])
         self.assertEqual("Asset Without Thumbnail", body["name"])
-        self.assertEqual(body["thumbnail_url"], "")
+        self.assertEqual(body["thumbnail_url"], None)
         self.assertEqual("CC0", body["license"])
 
         # Verify other required fields are still present

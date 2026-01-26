@@ -75,7 +75,7 @@ class PublisherQ(Protocol):
     def __call__(self, lookup: str = "publisher") -> Q: ...
 
 
-def publisher_q(publisher: Publisher, lookup: str = "publisher") -> Q:
+def publisher_q(publisher: Publisher | None, lookup: str = "publisher") -> Q:
     """
     returns a Q object base on the publisher in the request, if any.
     useful for frequent filtering

@@ -5,7 +5,7 @@ import json
 from django.core.files.base import ContentFile
 from django.db import transaction
 
-from apps.content.api.public.recitation_detail import (
+from apps.content.api.public.recitation_track_list import (
     RecitationAyahTimingOut,
     RecitationSurahTrackOut,
 )

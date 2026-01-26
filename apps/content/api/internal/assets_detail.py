@@ -1,30 +1,22 @@
 from django.shortcuts import get_object_or_404
 from ninja import Schema
-from pydantic import Field, field_serializer
-from pydantic_core.core_schema import SerializationInfo
+from pydantic import Field
 
 from apps.content.models import Asset, UsageEvent
 from apps.content.tasks import create_usage_event_task
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.core.ninja_utils.types import AbsoluteUrl
 from apps.mixins.helpers import run_task
 
 router = ItqanRouter(tags=[NinjaTag.ASSETS])
 
 
 class DetailAssetSnapshotOut(Schema):
-    image_url: str | None
+    image_url: AbsoluteUrl | None
     title: str
     description: str
-
-    @field_serializer("image_url")
-    def serialize_image_url(self, value, info: SerializationInfo) -> str:
-        request = info.context.get("request")
-        if request and isinstance(value, str) and not value.startswith("https"):
-            return request.build_absolute_uri(value)
-
-        return value if isinstance(value, str) else ""
 
 
 class DetailAssetPublisherOut(Schema):
@@ -43,19 +35,11 @@ class DetailAssetOut(Schema):
     name: str
     description: str
     long_description: str
-    thumbnail_url: str | None
+    thumbnail_url: AbsoluteUrl | None
     publisher: DetailAssetPublisherOut = Field(alias="resource.publisher")
     resource: DetailAssetResourceOut
     license: str
     snapshots: list[DetailAssetSnapshotOut] = Field(default_factory=list, alias="previews")
-
-    @field_serializer("thumbnail_url")
-    def serialize_thumbnail_url(self, value, info: SerializationInfo) -> str:
-        request = info.context.get("request")
-        if request and isinstance(value, str) and not value.startswith("https"):
-            return request.build_absolute_uri(value)
-
-        return value if isinstance(value, str) else ""
 
 
 @router.get("assets/{id}/", response=DetailAssetOut, auth=None)
