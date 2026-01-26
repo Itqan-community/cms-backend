@@ -1,10 +1,12 @@
 from typing import Literal
 
-from django.shortcuts import get_object_or_404
+from django.db.models import Q
+from django.http import Http404
 from ninja import Schema
 from ninja.pagination import paginate
 
-from apps.content.models import Asset, RecitationSurahTrack, Resource
+from apps.content.repositories.recitation import RecitationRepository
+from apps.content.services.recitation import RecitationService
 from apps.core.mixins.constants import QURAN_SURAHS
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
@@ -41,16 +43,15 @@ class RecitationSurahTrackOut(Schema):
 )
 @paginate
 def list_recitation_tracks(request: Request, asset_id: int):
-    asset = get_object_or_404(
-        Asset.objects.filter(
-            id=asset_id,
-            category=Asset.CategoryChoice.RECITATION,
-            resource__category=Resource.CategoryChoice.RECITATION,
-            resource__status=Resource.StatusChoice.READY,
-        )
-    )
+    repo = RecitationRepository()
+    service = RecitationService(repo)
 
-    tracks = RecitationSurahTrack.objects.filter(asset=asset).prefetch_related("ayah_timings").order_by("surah_number")
+    # Public API doesn't filter by publisher by default
+    asset = repo.get_asset_object(asset_id, Q())
+    if not asset:
+        raise Http404("No asset matches the given query.")
+
+    tracks = service.get_asset_tracks(asset_id, Q(), prefetch_timings=True)
 
     results: list[RecitationSurahTrackOut] = []
 

@@ -54,6 +54,8 @@ def list_recitation_tracks(request: Request, asset_id: int):
 
     publisher_q = request.publisher_q("resource_publisher")
 
+    # The service check handles presence and publisher ownership
+    # For now, we use a helper to maintain the 404 behavior
     asset = repo.get_asset_object(asset_id, publisher_q)
     if not asset:
         raise Http404("No asset matches the given query.")
