@@ -1,9 +1,10 @@
-from django.db.models import Count
+from django.db.models import Q
 from ninja import FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import Field
 
-from apps.content.models import Asset, Resource
+from apps.content.repositories.recitation import RecitationRepository
+from apps.content.services.recitation import RecitationService
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
@@ -68,15 +69,11 @@ class RecitationFilter(FilterSchema):
 @ordering(ordering_fields=["name", "created_at", "updated_at"])
 @searching(search_fields=["name", "description", "resource__publisher__name", "reciter__name"])
 def list_recitations(request, filters: RecitationFilter = Query()):
-    qs = (
-        Asset.objects.select_related("resource", "resource__publisher", "reciter", "riwayah")
-        .filter(
-            category=Asset.CategoryChoice.RECITATION,
-            resource__category=Resource.CategoryChoice.RECITATION,
-            resource__status=Resource.StatusChoice.READY,
-        )
-        .annotate(surahs_count=Count("recitation_tracks"))
-    )
+    repo = RecitationRepository()
+    service = RecitationService(repo)
+
+    # Public API doesn't filter by publisher by default, so we pass an empty Q object
+    qs = service.get_all_recitations(Q(), filters, annotate_surahs_count=True)
 
     qs = filters.filter(qs)
     return qs

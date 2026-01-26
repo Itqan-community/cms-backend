@@ -125,10 +125,101 @@ response={
 ## 🏗️ API Architecture
 - **cms_api**: Internal API mounted at `/cms-api/`. Used by the frontend SPA. Primarily uses JWT/Session authentication.
 - **developers_api**: Public API used by external developers/consumers. Primarily uses OAuth2.0 authentication.
-
+- **tenant_api**: Internal API mounted at `/tenant/`. Used by the frontend SPA for the publishers' pages. used as multitenant SaaS. Primarily uses JWT/Session authentication.
 
 ## General
 - any function you define should be type hinted, you can exclude only api endpoints (decorated with `@router.`)
 - All code should be python 3.13 compatible and django 5.2 compatible
 - always use `AwareDateTime` instead of `datetime` in `Schema`
-- All queries in `api/internal` should be filtered for publisher, preferably using `request.publisher_q()`
+- All queries in `api/tenant` should be filtered for publisher, preferably using `request.publisher_q()`
+
+## Architecture
+- Always use Repositories for data access layer and Services for business logic layer
+The following code is for demonstration purposes:
+A base repository so that it defines the contract for upcoming consumers therefore the code doesn't break.
+```python
+from abc import ABC, abstractmethod
+from typing import Optional
+import cache_service # Hypothetical external cache client
+
+class BaseRecitationRepository(ABC):
+
+    @abstractmethod
+    def get_recitation(self, surah_number: int, reciter_name: str) -> Optional[dict]:
+        """
+        Retrieves the recitation data.
+        Returns a dictionary (Entity), not a Django Model.
+        """
+        pass
+
+    @abstractmethod
+    def clear_cache(self, surah_number: int, reciter_name: str):
+        """
+        Clears the cache for this specific recitation.
+        """
+        pass
+```
+Here, the repository interacts with the data sources, gets data from the ORM, and caches it in Redis. Later,
+we may use different technology for search, which will be a good fit.
+````python
+  class RecitationRepository(BaseRecitationRepository):
+
+    def __init__(self):
+        # We only interact with the Django ORM here
+        self.model = QuranRecitation
+
+    def get_recitation(self, surah_number, reciter_name):
+        # 1. Construct Cache Key
+        cache_key = f"quran:{surah_number}:{reciter_name}"
+
+        # 2. Check Cache Service (Decoupled)
+        cached_data = cache_service.get(cache_key)
+        if cached_data:
+            return cached_data
+
+        # 3. Database Access via ORM
+        # Note: The rest of the app doesn't know this is Django
+        try:
+            recitation = self.model.objects.get(
+                surah_number=surah_number,
+                reciter_name=reciter_name
+            )
+        except self.model.DoesNotExist:
+            return None
+
+
+        # 4. Cache It (Long TTL for recitations)
+        cache_service.set(cache_key, entity, timeout=86400) # 1 Day
+        return entity
+
+    def clear_cache(self, surah_number, reciter_name):
+        cache_key = f"quran:{surah_number}:{reciter_name}"
+        cache_service.delete(cache_key)
+```
+The service will call the repository without bothering itself about the data internals or how it is retrieved,
+ as the service should bother itself with business logic only.
+```python
+   class RecitationService:
+
+    def __init__(self, repo: BaseQuranRecitationRepository):
+        self.repo = repo
+
+    def get_audio_link(self, surah_number: int, reciter_name: str):
+        """
+        Business Logic: Check if recitation exists.
+        """
+        recitation = self.repo.get_recitation(surah_number, reciter_name)
+
+        if not recitation or not recitation.get('is_active'):
+            raise ValueError("Recitation not found or inactive.")
+
+        return recitation['url']
+
+    def update_recitation(self, surah_number: int, reciter_name: str, new_status: bool):
+        """
+        Business Logic: Update the DB and notify the user
+        """
+        # 1. Update Database (ORM)
+
+       # Notify the user about the new update (Version)
+```
