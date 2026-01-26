@@ -28,6 +28,18 @@ Itqan CMS helps Quranic data publishers distribute high-quality, licensed conten
 - **CI/CD**: GitHub Actions
 - **Hosting/Infra**: DigitalOcean (e.g., Droplets, Managed PostgreSQL)
 
+## 🔐 Authentication
+
+Itqan CMS uses **two distinct authentication systems** for different user types:
+
+| User Type | API | Authentication | Documentation |
+|-----------|-----|----------------|---------------|
+| **Publishers** | `cms-api` | django-allauth (JWT) | Account creation, social login (Google/GitHub) |
+| **Developers** | `developers-api` | django-oauth-toolkit (OAuth2) | Client credentials flow |
+
+**📖 For detailed authentication flows, security practices, and developer guides, see [docs/AUTHENTICATION.md](./docs/AUTHENTICATION.md)**
+
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -115,17 +127,22 @@ cms-backend/
 
 
 
+## 📚 Documentation
+
+- **[Documentation Index](./docs/)** — Overview of all available documentation
+- **[Architecture Guide](./docs/ARCHITECTURE.md)** — System architecture, domain models, and component interactions
+- **[Authentication Guide](./docs/AUTHENTICATION.md)** — Complete OAuth flows, security practices, and developer guides
+- **[Contributing Guide](./CONTRIBUTING.md)** — How to contribute to the project
+
 ## 🤝 Contributing
 
-Branch strategy and protection:
-- main and staging: no direct commits; updates via PRs only
-- develop: primary branch for active development
-- Flow: develop → staging (PR) → main (PR). Do not skip stages
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines.
 
-Rules:
-- Start all changes from develop (or feature/* based on develop)
-- Test locally before pushing; use descriptive commits
-- Push to origin/develop after tests pass
+**Quick Summary:**
+- `main` and `staging`: PR-only (no direct commits)
+- `develop`: Primary development branch
+- Flow: `develop` → `staging` (PR) → `main` (PR)
+- Start all changes from `develop` or feature branches
 
 
 ## 🚚 Deployment
@@ -136,7 +153,8 @@ Containerized deployment uses Caddy (TLS, static) and the Django app container. 
 
 - Use strong unique `SECRET_KEY` per environment; keep it out of VCS
 - CORS/CSRF configured per environment settings
-- JWT via SimpleJWT; OAuth via allauth providers (Google/GitHub)
+- OAuth `client_secret` must be kept secure (see [docs/AUTHENTICATION.md](./docs/AUTHENTICATION.md))
+- JWT tokens via SimpleJWT for `cms-api`; OAuth2 via django-oauth-toolkit for `developers-api`
 
 ## 📄 License
 

@@ -211,6 +211,7 @@ jobs:
                 echo "CLOUDFLARE_R2_ACCESS_KEY_ID=${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}";
                 echo "CLOUDFLARE_R2_SECRET_ACCESS_KEY=${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}";
                 echo "CLOUDFLARE_R2_PUBLIC_BASE_URL=${{ secrets.DEVELOP_CLOUDFLARE_R2_PUBLIC_BASE_URL }}";
+                echo "EMAIL_BACKEND=${{ secrets.DEVELOP_EMAIL_BACKEND }}";
               } > deployment/docker/.env
             elif [ "${{ env.ENV_NAME }}" = "staging" ]; then
               {
@@ -232,6 +233,7 @@ jobs:
                 echo "CLOUDFLARE_R2_ACCESS_KEY_ID=${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}";
                 echo "CLOUDFLARE_R2_SECRET_ACCESS_KEY=${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}";
                 echo "CLOUDFLARE_R2_PUBLIC_BASE_URL=${{ secrets.STAGING_CLOUDFLARE_R2_PUBLIC_BASE_URL }}";
+                echo "EMAIL_BACKEND=${{ secrets.STAGING_EMAIL_BACKEND }}";
               } > deployment/docker/.env
             elif [ "${{ env.ENV_NAME }}" = "production" ]; then
               {
@@ -253,6 +255,7 @@ jobs:
                 echo "CLOUDFLARE_R2_ACCESS_KEY_ID=${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}";
                 echo "CLOUDFLARE_R2_SECRET_ACCESS_KEY=${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}";
                 echo "CLOUDFLARE_R2_PUBLIC_BASE_URL=${{ secrets.PROD_CLOUDFLARE_R2_PUBLIC_BASE_URL }}";
+                echo "EMAIL_BACKEND=${{ secrets.PRODUCTION_EMAIL_BACKEND }}";
               } > deployment/docker/.env
             fi
             # Append image coordinates for docker compose variable substitution
