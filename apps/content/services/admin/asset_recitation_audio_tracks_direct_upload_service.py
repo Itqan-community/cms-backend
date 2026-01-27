@@ -6,6 +6,7 @@ from typing import Any
 import boto3
 from botocore.config import Config
 from django.conf import settings
+from django.db import IntegrityError
 from django.utils import timezone
 
 from apps.content.models import RecitationSurahTrack
@@ -46,10 +47,6 @@ class AssetRecitationAudioTracksDirectUploadService:
         key = self._build_key(asset_id, surah_number)  # DB/storage name (no "media/" prefix)
         r2_key = self._to_r2_key(key)
 
-        # Skip duplicates early (avoid creating multipart uploads we won't use)
-        if RecitationSurahTrack.objects.filter(asset_id=asset_id, surah_number=surah_number).exists():
-            raise ItqanError("duplicate_track", f"Track already exists for surah {surah_number}", status_code=400)
-
         resp = s3.create_multipart_upload(
             Bucket=settings.CLOUDFLARE_R2_BUCKET,
             Key=r2_key,
@@ -57,13 +54,27 @@ class AssetRecitationAudioTracksDirectUploadService:
         )
         upload_id = resp["UploadId"]
 
-        RecitationSurahTrack.objects.create(
-            asset_id=asset_id,
-            surah_number=surah_number,
-            audio_file=key,
-            original_filename=filename,
-            upload_finished_at=None,
-        )
+        try:
+            RecitationSurahTrack.objects.create(
+                asset_id=asset_id,
+                surah_number=surah_number,
+                audio_file=key,
+                original_filename=filename,
+                upload_finished_at=None,
+            )
+        except IntegrityError as err:
+            # Prevent orphaned multipart uploads if the DB row already exists.
+            s3.abort_multipart_upload(
+                Bucket=settings.CLOUDFLARE_R2_BUCKET,
+                Key=r2_key,
+                UploadId=upload_id,
+            )
+
+            raise ItqanError(
+                "duplicate_track",
+                f"Track already exists for asset {asset_id} and surah {surah_number}",
+                status_code=400,
+            ) from err
 
         return {"key": key, "uploadId": upload_id, "contentType": "audio/mpeg", "surahNumber": surah_number}
 
@@ -164,6 +175,7 @@ class AssetRecitationAudioTracksDirectUploadService:
 
         s3 = self._get_s3_client()
         cutoff_time = timezone.now() - timedelta(hours=older_than_hours)
+        cutoff_time_utc = cutoff_time.astimezone(timezone.utc)
 
         aborted_count = 0
         db_cleaned_count = 0
@@ -177,17 +189,21 @@ class AssetRecitationAudioTracksDirectUploadService:
             )
 
             uploads = response.get("Uploads", [])
-            orphaned_tracks_to_cleanup: list[RecitationSurahTrack] = []
 
             for upload in uploads:
                 initiated = upload.get("Initiated")
                 if not initiated:
                     continue
 
-                if initiated.replace(tzinfo=None) < cutoff_time.replace(tzinfo=None):
+                initiated_utc = (
+                    initiated.replace(tzinfo=timezone.utc)
+                    if initiated.tzinfo is None
+                    else initiated.astimezone(timezone.utc)
+                )
+
+                if initiated_utc < cutoff_time_utc:
                     key = upload.get("Key")
                     upload_id = upload.get("UploadId")
-                    db_key = self._to_db_key(key) if key else None
 
                     try:
                         result = self.abort_upload(key=key, upload_id=upload_id)
@@ -195,25 +211,6 @@ class AssetRecitationAudioTracksDirectUploadService:
                         db_cleaned_count += result.get("dbRecordsDeleted", 0)
                     except Exception as e:
                         errors.append(f"Failed to abort {key}: {str(e)}")
-
-                    if (
-                        db_key
-                        and RecitationSurahTrack.objects.filter(
-                            audio_file=db_key,
-                            upload_finished_at__isnull=True,
-                        ).exists()
-                    ):
-                        orphaned_tracks_to_cleanup.append(
-                            RecitationSurahTrack.objects.get(
-                                audio_file=db_key,
-                                upload_finished_at__isnull=True,
-                            )
-                        )
-
-            orphaned_count = len(orphaned_tracks_to_cleanup)
-            if orphaned_count > 0:
-                RecitationSurahTrack.objects.filter(id__in=[t.id for t in orphaned_tracks_to_cleanup]).delete()
-                db_cleaned_count += orphaned_count
 
         except Exception as e:
             errors.append(f"Cleanup failed: {str(e)}")

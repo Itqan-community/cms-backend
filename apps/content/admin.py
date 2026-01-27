@@ -1,4 +1,5 @@
 import json
+import logging
 
 from django.contrib import admin
 from django.core.exceptions import PermissionDenied
@@ -43,6 +44,8 @@ from .services.admin.asset_recitation_audio_tracks_upload_service import (
 from .services.admin.asset_recitation_ayah_timestamps_upload_service import (
     bulk_upload_recitation_ayah_timestamps,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ResourceVersionInline(admin.TabularInline):
@@ -480,8 +483,12 @@ class AssetAdmin(admin.ModelAdmin):
             return JsonResponse(
                 {"error_name": e.error_name, "message": e.message, "extra": e.extra}, status=e.status_code
             )
-        except Exception as e:
-            return JsonResponse({"error_name": "server_error", "message": str(e)}, status=500)
+        except Exception:
+            logger.exception("uploads_start_view failed (asset_id=%s)", locals().get("asset_id"))
+            return JsonResponse(
+                {"error_name": "server_error", "message": "An unexpected error occurred"},
+                status=500,
+            )
 
     def uploads_sign_part_view(self, request: HttpRequest) -> JsonResponse:
         if not request.user.is_staff:
@@ -502,8 +509,17 @@ class AssetAdmin(admin.ModelAdmin):
             return JsonResponse(
                 {"error_name": e.error_name, "message": e.message, "extra": e.extra}, status=e.status_code
             )
-        except Exception as e:
-            return JsonResponse({"error_name": "server_error", "message": str(e)}, status=500)
+        except Exception:
+            logger.exception(
+                "uploads_sign_part_view failed (key=%s upload_id=%s part_number=%s)",
+                (locals().get("body") or {}).get("key"),
+                (locals().get("body") or {}).get("uploadId"),
+                (locals().get("body") or {}).get("partNumber"),
+            )
+            return JsonResponse(
+                {"error_name": "server_error", "message": "An unexpected error occurred"},
+                status=500,
+            )
 
     def uploads_finish_view(self, request: HttpRequest) -> JsonResponse:
         if not request.user.is_staff:
@@ -519,8 +535,16 @@ class AssetAdmin(admin.ModelAdmin):
             return JsonResponse(
                 {"error_name": e.error_name, "message": e.message, "extra": e.extra}, status=e.status_code
             )
-        except Exception as e:
-            return JsonResponse({"error_name": "server_error", "message": str(e)}, status=500)
+        except Exception:
+            logger.exception(
+                "uploads_finish_view failed (key=%s upload_id=%s)",
+                (locals().get("body") or {}).get("key"),
+                (locals().get("body") or {}).get("uploadId"),
+            )
+            return JsonResponse(
+                {"error_name": "server_error", "message": "An unexpected error occurred"},
+                status=500,
+            )
 
     def uploads_abort_view(self, request: HttpRequest) -> JsonResponse:
         if not request.user.is_staff:
@@ -536,8 +560,16 @@ class AssetAdmin(admin.ModelAdmin):
             return JsonResponse(
                 {"error_name": e.error_name, "message": e.message, "extra": e.extra}, status=e.status_code
             )
-        except Exception as e:
-            return JsonResponse({"error_name": "server_error", "message": str(e)}, status=500)
+        except Exception:
+            logger.exception(
+                "uploads_abort_view failed (key=%s upload_id=%s)",
+                (locals().get("body") or {}).get("key"),
+                (locals().get("body") or {}).get("uploadId"),
+            )
+            return JsonResponse(
+                {"error_name": "server_error", "message": "An unexpected error occurred"},
+                status=500,
+            )
 
     def validate_recitation_filenames_view(self, request: HttpRequest) -> JsonResponse:
         if not request.user.is_staff:
