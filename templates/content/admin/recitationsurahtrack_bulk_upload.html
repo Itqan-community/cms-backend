@@ -30,6 +30,7 @@
       // Surah name maps injected by server (safe via json_script)
       const SURAH_MAP_EN = JSON.parse(document.getElementById('surah-map-en').textContent);
       const SURAH_MAP_AR = JSON.parse(document.getElementById('surah-map-ar').textContent);
+      const assetId = window.location.pathname.match(/\/(\d+)\//)?.[1];
       const form = document.getElementById('bulkUploadForm');
       if (!form) return;
       const fileInput = form.querySelector('input[name="audio_files"]');
@@ -56,51 +57,103 @@
         return `${num.toFixed(1)} ${units[i]}`;
       }
 
-      function parseSurahNumber(filename) {
-        const m = /^(\d{1,3})/.exec(filename || '');
-        return m ? parseInt(m[1], 10) : null;
-      }
-
-      function refreshPreview() {
+      async function refreshPreview() {
         if (!fileInput) return;
         const files = Array.from(fileInput.files || []);
         if (!files.length) {
           filePreview.style.display = 'none';
           return;
         }
-        filePreview.style.display = 'block';
-        filePreviewList.innerHTML = '';
-        const seen = new Set();
-        let invalid = 0;
-        let dupWithin = 0;
-        for (const f of files) {
-          const li = document.createElement('li');
-          li.style.margin = '4px 0';
-          const sn = parseSurahNumber(f.name);
-          if (sn === null || sn < 1 || sn > 114) {
-            li.style.color = '#ff6b6b';
-            li.textContent = `${f.name} — invalid surah number`;
-            invalid++;
-          } else {
-            if (seen.has(sn)) {
-              li.style.color = '#f0ad4e';
-              li.textContent = `${f.name} — duplicate in selection (surah ${sn})`;
-              dupWithin++;
-            } else {
-              seen.add(sn);
-              const en = SURAH_MAP_EN[String(sn)] || SURAH_MAP_EN[sn] || '';
-              const ar = SURAH_MAP_AR[String(sn)] || SURAH_MAP_AR[sn] || '';
-              li.textContent = `${f.name} — surah ${sn} ${en ? `(${en})` : ''} ${ar ? `- ${ar}` : ''}`;
-            }
+
+        // Call backend validation endpoint
+        const validateUrl = "{% url 'admin:asset_validate_recitation_filenames' %}";
+        try {
+          const response = await fetch(validateUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': getCookie('csrftoken') || ''
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+              filenames: files.map(f => f.name),
+              asset_id: assetId
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Validation request failed');
           }
-          filePreviewList.appendChild(li);
+
+          const { results } = await response.json();
+
+          // Render validation results
+          filePreview.style.display = 'block';
+          filePreviewList.innerHTML = '';
+
+          let invalid = 0;
+          let dupInSelection = 0;
+          let dupInDb = 0;
+          let totalBytes = 0;
+          const seenSurahs = new Set();
+
+          results.forEach((result, idx) => {
+            const file = files[idx];
+            totalBytes += file?.size || 0;
+
+            const li = document.createElement('li');
+            li.style.margin = '4px 0';
+
+            if (!result.valid) {
+              li.style.color = '#ff6b6b';
+              li.textContent = `${result.filename} —  invalid filename, can't extract surah number`;
+              invalid++;
+            } else {
+              const sn = result.surah_number;
+
+              // Check for duplicates within selection
+              if (seenSurahs.has(sn)) {
+                li.style.color = '#f0ad4e';
+                li.textContent = `${result.filename} — duplicate in selection (surah ${sn})`;
+                dupInSelection++;
+              } else {
+                seenSurahs.add(sn);
+
+                // Check if exists in database
+                if (result.exists) {
+                  li.style.color = '#f0ad4e';
+                  li.textContent = `${result.filename} — already exists in database (surah ${sn})`;
+                  dupInDb++;
+                } else {
+                  // Valid file
+                  const en = result.surah_name_en || '';
+                  const ar = result.surah_name_ar || '';
+                  li.textContent = `${result.filename} — surah ${sn} ${en ? `(${en})` : ''} ${ar ? `- ${ar}` : ''}`;
+                }
+              }
+            }
+
+            filePreviewList.appendChild(li);
+          });
+
+          // Build summary message
+          const warnings = [];
+          if (invalid) warnings.push(`${invalid} invalid filename(s)`);
+          if (dupInSelection) warnings.push(`${dupInSelection} duplicate(s) in selection`);
+
+          filePreviewSummary.textContent = warnings.length
+            ? `Warnings: ${warnings.join(', ')}. Existing tracks in the database will be skipped automatically. Total size: ${bytesToReadable(totalBytes)}.`
+            : `Looks good. Existing tracks in the database will be skipped automatically. Total size: ${bytesToReadable(totalBytes)}.`;
+
+          // Disable submit if invalid files
+          document.getElementById('submitBtn').disabled = invalid > 0;
+
+        } catch (error) {
+          console.error('Validation error:', error);
+          filePreview.style.display = 'block';
+          filePreviewList.innerHTML = '<li style="color:#ff6b6b;">Failed to validate filenames. Please try again.</li>';
+          document.getElementById('submitBtn').disabled = true;
         }
-        const warnings = [];
-        if (invalid) warnings.push(`${invalid} invalid filename(s)`);
-        if (dupWithin) warnings.push(`${dupWithin} duplicate(s) in selection`);
-        filePreviewSummary.textContent = warnings.length ? `Warnings: ${warnings.join(', ')}. Existing tracks in the database will also be skipped automatically.` : 'Looks good. Existing tracks in the database will be skipped automatically.';
-        // Optional: disable submit if there are invalid filenames
-        document.getElementById('submitBtn').disabled = invalid > 0;
       }
 
       if (fileInput) {
