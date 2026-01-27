@@ -1,0 +1,387 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrahead %}
+  <script src="https://releases.transloadit.com/uppy/v3.17.0/uppy.min.js"></script>
+  <link href="https://releases.transloadit.com/uppy/v3.17.0/uppy.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+  {{ surah_map_en|json_script:"surah-map-en" }}
+  {{ surah_map_ar|json_script:"surah-map-ar" }}
+  <form id="bulkUploadForm" method="post" enctype="multipart/form-data" action="" style="max-width:900px;">
+      {% csrf_token %}
+      <table style="margin-bottom:12px;">
+          {{ form.as_table }}
+      </table>
+      <div id="filePreview" style="display:none; margin:12px 0; padding:10px; border:1px solid #444; border-radius:6px;">
+        <div style="margin-bottom:8px; font-weight:600;">Selected files</div>
+        <ul id="filePreviewList" style="list-style: none; padding-left: 0; margin:0;"></ul>
+        <div id="filePreviewSummary" style="margin-top:8px; font-size:12px; color:#aaa;"></div>
+      </div>
+      <div id="progressWrap" style="margin-top:12px; display:none;">
+        <progress id="uploadProgress" max="100" value="0" style="width:100%;"></progress>
+        <div id="progressText" style="margin-top:6px; font-size:12px;">Preparing upload…</div>
+        <div id="uploadStatus" style="margin-top:6px; font-size:12px; color:#555;">
+          Please do not close or navigate away from this page until the upload is fully finished.
+        </div>
+      </div>
+      <div style="margin-top:12px; display:flex; gap:8px;">
+        <input type="submit" value="Upload" class="default" id="submitBtn">
+      </div>
+  </form>
+
+  <script id="assetId" type="application/json">{{ asset_id }}</script>
+  <script>
+    (function() {
+      const SURAH_MAP_EN = JSON.parse(document.getElementById('surah-map-en').textContent);
+      const SURAH_MAP_AR = JSON.parse(document.getElementById('surah-map-ar').textContent);
+      const assetId = JSON.parse(document.getElementById('assetId').textContent);
+
+      const startUrl = "{% url 'admin:asset_uploads_start' %}";
+      const signPartUrl = "{% url 'admin:asset_uploads_sign_part' %}";
+      const finishUrl = "{% url 'admin:asset_uploads_finish' %}";
+      const abortUrl = "{% url 'admin:asset_uploads_abort' %}";
+      const redirectUrl = "{{ redirect_url|default:'' }}";
+
+      const form = document.getElementById('bulkUploadForm');
+      if (!form) return;
+      const fileInput = form.querySelector('input[name="audio_files"]');
+      const filePreview = document.getElementById('filePreview');
+      const filePreviewList = document.getElementById('filePreviewList');
+      const filePreviewSummary = document.getElementById('filePreviewSummary');
+
+      const progressWrap = document.getElementById('progressWrap');
+      const progressBar = document.getElementById('uploadProgress');
+      const progressText = document.getElementById('progressText');
+      const statusText = document.getElementById('uploadStatus');
+      const submitBtn = document.getElementById('submitBtn');
+
+      // Store validation results globally to use during upload
+      let validationResults = [];
+
+      function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+      }
+      function bytesToReadable(bytes) {
+        if (!bytes || isNaN(bytes)) return '0 B';
+        const units = ['B','KB','MB','GB','TB'];
+        let i = 0;
+        let num = bytes;
+        while (num >= 1024 && i < units.length - 1) {
+          num = num / 1024;
+          i++;
+        }
+        return `${num.toFixed(1)} ${units[i]}`;
+      }
+
+      async function abortUpload(key, uploadId) {
+        if (!key || !uploadId) return;
+        try {
+          await fetch(abortUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': getCookie('csrftoken') || ''
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ key, uploadId }),
+          });
+        } catch (e) {
+          console.error('Failed to abort upload:', e);
+        }
+      }
+
+      async function refreshPreview() {
+        if (!fileInput) return;
+        const files = Array.from(fileInput.files || []);
+
+        // Clear validation results
+        validationResults = [];
+
+        if (!files.length) {
+          filePreview.style.display = 'none';
+          return;
+        }
+
+        // Call backend validation endpoint
+        const validateUrl = "{% url 'admin:asset_validate_recitation_filenames' %}";
+        try {
+          const response = await fetch(validateUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': getCookie('csrftoken') || ''
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+              filenames: files.map(f => f.name),
+              asset_id: assetId
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Validation request failed');
+          }
+
+          const { results } = await response.json();
+
+          // Store validation results globally for use during upload
+          validationResults = results;
+
+          // Render validation results
+          filePreview.style.display = 'block';
+          filePreviewList.innerHTML = '';
+
+          let invalid = 0;
+          let dupInSelection = 0;
+          let dupInDb = 0;
+          let totalBytes = 0;
+          const seenSurahs = new Set();
+
+          results.forEach((result, idx) => {
+            const file = files[idx];
+            totalBytes += file?.size || 0;
+
+            const li = document.createElement('li');
+            li.style.margin = '4px 0';
+
+            if (!result.valid) {
+              li.style.color = '#ff6b6b';
+              li.textContent = `${result.filename} — invalid filename, can't extract surah number`;
+              invalid++;
+            } else {
+              const sn = result.surah_number;
+
+              // Check for duplicates within selection
+              if (seenSurahs.has(sn)) {
+                li.style.color = '#f0ad4e';
+                li.textContent = `${result.filename} — duplicate in selection (surah ${sn})`;
+                dupInSelection++;
+              } else {
+                seenSurahs.add(sn);
+
+                // Check if exists in database
+                if (result.exists) {
+                  li.style.color = '#f0ad4e';
+                  li.textContent = `${result.filename} — already exists in database (surah ${sn})`;
+                  dupInDb++;
+                } else {
+                  // Valid file
+                  const en = result.surah_name_en || '';
+                  const ar = result.surah_name_ar || '';
+                  li.textContent = `${result.filename} — surah ${sn} ${en ? `(${en})` : ''} ${ar ? `- ${ar}` : ''}`;
+                }
+              }
+            }
+
+            filePreviewList.appendChild(li);
+          });
+
+          // Build summary message
+          const warnings = [];
+          if (invalid) warnings.push(`${invalid} invalid filename(s)`);
+          if (dupInSelection) warnings.push(`${dupInSelection} duplicate(s) in selection`);
+
+          filePreviewSummary.textContent = warnings.length
+            ? `Warnings: ${warnings.join(', ')}. Existing tracks in the database will be skipped automatically. Total size: ${bytesToReadable(totalBytes)}.`
+            : `Looks good. Existing tracks in the database will be skipped automatically. Total size: ${bytesToReadable(totalBytes)}.`;
+
+          // Disable submit if invalid files
+          submitBtn.disabled = invalid > 0;
+
+        } catch (error) {
+          console.error('Validation error:', error);
+          filePreview.style.display = 'block';
+          filePreviewList.innerHTML = '<li style="color:#ff6b6b;">Failed to validate filenames. Please try again.</li>';
+          submitBtn.disabled = true;
+        }
+      }
+
+      if (fileInput) {
+        fileInput.addEventListener('change', refreshPreview);
+        if (fileInput.files && fileInput.files.length) refreshPreview();
+      }
+
+      if (!window.Uppy) {
+        console.error('Uppy library failed to load');
+        return;
+      }
+
+      const csrftoken = getCookie('csrftoken');
+      const uppy = new Uppy.Uppy({
+        restrictions: { allowedFileTypes: ['.mp3'] },
+        autoProceed: false,
+      }).use(Uppy.AwsS3Multipart, {
+        limit: 4,
+        partSize: 32 * 1024 * 1024, // 32 MB
+        createMultipartUpload: async (file) => {
+          const res = await fetch(startUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken || '' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ assetId: assetId, filename: file.name }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            try { uppy.setFileMeta(file.id, { startErrorName: data.error_name || 'start_failed' }); } catch (e) {}
+            throw new Error(data.message || 'start failed');
+          }
+
+          // Store uploadId and key in file meta for error handlers
+          try { uppy.setFileMeta(file.id, { key: data.key, uploadId: data.uploadId }); } catch (e) {}
+
+          return { uploadId: data.uploadId, key: data.key };
+        },
+        signPart: async (file, { uploadId, partNumber }) => {
+          const key = (file.s3Multipart && file.s3Multipart.key) || file.meta.key;
+          const res = await fetch(signPartUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken || '' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ key, uploadId, partNumber }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.message || 'sign failed');
+          return { url: data.url };
+        },
+        completeMultipartUpload: async (file, { uploadId, parts, key }) => {
+          const res = await fetch(finishUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken || '' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ key, uploadId, parts }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.message || 'finish failed');
+          return data;
+        },
+      });
+
+      uppy.on('progress', (pct) => {
+        if (!progressBar || !progressText) return;
+        progressBar.value = Math.max(0, Math.min(100, Math.round(pct)));
+        progressText.textContent = `${Math.round(pct)}%`;
+        if (pct >= 100) {
+          progressBar.removeAttribute('value');
+          progressText.textContent = 'Upload sent. Finalizing on server…';
+        }
+      });
+
+      // Handle individual file upload errors
+      uppy.on('upload-error', async (file, error, response) => {
+        console.error('Upload error for file:', file?.name, error);
+
+        // Abort the multipart upload if it was started
+        const uploadId = file?.s3Multipart?.uploadId;
+        const key = file?.s3Multipart?.key || file?.meta?.key;
+
+        if (uploadId && key) {
+          await abortUpload(key, uploadId);
+        }
+      });
+
+      // Handle file removal (user cancelled)
+      uppy.on('file-removed', async (file, reason) => {
+        if (reason === 'removed-by-user') {
+          const uploadId = file?.s3Multipart?.uploadId;
+          const key = file?.s3Multipart?.key || file?.meta?.key;
+
+          if (uploadId && key) {
+            await abortUpload(key, uploadId);
+          }
+        }
+      });
+
+      // Handle cancel-all event
+      uppy.on('cancel-all', async () => {
+        const files = uppy.getFiles ? uppy.getFiles() : [];
+        for (const file of files) {
+          const uploadId = file?.s3Multipart?.uploadId;
+          const key = file?.s3Multipart?.key || file?.meta?.key;
+
+          if (uploadId && key) {
+            await abortUpload(key, uploadId);
+          }
+        }
+      });
+
+      function redirectNow() {
+        try {
+          progressBar.setAttribute('value', '100');
+          progressText.textContent = 'Completed. Redirecting…';
+          statusText.textContent = 'Upload finished.';
+        } catch (e) {}
+
+        window.location.href = redirectUrl || window.location.href;
+      }
+
+      form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const files = Array.from(fileInput.files || []);
+        if (!files.length) return;
+
+        // Filter files based on validation results
+        // Only upload files that are valid AND don't already exist in database
+        const filesToUpload = [];
+        const seenSurahs = new Set();
+
+        files.forEach((file, idx) => {
+          const validation = validationResults[idx];
+          if (!validation) return; // Skip if no validation data
+
+          // Skip if invalid filename
+          if (!validation.valid) return;
+
+          // Skip if already exists in database
+          if (validation.exists) return;
+
+          // Skip if duplicate surah number in current selection
+          const surahNum = validation.surah_number;
+          if (seenSurahs.has(surahNum)) return;
+
+          seenSurahs.add(surahNum);
+          filesToUpload.push(file);
+        });
+
+        // If no files to upload (all are duplicates/invalid), redirect immediately
+        if (filesToUpload.length === 0) {
+          progressWrap.style.display = 'block';
+          progressBar.value = 100;
+          progressText.textContent = 'All files already exist or are invalid. Redirecting…';
+          statusText.textContent = 'No new files to upload.';
+          setTimeout(() => redirectNow(), 1000);
+          return;
+        }
+
+        progressWrap.style.display = 'block';
+        progressBar.value = 0;
+        progressText.textContent = '0%';
+        statusText.textContent = `Uploading ${filesToUpload.length} file(s)… Please do not close this page.`;
+        submitBtn.disabled = true;
+
+        try {
+          // Clear queue
+          try {
+            const existing = uppy.getFiles ? uppy.getFiles() : [];
+            for (const f of existing) if (f && f.id) uppy.removeFile(f.id);
+          } catch (e) {}
+
+          // Only add files that should be uploaded
+          filesToUpload.forEach((file) => {
+            uppy.addFile({ name: file.name, type: file.type || 'audio/mpeg', data: file, meta: {} });
+          });
+
+          const result = await uppy.upload();
+          redirectNow();
+        } catch (err) {
+          console.error('Upload failed', err);
+          statusText.textContent = 'Upload encountered errors. Redirecting…';
+          setTimeout(() => redirectNow(), 2000);
+        }
+      });
+    })();
+  </script>
+{% endblock %}

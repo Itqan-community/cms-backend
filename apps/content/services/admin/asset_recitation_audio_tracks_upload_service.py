@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from django.db import transaction
 
 from apps.content.models import Asset, RecitationSurahTrack
-from apps.mixins.recitations_helpers import extract_surah_number_from_filename
+from apps.mixins.recitations_helpers import extract_surah_number_from_mp3_filename
 
 
 def bulk_upload_recitation_audio_tracks(asset_id: int, files: Iterable) -> dict:
@@ -30,7 +30,7 @@ def bulk_upload_recitation_audio_tracks(asset_id: int, files: Iterable) -> dict:
         with transaction.atomic():
             for f in files:
                 try:
-                    surah_number = extract_surah_number_from_filename(f.name)
+                    surah_number = extract_surah_number_from_mp3_filename(f.name)
                 except ValueError:
                     filename_errors += 1
                     continue
@@ -50,6 +50,7 @@ def bulk_upload_recitation_audio_tracks(asset_id: int, files: Iterable) -> dict:
                     asset=asset,
                     surah_number=surah_number,
                     audio_file=f,
+                    original_filename=getattr(f, "name", None),
                 )
                 try:
                     if obj.audio_file and getattr(obj.audio_file, "name", None):
