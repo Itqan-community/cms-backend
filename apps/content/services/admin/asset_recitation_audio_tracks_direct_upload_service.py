@@ -41,7 +41,7 @@ class AssetRecitationAudioTracksDirectUploadService:
         """Convert R2 object key (media/uploads/...) to DB/storage name (uploads/...) without media prefix for backward compatibility and to match default Django upload behavior"""
         return key[len(self._MEDIA_PREFIX) :] if key.startswith(self._MEDIA_PREFIX) else key
 
-    def start_upload(self, asset_id: int, filename: str) -> dict[str, Any]:
+    def start_upload(self, asset_id: int, filename: str, duration_ms: int | None = None) -> dict[str, Any]:
         s3 = self._get_s3_client()
         surah_number = extract_surah_number_from_mp3_filename(filename)
         key = self._build_key(asset_id, surah_number)  # DB/storage name (no "media/" prefix)
@@ -60,6 +60,7 @@ class AssetRecitationAudioTracksDirectUploadService:
                 surah_number=surah_number,
                 audio_file=key,
                 original_filename=filename,
+                duration_ms=duration_ms or 0,
                 upload_finished_at=None,
             )
         except IntegrityError as err:
@@ -105,19 +106,25 @@ class AssetRecitationAudioTracksDirectUploadService:
             MultipartUpload={"Parts": [{"ETag": p["ETag"], "PartNumber": int(p["PartNumber"])} for p in parts]},
         )
 
-        # Compute size_bytes and duration_ms from the uploaded object
+        # Compute size_bytes from the uploaded object
         try:
             head = s3.head_object(Bucket=settings.CLOUDFLARE_R2_BUCKET, Key=r2_key)
             size_bytes = int(head.get("ContentLength", 0))
         except Exception:
             size_bytes = 0
 
-        try:
-            obj = s3.get_object(Bucket=settings.CLOUDFLARE_R2_BUCKET, Key=r2_key)
-            data = obj["Body"].read()
-            duration_ms = get_mp3_duration_ms(BytesIO(data))
-        except Exception:
-            duration_ms = 0
+        # Get current track to check if duration_ms was already set
+        track = RecitationSurahTrack.objects.only("duration_ms").get(audio_file=key)
+
+        # Only compute duration_ms using mutagen as fallback if not already set
+        duration_ms = track.duration_ms
+        if not duration_ms or duration_ms == 0:
+            try:
+                obj = s3.get_object(Bucket=settings.CLOUDFLARE_R2_BUCKET, Key=r2_key)
+                data = obj["Body"].read()
+                duration_ms = get_mp3_duration_ms(BytesIO(data))
+            except Exception:
+                duration_ms = 0
 
         RecitationSurahTrack.objects.filter(audio_file=key).update(
             size_bytes=size_bytes,

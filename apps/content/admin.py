@@ -359,7 +359,19 @@ class AssetAdmin(admin.ModelAdmin):
             form = RecitationAudioTracksBulkUploadForm(request.POST, request.FILES)
             if form.is_valid():
                 files = request.FILES.getlist("audio_files")
-                stats = bulk_upload_recitation_audio_tracks(asset_id=asset_id, files=files)
+
+                # Parse durations if provided
+                durations_by_filename = {}
+                durations_json = request.POST.get("durations_json")
+                if durations_json:
+                    try:
+                        durations_by_filename = json.loads(durations_json)
+                    except Exception:
+                        pass  # Silently ignore invalid JSON, fallback to mutagen
+
+                stats = bulk_upload_recitation_audio_tracks(
+                    asset_id=asset_id, files=files, durations_by_filename=durations_by_filename
+                )
 
                 if stats.get("created"):
                     self.message_user(request, f"Created {stats['created']} recitation tracks.")
@@ -473,18 +485,24 @@ class AssetAdmin(admin.ModelAdmin):
                 body = json.loads(request.body or "{}")
                 asset_id = int(body.get("assetId"))
                 filename = str(body.get("filename", "")).strip()
+                duration_ms = body.get("durationMs")
+                if duration_ms is not None:
+                    duration_ms = int(duration_ms)
             else:
                 asset_id = int(request.POST.get("assetId"))
                 filename = str(request.POST.get("filename", "")).strip()
+                duration_ms = request.POST.get("durationMs")
+                if duration_ms is not None:
+                    duration_ms = int(duration_ms)
             service = AssetRecitationAudioTracksDirectUploadService()
-            data = service.start_upload(asset_id=asset_id, filename=filename)
+            data = service.start_upload(asset_id=asset_id, filename=filename, duration_ms=duration_ms)
             return JsonResponse(data)
         except ItqanError as e:
             return JsonResponse(
                 {"error_name": e.error_name, "message": e.message, "extra": e.extra}, status=e.status_code
             )
         except Exception:
-            logger.exception("uploads_start_view failed (asset_id=%s)", locals().get("asset_id"))
+            logger.exception(f"uploads_start_view failed (asset_id={locals().get('asset_id')})")
             return JsonResponse(
                 {"error_name": "server_error", "message": "An unexpected error occurred"},
                 status=500,
@@ -511,10 +529,11 @@ class AssetAdmin(admin.ModelAdmin):
             )
         except Exception:
             logger.exception(
-                "uploads_sign_part_view failed (key=%s upload_id=%s part_number=%s)",
-                (locals().get("body") or {}).get("key"),
-                (locals().get("body") or {}).get("uploadId"),
-                (locals().get("body") or {}).get("partNumber"),
+                f"uploads_sign_part_view failed (\
+                    key={(locals().get('body') or {}).get('key')},\
+                    upload_id={(locals().get('body') or {}).get('uploadId')},\
+                    part_number={(locals().get('body') or {}).get('partNumber')}\
+                )"
             )
             return JsonResponse(
                 {"error_name": "server_error", "message": "An unexpected error occurred"},
@@ -537,9 +556,10 @@ class AssetAdmin(admin.ModelAdmin):
             )
         except Exception:
             logger.exception(
-                "uploads_finish_view failed (key=%s upload_id=%s)",
-                (locals().get("body") or {}).get("key"),
-                (locals().get("body") or {}).get("uploadId"),
+                f"uploads_finish_view failed (\
+                    key={(locals().get('body') or {}).get('key')},\
+                    upload_id={(locals().get('body') or {}).get('uploadId')}\
+                )"
             )
             return JsonResponse(
                 {"error_name": "server_error", "message": "An unexpected error occurred"},
@@ -562,9 +582,10 @@ class AssetAdmin(admin.ModelAdmin):
             )
         except Exception:
             logger.exception(
-                "uploads_abort_view failed (key=%s upload_id=%s)",
-                (locals().get("body") or {}).get("key"),
-                (locals().get("body") or {}).get("uploadId"),
+                f"uploads_abort_view failed (\
+                    key={(locals().get('body') or {}).get('key')},\
+                    upload_id={(locals().get('body') or {}).get('uploadId')}\
+                )"
             )
             return JsonResponse(
                 {"error_name": "server_error", "message": "An unexpected error occurred"},

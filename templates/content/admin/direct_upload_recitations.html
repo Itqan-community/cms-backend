@@ -210,6 +210,37 @@
         return;
       }
 
+      // Helper function to extract duration from audio file
+      async function extractAudioDuration(file) {
+        return new Promise((resolve) => {
+          try {
+            const audio = document.createElement('audio');
+            audio.preload = 'metadata';
+
+            audio.onloadedmetadata = function() {
+              window.URL.revokeObjectURL(audio.src);
+              const durationSeconds = audio.duration;
+              if (durationSeconds && isFinite(durationSeconds)) {
+                const durationMs = Math.round(durationSeconds * 1000);
+                resolve(durationMs);
+              } else {
+                resolve(null);
+              }
+            };
+
+            audio.onerror = function() {
+              window.URL.revokeObjectURL(audio.src);
+              resolve(null);
+            };
+
+            audio.src = window.URL.createObjectURL(file);
+          } catch (error) {
+            console.warn('Failed to extract audio duration:', error);
+            resolve(null);
+          }
+        });
+      }
+
       const csrftoken = getCookie('csrftoken');
       const uppy = new Uppy.Uppy({
         restrictions: { allowedFileTypes: ['.mp3'] },
@@ -218,11 +249,24 @@
         limit: 4,
         partSize: 32 * 1024 * 1024, // 32 MB
         createMultipartUpload: async (file) => {
+          // Extract duration from audio file metadata
+          const durationMs = await extractAudioDuration(file.data);
+
+          const requestBody = {
+            assetId: assetId,
+            filename: file.name
+          };
+
+          // Only include durationMs if we successfully extracted it
+          if (durationMs !== null) {
+            requestBody.durationMs = durationMs;
+          }
+
           const res = await fetch(startUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken || '' },
             credentials: 'same-origin',
-            body: JSON.stringify({ assetId: assetId, filename: file.name }),
+            body: JSON.stringify(requestBody),
           });
           const data = await res.json().catch(() => ({}));
           if (!res.ok) {
