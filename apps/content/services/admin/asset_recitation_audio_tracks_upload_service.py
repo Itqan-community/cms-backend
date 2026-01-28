@@ -5,17 +5,22 @@ from collections.abc import Iterable
 from django.db import transaction
 
 from apps.content.models import Asset, RecitationSurahTrack
-from apps.mixins.recitations_helpers import extract_surah_number_from_filename
+from apps.core.ninja_utils.errors import ItqanError
+from apps.mixins.recitations_helpers import extract_surah_number_from_mp3_filename
 
 
-def bulk_upload_recitation_audio_tracks(asset_id: int, files: Iterable) -> dict:
+def bulk_upload_recitation_audio_tracks(
+    asset_id: int, files: Iterable, durations_by_filename: dict[str, int] | None = None
+) -> dict:
     """
     Upload multiple MP3 files as RecitationSurahTrack rows for the given asset.
     - Skips duplicates within selection and already-existing tracks in DB.
     - Runs in a single atomic transaction; on error, attempts best-effort cleanup by storage.
+    - Accepts optional durations_by_filename dict to avoid mutagen extraction when duration is known.
     Returns stats dict: {created, filename_errors, skipped_duplicates, other_errors, duplicate_details, other_error_details}
     """
     asset = Asset.objects.get(pk=asset_id)
+    durations_by_filename = durations_by_filename or {}
 
     created = 0
     filename_errors = 0
@@ -30,8 +35,8 @@ def bulk_upload_recitation_audio_tracks(asset_id: int, files: Iterable) -> dict:
         with transaction.atomic():
             for f in files:
                 try:
-                    surah_number = extract_surah_number_from_filename(f.name)
-                except ValueError:
+                    surah_number = extract_surah_number_from_mp3_filename(f.name)
+                except ItqanError:
                     filename_errors += 1
                     continue
 
@@ -46,10 +51,15 @@ def bulk_upload_recitation_audio_tracks(asset_id: int, files: Iterable) -> dict:
                     duplicate_details.append(f"{f.name} (already exists)")
                     continue
 
+                # Get duration from frontend if available
+                duration_ms = durations_by_filename.get(f.name, 0)
+
                 obj = RecitationSurahTrack.objects.create(
                     asset=asset,
                     surah_number=surah_number,
                     audio_file=f,
+                    original_filename=getattr(f, "name", None),
+                    duration_ms=duration_ms,
                 )
                 try:
                     if obj.audio_file and getattr(obj.audio_file, "name", None):

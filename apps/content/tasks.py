@@ -391,3 +391,48 @@ def update_asset_stats_async(asset_id, stat_type, increment=1):
     except Exception as e:
         logger.error(f"Failed to queue asset statistics update: {e}")
         return False
+
+
+@shared_task
+def cleanup_stuck_multipart_uploads_task(older_than_hours: int = 2):
+    """
+    Periodic task to cleanup stuck recitations multipart uploads to R2 and orphaned related RecitationSurahTrack db records.
+
+    This task should run every 4 hours to catch uploads that:
+    - Were started but never completed (browser closed, network failure, etc.)
+    - Failed but weren't properly aborted by the client
+    - Have been stuck for more than the threshold
+
+    Args:
+        older_than_hours: Cleanup uploads older than this many hours (default: 2)
+
+    Returns:
+        Dictionary with cleanup statistics
+    """
+    try:
+        from apps.content.services.admin.asset_recitation_audio_tracks_direct_upload_service import (
+            AssetRecitationAudioTracksDirectUploadService,
+        )
+
+        service = AssetRecitationAudioTracksDirectUploadService()
+        result = service.cleanup_stuck_uploads(older_than_hours=older_than_hours)
+
+        logger.info(
+            f"Cleanup stuck uploads completed: "
+            f"aborted={result.get('abortedUploads', 0)}, "
+            f"db_cleaned={result.get('dbRecordsCleaned', 0)}, "
+            f"errors={len(result.get('errors', []))}"
+        )
+
+        if result.get("errors"):
+            logger.warning(f"Cleanup errors: {result['errors']}")
+
+        return result
+
+    except Exception as exc:
+        logger.error(f"Failed to cleanup stuck multipart uploads: {exc}")
+        return {
+            "abortedUploads": 0,
+            "dbRecordsCleaned": 0,
+            "errors": [str(exc)],
+        }

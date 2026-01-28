@@ -48,6 +48,11 @@ app.conf.beat_schedule = {
         # 'task': 'apps.licensing.tasks.cleanup_old_access_requests',
         "schedule": crontab(hour=4, minute=0, day_of_month=1),  # First day of month at 4 AM
     },
+    # Cleanup stuck multipart uploads to R2 every 4 hours
+    "cleanup-stuck-multipart-uploads": {
+        "task": "apps.content.tasks.cleanup_stuck_multipart_uploads_task",
+        "schedule": crontab(minute=0, hour="*/4"),  # Every 4 hours
+    },
 }
 
 app.conf.timezone = "UTC"
