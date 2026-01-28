@@ -57,13 +57,64 @@
         return `${num.toFixed(1)} ${units[i]}`;
       }
 
+      // Helper function to extract duration from audio file
+      async function extractAudioDuration(file) {
+        return new Promise((resolve) => {
+          try {
+            const audio = document.createElement('audio');
+            audio.preload = 'metadata';
+
+            audio.onloadedmetadata = function() {
+              window.URL.revokeObjectURL(audio.src);
+              const durationSeconds = audio.duration;
+              if (durationSeconds && isFinite(durationSeconds)) {
+                const durationMs = Math.round(durationSeconds * 1000);
+                resolve(durationMs);
+              } else {
+                resolve(null);
+              }
+            };
+
+            audio.onerror = function() {
+              window.URL.revokeObjectURL(audio.src);
+              resolve(null);
+            };
+
+            audio.src = window.URL.createObjectURL(file);
+          } catch (error) {
+            console.warn('Failed to extract audio duration:', error);
+            resolve(null);
+          }
+        });
+      }
+
+      // Store durations extracted during preview
+      let fileDurations = {};
+
       async function refreshPreview() {
         if (!fileInput) return;
         const files = Array.from(fileInput.files || []);
         if (!files.length) {
           filePreview.style.display = 'none';
+          fileDurations = {};
           return;
         }
+
+        // Clear previous durations
+        fileDurations = {};
+
+        // Extract durations from all files in parallel
+        const durationPromises = files.map(async (file) => {
+          const duration = await extractAudioDuration(file);
+          if (duration !== null) {
+            fileDurations[file.name] = duration;
+          }
+        });
+
+        // Wait for all duration extractions (non-blocking for validation)
+        Promise.all(durationPromises).catch(err => {
+          console.warn('Some durations failed to extract:', err);
+        });
 
         // Call backend validation endpoint
         const validateUrl = "{% url 'admin:asset_validate_recitation_filenames' %}";
@@ -228,6 +279,12 @@
         };
 
         const formData = new FormData(form);
+
+        // Add durations as JSON string if we have any
+        if (Object.keys(fileDurations).length > 0) {
+          formData.append('durations_json', JSON.stringify(fileDurations));
+        }
+
         xhr.send(formData);
       });
     })();
