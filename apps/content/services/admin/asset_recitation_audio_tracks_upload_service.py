@@ -5,6 +5,7 @@ from collections.abc import Iterable
 from django.db import transaction
 
 from apps.content.models import Asset, RecitationSurahTrack
+from apps.core.ninja_utils.errors import ItqanError
 from apps.mixins.recitations_helpers import extract_surah_number_from_mp3_filename
 
 
@@ -31,7 +32,7 @@ def bulk_upload_recitation_audio_tracks(asset_id: int, files: Iterable) -> dict:
             for f in files:
                 try:
                     surah_number = extract_surah_number_from_mp3_filename(f.name)
-                except ValueError:
+                except ItqanError:
                     filename_errors += 1
                     continue
 

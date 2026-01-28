@@ -175,7 +175,6 @@ class AssetRecitationAudioTracksDirectUploadService:
 
         s3 = self._get_s3_client()
         cutoff_time = timezone.now() - timedelta(hours=older_than_hours)
-        cutoff_time_utc = cutoff_time.astimezone(timezone.utc)
 
         aborted_count = 0
         db_cleaned_count = 0
@@ -195,13 +194,9 @@ class AssetRecitationAudioTracksDirectUploadService:
                 if not initiated:
                     continue
 
-                initiated_utc = (
-                    initiated.replace(tzinfo=timezone.utc)
-                    if initiated.tzinfo is None
-                    else initiated.astimezone(timezone.utc)
-                )
+                initiated_time = timezone.make_aware(initiated) if initiated.tzinfo is None else initiated
 
-                if initiated_utc < cutoff_time_utc:
+                if initiated_time < cutoff_time:
                     key = upload.get("Key")
                     upload_id = upload.get("UploadId")
 
