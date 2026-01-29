@@ -640,6 +640,12 @@ class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
         validators=[FileExtensionValidator(allowed_extensions=["mp3"])],
         help_text="Per-surah audio file (MP3)",
     )
+    original_filename = models.CharField(
+        max_length=512,
+        null=True,
+        blank=True,
+        help_text="Original filename provided at upload time (for audit/debugging; not used as storage key)",
+    )
     duration_ms = models.PositiveIntegerField(
         default=0,
         help_text="Audio track duration in milliseconds (auto-calculated upon uploading file)",
@@ -647,6 +653,7 @@ class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
     size_bytes = models.PositiveBigIntegerField(
         default=0, help_text="Audio file size in bytes (auto-calculated upon uploading file)"
     )
+    upload_finished_at = models.DateTimeField(null=True, blank=True, help_text="When audio file upload was completed")
 
     class Meta:
         unique_together = [["asset", "surah_number"]]
@@ -658,13 +665,21 @@ class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
         return f"RecitationSurahTrack(asset={self.asset_id}, surah={self.surah_number})"
 
     def save(self, *args, **kwargs) -> None:
-        # Auto-compute duration and size when an MP3 file is present
+        # Auto-compute duration and size when an MP3 file is present. And set the original filename for admin/manual uploads.
         if self.audio_file:
             try:
                 self.size_bytes = int(getattr(self.audio_file, "size", 0) or 0)
             except Exception:
                 self.size_bytes = 0
-            self.duration_ms = get_mp3_duration_ms(self.audio_file)
+
+            if not self.duration_ms:
+                self.duration_ms = get_mp3_duration_ms(self.audio_file)
+
+            # Preserve the original uploaded filename (admin/manual uploads), without coupling storage keys to user input.
+            # For direct-to-R2 upload this is set explicitly by the upload service.
+            if not self.original_filename:
+                self.original_filename = self.audio_file.name
+
         super().save(*args, **kwargs)
 
 
