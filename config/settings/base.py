@@ -18,6 +18,10 @@ DEBUG = config("DEBUG", default=True, cast=bool)
 
 ALLOWED_HOSTS: list[str] = []
 
+# Feature flags
+ENABLE_OAUTH2 = config("ENABLE_OAUTH2", cast=bool, default=False)
+ENABLE_ALLAUTH = config("ENABLE_ALLAUTH", cast=bool, default=False)
+
 # Application definition
 DJANGO_APPS = [
     "django.contrib.admin",
@@ -27,6 +31,7 @@ DJANGO_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.sites",  # Required for allauth
+    "django.contrib.humanize",
 ]
 
 THIRD_PARTY_APPS = [
@@ -39,12 +44,16 @@ THIRD_PARTY_APPS = [
     "drf_spectacular",
     "allauth",
     "allauth.account",
+    "allauth.headless",
+    "allauth.mfa",
+    "allauth.usersessions",
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",
     "allauth.socialaccount.providers.github",
     "storages",
     "oauth2_provider",
 ]
+
 
 LOCAL_APPS = ["apps.core", "apps.content", "apps.users", "apps.publishers"]
 
@@ -59,7 +68,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "apps.publishers.middlewares.publisher_middleware.PublisherMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "allauth.account.middleware.AccountMiddleware",  # Required for allauth
+    "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "oauth2_provider.middleware.OAuth2TokenMiddleware",
@@ -245,6 +254,7 @@ AUTH_USER_MODEL = "users.User"
 
 
 AUTHENTICATION_BACKENDS = [
+    *(["allauth.account.auth_backends.AuthenticationBackend"] if ENABLE_ALLAUTH else []),
     "django.contrib.auth.backends.ModelBackend",
     "oauth2_provider.backends.OAuth2Backend",
 ]
@@ -286,6 +296,16 @@ CELERY_WORKER_SEND_TASK_EVENTS = True
 CELERY_TASK_SEND_SENT_EVENT = True
 CELERY_WORKER_HIJACK_ROOT_LOGGER = False
 
+# Email server
+EMAIL_BACKEND = config("EMAIL_BACKEND")
+EMAIL_HOST = config("EMAIL_HOST", default="")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+EMAIL_PORT = config("EMAIL_PORT", cast=int, default=587)
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
+EMAIL_USE_SSL = config("EMAIL_USE_SSL", default=True, cast=bool)
+
 # Site ID (required for allauth)
 SITE_ID = 1
 
@@ -298,21 +318,46 @@ ACCOUNT_ALLOW_REGISTRATION = config("DJANGO_ACCOUNT_ALLOW_REGISTRATION", True, c
 ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
-ACCOUNT_ADAPTER = "apps.users.adapters.AccountAdapter"
+# ACCOUNT_ADAPTER = "apps.users.adapters.AccountAdapter"
 ACCOUNT_FORMS = {"signup": "apps.users.forms.UserSignupForm"}
-SOCIALACCOUNT_ADAPTER = "apps.users.adapters.SocialAccountAdapter"
-SOCIALACCOUNT_FORMS = {"signup": "apps.users.forms.UserSocialSignupForm"}
-
 ACCOUNT_EMAIL_VERIFICATION = "none"
+ACCOUNT_EMAIL_VERIFICATION_BY_CODE_ENABLED = False
 ACCOUNT_USER_MODEL_EMAIL_FIELD = "email"
 ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = False
 ACCOUNT_LOGOUT_ON_GET = False
 ACCOUNT_SESSION_REMEMBER = True
 ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_LOGIN_BY_CODE_ENABLED = True
+ACCOUNT_PASSWORD_RESET_BY_CODE_ENABLED = True
 
-SOCIALACCOUNT_EMAIL_VERIFICATION = "none"
+SOCIALACCOUNT_EMAIL_VERIFICATION = "mandatory"
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_QUERY_EMAIL = True
+SOCIALACCOUNT_LOGIN_ON_GET = True
+SOCIALACCOUNT_ADAPTER = "apps.users.adapters.SocialAccountAdapter"
+SOCIALACCOUNT_FORMS = {"signup": "apps.users.forms.UserSocialSignupForm"}
+
+# HEADLESS_ONLY = True
+HEADLESS_FRONTEND_URLS = {
+    "account_confirm_email": "/accounts/confirm-email/{key}/",
+    "account_reset_password": "/account/password/reset",
+    "account_reset_password_from_key": "/account/password/reset/key/{key}",
+    "account_signup": "/account/signup",
+    "socialaccount_login_error": "/account/provider/callback",
+}
+HEADLESS_CLIENTS = ["app", "browser"]
+HEADLESS_SERVE_SPECIFICATION = True
+HEADLESS_SPECIFICATION_TEMPLATE_NAME = None  # disable html docs
+HEADLESS_TOKEN_STRATEGY = "allauth.headless.tokens.strategies.jwt.JWTTokenStrategy"
+if ENABLE_ALLAUTH:
+    with open(config("ALLAUTH_JWT_PRIVATE_KEY")) as jwt_key:
+        HEADLESS_JWT_PRIVATE_KEY = jwt_key.read()
+    # Create Private key from here https://docs.allauth.org/en/latest/headless/token-strategies/jwt-tokens.html
+
+MFA_SUPPORTED_TYPES = ["totp", "recovery_codes", "webauthn"]
+MFA_PASSKEY_LOGIN_ENABLED = True
+MFA_PASSKEY_SIGNUP_ENABLED = False
+MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = DEBUG
 
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
@@ -323,7 +368,7 @@ SOCIALACCOUNT_PROVIDERS = {
     "github": {"SCOPE": ["user:email"], "VERIFIED_EMAIL": True},
 }
 
-# OAuth2 Provider Configuration
+# Django Oauth2 Toolkit: OAuth2 Provider Configuration
 OAUTH2_PROVIDER = {
     "PKCE_REQUIRED": True,
     "ACCESS_TOKEN_EXPIRE_SECONDS": 3600,
@@ -402,10 +447,10 @@ SENTRY_ENABLED = config("SENTRY_ENABLED", cast=bool, default=False)
 if SENTRY_ENABLED and sentry_sdk:
     enable_sentry()
 
-ENABLE_OAUTH2 = config("ENABLE_OAUTH2", cast=bool, default=False)
-
 # Allow large admin bulk actions - used for bulk updating/deleting mushaf recitations timestamps objects data
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000
 
 # Allow uploading many files in one request - used for bulk uploading mushaf recitations timestamps .json files
 DATA_UPLOAD_MAX_NUMBER_FILES = 114
+
+LOGOUT_REDIRECT_URL = "/accounts/login"

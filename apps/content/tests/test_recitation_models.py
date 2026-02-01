@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from model_bakery import baker
 
 from apps.content.models import Asset, RecitationAyahTiming, RecitationSurahTrack, Resource
 from apps.core.tests import BaseTestCase
@@ -30,6 +31,8 @@ class RecitationModelsTest(BaseTestCase):
             format="mp3",
             version="1.0.0",
             language="ar",
+            reciter=baker.make("content.Reciter", name="Test Reciter"),
+            riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
         )
         mp3 = SimpleUploadedFile("t.mp3", b"fake-mp3-bytes")
 
@@ -70,6 +73,8 @@ class RecitationModelsTest(BaseTestCase):
             format="mp3",
             version="1.0.0",
             language="ar",
+            reciter=baker.make("content.Reciter", name="Test Reciter"),
+            riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
         )
         track = RecitationSurahTrack.objects.create(
             asset=asset, surah_number=1, audio_file=SimpleUploadedFile("t.mp3", b"x")

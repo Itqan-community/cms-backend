@@ -8,6 +8,7 @@ if TYPE_CHECKING:
         AssetPreview,
         AssetVersion,
         RecitationSurahTrack,
+        Reciter,
         ResourceVersion,
     )
     from apps.publishers.models import Publisher
@@ -65,7 +66,17 @@ def upload_to_resource_files(instance: "ResourceVersion", filename: str) -> str:
 def upload_to_recitation_surah_track_files(instance: "RecitationSurahTrack", filename: str) -> str:
     """
     Generate upload path for recitation surah track audio files.
-    Format: uploads/assets/{asset_id}/recitations/{safe_filename}
+    Format: uploads/assets/{asset_id}/recitations/{surah_number:03}.{ext}
     """
-    safe_filename = slugify(filename.rsplit(".", 1)[0]) + "." + filename.split(".")[-1].lower()
-    return f"uploads/assets/{instance.asset_id}/recitations/{safe_filename}"
+    ext = filename.split(".")[-1].lower() if "." in filename else "mp3"
+    return f"uploads/assets/{instance.asset_id}/recitations/{int(instance.surah_number):03}.{ext}"
+
+
+def upload_to_reciter_image(instance: "Reciter", filename: str) -> str:
+    """
+    Generate upload path for publisher icon images
+    Format: uploads/reciters/{reciter_id}/image.{ext}
+    """
+    ext = filename.split(".")[-1].lower()
+    filename = f"icon.{ext}"
+    return f"uploads/reciters/{instance.id}/{filename}"

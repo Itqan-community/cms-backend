@@ -1,3 +1,4 @@
+from allauth.headless.contrib.ninja.security import jwt_token_auth
 from django.conf import settings
 from oauth2_provider.contrib.rest_framework import OAuth2Authentication
 from rest_framework_simplejwt.authentication import (
@@ -45,7 +46,10 @@ class OAuth2OptionalAuth(OAuth2Auth):
         return anonymous_user
 
 
-ninja_jwt_auth = [JWTAuth(), JWTAuthStateless()]
+if settings.ENABLE_ALLAUTH:
+    ninja_jwt_auth = [jwt_token_auth]
+else:
+    ninja_jwt_auth = [JWTAuth(), JWTAuthStateless()]
 if settings.ENABLE_OAUTH2:
     ninja_oauth2_auth = [OAuth2Auth()]
 else:
