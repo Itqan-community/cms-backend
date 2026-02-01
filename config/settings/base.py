@@ -72,6 +72,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "oauth2_provider.middleware.OAuth2TokenMiddleware",
+    "apps.mixins.middleware.PublicApiUsageLoggingMiddleware",
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
