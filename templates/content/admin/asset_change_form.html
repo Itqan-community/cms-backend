@@ -10,6 +10,11 @@
     </a>
   </li>
   <li>
+    <a href="{% url 'admin:asset_direct_upload_recitations' original.pk %}">
+      {% translate "Bulk Upload Recitation Audio Tracks (Direct to R2)" %}
+    </a>
+  </li>
+  <li>
     <a href="{% url 'admin:asset_bulk_upload_recitation_ayah_timestamps' original.pk %}">
       {% translate "Bulk Upload Recitation Ayahs Timestamps" %}
     </a>
