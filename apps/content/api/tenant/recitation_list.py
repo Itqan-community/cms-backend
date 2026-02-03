@@ -36,7 +36,6 @@ class RecitationListOut(Schema):
 
 
 class RecitationFilter(FilterSchema):
-    publisher_id: list[int] | None = Field(None, q="resource__publisher_id__in")
     reciter_id: list[int] | None = Field(None, q="reciter_id__in")
     riwayah_id: list[int] | None = Field(None, q="riwayah_id__in")
 
@@ -52,5 +51,4 @@ def list_recitations(request: Request, filters: RecitationFilter = Query()):
     publisher_q = request.publisher_q("resource__publisher")
     qs = service.get_all_recitations(publisher_q, filters)
 
-    qs = filters.filter(qs)
     return qs

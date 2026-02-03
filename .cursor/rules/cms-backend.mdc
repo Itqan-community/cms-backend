@@ -161,7 +161,7 @@ class BaseRecitationRepository(ABC):
 ```
 Here, the repository interacts with the data sources, gets data from the ORM, and caches it in Redis. Later,
 we may use different technology for search, which will be a good fit.
-````python
+```python
   class RecitationRepository(BaseRecitationRepository):
 
     def __init__(self):
@@ -201,7 +201,7 @@ The service will call the repository without bothering itself about the data int
 ```python
    class RecitationService:
 
-    def __init__(self, repo: BaseQuranRecitationRepository):
+    def __init__(self, repo: BaseRecitationRepository):
         self.repo = repo
 
     def get_audio_link(self, surah_number: int, reciter_name: str):

@@ -41,6 +41,7 @@ class RecitationTracksTest(BaseTestCase):
             surah_number=2,
             duration_ms=2000,
             size_bytes=1024,
+            audio_file=SimpleUploadedFile(name="test.mp3", content=b"dummy", content_type="audio/mpeg"),
         )
         baker.make(
             RecitationSurahTrack,

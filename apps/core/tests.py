@@ -14,6 +14,7 @@ from oauth2_provider.models import AccessToken as OAuth2AccessToken, Application
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import AccessToken as JWTAccessToken
 
+from apps.publishers.models import Domain
 from apps.users.models import User
 
 
@@ -72,6 +73,7 @@ class BaseTestCase(TestCase):
         self,
         user: User | None,
         language: Literal["en", "ar"] | None = "en",
+        domain: Domain | None = None,
         **kwargs,
     ):
         """
@@ -81,13 +83,19 @@ class BaseTestCase(TestCase):
         if not kwargs:
             kwargs = {}
 
+        if domain is None:
+            kwargs.pop("HTTP_HOST", None)
+        else:
+            kwargs["HTTP_HOST"] = domain.domain
+            settings.ALLOWED_HOSTS.append(domain.domain)
+
         if user is None:
             # Clear authentication
             kwargs.pop("HTTP_X_SESSION_TOKEN", None)
             kwargs.pop("HTTP_AUTHORIZATION", None)
         else:
             if settings.ENABLE_ALLAUTH:
-                self.client.force_login(user=user, **kwargs)
+                self.client.force_login(user=user)
                 token = create_access_token(user, session=self.client.session, claims={})
                 kwargs["HTTP_AUTHORIZATION"] = f"Bearer {token}"
             else:

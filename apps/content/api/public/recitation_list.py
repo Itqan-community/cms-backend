@@ -75,5 +75,4 @@ def list_recitations(request, filters: RecitationFilter = Query()):
     # Public API doesn't filter by publisher by default, so we pass an empty Q object
     qs = service.get_all_recitations(Q(), filters, annotate_surahs_count=True)
 
-    qs = filters.filter(qs)
     return qs

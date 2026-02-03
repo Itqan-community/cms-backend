@@ -52,5 +52,4 @@ def list_recitations(request: Request, filters: RecitationFilter = Query()):
     publisher_q = request.publisher_q("resource__publisher")
     qs = service.get_all_recitations(publisher_q, filters)
 
-    qs = filters.filter(qs)
     return qs
