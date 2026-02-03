@@ -14,6 +14,7 @@ from apps.core.uploads import (
     upload_to_asset_preview_images,
     upload_to_asset_thumbnails,
     upload_to_recitation_surah_track_files,
+    upload_to_reciter_image,
     upload_to_resource_files,
 )
 from apps.mixins.recitations_helpers import get_mp3_duration_ms
@@ -148,6 +149,14 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         MUSHAF = "mushaf", _("Mushaf")
         TAFSIR = "tafsir", _("Tafsir")
 
+    class MaddLevelChoice(models.TextChoices):
+        TWASSUT = "twassut", _("Twassut")
+        QASR = "qasr", _("Qasr")
+
+    class MeemBehaviorChoice(models.TextChoices):
+        SILAH = "silah", _("Silah")
+        SKOUN = "skoun", _("Skoun")
+
     resource = models.ForeignKey(Resource, on_delete=models.PROTECT, related_name="assets")
 
     name = models.CharField(max_length=255, help_text="Asset name")
@@ -198,6 +207,42 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         related_name="assets",
         help_text="Riwayah for recitation assets",
     )
+    madd_level = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        choices=MaddLevelChoice.choices,
+        help_text="Madd level for recitation assets",
+    )
+    meem_behaviour = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        choices=MeemBehaviorChoice.choices,
+        help_text="Meem behaviour for recitation assets",
+    )
+    year = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Year of recording for recitation assets",
+    )
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(
+                    category="recitation",
+                    reciter__isnull=False,
+                    riwayah__isnull=False,
+                )
+                | models.Q(
+                    ~models.Q(category="recitation"),
+                    reciter__isnull=True,
+                    riwayah__isnull=True,
+                ),
+                name="asset_recitation_fields_consistency",
+            )
+        ]
 
     def __str__(self):
         return f"Asset(name={self.name}, category={self.category})"
@@ -543,6 +588,13 @@ class Reciter(BaseModel):
 
     name = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(unique=True, allow_unicode=True, db_index=True)
+    image_url = models.ImageField(
+        upload_to=upload_to_reciter_image,
+        blank=True,
+        validators=[FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "gif", "webp"])],
+        help_text="Icon/logo image - used in V1 UI: Publisher Page",
+    )
+    bio = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
 
     def save(self, *args, **kwargs) -> None:
@@ -588,6 +640,12 @@ class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
         validators=[FileExtensionValidator(allowed_extensions=["mp3"])],
         help_text="Per-surah audio file (MP3)",
     )
+    original_filename = models.CharField(
+        max_length=512,
+        null=True,
+        blank=True,
+        help_text="Original filename provided at upload time (for audit/debugging; not used as storage key)",
+    )
     duration_ms = models.PositiveIntegerField(
         default=0,
         help_text="Audio track duration in milliseconds (auto-calculated upon uploading file)",
@@ -595,6 +653,7 @@ class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
     size_bytes = models.PositiveBigIntegerField(
         default=0, help_text="Audio file size in bytes (auto-calculated upon uploading file)"
     )
+    upload_finished_at = models.DateTimeField(null=True, blank=True, help_text="When audio file upload was completed")
 
     class Meta:
         unique_together = [["asset", "surah_number"]]
@@ -606,13 +665,21 @@ class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
         return f"RecitationSurahTrack(asset={self.asset_id}, surah={self.surah_number})"
 
     def save(self, *args, **kwargs) -> None:
-        # Auto-compute duration and size when an MP3 file is present
+        # Auto-compute duration and size when an MP3 file is present. And set the original filename for admin/manual uploads.
         if self.audio_file:
             try:
                 self.size_bytes = int(getattr(self.audio_file, "size", 0) or 0)
             except Exception:
                 self.size_bytes = 0
-            self.duration_ms = get_mp3_duration_ms(self.audio_file)
+
+            if not self.duration_ms:
+                self.duration_ms = get_mp3_duration_ms(self.audio_file)
+
+            # Preserve the original uploaded filename (admin/manual uploads), without coupling storage keys to user input.
+            # For direct-to-R2 upload this is set explicitly by the upload service.
+            if not self.original_filename:
+                self.original_filename = self.audio_file.name
+
         super().save(*args, **kwargs)
 
 

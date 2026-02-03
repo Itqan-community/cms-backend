@@ -1,0 +1,18 @@
+{% load i18n %}
+{% load allauth %}
+{% load socialaccount %}
+{% get_providers as socialaccount_providers %}
+{% if socialaccount_providers %}
+    {% if not SOCIALACCOUNT_ONLY %}
+{#        {% element hr %}#}
+{#        {% endelement %}#}
+{#        {% element h2 class="text-center"%}#}
+{#            {% translate "Or Login with" %}#}
+{#        {% endelement %}#}
+    {% endif %}
+{#    <div class="container-fluid text-center">#}
+    {% include "socialaccount/snippets/provider_list.html" with process="login" %}
+{#    </div>#}
+    {% include "socialaccount/snippets/login_extra.html" %}
+    {% element hr %}{% endelement %}
+{% endif %}

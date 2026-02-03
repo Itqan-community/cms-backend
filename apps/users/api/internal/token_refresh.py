@@ -13,63 +13,62 @@ from apps.users.models import User
 
 router = ItqanRouter(tags=[NinjaTag.AUTH])
 
+if not settings.ENABLE_ALLAUTH:
 
-class RefreshTokenIn(Schema):
-    refresh: str
+    class RefreshTokenIn(Schema):
+        refresh: str
 
+    class RefreshTokenOut(Schema):
+        access: str
+        refresh: str | None = None
 
-class RefreshTokenOut(Schema):
-    access: str
-    refresh: str | None = None
+    @router.post(
+        "auth/token/refresh/",
+        auth=None,
+        response={
+            200: RefreshTokenOut,
+            401: NinjaErrorResponse[Literal["invalid_refresh_token"], Literal[None]]
+            | NinjaErrorResponse[Literal["user_not_found"], Literal[None]],
+            400: NinjaErrorResponse[Literal["token_rotation_failed"], Literal[None]],
+        },
+        summary="Refresh JWT access token",
+        description="Refresh expired JWT access token using refresh token. Returns new access token and optionally a new refresh token if rotation is enabled.",
+    )
+    def refresh_token(request: Request, refresh_data: RefreshTokenIn):
+        """Refresh JWT access token"""
+        try:
+            # Use rest_framework_simplejwt to refresh token
+            refresh = RefreshToken(refresh_data.refresh)
+            access = refresh.access_token
 
+            response_data = {"access": str(access), "refresh": None}
 
-@router.post(
-    "auth/token/refresh/",
-    auth=None,
-    response={
-        200: RefreshTokenOut,
-        401: NinjaErrorResponse[Literal["invalid_refresh_token"], Literal[None]]
-        | NinjaErrorResponse[Literal["user_not_found"], Literal[None]],
-        400: NinjaErrorResponse[Literal["token_rotation_failed"], Literal[None]],
-    },
-    summary="Refresh JWT access token",
-    description="Refresh expired JWT access token using refresh token. Returns new access token and optionally a new refresh token if rotation is enabled.",
-)
-def refresh_token(request: Request, refresh_data: RefreshTokenIn):
-    """Refresh JWT access token"""
-    try:
-        # Use rest_framework_simplejwt to refresh token
-        refresh = RefreshToken(refresh_data.refresh)
-        access = refresh.access_token
+            # If rotation is enabled, return new refresh token
+            if getattr(settings, "SIMPLE_JWT", {}).get("ROTATE_REFRESH_TOKENS", False):
+                try:
+                    refresh.blacklist()
+                    # Get user from token payload
+                    user_id = refresh.payload.get("user_id")
+                    user = User.objects.get(id=user_id)
+                    new_refresh = RefreshToken.for_user(user)
+                    response_data["refresh"] = str(new_refresh)
+                except Exception as e:
+                    raise ItqanError(
+                        error_name="token_rotation_failed",
+                        message=f"Failed to rotate refresh token: {str(e)}",
+                        status_code=400,
+                    ) from e
 
-        response_data = {"access": str(access), "refresh": None}
-
-        # If rotation is enabled, return new refresh token
-        if getattr(settings, "SIMPLE_JWT", {}).get("ROTATE_REFRESH_TOKENS", False):
-            try:
-                refresh.blacklist()
-                # Get user from token payload
-                user_id = refresh.payload.get("user_id")
-                user = User.objects.get(id=user_id)
-                new_refresh = RefreshToken.for_user(user)
-                response_data["refresh"] = str(new_refresh)
-            except Exception as e:
-                raise ItqanError(
-                    error_name="token_rotation_failed",
-                    message=f"Failed to rotate refresh token: {str(e)}",
-                    status_code=400,
-                ) from e
-
-        return response_data
-    except (InvalidToken, TokenError) as err:
-        raise ItqanError(
-            error_name="invalid_refresh_token",
-            message="Invalid or expired refresh token",
-            status_code=401,
-        ) from err
-    except User.DoesNotExist as err:
-        raise ItqanError(
-            error_name="user_not_found",
-            message="User associated with token not found",
-            status_code=401,
-        ) from err
+            return response_data
+        except (InvalidToken, TokenError) as err:
+            raise ItqanError(
+                error_name="invalid_refresh_token",
+                message="Invalid or expired refresh token",
+                status_code=401,
+            ) from err
+        except User.DoesNotExist as err:
+            raise ItqanError(
+                error_name="user_not_found",
+                message="User associated with token not found",
+                status_code=401,
+            ) from err
