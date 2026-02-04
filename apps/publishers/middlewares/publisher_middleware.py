@@ -58,7 +58,11 @@ def get_publisher_domain(request: HttpRequest) -> Domain | None:
     """
     Retrieve a domain based on the Host header
     """
-    referer = request.headers.get("referer")
+    referer = (
+        request.headers.get("referer").replace("https://", "").replace("http://", "")
+        if request.headers.get("referer")
+        else None
+    )
     if not referer:
         return None
 
