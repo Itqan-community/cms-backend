@@ -3,7 +3,7 @@ from django.db.models import Count
 from django.urls import reverse
 from django.utils.html import format_html
 
-from .models import Publisher, PublisherMember
+from .models import Domain, Publisher, PublisherMember
 
 
 class PublisherMemberInline(admin.TabularInline):
@@ -116,3 +116,10 @@ class PublisherMemberAdmin(admin.ModelAdmin):
     list_display = ["user", "publisher", "role", "created_at"]
     list_filter = ["role", "created_at"]
     search_fields = ["user__email", "publisher__name"]
+
+
+@admin.register(Domain)
+class DomainAdmin(admin.ModelAdmin):
+    list_display = ["name", "publisher", "is_active", "created_at"]
+    list_filter = ["is_active", "created_at"]
+    search_fields = ["name", "publisher__name"]
