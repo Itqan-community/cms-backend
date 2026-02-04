@@ -1,21 +1,17 @@
-from django.db.models import Q
 from ninja import FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import Field
 
+from apps.content.models import Asset
 from apps.content.repositories.recitation import RecitationRepository
 from apps.content.services.recitation import RecitationService
 from apps.core.ninja_utils.ordering_base import ordering
+from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
 
 router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
-
-
-class RecitationPublisherOut(Schema):
-    id: int
-    name: str
 
 
 class RecitationReciterOut(Schema):
@@ -32,34 +28,14 @@ class RecitationListOut(Schema):
     id: int
     name: str
     description: str
-    publisher: RecitationPublisherOut
+    madd_level: Asset.MaddLevelChoice | None
+    meem_behaviour: Asset.MeemBehaviorChoice | None
+    year: int | None
     reciter: RecitationReciterOut
     riwayah: RecitationRiwayahOut
-    surahs_count: int
-
-    @staticmethod
-    def resolve_publisher(obj):
-        publisher = obj.resource.publisher
-        return {
-            "id": publisher.id,
-            "name": publisher.name,
-        }  # django-modeltranslation chooses name_* based on active language (en or ar)
-
-    @staticmethod
-    def resolve_reciter(obj):
-        return {"id": obj.reciter_id, "name": obj.reciter.name}
-
-    @staticmethod
-    def resolve_riwayah(obj):
-        return {"id": obj.riwayah_id, "name": obj.riwayah.name}
-
-    @staticmethod
-    def resolve_surahs_count(obj):
-        return getattr(obj, "surahs_count", 0)
 
 
 class RecitationFilter(FilterSchema):
-    publisher_id: list[int] | None = Field(None, q="resource__publisher_id__in")
     reciter_id: list[int] | None = Field(None, q="reciter_id__in")
     riwayah_id: list[int] | None = Field(None, q="riwayah_id__in")
 
@@ -68,11 +44,11 @@ class RecitationFilter(FilterSchema):
 @paginate
 @ordering(ordering_fields=["name", "created_at", "updated_at"])
 @searching(search_fields=["name", "description", "resource__publisher__name", "reciter__name"])
-def list_recitations(request, filters: RecitationFilter = Query()):
+def list_recitations(request: Request, filters: RecitationFilter = Query()):
     repo = RecitationRepository()
     service = RecitationService(repo)
 
-    # Public API doesn't filter by publisher by default, so we pass an empty Q object
-    qs = service.get_all_recitations(Q(), filters, annotate_surahs_count=True)
+    publisher_q = request.publisher_q("resource__publisher")
+    qs = service.get_all_recitations(publisher_q, filters)
 
     return qs
