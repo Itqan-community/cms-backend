@@ -60,11 +60,10 @@ def get_publisher_domain(request: HttpRequest) -> Domain | None:
     """
 
     referer = (
-        request.headers.get("referer").rstrip("/").replace("https://", "").replace("http://", "")
-        if request.headers.get("referer")
+        request.headers.get("Origin").rstrip("/").replace("https://", "").replace("http://", "")
+        if request.headers.get("Origin")
         else None
     )
-    print(f"{referer=}")
     if not referer:
         return None
 
