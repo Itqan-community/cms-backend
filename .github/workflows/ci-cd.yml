@@ -1,25 +1,24 @@
 name: CI/CD Pipeline
 
 on:
-  # Auto-deploy on direct pushes to develop branch (development workflow)
   push:
-    branches: [develop]
+    branches: [staging, main]
 
   # Deployment triggered by pull request merges to enforce branch flow
   pull_request:
     types: [closed]
-    branches: [staging, main]  # Only staging and main require PRs
+    branches: [staging, main]
 
-  # Allow manual deployment trigger for develop branch only (for hotfixes)
+  # Allow manual deployment trigger (for hotfixes)
   workflow_dispatch:
     inputs:
       branch:
-        description: 'Branch to deploy (develop only)'
+        description: 'Branch to deploy'
         required: true
-        default: 'develop'
+        default: 'staging'
         type: choice
         options:
-          - develop
+          - staging
 
 jobs:
   # Deployment Job with Container Cleanup
@@ -28,62 +27,14 @@ jobs:
     permissions:
       contents: read
       packages: write
-    # Run on: direct push to develop, merged PRs to staging/main, or manual dispatch
+    # Run on: direct push to staging or main, merged PRs to staging/main, or manual dispatch
     if: |
-      (github.event_name == 'push' && github.ref == 'refs/heads/develop') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/staging') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
       (github.event_name == 'workflow_dispatch')
 
     steps:
-      - name: Validate branch flow rules
-        run: |
-          echo "🔍 Validating deployment rules..."
-
-          if [[ "${{ github.event_name }}" == "push" ]]; then
-            PUSH_BRANCH="${{ github.ref_name }}"
-            echo "   Direct Push to: $PUSH_BRANCH"
-
-            # Only develop branch allows direct pushes for auto-deployment
-            if [[ "$PUSH_BRANCH" == "develop" ]]; then
-              echo "✅ Direct push to develop branch - auto-deployment authorized"
-            else
-              echo "❌ ERROR: Direct pushes only allowed to develop branch"
-              echo "   Use Pull Requests for staging and main branches"
-              exit 1
-            fi
-
-          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
-            HEAD_BRANCH="${{ github.event.pull_request.head.ref }}"
-
-            echo "   Pull Request: $HEAD_BRANCH → $BASE_BRANCH"
-
-            # Rule 1: Main can only receive merges from staging
-            if [[ "$BASE_BRANCH" == "main" && "$HEAD_BRANCH" != "staging" ]]; then
-              echo "❌ ERROR: Production (main) can only be updated from staging branch"
-              echo "   Attempted: $HEAD_BRANCH → main"
-              echo "   Required: staging → main"
-              exit 1
-            fi
-
-            # Rule 2: Staging can only receive merges from develop
-            if [[ "$BASE_BRANCH" == "staging" && "$HEAD_BRANCH" != "develop" ]]; then
-              echo "❌ ERROR: Staging can only be updated from develop branch"
-              echo "   Attempted: $HEAD_BRANCH → staging"
-              echo "   Required: develop → staging"
-              exit 1
-            fi
-
-            echo "✅ Branch flow rules validated successfully"
-          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            DISPATCH_BRANCH="${{ github.event.inputs.branch }}"
-            if [[ "$DISPATCH_BRANCH" != "develop" ]]; then
-              echo "❌ ERROR: Manual deployment only allowed for develop branch"
-              exit 1
-            fi
-            echo "✅ Manual deployment authorized for develop branch"
-          fi
-
       - name: Set deployment variables
         id: vars
         run: |
@@ -98,15 +49,7 @@ jobs:
             TARGET_BRANCH="${{ github.ref_name }}"
           fi
 
-          if [[ "$TARGET_BRANCH" == "develop" ]]; then
-            echo "HOST=${{ secrets.DEVELOP_HOST }}" >> $GITHUB_ENV
-            echo "ENV_NAME=development" >> $GITHUB_ENV
-            echo "ENV_URL=https://develop.api.cms.itqan.dev" >> $GITHUB_ENV
-            echo "COMPOSE_FILE=deployment/docker/docker-compose.develop.yml" >> $GITHUB_ENV
-            echo "BRANCH=develop" >> $GITHUB_ENV
-            echo "IMAGE_REPO=ghcr.io/${OWNER_LC}/cms-backend" >> $GITHUB_ENV
-            echo "IMAGE_TAG=develop-${GITHUB_SHA::7}" >> $GITHUB_ENV
-          elif [[ "$TARGET_BRANCH" == "staging" ]]; then
+          if [[ "$TARGET_BRANCH" == "staging" ]]; then
             echo "HOST=${{ secrets.STAGING_HOST }}" >> $GITHUB_ENV
             echo "ENV_NAME=staging" >> $GITHUB_ENV
             echo "ENV_URL=https://staging.api.cms.itqan.dev" >> $GITHUB_ENV
@@ -191,29 +134,7 @@ jobs:
             # Generate environment file from GitHub Secrets (per environment)
             echo "🧩 Generating environment file from secrets..."
             mkdir -p deployment/docker
-            if [ "${{ env.ENV_NAME }}" = "development" ]; then
-              {
-                echo "DJANGO_SETTINGS_MODULE=config.settings.development";
-                echo "SECRET_KEY=${{ secrets.DEVELOP_SECRET_KEY }}";
-                echo "DEBUG=False";
-                echo "SITE_DOMAIN=develop.api.cms.itqan.dev";
-                echo "DB_ENGINE=django.db.backends.postgresql";
-                echo "DB_NAME=${{ secrets.DEVELOP_DB_NAME }}";
-                echo "DB_USER=${{ secrets.DEVELOP_DB_USER }}";
-                echo "DB_PASSWORD=${{ secrets.DEVELOP_DB_PASSWORD }}";
-                echo "DB_HOST=${{ secrets.DEVELOP_DB_HOST }}";
-                echo "DB_PORT=25060";
-                echo "PGSSLMODE=require";
-                echo "ALLOWED_HOSTS=develop.api.cms.itqan.dev";
-                echo "CORS_ALLOWED_ORIGINS=https://dev.cms.itqan.dev,http://localhost:3000";
-                echo "CLOUDFLARE_R2_BUCKET=${{ secrets.DEVELOP_CLOUDFLARE_R2_BUCKET }}";
-                echo "CLOUDFLARE_R2_ENDPOINT=${{ secrets.CLOUDFLARE_R2_ENDPOINT }}";
-                echo "CLOUDFLARE_R2_ACCESS_KEY_ID=${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}";
-                echo "CLOUDFLARE_R2_SECRET_ACCESS_KEY=${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}";
-                echo "CLOUDFLARE_R2_PUBLIC_BASE_URL=${{ secrets.DEVELOP_CLOUDFLARE_R2_PUBLIC_BASE_URL }}";
-                echo "EMAIL_BACKEND=${{ secrets.DEVELOP_EMAIL_BACKEND }}";
-              } > deployment/docker/.env
-            elif [ "${{ env.ENV_NAME }}" = "staging" ]; then
+            if [ "${{ env.ENV_NAME }}" = "staging" ]; then
               {
                 echo "DJANGO_SETTINGS_MODULE=config.settings.staging";
                 echo "SECRET_KEY=${{ secrets.STAGING_SECRET_KEY }}";
