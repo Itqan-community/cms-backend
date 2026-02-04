@@ -1,6 +1,6 @@
 from django.contrib.admin.views.decorators import staff_member_required
 
-from apps.core.ninja_utils.auth import ninja_jwt_auth
+from apps.core.ninja_utils.auth import ninja_jwt_auth_optional
 from apps.core.ninja_utils.autodiscover import auto_discover_ninja_routers
 from apps.core.ninja_utils.error_handling import register_exception_handlers
 
@@ -12,7 +12,7 @@ tenant_api = create_ninja_api(
     description="APIs for Tenant-specific operations",
     docs_base_path="/tenant",
     urls_namespace="tenant",
-    auth=ninja_jwt_auth,
+    auth=ninja_jwt_auth_optional,
     docs_decorator=staff_member_required,
 )
 
