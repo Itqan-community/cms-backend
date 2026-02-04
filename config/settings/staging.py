@@ -57,6 +57,7 @@ settings.DATABASES.update(
 # ============================================================
 
 CSRF_TRUSTED_ORIGINS = [
+    "https://staging--saudi-recitation-center.netlify.app",
     "https://staging.api.cms.itqan.dev",
     "https://staging.cms.itqan.dev",
     "https://staging--itqan-cms.netlify.app",
@@ -140,6 +141,7 @@ SOCIALACCOUNT_PROVIDERS = {
 
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
+    "https://staging--saudi-recitation-center.netlify.app",
     "https://staging.cms.itqan.dev",  # Staging frontend
     "https://staging--itqan-cms.netlify.app",
     "https://develop.cms.itqan.dev",
