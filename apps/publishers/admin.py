@@ -120,6 +120,6 @@ class PublisherMemberAdmin(admin.ModelAdmin):
 
 @admin.register(Domain)
 class DomainAdmin(admin.ModelAdmin):
-    list_display = ["name", "publisher", "is_active", "created_at"]
+    list_display = ["domain", "publisher", "is_active", "created_at"]
     list_filter = ["is_active", "created_at"]
-    search_fields = ["name", "publisher__name"]
+    search_fields = ["domain", "publisher__name"]
