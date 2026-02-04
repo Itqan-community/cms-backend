@@ -35,7 +35,7 @@ class RecitationsListTest(BaseTestCase):
             category=Resource.CategoryChoice.RECITATION,
             status=Resource.StatusChoice.READY,
         )
-        self.ready_recitation_resource_pub2 = baker.make(
+        self.ready_recitation_resource2 = baker.make(
             Resource,
             publisher=self.publisher1,
             category=Resource.CategoryChoice.RECITATION,
@@ -67,7 +67,7 @@ class RecitationsListTest(BaseTestCase):
         self.asset2 = baker.make(
             Asset,
             category=Asset.CategoryChoice.RECITATION,
-            resource=self.ready_recitation_resource_pub2,
+            resource=self.ready_recitation_resource2,
             reciter=self.reciter2,
             riwayah=self.riwayah2,
             name="Second Recitation",
