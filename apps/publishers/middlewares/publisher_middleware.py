@@ -51,7 +51,6 @@ def remove_www(hostname: str) -> str:
     """
     if hostname.startswith("www."):
         return hostname[4:]
-
     return hostname
 
 
@@ -59,7 +58,11 @@ def get_publisher_domain(request: HttpRequest) -> Domain | None:
     """
     Retrieve a domain based on the Host header
     """
-    host: str = remove_www(request.get_host().split(":")[0])
+    referer = request.headers.get("referer")
+    if not referer:
+        return None
+
+    host: str = remove_www(referer.split(":")[0])
     if host:
         result = cache.get(f"x_tenant-{host}")
         if not result:
