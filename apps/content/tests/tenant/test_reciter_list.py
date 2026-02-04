@@ -1,0 +1,130 @@
+from model_bakery import baker
+
+from apps.content.models import Asset, Reciter, Resource
+from apps.core.tests import BaseTestCase
+from apps.publishers.models import Domain, Publisher
+from apps.users.adapters import User
+
+
+class RecitersListTest(BaseTestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.publisher = baker.make(Publisher)
+        self.domain = baker.make(Domain, domain="example.com", publisher=self.publisher, is_primary=True)
+
+        # Valid resource/asset that should be counted
+        self.recitation_resource = baker.make(
+            Resource,
+            publisher=self.publisher,
+            category=Resource.CategoryChoice.RECITATION,
+            status=Resource.StatusChoice.READY,
+        )
+        self.active_reciter = baker.make(Reciter, is_active=True, name="Active Reciter")
+
+        riwayah = baker.make("content.Riwayah", name="Test Riwayah")
+        self.valid_asset = baker.make(
+            Asset,
+            category=Asset.CategoryChoice.RECITATION,
+            reciter=self.active_reciter,
+            resource=self.recitation_resource,
+            riwayah=riwayah,
+        )
+
+        # Inactive reciter should NOT appear
+        self.inactive_reciter = baker.make(Reciter, is_active=False, name="Inactive Reciter")
+        baker.make(
+            Asset,
+            category=Asset.CategoryChoice.RECITATION,
+            reciter=self.inactive_reciter,
+            resource=self.recitation_resource,
+            riwayah=riwayah,
+        )
+
+        # Asset with non-RECITATION category should NOT be counted
+        self.other_category_asset = baker.make(
+            Asset,
+            category=Asset.CategoryChoice.TAFSIR,  # assuming another category exists
+            resource=self.recitation_resource,
+        )
+
+        # Resource not READY should NOT be counted
+        self.draft_resource = baker.make(
+            Resource,
+            publisher=self.publisher,
+            category=Resource.CategoryChoice.RECITATION,
+            status=Resource.StatusChoice.DRAFT,
+        )
+        baker.make(
+            Asset,
+            category=Asset.CategoryChoice.RECITATION,
+            reciter=self.active_reciter,
+            resource=self.draft_resource,
+            riwayah=riwayah,
+        )
+
+        # Resource with non-RECITATION category should NOT be counted
+        self.other_resource = baker.make(
+            Resource,
+            publisher=self.publisher,
+            category=Resource.CategoryChoice.TAFSIR,
+            status=Resource.StatusChoice.READY,
+        )
+        baker.make(
+            Asset,
+            category=Asset.CategoryChoice.RECITATION,
+            reciter=self.active_reciter,
+            resource=self.other_resource,
+            riwayah=riwayah,
+        )
+        self.user = User.objects.create_user(email="oauthuser@example.com", name="OAuth User")
+
+    def test_list_reciters_should_return_only_active_reciters_with_ready_recitations(self):
+        # Arrange
+        self.authenticate_user(self.user, domain=self.domain)
+
+        # Act
+        response = self.client.get("/tenant/reciters/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+
+        self.assertIn("results", body)
+        self.assertIn("count", body)
+
+        items = body["results"]
+        reciter_names = {item["name"] for item in items}
+
+        self.assertIn("Active Reciter", reciter_names)
+        self.assertNotIn("Inactive Reciter", reciter_names)
+
+        # There should be exactly one reciter (the active one with at least one valid asset)
+        self.assertEqual(1, len(items))
+
+        reciter_item = items[0]
+        self.assertEqual(self.active_reciter.id, reciter_item["id"])
+        # Only the valid RECITATION asset with READY + RECITATION resource should be counted
+        self.assertEqual(1, reciter_item["recitations_count"])
+
+    def test_list_reciters_ordering_by_name(self):
+        # Arrange – another active reciter so we can test ordering
+        other_reciter = baker.make(Reciter, is_active=True, name="A Reciter")
+        baker.make(
+            Asset,
+            category=Asset.CategoryChoice.RECITATION,
+            reciter=other_reciter,
+            resource=self.recitation_resource,
+            riwayah=baker.make("content.Riwayah", name="Test Riwayah1"),
+        )
+        self.authenticate_user(self.user, domain=self.domain)
+
+        # Act
+        response = self.client.get("/tenant/reciters/?ordering=name")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        items = response.json()["results"]
+
+        names = [item["name"] for item in items]
+        self.assertEqual(sorted(names), names)  # ascending by name
