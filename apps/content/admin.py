@@ -30,6 +30,7 @@ from .models import (
     AssetAccessRequest,
     AssetPreview,
     AssetVersion,
+    Qiraah,
     RecitationAyahTiming,
     RecitationSurahTrack,
     Reciter,
@@ -826,6 +827,41 @@ class UsageEventAdmin(admin.ModelAdmin):
         return False
 
 
+@admin.register(Qiraah)
+class QiraahAdmin(admin.ModelAdmin):
+    list_display = ["id", "name", "slug", "is_active", "created_at"]
+    list_filter = ["is_active", "created_at"]
+    search_fields = ["name", "slug"]
+    prepopulated_fields = {"slug": ("name",)}
+    readonly_fields = ["created_at", "updated_at"]
+
+    fieldsets = (
+        (
+            "Basic Information",
+            {
+                "fields": ("name", "slug", "is_active"),
+            },
+        ),
+        (
+            "Multilingual Fields",
+            {
+                "fields": (
+                    "name_en",
+                    "name_ar",
+                ),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            "Timestamps",
+            {
+                "fields": ("created_at", "updated_at"),
+                "classes": ("collapse",),
+            },
+        ),
+    )
+
+
 @admin.register(Reciter)
 class ReciterAdmin(admin.ModelAdmin):
     list_display = ["id", "name", "slug", "is_active", "created_at"]
@@ -863,8 +899,8 @@ class ReciterAdmin(admin.ModelAdmin):
 
 @admin.register(Riwayah)
 class RiwayahAdmin(admin.ModelAdmin):
-    list_display = ["id", "name", "slug", "is_active", "created_at"]
-    list_filter = ["is_active", "created_at"]
+    list_display = ["id", "name", "slug", "qiraah", "is_active", "created_at"]
+    list_filter = ["is_active", "qiraah", "created_at"]
     search_fields = ["name", "slug"]
     prepopulated_fields = {"slug": ("name",)}
     readonly_fields = ["created_at", "updated_at"]
@@ -873,7 +909,7 @@ class RiwayahAdmin(admin.ModelAdmin):
         (
             "Basic Information",
             {
-                "fields": ("name", "slug", "is_active"),
+                "fields": ("qiraah", "name", "slug", "is_active"),
             },
         ),
         (
