@@ -32,7 +32,7 @@ class PublisherMiddleware:
     @staticmethod
     def is_publisher_active(request) -> bool | None:
         """modifies the request and adds publisher objects"""
-        domain = get_publisher_domain(request)
+        domain = get_publisher_domain(request, "X-Tenant") or get_publisher_domain(request, "Origin")
         request.publisher_domain = domain
         request.publisher = domain.publisher if domain else None
         request.publisher_q = functools.partial(publisher_q, request.publisher)
@@ -54,14 +54,14 @@ def remove_www(hostname: str) -> str:
     return hostname
 
 
-def get_publisher_domain(request: HttpRequest) -> Domain | None:
+def get_publisher_domain(request: HttpRequest, header_name: str) -> Domain | None:
     """
     Retrieve a domain based on the Host header
     """
 
     referer = (
-        request.headers.get("Origin").rstrip("/").replace("https://", "").replace("http://", "")
-        if request.headers.get("Origin")
+        request.headers.get(header_name).rstrip("/").replace("https://", "").replace("http://", "")
+        if request.headers.get(header_name)
         else None
     )
     if not referer:
