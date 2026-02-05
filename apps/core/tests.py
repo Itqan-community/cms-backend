@@ -84,9 +84,9 @@ class BaseTestCase(TestCase):
             kwargs = {}
 
         if domain is None:
-            kwargs.pop("HTTP_HOST", None)
+            kwargs.pop("HTTP_ORIGIN", None)
         else:
-            kwargs["HTTP_HOST"] = domain.domain
+            kwargs["HTTP_ORIGIN"] = domain.domain
             settings.ALLOWED_HOSTS.append(domain.domain)
 
         if user is None:

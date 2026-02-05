@@ -22,7 +22,7 @@ class PublisherMiddlewareTest(BaseTestCase):
 
     def test_middleware_with_active_publisher_should_allow_request(self):
         # Arrange
-        request = self.factory.get("/", HTTP_HOST="test.com")
+        request = self.factory.get("/", HTTP_ORIGIN="test.com")
         mock_get_response = Mock(return_value=Mock(status_code=200))
         middleware = PublisherMiddleware(get_response=mock_get_response)
 
@@ -41,7 +41,7 @@ class PublisherMiddlewareTest(BaseTestCase):
         # Arrange
 
         # Act
-        response = self.client.get(self.url, headers={"host": "www.test.com"})
+        response = self.client.get(self.url, headers={"origin": "www.test.com"})
 
         # Assert - If www was stripped and matched 'test.com', then request.publisher is set.
         # If request.publisher is set, then filtering applies.
@@ -52,7 +52,7 @@ class PublisherMiddlewareTest(BaseTestCase):
         # Arrange
 
         # Act
-        response = self.client.get(self.url, headers={"host": "unknown.com"})
+        response = self.client.get(self.url, headers={"origin": "unknown.com"})
 
         # Assert
         self.assertEqual(response.status_code, 200)
@@ -63,7 +63,7 @@ class PublisherMiddlewareTest(BaseTestCase):
         self.domain.save()
 
         # Act
-        response = self.client.get(self.url, headers={"host": "test.com"})
+        response = self.client.get(self.url, headers={"origin": "test.com"})
 
         # Assert
         self.assertEqual(423, response.status_code, response.content)
