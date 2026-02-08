@@ -196,3 +196,77 @@ class RecitationsListTest(BaseTestCase):
 
         names = [item["name"] for item in items]
         self.assertEqual(sorted(names), names)
+
+    def test_list_recitations_filter_by_madd_level(self):
+        """Test filtering recitations by madd_level"""
+        # Arrange
+        self.authenticate_user(self.user, domain=self.domain1)
+
+        # Create one asset with TWASSUT and one with QASR
+        baker.make(
+            Asset,
+            category=Asset.CategoryChoice.RECITATION,
+            resource=self.ready_recitation_resource_pub1,
+            reciter=self.reciter1,
+            riwayah=self.riwayah1,
+            name="Twassut Recitation",
+            description="Twassut",
+            madd_level=Asset.MaddLevelChoice.TWASSUT,
+        )
+        baker.make(
+            Asset,
+            category=Asset.CategoryChoice.RECITATION,
+            resource=self.ready_recitation_resource_pub1,
+            reciter=self.reciter1,
+            riwayah=self.riwayah1,
+            name="Qasr Recitation",
+            description="Qasr",
+            madd_level=Asset.MaddLevelChoice.QASR,
+        )
+
+        # Act - filter by madd_level=twassut
+        response = self.client.get(f"/tenant/recitations/?madd_level={Asset.MaddLevelChoice.TWASSUT}")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        items = response.json()["results"]
+        names = {item["name"] for item in items}
+        self.assertIn("Twassut Recitation", names)
+        self.assertNotIn("Qasr Recitation", names)
+
+    def test_list_recitations_filter_by_meem_behaviour(self):
+        """Test filtering recitations by meem_behaviour"""
+        # Arrange
+        self.authenticate_user(self.user, domain=self.domain1)
+
+        # Create one asset with SILAH and one with SKOUN
+        baker.make(
+            Asset,
+            category=Asset.CategoryChoice.RECITATION,
+            resource=self.ready_recitation_resource_pub1,
+            reciter=self.reciter1,
+            riwayah=self.riwayah1,
+            name="Silah Recitation",
+            description="Silah",
+            meem_behaviour=Asset.MeemBehaviorChoice.SILAH,
+        )
+        baker.make(
+            Asset,
+            category=Asset.CategoryChoice.RECITATION,
+            resource=self.ready_recitation_resource_pub1,
+            reciter=self.reciter1,
+            riwayah=self.riwayah1,
+            name="Skoun Recitation",
+            description="Skoun",
+            meem_behaviour=Asset.MeemBehaviorChoice.SKOUN,
+        )
+
+        # Act - filter by meem_behaviour=silah
+        response = self.client.get(f"/tenant/recitations/?meem_behaviour={Asset.MeemBehaviorChoice.SILAH}")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        items = response.json()["results"]
+        names = {item["name"] for item in items}
+        self.assertIn("Silah Recitation", names)
+        self.assertNotIn("Skoun Recitation", names)

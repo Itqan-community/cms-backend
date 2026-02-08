@@ -606,12 +606,40 @@ class Reciter(BaseModel):
         return f"Reciter(name={self.name})"
 
 
-class Riwayah(BaseModel):
-    """Quran recitation tradition/transmission (e.g. Hafs, Warsh, etc)"""
+class Qiraah(BaseModel):
+    """Quran recitation method/school (e.g. Qiraah Asim, Qiraah Nafi, etc)"""
 
     name = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(unique=True, allow_unicode=True, db_index=True)
     is_active = models.BooleanField(default=True)
+
+    def save(self, *args, **kwargs) -> None:
+        if not self.slug:
+            self.slug = slugify(self.name[:50], allow_unicode=True)
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return f"Qiraah(name={self.name})"
+
+
+class Riwayah(BaseModel):
+    """Quran recitation tradition/transmission (e.g. Hafs, Warsh, etc)"""
+
+    qiraah = models.ForeignKey(
+        Qiraah,
+        on_delete=models.PROTECT,
+        related_name="riwayahs",
+        help_text="Parent Qiraah (recitation method)",
+    )
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(allow_unicode=True, db_index=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = [["qiraah", "name"]]
+        indexes = [
+            models.Index(fields=["qiraah", "slug"]),
+        ]
 
     def save(self, *args, **kwargs) -> None:
         if not self.slug:

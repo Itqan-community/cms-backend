@@ -38,6 +38,8 @@ class RecitationListOut(Schema):
 class RecitationFilter(FilterSchema):
     reciter_id: list[int] | None = Field(None, q="reciter_id__in")
     riwayah_id: list[int] | None = Field(None, q="riwayah_id__in")
+    madd_level: list[Asset.MaddLevelChoice | None] | None = Field(None, q="madd_level__in")
+    meem_behaviour: list[Asset.MeemBehaviorChoice | None] | None = Field(None, q="meem_behaviour__in")
 
 
 @router.get("recitations/", response=list[RecitationListOut])

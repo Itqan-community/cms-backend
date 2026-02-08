@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, Resource, Riwayah
+from apps.content.models import Asset, Qiraah, Resource, Riwayah
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Domain, Publisher
 from apps.users.models import User
@@ -18,8 +18,8 @@ class RiwayahsListTest(BaseTestCase):
             category=Resource.CategoryChoice.RECITATION,
             status=Resource.StatusChoice.READY,
         )
-
-        self.active_riwayah = baker.make(Riwayah, is_active=True, name="Active Riwayah")
+        self.active_qiraah = baker.make(Qiraah, is_active=True, name="Active Qiraah", slug="active-qiraah")
+        self.active_riwayah = baker.make(Riwayah, is_active=True, name="Active Riwayah", qiraah=self.active_qiraah)
         self.valid_asset = baker.make(
             Asset,
             category=Asset.CategoryChoice.RECITATION,
@@ -100,6 +100,9 @@ class RiwayahsListTest(BaseTestCase):
         riwayah_item = items[0]
         self.assertEqual(self.active_riwayah.id, riwayah_item["id"])
         self.assertEqual(1, riwayah_item["recitations_count"])
+        self.assertEqual(
+            {"id": self.active_qiraah.id, "name": "Active Qiraah", "slug": "active-qiraah"}, riwayah_item["qiraah"]
+        )
 
     def test_list_riwayahs_ordering_by_name(self):
         # Arrange

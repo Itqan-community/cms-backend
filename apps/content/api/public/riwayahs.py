@@ -26,8 +26,6 @@ class RiwayahOut(Schema):
 @ordering(ordering_fields=["name"])
 def list_riwayahs(request: Request):
     """
-    Public Content API (V2):
-
     List riwayahs that have at least one READY recitation Asset.
 
     Conditions:

@@ -13,19 +13,24 @@ from apps.core.ninja_utils.tags import NinjaTag
 router = ItqanRouter(tags=[NinjaTag.RIWAYAHS])
 
 
+class QiraahOut(Schema):
+    id: int
+    name: str
+    slug: str
+
+
 class RiwayahOut(Schema):
     id: int
     name: str
     slug: str
-    recitations_count: int = Field(
-        0,
-        description="Number of READY recitation assets for this riwayah",
-    )
+    qiraah: QiraahOut
+    recitations_count: int = Field(0, description="Number of READY recitation assets for this riwayah")
 
 
 class RiwayahFilter(FilterSchema):
     name: str | None = Field(None, description="Filter by riwayah name (case-insensitive)")
     slug: str | None = Field(None, description="Filter by riwayah slug (case-insensitive)")
+    qiraah_id: int | None = Field(None, description="Filter by parent qiraah ID")
 
 
 @router.get("riwayahs/", response=list[RiwayahOut])
@@ -34,8 +39,6 @@ class RiwayahFilter(FilterSchema):
 @searching(search_fields=["name", "slug"])
 def list_riwayahs(request: Request, filters: RiwayahFilter = Query()):
     """
-    Public Content API (V2):
-
     List riwayahs that have at least one READY recitation Asset.
 
     Conditions:
