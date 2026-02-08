@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 from django.db.models import Count, Q
 
-from apps.content.models import Asset, RecitationSurahTrack, Reciter, Resource
+from apps.content.models import Asset, RecitationSurahTrack, Reciter, Resource, Riwayah
 from apps.content.repositories.base import BaseRecitationRepository
 
 if TYPE_CHECKING:
@@ -15,6 +15,7 @@ class RecitationRepository(BaseRecitationRepository):
     def __init__(self) -> None:
         self.asset_model = Asset
         self.track_model = RecitationSurahTrack
+        self.riwayah_model = Riwayah
 
     def list_recitations_qs(
         self, publisher_q: Q, filters_dict: dict[str, Any], annotate_surahs_count: bool = False
@@ -119,5 +120,50 @@ class RecitationRepository(BaseRecitationRepository):
                 qs = qs.filter(name_ar__in=names_ar)
             if slugs := filters_dict.get("slug__in"):
                 qs = qs.filter(slug__in=slugs)
+
+        return qs
+
+    def list_riwayahs_qs(self, publisher_q: Q, filters_dict: dict[str, Any]) -> QuerySet[Riwayah]:
+        """
+        Returns a queryset of Riwayah objects that have READY recitation assets.
+
+        Conditions:
+        - Riwayah.is_active = True
+        - Asset.category = RECITATION
+        - Asset.riwayah = this Riwayah
+        - Asset.resource.category = RECITATION
+        - Asset.resource.status = READY
+        """
+        recitation_filter = (
+            Q(
+                assets__category=Asset.CategoryChoice.RECITATION,
+                assets__riwayah__isnull=False,
+                assets__resource__category=Resource.CategoryChoice.RECITATION,
+                assets__resource__status=Resource.StatusChoice.READY,
+            )
+            & publisher_q
+        )
+
+        qs = (
+            self.riwayah_model.objects.filter(
+                is_active=True,
+            )
+            .filter(recitation_filter)
+            .distinct()
+            .annotate(
+                recitations_count=Count(
+                    "assets",
+                    filter=recitation_filter,
+                )
+            )
+            .order_by("name")
+        )
+
+        # Apply filters if provided
+        if filters_dict:
+            if name := filters_dict.get("name"):
+                qs = qs.filter(name__icontains=name)
+            if slug := filters_dict.get("slug"):
+                qs = qs.filter(slug__icontains=slug)
 
         return qs

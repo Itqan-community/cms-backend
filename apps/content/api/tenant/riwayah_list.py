@@ -1,12 +1,13 @@
-from django.db.models import Count, Q
-from ninja import Schema
+from ninja import FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import Field
 
-from apps.content.models import Asset, Resource, Riwayah
+from apps.content.repositories.recitation import RecitationRepository
+from apps.content.services.riwayah import RiwayahService
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
+from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
 
 router = ItqanRouter(tags=[NinjaTag.RIWAYAHS])
@@ -15,16 +16,23 @@ router = ItqanRouter(tags=[NinjaTag.RIWAYAHS])
 class RiwayahOut(Schema):
     id: int
     name: str
+    slug: str
     recitations_count: int = Field(
         0,
         description="Number of READY recitation assets for this riwayah",
     )
 
 
+class RiwayahFilter(FilterSchema):
+    name: str | None = Field(None, description="Filter by riwayah name (case-insensitive)")
+    slug: str | None = Field(None, description="Filter by riwayah slug (case-insensitive)")
+
+
 @router.get("riwayahs/", response=list[RiwayahOut])
 @paginate
 @ordering(ordering_fields=["name"])
-def list_riwayahs(request: Request):
+@searching(search_fields=["name", "slug"])
+def list_riwayahs(request: Request, filters: RiwayahFilter = Query()):
     """
     Public Content API (V2):
 
@@ -37,27 +45,6 @@ def list_riwayahs(request: Request):
     - Asset.resource.category = RECITATION
     - Asset.resource.status = READY
     """
-
-    recitation_filter = Q(
-        assets__category=Asset.CategoryChoice.RECITATION,
-        assets__riwayah__isnull=False,
-        assets__resource__category=Resource.CategoryChoice.RECITATION,
-        assets__resource__status=Resource.StatusChoice.READY,
-    )
-
-    qs = (
-        Riwayah.objects.filter(
-            is_active=True,
-        )
-        .filter(recitation_filter)
-        .distinct()
-        .annotate(
-            recitations_count=Count(
-                "assets",
-                filter=recitation_filter,
-            )
-        )
-        .order_by("name")
-    )
-
-    return qs
+    repo = RecitationRepository()
+    service = RiwayahService(repo)
+    return service.get_all_riwayahs(publisher_q=request.publisher_q("assets__resource__publisher"), filters=filters)
