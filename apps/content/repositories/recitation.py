@@ -174,6 +174,8 @@ class RecitationRepository(BaseRecitationRepository):
                 qs = qs.filter(name__icontains=name)
             if slug := filters_dict.get("slug"):
                 qs = qs.filter(slug__icontains=slug)
+            if qiraah_id := filters_dict.get("qiraah_id"):
+                qs = qs.filter(qiraah_id=qiraah_id)
 
         return qs
 

@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("content", "0016_populate_qiraah_asim"),
+        ("content", "0016_populate_qiraah"),
     ]
 
     operations = [

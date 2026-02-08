@@ -66,6 +66,16 @@ class Migration(migrations.Migration):
                 to="content.qiraah",
             ),
         ),
+        migrations.AddField(
+            model_name="qiraah",
+            name="name_ar",
+            field=models.CharField(max_length=255, null=True, unique=True),
+        ),
+        migrations.AddField(
+            model_name="qiraah",
+            name="name_en",
+            field=models.CharField(max_length=255, null=True, unique=True),
+        ),
         migrations.AlterUniqueTogether(
             name="riwayah",
             unique_together={("qiraah", "name"), ("qiraah", "name_ar"), ("qiraah", "name_en")},
