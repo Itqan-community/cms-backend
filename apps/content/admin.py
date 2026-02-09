@@ -838,7 +838,7 @@ class ReciterAdmin(admin.ModelAdmin):
         (
             "Basic Information",
             {
-                "fields": ("name", "slug", "is_active"),
+                "fields": ("name", "slug", "is_active", "bio", "image_url"),
             },
         ),
         (
