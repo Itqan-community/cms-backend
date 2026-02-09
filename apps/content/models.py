@@ -207,6 +207,14 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         related_name="assets",
         help_text="Riwayah for recitation assets",
     )
+    qiraah = models.ForeignKey(
+        "Qiraah",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="assets",
+        help_text="Qiraah for recitation assets",
+    )
     madd_level = models.CharField(
         max_length=50,
         null=True,
@@ -233,12 +241,13 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
                 condition=models.Q(
                     category="recitation",
                     reciter__isnull=False,
-                    riwayah__isnull=False,
+                    qiraah__isnull=False,
                 )
                 | models.Q(
                     ~models.Q(category="recitation"),
                     reciter__isnull=True,
                     riwayah__isnull=True,
+                    qiraah__isnull=True,
                 ),
                 name="asset_recitation_fields_consistency",
             )
@@ -246,6 +255,11 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
 
     def __str__(self):
         return f"Asset(name={self.name}, category={self.category})"
+
+    def save(self, *args, **kwargs):
+        if self.riwayah_id and not self.qiraah_id:
+            self.qiraah_id = self.riwayah.qiraah_id
+        super().save(*args, **kwargs)
 
     @staticmethod
     def _parse_file_size_to_bytes(file_size_str):

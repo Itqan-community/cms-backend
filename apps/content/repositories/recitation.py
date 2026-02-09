@@ -36,6 +36,8 @@ class RecitationRepository(BaseRecitationRepository):
                 qs = qs.filter(reciter_id__in=reciter_ids)
             if riwayah_ids := filters_dict.get("riwayah_id"):
                 qs = qs.filter(riwayah_id__in=riwayah_ids)
+            if qiraah_ids := filters_dict.get("qiraah_id"):
+                qs = qs.filter(qiraah_id__in=qiraah_ids)
             if publisher_ids := filters_dict.get("publisher_id"):
                 qs = qs.filter(resource__publisher_id__in=publisher_ids)
             if madd_levels := filters_dict.get("madd_level"):
@@ -203,7 +205,6 @@ class RecitationRepository(BaseRecitationRepository):
 
         qs = (
             self.qiraah_model.objects.filter(
-                is_active=True,
                 riwayahs__is_active=True,
             )
             .filter(recitation_filter)

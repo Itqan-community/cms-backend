@@ -103,8 +103,8 @@ def create_initial_qiraahs(apps, schema_editor):
 
         qiraah, created = Qiraah.objects.update_or_create(
             slug=slug,
-            name = english,
             defaults={
+                "name" : english,
                 "name_ar" : arabic,
                 "is_active": True,
             },
@@ -137,7 +137,7 @@ def create_initial_qiraahs(apps, schema_editor):
                 matches.update(qiraah=qiraah)
 
                 # create the riwayah and associate
-                Riwayah.objects.update_or_create(name=r_english, name_ar=r_arabic, slug=rslug, is_active=True, qiraah=qiraah)
+                Riwayah.objects.update_or_create(slug=rslug, defaults= dict(name=r_english, name_ar=r_arabic,  is_active=True, qiraah=qiraah))
 
 
 def reverse_initial_qiraahs(apps, schema_editor):
