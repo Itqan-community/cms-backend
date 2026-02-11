@@ -31,14 +31,14 @@ class QiraahListTest(BaseTestCase):
         # Add recitations for Asim Qiraah
         self.asset_hafs = baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             riwayah=self.riwayah_hafs,
             resource=self.recitation_resource,
             reciter=self.reciter,
         )
         self.asset_qaloon = baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             riwayah=self.riwayah_qaloon,
             resource=self.recitation_resource,
             reciter=self.reciter,
@@ -51,7 +51,7 @@ class QiraahListTest(BaseTestCase):
         )
         self.asset_warsh = baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             riwayah=self.riwayah_warsh,
             resource=self.recitation_resource,
             reciter=self.reciter,
@@ -68,7 +68,7 @@ class QiraahListTest(BaseTestCase):
         )
         baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             riwayah=inactive_riwayah,
             resource=self.recitation_resource,
             reciter=self.reciter,
@@ -81,7 +81,7 @@ class QiraahListTest(BaseTestCase):
         )
         baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             riwayah=inactive_riwayah_hamza,
             resource=self.recitation_resource,
             reciter=self.reciter,
@@ -100,7 +100,7 @@ class QiraahListTest(BaseTestCase):
         )
         baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             riwayah=riwayah_draft,
             resource=draft_resource,
             reciter=self.reciter,
@@ -291,7 +291,7 @@ class QiraahListTest(BaseTestCase):
         )
         baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             riwayah=self.riwayah_hafs,
             resource=draft_resource,
             reciter=self.reciter,
