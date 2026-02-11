@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
-from apps.content.models import Asset, RecitationSurahTrack, Reciter, Riwayah
+from apps.content.models import Asset, RecitationSurahTrack, Reciter, Resource, Riwayah
 from apps.content.services.admin.asset_recitation_audio_tracks_upload_service import (
     bulk_upload_recitation_audio_tracks,
 )
@@ -18,7 +18,7 @@ class TestBulkUploadRecitationAudioTracks(BaseTestCase):
         asset = baker.make(
             Asset,
             name="test",
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             reciter=reciter,
             riwayah=riwayah,
         )
@@ -45,7 +45,7 @@ class TestBulkUploadRecitationAudioTracks(BaseTestCase):
         asset = baker.make(
             Asset,
             name="test",
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             reciter=reciter,
             riwayah=riwayah,
         )
@@ -79,7 +79,7 @@ class TestBulkUploadRecitationAudioTracks(BaseTestCase):
         asset = baker.make(
             Asset,
             name="test",
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             reciter=reciter,
             riwayah=riwayah,
         )
@@ -102,7 +102,7 @@ class TestBulkUploadRecitationAudioTracks(BaseTestCase):
         asset = baker.make(
             Asset,
             name="test",
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             reciter=reciter,
             riwayah=riwayah,
         )
@@ -125,7 +125,7 @@ class TestBulkUploadRecitationAudioTracks(BaseTestCase):
         asset = baker.make(
             Asset,
             name="test",
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             reciter=reciter,
             riwayah=riwayah,
         )

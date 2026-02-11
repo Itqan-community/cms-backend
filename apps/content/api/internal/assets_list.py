@@ -2,7 +2,7 @@ from ninja import FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import Field
 
-from apps.content.models import Asset
+from apps.content.models import Asset, Resource
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -27,7 +27,7 @@ class ListAssetOut(Schema):
 
 
 class AssetFilter(FilterSchema):
-    category: list[Asset.CategoryChoice] | None = Field(None, q="category__in")
+    category: list[Resource.CategoryChoice] | None = Field(None, q="category__in")
     license_code: list[str] | None = Field(None, q="license__in")
     publisher_id: int | None = Field(None, q="resource__publisher")
 

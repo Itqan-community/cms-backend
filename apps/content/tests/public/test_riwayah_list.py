@@ -23,7 +23,7 @@ class RiwayahsListTest(BaseTestCase):
         self.active_riwayah_hafs = baker.make(Riwayah, is_active=True, name="Hafs", slug="hafs")
         self.valid_asset_hafs = baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             riwayah=self.active_riwayah_hafs,
             resource=self.recitation_resource,
             reciter=self.reciter,
@@ -32,7 +32,7 @@ class RiwayahsListTest(BaseTestCase):
         self.active_riwayah_warsh = baker.make(Riwayah, is_active=True, name="Warsh", slug="warsh")
         self.valid_asset_warsh = baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             riwayah=self.active_riwayah_warsh,
             resource=self.recitation_resource,
             reciter=self.reciter,
@@ -41,7 +41,7 @@ class RiwayahsListTest(BaseTestCase):
         self.active_riwayah_qaloon = baker.make(Riwayah, is_active=True, name="Qaloon", slug="qaloon")
         self.valid_asset_qaloon = baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             riwayah=self.active_riwayah_qaloon,
             resource=self.recitation_resource,
             reciter=self.reciter,
@@ -50,7 +50,7 @@ class RiwayahsListTest(BaseTestCase):
         # Multiple assets for same riwayah
         self.valid_asset_hafs_2 = baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             riwayah=self.active_riwayah_hafs,
             resource=self.recitation_resource,
             reciter=self.reciter,
@@ -60,7 +60,7 @@ class RiwayahsListTest(BaseTestCase):
         self.inactive_riwayah = baker.make(Riwayah, is_active=False, name="Inactive Riwayah", slug="inactive")
         baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             riwayah=self.inactive_riwayah,
             resource=self.recitation_resource,
             reciter=self.reciter,
@@ -69,7 +69,7 @@ class RiwayahsListTest(BaseTestCase):
         # Asset with non-RECITATION category – should not count
         baker.make(
             Asset,
-            category=Asset.CategoryChoice.TAFSIR,
+            category=Resource.CategoryChoice.TAFSIR,
             resource=self.recitation_resource,
         )
 
@@ -82,7 +82,7 @@ class RiwayahsListTest(BaseTestCase):
         )
         baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             riwayah=self.active_riwayah_hafs,
             resource=draft_resource,
             reciter=self.reciter,
@@ -97,7 +97,7 @@ class RiwayahsListTest(BaseTestCase):
         )
         baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             riwayah=self.active_riwayah_hafs,
             resource=tafsir_resource,
             reciter=self.reciter,
@@ -280,7 +280,7 @@ class RiwayahsListTest(BaseTestCase):
         riwayah = baker.make(Riwayah, is_active=False, name="Test Inactive")
         baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             riwayah=riwayah,
             resource=self.recitation_resource,
             reciter=self.reciter,
@@ -308,7 +308,7 @@ class RiwayahsListTest(BaseTestCase):
         )
         baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             riwayah=riwayah,
             resource=draft_resource,
             reciter=self.reciter,
@@ -336,7 +336,7 @@ class RiwayahsListTest(BaseTestCase):
         )
         baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             riwayah=self.active_riwayah_hafs,
             resource=draft_resource,
             reciter=self.reciter,
@@ -375,7 +375,7 @@ class RiwayahsListTest(BaseTestCase):
         similar_riwayah = baker.make(Riwayah, is_active=True, name="Hafs Extended")
         baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             riwayah=similar_riwayah,
             resource=self.recitation_resource,
             reciter=self.reciter,

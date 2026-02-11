@@ -3,7 +3,7 @@ from ninja import Schema
 from ninja.pagination import paginate
 from pydantic import Field
 
-from apps.content.models import Asset, Resource, Riwayah
+from apps.content.models import Resource, Riwayah
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -37,7 +37,7 @@ def list_riwayahs(request: Request):
     """
 
     recitation_filter = Q(
-        assets__category=Asset.CategoryChoice.RECITATION,
+        assets__category=Resource.CategoryChoice.RECITATION,
         assets__riwayah__isnull=False,
         assets__resource__category=Resource.CategoryChoice.RECITATION,
         assets__resource__status=Resource.StatusChoice.READY,

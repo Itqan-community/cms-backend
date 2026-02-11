@@ -46,7 +46,7 @@ class RecitationsListTest(BaseTestCase):
         # Valid assets that should be returned
         self.asset1 = baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             resource=self.ready_recitation_resource_pub1,
             reciter=self.reciter1,
             riwayah=self.riwayah1,
@@ -55,7 +55,7 @@ class RecitationsListTest(BaseTestCase):
         )
         self.asset2 = baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             resource=self.ready_recitation_resource2,
             reciter=self.reciter2,
             riwayah=self.riwayah2,
@@ -73,21 +73,21 @@ class RecitationsListTest(BaseTestCase):
         # Assets that should NOT be returned
         baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             resource=self.draft_recitation_resource,
             reciter=self.reciter1,
             riwayah=baker.make("content.Riwayah", name="Test Riwayah1"),
         )
         baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             resource=self.other_category_resource,
             reciter=self.reciter1,
             riwayah=baker.make("content.Riwayah", name="Test Riwayah2"),
         )
         baker.make(
             Asset,
-            category=Asset.CategoryChoice.TAFSIR,
+            category=Resource.CategoryChoice.TAFSIR,
             resource=self.ready_recitation_resource_pub1,
         )
         self.user = User.objects.create_user(email="oauthuser@example.com", name="OAuth User")
