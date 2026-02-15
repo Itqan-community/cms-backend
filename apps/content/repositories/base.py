@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from django.db.models import Q, QuerySet
 
-    from apps.content.models import Asset, RecitationSurahTrack, Riwayah
+    from apps.content.models import Asset, Qiraah, RecitationSurahTrack, Riwayah
 
 
 class BaseRecitationRepository(ABC):
@@ -46,5 +46,12 @@ class BaseRecitationRepository(ABC):
     def list_riwayahs_qs(self, publisher_q: Q, filters_dict: dict[str, Any]) -> QuerySet[Riwayah]:
         """
         Returns a queryset of Riwayah objects that have READY recitation assets.
+        """
+        pass
+
+    @abstractmethod
+    def list_qiraahs_qs(self, publisher_q: Q, filters_dict: dict[str, Any]) -> QuerySet[Qiraah]:
+        """
+        Returns a queryset of Qiraah objects that have READY recitation assets through riwayahs.
         """
         pass

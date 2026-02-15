@@ -110,7 +110,7 @@ class TestAssetDownload(BaseTestCase):
         mock_user_has_access.return_value = True
 
         # Create a mock file
-        mock_file = SimpleUploadedFile("test.pdf", b"fake pdf content", content_type="application/pdf")
+        mock_file = SimpleUploadedFile("test_123abc.pdf", b"fake pdf content", content_type="application/pdf")
         baker.make(AssetVersion, asset=self.asset, name="Version 1", file_url=mock_file)
 
         # Act
@@ -121,7 +121,7 @@ class TestAssetDownload(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         self.assertIn("download_url", body)
-        self.assertIn("/test.pdf", body["download_url"])
+        self.assertIn("/test_123abc", body["download_url"])
 
     @patch("apps.content.api.internal.assets_download.user_has_access")
     def test_download_asset_with_csv_file_should_return_correct_content_type(self, mock_user_has_access):
@@ -129,7 +129,7 @@ class TestAssetDownload(BaseTestCase):
         mock_user_has_access.return_value = True
 
         # Create a CSV file
-        mock_file = SimpleUploadedFile("test.csv", b"fake csv content", content_type="text/csv")
+        mock_file = SimpleUploadedFile("test_123abc.csv", b"fake csv content", content_type="text/csv")
         baker.make(AssetVersion, asset=self.asset, name="CSV Version", file_url=mock_file)
 
         # Act
@@ -140,7 +140,7 @@ class TestAssetDownload(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         self.assertIn("download_url", body)
-        self.assertIn("/test.csv", body["download_url"])
+        self.assertIn("/test_123abc", body["download_url"])
 
     @patch("apps.content.api.internal.assets_download.user_has_access")
     def test_download_asset_should_return_latest_version(self, mock_user_has_access):
@@ -149,7 +149,7 @@ class TestAssetDownload(BaseTestCase):
 
         # Create multiple versions
         older_file = SimpleUploadedFile("old.pdf", b"old content", content_type="application/pdf")
-        newer_file = SimpleUploadedFile("new.pdf", b"new content", content_type="application/pdf")
+        newer_file = SimpleUploadedFile("new_123abc.pdf", b"new content", content_type="application/pdf")
 
         older_version = baker.make(AssetVersion, asset=self.asset, name="Old Version", file_url=older_file)
         newer_version = baker.make(AssetVersion, asset=self.asset, name="New Version", file_url=newer_file)
@@ -166,7 +166,7 @@ class TestAssetDownload(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         self.assertIn("download_url", body)
-        self.assertIn("/new.pdf", body["download_url"])
+        self.assertIn("/new_123abc", body["download_url"])
 
     def test_download_asset_with_invalid_id_format_should_return_400(self):
         # Arrange

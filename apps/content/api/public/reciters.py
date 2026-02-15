@@ -31,8 +31,6 @@ class ReciterFilter(FilterSchema):
 @searching(search_fields=["name", "name_ar", "slug"])
 def list_reciters(request: Request, filters: ReciterFilter = Query()):
     """
-    Public Content API (V2):
-
     List reciters that have at least one READY recitation Asset.
 
     Conditions:
