@@ -55,6 +55,7 @@ class ResourceListTest(BaseTestCase):
             self.assertIn("description", item)
             self.assertIn("category", item)
             self.assertIn("status", item)
+            self.assertIn("is_external", item)
             self.assertIn("publisher", item)
             self.assertIn("created_at", item)
             self.assertIn("updated_at", item)
@@ -240,6 +241,7 @@ class ResourceListTest(BaseTestCase):
         self.assertEqual("tafsir", body["category"])
         self.assertEqual(self.publisher1.id, body["publisher_id"])
         self.assertEqual("draft", body["status"])  # Default status
+        self.assertEqual(False, body["is_external"])  # Default is_external
         self.assertIn("id", body)
         self.assertIn("slug", body)
         self.assertIn("created_at", body)
@@ -248,6 +250,25 @@ class ResourceListTest(BaseTestCase):
         # Check that datetime fields are serialized as strings
         self.assertIsInstance(body["created_at"], str)
         self.assertIsInstance(body["updated_at"], str)
+
+    def test_create_resource_with_is_external_false_should_return_correct_data(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        data = {
+            "name": "External False Resource",
+            "description": "A test resource description",
+            "category": Resource.CategoryChoice.TAFSIR,
+            "publisher_id": self.publisher1.id,
+            "is_external": False,
+        }
+
+        # Act
+        response = self.client.post("/cms-api/resources/", data=data, format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(False, body["is_external"])
 
     def test_create_resource_with_invalid_data_should_return_400(self):
         # Arrange

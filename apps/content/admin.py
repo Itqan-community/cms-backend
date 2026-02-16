@@ -70,6 +70,7 @@ class ResourceAdmin(admin.ModelAdmin):
         "publisher",
         "category",
         "status",
+        "is_external",
         "latest_version",
         "created_at",
     ]
@@ -88,7 +89,7 @@ class ResourceAdmin(admin.ModelAdmin):
         (
             "Content",
             {
-                "fields": ("description", "category", "status"),
+                "fields": ("description", "category", "status", "is_external"),
             },
         ),
         (
@@ -441,8 +442,8 @@ class AssetAdmin(admin.ModelAdmin):
 
                 self.message_user(
                     request,
-                    f"Done. created={stats.get('created_total',0)}, updated={stats.get('updated_total',0)}, "
-                    f"skipped={stats.get('skipped_total',0)}, files={len(files)}, asset_id={asset_id}",
+                    f"Done. created={stats.get('created_total', 0)}, updated={stats.get('updated_total', 0)}, "
+                    f"skipped={stats.get('skipped_total', 0)}, files={len(files)}, asset_id={asset_id}",
                 )
                 return redirect(reverse("admin:content_asset_change", args=[asset_id]))
         else:
