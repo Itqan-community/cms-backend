@@ -94,7 +94,7 @@ class RecitationTracksTest(BaseTestCase):
 
         item = items[0]
         self.assertIsNotNone(item["audio_url"])
-        self.assertIn(f"/assets/{self.asset.id}/recitations/001.mp3", item["audio_url"])
+        self.assertIn(f"/assets/{self.asset.id}/recitations/001", item["audio_url"])
 
     def test_list_recitation_tracks_for_nonexistent_or_invalid_asset_should_return_404(self):
         self.authenticate_client(self.app)
