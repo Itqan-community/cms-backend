@@ -28,6 +28,7 @@ class ListResourceOut(Schema):
     description: str
     status: str
     publisher: ListResourcePublisherOut = Field(alias="publisher")
+    is_external: bool
     created_at: AwareDatetime
     updated_at: AwareDatetime
 
@@ -43,6 +44,7 @@ class CreateResourceIn(Schema):
     description: str
     category: Resource.CategoryChoice
     publisher_id: int
+    is_external: bool = False
 
 
 class UpdateResourceIn(Schema):
@@ -50,6 +52,7 @@ class UpdateResourceIn(Schema):
     description: str | None = None
     category: Resource.CategoryChoice | None = None
     status: Resource.StatusChoice | None = None
+    is_external: bool | None = None
 
 
 class ResourceOut(Schema):
@@ -60,6 +63,7 @@ class ResourceOut(Schema):
     description: str
     status: str
     publisher_id: int
+    is_external: bool
     created_at: AwareDatetime
     updated_at: AwareDatetime
 
@@ -78,6 +82,7 @@ class DetailResourceOut(Schema):
     description: str
     status: str
     publisher: DetailResourcePublisherOut = Field(alias="publisher")
+    is_external: bool
     created_at: AwareDatetime
     updated_at: AwareDatetime
 
@@ -103,6 +108,7 @@ def create_resource(request: Request, data: CreateResourceIn):
         description=data.description,
         category=data.category,
         publisher_id=publisher_id,
+        is_external=data.is_external,
     )
     return resource
 

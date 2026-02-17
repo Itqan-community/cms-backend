@@ -78,6 +78,8 @@ class Resource(BaseModel):
         help_text="Asset license",
     )
 
+    is_external = models.BooleanField(default=False)
+
     def __str__(self):
         return f"Resource(name={self.name} category={self.category})"
 

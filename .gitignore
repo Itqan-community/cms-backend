@@ -332,3 +332,5 @@ media/
 .env
 .envs/*
 .idea/
+.vscode/settings.json
+/private_key.pem
