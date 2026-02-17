@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>New Resource Version Available</title>
+</head>
+<body>
+    <h2>New Version for {{ resource_name }}</h2>
+    <p>A new version ({{ version }}) of the resource "{{ resource_name }}" is now available.</p>
+
+    {% if summary %}
+    <p><strong>Summary of changes:</strong></p>
+    <p>{{ summary }}</p>
+    {% endif %}
+
+    <p>You are receiving this email because you have access to assets within this resource.</p>
+
+    <p>Best regards,<br>Itqan Team</p>
+</body>
+</html>
