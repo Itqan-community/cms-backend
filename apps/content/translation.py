@@ -1,7 +1,7 @@
 from modeltranslation.decorators import register
 from modeltranslation.translator import TranslationOptions
 
-from .models import Asset, Reciter, Resource, Riwayah
+from .models import Asset, Qiraah, Reciter, Resource, Riwayah
 
 
 @register(Resource)
@@ -31,5 +31,11 @@ class ReciterTranslationOptions(TranslationOptions):
 
 @register(Riwayah)
 class RiwayahTranslationOptions(TranslationOptions):
+
+    fields = ("name",)
+
+
+@register(Qiraah)
+class QiraahTranslationOptions(TranslationOptions):
 
     fields = ("name",)

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 from django.db.models import Count, Q
 
-from apps.content.models import Asset, RecitationSurahTrack, Reciter, Resource, Riwayah
+from apps.content.models import Asset, Qiraah, RecitationSurahTrack, Reciter, Resource, Riwayah
 from apps.content.repositories.base import BaseRecitationRepository
 
 if TYPE_CHECKING:
@@ -16,6 +16,7 @@ class RecitationRepository(BaseRecitationRepository):
         self.asset_model = Asset
         self.track_model = RecitationSurahTrack
         self.riwayah_model = Riwayah
+        self.qiraah_model = Qiraah
 
     def list_recitations_qs(
         self, publisher_q: Q, filters_dict: dict[str, Any], annotate_surahs_count: bool = False
@@ -35,8 +36,14 @@ class RecitationRepository(BaseRecitationRepository):
                 qs = qs.filter(reciter_id__in=reciter_ids)
             if riwayah_ids := filters_dict.get("riwayah_id"):
                 qs = qs.filter(riwayah_id__in=riwayah_ids)
+            if qiraah_ids := filters_dict.get("qiraah_id"):
+                qs = qs.filter(qiraah_id__in=qiraah_ids)
             if publisher_ids := filters_dict.get("publisher_id"):
                 qs = qs.filter(resource__publisher_id__in=publisher_ids)
+            if madd_levels := filters_dict.get("madd_level"):
+                qs = qs.filter(madd_level__in=madd_levels)
+            if meem_behaviours := filters_dict.get("meem_behaviour"):
+                qs = qs.filter(meem_behaviour__in=meem_behaviours)
 
         if annotate_surahs_count:
             from django.db.models import Count
@@ -157,10 +164,67 @@ class RecitationRepository(BaseRecitationRepository):
                 )
             )
             .order_by("name")
+            .select_related("qiraah")
         )
 
         # Apply filters if provided
         if filters_dict:
+            # Allow explicit is_active filter (handles False correctly)
+            if "is_active" in filters_dict:
+                qs = qs.filter(is_active=filters_dict.get("is_active"))
+            if name := filters_dict.get("name"):
+                qs = qs.filter(name__icontains=name)
+            if slug := filters_dict.get("slug"):
+                qs = qs.filter(slug__icontains=slug)
+            if qiraah_id := filters_dict.get("qiraah_id"):
+                qs = qs.filter(qiraah_id=qiraah_id)
+
+        return qs
+
+    def list_qiraahs_qs(self, publisher_q: Q, filters_dict: dict[str, Any]) -> QuerySet[Qiraah]:
+        """
+        Returns a queryset of Qiraah objects that have READY recitation assets through riwayahs.
+
+        Conditions:
+        - Qiraah.is_active = True
+        - Qiraah has at least one active Riwayah
+        - Riwayah.is_active = True
+        - Asset.category = RECITATION
+        - Asset.resource.category = RECITATION
+        - Asset.resource.status = READY
+        """
+        recitation_filter = (
+            Q(
+                riwayahs__assets__category=Asset.CategoryChoice.RECITATION,
+                riwayahs__assets__riwayah__isnull=False,
+                riwayahs__assets__resource__category=Resource.CategoryChoice.RECITATION,
+                riwayahs__assets__resource__status=Resource.StatusChoice.READY,
+            )
+            & publisher_q
+        )
+
+        qs = (
+            self.qiraah_model.objects.filter(
+                riwayahs__is_active=True,
+            )
+            .filter(recitation_filter)
+            .distinct()
+            .annotate(
+                riwayahs_count=Count("riwayahs", filter=Q(is_active=True), distinct=True),
+                recitations_count=Count(
+                    "riwayahs__assets",
+                    filter=recitation_filter,
+                    distinct=True,
+                ),
+            )
+            .order_by("name")
+        )
+
+        # Apply filters if provided
+        if filters_dict:
+            # Allow explicit is_active filter to filter qiraahs (handles False correctly)
+            if "is_active" in filters_dict:
+                qs = qs.filter(is_active=filters_dict.get("is_active"))
             if name := filters_dict.get("name"):
                 qs = qs.filter(name__icontains=name)
             if slug := filters_dict.get("slug"):
