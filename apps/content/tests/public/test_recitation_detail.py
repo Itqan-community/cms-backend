@@ -20,7 +20,7 @@ class RecitationTracksTest(BaseTestCase):
         )
         self.asset = baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             resource=self.recitation_resource,
             reciter=baker.make("content.Reciter", name="Test Reciter"),
             riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
@@ -111,7 +111,7 @@ class RecitationTracksTest(BaseTestCase):
         )
         non_recitation_asset = baker.make(
             Asset,
-            category=Asset.CategoryChoice.TAFSIR,
+            category=Resource.CategoryChoice.TAFSIR,
             resource=non_recitation_resource,
         )
 
@@ -127,7 +127,7 @@ class RecitationTracksTest(BaseTestCase):
         )
         draft_asset = baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             resource=draft_resource,
             reciter=baker.make("content.Reciter", name="Test Reciter1"),
             riwayah=baker.make("content.Riwayah", name="Test Riwayah1"),

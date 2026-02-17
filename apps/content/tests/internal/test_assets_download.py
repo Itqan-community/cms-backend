@@ -10,6 +10,7 @@ from apps.content.models import (
     AssetAccessRequest,
     AssetVersion,
     LicenseChoice,
+    Resource,
     UsageEvent,
 )
 from apps.core.tests import BaseTestCase
@@ -27,7 +28,7 @@ class TestAssetDownload(BaseTestCase):
             resource=self.resource,
             name="Test Asset",
             description="Test asset description",
-            category=Asset.CategoryChoice.TAFSIR,
+            category=Resource.CategoryChoice.TAFSIR,
             license=LicenseChoice.CC_BY_SA,
         )
         self.user = baker.make(User, email="test@example.com")

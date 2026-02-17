@@ -43,6 +43,12 @@ class Resource(BaseModel):
         RECITATION = "recitation", _("Recitation")
         MUSHAF = "mushaf", _("Mushaf")
         TAFSIR = "tafsir", _("Tafsir")
+        PROGRAM = "program", _("Program")
+        LINGUISTIC = "linguistic", _("Linguistic")
+        TRANSLATION = "translation", _("Translation")
+        FONT = "font", _("Font")
+        SEARCH = "search", _("Search")
+        TAJWEED = "tajweed", _("Tajweed")
 
     class StatusChoice(models.TextChoices):
         DRAFT = "draft", _("Draft")
@@ -144,11 +150,6 @@ class ResourceVersion(DeleteFilesOnDeleteMixin, BaseModel):
 
 
 class Asset(DeleteFilesOnDeleteMixin, BaseModel):
-    class CategoryChoice(models.TextChoices):
-        RECITATION = "recitation", _("Recitation")
-        MUSHAF = "mushaf", _("Mushaf")
-        TAFSIR = "tafsir", _("Tafsir")
-
     class MaddLevelChoice(models.TextChoices):
         TWASSUT = "twassut", _("Twassut")
         QASR = "qasr", _("Qasr")
@@ -174,7 +175,7 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
 
     category = models.CharField(
         max_length=20,
-        choices=CategoryChoice.choices,
+        choices=Resource.CategoryChoice.choices,
         help_text="Asset category matching resource categories",
     )
 

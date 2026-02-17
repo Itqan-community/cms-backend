@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, LicenseChoice, UsageEvent
+from apps.content.models import Asset, LicenseChoice, Resource, UsageEvent
 from apps.core.tests import BaseTestCase
 from apps.users.models import User
 
@@ -16,7 +16,7 @@ class DetailAssetTest(BaseTestCase):
                 "This is a detailed explanation of the Quran by Ibn Katheer, covering various aspects of "
                 "Islamic interpretation."
             ),
-            category=Asset.CategoryChoice.TAFSIR,
+            category=Resource.CategoryChoice.TAFSIR,
             license=LicenseChoice.CC_BY_SA,
             thumbnail_url="thumbnails/tafseer.png",
         )
@@ -48,7 +48,7 @@ class DetailAssetTest(BaseTestCase):
             description="Test asset for schema validation",
             long_description="Extended description for schema testing",
             license=LicenseChoice.CC_BY,
-            category=Asset.CategoryChoice.MUSHAF,
+            category=Resource.CategoryChoice.MUSHAF,
             thumbnail_url="thumbs/schema.png",
         )
 
@@ -84,7 +84,7 @@ class DetailAssetTest(BaseTestCase):
                 Asset,
                 name="Tafsir Asset",
                 description="desc",
-                category=Asset.CategoryChoice.TAFSIR,
+                category=Resource.CategoryChoice.TAFSIR,
                 license=LicenseChoice.CC0,
                 thumbnail_url="thumbs/tafsir.png",
             ),
@@ -92,7 +92,7 @@ class DetailAssetTest(BaseTestCase):
                 Asset,
                 name="Recitation Asset",
                 description="desc",
-                category=Asset.CategoryChoice.RECITATION,
+                category=Resource.CategoryChoice.RECITATION,
                 license=LicenseChoice.CC0,
                 thumbnail_url="thumbs/recitation.png",
                 reciter=baker.make("content.Reciter", name="Test Reciter"),
@@ -102,7 +102,7 @@ class DetailAssetTest(BaseTestCase):
                 Asset,
                 name="Mushaf Asset",
                 description="desc",
-                category=Asset.CategoryChoice.MUSHAF,
+                category=Resource.CategoryChoice.MUSHAF,
                 license=LicenseChoice.CC0,
                 thumbnail_url="thumbs/mushaf.png",
             ),
@@ -131,7 +131,7 @@ class DetailAssetTest(BaseTestCase):
             name="اسم الأصل",
             description="وصف عربي",
             long_description="وصف عربي مطول",
-            category=Asset.CategoryChoice.TAFSIR,
+            category=Resource.CategoryChoice.TAFSIR,
             license=LicenseChoice.CC0,
             thumbnail_url="thumbs/localized.png",
         )
@@ -155,7 +155,7 @@ class DetailAssetTest(BaseTestCase):
             name="Asset Name",
             description="English description",
             long_description="English long description",
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             license=LicenseChoice.CC0,
             thumbnail_url="thumbs/en-only.png",
             reciter=baker.make("content.Reciter", name="Test Reciter"),
@@ -210,7 +210,7 @@ class DetailAssetTest(BaseTestCase):
             Asset,
             name="Usage Event Test Asset",
             description="Test asset for usage event tracking",
-            category=Asset.CategoryChoice.TAFSIR,
+            category=Resource.CategoryChoice.TAFSIR,
             license=LicenseChoice.CC_BY,
             thumbnail_url="thumbnails/test.png",
         )
@@ -247,7 +247,7 @@ class DetailAssetTest(BaseTestCase):
             Asset,
             name="Anonymous Test Asset",
             description="Test asset for anonymous access",
-            category=Asset.CategoryChoice.MUSHAF,
+            category=Resource.CategoryChoice.MUSHAF,
             license=LicenseChoice.CC0,
             thumbnail_url="thumbnails/anonymous.png",
         )
@@ -276,7 +276,7 @@ class DetailAssetTest(BaseTestCase):
             Asset,
             name="Metadata Test Asset",
             description="Test asset for request metadata",
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             license=LicenseChoice.CC_BY_SA,
             thumbnail_url="thumbnails/metadata.png",
             reciter=baker.make("content.Reciter", name="Test Reciter"),
@@ -319,7 +319,7 @@ class DetailAssetTest(BaseTestCase):
             name="Asset Without Thumbnail",
             description="Test asset without thumbnail",
             long_description="This asset has no thumbnail URL to test optional field",
-            category=Asset.CategoryChoice.TAFSIR,
+            category=Resource.CategoryChoice.TAFSIR,
             license=LicenseChoice.CC0,
             thumbnail_url=None,  # Test the optional field
         )
