@@ -90,7 +90,7 @@ class ResourceAdmin(admin.ModelAdmin):
         (
             "Content",
             {
-                "fields": ("description", "category", "status", "is_external"),
+                "fields": ("description", "category", "status", "is_external", "external_url"),
             },
         ),
         (
@@ -144,6 +144,32 @@ class ResourceAdmin(admin.ModelAdmin):
             obj.pk,
             count,
         )
+
+    def save_formset(self, request, form, formset, change):
+        """
+        Override save_formset to use ResourceService for version creation.
+        """
+        if formset.model != ResourceVersion:
+            return super().save_formset(request, form, formset, change)
+
+        instances = formset.save(commit=False)
+
+        # Handle deletions
+        for obj in formset.deleted_objects:
+            obj.delete()
+
+        from apps.content.services.resource import ResourceService
+
+        service = ResourceService()
+
+        for instance in instances:
+            # If it's a new instance (no pk), use service to create and notify
+            if not instance.pk:
+                service.create_version(instance)
+            else:
+                instance.save()
+
+        formset.save_m2m()
 
 
 @admin.register(ResourceVersion)
@@ -292,6 +318,32 @@ class AssetAdmin(admin.ModelAdmin):
                 latest_version.file_url.url,
             )
         return "No download URL"
+
+    def save_formset(self, request, form, formset, change):
+        """
+        Override save_formset to use AssetService for version creation.
+        """
+        if formset.model != AssetVersion:
+            return super().save_formset(request, form, formset, change)
+
+        instances = formset.save(commit=False)
+
+        # Handle deletions
+        for obj in formset.deleted_objects:
+            obj.delete()
+
+        from apps.content.services.asset import AssetService
+
+        service = AssetService()
+
+        for instance in instances:
+            # If it's a new instance (no pk), use service to create and notify
+            if not instance.pk:
+                service.create_version(instance)
+            else:
+                instance.save()
+
+        formset.save_m2m()
 
     def get_urls(self):
         urls = super().get_urls()

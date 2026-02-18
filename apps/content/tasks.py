@@ -9,8 +9,12 @@ import logging
 from typing import TYPE_CHECKING, TypedDict
 
 from celery import shared_task
+from django.conf import settings
+from django.core.mail import send_mass_mail
 from django.db import transaction
+from django.template.loader import render_to_string
 from django.utils import timezone
+from django.utils.html import strip_tags
 
 if TYPE_CHECKING:
     from apps.content.models import UsageEvent
@@ -114,8 +118,9 @@ def update_asset_statistics_task(self, asset_id, stat_type, increment=1):
         stat_type: 'download_count' or 'view_count'
         increment: Amount to increment (default 1)
     """
+    from .models import Asset
+
     try:
-        from .models import Asset
 
         asset = Asset.objects.get(id=asset_id)
 
@@ -233,7 +238,7 @@ def compute_daily_analytics_task():
                 daily_stats["top_assets"].append(
                     {
                         "asset_id": asset.id,
-                        "title": asset.title,
+                        "title": asset.name,
                         "download_count": asset_stat["download_count"],
                     }
                 )
@@ -321,9 +326,9 @@ def update_publisher_statistics_task(publisher_id):
     Args:
         publisher_id: Publisher ID
     """
-    try:
-        from .models import Asset, Publisher, Resource
+    from .models import Asset, Publisher, Resource
 
+    try:
         publisher = Publisher.objects.get(id=publisher_id)
 
         # Calculate fresh statistics
@@ -436,3 +441,99 @@ def cleanup_stuck_multipart_uploads_task(older_than_hours: int = 2):
             "dbRecordsCleaned": 0,
             "errors": [str(exc)],
         }
+
+
+@shared_task
+def send_resource_update_email(resource_version_id: int) -> None:
+    """
+    Task to send email notifications for a new ResourceVersion.
+    """
+    from apps.content.models import AssetAccess, ResourceVersion
+
+    try:
+        resource_version = ResourceVersion.objects.select_related("resource").get(pk=resource_version_id)
+    except ResourceVersion.DoesNotExist:
+        return
+
+    # Find users with active access to any asset of this resource
+    users = (
+        AssetAccess.objects.filter(asset__resource=resource_version.resource)
+        .select_related("user")
+        .values_list("user__email", flat=True)
+        .distinct()
+    )
+
+    if not users:
+        return
+
+    subject = f"New Update for {resource_version.resource.name}"
+    context = {
+        "resource_name": resource_version.resource.name,
+        "version": resource_version.semvar,
+        "summary": resource_version.summary,
+    }
+
+    html_message = render_to_string("emails/resource_update.html", context)
+    plain_message = strip_tags(html_message)
+
+    messages = [
+        (
+            subject,
+            plain_message,
+            settings.DEFAULT_FROM_EMAIL,
+            [email],
+        )
+        for email in users
+        if email
+    ]
+
+    if messages:
+        send_mass_mail(messages, fail_silently=True)
+
+
+@shared_task
+def send_asset_update_email(asset_version_id: int) -> None:
+    """
+    Task to send email notifications for a new AssetVersion.
+    """
+    from apps.content.models import AssetAccess, AssetVersion
+
+    try:
+        asset_version = AssetVersion.objects.select_related("asset", "resource_version").get(pk=asset_version_id)
+    except AssetVersion.DoesNotExist:
+        return
+
+    # Find users with active access to this asset
+    users = (
+        AssetAccess.objects.filter(asset=asset_version.asset)
+        .select_related("user")
+        .values_list("user__email", flat=True)
+        .distinct()
+    )
+
+    if not users:
+        return
+
+    subject = f"New Update for {asset_version.asset.name}"
+    context = {
+        "asset_name": asset_version.asset.name,
+        "version": asset_version.resource_version.semvar,
+        "summary": asset_version.summary,
+    }
+
+    html_message = render_to_string("emails/asset_update.html", context)
+    plain_message = strip_tags(html_message)
+
+    messages = [
+        (
+            subject,
+            plain_message,
+            settings.DEFAULT_FROM_EMAIL,
+            [email],
+        )
+        for email in users
+        if email
+    ]
+
+    if messages:
+        send_mass_mail(messages, fail_silently=True)
