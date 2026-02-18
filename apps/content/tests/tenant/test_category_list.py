@@ -19,7 +19,7 @@ class CategoryListTest(BaseTestCase):
         self.authenticate_user(self.user, domain=self.domain)
 
         # Act
-        response = self.client.get("/tenant/categories/")
+        response = self.client.get("/tenant/resource-categories/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -38,7 +38,7 @@ class CategoryListTest(BaseTestCase):
         self.authenticate_user(self.user, domain=self.domain)
 
         # Act
-        response = self.client.get("/tenant/categories/")
+        response = self.client.get("/tenant/resource-categories/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -57,7 +57,7 @@ class CategoryListTest(BaseTestCase):
         self.authenticate_user(self.user, domain=self.domain)
 
         # Act
-        response = self.client.get("/tenant/categories/")
+        response = self.client.get("/tenant/resource-categories/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -85,7 +85,7 @@ class CategoryListTest(BaseTestCase):
         self.authenticate_user(self.user, domain=self.domain)
 
         # Act
-        response = self.client.get("/tenant/categories/")
+        response = self.client.get("/tenant/resource-categories/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -103,7 +103,7 @@ class CategoryListTest(BaseTestCase):
         self.authenticate_user(self.user, domain=self.domain)
 
         # Act
-        response = self.client.get("/tenant/categories/")
+        response = self.client.get("/tenant/resource-categories/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -124,7 +124,7 @@ class CategoryListTest(BaseTestCase):
         self.authenticate_user(self.user, domain=self.domain)
 
         # Act - Get categories before creating any resources
-        response1 = self.client.get("/tenant/categories/")
+        response1 = self.client.get("/tenant/resource-categories/")
         self.assertEqual(200, response1.status_code)
         categories1 = response1.json()
 
@@ -143,7 +143,7 @@ class CategoryListTest(BaseTestCase):
         )
 
         # Act - Get categories after creating resources
-        response2 = self.client.get("/tenant/categories/")
+        response2 = self.client.get("/tenant/resource-categories/")
         self.assertEqual(200, response2.status_code)
         categories2 = response2.json()
 
@@ -156,7 +156,7 @@ class CategoryListTest(BaseTestCase):
         self.authenticate_user(self.user, domain=self.domain)
 
         # Act
-        response = self.client.get("/tenant/categories/")
+        response = self.client.get("/tenant/resource-categories/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)

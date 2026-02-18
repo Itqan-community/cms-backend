@@ -13,6 +13,6 @@ class CategoryOut(Schema):
     label: str
 
 
-@router.get("categories/", response=list[CategoryOut])
+@router.get("resource-categories/", response=list[CategoryOut])
 def list_categories(request: Request):
     return [CategoryOut(value=choice.value, label=str(choice.label)) for choice in Resource.CategoryChoice]
