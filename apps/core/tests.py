@@ -18,6 +18,7 @@ from apps.publishers.models import Domain
 from apps.users.models import User
 
 
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 class BaseTestCase(TestCase):
     client_class = APIClient
     client: APIClient
