@@ -80,6 +80,18 @@ class Resource(BaseModel):
     )
 
     is_external = models.BooleanField(default=False)
+    external_url = models.URLField(
+        "External URL", null=True, blank=True, help_text="If is_external=True, URL to the external resource"
+    )
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(is_external=False, external_url__isnull=True)
+                | models.Q(is_external=True, external_url__isnull=False),
+                name="resource_external_url_consistency",
+            )
+        ]
 
     def __str__(self):
         return f"Resource(name={self.name} category={self.category})"
