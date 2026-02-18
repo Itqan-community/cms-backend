@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("content", "0020_remove_asset_asset_recitation_fields_consistency_and_more"),
+        ("content", "0021_alter_asset_category_alter_resource_category"),
     ]
 
     operations = [
