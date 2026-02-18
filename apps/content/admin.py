@@ -90,7 +90,7 @@ class ResourceAdmin(admin.ModelAdmin):
         (
             "Content",
             {
-                "fields": ("description", "category", "status", "is_external"),
+                "fields": ("description", "category", "status", "is_external", "external_url"),
             },
         ),
         (
