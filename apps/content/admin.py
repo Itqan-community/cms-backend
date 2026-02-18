@@ -181,7 +181,7 @@ class AssetAdmin(admin.ModelAdmin):
         (
             "Basic Information",
             {
-                "fields": ("name", "resource", "category", "riwayah"),
+                "fields": ("name", "resource", "category", "riwayah", "qiraah"),
             },
         ),
         (
