@@ -1,6 +1,7 @@
 import re
 
 from django.conf import settings
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.validators import FileExtensionValidator, MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
@@ -43,6 +44,12 @@ class Resource(BaseModel):
         RECITATION = "recitation", _("Recitation")
         MUSHAF = "mushaf", _("Mushaf")
         TAFSIR = "tafsir", _("Tafsir")
+        PROGRAM = "program", _("Program")
+        LINGUISTIC = "linguistic", _("Linguistic")
+        TRANSLATION = "translation", _("Translation")
+        FONT = "font", _("Font")
+        SEARCH = "search", _("Search")
+        TAJWEED = "tajweed", _("Tajweed")
 
     class StatusChoice(models.TextChoices):
         DRAFT = "draft", _("Draft")
@@ -71,6 +78,8 @@ class Resource(BaseModel):
         default=LicenseChoice.CC0,
         help_text="Asset license",
     )
+
+    is_external = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Resource(name={self.name} category={self.category})"
@@ -144,11 +153,6 @@ class ResourceVersion(DeleteFilesOnDeleteMixin, BaseModel):
 
 
 class Asset(DeleteFilesOnDeleteMixin, BaseModel):
-    class CategoryChoice(models.TextChoices):
-        RECITATION = "recitation", _("Recitation")
-        MUSHAF = "mushaf", _("Mushaf")
-        TAFSIR = "tafsir", _("Tafsir")
-
     class MaddLevelChoice(models.TextChoices):
         TWASSUT = "twassut", _("Twassut")
         QASR = "qasr", _("Qasr")
@@ -174,7 +178,7 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
 
     category = models.CharField(
         max_length=20,
-        choices=CategoryChoice.choices,
+        choices=Resource.CategoryChoice.choices,
         help_text="Asset category matching resource categories",
     )
 
@@ -286,15 +290,6 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         }
 
         return int(size * units.get(unit, 1))
-
-    def get_related_assets(self, limit=5):
-        """Get related assets from same category and publisher"""
-        return Asset.objects.filter(
-            category=self.category,
-            resource__publisher=self.resource.publisher,
-        ).exclude(
-            id=self.id
-        )[:limit]
 
     def get_latest_version(self):
         return self.versions.order_by("-created_at").first()
@@ -748,4 +743,79 @@ class RecitationAyahTiming(BaseModel):
             self.duration_ms = max(0, int(self.end_ms) - int(self.start_ms))
         except Exception:
             self.duration_ms = 0
+        super().save(*args, **kwargs)
+
+
+class ContentIssueReport(BaseModel):
+    """
+    Issue reports for content items (Resources or Assets).
+    Uses GenericForeignKey to allow reporting issues on any content type.
+    """
+
+    class StatusChoice(models.TextChoices):
+        PENDING = "pending", _("Pending")
+        UNDER_REVIEW = "under_review", _("Under Review")
+        RESOLVED = "resolved", _("Resolved")
+        DISMISSED = "dismissed", _("Dismissed")
+
+    reporter = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="content_issue_reports",
+        help_text="User who reported the issue",
+    )
+
+    # Generic foreign key fields
+    content_type = models.ForeignKey(
+        "contenttypes.ContentType",
+        on_delete=models.CASCADE,
+        limit_choices_to={"model__in": ["resource", "asset"]},
+        help_text="Django ContentType for the reported object",
+    )
+
+    object_id = models.PositiveIntegerField(help_text="ID of the reported content object")
+
+    content_object = GenericForeignKey("content_type", "object_id")
+
+    description = models.TextField(
+        help_text="Description of the issue (10-2000 characters)",
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=StatusChoice.choices,
+        default=StatusChoice.PENDING,
+        help_text="Current status of the issue report",
+    )
+
+    class Meta:
+        verbose_name = "Content Issue Report"
+        verbose_name_plural = "Content Issue Reports"
+        indexes = [
+            models.Index(fields=["content_type", "object_id"]),
+            models.Index(fields=["reporter", "status"]),
+            models.Index(fields=["status", "created_at"]),
+        ]
+
+    def __str__(self) -> str:
+        content_type_name = self.content_type.model if self.content_type else "unknown"
+        return f"ContentIssueReport(reporter={self.reporter_id}, content={content_type_name}:{self.object_id}, status={self.status})"
+
+    @property
+    def content_object_summary(self) -> str:
+        return str(self.content_object)
+
+    def clean(self):
+        """Validate the model before saving"""
+        from django.core.exceptions import ValidationError
+
+        # Validate description length
+        if self.description:
+            if len(self.description) < 10:
+                raise ValidationError({"description": "Description must be at least 10 characters long."})
+            if len(self.description) > 2000:
+                raise ValidationError({"description": "Description cannot exceed 2000 characters."})
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
         super().save(*args, **kwargs)

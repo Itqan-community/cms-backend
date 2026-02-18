@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetAccess, AssetAccessRequest, LicenseChoice
+from apps.content.models import Asset, AssetAccess, AssetAccessRequest, LicenseChoice, Resource
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -16,7 +16,7 @@ class AssetAccessTest(BaseTestCase):
             resource=self.resource,
             name="Test Asset",
             description="Test asset description",
-            category=Asset.CategoryChoice.TAFSIR,
+            category=Resource.CategoryChoice.TAFSIR,
             license=LicenseChoice.CC_BY_SA,
         )
         self.user = baker.make(User, email="test@example.com")

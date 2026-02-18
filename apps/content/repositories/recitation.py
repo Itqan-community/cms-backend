@@ -26,7 +26,7 @@ class RecitationRepository(BaseRecitationRepository):
         """
         qs = self.asset_model.objects.select_related("resource", "reciter", "riwayah").filter(
             publisher_q,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             resource__category=Resource.CategoryChoice.RECITATION,
             resource__status=Resource.StatusChoice.READY,
         )
@@ -71,7 +71,7 @@ class RecitationRepository(BaseRecitationRepository):
             return self.asset_model.objects.select_related("resource", "resource__publisher").get(
                 publisher_q,
                 id=asset_id,
-                category=Asset.CategoryChoice.RECITATION,
+                category=Resource.CategoryChoice.RECITATION,
                 resource__category=Resource.CategoryChoice.RECITATION,
                 resource__status=Resource.StatusChoice.READY,
             )
@@ -97,7 +97,7 @@ class RecitationRepository(BaseRecitationRepository):
         """
         recitation_filter = (
             Q(
-                assets__category=Asset.CategoryChoice.RECITATION,
+                assets__category=Resource.CategoryChoice.RECITATION,
                 assets__resource__category=Resource.CategoryChoice.RECITATION,
                 assets__resource__status=Resource.StatusChoice.READY,
             )
@@ -143,7 +143,7 @@ class RecitationRepository(BaseRecitationRepository):
         """
         recitation_filter = (
             Q(
-                assets__category=Asset.CategoryChoice.RECITATION,
+                assets__category=Resource.CategoryChoice.RECITATION,
                 assets__riwayah__isnull=False,
                 assets__resource__category=Resource.CategoryChoice.RECITATION,
                 assets__resource__status=Resource.StatusChoice.READY,
@@ -195,7 +195,7 @@ class RecitationRepository(BaseRecitationRepository):
         """
         recitation_filter = (
             Q(
-                riwayahs__assets__category=Asset.CategoryChoice.RECITATION,
+                riwayahs__assets__category=Resource.CategoryChoice.RECITATION,
                 riwayahs__assets__riwayah__isnull=False,
                 riwayahs__assets__resource__category=Resource.CategoryChoice.RECITATION,
                 riwayahs__assets__resource__status=Resource.StatusChoice.READY,

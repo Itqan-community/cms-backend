@@ -20,7 +20,7 @@ class RecitationService:
         Business Logic: Retrieve all recitations for a specific publisher/tenant.
         """
         # Convert filter object to dictionary for the repository
-        filters_dict = filters.dict(exclude_none=True) if filters and hasattr(filters, "dict") else {}
+        filters_dict = filters.model_dump(exclude_none=True) if filters and hasattr(filters, "model_dump") else {}
 
         return self.repo.list_recitations_qs(
             publisher_q, filters_dict=filters_dict, annotate_surahs_count=annotate_surahs_count
@@ -41,6 +41,6 @@ class RecitationService:
         Business Logic: Retrieve all reciters that have READY recitations for a specific publisher/tenant.
         """
         # Convert filter object to dictionary for the repository
-        filters_dict = filters.dict(exclude_none=True) if filters and hasattr(filters, "dict") else {}
+        filters_dict = filters.model_dump(exclude_none=True) if filters and hasattr(filters, "model_dump") else {}
 
         return self.repo.list_reciters_qs(publisher_q, filters_dict=filters_dict)

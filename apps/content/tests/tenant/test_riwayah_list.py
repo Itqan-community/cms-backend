@@ -22,7 +22,7 @@ class RiwayahsListTest(BaseTestCase):
         self.active_riwayah = baker.make(Riwayah, is_active=True, name="Active Riwayah", qiraah=self.active_qiraah)
         self.valid_asset = baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             riwayah=self.active_riwayah,
             resource=self.recitation_resource,
             reciter=self.reciter,
@@ -32,7 +32,7 @@ class RiwayahsListTest(BaseTestCase):
         self.inactive_riwayah = baker.make(Riwayah, is_active=False, name="Inactive Riwayah")
         baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             riwayah=self.inactive_riwayah,
             resource=self.recitation_resource,
             reciter=self.reciter,
@@ -41,7 +41,7 @@ class RiwayahsListTest(BaseTestCase):
         # Asset with non-RECITATION category – should not count
         baker.make(
             Asset,
-            category=Asset.CategoryChoice.TAFSIR,
+            category=Resource.CategoryChoice.TAFSIR,
             resource=self.recitation_resource,
         )
 
@@ -54,7 +54,7 @@ class RiwayahsListTest(BaseTestCase):
         )
         baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             riwayah=self.active_riwayah,
             resource=draft_resource,
             reciter=self.reciter,
@@ -69,7 +69,7 @@ class RiwayahsListTest(BaseTestCase):
         )
         baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             riwayah=self.active_riwayah,
             resource=tafsir_resource,
             reciter=self.reciter,
@@ -110,7 +110,7 @@ class RiwayahsListTest(BaseTestCase):
         other_riwayah = baker.make(Riwayah, is_active=True, name="A Riwayah")
         baker.make(
             Asset,
-            category=Asset.CategoryChoice.RECITATION,
+            category=Resource.CategoryChoice.RECITATION,
             riwayah=other_riwayah,
             resource=self.recitation_resource,
             reciter=self.reciter,
