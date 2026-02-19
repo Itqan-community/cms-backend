@@ -101,7 +101,8 @@ class RiwayahsListTest(BaseTestCase):
         self.assertEqual(self.active_riwayah.id, riwayah_item["id"])
         self.assertEqual(1, riwayah_item["recitations_count"])
         self.assertEqual(
-            {"id": self.active_qiraah.id, "name": "Active Qiraah", "slug": "active-qiraah"}, riwayah_item["qiraah"]
+            {"id": self.active_qiraah.id, "name": "Active Qiraah", "slug": "active-qiraah", "bio": ""},
+            riwayah_item["qiraah"],
         )
 
     def test_list_riwayahs_ordering_by_name(self):

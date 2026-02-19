@@ -6,7 +6,6 @@ from .models import Asset, Qiraah, Reciter, Resource, Riwayah
 
 @register(Resource)
 class ResourceTranslationOptions(TranslationOptions):
-
     fields = (
         "name",
         "description",
@@ -15,7 +14,6 @@ class ResourceTranslationOptions(TranslationOptions):
 
 @register(Asset)
 class AssetTranslationOptions(TranslationOptions):
-
     fields = (
         "name",
         "description",
@@ -25,17 +23,14 @@ class AssetTranslationOptions(TranslationOptions):
 
 @register(Reciter)
 class ReciterTranslationOptions(TranslationOptions):
-
     fields = ("name",)
 
 
 @register(Riwayah)
 class RiwayahTranslationOptions(TranslationOptions):
-
     fields = ("name",)
 
 
 @register(Qiraah)
 class QiraahTranslationOptions(TranslationOptions):
-
-    fields = ("name",)
+    fields = ("name", "bio")
