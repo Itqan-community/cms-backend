@@ -1,3 +1,4 @@
+import uuid
 from typing import TYPE_CHECKING
 
 from django.utils.text import slugify
@@ -50,7 +51,8 @@ def upload_to_asset_files(instance: "AssetVersion", filename: str) -> str:
     """
     # Keep original filename for downloadable assets
     safe_filename = slugify(filename.rsplit(".", 1)[0]) + "." + filename.split(".")[-1].lower()
-    return f"uploads/assets/{instance.asset_id}/versions/{instance.id}/{safe_filename}"
+    version_id = instance.pk or f"tmp-{uuid.uuid4().hex[:8]}"
+    return f"uploads/assets/{instance.asset_id}/versions/{version_id}/{safe_filename}"
 
 
 def upload_to_resource_files(instance: "ResourceVersion", filename: str) -> str:
@@ -60,7 +62,8 @@ def upload_to_resource_files(instance: "ResourceVersion", filename: str) -> str:
     """
     # Keep original filename for downloadable resources
     safe_filename = slugify(filename.rsplit(".", 1)[0]) + "." + filename.split(".")[-1].lower()
-    return f"uploads/resources/{instance.resource_id}/versions/{instance.id}/{safe_filename}"
+    version_id = instance.pk or f"tmp-{uuid.uuid4().hex[:8]}"
+    return f"uploads/resources/{instance.resource_id}/versions/{version_id}/{safe_filename}"
 
 
 def upload_to_recitation_surah_track_files(instance: "RecitationSurahTrack", filename: str) -> str:
