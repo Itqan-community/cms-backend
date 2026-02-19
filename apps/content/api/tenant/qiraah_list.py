@@ -13,12 +13,19 @@ from apps.core.ninja_utils.tags import NinjaTag
 router = ItqanRouter(tags=[NinjaTag.RIWAYAHS])
 
 
+class RiwayahOut(Schema):
+    id: int
+    name: str
+    slug: str
+
+
 class QiraahOut(Schema):
     id: int
     name: str
     slug: str
+    bio: str
     is_active: bool
-    riwayahs_count: int = Field(0, description="Number of active riwayahs under this qiraah")
+    riwayahs: list[RiwayahOut]
     recitations_count: int = Field(0, description="Number of READY recitation assets for this qiraah")
 
 

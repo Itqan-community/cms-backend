@@ -893,7 +893,7 @@ class QiraahAdmin(admin.ModelAdmin):
         (
             "Basic Information",
             {
-                "fields": ("name", "slug", "is_active"),
+                "fields": ("name", "bio", "slug", "is_active"),
             },
         ),
         (
@@ -902,6 +902,8 @@ class QiraahAdmin(admin.ModelAdmin):
                 "fields": (
                     "name_en",
                     "name_ar",
+                    "bio_en",
+                    "bio_ar",
                 ),
                 "classes": ("collapse",),
             },

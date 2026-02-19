@@ -632,6 +632,7 @@ class Qiraah(BaseModel):
 
     name = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(unique=True, allow_unicode=True, db_index=True)
+    bio = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
 
     def save(self, *args, **kwargs) -> None:

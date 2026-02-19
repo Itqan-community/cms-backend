@@ -32,6 +32,8 @@ class RecitationRepository(BaseRecitationRepository):
         )
 
         if filters_dict:
+            if ids := filters_dict.get("id"):
+                qs = qs.filter(id__in=ids)
             if reciter_ids := filters_dict.get("reciter_id"):
                 qs = qs.filter(reciter_id__in=reciter_ids)
             if riwayah_ids := filters_dict.get("riwayah_id"):
@@ -218,6 +220,7 @@ class RecitationRepository(BaseRecitationRepository):
                 ),
             )
             .order_by("name")
+            .prefetch_related("riwayahs")
         )
 
         # Apply filters if provided

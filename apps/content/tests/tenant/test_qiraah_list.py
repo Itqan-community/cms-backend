@@ -135,26 +135,6 @@ class QiraahListTest(BaseTestCase):
 
         self.assertEqual(2, len(items))
 
-    def test_list_qiraahs_counts_active_riwayahs_correctly(self):
-        """Test that riwayahs_count includes only active riwayahs"""
-        # Arrange
-        self.authenticate_user(self.user, domain=self.domain)
-
-        # Act
-        response = self.client.get("/tenant/qiraahs/")
-
-        # Assert
-        self.assertEqual(200, response.status_code, response.content)
-        items = response.json()["results"]
-
-        # Asim should have 2 active riwayahs
-        asim_item = next(item for item in items if item["name"] == "Test Asim")
-        self.assertEqual(2, asim_item["riwayahs_count"])
-
-        # Nafi should have 1 active riwayah
-        nafi_item = next(item for item in items if item["name"] == "Test Nafi")
-        self.assertEqual(1, nafi_item["riwayahs_count"])
-
     def test_list_qiraahs_counts_recitations_correctly(self):
         """Test that recitations_count includes all READY recitations for qiraah"""
         # Arrange
@@ -192,16 +172,21 @@ class QiraahListTest(BaseTestCase):
                     "id": self.qiraah_asim.id,
                     "name": "Test Asim",
                     "slug": "test-asim",
+                    "bio": "",
                     "is_active": True,
-                    "riwayahs_count": 2,
                     "recitations_count": 2,
+                    "riwayahs": [
+                        {"id": self.riwayah_hafs.id, "name": "Test Hafs", "slug": "test-hafs"},
+                        {"id": self.riwayah_qaloon.id, "name": "Test Qaloon", "slug": "test-qaloon"},
+                    ],
                 },
                 {
                     "id": self.qiraah_nafi.id,
                     "name": "Test Nafi",
                     "slug": "test-nafi",
+                    "bio": "",
                     "is_active": True,
-                    "riwayahs_count": 1,
+                    "riwayahs": [{"id": self.riwayah_warsh.id, "name": "Test Warsh", "slug": "test-warsh"}],
                     "recitations_count": 1,
                 },
             ],

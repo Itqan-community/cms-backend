@@ -24,6 +24,12 @@ class RecitationRiwayahOut(Schema):
     name: str
 
 
+class RecitationQiraahOut(Schema):
+    id: int
+    name: str
+    bio: str
+
+
 class RecitationListOut(Schema):
     id: int
     name: str
@@ -32,7 +38,8 @@ class RecitationListOut(Schema):
     meem_behaviour: Asset.MeemBehaviorChoice | None
     year: int | None
     reciter: RecitationReciterOut
-    riwayah: RecitationRiwayahOut
+    riwayah: RecitationRiwayahOut | None = None
+    qiraah: RecitationQiraahOut
 
 
 class RecitationFilter(FilterSchema):
