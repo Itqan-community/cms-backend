@@ -828,9 +828,9 @@ class UsageEventAdmin(admin.ModelAdmin):
 
 @admin.register(Reciter)
 class ReciterAdmin(admin.ModelAdmin):
-    list_display = ["id", "name", "slug", "is_active", "created_at"]
-    list_filter = ["is_active", "created_at"]
-    search_fields = ["name", "slug"]
+    list_display = ["id", "name", "slug", "nationality", "is_contemporary", "is_active", "created_at"]
+    list_filter = ["is_active", "is_contemporary", "created_at"]
+    search_fields = ["name", "slug", "nationality"]
     prepopulated_fields = {"slug": ("name",)}
     readonly_fields = ["created_at", "updated_at"]
 
@@ -838,7 +838,7 @@ class ReciterAdmin(admin.ModelAdmin):
         (
             "Basic Information",
             {
-                "fields": ("name", "slug", "is_active"),
+                "fields": ("name", "slug", "nationality", "is_contemporary", "is_active"),
             },
         ),
         (
@@ -847,6 +847,8 @@ class ReciterAdmin(admin.ModelAdmin):
                 "fields": (
                     "name_en",
                     "name_ar",
+                    "nationality_en",
+                    "nationality_ar",
                 ),
                 "classes": ("collapse",),
             },

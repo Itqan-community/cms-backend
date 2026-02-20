@@ -1,8 +1,10 @@
 import re
 
 from django.conf import settings
+from django.core.cache import cache
 from django.core.validators import FileExtensionValidator, MaxValueValidator, MinValueValidator
 from django.db import models
+from django.db.models.signals import post_delete, post_save
 from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
@@ -595,6 +597,8 @@ class Reciter(BaseModel):
         help_text="Icon/logo image - used in V1 UI: Publisher Page",
     )
     bio = models.TextField(blank=True)
+    nationality = models.CharField(max_length=100, blank=True, default="")
+    is_contemporary = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
 
     def save(self, *args, **kwargs) -> None:
@@ -604,6 +608,14 @@ class Reciter(BaseModel):
 
     def __str__(self) -> str:
         return f"Reciter(name={self.name})"
+
+
+def invalidate_reciters_stats_cache(sender, **kwargs):
+    cache.delete("reciters_stats")
+
+
+post_save.connect(invalidate_reciters_stats_cache, sender=Reciter)
+post_delete.connect(invalidate_reciters_stats_cache, sender=Reciter)
 
 
 class Riwayah(BaseModel):

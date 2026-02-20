@@ -26,7 +26,7 @@ class AssetTranslationOptions(TranslationOptions):
 @register(Reciter)
 class ReciterTranslationOptions(TranslationOptions):
 
-    fields = ("name",)
+    fields = ("name", "nationality")
 
 
 @register(Riwayah)
