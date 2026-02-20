@@ -596,8 +596,12 @@ class Reciter(BaseModel):
         validators=[FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "gif", "webp"])],
         help_text="Icon/logo image - used in V1 UI: Publisher Page",
     )
+    identifier = models.CharField(max_length=255, unique=True, blank=True, default="")
     bio = models.TextField(blank=True)
     nationality = models.CharField(max_length=100, blank=True, default="")
+    date_of_birth = models.DateField(blank=True, null=True)
+    date_of_death = models.DateField(blank=True, null=True)
+    about = models.TextField(blank=True, default="")
     is_contemporary = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
 
