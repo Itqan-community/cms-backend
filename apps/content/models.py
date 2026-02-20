@@ -173,6 +173,12 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         SILAH = "silah", _("Silah")
         SKOUN = "skoun", _("Skoun")
 
+    class RecitationTypeChoice(models.TextChoices):
+        MURATTAL = "murattal", _("Murattal")
+        MUJAWWAD = "mujawwad", _("Mujawwad")
+        MUALLIM = "muallim", _("Muallim")
+        TAALIM = "taalim", _("Taalim")
+
     resource = models.ForeignKey(Resource, on_delete=models.PROTECT, related_name="assets")
 
     name = models.CharField(max_length=255, help_text="Asset name")
@@ -230,6 +236,13 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         blank=True,
         related_name="assets",
         help_text="Qiraah for recitation assets",
+    )
+    recitation_type = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        choices=RecitationTypeChoice.choices,
+        help_text="Recitation style: Murattal (مرتل), Mujawwad (مجود), etc.",
     )
     madd_level = models.CharField(
         max_length=50,

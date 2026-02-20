@@ -44,3 +44,23 @@ class RecitationService:
         filters_dict = filters.model_dump(exclude_none=True) if filters and hasattr(filters, "model_dump") else {}
 
         return self.repo.list_reciters_qs(publisher_q, filters_dict=filters_dict)
+
+    def get_dashboard_stats(self, publisher_q: Q) -> dict:
+        """
+        Business Logic: Retrieve aggregate dashboard statistics for recitations.
+        """
+        return self.repo.get_dashboard_stats(publisher_q)
+
+    def get_reciter(self, reciter_id: int):
+        """
+        Business Logic: Retrieve a single active reciter by ID.
+        """
+        return self.repo.get_reciter_by_id(reciter_id)
+
+    def get_reciter_recitations(self, reciter, publisher_q: Q):
+        """
+        Business Logic: Retrieve all READY recitations for a reciter,
+        with tracks prefetched.
+        """
+        return self.repo.list_recitations_for_reciter(reciter, publisher_q)
+

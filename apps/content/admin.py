@@ -213,7 +213,7 @@ class AssetAdmin(admin.ModelAdmin):
         (
             "Recitation Details",
             {
-                "fields": ("reciter", "madd_level", "meem_behaviour", "year"),
+                "fields": ("reciter", "recitation_type", "madd_level", "meem_behaviour", "year"),
             },
         ),
         (

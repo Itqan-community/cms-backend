@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from django.db.models import Q, QuerySet
 
-    from apps.content.models import Asset, Qiraah, RecitationSurahTrack, Riwayah
+    from apps.content.models import Asset, Qiraah, RecitationSurahTrack, Reciter, Riwayah
 
 
 class BaseRecitationRepository(ABC):
@@ -53,5 +53,29 @@ class BaseRecitationRepository(ABC):
     def list_qiraahs_qs(self, publisher_q: Q, filters_dict: dict[str, Any]) -> QuerySet[Qiraah]:
         """
         Returns a queryset of Qiraah objects that have READY recitation assets through riwayahs.
+        """
+        pass
+
+    @abstractmethod
+    def get_dashboard_stats(self, publisher_q: Q) -> dict[str, Any]:
+        """
+        Returns aggregate statistics for the recitations dashboard.
+        """
+        pass
+
+    @abstractmethod
+    def get_reciter_by_id(self, reciter_id: int) -> Reciter | None:
+        """
+        Retrieves a single reciter by ID.
+        """
+        pass
+
+    @abstractmethod
+    def list_recitations_for_reciter(
+        self, reciter: Reciter, publisher_q: Q
+    ) -> QuerySet[Asset]:
+        """
+        Returns a queryset of recitation assets for a given reciter,
+        scoped to the publisher, with tracks prefetched.
         """
         pass

@@ -24,7 +24,7 @@ class RecitationRepository(BaseRecitationRepository):
         """
         Returns a queryset of Asset objects.
         """
-        qs = self.asset_model.objects.select_related("resource", "reciter", "riwayah").filter(
+        qs = self.asset_model.objects.select_related("resource", "reciter", "riwayah", "qiraah").filter(
             publisher_q,
             category=Resource.CategoryChoice.RECITATION,
             resource__category=Resource.CategoryChoice.RECITATION,
@@ -234,3 +234,101 @@ class RecitationRepository(BaseRecitationRepository):
                 qs = qs.filter(slug__icontains=slug)
 
         return qs
+
+    def get_dashboard_stats(self, publisher_q: Q) -> dict[str, Any]:
+        """
+        Compute aggregate statistics for the recitations dashboard.
+        Returns a dict with total counts and per-dimension breakdowns.
+        """
+        # Base filter for READY recitation assets
+        base_q = Q(
+            category=Resource.CategoryChoice.RECITATION,
+            resource__category=Resource.CategoryChoice.RECITATION,
+            resource__status=Resource.StatusChoice.READY,
+        ) & publisher_q
+
+        total_recitations = self.asset_model.objects.filter(base_q).count()
+
+        # Reciters with at least one READY recitation
+        reciter_pub_q = Q(**{
+            k.replace("resource__publisher", "assets__resource__publisher"): v
+            for k, v in publisher_q.children
+        }) if publisher_q.children else Q()
+
+        total_reciters = (
+            Reciter.objects.filter(
+                is_active=True,
+                assets__category=Resource.CategoryChoice.RECITATION,
+                assets__resource__category=Resource.CategoryChoice.RECITATION,
+                assets__resource__status=Resource.StatusChoice.READY,
+            )
+            .filter(reciter_pub_q)
+            .distinct()
+            .count()
+        )
+
+        # Track count for READY recitation assets
+        track_base_q = Q(
+            asset__category=Resource.CategoryChoice.RECITATION,
+            asset__resource__category=Resource.CategoryChoice.RECITATION,
+            asset__resource__status=Resource.StatusChoice.READY,
+        )
+        total_tracks = self.track_model.objects.filter(track_base_q).count()
+
+        # Per-riwayah breakdown
+        riwayah_pub_q = reciter_pub_q  # reuse the publisher Q adapted for riwayah
+        per_riwayah = list(
+            self.riwayah_model.objects.filter(
+                is_active=True,
+                assets__category=Resource.CategoryChoice.RECITATION,
+                assets__resource__category=Resource.CategoryChoice.RECITATION,
+                assets__resource__status=Resource.StatusChoice.READY,
+            )
+            .annotate(count=Count("assets", filter=base_q))
+            .values("id", "name", "count")
+            .order_by("-count")
+        )
+
+        # Per-type (madd_level) breakdown
+        per_type = list(
+            self.asset_model.objects.filter(base_q)
+            .values("madd_level")
+            .annotate(count=Count("id"))
+            .order_by("-count")
+        )
+
+        return {
+            "total_reciters": total_reciters,
+            "total_recitations": total_recitations,
+            "total_tracks": total_tracks,
+            "per_riwayah": per_riwayah,
+            "per_type": per_type,
+        }
+
+    def get_reciter_by_id(self, reciter_id: int) -> Reciter | None:
+        """Fetch a single active reciter by primary key."""
+        try:
+            return Reciter.objects.get(id=reciter_id, is_active=True)
+        except Reciter.DoesNotExist:
+            return None
+
+    def list_recitations_for_reciter(
+        self, reciter: Reciter, publisher_q: Q
+    ):
+        """
+        Return recitation Assets for *reciter* with tracks prefetched.
+        Only READY resources belonging to the publisher are included.
+        """
+        return (
+            self.asset_model.objects.select_related("riwayah", "qiraah")
+            .prefetch_related("recitation_tracks")
+            .filter(
+                publisher_q,
+                reciter=reciter,
+                category=Resource.CategoryChoice.RECITATION,
+                resource__category=Resource.CategoryChoice.RECITATION,
+                resource__status=Resource.StatusChoice.READY,
+            )
+            .order_by("-created_at")
+        )
+
