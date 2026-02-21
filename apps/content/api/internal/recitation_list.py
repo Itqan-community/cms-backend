@@ -24,6 +24,11 @@ class RecitationRiwayahOut(Schema):
     name: str
 
 
+class RecitationQiraahOut(Schema):
+    id: int
+    name: str
+
+
 class RecitationListOut(Schema):
     id: int
     name: str
@@ -32,20 +37,50 @@ class RecitationListOut(Schema):
     meem_behaviour: Asset.MeemBehaviorChoice | None
     year: int | None
     reciter: RecitationReciterOut
-    riwayah: RecitationRiwayahOut
+    riwayah: RecitationRiwayahOut | None
+    qiraah: RecitationQiraahOut | None
 
 
 class RecitationFilter(FilterSchema):
     publisher_id: list[int] | None = Field(None, q="resource__publisher_id__in")
     reciter_id: list[int] | None = Field(None, q="reciter_id__in")
-    riwayah_id: list[int] | None = Field(None, q="riwayah_id__in")
+    riwayah_id: list[int] | None = Field(
+        None,
+        q="riwayah_id__in",
+        description="Filter by Riwayah (e.g. عاصم عن حفص). Clears results when combined with qiraah_id.",
+    )
+    qiraah_id: list[int] | None = Field(
+        None,
+        q="qiraah_id__in",
+        description="Filter by Recitation Type / Qiraah (e.g. Hafs, Warsh).",
+    )
 
 
 @router.get("recitations/", response=list[RecitationListOut])
 @paginate
 @ordering(ordering_fields=["name", "created_at", "updated_at"])
-@searching(search_fields=["name", "description", "resource__publisher__name", "reciter__name"])
+@searching(
+    search_fields=[
+        "name",
+        "description",
+        "resource__publisher__name",
+        "reciter__name",
+    ]
+)
 def list_recitations(request: Request, filters: RecitationFilter = Query()):
+    """
+    List recitations with support for:
+
+    - **Full-text search** by reciter name (Arabic & English), asset name, description, publisher name.
+    - **Filter by Recitation Type / Qiraah** (`qiraah_id`): e.g. Hafs, Warsh.
+    - **Filter by Riwayah** (`riwayah_id`): e.g. عاصم عن حفص.
+    - **Filter by Reciter** (`reciter_id`).
+    - **Filter by Publisher** (`publisher_id`).
+    - **Server-side pagination** via `page` & `page_size` query parameters.
+    - **Ordering** via `ordering` query parameter (name, -name, created_at, -created_at, etc.).
+
+    Closes #189
+    """
     repo = RecitationRepository()
     service = RecitationService(repo)
 
