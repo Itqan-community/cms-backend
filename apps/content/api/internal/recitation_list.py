@@ -47,7 +47,7 @@ class RecitationFilter(FilterSchema):
     riwayah_id: list[int] | None = Field(
         None,
         q="riwayah_id__in",
-        description="Filter by Riwayah (e.g. عاصم عن حفص). Clears results when combined with qiraah_id.",
+        description="Filter by Riwayah (e.g. عاصم عن حفص). Combined with qiraah_id, results are narrowed by both conditions (AND semantics).",
     )
     qiraah_id: list[int] | None = Field(
         None,
@@ -62,15 +62,18 @@ class RecitationFilter(FilterSchema):
 @searching(
     search_fields=[
         "name",
+        "name_ar",
         "description",
+        "description_ar",
         "resource__publisher__name",
+        "resource__publisher__name_ar",
         "reciter__name",
+        "reciter__name_ar",
     ]
 )
 def list_recitations(request: Request, filters: RecitationFilter = Query()):
     """
     List recitations with support for:
-
     - **Full-text search** by reciter name (Arabic & English), asset name, description, publisher name.
     - **Filter by Recitation Type / Qiraah** (`qiraah_id`): e.g. Hafs, Warsh.
     - **Filter by Riwayah** (`riwayah_id`): e.g. عاصم عن حفص.
@@ -78,8 +81,6 @@ def list_recitations(request: Request, filters: RecitationFilter = Query()):
     - **Filter by Publisher** (`publisher_id`).
     - **Server-side pagination** via `page` & `page_size` query parameters.
     - **Ordering** via `ordering` query parameter (name, -name, created_at, -created_at, etc.).
-
-    Closes #189
     """
     repo = RecitationRepository()
     service = RecitationService(repo)
