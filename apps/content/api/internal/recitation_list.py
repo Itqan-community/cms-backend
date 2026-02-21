@@ -37,8 +37,8 @@ class RecitationListOut(Schema):
     meem_behaviour: Asset.MeemBehaviorChoice | None
     year: int | None
     reciter: RecitationReciterOut
-    riwayah: RecitationRiwayahOut | None
-    qiraah: RecitationQiraahOut | None
+    riwayah: RecitationRiwayahOut | None = None
+    qiraah: RecitationQiraahOut | None = None
 
 
 class RecitationFilter(FilterSchema):
@@ -61,13 +61,13 @@ class RecitationFilter(FilterSchema):
 @ordering(ordering_fields=["name", "created_at", "updated_at"])
 @searching(
     search_fields=[
-        "name",
+        "name_en",
         "name_ar",
-        "description",
+        "description_en",
         "description_ar",
-        "resource__publisher__name",
+        "resource__publisher__name_en",
         "resource__publisher__name_ar",
-        "reciter__name",
+        "reciter__name_en",
         "reciter__name_ar",
     ]
 )
