@@ -1,13 +1,10 @@
 import hashlib
-import json
 import logging
 
 from django.core.cache import cache
 from ninja import Schema
 
 from apps.content.models import Asset, Reciter, Resource
-from apps.content.repositories.recitation import RecitationRepository
-from apps.content.services.recitation import RecitationService
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag

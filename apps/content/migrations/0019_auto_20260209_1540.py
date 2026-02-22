@@ -7,7 +7,6 @@ def populate_asset_qiraah(apps, schema_editor):
     """Populate Asset.qiraah from the related Asset.riwayah.qiraah when available."""
     Asset = apps.get_model("content", "Asset")
     # Use an F expression to set the FK directly from the related riwayah relationship
-    from django.db.models import F
 
     # Only set qiraah where riwayah is present and riwayah.qiraah is not null
     recitations = Asset.objects.filter(riwayah__isnull=False, riwayah__qiraah__isnull=False)
