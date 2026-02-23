@@ -28,13 +28,20 @@ class RecitationRiwayahOut(Schema):
     name: str
 
 
+class RecitationQiraahOut(Schema):
+    id: int
+    name: str
+    bio: str
+
+
 class RecitationListOut(Schema):
     id: int
     name: str
     description: str
     publisher: RecitationPublisherOut
     reciter: RecitationReciterOut
-    riwayah: RecitationRiwayahOut
+    riwayah: RecitationRiwayahOut | None = None
+    qiraah: RecitationQiraahOut | None = None
     surahs_count: int
 
     @staticmethod

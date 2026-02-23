@@ -14,6 +14,12 @@ from apps.core.ninja_utils.tags import NinjaTag
 router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
 
 
+class RecitationQiraahOut(Schema):
+    id: int
+    name: str
+    bio: str
+
+
 class RecitationReciterOut(Schema):
     id: int
     name: str
@@ -32,7 +38,8 @@ class RecitationListOut(Schema):
     meem_behaviour: Asset.MeemBehaviorChoice | None
     year: int | None
     reciter: RecitationReciterOut
-    riwayah: RecitationRiwayahOut
+    riwayah: RecitationRiwayahOut | None = None
+    qiraah: RecitationQiraahOut | None = None
 
 
 class RecitationFilter(FilterSchema):
