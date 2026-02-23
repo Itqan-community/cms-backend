@@ -71,7 +71,7 @@ class RecitationFilter(FilterSchema):
         "reciter__name_ar",
     ]
 )
-def list_recitations(request: Request, filters: RecitationFilter = Query()):
+def list_recitations(request: Request, filters: RecitationFilter = Query()):  # noqa: B008
     """
     List recitations with support for:
     - **Full-text search** by reciter name (Arabic & English), asset name, description, publisher name.
