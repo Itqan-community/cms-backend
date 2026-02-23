@@ -41,8 +41,6 @@ def list_reciters(request: Request, filters: ReciterFilter = Query()):
       with READY recitations owned by the specified publisher(s).
     - **Server-side pagination** via `page` & `page_size` query parameters.
     - **Ordering** via `ordering` query parameter (name, -name, etc.).
-
-    Closes #193
     """
     repo = RecitationRepository()
     service = RecitationService(repo)
