@@ -36,7 +36,7 @@ def recitation_statistics(request: Request):
     Returns aggregated statistics for the audio recitations library.
 
     Statistics include:
-    - Total number of Riwayas (transmission traditions)
+    - Total number of Riwayahs (transmission traditions)
     - Total number of Reciters
     - Total number of Recitations (audio assets)
 
@@ -52,8 +52,10 @@ def recitation_statistics(request: Request):
         logger.debug("Recitation statistics cache hit for key=%s", cache_key)
         return RecitationStatisticsOut(**cached)
 
-    # Build publisher filter
-    publisher_q = request.publisher_q("resource__publisher")
+    # Build publisher filters for each model's relationship path
+    publisher_q = request.publisher_q("resource__publisher")  # for Asset
+    reciter_publisher_q = request.publisher_q("assets__resource__publisher")  # for Reciter
+    riwayah_publisher_q = request.publisher_q("assets__resource__publisher")  # for Riwayah
 
     # Base filter for READY recitation assets
     base_filter = {
@@ -70,13 +72,12 @@ def recitation_statistics(request: Request):
             assets__resource__category=Resource.CategoryChoice.RECITATION,
             assets__resource__status=Resource.StatusChoice.READY,
         )
-        .filter(publisher_q)
+        .filter(reciter_publisher_q)
         .distinct()
         .count()
     )
 
     # Count distinct riwayahs with READY recitation assets
-    riwayah_publisher_q = request.publisher_q("assets__resource__publisher")
     total_riwayahs = (
         Riwayah.objects.filter(
             is_active=True,
