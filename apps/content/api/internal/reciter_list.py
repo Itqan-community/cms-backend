@@ -33,7 +33,7 @@ class ReciterFilter(FilterSchema):
 @paginate
 @ordering(ordering_fields=["name"])
 @searching(search_fields=["name", "name_ar", "slug"])
-def list_reciters(request: Request, filters: ReciterFilter = Query()):
+def list_reciters(request: Request, filters: ReciterFilter = Query()):  # noqa: B008
     """
     Internal CMS API: Search and list reciters with support for:
     - **Full-text search** by reciter name (Arabic & English) and slug.
