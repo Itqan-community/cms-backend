@@ -4,7 +4,7 @@ import logging
 from django.core.cache import cache
 from ninja import Schema
 
-from apps.content.models import Asset, Reciter, Resource
+from apps.content.models import Asset, Reciter, Resource, Riwayah
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
@@ -41,8 +41,6 @@ def recitation_statistics(request: Request):
     - Total number of Recitations (audio assets)
 
     Results are cached with a 15-minute TTL for performance.
-
-    Closes #188
     """
     publisher = getattr(request, "publisher", None)
     publisher_id = publisher.id if publisher else None
@@ -78,8 +76,6 @@ def recitation_statistics(request: Request):
     )
 
     # Count distinct riwayahs with READY recitation assets
-    from apps.content.models import Riwayah
-
     riwayah_publisher_q = request.publisher_q("assets__resource__publisher")
     total_riwayahs = (
         Riwayah.objects.filter(
