@@ -32,7 +32,7 @@ class ReciterFilter(FilterSchema):
 @router.get("reciters/", response=list[ReciterOut])
 @paginate
 @ordering(ordering_fields=["name"])
-@searching(search_fields=["name", "slug"])
+@searching(search_fields=["name", "name_ar", "slug"])
 def list_reciters(request: Request, filters: ReciterFilter = Query()):
     """
     Internal CMS API: Search and list reciters with support for:
