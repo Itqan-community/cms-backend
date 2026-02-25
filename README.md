@@ -77,8 +77,8 @@ docker compose -f deployment/docker/docker-compose.develop.yml logs -f web
 ### 3) Native Development (alternative)
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements/development.txt
+uv sync --group dev
+source .venv/bin/activate
 
 python manage.py migrate
 python manage.py createsuperuser
@@ -120,7 +120,8 @@ cms-backend/
 │   └── urls.py              # Root URLs (health, admin, accounts, ninja)
 ├── deployment/
 │   └── docker/              # Dockerfile, compose, Caddyfile, env.template
-├── requirements/            # base.txt, development.txt, production.txt
+├── pyproject.toml
+├── uv.lock
 ├── manage.py
 └── ...
 ```
@@ -140,9 +141,8 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines.
 
 **Quick Summary:**
 - `main` and `staging`: PR-only (no direct commits)
-- `develop`: Primary development branch
-- Flow: `develop` → `staging` (PR) → `main` (PR)
-- Start all changes from `develop` or feature branches
+- Flow: `feature branch`→ `staging` (PR) → `main` (PR)
+- Start all changes from `staging` or feature branches
 
 
 ## 🚚 Deployment

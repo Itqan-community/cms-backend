@@ -13,7 +13,7 @@ This directory contains Docker configuration files for deploying the Itqan CMS b
 
 ### 1. DigitalOcean Resources Required
 
-For each environment (develop, staging, production):
+For each environment (staging, production):
 - 1x Droplet (Ubuntu 22.04, 1-2GB RAM)
 - 1x Managed PostgreSQL database
 - DNS A records pointing to droplet IPs
@@ -70,7 +70,6 @@ The Caddyfile automatically handles:
 - Reverse proxy to Django application
 
 Ensure your DNS A records point to the correct droplet IPs:
-- `develop.api.cms.itqan.dev` → develop droplet IP
 - `staging.api.cms.itqan.dev` → staging droplet IP
 - `api.cms.itqan.dev` → production droplet IP
 

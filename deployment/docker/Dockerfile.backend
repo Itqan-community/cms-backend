@@ -16,12 +16,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-ARG REQUIREMENTS_FILE=production.txt
-COPY requirements/ /tmp/requirements/
-RUN pip install --no-cache-dir -r /tmp/requirements/${REQUIREMENTS_FILE}
+ARG DEPENDENCY_GROUP=prod
+COPY pyproject.toml uv.lock ./
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+RUN uv sync --frozen --no-install-project $([ "$DEPENDENCY_GROUP" = "prod" ] && echo "--no-dev") $([ "$DEPENDENCY_GROUP" = "prod" ] && echo "--extra prod")
 
 # Copy application code
 COPY / /app/
+
+# Place uv cache and python bin in PATH
+ENV PATH="/app/.venv/bin:$PATH"
 
 # Copy and set up entrypoint
 COPY deployment/docker/entrypoint.sh /entrypoint.sh
