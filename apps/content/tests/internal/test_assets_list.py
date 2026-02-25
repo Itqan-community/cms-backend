@@ -7,7 +7,12 @@ from apps.core.tests import BaseTestCase
 class ListAssetTest(BaseTestCase):
     def test_list_asset_should_return_all_available_assets(self):
         # Arrange
-        baker.make(Asset, name="Tafsir Ibn Katheer", category=Resource.CategoryChoice.TAFSIR)
+        baker.make(
+            Asset,
+            name="Tafsir Ibn Katheer",
+            category=Resource.CategoryChoice.TAFSIR,
+            resource__status=Resource.StatusChoice.READY,
+        )
 
         # Act
         response = self.client.get("/cms-api/assets/", format="json")
@@ -21,10 +26,18 @@ class ListAssetTest(BaseTestCase):
     def test_list_asset_filter_by_license_code_should_return_filtered_assets(self):
         # Arrange
         baker.make(
-            Asset, name="Tafsir Al-Jalalayn", license=LicenseChoice.CC_BY_SA, category=Resource.CategoryChoice.TAFSIR
+            Asset,
+            name="Tafsir Al-Jalalayn",
+            license=LicenseChoice.CC_BY_SA,
+            category=Resource.CategoryChoice.TAFSIR,
+            resource__status=Resource.StatusChoice.READY,
         )
         baker.make(
-            Asset, name="Tafsir Ibn Katheer", license=LicenseChoice.CC_BY_NC, category=Resource.CategoryChoice.TAFSIR
+            Asset,
+            name="Tafsir Ibn Katheer",
+            license=LicenseChoice.CC_BY_NC,
+            category=Resource.CategoryChoice.TAFSIR,
+            resource__status=Resource.StatusChoice.READY,
         )
 
         # Act
@@ -38,13 +51,19 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_asset_filter_by_category_should_return_filtered_assets(self):
         # Arrange
-        baker.make(Asset, name="Tafsir Al-Jalalayn", category=Resource.CategoryChoice.TAFSIR)
+        baker.make(
+            Asset,
+            name="Tafsir Al-Jalalayn",
+            category=Resource.CategoryChoice.TAFSIR,
+            resource__status=Resource.StatusChoice.READY,
+        )
         baker.make(
             Asset,
             name="Muhammad Refaat",
             category=Resource.CategoryChoice.RECITATION,
             reciter=baker.make("content.Reciter", name="Test Reciter"),
             riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
+            resource__status=Resource.StatusChoice.READY,
         )
 
         # Act
@@ -64,15 +83,26 @@ class ListAssetTest(BaseTestCase):
         self,
     ):
         # Arrange
-        baker.make(Asset, name="Tafsir Al-Jalalayn", category=Resource.CategoryChoice.TAFSIR)
+        baker.make(
+            Asset,
+            name="Tafsir Al-Jalalayn",
+            category=Resource.CategoryChoice.TAFSIR,
+            resource__status=Resource.StatusChoice.READY,
+        )
         baker.make(
             Asset,
             name="Muhammad Refaat",
             category=Resource.CategoryChoice.RECITATION,
             reciter=baker.make("content.Reciter", name="Test Reciter"),
             riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
+            resource__status=Resource.StatusChoice.READY,
         )
-        baker.make(Asset, name="King Fahd", category=Resource.CategoryChoice.MUSHAF)
+        baker.make(
+            Asset,
+            name="King Fahd",
+            category=Resource.CategoryChoice.MUSHAF,
+            resource__status=Resource.StatusChoice.READY,
+        )
 
         # Act
         response = self.client.get(
@@ -88,9 +118,15 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_order_by_name_descending_should_return_sorted_assets(self):
         # Arrange
-        baker.make(Asset, name="A", category=Resource.CategoryChoice.TAFSIR)
-        baker.make(Asset, name="C", category=Resource.CategoryChoice.TAFSIR)
-        baker.make(Asset, name="B", category=Resource.CategoryChoice.TAFSIR)
+        baker.make(
+            Asset, name="A", category=Resource.CategoryChoice.TAFSIR, resource__status=Resource.StatusChoice.READY
+        )
+        baker.make(
+            Asset, name="C", category=Resource.CategoryChoice.TAFSIR, resource__status=Resource.StatusChoice.READY
+        )
+        baker.make(
+            Asset, name="B", category=Resource.CategoryChoice.TAFSIR, resource__status=Resource.StatusChoice.READY
+        )
 
         # Act
         response = self.client.get("/cms-api/assets/", data={"ordering": "-name"}, format="json")
@@ -105,9 +141,15 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_order_by_name_ascending_should_return_sorted_assets(self):
         # Arrange
-        baker.make(Asset, name="A", category=Resource.CategoryChoice.TAFSIR)
-        baker.make(Asset, name="C", category=Resource.CategoryChoice.TAFSIR)
-        baker.make(Asset, name="B", category=Resource.CategoryChoice.TAFSIR)
+        baker.make(
+            Asset, name="A", category=Resource.CategoryChoice.TAFSIR, resource__status=Resource.StatusChoice.READY
+        )
+        baker.make(
+            Asset, name="C", category=Resource.CategoryChoice.TAFSIR, resource__status=Resource.StatusChoice.READY
+        )
+        baker.make(
+            Asset, name="B", category=Resource.CategoryChoice.TAFSIR, resource__status=Resource.StatusChoice.READY
+        )
 
         # Act
         response = self.client.get("/cms-api/assets/", data={"ordering": "name"}, format="json")
@@ -122,15 +164,20 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_assets_order_by_category_descending_should_return_sorted_assets(self):
         # Arrange
-        baker.make(Asset, name="A", category=Resource.CategoryChoice.TAFSIR)
+        baker.make(
+            Asset, name="A", category=Resource.CategoryChoice.TAFSIR, resource__status=Resource.StatusChoice.READY
+        )
         baker.make(
             Asset,
             name="C",
             category=Resource.CategoryChoice.RECITATION,
             reciter=baker.make("content.Reciter", name="Test Reciter"),
             riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
+            resource__status=Resource.StatusChoice.READY,
         )
-        baker.make(Asset, name="B", category=Resource.CategoryChoice.TAFSIR)
+        baker.make(
+            Asset, name="B", category=Resource.CategoryChoice.TAFSIR, resource__status=Resource.StatusChoice.READY
+        )
 
         # Act
         response = self.client.get("/cms-api/assets/", data={"ordering": "-category"}, format="json")
@@ -153,6 +200,7 @@ class ListAssetTest(BaseTestCase):
             name="Tafsir Al-Jalalayn",
             description="This is a tafsir book",
             category=Resource.CategoryChoice.TAFSIR,
+            resource__status=Resource.StatusChoice.READY,
         )
         baker.make(
             Asset,
@@ -161,12 +209,14 @@ class ListAssetTest(BaseTestCase):
             category=Resource.CategoryChoice.RECITATION,
             reciter=baker.make("content.Reciter", name="Test Reciter"),
             riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
+            resource__status=Resource.StatusChoice.READY,
         )
         baker.make(
             Asset,
             name="King Fahd",
             description="This is a mushaf book",
             category=Resource.CategoryChoice.MUSHAF,
+            resource__status=Resource.StatusChoice.READY,
         )
 
         # Test search by name/category
@@ -182,3 +232,27 @@ class ListAssetTest(BaseTestCase):
         response_body = response.json()
         self.assertEqual(1, len(response_body["results"]))
         self.assertEqual("Muhammad Refaat", response_body["results"][0]["name"])
+
+    def test_list_assets_should_exclude_assets_with_draft_resource(self):
+        # Arrange
+        baker.make(
+            Asset,
+            name="Ready Asset",
+            category=Resource.CategoryChoice.TAFSIR,
+            resource__status=Resource.StatusChoice.READY,
+        )
+        baker.make(
+            Asset,
+            name="Draft Asset",
+            category=Resource.CategoryChoice.TAFSIR,
+            resource__status=Resource.StatusChoice.DRAFT,
+        )
+
+        # Act
+        response = self.client.get("/cms-api/assets/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        response_body = response.json()
+        self.assertEqual(1, len(response_body["results"]))
+        self.assertEqual("Ready Asset", response_body["results"][0]["name"])

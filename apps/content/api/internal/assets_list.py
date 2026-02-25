@@ -37,6 +37,8 @@ class AssetFilter(FilterSchema):
 @ordering(ordering_fields=["name", "category"])
 @searching(search_fields=["name", "description", "resource__publisher__name", "category"])
 def list_assets(request: Request, filters: AssetFilter = Query()):
-    assets = Asset.objects.filter(request.publisher_q("resource__publisher"))
+    assets = Asset.objects.filter(request.publisher_q("resource__publisher")).exclude(
+        resource__status=Resource.StatusChoice.DRAFT
+    )
     assets = filters.filter(assets)
     return assets
