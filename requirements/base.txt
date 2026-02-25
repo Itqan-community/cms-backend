@@ -39,4 +39,4 @@ python-dateutil==2.8.*
 requests==2.31.*
 mutagen>=1.47.0
 
-scalar-django-ninja==0.1.4
+#scalar-django-ninja==0.1.4
