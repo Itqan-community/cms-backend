@@ -1,5 +1,5 @@
 from django.db.models import Count, Q
-from ninja import FilterSchema, Query, Schema
+from ninja import FilterSchema, Query, Schema, files, File
 from ninja.pagination import paginate
 from pydantic import Field
 from datetime import date
@@ -32,11 +32,11 @@ class ReciterCreateIn(Schema):
     nationality: str | None = None
     date_of_birth: date | None = None
     date_of_death: date | None = None
-    slug: str
+    slug: str | None = None
     is_active: bool = True
     bio: str | None = None
-    image_url: str | None = None
-    reciter_identifier: str | None = None
+    image_url: files.UploadedFile | None = File(default=None, description="Reciter image")
+    reciter_identifier: str
 
 
 @router.get("reciters/", response=list[ReciterOut])
