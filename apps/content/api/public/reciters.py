@@ -29,8 +29,8 @@ class ReciterCreateIn(Schema):
     name: str
     name_ar: str | None = None
     name_en: str | None = None
-    nationality: str | None = None
-    date_of_birth: date | None = None
+    nationality: str
+    date_of_birth: date
     date_of_death: date | None = None
     slug: str | None = None
     is_active: bool = True
