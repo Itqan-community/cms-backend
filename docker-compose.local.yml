@@ -27,7 +27,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-    command: tail -f /dev/null # Keep container running for tests
+    ports:
+      - "8000:8000"
+    command: uv run python manage.py runserver 0.0.0.0:8000
 
   postgres:
     image: postgres:15-alpine

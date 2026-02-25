@@ -65,13 +65,13 @@ cp deployment/docker/env.template deployment/docker/.env
 
 ```bash
 # Start services (web + caddy)
-docker compose -f deployment/docker/docker-compose.develop.yml up -d
+docker compose -f docker-compose.local.yml up -d
 
 # Check status
-docker compose -f deployment/docker/docker-compose.develop.yml ps
+docker compose -f docker-compose.local.yml ps
 
 # Tail logs
-docker compose -f deployment/docker/docker-compose.develop.yml logs -f web
+docker compose -f docker-compose.local.yml logs -f web
 ```
 
 ### 3) Native Development (alternative)

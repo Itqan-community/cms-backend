@@ -61,7 +61,7 @@ Use exactly this shape when converting inputs:
    - ALL changes MUST start on `staging` branch (or feature branch created from staging)
    - Changes MUST be tested locally BEFORE any remote push
    - Changes MUST commit with descriptive but concise messages
-   - Changes MUST push to `origin/staging` after local testing passes
+   - Changes MUST push to `feat/*` after local testing passes
 
 3. **Branch Transition Rules**:
    - `staging` → `main`: ONLY via Pull Request + code review

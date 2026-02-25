@@ -15,7 +15,7 @@ dependencies = [
     "django-filter==25.1",
     "psycopg2-binary==2.9.10",
     "PyJWT==2.8.*",
-    "cryptography==41.*",
+    "cryptography==46.0.5",
     "django-oauth-toolkit==3.1.0",
     "djangorestframework-simplejwt==5.5.*",
     "django-allauth[mfa,socialaccount,headless]==65.13.1",
@@ -86,13 +86,10 @@ indent_size = 2
 [tool.djlint.js]
 indent_size = 2
 
-extend-unsafe-fixes = [
-  "UP038",
-]
 [project.optional-dependencies]
 prod = [
     "gunicorn==21.2.*",
-    "sentry-sdk[django]==1.31.*",
+    "sentry-sdk[django]==2.53.0",
 ]
 
 [tool.uv]
