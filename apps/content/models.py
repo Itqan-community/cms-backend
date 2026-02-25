@@ -608,7 +608,7 @@ class Reciter(BaseModel):
     """Quran reciter/qari (e.g. Mshari Al-Afasi, Saad Al-Ghamidi, etc)"""
 
     name = models.CharField(max_length=255, unique=True)
-    reciter_identifier = models.CharField(max_length=255, unique=True, blank=False)
+    reciter_identifier = models.CharField(max_length=255, unique=True, blank=False, null=False)
     nationality = models.CharField(max_length=255, blank=False)
     date_of_birth = models.DateField(null=False, blank=False)
     date_of_death = models.DateField(null=True, blank=True)
