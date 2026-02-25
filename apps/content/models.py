@@ -610,8 +610,8 @@ class Reciter(BaseModel):
     name = models.CharField(max_length=255, unique=True)
     reciter_identifier = models.CharField(max_length=255, unique=True, blank=False)
     nationality = models.CharField(max_length=255, blank=False)
-    date_of_birth = models.DateField(null=True, blank=False)
-    date_of_death = models.DateField(null=True, blank=False)
+    date_of_birth = models.DateField(null=True, blank=True)
+    date_of_death = models.DateField(null=True, blank=True)
 
     slug = models.SlugField(unique=True, allow_unicode=True, db_index=True)
     image_url = models.ImageField(
