@@ -27,7 +27,7 @@ class PublisherAdmin(admin.ModelAdmin):
     ]
     list_filter = ["created_at", "updated_at"]
     search_fields = ["name", "slug", "description"]
-    prepopulated_fields = {"slug": ("name",)}
+    prepopulated_fields = {"slug": ("name_en",)}
     inlines = [PublisherMemberInline]
 
     fieldsets = (

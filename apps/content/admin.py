@@ -77,7 +77,7 @@ class ResourceAdmin(admin.ModelAdmin):
     ]
     list_filter = ["category", "status", "publisher", "created_at"]
     search_fields = ["name", "description", "slug"]
-    prepopulated_fields = {"slug": ("name",)}
+    prepopulated_fields = {"slug": ("name_en",)}
     inlines = [ResourceVersionInline]
 
     fieldsets = (
@@ -871,7 +871,7 @@ class QiraahAdmin(admin.ModelAdmin):
     list_display = ["id", "name", "slug", "is_active", "created_at"]
     list_filter = ["is_active", "created_at"]
     search_fields = ["name", "slug"]
-    prepopulated_fields = {"slug": ("name",)}
+    prepopulated_fields = {"slug": ("name_en",)}
     readonly_fields = ["created_at", "updated_at"]
 
     fieldsets = (
@@ -896,7 +896,7 @@ class ReciterAdmin(admin.ModelAdmin):
     list_display = ["id", "name", "slug", "is_active", "created_at"]
     list_filter = ["is_active", "created_at"]
     search_fields = ["name", "slug"]
-    prepopulated_fields = {"slug": ("name",)}
+    prepopulated_fields = {"slug": ("name_en",)}
     readonly_fields = ["created_at", "updated_at"]
 
     fieldsets = (
@@ -921,7 +921,7 @@ class RiwayahAdmin(admin.ModelAdmin):
     list_display = ["id", "name", "slug", "qiraah", "is_active", "created_at"]
     list_filter = ["is_active", "qiraah", "created_at"]
     search_fields = ["name", "slug"]
-    prepopulated_fields = {"slug": ("name",)}
+    prepopulated_fields = {"slug": ("name_en",)}
     readonly_fields = ["created_at", "updated_at"]
 
     fieldsets = (
