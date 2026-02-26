@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from io import BytesIO
+import logging
 from typing import Any
 
 import boto3
@@ -15,6 +16,8 @@ from apps.mixins.recitations_helpers import (
     extract_surah_number_from_mp3_filename,
     get_mp3_duration_ms,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class AssetRecitationAudioTracksDirectUploadService:
@@ -110,7 +113,8 @@ class AssetRecitationAudioTracksDirectUploadService:
         try:
             head = s3.head_object(Bucket=settings.CLOUDFLARE_R2_BUCKET, Key=r2_key)
             size_bytes = int(head.get("ContentLength", 0))
-        except Exception:
+        except Exception as e:
+            logger.warning("Failed to get size_bytes from R2 for key %s: %s", r2_key, e)
             size_bytes = 0
 
         # Get current track to check if duration_ms was already set
@@ -123,7 +127,8 @@ class AssetRecitationAudioTracksDirectUploadService:
                 obj = s3.get_object(Bucket=settings.CLOUDFLARE_R2_BUCKET, Key=r2_key)
                 data = obj["Body"].read()
                 duration_ms = get_mp3_duration_ms(BytesIO(data))
-            except Exception:
+            except Exception as e:
+                logger.warning("Failed to compute duration_ms from R2 for key %s: %s", r2_key, e)
                 duration_ms = 0
 
         RecitationSurahTrack.objects.filter(audio_file=key).update(
