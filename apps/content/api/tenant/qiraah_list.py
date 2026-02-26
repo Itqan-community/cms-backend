@@ -17,6 +17,7 @@ class RiwayahOut(Schema):
     id: int
     name: str
     slug: str
+    bio: str
 
 
 class QiraahOut(Schema):

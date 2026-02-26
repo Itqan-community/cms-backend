@@ -655,6 +655,7 @@ class Riwayah(BaseModel):
     )
     name = models.CharField(max_length=255)
     slug = models.SlugField(allow_unicode=True, db_index=True)
+    bio = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
 
     class Meta:
