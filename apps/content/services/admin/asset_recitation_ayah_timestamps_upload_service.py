@@ -3,10 +3,13 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass
 import json
+import logging
 
 from django.db import transaction
 
 from apps.content.models import Asset, RecitationAyahTiming, RecitationSurahTrack
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -96,6 +99,11 @@ def bulk_upload_recitation_ayah_timestamps(asset_id: int, files: Iterable) -> di
                 try:
                     surah_number, rows = _parse_json_bytes(f.read())
                 except Exception as e:
+                    logger.warning(
+                        "Failed to parse ayah timestamps JSON file",
+                        exc_info=e,
+                        extra={"asset_id": asset_id, "filename": getattr(f, "name", "")},
+                    )
                     file_errors.append(f"{f.name}: {e}")
                     continue
 
@@ -150,6 +158,7 @@ def bulk_upload_recitation_ayah_timestamps(asset_id: int, files: Iterable) -> di
                 updated_total += len(to_update)
 
     except Exception as e:
+        logger.exception("Bulk upload ayah timestamps failed", exc_info=e, extra={"asset_id": asset_id})
         file_errors.append(str(e))
 
     return {

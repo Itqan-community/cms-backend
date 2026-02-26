@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from io import BytesIO
+import logging
 from typing import Any
 
 import boto3
@@ -15,6 +16,8 @@ from apps.mixins.recitations_helpers import (
     extract_surah_number_from_mp3_filename,
     get_mp3_duration_ms,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class AssetRecitationAudioTracksDirectUploadService:
@@ -110,7 +113,12 @@ class AssetRecitationAudioTracksDirectUploadService:
         try:
             head = s3.head_object(Bucket=settings.CLOUDFLARE_R2_BUCKET, Key=r2_key)
             size_bytes = int(head.get("ContentLength", 0))
-        except Exception:
+        except Exception as exc:
+            logger.warning(
+                "Failed to fetch uploaded object metadata; defaulting size_bytes to 0",
+                exc_info=exc,
+                extra={"key": key, "upload_id": upload_id},
+            )
             size_bytes = 0
 
         # Get current track to check if duration_ms was already set
@@ -123,7 +131,12 @@ class AssetRecitationAudioTracksDirectUploadService:
                 obj = s3.get_object(Bucket=settings.CLOUDFLARE_R2_BUCKET, Key=r2_key)
                 data = obj["Body"].read()
                 duration_ms = get_mp3_duration_ms(BytesIO(data))
-            except Exception:
+            except Exception as exc:
+                logger.warning(
+                    "Failed to compute MP3 duration from uploaded object; defaulting duration_ms to 0",
+                    exc_info=exc,
+                    extra={"key": key, "upload_id": upload_id},
+                )
                 duration_ms = 0
 
         RecitationSurahTrack.objects.filter(audio_file=key).update(
@@ -160,8 +173,18 @@ class AssetRecitationAudioTracksDirectUploadService:
             # If upload doesn't exist or already completed, that's fine
             error_code = getattr(e, "response", {}).get("Error", {}).get("Code", "")
             if error_code not in ("NoSuchUpload", "NotFound"):
+                logger.error(
+                    "Unexpected error while aborting multipart upload",
+                    exc_info=e,
+                    extra={"key": key, "upload_id": upload_id, "error_code": error_code},
+                )
                 # Re-raise unexpected errors
                 raise
+            logger.warning(
+                "Multipart upload already missing during abort",
+                exc_info=e,
+                extra={"key": key, "upload_id": upload_id, "error_code": error_code},
+            )
 
         # Delete the incomplete database record (only if upload not finished)
         deleted_count = RecitationSurahTrack.objects.filter(
@@ -212,9 +235,19 @@ class AssetRecitationAudioTracksDirectUploadService:
                         aborted_count += 1
                         db_cleaned_count += result.get("dbRecordsDeleted", 0)
                     except Exception as e:
+                        logger.warning(
+                            "Failed to abort stuck multipart upload",
+                            exc_info=e,
+                            extra={"key": key, "upload_id": upload_id},
+                        )
                         errors.append(f"Failed to abort {key}: {str(e)}")
 
         except Exception as e:
+            logger.exception(
+                "Multipart cleanup listing failed",
+                exc_info=e,
+                extra={"older_than_hours": older_than_hours},
+            )
             errors.append(f"Cleanup failed: {str(e)}")
 
         return {

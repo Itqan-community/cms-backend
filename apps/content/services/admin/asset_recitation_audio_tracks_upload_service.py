@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+import logging
 
 from django.db import transaction
 
 from apps.content.models import Asset, RecitationSurahTrack
 from apps.core.ninja_utils.errors import ItqanError
 from apps.mixins.recitations_helpers import extract_surah_number_from_mp3_filename
+
+logger = logging.getLogger(__name__)
 
 
 def bulk_upload_recitation_audio_tracks(
@@ -64,10 +67,15 @@ def bulk_upload_recitation_audio_tracks(
                 try:
                     if obj.audio_file and getattr(obj.audio_file, "name", None):
                         uploaded_file_names.append(obj.audio_file.name)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.warning(
+                        "Failed to collect uploaded file name for cleanup",
+                        exc_info=exc,
+                        extra={"asset_id": asset_id, "surah_number": surah_number},
+                    )
                 created += 1
     except Exception as e:
+        logger.exception("Bulk recitation upload failed", exc_info=e, extra={"asset_id": asset_id})
         # Best-effort cleanup of any uploaded files when the DB transaction rolls back
         try:
             from django.core.files.storage import default_storage
@@ -75,10 +83,18 @@ def bulk_upload_recitation_audio_tracks(
             for name in uploaded_file_names:
                 try:
                     default_storage.delete(name)
-                except Exception:
-                    pass
-        except Exception:
-            pass
+                except Exception as cleanup_exc:
+                    logger.warning(
+                        "Failed to cleanup uploaded file after rollback",
+                        exc_info=cleanup_exc,
+                        extra={"asset_id": asset_id, "file_name": name},
+                    )
+        except Exception as import_exc:
+            logger.warning(
+                "Failed to import/access default storage during rollback cleanup",
+                exc_info=import_exc,
+                extra={"asset_id": asset_id},
+            )
 
         other_errors += 1
         other_error_details.append(str(e))

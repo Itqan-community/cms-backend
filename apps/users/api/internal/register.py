@@ -1,4 +1,5 @@
 from typing import Literal
+import logging
 
 from django.conf import settings
 from django.db import transaction
@@ -13,6 +14,7 @@ from apps.users.models import Developer, User
 from ._schemas import RegisterSchema, TokenResponseSchema
 
 router = ItqanRouter(tags=[NinjaTag.AUTH])
+logger = logging.getLogger(__name__)
 
 if not settings.ENABLE_ALLAUTH:
 
@@ -75,6 +77,11 @@ if not settings.ENABLE_ALLAUTH:
                 },
             }
         except Exception as e:
+            logger.exception(
+                "User registration failed",
+                exc_info=e,
+                extra={"email": registration_data.email},
+            )
             raise ItqanError(
                 error_name="registration_failed",
                 message=f"Registration failed: {str(e)}",
