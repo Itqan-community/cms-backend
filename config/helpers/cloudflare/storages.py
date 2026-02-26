@@ -1,13 +1,11 @@
-from storages.backends.s3 import S3ManifestStaticStorage, S3Storage
+from storages.backends.s3 import S3Storage
 
 
-class StaticFileStorage(S3ManifestStaticStorage):
+class StaticFileStorage(S3Storage):
     location = "static"
     default_acl = "public-read"
-    querystring_auth = False
 
 
 class MediaFileStorage(S3Storage):
     location = "media"
     default_acl = "public-read"
-    querystring_auth = False

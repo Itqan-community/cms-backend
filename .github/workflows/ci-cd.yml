@@ -4,10 +4,6 @@ on:
   push:
     branches: [staging, main]
 
-  # Deployment triggered by pull request merges to enforce branch flow
-  pull_request:
-    types: [closed]
-    branches: [staging, main]
 
   # Allow manual deployment trigger (for hotfixes)
   workflow_dispatch:
@@ -19,6 +15,7 @@ on:
         type: choice
         options:
           - staging
+          - main
 
 jobs:
   # Deployment Job with Container Cleanup
