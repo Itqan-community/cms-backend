@@ -1,8 +1,7 @@
-from django.contrib.staticfiles.storage import ManifestStaticFilesStorage
-from storages.backends.s3 import S3Storage
+from storages.backends.s3 import S3ManifestStaticStorage, S3Storage
 
 
-class StaticFileStorage(ManifestStaticFilesStorage):
+class StaticFileStorage(S3ManifestStaticStorage):
     location = "static"
     default_acl = "public-read"
 
