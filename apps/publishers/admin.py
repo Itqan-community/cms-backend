@@ -34,20 +34,16 @@ class PublisherAdmin(admin.ModelAdmin):
         (
             "Basic Information",
             {
-                "fields": ("name", "slug", "icon_url"),
+                "fields": ("name_en", "name_ar", "slug", "icon_url"),
             },
         ),
         (
             "Content",
             {
-                "fields": ("description",),
-            },
-        ),
-        (
-            "Multilingual Fields",
-            {
-                "fields": ("name_en", "name_ar", "description_en", "description_ar"),
-                "classes": ("collapse",),
+                "fields": (
+                    "description_en",
+                    "description_ar",
+                ),
             },
         ),
         (

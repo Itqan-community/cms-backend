@@ -24,6 +24,7 @@ class RiwayahOut(Schema):
     id: int
     name: str
     slug: str
+    bio: str
     qiraah: QiraahOut
     recitations_count: int = Field(0, description="Number of READY recitation assets for this riwayah")
 

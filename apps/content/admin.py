@@ -84,20 +84,13 @@ class ResourceAdmin(admin.ModelAdmin):
         (
             "Basic Information",
             {
-                "fields": ("name", "slug", "publisher"),
+                "fields": ("name_en", "name_ar", "slug", "publisher"),
             },
         ),
         (
             "Content",
             {
-                "fields": ("description", "category", "status", "is_external", "external_url"),
-            },
-        ),
-        (
-            "Multilingual Fields",
-            {
-                "fields": ("name_en", "name_ar", "description_en", "description_ar"),
-                "classes": ("collapse",),
+                "fields": ("description_en", "description_ar", "category", "status", "is_external", "external_url"),
             },
         ),
         (
@@ -207,7 +200,7 @@ class AssetAdmin(admin.ModelAdmin):
         (
             "Basic Information",
             {
-                "fields": ("name", "resource", "category", "riwayah", "qiraah"),
+                "fields": ("name_en", "name_ar", "resource", "category", "riwayah", "qiraah"),
             },
         ),
         (
@@ -219,21 +212,13 @@ class AssetAdmin(admin.ModelAdmin):
         (
             "Content",
             {
-                "fields": ("description", "long_description", "thumbnail_url"),
-            },
-        ),
-        (
-            "Multilingual Fields",
-            {
                 "fields": (
-                    "name_en",
-                    "name_ar",
                     "description_en",
                     "description_ar",
                     "long_description_en",
                     "long_description_ar",
+                    "thumbnail_url",
                 ),
-                "classes": ("collapse",),
             },
         ),
         (
@@ -893,19 +878,7 @@ class QiraahAdmin(admin.ModelAdmin):
         (
             "Basic Information",
             {
-                "fields": ("name", "bio", "slug", "is_active"),
-            },
-        ),
-        (
-            "Multilingual Fields",
-            {
-                "fields": (
-                    "name_en",
-                    "name_ar",
-                    "bio_en",
-                    "bio_ar",
-                ),
-                "classes": ("collapse",),
+                "fields": ("name_en", "name_ar", "bio_en", "bio_ar", "slug", "is_active"),
             },
         ),
         (
@@ -930,17 +903,7 @@ class ReciterAdmin(admin.ModelAdmin):
         (
             "Basic Information",
             {
-                "fields": ("name", "slug", "is_active", "bio", "image_url"),
-            },
-        ),
-        (
-            "Multilingual Fields",
-            {
-                "fields": (
-                    "name_en",
-                    "name_ar",
-                ),
-                "classes": ("collapse",),
+                "fields": ("name_en", "name_ar", "bio_en", "bio_ar", "slug", "is_active", "image_url"),
             },
         ),
         (
@@ -965,17 +928,7 @@ class RiwayahAdmin(admin.ModelAdmin):
         (
             "Basic Information",
             {
-                "fields": ("qiraah", "name", "slug", "is_active"),
-            },
-        ),
-        (
-            "Multilingual Fields",
-            {
-                "fields": (
-                    "name_en",
-                    "name_ar",
-                ),
-                "classes": ("collapse",),
+                "fields": ("qiraah", "name_en", "name_ar", "bio_en", "bio_ar", "slug", "is_active"),
             },
         ),
         (
