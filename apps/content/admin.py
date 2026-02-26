@@ -77,27 +77,20 @@ class ResourceAdmin(admin.ModelAdmin):
     ]
     list_filter = ["category", "status", "publisher", "created_at"]
     search_fields = ["name", "description", "slug"]
-    prepopulated_fields = {"slug": ("name",)}
+    prepopulated_fields = {"slug": ("name_en",)}
     inlines = [ResourceVersionInline]
 
     fieldsets = (
         (
             "Basic Information",
             {
-                "fields": ("name", "slug", "publisher"),
+                "fields": ("name_en", "name_ar", "slug", "publisher"),
             },
         ),
         (
             "Content",
             {
-                "fields": ("description", "category", "status", "is_external", "external_url"),
-            },
-        ),
-        (
-            "Multilingual Fields",
-            {
-                "fields": ("name_en", "name_ar", "description_en", "description_ar"),
-                "classes": ("collapse",),
+                "fields": ("description_en", "description_ar", "category", "status", "is_external", "external_url"),
             },
         ),
         (
@@ -207,7 +200,7 @@ class AssetAdmin(admin.ModelAdmin):
         (
             "Basic Information",
             {
-                "fields": ("name", "resource", "category", "riwayah", "qiraah"),
+                "fields": ("name_en", "name_ar", "resource", "category", "riwayah", "qiraah"),
             },
         ),
         (
@@ -219,21 +212,13 @@ class AssetAdmin(admin.ModelAdmin):
         (
             "Content",
             {
-                "fields": ("description", "long_description", "thumbnail_url"),
-            },
-        ),
-        (
-            "Multilingual Fields",
-            {
                 "fields": (
-                    "name_en",
-                    "name_ar",
                     "description_en",
                     "description_ar",
                     "long_description_en",
                     "long_description_ar",
+                    "thumbnail_url",
                 ),
-                "classes": ("collapse",),
             },
         ),
         (
@@ -886,26 +871,14 @@ class QiraahAdmin(admin.ModelAdmin):
     list_display = ["id", "name", "slug", "is_active", "created_at"]
     list_filter = ["is_active", "created_at"]
     search_fields = ["name", "slug"]
-    prepopulated_fields = {"slug": ("name",)}
+    prepopulated_fields = {"slug": ("name_en",)}
     readonly_fields = ["created_at", "updated_at"]
 
     fieldsets = (
         (
             "Basic Information",
             {
-                "fields": ("name", "bio", "slug", "is_active"),
-            },
-        ),
-        (
-            "Multilingual Fields",
-            {
-                "fields": (
-                    "name_en",
-                    "name_ar",
-                    "bio_en",
-                    "bio_ar",
-                ),
-                "classes": ("collapse",),
+                "fields": ("name_en", "name_ar", "bio_en", "bio_ar", "slug", "is_active"),
             },
         ),
         (
@@ -923,24 +896,14 @@ class ReciterAdmin(admin.ModelAdmin):
     list_display = ["id", "name", "slug", "is_active", "created_at"]
     list_filter = ["is_active", "created_at"]
     search_fields = ["name", "slug"]
-    prepopulated_fields = {"slug": ("name",)}
+    prepopulated_fields = {"slug": ("name_en",)}
     readonly_fields = ["created_at", "updated_at"]
 
     fieldsets = (
         (
             "Basic Information",
             {
-                "fields": ("name", "slug", "is_active", "bio", "image_url"),
-            },
-        ),
-        (
-            "Multilingual Fields",
-            {
-                "fields": (
-                    "name_en",
-                    "name_ar",
-                ),
-                "classes": ("collapse",),
+                "fields": ("name_en", "name_ar", "bio_en", "bio_ar", "slug", "is_active", "image_url"),
             },
         ),
         (
@@ -958,24 +921,14 @@ class RiwayahAdmin(admin.ModelAdmin):
     list_display = ["id", "name", "slug", "qiraah", "is_active", "created_at"]
     list_filter = ["is_active", "qiraah", "created_at"]
     search_fields = ["name", "slug"]
-    prepopulated_fields = {"slug": ("name",)}
+    prepopulated_fields = {"slug": ("name_en",)}
     readonly_fields = ["created_at", "updated_at"]
 
     fieldsets = (
         (
             "Basic Information",
             {
-                "fields": ("qiraah", "name", "slug", "is_active"),
-            },
-        ),
-        (
-            "Multilingual Fields",
-            {
-                "fields": (
-                    "name_en",
-                    "name_ar",
-                ),
-                "classes": ("collapse",),
+                "fields": ("qiraah", "name_en", "name_ar", "bio_en", "bio_ar", "slug", "is_active"),
             },
         ),
         (

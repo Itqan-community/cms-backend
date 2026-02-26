@@ -18,6 +18,7 @@ class AssetAccessTest(BaseTestCase):
             description="Test asset description",
             category=Resource.CategoryChoice.TAFSIR,
             license=LicenseChoice.CC_BY_SA,
+            resource__status=Resource.StatusChoice.READY,
         )
         self.user = baker.make(User, email="test@example.com")
 

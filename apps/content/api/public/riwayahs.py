@@ -15,6 +15,7 @@ router = ItqanRouter(tags=[NinjaTag.RIWAYAHS])
 class RiwayahOut(Schema):
     id: int
     name: str
+    bio: str
     recitations_count: int = Field(
         0,
         description="Number of READY recitation assets for this riwayah",

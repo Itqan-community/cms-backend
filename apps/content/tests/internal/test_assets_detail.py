@@ -19,6 +19,7 @@ class DetailAssetTest(BaseTestCase):
             category=Resource.CategoryChoice.TAFSIR,
             license=LicenseChoice.CC_BY_SA,
             thumbnail_url="thumbnails/tafseer.png",
+            resource__status=Resource.StatusChoice.READY,
         )
 
         # Act
@@ -50,6 +51,7 @@ class DetailAssetTest(BaseTestCase):
             license=LicenseChoice.CC_BY,
             category=Resource.CategoryChoice.MUSHAF,
             thumbnail_url="thumbs/schema.png",
+            resource__status=Resource.StatusChoice.READY,
         )
 
         # Act
@@ -87,6 +89,7 @@ class DetailAssetTest(BaseTestCase):
                 category=Resource.CategoryChoice.TAFSIR,
                 license=LicenseChoice.CC0,
                 thumbnail_url="thumbs/tafsir.png",
+                resource__status=Resource.StatusChoice.READY,
             ),
             baker.make(
                 Asset,
@@ -97,6 +100,7 @@ class DetailAssetTest(BaseTestCase):
                 thumbnail_url="thumbs/recitation.png",
                 reciter=baker.make("content.Reciter", name="Test Reciter"),
                 riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
+                resource__status=Resource.StatusChoice.READY,
             ),
             baker.make(
                 Asset,
@@ -105,6 +109,7 @@ class DetailAssetTest(BaseTestCase):
                 category=Resource.CategoryChoice.MUSHAF,
                 license=LicenseChoice.CC0,
                 thumbnail_url="thumbs/mushaf.png",
+                resource__status=Resource.StatusChoice.READY,
             ),
         ]
 
@@ -134,6 +139,7 @@ class DetailAssetTest(BaseTestCase):
             category=Resource.CategoryChoice.TAFSIR,
             license=LicenseChoice.CC0,
             thumbnail_url="thumbs/localized.png",
+            resource__status=Resource.StatusChoice.READY,
         )
 
         # Act
@@ -160,6 +166,7 @@ class DetailAssetTest(BaseTestCase):
             thumbnail_url="thumbs/en-only.png",
             reciter=baker.make("content.Reciter", name="Test Reciter"),
             riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
+            resource__status=Resource.StatusChoice.READY,
         )
 
         # Act
@@ -213,6 +220,7 @@ class DetailAssetTest(BaseTestCase):
             category=Resource.CategoryChoice.TAFSIR,
             license=LicenseChoice.CC_BY,
             thumbnail_url="thumbnails/test.png",
+            resource__status=Resource.StatusChoice.READY,
         )
 
         # Act
@@ -250,6 +258,7 @@ class DetailAssetTest(BaseTestCase):
             category=Resource.CategoryChoice.MUSHAF,
             license=LicenseChoice.CC0,
             thumbnail_url="thumbnails/anonymous.png",
+            resource__status=Resource.StatusChoice.READY,
         )
 
         # Act
@@ -281,6 +290,7 @@ class DetailAssetTest(BaseTestCase):
             thumbnail_url="thumbnails/metadata.png",
             reciter=baker.make("content.Reciter", name="Test Reciter"),
             riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
+            resource__status=Resource.StatusChoice.READY,
         )
 
         # Act - Include custom headers
@@ -322,6 +332,7 @@ class DetailAssetTest(BaseTestCase):
             category=Resource.CategoryChoice.TAFSIR,
             license=LicenseChoice.CC0,
             thumbnail_url=None,  # Test the optional field
+            resource__status=Resource.StatusChoice.READY,
         )
 
         # Act

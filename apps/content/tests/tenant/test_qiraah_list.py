@@ -22,10 +22,10 @@ class QiraahListTest(BaseTestCase):
         # Create Qiraahs with multiple Riwayahs - use unique names to avoid constraint violations
         self.qiraah_asim = baker.make(Qiraah, is_active=True, name="Test Asim", slug="test-asim")
         self.riwayah_hafs = baker.make(
-            Riwayah, is_active=True, name="Test Hafs", slug="test-hafs", qiraah=self.qiraah_asim
+            Riwayah, is_active=True, name="Test Hafs", slug="test-hafs", bio="hafs Bio", qiraah=self.qiraah_asim
         )
         self.riwayah_qaloon = baker.make(
-            Riwayah, is_active=True, name="Test Qaloon", slug="test-qaloon", qiraah=self.qiraah_asim
+            Riwayah, is_active=True, name="Test Qaloon", bio="Qaloon Bio", slug="test-qaloon", qiraah=self.qiraah_asim
         )
 
         # Add recitations for Asim Qiraah
@@ -176,8 +176,13 @@ class QiraahListTest(BaseTestCase):
                     "is_active": True,
                     "recitations_count": 2,
                     "riwayahs": [
-                        {"id": self.riwayah_hafs.id, "name": "Test Hafs", "slug": "test-hafs"},
-                        {"id": self.riwayah_qaloon.id, "name": "Test Qaloon", "slug": "test-qaloon"},
+                        {"id": self.riwayah_hafs.id, "name": "Test Hafs", "bio": "hafs Bio", "slug": "test-hafs"},
+                        {
+                            "id": self.riwayah_qaloon.id,
+                            "name": "Test Qaloon",
+                            "bio": "Qaloon Bio",
+                            "slug": "test-qaloon",
+                        },
                     ],
                 },
                 {
@@ -186,7 +191,7 @@ class QiraahListTest(BaseTestCase):
                     "slug": "test-nafi",
                     "bio": "",
                     "is_active": True,
-                    "riwayahs": [{"id": self.riwayah_warsh.id, "name": "Test Warsh", "slug": "test-warsh"}],
+                    "riwayahs": [{"id": self.riwayah_warsh.id, "name": "Test Warsh", "bio": "", "slug": "test-warsh"}],
                     "recitations_count": 1,
                 },
             ],

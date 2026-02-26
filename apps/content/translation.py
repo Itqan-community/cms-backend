@@ -23,12 +23,12 @@ class AssetTranslationOptions(TranslationOptions):
 
 @register(Reciter)
 class ReciterTranslationOptions(TranslationOptions):
-    fields = ("name",)
+    fields = ("name", "bio")
 
 
 @register(Riwayah)
 class RiwayahTranslationOptions(TranslationOptions):
-    fields = ("name",)
+    fields = ("name", "bio")
 
 
 @register(Qiraah)
