@@ -1,9 +1,12 @@
-from ninja import FilterSchema, Query, Schema
+from typing import Annotated, Literal
+
+from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import Field
 
 from apps.content.repositories.recitation import RecitationRepository
 from apps.content.services.recitation import RecitationService
+from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -17,8 +20,6 @@ router = ItqanRouter(tags=[NinjaTag.RECITERS])
 class ReciterOut(Schema):
     id: int
     name: str
-    name_ar: str | None = None
-    name_en: str | None = None
     recitations_count: int = Field(
         0,
         description="Number of READY recitation assets for this reciter",
@@ -26,16 +27,23 @@ class ReciterOut(Schema):
 
 
 class ReciterFilter(FilterSchema):
-    name: list[str] | None = Field(None, q="name__in")
-    name_ar: list[str] | None = Field(None, q="name_ar__in")
-    slug: list[str] | None = Field(None, q="slug__in")
+    name: Annotated[list[str] | None, FilterLookup("name__in")] = None
+    name_ar: Annotated[list[str] | None, FilterLookup("name_ar__in")] = None
+    slug: Annotated[list[str] | None, FilterLookup("slug__in")] = None
 
 
-@router.get("reciters/", response=list[ReciterOut], auth=None)
+@router.get(
+    "reciters/",
+    response={
+        200: list[ReciterOut],
+        400: NinjaErrorResponse[Literal["validation_error"], Literal[None]],
+        403: NinjaErrorResponse[Literal["permission_denied"], Literal[None]],
+    },
+)
 @paginate
-@ordering(ordering_fields=["name"])
-@searching(search_fields=["name", "name_en", "name_ar", "slug"])
-def list_reciters(request: Request, filters: ReciterFilter = Query()):
+@ordering(ordering_fields=["name", "name_ar"])
+@searching(search_fields=["name", "name_ar", "slug"])
+def list_reciters(request: Request, filters: Query[ReciterFilter]):
     """
     CMS Internal API:
 
