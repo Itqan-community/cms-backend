@@ -1,4 +1,5 @@
 import re
+from random import choice
 
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -603,9 +604,14 @@ class Distribution(BaseModel):
     def __str__(self):
         return f"Distribution(asset={self.asset_version.asset.name}, channel={self.channel})"
 
+class Nationality(BaseModel):
+    """ reciter/qri nationality """
+    code = models.CharField(max_length=2, unique=True)
+    name = models.CharField(max_length=100)
 
 class Reciter(BaseModel):
     """Quran reciter/qari (e.g. Mshari Al-Afasi, Saad Al-Ghamidi, etc)"""
+
 
     name = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(unique=True, allow_unicode=True, db_index=True)
@@ -617,6 +623,8 @@ class Reciter(BaseModel):
     )
     bio = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
+    nationality = models.ForeignKey(Nationality,on_delete=models.SET_NULL,related_name="reciters",null=True)
+    is_contemporary = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs) -> None:
         if not self.slug:

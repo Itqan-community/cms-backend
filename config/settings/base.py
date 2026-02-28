@@ -54,7 +54,6 @@ THIRD_PARTY_APPS = [
     "oauth2_provider",
 ]
 
-
 LOCAL_APPS = ["apps.core", "apps.content", "apps.users", "apps.publishers"]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -249,10 +248,8 @@ CORS_ALLOW_HEADERS = [
     "x-tenant",
 ]
 
-
 # Custom user model
 AUTH_USER_MODEL = "users.User"
-
 
 AUTHENTICATION_BACKENDS = [
     *(["allauth.account.auth_backends.AuthenticationBackend"] if ENABLE_ALLAUTH else []),
@@ -380,8 +377,11 @@ OAUTH2_PROVIDER = {
 # Cache Configuration
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": config("REDIS_URL", default="redis://localhost:6379/1"),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
     }
 }
 
