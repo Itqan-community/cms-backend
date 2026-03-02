@@ -1,8 +1,7 @@
 from django.db.models import Count, Q
-from ninja import FilterSchema, Query, Schema, files, File
+from ninja import FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import Field
-from datetime import date
 
 from apps.content.models import Reciter, Resource
 from apps.core.ninja_utils.ordering_base import ordering
@@ -17,6 +16,7 @@ router = ItqanRouter(tags=[NinjaTag.RECITERS])
 class ReciterOut(Schema):
     id: int
     name: str
+    bio: str
     recitations_count: int = Field(0, description="Number of READY recitation assets for this reciter")
 
 
@@ -24,19 +24,6 @@ class ReciterFilter(FilterSchema):
     name: list[str] | None = Field(None, q="name__in")
     name_ar: list[str] | None = Field(None, q="name_ar__in")
     slug: list[str] | None = Field(None, q="slug__in")
-
-class ReciterCreateIn(Schema):
-    name: str
-    name_ar: str | None = None
-    name_en: str | None = None
-    nationality: str
-    date_of_birth: date
-    date_of_death: date | None = None
-    slug: str | None = None
-    is_active: bool = True
-    bio: str | None = None
-    image_url: files.UploadedFile | None = File(default=None, description="Reciter image")
-    reciter_identifier: str
 
 
 @router.get("reciters/", response=list[ReciterOut])
@@ -77,18 +64,3 @@ def list_reciters(request: Request, filters: ReciterFilter = Query()):
 
     qs = filters.filter(qs)
     return qs
-
-@router.post("reciters/", response=ReciterOut)
-def create_reciter(request: Request, data: ReciterCreateIn):
-    """
-    Create a new reciter.
-    """
-    if Reciter.objects.filter(reciter_identifier=data.reciter_identifier).exists():
-        return {"error": "Reciter with this identifier already exists."}
-    
-    if Reciter.objects.filter(name=data.name).exists():
-        return {"error": "Reciter with this name already exists."}
-    
-    
-    reciter = Reciter.objects.create(**data.dict())
-    return reciter

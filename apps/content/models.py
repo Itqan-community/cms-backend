@@ -623,7 +623,6 @@ class Reciter(BaseModel):
     bio = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
 
-
     def save(self, *args, **kwargs) -> None:
         if not self.slug:
             self.slug = slugify(self.name[:50], allow_unicode=True)

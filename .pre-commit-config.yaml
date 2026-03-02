@@ -25,36 +25,36 @@ repos:
           - --fix=auto
 
   - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
+    rev: 8.0.0
     hooks:
       - id: isort
         args: ["--profile", "black", "--line-length=100"]
 
   - repo: https://github.com/psf/black
-    rev: 24.10.0
+    rev: 26.1.0
     hooks:
       - id: black
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.12
+    rev: v0.15.2
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
 
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.10
+    rev: 1.9.4
     hooks:
       - id: bandit
         args: ["--severity-level", "medium", "-r", "apps", "config"]
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.10.1
+    rev: v3.21.2
     hooks:
       - id: pyupgrade
         args: [ --py311-plus ]
 
   - repo: https://github.com/adamchainz/django-upgrade
-    rev: '1.27.0'
+    rev: '1.30.0'
     hooks:
       - id: django-upgrade
         args: ['--target-version', '5.0']

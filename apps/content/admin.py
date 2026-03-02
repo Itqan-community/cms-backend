@@ -583,13 +583,11 @@ class AssetAdmin(admin.ModelAdmin):
                 {"error_name": e.error_name, "message": e.message, "extra": e.extra}, status=e.status_code
             )
         except Exception:
-            logger.exception(
-                f"uploads_sign_part_view failed (\
+            logger.exception(f"uploads_sign_part_view failed (\
                     key={(locals().get('body') or {}).get('key')},\
                     upload_id={(locals().get('body') or {}).get('uploadId')},\
                     part_number={(locals().get('body') or {}).get('partNumber')}\
-                )"
-            )
+                )")
             return JsonResponse(
                 {"error_name": "server_error", "message": "An unexpected error occurred"},
                 status=500,
@@ -610,12 +608,10 @@ class AssetAdmin(admin.ModelAdmin):
                 {"error_name": e.error_name, "message": e.message, "extra": e.extra}, status=e.status_code
             )
         except Exception:
-            logger.exception(
-                f"uploads_finish_view failed (\
+            logger.exception(f"uploads_finish_view failed (\
                     key={(locals().get('body') or {}).get('key')},\
                     upload_id={(locals().get('body') or {}).get('uploadId')}\
-                )"
-            )
+                )")
             return JsonResponse(
                 {"error_name": "server_error", "message": "An unexpected error occurred"},
                 status=500,
@@ -636,12 +632,10 @@ class AssetAdmin(admin.ModelAdmin):
                 {"error_name": e.error_name, "message": e.message, "extra": e.extra}, status=e.status_code
             )
         except Exception:
-            logger.exception(
-                f"uploads_abort_view failed (\
+            logger.exception(f"uploads_abort_view failed (\
                     key={(locals().get('body') or {}).get('key')},\
                     upload_id={(locals().get('body') or {}).get('uploadId')}\
-                )"
-            )
+                )")
             return JsonResponse(
                 {"error_name": "server_error", "message": "An unexpected error occurred"},
                 status=500,
@@ -920,7 +914,17 @@ class QiraahAdmin(admin.ModelAdmin):
 
 @admin.register(Reciter)
 class ReciterAdmin(admin.ModelAdmin):
-    list_display = ["id", "reciter_identifier", "nationality", "date_of_birth", "date_of_death", "name", "slug", "is_active", "created_at"]
+    list_display = [
+        "id",
+        "reciter_identifier",
+        "nationality",
+        "date_of_birth",
+        "date_of_death",
+        "name",
+        "slug",
+        "is_active",
+        "created_at",
+    ]
     list_filter = ["is_active", "created_at"]
     search_fields = ["name", "slug"]
     prepopulated_fields = {"slug": ("name",)}
@@ -930,7 +934,17 @@ class ReciterAdmin(admin.ModelAdmin):
         (
             "Basic Information",
             {
-                "fields": ("name", "slug", "is_active", "bio", "image_url", "reciter_identifier", "nationality", "date_of_birth", "date_of_death"),
+                "fields": (
+                    "name",
+                    "slug",
+                    "is_active",
+                    "bio",
+                    "image_url",
+                    "reciter_identifier",
+                    "nationality",
+                    "date_of_birth",
+                    "date_of_death",
+                ),
             },
         ),
         (
