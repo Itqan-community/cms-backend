@@ -234,3 +234,50 @@ class RecitationRepository(BaseRecitationRepository):
                 qs = qs.filter(slug__icontains=slug)
 
         return qs
+
+    def get_recitation_statistics(self, publisher_q: Q) -> dict[str, int]:
+        """
+        Returns aggregate statistics for the recitation library scoped to a publisher.
+        """
+        base_filter = Q(
+            category=Resource.CategoryChoice.RECITATION,
+            resource__category=Resource.CategoryChoice.RECITATION,
+            resource__status=Resource.StatusChoice.READY,
+        )
+
+        recitations_count = self.asset_model.objects.filter(publisher_q, base_filter).count()
+
+        reciters_count = (
+            Reciter.objects.filter(is_active=True)
+            .filter(
+                Q(
+                    assets__category=Resource.CategoryChoice.RECITATION,
+                    assets__resource__category=Resource.CategoryChoice.RECITATION,
+                    assets__resource__status=Resource.StatusChoice.READY,
+                )
+                & publisher_q
+            )
+            .distinct()
+            .count()
+        )
+
+        riwayahs_count = (
+            self.riwayah_model.objects.filter(is_active=True)
+            .filter(
+                Q(
+                    assets__category=Resource.CategoryChoice.RECITATION,
+                    assets__riwayah__isnull=False,
+                    assets__resource__category=Resource.CategoryChoice.RECITATION,
+                    assets__resource__status=Resource.StatusChoice.READY,
+                )
+                & publisher_q
+            )
+            .distinct()
+            .count()
+        )
+
+        return {
+            "total_recitations": recitations_count,
+            "total_reciters": reciters_count,
+            "total_riwayahs": riwayahs_count,
+        }

@@ -55,3 +55,10 @@ class BaseRecitationRepository(ABC):
         Returns a queryset of Qiraah objects that have READY recitation assets through riwayahs.
         """
         pass
+
+    @abstractmethod
+    def get_recitation_statistics(self, publisher_q: Q) -> dict[str, int]:
+        """
+        Returns aggregate statistics for the recitation library.
+        """
+        pass
