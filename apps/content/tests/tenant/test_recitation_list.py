@@ -270,3 +270,88 @@ class RecitationsListTest(BaseTestCase):
         names = {item["name"] for item in items}
         self.assertIn("Silah Recitation", names)
         self.assertNotIn("Skoun Recitation", names)
+
+
+class RecitationBilingualSearchTest(BaseTestCase):
+    """Tests for Arabic + English bilingual search across recitations."""
+
+    def setUp(self):
+        super().setUp()
+        self.publisher = baker.make(Publisher, name="Publisher")
+        self.domain = baker.make(
+            "publishers.Domain",
+            domain="bilingual.com",
+            publisher=self.publisher,
+            is_primary=True,
+        )
+        self.user = User.objects.create_user(email="bilingual@example.com", name="Bilingual User")
+
+        self.qiraah = baker.make(Qiraah, name="Asim", name_ar="عاصم")
+        self.riwayah = baker.make(Riwayah, name="Hafs", name_ar="حفص عن عاصم", qiraah=self.qiraah)
+        self.reciter = baker.make(Reciter, name="Al-Husary", name_ar="الحصري", is_active=True)
+        resource = baker.make(
+            Resource,
+            publisher=self.publisher,
+            category=Resource.CategoryChoice.RECITATION,
+            status=Resource.StatusChoice.READY,
+        )
+        self.asset = baker.make(
+            Asset,
+            category=Resource.CategoryChoice.RECITATION,
+            resource=resource,
+            reciter=self.reciter,
+            riwayah=self.riwayah,
+            qiraah=self.qiraah,
+            name="Full Quran - Hafs",
+            name_ar="المصحف كامل - حفص",
+        )
+
+    def test_search_by_arabic_reciter_name(self):
+        self.authenticate_user(self.user, domain=self.domain)
+        response = self.client.get("/tenant/recitations/?search=الحصري")
+
+        self.assertEqual(200, response.status_code, response.content)
+        items = response.json()["results"]
+        self.assertEqual(1, len(items))
+        self.assertEqual(self.asset.id, items[0]["id"])
+
+    def test_search_by_english_reciter_name(self):
+        self.authenticate_user(self.user, domain=self.domain)
+        response = self.client.get("/tenant/recitations/?search=Husary")
+
+        self.assertEqual(200, response.status_code, response.content)
+        items = response.json()["results"]
+        self.assertEqual(1, len(items))
+        self.assertEqual(self.asset.id, items[0]["id"])
+
+    def test_search_by_arabic_riwayah_name(self):
+        self.authenticate_user(self.user, domain=self.domain)
+        response = self.client.get("/tenant/recitations/?search=حفص")
+
+        self.assertEqual(200, response.status_code, response.content)
+        items = response.json()["results"]
+        self.assertEqual(1, len(items))
+
+    def test_search_by_arabic_qiraah_name(self):
+        self.authenticate_user(self.user, domain=self.domain)
+        response = self.client.get("/tenant/recitations/?search=عاصم")
+
+        self.assertEqual(200, response.status_code, response.content)
+        items = response.json()["results"]
+        self.assertEqual(1, len(items))
+
+    def test_search_by_arabic_asset_name(self):
+        self.authenticate_user(self.user, domain=self.domain)
+        response = self.client.get("/tenant/recitations/?search=المصحف")
+
+        self.assertEqual(200, response.status_code, response.content)
+        items = response.json()["results"]
+        self.assertEqual(1, len(items))
+
+    def test_search_no_match_returns_empty(self):
+        self.authenticate_user(self.user, domain=self.domain)
+        response = self.client.get("/tenant/recitations/?search=nonexistent")
+
+        self.assertEqual(200, response.status_code, response.content)
+        items = response.json()["results"]
+        self.assertEqual(0, len(items))

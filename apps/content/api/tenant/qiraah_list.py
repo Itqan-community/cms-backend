@@ -39,7 +39,7 @@ class QiraahFilter(FilterSchema):
 @router.get("qiraahs/", response=list[QiraahOut])
 @paginate
 @ordering(ordering_fields=["name"])
-@searching(search_fields=["name", "slug"])
+@searching(search_fields=["name", "name_ar", "slug"])
 def list_qiraahs(request: Request, filters: QiraahFilter = Query()):
     """
     List qiraahs (recitation methods) that have at least one active riwayah
