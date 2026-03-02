@@ -2,13 +2,14 @@ from model_bakery import baker
 
 from apps.content.models import Reciter, Resource
 from apps.core.tests import BaseTestCase
+from apps.publishers.models import Publisher
 
 
 class InternalRecitersApiTest(BaseTestCase):
     def test_list_reciters_returns_only_reciters_with_ready_recitations_for_publisher(self):
         # Arrange
-        publisher = self.create_publisher()
-        other_publisher = self.create_publisher()
+        publisher = baker.make(Publisher)
+        other_publisher = baker.make(Publisher)
 
         # Reciter with READY recitation asset for current tenant's publisher
         reciter_ok = baker.make(Reciter, is_active=True, name="Active Reciter")
@@ -43,6 +44,7 @@ class InternalRecitersApiTest(BaseTestCase):
             resource__status=Resource.StatusChoice.DRAFT,
         )
 
+        self.authenticate_user()
         # Act
         response = self.client.get("/cms-api/reciters/", format="json")
 
@@ -57,12 +59,9 @@ class InternalRecitersApiTest(BaseTestCase):
 
     def test_search_reciters_matches_arabic_and_slug(self):
         # Arrange
-        publisher = self.create_publisher()
+        publisher = baker.make(Publisher)
 
-        reciter_arabic = baker.make(Reciter, is_active=True, name="Mishary", slug="mishary", name="Mishary")
-        # Add translation fields via modeltranslation convention
-        setattr(reciter_arabic, "name_ar", "مشاري راشد العفاسي")
-        reciter_arabic.save()
+        reciter_arabic = baker.make(Reciter, is_active=True, name="Mishary", slug="mishary", name_ar="مشاري راشد العفاسي")
 
         baker.make(
             "content.Asset",
@@ -84,6 +83,7 @@ class InternalRecitersApiTest(BaseTestCase):
             resource__status=Resource.StatusChoice.READY,
         )
 
+        self.authenticate_user()
         # Act: search by Arabic fragment
         response = self.client.get("/cms-api/reciters/", data={"search": "مشاري"}, format="json")
 
@@ -96,11 +96,9 @@ class InternalRecitersApiTest(BaseTestCase):
 
     def test_ordering_by_name_and_name_ar_supported(self):
         # Arrange
-        publisher = self.create_publisher()
+        publisher = baker.make(Publisher)
 
-        reciter_b = baker.make(Reciter, is_active=True, name="B Reciter")
-        setattr(reciter_b, "name_ar", "ب")
-        reciter_b.save()
+        reciter_b = baker.make(Reciter, is_active=True, name="B Reciter", name_ar="ب")
         baker.make(
             "content.Asset",
             reciter=reciter_b,
@@ -110,9 +108,7 @@ class InternalRecitersApiTest(BaseTestCase):
             resource__status=Resource.StatusChoice.READY,
         )
 
-        reciter_a = baker.make(Reciter, is_active=True, name="A Reciter")
-        setattr(reciter_a, "name_ar", "ا")
-        reciter_a.save()
+        reciter_a = baker.make(Reciter, is_active=True, name="A Reciter", name_ar="ا")
         baker.make(
             "content.Asset",
             reciter=reciter_a,
@@ -122,6 +118,7 @@ class InternalRecitersApiTest(BaseTestCase):
             resource__status=Resource.StatusChoice.READY,
         )
 
+        self.authenticate_user()
         # Act & Assert: order by name
         response = self.client.get("/cms-api/reciters/", data={"ordering": "name"}, format="json")
         self.assertEqual(200, response.status_code, response.content)
