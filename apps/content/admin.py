@@ -406,8 +406,8 @@ class AssetAdmin(admin.ModelAdmin):
                 if durations_json:
                     try:
                         durations_by_filename = json.loads(durations_json)
-                    except Exception:
-                        pass  # Silently ignore invalid JSON, fallback to mutagen
+                    except (json.JSONDecodeError, TypeError):
+                        logger.warning("Invalid durations_json in bulk upload for asset %s, falling back to mutagen", asset_id)
 
                 stats = bulk_upload_recitation_audio_tracks(
                     asset_id=asset_id, files=files, durations_by_filename=durations_by_filename
