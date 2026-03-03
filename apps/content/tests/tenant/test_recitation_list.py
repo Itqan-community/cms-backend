@@ -1,4 +1,5 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test.utils import CaptureQueriesContext
 from model_bakery import baker
 
 from apps.content.models import Asset, RecitationSurahTrack, Reciter, Resource, Riwayah
@@ -270,3 +271,26 @@ class RecitationsListTest(BaseTestCase):
         names = {item["name"] for item in items}
         self.assertIn("Silah Recitation", names)
         self.assertNotIn("Skoun Recitation", names)
+
+    def test_list_recitations_query_count_should_not_exceed_threshold(self):
+        """Ensure the recitation list uses batched queries (no N+1)."""
+        # Arrange
+        self.authenticate_user(self.user, domain=self.domain1)
+
+        from django.db import connection
+
+        # Warm up the request once (content-type negotiation, auth, etc.)
+        self.client.get("/tenant/recitations/")
+
+        # Act
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get("/tenant/recitations/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertLessEqual(
+            len(ctx),
+            4,
+            f"Expected ≤4 queries, got {len(ctx)}:\n"
+            + "\n".join(q["sql"] for q in ctx),
+        )
