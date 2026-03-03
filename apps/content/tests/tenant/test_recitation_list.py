@@ -1,7 +1,7 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
-from apps.content.models import Asset, RecitationSurahTrack, Reciter, Resource, Riwayah
+from apps.content.models import Asset, Qiraah, RecitationSurahTrack, Reciter, Resource, Riwayah
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -270,3 +270,105 @@ class RecitationsListTest(BaseTestCase):
         names = {item["name"] for item in items}
         self.assertIn("Silah Recitation", names)
         self.assertNotIn("Skoun Recitation", names)
+
+    def test_list_recitations_search_by_riwayah_name(self):
+        self.authenticate_user(self.user, domain=self.domain1)
+
+        qiraah = baker.make(Qiraah, name="عاصم")
+        riwayah = baker.make(Riwayah, name="حفص عن عاصم", qiraah=qiraah)
+        baker.make(
+            Asset,
+            category=Resource.CategoryChoice.RECITATION,
+            resource=self.ready_recitation_resource_pub1,
+            reciter=self.reciter1,
+            riwayah=riwayah,
+            qiraah=qiraah,
+            name="Hafs Recitation",
+            description="Hafs",
+        )
+
+        response = self.client.get("/tenant/recitations/?search=حفص")
+
+        self.assertEqual(200, response.status_code, response.content)
+        items = response.json()["results"]
+        names = {item["name"] for item in items}
+        self.assertIn("Hafs Recitation", names)
+
+    def test_list_recitations_search_by_qiraah_name(self):
+        self.authenticate_user(self.user, domain=self.domain1)
+
+        qiraah = baker.make(Qiraah, name="نافع")
+        riwayah = baker.make(Riwayah, name="ورش عن نافع", qiraah=qiraah)
+        baker.make(
+            Asset,
+            category=Resource.CategoryChoice.RECITATION,
+            resource=self.ready_recitation_resource_pub1,
+            reciter=self.reciter1,
+            riwayah=riwayah,
+            qiraah=qiraah,
+            name="Warsh Recitation",
+            description="Warsh",
+        )
+
+        response = self.client.get("/tenant/recitations/?search=نافع")
+
+        self.assertEqual(200, response.status_code, response.content)
+        items = response.json()["results"]
+        names = {item["name"] for item in items}
+        self.assertIn("Warsh Recitation", names)
+
+    def test_list_recitations_filter_by_qiraah(self):
+        self.authenticate_user(self.user, domain=self.domain1)
+
+        qiraah = baker.make(Qiraah, name="Test Qiraah")
+        riwayah = baker.make(Riwayah, qiraah=qiraah)
+        baker.make(
+            Asset,
+            category=Resource.CategoryChoice.RECITATION,
+            resource=self.ready_recitation_resource_pub1,
+            reciter=self.reciter1,
+            riwayah=riwayah,
+            qiraah=qiraah,
+            name="Qiraah Filtered",
+        )
+
+        response = self.client.get(f"/tenant/recitations/?qiraah_id={qiraah.id}")
+
+        self.assertEqual(200, response.status_code, response.content)
+        items = response.json()["results"]
+        self.assertTrue(all(item["qiraah"]["id"] == qiraah.id for item in items))
+
+    def test_list_recitations_includes_surahs_count(self):
+        self.authenticate_user(self.user, domain=self.domain1)
+
+        response = self.client.get("/tenant/recitations/")
+
+        self.assertEqual(200, response.status_code, response.content)
+        items = response.json()["results"]
+        for item in items:
+            self.assertIn("surahs_count", item)
+
+        asset1_item = next(i for i in items if i["id"] == self.asset1.id)
+        asset2_item = next(i for i in items if i["id"] == self.asset2.id)
+        self.assertEqual(2, asset1_item["surahs_count"])
+        self.assertEqual(1, asset2_item["surahs_count"])
+
+    def test_list_recitations_search_arabic_reciter_name(self):
+        self.authenticate_user(self.user, domain=self.domain1)
+
+        arabic_reciter = baker.make(Reciter, name="مشاري العفاسي")
+        baker.make(
+            Asset,
+            category=Resource.CategoryChoice.RECITATION,
+            resource=self.ready_recitation_resource_pub1,
+            reciter=arabic_reciter,
+            riwayah=self.riwayah1,
+            name="Arabic Reciter Asset",
+        )
+
+        response = self.client.get("/tenant/recitations/?search=العفاسي")
+
+        self.assertEqual(200, response.status_code, response.content)
+        items = response.json()["results"]
+        self.assertEqual(1, len(items))
+        self.assertEqual("Arabic Reciter Asset", items[0]["name"])

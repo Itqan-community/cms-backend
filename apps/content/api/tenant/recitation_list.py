@@ -40,12 +40,14 @@ class RecitationListOut(Schema):
     reciter: RecitationReciterOut
     riwayah: RecitationRiwayahOut | None = None
     qiraah: RecitationQiraahOut
+    surahs_count: int = Field(0, description="Number of surah tracks in this recitation")
 
 
 class RecitationFilter(FilterSchema):
     reciter_id: list[int] | None = Field(None, q="reciter_id__in")
     riwayah_id: list[int] | None = Field(None, q="riwayah_id__in")
     qiraah_id: list[int] | None = Field(None, q="qiraah_id__in")
+    publisher_id: list[int] | None = Field(None, q="resource__publisher_id__in")
     madd_level: list[Asset.MaddLevelChoice] | None = Field(None, q="madd_level__in")
     meem_behaviour: list[Asset.MeemBehaviorChoice] | None = Field(None, q="meem_behaviour__in")
 
@@ -53,12 +55,21 @@ class RecitationFilter(FilterSchema):
 @router.get("recitations/", response=list[RecitationListOut])
 @paginate
 @ordering(ordering_fields=["name", "created_at", "updated_at"])
-@searching(search_fields=["name", "description", "resource__publisher__name", "reciter__name"])
+@searching(
+    search_fields=[
+        "name",
+        "description",
+        "reciter__name",
+        "riwayah__name",
+        "qiraah__name",
+        "resource__publisher__name",
+    ]
+)
 def list_recitations(request: Request, filters: RecitationFilter = Query()):
     repo = RecitationRepository()
     service = RecitationService(repo)
 
     publisher_q = request.publisher_q("resource__publisher")
-    qs = service.get_all_recitations(publisher_q, filters)
+    qs = service.get_all_recitations(publisher_q, filters, annotate_surahs_count=True)
 
     return qs
