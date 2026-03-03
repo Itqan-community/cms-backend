@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: deployment/docker/Dockerfile.backend
       args:
-        REQUIREMENTS_FILE: development.txt
+        DEPENDENCY_GROUP: dev
     env_file:
       - .env
     environment:
@@ -27,7 +27,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-    command: tail -f /dev/null  # Keep container running for tests
+    ports:
+      - "8000:8000"
+    command: uv run python manage.py runserver 0.0.0.0:8000
 
   postgres:
     image: postgres:15-alpine
@@ -36,7 +38,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -46,7 +48,7 @@ services:
   redis:
     image: redis:7-alpine
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 5s
       timeout: 3s
       retries: 5

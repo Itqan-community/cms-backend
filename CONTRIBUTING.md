@@ -4,15 +4,15 @@ Thank you for helping improve Quranic accessibility. This guide keeps contributi
 
 ## 🧭 Branch Strategy
 - **Protected branches**: `main`, `staging` (PRs only; no direct commits)
-- **Active development**: `develop` (direct commits allowed)
-- **Flow**: `develop` → `staging` (PR) → `main` (PR). Do not skip stages.
-- **Features**: branch from `develop` as `feature/<short-description>`
+- **Active development**: `{feature_branch}` (direct commits allowed)
+- **Flow**: `staging` (PR) → `main` (PR). Do not skip stages.
+- **Features**: branch from `staging` as `feat/<short-description>`
 
 ## 🛠️ Workflow
-1) Start from `develop` or a `feature/*` branch
+1) Start from `staging` or a `feat/*` branch
 2) Make small, focused commits with clear messages
 3) Test locally; fix linter/type errors
-4) Push to `origin/develop` or open a PR from `feature/*` to `develop`
+4) Push to `origin/staging` or open a PR from `feat/*` to `staging`
 5) Request review; address feedback; keep PRs concise
 
 ## 🧰 Development Setup

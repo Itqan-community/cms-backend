@@ -5,7 +5,7 @@ from typing import Any
 
 from ninja import NinjaAPI
 from ninja.types import TCallable
-from scalar_django_ninja import ScalarViewer
+from scalar_ninja import ScalarViewer
 
 from apps.core.ninja_utils.parser import NinjaParser
 from apps.core.ninja_utils.router import ItqanRouter
