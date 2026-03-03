@@ -15,15 +15,15 @@ fi
 
 # Run Django management commands
 echo "Running database migrations..."
-python manage.py migrate --noinput
+uv run python manage.py migrate --noinput
 
 echo "Collecting static files..."
-python manage.py collectstatic --noinput
+uv run python manage.py collectstatic --noinput
 
 # Create superuser if it doesn't exist
 if [ -n "${DJANGO_SUPERUSER_EMAIL}" ] && [ -n "${DJANGO_SUPERUSER_PASSWORD}" ]; then
     echo "Creating superuser if not exists..."
-    python manage.py shell -c "
+    uv run python manage.py shell -c "
 from django.contrib.auth import get_user_model
 User = get_user_model()
 if not User.objects.filter(email='${DJANGO_SUPERUSER_EMAIL}').exists():
@@ -35,4 +35,4 @@ else:
 fi
 
 echo "Starting Gunicorn server..."
-exec gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 600 config.wsgi
+exec uv run gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 600 config.wsgi
