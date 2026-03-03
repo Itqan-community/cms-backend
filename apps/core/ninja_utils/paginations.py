@@ -1,3 +1,4 @@
+import math
 from typing import Any
 
 from django.db.models import QuerySet
@@ -22,7 +23,12 @@ class NinjaPagination(NinjaPageNumberPagination):
 
     class Output(Schema):
         results: list[Any]
-        count: int
+        total: int
+        page: int
+        page_size: int
+        total_pages: int
+        next_page: int | None
+        prev_page: int | None
 
     def paginate_queryset(
         self,
@@ -30,10 +36,19 @@ class NinjaPagination(NinjaPageNumberPagination):
         pagination: Input,
         **params: Any,
     ) -> Any:
-        offset = (pagination.page - 1) * pagination.page_size
+        total = self._items_count(queryset)
+        page = pagination.page
+        page_size = pagination.page_size
+        total_pages = math.ceil(total / page_size) if total > 0 else 0
+        offset = (page - 1) * page_size
         return {
-            "results": queryset[offset : offset + pagination.page_size],
-            "count": self._items_count(queryset),
+            "results": queryset[offset : offset + page_size],
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": total_pages,
+            "next_page": page + 1 if page < total_pages else None,
+            "prev_page": page - 1 if page > 1 and page <= total_pages + 1 else None,
         }
 
     async def apaginate_queryset(
@@ -42,8 +57,17 @@ class NinjaPagination(NinjaPageNumberPagination):
         pagination: Input,
         **params: Any,
     ) -> Any:
-        offset = (pagination.page - 1) * pagination.page_size
+        total = await self._aitems_count(queryset)
+        page = pagination.page
+        page_size = pagination.page_size
+        total_pages = math.ceil(total / page_size) if total > 0 else 0
+        offset = (page - 1) * page_size
         return {
-            "results": queryset[offset : offset + pagination.page_size],
-            "count": await self._aitems_count(queryset),
+            "results": queryset[offset : offset + page_size],
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": total_pages,
+            "next_page": page + 1 if page < total_pages else None,
+            "prev_page": page - 1 if page > 1 and page <= total_pages + 1 else None,
         }

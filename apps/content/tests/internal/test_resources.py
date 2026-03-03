@@ -38,7 +38,7 @@ class ResourceListTest(BaseTestCase):
 
         # Check pagination structure
         self.assertIn("results", body)
-        self.assertIn("count", body)
+        self.assertIn("total", body)
 
         items = body["results"]
         self.assertEqual(2, len(items))
@@ -490,3 +490,121 @@ class ResourceListTest(BaseTestCase):
         self.assertEqual(usage_event.user_agent, "Test Agent/1.0")
         # Note: IP address capture depends on Django test client configuration
         # In real requests, this would capture the client IP
+
+    def test_list_resources_pagination_response_shape(self):
+        self.authenticate_user(self.user)
+        for i in range(5):
+            baker.make(Resource, publisher=self.publisher1, name=f"Resource {i}")
+
+        response = self.client.get("/cms-api/resources/?page=1&page_size=2")
+        self.assertEqual(200, response.status_code)
+        body = response.json()
+
+        self.assertIn("results", body)
+        self.assertIn("total", body)
+        self.assertIn("page", body)
+        self.assertIn("page_size", body)
+        self.assertIn("total_pages", body)
+        self.assertIn("next_page", body)
+        self.assertIn("prev_page", body)
+
+        self.assertEqual(2, len(body["results"]))
+        self.assertEqual(5, body["total"])
+        self.assertEqual(1, body["page"])
+        self.assertEqual(2, body["page_size"])
+        self.assertEqual(3, body["total_pages"])
+        self.assertEqual(2, body["next_page"])
+        self.assertIsNone(body["prev_page"])
+
+    def test_list_resources_pagination_last_page(self):
+        self.authenticate_user(self.user)
+        for i in range(5):
+            baker.make(Resource, publisher=self.publisher1, name=f"Resource {i}")
+
+        response = self.client.get("/cms-api/resources/?page=3&page_size=2")
+        self.assertEqual(200, response.status_code)
+        body = response.json()
+
+        self.assertEqual(1, len(body["results"]))
+        self.assertEqual(5, body["total"])
+        self.assertEqual(3, body["page"])
+        self.assertEqual(3, body["total_pages"])
+        self.assertIsNone(body["next_page"])
+        self.assertEqual(2, body["prev_page"])
+
+    def test_list_resources_pagination_middle_page(self):
+        self.authenticate_user(self.user)
+        for i in range(5):
+            baker.make(Resource, publisher=self.publisher1, name=f"Resource {i}")
+
+        response = self.client.get("/cms-api/resources/?page=2&page_size=2")
+        self.assertEqual(200, response.status_code)
+        body = response.json()
+
+        self.assertEqual(2, len(body["results"]))
+        self.assertEqual(2, body["page"])
+        self.assertEqual(3, body["next_page"])
+        self.assertEqual(1, body["prev_page"])
+
+    def test_list_resources_pagination_empty_results(self):
+        self.authenticate_user(self.user)
+
+        response = self.client.get("/cms-api/resources/?page=1&page_size=10")
+        self.assertEqual(200, response.status_code)
+        body = response.json()
+
+        self.assertEqual(0, len(body["results"]))
+        self.assertEqual(0, body["total"])
+        self.assertEqual(1, body["page"])
+        self.assertEqual(0, body["total_pages"])
+        self.assertIsNone(body["next_page"])
+        self.assertIsNone(body["prev_page"])
+
+    def test_list_resources_pagination_default_page_size(self):
+        self.authenticate_user(self.user)
+        for i in range(25):
+            baker.make(Resource, publisher=self.publisher1, name=f"Resource {i}")
+
+        response = self.client.get("/cms-api/resources/")
+        self.assertEqual(200, response.status_code)
+        body = response.json()
+
+        self.assertEqual(20, len(body["results"]))
+        self.assertEqual(25, body["total"])
+        self.assertEqual(1, body["page"])
+        self.assertEqual(20, body["page_size"])
+        self.assertEqual(2, body["total_pages"])
+        self.assertEqual(2, body["next_page"])
+        self.assertIsNone(body["prev_page"])
+
+    def test_list_resources_pagination_page_beyond_total(self):
+        self.authenticate_user(self.user)
+        for i in range(3):
+            baker.make(Resource, publisher=self.publisher1, name=f"Resource {i}")
+
+        response = self.client.get("/cms-api/resources/?page=99&page_size=10")
+        self.assertEqual(200, response.status_code)
+        body = response.json()
+
+        self.assertEqual(0, len(body["results"]))
+        self.assertEqual(3, body["total"])
+        self.assertEqual(99, body["page"])
+        self.assertEqual(1, body["total_pages"])
+        self.assertIsNone(body["next_page"])
+        self.assertIsNone(body["prev_page"])
+
+    def test_list_resources_pagination_exact_boundary(self):
+        self.authenticate_user(self.user)
+        for i in range(10):
+            baker.make(Resource, publisher=self.publisher1, name=f"Resource {i}")
+
+        response = self.client.get("/cms-api/resources/?page=2&page_size=5")
+        self.assertEqual(200, response.status_code)
+        body = response.json()
+
+        self.assertEqual(5, len(body["results"]))
+        self.assertEqual(10, body["total"])
+        self.assertEqual(2, body["page"])
+        self.assertEqual(2, body["total_pages"])
+        self.assertIsNone(body["next_page"])
+        self.assertEqual(1, body["prev_page"])

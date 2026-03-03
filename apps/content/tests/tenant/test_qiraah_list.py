@@ -121,7 +121,7 @@ class QiraahListTest(BaseTestCase):
         body = response.json()
 
         self.assertIn("results", body)
-        self.assertIn("count", body)
+        self.assertIn("total", body)
 
         items = body["results"]
         qiraah_names = {item["name"] for item in items}

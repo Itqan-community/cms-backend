@@ -60,7 +60,7 @@ class RecitationTracksTest(BaseTestCase):
         body = response.json()
 
         self.assertIn("results", body)
-        self.assertIn("count", body)
+        self.assertIn("total", body)
 
         items = body["results"]
         self.assertEqual(2, len(items))
@@ -127,7 +127,7 @@ class RecitationTracksTest(BaseTestCase):
         body = response.json()
 
         self.assertIn("results", body)
-        self.assertIn("count", body)
+        self.assertIn("total", body)
 
         items = body["results"]
         self.assertEqual(2, len(items))
