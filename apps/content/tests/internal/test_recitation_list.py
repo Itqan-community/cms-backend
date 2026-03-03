@@ -70,7 +70,7 @@ class RecitationsListTest(BaseTestCase):
 
     # ── Baseline ──────────────────────────────────────────────
 
-    def test_list_recitations_should_return_only_ready_recitations(self):
+    def test_list_recitations_where_no_filters_should_return_only_ready_recitations(self):
         response = self.client.get("/cms-api/recitations/")
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
@@ -79,7 +79,7 @@ class RecitationsListTest(BaseTestCase):
         self.assertIn(self.asset1.id, returned_ids)
         self.assertIn(self.asset2.id, returned_ids)
 
-    def test_list_recitations_no_filters_returns_all(self):
+    def test_list_recitations_where_no_filters_should_return_all(self):
         response = self.client.get("/cms-api/recitations/")
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
@@ -87,7 +87,7 @@ class RecitationsListTest(BaseTestCase):
 
     # ── Search by English name ────────────────────────────────
 
-    def test_list_recitations_search_by_english_reciter_name(self):
+    def test_list_recitations_where_search_by_english_reciter_name_should_return_matching_recitation(self):
         response = self.client.get("/cms-api/recitations/?search=Alafasy")
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
@@ -96,21 +96,21 @@ class RecitationsListTest(BaseTestCase):
 
     # ── Search by Arabic name ─────────────────────────────────
 
-    def test_list_recitations_search_by_arabic_reciter_name(self):
+    def test_list_recitations_where_search_by_arabic_reciter_name_should_return_matching_recitation(self):
         response = self.client.get("/cms-api/recitations/?search=مشاري")
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
         self.assertEqual(1, len(items))
         self.assertEqual(self.asset1.id, items[0]["id"])
 
-    def test_list_recitations_search_by_riwayah_name_arabic(self):
+    def test_list_recitations_where_search_by_riwayah_name_arabic_should_return_matching_recitation(self):
         response = self.client.get("/cms-api/recitations/?search=حفص")
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
         self.assertEqual(1, len(items))
         self.assertEqual(self.asset1.id, items[0]["id"])
 
-    def test_list_recitations_search_by_qiraah_name_arabic(self):
+    def test_list_recitations_where_search_by_qiraah_name_arabic_should_return_matching_recitation(self):
         response = self.client.get("/cms-api/recitations/?search=عاصم")
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
@@ -119,7 +119,7 @@ class RecitationsListTest(BaseTestCase):
 
     # ── Filter by Riwayah ─────────────────────────────────────
 
-    def test_list_recitations_filter_by_riwayah(self):
+    def test_list_recitations_where_filter_by_riwayah_should_return_matching_recitation(self):
         response = self.client.get(f"/cms-api/recitations/?riwayah_id={self.riwayah_hafs.id}")
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
@@ -128,7 +128,7 @@ class RecitationsListTest(BaseTestCase):
 
     # ── Filter by Qiraah ──────────────────────────────────────
 
-    def test_list_recitations_filter_by_qiraah(self):
+    def test_list_recitations_where_filter_by_qiraah_should_return_matching_recitation(self):
         response = self.client.get(f"/cms-api/recitations/?qiraah_id={self.qiraah_nafi.id}")
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
@@ -137,7 +137,7 @@ class RecitationsListTest(BaseTestCase):
 
     # ── Combined filters ──────────────────────────────────────
 
-    def test_list_recitations_combined_filters_riwayah_and_reciter(self):
+    def test_list_recitations_where_filter_by_riwayah_and_reciter_should_return_matching_recitation(self):
         response = self.client.get(
             f"/cms-api/recitations/?riwayah_id={self.riwayah_hafs.id}&reciter_id={self.reciter1.id}"
         )
@@ -146,7 +146,7 @@ class RecitationsListTest(BaseTestCase):
         self.assertEqual(1, len(items))
         self.assertEqual(self.asset1.id, items[0]["id"])
 
-    def test_list_recitations_combined_filters_no_match(self):
+    def test_list_recitations_where_filter_by_riwayah_and_reciter_should_return_no_results(self):
         response = self.client.get(
             f"/cms-api/recitations/?riwayah_id={self.riwayah_hafs.id}&reciter_id={self.reciter2.id}"
         )
@@ -156,7 +156,7 @@ class RecitationsListTest(BaseTestCase):
 
     # ── Pagination ────────────────────────────────────────────
 
-    def test_list_recitations_pagination_response_structure(self):
+    def test_list_recitations_where_pagination_requested_should_return_paginated_response_structure(self):
         response = self.client.get("/cms-api/recitations/?page=1&page_size=1")
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
@@ -167,7 +167,7 @@ class RecitationsListTest(BaseTestCase):
 
     # ── Response shape ────────────────────────────────────────
 
-    def test_list_recitations_response_contains_expected_fields(self):
+    def test_list_recitations_where_fetching_recitations_should_return_response_with_expected_fields(self):
         response = self.client.get("/cms-api/recitations/")
         self.assertEqual(200, response.status_code, response.content)
         item = response.json()["results"][0]
