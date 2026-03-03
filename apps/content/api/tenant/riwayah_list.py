@@ -52,4 +52,6 @@ def list_riwayahs(request: Request, filters: RiwayahFilter = Query()):
     """
     repo = RecitationRepository()
     service = RiwayahService(repo)
-    return service.get_all_riwayahs(publisher_q=request.publisher_q("assets__resource__publisher"), filters=filters)
+    return service.get_all_riwayahs(
+        publisher_q=request.publisher_q("assets__resource__publisher"), filters=filters
+    ).order_by("id")
