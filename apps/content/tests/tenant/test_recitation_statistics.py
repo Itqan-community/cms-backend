@@ -86,7 +86,7 @@ class RecitationStatisticsTest(BaseTestCase):
 
     def test_statistics_excludes_other_publishers(self):
         other_publisher = baker.make(Publisher, name="Other Publisher")
-        other_domain = baker.make(
+        baker.make(
             "publishers.Domain",
             domain="other.com",
             publisher=other_publisher,
