@@ -183,6 +183,40 @@ class RecitationRepository(BaseRecitationRepository):
 
         return qs
 
+    def get_recitation_statistics(self, publisher_q: Q) -> dict[str, int]:
+        base_filter = Q(
+            category=Resource.CategoryChoice.RECITATION,
+            resource__category=Resource.CategoryChoice.RECITATION,
+            resource__status=Resource.StatusChoice.READY,
+        )
+        ready_assets = self.asset_model.objects.filter(publisher_q, base_filter)
+
+        total_recitations = ready_assets.count()
+
+        total_reciters = (
+            Reciter.objects.filter(
+                is_active=True,
+                assets__in=ready_assets,
+            )
+            .distinct()
+            .count()
+        )
+
+        total_riwayahs = (
+            self.riwayah_model.objects.filter(
+                is_active=True,
+                assets__in=ready_assets,
+            )
+            .distinct()
+            .count()
+        )
+
+        return {
+            "total_recitations": total_recitations,
+            "total_reciters": total_reciters,
+            "total_riwayahs": total_riwayahs,
+        }
+
     def list_qiraahs_qs(self, publisher_q: Q, filters_dict: dict[str, Any]) -> QuerySet[Qiraah]:
         """
         Returns a queryset of Qiraah objects that have READY recitation assets through riwayahs.

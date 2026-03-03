@@ -36,6 +36,9 @@ class RecitationService:
             asset_id, publisher_q=publisher_q, prefetch_timings=prefetch_timings
         )
 
+    def get_recitation_statistics(self, publisher_q: Q) -> dict[str, int]:
+        return self.repo.get_recitation_statistics(publisher_q)
+
     def get_all_reciters(self, publisher_q: Q, filters: Any = None) -> QuerySet:
         """
         Business Logic: Retrieve all reciters that have READY recitations for a specific publisher/tenant.
