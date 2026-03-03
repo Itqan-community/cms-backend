@@ -57,7 +57,7 @@ class RecitationsListTest(BaseTestCase):
             qiraah=self.qiraah_nafi,
         )
 
-        # Draft asset – should NOT be returned
+        # Draft asset - should NOT be returned
         baker.make(
             Asset,
             name="Draft Recitation",
