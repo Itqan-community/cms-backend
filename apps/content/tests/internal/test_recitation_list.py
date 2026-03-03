@@ -6,7 +6,7 @@ from apps.publishers.models import Publisher
 
 
 class RecitationsListTest(BaseTestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         super().setUp()
         self.publisher = baker.make(Publisher, name="Publisher One")
 
