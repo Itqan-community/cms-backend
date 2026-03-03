@@ -173,7 +173,7 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         SILAH = "silah", _("Silah")
         SKOUN = "skoun", _("Skoun")
 
-    resource = models.ForeignKey(Resource, on_delete=models.PROTECT, related_name="assets")
+    resource = models.ForeignKey(Resource, on_delete=models.PROTECT, related_name="assets", db_index=True)
 
     name = models.CharField(max_length=255, help_text="Asset name")
 
@@ -402,7 +402,7 @@ class AssetAccessRequest(BaseModel):
 
     developer_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="asset_requests")
 
-    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="access_requests")
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="access_requests", db_index=True)
 
     status = models.CharField(
         max_length=20,
@@ -439,9 +439,9 @@ class AssetAccess(BaseModel):
         AssetAccessRequest, on_delete=models.CASCADE, related_name="access_grant"
     )
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="asset_accesses")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="asset_accesses", db_index=True)
 
-    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="user_accesses")
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="user_accesses", db_index=True)
     effective_license = models.CharField(
         max_length=50,
         choices=LicenseChoice,
@@ -459,6 +459,9 @@ class AssetAccess(BaseModel):
 
     class Meta:
         unique_together = ["user", "asset"]
+        indexes = [
+            models.Index(fields=["asset"], name="assetaccess_asset_idx"),
+        ]
 
     def __str__(self):
         return f"AssetAccess(user_id={self.user_id}, asset_id={self.asset_id})"
@@ -494,7 +497,7 @@ class UsageEvent(BaseModel):
         RESOURCE = "resource", _("Resource")
         ASSET = "asset", _("Asset")
 
-    developer_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="usage_events")
+    developer_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="usage_events", db_index=True)
 
     usage_kind = models.CharField(max_length=20, choices=UsageKindChoice.choices, help_text="Type of usage event")
 
@@ -505,10 +508,12 @@ class UsageEvent(BaseModel):
     )
 
     resource_id = models.PositiveIntegerField(
-        null=True, blank=True, help_text="Resource ID if subject_kind = 'resource'"
+        null=True, blank=True, db_index=True, help_text="Resource ID if subject_kind = 'resource'"
     )
 
-    asset_id = models.PositiveIntegerField(null=True, blank=True, help_text="Asset ID if subject_kind = 'asset'")
+    asset_id = models.PositiveIntegerField(
+        null=True, blank=True, db_index=True, help_text="Asset ID if subject_kind = 'asset'"
+    )
 
     metadata = models.JSONField(default=dict, help_text="Additional event metadata")
 
@@ -518,6 +523,9 @@ class UsageEvent(BaseModel):
     effective_license = models.CharField(max_length=50, choices=LicenseChoice, help_text="License at time of usage")
 
     class Meta:
+        indexes = [
+            models.Index(fields=["developer_user", "usage_kind"], name="usageevent_user_kind_idx"),
+        ]
         constraints = [
             models.CheckConstraint(
                 condition=models.Q(
