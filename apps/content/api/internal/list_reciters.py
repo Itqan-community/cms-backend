@@ -31,7 +31,7 @@ class ReciterListOut(Schema):
     updated_at: AwareDatetime
 
 
-@router.get("reciters/", response=list[ReciterListOut], auth=None)
+@router.get("reciters/", response=list[ReciterListOut])
 @paginate
 @ordering(ordering_fields=["name_ar", "name_en", "created_at", "updated_at"])
 @searching(search_fields=["name_en", "name_ar", "slug"])
