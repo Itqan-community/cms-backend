@@ -893,7 +893,7 @@ class QiraahAdmin(admin.ModelAdmin):
         (
             "Basic Information",
             {
-                "fields": ("name", "bio", "slug", "is_active"),
+                "fields": ("name", "bio", "slug", "is_active", "recitation_style"),
             },
         ),
         (

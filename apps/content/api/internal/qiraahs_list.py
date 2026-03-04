@@ -36,6 +36,7 @@ class QiraahListOut(Schema):
     slug: str
     bio: str
     is_active: bool
+    recitation_style: str | None = None
     riwayahs: list[RiwayahOut]
     recitations_count: int = Field(0, description="Number of READY recitation assets")
 

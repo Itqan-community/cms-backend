@@ -643,10 +643,22 @@ class Reciter(BaseModel):
 class Qiraah(BaseModel):
     """Quran recitation method/school (e.g. Qiraah Asim, Qiraah Nafi, etc)"""
 
+    class RecitationStyleChoice(models.TextChoices):
+        MURATTAL = "murattal", _("Murattal / مرتل")
+        MUJAWWAD = "mujawwad", _("Mujawwad / مجود")
+
     name = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(unique=True, allow_unicode=True, db_index=True)
     bio = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
+    recitation_style = models.CharField(
+        max_length=20,
+        choices=RecitationStyleChoice.choices,
+        null=True,
+        blank=True,
+        help_text="Recitation style: Murattal (مرتل) or Mujawwad (مجود)",
+        verbose_name=_("Recitation Style / نوع التلاوة"),
+    )
 
     def save(self, *args, **kwargs) -> None:
         if not self.slug:
