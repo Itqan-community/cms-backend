@@ -11,35 +11,41 @@ Itqan CMS is a **Quranic Content Management System** designed to help **Publishe
 ```mermaid
 flowchart TB
     subgraph External["External Users"]
-        PUB["🏢 Publishers"]
-        DEV["👨‍💻 Developers"]
+        DEV["Developers"]
+        PUB["Publishers"]
+        STAFF["Internal Staff"]
     end
 
     subgraph ItqanCMS["Itqan CMS Platform"]
-        CMS_API["CMS API<br/>(Internal Frontend)"]
-        DEV_API["Developers API<br/>(Public)"]
+        CMS_API["CMS API<br/>(Internal Frontend)<br/>cms-api/"]
+        DEV_API["Public API<br/>(Developers' API)<br/>/"]
+        TENANT_API["Tenant API<br/>(Publisher SaaS)<br/>tenant/"]
+        PORTAL_API["Portal API<br/>(Admin CRUD)<br/>portal/"]
         CORE["Core System"]
     end
 
-    PUB -->|"Upload & Manage Content"| CMS_API
-    PUB -->|"Download Resources (GUI)"| CMS_API
-    PUB -->|"Create OAuth Clients"| CMS_API
-    DEV -->|"OAuth Client Credentials"| DEV_API
-    DEV -->|"Request Access & Consume"| DEV_API
+    DEV -->|"Create Account & OAuth Apps"| CMS_API
+    DEV -->|"Consume Content (OAuth2)"| DEV_API
+    PUB -->|"Branded Domain Access"| TENANT_API
+    STAFF -->|"Upload & Manage Content"| PORTAL_API
     CMS_API --> CORE
     DEV_API --> CORE
+    TENANT_API --> CORE
+    PORTAL_API --> CORE
 ```
 
 ---
 
 ## User Types
 
-The system serves **two distinct sets of users**, each with their own API and authentication mechanism:
+The system serves **four distinct API surfaces**, each with their own audience and authentication mechanism:
 
-| User Type | API | Purpose |
-|-----------|-----|---------|
-| **Internal Frontend Users** | `cms-api` | Publishers and staff who upload, manage, and govern Quranic resources. They can also download resources via the GUI and create OAuth clients (client_id/client_secret) for programmatic access to the `developers-api` |
-| **Developers** | `developers-api` | External developers who access and integrate resources into their apps using OAuth2 client credentials |
+| API | Mount | Purpose | Authentication |
+|-----|-------|---------|----------------|
+| **CMS API** (Internal) | `cms-api/` | Powers the frontend SPA. Users can create accounts, explore the platform, and create OAuth applications. | django-allauth (JWT), social login (Google/GitHub) |
+| **Public API** (Developers') | `/` (root) | Public-facing API consumed by external developers using OAuth applications created via the CMS API. **Expected to receive the majority of traffic.** | django-oauth-toolkit (OAuth2 client credentials) |
+| **Tenant API** | `tenant/` | Multi-tenant SaaS API for publishers. Each publisher can have their own domain; content is filtered by the `Domain` the request originates from. All tenants share a single database. | JWT/Session |
+| **Portal API** | `portal/` | Internal admin portal for uploading, writing, updating, and managing content (full CRUD). All users are internal company staff. | JWT/Session + role-based permissions |
 
 ---
 
@@ -155,18 +161,18 @@ Similar to ResourceVersion, **AssetVersion** tracks each uploaded file version o
 ```mermaid
 flowchart LR
     subgraph Publisher Flow
-        A["📤 Upload Resource"] --> B["📝 Create ResourceVersion<br/>(v1.0.0)"]
-        B --> C["✅ Set Status: Ready"]
+        A["Upload Resource"] --> B["Create ResourceVersion<br/>(v1.0.0)"]
+        B --> C["Set Status: Ready"]
     end
 
     subgraph Derivation Flow
-        C --> D["🔄 Create Asset<br/>(Derived from Resource)"]
-        D --> E["📝 Create AssetVersion<br/>(linked to ResourceVersion)"]
+        C --> D["Create Asset<br/>(Derived from Resource)"]
+        D --> E["Create AssetVersion<br/>(linked to ResourceVersion)"]
     end
 
     subgraph Version Updates
-        B -.->|"New version"| F["📝 ResourceVersion<br/>(v1.1.0)"]
-        E -.->|"New version"| G["📝 AssetVersion<br/>(linked to v1.1.0)"]
+        B -.->|"New version"| F["ResourceVersion<br/>(v1.1.0)"]
+        E -.->|"New version"| G["AssetVersion<br/>(linked to v1.1.0)"]
     end
 ```
 
@@ -225,7 +231,7 @@ Developers can create **OAuth2 applications** via the CMS frontend to access the
 - Use client credentials flow to obtain access tokens
 - Make authenticated API requests
 
-**📖 For complete OAuth flow diagrams, security best practices, and step-by-step guides, see [AUTHENTICATION.md](./AUTHENTICATION.md)**
+**For complete OAuth flow diagrams, security best practices, and step-by-step guides, see [AUTHENTICATION.md](./AUTHENTICATION.md)**
 
 ---
 
@@ -239,9 +245,9 @@ Assets can be distributed through multiple channels:
 flowchart TB
     AV["AssetVersion"]
 
-    AV --> D1["📥 FILE_DOWNLOAD<br/>Direct file download"]
-    AV --> D2["🔌 API<br/>Programmatic access"]
-    AV --> D3["📦 PACKAGE<br/>SDK/Library distribution"]
+    AV --> D1["FILE_DOWNLOAD<br/>Direct file download"]
+    AV --> D2["API<br/>Programmatic access"]
+    AV --> D3["PACKAGE<br/>SDK/Library distribution"]
 ```
 
 ---
@@ -253,9 +259,9 @@ The system tracks all interactions for analytics and auditing:
 ```mermaid
 flowchart LR
     subgraph Events
-        E1["👁️ View"]
-        E2["📥 File Download"]
-        E3["🔌 API Access"]
+        E1["View"]
+        E2["File Download"]
+        E3["API Access"]
     end
 
     subgraph Subjects
@@ -267,7 +273,7 @@ flowchart LR
     UE --> S1
     UE --> S2
 
-    UE --> Stats["📊 Analytics Dashboard"]
+    UE --> Stats["Analytics Dashboard"]
 ```
 
 ---
@@ -277,14 +283,18 @@ flowchart LR
 ```mermaid
 flowchart TB
     subgraph External
-        Browser["🌐 CMS Frontend<br/>(Browser)"]
-        DevApp["📱 Developer Apps"]
+        Browser["CMS Frontend<br/>(Browser)"]
+        DevApp["Developer Apps"]
+        PubDomain["Publisher Domains"]
+        AdminUI["Admin Portal"]
     end
 
     subgraph Itqan Platform
         subgraph APIs
-            CMS["cms-api<br/>(django-allauth)"]
-            PUB["developers-api<br/>(OAuth2)"]
+            CMS["CMS API - cms-api/<br/>(django-allauth)"]
+            PUB["Public API - /<br/>(OAuth2)"]
+            TENANT["Tenant API - tenant/<br/>(JWT/Session)"]
+            PORTAL["Portal API - portal/<br/>(JWT/Session + Permissions)"]
         end
 
         subgraph Core
@@ -305,8 +315,12 @@ flowchart TB
 
     Browser --> CMS
     DevApp --> PUB
+    PubDomain --> TENANT
+    AdminUI --> PORTAL
     CMS --> Models
     PUB --> Models
+    TENANT --> Models
+    PORTAL --> Models
     Models --> Services
     Services --> DB
     Services --> Files
