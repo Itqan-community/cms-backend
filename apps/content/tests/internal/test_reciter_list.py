@@ -42,7 +42,7 @@ class RecitersListTest(BaseTestCase):
         )
         return reciter
 
-    def test_list_reciters_returns_only_active_reciters_with_ready_recitations(self):
+    def test_reciters_listing_where_having_multiple_reciters_api_should_return_only_active_reciters_with_ready_recitations(self):
         self._make_reciter_with_recitation(Resource.StatusChoice.READY, name_ar="قارئ نشط", is_active=True)             # Active + READY → appears
         self._make_reciter_with_recitation(Resource.StatusChoice.READY, name_ar="قارئ غير نشط ١", is_active=False)      # Inactive + READY → does NOT appear
         self._make_reciter_with_recitation(Resource.StatusChoice.DRAFT, name_ar="قارئ غير نشط ٢", is_active=False)      # Inactive + DRAFT → does NOT appear
@@ -77,7 +77,7 @@ class RecitersListTest(BaseTestCase):
         self.assertIn("created_at", item)
         self.assertIn("updated_at", item)
 
-    def test_list_reciters_default_ordering_by_name_ar(self):
+    def test_reciters_where_no_ordering_parameter_provided_api_should_fallback_to_ordering_by_name_ar(self):
         for name_ar in ["ياسر الدوسري", "أحمد العجمي", "سعد الغامدي"]:
             self._make_reciter_with_recitation(name_ar=name_ar, is_active=True)
 
@@ -91,7 +91,7 @@ class RecitersListTest(BaseTestCase):
         self.assertEqual(sorted(names), names)
 
 
-    def test_list_reciters_search_by_name_ar(self):
+    def test_reciters_listing_where_search_paramter_is_provided_api_should_return_matched_reciters(self):
         self._make_reciter_with_recitation(
             name="Mishary Rashid", name_ar="مشاري راشد العفاسي", is_active=True
         )

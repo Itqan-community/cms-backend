@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from ninja import Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime
