@@ -2,7 +2,9 @@ from datetime import datetime
 
 from ninja import Schema
 from ninja.pagination import paginate
+from pydantic import AwareDatetime
 
+from apps.core.ninja_utils.types import AbsoluteUrl
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -24,16 +26,16 @@ class ReciterListOut(Schema):
     slug: str
     bio: str
     is_active: bool
-    image_url: str | None
-    created_at: datetime
-    updated_at: datetime
+    image_url: AbsoluteUrl | None
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
 
 
-@router.get("reciters/", response=list[ReciterListOut])
+@router.get("reciters/", response=list[ReciterListOut], auth=None)
 @paginate
 @ordering(ordering_fields=["name_ar", "name_en", "created_at", "updated_at"])
 @searching(search_fields=["name_en", "name_ar", "slug"])
-def list_sorted_reciters(request: Request):
+def list_reciters(request: Request):
 
     recitation_repo     = RecitationRepository()
     recitation_service  = RecitationService(recitation_repo)

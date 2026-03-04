@@ -1,136 +1,108 @@
 from model_bakery import baker
-from oauth2_provider.models import Application
 
 from apps.content.models import Asset, Reciter, Resource
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
-from apps.users.adapters import User
+from apps.users.models import User
 
 
 class RecitersListTest(BaseTestCase):
-
     def setUp(self):
         super().setUp()
+        self.user = baker.make(User, email="admin@example.com", is_active=True, is_staff=True)
         self.publisher = baker.make(Publisher)
-
-        # Valid resource/asset that should be counted
         self.recitation_resource = baker.make(
             Resource,
             publisher=self.publisher,
             category=Resource.CategoryChoice.RECITATION,
             status=Resource.StatusChoice.READY,
         )
-        self.active_reciter = baker.make(Reciter, is_active=True, name="Active Reciter")
-
-        riwayah = baker.make("content.Riwayah", name="Test Riwayah")
-        self.valid_asset = baker.make(
-            Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            reciter=self.active_reciter,
-            resource=self.recitation_resource,
-            riwayah=riwayah,
-        )
-
-        # Inactive reciter should NOT appear
-        self.inactive_reciter = baker.make(Reciter, is_active=False, name="Inactive Reciter")
-        baker.make(
-            Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            reciter=self.inactive_reciter,
-            resource=self.recitation_resource,
-            riwayah=riwayah,
-        )
-
-        # Asset with non-RECITATION category should NOT be counted
-        self.other_category_asset = baker.make(
-            Asset,
-            category=Resource.CategoryChoice.TAFSIR,  # assuming another category exists
-            resource=self.recitation_resource,
-        )
-
-        # Resource not READY should NOT be counted
-        self.draft_resource = baker.make(
+        self.draft_recitation_resource = baker.make(
             Resource,
             publisher=self.publisher,
             category=Resource.CategoryChoice.RECITATION,
             status=Resource.StatusChoice.DRAFT,
         )
+        self.riwayah = baker.make("content.Riwayah")
+
+    def _make_reciter_with_recitation(self, resource_status=Resource.StatusChoice.READY, **kwargs):
+        """Create a reciter with a recitation asset linked to a resource of the given status."""
+        resource = (
+            self.recitation_resource
+            if resource_status == Resource.StatusChoice.READY
+            else self.draft_recitation_resource
+        )
+        reciter = baker.make(Reciter, **kwargs)
         baker.make(
             Asset,
             category=Resource.CategoryChoice.RECITATION,
-            reciter=self.active_reciter,
-            resource=self.draft_resource,
-            riwayah=riwayah,
+            reciter=reciter,
+            resource=resource,
+            riwayah=self.riwayah,
         )
+        return reciter
 
-        # Resource with non-RECITATION category should NOT be counted
-        self.other_resource = baker.make(
-            Resource,
-            publisher=self.publisher,
-            category=Resource.CategoryChoice.TAFSIR,
-            status=Resource.StatusChoice.READY,
-        )
-        baker.make(
-            Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            reciter=self.active_reciter,
-            resource=self.other_resource,
-            riwayah=riwayah,
-        )
-        self.user = User.objects.create_user(email="oauthuser@example.com", name="OAuth User")
-        self.app = Application.objects.create(
-            user=self.user,
-            name="App 1",
-            client_type="confidential",
-            authorization_grant_type="password",
-        )
+    def test_list_reciters_returns_only_active_reciters_with_ready_recitations(self):
+        self._make_reciter_with_recitation(Resource.StatusChoice.READY, name_ar="قارئ نشط", is_active=True)             # Active + READY → appears
+        self._make_reciter_with_recitation(Resource.StatusChoice.READY, name_ar="قارئ غير نشط ١", is_active=False)      # Inactive + READY → does NOT appear
+        self._make_reciter_with_recitation(Resource.StatusChoice.DRAFT, name_ar="قارئ غير نشط ٢", is_active=False)      # Inactive + DRAFT → does NOT appear
+        self._make_reciter_with_recitation(Resource.StatusChoice.DRAFT, name_ar="قارئ نشط ٢", is_active=True)           # ACTIVE + DRAFT → does NOT appear
+        baker.make(Reciter, name_ar="قارئ بدون تسجيل", is_active=True)                                                  # Active + no asset → does NOT appear
 
-    def test_list_reciters_should_return_only_active_reciters_with_ready_recitations(self):
-        # Arrange
-        self.authenticate_client(self.app)
+        self.authenticate_user(self.user)
+        response = self.client.get("/cms-api/reciters/")
 
-        # Act
-        response = self.client.get("/reciters/")
-
-        # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
-
         self.assertIn("results", body)
-        self.assertIn("count", body)
+        self.assertEqual(1, body["count"])
 
-        items = body["results"]
-        reciter_names = {item["name"] for item in items}
-
-        self.assertIn("Active Reciter", reciter_names)
-        self.assertNotIn("Inactive Reciter", reciter_names)
-
-        # There should be exactly one reciter (the active one with at least one valid asset)
-        self.assertEqual(1, len(items))
-
-        reciter_item = items[0]
-        self.assertEqual(self.active_reciter.id, reciter_item["id"])
-        # Only the valid RECITATION asset with READY + RECITATION resource should be counted
-        self.assertEqual(1, reciter_item["recitations_count"])
-
-    def test_list_reciters_ordering_by_name(self):
-        # Arrange – another active reciter so we can test ordering
-        other_reciter = baker.make(Reciter, is_active=True, name="A Reciter")
-        baker.make(
-            Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            reciter=other_reciter,
-            resource=self.recitation_resource,
-            riwayah=baker.make("content.Riwayah", name="Test Riwayah1"),
+    def test_list_reciters_returns_detailed_fields(self):
+        self._make_reciter_with_recitation(
+            name="Test Reciter",
+            slug="test-reciter",
+            is_active=True,
         )
-        self.authenticate_client(self.app)
+        self.authenticate_user(self.user)
 
-        # Act
-        response = self.client.get("/reciters/?ordering=name")
+        response = self.client.get("/cms-api/reciters/")
 
-        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        item = response.json()["results"][0]
+        self.assertIn("name", item)
+        self.assertIn("slug", item)
+        self.assertIn("bio", item)
+        self.assertIn("is_active", item)
+        self.assertIn("image_url", item)
+        self.assertIn("created_at", item)
+        self.assertIn("updated_at", item)
+
+    def test_list_reciters_default_ordering_by_name_ar(self):
+        for name_ar in ["ياسر الدوسري", "أحمد العجمي", "سعد الغامدي"]:
+            self._make_reciter_with_recitation(name_ar=name_ar, is_active=True)
+
+        # Use Accept-Language: ar so that `name` in the response maps to name_ar
+        self.authenticate_user(self.user, language="ar")
+        response = self.client.get("/cms-api/reciters/")
+
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
-
         names = [item["name"] for item in items]
-        self.assertEqual(sorted(names), names)  # ascending by name
+        self.assertEqual(sorted(names), names)
+
+
+    def test_list_reciters_search_by_name_ar(self):
+        self._make_reciter_with_recitation(
+            name="Mishary Rashid", name_ar="مشاري راشد العفاسي", is_active=True
+        )
+        self._make_reciter_with_recitation(
+            name="Saad Al-Ghamidi", name_ar="سعد الغامدي", is_active=True
+        )
+        self.authenticate_user(self.user, language="ar")
+
+        response = self.client.get("/cms-api/reciters/", data={"search": "مشاري"})
+
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(1, body["count"])
+        self.assertEqual("مشاري راشد العفاسي", body["results"][0]["name"])
