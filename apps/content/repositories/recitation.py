@@ -110,6 +110,7 @@ class RecitationRepository(BaseRecitationRepository):
             Reciter.objects.filter(
                 is_active=True,
             )
+            .filter(recitation_filter)
             .distinct()
             .annotate(
                 recitations_count=Count(
