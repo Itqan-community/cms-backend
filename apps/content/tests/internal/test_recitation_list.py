@@ -169,6 +169,7 @@ class RecitationsListTest(BaseTestCase):
     # ── Pagination ────────────────────────────────────────────
 
     def test_list_recitations_where_pagination_requested_should_return_paginated_response_structure(self):
+        self.authenticate_user(self.user)
         response = self.client.get("/cms-api/recitations/?page=1&page_size=1")
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
@@ -180,6 +181,7 @@ class RecitationsListTest(BaseTestCase):
     # ── Response shape ────────────────────────────────────────
 
     def test_list_recitations_where_fetching_recitations_should_return_response_with_expected_fields(self):
+        self.authenticate_user(self.user)
         response = self.client.get("/cms-api/recitations/")
         self.assertEqual(200, response.status_code, response.content)
         item = response.json()["results"][0]
