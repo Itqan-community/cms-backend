@@ -1,0 +1,46 @@
+from django.core.cache import cache
+from model_bakery import baker
+
+from apps.core.tests import BaseTestCase
+from apps.users.models import User
+from apps.publishers.models import Publisher
+
+
+class PublisherStatsEndpointTest(BaseTestCase):
+    def setUp(self):
+        self.url = "/portal/publishers/stats/"
+
+        self.user = baker.make(User, is_active=True)
+        self.authenticate_user(self.user)
+
+    def test_stats_endpoint_where_unauthenticated_should_return_401(self):
+        # Arrange
+        self.client.logout()
+
+        # Act
+        response = self.client.get(self.url)
+
+        # Assert
+        self.assertEqual(401, response.status_code)
+
+    def test_stats_endpoint_where_cache_populated_should_return_cached_data(self):
+        # Arrange
+        cache.set("publisher_stats", {"total_publishers": 99})
+
+        # Act
+        response = self.client.get(self.url)
+
+        # Assert
+        self.assertEqual(200, response.status_code)
+        self.assertEqual(99, response.json()["total_publishers"])
+
+    def test_stats_endpoint_where_cache_empty_should_compute_and_return(self):
+        # Arrange
+        baker.make(Publisher)
+
+        # Act
+        response = self.client.get(self.url)
+
+        # Assert
+        self.assertEqual(200, response.status_code)
+        self.assertIn("total_publishers", response.json())
