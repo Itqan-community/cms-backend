@@ -1,8 +1,9 @@
-from django.db.models import Count, Q
-from ninja import Schema
-from django.db.models.signals import post_save, post_delete
-from django.dispatch import receiver
 from django.core.cache import cache
+from django.db.models import Count, Q
+from django.db.models.signals import post_delete, post_save
+from django.dispatch import receiver
+from ninja import Schema
+
 from apps.content.models import Reciter
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -40,12 +41,13 @@ def reciter_stats(request: Request):
             "nationality",
             filter=Q(is_active=True),
             distinct=True,
-        )
+        ),
     )
 
     cache.set(RECITER_STATS_CACHE_KEY, stats, timeout=RECITER_STATS_TTL)
     print(stats)
     return stats
+
 
 @receiver(post_save, sender=Reciter)
 @receiver(post_delete, sender=Reciter)

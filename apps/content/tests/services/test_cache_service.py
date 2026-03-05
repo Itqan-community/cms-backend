@@ -1,10 +1,10 @@
 import os
+from unittest import skipUnless
 
-import redis
 from django.conf import settings
 from django.core.cache import cache
-from django.test import TestCase, override_settings
-from unittest import skipUnless
+from django.test import override_settings
+import redis
 
 from apps.core.tests import BaseTestCase
 

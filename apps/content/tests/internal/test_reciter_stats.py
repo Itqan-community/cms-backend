@@ -1,11 +1,8 @@
 import os
-from unittest import skipUnless
 from unittest.mock import patch
 
-import redis
-from django.conf import settings
 from django.core.cache import cache
-from django.test import TestCase, override_settings
+from django.test import override_settings
 from model_bakery import baker
 
 from apps.content.api.internal.reciter_stats import RECITER_STATS_CACHE_KEY, RECITER_STATS_TTL
@@ -44,9 +41,7 @@ class ReciterStatsCacheTests(BaseTestCase):
         # Arrange: have at least one reciter so aggregate makes sense
         Reciter.objects.create(name="Test Reciter 1")
 
-        with patch(
-            "apps.content.api.internal.reciter_stats.Reciter.objects.aggregate"
-        ) as aggregate_mock:
+        with patch("apps.content.api.internal.reciter_stats.Reciter.objects.aggregate") as aggregate_mock:
             aggregate_mock.return_value = {
                 "registered_reciters": 1,
                 "contemporary_reciters": 0,
@@ -85,9 +80,7 @@ class ReciterStatsCacheTests(BaseTestCase):
             timeout=RECITER_STATS_TTL,
         )
 
-        with patch(
-            "apps.content.api.internal.reciter_stats.Reciter.objects.aggregate"
-        ) as aggregate_mock:
+        with patch("apps.content.api.internal.reciter_stats.Reciter.objects.aggregate") as aggregate_mock:
             # Act
             response = self.client.get("/cms-api/reciters/stats/")
 
