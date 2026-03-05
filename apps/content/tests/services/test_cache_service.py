@@ -16,7 +16,7 @@ from apps.core.tests import BaseTestCase
 @override_settings(
     CACHES={
         "default": {
-            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "BACKEND": "django_redis.cache.RedisCache",
             "LOCATION": os.getenv("REDIS_URL", "redis://localhost:6379/1"),
         }
     }

@@ -34,7 +34,7 @@ def reciter_stats(request: Request):
         ),
         contemporary_reciters=Count(
             "id",
-            filter=Q(is_contemporary=True),
+            filter=Q(is_contemporary=True, is_active=True),
             distinct=True,
         ),
         nationalities=Count(
@@ -45,7 +45,6 @@ def reciter_stats(request: Request):
     )
 
     cache.set(RECITER_STATS_CACHE_KEY, stats, timeout=RECITER_STATS_TTL)
-    print(stats)
     return stats
 
 
