@@ -22,6 +22,10 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _task_extra(task_name: str, **task_args):
+    return {"task_name": task_name, "task_args": task_args}
+
+
 class EventData(TypedDict):
     developer_user_id: int
     usage_kind: UsageEvent.UsageKindChoice
@@ -56,7 +60,10 @@ def create_usage_event_task(self, event_data):
         required_fields = ["developer_user_id", "usage_kind", "subject_kind"]
         for field in required_fields:
             if field not in event_data:
-                logger.error(f"Missing required field '{field}' in usage event data")
+                logger.error(
+                    "Missing required field in usage event data",
+                    extra=_task_extra("create_usage_event_task", missing_field=field, event_data=event_data),
+                )
                 return False
 
         # Get user
@@ -65,7 +72,10 @@ def create_usage_event_task(self, event_data):
         try:
             user = User.objects.get(id=event_data["developer_user_id"])
         except User.DoesNotExist:
-            logger.error(f"User {event_data['developer_user_id']} not found for usage event")
+            logger.error(
+                "User not found for usage event",
+                extra=_task_extra("create_usage_event_task", developer_user_id=event_data["developer_user_id"]),
+            )
             return False
 
         # Validate subject references
@@ -76,13 +86,19 @@ def create_usage_event_task(self, event_data):
             try:
                 Asset.objects.get(id=asset_id)
             except Asset.DoesNotExist:
-                logger.error(f"Asset {asset_id} not found for usage event")
+                logger.error(
+                    "Asset not found for usage event",
+                    extra=_task_extra("create_usage_event_task", asset_id=asset_id, subject_kind="asset"),
+                )
                 return False
         elif event_data["subject_kind"] == "resource" and resource_id:
             try:
                 Resource.objects.get(id=resource_id)
             except Resource.DoesNotExist:
-                logger.error(f"Resource {resource_id} not found for usage event")
+                logger.error(
+                    "Resource not found for usage event",
+                    extra=_task_extra("create_usage_event_task", resource_id=resource_id, subject_kind="resource"),
+                )
                 return False
 
         # Create usage event
@@ -103,7 +119,11 @@ def create_usage_event_task(self, event_data):
             return True
 
     except Exception as exc:
-        logger.error(f"Failed to create usage event: {exc}")
+        logger.exception(
+            "Failed to create usage event",
+            exc_info=exc,
+            extra=_task_extra("create_usage_event_task", event_data=event_data, retries=self.request.retries),
+        )
         # Retry the task with explicit exception chaining
         raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1)) from exc
 
@@ -129,7 +149,12 @@ def update_asset_statistics_task(self, asset_id, stat_type, increment=1):
         elif stat_type == "view_count":
             asset.view_count += increment
         else:
-            logger.error(f"Invalid stat_type: {stat_type}")
+            logger.error(
+                "Invalid stat_type for asset statistics update",
+                extra=_task_extra(
+                    "update_asset_statistics_task", asset_id=asset_id, stat_type=stat_type, increment=increment
+                ),
+            )
             return False
 
         asset.save(update_fields=[stat_type, "updated_at"])
@@ -137,9 +162,23 @@ def update_asset_statistics_task(self, asset_id, stat_type, increment=1):
         return True
 
     except Asset.DoesNotExist:
-        logger.error(f"Asset {asset_id} not found for statistics update")
+        logger.error(
+            "Asset not found for statistics update",
+            extra=_task_extra("update_asset_statistics_task", asset_id=asset_id, stat_type=stat_type),
+        )
         return False
     except Exception as exc:
+        logger.exception(
+            "Failed to update asset statistics",
+            exc_info=exc,
+            extra=_task_extra(
+                "update_asset_statistics_task",
+                asset_id=asset_id,
+                stat_type=stat_type,
+                increment=increment,
+                retries=self.request.retries,
+            ),
+        )
         raise self.retry(exc=exc, countdown=30 * (self.request.retries + 1)) from exc
 
 
@@ -178,7 +217,11 @@ def batch_create_usage_events_task(events_data):
                 events_to_create.append(event)
 
             except Exception as e:
-                logger.error(f"Failed to prepare usage event: {e}")
+                logger.warning(
+                    "Failed to prepare usage event in batch",
+                    exc_info=e,
+                    extra=_task_extra("batch_create_usage_events_task", event_data=event_data),
+                )
                 continue
 
         # Bulk create events
@@ -191,7 +234,11 @@ def batch_create_usage_events_task(events_data):
         return successful_events
 
     except Exception as exc:
-        logger.error(f"Failed to batch create usage events: {exc}")
+        logger.exception(
+            "Failed to batch create usage events",
+            exc_info=exc,
+            extra=_task_extra("batch_create_usage_events_task", events_count=len(events_data)),
+        )
         return 0
 
 
@@ -243,6 +290,14 @@ def compute_daily_analytics_task():
                     }
                 )
             except Asset.DoesNotExist:
+                logger.warning(
+                    "Asset missing while computing top_assets daily analytics",
+                    extra=_task_extra(
+                        "compute_daily_analytics_task",
+                        asset_id=asset_stat.get("asset_id"),
+                        date=today.isoformat(),
+                    ),
+                )
                 continue
 
         # Get top publishers by activity today
@@ -265,6 +320,14 @@ def compute_daily_analytics_task():
                     }
                 )
             except Publisher.DoesNotExist:
+                logger.warning(
+                    "Publisher missing while computing top_publishers daily analytics",
+                    extra=_task_extra(
+                        "compute_daily_analytics_task",
+                        publisher_id=pub_stat.get("asset__publisher"),
+                        date=today.isoformat(),
+                    ),
+                )
                 continue
 
         # Store or cache the daily stats
@@ -274,7 +337,7 @@ def compute_daily_analytics_task():
         return daily_stats
 
     except Exception as exc:
-        logger.error(f"Failed to compute daily analytics: {exc}")
+        logger.exception("Failed to compute daily analytics", exc_info=exc, extra=_task_extra("compute_daily_analytics_task"))
         return None
 
 
@@ -314,7 +377,11 @@ def cleanup_old_usage_events_task(days_to_keep=90):
         return deleted_count
 
     except Exception as exc:
-        logger.error(f"Failed to cleanup old usage events: {exc}")
+        logger.exception(
+            "Failed to cleanup old usage events",
+            exc_info=exc,
+            extra=_task_extra("cleanup_old_usage_events_task", days_to_keep=days_to_keep),
+        )
         return 0
 
 
@@ -349,10 +416,17 @@ def update_publisher_statistics_task(publisher_id):
         return stats
 
     except Publisher.DoesNotExist:
-        logger.error(f"Publisher {publisher_id} not found for statistics update")
+        logger.error(
+            "Publisher not found for statistics update",
+            extra=_task_extra("update_publisher_statistics_task", publisher_id=publisher_id),
+        )
         return None
     except Exception as exc:
-        logger.error(f"Failed to update publisher statistics: {exc}")
+        logger.exception(
+            "Failed to update publisher statistics",
+            exc_info=exc,
+            extra=_task_extra("update_publisher_statistics_task", publisher_id=publisher_id),
+        )
         return None
 
 
@@ -369,7 +443,11 @@ def track_event_async(event_data):
         create_usage_event_task.delay(event_data)
         return True
     except Exception as e:
-        logger.error(f"Failed to queue usage event: {e}")
+        logger.exception(
+            "Failed to queue usage event",
+            exc_info=e,
+            extra=_task_extra("track_event_async", event_data=event_data),
+        )
         # Fallback to synchronous creation if Celery is unavailable
         try:
             from .models import UsageEvent
@@ -377,7 +455,11 @@ def track_event_async(event_data):
             UsageEvent.objects.create(**event_data)
             return True
         except Exception as sync_e:
-            logger.error(f"Failed to create usage event synchronously: {sync_e}")
+            logger.exception(
+                "Failed to create usage event synchronously",
+                exc_info=sync_e,
+                extra=_task_extra("track_event_async", event_data=event_data),
+            )
             return False
 
 
@@ -394,7 +476,11 @@ def update_asset_stats_async(asset_id, stat_type, increment=1):
         update_asset_statistics_task.delay(asset_id, stat_type, increment)
         return True
     except Exception as e:
-        logger.error(f"Failed to queue asset statistics update: {e}")
+        logger.exception(
+            "Failed to queue asset statistics update",
+            exc_info=e,
+            extra=_task_extra("update_asset_stats_async", asset_id=asset_id, stat_type=stat_type, increment=increment),
+        )
         return False
 
 
@@ -435,7 +521,11 @@ def cleanup_stuck_multipart_uploads_task(older_than_hours: int = 2):
         return result
 
     except Exception as exc:
-        logger.error(f"Failed to cleanup stuck multipart uploads: {exc}")
+        logger.exception(
+            "Failed to cleanup stuck multipart uploads",
+            exc_info=exc,
+            extra=_task_extra("cleanup_stuck_multipart_uploads_task", older_than_hours=older_than_hours),
+        )
         return {
             "abortedUploads": 0,
             "dbRecordsCleaned": 0,
@@ -453,6 +543,10 @@ def send_resource_update_email(resource_version_id: int) -> None:
     try:
         resource_version = ResourceVersion.objects.select_related("resource").get(pk=resource_version_id)
     except ResourceVersion.DoesNotExist:
+        logger.warning(
+            "ResourceVersion not found for update email task",
+            extra=_task_extra("send_resource_update_email", resource_version_id=resource_version_id),
+        )
         return
 
     # Find users with active access to any asset of this resource
@@ -501,6 +595,10 @@ def send_asset_update_email(asset_version_id: int) -> None:
     try:
         asset_version = AssetVersion.objects.select_related("asset", "resource_version").get(pk=asset_version_id)
     except AssetVersion.DoesNotExist:
+        logger.warning(
+            "AssetVersion not found for update email task",
+            extra=_task_extra("send_asset_update_email", asset_version_id=asset_version_id),
+        )
         return
 
     # Find users with active access to this asset

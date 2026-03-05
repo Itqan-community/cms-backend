@@ -1,4 +1,5 @@
 from typing import Literal
+import logging
 
 from django.conf import settings
 from ninja import Schema
@@ -12,6 +13,7 @@ from apps.core.ninja_utils.tags import NinjaTag
 from apps.users.models import User
 
 router = ItqanRouter(tags=[NinjaTag.AUTH])
+logger = logging.getLogger(__name__)
 
 if not settings.ENABLE_ALLAUTH:
 
@@ -53,6 +55,11 @@ if not settings.ENABLE_ALLAUTH:
                     new_refresh = RefreshToken.for_user(user)
                     response_data["refresh"] = str(new_refresh)
                 except Exception as e:
+                    logger.exception(
+                        "Refresh token rotation failed",
+                        exc_info=e,
+                        extra={"request_path": request.path},
+                    )
                     raise ItqanError(
                         error_name="token_rotation_failed",
                         message=f"Failed to rotate refresh token: {str(e)}",

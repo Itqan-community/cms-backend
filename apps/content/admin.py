@@ -388,6 +388,7 @@ class AssetAdmin(admin.ModelAdmin):
         try:
             sync_asset_recitations_json_file(asset_id=asset_id)
         except Exception as e:
+            logger.exception("Sync recitations JSON failed", extra={"asset_id": asset_id}, exc_info=e)
             self.message_user(request, f"Sync failed: {e}", level="ERROR")
             return redirect(reverse("admin:content_asset_change", args=[asset_id]))
 
@@ -406,8 +407,12 @@ class AssetAdmin(admin.ModelAdmin):
                 if durations_json:
                     try:
                         durations_by_filename = json.loads(durations_json)
-                    except Exception:
-                        pass  # Silently ignore invalid JSON, fallback to mutagen
+                    except json.JSONDecodeError as exc:
+                        logger.warning(
+                            "Invalid durations_json in bulk upload; falling back to mutagen",
+                            exc_info=exc,
+                            extra={"asset_id": asset_id, "durations_json_length": len(durations_json or "")},
+                        )
 
                 stats = bulk_upload_recitation_audio_tracks(
                     asset_id=asset_id, files=files, durations_by_filename=durations_by_filename
@@ -541,8 +546,8 @@ class AssetAdmin(admin.ModelAdmin):
             return JsonResponse(
                 {"error_name": e.error_name, "message": e.message, "extra": e.extra}, status=e.status_code
             )
-        except Exception:
-            logger.exception(f"uploads_start_view failed (asset_id={locals().get('asset_id')})")
+        except Exception as e:
+            logger.exception(f"uploads_start_view failed (asset_id={locals().get('asset_id')})", exc_info=e)
             return JsonResponse(
                 {"error_name": "server_error", "message": "An unexpected error occurred"},
                 status=500,
@@ -567,13 +572,14 @@ class AssetAdmin(admin.ModelAdmin):
             return JsonResponse(
                 {"error_name": e.error_name, "message": e.message, "extra": e.extra}, status=e.status_code
             )
-        except Exception:
+        except Exception as e:
             logger.exception(
                 f"uploads_sign_part_view failed (\
                     key={(locals().get('body') or {}).get('key')},\
                     upload_id={(locals().get('body') or {}).get('uploadId')},\
                     part_number={(locals().get('body') or {}).get('partNumber')}\
-                )"
+                )",
+                exc_info=e,
             )
             return JsonResponse(
                 {"error_name": "server_error", "message": "An unexpected error occurred"},
@@ -594,12 +600,13 @@ class AssetAdmin(admin.ModelAdmin):
             return JsonResponse(
                 {"error_name": e.error_name, "message": e.message, "extra": e.extra}, status=e.status_code
             )
-        except Exception:
+        except Exception as e:
             logger.exception(
                 f"uploads_finish_view failed (\
                     key={(locals().get('body') or {}).get('key')},\
                     upload_id={(locals().get('body') or {}).get('uploadId')}\
-                )"
+                )",
+                exc_info=e,
             )
             return JsonResponse(
                 {"error_name": "server_error", "message": "An unexpected error occurred"},
@@ -620,12 +627,13 @@ class AssetAdmin(admin.ModelAdmin):
             return JsonResponse(
                 {"error_name": e.error_name, "message": e.message, "extra": e.extra}, status=e.status_code
             )
-        except Exception:
+        except Exception as e:
             logger.exception(
                 f"uploads_abort_view failed (\
                     key={(locals().get('body') or {}).get('key')},\
                     upload_id={(locals().get('body') or {}).get('uploadId')}\
-                )"
+                )",
+                exc_info=e,
             )
             return JsonResponse(
                 {"error_name": "server_error", "message": "An unexpected error occurred"},
@@ -690,6 +698,11 @@ class AssetAdmin(admin.ModelAdmin):
                         }
                     )
                 except Exception as e:
+                    logger.warning(
+                        "Unexpected filename validation error",
+                        exc_info=e,
+                        extra={"filename": filename, "asset_id": asset_id},
+                    )
                     results.append(
                         {
                             "filename": filename,
@@ -701,6 +714,11 @@ class AssetAdmin(admin.ModelAdmin):
 
             return JsonResponse({"results": results})
         except Exception as e:
+            logger.exception(
+                "validate_recitation_filenames_view failed",
+                exc_info=e,
+                extra={"content_type": request.content_type, "path": request.path},
+            )
             return JsonResponse({"error_name": "server_error", "message": str(e)}, status=500)
 
 
@@ -765,6 +783,11 @@ class AssetAccessRequestAdmin(admin.ModelAdmin):
                 access_request.approve_request(approved_by_user=request.user, auto_approved=False)
                 count += 1
             except Exception as e:
+                logger.exception(
+                    "Error approving access request",
+                    exc_info=e,
+                    extra={"access_request_id": access_request.id, "admin_user_id": request.user.id},
+                )
                 self.message_user(
                     request,
                     f"Error approving request {access_request.id}: {e}",
@@ -782,6 +805,11 @@ class AssetAccessRequestAdmin(admin.ModelAdmin):
                 access_request.reject_request(rejected_by_user=request.user, reason="Bulk rejection from admin")
                 count += 1
             except Exception as e:
+                logger.exception(
+                    "Error rejecting access request",
+                    exc_info=e,
+                    extra={"access_request_id": access_request.id, "admin_user_id": request.user.id},
+                )
                 self.message_user(
                     request,
                     f"Error rejecting request {access_request.id}: {e}",
