@@ -1,7 +1,5 @@
 from typing import Any
 
-# Quran surah info extracted from trusted source qul.tarteel.ai (https://qul.tarteel.ai/resources/quran-metadata/70)
-# To be considered into Lubb ecosystem
 QURAN_SURAHS: dict[int, dict[str, Any]] = {
     1: {
         "name": "الفاتحة",
@@ -95,7 +93,7 @@ QURAN_SURAHS: dict[int, dict[str, Any]] = {
         "ayahs_count": 43,
     },
     14: {
-        "name": "ابراهيم",
+        "name": "إبراهيم",
         "name_en": "Ibrahim",
         "revelation_order": 72,
         "revelation_place": "Makkah",
@@ -235,7 +233,7 @@ QURAN_SURAHS: dict[int, dict[str, Any]] = {
         "ayahs_count": 73,
     },
     34: {
-        "name": "سبإ",
+        "name": "سبأ",
         "name_en": "Saba",
         "revelation_order": 58,
         "revelation_place": "Makkah",
@@ -529,7 +527,7 @@ QURAN_SURAHS: dict[int, dict[str, Any]] = {
         "ayahs_count": 40,
     },
     76: {
-        "name": "الانسان",
+        "name": "الإنسان",
         "name_en": "Al-Insan",
         "revelation_order": 98,
         "revelation_place": "Madinah",
@@ -543,7 +541,7 @@ QURAN_SURAHS: dict[int, dict[str, Any]] = {
         "ayahs_count": 50,
     },
     78: {
-        "name": "النبإ",
+        "name": "النبأ",
         "name_en": "An-Naba",
         "revelation_order": 80,
         "revelation_place": "Makkah",
@@ -571,7 +569,7 @@ QURAN_SURAHS: dict[int, dict[str, Any]] = {
         "ayahs_count": 29,
     },
     82: {
-        "name": "الإنفطار",
+        "name": "الانفطار",
         "name_en": "Al-Infitar",
         "revelation_order": 82,
         "revelation_place": "Makkah",
@@ -585,7 +583,7 @@ QURAN_SURAHS: dict[int, dict[str, Any]] = {
         "ayahs_count": 36,
     },
     84: {
-        "name": "الإنشقاق",
+        "name": "الانشقاق",
         "name_en": "Al-Inshiqaq",
         "revelation_order": 83,
         "revelation_place": "Makkah",
