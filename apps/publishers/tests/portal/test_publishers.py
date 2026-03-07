@@ -13,7 +13,7 @@ class PublisherCreateTest(BaseTestCase):
         super().setUp()
         self.user = baker.make(User, email="test@example.com", is_active=True)
 
-    def test_create_publisher_should_return_201(self):
+    def test_create_publisher_where_valid_data_should_return_201(self):
         """Test creating a publisher with valid data returns 201."""
         self.authenticate_user(self.user)
         response = self.client.post(
@@ -66,7 +66,7 @@ class PublisherCreateTest(BaseTestCase):
 class PublisherListTest(BaseTestCase):
     """Tests for the publisher list endpoint."""
 
-    def test_list_publishers_should_return_all_publishers(self):
+    def test_list_publishers_where_publishers_exist_should_return_all(self):
         """Test listing publishers returns paginated results."""
         baker.make(Publisher, name="Publisher A")
         baker.make(Publisher, name="Publisher B")
@@ -89,7 +89,7 @@ class PublisherListTest(BaseTestCase):
 class PublisherGetTest(BaseTestCase):
     """Tests for the publisher detail endpoint."""
 
-    def test_get_publisher_should_return_publisher(self):
+    def test_get_publisher_where_exists_should_return_publisher(self):
         """Test retrieving a publisher by ID returns the publisher."""
         publisher = baker.make(Publisher, name="Test Publisher")
         response = self.client.get(f"/portal/publishers/{publisher.id}/")
@@ -113,7 +113,7 @@ class PublisherUpdateTest(BaseTestCase):
         super().setUp()
         self.user = baker.make(User, email="test@example.com", is_active=True)
 
-    def test_update_publisher_partial_should_return_updated(self):
+    def test_update_publisher_where_partial_data_should_return_updated(self):
         """Test partially updating a publisher returns the updated publisher."""
         self.authenticate_user(self.user)
         publisher = baker.make(Publisher, name="Old Name")
@@ -147,7 +147,7 @@ class PublisherUpdateTest(BaseTestCase):
         )
         self.assertEqual(422, response.status_code, response.content)
 
-    def test_update_publisher_full_should_return_updated(self):
+    def test_update_publisher_where_full_data_should_return_updated(self):
         """Test fully updating a publisher returns the updated publisher."""
         self.authenticate_user(self.user)
         publisher = baker.make(Publisher, name="Old Name")
@@ -160,6 +160,16 @@ class PublisherUpdateTest(BaseTestCase):
         body = response.json()
         self.assertEqual("New Name", body["name"])
 
+    def test_update_publisher_where_unauthenticated_should_return_401(self):
+        """Test updating a publisher without auth returns 401."""
+        publisher = baker.make(Publisher, name="Test")
+        response = self.client.patch(
+            f"/portal/publishers/{publisher.id}/",
+            data={"name": "New Name"},
+            content_type="application/json",
+        )
+        self.assertEqual(401, response.status_code, response.content)
+
 
 class PublisherDeleteTest(BaseTestCase):
     """Tests for the publisher delete endpoint."""
@@ -169,7 +179,7 @@ class PublisherDeleteTest(BaseTestCase):
         super().setUp()
         self.user = baker.make(User, email="test@example.com", is_active=True)
 
-    def test_delete_publisher_should_return_204(self):
+    def test_delete_publisher_where_exists_should_return_204(self):
         """Test deleting a publisher returns 204."""
         self.authenticate_user(self.user)
         publisher = baker.make(Publisher, name="To Delete")

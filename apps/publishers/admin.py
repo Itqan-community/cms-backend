@@ -48,7 +48,7 @@ class PublisherAdmin(admin.ModelAdmin):
         ),
         (
             "Additional Information",
-            {"fields": ("contact_email", "website", "address")},
+            {"fields": ("contact_email", "website", "address", "foundation_year", "country")},
         ),
         (
             "Timestamps",

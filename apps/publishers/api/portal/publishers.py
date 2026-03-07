@@ -125,8 +125,8 @@ def create_publisher(request: Request, data: PublisherCreateIn) -> tuple[int, Pu
         publisher = Publisher.objects.create(**data.dict())
     except IntegrityError:
         raise ItqanError(
-            error_name="PUBLISHER_CONFLICT",
-            message="A publisher with conflicting unique fields already exists.",
+            error_name="PUBLISHER_ALREADY_EXISTS",
+            message=f"A publisher with the name '{data.name}' already exists.",
             status_code=409,
         ) from None
     return 201, publisher
