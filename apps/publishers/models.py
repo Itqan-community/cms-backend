@@ -10,8 +10,6 @@ from apps.users.models import User
 
 class Publisher(BaseModel):
     name = models.CharField(max_length=255, help_text="Publisher name e.g. 'Tafsir Center'")
-    name_ar = models.CharField(max_length=255, null=True, help_text="Publisher name e.g. 'Tafsir Center'")
-    name_en = models.CharField(max_length=255, null=True, help_text="Publisher name e.g. 'Tafsir Center'")
 
     slug = models.SlugField(unique=True, allow_unicode=True, help_text="URL-friendly slug e.g. 'tafsir-center'")
 
@@ -23,8 +21,6 @@ class Publisher(BaseModel):
     )
 
     description = models.TextField(blank=True, help_text="Detailed publisher description")
-    description_ar = models.TextField(blank=True, null=True, help_text="Detailed publisher description")
-    description_en = models.TextField(blank=True, null=True, help_text="Detailed publisher description")
 
     address = models.CharField(max_length=255, blank=True, help_text="Publisher address")
 

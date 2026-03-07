@@ -1,6 +1,7 @@
+from django.db import IntegrityError
 from ninja import FilterSchema, Query, Schema
 from ninja.pagination import paginate
-from pydantic import AwareDatetime, Field
+from pydantic import AwareDatetime, Field, field_validator
 
 from apps.core.ninja_utils.auth import ninja_jwt_auth
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
@@ -15,6 +16,8 @@ router = ItqanRouter(tags=[NinjaTag.PUBLISHERS])
 
 
 class PublisherCreateIn(Schema):
+    """Schema for creating a new publisher."""
+
     name: str
     name_ar: str | None = None
     name_en: str | None = None
@@ -28,8 +31,29 @@ class PublisherCreateIn(Schema):
     foundation_year: int | None = None
     country: str = ""
 
+    @field_validator("name")
+    @classmethod
+    def name_must_not_be_blank(cls, v: str) -> str:
+        """Validate that name is not blank after stripping whitespace."""
+        v = v.strip()
+        if not v:
+            raise ValueError("Name must not be blank.")
+        return v
+
+    @field_validator("name_ar", "name_en")
+    @classmethod
+    def optional_name_must_not_be_blank(cls, v: str | None) -> str | None:
+        """Validate that optional name fields are not blank if provided."""
+        if v is not None:
+            v = v.strip()
+            if not v:
+                raise ValueError("Name must not be blank if provided.")
+        return v
+
 
 class PublisherUpdateIn(Schema):
+    """Schema for partially updating a publisher."""
+
     name: str | None = None
     name_ar: str | None = None
     name_en: str | None = None
@@ -43,8 +67,20 @@ class PublisherUpdateIn(Schema):
     foundation_year: int | None = None
     country: str | None = None
 
+    @field_validator("name", "name_ar", "name_en")
+    @classmethod
+    def name_must_not_be_blank(cls, v: str | None) -> str | None:
+        """Validate that name fields are not blank if provided."""
+        if v is not None:
+            v = v.strip()
+            if not v:
+                raise ValueError("Name must not be blank if provided.")
+        return v
+
 
 class PublisherOut(Schema):
+    """Schema for publisher output representation."""
+
     id: int
     name: str
     name_ar: str | None = None
@@ -65,6 +101,8 @@ class PublisherOut(Schema):
 
 
 class PublisherFilter(FilterSchema):
+    """Filter schema for publisher list endpoint."""
+
     is_verified: bool | None = Field(None, q="is_verified")
     country: str | None = Field(None, q="country__icontains")
 
@@ -74,15 +112,23 @@ class PublisherFilter(FilterSchema):
     response={201: PublisherOut, 409: NinjaErrorResponse},
     auth=ninja_jwt_auth,
 )
-def create_publisher(request: Request, data: PublisherCreateIn):
+def create_publisher(request: Request, data: PublisherCreateIn) -> tuple[int, Publisher]:
+    """Create a new publisher with the given data."""
     if Publisher.objects.filter(name=data.name).exists():
         raise ItqanError(
-            error_name="publisher_already_exists",
+            error_name="PUBLISHER_ALREADY_EXISTS",
             message=f"A publisher with the name '{data.name}' already exists.",
             status_code=409,
         )
 
-    publisher = Publisher.objects.create(**data.dict())
+    try:
+        publisher = Publisher.objects.create(**data.dict())
+    except IntegrityError:
+        raise ItqanError(
+            error_name="PUBLISHER_CONFLICT",
+            message="A publisher with conflicting unique fields already exists.",
+            status_code=409,
+        )
     return 201, publisher
 
 
@@ -90,7 +136,8 @@ def create_publisher(request: Request, data: PublisherCreateIn):
 @paginate
 @ordering(ordering_fields=["name", "created_at"])
 @searching(search_fields=["name", "name_ar", "description", "description_ar"])
-def list_publishers(request: Request, filters: PublisherFilter = Query()):
+def list_publishers(request: Request, filters: PublisherFilter = Query()) -> list[Publisher]:
+    """List all publishers with optional filtering, ordering, and search."""
     qs = Publisher.objects.all().order_by("name")
     qs = filters.filter(qs)
     return qs
@@ -100,12 +147,13 @@ def list_publishers(request: Request, filters: PublisherFilter = Query()):
     "publishers/{publisher_id}/",
     response={200: PublisherOut, 404: NinjaErrorResponse},
 )
-def get_publisher(request: Request, publisher_id: int):
+def get_publisher(request: Request, publisher_id: int) -> Publisher:
+    """Retrieve a single publisher by ID."""
     try:
         return Publisher.objects.get(id=publisher_id)
     except Publisher.DoesNotExist:
         raise ItqanError(
-            error_name="publisher_not_found",
+            error_name="PUBLISHER_NOT_FOUND",
             message=f"Publisher with id {publisher_id} not found.",
             status_code=404,
         )
@@ -116,26 +164,28 @@ def get_publisher(request: Request, publisher_id: int):
     response={200: PublisherOut, 404: NinjaErrorResponse, 409: NinjaErrorResponse},
     auth=ninja_jwt_auth,
 )
-def update_publisher_full(request: Request, publisher_id: int, data: PublisherCreateIn):
+def update_publisher_full(request: Request, publisher_id: int, data: PublisherCreateIn) -> Publisher:
+    """Fully update a publisher with the given data."""
     try:
         publisher = Publisher.objects.get(id=publisher_id)
     except Publisher.DoesNotExist:
         raise ItqanError(
-            error_name="publisher_not_found",
+            error_name="PUBLISHER_NOT_FOUND",
             message=f"Publisher with id {publisher_id} not found.",
             status_code=404,
         )
 
-    if data.name != publisher.name and Publisher.objects.filter(name=data.name).exists():
-        raise ItqanError(
-            error_name="publisher_already_exists",
-            message=f"A publisher with the name '{data.name}' already exists.",
-            status_code=409,
-        )
-
     for field, value in data.dict().items():
         setattr(publisher, field, value)
-    publisher.save()
+
+    try:
+        publisher.save()
+    except IntegrityError:
+        raise ItqanError(
+            error_name="PUBLISHER_CONFLICT",
+            message="A publisher with conflicting unique fields already exists.",
+            status_code=409,
+        )
     return publisher
 
 
@@ -144,29 +194,29 @@ def update_publisher_full(request: Request, publisher_id: int, data: PublisherCr
     response={200: PublisherOut, 404: NinjaErrorResponse, 409: NinjaErrorResponse},
     auth=ninja_jwt_auth,
 )
-def update_publisher_partial(request: Request, publisher_id: int, data: PublisherUpdateIn):
+def update_publisher_partial(request: Request, publisher_id: int, data: PublisherUpdateIn) -> Publisher:
+    """Partially update a publisher's fields."""
     try:
         publisher = Publisher.objects.get(id=publisher_id)
     except Publisher.DoesNotExist:
         raise ItqanError(
-            error_name="publisher_not_found",
+            error_name="PUBLISHER_NOT_FOUND",
             message=f"Publisher with id {publisher_id} not found.",
             status_code=404,
         )
 
     update_data = data.dict(exclude_unset=True)
-
-    if "name" in update_data and update_data["name"] != publisher.name:
-        if Publisher.objects.filter(name=update_data["name"]).exists():
-            raise ItqanError(
-                error_name="publisher_already_exists",
-                message=f"A publisher with the name '{update_data['name']}' already exists.",
-                status_code=409,
-            )
-
     for field, value in update_data.items():
         setattr(publisher, field, value)
-    publisher.save()
+
+    try:
+        publisher.save()
+    except IntegrityError:
+        raise ItqanError(
+            error_name="PUBLISHER_CONFLICT",
+            message="A publisher with conflicting unique fields already exists.",
+            status_code=409,
+        )
     return publisher
 
 
@@ -175,12 +225,13 @@ def update_publisher_partial(request: Request, publisher_id: int, data: Publishe
     response={204: None, 404: NinjaErrorResponse},
     auth=ninja_jwt_auth,
 )
-def delete_publisher(request: Request, publisher_id: int):
+def delete_publisher(request: Request, publisher_id: int) -> tuple[int, None]:
+    """Delete a publisher by ID."""
     try:
         publisher = Publisher.objects.get(id=publisher_id)
     except Publisher.DoesNotExist:
         raise ItqanError(
-            error_name="publisher_not_found",
+            error_name="PUBLISHER_NOT_FOUND",
             message=f"Publisher with id {publisher_id} not found.",
             status_code=404,
         )
