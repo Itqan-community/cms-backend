@@ -619,6 +619,8 @@ class Reciter(BaseModel):
     """Quran reciter/qari (e.g. Mshari Al-Afasi, Saad Al-Ghamidi, etc)"""
 
     name = models.CharField(max_length=255, unique=True)
+    name_ar = models.CharField(max_length=255, null=True, unique=True)
+    name_en = models.CharField(max_length=255, null=True, unique=True)
     slug = models.SlugField(unique=True, allow_unicode=True, db_index=True)
     image_url = models.ImageField(
         upload_to=upload_to_reciter_image,
@@ -627,6 +629,9 @@ class Reciter(BaseModel):
         help_text="Icon/logo image - used in V1 UI: Publisher Page",
     )
     bio = models.TextField(blank=True)
+    nationality = models.CharField(max_length=100, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    date_of_death = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     nationality = models.ForeignKey(Nationality, on_delete=models.SET_NULL, related_name="reciters", null=True)
     is_contemporary = models.BooleanField(default=False)
