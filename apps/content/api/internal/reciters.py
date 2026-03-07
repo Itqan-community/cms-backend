@@ -21,30 +21,20 @@ class ReciterCreateIn(Schema):
     """Schema for creating a new reciter."""
 
     name: str
-    name_ar: str | None = None
-    name_en: str | None = None
+    name_ar: str
+    name_en: str
     nationality: str = ""
     date_of_birth: datetime.date | None = None
     date_of_death: datetime.date | None = None
     bio: str = ""
 
-    @field_validator("name")
+    @field_validator("name", "name_ar", "name_en")
     @classmethod
     def name_must_not_be_blank(cls, v: str) -> str:
-        """Validate that name is not blank after stripping whitespace."""
+        """Validate that name fields are not blank after stripping whitespace."""
         v = v.strip()
         if not v:
             raise ValueError("Name must not be blank.")
-        return v
-
-    @field_validator("name_ar", "name_en")
-    @classmethod
-    def optional_name_must_not_be_blank(cls, v: str | None) -> str | None:
-        """Validate that optional name fields are not blank if provided."""
-        if v is not None:
-            v = v.strip()
-            if not v:
-                raise ValueError("Name must not be blank if provided.")
         return v
 
     @field_validator("nationality", "bio")

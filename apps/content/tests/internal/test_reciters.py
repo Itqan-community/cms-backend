@@ -38,7 +38,7 @@ class ReciterCreateTest(BaseTestCase):
         self.authenticate_user(self.user)
         response = self.client.post(
             "/cms-api/reciters/",
-            data={"name": "   "},
+            data={"name": "   ", "name_ar": "عربي", "name_en": "English"},
             content_type="application/json",
         )
         self.assertEqual(422, response.status_code, response.content)
@@ -49,7 +49,11 @@ class ReciterCreateTest(BaseTestCase):
         baker.make(Reciter, name="Existing Reciter", slug="existing-reciter")
         response = self.client.post(
             "/cms-api/reciters/",
-            data={"name": "Existing Reciter"},
+            data={
+                "name": "Existing Reciter",
+                "name_ar": "قارئ موجود",
+                "name_en": "Existing Reciter EN",
+            },
             content_type="application/json",
         )
         self.assertEqual(409, response.status_code, response.content)
@@ -60,17 +64,27 @@ class ReciterCreateTest(BaseTestCase):
         """Test creating a reciter without auth returns 401."""
         response = self.client.post(
             "/cms-api/reciters/",
-            data={"name": "Test"},
+            data={"name": "Test", "name_ar": "تست", "name_en": "Test EN"},
             content_type="application/json",
         )
         self.assertEqual(401, response.status_code, response.content)
 
-    def test_create_reciter_where_optional_name_blank_should_return_422(self):
-        """Test creating a reciter with blank optional name returns validation error."""
+    def test_create_reciter_where_name_ar_blank_should_return_422(self):
+        """Test creating a reciter with blank name_ar returns validation error."""
         self.authenticate_user(self.user)
         response = self.client.post(
             "/cms-api/reciters/",
-            data={"name": "Valid", "name_ar": "   "},
+            data={"name": "Valid", "name_ar": "   ", "name_en": "Valid EN"},
+            content_type="application/json",
+        )
+        self.assertEqual(422, response.status_code, response.content)
+
+    def test_create_reciter_where_missing_name_ar_should_return_422(self):
+        """Test creating a reciter without required name_ar returns validation error."""
+        self.authenticate_user(self.user)
+        response = self.client.post(
+            "/cms-api/reciters/",
+            data={"name": "Valid", "name_en": "Valid EN"},
             content_type="application/json",
         )
         self.assertEqual(422, response.status_code, response.content)
