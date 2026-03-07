@@ -128,7 +128,7 @@ def create_publisher(request: Request, data: PublisherCreateIn) -> tuple[int, Pu
             error_name="PUBLISHER_CONFLICT",
             message="A publisher with conflicting unique fields already exists.",
             status_code=409,
-        )
+        ) from None
     return 201, publisher
 
 
@@ -156,7 +156,7 @@ def get_publisher(request: Request, publisher_id: int) -> Publisher:
             error_name="PUBLISHER_NOT_FOUND",
             message=f"Publisher with id {publisher_id} not found.",
             status_code=404,
-        )
+        ) from None
 
 
 @router.put(
@@ -173,7 +173,7 @@ def update_publisher_full(request: Request, publisher_id: int, data: PublisherCr
             error_name="PUBLISHER_NOT_FOUND",
             message=f"Publisher with id {publisher_id} not found.",
             status_code=404,
-        )
+        ) from None
 
     for field, value in data.dict().items():
         setattr(publisher, field, value)
@@ -185,7 +185,7 @@ def update_publisher_full(request: Request, publisher_id: int, data: PublisherCr
             error_name="PUBLISHER_CONFLICT",
             message="A publisher with conflicting unique fields already exists.",
             status_code=409,
-        )
+        ) from None
     return publisher
 
 
@@ -203,7 +203,7 @@ def update_publisher_partial(request: Request, publisher_id: int, data: Publishe
             error_name="PUBLISHER_NOT_FOUND",
             message=f"Publisher with id {publisher_id} not found.",
             status_code=404,
-        )
+        ) from None
 
     update_data = data.dict(exclude_unset=True)
     for field, value in update_data.items():
@@ -216,7 +216,7 @@ def update_publisher_partial(request: Request, publisher_id: int, data: Publishe
             error_name="PUBLISHER_CONFLICT",
             message="A publisher with conflicting unique fields already exists.",
             status_code=409,
-        )
+        ) from None
     return publisher
 
 
@@ -234,7 +234,7 @@ def delete_publisher(request: Request, publisher_id: int) -> tuple[int, None]:
             error_name="PUBLISHER_NOT_FOUND",
             message=f"Publisher with id {publisher_id} not found.",
             status_code=404,
-        )
+        ) from None
 
     publisher.delete()
     return 204, None
