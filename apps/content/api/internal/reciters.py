@@ -65,10 +65,20 @@ class ReciterUpdateIn(Schema):
     date_of_death: datetime.date | None = None
     bio: str | None = None
 
-    @field_validator("name", "name_ar", "name_en")
+    @field_validator("name")
     @classmethod
     def name_must_not_be_blank(cls, v: str | None) -> str | None:
-        """Validate that name fields are not blank if provided."""
+        """Validate that name is not blank if provided."""
+        if v is not None:
+            v = v.strip()
+            if not v:
+                raise ValueError("Name must not be blank if provided.")
+        return v
+
+    @field_validator("name_ar", "name_en")
+    @classmethod
+    def optional_name_must_not_be_blank(cls, v: str | None) -> str | None:
+        """Validate that optional name fields are not blank if provided."""
         if v is not None:
             v = v.strip()
             if not v:
@@ -77,11 +87,11 @@ class ReciterUpdateIn(Schema):
 
     @field_validator("nationality", "bio")
     @classmethod
-    def strip_whitespace(cls, v: str | None) -> str | None:
-        """Strip leading/trailing whitespace from optional string fields."""
-        if v is not None:
-            v = v.strip()
-        return v
+    def non_nullable_string_must_not_be_null(cls, v: str | None) -> str | None:
+        """Validate non-nullable string fields are not set to null."""
+        if v is None:
+            raise ValueError("This field cannot be null.")
+        return v.strip()
 
 
 class ReciterOut(Schema):
@@ -141,7 +151,7 @@ def create_reciter(request: Request, data: ReciterCreateIn) -> tuple[int, Recite
             error_name="RECITER_CONFLICT",
             message="A reciter with conflicting unique fields already exists.",
             status_code=409,
-        )
+        ) from None
     return 201, reciter
 
 
@@ -172,7 +182,7 @@ def get_reciter(request: Request, reciter_id: int) -> Reciter:
             error_name="RECITER_NOT_FOUND",
             message=f"Reciter with id {reciter_id} not found.",
             status_code=404,
-        )
+        ) from None
 
 
 @router.patch(
@@ -193,7 +203,7 @@ def update_reciter(request: Request, reciter_id: int, data: ReciterUpdateIn) -> 
             error_name="RECITER_NOT_FOUND",
             message=f"Reciter with id {reciter_id} not found.",
             status_code=404,
-        )
+        ) from None
 
     update_data = data.dict(exclude_unset=True)
     for field, value in update_data.items():
@@ -206,5 +216,5 @@ def update_reciter(request: Request, reciter_id: int, data: ReciterUpdateIn) -> 
             error_name="RECITER_CONFLICT",
             message="A reciter with conflicting unique fields already exists.",
             status_code=409,
-        )
+        ) from None
     return reciter

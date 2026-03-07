@@ -79,11 +79,6 @@ class ReciterCreateTest(BaseTestCase):
 class ReciterListTest(BaseTestCase):
     """Tests for the reciter list endpoint."""
 
-    def setUp(self):
-        """Set up test fixtures."""
-        super().setUp()
-        self.user = baker.make(User, email="test@example.com", is_active=True)
-
     def test_list_reciters_should_return_all_reciters(self):
         """Test listing reciters returns paginated results."""
         baker.make(Reciter, name="Reciter A", slug="reciter-a")
@@ -179,6 +174,17 @@ class ReciterUpdateTest(BaseTestCase):
             content_type="application/json",
         )
         self.assertEqual(401, response.status_code, response.content)
+
+    def test_update_reciter_where_null_nationality_should_return_422(self):
+        """Test updating a reciter with null non-nullable field returns validation error."""
+        self.authenticate_user(self.user)
+        reciter = baker.make(Reciter, name="Test", slug="test")
+        response = self.client.patch(
+            f"/cms-api/reciters/{reciter.id}/",
+            data={"nationality": None},
+            content_type="application/json",
+        )
+        self.assertEqual(422, response.status_code, response.content)
 
     def test_update_reciter_where_duplicate_name_should_return_409(self):
         """Test updating a reciter with conflicting name returns 409."""
