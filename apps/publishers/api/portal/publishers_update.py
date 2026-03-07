@@ -1,7 +1,7 @@
 from django.db import IntegrityError
 from ninja import Schema
 
-from apps.core.ninja_utils.errors import ItqanError
+from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
@@ -51,23 +51,23 @@ class PublisherUpdateOut(Schema):
 def _get_publisher_or_404(id: int) -> Publisher:
     try:
         return Publisher.objects.get(id=id)
-    except Publisher.DoesNotExist:
-        raise ItqanError("publisher_not_found", "Publisher not found", status_code=404)
+    except Publisher.DoesNotExist as err:
+        raise ItqanError("publisher_not_found", "Publisher not found", status_code=404) from err
 
 
 def _apply_update(publisher: Publisher, payload: PublisherUpdateIn, partial: bool = False) -> Publisher:
     fields = payload.dict(exclude_unset=partial)
     for field, value in fields.items():
-        if value is not None or not partial:
-            setattr(publisher, field, value if value is not None else "")
+        if value is not None:
+            setattr(publisher, field, value)
     try:
         publisher.save()
-    except IntegrityError:
-        raise ItqanError("publisher_already_exists", "A publisher with this name already exists")
+    except IntegrityError as err:
+        raise ItqanError("publisher_already_exists", "A publisher with this name already exists") from err
     return publisher
 
 
-@router.put("publishers/{id}/", response=PublisherUpdateOut)
+@router.put("publishers/{id}/", response={200: PublisherUpdateOut, 400: NinjaErrorResponse, 404: NinjaErrorResponse})
 def update_publisher(request: Request, id: int, payload: PublisherUpdateIn):
     publisher = _get_publisher_or_404(id)
     if payload.name is not None and not payload.name.strip():
@@ -76,7 +76,7 @@ def update_publisher(request: Request, id: int, payload: PublisherUpdateIn):
     return publisher
 
 
-@router.patch("publishers/{id}/", response=PublisherUpdateOut)
+@router.patch("publishers/{id}/", response={200: PublisherUpdateOut, 400: NinjaErrorResponse, 404: NinjaErrorResponse})
 def patch_publisher(request: Request, id: int, payload: PublisherUpdateIn):
     publisher = _get_publisher_or_404(id)
     if payload.name is not None and not payload.name.strip():

@@ -2,7 +2,7 @@ from django.db import IntegrityError
 from ninja import Schema
 from pydantic import Field
 
-from apps.core.ninja_utils.errors import ItqanError
+from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
@@ -44,7 +44,7 @@ class PublisherCreateOut(Schema):
         return obj.created_at.isoformat() if obj.created_at else ""
 
 
-@router.post("publishers/", response={201: PublisherCreateOut})
+@router.post("publishers/", response={201: PublisherCreateOut, 400: NinjaErrorResponse})
 def create_publisher(request: Request, payload: PublisherCreateIn):
     if not payload.name or not payload.name.strip():
         raise ItqanError("publisher_name_required", "Publisher name is required")
@@ -62,7 +62,7 @@ def create_publisher(request: Request, payload: PublisherCreateIn):
             foundation_year=payload.foundation_year,
             country=payload.country,
         )
-    except IntegrityError:
-        raise ItqanError("publisher_already_exists", "A publisher with this name already exists")
+    except IntegrityError as err:
+        raise ItqanError("publisher_already_exists", "A publisher with this name already exists") from err
 
     return 201, publisher

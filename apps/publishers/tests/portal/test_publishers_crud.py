@@ -1,5 +1,6 @@
 from model_bakery import baker
 
+from apps.content.models import Resource
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -332,8 +333,11 @@ class DeletePublisherTest(BaseTestCase):
 
         self.assertEqual(401, response.status_code, response.content)
 
-    def test_delete_publisher_where_has_resources_should_handle_gracefully(self):
+    def test_delete_publisher_where_has_resources_should_return_409(self):
         publisher = baker.make(Publisher, name="With Resources", slug="with-resources")
+        baker.make(Resource, publisher=publisher)
         response = self.client.delete(f"/portal/publishers/{publisher.id}/")
 
-        self.assertEqual(204, response.status_code, response.content)
+        self.assertEqual(409, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("publisher_has_resources", body["error_name"])

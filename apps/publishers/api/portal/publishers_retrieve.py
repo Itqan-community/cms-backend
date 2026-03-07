@@ -1,6 +1,6 @@
 from ninja import Schema
 
-from apps.core.ninja_utils.errors import ItqanError
+from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
@@ -42,11 +42,11 @@ class PublisherDetailOut(Schema):
         return obj.updated_at.isoformat() if obj.updated_at else ""
 
 
-@router.get("publishers/{id}/", response=PublisherDetailOut)
+@router.get("publishers/{id}/", response={200: PublisherDetailOut, 404: NinjaErrorResponse})
 def retrieve_publisher(request: Request, id: int):
     try:
         publisher = Publisher.objects.get(id=id)
-    except Publisher.DoesNotExist:
-        raise ItqanError("publisher_not_found", "Publisher not found", status_code=404)
+    except Publisher.DoesNotExist as err:
+        raise ItqanError("publisher_not_found", "Publisher not found", status_code=404) from err
 
     return publisher
