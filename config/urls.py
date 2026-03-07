@@ -9,6 +9,7 @@ from oauth2_provider import urls as oauth2_urls
 
 from config.cms_api import cms_api, cms_auth_api
 from config.developers_api import deprecated_developers_api, developers_api
+from config.portal_api import portal_api
 from config.tenant_api import tenant_api
 
 
@@ -36,6 +37,8 @@ urlpatterns = [
     path("cms-api/", cms_api.urls),
     # Tenant API mount
     path("tenant/", tenant_api.urls),
+    # Portal API mount
+    path("portal-api/", portal_api.urls),
     # Public developers API mount
     path("developers-api/", deprecated_developers_api.urls),
     path("", developers_api.urls),

@@ -10,6 +10,8 @@ from apps.users.models import User
 
 class Publisher(BaseModel):
     name = models.CharField(max_length=255, help_text="Publisher name e.g. 'Tafsir Center'")
+    name_ar = models.CharField(max_length=255, null=True, help_text="Publisher name e.g. 'Tafsir Center'")
+    name_en = models.CharField(max_length=255, null=True, help_text="Publisher name e.g. 'Tafsir Center'")
 
     slug = models.SlugField(unique=True, allow_unicode=True, help_text="URL-friendly slug e.g. 'tafsir-center'")
 
@@ -21,6 +23,8 @@ class Publisher(BaseModel):
     )
 
     description = models.TextField(blank=True, help_text="Detailed publisher description")
+    description_ar = models.TextField(blank=True, null=True, help_text="Detailed publisher description")
+    description_en = models.TextField(blank=True, null=True, help_text="Detailed publisher description")
 
     address = models.CharField(max_length=255, blank=True, help_text="Publisher address")
 
@@ -29,6 +33,9 @@ class Publisher(BaseModel):
     is_verified = models.BooleanField(default=True, help_text="Whether publisher is verified")
 
     contact_email = models.EmailField(blank=True, help_text="Contact email for the publisher")
+
+    foundation_year = models.PositiveIntegerField(null=True, blank=True, help_text="Year the publisher was founded")
+    country = models.CharField(max_length=100, blank=True, help_text="Country of the publisher")
 
     members = models.ManyToManyField(User, through="PublisherMember", related_name="publishers")
 
