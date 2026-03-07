@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="reciter",
             name="nationality",
-            field=models.CharField(blank=True, max_length=100),
+            field=models.CharField(blank=True, default="", max_length=100),
         ),
         migrations.AddField(
             model_name="reciter",
