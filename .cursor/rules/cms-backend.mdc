@@ -50,12 +50,12 @@ Use exactly this shape when converting inputs:
 - **main**: Production-ready code, **MERGE-ONLY** from staging
 - **staging**: Primary development branch for new features and bug fixes
 
-### 🔒 ENFORCED Git Workflow Rules
+### Enforced Git Workflow Rules
 **CRITICAL**: These rules are strictly enforced and cannot be bypassed:
 
 1. **Branch Protection**:
-   - ❌ **main** and **staging** branches: NO direct commits/pushes allowed
-   - ✅ **feat/** branches: Direct commits allowed for feature development
+   - **main** and **staging** branches: NO direct commits/pushes allowed
+   - **feat/** branches: Direct commits allowed for feature development
 
 2. **Mandatory Change Flow**:
    - ALL changes MUST start on `staging` branch (or feature branch created from staging)
@@ -79,7 +79,7 @@ Use exactly this shape when converting inputs:
 
 
 ### Deployment Rules (ENFORCED)
-🔒 **Strict branch flow enforcement via GitHub Actions:**
+**Strict branch flow enforcement via GitHub Actions:**
 1. **main** can ONLY be updated from **staging** via Pull Request
 2. **staging** can ONLY be updated from feature branches via Pull Request
 3. Deployment triggers ONLY on successful PR merges (not direct pushes)
@@ -116,16 +116,25 @@ response={
 - When using self.authenticate_user in tests, put it into the test case itself not in `setUp` or `setUpClass` methods to be more explicit
 - Use `pytest` to run test NOT `python manage.py test`
 
-## 🏗️ API Architecture
-- **cms_api**: Internal API mounted at `/cms-api/`. Used by the frontend SPA. Primarily uses JWT/Session authentication.
-- **developers_api**: Public API used by external developers/consumers. Primarily uses OAuth2.0 authentication.
-- **tenant_api**: Internal API mounted at `/tenant/`. Used by the frontend SPA for the publishers' pages. used as multitenant SaaS. Primarily uses JWT/Session authentication.
+## API Architecture
+
+This project exposes **four distinct APIs**, each serving a different audience. All are built with Django Ninja and share the same error handling structure (`ItqanError` / `NinjaErrorResponse`).
+
+- **cms_api** (Internal API): Mounted at `/cms-api/`. Powers the frontend SPA where platform users ("the developers") can create accounts, explore the platform, and create OAuth applications. Uses JWT/Session authentication via django-allauth.
+- **developers_api** (Public API): Mounted at `/` (root). The public-facing API consumed by external developers after they create an OAuth application through the CMS API. This is where we expect the majority of traffic. Uses OAuth2 via django-oauth-toolkit.
+- **tenant_api** (Tenant API): Mounted at `/tenant/`. A multi-tenant SaaS API for **publishers** (core stakeholders). Each publisher can have their own domain; content is filtered by the `Domain` the request originates from, showing only their data. All tenants share a single database -- this architecture will not change in the near term. Uses JWT/Session authentication.
+- **portal_api** (Portal API): Mounted at `/portal/`. Internal admin portal for uploading, writing, updating, and managing content (full CRUD). Relies on a permission system; all users are expected to be internal company staff. Focus is on heavy lifting, not aesthetics. Uses JWT/Session authentication with role-based permissions.
+
+Each app has its own `api/` directory with subdirectories per API surface (`internal/`, `public/`, `tenant/`, `portal/`), and each has its own tests.
+
+- All queries in `api/tenant` should be filtered for publisher, preferably using `request.publisher_q()`
 
 ## General
-- any function you define should be type hinted, you can exclude only api endpoints (decorated with `@router.`)
-- All code should be python 3.13 compatible and django 5.2 compatible
-- always use `AwareDateTime` instead of `datetime` in `Schema`
-- All queries in `api/tenant` should be filtered for publisher, preferably using `request.publisher_q()`
+- **Dependency management**: Use `uv` (`uv sync` to install, `uv sync --group dev` for dev dependencies)
+- **Linting**: Use `pre-commit install` to set up Git hooks. All PRs must pass linting checks to be merged
+- Any function you define should be type hinted, you can exclude only API endpoints (decorated with `@router.`)
+- All code should be Python 3.13 compatible and Django 5.2 compatible
+- Always use `AwareDateTime` instead of `datetime` in `Schema`
 
 ## Architecture
 - Always use Repositories for data access layer and Services for business logic layer

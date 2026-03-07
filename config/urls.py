@@ -37,8 +37,7 @@ urlpatterns = [
     path("cms-api/", cms_api.urls),
     # Tenant API mount
     path("tenant/", tenant_api.urls),
-    # Portal API mount
-    path("portal-api/", portal_api.urls),
+    path("portal/", portal_api.urls),
     # Public developers API mount
     path("developers-api/", deprecated_developers_api.urls),
     path("", developers_api.urls),

@@ -30,7 +30,10 @@ class Publisher(BaseModel):
 
     contact_email = models.EmailField(blank=True, help_text="Contact email for the publisher")
 
-    foundation_year = models.PositiveIntegerField(null=True, blank=True, help_text="Year the publisher was founded")
+    foundation_year = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text="Year the publisher was established"
+    )
+
     country = models.CharField(max_length=100, blank=True, help_text="Country of the publisher")
 
     members = models.ManyToManyField(User, through="PublisherMember", related_name="publishers")
