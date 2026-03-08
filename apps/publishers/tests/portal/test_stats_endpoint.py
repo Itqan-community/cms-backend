@@ -3,19 +3,35 @@ from model_bakery import baker
 
 from apps.core.tests import BaseTestCase
 from apps.users.models import User
-from apps.publishers.models import Publisher
+from apps.publishers.models import Publisher, Domain
 
 
 class PublisherStatsEndpointTest(BaseTestCase):
     def setUp(self):
+        super().setUp()
         self.url = "/portal/publishers/stats/"
 
-        self.user = baker.make(User, is_active=True)
-        self.authenticate_user(self.user)
+
+        self.publisher = baker.make(Publisher)
+        self.domain = baker.make(
+            Domain, publisher=self.publisher, domain="example.com",
+        )
+
+        # Create staff user
+        self.user = baker.make(
+            User,
+            is_active=True,
+            is_staff=True,
+        )
+
+        cache.clear()
+
+        # Authenticate the client with a valid JWT and origin header
+        self.authenticate_user(self.user, domain=self.domain)
 
     def test_stats_endpoint_where_unauthenticated_should_return_401(self):
-        # Arrange
-        self.client.logout()
+        # Arrange - clear authentication headers/cookies
+        self.authenticate_user(None)
 
         # Act
         response = self.client.get(self.url)
@@ -43,4 +59,7 @@ class PublisherStatsEndpointTest(BaseTestCase):
 
         # Assert
         self.assertEqual(200, response.status_code)
-        self.assertIn("total_publishers", response.json())
+
+        data = response.json()
+        self.assertIn("total_publishers", data)
+        self.assertEqual(2, data["total_publishers"])
