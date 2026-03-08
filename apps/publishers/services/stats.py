@@ -9,7 +9,7 @@ def compute_publisher_stats_sync():
     total_publishers = Publisher.objects.count()
     active_publishers = Publisher.objects.filter(domains__is_active=True).distinct().count()
     verified_publishers = Publisher.objects.filter(is_verified=True).count()
-    total_countries = Publisher.objects.values("country").distinct().count()
+    total_countries = Publisher.objects.values("country").exclude(country="").distinct().count()
 
     stats = {
         "total_publishers": total_publishers,
