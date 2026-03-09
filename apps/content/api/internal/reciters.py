@@ -20,10 +20,10 @@ router = ItqanRouter(tags=[NinjaTag.RECITERS])
 class ReciterCreateIn(Schema):
     """Schema for creating a new reciter."""
 
-    name: str
-    name_ar: str
-    name_en: str
-    nationality: str = ""
+    name: str = Field(..., max_length=255)
+    name_ar: str = Field(..., max_length=255)
+    name_en: str = Field(..., max_length=255)
+    nationality: str = Field("", max_length=100)
     date_of_birth: datetime.date | None = None
     date_of_death: datetime.date | None = None
     bio: str = ""
@@ -47,10 +47,10 @@ class ReciterCreateIn(Schema):
 class ReciterUpdateIn(Schema):
     """Schema for updating an existing reciter."""
 
-    name: str | None = None
-    name_ar: str | None = None
-    name_en: str | None = None
-    nationality: str | None = None
+    name: str | None = Field(None, max_length=255)
+    name_ar: str | None = Field(None, max_length=255)
+    name_en: str | None = Field(None, max_length=255)
+    nationality: str | None = Field(None, max_length=100)
     date_of_birth: datetime.date | None = None
     date_of_death: datetime.date | None = None
     bio: str | None = None
@@ -104,6 +104,7 @@ class ReciterFilter(FilterSchema):
     "reciters/",
     response={
         201: ReciterOut,
+        401: NinjaErrorResponse,
         409: NinjaErrorResponse,
     },
     auth=ninja_jwt_auth,
@@ -170,6 +171,7 @@ def get_reciter(request: Request, reciter_id: int) -> Reciter:
     "reciters/{reciter_id}/",
     response={
         200: ReciterOut,
+        401: NinjaErrorResponse,
         404: NinjaErrorResponse,
         409: NinjaErrorResponse,
     },
