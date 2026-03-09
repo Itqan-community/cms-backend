@@ -16,6 +16,11 @@ if TYPE_CHECKING:
 
 
 def _safe_id(instance_id: int | None) -> str:
+    """Return the instance ID as a string, or a UUID-based fallback if the ID is None.
+
+    Prevents '/None' from appearing in upload paths when the model instance
+    has not yet been saved to the database.
+    """
     if instance_id is None:
         return str(uuid.uuid4().hex[:12])
     return str(instance_id)
