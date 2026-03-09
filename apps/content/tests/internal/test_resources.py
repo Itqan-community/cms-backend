@@ -503,13 +503,16 @@ class ResourceListTest(BaseTestCase):
         # Note: IP address capture depends on Django test client configuration
         # In real requests, this would capture the client IP
 
-    def test_list_resources_pagination_should_return_correct_pages(self):
+    def test_list_resources_where_page_is_first_should_return_correct_pages(self) -> None:
+        # Arrange
         self.authenticate_user(self.user)
         for i in range(5):
             baker.make(Resource, publisher=self.publisher1, name=f"Resource {i}")
 
-        response = self.client.get("/cms-api/resources/?page=1&page_size=2")
+        # Act
+        response = self.client.get("/cms-api/resources/?page=1&pageSize=2")
 
+        # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
 
@@ -517,17 +520,21 @@ class ResourceListTest(BaseTestCase):
         self.assertEqual(1, body["page"])
         self.assertEqual(2, body["pageSize"])
         self.assertEqual(3, body["totalPages"])
-        self.assertEqual(2, body["nextPage"])
+        self.assertIsNotNone(body["nextPage"])
+        self.assertIn("page=2", body["nextPage"])
         self.assertIsNone(body["prevPage"])
         self.assertEqual(2, len(body["results"]))
 
-    def test_list_resources_pagination_last_page_should_have_no_next(self):
+    def test_list_resources_where_page_is_last_should_have_no_next(self) -> None:
+        # Arrange
         self.authenticate_user(self.user)
         for i in range(5):
             baker.make(Resource, publisher=self.publisher1, name=f"Resource {i}")
 
-        response = self.client.get("/cms-api/resources/?page=3&page_size=2")
+        # Act
+        response = self.client.get("/cms-api/resources/?page=3&pageSize=2")
 
+        # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
 
@@ -535,5 +542,6 @@ class ResourceListTest(BaseTestCase):
         self.assertEqual(3, body["page"])
         self.assertEqual(3, body["totalPages"])
         self.assertIsNone(body["nextPage"])
-        self.assertEqual(2, body["prevPage"])
+        self.assertIsNotNone(body["prevPage"])
+        self.assertIn("page=2", body["prevPage"])
         self.assertEqual(1, len(body["results"]))
