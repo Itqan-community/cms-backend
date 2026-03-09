@@ -5,7 +5,7 @@ from django.db.models import QuerySet
 from django.http import HttpRequest
 from ninja import Schema
 from ninja.pagination import PageNumberPagination as NinjaPageNumberPagination
-from pydantic import Field
+from pydantic import Field, field_validator
 
 MAX_PAGE_SIZE = 1000
 DEFAULT_PAGE_SIZE = 20
@@ -20,9 +20,10 @@ class NinjaPagination(NinjaPageNumberPagination):
 
         model_config = {"populate_by_name": True}
 
-        def __init__(self, **kwargs: Any) -> None:
-            super().__init__(**kwargs)
-            self.page_size = min(self.page_size, MAX_PAGE_SIZE)
+        @field_validator("page_size")
+        @classmethod
+        def clamp_page_size(cls, value: int) -> int:
+            return min(value, MAX_PAGE_SIZE)
 
     class Output(Schema):
         results: list[Any]
