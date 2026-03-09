@@ -15,3 +15,7 @@ class NinjaTag(models.TextChoices):
     RIWAYAHS = "Riwayahs"
     QIRAAHS = "Qiraahs"
     ISSUE_REPORTS = "Issue Reports"
+    FAVORITES = "Favorites"
+    BOOKMARKS = "Bookmarks"
+    LISTENING_HISTORY = "Listening History"
+    PREFERENCES = "Preferences"
