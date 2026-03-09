@@ -18,7 +18,6 @@ ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
     "::1",
-    "develop.api.cms.itqan.dev",
 ]
 
 # =========================
@@ -53,8 +52,6 @@ CORS_ALLOW_ALL_ORIGINS = True  # Dev only
 CORS_ALLOW_CREDENTIALS = True
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://develop.api.cms.itqan.dev",
-    "https://develop.cms.itqan.dev",
     "https://staging.cms.itqan.dev",
     "https://staging--itqan-cms.netlify.app",
     "https://cms.itqan.dev",

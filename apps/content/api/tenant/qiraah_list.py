@@ -56,4 +56,4 @@ def list_qiraahs(request: Request, filters: QiraahFilter = Query()):
     service = RiwayahService(repo)
     return service.get_all_qiraahs(
         publisher_q=request.publisher_q("riwayahs__assets__resource__publisher"), filters=filters
-    )
+    ).order_by("id")

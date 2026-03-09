@@ -48,52 +48,46 @@ Use exactly this shape when converting inputs:
 
 ### Branch Strategy & Protection Rules
 - **main**: Production-ready code, **MERGE-ONLY** from staging
-- **staging**: Pre-production branch, **MERGE-ONLY** from develop
-- **develop**: Primary development branch for new features and bug fixes
+- **staging**: Primary development branch for new features and bug fixes
 
-### 🔒 ENFORCED Git Workflow Rules
+### Enforced Git Workflow Rules
 **CRITICAL**: These rules are strictly enforced and cannot be bypassed:
 
 1. **Branch Protection**:
-   - ❌ **main** and **staging** branches: NO direct commits/pushes allowed
-   - ✅ **develop** branch: Direct commits allowed for active development
-   - ✅ **feature/** branches: Direct commits allowed for feature development
+   - **main** and **staging** branches: NO direct commits/pushes allowed
+   - **feat/** branches: Direct commits allowed for feature development
 
 2. **Mandatory Change Flow**:
-   - ALL changes MUST start on `develop` branch (or feature branch created from develop)
+   - ALL changes MUST start on `staging` branch (or feature branch created from staging)
    - Changes MUST be tested locally BEFORE any remote push
    - Changes MUST commit with descriptive but concise messages
-   - Changes MUST push to `origin/develop` after local testing passes
+   - Changes MUST push to `feat/*` after local testing passes
 
 3. **Branch Transition Rules**:
-   - `develop` → `staging`: ONLY via Pull Request + code review
    - `staging` → `main`: ONLY via Pull Request + code review
-   - `feature/*` → `develop`: Via Pull Request or direct merge after testing
+   - `feat/*` → `staging`: Via Pull Request or direct merge after testing
 
 ### Merge Order Rule (MANDATORY)
-- **Sequence**: `develop` MUST be merged into `staging`, then `staging` MUST be merged into `main`.
+- **Sequence**: `staging` MUST be merged into `main`.
 - **Prohibited**: Skipping stages or merging directly into `staging` or `main` from any other branch is not allowed.
 
 
 4. **CMS Rules File Updates**:
    - When CMS rules are modified, automatic commit with message "Update CMS workflow rules"
    - Must test locally immediately after rules change
-   - Must push to develop origin once local testing confirms functionality
+   - Must push to staging origin once local testing confirms functionality
 
 
 ### Deployment Rules (ENFORCED)
-🔒 **Strict branch flow enforcement via GitHub Actions:**
+**Strict branch flow enforcement via GitHub Actions:**
 1. **main** can ONLY be updated from **staging** via Pull Request
-2. **staging** can ONLY be updated from **develop** via Pull Request
-3. **develop** allows direct pushes for active development
-4. Deployment triggers ONLY on successful PR merges (not direct pushes)
-5. Manual deployment available ONLY for develop branch (emergency hotfixes)
+2. **staging** can ONLY be updated from feature branches via Pull Request
+3. Deployment triggers ONLY on successful PR merges (not direct pushes)
 
 
 ## Environments & URLs
 - Production: `https://cms.itqan.dev`
 - Staging: `https://staging.cms.itqan.dev`
-- Develop: `https://develop.cms.itqan.dev`
 
 ## Dependencies docs
 - ninja docs: https://django-ninja.dev/
@@ -122,16 +116,25 @@ response={
 - When using self.authenticate_user in tests, put it into the test case itself not in `setUp` or `setUpClass` methods to be more explicit
 - Use `pytest` to run test NOT `python manage.py test`
 
-## 🏗️ API Architecture
-- **cms_api**: Internal API mounted at `/cms-api/`. Used by the frontend SPA. Primarily uses JWT/Session authentication.
-- **developers_api**: Public API used by external developers/consumers. Primarily uses OAuth2.0 authentication.
-- **tenant_api**: Internal API mounted at `/tenant/`. Used by the frontend SPA for the publishers' pages. used as multitenant SaaS. Primarily uses JWT/Session authentication.
+## API Architecture
+
+This project exposes **four distinct APIs**, each serving a different audience. All are built with Django Ninja and share the same error handling structure (`ItqanError` / `NinjaErrorResponse`).
+
+- **cms_api** (Internal API): Mounted at `/cms-api/`. Powers the frontend SPA where platform users ("the developers") can create accounts, explore the platform, and create OAuth applications. Uses JWT/Session authentication via django-allauth.
+- **developers_api** (Public API): Mounted at `/` (root). The public-facing API consumed by external developers after they create an OAuth application through the CMS API. This is where we expect the majority of traffic. Uses OAuth2 via django-oauth-toolkit.
+- **tenant_api** (Tenant API): Mounted at `/tenant/`. A multi-tenant SaaS API for **publishers** (core stakeholders). Each publisher can have their own domain; content is filtered by the `Domain` the request originates from, showing only their data. All tenants share a single database -- this architecture will not change in the near term. Uses JWT/Session authentication.
+- **portal_api** (Portal API): Mounted at `/portal/`. Internal admin portal for uploading, writing, updating, and managing content (full CRUD). Relies on a permission system; all users are expected to be internal company staff. Focus is on heavy lifting, not aesthetics. Uses JWT/Session authentication with role-based permissions.
+
+Each app has its own `api/` directory with subdirectories per API surface (`internal/`, `public/`, `tenant/`, `portal/`), and each has its own tests.
+
+- All queries in `api/tenant` should be filtered for publisher, preferably using `request.publisher_q()`
 
 ## General
-- any function you define should be type hinted, you can exclude only api endpoints (decorated with `@router.`)
-- All code should be python 3.13 compatible and django 5.2 compatible
-- always use `AwareDateTime` instead of `datetime` in `Schema`
-- All queries in `api/tenant` should be filtered for publisher, preferably using `request.publisher_q()`
+- **Dependency management**: Use `uv` (`uv sync` to install, `uv sync --group dev` for dev dependencies)
+- **Linting**: Use `pre-commit install` to set up Git hooks. All PRs must pass linting checks to be merged
+- Any function you define should be type hinted, you can exclude only API endpoints (decorated with `@router.`)
+- All code should be Python 3.13 compatible and Django 5.2 compatible
+- Always use `AwareDateTime` instead of `datetime` in `Schema`
 
 ## Architecture
 - Always use Repositories for data access layer and Services for business logic layer

@@ -15,7 +15,6 @@ DEBUG = False
 
 ALLOWED_HOSTS = [
     "api.cms.itqan.dev",  # Production API domain
-    "develop.api.cms.itqan.dev",  # Development environment
     "staging.api.cms.itqan.dev",  # Staging environment
     "localhost",  # For local Docker development
 ]
@@ -42,8 +41,6 @@ X_FRAME_OPTIONS = "DENY"
 CORS_ALLOWED_ORIGINS = [
     "https://cms.itqan.dev",
     "https://itqan-cms.netlify.app",
-    "https://develop.cms.itqan.dev",
-    "https://develop--itqan-cms.netlify.app",
     "https://staging.cms.itqan.dev",
     "https://staging--itqan-cms.netlify.app",
     "https://saudi-recitation-center.netlify.app",
@@ -92,8 +89,6 @@ CELERY_TASK_EAGER_PROPAGATES = True
 
 CSRF_TRUSTED_ORIGINS = [
     "https://api.cms.itqan.dev",
-    "https://develop.cms.itqan.dev",
-    "https://develop--itqan-cms.netlify.app",
     "https://staging.cms.itqan.dev",
     "https://staging--itqan-cms.netlify.app",
     "https://cms.itqan.dev",

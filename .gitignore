@@ -334,3 +334,4 @@ media/
 .idea/
 .vscode/settings.json
 /private_key.pem
+/.vscode/launch.json

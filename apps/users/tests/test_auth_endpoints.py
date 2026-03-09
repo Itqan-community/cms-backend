@@ -231,7 +231,7 @@ class UserLoginTestCase(BaseTestCase):
         """Test login with missing required fields returns validation error"""
         # Arrange
         data = {
-            "email": self.user_data["email"]
+            "email": self.user_data["email"],
             # Missing password
         }
 
