@@ -51,6 +51,42 @@ class PublisherCreateIn(Schema):
         return v
 
 
+class PublisherPutIn(Schema):
+    """Schema for fully replacing a publisher (PUT)."""
+
+    name: str
+    name_ar: str | None = None
+    name_en: str | None = None
+    description: str
+    description_ar: str | None = None
+    description_en: str | None = None
+    address: str
+    website: str
+    contact_email: str
+    is_verified: bool
+    foundation_year: int | None = None
+    country: str
+
+    @field_validator("name")
+    @classmethod
+    def name_must_not_be_blank(cls, v: str) -> str:
+        """Validate that name is not blank after stripping whitespace."""
+        v = v.strip()
+        if not v:
+            raise ValueError("Name must not be blank.")
+        return v
+
+    @field_validator("name_ar", "name_en")
+    @classmethod
+    def optional_name_must_not_be_blank(cls, v: str | None) -> str | None:
+        """Validate that optional name fields are not blank if provided."""
+        if v is not None:
+            v = v.strip()
+            if not v:
+                raise ValueError("Name must not be blank if provided.")
+        return v
+
+
 class PublisherUpdateIn(Schema):
     """Schema for partially updating a publisher."""
 
@@ -109,7 +145,7 @@ class PublisherFilter(FilterSchema):
 
 @router.post(
     "publishers/",
-    response={201: PublisherOut, 409: NinjaErrorResponse},
+    response={201: PublisherOut, 401: NinjaErrorResponse, 409: NinjaErrorResponse},
     auth=ninja_jwt_auth,
 )
 def create_publisher(request: Request, data: PublisherCreateIn) -> tuple[int, Publisher]:
@@ -135,7 +171,16 @@ def create_publisher(request: Request, data: PublisherCreateIn) -> tuple[int, Pu
 @router.get("publishers/", response=list[PublisherOut])
 @paginate
 @ordering(ordering_fields=["name", "created_at"])
-@searching(search_fields=["name", "name_ar", "description", "description_ar"])
+@searching(
+    search_fields=[
+        "name",
+        "name_ar",
+        "name_en",
+        "description",
+        "description_ar",
+        "description_en",
+    ]
+)
 def list_publishers(request: Request, filters: PublisherFilter = Query()) -> list[Publisher]:
     """List all publishers with optional filtering, ordering, and search."""
     qs = Publisher.objects.all().order_by("name")
@@ -161,10 +206,10 @@ def get_publisher(request: Request, publisher_id: int) -> Publisher:
 
 @router.put(
     "publishers/{publisher_id}/",
-    response={200: PublisherOut, 404: NinjaErrorResponse, 409: NinjaErrorResponse},
+    response={200: PublisherOut, 401: NinjaErrorResponse, 404: NinjaErrorResponse, 409: NinjaErrorResponse},
     auth=ninja_jwt_auth,
 )
-def update_publisher_full(request: Request, publisher_id: int, data: PublisherCreateIn) -> Publisher:
+def update_publisher_full(request: Request, publisher_id: int, data: PublisherPutIn) -> Publisher:
     """Fully update a publisher with the given data."""
     try:
         publisher = Publisher.objects.get(id=publisher_id)
@@ -191,7 +236,7 @@ def update_publisher_full(request: Request, publisher_id: int, data: PublisherCr
 
 @router.patch(
     "publishers/{publisher_id}/",
-    response={200: PublisherOut, 404: NinjaErrorResponse, 409: NinjaErrorResponse},
+    response={200: PublisherOut, 401: NinjaErrorResponse, 404: NinjaErrorResponse, 409: NinjaErrorResponse},
     auth=ninja_jwt_auth,
 )
 def update_publisher_partial(request: Request, publisher_id: int, data: PublisherUpdateIn) -> Publisher:
@@ -222,7 +267,7 @@ def update_publisher_partial(request: Request, publisher_id: int, data: Publishe
 
 @router.delete(
     "publishers/{publisher_id}/",
-    response={204: None, 404: NinjaErrorResponse},
+    response={204: None, 401: NinjaErrorResponse, 404: NinjaErrorResponse},
     auth=ninja_jwt_auth,
 )
 def delete_publisher(request: Request, publisher_id: int) -> tuple[int, None]:
