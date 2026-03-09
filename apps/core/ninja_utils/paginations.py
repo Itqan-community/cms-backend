@@ -38,8 +38,12 @@ class NinjaPagination(NinjaPageNumberPagination):
     def _build_page_url(request: HttpRequest | None, page: int, page_size: int) -> str | None:
         if request is None:
             return None
-        path = request.path
-        return f"{path}?page={page}&pageSize={page_size}"
+        query = request.GET.copy()
+        query["page"] = str(page)
+        query["pageSize"] = str(page_size)
+        if "page_size" in query:
+            del query["page_size"]
+        return f"{request.path}?{query.urlencode()}"
 
     def _build_pagination_response(
         self,

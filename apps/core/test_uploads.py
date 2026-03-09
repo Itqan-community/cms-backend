@@ -2,7 +2,7 @@ from types import SimpleNamespace
 from unittest import TestCase
 
 from apps.core.uploads import (
-    _safe_id,
+    _safe_own_id,
     upload_to_asset_files,
     upload_to_asset_preview_images,
     upload_to_asset_thumbnails,
@@ -13,29 +13,29 @@ from apps.core.uploads import (
 )
 
 
-class SafeIdTest(TestCase):
-    """Tests for the _safe_id helper that prevents None in file paths."""
+class SafeOwnIdTest(TestCase):
+    """Tests for the _safe_own_id helper that prevents None in file paths."""
 
-    def test_safe_id_where_id_is_integer_should_return_string_of_id(self) -> None:
+    def test_safe_own_id_where_id_is_integer_should_return_string_of_id(self) -> None:
         """Verify that a valid integer ID is returned as its string representation."""
-        result = _safe_id(42)
+        result = _safe_own_id(42)
         self.assertEqual(result, "42")
 
-    def test_safe_id_where_id_is_none_should_return_uuid_fallback(self) -> None:
+    def test_safe_own_id_where_id_is_none_should_return_uuid_fallback(self) -> None:
         """Verify that None produces a 12-character hex fallback instead of 'None'."""
-        result = _safe_id(None)
+        result = _safe_own_id(None)
         self.assertNotEqual(result, "None")
         self.assertEqual(len(result), 12)
         self.assertTrue(all(c in "0123456789abcdef" for c in result))
 
-    def test_safe_id_where_id_is_none_should_return_unique_values(self) -> None:
+    def test_safe_own_id_where_id_is_none_should_return_unique_values(self) -> None:
         """Verify that repeated calls with None produce different fallbacks."""
-        results = {_safe_id(None) for _ in range(10)}
+        results = {_safe_own_id(None) for _ in range(10)}
         self.assertEqual(len(results), 10)
 
-    def test_safe_id_where_id_is_zero_should_return_zero_string(self) -> None:
+    def test_safe_own_id_where_id_is_zero_should_return_zero_string(self) -> None:
         """Verify that zero is treated as a valid ID, not as falsy."""
-        result = _safe_id(0)
+        result = _safe_own_id(0)
         self.assertEqual(result, "0")
 
 
@@ -56,21 +56,17 @@ class UploadToAssetFilesTest(TestCase):
         self.assertTrue(result.startswith("uploads/assets/5/versions/"))
         self.assertTrue(result.endswith("/document.pdf"))
 
-    def test_upload_to_asset_files_where_asset_id_is_none_should_not_contain_none(self) -> None:
-        """Verify that /None/ never appears in the path when asset_id is None."""
+    def test_upload_to_asset_files_where_asset_id_is_none_should_raise_value_error(self) -> None:
+        """Verify that ValueError is raised when asset_id (parent) is None."""
         instance = SimpleNamespace(asset_id=None, id=10)
-        result = upload_to_asset_files(instance, "document.pdf")
-        self.assertNotIn("None", result)
-        self.assertTrue(result.startswith("uploads/assets/"))
-        self.assertIn("/versions/10/document.pdf", result)
+        with self.assertRaisesRegex(ValueError, "Asset must be saved"):
+            upload_to_asset_files(instance, "document.pdf")
 
-    def test_upload_to_asset_files_where_both_ids_none_should_not_contain_none(self) -> None:
-        """Verify that /None/ never appears when both IDs are None."""
+    def test_upload_to_asset_files_where_both_ids_none_should_raise_value_error(self) -> None:
+        """Verify that ValueError is raised when asset_id (parent) is None."""
         instance = SimpleNamespace(asset_id=None, id=None)
-        result = upload_to_asset_files(instance, "document.pdf")
-        self.assertNotIn("None", result)
-        self.assertTrue(result.startswith("uploads/assets/"))
-        self.assertTrue(result.endswith(".pdf"))
+        with self.assertRaisesRegex(ValueError, "Asset must be saved"):
+            upload_to_asset_files(instance, "document.pdf")
 
 
 class UploadToResourceFilesTest(TestCase):
@@ -133,11 +129,11 @@ class UploadToAssetPreviewImagesTest(TestCase):
         result = upload_to_asset_preview_images(instance, "preview shot.png")
         self.assertEqual(result, "uploads/assets/4/preview/preview-shot.png")
 
-    def test_upload_to_asset_preview_images_where_asset_id_is_none_should_not_contain_none(self) -> None:
-        """Verify that /None/ never appears when asset_id is None."""
+    def test_upload_to_asset_preview_images_where_asset_id_is_none_should_raise_value_error(self) -> None:
+        """Verify that ValueError is raised when asset_id (parent) is None."""
         instance = SimpleNamespace(asset_id=None)
-        result = upload_to_asset_preview_images(instance, "shot.png")
-        self.assertNotIn("None", result)
+        with self.assertRaisesRegex(ValueError, "Asset must be saved"):
+            upload_to_asset_preview_images(instance, "shot.png")
 
 
 class UploadToReciterImageTest(TestCase):
@@ -165,9 +161,8 @@ class UploadToRecitationSurahTrackFilesTest(TestCase):
         result = upload_to_recitation_surah_track_files(instance, "track.mp3")
         self.assertEqual(result, "uploads/assets/6/recitations/002.mp3")
 
-    def test_upload_to_recitation_surah_track_files_where_asset_id_is_none_should_not_contain_none(self) -> None:
-        """Verify that /None/ never appears when asset_id is None."""
+    def test_upload_to_recitation_surah_track_files_where_asset_id_is_none_should_raise_value_error(self) -> None:
+        """Verify that ValueError is raised when asset_id (parent) is None."""
         instance = SimpleNamespace(asset_id=None, surah_number=114)
-        result = upload_to_recitation_surah_track_files(instance, "track.mp3")
-        self.assertNotIn("None", result)
-        self.assertTrue(result.endswith("/recitations/114.mp3"))
+        with self.assertRaisesRegex(ValueError, "Asset must be saved"):
+            upload_to_recitation_surah_track_files(instance, "track.mp3")
