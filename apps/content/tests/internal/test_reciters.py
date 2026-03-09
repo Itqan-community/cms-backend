@@ -6,15 +6,12 @@ from apps.users.models import User
 
 
 class ReciterCreateTest(BaseTestCase):
-    """Tests for the reciter creation endpoint."""
 
-    def setUp(self):
-        """Set up test fixtures."""
+    def setUp(self) -> None:
         super().setUp()
         self.user = baker.make(User, email="test@example.com", is_active=True)
 
-    def test_create_reciter_should_return_201(self):
-        """Test creating a reciter with valid data returns 201."""
+    def test_create_reciter_where_valid_data_should_return_201(self) -> None:
         self.authenticate_user(self.user)
         response = self.client.post(
             "/cms-api/reciters/",
@@ -33,8 +30,7 @@ class ReciterCreateTest(BaseTestCase):
         self.assertEqual("Saudi", body["nationality"])
         self.assertTrue(body["slug"])
 
-    def test_create_reciter_where_name_blank_should_return_422(self):
-        """Test creating a reciter with blank name returns validation error."""
+    def test_create_reciter_where_name_blank_should_return_422(self) -> None:
         self.authenticate_user(self.user)
         response = self.client.post(
             "/cms-api/reciters/",
@@ -43,8 +39,7 @@ class ReciterCreateTest(BaseTestCase):
         )
         self.assertEqual(422, response.status_code, response.content)
 
-    def test_create_reciter_where_name_exists_should_return_409(self):
-        """Test creating a reciter with duplicate name returns 409."""
+    def test_create_reciter_where_name_exists_should_return_409(self) -> None:
         self.authenticate_user(self.user)
         baker.make(Reciter, name="Existing Reciter", slug="existing-reciter")
         response = self.client.post(
@@ -60,8 +55,7 @@ class ReciterCreateTest(BaseTestCase):
         body = response.json()
         self.assertEqual("RECITER_ALREADY_EXISTS", body["error_name"])
 
-    def test_create_reciter_where_unauthenticated_should_return_401(self):
-        """Test creating a reciter without auth returns 401."""
+    def test_create_reciter_where_unauthenticated_should_return_401(self) -> None:
         response = self.client.post(
             "/cms-api/reciters/",
             data={"name": "Test", "name_ar": "تست", "name_en": "Test EN"},
@@ -69,8 +63,7 @@ class ReciterCreateTest(BaseTestCase):
         )
         self.assertEqual(401, response.status_code, response.content)
 
-    def test_create_reciter_where_name_ar_blank_should_return_422(self):
-        """Test creating a reciter with blank name_ar returns validation error."""
+    def test_create_reciter_where_name_ar_blank_should_return_422(self) -> None:
         self.authenticate_user(self.user)
         response = self.client.post(
             "/cms-api/reciters/",
@@ -79,8 +72,7 @@ class ReciterCreateTest(BaseTestCase):
         )
         self.assertEqual(422, response.status_code, response.content)
 
-    def test_create_reciter_where_missing_name_ar_should_return_422(self):
-        """Test creating a reciter without required name_ar returns validation error."""
+    def test_create_reciter_where_missing_name_ar_should_return_422(self) -> None:
         self.authenticate_user(self.user)
         response = self.client.post(
             "/cms-api/reciters/",
@@ -91,10 +83,8 @@ class ReciterCreateTest(BaseTestCase):
 
 
 class ReciterListTest(BaseTestCase):
-    """Tests for the reciter list endpoint."""
 
-    def test_list_reciters_should_return_all_reciters(self):
-        """Test listing reciters returns paginated results."""
+    def test_list_reciters_where_reciters_exist_should_return_all(self) -> None:
         baker.make(Reciter, name="Reciter A", slug="reciter-a")
         baker.make(Reciter, name="Reciter B", slug="reciter-b")
         response = self.client.get("/cms-api/reciters/")
@@ -103,8 +93,7 @@ class ReciterListTest(BaseTestCase):
         self.assertIn("results", body)
         self.assertEqual(2, len(body["results"]))
 
-    def test_list_reciters_where_filter_by_nationality_should_return_filtered(self):
-        """Test filtering reciters by nationality."""
+    def test_list_reciters_where_filter_by_nationality_should_return_filtered(self) -> None:
         baker.make(Reciter, name="R1", slug="r1", nationality="Saudi")
         baker.make(Reciter, name="R2", slug="r2", nationality="Egyptian")
         response = self.client.get("/cms-api/reciters/?nationality=Saudi")
@@ -115,22 +104,15 @@ class ReciterListTest(BaseTestCase):
 
 
 class ReciterGetTest(BaseTestCase):
-    """Tests for the reciter detail endpoint."""
 
-    def setUp(self):
-        """Set up test fixtures."""
-        super().setUp()
-
-    def test_get_reciter_should_return_reciter(self):
-        """Test retrieving a reciter by ID returns the reciter."""
+    def test_get_reciter_where_exists_should_return_reciter(self) -> None:
         reciter = baker.make(Reciter, name="Test Reciter", slug="test-reciter")
         response = self.client.get(f"/cms-api/reciters/{reciter.id}/")
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
         self.assertEqual("Test Reciter", body["name"])
 
-    def test_get_reciter_where_not_found_should_return_404(self):
-        """Test retrieving a non-existent reciter returns 404."""
+    def test_get_reciter_where_not_found_should_return_404(self) -> None:
         response = self.client.get("/cms-api/reciters/99999/")
         self.assertEqual(404, response.status_code, response.content)
         body = response.json()
@@ -138,15 +120,12 @@ class ReciterGetTest(BaseTestCase):
 
 
 class ReciterUpdateTest(BaseTestCase):
-    """Tests for the reciter update endpoint."""
 
-    def setUp(self):
-        """Set up test fixtures."""
+    def setUp(self) -> None:
         super().setUp()
         self.user = baker.make(User, email="test@example.com", is_active=True)
 
-    def test_update_reciter_should_return_updated_reciter(self):
-        """Test updating a reciter returns the updated reciter."""
+    def test_update_reciter_where_valid_data_should_return_updated(self) -> None:
         self.authenticate_user(self.user)
         reciter = baker.make(Reciter, name="Old Name", slug="old-name")
         response = self.client.patch(
@@ -158,8 +137,7 @@ class ReciterUpdateTest(BaseTestCase):
         body = response.json()
         self.assertEqual("Egyptian", body["nationality"])
 
-    def test_update_reciter_where_not_found_should_return_404(self):
-        """Test updating a non-existent reciter returns 404."""
+    def test_update_reciter_where_not_found_should_return_404(self) -> None:
         self.authenticate_user(self.user)
         response = self.client.patch(
             "/cms-api/reciters/99999/",
@@ -168,8 +146,7 @@ class ReciterUpdateTest(BaseTestCase):
         )
         self.assertEqual(404, response.status_code, response.content)
 
-    def test_update_reciter_where_blank_name_should_return_422(self):
-        """Test updating a reciter with blank name returns validation error."""
+    def test_update_reciter_where_blank_name_should_return_422(self) -> None:
         self.authenticate_user(self.user)
         reciter = baker.make(Reciter, name="Test", slug="test")
         response = self.client.patch(
@@ -179,8 +156,7 @@ class ReciterUpdateTest(BaseTestCase):
         )
         self.assertEqual(422, response.status_code, response.content)
 
-    def test_update_reciter_where_unauthenticated_should_return_401(self):
-        """Test updating a reciter without auth returns 401."""
+    def test_update_reciter_where_unauthenticated_should_return_401(self) -> None:
         reciter = baker.make(Reciter, name="Test", slug="test")
         response = self.client.patch(
             f"/cms-api/reciters/{reciter.id}/",
@@ -189,8 +165,7 @@ class ReciterUpdateTest(BaseTestCase):
         )
         self.assertEqual(401, response.status_code, response.content)
 
-    def test_update_reciter_where_null_nationality_should_return_422(self):
-        """Test updating a reciter with null non-nullable field returns validation error."""
+    def test_update_reciter_where_null_nationality_should_return_422(self) -> None:
         self.authenticate_user(self.user)
         reciter = baker.make(Reciter, name="Test", slug="test")
         response = self.client.patch(
@@ -200,8 +175,7 @@ class ReciterUpdateTest(BaseTestCase):
         )
         self.assertEqual(422, response.status_code, response.content)
 
-    def test_update_reciter_where_duplicate_name_should_return_409(self):
-        """Test updating a reciter with conflicting name returns 409."""
+    def test_update_reciter_where_duplicate_name_should_return_409(self) -> None:
         self.authenticate_user(self.user)
         baker.make(Reciter, name="Existing", slug="existing")
         reciter = baker.make(Reciter, name="Other", slug="other")
