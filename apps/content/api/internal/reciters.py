@@ -55,24 +55,15 @@ class ReciterUpdateIn(Schema):
     date_of_death: datetime.date | None = None
     bio: str | None = None
 
-    @field_validator("name")
+    @field_validator("name", "name_ar", "name_en")
     @classmethod
     def name_must_not_be_blank(cls, v: str | None) -> str | None:
-        """Validate that name is not blank if provided."""
-        if v is not None:
-            v = v.strip()
-            if not v:
-                raise ValueError("Name must not be blank if provided.")
-        return v
-
-    @field_validator("name_ar", "name_en")
-    @classmethod
-    def optional_name_must_not_be_blank(cls, v: str | None) -> str | None:
-        """Validate that optional name fields are not blank if provided."""
-        if v is not None:
-            v = v.strip()
-            if not v:
-                raise ValueError("Name must not be blank if provided.")
+        """Validate that name fields are not blank or null if provided."""
+        if v is None:
+            raise ValueError("This field cannot be null.")
+        v = v.strip()
+        if not v:
+            raise ValueError("Name must not be blank.")
         return v
 
     @field_validator("nationality", "bio")
