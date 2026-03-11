@@ -1,26 +1,10 @@
-import os
-from unittest import skipUnless
-
 from django.conf import settings
 from django.core.cache import cache
-from django.test import override_settings
 import redis
 
 from apps.core.tests import BaseTestCase
 
 
-@skipUnless(
-    os.getenv("ENABLE_REDIS_TESTS") == "1",
-    "Set ENABLE_REDIS_TESTS=1 to run Redis integration tests",
-)
-@override_settings(
-    CACHES={
-        "default": {
-            "BACKEND": "django_redis.cache.RedisCache",
-            "LOCATION": os.getenv("REDIS_URL", "redis://localhost:6379/1"),
-        }
-    }
-)
 class RedisCacheIntegrationTests(BaseTestCase):
     def test_redis_connection_and_cache_roundtrip(self):
         # Low-level ping using redis-py

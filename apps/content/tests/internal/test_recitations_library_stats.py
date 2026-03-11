@@ -4,11 +4,9 @@ Tests for GET /cms-api/recitations/library-stats/ (recitations library statistic
 Covers: auth, correct counts, Redis cache hit/miss, cache invalidation on Riwayah/Reciter/Asset change.
 """
 
-import os
 from unittest.mock import patch
 
 from django.core.cache import cache
-from django.test import override_settings
 from model_bakery import baker
 
 from apps.content.api.internal.recitations_library_stats import (
@@ -21,14 +19,6 @@ from apps.publishers.models import Publisher
 from apps.users.models import User
 
 
-@override_settings(
-    CACHES={
-        "default": {
-            "BACKEND": "django_redis.cache.RedisCache",
-            "LOCATION": os.getenv("REDIS_URL", "redis://localhost:6379/1"),
-        }
-    }
-)
 class RecitationsLibraryStatsTests(BaseTestCase):
     @classmethod
     def setUpTestData(cls) -> None:
@@ -51,6 +41,7 @@ class RecitationsLibraryStatsTests(BaseTestCase):
 
         qiraah = baker.make(Qiraah, name="Qiraah Asim", is_active=True)
         riwayah1 = baker.make(Riwayah, name="Hafs", qiraah=qiraah, is_active=True)
+        riwayah2 = baker.make(Riwayah, name="Warsh", qiraah=qiraah, is_active=True)
         reciter1 = baker.make(Reciter, name="Reciter One", is_active=True)
         reciter2 = baker.make(Reciter, name="Reciter Two", is_active=True)
         publisher = baker.make(Publisher, name="Test Publisher")
@@ -80,7 +71,7 @@ class RecitationsLibraryStatsTests(BaseTestCase):
             category=Resource.CategoryChoice.RECITATION,
             resource=resource,
             reciter=reciter2,
-            riwayah=riwayah1,
+            riwayah=riwayah2,
             license="CC0",
             file_size="1 MB",
             format="mp3",

@@ -1,8 +1,6 @@
-import os
 from unittest.mock import patch
 
 from django.core.cache import cache
-from django.test import override_settings
 from model_bakery import baker
 
 from apps.content.api.internal.reciter_stats import RECITER_STATS_CACHE_KEY, RECITER_STATS_TTL
@@ -11,14 +9,6 @@ from apps.core.tests import BaseTestCase
 from apps.users.models import User
 
 
-@override_settings(
-    CACHES={
-        "default": {
-            "BACKEND": "django.core.cache.backends.redis.RedisCache",
-            "LOCATION": os.getenv("REDIS_URL", "redis://localhost:6379/1"),
-        }
-    }
-)
 class ReciterStatsCacheTests(BaseTestCase):
     @classmethod
     def setUpTestData(cls) -> None:
