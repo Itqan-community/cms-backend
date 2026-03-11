@@ -188,7 +188,7 @@ def update_reciter(request: Request, reciter_id: int, data: ReciterUpdateIn) -> 
             status_code=404,
         ) from None
 
-    update_data = data.dict(exclude_unset=True)
+    update_data = data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(reciter, field, value)
 
