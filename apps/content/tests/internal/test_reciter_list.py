@@ -85,6 +85,37 @@ class RecitersListTest(BaseTestCase):
             authorization_grant_type="password",
         )
 
+        self.recitation_resource = baker.make(
+            Resource,
+            publisher=self.publisher,
+            category=Resource.CategoryChoice.RECITATION,
+            status=Resource.StatusChoice.READY,
+        )
+        self.draft_recitation_resource = baker.make(
+            Resource,
+            publisher=self.publisher,
+            category=Resource.CategoryChoice.RECITATION,
+            status=Resource.StatusChoice.DRAFT,
+        )
+        self.riwayah = baker.make("content.Riwayah")
+
+    def _make_reciter_with_recitation(self, resource_status=Resource.StatusChoice.READY, **kwargs):
+        """Create a reciter with a recitation asset linked to a resource of the given status."""
+        resource = (
+            self.recitation_resource
+            if resource_status == Resource.StatusChoice.READY
+            else self.draft_recitation_resource
+        )
+        reciter = baker.make(Reciter, **kwargs)
+        baker.make(
+            Asset,
+            category=Resource.CategoryChoice.RECITATION,
+            reciter=reciter,
+            resource=resource,
+            riwayah=self.riwayah,
+        )
+        return reciter
+
     def test_list_reciters_should_return_only_active_reciters_with_ready_recitations(self):
         # Arrange
         self.authenticate_client(self.app)
@@ -113,7 +144,7 @@ class RecitersListTest(BaseTestCase):
         # Only the valid RECITATION asset with READY + RECITATION resource should be counted
         self.assertEqual(1, reciter_item["recitations_count"])
 
-    def test_list_reciters_ordering_by_name(self):
+    def test_list_reciters_ordering_by_name_en(self):
         # Arrange – another active reciter so we can test ordering
         other_reciter = baker.make(Reciter, is_active=True, name="A Reciter")
         baker.make(
@@ -126,7 +157,7 @@ class RecitersListTest(BaseTestCase):
         self.authenticate_client(self.app)
 
         # Act
-        response = self.client.get("/reciters/?ordering=name")
+        response = self.client.get("/reciters/?ordering=name_en")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -134,3 +165,28 @@ class RecitersListTest(BaseTestCase):
 
         names = [item["name"] for item in items]
         self.assertEqual(sorted(names), names)  # ascending by name
+
+    def test_reciters_where_no_ordering_parameter_provided_api_should_fallback_to_ordering_by_name_ar(self):
+        for name_ar in ["ياسر الدوسري", "أحمد العجمي", "سعد الغامدي"]:
+            self._make_reciter_with_recitation(name_ar=name_ar, is_active=True)
+
+        # Use Accept-Language: ar so that `name` in the response maps to name_ar
+        self.authenticate_user(self.user, language="ar")
+        response = self.client.get("/cms-api/reciters/")
+
+        self.assertEqual(200, response.status_code, response.content)
+        items = response.json()["results"]
+        names = [item["name"] for item in items]
+        self.assertEqual(sorted(names), names)
+
+    def test_reciters_listing_where_search_paramter_is_provided_api_should_return_matched_reciters(self):
+        self._make_reciter_with_recitation(name="Mishary Rashid", name_ar="مشاري راشد العفاسي", is_active=True)
+        self._make_reciter_with_recitation(name="Saad Al-Ghamidi", name_ar="سعد الغامدي", is_active=True)
+        self.authenticate_user(self.user, language="ar")
+
+        response = self.client.get("/cms-api/reciters/", data={"search": "مشاري"})
+
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(1, body["count"])
+        self.assertEqual("مشاري راشد العفاسي", body["results"][0]["name"])
