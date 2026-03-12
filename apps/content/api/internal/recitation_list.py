@@ -46,12 +46,25 @@ class RecitationFilter(FilterSchema):
     publisher_id: list[int] | None = Field(None, q="resource__publisher_id__in")
     reciter_id: list[int] | None = Field(None, q="reciter_id__in")
     riwayah_id: list[int] | None = Field(None, q="riwayah_id__in")
+    qiraah_id: list[int] | None = Field(None, q="qiraah_id__in")
 
 
 @router.get("recitations/", response=list[RecitationListOut])
 @paginate
 @ordering(ordering_fields=["name", "created_at", "updated_at"])
-@searching(search_fields=["name", "description", "resource__publisher__name", "reciter__name"])
+@searching(
+    search_fields=[
+        "name",
+        "description",
+        "resource__publisher__name",
+        "reciter__name",
+        "reciter__name_ar",
+        "riwayah__name",
+        "riwayah__name_ar",
+        "qiraah__name",
+        "qiraah__name_ar",
+    ]
+)
 def list_recitations(request: Request, filters: RecitationFilter = Query()):
     repo = RecitationRepository()
     service = RecitationService(repo)
