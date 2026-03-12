@@ -1,3 +1,4 @@
+from django.db.models import F
 from ninja import FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
@@ -33,8 +34,8 @@ class ReciterFilter(FilterSchema):
 
 @router.get("reciters/", response=list[ReciterOut])
 @paginate
-@ordering(ordering_fields=["name_ar", "name_en", "created_at", "updated_at"])
-@searching(search_fields=["name_en", "name_ar", "slug"])
+@ordering(ordering_fields=["name", "name_ar", "name_en", "created_at", "updated_at"])
+@searching(search_fields=["name", "name_en", "name_ar", "slug"])
 def list_reciters(request: Request, filters: ReciterFilter = Query()):
     """
     Tenant Content API:
@@ -54,4 +55,4 @@ def list_reciters(request: Request, filters: ReciterFilter = Query()):
     publisher_q = request.publisher_q("assets__resource__publisher")
     qs = service.get_all_reciters(publisher_q, filters)
 
-    return qs.order_by("name_ar")
+    return qs.order_by(F("name_ar").asc(nulls_last=True))
