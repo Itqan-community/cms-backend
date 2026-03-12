@@ -37,7 +37,11 @@ class RecitationRepository(BaseRecitationRepository):
             if reciter_ids := filters_dict.get("reciter_id"):
                 qs = qs.filter(reciter_id__in=reciter_ids)
             if riwayah_ids := filters_dict.get("riwayah_id"):
-                qs = qs.filter(riwayah_id__in=riwayah_ids)
+                qs = qs.filter(
+                    Q(riwayah_id__in=riwayah_ids)
+                    # get recitations with combined riwayahs under one qiraah, but no single riwayah
+                    | Q(riwayah__isnull=True, qiraah__in=Riwayah.objects.filter(id__in=riwayah_ids).values("qiraah_id"))
+                )
             if qiraah_ids := filters_dict.get("qiraah_id"):
                 qs = qs.filter(qiraah_id__in=qiraah_ids)
             if publisher_ids := filters_dict.get("publisher_id"):
@@ -52,7 +56,7 @@ class RecitationRepository(BaseRecitationRepository):
 
             qs = qs.annotate(surahs_count=Count("recitation_tracks"))
 
-        return qs
+        return qs.distinct()
 
     def get_recitation_asset(self, asset_id: int, publisher_q: Q) -> dict[str, Any] | None:
         try:
