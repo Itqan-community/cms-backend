@@ -24,7 +24,6 @@ if settings.ENABLE_ALLAUTH:
         }
     }
 
-
 register_exception_handlers(portal_api)
 
 auto_discover_ninja_routers(portal_api, "api/portal")
