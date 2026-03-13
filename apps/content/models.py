@@ -533,6 +533,12 @@ class UsageEvent(BaseModel):
                 name="usage_event_subject_kind_consistency",
             )
         ]
+        indexes = [
+            models.Index(fields=["created_at", "usage_kind"], name="usageevent_created_kind_idx"),
+            models.Index(fields=["developer_user", "usage_kind"], name="usageevent_user_kind_idx"),
+            models.Index(fields=["asset_id"], name="usageevent_asset_id_idx"),
+            models.Index(fields=["resource_id"], name="usageevent_resource_id_idx"),
+        ]
 
     def __str__(self):
         return f"UsageEvent(user={self.developer_user_id}, kind={self.usage_kind}, subject={self.subject_kind})"
