@@ -8,10 +8,10 @@ from apps.users.models import User
 class DeletePublisherTest(BaseTestCase):
     def setUp(self) -> None:
         self.user = baker.make(User)
-        self.authenticate_user(self.user)
 
     def test_delete_publisher_where_exists_should_return_204(self) -> None:
         # Arrange
+        self.authenticate_user(self.user)
         publisher = baker.make(Publisher, name="To Delete", slug="to-delete")
 
         # Act
@@ -22,6 +22,9 @@ class DeletePublisherTest(BaseTestCase):
         self.assertFalse(Publisher.objects.filter(id=publisher.id).exists())
 
     def test_delete_publisher_where_not_found_should_return_404(self) -> None:
+        # Arrange
+        self.authenticate_user(self.user)
+
         # Act
         response = self.client.delete("/portal/publishers/99999/")
 
@@ -32,7 +35,6 @@ class DeletePublisherTest(BaseTestCase):
 
     def test_delete_publisher_where_unauthenticated_should_return_401(self) -> None:
         # Arrange
-        self.authenticate_user(None)
         publisher = baker.make(Publisher, name="Test", slug="test")
 
         # Act

@@ -8,10 +8,10 @@ from apps.users.models import User
 class RetrievePublisherTest(BaseTestCase):
     def setUp(self) -> None:
         self.user = baker.make(User)
-        self.authenticate_user(self.user)
 
     def test_retrieve_publisher_where_exists_should_return_200_with_all_fields(self) -> None:
         # Arrange
+        self.authenticate_user(self.user)
         publisher = baker.make(
             Publisher,
             name="Tafsir Center",
@@ -46,6 +46,9 @@ class RetrievePublisherTest(BaseTestCase):
         self.assertIn("updated_at", body)
 
     def test_retrieve_publisher_where_not_found_should_return_404(self) -> None:
+        # Arrange
+        self.authenticate_user(self.user)
+
         # Act
         response = self.client.get("/portal/publishers/99999/")
 
@@ -56,7 +59,6 @@ class RetrievePublisherTest(BaseTestCase):
 
     def test_retrieve_publisher_where_unauthenticated_should_return_401(self) -> None:
         # Arrange
-        self.authenticate_user(None)
         publisher = baker.make(Publisher, name="Test", slug="test")
 
         # Act
@@ -67,6 +69,7 @@ class RetrievePublisherTest(BaseTestCase):
 
     def test_retrieve_publisher_where_has_translated_fields_should_include_them(self) -> None:
         # Arrange
+        self.authenticate_user(self.user)
         publisher = baker.make(
             Publisher,
             name="International Publisher",

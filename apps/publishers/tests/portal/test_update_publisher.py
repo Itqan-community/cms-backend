@@ -8,7 +8,6 @@ from apps.users.models import User
 class UpdatePublisherTest(BaseTestCase):
     def setUp(self) -> None:
         self.user = baker.make(User)
-        self.authenticate_user(self.user)
         self.publisher = baker.make(
             Publisher,
             name="Original Publisher",
@@ -25,6 +24,7 @@ class UpdatePublisherTest(BaseTestCase):
 
     def test_put_publisher_where_valid_data_should_return_200(self) -> None:
         # Arrange
+        self.authenticate_user(self.user)
         data = {
             "name": "Updated Publisher",
             "description": "Updated description",
@@ -51,6 +51,7 @@ class UpdatePublisherTest(BaseTestCase):
 
     def test_put_publisher_where_not_found_should_return_404(self) -> None:
         # Arrange
+        self.authenticate_user(self.user)
         data = {"name": "Updated"}
 
         # Act
@@ -65,6 +66,7 @@ class UpdatePublisherTest(BaseTestCase):
 
     def test_patch_publisher_where_partial_data_should_update_only_provided_fields(self) -> None:
         # Arrange
+        self.authenticate_user(self.user)
         data = {"country": "Jordan"}
 
         # Act
@@ -81,6 +83,7 @@ class UpdatePublisherTest(BaseTestCase):
 
     def test_patch_publisher_where_name_changed_should_regenerate_slug(self) -> None:
         # Arrange
+        self.authenticate_user(self.user)
         data = {"name": "New Name Publisher"}
 
         # Act
@@ -94,6 +97,7 @@ class UpdatePublisherTest(BaseTestCase):
 
     def test_patch_publisher_where_translated_fields_updated_should_persist(self) -> None:
         # Arrange
+        self.authenticate_user(self.user)
         data = {"name_ar": "الناشر المحدث", "description_ar": "وصف محدث"}
 
         # Act
@@ -107,7 +111,6 @@ class UpdatePublisherTest(BaseTestCase):
 
     def test_update_publisher_where_unauthenticated_should_return_401(self) -> None:
         # Arrange
-        self.authenticate_user(None)
         data = {"name": "Updated"}
 
         # Act
