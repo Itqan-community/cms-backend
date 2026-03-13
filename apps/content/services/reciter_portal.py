@@ -57,6 +57,6 @@ class ReciterPortalService:
         except IntegrityError as exc:
             raise ItqanError(
                 error_name="reciter_already_exists",
-                message=f"A reciter with slug '{slug}' already exists",
+                message="A reciter with this name or slug already exists",
                 status_code=400,
             ) from exc

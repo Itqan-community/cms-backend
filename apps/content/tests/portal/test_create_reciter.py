@@ -83,6 +83,20 @@ class CreateReciterTest(BaseTestCase):
         body = response.json()
         self.assertEqual("reciter_already_exists", body["error_name"])
 
+    def test_create_reciter_where_duplicate_name_should_return_400(self) -> None:
+        # Arrange
+        self.authenticate_user(self.user)
+        baker.make(Reciter, name="Test Reciter", slug="different-slug")
+        data = {"name": "Test Reciter"}
+
+        # Act
+        response = self.client.post(self.url, data, content_type="application/json")
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("reciter_already_exists", body["error_name"])
+
     def test_create_reciter_where_translated_fields_provided_should_store_correctly(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
