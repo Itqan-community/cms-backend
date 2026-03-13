@@ -3,6 +3,7 @@ from ninja.pagination import paginate
 from pydantic import AwareDatetime
 
 from apps.core.ninja_utils.auth import ninja_jwt_auth
+from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.paginations import NinjaPagination
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -47,7 +48,11 @@ class PublisherCreateOut(Schema):
     updated_at: AwareDatetime
 
 
-@router.post("publishers/", response={201: PublisherCreateOut}, auth=ninja_jwt_auth)
+@router.post(
+    "publishers/",
+    response={201: PublisherCreateOut, 400: NinjaErrorResponse},
+    auth=ninja_jwt_auth,
+)
 def create_publisher(request: Request, data: PublisherCreateIn) -> tuple[int, object]:
     service = PublisherService(PublisherRepository())
     publisher = service.create_publisher(
