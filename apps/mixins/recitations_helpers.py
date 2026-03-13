@@ -1,6 +1,9 @@
+import logging
 import re
 
 from apps.core.ninja_utils.errors import ItqanError
+
+logger = logging.getLogger(__name__)
 
 
 def get_mp3_duration_ms(django_file) -> int:
@@ -13,11 +16,12 @@ def get_mp3_duration_ms(django_file) -> int:
         f = getattr(django_file, "file", django_file)
         try:
             f.seek(0)
-        except Exception:
-            pass
+        except (OSError, AttributeError):
+            logger.debug("Could not seek file before MP3 parsing, continuing without seek")
         audio = MP3(f)
         return int(audio.info.length * 1000)
     except Exception:
+        logger.warning("Failed to extract MP3 duration from %s", getattr(django_file, "name", "<unknown>"), exc_info=True)
         return 0
 
 

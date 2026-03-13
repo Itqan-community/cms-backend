@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable
 from functools import lru_cache
 import os
@@ -9,6 +10,8 @@ from django.conf import settings
 from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
+
+logger = logging.getLogger(__name__)
 
 
 class DeleteFilesOnDeleteMixin:
@@ -42,11 +45,17 @@ def delete_associated_files_on_delete(sender, instance, **kwargs):
                 if f and getattr(f, "name", ""):
                     f.delete(save=False)
             except Exception:
-                # Best-effort: ignore storage errors during cleanup
-                pass
+                # Best-effort: storage errors during cleanup must not prevent deletion
+                logger.warning(
+                    "Failed to delete file %s.%s from storage on %s delete",
+                    type(instance).__name__, field.name, type(instance).__name__, exc_info=True,
+                )
     except Exception:
-        # Do not raise from signals
-        pass
+        # Signals must never raise — log and continue
+        logger.warning(
+            "Unexpected error in post_delete file cleanup for %s (pk=%s)",
+            type(instance).__name__, getattr(instance, "pk", "?"), exc_info=True,
+        )
 
 
 # ===========================

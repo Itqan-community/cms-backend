@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable
 
 from django.db import transaction
@@ -7,6 +8,8 @@ from django.db import transaction
 from apps.content.models import Asset, RecitationSurahTrack
 from apps.core.ninja_utils.errors import ItqanError
 from apps.mixins.recitations_helpers import extract_surah_number_from_mp3_filename
+
+logger = logging.getLogger(__name__)
 
 
 def bulk_upload_recitation_audio_tracks(
@@ -64,8 +67,8 @@ def bulk_upload_recitation_audio_tracks(
                 try:
                     if obj.audio_file and getattr(obj.audio_file, "name", None):
                         uploaded_file_names.append(obj.audio_file.name)
-                except Exception:
-                    pass
+                except (AttributeError, ValueError):
+                    logger.debug("Could not read audio_file name after create (track=%s)", obj.id)
                 created += 1
     except Exception as e:
         # Best-effort cleanup of any uploaded files when the DB transaction rolls back
@@ -76,9 +79,9 @@ def bulk_upload_recitation_audio_tracks(
                 try:
                     default_storage.delete(name)
                 except Exception:
-                    pass
+                    logger.warning("Failed to clean up uploaded file %s after rollback", name, exc_info=True)
         except Exception:
-            pass
+            logger.warning("Unexpected error during upload cleanup for asset %s", asset_id, exc_info=True)
 
         other_errors += 1
         other_error_details.append(str(e))

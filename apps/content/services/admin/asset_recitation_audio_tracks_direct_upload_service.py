@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from io import BytesIO
 from typing import Any
 
@@ -8,6 +9,8 @@ from botocore.config import Config
 from django.conf import settings
 from django.db import IntegrityError
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 
 from apps.content.models import RecitationSurahTrack
 from apps.core.ninja_utils.errors import ItqanError
@@ -111,6 +114,7 @@ class AssetRecitationAudioTracksDirectUploadService:
             head = s3.head_object(Bucket=settings.CLOUDFLARE_R2_BUCKET, Key=r2_key)
             size_bytes = int(head.get("ContentLength", 0))
         except Exception:
+            logger.warning("Failed to get size_bytes via HEAD for R2 key %s", r2_key, exc_info=True)
             size_bytes = 0
 
         # Get current track to check if duration_ms was already set
@@ -124,6 +128,7 @@ class AssetRecitationAudioTracksDirectUploadService:
                 data = obj["Body"].read()
                 duration_ms = get_mp3_duration_ms(BytesIO(data))
             except Exception:
+                logger.warning("Failed to compute duration_ms from R2 key %s", r2_key, exc_info=True)
                 duration_ms = 0
 
         RecitationSurahTrack.objects.filter(audio_file=key).update(
