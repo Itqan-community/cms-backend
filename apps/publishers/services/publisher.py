@@ -1,3 +1,4 @@
+from django.db import IntegrityError
 from django.utils.text import slugify
 
 from apps.core.ninja_utils.errors import ItqanError
@@ -58,4 +59,11 @@ class PublisherService:
         if description_ar:
             kwargs["description_ar"] = description_ar
 
-        return self.repo.create(**kwargs)
+        try:
+            return self.repo.create(**kwargs)
+        except IntegrityError as exc:
+            raise ItqanError(
+                error_name="publisher_already_exists",
+                message=f"A publisher with slug '{slug}' already exists",
+                status_code=400,
+            ) from exc

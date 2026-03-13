@@ -112,6 +112,7 @@ class CreatePublisherTest(BaseTestCase):
         publisher = Publisher.objects.get(id=body["id"])
         self.assertEqual("الناشر الدولي", publisher.name_ar)
         self.assertEqual("International Publisher EN", publisher.name_en)
+        self.assertEqual("وصف بالعربية", publisher.description_ar)
 
     def test_create_publisher_where_unauthenticated_should_return_401(self) -> None:
         # Arrange
