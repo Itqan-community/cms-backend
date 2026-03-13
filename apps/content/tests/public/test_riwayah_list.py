@@ -127,7 +127,7 @@ class RiwayahsListTest(BaseTestCase):
         body = response.json()
 
         self.assertIn("results", body)
-        self.assertIn("count", body)
+        self.assertIn("total", body)
 
         items = body["results"]
         riwayah_names = {item["name"] for item in items}
@@ -232,9 +232,9 @@ class RiwayahsListTest(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
-        self.assertIn("count", body)
+        self.assertIn("total", body)
         self.assertIn("results", body)
-        self.assertEqual(3, body["count"])  # Should have 3 active riwayahs with recitations
+        self.assertEqual(3, body["total"])  # Should have 3 active riwayahs with recitations
 
     def test_list_riwayahs_pagination_limit_parameter(self):
         """Test pagination with custom limit"""
@@ -247,7 +247,7 @@ class RiwayahsListTest(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
-        self.assertEqual(3, body["count"])  # Total count should still be 3
+        self.assertEqual(3, body["total"])  # Total count should still be 3
 
     def test_list_riwayahs_response_schema(self):
         """Test that response contains all required fields"""
@@ -442,9 +442,9 @@ class RiwayahsListTest(BaseTestCase):
         body = response.json()
 
         # Check pagination fields exist
-        self.assertIn("count", body)
+        self.assertIn("total", body)
         self.assertIn("results", body)
-        self.assertIsInstance(body["count"], int)
+        self.assertIsInstance(body["total"], int)
         self.assertIsInstance(body["results"], list)
 
     def test_list_riwayahs_with_empty_search(self):
@@ -459,7 +459,7 @@ class RiwayahsListTest(BaseTestCase):
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
         # Empty search should return all items
-        self.assertEqual(3, body["count"])
+        self.assertEqual(3, body["total"])
 
     def test_list_riwayahs_response_is_json(self):
         """Test that response is valid JSON"""

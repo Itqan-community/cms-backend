@@ -88,7 +88,7 @@ class RiwayahsListTest(BaseTestCase):
         body = response.json()
 
         self.assertIn("results", body)
-        self.assertIn("count", body)
+        self.assertIn("total", body)
 
         items = body["results"]
         riwayah_names = {item["name"] for item in items}
