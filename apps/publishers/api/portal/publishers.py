@@ -1,10 +1,14 @@
-from ninja import Schema
+from ninja import FilterSchema, Query, Schema
+from ninja.pagination import paginate
 from pydantic import AwareDatetime
 
 from apps.core.ninja_utils.auth import ninja_jwt_auth
+from apps.core.ninja_utils.paginations import NinjaPagination
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
+from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.publishers.models import Publisher
 from apps.publishers.repositories.publisher import PublisherRepository
 from apps.publishers.services.publisher import PublisherService
 
@@ -60,3 +64,30 @@ def create_publisher(request: Request, data: PublisherCreateIn) -> tuple[int, ob
         country=data.country,
     )
     return 201, publisher
+
+
+# --- List Publishers ---
+
+
+class PublisherListOut(Schema):
+    id: int
+    name: str
+    slug: str
+    is_verified: bool
+    country: str
+    foundation_year: int | None
+    created_at: AwareDatetime
+
+
+class PublisherFilter(FilterSchema):
+    is_verified: bool | None = None
+    country: str | None = None
+
+
+@router.get("publishers/", response=list[PublisherListOut], auth=ninja_jwt_auth)
+@paginate(NinjaPagination)
+@searching(search_fields=["name", "name_ar", "description", "description_ar"])
+def list_publishers(request: Request, filters: PublisherFilter = Query(...)):
+    qs = Publisher.objects.all()
+    qs = filters.filter(qs)
+    return qs
