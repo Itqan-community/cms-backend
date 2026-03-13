@@ -39,6 +39,18 @@ class ResourceListTest(BaseTestCase):
         # Check pagination structure
         self.assertIn("results", body)
         self.assertIn("count", body)
+        self.assertIn("total", body)
+        self.assertIn("page", body)
+        self.assertIn("pageSize", body)
+        self.assertIn("totalPages", body)
+        self.assertIn("nextPage", body)
+        self.assertIn("prevPage", body)
+
+        self.assertEqual(2, body["total"])
+        self.assertEqual(1, body["page"])
+        self.assertEqual(1, body["totalPages"])
+        self.assertIsNone(body["nextPage"])
+        self.assertIsNone(body["prevPage"])
 
         items = body["results"]
         self.assertEqual(2, len(items))
@@ -490,3 +502,46 @@ class ResourceListTest(BaseTestCase):
         self.assertEqual(usage_event.user_agent, "Test Agent/1.0")
         # Note: IP address capture depends on Django test client configuration
         # In real requests, this would capture the client IP
+
+    def test_list_resources_where_page_is_first_should_return_correct_pages(self) -> None:
+        # Arrange
+        self.authenticate_user(self.user)
+        for i in range(5):
+            baker.make(Resource, publisher=self.publisher1, name=f"Resource {i}")
+
+        # Act
+        response = self.client.get("/cms-api/resources/?page=1&pageSize=2")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+
+        self.assertEqual(5, body["total"])
+        self.assertEqual(1, body["page"])
+        self.assertEqual(2, body["pageSize"])
+        self.assertEqual(3, body["totalPages"])
+        self.assertIsNotNone(body["nextPage"])
+        self.assertIn("page=2", body["nextPage"])
+        self.assertIsNone(body["prevPage"])
+        self.assertEqual(2, len(body["results"]))
+
+    def test_list_resources_where_page_is_last_should_have_no_next(self) -> None:
+        # Arrange
+        self.authenticate_user(self.user)
+        for i in range(5):
+            baker.make(Resource, publisher=self.publisher1, name=f"Resource {i}")
+
+        # Act
+        response = self.client.get("/cms-api/resources/?page=3&pageSize=2")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+
+        self.assertEqual(5, body["total"])
+        self.assertEqual(3, body["page"])
+        self.assertEqual(3, body["totalPages"])
+        self.assertIsNone(body["nextPage"])
+        self.assertIsNotNone(body["prevPage"])
+        self.assertIn("page=2", body["prevPage"])
+        self.assertEqual(1, len(body["results"]))
