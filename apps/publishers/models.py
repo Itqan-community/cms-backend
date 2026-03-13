@@ -45,7 +45,7 @@ class Publisher(BaseModel):
         self.slug = slugify(self.name[:50], allow_unicode=True)
         super().save(*args, **kwargs)
 
-
+    
 class PublisherMember(BaseModel):
     """
     Junction table for User <-> Publisher relationships.
