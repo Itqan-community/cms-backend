@@ -1,4 +1,5 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test.utils import CaptureQueriesContext
 from model_bakery import baker
 
 from apps.content.models import Asset, Qiraah, RecitationSurahTrack, Reciter, Resource, Riwayah
@@ -329,3 +330,61 @@ class RecitationsListTest(BaseTestCase):
         names = {item["name"] for item in items}
         self.assertIn("Silah Recitation", names)
         self.assertNotIn("Skoun Recitation", names)
+
+
+class RecitationListQueryCountTest(BaseTestCase):
+    """Regression test: recitation list must batch-load all related models (no N+1)."""
+
+    def setUp(self):
+        super().setUp()
+        self.publisher = baker.make(Publisher, name="Publisher")
+        self.domain = baker.make(
+            "publishers.Domain",
+            domain="querytest.com",
+            publisher=self.publisher,
+            is_primary=True,
+        )
+        self.user = User.objects.create_user(email="querycount@example.com", name="QC User")
+
+        qiraah = baker.make(Qiraah, name="Qiraah Asim")
+        riwayah = baker.make(Riwayah, qiraah=qiraah)
+        reciter = baker.make(Reciter, name="Reciter A")
+        resource = baker.make(
+            Resource,
+            publisher=self.publisher,
+            category=Resource.CategoryChoice.RECITATION,
+            status=Resource.StatusChoice.READY,
+        )
+
+        # Create several assets to expose N+1 problems
+        for i in range(5):
+            baker.make(
+                Asset,
+                category=Resource.CategoryChoice.RECITATION,
+                resource=resource,
+                reciter=reciter,
+                riwayah=riwayah,
+                qiraah=qiraah,
+                name=f"Recitation {i}",
+            )
+
+    def test_recitation_list_query_count_lte_4(self):
+        """The recitation list endpoint must use 4 or fewer DB queries."""
+        from django.db import connection
+
+        self.authenticate_user(self.user, domain=self.domain)
+
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get("/tenant/recitations/")
+
+        self.assertEqual(200, response.status_code, response.content)
+        items = response.json()["results"]
+        self.assertEqual(5, len(items))
+
+        # Must not exceed 4 queries (auth + count + data + at most 1 extra)
+        self.assertLessEqual(
+            len(ctx),
+            4,
+            f"Expected ≤4 queries but got {len(ctx)}. Queries:\n"
+            + "\n".join(f"  {i+1}. {q['sql'][:120]}" for i, q in enumerate(ctx.captured_queries)),
+        )
