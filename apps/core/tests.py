@@ -1,4 +1,5 @@
 import base64
+import logging
 import secrets
 from typing import Literal
 from unittest.mock import patch
@@ -17,6 +18,8 @@ from rest_framework_simplejwt.tokens import AccessToken as JWTAccessToken
 from apps.publishers.models import Domain
 from apps.users.models import User
 
+logger = logging.getLogger(__name__)
+
 
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 class BaseTestCase(TestCase):
@@ -32,13 +35,15 @@ class BaseTestCase(TestCase):
         # Disable storage override
         try:
             cls._storage_override.disable()
-        except Exception:
-            pass
+        except Exception as e:
+            # Cleanup may fail if storage was never initialized; safe to ignore
+            logger.warning("Failed to disable storage override during teardown: %s", e)
         # Stop moto mock to clean up between tests
         try:
             cls.mock_aws.stop()
-        except Exception:
-            pass
+        except Exception as e:
+            # Cleanup may fail if mock was never started; safe to ignore
+            logger.warning("Failed to stop mock_aws during teardown: %s", e)
 
     @classmethod
     def mock_storage(cls):

@@ -1,3 +1,4 @@
+import logging
 import re
 
 from django.conf import settings
@@ -21,6 +22,8 @@ from apps.core.uploads import (
 from apps.mixins.recitations_helpers import get_mp3_duration_ms
 from apps.publishers.models import Publisher
 from apps.users.models import User
+
+logger = logging.getLogger(__name__)
 
 
 class LicenseChoice(models.TextChoices):
@@ -720,7 +723,8 @@ class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
         if self.audio_file:
             try:
                 self.size_bytes = int(getattr(self.audio_file, "size", 0) or 0)
-            except Exception:
+            except (TypeError, ValueError) as e:
+                logger.warning("Failed to compute size_bytes for RecitationSurahTrack: %s", e)
                 self.size_bytes = 0
 
             if not self.duration_ms:
@@ -755,7 +759,8 @@ class RecitationAyahTiming(BaseModel):
         # Auto compute ayah duration
         try:
             self.duration_ms = max(0, int(self.end_ms) - int(self.start_ms))
-        except Exception:
+        except (TypeError, ValueError) as e:
+            logger.warning("Failed to compute duration_ms for RecitationAyahTiming: %s", e)
             self.duration_ms = 0
         super().save(*args, **kwargs)
 
