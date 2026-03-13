@@ -97,6 +97,7 @@ class PublisherService:
                     status_code=400,
                 )
             fields["name"] = str(name).strip()
+            fields["slug"] = slug
 
         # Skip empty translation fields to avoid overriding modeltranslation values
         translation_fields = {"name_ar", "name_en", "description_ar", "description_en"}

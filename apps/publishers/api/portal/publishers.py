@@ -120,7 +120,11 @@ class PublisherDetailOut(Schema):
     updated_at: AwareDatetime
 
 
-@router.get("publishers/{int:publisher_id}/", response=PublisherDetailOut, auth=ninja_jwt_auth)
+@router.get(
+    "publishers/{int:publisher_id}/",
+    response={200: PublisherDetailOut, 404: NinjaErrorResponse},
+    auth=ninja_jwt_auth,
+)
 def retrieve_publisher(request: Request, publisher_id: int) -> object:
     service = PublisherService(PublisherRepository())
     return service.get_publisher(publisher_id)
@@ -157,24 +161,36 @@ class PublisherPutIn(Schema):
     country: str = ""
 
 
-@router.put("publishers/{int:publisher_id}/", response=PublisherDetailOut, auth=ninja_jwt_auth)
+@router.put(
+    "publishers/{int:publisher_id}/",
+    response={200: PublisherDetailOut, 400: NinjaErrorResponse, 404: NinjaErrorResponse},
+    auth=ninja_jwt_auth,
+)
 def update_publisher_put(request: Request, publisher_id: int, data: PublisherPutIn) -> object:
     service = PublisherService(PublisherRepository())
-    fields = data.dict()
+    fields = data.model_dump()
     return service.update_publisher(publisher_id, fields=fields)
 
 
-@router.patch("publishers/{int:publisher_id}/", response=PublisherDetailOut, auth=ninja_jwt_auth)
+@router.patch(
+    "publishers/{int:publisher_id}/",
+    response={200: PublisherDetailOut, 400: NinjaErrorResponse, 404: NinjaErrorResponse},
+    auth=ninja_jwt_auth,
+)
 def update_publisher_patch(request: Request, publisher_id: int, data: PublisherUpdateIn) -> object:
     service = PublisherService(PublisherRepository())
-    fields = data.dict(exclude_unset=True)
+    fields = data.model_dump(exclude_unset=True)
     return service.update_publisher(publisher_id, fields=fields)
 
 
 # --- Delete Publisher ---
 
 
-@router.delete("publishers/{int:publisher_id}/", response={204: None}, auth=ninja_jwt_auth)
+@router.delete(
+    "publishers/{int:publisher_id}/",
+    response={204: None, 404: NinjaErrorResponse},
+    auth=ninja_jwt_auth,
+)
 def delete_publisher(request: Request, publisher_id: int) -> tuple[int, None]:
     service = PublisherService(PublisherRepository())
     service.delete_publisher(publisher_id)
