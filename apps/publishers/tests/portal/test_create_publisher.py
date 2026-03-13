@@ -8,11 +8,11 @@ from apps.users.models import User
 class CreatePublisherTest(BaseTestCase):
     def setUp(self) -> None:
         self.user = baker.make(User)
-        self.authenticate_user(self.user)
         self.url = "/portal/publishers/"
 
     def test_create_publisher_where_all_fields_provided_should_return_201(self) -> None:
         # Arrange
+        self.authenticate_user(self.user)
         data = {
             "name": "Tafsir Center",
             "name_ar": "مركز التفسير",
@@ -49,6 +49,7 @@ class CreatePublisherTest(BaseTestCase):
 
     def test_create_publisher_where_only_name_provided_should_return_201_with_defaults(self) -> None:
         # Arrange
+        self.authenticate_user(self.user)
         data = {"name": "Minimal Publisher"}
 
         # Act
@@ -66,6 +67,7 @@ class CreatePublisherTest(BaseTestCase):
 
     def test_create_publisher_where_name_empty_should_return_400(self) -> None:
         # Arrange
+        self.authenticate_user(self.user)
         data = {"name": ""}
 
         # Act
@@ -78,6 +80,7 @@ class CreatePublisherTest(BaseTestCase):
 
     def test_create_publisher_where_duplicate_slug_should_return_400(self) -> None:
         # Arrange
+        self.authenticate_user(self.user)
         baker.make(Publisher, name="Test Publisher", slug="test-publisher")
         data = {"name": "Test Publisher"}
 
@@ -91,6 +94,7 @@ class CreatePublisherTest(BaseTestCase):
 
     def test_create_publisher_where_translated_fields_provided_should_store_correctly(self) -> None:
         # Arrange
+        self.authenticate_user(self.user)
         data = {
             "name": "International Publisher",
             "name_ar": "الناشر الدولي",
@@ -112,10 +116,10 @@ class CreatePublisherTest(BaseTestCase):
         publisher = Publisher.objects.get(id=body["id"])
         self.assertEqual("الناشر الدولي", publisher.name_ar)
         self.assertEqual("International Publisher EN", publisher.name_en)
+        self.assertEqual("وصف بالعربية", publisher.description_ar)
 
     def test_create_publisher_where_unauthenticated_should_return_401(self) -> None:
         # Arrange
-        self.authenticate_user(None)
         data = {"name": "Test Publisher"}
 
         # Act
