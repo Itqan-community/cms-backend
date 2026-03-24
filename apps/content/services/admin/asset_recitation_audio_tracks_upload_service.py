@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+import logging
 
 from django.db import transaction
 
 from apps.content.models import Asset, RecitationSurahTrack
 from apps.core.ninja_utils.errors import ItqanError
 from apps.mixins.recitations_helpers import extract_surah_number_from_mp3_filename
+
+logger = logging.getLogger(__name__)
 
 
 def bulk_upload_recitation_audio_tracks(
@@ -64,21 +67,21 @@ def bulk_upload_recitation_audio_tracks(
                 try:
                     if obj.audio_file and getattr(obj.audio_file, "name", None):
                         uploaded_file_names.append(obj.audio_file.name)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("Could not record uploaded file name for track: %s", e)
                 created += 1
     except Exception as e:
-        # Best-effort cleanup of any uploaded files when the DB transaction rolls back
+        logger.error("Bulk upload failed for asset %s, cleaning up %d files: %s", asset_id, len(uploaded_file_names), e)
         try:
             from django.core.files.storage import default_storage
 
             for name in uploaded_file_names:
                 try:
                     default_storage.delete(name)
-                except Exception:
-                    pass
-        except Exception:
-            pass
+                except Exception as cleanup_err:
+                    logger.warning("Failed to clean up uploaded file %s: %s", name, cleanup_err)
+        except Exception as cleanup_err:
+            logger.warning("Storage cleanup initialization failed: %s", cleanup_err)
 
         other_errors += 1
         other_error_details.append(str(e))
