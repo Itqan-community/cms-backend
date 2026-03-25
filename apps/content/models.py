@@ -19,11 +19,11 @@ from apps.core.uploads import (
     upload_to_reciter_image,
     upload_to_resource_files,
 )
-
-logger = logging.getLogger(__name__)
 from apps.mixins.recitations_helpers import get_mp3_duration_ms
 from apps.publishers.models import Publisher
 from apps.users.models import User
+
+logger = logging.getLogger(__name__)
 
 
 class LicenseChoice(models.TextChoices):
