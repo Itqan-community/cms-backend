@@ -604,6 +604,7 @@ class Distribution(BaseModel):
         return f"Distribution(asset={self.asset_version.asset.name}, channel={self.channel})"
 
 
+# TODO: to not block merging contributor PR. consider adding admin model for it to be managed from Django admin panel. And consider adding translation to "name" field.
 class Nationality(BaseModel):
     """reciter/qri nationality"""
 

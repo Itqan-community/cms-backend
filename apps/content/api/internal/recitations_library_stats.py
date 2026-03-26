@@ -15,6 +15,8 @@ from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
 
+# TODO: to not block merging contributor PR, consider moving this api to api/portal/ since it's only used for admin dashboard. And simplify api url to be .../recitations/stats/ to be simpler and consistent with other admin dashboard apis e.g. /reciters/stats/
+
 router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
 
 RECITATIONS_LIBRARY_STATS_CACHE_KEY = "recitations_library_stats:v1"

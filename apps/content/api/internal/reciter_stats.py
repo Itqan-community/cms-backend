@@ -9,6 +9,8 @@ from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
 
+# TODO: to not block merging contributor PR, consider moving this api to api/portal/ since it's only used for admin dashboard.
+
 router = ItqanRouter(tags=[NinjaTag.RECITERS])
 
 RECITER_STATS_CACHE_KEY = "reciter_stats:v1"
