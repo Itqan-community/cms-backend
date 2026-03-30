@@ -1,7 +1,7 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
-from apps.content.models import Asset, RecitationSurahTrack, Reciter, Resource, Riwayah
+from apps.content.models import Asset, Qiraah, RecitationSurahTrack, Reciter, Resource, Riwayah
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -26,8 +26,11 @@ class RecitationsListTest(BaseTestCase):
         )
         self.reciter1 = baker.make(Reciter, name="Reciter One")
         self.reciter2 = baker.make(Reciter, name="Reciter Two")
-        self.riwayah1 = baker.make(Riwayah)
-        self.riwayah2 = baker.make(Riwayah)
+        self.qiraah1 = baker.make(Qiraah, name="Qiraah One")
+        self.qiraah2 = baker.make(Qiraah, name="Qiraah Two")
+        self.riwayah1 = baker.make(Riwayah, qiraah=self.qiraah1)
+        self.riwayah2 = baker.make(Riwayah, qiraah=self.qiraah1)
+        self.riwayah3 = baker.make(Riwayah, qiraah=self.qiraah2)
 
         self.ready_recitation_resource_pub1 = baker.make(
             Resource,
@@ -89,7 +92,7 @@ class RecitationsListTest(BaseTestCase):
             reciter=self.reciter1,
             riwayah=baker.make("content.Riwayah", name="Test Riwayah1"),
         )
-        baker.make(
+        self.asset3 = baker.make(
             Asset,
             category=Resource.CategoryChoice.RECITATION,
             resource=self.other_category_resource,
@@ -157,10 +160,66 @@ class RecitationsListTest(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
-
         self.assertEqual(1, len(items))
         self.assertEqual(self.riwayah1.id, items[0]["riwayah"]["id"])
         self.assertEqual(self.riwayah1.name, items[0]["riwayah"]["name"])
+
+    def test_list_recitations_filter_by_riwayah_should_show_also_sibling_riwayah(self):
+        # Arrange
+        self.authenticate_user(self.user, domain=self.domain1)
+        resource = baker.make(
+            Resource,
+            publisher=self.publisher1,
+            category=Resource.CategoryChoice.RECITATION,
+            status=Resource.StatusChoice.READY,
+        )
+        baker.make(
+            Asset,
+            name="recitation with only qiraah",
+            riwayah=None,
+            category=Resource.CategoryChoice.RECITATION,
+            qiraah=self.qiraah1,
+            reciter=self.reciter1,
+            resource=resource,
+        )
+
+        # Act
+        response = self.client.get("/tenant/recitations/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        items = response.json()["results"]
+        self.assertEqual(3, len(items))
+
+    def test_list_recitations_should_show_recitation_with_qiraah_but_no_riwayah(self):
+        # Arrange
+        self.authenticate_user(self.user, domain=self.domain1)
+        resource = baker.make(
+            Resource,
+            publisher=self.publisher1,
+            category=Resource.CategoryChoice.RECITATION,
+            status=Resource.StatusChoice.READY,
+        )
+        asset = baker.make(
+            Asset,
+            name="recitation with only qiraah",
+            riwayah=None,
+            category=Resource.CategoryChoice.RECITATION,
+            qiraah_id=self.riwayah2.qiraah_id,
+            reciter=self.reciter1,
+            resource=resource,
+        )
+
+        # Act
+        response = self.client.get(f"/tenant/recitations/?riwayah_id={self.riwayah2.id}")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        items = response.json()["results"]
+        self.assertEqual(2, len(items))
+        riwayah_ids = [r["id"] for r in items]
+        self.assertIn(asset.id, riwayah_ids)
+        self.assertIn(self.asset2.id, riwayah_ids)
 
     def test_list_recitations_search_should_match_name_description_publisher_or_reciter(self):
         # Arrange

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from io import BytesIO
+import logging
 from typing import Any
 
 import boto3
@@ -15,6 +16,8 @@ from apps.mixins.recitations_helpers import (
     extract_surah_number_from_mp3_filename,
     get_mp3_duration_ms,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class AssetRecitationAudioTracksDirectUploadService:
@@ -110,7 +113,8 @@ class AssetRecitationAudioTracksDirectUploadService:
         try:
             head = s3.head_object(Bucket=settings.CLOUDFLARE_R2_BUCKET, Key=r2_key)
             size_bytes = int(head.get("ContentLength", 0))
-        except Exception:
+        except Exception as e:
+            logger.warning("Failed to get size for uploaded object %s: %s", r2_key, e)
             size_bytes = 0
 
         # Get current track to check if duration_ms was already set
@@ -123,7 +127,8 @@ class AssetRecitationAudioTracksDirectUploadService:
                 obj = s3.get_object(Bucket=settings.CLOUDFLARE_R2_BUCKET, Key=r2_key)
                 data = obj["Body"].read()
                 duration_ms = get_mp3_duration_ms(BytesIO(data))
-            except Exception:
+            except Exception as e:
+                logger.warning("Failed to compute MP3 duration for %s: %s", r2_key, e)
                 duration_ms = 0
 
         RecitationSurahTrack.objects.filter(audio_file=key).update(
@@ -157,11 +162,11 @@ class AssetRecitationAudioTracksDirectUploadService:
                 UploadId=upload_id,
             )
         except Exception as e:
-            # If upload doesn't exist or already completed, that's fine
             error_code = getattr(e, "response", {}).get("Error", {}).get("Code", "")
             if error_code not in ("NoSuchUpload", "NotFound"):
-                # Re-raise unexpected errors
                 raise
+            # Upload doesn't exist or already completed — safe to ignore
+            logger.warning("Multipart upload abort skipped for %s (code=%s): %s", r2_key, error_code, e)
 
         # Delete the incomplete database record (only if upload not finished)
         deleted_count = RecitationSurahTrack.objects.filter(
@@ -212,9 +217,11 @@ class AssetRecitationAudioTracksDirectUploadService:
                         aborted_count += 1
                         db_cleaned_count += result.get("dbRecordsDeleted", 0)
                     except Exception as e:
+                        logger.error("Failed to abort stuck upload %s: %s", key, e)
                         errors.append(f"Failed to abort {key}: {str(e)}")
 
         except Exception as e:
+            logger.error("Stuck upload cleanup failed: %s", e)
             errors.append(f"Cleanup failed: {str(e)}")
 
         return {
