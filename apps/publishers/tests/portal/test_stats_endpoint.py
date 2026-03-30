@@ -23,12 +23,7 @@ class PublisherStatsEndpointTest(BaseTestCase):
 
         cache.clear()
 
-        # Authenticate the client with a valid JWT and origin header
-        self.authenticate_user(self.user, domain=self.domain)
-
     def test_stats_endpoint_where_unauthenticated_should_return_401(self):
-        # Arrange - clear authentication headers/cookies
-        self.authenticate_user(None)
 
         # Act
         response = self.client.get(self.url)
@@ -38,6 +33,7 @@ class PublisherStatsEndpointTest(BaseTestCase):
 
     def test_stats_endpoint_where_cache_populated_should_return_cached_data(self):
         # Arrange
+        self.authenticate_user(self.user, domain=self.domain)
         cache.set("publisher_stats", {"total_publishers": 99})
 
         # Act
@@ -49,6 +45,7 @@ class PublisherStatsEndpointTest(BaseTestCase):
 
     def test_stats_endpoint_where_cache_empty_should_compute_and_return(self):
         # Arrange
+        self.authenticate_user(self.user, domain=self.domain)
         baker.make(Publisher)
 
         # Act

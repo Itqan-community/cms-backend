@@ -8,7 +8,7 @@ from apps.publishers.tasks import compute_publisher_stats_task
 
 class ComputePublisherStatsTaskTest(BaseTestCase):
 
-    def test_should_count_active_publishers_correctly(self):
+    def test_should_count_active_publishers_correctly(self) -> None:
         # Arrange
         active_pub = baker.make(Publisher)
         baker.make(Domain, publisher=active_pub, is_active=True)
@@ -35,7 +35,7 @@ class ComputePublisherStatsTaskTest(BaseTestCase):
         # Assert
         self.assertEqual(2, result["total_countries"])
 
-    def test_should_store_correct_values_in_cache(self):
+    def test_compute_publisher_stats_should_store_correct_values_in_cache(self):
         # Arrange
         baker.make(Publisher)
 
