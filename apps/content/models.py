@@ -607,7 +607,6 @@ class Distribution(BaseModel):
         return f"Distribution(asset={self.asset_version.asset.name}, channel={self.channel})"
 
 
-# TODO: to not block merging contributor PR. consider adding admin model for it to be managed from Django admin panel. And consider adding translation to "name" field.
 class Nationality(BaseModel):
     """reciter/qri nationality"""
 
@@ -630,7 +629,9 @@ class Reciter(BaseModel):
     date_of_birth = models.DateField(null=True, blank=True)
     date_of_death = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
-    nationality = models.ForeignKey(Nationality, on_delete=models.SET_NULL, related_name="reciters", null=True)
+    nationality = models.ForeignKey(
+        Nationality, on_delete=models.SET_NULL, related_name="reciters", null=True, blank=True
+    )
     is_contemporary = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs) -> None:

@@ -25,7 +25,7 @@ class ReciterCreateIn(Schema):
     name: str = Field(..., max_length=255)
     name_ar: str = Field(..., max_length=255)
     name_en: str = Field(..., max_length=255)
-    nationality: str = Field("", max_length=100)
+    nationality_id: int | None = None
     date_of_birth: datetime.date | None = None
     date_of_death: datetime.date | None = None
     bio: str = ""
@@ -39,10 +39,10 @@ class ReciterCreateIn(Schema):
             raise ValueError("Name must not be blank.")
         return v
 
-    @field_validator("nationality", "bio")
+    @field_validator("bio")
     @classmethod
     def strip_whitespace(cls, v: str) -> str:
-        """Strip leading/trailing whitespace from string fields."""
+        """Strip leading/trailing whitespace from bio field."""
         return v.strip()
 
 
@@ -52,7 +52,7 @@ class ReciterUpdateIn(Schema):
     name: str | None = Field(None, max_length=255)
     name_ar: str | None = Field(None, max_length=255)
     name_en: str | None = Field(None, max_length=255)
-    nationality: str | None = Field(None, max_length=100)
+    nationality_id: int | None = None
     date_of_birth: datetime.date | None = None
     date_of_death: datetime.date | None = None
     bio: str | None = None
@@ -68,13 +68,12 @@ class ReciterUpdateIn(Schema):
             raise ValueError("Name must not be blank.")
         return v
 
-    @field_validator("nationality", "bio")
-    @classmethod
-    def non_nullable_string_must_not_be_null(cls, v: str | None) -> str | None:
-        """Validate non-nullable string fields are not set to null."""
-        if v is None:
-            raise ValueError("This field cannot be null.")
-        return v.strip()
+
+class NationalityOut(Schema):
+    """Schema for nationality nested in reciter output."""
+
+    id: int
+    name: str
 
 
 class ReciterOut(Schema):
@@ -85,15 +84,21 @@ class ReciterOut(Schema):
     name_ar: str | None
     name_en: str | None
     slug: str
-    nationality: str
+    nationality: NationalityOut | None
     date_of_birth: datetime.date | None
     date_of_death: datetime.date | None
     bio: str
     is_active: bool
 
     @staticmethod
-    def resolve_nationality(obj: Reciter) -> str:
-        return obj.nationality.name if obj.nationality else ""
+    def resolve_bio(obj: Reciter) -> str:
+        return obj.bio or ""
+
+    @staticmethod
+    def resolve_nationality(obj: Reciter) -> NationalityOut | None:
+        if not obj.nationality:
+            return None
+        return NationalityOut(id=obj.nationality.id, name=obj.nationality.name)
 
 
 class ReciterFilter(FilterSchema):
@@ -111,8 +116,8 @@ class ReciterFilter(FilterSchema):
     response={
         201: ReciterOut,
         401: NinjaErrorResponse,
+        404: NinjaErrorResponse,
         409: NinjaErrorResponse,
-        422: NinjaErrorResponse,
     },
     auth=ninja_jwt_auth,
 )
@@ -126,14 +131,14 @@ def create_reciter(request: Request, data: ReciterCreateIn) -> tuple[int, Recite
         )
 
     nationality_obj: Nationality | None = None
-    if data.nationality:
+    if data.nationality_id is not None:
         try:
-            nationality_obj = Nationality.objects.get(name=data.nationality)
+            nationality_obj = Nationality.objects.get(id=data.nationality_id)
         except Nationality.DoesNotExist:
             raise ItqanError(
                 error_name="NATIONALITY_NOT_FOUND",
-                message=f"Nationality '{data.nationality}' not found.",
-                status_code=422,
+                message=f"Nationality with id {data.nationality_id} not found.",
+                status_code=404,
             ) from None
 
     try:
@@ -192,7 +197,6 @@ def get_reciter(request: Request, reciter_id: int) -> Reciter:
         401: NinjaErrorResponse,
         404: NinjaErrorResponse,
         409: NinjaErrorResponse,
-        422: NinjaErrorResponse,
     },
     auth=ninja_jwt_auth,
 )
@@ -208,16 +212,16 @@ def update_reciter(request: Request, reciter_id: int, data: ReciterUpdateIn) -> 
         ) from None
 
     update_data = data.model_dump(exclude_unset=True)
-    if "nationality" in update_data:
-        nationality_name = update_data.pop("nationality")
-        if nationality_name:
+    if "nationality_id" in update_data:
+        nationality_id = update_data.pop("nationality_id")
+        if nationality_id is not None:
             try:
-                reciter.nationality = Nationality.objects.get(name=nationality_name)
+                reciter.nationality = Nationality.objects.get(id=nationality_id)
             except Nationality.DoesNotExist:
                 raise ItqanError(
                     error_name="NATIONALITY_NOT_FOUND",
-                    message=f"Nationality '{nationality_name}' not found.",
-                    status_code=422,
+                    message=f"Nationality with id {nationality_id} not found.",
+                    status_code=404,
                 ) from None
         else:
             reciter.nationality = None
