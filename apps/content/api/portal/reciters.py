@@ -1,0 +1,239 @@
+import datetime
+
+from django.db import IntegrityError
+from ninja import FilterSchema, Query, Schema
+from ninja.pagination import paginate
+from pydantic import Field, field_validator
+
+from apps.content.models import Nationality, Reciter
+from apps.core.ninja_utils.auth import ninja_jwt_auth
+from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
+from apps.core.ninja_utils.ordering_base import ordering
+from apps.core.ninja_utils.request import Request
+from apps.core.ninja_utils.router import ItqanRouter
+from apps.core.ninja_utils.searching_base import searching
+from apps.core.ninja_utils.tags import NinjaTag
+
+# TODO: to not block merging contributor PR, consider moving this api to api/portal/ since it's only used for admin dashboard.
+
+router = ItqanRouter(tags=[NinjaTag.RECITERS])
+
+
+class ReciterCreateIn(Schema):
+    """Schema for creating a new reciter."""
+
+    name: str = Field(..., max_length=255)
+    name_ar: str = Field(..., max_length=255)
+    name_en: str = Field(..., max_length=255)
+    nationality_id: int | None = None
+    date_of_birth: datetime.date | None = None
+    date_of_death: datetime.date | None = None
+    bio: str = ""
+
+    @field_validator("name", "name_ar", "name_en")
+    @classmethod
+    def name_must_not_be_blank(cls, v: str) -> str:
+        """Validate that name fields are not blank after stripping whitespace."""
+        v = v.strip()
+        if not v:
+            raise ValueError("Name must not be blank.")
+        return v
+
+    @field_validator("bio")
+    @classmethod
+    def strip_whitespace(cls, v: str) -> str:
+        """Strip leading/trailing whitespace from bio field."""
+        return v.strip()
+
+
+class ReciterUpdateIn(Schema):
+    """Schema for updating an existing reciter."""
+
+    name: str | None = Field(None, max_length=255)
+    name_ar: str | None = Field(None, max_length=255)
+    name_en: str | None = Field(None, max_length=255)
+    nationality_id: int | None = None
+    date_of_birth: datetime.date | None = None
+    date_of_death: datetime.date | None = None
+    bio: str | None = None
+
+    @field_validator("name", "name_ar", "name_en")
+    @classmethod
+    def name_must_not_be_blank(cls, v: str | None) -> str | None:
+        """Validate that name fields are not blank or null if provided."""
+        if v is None:
+            raise ValueError("This field cannot be null.")
+        v = v.strip()
+        if not v:
+            raise ValueError("Name must not be blank.")
+        return v
+
+
+class NationalityOut(Schema):
+    """Schema for nationality nested in reciter output."""
+
+    id: int
+    name: str
+
+
+class ReciterOut(Schema):
+    """Schema for reciter output representation."""
+
+    id: int
+    name: str
+    name_ar: str | None
+    name_en: str | None
+    slug: str
+    nationality: NationalityOut | None
+    date_of_birth: datetime.date | None
+    date_of_death: datetime.date | None
+    bio: str
+    is_active: bool
+
+    @staticmethod
+    def resolve_bio(obj: Reciter) -> str:
+        return obj.bio or ""
+
+    @staticmethod
+    def resolve_nationality(obj: Reciter) -> NationalityOut | None:
+        if not obj.nationality:
+            return None
+        return NationalityOut(id=obj.nationality.id, name=obj.nationality.name)
+
+
+class ReciterFilter(FilterSchema):
+    """Filter schema for reciter list endpoint."""
+
+    name: list[str] | None = Field(None, q="name__in")
+    name_ar: list[str] | None = Field(None, q="name_ar__in")
+    slug: list[str] | None = Field(None, q="slug__in")
+    is_active: bool | None = Field(None, q="is_active")
+    nationality: str | None = Field(None, q="nationality__name__icontains")
+
+
+@router.post(
+    "reciters/",
+    response={
+        201: ReciterOut,
+        401: NinjaErrorResponse,
+        404: NinjaErrorResponse,
+        409: NinjaErrorResponse,
+    },
+    auth=ninja_jwt_auth,
+)
+def create_reciter(request: Request, data: ReciterCreateIn) -> tuple[int, Reciter]:
+    """Create a new reciter with the given data."""
+    if Reciter.objects.filter(name=data.name).exists():
+        raise ItqanError(
+            error_name="RECITER_ALREADY_EXISTS",
+            message=f"A reciter with the name '{data.name}' already exists.",
+            status_code=409,
+        )
+
+    nationality_obj: Nationality | None = None
+    if data.nationality_id is not None:
+        try:
+            nationality_obj = Nationality.objects.get(id=data.nationality_id)
+        except Nationality.DoesNotExist:
+            raise ItqanError(
+                error_name="NATIONALITY_NOT_FOUND",
+                message=f"Nationality with id {data.nationality_id} not found.",
+                status_code=404,
+            ) from None
+
+    try:
+        reciter = Reciter.objects.create(
+            name=data.name,
+            name_ar=data.name_ar,
+            name_en=data.name_en,
+            nationality=nationality_obj,
+            date_of_birth=data.date_of_birth,
+            date_of_death=data.date_of_death,
+            bio=data.bio,
+        )
+    except IntegrityError:
+        raise ItqanError(
+            error_name="RECITER_CONFLICT",
+            message="A reciter with conflicting unique fields already exists.",
+            status_code=409,
+        ) from None
+    return 201, reciter
+
+
+@router.get("reciters/", response=list[ReciterOut])
+@paginate
+@ordering(ordering_fields=["name", "nationality"])
+@searching(search_fields=["name", "name_ar", "name_en", "slug", "nationality"])
+def list_reciters(request: Request, filters: ReciterFilter = Query()) -> list[Reciter]:
+    """List all reciters with optional filtering, ordering, and search."""
+    qs = Reciter.objects.select_related("nationality").order_by("name")
+    qs = filters.filter(qs)
+    return qs
+
+
+@router.get(
+    "reciters/{reciter_id}/",
+    response={
+        200: ReciterOut,
+        404: NinjaErrorResponse,
+    },
+)
+def get_reciter(request: Request, reciter_id: int) -> Reciter:
+    """Retrieve a single reciter by ID."""
+    try:
+        return Reciter.objects.select_related("nationality").get(id=reciter_id)
+    except Reciter.DoesNotExist:
+        raise ItqanError(
+            error_name="RECITER_NOT_FOUND",
+            message=f"Reciter with id {reciter_id} not found.",
+            status_code=404,
+        ) from None
+
+
+@router.patch(
+    "reciters/{reciter_id}/",
+    response={
+        200: ReciterOut,
+        401: NinjaErrorResponse,
+        404: NinjaErrorResponse,
+        409: NinjaErrorResponse,
+    },
+    auth=ninja_jwt_auth,
+)
+def update_reciter(request: Request, reciter_id: int, data: ReciterUpdateIn) -> Reciter:
+    """Update an existing reciter's fields."""
+    try:
+        reciter = Reciter.objects.select_related("nationality").get(id=reciter_id)
+    except Reciter.DoesNotExist:
+        raise ItqanError(
+            error_name="RECITER_NOT_FOUND",
+            message=f"Reciter with id {reciter_id} not found.",
+            status_code=404,
+        ) from None
+
+    update_data = data.model_dump(exclude_unset=True)
+    if "nationality_id" in update_data:
+        nationality_id = update_data.pop("nationality_id")
+        if nationality_id is not None:
+            try:
+                reciter.nationality = Nationality.objects.get(id=nationality_id)
+            except Nationality.DoesNotExist:
+                raise ItqanError(
+                    error_name="NATIONALITY_NOT_FOUND",
+                    message=f"Nationality with id {nationality_id} not found.",
+                    status_code=404,
+                ) from None
+        else:
+            reciter.nationality = None
+    for field, value in update_data.items():
+        setattr(reciter, field, value)
+
+    try:
+        reciter.save()
+    except IntegrityError:
+        raise ItqanError(
+            error_name="RECITER_CONFLICT",
+            message="A reciter with conflicting unique fields already exists.",
+            status_code=409,
+        ) from None
+    return reciter
