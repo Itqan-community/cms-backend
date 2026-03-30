@@ -55,9 +55,7 @@ class UpdatePublisherTest(BaseTestCase):
         data = {"name": "Updated"}
 
         # Act
-        response = self.client.put(
-            "/portal/publishers/99999/", data, content_type="application/json"
-        )
+        response = self.client.put("/portal/publishers/99999/", data, content_type="application/json")
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
