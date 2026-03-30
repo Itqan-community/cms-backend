@@ -92,3 +92,102 @@ def list_publishers(request: Request, filters: PublisherFilter = Query(...)):
     qs = Publisher.objects.all()
     qs = filters.filter(qs)
     return qs
+
+
+# --- Retrieve Publisher ---
+
+
+class PublisherDetailOut(Schema):
+    id: int
+    name: str
+    slug: str
+    name_ar: str | None
+    name_en: str | None
+    description: str
+    description_ar: str | None
+    description_en: str | None
+    address: str
+    website: str
+    contact_email: str
+    is_verified: bool
+    foundation_year: int | None
+    country: str
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
+
+
+@router.get(
+    "publishers/{int:publisher_id}/",
+    response={200: PublisherDetailOut, 404: NinjaErrorResponse},
+    auth=ninja_jwt_auth,
+)
+def retrieve_publisher(request: Request, publisher_id: int) -> object:
+    service = PublisherService(PublisherRepository())
+    return service.get_publisher(publisher_id)
+
+
+# --- Update Publisher ---
+
+
+class PublisherUpdateIn(Schema):
+    name: str | None = None
+    name_ar: str | None = None
+    name_en: str | None = None
+    description: str | None = None
+    description_ar: str | None = None
+    address: str | None = None
+    website: str | None = None
+    contact_email: str | None = None
+    is_verified: bool | None = None
+    foundation_year: int | None = None
+    country: str | None = None
+
+
+class PublisherPutIn(Schema):
+    name: str
+    name_ar: str = ""
+    name_en: str = ""
+    description: str = ""
+    description_ar: str = ""
+    address: str = ""
+    website: str = ""
+    contact_email: str = ""
+    is_verified: bool = True
+    foundation_year: int | None = None
+    country: str = ""
+
+
+@router.put(
+    "publishers/{int:publisher_id}/",
+    response={200: PublisherDetailOut, 400: NinjaErrorResponse, 404: NinjaErrorResponse},
+    auth=ninja_jwt_auth,
+)
+def update_publisher_put(request: Request, publisher_id: int, data: PublisherPutIn) -> object:
+    service = PublisherService(PublisherRepository())
+    fields = data.model_dump()
+    return service.update_publisher(publisher_id, fields=fields)
+
+
+@router.patch(
+    "publishers/{int:publisher_id}/",
+    response={200: PublisherDetailOut, 400: NinjaErrorResponse, 404: NinjaErrorResponse},
+    auth=ninja_jwt_auth,
+)
+def update_publisher_patch(request: Request, publisher_id: int, data: PublisherUpdateIn) -> object:
+    service = PublisherService(PublisherRepository())
+    fields = data.model_dump(exclude_unset=True)
+    return service.update_publisher(publisher_id, fields=fields)
+
+
+# --- Delete Publisher ---
+
+
+@router.delete(
+    "publishers/{int:publisher_id}/",
+    response={204: None, 404: NinjaErrorResponse},
+    auth=ninja_jwt_auth,
+)
+def delete_publisher(request: Request, publisher_id: int) -> tuple[int, None]:
+    service = PublisherService(PublisherRepository())
+    service.delete_publisher(publisher_id)
+    return 204, None

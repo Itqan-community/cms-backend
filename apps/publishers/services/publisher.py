@@ -67,3 +67,47 @@ class PublisherService:
                 message=f"A publisher with slug '{slug}' already exists",
                 status_code=400,
             ) from exc
+
+    def get_publisher(self, publisher_id: int) -> Publisher:
+        publisher = self.repo.get_by_id(publisher_id)
+        if publisher is None:
+            raise ItqanError(
+                error_name="publisher_not_found",
+                message=f"Publisher with id {publisher_id} not found",
+                status_code=404,
+            )
+        return publisher
+
+    def update_publisher(self, publisher_id: int, *, fields: dict[str, object]) -> Publisher:
+        publisher = self.get_publisher(publisher_id)
+
+        name = fields.get("name")
+        if name is not None:
+            if not str(name).strip():
+                raise ItqanError(
+                    error_name="publisher_name_required",
+                    message="Publisher name is required",
+                    status_code=400,
+                )
+            slug = slugify(str(name)[:50], allow_unicode=True)
+            if self.repo.slug_exists(slug, exclude_id=publisher_id):
+                raise ItqanError(
+                    error_name="publisher_already_exists",
+                    message=f"A publisher with slug '{slug}' already exists",
+                    status_code=400,
+                )
+            fields["name"] = str(name).strip()
+            fields["slug"] = slug
+
+        # Skip empty translation fields to avoid overriding modeltranslation values
+        translation_fields = {"name_ar", "name_en", "description_ar", "description_en"}
+        for key, value in fields.items():
+            if key in translation_fields and value == "":
+                continue
+            setattr(publisher, key, value)
+        publisher.save()
+        return publisher
+
+    def delete_publisher(self, publisher_id: int) -> None:
+        publisher = self.get_publisher(publisher_id)
+        self.repo.delete(publisher)
