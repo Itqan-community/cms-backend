@@ -1,5 +1,5 @@
-import uuid
 from typing import TYPE_CHECKING
+import uuid
 
 from django.utils.text import slugify
 
