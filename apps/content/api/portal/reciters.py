@@ -1,6 +1,8 @@
 import datetime
+from typing import Literal
 
 from django.db import IntegrityError
+from django.utils.translation import gettext as _
 from ninja import FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import Field, field_validator
@@ -115,9 +117,10 @@ class ReciterFilter(FilterSchema):
     "reciters/",
     response={
         201: ReciterOut,
-        401: NinjaErrorResponse,
-        404: NinjaErrorResponse,
-        409: NinjaErrorResponse,
+        401: NinjaErrorResponse[Literal["unauthorized"], Literal[None]],
+        404: NinjaErrorResponse[Literal["nationality_not_found"], Literal[None]],
+        409: NinjaErrorResponse[Literal["reciter_already_exists"], Literal[None]]
+        | NinjaErrorResponse[Literal["reciter_conflict"], Literal[None]],
     },
     auth=ninja_jwt_auth,
 )
@@ -125,8 +128,8 @@ def create_reciter(request: Request, data: ReciterCreateIn) -> tuple[int, Recite
     """Create a new reciter with the given data."""
     if Reciter.objects.filter(name=data.name).exists():
         raise ItqanError(
-            error_name="RECITER_ALREADY_EXISTS",
-            message=f"A reciter with the name '{data.name}' already exists.",
+            error_name="reciter_already_exists",
+            message=_("A reciter with the name '{name}' already exists.").format(name=data.name),
             status_code=409,
         )
 
@@ -136,8 +139,8 @@ def create_reciter(request: Request, data: ReciterCreateIn) -> tuple[int, Recite
             nationality_obj = Nationality.objects.get(id=data.nationality_id)
         except Nationality.DoesNotExist:
             raise ItqanError(
-                error_name="NATIONALITY_NOT_FOUND",
-                message=f"Nationality with id {data.nationality_id} not found.",
+                error_name="nationality_not_found",
+                message=_("Nationality with id {id} not found.").format(id=data.nationality_id),
                 status_code=404,
             ) from None
 
@@ -153,8 +156,8 @@ def create_reciter(request: Request, data: ReciterCreateIn) -> tuple[int, Recite
         )
     except IntegrityError:
         raise ItqanError(
-            error_name="RECITER_CONFLICT",
-            message="A reciter with conflicting unique fields already exists.",
+            error_name="reciter_conflict",
+            message=_("A reciter with conflicting unique fields already exists."),
             status_code=409,
         ) from None
     return 201, reciter
@@ -175,7 +178,7 @@ def list_reciters(request: Request, filters: ReciterFilter = Query()) -> list[Re
     "reciters/{reciter_id}/",
     response={
         200: ReciterOut,
-        404: NinjaErrorResponse,
+        404: NinjaErrorResponse[Literal["reciter_not_found"], Literal[None]],
     },
 )
 def get_reciter(request: Request, reciter_id: int) -> Reciter:
@@ -184,8 +187,8 @@ def get_reciter(request: Request, reciter_id: int) -> Reciter:
         return Reciter.objects.select_related("nationality").get(id=reciter_id)
     except Reciter.DoesNotExist:
         raise ItqanError(
-            error_name="RECITER_NOT_FOUND",
-            message=f"Reciter with id {reciter_id} not found.",
+            error_name="reciter_not_found",
+            message=_("Reciter with id {id} not found.").format(id=reciter_id),
             status_code=404,
         ) from None
 
@@ -194,9 +197,10 @@ def get_reciter(request: Request, reciter_id: int) -> Reciter:
     "reciters/{reciter_id}/",
     response={
         200: ReciterOut,
-        401: NinjaErrorResponse,
-        404: NinjaErrorResponse,
-        409: NinjaErrorResponse,
+        401: NinjaErrorResponse[Literal["unauthorized"], Literal[None]],
+        404: NinjaErrorResponse[Literal["reciter_not_found"], Literal[None]]
+        | NinjaErrorResponse[Literal["nationality_not_found"], Literal[None]],
+        409: NinjaErrorResponse[Literal["reciter_conflict"], Literal[None]],
     },
     auth=ninja_jwt_auth,
 )
@@ -206,8 +210,8 @@ def update_reciter(request: Request, reciter_id: int, data: ReciterUpdateIn) -> 
         reciter = Reciter.objects.select_related("nationality").get(id=reciter_id)
     except Reciter.DoesNotExist:
         raise ItqanError(
-            error_name="RECITER_NOT_FOUND",
-            message=f"Reciter with id {reciter_id} not found.",
+            error_name="reciter_not_found",
+            message=_("Reciter with id {id} not found.").format(id=reciter_id),
             status_code=404,
         ) from None
 
@@ -219,8 +223,8 @@ def update_reciter(request: Request, reciter_id: int, data: ReciterUpdateIn) -> 
                 reciter.nationality = Nationality.objects.get(id=nationality_id)
             except Nationality.DoesNotExist:
                 raise ItqanError(
-                    error_name="NATIONALITY_NOT_FOUND",
-                    message=f"Nationality with id {nationality_id} not found.",
+                    error_name="nationality_not_found",
+                    message=_("Nationality with id {id} not found.").format(id=nationality_id),
                     status_code=404,
                 ) from None
         else:
@@ -232,8 +236,8 @@ def update_reciter(request: Request, reciter_id: int, data: ReciterUpdateIn) -> 
         reciter.save()
     except IntegrityError:
         raise ItqanError(
-            error_name="RECITER_CONFLICT",
-            message="A reciter with conflicting unique fields already exists.",
+            error_name="reciter_conflict",
+            message=_("A reciter with conflicting unique fields already exists."),
             status_code=409,
         ) from None
     return reciter

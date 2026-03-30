@@ -64,7 +64,7 @@ class ReciterCreateTest(BaseTestCase):
         )
         self.assertEqual(409, response.status_code, response.content)
         body = response.json()
-        self.assertEqual("RECITER_ALREADY_EXISTS", body["error_name"])
+        self.assertEqual("reciter_already_exists", body["error_name"])
 
     def test_create_reciter_where_unauthenticated_should_return_401(self) -> None:
         response = self.client.post(
@@ -101,7 +101,7 @@ class ReciterCreateTest(BaseTestCase):
         )
         self.assertEqual(404, response.status_code, response.content)
         body = response.json()
-        self.assertEqual("NATIONALITY_NOT_FOUND", body["error_name"])
+        self.assertEqual("nationality_not_found", body["error_name"])
 
 
 class ReciterListTest(BaseTestCase):
@@ -151,7 +151,7 @@ class ReciterGetTest(BaseTestCase):
         response = self.client.get("/portal/reciters/99999/")
         self.assertEqual(404, response.status_code, response.content)
         body = response.json()
-        self.assertEqual("RECITER_NOT_FOUND", body["error_name"])
+        self.assertEqual("reciter_not_found", body["error_name"])
 
 
 class ReciterUpdateTest(BaseTestCase):
@@ -222,7 +222,7 @@ class ReciterUpdateTest(BaseTestCase):
         )
         self.assertEqual(404, response.status_code, response.content)
         body = response.json()
-        self.assertEqual("NATIONALITY_NOT_FOUND", body["error_name"])
+        self.assertEqual("nationality_not_found", body["error_name"])
 
     def test_update_reciter_where_duplicate_name_should_return_409(self) -> None:
         self.authenticate_user(self.user)
@@ -235,4 +235,4 @@ class ReciterUpdateTest(BaseTestCase):
         )
         self.assertEqual(409, response.status_code, response.content)
         body = response.json()
-        self.assertEqual("RECITER_CONFLICT", body["error_name"])
+        self.assertEqual("reciter_conflict", body["error_name"])
