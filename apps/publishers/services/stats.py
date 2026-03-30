@@ -1,5 +1,6 @@
-from django.utils import timezone
 from django.core.cache import cache
+from django.utils import timezone
+
 from apps.publishers.models import Publisher
 
 CACHE_KEY_PUBLISHER_STATS = "publisher_stats"

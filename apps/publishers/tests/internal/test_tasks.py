@@ -2,12 +2,11 @@ from django.core.cache import cache
 from model_bakery import baker
 
 from apps.core.tests import BaseTestCase
-from apps.publishers.models import Publisher, Domain
+from apps.publishers.models import Domain, Publisher
 from apps.publishers.tasks import compute_publisher_stats_task
 
 
 class ComputePublisherStatsTaskTest(BaseTestCase):
-
 
     def test_should_count_active_publishers_correctly(self):
         # Arrange

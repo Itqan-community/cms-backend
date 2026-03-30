@@ -6,4 +6,4 @@ class PublishersConfig(AppConfig):
     name = "apps.publishers"
 
     def ready(self) -> None:
-        import apps.publishers.signals
+        import apps.publishers.signals  # noqa: F401

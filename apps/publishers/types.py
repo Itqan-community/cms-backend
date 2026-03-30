@@ -1,8 +1,6 @@
 from typing import TypedDict
 
 
-
-
 class PublisherStats(TypedDict):
     total_publishers: int
     active_publishers: int

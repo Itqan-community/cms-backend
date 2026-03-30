@@ -2,8 +2,8 @@ from django.core.cache import cache
 from model_bakery import baker
 
 from apps.core.tests import BaseTestCase
+from apps.publishers.models import Domain, Publisher
 from apps.users.models import User
-from apps.publishers.models import Publisher, Domain
 
 
 class PublisherStatsEndpointTest(BaseTestCase):
@@ -11,11 +11,8 @@ class PublisherStatsEndpointTest(BaseTestCase):
         super().setUp()
         self.url = "/portal/publishers/stats/"
 
-
         self.publisher = baker.make(Publisher)
-        self.domain = baker.make(
-            Domain, publisher=self.publisher, domain="example.com",
-        )
+        self.domain = baker.make(Domain, publisher=self.publisher, domain="example.com")
 
         # Create staff user
         self.user = baker.make(
