@@ -1,8 +1,10 @@
 from model_bakery import baker
 
-from apps.content.models import Reciter
+from apps.content.models import Nationality, Reciter
 from apps.core.tests import BaseTestCase
 from apps.users.models import User
+
+# TODO: to not block merging contributor PR, consider moving this test to tests/portal/ and update tests naming to match preferred naming conventions and be consistent with other tests
 
 
 class ReciterCreateTest(BaseTestCase):
@@ -10,6 +12,7 @@ class ReciterCreateTest(BaseTestCase):
     def setUp(self) -> None:
         super().setUp()
         self.user = baker.make(User, email="test@example.com", is_active=True)
+        self.nationality = baker.make(Nationality, code="SA", name="Saudi Arabia")
 
     def test_create_reciter_where_valid_data_should_return_201(self) -> None:
         self.authenticate_user(self.user)
@@ -19,25 +22,25 @@ class ReciterCreateTest(BaseTestCase):
                 "name": "Test Reciter",
                 "name_ar": "قارئ تجريبي",
                 "name_en": "Test Reciter EN",
-                "nationality": "Saudi",
+                "nationality": self.nationality.name,
                 "bio": "A test reciter.",
             },
             content_type="application/json",
         )
         self.assertEqual(201, response.status_code, response.content)
         body = response.json()
-        self.assertEqual("Test Reciter", body["name"])
-        self.assertEqual("Saudi", body["nationality"])
+        self.assertEqual("Test Reciter EN", body["name"])
+        self.assertEqual("Saudi Arabia", body["nationality"])
         self.assertTrue(body["slug"])
 
-    def test_create_reciter_where_name_blank_should_return_422(self) -> None:
+    def test_create_reciter_where_name_blank_should_return_400(self) -> None:
         self.authenticate_user(self.user)
         response = self.client.post(
             "/cms-api/reciters/",
             data={"name": "   ", "name_ar": "عربي", "name_en": "English"},
             content_type="application/json",
         )
-        self.assertEqual(422, response.status_code, response.content)
+        self.assertEqual(400, response.status_code, response.content)
 
     def test_create_reciter_where_name_exists_should_return_409(self) -> None:
         self.authenticate_user(self.user)
@@ -63,23 +66,34 @@ class ReciterCreateTest(BaseTestCase):
         )
         self.assertEqual(401, response.status_code, response.content)
 
-    def test_create_reciter_where_name_ar_blank_should_return_422(self) -> None:
+    def test_create_reciter_where_name_ar_blank_should_return_400(self) -> None:
         self.authenticate_user(self.user)
         response = self.client.post(
             "/cms-api/reciters/",
             data={"name": "Valid", "name_ar": "   ", "name_en": "Valid EN"},
             content_type="application/json",
         )
-        self.assertEqual(422, response.status_code, response.content)
+        self.assertEqual(400, response.status_code, response.content)
 
-    def test_create_reciter_where_missing_name_ar_should_return_422(self) -> None:
+    def test_create_reciter_where_missing_name_ar_should_return_400(self) -> None:
         self.authenticate_user(self.user)
         response = self.client.post(
             "/cms-api/reciters/",
             data={"name": "Valid", "name_en": "Valid EN"},
             content_type="application/json",
         )
+        self.assertEqual(400, response.status_code, response.content)
+
+    def test_create_reciter_where_unknown_nationality_should_return_422(self) -> None:
+        self.authenticate_user(self.user)
+        response = self.client.post(
+            "/cms-api/reciters/",
+            data={"name": "Valid", "name_ar": "صالح", "name_en": "Valid EN", "nationality": "Nonexistent"},
+            content_type="application/json",
+        )
         self.assertEqual(422, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("NATIONALITY_NOT_FOUND", body["error_name"])
 
 
 class ReciterListTest(BaseTestCase):
@@ -94,13 +108,15 @@ class ReciterListTest(BaseTestCase):
         self.assertEqual(2, len(body["results"]))
 
     def test_list_reciters_where_filter_by_nationality_should_return_filtered(self) -> None:
-        baker.make(Reciter, name="R1", slug="r1", nationality="Saudi")
-        baker.make(Reciter, name="R2", slug="r2", nationality="Egyptian")
+        nationality_sa = baker.make(Nationality, code="SA", name="Saudi Arabia")
+        nationality_eg = baker.make(Nationality, code="EG", name="Egypt")
+        baker.make(Reciter, name="R1", slug="r1", nationality=nationality_sa)
+        baker.make(Reciter, name="R2", slug="r2", nationality=nationality_eg)
         response = self.client.get("/cms-api/reciters/?nationality=Saudi")
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
         self.assertEqual(1, len(body["results"]))
-        self.assertEqual("Saudi", body["results"][0]["nationality"])
+        self.assertEqual("Saudi Arabia", body["results"][0]["nationality"])
 
 
 class ReciterGetTest(BaseTestCase):
@@ -124,18 +140,19 @@ class ReciterUpdateTest(BaseTestCase):
     def setUp(self) -> None:
         super().setUp()
         self.user = baker.make(User, email="test@example.com", is_active=True)
+        self.nationality = baker.make(Nationality, code="EG", name="Egypt")
 
     def test_update_reciter_where_valid_data_should_return_updated(self) -> None:
         self.authenticate_user(self.user)
         reciter = baker.make(Reciter, name="Old Name", slug="old-name")
         response = self.client.patch(
             f"/cms-api/reciters/{reciter.id}/",
-            data={"nationality": "Egyptian"},
+            data={"nationality": "Egypt"},
             content_type="application/json",
         )
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
-        self.assertEqual("Egyptian", body["nationality"])
+        self.assertEqual("Egypt", body["nationality"])
 
     def test_update_reciter_where_not_found_should_return_404(self) -> None:
         self.authenticate_user(self.user)

@@ -5,7 +5,7 @@ from ninja import FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import Field, field_validator
 
-from apps.content.models import Reciter
+from apps.content.models import Nationality, Reciter
 from apps.core.ninja_utils.auth import ninja_jwt_auth
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
@@ -13,6 +13,8 @@ from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
+
+# TODO: to not block merging contributor PR, consider moving this api to api/portal/ since it's only used for admin dashboard.
 
 router = ItqanRouter(tags=[NinjaTag.RECITERS])
 
@@ -89,6 +91,10 @@ class ReciterOut(Schema):
     bio: str
     is_active: bool
 
+    @staticmethod
+    def resolve_nationality(obj: Reciter) -> str:
+        return obj.nationality.name if obj.nationality else ""
+
 
 class ReciterFilter(FilterSchema):
     """Filter schema for reciter list endpoint."""
@@ -97,7 +103,7 @@ class ReciterFilter(FilterSchema):
     name_ar: list[str] | None = Field(None, q="name_ar__in")
     slug: list[str] | None = Field(None, q="slug__in")
     is_active: bool | None = Field(None, q="is_active")
-    nationality: str | None = Field(None, q="nationality__icontains")
+    nationality: str | None = Field(None, q="nationality__name__icontains")
 
 
 @router.post(
@@ -106,6 +112,7 @@ class ReciterFilter(FilterSchema):
         201: ReciterOut,
         401: NinjaErrorResponse,
         409: NinjaErrorResponse,
+        422: NinjaErrorResponse,
     },
     auth=ninja_jwt_auth,
 )
@@ -118,12 +125,23 @@ def create_reciter(request: Request, data: ReciterCreateIn) -> tuple[int, Recite
             status_code=409,
         )
 
+    nationality_obj: Nationality | None = None
+    if data.nationality:
+        try:
+            nationality_obj = Nationality.objects.get(name=data.nationality)
+        except Nationality.DoesNotExist:
+            raise ItqanError(
+                error_name="NATIONALITY_NOT_FOUND",
+                message=f"Nationality '{data.nationality}' not found.",
+                status_code=422,
+            ) from None
+
     try:
         reciter = Reciter.objects.create(
             name=data.name,
             name_ar=data.name_ar,
             name_en=data.name_en,
-            nationality=data.nationality,
+            nationality=nationality_obj,
             date_of_birth=data.date_of_birth,
             date_of_death=data.date_of_death,
             bio=data.bio,
@@ -143,7 +161,7 @@ def create_reciter(request: Request, data: ReciterCreateIn) -> tuple[int, Recite
 @searching(search_fields=["name", "name_ar", "name_en", "slug", "nationality"])
 def list_reciters(request: Request, filters: ReciterFilter = Query()) -> list[Reciter]:
     """List all reciters with optional filtering, ordering, and search."""
-    qs = Reciter.objects.all().order_by("name")
+    qs = Reciter.objects.select_related("nationality").order_by("name")
     qs = filters.filter(qs)
     return qs
 
@@ -158,7 +176,7 @@ def list_reciters(request: Request, filters: ReciterFilter = Query()) -> list[Re
 def get_reciter(request: Request, reciter_id: int) -> Reciter:
     """Retrieve a single reciter by ID."""
     try:
-        return Reciter.objects.get(id=reciter_id)
+        return Reciter.objects.select_related("nationality").get(id=reciter_id)
     except Reciter.DoesNotExist:
         raise ItqanError(
             error_name="RECITER_NOT_FOUND",
@@ -174,13 +192,14 @@ def get_reciter(request: Request, reciter_id: int) -> Reciter:
         401: NinjaErrorResponse,
         404: NinjaErrorResponse,
         409: NinjaErrorResponse,
+        422: NinjaErrorResponse,
     },
     auth=ninja_jwt_auth,
 )
 def update_reciter(request: Request, reciter_id: int, data: ReciterUpdateIn) -> Reciter:
     """Update an existing reciter's fields."""
     try:
-        reciter = Reciter.objects.get(id=reciter_id)
+        reciter = Reciter.objects.select_related("nationality").get(id=reciter_id)
     except Reciter.DoesNotExist:
         raise ItqanError(
             error_name="RECITER_NOT_FOUND",
@@ -189,6 +208,19 @@ def update_reciter(request: Request, reciter_id: int, data: ReciterUpdateIn) -> 
         ) from None
 
     update_data = data.model_dump(exclude_unset=True)
+    if "nationality" in update_data:
+        nationality_name = update_data.pop("nationality")
+        if nationality_name:
+            try:
+                reciter.nationality = Nationality.objects.get(name=nationality_name)
+            except Nationality.DoesNotExist:
+                raise ItqanError(
+                    error_name="NATIONALITY_NOT_FOUND",
+                    message=f"Nationality '{nationality_name}' not found.",
+                    status_code=422,
+                ) from None
+        else:
+            reciter.nationality = None
     for field, value in update_data.items():
         setattr(reciter, field, value)
 
