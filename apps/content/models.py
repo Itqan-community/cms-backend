@@ -1,3 +1,4 @@
+import logging
 import re
 
 from django.conf import settings
@@ -21,6 +22,8 @@ from apps.core.uploads import (
 from apps.mixins.recitations_helpers import get_mp3_duration_ms
 from apps.publishers.models import Publisher
 from apps.users.models import User
+
+logger = logging.getLogger(__name__)
 
 
 class LicenseChoice(models.TextChoices):
@@ -604,6 +607,14 @@ class Distribution(BaseModel):
         return f"Distribution(asset={self.asset_version.asset.name}, channel={self.channel})"
 
 
+# TODO: to not block merging contributor PR. consider adding admin model for it to be managed from Django admin panel. And consider adding translation to "name" field.
+class Nationality(BaseModel):
+    """reciter/qri nationality"""
+
+    code = models.CharField(max_length=2, unique=True)
+    name = models.CharField(max_length=100)
+
+
 class Reciter(BaseModel):
     """Quran reciter/qari (e.g. Mshari Al-Afasi, Saad Al-Ghamidi, etc)"""
 
@@ -617,6 +628,8 @@ class Reciter(BaseModel):
     )
     bio = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
+    nationality = models.ForeignKey(Nationality, on_delete=models.SET_NULL, related_name="reciters", null=True)
+    is_contemporary = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs) -> None:
         if not self.slug:
@@ -720,7 +733,8 @@ class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
         if self.audio_file:
             try:
                 self.size_bytes = int(getattr(self.audio_file, "size", 0) or 0)
-            except Exception:
+            except Exception as e:
+                logger.warning("Failed to get file size for RecitationSurahTrack: %s", e)
                 self.size_bytes = 0
 
             if not self.duration_ms:
@@ -755,7 +769,8 @@ class RecitationAyahTiming(BaseModel):
         # Auto compute ayah duration
         try:
             self.duration_ms = max(0, int(self.end_ms) - int(self.start_ms))
-        except Exception:
+        except Exception as e:
+            logger.warning("Failed to compute ayah duration for %s: %s", self.ayah_key, e)
             self.duration_ms = 0
         super().save(*args, **kwargs)
 

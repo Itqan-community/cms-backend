@@ -33,7 +33,7 @@ if hasattr(settings, "MIDDLEWARE") and isinstance(settings.MIDDLEWARE, list):
 # =========================
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.dummy.DummyCache",
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
     }
 }
 

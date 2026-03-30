@@ -48,11 +48,7 @@ class PublisherCreateOut(Schema):
     updated_at: AwareDatetime
 
 
-@router.post(
-    "publishers/",
-    response={201: PublisherCreateOut, 400: NinjaErrorResponse},
-    auth=ninja_jwt_auth,
-)
+@router.post("publishers/", response={201: PublisherCreateOut, 400: NinjaErrorResponse}, auth=ninja_jwt_auth)
 def create_publisher(request: Request, data: PublisherCreateIn) -> tuple[int, object]:
     service = PublisherService(PublisherRepository())
     publisher = service.create_publisher(
