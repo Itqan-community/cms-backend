@@ -1,5 +1,4 @@
 from django.test.utils import CaptureQueriesContext
-
 from model_bakery import baker
 
 from apps.content.models import Asset, Qiraah, Resource, Riwayah
@@ -202,4 +201,5 @@ class RecitationsListTest(BaseTestCase):
             response = self.client.get("/cms-api/recitations/")
 
         self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(2, len(response.json()["results"]))
         self.assertLessEqual(len(ctx), 4, f"Expected <= 4 queries, got {len(ctx)}: {[q['sql'] for q in ctx]}")
