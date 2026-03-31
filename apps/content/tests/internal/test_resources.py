@@ -38,7 +38,7 @@ class ResourceListTest(BaseTestCase):
 
         # Check pagination structure
         self.assertIn("results", body)
-        self.assertIn("count", body)
+        self.assertIn("total", body)
 
         items = body["results"]
         self.assertEqual(2, len(items))
@@ -218,6 +218,113 @@ class ResourceListTest(BaseTestCase):
         self.assertEqual("tafsir", items[0]["category"])
         self.assertEqual("ready", items[0]["status"])
         self.assertEqual(self.publisher1.id, items[0]["publisher"]["id"])
+
+    # Pagination Tests
+    def test_list_resources_pagination_should_return_full_pagination_metadata(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        for i in range(5):
+            baker.make(Resource, publisher=self.publisher1, name=f"Resource {i}")
+
+        # Act
+        response = self.client.get("/cms-api/resources/?page=1&page_size=2")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+
+        self.assertEqual(2, len(body["results"]))
+        self.assertEqual(5, body["total"])
+        self.assertEqual(1, body["page"])
+        self.assertEqual(2, body["page_size"])
+        self.assertEqual(3, body["total_pages"])
+        self.assertIsNotNone(body["next_page"])
+        self.assertIn("page=2", body["next_page"])
+        self.assertIsNone(body["prev_page"])
+
+    def test_list_resources_pagination_middle_page_should_have_both_next_and_prev(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        for i in range(5):
+            baker.make(Resource, publisher=self.publisher1, name=f"Resource {i}")
+
+        # Act
+        response = self.client.get("/cms-api/resources/?page=2&page_size=2")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+
+        self.assertEqual(2, len(body["results"]))
+        self.assertEqual(5, body["total"])
+        self.assertEqual(2, body["page"])
+        self.assertEqual(3, body["total_pages"])
+        self.assertIsNotNone(body["next_page"])
+        self.assertIn("page=3", body["next_page"])
+        self.assertIsNotNone(body["prev_page"])
+        self.assertIn("page=1", body["prev_page"])
+
+    def test_list_resources_pagination_last_page_should_have_no_next(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        for i in range(5):
+            baker.make(Resource, publisher=self.publisher1, name=f"Resource {i}")
+
+        # Act
+        response = self.client.get("/cms-api/resources/?page=3&page_size=2")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+
+        self.assertEqual(1, len(body["results"]))
+        self.assertEqual(5, body["total"])
+        self.assertEqual(3, body["page"])
+        self.assertEqual(3, body["total_pages"])
+        self.assertIsNone(body["next_page"])
+        self.assertIsNotNone(body["prev_page"])
+        self.assertIn("page=2", body["prev_page"])
+
+    def test_list_resources_pagination_preserves_query_params(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        for i in range(5):
+            baker.make(
+                Resource,
+                publisher=self.publisher1,
+                name=f"Resource {i}",
+                category=Resource.CategoryChoice.TAFSIR,
+            )
+
+        # Act
+        response = self.client.get("/cms-api/resources/?page=1&page_size=2&category=tafsir")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+
+        self.assertIsNotNone(body["next_page"])
+        self.assertIn("category=tafsir", body["next_page"])
+        self.assertIn("page=2", body["next_page"])
+
+    def test_list_resources_pagination_default_page_size(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        baker.make(Resource, publisher=self.publisher1, name="Resource 1")
+
+        # Act
+        response = self.client.get("/cms-api/resources/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+
+        self.assertEqual(1, body["total"])
+        self.assertEqual(1, body["page"])
+        self.assertEqual(20, body["page_size"])
+        self.assertEqual(1, body["total_pages"])
+        self.assertIsNone(body["next_page"])
+        self.assertIsNone(body["prev_page"])
 
     # CRUD Tests
     def test_create_resource_should_return_200_with_resource_data(self):

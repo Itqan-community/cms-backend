@@ -174,8 +174,8 @@ class RecitationsListTest(BaseTestCase):
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
         self.assertIn("results", body)
-        self.assertIn("count", body)
-        self.assertEqual(2, body["count"])
+        self.assertIn("total", body)
+        self.assertEqual(2, body["total"])
         self.assertEqual(1, len(body["results"]))
 
     # ── Response shape ────────────────────────────────────────

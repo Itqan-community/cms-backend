@@ -23,7 +23,7 @@ class ListPublishersTest(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
-        self.assertEqual(3, body["count"])
+        self.assertEqual(3, body["total"])
         self.assertEqual(3, len(body["results"]))
 
     def test_list_publishers_where_search_by_name_should_filter_results(self) -> None:
@@ -38,7 +38,7 @@ class ListPublishersTest(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
-        self.assertEqual(1, body["count"])
+        self.assertEqual(1, body["total"])
         self.assertEqual("Tafsir Center", body["results"][0]["name"])
 
     def test_list_publishers_where_search_by_name_ar_should_filter_results(self) -> None:
@@ -53,7 +53,7 @@ class ListPublishersTest(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
-        self.assertEqual(1, body["count"])
+        self.assertEqual(1, body["total"])
         self.assertEqual("Tafsir Center", body["results"][0]["name"])
 
     def test_list_publishers_where_search_by_description_should_filter_results(self) -> None:
@@ -68,7 +68,7 @@ class ListPublishersTest(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
-        self.assertEqual(1, body["count"])
+        self.assertEqual(1, body["total"])
         self.assertEqual("Tafsir Pub", body["results"][0]["name"])
 
     def test_list_publishers_where_filter_is_verified_true_should_return_only_verified(self) -> None:
@@ -83,7 +83,7 @@ class ListPublishersTest(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
-        self.assertEqual(1, body["count"])
+        self.assertEqual(1, body["total"])
         self.assertEqual("Verified Pub", body["results"][0]["name"])
 
     def test_list_publishers_where_filter_country_should_filter_results(self) -> None:
@@ -98,7 +98,7 @@ class ListPublishersTest(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
-        self.assertEqual(1, body["count"])
+        self.assertEqual(1, body["total"])
         self.assertEqual("Saudi Pub", body["results"][0]["name"])
 
     def test_list_publishers_where_page_2_should_return_correct_offset(self) -> None:
@@ -113,7 +113,7 @@ class ListPublishersTest(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
-        self.assertEqual(25, body["count"])
+        self.assertEqual(25, body["total"])
         self.assertEqual(5, len(body["results"]))
 
     def test_list_publishers_where_unauthenticated_should_return_401(self) -> None:

@@ -91,7 +91,7 @@ class RecitersListTest(BaseTestCase):
         body = response.json()
 
         self.assertIn("results", body)
-        self.assertIn("count", body)
+        self.assertIn("total", body)
 
         items = body["results"]
         reciter_names = {item["name"] for item in items}
