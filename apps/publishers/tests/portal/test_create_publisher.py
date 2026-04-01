@@ -14,9 +14,9 @@ class CreatePublisherTest(BaseTestCase):
         # Arrange
         self.authenticate_user(self.user)
         data = {
-            "name": "Tafsir Center",
+            "name_en": "Tafsir Center",
             "name_ar": "مركز التفسير",
-            "description": "A leading Tafsir publisher",
+            "description_en": "A leading Tafsir publisher",
             "description_ar": "ناشر رائد في التفسير",
             "address": "Riyadh, KSA",
             "website": "https://tafsir.center",
@@ -50,7 +50,7 @@ class CreatePublisherTest(BaseTestCase):
     def test_create_publisher_where_only_name_provided_should_return_201_with_defaults(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
-        data = {"name": "Minimal Publisher"}
+        data = {"name_en": "Minimal Publisher"}
 
         # Act
         response = self.client.post(self.url, data, content_type="application/json")
@@ -68,7 +68,7 @@ class CreatePublisherTest(BaseTestCase):
     def test_create_publisher_where_name_empty_should_return_400(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
-        data = {"name": ""}
+        data = {"name_en": ""}
 
         # Act
         response = self.client.post(self.url, data, content_type="application/json")
@@ -82,7 +82,7 @@ class CreatePublisherTest(BaseTestCase):
         # Arrange
         self.authenticate_user(self.user)
         baker.make(Publisher, name="Test Publisher", slug="test-publisher")
-        data = {"name": "Test Publisher"}
+        data = {"name_en": "Test Publisher"}
 
         # Act
         response = self.client.post(self.url, data, content_type="application/json")
@@ -96,7 +96,6 @@ class CreatePublisherTest(BaseTestCase):
         # Arrange
         self.authenticate_user(self.user)
         data = {
-            "name": "International Publisher",
             "name_ar": "الناشر الدولي",
             "name_en": "International Publisher EN",
             "description_ar": "وصف بالعربية",
@@ -120,7 +119,7 @@ class CreatePublisherTest(BaseTestCase):
 
     def test_create_publisher_where_unauthenticated_should_return_401(self) -> None:
         # Arrange
-        data = {"name": "Test Publisher"}
+        data = {"name_en": "Test Publisher"}
 
         # Act
         response = self.client.post(self.url, data, content_type="application/json")

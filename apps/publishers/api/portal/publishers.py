@@ -17,11 +17,10 @@ router = ItqanRouter(tags=[NinjaTag.PUBLISHERS])
 
 
 class PublisherCreateIn(Schema):
-    name: str
     name_ar: str = ""
     name_en: str = ""
-    description: str = ""
     description_ar: str = ""
+    description_en: str = ""
     address: str = ""
     website: str = ""
     contact_email: str = ""
@@ -52,11 +51,10 @@ class PublisherCreateOut(Schema):
 def create_publisher(request: Request, data: PublisherCreateIn) -> tuple[int, object]:
     service = PublisherService(PublisherRepository())
     publisher = service.create_publisher(
-        name=data.name,
         name_ar=data.name_ar,
         name_en=data.name_en,
-        description=data.description,
         description_ar=data.description_ar,
+        description_en=data.description_en,
         address=data.address,
         website=data.website,
         contact_email=data.contact_email,
@@ -130,11 +128,10 @@ def retrieve_publisher(request: Request, publisher_id: int) -> object:
 
 
 class PublisherUpdateIn(Schema):
-    name: str | None = None
     name_ar: str | None = None
     name_en: str | None = None
-    description: str | None = None
     description_ar: str | None = None
+    description_en: str | None = None
     address: str | None = None
     website: str | None = None
     contact_email: str | None = None
@@ -144,11 +141,10 @@ class PublisherUpdateIn(Schema):
 
 
 class PublisherPutIn(Schema):
-    name: str
     name_ar: str = ""
     name_en: str = ""
-    description: str = ""
     description_ar: str = ""
+    description_en: str = ""
     address: str = ""
     website: str = ""
     contact_email: str = ""

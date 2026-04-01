@@ -26,8 +26,8 @@ class UpdatePublisherTest(BaseTestCase):
         # Arrange
         self.authenticate_user(self.user)
         data = {
-            "name": "Updated Publisher",
-            "description": "Updated description",
+            "name_en": "Updated Publisher",
+            "description_en": "Updated description",
             "address": "Updated address",
             "website": "https://updated.com",
             "contact_email": "updated@test.com",
@@ -52,7 +52,7 @@ class UpdatePublisherTest(BaseTestCase):
     def test_put_publisher_where_not_found_should_return_404(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
-        data = {"name": "Updated"}
+        data = {"name_en": "Updated"}
 
         # Act
         response = self.client.put("/portal/publishers/99999/", data, content_type="application/json")
@@ -82,7 +82,7 @@ class UpdatePublisherTest(BaseTestCase):
     def test_patch_publisher_where_name_changed_should_regenerate_slug(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
-        data = {"name": "New Name Publisher"}
+        data = {"name_en": "New Name Publisher"}
 
         # Act
         response = self.client.patch(self.url, data, content_type="application/json")
@@ -109,7 +109,7 @@ class UpdatePublisherTest(BaseTestCase):
 
     def test_update_publisher_where_unauthenticated_should_return_401(self) -> None:
         # Arrange
-        data = {"name": "Updated"}
+        data = {"name_en": "Updated"}
 
         # Act
         response = self.client.patch(self.url, data, content_type="application/json")
