@@ -1,3 +1,4 @@
+from django.test.utils import CaptureQueriesContext
 from model_bakery import baker
 
 from apps.content.models import Asset, Qiraah, Resource, Riwayah
@@ -189,3 +190,16 @@ class RecitationsListTest(BaseTestCase):
             self.assertIn(field, item, f"Missing field: {field}")
         self.assertIsInstance(item["reciter"], dict)
         self.assertSetEqual(set(item["reciter"].keys()), {"id", "name"})
+
+    # ── Query count ────────────────────────────────────────────
+
+    def test_list_recitations_should_use_constant_number_of_queries(self):
+        self.authenticate_user(self.user)
+        from django.db import connection
+
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get("/cms-api/recitations/")
+
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(2, len(response.json()["results"]))
+        self.assertLessEqual(len(ctx), 4, f"Expected <= 4 queries, got {len(ctx)}: {[q['sql'] for q in ctx]}")

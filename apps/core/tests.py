@@ -99,6 +99,7 @@ class BaseTestCase(TestCase):
                 self.client.force_login(user=user)
                 token = create_access_token(user, session=self.client.session, claims={})
                 kwargs["HTTP_AUTHORIZATION"] = f"Bearer {token}"
+                self.client.cookies.clear()
             else:
                 access_token = str(JWTAccessToken.for_user(user))
                 kwargs["HTTP_AUTHORIZATION"] = f"Bearer {access_token}"

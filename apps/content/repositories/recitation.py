@@ -24,7 +24,9 @@ class RecitationRepository(BaseRecitationRepository):
         """
         Returns a queryset of Asset objects.
         """
-        qs = self.asset_model.objects.select_related("resource", "reciter", "riwayah").filter(
+        qs = self.asset_model.objects.select_related(
+            "resource", "resource__publisher", "reciter", "riwayah", "qiraah"
+        ).filter(
             publisher_q,
             category=Resource.CategoryChoice.RECITATION,
             resource__category=Resource.CategoryChoice.RECITATION,
