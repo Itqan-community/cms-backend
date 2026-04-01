@@ -32,7 +32,7 @@ class IssueReportCreateIn(Schema):
 
 
 class IssueReportFilter(FilterSchema):
-    status: list[str] | None = Field(None, q="status__in")
+    status: list[str] | None = Field(None, json_schema_extra={"q": "status__in"})
     content_type: Literal["resource", "asset"] | None = None
 
 

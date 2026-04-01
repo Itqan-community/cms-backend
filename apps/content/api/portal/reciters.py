@@ -106,11 +106,11 @@ class ReciterOut(Schema):
 class ReciterFilter(FilterSchema):
     """Filter schema for reciter list endpoint."""
 
-    name: list[str] | None = Field(None, q="name__in")
-    name_ar: list[str] | None = Field(None, q="name_ar__in")
-    slug: list[str] | None = Field(None, q="slug__in")
-    is_active: bool | None = Field(None, q="is_active")
-    nationality: str | None = Field(None, q="nationality__name__icontains")
+    name: list[str] | None = Field(None, json_schema_extra={"q": "name__in"})
+    name_ar: list[str] | None = Field(None, json_schema_extra={"q": "name_ar__in"})
+    slug: list[str] | None = Field(None, json_schema_extra={"q": "slug__in"})
+    is_active: bool | None = Field(None, json_schema_extra={"q": "is_active"})
+    nationality: str | None = Field(None, json_schema_extra={"q": "nationality__name__icontains"})
 
 
 @router.post(

@@ -27,9 +27,9 @@ class ReciterOut(Schema):
 
 
 class ReciterFilter(FilterSchema):
-    name: list[str] | None = Field(None, q="name__in")
-    name_ar: list[str] | None = Field(None, q="name_ar__in")
-    slug: list[str] | None = Field(None, q="slug__in")
+    name: list[str] | None = Field(None, json_schema_extra={"q": "name__in"})
+    name_ar: list[str] | None = Field(None, json_schema_extra={"q": "name_ar__in"})
+    slug: list[str] | None = Field(None, json_schema_extra={"q": "slug__in"})
 
 
 @router.get("reciters/", response=list[ReciterOut])

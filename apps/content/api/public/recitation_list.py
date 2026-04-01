@@ -66,10 +66,10 @@ class RecitationListOut(Schema):
 
 
 class RecitationFilter(FilterSchema):
-    publisher_id: list[int] | None = Field(None, q="resource__publisher_id__in")
-    reciter_id: list[int] | None = Field(None, q="reciter_id__in")
-    riwayah_id: list[int] | None = Field(None, q="riwayah_id__in")
-    qiraah_id: list[int] | None = Field(None, q="qiraah_id__in")
+    publisher_id: list[int] | None = Field(None, json_schema_extra={"q": "resource__publisher_id__in"})
+    reciter_id: list[int] | None = Field(None, json_schema_extra={"q": "reciter_id__in"})
+    riwayah_id: list[int] | None = Field(None, json_schema_extra={"q": "riwayah_id__in"})
+    qiraah_id: list[int] | None = Field(None, json_schema_extra={"q": "qiraah_id__in"})
 
 
 @router.get("recitations/", response=list[RecitationListOut])

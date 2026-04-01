@@ -27,9 +27,9 @@ class ListAssetOut(Schema):
 
 
 class AssetFilter(FilterSchema):
-    category: list[Resource.CategoryChoice] | None = Field(None, q="category__in")
-    license_code: list[str] | None = Field(None, q="license__in")
-    publisher_id: int | None = Field(None, q="resource__publisher")
+    category: list[Resource.CategoryChoice] | None = Field(None, json_schema_extra={"q": "category__in"})
+    license_code: list[str] | None = Field(None, json_schema_extra={"q": "license__in"})
+    publisher_id: int | None = Field(None, json_schema_extra={"q": "resource__publisher"})
 
 
 @router.get("assets/", response=list[ListAssetOut], auth=None)

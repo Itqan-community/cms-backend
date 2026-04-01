@@ -35,9 +35,9 @@ class ListResourceOut(Schema):
 
 
 class ResourceFilter(FilterSchema):
-    category: list[Resource.CategoryChoice] | None = Field(None, q="category__in")
-    status: list[Resource.StatusChoice] | None = Field(None, q="status__in")
-    publisher_id: list[int] | None = Field(None, q="publisher_id__in")
+    category: list[Resource.CategoryChoice] | None = Field(None, json_schema_extra={"q": "category__in"})
+    status: list[Resource.StatusChoice] | None = Field(None, json_schema_extra={"q": "status__in"})
+    publisher_id: list[int] | None = Field(None, json_schema_extra={"q": "publisher_id__in"})
 
 
 class CreateResourceIn(Schema):
