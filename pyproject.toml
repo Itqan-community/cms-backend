@@ -102,6 +102,9 @@ managed = true
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "--ds=config.settings.development --reuse-db --import-mode=importlib"
+filterwarnings = [
+     "ignore::DeprecationWarning",
+]
 python_files = [
     "tests.py",
     "test_*.py",
