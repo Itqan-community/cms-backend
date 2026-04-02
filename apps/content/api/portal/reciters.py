@@ -1,9 +1,9 @@
 import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
 from django.db import IntegrityError
 from django.utils.translation import gettext as _
-from ninja import FilterSchema, Query, Schema
+from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import Field, field_validator
 
@@ -106,11 +106,11 @@ class ReciterOut(Schema):
 class ReciterFilter(FilterSchema):
     """Filter schema for reciter list endpoint."""
 
-    name: list[str] | None = Field(None, json_schema_extra={"q": "name__in"})
-    name_ar: list[str] | None = Field(None, json_schema_extra={"q": "name_ar__in"})
-    slug: list[str] | None = Field(None, json_schema_extra={"q": "slug__in"})
-    is_active: bool | None = Field(None, json_schema_extra={"q": "is_active"})
-    nationality: str | None = Field(None, json_schema_extra={"q": "nationality__name__icontains"})
+    name: Annotated[list[str] | None, FilterLookup(q="name__in")] = None
+    name_ar: Annotated[list[str] | None, FilterLookup(q="name_ar__in")] = None
+    slug: Annotated[list[str] | None, FilterLookup(q="slug__in")] = None
+    is_active: Annotated[bool | None, FilterLookup(q="is_active")] = None
+    nationality: Annotated[str | None, FilterLookup(q="nationality__name__icontains")] = None
 
 
 @router.post(

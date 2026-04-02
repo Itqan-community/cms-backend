@@ -1,7 +1,8 @@
+from typing import Annotated
+
 from django.db.models import Q
-from ninja import FilterSchema, Query, Schema
+from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
-from pydantic import Field
 
 from apps.content.repositories.recitation import RecitationRepository
 from apps.content.services.recitation import RecitationService
@@ -66,10 +67,10 @@ class RecitationListOut(Schema):
 
 
 class RecitationFilter(FilterSchema):
-    publisher_id: list[int] | None = Field(None, json_schema_extra={"q": "resource__publisher_id__in"})
-    reciter_id: list[int] | None = Field(None, json_schema_extra={"q": "reciter_id__in"})
-    riwayah_id: list[int] | None = Field(None, json_schema_extra={"q": "riwayah_id__in"})
-    qiraah_id: list[int] | None = Field(None, json_schema_extra={"q": "qiraah_id__in"})
+    publisher_id: Annotated[list[int] | None, FilterLookup(q="resource__publisher_id__in")] = None
+    reciter_id: Annotated[list[int] | None, FilterLookup(q="reciter_id__in")] = None
+    riwayah_id: Annotated[list[int] | None, FilterLookup(q="riwayah_id__in")] = None
+    qiraah_id: Annotated[list[int] | None, FilterLookup(q="qiraah_id__in")] = None
 
 
 @router.get("recitations/", response=list[RecitationListOut])

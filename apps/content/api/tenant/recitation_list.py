@@ -1,6 +1,7 @@
-from ninja import FilterSchema, Query, Schema
+from typing import Annotated
+
+from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
-from pydantic import Field
 
 from apps.content.models import Asset
 from apps.content.repositories.recitation import RecitationRepository
@@ -43,11 +44,11 @@ class RecitationListOut(Schema):
 
 
 class RecitationFilter(FilterSchema):
-    reciter_id: list[int] | None = Field(None, json_schema_extra={"q": "reciter_id__in"})
-    riwayah_id: list[int] | None = Field(None, json_schema_extra={"q": "riwayah_id__in"})
-    qiraah_id: list[int] | None = Field(None, json_schema_extra={"q": "qiraah_id__in"})
-    madd_level: list[Asset.MaddLevelChoice] | None = Field(None, json_schema_extra={"q": "madd_level__in"})
-    meem_behaviour: list[Asset.MeemBehaviorChoice] | None = Field(None, json_schema_extra={"q": "meem_behaviour__in"})
+    reciter_id: Annotated[list[int] | None, FilterLookup(q="reciter_id__in")] = None
+    riwayah_id: Annotated[list[int] | None, FilterLookup(q="riwayah_id__in")] = None
+    qiraah_id: Annotated[list[int] | None, FilterLookup(q="qiraah_id__in")] = None
+    madd_level: Annotated[list[Asset.MaddLevelChoice] | None, FilterLookup(q="madd_level__in")] = None
+    meem_behaviour: Annotated[list[Asset.MeemBehaviorChoice] | None, FilterLookup(q="meem_behaviour__in")] = None
 
 
 @router.get("recitations/", response=list[RecitationListOut])

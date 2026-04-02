@@ -1,4 +1,6 @@
-from ninja import FilterSchema, Query, Schema
+from typing import Annotated
+
+from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import Field
 
@@ -27,9 +29,9 @@ class ListAssetOut(Schema):
 
 
 class AssetFilter(FilterSchema):
-    category: list[Resource.CategoryChoice] | None = Field(None, json_schema_extra={"q": "category__in"})
-    license_code: list[str] | None = Field(None, json_schema_extra={"q": "license__in"})
-    publisher_id: int | None = Field(None, json_schema_extra={"q": "resource__publisher"})
+    category: Annotated[list[Resource.CategoryChoice] | None, FilterLookup(q="category__in")] = None
+    license_code: Annotated[list[str] | None, FilterLookup(q="license__in")] = None
+    publisher_id: Annotated[int | None, FilterLookup(q="resource__publisher")] = None
 
 
 @router.get("assets/", response=list[ListAssetOut], auth=None)
