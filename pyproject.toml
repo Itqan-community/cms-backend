@@ -26,6 +26,7 @@ dependencies = [
     "django-ninja==1.4.*",
     "drf-spectacular==0.27.*",
     "celery==5.5.*",
+    "django-celery-beat==2.9.*",
     "django-storages[s3]==1.14.*",
     "boto3==1.40.*",
     "django-modeltranslation==0.19.*",

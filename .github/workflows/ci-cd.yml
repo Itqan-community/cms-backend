@@ -152,6 +152,11 @@ jobs:
                 echo "CLOUDFLARE_R2_SECRET_ACCESS_KEY=${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}";
                 echo "CLOUDFLARE_R2_PUBLIC_BASE_URL=${{ secrets.STAGING_CLOUDFLARE_R2_PUBLIC_BASE_URL }}";
                 echo "EMAIL_BACKEND=${{ secrets.STAGING_EMAIL_BACKEND }}";
+                echo "RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}";
+                echo "RABBITMQ_PASS=${{ secrets.RABBITMQ_PASS }}";
+                echo "CELERY_BROKER_URL=amqp://${{ secrets.RABBITMQ_USER }}:${{ secrets.RABBITMQ_PASS }}@rabbitmq:5672//";
+                echo "CELERY_RESULT_BACKEND=redis://redis:6379/0";
+                echo "REDIS_URL=redis://redis:6379/1";
               } > deployment/docker/.env
             elif [ "${{ env.ENV_NAME }}" = "production" ]; then
               {
@@ -174,6 +179,11 @@ jobs:
                 echo "CLOUDFLARE_R2_SECRET_ACCESS_KEY=${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}";
                 echo "CLOUDFLARE_R2_PUBLIC_BASE_URL=${{ secrets.PROD_CLOUDFLARE_R2_PUBLIC_BASE_URL }}";
                 echo "EMAIL_BACKEND=${{ secrets.PRODUCTION_EMAIL_BACKEND }}";
+                echo "RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}";
+                echo "RABBITMQ_PASS=${{ secrets.RABBITMQ_PASS }}";
+                echo "CELERY_BROKER_URL=amqp://${{ secrets.RABBITMQ_USER }}:${{ secrets.RABBITMQ_PASS }}@rabbitmq:5672//";
+                echo "CELERY_RESULT_BACKEND=redis://redis:6379/0";
+                echo "REDIS_URL=redis://redis:6379/1";
               } > deployment/docker/.env
             fi
             # Append image coordinates for docker compose variable substitution
