@@ -157,6 +157,8 @@ jobs:
                 echo "CELERY_BROKER_URL=amqp://${{ secrets.RABBITMQ_USER }}:${{ secrets.RABBITMQ_PASS }}@rabbitmq:5672//";
                 echo "CELERY_RESULT_BACKEND=redis://redis:6379/0";
                 echo "REDIS_URL=redis://redis:6379/1";
+                echo "FLOWER_USER=${{ secrets.FLOWER_USER }}";
+                echo "FLOWER_PASS=${{ secrets.FLOWER_PASS }}";
               } > deployment/docker/.env
             elif [ "${{ env.ENV_NAME }}" = "production" ]; then
               {
@@ -184,6 +186,8 @@ jobs:
                 echo "CELERY_BROKER_URL=amqp://${{ secrets.RABBITMQ_USER }}:${{ secrets.RABBITMQ_PASS }}@rabbitmq:5672//";
                 echo "CELERY_RESULT_BACKEND=redis://redis:6379/0";
                 echo "REDIS_URL=redis://redis:6379/1";
+                echo "FLOWER_USER=${{ secrets.FLOWER_USER }}";
+                echo "FLOWER_PASS=${{ secrets.FLOWER_PASS }}";
               } > deployment/docker/.env
             fi
             # Append image coordinates for docker compose variable substitution
