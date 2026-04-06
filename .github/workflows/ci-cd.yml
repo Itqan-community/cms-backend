@@ -159,6 +159,9 @@ jobs:
                 echo "REDIS_URL=redis://redis:6379/1";
                 echo "FLOWER_USER=${{ secrets.FLOWER_USER }}";
                 echo "FLOWER_PASS=${{ secrets.FLOWER_PASS }}";
+                echo "SENTRY_ENABLED=True";
+                echo "SENTRY_DSN=${{ secrets.SENTRY_DSN }}";
+                echo "ENV_NAME=staging";
               } > deployment/docker/.env
             elif [ "${{ env.ENV_NAME }}" = "production" ]; then
               {
@@ -188,6 +191,9 @@ jobs:
                 echo "REDIS_URL=redis://redis:6379/1";
                 echo "FLOWER_USER=${{ secrets.FLOWER_USER }}";
                 echo "FLOWER_PASS=${{ secrets.FLOWER_PASS }}";
+                echo "SENTRY_ENABLED=True";
+                echo "SENTRY_DSN=${{ secrets.SENTRY_DSN }}";
+                echo "ENV_NAME=production";
               } > deployment/docker/.env
             fi
             # Append image coordinates for docker compose variable substitution
