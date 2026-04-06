@@ -52,6 +52,7 @@ THIRD_PARTY_APPS = [
     "allauth.socialaccount.providers.github",
     "storages",
     "oauth2_provider",
+    "django_celery_beat",
 ]
 
 LOCAL_APPS = ["apps.core", "apps.content", "apps.users", "apps.publishers"]
@@ -280,11 +281,11 @@ SIMPLE_JWT = {
 }
 
 # Celery Configuration
-CELERY_BROKER_URL = config("CELERY_BROKER_URL", default="redis://localhost:6379/0")
+CELERY_BROKER_URL = config("CELERY_BROKER_URL", default="amqp://guest:guest@localhost:5672//")
 CELERY_RESULT_BACKEND = config("CELERY_RESULT_BACKEND", default="redis://localhost:6379/0")
-CELERY_ACCEPT_CONTENT = ["json", "application/x-python-serialize"]
-CELERY_TASK_SERIALIZER = "pickle"
-CELERY_RESULT_SERIALIZER = "pickle"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_ALWAYS_EAGER = config("CELERY_TASK_ALWAYS_EAGER", default=False, cast=bool)
 CELERY_TASK_TIME_LIMIT = 5 * 60
