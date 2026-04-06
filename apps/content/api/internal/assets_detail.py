@@ -2,7 +2,7 @@ from django.shortcuts import get_object_or_404
 from ninja import Schema
 from pydantic import Field
 
-from apps.content.models import Asset, UsageEvent
+from apps.content.models import Asset, LicenseChoice, UsageEvent
 from apps.content.tasks import create_usage_event_task
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -38,7 +38,7 @@ class DetailAssetOut(Schema):
     thumbnail_url: AbsoluteUrl | None
     publisher: DetailAssetPublisherOut = Field(alias="resource.publisher")
     resource: DetailAssetResourceOut
-    license: str
+    license: LicenseChoice
     snapshots: list[DetailAssetSnapshotOut] = Field(default_factory=list, alias="previews")
 
 

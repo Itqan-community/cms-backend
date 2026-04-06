@@ -4,7 +4,7 @@ from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import Field
 
-from apps.content.models import Asset, Resource
+from apps.content.models import Asset, LicenseChoice, Resource
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -25,7 +25,7 @@ class ListAssetOut(Schema):
     name: str
     description: str
     publisher: ListAssetPublisherOut = Field(alias="resource.publisher")
-    license: str
+    license: LicenseChoice
 
 
 class AssetFilter(FilterSchema):
