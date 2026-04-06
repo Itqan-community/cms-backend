@@ -446,7 +446,12 @@ except ImportError:
 SENTRY_ENABLED = config("SENTRY_ENABLED", cast=bool, default=False)
 
 if SENTRY_ENABLED and sentry_sdk:
-    enable_sentry()
+    try:
+        enable_sentry()
+    except Exception as e:
+        import logging
+
+        logging.getLogger(__name__).warning("Failed to initialize Sentry: %s", e)
 
 # Allow large admin bulk actions - used for bulk updating/deleting mushaf recitations timestamps objects data
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000
