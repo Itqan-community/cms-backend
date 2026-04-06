@@ -71,16 +71,16 @@ settings.DATABASES["default"].update(
 
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.dummy.DummyCache",
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": config("REDIS_URL", default="redis://localhost:6379/1"),
     }
 }
 
 # ============================================================
-# Celery
+# Celery (uses RabbitMQ broker + Redis result backend)
 # ============================================================
 
-CELERY_TASK_ALWAYS_EAGER = True
-CELERY_TASK_EAGER_PROPAGATES = True
+CELERY_TASK_ALWAYS_EAGER = False
 
 
 # ============================================================
