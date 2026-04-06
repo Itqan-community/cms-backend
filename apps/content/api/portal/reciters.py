@@ -166,7 +166,7 @@ def create_reciter(request: Request, data: ReciterCreateIn) -> tuple[int, Recite
 @router.get("reciters/", response=list[ReciterOut])
 @paginate
 @ordering(ordering_fields=["name", "nationality"])
-@searching(search_fields=["name", "name_ar", "name_en", "slug", "nationality"])
+@searching(search_fields=["name_en", "name_ar", "name_en", "slug", "nationality"])
 def list_reciters(request: Request, filters: ReciterFilter = Query()) -> list[Reciter]:
     """List all reciters with optional filtering, ordering, and search."""
     qs = Reciter.objects.select_related("nationality").order_by("name")

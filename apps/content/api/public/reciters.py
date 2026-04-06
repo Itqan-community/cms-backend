@@ -31,7 +31,7 @@ class ReciterFilter(FilterSchema):
 @router.get("reciters/", response=list[ReciterOut])
 @paginate
 @ordering(ordering_fields=["name"])
-@searching(search_fields=["name", "name_ar", "slug"])
+@searching(search_fields=["name_en", "name_ar", "slug"])
 def list_reciters(request: Request, filters: ReciterFilter = Query()):
     """
     List reciters that have at least one READY recitation Asset.
