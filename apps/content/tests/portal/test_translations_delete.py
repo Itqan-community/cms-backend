@@ -6,62 +6,62 @@ from apps.publishers.models import Publisher
 from apps.users.models import User
 
 
-class TafsirDeleteTest(BaseTestCase):
+class TranslationDeleteTest(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.publisher = baker.make(Publisher, name="Test Publisher")
         self.resource = baker.make(
             Resource,
             publisher=self.publisher,
-            category=Resource.CategoryChoice.TAFSIR,
+            category=Resource.CategoryChoice.TRANSLATION,
             status=Resource.StatusChoice.READY,
         )
-        self.tafsir = baker.make(
+        self.translation = baker.make(
             Asset,
-            category=Resource.CategoryChoice.TAFSIR,
+            category=Resource.CategoryChoice.TRANSLATION,
             resource=self.resource,
-            name="Tafsir to Delete",
+            name="Translation to Delete",
             description="Will be deleted",
         )
 
         self.user = User.objects.create_user(email="testuser@example.com", name="Test User")
 
-    def test_delete_tafsir_where_valid_slug_should_return_204(self):
+    def test_delete_translation_where_valid_slug_should_return_204(self):
         self.authenticate_user(self.user)
-        tafsir_slug = self.tafsir.slug
+        translation_slug = self.translation.slug
 
-        response = self.client.delete(f"/portal/tafsirs/{tafsir_slug}/")
+        response = self.client.delete(f"/portal/translations/{translation_slug}/")
 
         self.assertEqual(204, response.status_code)
 
         # Verify asset was deleted
-        self.assertFalse(Asset.objects.filter(slug=tafsir_slug).exists())
+        self.assertFalse(Asset.objects.filter(slug=translation_slug).exists())
 
-    def test_delete_tafsir_where_valid_slug_should_also_delete_resource(self):
+    def test_delete_translation_where_valid_slug_should_also_delete_resource(self):
         self.authenticate_user(self.user)
-        tafsir_slug = self.tafsir.slug
+        translation_slug = self.translation.slug
         resource_id = self.resource.id
 
-        response = self.client.delete(f"/portal/tafsirs/{tafsir_slug}/")
+        response = self.client.delete(f"/portal/translations/{translation_slug}/")
 
         self.assertEqual(204, response.status_code)
 
         # Verify both asset and resource were deleted
-        self.assertFalse(Asset.objects.filter(slug=tafsir_slug).exists())
+        self.assertFalse(Asset.objects.filter(slug=translation_slug).exists())
         self.assertFalse(Resource.objects.filter(id=resource_id).exists())
 
-    def test_delete_tafsir_where_not_found_should_return_404(self):
+    def test_delete_translation_where_not_found_should_return_404(self):
         self.authenticate_user(self.user)
-        response = self.client.delete("/portal/tafsirs/nonexistent-slug/")
+        response = self.client.delete("/portal/translations/nonexistent-slug/")
 
         self.assertEqual(404, response.status_code, response.content)
         body = response.json()
-        self.assertEqual("tafsir_not_found", body["error_name"])
+        self.assertEqual("translation_not_found", body["error_name"])
 
-    def test_delete_tafsir_where_unauthenticated_should_return_401(self):
-        response = self.client.delete(f"/portal/tafsirs/{self.tafsir.slug}/")
+    def test_delete_translation_where_unauthenticated_should_return_401(self):
+        response = self.client.delete(f"/portal/translations/{self.translation.slug}/")
 
         self.assertEqual(401, response.status_code, response.content)
 
         # Verify nothing was deleted
-        self.assertTrue(Asset.objects.filter(slug=self.tafsir.slug).exists())
+        self.assertTrue(Asset.objects.filter(slug=self.translation.slug).exists())

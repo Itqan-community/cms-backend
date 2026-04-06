@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 from django.utils.translation import gettext as _
 
 from apps.content.models import LicenseChoice
-from apps.content.repositories.tafsir import TafsirRepository
+from apps.content.repositories.translation import TranslationRepository
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
 
@@ -15,32 +15,32 @@ if TYPE_CHECKING:
     from apps.content.models import Asset
 
 
-class TafsirService:
-    def __init__(self, repo: TafsirRepository | None = None) -> None:
-        self.repo = repo or TafsirRepository()
+class TranslationService:
+    def __init__(self, repo: TranslationRepository | None = None) -> None:
+        self.repo = repo or TranslationRepository()
 
-    def get_all_tafsirs(self, filters: Any = None) -> QuerySet[Asset]:
+    def get_all_translations(self, filters: Any = None) -> QuerySet[Asset]:
         """
-        Business Logic: Retrieve all tafsirs with optional filtering.
+        Business Logic: Retrieve all translations with optional filtering.
         """
         filters_dict = filters.model_dump(exclude_none=True) if filters and hasattr(filters, "model_dump") else {}
-        return self.repo.list_tafsirs_qs(filters_dict)
+        return self.repo.list_translations_qs(filters_dict)
 
-    def get_tafsir(self, tafsir_slug: str) -> Asset:
+    def get_translation(self, translation_slug: str) -> Asset:
         """
-        Business Logic: Retrieve a single tafsir by slug.
+        Business Logic: Retrieve a single translation by slug.
         Raises ItqanError if not found.
         """
-        tafsir = self.repo.get_tafsir(tafsir_slug)
-        if tafsir is None:
+        translation = self.repo.get_translation(translation_slug)
+        if translation is None:
             raise ItqanError(
-                error_name="tafsir_not_found",
-                message=_("Tafsir with slug {slug} not found.").format(slug=tafsir_slug),
+                error_name="translation_not_found",
+                message=_("Translation with slug {slug} not found.").format(slug=translation_slug),
                 status_code=404,
             )
-        return tafsir
+        return translation
 
-    def create_tafsir(
+    def create_translation(
         self,
         *,
         publisher_id: int,
@@ -56,7 +56,7 @@ class TafsirService:
         external_url: str | None = None,
     ) -> Asset:
         """
-        Business Logic: Create a new tafsir.
+        Business Logic: Create a new translation.
         Validates publisher exists and computes base name/description.
         """
         # Validate publisher exists
@@ -73,14 +73,14 @@ class TafsirService:
         name = normalized_name_ar or normalized_name_en
         if not name:
             raise ItqanError(
-                error_name="tafsir_name_required",
-                message=_("Tafsir name (Arabic or English) is required."),
+                error_name="translation_name_required",
+                message=_("Translation name (Arabic or English) is required."),
                 status_code=400,
             )
 
         description = description_ar or description_en
 
-        return self.repo.create_tafsir(
+        return self.repo.create_translation(
             publisher_id=publisher_id,
             name=name,
             name_ar=normalized_name_ar,
@@ -96,16 +96,16 @@ class TafsirService:
             external_url=external_url,
         )
 
-    def update_tafsir(
+    def update_translation(
         self,
-        tafsir_slug: str,
+        translation_slug: str,
         fields: dict[str, Any],
     ) -> Asset:
         """
-        Business Logic: Update an existing tafsir.
+        Business Logic: Update an existing translation.
         Validates name requirement, lets repository handle field setting and syncing.
         """
-        asset = self.get_tafsir(tafsir_slug)
+        asset = self.get_translation(translation_slug)
 
         # Validate name fields if user is trying to update them
         if "name_ar" in fields or "name_en" in fields:
@@ -119,16 +119,16 @@ class TafsirService:
 
             if not final_name_ar and not final_name_en:
                 raise ItqanError(
-                    error_name="tafsir_name_required",
-                    message=_("Tafsir name (Arabic or English) is required."),
+                    error_name="translation_name_required",
+                    message=_("Translation name (Arabic or English) is required."),
                     status_code=400,
                 )
 
-        return self.repo.update_tafsir(asset, fields=fields)
+        return self.repo.update_translation(asset, fields=fields)
 
-    def delete_tafsir(self, tafsir_slug: str) -> None:
+    def delete_translation(self, translation_slug: str) -> None:
         """
-        Business Logic: Delete a tafsir and its resource.
+        Business Logic: Delete a translation and its resource.
         """
-        asset = self.get_tafsir(tafsir_slug)
-        self.repo.delete_tafsir(asset)
+        asset = self.get_translation(translation_slug)
+        self.repo.delete_translation(asset)

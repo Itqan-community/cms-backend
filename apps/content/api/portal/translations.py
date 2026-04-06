@@ -1,0 +1,248 @@
+from typing import Annotated, Literal
+
+from ninja import FilterLookup, FilterSchema, Query, Schema
+from ninja.pagination import paginate
+from pydantic import AwareDatetime, Field
+
+from apps.content.models import Asset, LicenseChoice
+from apps.content.services.translation import TranslationService
+from apps.core.ninja_utils.auth import ninja_jwt_auth
+from apps.core.ninja_utils.errors import NinjaErrorResponse
+from apps.core.ninja_utils.ordering_base import ordering
+from apps.core.ninja_utils.request import Request
+from apps.core.ninja_utils.router import ItqanRouter
+from apps.core.ninja_utils.searching_base import searching
+from apps.core.ninja_utils.tags import NinjaTag
+
+router = ItqanRouter(tags=[NinjaTag.TRANSLATIONS])
+
+
+# --- Output Schemas ---
+
+
+class TranslationPublisherOut(Schema):
+    id: int
+    name: str
+
+
+class TranslationListOut(Schema):
+    id: int
+    name: str
+    description: str
+    publisher: TranslationPublisherOut
+    license: LicenseChoice
+    is_external: bool
+    created_at: AwareDatetime
+
+    @staticmethod
+    def resolve_publisher(obj: Asset) -> TranslationPublisherOut:
+        return TranslationPublisherOut(id=obj.resource.publisher.id, name=obj.resource.publisher.name)
+
+
+class TranslationVersionOut(Schema):
+    id: int
+    name: str
+    file_url: str | None = None
+    size_bytes: int
+    created_at: AwareDatetime
+
+    @staticmethod
+    def resolve_file_url(obj) -> str | None:
+        if obj.storage_url:
+            return obj.storage_url.url
+        return None
+
+
+class TranslationDetailOut(Schema):
+    id: int
+    name_ar: str | None = None
+    name_en: str | None = None
+    description_ar: str | None = None
+    description_en: str | None = None
+    long_description_ar: str | None = None
+    long_description_en: str | None = None
+    thumbnail_url: str | None = None
+    publisher: TranslationPublisherOut
+    license: LicenseChoice
+    is_external: bool
+    external_url: str | None = None
+    versions: list[TranslationVersionOut]
+    created_at: AwareDatetime
+
+    @staticmethod
+    def resolve_thumbnail_url(obj: Asset) -> str | None:
+        if obj.thumbnail_url:
+            return obj.thumbnail_url.url
+        return None
+
+    @staticmethod
+    def resolve_publisher(obj: Asset) -> TranslationPublisherOut:
+        return TranslationPublisherOut(id=obj.resource.publisher.id, name=obj.resource.publisher.name)
+
+    @staticmethod
+    def resolve_versions(obj: Asset) -> list[TranslationVersionOut]:
+        return list(obj.resource.versions.all())
+
+
+# --- Input Schemas ---
+
+
+class TranslationCreateIn(Schema):
+    name_ar: str = Field(default="", max_length=255)
+    name_en: str = Field(default="", max_length=255)
+    description_ar: str = ""
+    description_en: str = ""
+    long_description_ar: str = ""
+    long_description_en: str = ""
+    license: LicenseChoice = Field(...)
+    language: str = Field(..., max_length=10)
+    publisher_id: int = Field(...)
+    is_external: bool = False
+    external_url: str | None = None
+
+
+class TranslationPutIn(Schema):
+    name_ar: str = Field(default="", max_length=255)
+    name_en: str = Field(default="", max_length=255)
+    description_ar: str = ""
+    description_en: str = ""
+    long_description_ar: str = ""
+    long_description_en: str = ""
+    license: LicenseChoice = Field(...)
+    language: str = Field(..., max_length=10)
+    publisher_id: int = Field(...)
+    is_external: bool = False
+    external_url: str | None = None
+
+
+class TranslationPatchIn(Schema):
+    name_ar: str | None = None
+    name_en: str | None = None
+    description_ar: str | None = None
+    description_en: str | None = None
+    long_description_ar: str | None = None
+    long_description_en: str | None = None
+    license: LicenseChoice | None = None
+    language: str | None = None
+    publisher_id: int | None = None
+    is_external: bool | None = None
+    external_url: str | None = None
+
+
+# --- Filter Schema ---
+
+
+class TranslationFilter(FilterSchema):
+    publisher_id: Annotated[list[int] | None, FilterLookup(q="resource__publisher_id__in")] = None
+    license_code: Annotated[list[str] | None, FilterLookup(q="license__in")] = None
+    language: Annotated[str | None, FilterLookup(q="language")] = None
+    is_external: Annotated[bool | None, FilterLookup(q="resource__is_external")] = None
+
+
+# --- Endpoints ---
+
+
+@router.get("translations/", response=list[TranslationListOut])
+@paginate
+@ordering(ordering_fields=["id", "name", "created_at", "updated_at"])
+@searching(search_fields=["name", "name_ar", "description", "description_ar", "resource__publisher__name"])
+def list_translations(request: Request, filters: TranslationFilter = Query()):
+    service = TranslationService()
+    qs = service.get_all_translations(filters)
+    return qs
+
+
+@router.post(
+    "translations/",
+    response={
+        201: TranslationDetailOut,
+        400: NinjaErrorResponse[Literal["translation_name_required", "publisher_not_found"], Literal[None]],
+        404: NinjaErrorResponse[Literal["publisher_not_found"], Literal[None]],
+    },
+    auth=ninja_jwt_auth,
+)
+def create_translation(
+    request: Request,
+    data: TranslationCreateIn,
+) -> tuple[int, Asset]:
+    service = TranslationService()
+    translation = service.create_translation(
+        publisher_id=data.publisher_id,
+        name_ar=data.name_ar,
+        name_en=data.name_en,
+        description_ar=data.description_ar,
+        description_en=data.description_en,
+        long_description_ar=data.long_description_ar,
+        long_description_en=data.long_description_en,
+        license=data.license,
+        language=data.language,
+        is_external=data.is_external,
+        external_url=data.external_url,
+    )
+    return 201, translation
+
+
+@router.get(
+    "translations/{translation_slug}/",
+    response={
+        200: TranslationDetailOut,
+        404: NinjaErrorResponse[Literal["translation_not_found"], Literal[None]],
+    },
+)
+def retrieve_translation(request: Request, translation_slug: str) -> Asset:
+    service = TranslationService()
+    return service.get_translation(translation_slug)
+
+
+@router.put(
+    "translations/{translation_slug}/",
+    response={
+        200: TranslationDetailOut,
+        400: NinjaErrorResponse[Literal["translation_name_required"], Literal[None]],
+        404: NinjaErrorResponse[Literal["translation_not_found"], Literal[None]],
+    },
+    auth=ninja_jwt_auth,
+)
+def update_translation_put(
+    request: Request,
+    translation_slug: str,
+    data: TranslationPutIn,
+) -> Asset:
+    service = TranslationService()
+    fields = data.model_dump()
+    translation = service.update_translation(translation_slug, fields=fields)
+    return translation
+
+
+@router.patch(
+    "translations/{translation_slug}/",
+    response={
+        200: TranslationDetailOut,
+        400: NinjaErrorResponse[Literal["translation_name_required"], Literal[None]],
+        404: NinjaErrorResponse[Literal["translation_not_found"], Literal[None]],
+    },
+    auth=ninja_jwt_auth,
+)
+def update_translation_patch(
+    request: Request,
+    translation_slug: str,
+    data: TranslationPatchIn,
+) -> Asset:
+    service = TranslationService()
+    fields = data.model_dump(exclude_unset=True)
+    translation = service.update_translation(translation_slug, fields=fields)
+    return translation
+
+
+@router.delete(
+    "translations/{translation_slug}/",
+    response={
+        204: None,
+        404: NinjaErrorResponse[Literal["translation_not_found"], Literal[None]],
+    },
+    auth=ninja_jwt_auth,
+)
+def delete_translation(request: Request, translation_slug: str) -> tuple[int, None]:
+    service = TranslationService()
+    service.delete_translation(translation_slug)
+    return 204, None
