@@ -90,7 +90,7 @@ class TafsirListTest(BaseTestCase):
 
         self.user = User.objects.create_user(email="testuser@example.com", name="Test User")
 
-    def test_list_tafsirs_returns_only_ready_tafsir_assets(self):
+    def test_list_tafsirs_where_assets_are_ready_should_return_only_ready_tafsir_assets(self):
         self.authenticate_user(self.user)
         response = self.client.get("/portal/tafsirs/")
 
@@ -114,7 +114,7 @@ class TafsirListTest(BaseTestCase):
             self.assertIsInstance(item["publisher"], dict)
             self.assertSetEqual(set(item["publisher"].keys()), {"id", "name"})
 
-    def test_list_tafsirs_filter_by_publisher_id(self):
+    def test_list_tafsirs_where_publisher_id_is_filtered_should_return_matching_tafsirs(self):
         self.authenticate_user(self.user)
         response = self.client.get(f"/portal/tafsirs/?publisher_id={self.publisher1.id}")
 
@@ -125,7 +125,7 @@ class TafsirListTest(BaseTestCase):
         self.assertEqual(self.tafsir1.id, items[0]["id"])
         self.assertEqual(self.publisher1.id, items[0]["publisher"]["id"])
 
-    def test_list_tafsirs_filter_by_license_code(self):
+    def test_list_tafsirs_where_license_code_is_filtered_should_return_matching_tafsirs(self):
         self.authenticate_user(self.user)
         # Set different licenses on tafsirs
         self.tafsir1.license = "CC0"
@@ -141,7 +141,7 @@ class TafsirListTest(BaseTestCase):
         self.assertEqual(1, len(items))
         self.assertEqual("CC0", items[0]["license"])
 
-    def test_list_tafsirs_filter_by_language(self):
+    def test_list_tafsirs_where_language_is_filtered_should_return_matching_tafsirs(self):
         self.authenticate_user(self.user)
         response = self.client.get("/portal/tafsirs/?language=ar")
 
@@ -152,7 +152,7 @@ class TafsirListTest(BaseTestCase):
         self.assertEqual(self.tafsir1.id, items[0]["id"])
         self.assertEqual("ar", self.tafsir1.language)
 
-    def test_list_tafsirs_filter_by_is_external(self):
+    def test_list_tafsirs_where_is_external_is_filtered_should_return_external_tafsir(self):
         self.authenticate_user(self.user)
         # Create an external tafsir resource
         external_resource = baker.make(
@@ -179,7 +179,7 @@ class TafsirListTest(BaseTestCase):
         self.assertEqual(1, len(items))
         self.assertEqual(external_tafsir.id, items[0]["id"])
 
-    def test_list_tafsirs_search_by_name(self):
+    def test_list_tafsirs_where_search_by_name_should_return_matching_tafsir(self):
         self.authenticate_user(self.user)
         response = self.client.get("/portal/tafsirs/?search=Tabari")
 
@@ -189,7 +189,7 @@ class TafsirListTest(BaseTestCase):
         self.assertEqual(1, len(items))
         self.assertEqual(self.tafsir1.id, items[0]["id"])
 
-    def test_list_tafsirs_search_by_publisher_name(self):
+    def test_list_tafsirs_where_search_by_publisher_name_should_return_matching_tafsir(self):
         self.authenticate_user(self.user)
         response = self.client.get("/portal/tafsirs/?search=Publisher%20Two")
 
@@ -199,7 +199,7 @@ class TafsirListTest(BaseTestCase):
         self.assertEqual(1, len(items))
         self.assertEqual(self.tafsir2.id, items[0]["id"])
 
-    def test_list_tafsirs_ordering_by_name(self):
+    def test_list_tafsirs_where_ordering_by_name_should_return_sorted_names(self):
         self.authenticate_user(self.user)
         response = self.client.get("/portal/tafsirs/?ordering=name")
 
@@ -209,7 +209,7 @@ class TafsirListTest(BaseTestCase):
         names = [item["name"] for item in items]
         self.assertEqual(sorted(names), names)
 
-    def test_list_tafsirs_pagination(self):
+    def test_list_tafsirs_where_pagination_is_applied_should_return_page_and_count(self):
         self.authenticate_user(self.user)
         response = self.client.get("/portal/tafsirs/?page_size=1")
 
@@ -219,6 +219,6 @@ class TafsirListTest(BaseTestCase):
         self.assertEqual(1, len(body["results"]))
         self.assertEqual(2, body["count"])
 
-    def test_list_tafsirs_unauthenticated_returns_401(self):
+    def test_list_tafsirs_where_unauthenticated_should_return_401(self):
         response = self.client.get("/portal/tafsirs/")
         self.assertEqual(401, response.status_code)

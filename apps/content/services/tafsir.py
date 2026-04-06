@@ -68,8 +68,10 @@ class TafsirService:
             )
 
         # Compute base name and description from localized fields
-        name = name_ar or name_en
-        if not name or not name.strip():
+        normalized_name_ar = (name_ar or "").strip()
+        normalized_name_en = (name_en or "").strip()
+        name = normalized_name_ar or normalized_name_en
+        if not name:
             raise ItqanError(
                 error_name="tafsir_name_required",
                 message=_("Tafsir name (Arabic or English) is required."),
@@ -80,9 +82,9 @@ class TafsirService:
 
         return self.repo.create_tafsir(
             publisher_id=publisher_id,
-            name=name.strip(),
-            name_ar=name_ar,
-            name_en=name_en,
+            name=name,
+            name_ar=normalized_name_ar,
+            name_en=normalized_name_en,
             description=description,
             description_ar=description_ar,
             description_en=description_en,

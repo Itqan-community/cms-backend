@@ -176,6 +176,8 @@ def create_translation(
         long_description_en=data.long_description_en,
         license=data.license,
         language=data.language,
+        is_external=data.is_external,
+        external_url=data.external_url,
     )
     return 201, translation
 

@@ -52,6 +52,8 @@ class TranslationService:
         long_description_en: str,
         license: LicenseChoice,
         language: str,
+        is_external: bool = False,
+        external_url: str | None = None,
     ) -> Asset:
         """
         Business Logic: Create a new translation.
@@ -66,8 +68,10 @@ class TranslationService:
             )
 
         # Compute base name and description from localized fields
-        name = name_ar or name_en
-        if not name or not name.strip():
+        normalized_name_ar = (name_ar or "").strip()
+        normalized_name_en = (name_en or "").strip()
+        name = normalized_name_ar or normalized_name_en
+        if not name:
             raise ItqanError(
                 error_name="translation_name_required",
                 message=_("Translation name (Arabic or English) is required."),
@@ -78,9 +82,9 @@ class TranslationService:
 
         return self.repo.create_translation(
             publisher_id=publisher_id,
-            name=name.strip(),
-            name_ar=name_ar,
-            name_en=name_en,
+            name=name,
+            name_ar=normalized_name_ar,
+            name_en=normalized_name_en,
             description=description,
             description_ar=description_ar,
             description_en=description_en,
@@ -88,6 +92,8 @@ class TranslationService:
             long_description_en=long_description_en,
             license=license,
             language=language,
+            is_external=is_external,
+            external_url=external_url,
         )
 
     def update_translation(

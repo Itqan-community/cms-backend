@@ -49,7 +49,7 @@ class TafsirDetailTest(BaseTestCase):
 
         self.user = User.objects.create_user(email="testuser@example.com", name="Test User")
 
-    def test_detail_returns_all_localized_fields_and_versions(self):
+    def test_retrieve_tafsir_where_valid_slug_should_return_all_fields(self):
         self.authenticate_user(self.user)
         response = self.client.get(f"/portal/tafsirs/{self.tafsir.slug}/")
 
@@ -84,7 +84,7 @@ class TafsirDetailTest(BaseTestCase):
             self.assertIn("size_bytes", version)
             self.assertIn("created_at", version)
 
-    def test_detail_not_found_returns_404(self):
+    def test_retrieve_tafsir_where_not_found_should_return_404(self):
         self.authenticate_user(self.user)
         response = self.client.get("/portal/tafsirs/nonexistent-slug/")
 
@@ -92,6 +92,6 @@ class TafsirDetailTest(BaseTestCase):
         body = response.json()
         self.assertEqual("tafsir_not_found", body["error_name"])
 
-    def test_detail_unauthenticated_returns_401(self):
+    def test_retrieve_tafsir_where_unauthenticated_should_return_401(self):
         response = self.client.get(f"/portal/tafsirs/{self.tafsir.slug}/")
         self.assertEqual(401, response.status_code)

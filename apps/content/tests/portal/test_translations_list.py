@@ -90,7 +90,7 @@ class TranslationListTest(BaseTestCase):
 
         self.user = User.objects.create_user(email="testuser@example.com", name="Test User")
 
-    def test_list_translations_returns_only_ready_translation_assets(self):
+    def test_list_translations_where_assets_are_ready_should_return_only_ready_assets(self):
         self.authenticate_user(self.user)
         response = self.client.get("/portal/translations/")
 
@@ -114,7 +114,7 @@ class TranslationListTest(BaseTestCase):
             self.assertIsInstance(item["publisher"], dict)
             self.assertSetEqual(set(item["publisher"].keys()), {"id", "name"})
 
-    def test_list_translations_filter_by_publisher_id(self):
+    def test_list_translations_where_publisher_id_is_filtered_should_return_matching_translations(self):
         self.authenticate_user(self.user)
         response = self.client.get(f"/portal/translations/?publisher_id={self.publisher1.id}")
 
@@ -125,7 +125,7 @@ class TranslationListTest(BaseTestCase):
         self.assertEqual(self.translation1.id, items[0]["id"])
         self.assertEqual(self.publisher1.id, items[0]["publisher"]["id"])
 
-    def test_list_translations_filter_by_license_code(self):
+    def test_list_translations_where_license_code_is_filtered_should_return_matching_translations(self):
         self.authenticate_user(self.user)
         # Set different licenses on translations
         self.translation1.license = "CC0"
@@ -141,7 +141,7 @@ class TranslationListTest(BaseTestCase):
         self.assertEqual(1, len(items))
         self.assertEqual("CC0", items[0]["license"])
 
-    def test_list_translations_filter_by_language(self):
+    def test_list_translations_where_language_is_filtered_should_return_matching_translations(self):
         self.authenticate_user(self.user)
         self.translation1.language = "ar"
         self.translation1.save()
@@ -154,7 +154,7 @@ class TranslationListTest(BaseTestCase):
         self.assertEqual(1, len(items))
         self.assertEqual(self.translation1.id, items[0]["id"])
 
-    def test_list_translations_filter_by_is_external(self):
+    def test_list_translations_where_is_external_is_filtered_should_return_external_translation(self):
         self.authenticate_user(self.user)
         # Create an external translation resource
         external_resource = baker.make(
@@ -181,7 +181,7 @@ class TranslationListTest(BaseTestCase):
         self.assertEqual(1, len(items))
         self.assertEqual(external_translation.id, items[0]["id"])
 
-    def test_list_translations_search_by_name(self):
+    def test_list_translations_where_search_by_name_should_return_matching_translation(self):
         self.authenticate_user(self.user)
         response = self.client.get("/portal/translations/?search=Sahih")
 
@@ -191,7 +191,7 @@ class TranslationListTest(BaseTestCase):
         self.assertEqual(1, len(items))
         self.assertEqual(self.translation1.id, items[0]["id"])
 
-    def test_list_translations_search_by_publisher_name(self):
+    def test_list_translations_where_search_by_publisher_name_should_return_matching_translation(self):
         self.authenticate_user(self.user)
         response = self.client.get("/portal/translations/?search=Publisher%20Two")
 
@@ -201,7 +201,7 @@ class TranslationListTest(BaseTestCase):
         self.assertEqual(1, len(items))
         self.assertEqual(self.translation2.id, items[0]["id"])
 
-    def test_list_translations_ordering_by_name(self):
+    def test_list_translations_where_ordering_by_name_should_return_sorted_names(self):
         self.authenticate_user(self.user)
         response = self.client.get("/portal/translations/?ordering=name")
 
@@ -211,7 +211,7 @@ class TranslationListTest(BaseTestCase):
         names = [item["name"] for item in items]
         self.assertEqual(sorted(names), names)
 
-    def test_list_translations_pagination(self):
+    def test_list_translations_where_pagination_is_applied_should_return_page_and_count(self):
         self.authenticate_user(self.user)
         response = self.client.get("/portal/translations/?page_size=1")
 
@@ -221,6 +221,6 @@ class TranslationListTest(BaseTestCase):
         self.assertEqual(1, len(body["results"]))
         self.assertEqual(2, body["count"])
 
-    def test_list_translations_unauthenticated_returns_401(self):
+    def test_list_translations_where_unauthenticated_should_return_401(self):
         response = self.client.get("/portal/translations/")
         self.assertEqual(401, response.status_code)

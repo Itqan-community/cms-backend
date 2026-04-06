@@ -12,7 +12,7 @@ class TafsirCreateTest(BaseTestCase):
         self.publisher = baker.make(Publisher, name="Test Publisher")
         self.user = User.objects.create_user(email="testuser@example.com", name="Test User")
 
-    def test_create_tafsir_valid_data_returns_201(self):
+    def test_create_tafsir_where_valid_data_should_return_201(self):
         self.authenticate_user(self.user)
         response = self.client.post(
             "/portal/tafsirs/",
@@ -47,7 +47,7 @@ class TafsirCreateTest(BaseTestCase):
         self.assertEqual(Resource.CategoryChoice.TAFSIR, asset.category)
         self.assertEqual(Resource.StatusChoice.READY, asset.resource.status)
 
-    def test_create_tafsir_invalid_publisher_returns_404(self):
+    def test_create_tafsir_where_publisher_not_found_should_return_404(self):
         self.authenticate_user(self.user)
         response = self.client.post(
             "/portal/tafsirs/",
@@ -71,7 +71,7 @@ class TafsirCreateTest(BaseTestCase):
         body = response.json()
         self.assertEqual("publisher_not_found", body["error_name"])
 
-    def test_create_tafsir_missing_name_returns_400(self):
+    def test_create_tafsir_where_name_missing_should_return_400(self):
         self.authenticate_user(self.user)
         response = self.client.post(
             "/portal/tafsirs/",
@@ -95,7 +95,7 @@ class TafsirCreateTest(BaseTestCase):
         body = response.json()
         self.assertEqual("tafsir_name_required", body["error_name"])
 
-    def test_create_tafsir_unauthenticated_returns_401(self):
+    def test_create_tafsir_where_unauthenticated_should_return_401(self):
         response = self.client.post(
             "/portal/tafsirs/",
             data={
@@ -116,7 +116,7 @@ class TafsirCreateTest(BaseTestCase):
 
         self.assertEqual(401, response.status_code, response.content)
 
-    def test_create_tafsir_with_only_english_name(self):
+    def test_create_tafsir_where_only_english_name_should_create_successfully(self):
         self.authenticate_user(self.user)
         response = self.client.post(
             "/portal/tafsirs/",

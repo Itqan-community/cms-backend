@@ -26,7 +26,7 @@ class TranslationDeleteTest(BaseTestCase):
 
         self.user = User.objects.create_user(email="testuser@example.com", name="Test User")
 
-    def test_delete_returns_204(self):
+    def test_delete_translation_where_valid_slug_should_return_204(self):
         self.authenticate_user(self.user)
         translation_slug = self.translation.slug
 
@@ -37,7 +37,7 @@ class TranslationDeleteTest(BaseTestCase):
         # Verify asset was deleted
         self.assertFalse(Asset.objects.filter(slug=translation_slug).exists())
 
-    def test_delete_also_deletes_resource(self):
+    def test_delete_translation_where_valid_slug_should_also_delete_resource(self):
         self.authenticate_user(self.user)
         translation_slug = self.translation.slug
         resource_id = self.resource.id
@@ -50,7 +50,7 @@ class TranslationDeleteTest(BaseTestCase):
         self.assertFalse(Asset.objects.filter(slug=translation_slug).exists())
         self.assertFalse(Resource.objects.filter(id=resource_id).exists())
 
-    def test_delete_not_found_returns_404(self):
+    def test_delete_translation_where_not_found_should_return_404(self):
         self.authenticate_user(self.user)
         response = self.client.delete("/portal/translations/nonexistent-slug/")
 
@@ -58,7 +58,7 @@ class TranslationDeleteTest(BaseTestCase):
         body = response.json()
         self.assertEqual("translation_not_found", body["error_name"])
 
-    def test_delete_unauthenticated_returns_401(self):
+    def test_delete_translation_where_unauthenticated_should_return_401(self):
         response = self.client.delete(f"/portal/translations/{self.translation.slug}/")
 
         self.assertEqual(401, response.status_code, response.content)

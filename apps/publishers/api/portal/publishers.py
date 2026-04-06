@@ -84,7 +84,7 @@ class PublisherFilter(FilterSchema):
 
 @router.get("publishers/", response=list[PublisherListOut], auth=ninja_jwt_auth)
 @paginate
-@searching(search_fields=["name", "name_ar", "description", "description_ar"])
+@searching(search_fields=["name_en", "name_ar", "description_en", "description_ar"])
 def list_publishers(request: Request, filters: PublisherFilter = Query(...)):
     qs = Publisher.objects.all()
     qs = filters.filter(qs)

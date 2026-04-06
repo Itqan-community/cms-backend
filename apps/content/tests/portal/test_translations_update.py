@@ -36,7 +36,7 @@ class TranslationUpdateTest(BaseTestCase):
 
         self.user = User.objects.create_user(email="testuser@example.com", name="Test User")
 
-    def test_put_updates_all_fields_returns_200(self):
+    def test_update_translation_where_put_updates_all_fields_should_return_200(self):
         self.authenticate_user(self.user)
         response = self.client.put(
             f"/portal/translations/{self.translation.slug}/",
@@ -73,7 +73,7 @@ class TranslationUpdateTest(BaseTestCase):
         self.assertEqual("Updated Translation", updated_asset.name_en)
         self.assertEqual("CC-BY", updated_asset.license)
 
-    def test_patch_updates_partial_fields_returns_200(self):
+    def test_update_translation_where_patch_updates_partial_fields_should_return_200(self):
         self.authenticate_user(self.user)
         response = self.client.patch(
             f"/portal/translations/{self.translation.slug}/",
@@ -95,7 +95,7 @@ class TranslationUpdateTest(BaseTestCase):
         self.assertEqual("ترجمة أصلية", body["name_ar"])
         self.assertEqual("Original description", body["description_en"])
 
-    def test_put_missing_required_field_returns_400(self):
+    def test_update_translation_where_put_missing_required_field_should_return_400(self):
         self.authenticate_user(self.user)
         response = self.client.put(
             f"/portal/translations/{self.translation.slug}/",
@@ -113,7 +113,7 @@ class TranslationUpdateTest(BaseTestCase):
 
         self.assertEqual(400, response.status_code, response.content)
 
-    def test_patch_with_invalid_name_returns_400(self):
+    def test_update_translation_where_patch_with_invalid_name_should_return_400(self):
         self.authenticate_user(self.user)
         response = self.client.patch(
             f"/portal/translations/{self.translation.slug}/",
@@ -128,7 +128,7 @@ class TranslationUpdateTest(BaseTestCase):
         body = response.json()
         self.assertEqual("translation_name_required", body["error_name"])
 
-    def test_update_not_found_returns_404(self):
+    def test_update_translation_where_not_found_should_return_404(self):
         self.authenticate_user(self.user)
         response = self.client.patch(
             "/portal/translations/nonexistent-slug/",
@@ -142,7 +142,7 @@ class TranslationUpdateTest(BaseTestCase):
         body = response.json()
         self.assertEqual("translation_not_found", body["error_name"])
 
-    def test_update_unauthenticated_returns_401(self):
+    def test_update_translation_where_unauthenticated_should_return_401(self):
         response = self.client.patch(
             f"/portal/translations/{self.translation.slug}/",
             data={
