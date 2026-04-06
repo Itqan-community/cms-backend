@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 from django.db import transaction
 
-from apps.content.models import Asset, Resource
+from apps.content.models import Asset, LicenseChoice, Resource
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
@@ -66,7 +66,7 @@ class TafsirRepository:
         description_en: str,
         long_description_ar: str,
         long_description_en: str,
-        license: str,
+        license: LicenseChoice,
         language: str,
         is_external: bool = False,
         external_url: str | None = None,
