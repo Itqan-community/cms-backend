@@ -1,6 +1,7 @@
 x-common-env: &common-env
   DJANGO_SETTINGS_MODULE: config.settings.development
   PYTHONUNBUFFERED: "1"
+  EMAIL_BACKEND: django.core.mail.backends.console.EmailBackend
   DATABASE_URL: postgresql://postgres:postgres@postgres:5432/itqan
   DB_ENGINE: django.db.backends.postgresql
   DB_NAME: itqan
@@ -25,6 +26,7 @@ services:
       <<: *common-env
     volumes:
       - .:/app
+      - /app/.venv
     depends_on:
       postgres:
         condition: service_healthy
@@ -86,6 +88,7 @@ services:
       <<: *common-env
     volumes:
       - .:/app
+      - /app/.venv
     depends_on:
       postgres:
         condition: service_healthy
@@ -107,6 +110,7 @@ services:
       <<: *common-env
     volumes:
       - .:/app
+      - /app/.venv
     depends_on:
       postgres:
         condition: service_healthy
