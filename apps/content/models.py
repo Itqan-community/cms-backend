@@ -180,6 +180,10 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
 
     name = models.CharField(max_length=255, help_text="Asset name")
 
+    slug = models.SlugField(
+        allow_unicode=True, unique=True, db_index=True, default="", help_text="URL-friendly slug for the asset"
+    )
+
     description = models.TextField(help_text="Asset description")
 
     long_description = models.TextField(blank=True, help_text="Extended description")
@@ -254,6 +258,17 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         help_text="Year of recording for recitation assets",
     )
 
+    is_external = models.BooleanField(
+        default=False,
+        help_text="Whether this asset is external",
+    )
+    external_url = models.URLField(
+        "External URL",
+        null=True,
+        blank=True,
+        help_text="URL for external assets",
+    )
+
     class Meta:
         constraints = [
             models.CheckConstraint(
@@ -269,7 +284,12 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
                     qiraah__isnull=True,
                 ),
                 name="asset_recitation_fields_consistency",
-            )
+            ),
+            models.CheckConstraint(
+                condition=models.Q(is_external=False, external_url__isnull=True)
+                | models.Q(is_external=True, external_url__isnull=False),
+                name="asset_external_url_consistency",
+            ),
         ]
 
     def __str__(self):
@@ -278,6 +298,16 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
     def save(self, *args, **kwargs):
         if self.riwayah_id and not self.qiraah_id:
             self.qiraah_id = self.riwayah.qiraah_id
+        if not self.slug:
+            from django.utils.text import slugify
+
+            base_slug = slugify(self.name[:50], allow_unicode=True) or f"asset-{self.pk or 0}"
+            slug = base_slug
+            counter = 1
+            while self.__class__.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base_slug[:40]}-{counter}"
+                counter += 1
+            self.slug = slug
         super().save(*args, **kwargs)
 
     @staticmethod
