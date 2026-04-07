@@ -153,7 +153,7 @@ class AssetRecitationAudioTracksDirectUploadService:
         }
 
     def abort_upload(self, r2_key: str, upload_id: str) -> dict[str, Any]:
-        """Abort a multipart upload in R2. key must be a DB-format key (no media/ prefix)."""
+        """Abort a multipart upload in R2."""
         s3 = self._get_s3_client()
 
         try:
