@@ -167,7 +167,8 @@ def list_tafsirs(request: Request, filters: TafsirFilter = Query()):
     response={
         201: TafsirDetailOut,
         400: NinjaErrorResponse[Literal["tafsir_name_required"], Literal[None]],
-        404: NinjaErrorResponse[Literal["publisher_not_found", "tafsir_not_found"], Literal[None]],
+        404: NinjaErrorResponse[Literal["publisher_not_found"], Literal[None]]
+        | NinjaErrorResponse[Literal["tafsir_not_found"], Literal[None]],
     },
     auth=ninja_jwt_auth,
 )

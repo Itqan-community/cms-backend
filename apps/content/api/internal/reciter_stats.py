@@ -13,13 +13,12 @@ from apps.core.ninja_utils.tags import NinjaTag
 
 router = ItqanRouter(tags=[NinjaTag.RECITERS])
 
-RECITER_STATS_CACHE_KEY = "reciter_stats:v1"
+RECITER_STATS_CACHE_KEY = "reciter_stats:v2"
 RECITER_STATS_TTL = 60 * 60 * 12  # 12 hours
 
 
 class ReciterStatsAggregationOut(Schema):
     nationalities: int
-    contemporary_reciters: int
     registered_reciters: int
 
 
@@ -34,14 +33,9 @@ def reciter_stats(request: Request):
             filter=Q(is_active=True),
             distinct=True,
         ),
-        contemporary_reciters=Count(
-            "id",
-            filter=Q(is_contemporary=True, is_active=True),
-            distinct=True,
-        ),
         nationalities=Count(
             "nationality",
-            filter=Q(is_active=True),
+            filter=Q(is_active=True) & ~Q(nationality=""),
             distinct=True,
         ),
     )
