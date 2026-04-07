@@ -773,11 +773,12 @@ class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
     def save(self, *args, **kwargs) -> None:
         # Auto-compute duration and size when an MP3 file is present. And set the original filename for admin/manual uploads.
         if self.audio_file:
-            try:
-                self.size_bytes = int(getattr(self.audio_file, "size", 0) or 0)
-            except Exception as e:
-                logger.warning("Failed to get file size for RecitationSurahTrack: %s", e)
-                self.size_bytes = 0
+            if not self.size_bytes:
+                try:
+                    self.size_bytes = int(getattr(self.audio_file, "size", 0) or 0)
+                except Exception as e:
+                    logger.warning("Failed to get file size for RecitationSurahTrack: %s", e)
+                    self.size_bytes = 0
 
             if not self.duration_ms:
                 self.duration_ms = get_mp3_duration_ms(self.audio_file)

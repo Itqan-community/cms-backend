@@ -401,7 +401,7 @@ def update_asset_stats_async(asset_id, stat_type, increment=1):
 @shared_task
 def cleanup_stuck_multipart_uploads_task(older_than_hours: int = 2):
     """
-    Periodic task to cleanup stuck recitations multipart uploads to R2 and orphaned related RecitationSurahTrack db records.
+    Periodic task to cleanup stuck recitations multipart uploads to R2
 
     This task should run every 4 hours to catch uploads that:
     - Were started but never completed (browser closed, network failure, etc.)
@@ -422,25 +422,14 @@ def cleanup_stuck_multipart_uploads_task(older_than_hours: int = 2):
         service = AssetRecitationAudioTracksDirectUploadService()
         result = service.cleanup_stuck_uploads(older_than_hours=older_than_hours)
 
-        logger.info(
-            f"Cleanup stuck uploads completed: "
-            f"aborted={result.get('abortedUploads', 0)}, "
-            f"db_cleaned={result.get('dbRecordsCleaned', 0)}, "
-            f"errors={len(result.get('errors', []))}"
-        )
-
-        if result.get("errors"):
-            logger.warning(f"Cleanup errors: {result['errors']}")
+        logger.info(f"Cleanup stuck uploads completed. aborted={result.get('abortedUploads', 0)}")
 
         return result
 
     except Exception as exc:
-        logger.error(f"Failed to cleanup stuck multipart uploads: {exc}")
-        return {
-            "abortedUploads": 0,
-            "dbRecordsCleaned": 0,
-            "errors": [str(exc)],
-        }
+        message = f"Failed to cleanup stuck multipart uploads: {exc}"
+        logger.error(message)
+        return {"abortedUploads": 0, "message": message}
 
 
 @shared_task
