@@ -552,7 +552,7 @@ class AssetAdmin(admin.ModelAdmin):
         try:
             body = json.loads(request.body or "{}")
             service = AssetRecitationAudioTracksDirectUploadService()
-            result = service.abort_upload(key=body["key"], upload_id=body["uploadId"])
+            result = service.abort_upload(r2_key=f"media/{body["key"]}", upload_id=body["uploadId"])
             return JsonResponse(result)
         except ItqanError as e:
             return JsonResponse(

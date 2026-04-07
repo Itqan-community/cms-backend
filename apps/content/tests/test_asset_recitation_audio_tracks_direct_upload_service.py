@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import timedelta
 from unittest.mock import Mock, patch
 
+from django.conf import settings
 from django.utils import timezone
 from model_bakery import baker
 
@@ -10,6 +11,7 @@ from apps.content.models import Asset, RecitationSurahTrack, Reciter, Resource, 
 from apps.content.services.admin.asset_recitation_audio_tracks_direct_upload_service import (
     AssetRecitationAudioTracksDirectUploadService,
 )
+from apps.core.ninja_utils.errors import ItqanError
 from apps.core.tests import BaseTestCase
 
 
@@ -201,6 +203,53 @@ class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
         self.assertEqual(123, result["sizeBytes"])
         s3.head_object.assert_called_once()
         s3.get_object.assert_called_once()
+
+    def test_finish_upload_where_track_already_exists_should_delete_r2_object_and_raise_itqan_error(self):
+        # A duplicate finish_upload for the same asset+surah must delete the newly uploaded R2
+        # object (to avoid orphaned storage) and raise ItqanError with status 409.
+        # Arrange
+        reciter = baker.make(Reciter, name="Test Reciter")
+        riwayah = baker.make(Riwayah, name="Test Riwayah")
+        asset = baker.make(
+            Asset,
+            name="test",
+            category=Resource.CategoryChoice.RECITATION,
+            reciter=reciter,
+            riwayah=riwayah,
+        )
+        key = f"uploads/assets/{asset.id}/recitations/001.mp3"
+        filename = "anything_001.mp3"
+
+        # Pre-create a track so the second insert trips the unique constraint
+        baker.make(RecitationSurahTrack, asset=asset, surah_number=1, audio_file=key)
+
+        s3 = Mock()
+        s3.complete_multipart_upload.return_value = {}
+        service = AssetRecitationAudioTracksDirectUploadService()
+
+        # Act & Assert
+        with patch.object(service, "_get_s3_client", return_value=s3):
+            with self.assertRaises(ItqanError) as ctx:
+                service.finish_upload(
+                    key=key,
+                    upload_id="upload-1",
+                    parts=[{"ETag": "etag-1", "PartNumber": 1}],
+                    asset_id=asset.id,
+                    filename=filename,
+                    size_bytes=1024,
+                    duration_ms=5000,
+                )
+
+        error = ctx.exception
+        self.assertEqual("duplicate_track", error.error_name)
+        self.assertEqual(409, error.status_code)
+
+        # The orphaned R2 object must be deleted
+        r2_key = f"media/{key}"
+        s3.delete_object.assert_called_once_with(Bucket=settings.CLOUDFLARE_R2_BUCKET, Key=r2_key)
+
+        # No second DB row created
+        self.assertEqual(1, RecitationSurahTrack.objects.filter(asset_id=asset.id, surah_number=1).count())
 
     def test_abort_upload_should_abort_r2_multipart(self):
         # Arrange

@@ -7,9 +7,11 @@ from typing import Any
 import boto3
 from botocore.config import Config
 from django.conf import settings
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.content.models import RecitationSurahTrack
+from apps.core.ninja_utils.errors import ItqanError
 from apps.mixins.recitations_helpers import (
     extract_surah_number_from_mp3_filename,
     get_mp3_duration_ms,
@@ -118,15 +120,28 @@ class AssetRecitationAudioTracksDirectUploadService:
 
         surah_number = extract_surah_number_from_mp3_filename(filename)
 
-        track = RecitationSurahTrack.objects.create(
-            asset_id=asset_id,
-            surah_number=surah_number,
-            audio_file=key,
-            original_filename=filename,
-            duration_ms=duration_ms or 0,
-            size_bytes=size_bytes or 0,
-            upload_finished_at=timezone.now(),
-        )
+        try:
+            with transaction.atomic():
+                track = RecitationSurahTrack.objects.create(
+                    asset_id=asset_id,
+                    surah_number=surah_number,
+                    audio_file=key,
+                    original_filename=filename,
+                    duration_ms=duration_ms,
+                    size_bytes=size_bytes,
+                    upload_finished_at=timezone.now(),
+                )
+        except IntegrityError as exc:
+            try:
+                s3.delete_object(Bucket=settings.CLOUDFLARE_R2_BUCKET, Key=r2_key)
+            except Exception as e:
+                logger.warning("Failed to delete orphaned object in R2 %s: %s", r2_key, e)
+
+            raise ItqanError(
+                error_name="duplicate_track",
+                message=f"A track for asset {asset_id} surah {surah_number} already exists",
+                status_code=409,
+            ) from exc
 
         return {
             "trackId": track.id,
