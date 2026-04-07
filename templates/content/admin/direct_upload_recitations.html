@@ -274,8 +274,8 @@
             throw new Error(data.message || 'start failed');
           }
 
-          // Store uploadId and key in file meta for error handlers
-          try { uppy.setFileMeta(file.id, { key: data.key, uploadId: data.uploadId }); } catch (e) {}
+          // Store uploadId, key, and durationMs in file meta for error handlers and finish call
+          try { uppy.setFileMeta(file.id, { key: data.key, uploadId: data.uploadId, durationMs: durationMs }); } catch (e) {}
 
           return { uploadId: data.uploadId, key: data.key };
         },
@@ -292,11 +292,16 @@
           return { url: data.url };
         },
         completeMultipartUpload: async (file, { uploadId, parts, key }) => {
+          const filename = file.name;
+          const sizeBytes = file.data?.size || file.size || 0;
+          const durationMs = file.meta?.durationMs || null;
+          const finishBody = { key, uploadId, parts, assetId, filename, sizeBytes };
+          if (durationMs !== null) finishBody.durationMs = durationMs;
           const res = await fetch(finishUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken || '' },
             credentials: 'same-origin',
-            body: JSON.stringify({ key, uploadId, parts }),
+            body: JSON.stringify(finishBody),
           });
           const data = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error(data.message || 'finish failed');

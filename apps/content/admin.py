@@ -536,7 +536,7 @@ class AssetAdmin(admin.ModelAdmin):
                 if duration_ms is not None:
                     duration_ms = int(duration_ms)
             service = AssetRecitationAudioTracksDirectUploadService()
-            data = service.start_upload(asset_id=asset_id, filename=filename, duration_ms=duration_ms)
+            data = service.start_upload(asset_id=asset_id, filename=filename)
             return JsonResponse(data)
         except ItqanError as e:
             return JsonResponse(
@@ -589,7 +589,15 @@ class AssetAdmin(admin.ModelAdmin):
         try:
             body = json.loads(request.body or "{}")
             service = AssetRecitationAudioTracksDirectUploadService()
-            result = service.finish_upload(key=body["key"], upload_id=body["uploadId"], parts=body["parts"])
+            result = service.finish_upload(
+                key=body["key"],
+                upload_id=body["uploadId"],
+                parts=body["parts"],
+                asset_id=int(body["assetId"]),
+                filename=str(body.get("filename", "")),
+                duration_ms=int(body["durationMs"]) if body.get("durationMs") else 0,
+                size_bytes=int(body["sizeBytes"]) if body.get("sizeBytes") else 0,
+            )
             return JsonResponse(result)
         except ItqanError as e:
             return JsonResponse(
