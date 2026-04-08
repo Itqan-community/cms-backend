@@ -53,7 +53,10 @@ THIRD_PARTY_APPS = [
     "storages",
     "oauth2_provider",
     "django_celery_beat",
+    "django_countries",
 ]
+
+COUNTRIES_OVERRIDE = {"IL": None}
 
 LOCAL_APPS = ["apps.core", "apps.content", "apps.users", "apps.publishers"]
 
@@ -72,6 +75,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "oauth2_provider.middleware.OAuth2TokenMiddleware",
+    "ninja.compatibility.files.fix_request_files_middleware",
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True

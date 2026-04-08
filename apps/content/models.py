@@ -8,6 +8,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
+from django_countries.fields import CountryField
 
 from apps.core.mixins.storage import DeleteFilesOnDeleteMixin
 from apps.core.models import BaseModel
@@ -646,13 +647,6 @@ class Distribution(BaseModel):
         return f"Distribution(asset={self.asset_version.asset.name}, channel={self.channel})"
 
 
-class Nationality(BaseModel):
-    """reciter/qri nationality"""
-
-    code = models.CharField(max_length=2, unique=True)
-    name = models.CharField(max_length=100)
-
-
 class Reciter(BaseModel):
     """Quran reciter/qari (e.g. Mshari Al-Afasi, Saad Al-Ghamidi, etc)"""
 
@@ -665,13 +659,9 @@ class Reciter(BaseModel):
         help_text="Icon/logo image - used in V1 UI: Publisher Page",
     )
     bio = models.TextField(blank=True)
-    date_of_birth = models.DateField(null=True, blank=True)
     date_of_death = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
-    nationality = models.ForeignKey(
-        Nationality, on_delete=models.SET_NULL, related_name="reciters", null=True, blank=True
-    )
-    is_contemporary = models.BooleanField(default=False)
+    nationality = CountryField(blank=True, default="")
 
     def save(self, *args, **kwargs) -> None:
         if not self.slug:

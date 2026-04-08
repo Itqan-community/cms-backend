@@ -30,7 +30,6 @@ from .models import (
     AssetPreview,
     AssetVersion,
     ContentIssueReport,
-    Nationality,
     Qiraah,
     RecitationAyahTiming,
     RecitationSurahTrack,
@@ -804,29 +803,6 @@ class UsageEventAdmin(admin.ModelAdmin):
         return False
 
 
-@admin.register(Nationality)
-class NationalityAdmin(admin.ModelAdmin):
-    list_display = ["id", "code", "name_en", "name_ar", "created_at"]
-    search_fields = ["code", "name_en", "name_ar"]
-    readonly_fields = ["created_at", "updated_at"]
-
-    fieldsets = (
-        (
-            "Basic Information",
-            {
-                "fields": ("code", "name_en", "name_ar"),
-            },
-        ),
-        (
-            "Timestamps",
-            {
-                "fields": ("created_at", "updated_at"),
-                "classes": ("collapse",),
-            },
-        ),
-    )
-
-
 @admin.register(Qiraah)
 class QiraahAdmin(admin.ModelAdmin):
     list_display = ["id", "name", "slug", "is_active", "created_at"]
@@ -864,7 +840,17 @@ class ReciterAdmin(admin.ModelAdmin):
         (
             "Basic Information",
             {
-                "fields": ("name_en", "name_ar", "bio_en", "bio_ar", "slug", "is_active", "image_url"),
+                "fields": (
+                    "name_en",
+                    "name_ar",
+                    "bio_en",
+                    "bio_ar",
+                    "slug",
+                    "nationality",
+                    "date_of_death",
+                    "is_active",
+                    "image_url",
+                ),
             },
         ),
         (
