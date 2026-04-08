@@ -1,3 +1,4 @@
+from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
 from apps.content.models import Asset, Resource
@@ -37,7 +38,10 @@ class TafsirUpdateTest(BaseTestCase):
         self.user = User.objects.create_user(email="testuser@example.com", name="Test User")
 
     def test_update_tafsir_where_put_updates_all_fields_should_return_200(self):
+        # Arrange
         self.authenticate_user(self.user)
+
+        # Act
         response = self.client.put(
             f"/portal/tafsirs/{self.tafsir.slug}/",
             data={
@@ -51,11 +55,11 @@ class TafsirUpdateTest(BaseTestCase):
                 "language": "en",
                 "publisher_id": self.publisher1.id,
                 "is_external": False,
-                "external_url": None,
             },
-            content_type="application/json",
+            format="multipart",
         )
 
+        # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
 
@@ -74,16 +78,20 @@ class TafsirUpdateTest(BaseTestCase):
         self.assertEqual("CC-BY", updated_asset.license)
 
     def test_update_tafsir_where_patch_updates_partial_fields_should_return_200(self):
+        # Arrange
         self.authenticate_user(self.user)
+
+        # Act
         response = self.client.patch(
             f"/portal/tafsirs/{self.tafsir.slug}/",
             data={
                 "name_en": "Patched English Name",
                 "description_ar": "وصف معدل",
             },
-            content_type="application/json",
+            format="multipart",
         )
 
+        # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
 
@@ -96,7 +104,10 @@ class TafsirUpdateTest(BaseTestCase):
         self.assertEqual("Original description", body["description_en"])
 
     def test_update_tafsir_where_put_missing_required_field_should_return_400(self):
+        # Arrange
         self.authenticate_user(self.user)
+
+        # Act
         response = self.client.put(
             f"/portal/tafsirs/{self.tafsir.slug}/",
             data={
@@ -106,22 +117,25 @@ class TafsirUpdateTest(BaseTestCase):
                 "language": "ar",
                 "publisher_id": self.publisher1.id,
                 "is_external": False,
-                "external_url": None,
             },
-            content_type="application/json",
+            format="multipart",
         )
 
+        # Assert
         self.assertEqual(400, response.status_code, response.content)
 
     def test_update_tafsir_where_patch_with_invalid_name_should_return_400(self):
+        # Arrange
         self.authenticate_user(self.user)
+
+        # Act
         response = self.client.patch(
             f"/portal/tafsirs/{self.tafsir.slug}/",
             data={
                 "name_ar": "",
                 "name_en": "",  # Both names empty
             },
-            content_type="application/json",
+            format="multipart",
         )
 
         self.assertEqual(400, response.status_code, response.content)
@@ -129,25 +143,65 @@ class TafsirUpdateTest(BaseTestCase):
         self.assertEqual("tafsir_name_required", body["error_name"])
 
     def test_update_tafsir_where_not_found_should_return_404(self):
+        # Arrange
         self.authenticate_user(self.user)
+
+        # Act
         response = self.client.patch(
             "/portal/tafsirs/nonexistent-slug/",
             data={
                 "name_en": "Updated",
             },
-            content_type="application/json",
+            format="multipart",
         )
 
+        # Assert
         self.assertEqual(404, response.status_code, response.content)
         body = response.json()
         self.assertEqual("tafsir_not_found", body["error_name"])
 
     def test_update_tafsir_where_unauthenticated_should_return_401(self):
+        # Arrange
+
+        # Act
         response = self.client.patch(
             f"/portal/tafsirs/{self.tafsir.slug}/",
             data={
                 "name_en": "Updated",
             },
+            format="multipart",
         )
 
+        # Assert
         self.assertEqual(401, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("authentication_error", body["error_name"])
+
+    def test_update_tafsir_where_thumbnail_provided_should_upload_and_return_url(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        image = SimpleUploadedFile("thumb.jpg", b"file_content", content_type="image/jpeg")
+
+        # Act
+        response = self.client.patch(
+            f"/portal/tafsirs/{self.tafsir.slug}/",
+            data={
+                "name_en": "Updated Name",
+                "thumbnail": image,
+            },
+            format="multipart",
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertIsNotNone(body.get("thumbnail_url"))
+        self.assertTrue(body["thumbnail_url"].endswith(".jpg"))
+
+        # Verify persisted in database
+        self.tafsir.refresh_from_db()
+        self.assertTrue(bool(self.tafsir.thumbnail_url))
+        self.assertTrue(self.tafsir.thumbnail_url.name.endswith(".jpg"))
+
+        # Clean up uploaded file
+        self.tafsir.thumbnail_url.delete()

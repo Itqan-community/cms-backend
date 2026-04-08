@@ -42,6 +42,7 @@ class RetrievePublisherTest(BaseTestCase):
         self.assertTrue(body["is_verified"])
         self.assertEqual(2010, body["foundation_year"])
         self.assertEqual("Saudi Arabia", body["country"])
+        self.assertIn("icon_url", body)
         self.assertIn("created_at", body)
         self.assertIn("updated_at", body)
 

@@ -57,6 +57,7 @@ class TafsirDetailTest(BaseTestCase):
         body = response.json()
 
         # Check localized fields
+        self.assertEqual(self.tafsir.slug, body["slug"])
         self.assertEqual("تفسير الطبري", body["name_ar"])
         self.assertEqual("Tafsir Al-Tabari", body["name_en"])
         self.assertEqual("تفسير شامل", body["description_ar"])

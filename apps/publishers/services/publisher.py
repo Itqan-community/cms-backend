@@ -23,6 +23,7 @@ class PublisherService:
         is_verified: bool = True,
         foundation_year: int | None = None,
         country: str = "",
+        icon_url: object | None = None,
     ) -> Publisher:
         name = name_ar or name_en
         if not name or not name.strip():
@@ -52,6 +53,7 @@ class PublisherService:
             "is_verified": is_verified,
             "foundation_year": foundation_year,
             "country": country,
+            "icon_url": icon_url,
         }
         if name_ar:
             kwargs["name_ar"] = name_ar

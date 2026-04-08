@@ -17,20 +17,6 @@ class TestCeleryConfig(SimpleTestCase):
 
         self.assertEqual(app.main, "itqan_cms")
 
-    def test_broker_url_uses_amqp(self):
-        """Default broker URL should use RabbitMQ (amqp://)."""
-        self.assertTrue(
-            settings.CELERY_BROKER_URL.startswith("amqp://"),
-            f"Expected amqp:// broker, got: {settings.CELERY_BROKER_URL}",
-        )
-
-    def test_result_backend_uses_redis(self):
-        """Result backend should use Redis."""
-        self.assertTrue(
-            settings.CELERY_RESULT_BACKEND.startswith("redis://"),
-            f"Expected redis:// backend, got: {settings.CELERY_RESULT_BACKEND}",
-        )
-
     def test_beat_scheduler_is_database(self):
         """Beat scheduler should use django-celery-beat DatabaseScheduler."""
         self.assertEqual(

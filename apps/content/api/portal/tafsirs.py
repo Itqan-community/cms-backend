@@ -1,8 +1,8 @@
 from typing import Annotated, Literal
 
-from ninja import FilterLookup, FilterSchema, Query, Schema
+from ninja import Field, File, FilterLookup, FilterSchema, Form, Query, Schema, UploadedFile
 from ninja.pagination import paginate
-from pydantic import AwareDatetime, Field
+from pydantic import AwareDatetime
 
 from apps.content.models import Asset, LicenseChoice, ResourceVersion
 from apps.content.services.tafsir import TafsirService
@@ -27,12 +27,20 @@ class TafsirPublisherOut(Schema):
 
 class TafsirListOut(Schema):
     id: int
+    slug: str
     name: str
     description: str
     publisher: TafsirPublisherOut
     license: LicenseChoice
     is_external: bool
+    thumbnail_url: str | None = None
     created_at: AwareDatetime
+
+    @staticmethod
+    def resolve_thumbnail_url(obj: Asset) -> str | None:
+        if obj.thumbnail_url:
+            return obj.thumbnail_url.url
+        return None
 
     @staticmethod
     def resolve_publisher(obj: Asset) -> TafsirPublisherOut:
@@ -61,6 +69,7 @@ class TafsirDetailOut(Schema):
     description_en: str | None = None
     long_description_ar: str | None = None
     long_description_en: str | None = None
+    slug: str
     thumbnail_url: str | None = None
     publisher: TafsirPublisherOut
     license: LicenseChoice
@@ -174,7 +183,8 @@ def list_tafsirs(request: Request, filters: TafsirFilter = Query()):
 )
 def create_tafsir(
     request: Request,
-    data: TafsirCreateIn,
+    data: Form[TafsirCreateIn],
+    thumbnail: UploadedFile | None = File(None),
 ) -> tuple[int, Asset]:
     service = TafsirService()
     tafsir = service.create_tafsir(
@@ -189,6 +199,7 @@ def create_tafsir(
         language=data.language,
         is_external=data.is_external,
         external_url=data.external_url,
+        thumbnail_url=thumbnail,
     )
     return 201, tafsir
 
@@ -217,10 +228,13 @@ def retrieve_tafsir(request: Request, tafsir_slug: str) -> Asset:
 def update_tafsir_put(
     request: Request,
     tafsir_slug: str,
-    data: TafsirPutIn,
+    data: Form[TafsirPutIn],
+    thumbnail: UploadedFile | None = File(None),
 ) -> Asset:
     service = TafsirService()
     fields = data.model_dump()
+    if thumbnail is not None:
+        fields["thumbnail_url"] = thumbnail
     tafsir = service.update_tafsir(tafsir_slug, fields=fields)
     return tafsir
 
@@ -237,10 +251,13 @@ def update_tafsir_put(
 def update_tafsir_patch(
     request: Request,
     tafsir_slug: str,
-    data: TafsirPatchIn,
+    data: Form[TafsirPatchIn],
+    thumbnail: UploadedFile | None = File(None),
 ) -> Asset:
     service = TafsirService()
     fields = data.model_dump(exclude_unset=True)
+    if thumbnail is not None:
+        fields["thumbnail_url"] = thumbnail
     tafsir = service.update_tafsir(tafsir_slug, fields=fields)
     return tafsir
 

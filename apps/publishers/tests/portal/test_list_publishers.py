@@ -25,6 +25,7 @@ class ListPublishersTest(BaseTestCase):
         body = response.json()
         self.assertEqual(3, body["count"])
         self.assertEqual(3, len(body["results"]))
+        self.assertIn("icon_url", body["results"][0])
 
     def test_list_publishers_where_search_by_name_should_filter_results(self) -> None:
         # Arrange
