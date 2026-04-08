@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 class BaseRecitationRepository(ABC):
     @abstractmethod
     def list_recitations_qs(
-        self, publisher_q: Q, filters_dict: dict[str, Any], annotate_surahs_count: bool = False
+        self, publisher_q: Q | None, filters_dict: dict[str, Any], annotate_surahs_count: bool = False
     ) -> QuerySet[Asset]:
         """
         Returns a queryset of recitation assets.
@@ -20,7 +20,7 @@ class BaseRecitationRepository(ABC):
         pass
 
     @abstractmethod
-    def get_recitation_asset(self, asset_id: int, publisher_q: Q) -> dict[str, Any] | None:
+    def get_recitation_asset(self, asset_id: int, publisher_q: Q | None) -> dict[str, Any] | None:
         """
         Retrieves a single recitation asset by ID.
         """
@@ -28,7 +28,7 @@ class BaseRecitationRepository(ABC):
 
     @abstractmethod
     def list_recitation_tracks_for_asset(
-        self, asset_id: int, publisher_q: Q, prefetch_timings: bool = False
+        self, asset_id: int, publisher_q: Q | None, prefetch_timings: bool = False
     ) -> QuerySet[RecitationSurahTrack]:
         """
         Returns a list of tracks for a given asset ID.
@@ -36,21 +36,21 @@ class BaseRecitationRepository(ABC):
         pass
 
     @abstractmethod
-    def list_reciters_qs(self, publisher_q: Q, filters_dict: dict[str, Any]) -> QuerySet:
+    def list_reciters_qs(self, publisher_q: Q | None, filters_dict: dict[str, Any]) -> QuerySet:
         """
         Returns a queryset of Reciter objects that have READY recitation assets.
         """
         pass
 
     @abstractmethod
-    def list_riwayahs_qs(self, publisher_q: Q, filters_dict: dict[str, Any]) -> QuerySet[Riwayah]:
+    def list_riwayahs_qs(self, publisher_q: Q | None, filters_dict: dict[str, Any]) -> QuerySet[Riwayah]:
         """
         Returns a queryset of Riwayah objects that have READY recitation assets.
         """
         pass
 
     @abstractmethod
-    def list_qiraahs_qs(self, publisher_q: Q, filters_dict: dict[str, Any]) -> QuerySet[Qiraah]:
+    def list_qiraahs_qs(self, publisher_q: Q | None, filters_dict: dict[str, Any]) -> QuerySet[Qiraah]:
         """
         Returns a queryset of Qiraah objects that have READY recitation assets through riwayahs.
         """
