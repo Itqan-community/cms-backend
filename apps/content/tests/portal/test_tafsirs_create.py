@@ -1,3 +1,4 @@
+from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
 from apps.content.models import Asset, Resource
@@ -13,7 +14,10 @@ class TafsirCreateTest(BaseTestCase):
         self.user = User.objects.create_user(email="testuser@example.com", name="Test User")
 
     def test_create_tafsir_where_valid_data_should_return_201(self):
+        # Arrange
         self.authenticate_user(self.user)
+
+        # Act
         response = self.client.post(
             "/portal/tafsirs/",
             data={
@@ -27,11 +31,10 @@ class TafsirCreateTest(BaseTestCase):
                 "language": "ar",
                 "publisher_id": self.publisher.id,
                 "is_external": False,
-                "external_url": None,
             },
-            content_type="application/json",
         )
 
+        # Assert
         self.assertEqual(201, response.status_code, response.content)
         body = response.json()
 
@@ -48,7 +51,10 @@ class TafsirCreateTest(BaseTestCase):
         self.assertEqual(Resource.StatusChoice.READY, asset.resource.status)
 
     def test_create_tafsir_where_publisher_not_found_should_return_404(self):
+        # Arrange
         self.authenticate_user(self.user)
+
+        # Act
         response = self.client.post(
             "/portal/tafsirs/",
             data={
@@ -62,17 +68,19 @@ class TafsirCreateTest(BaseTestCase):
                 "language": "ar",
                 "publisher_id": 99999,  # Non-existent publisher
                 "is_external": False,
-                "external_url": None,
             },
-            content_type="application/json",
         )
 
+        # Assert
         self.assertEqual(404, response.status_code, response.content)
         body = response.json()
         self.assertEqual("publisher_not_found", body["error_name"])
 
     def test_create_tafsir_where_name_missing_should_return_400(self):
+        # Arrange
         self.authenticate_user(self.user)
+
+        # Act
         response = self.client.post(
             "/portal/tafsirs/",
             data={
@@ -86,16 +94,18 @@ class TafsirCreateTest(BaseTestCase):
                 "language": "ar",
                 "publisher_id": self.publisher.id,
                 "is_external": False,
-                "external_url": None,
             },
-            content_type="application/json",
         )
 
+        # Assert
         self.assertEqual(400, response.status_code, response.content)
         body = response.json()
         self.assertEqual("tafsir_name_required", body["error_name"])
 
     def test_create_tafsir_where_unauthenticated_should_return_401(self):
+        # Arrange
+
+        # Act
         response = self.client.post(
             "/portal/tafsirs/",
             data={
@@ -109,15 +119,19 @@ class TafsirCreateTest(BaseTestCase):
                 "language": "ar",
                 "publisher_id": self.publisher.id,
                 "is_external": False,
-                "external_url": None,
             },
-            content_type="application/json",
         )
 
+        # Assert
         self.assertEqual(401, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("authentication_error", body["error_name"])
 
     def test_create_tafsir_where_only_english_name_should_create_successfully(self):
+        # Arrange
         self.authenticate_user(self.user)
+
+        # Act
         response = self.client.post(
             "/portal/tafsirs/",
             data={
@@ -131,11 +145,42 @@ class TafsirCreateTest(BaseTestCase):
                 "language": "en",
                 "publisher_id": self.publisher.id,
                 "is_external": False,
-                "external_url": None,
             },
-            content_type="application/json",
         )
 
+        # Assert
         self.assertEqual(201, response.status_code, response.content)
         body = response.json()
         self.assertEqual("English Tafsir", body["name_en"])
+
+    def test_create_tafsir_where_thumbnail_provided_should_upload_and_return_url(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        image = SimpleUploadedFile("test_image.jpg", b"file_content", content_type="image/jpeg")
+
+        # Act
+        response = self.client.post(
+            "/portal/tafsirs/",
+            data={
+                "name_ar": "تفسير مصور",
+                "name_en": "Visual Tafsir",
+                "description_ar": "وصف",
+                "description_en": "Description",
+                "license": "CC-BY",
+                "language": "ar",
+                "publisher_id": self.publisher.id,
+                "is_external": False,
+                "thumbnail": image,
+            },
+        )
+
+        # Assert
+        self.assertEqual(201, response.status_code, response.content)
+        body = response.json()
+
+        self.assertIsNotNone(body["thumbnail_url"])
+        self.assertTrue(body["thumbnail_url"].endswith(".jpg"))
+
+        asset = Asset.objects.get(id=body["id"])
+        self.assertTrue(bool(asset.thumbnail_url))
+        self.assertTrue(asset.thumbnail_url.name.endswith(".jpg"))

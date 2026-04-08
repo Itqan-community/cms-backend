@@ -54,6 +54,7 @@ class TafsirService:
         language: str,
         is_external: bool = False,
         external_url: str | None = None,
+        thumbnail_url: Any | None = None,
     ) -> Asset:
         """
         Business Logic: Create a new tafsir.
@@ -94,6 +95,7 @@ class TafsirService:
             language=language,
             is_external=is_external,
             external_url=external_url,
+            thumbnail_url=thumbnail_url,
         )
 
     def update_tafsir(

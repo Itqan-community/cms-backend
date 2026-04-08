@@ -70,6 +70,7 @@ class TafsirRepository:
         language: str,
         is_external: bool = False,
         external_url: str | None = None,
+        thumbnail_url: Any | None = None,
     ) -> Asset:
         """
         Create a Resource and Asset for a new Tafsir.
@@ -106,6 +107,7 @@ class TafsirRepository:
                 version="",
                 is_external=is_external,
                 external_url=external_url,
+                thumbnail_url=thumbnail_url,
             )
 
         return asset

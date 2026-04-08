@@ -1,3 +1,4 @@
+from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
 from apps.core.tests import BaseTestCase
@@ -27,7 +28,7 @@ class CreatePublisherTest(BaseTestCase):
         }
 
         # Act
-        response = self.client.post(self.url, data, content_type="application/json")
+        response = self.client.post(self.url, data, format="multipart")
 
         # Assert
         self.assertEqual(201, response.status_code, response.content)
@@ -47,13 +48,39 @@ class CreatePublisherTest(BaseTestCase):
         self.assertIn("created_at", body)
         self.assertIn("updated_at", body)
 
+    def test_create_publisher_where_icon_provided_should_return_201(self) -> None:
+        # Arrange
+        self.authenticate_user(self.user)
+        icon = SimpleUploadedFile("icon.png", b"file_content", content_type="image/png")
+        data = {
+            "name_en": "Iconic Publisher",
+            "icon": icon,
+        }
+
+        # Act
+        response = self.client.post(self.url, data, format="multipart")
+
+        # Assert
+        self.assertEqual(201, response.status_code, response.content)
+        body = response.json()
+        self.assertIsNotNone(body["icon_url"])
+        self.assertTrue(body["icon_url"].endswith(".png"))
+
+        # Verify in database
+        publisher = Publisher.objects.get(id=body["id"])
+        self.assertTrue(bool(publisher.icon_url))
+        self.assertTrue(publisher.icon_url.name.endswith(".png"))
+
+        # Cleanup
+        publisher.icon_url.delete()
+
     def test_create_publisher_where_only_name_provided_should_return_201_with_defaults(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
         data = {"name_en": "Minimal Publisher"}
 
         # Act
-        response = self.client.post(self.url, data, content_type="application/json")
+        response = self.client.post(self.url, data, format="multipart")
 
         # Assert
         self.assertEqual(201, response.status_code, response.content)
@@ -71,7 +98,7 @@ class CreatePublisherTest(BaseTestCase):
         data = {"name_en": ""}
 
         # Act
-        response = self.client.post(self.url, data, content_type="application/json")
+        response = self.client.post(self.url, data, format="multipart")
 
         # Assert
         self.assertEqual(400, response.status_code, response.content)
@@ -85,7 +112,7 @@ class CreatePublisherTest(BaseTestCase):
         data = {"name_en": "Test Publisher"}
 
         # Act
-        response = self.client.post(self.url, data, content_type="application/json")
+        response = self.client.post(self.url, data, format="multipart")
 
         # Assert
         self.assertEqual(400, response.status_code, response.content)
@@ -102,7 +129,7 @@ class CreatePublisherTest(BaseTestCase):
         }
 
         # Act
-        response = self.client.post(self.url, data, content_type="application/json")
+        response = self.client.post(self.url, data, format="multipart")
 
         # Assert
         self.assertEqual(201, response.status_code, response.content)
@@ -122,7 +149,7 @@ class CreatePublisherTest(BaseTestCase):
         data = {"name_en": "Test Publisher"}
 
         # Act
-        response = self.client.post(self.url, data, content_type="application/json")
+        response = self.client.post(self.url, data, format="multipart")
 
         # Assert
         self.assertEqual(401, response.status_code, response.content)

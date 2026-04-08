@@ -106,6 +106,7 @@ class TafsirListTest(BaseTestCase):
         # Check required fields
         for item in items:
             self.assertIn("id", item)
+            self.assertIn("slug", item)
             self.assertIn("name", item)
             self.assertIn("description", item)
             self.assertIn("publisher", item)

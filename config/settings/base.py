@@ -65,6 +65,7 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "ninja.compatibility.files.fix_request_files_middleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -75,7 +76,6 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "oauth2_provider.middleware.OAuth2TokenMiddleware",
-    "ninja.compatibility.files.fix_request_files_middleware",
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
