@@ -95,6 +95,8 @@ class BaseTestCase(TestCase):
             kwargs.pop("HTTP_X_SESSION_TOKEN", None)
             kwargs.pop("HTTP_AUTHORIZATION", None)
         else:
+            user.is_superuser = True
+            user.save()
             if settings.ENABLE_ALLAUTH:
                 self.client.force_login(user=user)
                 token = create_access_token(user, session=self.client.session, claims={})
