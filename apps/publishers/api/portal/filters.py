@@ -7,7 +7,7 @@ from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
 from apps.publishers.models import Publisher
 
-router = ItqanRouter(tags=[NinjaTag.PUBLISHERS])
+router = ItqanRouter(tags=[NinjaTag.FILTERS])
 
 
 class PublisherFilterOut(Schema):
