@@ -80,6 +80,15 @@ class TranslationService:
 
         description = description_ar or description_en
 
+        if is_external and not external_url:
+            raise ItqanError(
+                error_name="external_url_required",
+                message=_("External URL is required when is_external is True."),
+                status_code=400,
+            )
+        if not is_external:
+            external_url = None
+
         return self.repo.create_translation(
             publisher_id=publisher_id,
             name=name,
@@ -123,6 +132,21 @@ class TranslationService:
                     message=_("Translation name (Arabic or English) is required."),
                     status_code=400,
                 )
+
+        # Enforce external url rules
+        is_external = fields.get("is_external", asset.is_external)
+        if is_external:
+            external_url = fields.get("external_url", asset.external_url)
+            if not external_url:
+                raise ItqanError(
+                    error_name="external_url_required",
+                    message=_("External URL is required when is_external is True."),
+                    status_code=400,
+                )
+            fields["external_url"] = external_url
+        else:
+            fields["is_external"] = False
+            fields["external_url"] = None
 
         return self.repo.update_translation(asset, fields=fields)
 

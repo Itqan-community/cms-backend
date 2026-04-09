@@ -167,7 +167,9 @@ def list_translations(request: Request, filters: TranslationFilter = Query()):
     "translations/",
     response={
         201: TranslationDetailOut,
-        400: NinjaErrorResponse[Literal["translation_name_required", "publisher_not_found"], Literal[None]],
+        400: NinjaErrorResponse[
+            Literal["translation_name_required", "publisher_not_found", "external_url_required"], Literal[None]
+        ],
         404: NinjaErrorResponse[Literal["publisher_not_found"], Literal[None]],
     },
     auth=ninja_jwt_auth,
@@ -209,7 +211,7 @@ def retrieve_translation(request: Request, translation_slug: str) -> Asset:
     "translations/{translation_slug}/",
     response={
         200: TranslationDetailOut,
-        400: NinjaErrorResponse[Literal["translation_name_required"], Literal[None]],
+        400: NinjaErrorResponse[Literal["translation_name_required", "external_url_required"], Literal[None]],
         404: NinjaErrorResponse[Literal["translation_not_found"], Literal[None]],
     },
     auth=ninja_jwt_auth,
@@ -229,7 +231,7 @@ def update_translation_put(
     "translations/{translation_slug}/",
     response={
         200: TranslationDetailOut,
-        400: NinjaErrorResponse[Literal["translation_name_required"], Literal[None]],
+        400: NinjaErrorResponse[Literal["translation_name_required", "external_url_required"], Literal[None]],
         404: NinjaErrorResponse[Literal["translation_not_found"], Literal[None]],
     },
     auth=ninja_jwt_auth,

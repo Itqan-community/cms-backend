@@ -208,3 +208,72 @@ class TafsirUpdateTest(BaseTestCase):
 
         # Clean up uploaded file
         self.tafsir.thumbnail_url.delete()
+
+    def test_update_tafsir_where_is_external_true_and_url_present_should_return_200(self):
+        # Arrange
+        self.authenticate_user(self.user)
+
+        # Act
+        response = self.client.patch(
+            f"/portal/tafsirs/{self.tafsir.slug}/",
+            data={
+                "is_external": True,
+                "external_url": "https://example.com/updated",
+            },
+            format="multipart",
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertTrue(body["is_external"])
+        self.assertEqual("https://example.com/updated", body["external_url"])
+
+    def test_update_tafsir_where_is_external_true_and_no_url_should_return_400(self):
+        # Arrange
+        self.authenticate_user(self.user)
+
+        # Act
+        response = self.client.patch(
+            f"/portal/tafsirs/{self.tafsir.slug}/",
+            data={
+                "is_external": True,
+                "external_url": "",  # explicitly missing URL
+            },
+            format="multipart",
+        )
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("external_url_required", body["error_name"])
+
+    def test_update_tafsir_where_is_external_false_forces_url_null_should_return_200(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        # first make it external
+        self.tafsir.resource.is_external = True
+        self.tafsir.resource.external_url = "https://example.com/original"
+        self.tafsir.resource.save()
+
+        # Act
+        # turning it false, the external url should be set to None natively
+        response = self.client.patch(
+            f"/portal/tafsirs/{self.tafsir.slug}/",
+            data={
+                "is_external": False,
+                "external_url": "",  # what client might pass
+            },
+            format="multipart",
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertFalse(body["is_external"])
+        self.assertIsNone(body["external_url"])
+
+        # Check db
+        self.tafsir.resource.refresh_from_db()
+        self.assertFalse(self.tafsir.resource.is_external)
+        self.assertIsNone(self.tafsir.resource.external_url)

@@ -155,3 +155,60 @@ class TranslationUpdateTest(BaseTestCase):
         )
 
         self.assertEqual(401, response.status_code, response.content)
+
+    def test_update_translation_where_is_external_true_and_url_present_should_return_200(self):
+        self.authenticate_user(self.user)
+        response = self.client.patch(
+            f"/portal/translations/{self.translation.slug}/",
+            data={
+                "is_external": True,
+                "external_url": "https://example.com/updated",
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertTrue(body["is_external"])
+        self.assertEqual("https://example.com/updated", body["external_url"])
+
+    def test_update_translation_where_is_external_true_and_no_url_should_return_400(self):
+        self.authenticate_user(self.user)
+        response = self.client.patch(
+            f"/portal/translations/{self.translation.slug}/",
+            data={
+                "is_external": True,
+                "external_url": "",  # explicitly absent
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(400, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("external_url_required", body["error_name"])
+
+    def test_update_translation_where_is_external_false_forces_url_null_should_return_200(self):
+        self.authenticate_user(self.user)
+        # first make it external
+        self.translation.resource.is_external = True
+        self.translation.resource.external_url = "https://example.com/old"
+        self.translation.resource.save()
+
+        response = self.client.patch(
+            f"/portal/translations/{self.translation.slug}/",
+            data={
+                "is_external": False,
+                "external_url": "",  # what the frontend might submit
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertFalse(body["is_external"])
+        self.assertIsNone(body["external_url"])
+
+        # check DB
+        self.translation.resource.refresh_from_db()
+        self.assertFalse(self.translation.resource.is_external)
+        self.assertIsNone(self.translation.resource.external_url)

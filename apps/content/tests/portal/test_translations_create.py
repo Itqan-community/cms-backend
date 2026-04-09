@@ -142,3 +142,44 @@ class TranslationCreateTest(BaseTestCase):
         self.assertEqual(201, response.status_code, response.content)
         body = response.json()
         self.assertEqual("English Translation", body["name_en"])
+
+    def test_create_translation_where_is_external_true_and_url_present_should_return_201(self):
+        self.authenticate_user(self.user)
+        response = self.client.post(
+            "/portal/translations/",
+            data={
+                "name_ar": "ترجمة خارجية",
+                "name_en": "External Translation",
+                "license": "CC-BY",
+                "language": "en",
+                "publisher_id": self.publisher.id,
+                "is_external": True,
+                "external_url": "https://example.com/translation",
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(201, response.status_code, response.content)
+        body = response.json()
+        self.assertTrue(body["is_external"])
+        self.assertEqual("https://example.com/translation", body["external_url"])
+
+    def test_create_translation_where_is_external_true_and_no_url_should_return_400(self):
+        self.authenticate_user(self.user)
+        response = self.client.post(
+            "/portal/translations/",
+            data={
+                "name_ar": "ترجمة خارجية",
+                "name_en": "External Translation",
+                "license": "CC-BY",
+                "language": "en",
+                "publisher_id": self.publisher.id,
+                "is_external": True,
+                "external_url": "",  # explicitly empty/absent
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(400, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("external_url_required", body["error_name"])

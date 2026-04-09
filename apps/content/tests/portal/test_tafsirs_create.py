@@ -186,3 +186,50 @@ class TafsirCreateTest(BaseTestCase):
         asset = Asset.objects.get(id=body["id"])
         self.assertTrue(bool(asset.thumbnail_url))
         self.assertTrue(asset.thumbnail_url.name.endswith(".jpg"))
+
+    def test_create_tafsir_where_is_external_true_and_url_present_should_return_201(self):
+        # Arrange
+        self.authenticate_user(self.user)
+
+        # Act
+        response = self.client.post(
+            "/portal/tafsirs/",
+            data={
+                "name_ar": "تفسير خارجي",
+                "name_en": "External Tafsir",
+                "license": "CC-BY",
+                "language": "ar",
+                "publisher_id": self.publisher.id,
+                "is_external": True,
+                "external_url": "https://example.com/tafsir",
+            },
+        )
+
+        # Assert
+        self.assertEqual(201, response.status_code, response.content)
+        body = response.json()
+        self.assertTrue(body["is_external"])
+        self.assertEqual("https://example.com/tafsir", body["external_url"])
+
+    def test_create_tafsir_where_is_external_true_and_no_url_should_return_400(self):
+        # Arrange
+        self.authenticate_user(self.user)
+
+        # Act
+        response = self.client.post(
+            "/portal/tafsirs/",
+            data={
+                "name_ar": "تفسير خارجي",
+                "name_en": "External Tafsir",
+                "license": "CC-BY",
+                "language": "ar",
+                "publisher_id": self.publisher.id,
+                "is_external": True,
+                "external_url": "",  # Or absent
+            },
+        )
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("external_url_required", body["error_name"])
