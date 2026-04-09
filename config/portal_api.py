@@ -1,6 +1,6 @@
 from django.conf import settings
 
-from apps.core.ninja_utils.auth import ninja_jwt_auth
+from apps.core.ninja_utils.auth import ninja_jwt_staff_auth
 from apps.core.ninja_utils.autodiscover import auto_discover_ninja_routers
 from apps.core.ninja_utils.error_handling import register_exception_handlers
 
@@ -12,7 +12,7 @@ portal_api = create_ninja_api(
     description="Internal APIs for CMS frontend, this API is meant for admins to controls resources",
     docs_base_path="/portal",
     urls_namespace="portal",
-    auth=ninja_jwt_auth,
+    auth=ninja_jwt_staff_auth,
 )
 if settings.ENABLE_ALLAUTH:
     portal_api.openapi_extra = {
@@ -36,7 +36,7 @@ portal_auth_api = create_ninja_api(
     description="Internal APIs for CMS frontend",
     docs_base_path="/portal/auth",
     urls_namespace="portal-auth",
-    auth=ninja_jwt_auth,
+    auth=ninja_jwt_staff_auth,
 )
 
 # Register standard exception handlers
