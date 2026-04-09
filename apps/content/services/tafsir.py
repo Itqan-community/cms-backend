@@ -10,7 +10,7 @@ from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
 
 if TYPE_CHECKING:
-    from django.db.models import QuerySet
+    from django.db.models import ProtectedError, QuerySet
 
     from apps.content.models import Asset
 
@@ -157,4 +157,11 @@ class TafsirService:
         Business Logic: Delete a tafsir and its resource.
         """
         asset = self.get_tafsir(tafsir_slug)
-        self.repo.delete_tafsir(asset)
+        try:
+            self.repo.delete_tafsir(asset)
+        except ProtectedError as exc:
+            raise ItqanError(
+                error_name="related_objects_exist",
+                message=str(_("Cannot delete Tafsir because they are referenced through other objects")),
+                status_code=400,
+            ) from exc

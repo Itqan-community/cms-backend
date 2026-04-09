@@ -10,7 +10,7 @@ from apps.content.repositories.reciter import ReciterRepository
 from apps.core.ninja_utils.errors import ItqanError
 
 if TYPE_CHECKING:
-    from django.db.models import QuerySet
+    from django.db.models import ProtectedError, QuerySet
 
     from apps.content.models import Reciter
 
@@ -127,4 +127,11 @@ class ReciterService:
         Business Logic: Delete a reciter.
         """
         reciter = self.get_reciter(reciter_slug)
-        self.repo.delete_reciter(reciter)
+        try:
+            self.repo.delete_reciter(reciter)
+        except ProtectedError as exc:
+            raise ItqanError(
+                error_name="related_objects_exist",
+                message=str(_("Cannot delete Reciter because they are referenced through other objects")),
+                status_code=400,
+            ) from exc
