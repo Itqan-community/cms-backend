@@ -56,7 +56,7 @@ class PublisherCreateOut(Schema):
 @router.post("publishers/", response={201: PublisherCreateOut, 400: NinjaErrorResponse}, auth=ninja_jwt_auth)
 def create_publisher(
     request: Request, data: Form[PublisherCreateIn], icon: UploadedFile = File(None)
-) -> tuple[int, object]:
+) -> tuple[int, Publisher]:
     service = PublisherService(PublisherRepository())
     publisher = service.create_publisher(
         name_ar=data.name_ar,
@@ -142,7 +142,7 @@ class PublisherDetailOut(Schema):
     response={200: PublisherDetailOut, 404: NinjaErrorResponse},
     auth=ninja_jwt_auth,
 )
-def retrieve_publisher(request: Request, publisher_id: int) -> object:
+def retrieve_publisher(request: Request, publisher_id: int) -> Publisher:
     service = PublisherService(PublisherRepository())
     return service.get_publisher(publisher_id)
 
@@ -183,7 +183,7 @@ class PublisherPutIn(Schema):
 )
 def update_publisher_put(
     request: Request, publisher_id: int, data: Form[PublisherPutIn], icon: UploadedFile = File(None)
-) -> object:
+) -> Publisher:
     service = PublisherService(PublisherRepository())
     fields = data.model_dump()
     if icon:
@@ -198,7 +198,7 @@ def update_publisher_put(
 )
 def update_publisher_patch(
     request: Request, publisher_id: int, data: Form[PublisherPatchIn], icon: UploadedFile = File(None)
-) -> object:
+) -> Publisher:
     service = PublisherService(PublisherRepository())
     fields = data.model_dump(exclude_unset=True)
     if icon:

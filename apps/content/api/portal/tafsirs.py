@@ -30,7 +30,7 @@ class TafsirListOut(Schema):
     slug: str
     name: str
     description: str
-    publisher: TafsirPublisherOut
+    publisher: TafsirPublisherOut = Field(..., alias="resource.publisher")
     license: LicenseChoice
     language: str
     is_external: bool
@@ -42,10 +42,6 @@ class TafsirListOut(Schema):
         if obj.thumbnail_url:
             return obj.thumbnail_url.url
         return None
-
-    @staticmethod
-    def resolve_publisher(obj: Asset) -> TafsirPublisherOut:
-        return TafsirPublisherOut(id=obj.resource.publisher.id, name=obj.resource.publisher.name)
 
 
 class TafsirVersionOut(Schema):
@@ -72,7 +68,7 @@ class TafsirDetailOut(Schema):
     long_description_en: str | None = None
     slug: str
     thumbnail_url: str | None = None
-    publisher: TafsirPublisherOut
+    publisher: TafsirPublisherOut = Field(..., alias="resource.publisher")
     license: LicenseChoice
     language: str
     is_external: bool
@@ -85,10 +81,6 @@ class TafsirDetailOut(Schema):
         if obj.thumbnail_url:
             return obj.thumbnail_url.url
         return None
-
-    @staticmethod
-    def resolve_publisher(obj: Asset) -> TafsirPublisherOut:
-        return TafsirPublisherOut(id=obj.resource.publisher.id, name=obj.resource.publisher.name)
 
     @staticmethod
     def resolve_versions(obj: Asset) -> list[TafsirVersionOut]:

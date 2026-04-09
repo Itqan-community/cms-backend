@@ -62,6 +62,14 @@ class ReciterDetailOut(Schema):
         return obj.nationality if isinstance(obj.nationality, str) else None
 
     @staticmethod
+    def resolve_name_ar(obj: Reciter) -> str:
+        return obj.name_ar or ""
+
+    @staticmethod
+    def resolve_name_en(obj: Reciter) -> str:
+        return obj.name_en or ""
+
+    @staticmethod
     def resolve_bio_ar(obj: Reciter) -> str:
         return obj.bio_ar or ""
 

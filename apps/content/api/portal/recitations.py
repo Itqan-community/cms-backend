@@ -44,6 +44,7 @@ class PublisherRef(Schema):
 
 class RecitationListOut(Schema):
     id: int
+    slug: str
     name: str
     description: str
     publisher: PublisherRef = Field(alias="resource.publisher")
@@ -54,7 +55,14 @@ class RecitationListOut(Schema):
     meem_behaviour: str | None = None
     year: int | None = None
     license: LicenseChoice
+    thumbnail_url: str | None = None
     created_at: AwareDatetime
+
+    @staticmethod
+    def resolve_thumbnail_url(obj: Asset) -> str | None:
+        if obj.thumbnail_url:
+            return obj.thumbnail_url.url
+        return None
 
 
 class RecitationDetailOut(Schema):
@@ -63,16 +71,26 @@ class RecitationDetailOut(Schema):
     name_en: str | None = None
     description_ar: str | None = None
     description_en: str | None = None
+    long_description_ar: str | None = None
+    long_description_en: str | None = None
+    slug: str
+    thumbnail_url: str | None = None
     publisher: PublisherRef = Field(alias="resource.publisher")
     reciter: MinimalReciter | None = None
     qiraah: MinimalQiraah | None = None
     riwayah: MinimalRiwayah | None = None
-    madd_level: str | None = None
-    meem_behaviour: str | None = None
+    madd_level: Asset.MaddLevelChoice | None = None
+    meem_behaviour: Asset.MeemBehaviourChoice | None = None
     year: int | None = None
-    license: str
+    license: LicenseChoice
     created_at: AwareDatetime
     updated_at: AwareDatetime
+
+    @staticmethod
+    def resolve_thumbnail_url(obj: Asset) -> str | None:
+        if obj.thumbnail_url:
+            return obj.thumbnail_url.url
+        return None
 
 
 # --- Input Schemas ---

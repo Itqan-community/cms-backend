@@ -1,5 +1,7 @@
 from django.db import IntegrityError
+from django.db.models import ProtectedError
 from django.utils.text import slugify
+from django.utils.translation import gettext as _
 
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
@@ -135,4 +137,11 @@ class PublisherService:
 
     def delete_publisher(self, publisher_id: int) -> None:
         publisher = self.get_publisher(publisher_id)
-        self.repo.delete(publisher)
+        try:
+            self.repo.delete(publisher)
+        except ProtectedError as exc:
+            raise ItqanError(
+                error_name="related_objects_exist",
+                message=str(_("Cannot delete Publisher because they are referenced through other objects")),
+                status_code=400,
+            ) from exc
