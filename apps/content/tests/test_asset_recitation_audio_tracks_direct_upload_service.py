@@ -269,7 +269,7 @@ class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
 
         # Act
         with patch.object(service, "_get_s3_client", return_value=s3):
-            result = service.abort_upload(r2_key=r2_key, upload_id="upload-1")
+            result = service.abort_upload(key=r2_key, upload_id="upload-1")
 
         # Assert
         s3.abort_multipart_upload.assert_called_once()
@@ -301,5 +301,5 @@ class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
             result = service.cleanup_stuck_uploads(older_than_hours=2)
 
         # Assert
-        abort_upload.assert_called_once_with(r2_key="media/uploads/assets/1/recitations/001.mp3", upload_id="old-1")
+        abort_upload.assert_called_once_with(key="media/uploads/assets/1/recitations/001.mp3", upload_id="old-1")
         self.assertEqual(1, result["abortedUploads"])
