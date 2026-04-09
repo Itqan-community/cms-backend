@@ -173,7 +173,7 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         TWASSUT = "twassut", _("Twassut")
         QASR = "qasr", _("Qasr")
 
-    class MeemBehaviorChoice(models.TextChoices):
+    class MeemBehaviourChoice(models.TextChoices):
         SILAH = "silah", _("Silah")
         SKOUN = "skoun", _("Skoun")
 
@@ -250,7 +250,7 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         max_length=50,
         null=True,
         blank=True,
-        choices=MeemBehaviorChoice.choices,
+        choices=MeemBehaviourChoice.choices,
         help_text="Meem behaviour for recitation assets",
     )
     year = models.PositiveIntegerField(

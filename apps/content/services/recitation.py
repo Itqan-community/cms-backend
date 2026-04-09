@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 from django.utils.translation import gettext as _
 
-from apps.content.models import Qiraah, Reciter, Riwayah
+from apps.content.models import LicenseChoice, Qiraah, Reciter, Riwayah
 from apps.content.repositories.recitation import RecitationRepository
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
@@ -50,12 +50,12 @@ class RecitationService:
         name_en: str,
         description_ar: str,
         description_en: str,
-        license: str,
+        license: LicenseChoice,
         reciter_id: int,
         qiraah_id: int,
         riwayah_id: int,
-        madd_level: str,
-        meem_behaviour: str,
+        madd_level: Asset.MaddLevelChoice,
+        meem_behaviour: Asset.MeemBehaviourChoice,
         year: int,
     ) -> Asset:
         """
@@ -173,22 +173,12 @@ class RecitationService:
                 status_code=404,
             )
 
-        try:
-            riwayah = Riwayah.objects.get(id=riwayah_id)
-            if riwayah.qiraah_id != qiraah_id:
-                raise ItqanError(
-                    error_name="invalid_riwayah_qiraah_combo",
-                    message=_("Riwayah {riwayah_id} does not belong to Qiraah {qiraah_id}.").format(
-                        riwayah_id=riwayah_id, qiraah_id=qiraah_id
-                    ),
-                    status_code=400,
-                )
-        except Riwayah.DoesNotExist as err:
+        if riwayah_id and not Riwayah.objects.filter(id=riwayah_id).exists():
             raise ItqanError(
                 error_name="riwayah_not_found",
                 message=_("Riwayah with id {id} not found.").format(id=riwayah_id),
                 status_code=404,
-            ) from err
+            )
 
     def delete_recitation(self, recitation_slug: str) -> None:
         """

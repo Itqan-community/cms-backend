@@ -88,7 +88,7 @@ class RecitationCreateIn(Schema):
     qiraah_id: int = Field(...)
     riwayah_id: int = Field(...)
     madd_level: Asset.MaddLevelChoice = Field(...)
-    meem_behaviour: Asset.MeemBehaviorChoice = Field(...)
+    meem_behaviour: Asset.MeemBehaviourChoice = Field(...)
     year: int = Field(...)
     license: LicenseChoice = Field(...)
 
@@ -103,7 +103,7 @@ class RecitationPutIn(Schema):
     qiraah_id: int = Field(...)
     riwayah_id: int = Field(...)
     madd_level: Asset.MaddLevelChoice = Field(...)
-    meem_behaviour: Asset.MeemBehaviorChoice = Field(...)
+    meem_behaviour: Asset.MeemBehaviourChoice = Field(...)
     year: int = Field(...)
     license: LicenseChoice = Field(...)
 
@@ -118,7 +118,7 @@ class RecitationPatchIn(Schema):
     qiraah_id: int | None = None
     riwayah_id: int | None = None
     madd_level: Asset.MaddLevelChoice | None = None
-    meem_behaviour: Asset.MeemBehaviorChoice | None = None
+    meem_behaviour: Asset.MeemBehaviourChoice | None = None
     year: int | None = None
     license: LicenseChoice | None = None
 
@@ -132,7 +132,7 @@ class RecitationFilter(FilterSchema):
     qiraah_id: Annotated[list[int] | None, FilterLookup(q="qiraah_id__in")] = None
     riwayah_id: Annotated[list[int] | None, FilterLookup(q="riwayah_id__in")] = None
     madd_level: Annotated[list[Asset.MaddLevelChoice] | None, FilterLookup(q="madd_level__in")] = None
-    meem_behaviour: Annotated[list[Asset.MeemBehaviorChoice] | None, FilterLookup(q="meem_behaviour__in")] = None
+    meem_behaviour: Annotated[list[Asset.MeemBehaviourChoice] | None, FilterLookup(q="meem_behaviour__in")] = None
     year: Annotated[int | None, FilterLookup(q="year")] = None
     license_code: Annotated[list[LicenseChoice] | None, FilterLookup(q="license__in")] = None
 

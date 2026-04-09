@@ -36,7 +36,7 @@ class RecitationListOut(Schema):
     name: str
     description: str
     madd_level: Asset.MaddLevelChoice | None
-    meem_behaviour: Asset.MeemBehaviorChoice | None
+    meem_behaviour: Asset.MeemBehaviourChoice | None
     year: int | None
     reciter: RecitationReciterOut
     riwayah: RecitationRiwayahOut | None = None
@@ -48,7 +48,7 @@ class RecitationFilter(FilterSchema):
     riwayah_id: Annotated[list[int] | None, FilterLookup(q="riwayah_id__in")] = None
     qiraah_id: Annotated[list[int] | None, FilterLookup(q="qiraah_id__in")] = None
     madd_level: Annotated[list[Asset.MaddLevelChoice] | None, FilterLookup(q="madd_level__in")] = None
-    meem_behaviour: Annotated[list[Asset.MeemBehaviorChoice] | None, FilterLookup(q="meem_behaviour__in")] = None
+    meem_behaviour: Annotated[list[Asset.MeemBehaviourChoice] | None, FilterLookup(q="meem_behaviour__in")] = None
 
 
 @router.get("recitations/", response=list[RecitationListOut])
