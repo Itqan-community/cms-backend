@@ -20,6 +20,9 @@ uv run python manage.py migrate --noinput
 echo "Collecting static files..."
 uv run python manage.py collectstatic --noinput
 
+echo "Compiling translations..."
+uv run python manage.py compilemessages --locale ar
+
 # Create superuser if it doesn't exist
 if [ -n "${DJANGO_SUPERUSER_EMAIL}" ] && [ -n "${DJANGO_SUPERUSER_PASSWORD}" ]; then
     echo "Creating superuser if not exists..."

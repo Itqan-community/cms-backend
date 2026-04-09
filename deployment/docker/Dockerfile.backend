@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
     git \
+    gettext \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
@@ -23,6 +24,9 @@ RUN uv sync --frozen --no-install-project $([ "$DEPENDENCY_GROUP" = "prod" ] && 
 
 # Copy application code
 COPY / /app/
+
+# Compile translations
+RUN python manage.py compilemessages --locale ar
 
 # Place uv cache and python bin in PATH
 ENV PATH="/app/.venv/bin:$PATH"

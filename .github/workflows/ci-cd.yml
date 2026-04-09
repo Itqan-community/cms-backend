@@ -234,6 +234,9 @@ jobs:
             IMAGE_REPO="${IMG_REPO}" IMAGE_TAG="${IMG_TAG}" docker compose -f ${{ env.COMPOSE_FILE }} pull
             IMAGE_REPO="${IMG_REPO}" IMAGE_TAG="${IMG_TAG}" docker compose -f ${{ env.COMPOSE_FILE }} up -d
 
+            # Note: python manage.py compilemessages --locale ar is run automatically in entrypoint.sh
+            # and during docker build in Dockerfile.backend
+
             # Wait for services to be ready
             echo "⏳ Waiting for services to start..."
             sleep 30
