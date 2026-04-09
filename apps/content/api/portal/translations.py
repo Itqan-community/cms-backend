@@ -27,12 +27,20 @@ class TranslationPublisherOut(Schema):
 
 class TranslationListOut(Schema):
     id: int
+    slug: str
     name: str
     description: str
     publisher: TranslationPublisherOut
     license: LicenseChoice
     is_external: bool
+    thumbnail_url: str | None = None
     created_at: AwareDatetime
+
+    @staticmethod
+    def resolve_thumbnail_url(obj: Asset) -> str | None:
+        if obj.thumbnail_url:
+            return obj.thumbnail_url.url
+        return None
 
     @staticmethod
     def resolve_publisher(obj: Asset) -> TranslationPublisherOut:

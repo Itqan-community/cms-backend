@@ -146,8 +146,8 @@ class RecitationService:
         self,
         publisher_id: int,
         reciter_id: int,
-        qiraah_id: int,
-        riwayah_id: int,
+        qiraah_id: int | None,
+        riwayah_id: int | None,
     ) -> None:
         """
         Ensures all foreign keys exist and are consistent.
@@ -166,7 +166,7 @@ class RecitationService:
                 status_code=404,
             )
 
-        if not Qiraah.objects.filter(id=qiraah_id).exists():
+        if qiraah_id and not Qiraah.objects.filter(id=qiraah_id).exists():
             raise ItqanError(
                 error_name="qiraah_not_found",
                 message=_("Qiraah with id {id} not found.").format(id=qiraah_id),

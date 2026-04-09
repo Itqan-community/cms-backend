@@ -20,7 +20,7 @@ if settings.ENABLE_ALLAUTH:
             "description": "# Authentication\n\n"
             "## Authentication docs\n\n"
             "Authentication supports many features, and it has its own extensive documentation.\n\n"
-            "You can find authentication documentation [Here](../cms-api/auth/docs)",
+            "You can find authentication documentation [Here](../auth/docs)",
         }
     }
 
