@@ -103,11 +103,11 @@ class RecitationCreateIn(Schema):
     description_en: str = ""
     publisher_id: int = Field(...)
     reciter_id: int = Field(...)
-    qiraah_id: int = Field(...)
-    riwayah_id: int = Field(...)
-    madd_level: Asset.MaddLevelChoice = Field(...)
-    meem_behaviour: Asset.MeemBehaviourChoice = Field(...)
-    year: int = Field(...)
+    qiraah_id: int | None = None
+    riwayah_id: int | None = None
+    madd_level: Asset.MaddLevelChoice | None = None
+    meem_behaviour: Asset.MeemBehaviourChoice = None
+    year: int | None = None
     license: LicenseChoice = Field(...)
 
 
@@ -118,11 +118,11 @@ class RecitationPutIn(Schema):
     description_en: str = ""
     publisher_id: int = Field(...)
     reciter_id: int = Field(...)
-    qiraah_id: int = Field(...)
-    riwayah_id: int = Field(...)
-    madd_level: Asset.MaddLevelChoice = Field(...)
-    meem_behaviour: Asset.MeemBehaviourChoice = Field(...)
-    year: int = Field(...)
+    qiraah_id: int | None = None
+    riwayah_id: int | None = None
+    madd_level: Asset.MaddLevelChoice | None = None
+    meem_behaviour: Asset.MeemBehaviourChoice = None
+    year: int | None = None
     license: LicenseChoice = Field(...)
 
 
