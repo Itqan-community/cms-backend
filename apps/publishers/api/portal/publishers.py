@@ -2,7 +2,6 @@ from ninja import File, FilterSchema, Form, Query, Schema, UploadedFile
 from ninja.pagination import paginate
 from pydantic import AwareDatetime
 
-from apps.core.ninja_utils.auth import ninja_jwt_auth
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -53,7 +52,7 @@ class PublisherCreateOut(Schema):
         return None
 
 
-@router.post("publishers/", response={201: PublisherCreateOut, 400: NinjaErrorResponse}, auth=ninja_jwt_auth)
+@router.post("publishers/", response={201: PublisherCreateOut, 400: NinjaErrorResponse})
 def create_publisher(
     request: Request, data: Form[PublisherCreateIn], icon: UploadedFile = File(None)
 ) -> tuple[int, Publisher]:
@@ -99,7 +98,7 @@ class PublisherFilter(FilterSchema):
     country: str | None = None
 
 
-@router.get("publishers/", response=list[PublisherListOut], auth=ninja_jwt_auth)
+@router.get("publishers/", response=list[PublisherListOut])
 @paginate
 @searching(search_fields=["name_en", "name_ar", "description_en", "description_ar"])
 def list_publishers(request: Request, filters: PublisherFilter = Query(...)):
@@ -140,7 +139,6 @@ class PublisherDetailOut(Schema):
 @router.get(
     "publishers/{int:publisher_id}/",
     response={200: PublisherDetailOut, 404: NinjaErrorResponse},
-    auth=ninja_jwt_auth,
 )
 def retrieve_publisher(request: Request, publisher_id: int) -> Publisher:
     service = PublisherService(PublisherRepository())
@@ -179,7 +177,6 @@ class PublisherPutIn(Schema):
 @router.put(
     "publishers/{int:publisher_id}/",
     response={200: PublisherDetailOut, 400: NinjaErrorResponse, 404: NinjaErrorResponse},
-    auth=ninja_jwt_auth,
 )
 def update_publisher_put(
     request: Request, publisher_id: int, data: Form[PublisherPutIn], icon: UploadedFile = File(None)
@@ -194,7 +191,6 @@ def update_publisher_put(
 @router.patch(
     "publishers/{int:publisher_id}/",
     response={200: PublisherDetailOut, 400: NinjaErrorResponse, 404: NinjaErrorResponse},
-    auth=ninja_jwt_auth,
 )
 def update_publisher_patch(
     request: Request, publisher_id: int, data: Form[PublisherPatchIn], icon: UploadedFile = File(None)
@@ -212,7 +208,6 @@ def update_publisher_patch(
 @router.delete(
     "publishers/{int:publisher_id}/",
     response={204: None, 404: NinjaErrorResponse},
-    auth=ninja_jwt_auth,
 )
 def delete_publisher(request: Request, publisher_id: int) -> tuple[int, None]:
     service = PublisherService(PublisherRepository())
