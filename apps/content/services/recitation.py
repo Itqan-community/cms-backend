@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from django.db.models import ProtectedError, Q, QuerySet
 from django.utils.translation import gettext as _
 
 from apps.content.models import LicenseChoice, Qiraah, Reciter, Riwayah
@@ -10,7 +11,6 @@ from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
 
 if TYPE_CHECKING:
-    from django.db.models import Q, QuerySet
 
     from apps.content.models import Asset, RecitationSurahTrack
 
@@ -185,7 +185,14 @@ class RecitationService:
         Business Logic: Delete a recitation and its resource.
         """
         asset = self.get_recitation(recitation_slug)
-        self.repo.delete_recitation(asset)
+        try:
+            self.repo.delete_recitation(asset)
+        except ProtectedError as exc:
+            raise ItqanError(
+                error_name="related_objects_exist",
+                message=str(_("Cannot delete Recitation because they are referenced through other objects")),
+                status_code=400,
+            ) from exc
 
     def get_asset_tracks(
         self, asset_id: int, publisher_q: Q, prefetch_timings: bool = False

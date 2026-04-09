@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from django.db.models import ProtectedError, QuerySet
 from django.utils.translation import gettext as _
 
 from apps.content.models import LicenseChoice
@@ -10,7 +11,6 @@ from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
 
 if TYPE_CHECKING:
-    from django.db.models import ProtectedError, QuerySet
 
     from apps.content.models import Asset
 

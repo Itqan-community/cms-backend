@@ -4,13 +4,13 @@ import datetime
 from typing import TYPE_CHECKING, Any
 
 from django.db import IntegrityError
+from django.db.models import ProtectedError, QuerySet
 from django.utils.translation import gettext as _
 
 from apps.content.repositories.reciter import ReciterRepository
 from apps.core.ninja_utils.errors import ItqanError
 
 if TYPE_CHECKING:
-    from django.db.models import ProtectedError, QuerySet
 
     from apps.content.models import Reciter
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from django.db.models import ProtectedError, QuerySet
 from django.utils.translation import gettext as _
 
 from apps.content.models import LicenseChoice
@@ -10,7 +11,6 @@ from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
 
 if TYPE_CHECKING:
-    from django.db.models import QuerySet
 
     from apps.content.models import Asset
 
@@ -155,4 +155,11 @@ class TranslationService:
         Business Logic: Delete a translation and its resource.
         """
         asset = self.get_translation(translation_slug)
-        self.repo.delete_translation(asset)
+        try:
+            self.repo.delete_translation(asset)
+        except ProtectedError as exc:
+            raise ItqanError(
+                error_name="related_objects_exist",
+                message=str(_("Cannot delete Translation because they are referenced through other objects")),
+                status_code=400,
+            ) from exc
