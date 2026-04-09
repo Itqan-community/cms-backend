@@ -174,8 +174,8 @@ if CLOUDFLARE_R2_ENDPOINT:
             "OPTIONS": CLOUDFLARE_R2_CONFIG_OPTIONS,
         },
         "staticfiles": {
-            "BACKEND": "config.helpers.cloudflare.storages.StaticFileStorage",
-            "OPTIONS": CLOUDFLARE_R2_CONFIG_OPTIONS,
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+            # "OPTIONS": CLOUDFLARE_R2_CONFIG_OPTIONS,
         },
     }
 else:
