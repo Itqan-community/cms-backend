@@ -16,6 +16,17 @@ class JWTAuth(JWTAuthentication):
         return res
 
 
+class JWTAuthStaff(JWTAuthentication):
+    def __call__(self, request):
+        res = self.authenticate(request)
+        if res is None:
+            return None
+        request.user = res[0]
+        if not request.user.is_staff and not request.user.is_superuser:
+            return None
+        return res
+
+
 class JWTAuthStateless(JWTStatelessUserAuthentication):
     def __call__(self, request):
         res = self.authenticate(request)
@@ -46,6 +57,7 @@ class OAuth2OptionalAuth(OAuth2Auth):
         return anonymous_user
 
 
+ninja_jwt_staff_auth = JWTAuthStaff()
 if settings.ENABLE_ALLAUTH:
     ninja_jwt_auth = [jwt_token_auth]
 else:
