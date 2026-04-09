@@ -173,7 +173,7 @@ msgid "A reciter with this name already exists."
 msgstr "يوجد قارئ بهذا الاسم بالفعل."
 
 msgid "Cannot delete Reciter because they are referenced through other objects"
-msgstr "لا يمكن حذف القارئ لأنه مرتبط بكائنات أخرى"
+msgstr "لا يمكن حذف القارئ لأن مرتبط به بيانات أخرى"
 
 #, python-brace-format
 msgid "Tafsir with slug {slug} not found."
@@ -186,7 +186,7 @@ msgid "External URL is required when is_external is True."
 msgstr "الرابط الخارجي مطلوب عندما يكون المصدري خارجي."
 
 msgid "Cannot delete Tafsir because they are referenced through other objects"
-msgstr "لا يمكن حذف التفسير لأنه مرتبط بكائنات أخرى"
+msgstr "لا يمكن حذف التفسير لأن مرتبط به بيانات أخرى"
 
 #, python-brace-format
 msgid "Translation with slug {slug} not found."
