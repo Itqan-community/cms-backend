@@ -1,5 +1,7 @@
 from django.db import IntegrityError
+from django.db.models import ProtectedError
 from django.utils.text import slugify
+from django.utils.translation import gettext as _
 
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
@@ -13,22 +15,23 @@ class PublisherService:
     def create_publisher(
         self,
         *,
-        name: str,
         name_ar: str = "",
         name_en: str = "",
-        description: str = "",
         description_ar: str = "",
+        description_en: str = "",
         address: str = "",
         website: str = "",
         contact_email: str = "",
         is_verified: bool = True,
         foundation_year: int | None = None,
         country: str = "",
+        icon_url: object | None = None,
     ) -> Publisher:
+        name = name_ar or name_en
         if not name or not name.strip():
             raise ItqanError(
                 error_name="publisher_name_required",
-                message="Publisher name is required",
+                message="Publisher name (Arabic or English) is required",
                 status_code=400,
             )
 
@@ -41,6 +44,7 @@ class PublisherService:
                 status_code=400,
             )
 
+        description = description_ar or description_en
         kwargs: dict[str, object] = {
             "name": name.strip(),
             "slug": slug,
@@ -51,6 +55,7 @@ class PublisherService:
             "is_verified": is_verified,
             "foundation_year": foundation_year,
             "country": country,
+            "icon_url": icon_url,
         }
         if name_ar:
             kwargs["name_ar"] = name_ar
@@ -58,6 +63,8 @@ class PublisherService:
             kwargs["name_en"] = name_en
         if description_ar:
             kwargs["description_ar"] = description_ar
+        if description_en:
+            kwargs["description_en"] = description_en
 
         try:
             return self.repo.create(**kwargs)
@@ -81,23 +88,43 @@ class PublisherService:
     def update_publisher(self, publisher_id: int, *, fields: dict[str, object]) -> Publisher:
         publisher = self.get_publisher(publisher_id)
 
-        name = fields.get("name")
-        if name is not None:
-            if not str(name).strip():
+        if "name_ar" in fields or "name_en" in fields:
+            name_ar = fields.get("name_ar")
+            name_en = fields.get("name_en")
+            new_name = (
+                name_ar
+                or name_en
+                or getattr(publisher, "name_ar", "")
+                or getattr(publisher, "name_en", "")
+                or publisher.name
+            )
+            if not str(new_name).strip():
                 raise ItqanError(
                     error_name="publisher_name_required",
-                    message="Publisher name is required",
+                    message="Publisher name (Arabic or English) is required",
                     status_code=400,
                 )
-            slug = slugify(str(name)[:50], allow_unicode=True)
+            slug = slugify(str(new_name)[:50], allow_unicode=True)
             if self.repo.slug_exists(slug, exclude_id=publisher_id):
                 raise ItqanError(
                     error_name="publisher_already_exists",
                     message=f"A publisher with slug '{slug}' already exists",
                     status_code=400,
                 )
-            fields["name"] = str(name).strip()
+            fields["name"] = str(new_name).strip()
             fields["slug"] = slug
+
+        if "description_ar" in fields or "description_en" in fields:
+            desc_ar = fields.get("description_ar")
+            desc_en = fields.get("description_en")
+            new_desc = (
+                desc_ar
+                or desc_en
+                or getattr(publisher, "description_ar", "")
+                or getattr(publisher, "description_en", "")
+                or publisher.description
+            )
+            fields["description"] = new_desc
 
         # Skip empty translation fields to avoid overriding modeltranslation values
         translation_fields = {"name_ar", "name_en", "description_ar", "description_en"}
@@ -110,4 +137,11 @@ class PublisherService:
 
     def delete_publisher(self, publisher_id: int) -> None:
         publisher = self.get_publisher(publisher_id)
-        self.repo.delete(publisher)
+        try:
+            self.repo.delete(publisher)
+        except ProtectedError as exc:
+            raise ItqanError(
+                error_name="related_objects_exist",
+                message=str(_("Cannot delete Publisher because they are referenced through other objects")),
+                status_code=400,
+            ) from exc

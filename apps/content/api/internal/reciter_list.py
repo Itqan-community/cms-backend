@@ -1,5 +1,7 @@
+from typing import Annotated
+
 from django.db.models import F
-from ninja import FilterSchema, Query, Schema
+from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
@@ -27,9 +29,9 @@ class ReciterOut(Schema):
 
 
 class ReciterFilter(FilterSchema):
-    name: list[str] | None = Field(None, q="name__in")
-    name_ar: list[str] | None = Field(None, q="name_ar__in")
-    slug: list[str] | None = Field(None, q="slug__in")
+    name: Annotated[list[str] | None, FilterLookup(q="name__in")] = None
+    name_ar: Annotated[list[str] | None, FilterLookup(q="name_ar__in")] = None
+    slug: Annotated[list[str] | None, FilterLookup(q="slug__in")] = None
 
 
 @router.get("reciters/", response=list[ReciterOut])

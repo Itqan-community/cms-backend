@@ -1,8 +1,10 @@
-from ninja import FilterSchema, Query, Schema
+from typing import Annotated
+
+from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import Field
 
-from apps.content.models import Asset, Resource
+from apps.content.models import Asset, LicenseChoice, Resource
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -23,13 +25,13 @@ class ListAssetOut(Schema):
     name: str
     description: str
     publisher: ListAssetPublisherOut = Field(alias="resource.publisher")
-    license: str
+    license: LicenseChoice
 
 
 class AssetFilter(FilterSchema):
-    category: list[Resource.CategoryChoice] | None = Field(None, q="category__in")
-    license_code: list[str] | None = Field(None, q="license__in")
-    publisher_id: int | None = Field(None, q="resource__publisher")
+    category: Annotated[list[Resource.CategoryChoice] | None, FilterLookup(q="category__in")] = None
+    license_code: Annotated[list[str] | None, FilterLookup(q="license__in")] = None
+    publisher_id: Annotated[int | None, FilterLookup(q="resource__publisher")] = None
 
 
 @router.get("assets/", response=list[ListAssetOut], auth=None)

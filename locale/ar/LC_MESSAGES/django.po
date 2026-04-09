@@ -1,0 +1,309 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <h.alansary@itqan.dev>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: إصدار الحزمة\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-04-09 06:59+0300\n"
+"PO-Revision-Date: السنة-الشهر-اليوم الساعة:الدقيقة+المنطقة\n"
+"Last-Translator: الاسم الكامل <EMAIL@ADDRESS>\n"
+"Language-Team: اللغة <LL@li.org>\n"
+"Language: ar\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 "
+"&& n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5;\n"
+
+msgid "You do not have access to this asset"
+msgstr "ليس لديك صلاحية الوصول إلى هذا المورد"
+
+msgid "Resource deleted successfully."
+msgstr "تم حذف المورد بنجاح."
+
+msgid "Creative Commons Zero"
+msgstr "المشاع الإبداعي - بدون حقوق (CC0)"
+
+msgid "Creative Commons Attribution"
+msgstr "المشاع الإبداعي - نسب المصنف"
+
+msgid "Creative Commons Attribution-ShareAlike"
+msgstr "المشاع الإبداعي - نسب المصنف - الترخيص بالمثل"
+
+msgid "Creative Commons Attribution-NoDerivs"
+msgstr "المشاع الإبداعي - نسب المصنف - بدون اشتقاق"
+
+msgid "Creative Commons Attribution-NonCommercial"
+msgstr "المشاع الإبداعي - نسب المصنف - غير تجاري"
+
+msgid "Creative Commons Attribution-NonCommercial-ShareAlike"
+msgstr "المشاع الإبداعي - نسب المصنف - غير تجاري - الترخيص بالمثل"
+
+msgid "Creative Commons Attribution-NonCommercial-NoDerivs"
+msgstr "المشاع الإبداعي - نسب المصنف - غير تجاري - بدون اشتقاق"
+
+msgid "Recitation"
+msgstr "تلاوة"
+
+msgid "Mushaf"
+msgstr "مصحف"
+
+msgid "Tafsir"
+msgstr "تفسير"
+
+msgid "Program"
+msgstr "برنامج"
+
+msgid "Linguistic"
+msgstr "لغوي"
+
+msgid "Translation"
+msgstr "ترجمة"
+
+msgid "Font"
+msgstr "خط"
+
+msgid "Search"
+msgstr "بحث"
+
+msgid "Tajweed"
+msgstr "تجويد"
+
+msgid "Draft"
+msgstr "مسودة"
+
+msgid "Ready"
+msgstr "جاهز"
+
+msgid "Twassut"
+msgstr "توسط"
+
+msgid "Qasr"
+msgstr "قصر"
+
+msgid "Silah"
+msgstr "صلة"
+
+msgid "Skoun"
+msgstr "سكون"
+
+msgid "Pending"
+msgstr "قيد الانتظار"
+
+msgid "Approved"
+msgstr "معتمد"
+
+msgid "Rejected"
+msgstr "مرفوض"
+
+msgid "Commercial"
+msgstr "تجاري"
+
+msgid "Non-Commercial"
+msgstr "غير تجاري"
+
+msgid "File Download"
+msgstr "تنزيل الملف"
+
+msgid "View"
+msgstr "عرض"
+
+msgid "API Access"
+msgstr "الوصول إلى واجهة البرمجة (API)"
+
+msgid "Resource"
+msgstr "مورد"
+
+msgid "Asset"
+msgstr "أصل"
+
+msgid "API"
+msgstr "واجهة برمجة التطبيقات"
+
+msgid "Package"
+msgstr "حزمة"
+
+msgid "Under Review"
+msgstr "قيد المراجعة"
+
+msgid "Resolved"
+msgstr "تم الحل"
+
+msgid "Dismissed"
+msgstr "تم التجاهل"
+
+#, python-brace-format
+msgid "Recitation with slug {slug} not found."
+msgstr "لم يتم العثور على التلاوة بالمعرّف {slug}."
+
+msgid "Recitation name (Arabic or English) is required."
+msgstr "اسم التلاوة (بالعربية أو الإنجليزية) مطلوب."
+
+#, python-brace-format
+msgid "Publisher with id {id} not found."
+msgstr "لم يتم العثور على الناشر بالمعرّف {id}."
+
+#, python-brace-format
+msgid "Reciter with id {id} not found."
+msgstr "لم يتم العثور على القارئ بالمعرّف {id}."
+
+#, python-brace-format
+msgid "Qiraah with id {id} not found."
+msgstr "لم يتم العثور على القراءة بالمعرّف {id}."
+
+#, python-brace-format
+msgid "Riwayah with id {id} not found."
+msgstr "لم يتم العثور على الرواية بالمعرّف {id}."
+
+msgid "Cannot delete Recitation because they are referenced through other objects"
+msgstr "لا يمكن حذف التلاوة لأن هناك بيانات أخرى مرتبطة بها"
+
+#, python-brace-format
+msgid "Reciter with slug {slug} not found."
+msgstr "لم يتم العثور على القارئ بالمعرّف {slug}."
+
+msgid "Reciter name (Arabic or English) is required."
+msgstr "اسم القارئ (بالعربية أو الإنجليزية) مطلوب."
+
+msgid "A reciter with this name already exists."
+msgstr "يوجد قارئ بهذا الاسم بالفعل."
+
+msgid "Cannot delete Reciter because they are referenced through other objects"
+msgstr "لا يمكن حذف القارئ لأن مرتبط به بيانات أخرى"
+
+#, python-brace-format
+msgid "Tafsir with slug {slug} not found."
+msgstr "لم يتم العثور على التفسير بالمعرّف {slug}."
+
+msgid "Tafsir name (Arabic or English) is required."
+msgstr "اسم التفسير (بالعربية أو الإنجليزية) مطلوب."
+
+msgid "External URL is required when is_external is True."
+msgstr "الرابط الخارجي مطلوب عندما يكون المصدري خارجي."
+
+msgid "Cannot delete Tafsir because they are referenced through other objects"
+msgstr "لا يمكن حذف التفسير لأن مرتبط به بيانات أخرى"
+
+#, python-brace-format
+msgid "Translation with slug {slug} not found."
+msgstr "لم يتم العثور على الترجمة بالمعرّف {slug}."
+
+msgid "Translation name (Arabic or English) is required."
+msgstr "اسم الترجمة (بالعربية أو الإنجليزية) مطلوب."
+
+msgid "Cannot delete Translation because they are referenced through other objects"
+msgstr "لا يمكن حذف الترجمة لأن هناك بيانات أخرى مرتبطة بها"
+
+msgid "Invalid Input"
+msgstr "إدخال غير صالح"
+
+msgid "Authentication Error"
+msgstr "خطأ في المصادقة"
+
+msgid "Something went wrong - Internal Server Error"
+msgstr "حدث خطأ ما - خطأ داخلي في الخادم"
+
+msgid "Owner"
+msgstr "مالك"
+
+msgid "Manager"
+msgstr "مدير"
+
+msgid "Cannot delete Publisher because they are referenced through other objects"
+msgstr "لا يمكن حذف الناشر لأن هناك بيانات أخري مرتبطة به"
+
+msgid "This email has already been taken."
+msgstr "هذا البريد الإلكتروني مستخدم بالفعل."
+
+msgid "Personal info"
+msgstr "المعلومات الشخصية"
+
+msgid "Permissions"
+msgstr "الصلاحيات"
+
+msgid "Important dates"
+msgstr "تواريخ مهمة"
+
+msgid "Successfully logged out"
+msgstr "تم تسجيل الخروج بنجاح"
+
+msgid "Name of User"
+msgstr "اسم المستخدم"
+
+msgid "email address"
+msgstr "البريد الإلكتروني"
+
+msgid "Phone Number"
+msgstr "رقم الهاتف"
+
+msgid "Bio"
+msgstr "نبذة"
+
+msgid "Project Summary"
+msgstr "ملخص المشروع"
+
+msgid "Project URL"
+msgstr "رابط المشروع"
+
+msgid "Job Title"
+msgstr "المسمى الوظيفي"
+
+msgid "Sign In"
+msgstr "تسجيل الدخول"
+
+#, python-format
+msgid "Don't have an account? %(link)sSign up%(end_link)s"
+msgstr "ليس لديك حساب؟ %(link)sإنشاء حساب%(end_link)s"
+
+msgid "Sign in with a passkey"
+msgstr "تسجيل الدخول باستخدام مفتاح مرور"
+
+msgid "Mail me a sign-in code"
+msgstr "أرسل لي رمز تسجيل الدخول عبر البريد الإلكتروني"
+
+msgid "Skip to main content"
+msgstr "تخطي إلى المحتوى الرئيسي"
+
+msgid "Select Language"
+msgstr "اختر اللغة"
+
+msgid "Sign Out"
+msgstr "تسجيل الخروج"
+
+msgid "Sign Up"
+msgstr "إنشاء حساب"
+
+msgid "Bulk Upload Recitation Audio Tracks (Direct to R2)"
+msgstr "رفع جماعي للتلاوة الصوتية (مباشرة إلى R2)"
+
+msgid "Bulk Upload Recitation Ayahs Timestamps"
+msgstr "رفع جماعي للتوقيتات الزمنية لآيات التلاوة"
+
+msgid "Constructs the recitation JSON from all linked RecitationSurahTrack and RecitationAyahTiming, then saves it into the latest Asset version as the file. Runs in a single atomic transaction."
+msgstr "يقوم بإنشاء ملف JSON للتلاوة من جميع سجلات RecitationSurahTrack وRecitationAyahTiming المرتبطة، ثم يحفظه كملف في أحدث إصدار من الأصل. يتم التنفيذ ضمن معاملة ذرّية واحدة."
+
+msgid "Sync Asset Recitation Json File"
+msgstr "مزامنة ملف JSON الخاص بتلاوة الأصل"
+
+msgid ""
+"\n"
+"This action will:\n"
+"1) Collect all related RecitationSurahTrack and RecitationAyahTiming records linked with this Asset\n"
+"2) Construct a fresh JSON from these records\n"
+"3) Overwrite the file of the latest Asset version with this JSON\n"
+"\n"
+"Proceed?\n"
+"    "
+msgstr ""
+"\n"
+"سيقوم هذا الإجراء بما يلي:\n"
+"1) جمع جميع سجلات RecitationSurahTrack وRecitationAyahTiming المرتبطة بهذا الأصل\n"
+"2) إنشاء ملف JSON جديد من هذه السجلات\n"
+"3) استبدال ملف أحدث إصدار من الأصل بهذا الملف\n"
+"\n"
+"هل تريد المتابعة؟\n"
+"    "

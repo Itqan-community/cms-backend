@@ -8,7 +8,6 @@ from apps.users.adapters import User
 
 
 class RecitersListTest(BaseTestCase):
-
     def setUp(self):
         super().setUp()
         self.publisher = baker.make(Publisher)

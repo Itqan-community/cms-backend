@@ -307,7 +307,7 @@ class RecitationsListTest(BaseTestCase):
             riwayah=self.riwayah1,
             name="Silah Recitation",
             description="Silah",
-            meem_behaviour=Asset.MeemBehaviorChoice.SILAH,
+            meem_behaviour=Asset.MeemBehaviourChoice.SILAH,
         )
         baker.make(
             Asset,
@@ -317,11 +317,11 @@ class RecitationsListTest(BaseTestCase):
             riwayah=self.riwayah1,
             name="Skoun Recitation",
             description="Skoun",
-            meem_behaviour=Asset.MeemBehaviorChoice.SKOUN,
+            meem_behaviour=Asset.MeemBehaviourChoice.SKOUN,
         )
 
         # Act - filter by meem_behaviour=silah
-        response = self.client.get(f"/tenant/recitations/?meem_behaviour={Asset.MeemBehaviorChoice.SILAH}")
+        response = self.client.get(f"/tenant/recitations/?meem_behaviour={Asset.MeemBehaviourChoice.SILAH}")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)

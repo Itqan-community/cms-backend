@@ -1,3 +1,4 @@
+from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
 from apps.core.tests import BaseTestCase
@@ -26,8 +27,8 @@ class UpdatePublisherTest(BaseTestCase):
         # Arrange
         self.authenticate_user(self.user)
         data = {
-            "name": "Updated Publisher",
-            "description": "Updated description",
+            "name_en": "Updated Publisher",
+            "description_en": "Updated description",
             "address": "Updated address",
             "website": "https://updated.com",
             "contact_email": "updated@test.com",
@@ -37,7 +38,7 @@ class UpdatePublisherTest(BaseTestCase):
         }
 
         # Act
-        response = self.client.put(self.url, data, content_type="application/json")
+        response = self.client.put(self.url, data, format="multipart")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -52,10 +53,10 @@ class UpdatePublisherTest(BaseTestCase):
     def test_put_publisher_where_not_found_should_return_404(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
-        data = {"name": "Updated"}
+        data = {"name_en": "Updated"}
 
         # Act
-        response = self.client.put("/portal/publishers/99999/", data, content_type="application/json")
+        response = self.client.put("/portal/publishers/99999/", data, format="multipart")
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
@@ -68,7 +69,7 @@ class UpdatePublisherTest(BaseTestCase):
         data = {"country": "Jordan"}
 
         # Act
-        response = self.client.patch(self.url, data, content_type="application/json")
+        response = self.client.patch(self.url, data, format="multipart")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -82,10 +83,10 @@ class UpdatePublisherTest(BaseTestCase):
     def test_patch_publisher_where_name_changed_should_regenerate_slug(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
-        data = {"name": "New Name Publisher"}
+        data = {"name_en": "New Name Publisher"}
 
         # Act
-        response = self.client.patch(self.url, data, content_type="application/json")
+        response = self.client.patch(self.url, data, format="multipart")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -99,7 +100,7 @@ class UpdatePublisherTest(BaseTestCase):
         data = {"name_ar": "الناشر المحدث", "description_ar": "وصف محدث"}
 
         # Act
-        response = self.client.patch(self.url, data, content_type="application/json")
+        response = self.client.patch(self.url, data, format="multipart")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -107,12 +108,35 @@ class UpdatePublisherTest(BaseTestCase):
         self.assertEqual("الناشر المحدث", body["name_ar"])
         self.assertEqual("وصف محدث", body["description_ar"])
 
-    def test_update_publisher_where_unauthenticated_should_return_401(self) -> None:
+    def test_patch_publisher_where_icon_provided_should_return_200(self) -> None:
         # Arrange
-        data = {"name": "Updated"}
+        self.authenticate_user(self.user)
+        icon = SimpleUploadedFile("updated_icon.png", b"new_content", content_type="image/png")
+        data = {"icon": icon}
 
         # Act
-        response = self.client.patch(self.url, data, content_type="application/json")
+        response = self.client.patch(self.url, data, format="multipart")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertIsNotNone(body["icon_url"])
+        self.assertTrue(body["icon_url"].endswith(".png"))
+
+        # Verify in database
+        self.publisher.refresh_from_db()
+        self.assertTrue(bool(self.publisher.icon_url))
+        self.assertTrue(self.publisher.icon_url.name.endswith(".png"))
+
+        # Cleanup
+        self.publisher.icon_url.delete()
+
+    def test_update_publisher_where_unauthenticated_should_return_401(self) -> None:
+        # Arrange
+        data = {"name_en": "Updated"}
+
+        # Act
+        response = self.client.patch(self.url, data, format="multipart")
 
         # Assert
         self.assertEqual(401, response.status_code, response.content)

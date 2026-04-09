@@ -8,6 +8,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
+from django_countries.fields import CountryField
 
 from apps.core.mixins.storage import DeleteFilesOnDeleteMixin
 from apps.core.models import BaseModel
@@ -172,13 +173,17 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         TWASSUT = "twassut", _("Twassut")
         QASR = "qasr", _("Qasr")
 
-    class MeemBehaviorChoice(models.TextChoices):
+    class MeemBehaviourChoice(models.TextChoices):
         SILAH = "silah", _("Silah")
         SKOUN = "skoun", _("Skoun")
 
     resource = models.ForeignKey(Resource, on_delete=models.PROTECT, related_name="assets", db_index=True)
 
     name = models.CharField(max_length=255, help_text="Asset name")
+
+    slug = models.SlugField(
+        allow_unicode=True, unique=True, db_index=True, default="", help_text="URL-friendly slug for the asset"
+    )
 
     description = models.TextField(help_text="Asset description")
 
@@ -245,13 +250,24 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         max_length=50,
         null=True,
         blank=True,
-        choices=MeemBehaviorChoice.choices,
+        choices=MeemBehaviourChoice.choices,
         help_text="Meem behaviour for recitation assets",
     )
     year = models.PositiveIntegerField(
         null=True,
         blank=True,
         help_text="Year of recording for recitation assets",
+    )
+
+    is_external = models.BooleanField(
+        default=False,
+        help_text="Whether this asset is external",
+    )
+    external_url = models.URLField(
+        "External URL",
+        null=True,
+        blank=True,
+        help_text="URL for external assets",
     )
 
     class Meta:
@@ -269,7 +285,12 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
                     qiraah__isnull=True,
                 ),
                 name="asset_recitation_fields_consistency",
-            )
+            ),
+            models.CheckConstraint(
+                condition=models.Q(is_external=False, external_url__isnull=True)
+                | models.Q(is_external=True, external_url__isnull=False),
+                name="asset_external_url_consistency",
+            ),
         ]
 
     def __str__(self):
@@ -278,6 +299,16 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
     def save(self, *args, **kwargs):
         if self.riwayah_id and not self.qiraah_id:
             self.qiraah_id = self.riwayah.qiraah_id
+        if not self.slug:
+            from django.utils.text import slugify
+
+            base_slug = slugify(self.name[:50], allow_unicode=True) or f"asset-{self.pk or 0}"
+            slug = base_slug
+            counter = 1
+            while self.__class__.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base_slug[:40]}-{counter}"
+                counter += 1
+            self.slug = slug
         super().save(*args, **kwargs)
 
     @staticmethod
@@ -616,13 +647,6 @@ class Distribution(BaseModel):
         return f"Distribution(asset={self.asset_version.asset.name}, channel={self.channel})"
 
 
-class Nationality(BaseModel):
-    """reciter/qri nationality"""
-
-    code = models.CharField(max_length=2, unique=True)
-    name = models.CharField(max_length=100)
-
-
 class Reciter(BaseModel):
     """Quran reciter/qari (e.g. Mshari Al-Afasi, Saad Al-Ghamidi, etc)"""
 
@@ -635,13 +659,9 @@ class Reciter(BaseModel):
         help_text="Icon/logo image - used in V1 UI: Publisher Page",
     )
     bio = models.TextField(blank=True)
-    date_of_birth = models.DateField(null=True, blank=True)
     date_of_death = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
-    nationality = models.ForeignKey(
-        Nationality, on_delete=models.SET_NULL, related_name="reciters", null=True, blank=True
-    )
-    is_contemporary = models.BooleanField(default=False)
+    nationality = CountryField(blank=True, default="")
 
     def save(self, *args, **kwargs) -> None:
         if not self.slug:
@@ -743,11 +763,12 @@ class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
     def save(self, *args, **kwargs) -> None:
         # Auto-compute duration and size when an MP3 file is present. And set the original filename for admin/manual uploads.
         if self.audio_file:
-            try:
-                self.size_bytes = int(getattr(self.audio_file, "size", 0) or 0)
-            except Exception as e:
-                logger.warning("Failed to get file size for RecitationSurahTrack: %s", e)
-                self.size_bytes = 0
+            if not self.size_bytes:
+                try:
+                    self.size_bytes = int(getattr(self.audio_file, "size", 0) or 0)
+                except Exception as e:
+                    logger.warning("Failed to get file size for RecitationSurahTrack: %s", e)
+                    self.size_bytes = 0
 
             if not self.duration_ms:
                 self.duration_ms = get_mp3_duration_ms(self.audio_file)

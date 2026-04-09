@@ -1,8 +1,8 @@
-from typing import Literal
+from typing import Annotated, Literal
 
-from ninja import FilterSchema, Query, Schema
+from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
-from pydantic import AwareDatetime, Field
+from pydantic import AwareDatetime
 
 from apps.content.repositories.issue_report import IssueReportRepository
 from apps.content.services.issue_report import IssueReportService
@@ -32,7 +32,7 @@ class IssueReportCreateIn(Schema):
 
 
 class IssueReportFilter(FilterSchema):
-    status: list[str] | None = Field(None, q="status__in")
+    status: Annotated[list[str] | None, FilterLookup(q="status__in")] = None
     content_type: Literal["resource", "asset"] | None = None
 
 

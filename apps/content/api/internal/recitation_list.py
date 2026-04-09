@@ -1,6 +1,7 @@
-from ninja import FilterSchema, Query, Schema
+from typing import Annotated
+
+from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
-from pydantic import Field
 
 from apps.content.models import Asset
 from apps.content.repositories.recitation import RecitationRepository
@@ -35,7 +36,7 @@ class RecitationListOut(Schema):
     name: str
     description: str
     madd_level: Asset.MaddLevelChoice | None
-    meem_behaviour: Asset.MeemBehaviorChoice | None
+    meem_behaviour: Asset.MeemBehaviourChoice | None
     year: int | None
     reciter: RecitationReciterOut
     riwayah: RecitationRiwayahOut | None = None
@@ -43,10 +44,10 @@ class RecitationListOut(Schema):
 
 
 class RecitationFilter(FilterSchema):
-    publisher_id: list[int] | None = Field(None, q="resource__publisher_id__in")
-    reciter_id: list[int] | None = Field(None, q="reciter_id__in")
-    riwayah_id: list[int] | None = Field(None, q="riwayah_id__in")
-    qiraah_id: list[int] | None = Field(None, q="qiraah_id__in")
+    publisher_id: Annotated[list[int] | None, FilterLookup(q="resource__publisher_id__in")] = None
+    reciter_id: Annotated[list[int] | None, FilterLookup(q="reciter_id__in")] = None
+    riwayah_id: Annotated[list[int] | None, FilterLookup(q="riwayah_id__in")] = None
+    qiraah_id: Annotated[list[int] | None, FilterLookup(q="qiraah_id__in")] = None
 
 
 @router.get("recitations/", response=list[RecitationListOut])

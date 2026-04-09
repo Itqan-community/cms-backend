@@ -1,4 +1,6 @@
-from ninja import FilterSchema, Query, Schema
+from typing import Annotated
+
+from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import Field
 
@@ -21,15 +23,15 @@ class ReciterOut(Schema):
 
 
 class ReciterFilter(FilterSchema):
-    name: list[str] | None = Field(None, q="name__in")
-    name_ar: list[str] | None = Field(None, q="name_ar__in")
-    slug: list[str] | None = Field(None, q="slug__in")
+    name: Annotated[list[str] | None, FilterLookup(q="name__in")] = None
+    name_ar: Annotated[list[str] | None, FilterLookup(q="name_ar__in")] = None
+    slug: Annotated[list[str] | None, FilterLookup(q="slug__in")] = None
 
 
 @router.get("reciters/", response=list[ReciterOut])
 @paginate
 @ordering(ordering_fields=["name"])
-@searching(search_fields=["name", "name_ar", "slug"])
+@searching(search_fields=["name_en", "name_ar", "slug"])
 def list_reciters(request: Request, filters: ReciterFilter = Query()):
     """
     Tenant Content API:

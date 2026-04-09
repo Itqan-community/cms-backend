@@ -1,8 +1,8 @@
-from typing import Literal
+from typing import Annotated, Literal
 
-from ninja import FilterSchema, Query, Schema
+from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
-from pydantic import AwareDatetime, Field
+from pydantic import AwareDatetime
 
 from apps.content.models import ContentIssueReport
 from apps.content.repositories.issue_report import IssueReportRepository
@@ -39,8 +39,8 @@ class IssueReportCreateIn(Schema):
 
 
 class IssueReportFilter(FilterSchema):
-    status: list[ContentIssueReport.StatusChoice] | None = Field(None, q="status__in")
-    reporter_id: int | None = Field(None, q="reporter_id")
+    status: Annotated[list[ContentIssueReport.StatusChoice] | None, FilterLookup(q="status__in")] = None
+    reporter_id: Annotated[int | None, FilterLookup(q="reporter_id")] = None
 
 
 @router.post("issue-reports/", response={201: IssueReportOut}, auth=ninja_jwt_auth)

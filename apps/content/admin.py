@@ -20,7 +20,6 @@ from apps.core.ninja_utils.errors import ItqanError
 
 from ..core.mixins.constants import QURAN_SURAHS
 from .forms.direct_upload_recitations_form import DirectUploadRecitationsForm
-from .forms.recitation_audio_tracks_bulk_upload_form import RecitationAudioTracksBulkUploadForm
 from .forms.recitation_ayah_timestamps_bulk_upload_form import (
     RecitationAyahTimestampsBulkUploadForm,
 )
@@ -31,7 +30,6 @@ from .models import (
     AssetPreview,
     AssetVersion,
     ContentIssueReport,
-    Nationality,
     Qiraah,
     RecitationAyahTiming,
     RecitationSurahTrack,
@@ -40,9 +38,6 @@ from .models import (
     ResourceVersion,
     Riwayah,
     UsageEvent,
-)
-from .services.admin.asset_recitation_audio_tracks_upload_service import (
-    bulk_upload_recitation_audio_tracks,
 )
 from .services.admin.asset_recitation_ayah_timestamps_upload_service import (
     bulk_upload_recitation_ayah_timestamps,
@@ -340,11 +335,6 @@ class AssetAdmin(admin.ModelAdmin):
                 name="asset_sync_recitations_json",
             ),
             path(
-                "<int:asset_id>/bulk-upload-audio-tracks/",
-                self.admin_site.admin_view(self.bulk_upload_audio_tracks_view),
-                name="asset_bulk_upload_recitation_audio_tracks",
-            ),
-            path(
                 "<int:asset_id>/bulk-upload-ayahs-timestamps/",
                 self.admin_site.admin_view(self.bulk_upload_ayahs_timestamps_view),
                 name="asset_bulk_upload_recitation_ayah_timestamps",
@@ -394,68 +384,6 @@ class AssetAdmin(admin.ModelAdmin):
 
         self.message_user(request, "Asset Recitation Downloaded JSON File Synced Successfully.")
         return redirect(reverse("admin:content_asset_change", args=[asset_id]))
-
-    def bulk_upload_audio_tracks_view(self, request, asset_id: int):
-        if request.method == "POST":
-            form = RecitationAudioTracksBulkUploadForm(request.POST, request.FILES)
-            if form.is_valid():
-                files = request.FILES.getlist("audio_files")
-
-                # Parse durations if provided
-                durations_by_filename = {}
-                durations_json = request.POST.get("durations_json")
-                if durations_json:
-                    try:
-                        durations_by_filename = json.loads(durations_json)
-                    except Exception:
-                        pass  # Silently ignore invalid JSON, fallback to mutagen
-
-                stats = bulk_upload_recitation_audio_tracks(
-                    asset_id=asset_id, files=files, durations_by_filename=durations_by_filename
-                )
-
-                if stats.get("created"):
-                    self.message_user(request, f"Created {stats['created']} recitation tracks.")
-                if stats.get("filename_errors"):
-                    self.message_user(
-                        request,
-                        f"{stats['filename_errors']} files were skipped due to filename issues.",
-                        level="WARNING",
-                    )
-                if stats.get("skipped_duplicates"):
-                    preview_details = stats.get("duplicate_details") or []
-                    preview = ", ".join(preview_details[:10])
-                    more = "" if len(preview_details) <= 10 else f" and {len(preview_details) - 10} more"
-                    self.message_user(
-                        request,
-                        f"Skipped {stats['skipped_duplicates']} files due to duplicates: {preview}{more}.",
-                        level="WARNING",
-                    )
-                if stats.get("other_errors"):
-                    error_details = stats.get("other_error_details") or []
-                    preview = "; ".join(error_details[:5])
-                    more = "" if len(error_details) <= 5 else f" and {len(error_details) - 5} more"
-                    self.message_user(
-                        request, f"Upload encountered errors: {preview}{more}. All changes rolled back.", level="ERROR"
-                    )
-
-                return redirect(reverse("admin:content_asset_change", args=[asset_id]))
-        else:
-            form = RecitationAudioTracksBulkUploadForm()
-
-        context = {
-            **self.admin_site.each_context(request),
-            "title": "Bulk Upload Recitation Audio Tracks",
-            "form": form,
-            "redirect_url": reverse("admin:content_asset_change", args=[asset_id]),
-            "surah_map_ar": {k: v.get("name", "") for k, v in QURAN_SURAHS.items()},
-            "surah_map_en": {k: v.get("name_en", "") for k, v in QURAN_SURAHS.items()},
-        }
-        return render(
-            request,
-            "content/admin/recitationsurahtrack_bulk_upload.html",
-            context,
-        )
 
     def bulk_upload_ayahs_timestamps_view(self, request, asset_id: int):
         if request.method == "POST":
@@ -536,7 +464,7 @@ class AssetAdmin(admin.ModelAdmin):
                 if duration_ms is not None:
                     duration_ms = int(duration_ms)
             service = AssetRecitationAudioTracksDirectUploadService()
-            data = service.start_upload(asset_id=asset_id, filename=filename, duration_ms=duration_ms)
+            data = service.start_upload(asset_id=asset_id, filename=filename)
             return JsonResponse(data)
         except ItqanError as e:
             return JsonResponse(
@@ -589,7 +517,15 @@ class AssetAdmin(admin.ModelAdmin):
         try:
             body = json.loads(request.body or "{}")
             service = AssetRecitationAudioTracksDirectUploadService()
-            result = service.finish_upload(key=body["key"], upload_id=body["uploadId"], parts=body["parts"])
+            result = service.finish_upload(
+                key=body["key"],
+                upload_id=body["uploadId"],
+                parts=body["parts"],
+                asset_id=int(body["assetId"]),
+                filename=str(body.get("filename", "")),
+                duration_ms=int(body["durationMs"]) if body.get("durationMs") else 0,
+                size_bytes=int(body["sizeBytes"]) if body.get("sizeBytes") else 0,
+            )
             return JsonResponse(result)
         except ItqanError as e:
             return JsonResponse(
@@ -615,7 +551,7 @@ class AssetAdmin(admin.ModelAdmin):
         try:
             body = json.loads(request.body or "{}")
             service = AssetRecitationAudioTracksDirectUploadService()
-            result = service.abort_upload(key=body["key"], upload_id=body["uploadId"])
+            result = service.abort_upload(r2_key=f"media/{body["key"]}", upload_id=body["uploadId"])
             return JsonResponse(result)
         except ItqanError as e:
             return JsonResponse(
@@ -867,29 +803,6 @@ class UsageEventAdmin(admin.ModelAdmin):
         return False
 
 
-@admin.register(Nationality)
-class NationalityAdmin(admin.ModelAdmin):
-    list_display = ["id", "code", "name_en", "name_ar", "created_at"]
-    search_fields = ["code", "name_en", "name_ar"]
-    readonly_fields = ["created_at", "updated_at"]
-
-    fieldsets = (
-        (
-            "Basic Information",
-            {
-                "fields": ("code", "name_en", "name_ar"),
-            },
-        ),
-        (
-            "Timestamps",
-            {
-                "fields": ("created_at", "updated_at"),
-                "classes": ("collapse",),
-            },
-        ),
-    )
-
-
 @admin.register(Qiraah)
 class QiraahAdmin(admin.ModelAdmin):
     list_display = ["id", "name", "slug", "is_active", "created_at"]
@@ -927,7 +840,17 @@ class ReciterAdmin(admin.ModelAdmin):
         (
             "Basic Information",
             {
-                "fields": ("name_en", "name_ar", "bio_en", "bio_ar", "slug", "is_active", "image_url"),
+                "fields": (
+                    "name_en",
+                    "name_ar",
+                    "bio_en",
+                    "bio_ar",
+                    "slug",
+                    "nationality",
+                    "date_of_death",
+                    "is_active",
+                    "image_url",
+                ),
             },
         ),
         (

@@ -18,7 +18,12 @@ services:
       - media_volume:/app/media
     restart: unless-stopped
     depends_on:
-      - caddy
+      caddy:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   caddy:
     image: caddy:2-alpine
@@ -36,9 +41,83 @@ services:
       - caddy_logs:/var/log/caddy
     restart: unless-stopped
 
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  celery-worker:
+    image: ${IMAGE_REPO}:${IMAGE_TAG}
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.staging
+      PYTHONUNBUFFERED: "1"
+      PGSSLMODE: require
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: uv run celery -A config worker -l info --concurrency=${CELERY_WORKER_CONCURRENCY:-2}
+    restart: unless-stopped
+
+  celery-beat:
+    image: ${IMAGE_REPO}:${IMAGE_TAG}
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.staging
+      PYTHONUNBUFFERED: "1"
+      PGSSLMODE: require
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: uv run celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    restart: unless-stopped
+
+  flower:
+    image: ${IMAGE_REPO}:${IMAGE_TAG}
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.staging
+      PYTHONUNBUFFERED: "1"
+    ports:
+      - "${FLOWER_PORT:-5555}:5555"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    command: uv run celery -A config flower --port=5555 --basic_auth=${FLOWER_USER:-admin}:${FLOWER_PASS:-flower} --broker_api=http://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:15672/api/
+    restart: unless-stopped
+
 volumes:
   static_volume:
   media_volume:
   caddy_data:
   caddy_config:
   caddy_logs:
+  rabbitmq_data:
+  redis_data:

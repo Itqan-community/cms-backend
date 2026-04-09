@@ -52,7 +52,11 @@ THIRD_PARTY_APPS = [
     "allauth.socialaccount.providers.github",
     "storages",
     "oauth2_provider",
+    "django_celery_beat",
+    "django_countries",
 ]
+
+COUNTRIES_OVERRIDE = {"IL": None}
 
 LOCAL_APPS = ["apps.core", "apps.content", "apps.users", "apps.publishers"]
 
@@ -61,6 +65,7 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "ninja.compatibility.files.fix_request_files_middleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -169,8 +174,8 @@ if CLOUDFLARE_R2_ENDPOINT:
             "OPTIONS": CLOUDFLARE_R2_CONFIG_OPTIONS,
         },
         "staticfiles": {
-            "BACKEND": "config.helpers.cloudflare.storages.StaticFileStorage",
-            "OPTIONS": CLOUDFLARE_R2_CONFIG_OPTIONS,
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+            # "OPTIONS": CLOUDFLARE_R2_CONFIG_OPTIONS,
         },
     }
 else:
@@ -239,9 +244,11 @@ CORS_ALLOW_HEADERS = [
     "accept",
     "accept-encoding",
     "authorization",
+    "baggage",
     "content-type",
     "dnt",
     "origin",
+    "sentry-trace",
     "user-agent",
     "x-csrftoken",
     "x-requested-with",
@@ -280,11 +287,11 @@ SIMPLE_JWT = {
 }
 
 # Celery Configuration
-CELERY_BROKER_URL = config("CELERY_BROKER_URL", default="redis://localhost:6379/0")
+CELERY_BROKER_URL = config("CELERY_BROKER_URL", default="amqp://guest:guest@localhost:5672//")
 CELERY_RESULT_BACKEND = config("CELERY_RESULT_BACKEND", default="redis://localhost:6379/0")
-CELERY_ACCEPT_CONTENT = ["json", "application/x-python-serialize"]
-CELERY_TASK_SERIALIZER = "pickle"
-CELERY_RESULT_SERIALIZER = "pickle"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_ALWAYS_EAGER = config("CELERY_TASK_ALWAYS_EAGER", default=False, cast=bool)
 CELERY_TASK_TIME_LIMIT = 5 * 60
@@ -443,7 +450,12 @@ except ImportError:
 SENTRY_ENABLED = config("SENTRY_ENABLED", cast=bool, default=False)
 
 if SENTRY_ENABLED and sentry_sdk:
-    enable_sentry()
+    try:
+        enable_sentry()
+    except Exception as e:
+        import logging
+
+        logging.getLogger(__name__).warning("Failed to initialize Sentry: %s", e)
 
 # Allow large admin bulk actions - used for bulk updating/deleting mushaf recitations timestamps objects data
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000

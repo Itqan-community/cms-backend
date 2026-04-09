@@ -1,6 +1,8 @@
+from typing import Annotated
+
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
-from ninja import FilterSchema, Query, Schema
+from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
@@ -35,9 +37,9 @@ class ListResourceOut(Schema):
 
 
 class ResourceFilter(FilterSchema):
-    category: list[Resource.CategoryChoice] | None = Field(None, q="category__in")
-    status: list[Resource.StatusChoice] | None = Field(None, q="status__in")
-    publisher_id: list[int] | None = Field(None, q="publisher_id__in")
+    category: Annotated[list[Resource.CategoryChoice] | None, FilterLookup(q="category__in")] = None
+    status: Annotated[list[Resource.StatusChoice] | None, FilterLookup(q="status__in")] = None
+    publisher_id: Annotated[list[int] | None, FilterLookup(q="publisher_id__in")] = None
 
 
 class CreateResourceIn(Schema):
