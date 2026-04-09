@@ -40,12 +40,15 @@ class TranslationCreateTest(BaseTestCase):
         self.assertEqual("ترجمة صحيح إنترناشيونال", body["name_ar"])
         self.assertEqual("Sahih International", body["name_en"])
         self.assertEqual("CC-BY", body["license"])
+        self.assertEqual("en", body["language"])
+        self.assertIn("slug", body)
         self.assertEqual(self.publisher.id, body["publisher"]["id"])
 
         # Verify in database
         asset = Asset.objects.get(id=body["id"])
         self.assertEqual(Resource.CategoryChoice.TRANSLATION, asset.category)
         self.assertEqual(Resource.StatusChoice.READY, asset.resource.status)
+        self.assertEqual("en", asset.language)
 
     def test_create_translation_where_publisher_not_found_should_return_404(self):
         self.authenticate_user(self.user)

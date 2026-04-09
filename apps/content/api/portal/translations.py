@@ -32,6 +32,7 @@ class TranslationListOut(Schema):
     description: str
     publisher: TranslationPublisherOut
     license: LicenseChoice
+    language: str
     is_external: bool
     thumbnail_url: str | None = None
     created_at: AwareDatetime
@@ -69,9 +70,11 @@ class TranslationDetailOut(Schema):
     description_en: str | None = None
     long_description_ar: str | None = None
     long_description_en: str | None = None
+    slug: str
     thumbnail_url: str | None = None
     publisher: TranslationPublisherOut
     license: LicenseChoice
+    language: str
     is_external: bool
     external_url: str | None = None
     versions: list[TranslationVersionOut]

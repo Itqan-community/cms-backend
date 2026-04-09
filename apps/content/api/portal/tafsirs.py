@@ -32,6 +32,7 @@ class TafsirListOut(Schema):
     description: str
     publisher: TafsirPublisherOut
     license: LicenseChoice
+    language: str
     is_external: bool
     thumbnail_url: str | None = None
     created_at: AwareDatetime
@@ -73,6 +74,7 @@ class TafsirDetailOut(Schema):
     thumbnail_url: str | None = None
     publisher: TafsirPublisherOut
     license: LicenseChoice
+    language: str
     is_external: bool
     external_url: str | None = None
     versions: list[TafsirVersionOut]

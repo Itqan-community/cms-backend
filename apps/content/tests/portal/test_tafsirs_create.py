@@ -43,12 +43,14 @@ class TafsirCreateTest(BaseTestCase):
         self.assertEqual("تفسير الطبري", body["name_ar"])
         self.assertEqual("Tafsir Al-Tabari", body["name_en"])
         self.assertEqual("CC-BY", body["license"])
+        self.assertEqual("ar", body["language"])
         self.assertEqual(self.publisher.id, body["publisher"]["id"])
 
         # Verify in database
         asset = Asset.objects.get(id=body["id"])
         self.assertEqual(Resource.CategoryChoice.TAFSIR, asset.category)
         self.assertEqual(Resource.StatusChoice.READY, asset.resource.status)
+        self.assertEqual("ar", asset.language)
 
     def test_create_tafsir_where_publisher_not_found_should_return_404(self):
         # Arrange

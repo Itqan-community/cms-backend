@@ -70,12 +70,14 @@ class TafsirUpdateTest(BaseTestCase):
         self.assertEqual("شرح طويل جديد", body["long_description_ar"])
         self.assertEqual("New long explanation", body["long_description_en"])
         self.assertEqual("CC-BY", body["license"])
+        self.assertEqual("en", body["language"])
 
         # Verify in database
         updated_asset = Asset.objects.get(id=self.tafsir.id)
         self.assertEqual("تفسير محدث", updated_asset.name_ar)
         self.assertEqual("Updated Tafsir", updated_asset.name_en)
         self.assertEqual("CC-BY", updated_asset.license)
+        self.assertEqual("en", updated_asset.language)
 
     def test_update_tafsir_where_patch_updates_partial_fields_should_return_200(self):
         # Arrange
@@ -102,6 +104,7 @@ class TafsirUpdateTest(BaseTestCase):
         # Unchanged fields should remain
         self.assertEqual("تفسير أصلي", body["name_ar"])
         self.assertEqual("Original description", body["description_en"])
+        self.assertEqual("ar", body["language"])
 
     def test_update_tafsir_where_put_missing_required_field_should_return_400(self):
         # Arrange

@@ -66,6 +66,8 @@ class TranslationUpdateTest(BaseTestCase):
         self.assertEqual("شرح طويل جديد", body["long_description_ar"])
         self.assertEqual("New long explanation", body["long_description_en"])
         self.assertEqual("CC-BY", body["license"])
+        self.assertEqual("ar", body["language"])
+        self.assertIn("slug", body)
 
         # Verify in database
         updated_asset = Asset.objects.get(id=self.translation.id)
@@ -94,6 +96,8 @@ class TranslationUpdateTest(BaseTestCase):
         # Unchanged fields should remain
         self.assertEqual("ترجمة أصلية", body["name_ar"])
         self.assertEqual("Original description", body["description_en"])
+        self.assertEqual("en", body["language"])
+        self.assertIn("slug", body)
 
     def test_update_translation_where_put_missing_required_field_should_return_400(self):
         self.authenticate_user(self.user)
