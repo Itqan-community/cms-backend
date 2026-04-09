@@ -36,7 +36,7 @@ class RecitationListOut(Schema):
     name: str
     description: str
     madd_level: Asset.MaddLevelChoice | None
-    meem_behaviour: Asset.MeemBehaviorChoice | None
+    meem_behaviour: Asset.MeemBehaviourChoice | None
     year: int | None
     reciter: RecitationReciterOut
     riwayah: RecitationRiwayahOut | None = None
