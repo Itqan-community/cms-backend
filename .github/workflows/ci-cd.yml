@@ -160,8 +160,9 @@ jobs:
                 echo "FLOWER_USER=${{ secrets.FLOWER_USER }}";
                 echo "FLOWER_PASS=${{ secrets.FLOWER_PASS }}";
                 echo "SENTRY_ENABLED=True";
-                echo "SENTRY_DSN=${{ secrets.SENTRY_DSN }}";
+                echo "SENTRY_DSN=${{ secrets.STAGING_SENTRY_DSN }}";
                 echo "ENV_NAME=staging";
+                echo "DEFAULT_SERVER_NAME=cms-backend-staging";
               } > deployment/docker/.env
             elif [ "${{ env.ENV_NAME }}" = "production" ]; then
               {
@@ -192,8 +193,9 @@ jobs:
                 echo "FLOWER_USER=${{ secrets.FLOWER_USER }}";
                 echo "FLOWER_PASS=${{ secrets.FLOWER_PASS }}";
                 echo "SENTRY_ENABLED=True";
-                echo "SENTRY_DSN=${{ secrets.SENTRY_DSN }}";
+                echo "SENTRY_DSN=${{ secrets.PROD_SENTRY_DSN }}";
                 echo "ENV_NAME=production";
+                echo "DEFAULT_SERVER_NAME=cms-backend-production";
               } > deployment/docker/.env
             fi
             # Append image coordinates for docker compose variable substitution

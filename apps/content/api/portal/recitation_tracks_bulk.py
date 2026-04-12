@@ -1,22 +1,13 @@
+from datetime import datetime
 from typing import Literal
 
+from ninja import Schema
+from pydantic import Field
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.generics import get_object_or_404
 
-from apps.content.api.portal.schemas.recitation_tracks_upload import (
-    UploadAbortIn,
-    UploadAbortOut,
-    UploadFinishIn,
-    UploadFinishOut,
-    UploadSignPartIn,
-    UploadSignPartOut,
-    UploadStartIn,
-    UploadStartOut,
-    ValidateFileOut,
-    ValidateUploadIn,
-    ValidateUploadOut,
-)
 from apps.content.models import Asset
+from apps.content.repositories.recitation_track import RecitationTrackRepository
 from apps.content.services.admin.asset_recitation_audio_tracks_direct_upload_service import (
     AssetRecitationAudioTracksDirectUploadService,
 )
@@ -24,12 +15,29 @@ from apps.content.services.validate_recitation_tracks_upload_service import (
     ValidateRecitationTracksUploadService,
 )
 from apps.core.ninja_utils.auth import ninja_jwt_auth
-from apps.core.ninja_utils.errors import NinjaErrorResponse
+from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
 
 router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
+
+
+class ValidateFileOut(Schema):
+    filename: str
+    status: Literal["valid", "skip", "invalid"]
+
+
+class ValidateUploadIn(Schema):
+    asset_id: int
+    filenames: list[str]
+
+
+class ValidateUploadOut(Schema):
+    asset_id: int
+    status: Literal["valid", "invalid"]
+    message: str
+    files: list[ValidateFileOut]
 
 
 @router.post(
@@ -61,6 +69,20 @@ def validate_upload(request: Request, data: ValidateUploadIn):
         message=result.message,
         files=[ValidateFileOut(filename=f.filename, status=f.status) for f in result.files],
     )
+
+
+class UploadStartIn(Schema):
+    asset_id: int
+    filename: str
+    duration_ms: int | None = None
+    size_bytes: int | None = None
+
+
+class UploadStartOut(Schema):
+    key: str
+    upload_id: str
+    content_type: str
+    surah_number: int
 
 
 @router.post(
@@ -95,6 +117,16 @@ def start_upload(request: Request, data: UploadStartIn):
     )
 
 
+class UploadSignPartIn(Schema):
+    key: str
+    upload_id: str
+    part_number: int
+
+
+class UploadSignPartOut(Schema):
+    url: str
+
+
 @router.post(
     "recitation-tracks/uploads/sign-part/",
     response={
@@ -112,6 +144,30 @@ def sign_part(request: Request, data: UploadSignPartIn):
     result = service.sign_part(key=data.key, upload_id=data.upload_id, part_number=data.part_number)
 
     return UploadSignPartOut(url=result["url"])
+
+
+class UploadPartIn(Schema):
+    etag: str = Field(alias="ETag")
+    part_number: int = Field(alias="PartNumber")
+
+
+class UploadFinishIn(Schema):
+    asset_id: int
+    filename: str
+    key: str
+    upload_id: str
+    parts: list[UploadPartIn]
+    duration_ms: int | None = None
+    size_bytes: int | None = None
+
+
+class UploadFinishOut(Schema):
+    track_id: int
+    asset_id: int
+    surah_number: int
+    size_bytes: int
+    finished_at: datetime
+    key: str
 
 
 @router.post(
@@ -156,6 +212,17 @@ def finish_upload(request: Request, data: UploadFinishIn):
     )
 
 
+class UploadAbortIn(Schema):
+    key: str
+    upload_id: str
+
+
+class UploadAbortOut(Schema):
+    key: str
+    upload_id: str
+    aborted: bool
+
+
 @router.post(
     "recitation-tracks/uploads/abort/",
     response={
@@ -173,3 +240,34 @@ def abort_upload(request: Request, data: UploadAbortIn):
     result = service.abort_upload(key=data.key, upload_id=data.upload_id)
 
     return UploadAbortOut(key=data.key, upload_id=data.upload_id, aborted=result["aborted"])
+
+
+class DeleteTracksIn(Schema):
+    track_ids: list[int]
+
+
+@router.delete(
+    "recitation-tracks/",
+    response={
+        204: None,
+        401: NinjaErrorResponse[Literal["authentication_error"], Literal[None]],
+        403: NinjaErrorResponse[Literal["permission_denied"], Literal[None]],
+    },
+    auth=ninja_jwt_auth,
+)
+def delete_tracks(request: Request, data: DeleteTracksIn):
+    if not request.user.is_staff:
+        raise PermissionDenied("Staff only")
+
+    repo = RecitationTrackRepository()
+    tracks = repo.get_recitation_tracks_by_ids(data.track_ids)
+
+    if not data.track_ids or len(tracks) != len(data.track_ids):
+        raise ItqanError(
+            error_name="track_not_found",
+            message="Some track IDs are invalid or do not exist.",
+            status_code=400,
+        )
+
+    repo.delete_recitation_tracks(tracks)
+    return 204, None

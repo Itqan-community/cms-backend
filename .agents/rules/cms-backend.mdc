@@ -117,6 +117,7 @@ response={
 - Use `pytest` to run test NOT `python manage.py test`
 - If you are testing an API endpoint, do not just test the status code for 4xx responses, you have to asset the `error_name` as well
 - When you try to run the runserver, migrations, or tests, try to use virtual env at .venv first.
+- When you try to makemessages use `uv run python manage.py makemessages --no-location --no-wrap --locale=ar`
 
 ## API Architecture
 
