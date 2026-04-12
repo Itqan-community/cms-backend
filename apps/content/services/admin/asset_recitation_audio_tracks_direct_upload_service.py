@@ -10,7 +10,7 @@ from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from apps.content.models import RecitationSurahTrack
+from apps.content.repositories.recitation_track import RecitationTrackRepository
 from apps.core.ninja_utils.errors import ItqanError
 from apps.mixins.recitations_helpers import (
     extract_surah_number_from_mp3_filename,
@@ -35,22 +35,23 @@ class AssetRecitationAudioTracksDirectUploadService:
         return f"uploads/assets/{asset_id}/recitations/{surah_number:03}.mp3"
 
     def _to_r2_key(self, key: str) -> str:
-        """Prepend the R2 storage prefix to a DB-format key (uploads/...)."""
-        return f"media/{key}"
+        """R2 object keys must be prefixed with "media/" to work with our bucket configuration"""
+        _MEDIA_PREFIX = "media/"
+        return key if key.startswith(_MEDIA_PREFIX) else f"{_MEDIA_PREFIX}{key}"
 
     def start_upload(self, asset_id: int, filename: str) -> dict[str, Any]:
         s3 = self._get_s3_client()
         surah_number = extract_surah_number_from_mp3_filename(filename)
 
         key = self._build_key(asset_id, surah_number)  # DB/storage name (no "media/" prefix)
-        r2_key = self._to_r2_key(key)
+        r2_key = self._to_r2_key(key)  # R2 object key with "media/" prefix
 
-        resp = s3.create_multipart_upload(
+        response = s3.create_multipart_upload(
             Bucket=settings.CLOUDFLARE_R2_BUCKET,
             Key=r2_key,
             ContentType="audio/mpeg",
         )
-        upload_id = resp["UploadId"]
+        upload_id = response["UploadId"]
 
         return {
             "key": key,
@@ -61,7 +62,7 @@ class AssetRecitationAudioTracksDirectUploadService:
             "filename": filename,
         }
 
-    def sign_part(self, key: str, upload_id: str, part_number: int, expires_in: int = 3600) -> str:
+    def sign_part(self, key: str, upload_id: str, part_number: int, expires_in: int = 3600) -> dict[str, Any]:
         s3 = self._get_s3_client()
         r2_key = self._to_r2_key(key)
         url = s3.generate_presigned_url(
@@ -75,7 +76,7 @@ class AssetRecitationAudioTracksDirectUploadService:
             ExpiresIn=expires_in,
             HttpMethod="PUT",
         )
-        return url
+        return {"url": url}
 
     def finish_upload(
         self,
@@ -120,9 +121,10 @@ class AssetRecitationAudioTracksDirectUploadService:
 
         surah_number = extract_surah_number_from_mp3_filename(filename)
 
+        repo = RecitationTrackRepository()
         try:
             with transaction.atomic():
-                track = RecitationSurahTrack.objects.create(
+                track = repo.create_recitation_track(
                     asset_id=asset_id,
                     surah_number=surah_number,
                     audio_file=key,
@@ -152,9 +154,10 @@ class AssetRecitationAudioTracksDirectUploadService:
             "key": key,
         }
 
-    def abort_upload(self, r2_key: str, upload_id: str) -> dict[str, Any]:
+    def abort_upload(self, key: str, upload_id: str) -> dict[str, Any]:
         """Abort a multipart upload in R2."""
         s3 = self._get_s3_client()
+        r2_key = self._to_r2_key(key)
 
         try:
             s3.abort_multipart_upload(
@@ -196,14 +199,14 @@ class AssetRecitationAudioTracksDirectUploadService:
                 initiated_time = timezone.make_aware(initiated) if initiated.tzinfo is None else initiated
 
                 if initiated_time < cutoff_time:
-                    r2_key = upload.get("Key")
+                    key = upload.get("Key")
                     upload_id = upload.get("UploadId")
 
                     try:
-                        self.abort_upload(r2_key=r2_key, upload_id=upload_id)
+                        self.abort_upload(key=key, upload_id=upload_id)
                         aborted_count += 1
                     except Exception as e:
-                        logger.error("Failed to abort stuck upload %s: %s", r2_key, e)
+                        logger.error("Failed to abort stuck upload %s: %s", key, e)
 
         except Exception as e:
             logger.error("Stuck upload cleanup failed: %s", e)

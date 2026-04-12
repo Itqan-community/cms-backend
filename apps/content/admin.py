@@ -485,13 +485,13 @@ class AssetAdmin(admin.ModelAdmin):
         try:
             body = json.loads(request.body or "{}")
             service = AssetRecitationAudioTracksDirectUploadService()
-            url = service.sign_part(
+            result = service.sign_part(
                 key=body["key"],
                 upload_id=body["uploadId"],
                 part_number=int(body["partNumber"]),
                 expires_in=3600,
             )
-            return JsonResponse({"url": url})
+            return JsonResponse({"url": result["url"]})
         except ItqanError as e:
             return JsonResponse(
                 {"error_name": e.error_name, "message": e.message, "extra": e.extra}, status=e.status_code
@@ -551,7 +551,7 @@ class AssetAdmin(admin.ModelAdmin):
         try:
             body = json.loads(request.body or "{}")
             service = AssetRecitationAudioTracksDirectUploadService()
-            result = service.abort_upload(r2_key=f"media/{body["key"]}", upload_id=body["uploadId"])
+            result = service.abort_upload(key=body["key"], upload_id=body["uploadId"])
             return JsonResponse(result)
         except ItqanError as e:
             return JsonResponse(
