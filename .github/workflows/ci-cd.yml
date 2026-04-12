@@ -276,3 +276,42 @@ jobs:
 
             echo "🎉 Deployment to ${{ env.ENV_NAME }} completed successfully!"
             echo "🌐 Application URL: ${{ env.ENV_URL }}"
+
+      - name: Notify Slack
+        if: always()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_DEPLOY_WEBHOOK }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "⚠️ SLACK_DEPLOY_WEBHOOK secret not set, skipping notification"
+            exit 0
+          fi
+
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          if [ -z "$COMMIT_MSG" ]; then
+            COMMIT_MSG=$(git log -1 --pretty=%s)
+          fi
+
+          if [ "${{ job.status }}" = "success" ]; then
+            EMOJI=":white_check_mark:"
+            STATUS="Deployed"
+          else
+            EMOJI=":x:"
+            STATUS="Failed"
+          fi
+
+          ENV_LABEL=$(echo "${{ env.ENV_NAME }}" | tr '[:lower:]' '[:upper:]')
+
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"blocks\": [
+                {
+                  \"type\": \"section\",
+                  \"text\": {
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"${EMOJI} *[${ENV_LABEL}] CMS Backend ${STATUS}*\n\n:link: <${{ env.ENV_URL }}/admin/|View Admin>\n:seedling: Branch: \`${{ env.BRANCH }}\`\n:package: Commit: \`${GITHUB_SHA::7}\`\n:memo: ${COMMIT_MSG}\n:bust_in_silhouette: By: ${{ github.actor }}\"
+                  }
+                }
+              ]
+            }"
