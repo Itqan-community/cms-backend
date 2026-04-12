@@ -198,7 +198,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
         self.authenticate_user(self.staff_user)
 
         with patch(
-            "apps.content.api.portal.recitation_tracks_upload.AssetRecitationAudioTracksDirectUploadService.start_upload",
+            "apps.content.api.portal.recitation_tracks_bulk.AssetRecitationAudioTracksDirectUploadService.start_upload",
             return_value={
                 "key": "uploads/assets/1/recitations/002.mp3",
                 "uploadId": "upload-123",
@@ -233,7 +233,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
         self.authenticate_user(self.staff_user)
 
         with patch(
-            "apps.content.api.portal.recitation_tracks_upload.AssetRecitationAudioTracksDirectUploadService.start_upload",
+            "apps.content.api.portal.recitation_tracks_bulk.AssetRecitationAudioTracksDirectUploadService.start_upload",
             side_effect=ItqanError("duplicate_track", "Track already exists", status_code=409),
         ):
             response = self.client.post(
@@ -249,7 +249,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
         self.authenticate_user(self.staff_user)
 
         with patch(
-            "apps.content.api.portal.recitation_tracks_upload.AssetRecitationAudioTracksDirectUploadService.sign_part",
+            "apps.content.api.portal.recitation_tracks_bulk.AssetRecitationAudioTracksDirectUploadService.sign_part",
             return_value={"url": "https://example.test/presigned"},
         ) as sign_part:
             response = self.client.post(
@@ -270,7 +270,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
         self.authenticate_user(self.staff_user)
 
         with patch(
-            "apps.content.api.portal.recitation_tracks_upload.AssetRecitationAudioTracksDirectUploadService.finish_upload",
+            "apps.content.api.portal.recitation_tracks_bulk.AssetRecitationAudioTracksDirectUploadService.finish_upload",
             return_value={
                 "trackId": 55,
                 "assetId": self.recitation_asset.id,
@@ -313,7 +313,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
         self.authenticate_user(self.staff_user)
 
         with patch(
-            "apps.content.api.portal.recitation_tracks_upload.AssetRecitationAudioTracksDirectUploadService.abort_upload",
+            "apps.content.api.portal.recitation_tracks_bulk.AssetRecitationAudioTracksDirectUploadService.abort_upload",
             return_value={"aborted": True},
         ) as abort_upload:
             response = self.client.post(
