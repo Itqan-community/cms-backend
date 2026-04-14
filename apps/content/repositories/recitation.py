@@ -114,8 +114,8 @@ class RecitationRepository(BaseRecitationRepository):
         reciter_id: int,
         qiraah_id: int,
         riwayah_id: int,
-        madd_level: str,
-        meem_behaviour: str,
+        madd_level: Asset.MaddLevelChoice | None,
+        meem_behaviour: Asset.MeemBehaviourChoice | None,
         year: int,
     ) -> Asset:
         """
