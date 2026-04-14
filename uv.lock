@@ -576,6 +576,18 @@ wheels = [
 ]
 
 [[package]]
+name = "django-extended-makemessages"
+version = "1.8.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6e/57/984f4afdd3843d61bcdc4101deb759d34178ce552588f201c3eea4f68d47/django_extended_makemessages-1.8.0.tar.gz", hash = "sha256:854ccc4ae41869047dfde6fa9b1fb2af7d9a5227f9d501e0844da6842b6bc784", size = 12195, upload-time = "2026-04-03T20:37:13.75Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a1/ff/cfbe6a66c24d9dcbd7ce221ba054aed70ce684c2ff0d0813443c1a57de97/django_extended_makemessages-1.8.0-py3-none-any.whl", hash = "sha256:6e28e384935a3bf0681b41c181233659044615421a9ff3c084631bd590405932", size = 13280, upload-time = "2026-04-03T20:37:12.472Z" },
+]
+
+[[package]]
 name = "django-extensions"
 version = "4.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1015,6 +1027,7 @@ dependencies = [
     { name = "django-celery-beat" },
     { name = "django-cors-headers" },
     { name = "django-countries" },
+    { name = "django-extended-makemessages" },
     { name = "django-filter" },
     { name = "django-modeltranslation" },
     { name = "django-ninja" },
@@ -1081,6 +1094,7 @@ requires-dist = [
     { name = "django-celery-beat", specifier = "==2.9.*" },
     { name = "django-cors-headers", specifier = ">=4.7.0" },
     { name = "django-countries", specifier = ">=7.6" },
+    { name = "django-extended-makemessages", specifier = ">=1.8.0" },
     { name = "django-filter", specifier = "==25.1" },
     { name = "django-modeltranslation", specifier = "==0.19.*" },
     { name = "django-ninja", specifier = "==1.5.1" },

@@ -110,6 +110,11 @@ response={
     }
 ```
 
+## Actions:
+- migrate: uv run manage.py migrate
+- makemigrations: uv run makemigrations
+- makemessages: uv run manage.py extendedmakemessages --no-location --no-wrap --locale=ar --no-fuzzy-matching --keep-header
+
 ## Tests
 - All tests should be written as AAA Arrange, Act, Assert explicitly as comments in test cases
 - All tests should be writen test_<function_name>_where<criteria>_should<expected_results>
@@ -117,10 +122,8 @@ response={
 - Use `pytest` to run test NOT `python manage.py test`
 - If you are testing an API endpoint, do not just test the status code for 4xx responses, you have to asset the `error_name` as well
 - When you try to run the runserver, migrations, or tests, try to use virtual env at .venv first.
-- When you try to makemessages use `uv run python manage.py makemessages --no-location --no-wrap --locale=ar`
 
 ## API Architecture
-
 This project exposes **four distinct APIs**, each serving a different audience. All are built with Django Ninja and share the same error handling structure (`ItqanError` / `NinjaErrorResponse`).
 
 - **cms_api** (Internal API): Mounted at `/cms-api/`. Powers the frontend SPA where platform users ("the developers") can create accounts, explore the platform, and create OAuth applications. Uses JWT/Session authentication via django-allauth.
