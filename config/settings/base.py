@@ -54,6 +54,7 @@ THIRD_PARTY_APPS = [
     "oauth2_provider",
     "django_celery_beat",
     "django_countries",
+    "django_extended_makemessages",
 ]
 
 COUNTRIES_OVERRIDE = {"IL": None}

@@ -38,6 +38,7 @@ dependencies = [
     "mutagen>=1.47.0",
     "scalar-ninja==0.1.2",
     "django-countries>=7.6",
+    "django-extended-makemessages>=1.8.0",
 ]
 
 [dependency-groups]

@@ -88,7 +88,8 @@ jobs:
 
       - name: Check DB Migrations
         run: docker compose -f docker-compose.local.yml run --rm django uv run python manage.py makemigrations --check
-
+      - name: Check Localization
+        run: docker compose -f docker-compose.local.yml run --rm django uv run manage.py extendedmakemessages --no-location --no-wrap --locale=ar --no-fuzzy-matching --keep-header --check
       - name: Run DB Migrations
         run: docker compose -f docker-compose.local.yml run --rm django uv run python manage.py migrate
 
