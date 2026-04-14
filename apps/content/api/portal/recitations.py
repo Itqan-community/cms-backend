@@ -106,7 +106,7 @@ class RecitationCreateIn(Schema):
     qiraah_id: int | None = None
     riwayah_id: int | None = None
     madd_level: Asset.MaddLevelChoice | None = None
-    meem_behaviour: Asset.MeemBehaviourChoice = None
+    meem_behaviour: Asset.MeemBehaviourChoice | None = None
     year: int | None = None
     license: LicenseChoice = Field(...)
 
@@ -121,7 +121,7 @@ class RecitationPutIn(Schema):
     qiraah_id: int | None = None
     riwayah_id: int | None = None
     madd_level: Asset.MaddLevelChoice | None = None
-    meem_behaviour: Asset.MeemBehaviourChoice = None
+    meem_behaviour: Asset.MeemBehaviourChoice | None = None
     year: int | None = None
     license: LicenseChoice = Field(...)
 
