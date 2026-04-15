@@ -25,10 +25,6 @@ app.conf.beat_schedule = {
         "task": "apps.content.tasks.cleanup_stuck_multipart_uploads_task",
         "schedule": crontab(minute=0, hour="*/4"),
     },
-    "compute-publisher-stats": {
-        "task": "apps.publishers.tasks.compute_publisher_stats_task",
-        "schedule": crontab(minute="*/30"),
-    },
 }
 
 
