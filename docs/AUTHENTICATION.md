@@ -11,7 +11,7 @@ Itqan CMS uses **two distinct authentication systems** for different user types:
 | User Type | API | Authentication Method | Use Case |
 |-----------|-----|----------------------|----------|
 | **Internal Frontend Users** | `cms-api` | django-allauth (Headless JWT) | Publishers and staff managing content |
-| **Developers** | `developers-api` | django-oauth-toolkit (OAuth2) | External developers accessing resources programmatically |
+| **Developers** | Public API (`/`) | django-oauth-toolkit (OAuth2) | External developers accessing resources programmatically |
 
 ---
 
@@ -82,7 +82,7 @@ For detailed django-allauth headless documentation, see:
 
 ### Authentication System: django-oauth-toolkit
 
-The `developers-api` is designed for **external developers** who want to integrate Itqan resources into their applications.
+The public API (mounted at `/`) is designed for **external developers** who want to integrate Itqan resources into their applications.
 
 ---
 
@@ -167,7 +167,7 @@ Use the `client_credentials` grant type to obtain an access token.
 ```mermaid
 sequenceDiagram
     participant App as Developer App
-    participant API as developers-api
+    participant API as Public API
     participant OAuth as OAuth2 Provider
 
     App->>API: POST /o/token/<br/>grant_type=client_credentials<br/>client_id={client_id}<br/>client_secret={client_secret}
@@ -214,7 +214,7 @@ Include the access token in the `Authorization` header for all API requests.
 ```mermaid
 sequenceDiagram
     participant App as Developer App
-    participant API as developers-api
+    participant API as Public API
     participant System as Itqan CMS
 
     App->>API: GET /assets<br/>Authorization: Bearer {access_token}
@@ -293,7 +293,7 @@ flowchart LR
     end
 
     subgraph Itqan["Itqan CMS"]
-        DevAPI["developers-api"]
+        DevAPI["Public API (/)"]
     end
 
     Mobile & Web -->|"User requests"| Server
@@ -377,7 +377,7 @@ Currently, all authenticated applications have full read/write access. Future ve
 ```mermaid
 sequenceDiagram
     participant App as Developer App
-    participant API as developers-api
+    participant API as Public API
 
     App->>API: API Request with access_token
     API->>App: 401 Unauthorized (Token expired)
