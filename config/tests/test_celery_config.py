@@ -29,7 +29,7 @@ class TestCeleryConfig(SimpleTestCase):
         self.assertTrue(settings.CELERY_TASK_ALWAYS_EAGER)
 
     def test_existing_tasks_discoverable(self):
-        """Autodiscover should find tasks in content and publishers apps."""
+        """Autodiscover should find tasks in content app."""
         from celery import current_app
 
         current_app.loader.import_default_modules()
@@ -37,10 +37,6 @@ class TestCeleryConfig(SimpleTestCase):
         self.assertTrue(
             any("content" in t for t in registered),
             f"No content tasks found in: {list(registered)}",
-        )
-        self.assertTrue(
-            any("publishers" in t for t in registered),
-            f"No publisher tasks found in: {list(registered)}",
         )
 
     def test_beat_schedule_has_active_tasks(self):

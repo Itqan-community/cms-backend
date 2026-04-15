@@ -222,7 +222,7 @@ sequenceDiagram
 
 ## Developer API Access
 
-Developers can create **OAuth2 applications** via the CMS frontend to access the `developers-api` programmatically.
+Developers can create **OAuth2 applications** via the CMS frontend to access the public API programmatically.
 
 **Key Points:**
 - Register account via CMS frontend
