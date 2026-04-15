@@ -22,9 +22,6 @@ msgstr ""
 msgid "You do not have access to this asset"
 msgstr "ليس لديك صلاحية الوصول إلى هذا المورد"
 
-msgid "Resource deleted successfully."
-msgstr "تم حذف المورد بنجاح."
-
 msgid "Creative Commons Zero"
 msgstr "المشاع الإبداعي - بدون حقوق (CC0)"
 
