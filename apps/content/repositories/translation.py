@@ -233,6 +233,14 @@ class TranslationRepository:
                 semvar=new_semvar,
             )
 
+            # Compute file metadata from the uploaded file object
+            size_bytes = 0
+            if file:
+                try:
+                    size_bytes = file.size
+                except Exception:
+                    pass
+
             # Create the AssetVersion
             asset_version = self.asset_version_model.objects.create(
                 asset=asset,
@@ -240,10 +248,12 @@ class TranslationRepository:
                 name=name,
                 summary=summary,
                 file_url=file,
+                size_bytes=size_bytes,
             )
 
-            # File size is auto-calculated in AssetVersion.save() if not provided
-            # but we can force it if needed. The model handle it.
+            # Sync metadata back to Asset
+            asset.file_size = asset_version.human_readable_size
+            asset.save()
 
         return asset_version
 
@@ -259,6 +269,18 @@ class TranslationRepository:
             for field, value in fields.items():
                 setattr(version, field, value)
 
+            # Compute file metadata when the file is being replaced
+            if "file_url" in fields and fields["file_url"]:
+                file = fields["file_url"]
+                try:
+                    version.size_bytes = file.size
+                except Exception:
+                    pass
+                try:
+                    version.format = file.name.rsplit(".", 1)[-1].lower()
+                except Exception:
+                    pass
+
             # If name or summary changed, we might want to sync back to resource_version
             if "name" in fields:
                 version.resource_version.name = fields["name"]
@@ -267,6 +289,12 @@ class TranslationRepository:
 
             version.save()
             version.resource_version.save()
+
+            # Sync metadata back to Asset if file was updated
+            if "file_url" in fields:
+                version.asset.file_size = version.human_readable_size
+                version.asset.format = version.format
+                version.asset.save()
 
         return version
 
