@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 from django.db.models import ProtectedError, QuerySet
 from django.utils.translation import gettext as _
 
-from apps.content.models import LicenseChoice
+from apps.content.models import AssetVersion, LicenseChoice
 from apps.content.repositories.translation import TranslationRepository
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
@@ -163,3 +163,65 @@ class TranslationService:
                 message=str(_("Cannot delete Translation because they are referenced through other objects")),
                 status_code=400,
             ) from exc
+
+    def get_translation_versions(self, translation_slug: str) -> QuerySet[AssetVersion]:
+        """
+        Business Logic: Retrieve all versions of a translation.
+        """
+        asset = self.get_translation(translation_slug)
+        return self.repo.list_translation_versions(asset)
+
+    def get_translation_version(self, translation_slug: str, version_id: int) -> AssetVersion:
+        """
+        Business Logic: Retrieve a single translation version.
+        Raises ItqanError if version not found.
+        """
+        asset = self.get_translation(translation_slug)
+        version = self.repo.get_translation_version(asset, version_id)
+        if version is None:
+            raise ItqanError(
+                error_name="version_not_found",
+                message=_("Version with id {id} not found for translation {slug}.").format(
+                    id=version_id, slug=translation_slug
+                ),
+                status_code=404,
+            )
+        return version
+
+    def create_translation_version(
+        self,
+        translation_slug: str,
+        *,
+        name: str,
+        summary: str = "",
+        file: Any = None,
+    ) -> AssetVersion:
+        """
+        Business Logic: Create a new version for a translation.
+        """
+        asset = self.get_translation(translation_slug)
+        return self.repo.create_translation_version(
+            asset,
+            name=name,
+            summary=summary,
+            file=file,
+        )
+
+    def update_translation_version(
+        self,
+        translation_slug: str,
+        version_id: int,
+        fields: dict[str, Any],
+    ) -> AssetVersion:
+        """
+        Business Logic: Update an existing translation version.
+        """
+        version = self.get_translation_version(translation_slug, version_id)
+        return self.repo.update_translation_version(version, fields=fields)
+
+    def delete_translation_version(self, translation_slug: str, version_id: int) -> None:
+        """
+        Business Logic: Delete a translation version.
+        """
+        version = self.get_translation_version(translation_slug, version_id)
+        self.repo.delete_translation_version(version)

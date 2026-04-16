@@ -7,7 +7,6 @@ from pydantic import AwareDatetime
 
 from apps.content.models import Reciter
 from apps.content.services.reciter import ReciterService
-from apps.core.ninja_utils.auth import ninja_jwt_auth
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
@@ -143,7 +142,6 @@ def get_reciter(request: Request, reciter_slug: str):
         400: NinjaErrorResponse[Literal["reciter_name_required"], Literal[None]],
         409: NinjaErrorResponse[Literal["reciter_already_exists"], Literal[None]],
     },
-    auth=ninja_jwt_auth,
 )
 def create_reciter(
     request: Request,
@@ -173,7 +171,6 @@ def create_reciter(
         404: NinjaErrorResponse[Literal["reciter_not_found"], Literal[None]],
         409: NinjaErrorResponse[Literal["reciter_already_exists"], Literal[None]],
     },
-    auth=ninja_jwt_auth,
 )
 def patch_reciter(
     request: Request,
@@ -194,7 +191,6 @@ def patch_reciter(
         204: None,
         404: NinjaErrorResponse[Literal["reciter_not_found"], Literal[None]],
     },
-    auth=ninja_jwt_auth,
 )
 def delete_reciter(request: Request, reciter_slug: str):
     service = ReciterService()

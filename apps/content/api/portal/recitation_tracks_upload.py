@@ -3,7 +3,6 @@ from typing import Literal
 
 from ninja import Schema
 from pydantic import Field
-from rest_framework.exceptions import PermissionDenied
 from rest_framework.generics import get_object_or_404
 
 from apps.content.models import Asset
@@ -13,7 +12,6 @@ from apps.content.services.admin.asset_recitation_audio_tracks_direct_upload_ser
 from apps.content.services.validate_recitation_tracks_upload_service import (
     ValidateRecitationTracksUploadService,
 )
-from apps.core.ninja_utils.auth import ninja_jwt_auth
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -43,19 +41,13 @@ class ValidateUploadOut(Schema):
     "recitation-tracks/validate-upload/",
     response={
         200: ValidateUploadOut,
-        400: NinjaErrorResponse[
-            Literal["validation_error"],
-            Literal[None],
-        ],
+        400: NinjaErrorResponse[Literal["validation_error"], Literal[None]],
         401: NinjaErrorResponse[Literal["authentication_error"], Literal[None]],
         403: NinjaErrorResponse[Literal["permission_denied"], Literal[None]],
         404: NinjaErrorResponse[Literal["asset_not_found"], Literal[None]],
     },
-    auth=ninja_jwt_auth,
 )
 def validate_upload(request: Request, data: ValidateUploadIn):
-    if not request.user.is_staff:
-        raise PermissionDenied("Staff only")
 
     asset = get_object_or_404(Asset, id=data.asset_id)
 
@@ -97,11 +89,8 @@ class UploadStartOut(Schema):
         404: NinjaErrorResponse[Literal["asset_not_found"], Literal[None]],
         409: NinjaErrorResponse[Literal["duplicate_track"], Literal[None]],
     },
-    auth=ninja_jwt_auth,
 )
 def start_upload(request: Request, data: UploadStartIn):
-    if not request.user.is_staff:
-        raise PermissionDenied("Staff only")
 
     asset = get_object_or_404(Asset, id=data.asset_id)
 
@@ -133,11 +122,8 @@ class UploadSignPartOut(Schema):
         401: NinjaErrorResponse[Literal["authentication_error"], Literal[None]],
         403: NinjaErrorResponse[Literal["permission_denied"], Literal[None]],
     },
-    auth=ninja_jwt_auth,
 )
 def sign_part(request: Request, data: UploadSignPartIn):
-    if not request.user.is_staff:
-        raise PermissionDenied("Staff only")
 
     service = AssetRecitationAudioTracksDirectUploadService()
     result = service.sign_part(key=data.key, upload_id=data.upload_id, part_number=data.part_number)
@@ -182,11 +168,8 @@ class UploadFinishOut(Schema):
         404: NinjaErrorResponse[Literal["asset_not_found"], Literal[None]],
         409: NinjaErrorResponse[Literal["duplicate_track"], Literal[None]],
     },
-    auth=ninja_jwt_auth,
 )
 def finish_upload(request: Request, data: UploadFinishIn):
-    if not request.user.is_staff:
-        raise PermissionDenied("Staff only")
 
     asset = get_object_or_404(Asset, id=data.asset_id)
 
@@ -229,11 +212,8 @@ class UploadAbortOut(Schema):
         401: NinjaErrorResponse[Literal["authentication_error"], Literal[None]],
         403: NinjaErrorResponse[Literal["permission_denied"], Literal[None]],
     },
-    auth=ninja_jwt_auth,
 )
 def abort_upload(request: Request, data: UploadAbortIn):
-    if not request.user.is_staff:
-        raise PermissionDenied("Staff only")
 
     service = AssetRecitationAudioTracksDirectUploadService()
     result = service.abort_upload(key=data.key, upload_id=data.upload_id)

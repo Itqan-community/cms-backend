@@ -6,7 +6,6 @@ from pydantic import AwareDatetime, Field
 
 from apps.content.models import Asset, LicenseChoice
 from apps.content.services.translation import TranslationService
-from apps.core.ninja_utils.auth import ninja_jwt_auth
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
@@ -172,7 +171,6 @@ def list_translations(request: Request, filters: TranslationFilter = Query()):
         ],
         404: NinjaErrorResponse[Literal["publisher_not_found"], Literal[None]],
     },
-    auth=ninja_jwt_auth,
 )
 def create_translation(
     request: Request,
@@ -214,7 +212,6 @@ def retrieve_translation(request: Request, translation_slug: str) -> Asset:
         400: NinjaErrorResponse[Literal["translation_name_required", "external_url_required"], Literal[None]],
         404: NinjaErrorResponse[Literal["translation_not_found"], Literal[None]],
     },
-    auth=ninja_jwt_auth,
 )
 def update_translation_put(
     request: Request,
@@ -234,7 +231,6 @@ def update_translation_put(
         400: NinjaErrorResponse[Literal["translation_name_required", "external_url_required"], Literal[None]],
         404: NinjaErrorResponse[Literal["translation_not_found"], Literal[None]],
     },
-    auth=ninja_jwt_auth,
 )
 def update_translation_patch(
     request: Request,
@@ -253,7 +249,6 @@ def update_translation_patch(
         204: None,
         404: NinjaErrorResponse[Literal["translation_not_found"], Literal[None]],
     },
-    auth=ninja_jwt_auth,
 )
 def delete_translation(request: Request, translation_slug: str) -> tuple[int, None]:
     service = TranslationService()

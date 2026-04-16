@@ -2,12 +2,10 @@ from typing import Literal
 
 from ninja import Schema
 from ninja.pagination import paginate
-from rest_framework.exceptions import PermissionDenied
 from rest_framework.generics import get_object_or_404
 
-from apps.content.models import Asset, RecitationSurahTrack
+from apps.content.models import Asset, RecitationSurahTrack, Resource
 from apps.content.repositories.recitation_track import RecitationTrackRepository
-from apps.core.ninja_utils.auth import ninja_jwt_auth
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -36,22 +34,17 @@ class RecitationTrackOut(Schema):
 
 
 @router.get(
-    "assets/{asset_id}/recitation-tracks/",
+    "recitations/{recitation_slug}/recitation-tracks/",
     response={
         200: list[RecitationTrackOut],
         401: NinjaErrorResponse[Literal["authentication_error"], Literal[None]],
         403: NinjaErrorResponse[Literal["permission_denied"], Literal[None]],
         404: NinjaErrorResponse[Literal["asset_not_found"], Literal[None]],
     },
-    auth=ninja_jwt_auth,
 )
 @paginate
-def list_tracks(request: Request, asset_id: int):
-    if not request.user.is_staff:
-        raise PermissionDenied("Staff only")
-
-    asset = get_object_or_404(Asset, id=asset_id)
-
+def list_tracks(request: Request, recitation_slug: str):
+    asset = get_object_or_404(Asset, category=Resource.CategoryChoice.RECITATION, slug=recitation_slug)
     repo = RecitationTrackRepository()
     return repo.get_recitation_tracks_by_asset_id(asset_id=asset.id)
 
@@ -67,12 +60,8 @@ class DeleteTracksIn(Schema):
         401: NinjaErrorResponse[Literal["authentication_error"], Literal[None]],
         403: NinjaErrorResponse[Literal["permission_denied"], Literal[None]],
     },
-    auth=ninja_jwt_auth,
 )
 def delete_tracks(request: Request, data: DeleteTracksIn):
-    if not request.user.is_staff:
-        raise PermissionDenied("Staff only")
-
     repo = RecitationTrackRepository()
     tracks = repo.get_recitation_tracks_by_ids(data.track_ids)
 
