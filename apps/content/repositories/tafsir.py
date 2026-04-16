@@ -231,6 +231,14 @@ class TafsirRepository:
                 semvar=new_semvar,
             )
 
+            # Compute file metadata from the uploaded file object
+            size_bytes = 0
+            if file:
+                try:
+                    size_bytes = file.size
+                except Exception:
+                    pass
+
             # Create the AssetVersion
             asset_version = self.asset_version_model.objects.create(
                 asset=asset,
@@ -238,10 +246,8 @@ class TafsirRepository:
                 name=name,
                 summary=summary,
                 file_url=file,
+                size_bytes=size_bytes,
             )
-
-            # File size is auto-calculated in AssetVersion.save() if not provided
-            # but we can force it if needed. The model handle it.
 
         return asset_version
 
@@ -257,7 +263,15 @@ class TafsirRepository:
             for field, value in fields.items():
                 setattr(version, field, value)
 
-            # If name or summary changed, we might want to sync back to resource_version
+            # Compute file metadata when the file is being replaced
+            if "file_url" in fields and fields["file_url"]:
+                file = fields["file_url"]
+                try:
+                    version.size_bytes = file.size
+                except Exception:
+                    pass
+
+            # If name or summary changed, sync back to resource_version
             if "name" in fields:
                 version.resource_version.name = fields["name"]
             if "summary" in fields:

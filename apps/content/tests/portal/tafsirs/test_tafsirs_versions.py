@@ -79,11 +79,13 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         self.assertEqual("New Version", body["name"])
         self.assertEqual("This is a new version", body["summary"])
         self.assertIsNotNone(body["file_url"])
+        self.assertEqual(len(b"content"), body["size_bytes"])
 
         # Verify DB
         version = AssetVersion.objects.get(id=body["id"])
         self.assertEqual(self.tafsir, version.asset)
         self.assertEqual("1.0.0", version.resource_version.semvar)
+        self.assertEqual(len(b"content"), version.size_bytes)
 
     def test_create_version_where_asset_id_mismatch_should_return_400(self):
         # Arrange

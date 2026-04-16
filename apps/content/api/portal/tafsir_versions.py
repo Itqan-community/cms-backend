@@ -9,6 +9,7 @@ from apps.content.services.tafsir import TafsirService
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
+from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
 
 router = ItqanRouter(tags=[NinjaTag.TAFSIRS])
@@ -56,6 +57,7 @@ class TafsirVersionPatchIn(Schema):
     },
 )
 @paginate
+@searching(search_fields=["name", "summary"])
 def list_tafsir_versions(request: Request, tafsir_slug: str):
     service = TafsirService()
     return service.get_tafsir_versions(tafsir_slug)
