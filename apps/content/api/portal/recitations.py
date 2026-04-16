@@ -6,7 +6,6 @@ from pydantic import AwareDatetime
 
 from apps.content.models import Asset, LicenseChoice
 from apps.content.services.recitation import RecitationService
-from apps.core.ninja_utils.auth import ninja_jwt_auth
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
@@ -211,7 +210,6 @@ def list_recitations(request: Request, filters: RecitationFilter = Query()):
             Literal[None],
         ],
     },
-    auth=ninja_jwt_auth,
 )
 def create_recitation(
     request: Request,
@@ -266,7 +264,6 @@ def retrieve_recitation(request: Request, recitation_slug: str) -> Asset:
             Literal[None],
         ],
     },
-    auth=ninja_jwt_auth,
 )
 def update_recitation_put(
     request: Request,
@@ -298,7 +295,6 @@ def update_recitation_put(
             Literal[None],
         ],
     },
-    auth=ninja_jwt_auth,
 )
 def update_recitation_patch(
     request: Request,
@@ -317,7 +313,6 @@ def update_recitation_patch(
         204: None,
         404: NinjaErrorResponse[Literal["recitation_not_found"], Literal[None]],
     },
-    auth=ninja_jwt_auth,
 )
 def delete_recitation(request: Request, recitation_slug: str) -> tuple[int, None]:
     service = RecitationService()

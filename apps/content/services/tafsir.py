@@ -12,7 +12,7 @@ from apps.publishers.models import Publisher
 
 if TYPE_CHECKING:
 
-    from apps.content.models import Asset
+    from apps.content.models import Asset, AssetVersion
 
 
 class TafsirService:
@@ -165,3 +165,63 @@ class TafsirService:
                 message=str(_("Cannot delete Tafsir because they are referenced through other objects")),
                 status_code=400,
             ) from exc
+
+    def get_tafsir_versions(self, tafsir_slug: str) -> QuerySet[AssetVersion]:
+        """
+        Business Logic: Retrieve all versions of a tafsir.
+        """
+        asset = self.get_tafsir(tafsir_slug)
+        return self.repo.list_tafsir_versions(asset)
+
+    def get_tafsir_version(self, tafsir_slug: str, version_id: int) -> AssetVersion:
+        """
+        Business Logic: Retrieve a single tafsir version.
+        Raises ItqanError if version not found.
+        """
+        asset = self.get_tafsir(tafsir_slug)
+        version = self.repo.get_tafsir_version(asset, version_id)
+        if version is None:
+            raise ItqanError(
+                error_name="version_not_found",
+                message=_("Version with id {id} not found for tafsir {slug}.").format(id=version_id, slug=tafsir_slug),
+                status_code=404,
+            )
+        return version
+
+    def create_tafsir_version(
+        self,
+        tafsir_slug: str,
+        *,
+        name: str,
+        summary: str = "",
+        file: Any = None,
+    ) -> AssetVersion:
+        """
+        Business Logic: Create a new version for a tafsir.
+        """
+        asset = self.get_tafsir(tafsir_slug)
+        return self.repo.create_tafsir_version(
+            asset,
+            name=name,
+            summary=summary,
+            file=file,
+        )
+
+    def update_tafsir_version(
+        self,
+        tafsir_slug: str,
+        version_id: int,
+        fields: dict[str, Any],
+    ) -> AssetVersion:
+        """
+        Business Logic: Update an existing tafsir version.
+        """
+        version = self.get_tafsir_version(tafsir_slug, version_id)
+        return self.repo.update_tafsir_version(version, fields=fields)
+
+    def delete_tafsir_version(self, tafsir_slug: str, version_id: int) -> None:
+        """
+        Business Logic: Delete a tafsir version.
+        """
+        version = self.get_tafsir_version(tafsir_slug, version_id)
+        self.repo.delete_tafsir_version(version)
