@@ -9,11 +9,9 @@ import logging
 from typing import TYPE_CHECKING, TypedDict
 
 from celery import shared_task
-from django.conf import settings
-from django.core.mail import send_mass_mail
 from django.db import transaction
-from django.template.loader import render_to_string
-from django.utils.html import strip_tags
+
+from apps.core.services.email import email_service
 
 if TYPE_CHECKING:
     from apps.content.models import UsageEvent
@@ -195,22 +193,12 @@ def send_resource_update_email(resource_version_id: int) -> None:
         "summary": resource_version.summary,
     }
 
-    html_message = render_to_string("emails/resource_update.html", context)
-    plain_message = strip_tags(html_message)
-
-    messages = [
-        (
-            subject,
-            plain_message,
-            settings.DEFAULT_FROM_EMAIL,
-            [email],
-        )
-        for email in users
-        if email
-    ]
-
-    if messages:
-        send_mass_mail(messages, fail_silently=True)
+    email_service.send_email(
+        subject=subject,
+        recipients=list(users),
+        template="emails/resource_update.html",
+        context=context,
+    )
 
 
 @shared_task
@@ -243,19 +231,9 @@ def send_asset_update_email(asset_version_id: int) -> None:
         "summary": asset_version.summary,
     }
 
-    html_message = render_to_string("emails/asset_update.html", context)
-    plain_message = strip_tags(html_message)
-
-    messages = [
-        (
-            subject,
-            plain_message,
-            settings.DEFAULT_FROM_EMAIL,
-            [email],
-        )
-        for email in users
-        if email
-    ]
-
-    if messages:
-        send_mass_mail(messages, fail_silently=True)
+    email_service.send_email(
+        subject=subject,
+        recipients=list(users),
+        template="emails/asset_update.html",
+        context=context,
+    )
