@@ -41,7 +41,6 @@ THIRD_PARTY_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     "django_filters",
-    "drf_spectacular",
     "allauth",
     "allauth.account",
     "allauth.headless",
@@ -55,6 +54,7 @@ THIRD_PARTY_APPS = [
     "django_celery_beat",
     "django_countries",
     "django_extended_makemessages",
+    "django_watchfiles",
 ]
 
 COUNTRIES_OVERRIDE = {"IL": None}
@@ -224,7 +224,6 @@ REST_FRAMEWORK = {
         "rest_framework.filters.SearchFilter",
         "rest_framework.filters.OrderingFilter",
     ],
-    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.URLPathVersioning",
     "DEFAULT_VERSION": "v1",
     "ALLOWED_VERSIONS": ["v1"],
