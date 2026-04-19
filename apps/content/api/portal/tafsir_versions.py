@@ -53,7 +53,7 @@ class TafsirVersionPatchIn(Schema):
     "tafsirs/{tafsir_slug}/versions/",
     response={
         200: list[TafsirVersionListOut],
-        404: NinjaErrorResponse[Literal["tafsir_not_found"], Literal[None]],
+        404: NinjaErrorResponse[Literal["tafsir_not_found"]],
     },
 )
 @paginate
@@ -67,8 +67,8 @@ def list_tafsir_versions(request: Request, tafsir_slug: str):
     "tafsirs/{tafsir_slug}/versions/",
     response={
         201: TafsirVersionListOut,
-        400: NinjaErrorResponse[Literal["asset_id_mismatch"], Literal[None]],
-        404: NinjaErrorResponse[Literal["tafsir_not_found"], Literal[None]],
+        400: NinjaErrorResponse[Literal["asset_id_mismatch"]],
+        404: NinjaErrorResponse[Literal["tafsir_not_found"]],
     },
 )
 def create_tafsir_version(
@@ -99,8 +99,8 @@ def create_tafsir_version(
     "tafsirs/{tafsir_slug}/versions/{version_id}/",
     response={
         200: TafsirVersionListOut,
-        400: NinjaErrorResponse[Literal["asset_id_mismatch"], Literal[None]],
-        404: NinjaErrorResponse[Literal["tafsir_not_found", "version_not_found"], Literal[None]],
+        400: NinjaErrorResponse[Literal["asset_id_mismatch"]],
+        404: NinjaErrorResponse[Literal["tafsir_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
 )
 def update_tafsir_version_put(
@@ -131,8 +131,8 @@ def update_tafsir_version_put(
     "tafsirs/{tafsir_slug}/versions/{version_id}/",
     response={
         200: TafsirVersionListOut,
-        400: NinjaErrorResponse[Literal["asset_id_mismatch"], Literal[None]],
-        404: NinjaErrorResponse[Literal["tafsir_not_found", "version_not_found"], Literal[None]],
+        400: NinjaErrorResponse[Literal["asset_id_mismatch"]],
+        404: NinjaErrorResponse[Literal["tafsir_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
 )
 def update_tafsir_version_patch(
@@ -163,7 +163,7 @@ def update_tafsir_version_patch(
     "tafsirs/{tafsir_slug}/versions/{version_id}/",
     response={
         204: None,
-        404: NinjaErrorResponse[Literal["tafsir_not_found", "version_not_found"], Literal[None]],
+        404: NinjaErrorResponse[Literal["tafsir_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
 )
 def delete_tafsir_version(request: Request, tafsir_slug: str, version_id: int) -> tuple[int, None]:

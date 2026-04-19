@@ -53,7 +53,7 @@ class TranslationVersionPatchIn(Schema):
     "translations/{translation_slug}/versions/",
     response={
         200: list[TranslationVersionListOut],
-        404: NinjaErrorResponse[Literal["translation_not_found"], Literal[None]],
+        404: NinjaErrorResponse[Literal["translation_not_found"]],
     },
 )
 @paginate
@@ -67,8 +67,8 @@ def list_translation_versions(request: Request, translation_slug: str):
     "translations/{translation_slug}/versions/",
     response={
         201: TranslationVersionListOut,
-        400: NinjaErrorResponse[Literal["asset_id_mismatch"], Literal[None]],
-        404: NinjaErrorResponse[Literal["translation_not_found"], Literal[None]],
+        400: NinjaErrorResponse[Literal["asset_id_mismatch"]],
+        404: NinjaErrorResponse[Literal["translation_not_found"]],
     },
 )
 def create_translation_version(
@@ -99,8 +99,8 @@ def create_translation_version(
     "translations/{translation_slug}/versions/{version_id}/",
     response={
         200: TranslationVersionListOut,
-        400: NinjaErrorResponse[Literal["asset_id_mismatch"], Literal[None]],
-        404: NinjaErrorResponse[Literal["translation_not_found", "version_not_found"], Literal[None]],
+        400: NinjaErrorResponse[Literal["asset_id_mismatch"]],
+        404: NinjaErrorResponse[Literal["translation_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
 )
 def update_translation_version_put(
@@ -131,8 +131,8 @@ def update_translation_version_put(
     "translations/{translation_slug}/versions/{version_id}/",
     response={
         200: TranslationVersionListOut,
-        400: NinjaErrorResponse[Literal["asset_id_mismatch"], Literal[None]],
-        404: NinjaErrorResponse[Literal["translation_not_found", "version_not_found"], Literal[None]],
+        400: NinjaErrorResponse[Literal["asset_id_mismatch"]],
+        404: NinjaErrorResponse[Literal["translation_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
 )
 def update_translation_version_patch(
@@ -163,7 +163,7 @@ def update_translation_version_patch(
     "translations/{translation_slug}/versions/{version_id}/",
     response={
         204: None,
-        404: NinjaErrorResponse[Literal["translation_not_found", "version_not_found"], Literal[None]],
+        404: NinjaErrorResponse[Literal["translation_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
 )
 def delete_translation_version(request: Request, translation_slug: str, version_id: int) -> tuple[int, None]:

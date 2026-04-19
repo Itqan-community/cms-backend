@@ -104,9 +104,9 @@ Use exactly this shape when converting inputs:
 ```python
 response={
         200: OkSchema,
-        400: NinjaErrorResponse[Literal["activation_request_failed"], Literal[None]],
-        404: NinjaErrorResponse[Literal["user_not_found"], Literal[None]]
-        | NinjaErrorResponse[Literal["admin_not_found"], Literal[None]],
+        400: NinjaErrorResponse[Literal["activation_request_failed"]],
+        404: NinjaErrorResponse[Literal["user_not_found"]]
+        | NinjaErrorResponse[Literal["admin_not_found"]],
     }
 ```
 

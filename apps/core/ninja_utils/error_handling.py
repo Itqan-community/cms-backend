@@ -5,6 +5,7 @@ This module provides a registrar to attach handlers to any NinjaAPI instance.
 
 from json import JSONDecodeError
 import logging
+from typing import Any
 
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -25,7 +26,7 @@ def register_exception_handlers(api: NinjaAPI) -> None:
     def handle_permission_denied(request, exc: PermissionDenied):
         return api.create_response(
             request,
-            NinjaErrorResponse(error_name="permission_denied", message=exc.detail),
+            NinjaErrorResponse[str, Any](error_name="permission_denied", message=exc.detail),
             status=403,
         )
 
@@ -33,7 +34,7 @@ def register_exception_handlers(api: NinjaAPI) -> None:
     def handle_itqan_error(request, exc: ItqanError):
         return api.create_response(
             request,
-            NinjaErrorResponse(error_name=exc.error_name, message=exc.message, extra=exc.extra),
+            NinjaErrorResponse[str, Any](error_name=exc.error_name, message=exc.message, extra=exc.extra),
             status=exc.status_code,
         )
 
@@ -41,7 +42,7 @@ def register_exception_handlers(api: NinjaAPI) -> None:
     def handle_ninja_validation_error(request, exc: NinjaValidationError):
         return api.create_response(
             request,
-            NinjaErrorResponse(error_name="validation_error", message=_("Invalid Input"), extra=exc.errors),
+            NinjaErrorResponse[str, Any](error_name="validation_error", message=_("Invalid Input"), extra=exc.errors),
             status=400,
         )
 
@@ -50,7 +51,7 @@ def register_exception_handlers(api: NinjaAPI) -> None:
         error: dict[str, list] = as_serializer_error(exc)
         return api.create_response(
             request,
-            NinjaErrorResponse(
+            NinjaErrorResponse[str, Any](
                 error_name="validation_error",
                 message=_("Invalid Input"),
                 extra=error["non_field_errors"],
@@ -62,7 +63,7 @@ def register_exception_handlers(api: NinjaAPI) -> None:
     def handle_django_404(request, exc: Http404):
         return api.create_response(
             request,
-            NinjaErrorResponse(error_name="not_found", message=exc.args[0]),
+            NinjaErrorResponse[str, Any](error_name="not_found", message=exc.args[0]),
             status=404,
         )
 
@@ -70,7 +71,7 @@ def register_exception_handlers(api: NinjaAPI) -> None:
     def handle_ninja_authentication_error(request, exc: AuthenticationError):
         return api.create_response(
             request,
-            NinjaErrorResponse(
+            NinjaErrorResponse[str, Any](
                 error_name="authentication_error",
                 message=exc.message or _("Authentication Error"),
             ),
@@ -81,7 +82,7 @@ def register_exception_handlers(api: NinjaAPI) -> None:
     def handle_token_invalid_error(request, exc: InvalidToken):
         return api.create_response(
             request,
-            NinjaErrorResponse(error_name="token_not_valid", message=force_str(exc.default_detail)),
+            NinjaErrorResponse[str, Any](error_name="token_not_valid", message=force_str(exc.default_detail)),
             status=401,
         )
 
@@ -89,7 +90,7 @@ def register_exception_handlers(api: NinjaAPI) -> None:
     def handle_authentication_failed(request, exc: AuthenticationFailed):
         return api.create_response(
             request,
-            NinjaErrorResponse(error_name="token_not_valid", message=force_str(exc.default_detail)),
+            NinjaErrorResponse[str, Any](error_name="token_not_valid", message=force_str(exc.default_detail)),
             status=401,
         )
 
@@ -105,13 +106,13 @@ def register_exception_handlers(api: NinjaAPI) -> None:
         if isinstance(cause, JSONDecodeError):
             return api.create_response(
                 request,
-                NinjaErrorResponse(error_name="invalid_json", message=str(exc)),
+                NinjaErrorResponse[str, Any](error_name="invalid_json", message=str(exc)),
                 status=400,
             )
         else:
             return api.create_response(
                 request,
-                NinjaErrorResponse(error_name="http_error", message=exc.message),
+                NinjaErrorResponse[str, Any](error_name="http_error", message=exc.message),
                 status=exc.status_code,
             )
 
@@ -125,7 +126,7 @@ def register_exception_handlers(api: NinjaAPI) -> None:
         # in production
         return api.create_response(
             request,
-            NinjaErrorResponse(
+            NinjaErrorResponse[str, Any](
                 error_name="internal_error",
                 message=_("Something went wrong - Internal Server Error"),
             ),

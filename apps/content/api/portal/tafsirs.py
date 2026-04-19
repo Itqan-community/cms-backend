@@ -168,9 +168,8 @@ def list_tafsirs(request: Request, filters: TafsirFilter = Query()):
     "tafsirs/",
     response={
         201: TafsirDetailOut,
-        400: NinjaErrorResponse[Literal["tafsir_name_required", "external_url_required"], Literal[None]],
-        404: NinjaErrorResponse[Literal["publisher_not_found"], Literal[None]]
-        | NinjaErrorResponse[Literal["tafsir_not_found"], Literal[None]],
+        400: NinjaErrorResponse[Literal["tafsir_name_required"]] | NinjaErrorResponse[Literal["external_url_required"]],
+        404: NinjaErrorResponse[Literal["publisher_not_found"]] | NinjaErrorResponse[Literal["tafsir_not_found"]],
     },
 )
 def create_tafsir(
@@ -200,7 +199,7 @@ def create_tafsir(
     "tafsirs/{tafsir_slug}/",
     response={
         200: TafsirDetailOut,
-        404: NinjaErrorResponse[Literal["tafsir_not_found"], Literal[None]],
+        404: NinjaErrorResponse[Literal["tafsir_not_found"]],
     },
 )
 def retrieve_tafsir(request: Request, tafsir_slug: str) -> Asset:
@@ -212,8 +211,8 @@ def retrieve_tafsir(request: Request, tafsir_slug: str) -> Asset:
     "tafsirs/{tafsir_slug}/",
     response={
         200: TafsirDetailOut,
-        400: NinjaErrorResponse[Literal["tafsir_name_required", "external_url_required"], Literal[None]],
-        404: NinjaErrorResponse[Literal["tafsir_not_found"], Literal[None]],
+        400: NinjaErrorResponse[Literal["tafsir_name_required"]] | NinjaErrorResponse[Literal["external_url_required"]],
+        404: NinjaErrorResponse[Literal["tafsir_not_found"]],
     },
 )
 def update_tafsir_put(
@@ -234,8 +233,8 @@ def update_tafsir_put(
     "tafsirs/{tafsir_slug}/",
     response={
         200: TafsirDetailOut,
-        400: NinjaErrorResponse[Literal["tafsir_name_required", "external_url_required"], Literal[None]],
-        404: NinjaErrorResponse[Literal["tafsir_not_found"], Literal[None]],
+        400: NinjaErrorResponse[Literal["tafsir_name_required"]] | NinjaErrorResponse[Literal["external_url_required"]],
+        404: NinjaErrorResponse[Literal["tafsir_not_found"]],
     },
 )
 def update_tafsir_patch(
@@ -256,7 +255,7 @@ def update_tafsir_patch(
     "tafsirs/{tafsir_slug}/",
     response={
         204: None,
-        404: NinjaErrorResponse[Literal["tafsir_not_found"], Literal[None]],
+        404: NinjaErrorResponse[Literal["tafsir_not_found"]],
     },
 )
 def delete_tafsir(request: Request, tafsir_slug: str) -> tuple[int, None]:

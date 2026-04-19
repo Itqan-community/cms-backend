@@ -41,10 +41,10 @@ class ValidateUploadOut(Schema):
     "recitation-tracks/validate-upload/",
     response={
         200: ValidateUploadOut,
-        400: NinjaErrorResponse[Literal["validation_error"], Literal[None]],
-        401: NinjaErrorResponse[Literal["authentication_error"], Literal[None]],
-        403: NinjaErrorResponse[Literal["permission_denied"], Literal[None]],
-        404: NinjaErrorResponse[Literal["asset_not_found"], Literal[None]],
+        400: NinjaErrorResponse[Literal["validation_error"]],
+        401: NinjaErrorResponse[Literal["authentication_error"]],
+        403: NinjaErrorResponse[Literal["permission_denied"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]],
     },
 )
 def validate_upload(request: Request, data: ValidateUploadIn):
@@ -80,14 +80,13 @@ class UploadStartOut(Schema):
     "recitation-tracks/uploads/start/",
     response={
         200: UploadStartOut,
-        400: NinjaErrorResponse[
-            Literal["duplicate_track", "invalid_filename", "invalid_surah_number"],
-            Literal[None],
-        ],
-        401: NinjaErrorResponse[Literal["authentication_error"], Literal[None]],
-        403: NinjaErrorResponse[Literal["permission_denied"], Literal[None]],
-        404: NinjaErrorResponse[Literal["asset_not_found"], Literal[None]],
-        409: NinjaErrorResponse[Literal["duplicate_track"], Literal[None]],
+        400: NinjaErrorResponse[Literal["duplicate_track"]]
+        | NinjaErrorResponse[Literal["invalid_filename"]]
+        | NinjaErrorResponse[Literal["invalid_surah_number"]],
+        401: NinjaErrorResponse[Literal["authentication_error"]],
+        403: NinjaErrorResponse[Literal["permission_denied"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]],
+        409: NinjaErrorResponse[Literal["duplicate_track"]],
     },
 )
 def start_upload(request: Request, data: UploadStartIn):
@@ -119,8 +118,8 @@ class UploadSignPartOut(Schema):
     "recitation-tracks/uploads/sign-part/",
     response={
         200: UploadSignPartOut,
-        401: NinjaErrorResponse[Literal["authentication_error"], Literal[None]],
-        403: NinjaErrorResponse[Literal["permission_denied"], Literal[None]],
+        401: NinjaErrorResponse[Literal["authentication_error"]],
+        403: NinjaErrorResponse[Literal["permission_denied"]],
     },
 )
 def sign_part(request: Request, data: UploadSignPartIn):
@@ -159,14 +158,13 @@ class UploadFinishOut(Schema):
     "recitation-tracks/uploads/finish/",
     response={
         200: UploadFinishOut,
-        400: NinjaErrorResponse[
-            Literal["duplicate_track", "invalid_filename", "invalid_surah_number"],
-            Literal[None],
-        ],
-        401: NinjaErrorResponse[Literal["authentication_error"], Literal[None]],
-        403: NinjaErrorResponse[Literal["permission_denied"], Literal[None]],
-        404: NinjaErrorResponse[Literal["asset_not_found"], Literal[None]],
-        409: NinjaErrorResponse[Literal["duplicate_track"], Literal[None]],
+        400: NinjaErrorResponse[Literal["duplicate_track"]]
+        | NinjaErrorResponse[Literal["invalid_filename"]]
+        | NinjaErrorResponse[Literal["invalid_surah_number"]],
+        401: NinjaErrorResponse[Literal["authentication_error"]],
+        403: NinjaErrorResponse[Literal["permission_denied"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]],
+        409: NinjaErrorResponse[Literal["duplicate_track"]],
     },
 )
 def finish_upload(request: Request, data: UploadFinishIn):
@@ -209,8 +207,8 @@ class UploadAbortOut(Schema):
     "recitation-tracks/uploads/abort/",
     response={
         200: UploadAbortOut,
-        401: NinjaErrorResponse[Literal["authentication_error"], Literal[None]],
-        403: NinjaErrorResponse[Literal["permission_denied"], Literal[None]],
+        401: NinjaErrorResponse[Literal["authentication_error"]],
+        403: NinjaErrorResponse[Literal["permission_denied"]],
     },
 )
 def abort_upload(request: Request, data: UploadAbortIn):

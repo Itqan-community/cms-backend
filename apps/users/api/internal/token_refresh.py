@@ -27,9 +27,8 @@ if not settings.ENABLE_ALLAUTH:
         auth=None,
         response={
             200: RefreshTokenOut,
-            401: NinjaErrorResponse[Literal["invalid_refresh_token"], Literal[None]]
-            | NinjaErrorResponse[Literal["user_not_found"], Literal[None]],
-            400: NinjaErrorResponse[Literal["token_rotation_failed"], Literal[None]],
+            401: NinjaErrorResponse[Literal["invalid_refresh_token"]] | NinjaErrorResponse[Literal["user_not_found"]],
+            400: NinjaErrorResponse[Literal["token_rotation_failed"]],
         },
         summary="Refresh JWT access token",
         description="Refresh expired JWT access token using refresh token. Returns new access token and optionally a new refresh token if rotation is enabled.",

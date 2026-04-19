@@ -27,11 +27,11 @@ class DownloadAssetOut(Schema):
     "assets/{id}/download/",
     response={
         200: DownloadAssetOut,
-        403: NinjaErrorResponse[Literal["permission_denied"], Literal[None]],
-        404: NinjaErrorResponse[Literal["not_found"], Literal[None]]
-        | NinjaErrorResponse[Literal["no_file_versions"], Literal[None]]
-        | NinjaErrorResponse[Literal["no_file_available"], Literal[None]]
-        | NinjaErrorResponse[Literal["file_not_accessible"], Literal[None]],
+        403: NinjaErrorResponse[Literal["permission_denied"]],
+        404: NinjaErrorResponse[Literal["not_found"]]
+        | NinjaErrorResponse[Literal["no_file_versions"]]
+        | NinjaErrorResponse[Literal["no_file_available"]]
+        | NinjaErrorResponse[Literal["file_not_accessible"]],
     },
 )
 def download_asset(request: Request, id: int):
