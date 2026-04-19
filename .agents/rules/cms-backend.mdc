@@ -104,11 +104,22 @@ Use exactly this shape when converting inputs:
 ```python
 response={
         200: OkSchema,
-        400: NinjaErrorResponse[Literal["activation_request_failed"], Literal[None]],
-        404: NinjaErrorResponse[Literal["user_not_found"], Literal[None]]
-        | NinjaErrorResponse[Literal["admin_not_found"], Literal[None]],
+        400: NinjaErrorResponse[Literal["activation_request_failed"]],
+        404: NinjaErrorResponse[Literal["user_not_found"]]
+        | NinjaErrorResponse[Literal["admin_not_found"]],
     }
 ```
+- The `message` argument passed to `ItqanError` **must always be localized** using `gettext_lazy` (imported as `_` from `django.utils.translation`). Example:
+```python
+from django.utils.translation import gettext_lazy as _
+
+raise ItqanError(
+    error_name="asset_not_found",
+    message=_("Asset does not exist."),
+    status_code=404,
+)
+```
+- After adding any new translatable string (any call to `_(...)`), you **must** run `makemessages` as specified in the Actions section, then add the Arabic translation in `locale/ar/LC_MESSAGES/django.po`.
 
 ## Actions:
 - migrate: uv run manage.py migrate

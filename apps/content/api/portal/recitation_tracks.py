@@ -37,9 +37,9 @@ class RecitationTrackOut(Schema):
     "recitations/{recitation_slug}/recitation-tracks/",
     response={
         200: list[RecitationTrackOut],
-        401: NinjaErrorResponse[Literal["authentication_error"], Literal[None]],
-        403: NinjaErrorResponse[Literal["permission_denied"], Literal[None]],
-        404: NinjaErrorResponse[Literal["asset_not_found"], Literal[None]],
+        401: NinjaErrorResponse[Literal["authentication_error"]],
+        403: NinjaErrorResponse[Literal["permission_denied"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]],
     },
 )
 @paginate
@@ -57,8 +57,8 @@ class DeleteTracksIn(Schema):
     "recitation-tracks/",
     response={
         204: None,
-        401: NinjaErrorResponse[Literal["authentication_error"], Literal[None]],
-        403: NinjaErrorResponse[Literal["permission_denied"], Literal[None]],
+        401: NinjaErrorResponse[Literal["authentication_error"]],
+        403: NinjaErrorResponse[Literal["permission_denied"]],
     },
 )
 def delete_tracks(request: Request, data: DeleteTracksIn):

@@ -166,10 +166,9 @@ def list_translations(request: Request, filters: TranslationFilter = Query()):
     "translations/",
     response={
         201: TranslationDetailOut,
-        400: NinjaErrorResponse[
-            Literal["translation_name_required", "publisher_not_found", "external_url_required"], Literal[None]
-        ],
-        404: NinjaErrorResponse[Literal["publisher_not_found"], Literal[None]],
+        400: NinjaErrorResponse[Literal["translation_name_required"]]
+        | NinjaErrorResponse[Literal["external_url_required"]],
+        404: NinjaErrorResponse[Literal["publisher_not_found"]],
     },
 )
 def create_translation(
@@ -197,7 +196,7 @@ def create_translation(
     "translations/{translation_slug}/",
     response={
         200: TranslationDetailOut,
-        404: NinjaErrorResponse[Literal["translation_not_found"], Literal[None]],
+        404: NinjaErrorResponse[Literal["translation_not_found"]],
     },
 )
 def retrieve_translation(request: Request, translation_slug: str) -> Asset:
@@ -209,8 +208,9 @@ def retrieve_translation(request: Request, translation_slug: str) -> Asset:
     "translations/{translation_slug}/",
     response={
         200: TranslationDetailOut,
-        400: NinjaErrorResponse[Literal["translation_name_required", "external_url_required"], Literal[None]],
-        404: NinjaErrorResponse[Literal["translation_not_found"], Literal[None]],
+        400: NinjaErrorResponse[Literal["translation_name_required"]]
+        | NinjaErrorResponse[Literal["external_url_required"]],
+        404: NinjaErrorResponse[Literal["translation_not_found"]],
     },
 )
 def update_translation_put(
@@ -228,8 +228,9 @@ def update_translation_put(
     "translations/{translation_slug}/",
     response={
         200: TranslationDetailOut,
-        400: NinjaErrorResponse[Literal["translation_name_required", "external_url_required"], Literal[None]],
-        404: NinjaErrorResponse[Literal["translation_not_found"], Literal[None]],
+        400: NinjaErrorResponse[Literal["translation_name_required"]]
+        | NinjaErrorResponse[Literal["external_url_required"]],
+        404: NinjaErrorResponse[Literal["translation_not_found"]],
     },
 )
 def update_translation_patch(
@@ -247,7 +248,7 @@ def update_translation_patch(
     "translations/{translation_slug}/",
     response={
         204: None,
-        404: NinjaErrorResponse[Literal["translation_not_found"], Literal[None]],
+        404: NinjaErrorResponse[Literal["translation_not_found"]],
     },
 )
 def delete_translation(request: Request, translation_slug: str) -> tuple[int, None]:

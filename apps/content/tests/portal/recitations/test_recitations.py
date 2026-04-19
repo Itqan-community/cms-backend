@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, Qiraah, Reciter, Resource, Riwayah
+from apps.content.models import Asset, AssetVersion, Qiraah, Reciter, Resource, Riwayah
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -231,3 +231,60 @@ class RecitationPortalTest(BaseTestCase):
         self.assertEqual(204, response.status_code)
         self.assertFalse(Asset.objects.filter(id=asset.id).exists())
         self.assertFalse(Resource.objects.filter(id=resource_id).exists())
+
+    def test_retrieve_recitation_where_version_exists_should_return_ayah_timings_url(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        asset = baker.make(
+            Asset,
+            category=Resource.CategoryChoice.RECITATION,
+            resource=baker.make(
+                Resource,
+                publisher=self.publisher,
+                category=Resource.CategoryChoice.RECITATION,
+                status=Resource.StatusChoice.READY,
+            ),
+            reciter=self.reciter,
+            qiraah=self.qiraah,
+            riwayah=self.riwayah,
+        )
+
+        baker.make(
+            AssetVersion,
+            asset=asset,
+            file_url=self.create_file("test.json", b'{"data": "test"}', "application/json"),
+        )
+
+        # Act
+        response = self.client.get(f"/portal/recitations/{asset.slug}/")
+
+        # Assert
+        self.assertEqual(200, response.status_code)
+        body = response.json()
+        self.assertIsNotNone(body["ayah_timings_url"])
+        self.assertIn("test.json", body["ayah_timings_url"])
+
+    def test_retrieve_recitation_where_no_version_exists_should_return_none_ayah_timings_url(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        asset = baker.make(
+            Asset,
+            category=Resource.CategoryChoice.RECITATION,
+            resource=baker.make(
+                Resource,
+                publisher=self.publisher,
+                category=Resource.CategoryChoice.RECITATION,
+                status=Resource.StatusChoice.READY,
+            ),
+            reciter=self.reciter,
+            qiraah=self.qiraah,
+            riwayah=self.riwayah,
+        )
+
+        # Act
+        response = self.client.get(f"/portal/recitations/{asset.slug}/")
+
+        # Assert
+        self.assertEqual(200, response.status_code)
+        body = response.json()
+        self.assertIsNone(body["ayah_timings_url"])

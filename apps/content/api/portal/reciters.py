@@ -127,7 +127,7 @@ def list_reciters(request: Request, filters: ReciterFilter = Query()):
     "reciters/{reciter_slug}/",
     response={
         200: ReciterDetailOut,
-        404: NinjaErrorResponse[Literal["reciter_not_found"], Literal[None]],
+        404: NinjaErrorResponse[Literal["reciter_not_found"]],
     },
 )
 def get_reciter(request: Request, reciter_slug: str):
@@ -139,8 +139,8 @@ def get_reciter(request: Request, reciter_slug: str):
     "reciters/",
     response={
         201: ReciterListOut,
-        400: NinjaErrorResponse[Literal["reciter_name_required"], Literal[None]],
-        409: NinjaErrorResponse[Literal["reciter_already_exists"], Literal[None]],
+        400: NinjaErrorResponse[Literal["reciter_name_required"]],
+        409: NinjaErrorResponse[Literal["reciter_already_exists"]],
     },
 )
 def create_reciter(
@@ -167,9 +167,9 @@ def create_reciter(
     "reciters/{reciter_slug}/",
     response={
         200: ReciterDetailOut,
-        400: NinjaErrorResponse[Literal["reciter_name_required"], Literal[None]],
-        404: NinjaErrorResponse[Literal["reciter_not_found"], Literal[None]],
-        409: NinjaErrorResponse[Literal["reciter_already_exists"], Literal[None]],
+        400: NinjaErrorResponse[Literal["reciter_name_required"]],
+        404: NinjaErrorResponse[Literal["reciter_not_found"]],
+        409: NinjaErrorResponse[Literal["reciter_already_exists"]],
     },
 )
 def patch_reciter(
@@ -189,7 +189,7 @@ def patch_reciter(
     "reciters/{reciter_slug}/",
     response={
         204: None,
-        404: NinjaErrorResponse[Literal["reciter_not_found"], Literal[None]],
+        404: NinjaErrorResponse[Literal["reciter_not_found"]],
     },
 )
 def delete_reciter(request: Request, reciter_slug: str):

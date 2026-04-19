@@ -4,6 +4,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 import json
 import logging
+from typing import TypedDict
 
 from django.db import transaction
 
@@ -70,7 +71,15 @@ def _parse_json_bytes(data: bytes) -> tuple[int, list[AyahRow]]:
     return surah_number, rows
 
 
-def bulk_upload_recitation_ayah_timestamps(asset_id: int, files: Iterable) -> dict:
+class ResultDict(TypedDict):
+    created_total: int
+    updated_total: int
+    skipped_total: int
+    missing_tracks: list[int]
+    file_errors: list[str]
+
+
+def bulk_upload_recitation_ayah_timestamps(asset_id: int, files: Iterable) -> ResultDict:
     """
     Import ayah timings JSON files for a given asset.
     - files: iterable of UploadedFile objects (each file for a surah)
