@@ -39,7 +39,6 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "black==25.12.*",
     "boto3-stubs>=1.42.91",
     "coverage==7.10.6",
     "django-coverage-plugin==3.1.1",

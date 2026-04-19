@@ -110,7 +110,7 @@ class SearchOperation:
             self.searcher.Input,
             self.searcher.InputSource,
         )
-        searcher_view.searcher_operation = self  # type:ignore[attr-defined]
+        searcher_view.searcher_operation = self  # type: ignore[attr-defined]
 
     @property
     def view_func_has_kwargs(self) -> bool:  # pragma: no cover

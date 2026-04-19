@@ -56,7 +56,7 @@ class Searching(SearchingBase):
         super().__init__(pass_parameter=pass_parameter)
         self.search_fields = search_fields or []
         self.query_param = query_param
-        self.Input = self.create_input(search_fields)  # type:ignore
+        self.Input = self.create_input(search_fields)  # type: ignore
 
     def create_input(self, search_fields: list[str] | None) -> type[Input]:
         query_param = self.query_param
@@ -66,7 +66,7 @@ class Searching(SearchingBase):
                 search: Query[
                     str | None,
                     P(example=", ".join(search_fields), alias=query_param),
-                ] = None  # type:ignore[type-arg,valid-type]
+                ] = None  # type: ignore[type-arg,valid-type]
 
             return DynamicInput
         return Searching.Input
