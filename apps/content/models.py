@@ -372,6 +372,7 @@ class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
                     "json",
                     "xml",
                     "csv",
+                    "db",
                 ],
             ),
         ],
@@ -379,6 +380,11 @@ class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
     )
 
     size_bytes = models.PositiveBigIntegerField(default=0, help_text="File size in bytes")
+
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = [("name", "asset")]
 
     def __str__(self):
         return f"AssetVersion(asset={self.asset.name}, version={self.resource_version.semvar})"
