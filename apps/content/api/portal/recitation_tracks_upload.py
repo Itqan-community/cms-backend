@@ -9,9 +9,7 @@ from apps.content.models import Asset
 from apps.content.services.admin.asset_recitation_audio_tracks_direct_upload_service import (
     AssetRecitationAudioTracksDirectUploadService,
 )
-from apps.content.services.validate_recitation_tracks_upload_service import (
-    ValidateRecitationTracksUploadService,
-)
+from apps.content.services.validate_recitation_tracks_upload_service import ValidateRecitationTracksUploadService
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter

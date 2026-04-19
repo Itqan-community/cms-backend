@@ -100,7 +100,7 @@ class OrderingOperation:
             self.sorter.InputSource,
         )
 
-        sorter_view.sorter_operation = self  # type:ignore[attr-defined]
+        sorter_view.sorter_operation = self  # type: ignore[attr-defined]
 
     @property
     def view_func_has_kwargs(self) -> bool:  # pragma: no cover

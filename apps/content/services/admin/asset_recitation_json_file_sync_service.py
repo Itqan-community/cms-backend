@@ -5,10 +5,7 @@ import json
 from django.core.files.base import ContentFile
 from django.db import transaction
 
-from apps.content.api.public.recitation_track_list import (
-    RecitationAyahTimingOut,
-    RecitationSurahTrackOut,
-)
+from apps.content.api.public.recitation_track_list import RecitationAyahTimingOut, RecitationSurahTrackOut
 from apps.content.models import Asset, AssetVersion, RecitationSurahTrack
 from apps.core.mixins.constants import QURAN_SURAHS
 from config.settings.base import CLOUDFLARE_R2_PUBLIC_BASE_URL

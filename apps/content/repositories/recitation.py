@@ -5,15 +5,7 @@ from typing import TYPE_CHECKING, Any
 from django.db import models, transaction
 from django.db.models import Count, Q
 
-from apps.content.models import (
-    Asset,
-    LicenseChoice,
-    Qiraah,
-    RecitationSurahTrack,
-    Reciter,
-    Resource,
-    Riwayah,
-)
+from apps.content.models import Asset, LicenseChoice, Qiraah, RecitationSurahTrack, Reciter, Resource, Riwayah
 from apps.content.repositories.base import BaseRecitationRepository
 
 if TYPE_CHECKING:

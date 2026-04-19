@@ -1,10 +1,7 @@
 from allauth.headless.contrib.ninja.security import jwt_token_auth
 from django.conf import settings
 from oauth2_provider.contrib.rest_framework import OAuth2Authentication
-from rest_framework_simplejwt.authentication import (
-    JWTAuthentication,
-    JWTStatelessUserAuthentication,
-)
+from rest_framework_simplejwt.authentication import JWTAuthentication, JWTStatelessUserAuthentication
 
 
 class JWTAuth(JWTAuthentication):
