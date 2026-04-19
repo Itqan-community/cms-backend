@@ -4,14 +4,7 @@ import uuid
 from django.utils.text import slugify
 
 if TYPE_CHECKING:
-    from apps.content.models import (
-        Asset,
-        AssetPreview,
-        AssetVersion,
-        RecitationSurahTrack,
-        Reciter,
-        ResourceVersion,
-    )
+    from apps.content.models import Asset, AssetPreview, AssetVersion, RecitationSurahTrack, Reciter, ResourceVersion
     from apps.publishers.models import Publisher
 
 

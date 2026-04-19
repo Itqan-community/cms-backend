@@ -12,10 +12,7 @@ from django.utils import timezone
 
 from apps.content.repositories.recitation_track import RecitationTrackRepository
 from apps.core.ninja_utils.errors import ItqanError
-from apps.mixins.recitations_helpers import (
-    extract_surah_number_from_mp3_filename,
-    get_mp3_duration_ms,
-)
+from apps.mixins.recitations_helpers import extract_surah_number_from_mp3_filename, get_mp3_duration_ms
 
 logger = logging.getLogger(__name__)
 

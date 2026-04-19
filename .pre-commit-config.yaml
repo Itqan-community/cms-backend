@@ -28,7 +28,7 @@ repos:
     rev: 5.13.2
     hooks:
       - id: isort
-        args: ["--profile", "black", "--line-length=100"]
+        args: ["--profile", "black"]
 
   - repo: https://github.com/psf/black
     rev: 26.3.1
@@ -54,7 +54,7 @@ repos:
         args: [ --py313-plus ]
 
   - repo: https://github.com/adamchainz/django-upgrade
-    rev: '1.27.0'
+    rev: '1.30.0'
     hooks:
       - id: django-upgrade
         args: ['--target-version', '5.2']

@@ -9,9 +9,7 @@ from apps.content.services.admin.asset_recitation_ayah_timestamps_upload_service
     ResultDict,
     bulk_upload_recitation_ayah_timestamps,
 )
-from apps.content.services.admin.asset_recitation_json_file_sync_service import (
-    sync_asset_recitations_json_file,
-)
+from apps.content.services.admin.asset_recitation_json_file_sync_service import sync_asset_recitations_json_file
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter

@@ -13,16 +13,12 @@ from django.utils.html import format_html
 from apps.content.services.admin.asset_recitation_audio_tracks_direct_upload_service import (
     AssetRecitationAudioTracksDirectUploadService,
 )
-from apps.content.services.admin.asset_recitation_json_file_sync_service import (
-    sync_asset_recitations_json_file,
-)
+from apps.content.services.admin.asset_recitation_json_file_sync_service import sync_asset_recitations_json_file
 from apps.core.ninja_utils.errors import ItqanError
 
 from ..core.mixins.constants import QURAN_SURAHS
 from .forms.direct_upload_recitations_form import DirectUploadRecitationsForm
-from .forms.recitation_ayah_timestamps_bulk_upload_form import (
-    RecitationAyahTimestampsBulkUploadForm,
-)
+from .forms.recitation_ayah_timestamps_bulk_upload_form import RecitationAyahTimestampsBulkUploadForm
 from .models import (
     Asset,
     AssetAccess,
@@ -39,9 +35,7 @@ from .models import (
     Riwayah,
     UsageEvent,
 )
-from .services.admin.asset_recitation_ayah_timestamps_upload_service import (
-    bulk_upload_recitation_ayah_timestamps,
-)
+from .services.admin.asset_recitation_ayah_timestamps_upload_service import bulk_upload_recitation_ayah_timestamps
 
 logger = logging.getLogger(__name__)
 
