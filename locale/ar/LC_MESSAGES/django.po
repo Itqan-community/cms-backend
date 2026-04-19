@@ -22,6 +22,16 @@ msgstr ""
 msgid "You do not have access to this asset"
 msgstr "ليس لديك صلاحية الوصول إلى هذا المورد"
 
+#, python-format
+msgid "Asset with id %s does not exist."
+msgstr "المورد ذو المعرف %s غير موجود."
+
+msgid "One or more timing files could not be processed."
+msgstr "تعذر معالجة ملف توقيت واحد أو أكثر."
+
+msgid "This asset has no version to sync the recitation data into."
+msgstr "لا توجد نسخة لهذا المورد لمزامنة بيانات التلاوة إليها."
+
 msgid "Creative Commons Zero"
 msgstr "المشاع الإبداعي - بدون حقوق (CC0)"
 
