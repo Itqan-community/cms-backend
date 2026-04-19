@@ -178,6 +178,31 @@ class TimingUploadSuccessTest(TimingUploadBaseTest):
         self.assertEqual(0, body["created_total"])
         self.assertIn(2, body["missing_tracks"])
 
+    def test_upload_timing_where_no_asset_version_should_create_asset_version(self):
+        # Arrange
+        self.authenticate_user(self.staff_user)
+        # Delete the AssetVersion so sync will fail
+        self.asset_version.delete()
+        self.resource_version.delete()
+        timing_file = make_timing_file(surah_number=1)
+
+        # Act
+        response = self.client.post(
+            URL,
+            data={
+                "asset_id": self.asset.id,
+                "files": [timing_file],
+            },
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertIsNotNone(AssetVersion.objects.filter(asset_id=self.asset.id, name="1").first())
+        self.assertIsNotNone(ResourceVersion.objects.filter(resource_id=self.asset.resource_id, name="1").first())
+
+        # Verify the timing upload was also added
+        self.assertEqual(2, RecitationAyahTiming.objects.filter(track=self.track).count())
+
 
 class TimingUploadAuthTest(TimingUploadBaseTest):
     def test_upload_timing_where_unauthenticated_should_return_401(self):
@@ -232,30 +257,6 @@ class TimingUploadErrorTest(TimingUploadBaseTest):
         # Assert
         self.assertEqual(404, response.status_code, response.content)
         self.assertEqual("asset_not_found", response.json()["error_name"])
-
-    def test_upload_timing_where_no_asset_version_should_return_400(self):
-        # Arrange
-        self.authenticate_user(self.staff_user)
-        # Delete the AssetVersion so sync will fail
-        self.asset_version.delete()
-        self.resource_version.delete()
-        timing_file = make_timing_file(surah_number=1)
-
-        # Act
-        response = self.client.post(
-            URL,
-            data={
-                "asset_id": self.asset.id,
-                "files": [timing_file],
-            },
-        )
-
-        # Assert
-        self.assertEqual(400, response.status_code, response.content)
-        self.assertEqual("no_asset_version", response.json()["error_name"])
-
-        # Verify the timing upload was also rolled back (atomic)
-        self.assertEqual(0, RecitationAyahTiming.objects.filter(track=self.track).count())
 
     def test_upload_timing_where_malformed_json_file_should_return_400(self):
         # Arrange

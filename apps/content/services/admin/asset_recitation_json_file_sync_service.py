@@ -70,7 +70,10 @@ def sync_asset_recitations_json_file(asset_id: int) -> tuple[AssetVersion, str]:
 
     latest_version: AssetVersion | None = asset.get_latest_version()
     if not latest_version:
-        raise ValueError(f"Asset {asset_id} has no latest AssetVersion to update")
+        resource_version, _ = asset.resource.versions.get_or_create(name="1", defaults={"semvar": "1"})
+        latest_version: AssetVersion = AssetVersion.objects.create(
+            asset=asset, name="1", resource_version=resource_version
+        )
 
     payload, filename = _build_recitations_json(asset)
     payload_bytes = payload.encode("utf-8")

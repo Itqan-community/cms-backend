@@ -37,7 +37,7 @@ class TimingUploadOut(Schema):
     "timing/upload/",
     response={
         200: TimingUploadOut,
-        400: NinjaErrorResponse[Literal["upload_failed"], ResultDict] | NinjaErrorResponse[Literal["no_asset_version"]],
+        400: NinjaErrorResponse[Literal["upload_failed"], ResultDict],
         401: NinjaErrorResponse[Literal["authentication_error"]],
         403: NinjaErrorResponse[Literal["permission_denied"]],
         404: NinjaErrorResponse[Literal["asset_not_found"]],
@@ -68,14 +68,7 @@ def upload_timing(
                 extra=stats,
             )
 
-        try:
-            asset_version, filename = sync_asset_recitations_json_file(asset_id=asset.id)
-        except ValueError as exc:
-            raise ItqanError(
-                error_name="no_asset_version",
-                message=_("This asset has no version to sync the recitation data into."),
-                status_code=400,
-            ) from exc
+        asset_version, filename = sync_asset_recitations_json_file(asset_id=asset.id)
 
     synced_file_url = asset_version.file_url.url if asset_version.file_url else None
 
