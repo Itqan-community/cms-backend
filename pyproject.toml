@@ -33,7 +33,6 @@ dependencies = [
     "psycopg2-binary==2.9.10",
     "python-decouple==3.8",
     "redis==6.4.0",
-    "requests==2.31.*",
     "scalar-ninja==0.3.0",
 ]
 
