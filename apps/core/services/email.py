@@ -51,12 +51,12 @@ class EmailService:
         try:
             connection.open()
             connection.send_messages(messages)
-            connection.close()
-
         except Exception as e:
             logger.exception("Failed to send %d email(s) [subject=%r]: %s", len(recipients), subject, e)
             if not self._fail_silently:
                 raise
+        finally:
+            connection.close()
 
 
 email_service = EmailService()
