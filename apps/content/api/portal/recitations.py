@@ -12,6 +12,7 @@ from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.core.ninja_utils.types import AbsoluteUrl
 
 router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
 
@@ -84,11 +85,18 @@ class RecitationDetailOut(Schema):
     license: LicenseChoice
     created_at: AwareDatetime
     updated_at: AwareDatetime
+    ayah_timings_url: AbsoluteUrl | None = None
 
     @staticmethod
     def resolve_thumbnail_url(obj: Asset) -> str | None:
         if obj.thumbnail_url:
             return obj.thumbnail_url.url
+        return None
+
+    @staticmethod
+    def resolve_ayah_timings_url(obj: Asset) -> str | None:
+        if version := obj.versions.first():
+            return version.file_url.url if version.file_url else None
         return None
 
 
@@ -235,7 +243,8 @@ def create_recitation(
 )
 def retrieve_recitation(request: Request, recitation_slug: str) -> Asset:
     service = RecitationService()
-    return service.get_recitation(recitation_slug)
+    recitation = service.get_recitation(recitation_slug)
+    return recitation
 
 
 @router.put(

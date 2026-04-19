@@ -167,7 +167,6 @@ def list_translations(request: Request, filters: TranslationFilter = Query()):
     response={
         201: TranslationDetailOut,
         400: NinjaErrorResponse[Literal["translation_name_required"]]
-        | NinjaErrorResponse[Literal["publisher_not_found"]]
         | NinjaErrorResponse[Literal["external_url_required"]],
         404: NinjaErrorResponse[Literal["publisher_not_found"]],
     },
