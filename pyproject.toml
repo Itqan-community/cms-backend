@@ -34,7 +34,7 @@ dependencies = [
     "python-decouple==3.8",
     "redis==6.4.0",
     "requests==2.31.*",
-    "scalar-ninja==0.1.2",
+    "scalar-ninja==0.3.0",
 ]
 
 [dependency-groups]

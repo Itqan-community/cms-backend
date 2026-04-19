@@ -1113,7 +1113,7 @@ requires-dist = [
     { name = "python-decouple", specifier = "==3.8" },
     { name = "redis", specifier = "==6.4.0" },
     { name = "requests", specifier = "==2.31.*" },
-    { name = "scalar-ninja", specifier = "==0.1.2" },
+    { name = "scalar-ninja", specifier = "==0.3.0" },
     { name = "sentry-sdk", extras = ["django"], marker = "extra == 'prod'", specifier = "==2.53.0" },
 ]
 provides-extras = ["prod"]
@@ -2002,11 +2002,11 @@ wheels = [
 
 [[package]]
 name = "scalar-ninja"
-version = "0.1.2"
+version = "0.3.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/d8/79/1d87ebaa4bd3765700abd87f774475a7bc9f15c73507aea8c2da813f601f/scalar_ninja-0.1.2.tar.gz", hash = "sha256:0694d625260528231e4af52b6ac10ebbf84e2f8f5fb5ba3b43a5adb839a93f6a", size = 7912, upload-time = "2026-02-11T21:26:36.251Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b6/c7/5d6b43f8cd5e47c2b30e3f249721fa4abf7bbedd322e0e6d3ede69ab9c8f/scalar_ninja-0.3.0.tar.gz", hash = "sha256:fe657fa3356cf80bfa30b3297690a1e42ce7b0daa73738042b175463eab3a65e", size = 8005, upload-time = "2026-03-04T11:02:19.509Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/17/b2/81d848efa789021701aa2f393035f594e4aaac9b9b616d10ddc89e0e0714/scalar_ninja-0.1.2-py3-none-any.whl", hash = "sha256:97737a73bb32df8b4042682dbabfb4425f1114c182028f216d8fa396b1d7ebc8", size = 7295, upload-time = "2026-02-11T21:26:35.541Z" },
+    { url = "https://files.pythonhosted.org/packages/36/12/a6cba17c0fd973c6ef1b80a793fef73bf751a794631916f49c5cb2b0922a/scalar_ninja-0.3.0-py3-none-any.whl", hash = "sha256:8fb4aeecef527d8dfc81cd1ff00bffa66076a3201607f1bf4f2fb1c8206cadb2", size = 7377, upload-time = "2026-03-04T11:02:18.562Z" },
 ]
 
 [[package]]
