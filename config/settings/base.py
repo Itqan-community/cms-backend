@@ -302,14 +302,7 @@ CELERY_TASK_SEND_SENT_EVENT = True
 CELERY_WORKER_HIJACK_ROOT_LOGGER = False
 
 # Email server
-EMAIL_BACKEND = config("EMAIL_BACKEND")
-EMAIL_HOST = config("EMAIL_HOST", default="")
-EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
-EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-EMAIL_PORT = config("EMAIL_PORT", cast=int, default=587)
-EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
-EMAIL_USE_SSL = config("EMAIL_USE_SSL", default=True, cast=bool)
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # Site ID (required for allauth)
 SITE_ID = 1
