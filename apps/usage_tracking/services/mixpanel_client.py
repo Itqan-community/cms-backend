@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import urlparse
 
 import requests
-from mixpanel import Mixpanel
+from mixpanel import Consumer, Mixpanel
 from requests.auth import HTTPBasicAuth
 
 
@@ -24,7 +25,8 @@ class MixpanelIngestClient:
         if not self._enabled or not self._token:
             return
         if self._sdk is None:
-            self._sdk = Mixpanel(self._token)
+            api_host = urlparse(self._api_base).netloc or self._api_base
+            self._sdk = Mixpanel(self._token, consumer=Consumer(api_host=api_host))
         self._sdk.track(distinct_id, event, properties)
 
 
