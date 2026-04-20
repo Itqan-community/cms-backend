@@ -102,7 +102,7 @@ CSRF_TRUSTED_ORIGINS = [
 # Logging
 # ============================================================
 
-settings.LOGGING["handlers"]["console"]["level"] = "WARNING"
+settings.LOGGING["handlers"]["console"]["level"] = "INFO"
 settings.LOGGING["root"]["level"] = "INFO"
 
 # ============================================================

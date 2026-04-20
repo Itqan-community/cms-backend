@@ -1,3 +1,5 @@
+import logging
+
 from django.shortcuts import get_object_or_404
 from ninja import Schema
 from pydantic import Field
@@ -11,6 +13,7 @@ from apps.core.ninja_utils.types import AbsoluteUrl
 from apps.mixins.helpers import run_task
 
 router = ItqanRouter(tags=[NinjaTag.ASSETS])
+logger = logging.getLogger(__name__)
 
 
 class DetailAssetSnapshotOut(Schema):
@@ -44,6 +47,7 @@ class DetailAssetOut(Schema):
 
 @router.get("assets/{id}/", response=DetailAssetOut, auth=None)
 def detail_assets(request: Request, id: int):
+    logger.info("Asset detail requested [asset_id=%s]", id)
     asset = get_object_or_404(Asset, request.publisher_q("resource__publisher"), id=id)
 
     # Only create usage event for authenticated users
