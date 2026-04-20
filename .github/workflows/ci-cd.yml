@@ -162,6 +162,13 @@ jobs:
                 echo "SENTRY_DSN=${{ secrets.STAGING_SENTRY_DSN }}";
                 echo "ENV_NAME=staging";
                 echo "DEFAULT_SERVER_NAME=cms-backend-staging";
+                echo "MIXPANEL_ENABLED=True";
+                echo "MIXPANEL_PROJECT_TOKEN=${{ secrets.MIXPANEL_PROJECT_TOKEN }}";
+                echo "MIXPANEL_PROJECT_ID=${{ secrets.MIXPANEL_PROJECT_ID }}";
+                echo "MIXPANEL_SERVICE_USERNAME=${{ secrets.MIXPANEL_SERVICE_USERNAME }}";
+                echo "MIXPANEL_SERVICE_SECRET=${{ secrets.MIXPANEL_SERVICE_SECRET }}";
+                echo "MIXPANEL_INGEST_HOST=${{ secrets.MIXPANEL_INGEST_HOST }}";
+                echo "MIXPANEL_API_BASE=${{ secrets.MIXPANEL_API_BASE }}";
               } > deployment/docker/.env
             elif [ "${{ env.ENV_NAME }}" = "production" ]; then
               {
