@@ -33,7 +33,7 @@ class PublisherCreateOut(Schema):
     slug: str
     name_ar: str | None
     name_en: str | None
-    description_en: str
+    description_en: str | None
     description_ar: str | None
     address: str
     website: str
