@@ -1,13 +1,7 @@
 from django.core import mail
 from model_bakery import baker
 
-from apps.content.models import (
-    Asset,
-    AssetAccess,
-    AssetAccessRequest,
-    AssetVersion,
-    ResourceVersion,
-)
+from apps.content.models import Asset, AssetAccess, AssetAccessRequest, AssetVersion, ResourceVersion
 from apps.content.services.asset import AssetService
 from apps.core.tests import BaseTestCase
 from apps.users.models import User

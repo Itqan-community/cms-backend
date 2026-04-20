@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 from django.db import transaction
 
-from apps.content.models import Asset, LicenseChoice, Resource
+from apps.content.models import Asset, AssetVersion, LicenseChoice, Resource, ResourceVersion
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
@@ -14,6 +14,8 @@ class TranslationRepository:
     def __init__(self) -> None:
         self.asset_model = Asset
         self.resource_model = Resource
+        self.asset_version_model = AssetVersion
+        self.resource_version_model = ResourceVersion
 
     def list_translations_qs(self, filters_dict: dict[str, Any]) -> QuerySet[Asset]:
         """
@@ -185,3 +187,122 @@ class TranslationRepository:
             resource = asset.resource
             asset.delete()
             resource.delete()
+
+    def list_translation_versions(self, asset: Asset):
+        return AssetVersion.objects.filter(asset=asset).order_by("-created_at")
+
+    def get_translation_version(self, asset: Asset, version_id: int) -> AssetVersion | None:
+        """
+        Fetch a single AssetVersion belonging to the asset.
+        """
+        try:
+            return self.asset_version_model.objects.get(asset=asset, id=version_id)
+        except self.asset_version_model.DoesNotExist:
+            return None
+
+    def create_translation_version(
+        self,
+        asset: Asset,
+        *,
+        name: str,
+        summary: str = "",
+        file: Any = None,
+    ) -> AssetVersion:
+        """
+        Atomically creates a ResourceVersion and its corresponding AssetVersion.
+        Automatically handles semvar generation.
+        """
+        with transaction.atomic():
+            # Generate sequential semvar based on existing resource versions
+            last_version = asset.resource.versions.order_by("-created_at").first()
+            if last_version:
+                try:
+                    # Simple increment of major version for now: X.0.0
+                    major = int(last_version.semvar.split(".")[0])
+                    new_semvar = f"{major + 1}.0.0"
+                except (ValueError, IndexError):
+                    new_semvar = "1.0.0"
+            else:
+                new_semvar = "1.0.0"
+
+            # Create the ResourceVersion
+            resource_version = self.resource_version_model.objects.create(
+                resource=asset.resource,
+                name=name,
+                summary=summary,
+                semvar=new_semvar,
+            )
+
+            # Compute file metadata from the uploaded file object
+            size_bytes = 0
+            if file:
+                try:
+                    size_bytes = file.size
+                except Exception:
+                    pass
+
+            # Create the AssetVersion
+            asset_version = self.asset_version_model.objects.create(
+                asset=asset,
+                resource_version=resource_version,
+                name=name,
+                summary=summary,
+                file_url=file,
+                size_bytes=size_bytes,
+            )
+
+            # Sync metadata back to Asset
+            asset.file_size = asset_version.human_readable_size
+            asset.save()
+
+        return asset_version
+
+    def update_translation_version(
+        self,
+        version: AssetVersion,
+        fields: dict[str, Any],
+    ) -> AssetVersion:
+        """
+        Update AssetVersion fields.
+        """
+        with transaction.atomic():
+            for field, value in fields.items():
+                setattr(version, field, value)
+
+            # Compute file metadata when the file is being replaced
+            if "file_url" in fields and fields["file_url"]:
+                file = fields["file_url"]
+                try:
+                    version.size_bytes = file.size
+                except Exception:
+                    pass
+                try:
+                    version.format = file.name.rsplit(".", 1)[-1].lower()
+                except Exception:
+                    pass
+
+            # If name or summary changed, we might want to sync back to resource_version
+            if "name" in fields:
+                version.resource_version.name = fields["name"]
+            if "summary" in fields:
+                version.resource_version.summary = fields["summary"]
+
+            version.save()
+            version.resource_version.save()
+
+            # Sync metadata back to Asset if file was updated
+            if "file_url" in fields:
+                version.asset.file_size = version.human_readable_size
+                version.asset.format = version.format
+                version.asset.save()
+
+        return version
+
+    def delete_translation_version(self, version: AssetVersion) -> None:
+        """
+        Delete the AssetVersion and its linked ResourceVersion.
+        """
+        with transaction.atomic():
+            resource_version = version.resource_version
+            version.delete()
+            resource_version.delete()

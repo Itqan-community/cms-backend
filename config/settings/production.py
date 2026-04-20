@@ -99,18 +99,6 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 # ============================================================
-# Email
-# ============================================================
-
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = config("EMAIL_HOST", "smtp.mailgun.org")
-EMAIL_PORT = config("EMAIL_PORT", 587, cast=int)
-EMAIL_HOST_USER = config("EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", "")
-EMAIL_USE_TLS = True
-DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", "noreply@itqan.com")
-
-# ============================================================
 # Logging
 # ============================================================
 
@@ -122,6 +110,22 @@ settings.LOGGING["root"]["level"] = "INFO"
 # ============================================================
 
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https"
+
+# ============================================================
+# Email
+# ============================================================
+
+_EMAIL_SENDER_NAME: str = config("EMAIL_SENDER_NAME", default="")
+_EMAIL_SENDER_EMAIL: str = config("EMAIL_SENDER_EMAIL", default="")
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = config("EMAIL_HOST", default="")
+EMAIL_PORT = config("EMAIL_PORT", cast=int, default=587)
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
+DEFAULT_FROM_EMAIL = f"{_EMAIL_SENDER_NAME} <{_EMAIL_SENDER_EMAIL}>" if _EMAIL_SENDER_NAME else _EMAIL_SENDER_EMAIL
 
 SOCIALACCOUNT_PROVIDERS = {
     "google": {

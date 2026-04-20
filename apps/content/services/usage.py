@@ -1,4 +1,4 @@
-from dotenv.variables import Literal
+from typing import Literal
 
 from apps.content.models import AssetAccess, UsageEvent
 
@@ -63,7 +63,9 @@ def log_resource_download(user, resource, ip_address=None, user_agent=""):
     )
 
 
-def log_api_access(user, *, api_endpoint="", ip_address=None, user_agent="", resource=None, asset=None) -> None:
+def log_api_access(
+    user, *, api_endpoint="", ip_address=None, user_agent="", resource=None, asset=None
+) -> UsageEvent | None:
     """Track API access event"""
     if resource:
         return UsageEvent.objects.create(

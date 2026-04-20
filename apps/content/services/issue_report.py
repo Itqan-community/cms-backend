@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from django.core.exceptions import ValidationError
 from django.db.models import Q
@@ -22,7 +22,7 @@ class IssueReportService:
     def create_issue_report(
         self,
         reporter: User,
-        content_type: str,
+        content_type: Literal["resource", "asset"],
         content_id: int,
         description: str,
     ) -> ContentIssueReport:

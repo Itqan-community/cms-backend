@@ -13,6 +13,10 @@ class RecitationTrackRepository:
         """Return the set of tracks surah numbers already uploaded for the given asset."""
         return set(self.model.objects.filter(asset_id=asset_id).values_list("surah_number", flat=True))
 
+    def get_recitation_tracks_by_asset_id(self, asset_id: int) -> list[RecitationSurahTrack]:
+        """Return all tracks for the given asset, ordered by surah number."""
+        return list(self.model.objects.filter(asset_id=asset_id).order_by("surah_number"))
+
     def get_recitation_tracks_by_ids(self, track_ids: list[int]) -> list[RecitationSurahTrack]:
         """Return tracks whose IDs are in track_ids"""
         return list(self.model.objects.filter(id__in=track_ids))

@@ -104,11 +104,27 @@ Use exactly this shape when converting inputs:
 ```python
 response={
         200: OkSchema,
-        400: NinjaErrorResponse[Literal["activation_request_failed"], Literal[None]],
-        404: NinjaErrorResponse[Literal["user_not_found"], Literal[None]]
-        | NinjaErrorResponse[Literal["admin_not_found"], Literal[None]],
+        400: NinjaErrorResponse[Literal["activation_request_failed"]],
+        404: NinjaErrorResponse[Literal["user_not_found"]]
+        | NinjaErrorResponse[Literal["admin_not_found"]],
     }
 ```
+- The `message` argument passed to `ItqanError` **must always be localized** using `gettext_lazy` (imported as `_` from `django.utils.translation`). Example:
+```python
+from django.utils.translation import gettext_lazy as _
+
+raise ItqanError(
+    error_name="asset_not_found",
+    message=_("Asset does not exist."),
+    status_code=404,
+)
+```
+- After adding any new translatable string (any call to `_(...)`), you **must** run `makemessages` as specified in the Actions section, then add the Arabic translation in `locale/ar/LC_MESSAGES/django.po`.
+
+## Actions:
+- migrate: uv run manage.py migrate
+- makemigrations: uv run makemigrations
+- makemessages: uv run manage.py extendedmakemessages --no-location --no-wrap --locale=ar --no-fuzzy-matching --keep-header
 
 ## Tests
 - All tests should be written as AAA Arrange, Act, Assert explicitly as comments in test cases
@@ -117,10 +133,8 @@ response={
 - Use `pytest` to run test NOT `python manage.py test`
 - If you are testing an API endpoint, do not just test the status code for 4xx responses, you have to asset the `error_name` as well
 - When you try to run the runserver, migrations, or tests, try to use virtual env at .venv first.
-- When you try to makemessages use `uv run python manage.py makemessages --no-location --no-wrap --locale=ar`
 
 ## API Architecture
-
 This project exposes **four distinct APIs**, each serving a different audience. All are built with Django Ninja and share the same error handling structure (`ItqanError` / `NinjaErrorResponse`).
 
 - **cms_api** (Internal API): Mounted at `/cms-api/`. Powers the frontend SPA where platform users ("the developers") can create accounts, explore the platform, and create OAuth applications. Uses JWT/Session authentication via django-allauth.

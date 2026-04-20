@@ -3,19 +3,14 @@ from typing import Literal
 
 from ninja import Schema
 from pydantic import Field
-from rest_framework.exceptions import PermissionDenied
 from rest_framework.generics import get_object_or_404
 
 from apps.content.models import Asset
-from apps.content.repositories.recitation_track import RecitationTrackRepository
 from apps.content.services.admin.asset_recitation_audio_tracks_direct_upload_service import (
     AssetRecitationAudioTracksDirectUploadService,
 )
-from apps.content.services.validate_recitation_tracks_upload_service import (
-    ValidateRecitationTracksUploadService,
-)
-from apps.core.ninja_utils.auth import ninja_jwt_auth
-from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
+from apps.content.services.validate_recitation_tracks_upload_service import ValidateRecitationTracksUploadService
+from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
@@ -44,19 +39,13 @@ class ValidateUploadOut(Schema):
     "recitation-tracks/validate-upload/",
     response={
         200: ValidateUploadOut,
-        400: NinjaErrorResponse[
-            Literal["validation_error"],
-            Literal[None],
-        ],
-        401: NinjaErrorResponse[Literal["authentication_error"], Literal[None]],
-        403: NinjaErrorResponse[Literal["permission_denied"], Literal[None]],
-        404: NinjaErrorResponse[Literal["asset_not_found"], Literal[None]],
+        400: NinjaErrorResponse[Literal["validation_error"]],
+        401: NinjaErrorResponse[Literal["authentication_error"]],
+        403: NinjaErrorResponse[Literal["permission_denied"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]],
     },
-    auth=ninja_jwt_auth,
 )
 def validate_upload(request: Request, data: ValidateUploadIn):
-    if not request.user.is_staff:
-        raise PermissionDenied("Staff only")
 
     asset = get_object_or_404(Asset, id=data.asset_id)
 
@@ -89,20 +78,16 @@ class UploadStartOut(Schema):
     "recitation-tracks/uploads/start/",
     response={
         200: UploadStartOut,
-        400: NinjaErrorResponse[
-            Literal["duplicate_track", "invalid_filename", "invalid_surah_number"],
-            Literal[None],
-        ],
-        401: NinjaErrorResponse[Literal["authentication_error"], Literal[None]],
-        403: NinjaErrorResponse[Literal["permission_denied"], Literal[None]],
-        404: NinjaErrorResponse[Literal["asset_not_found"], Literal[None]],
-        409: NinjaErrorResponse[Literal["duplicate_track"], Literal[None]],
+        400: NinjaErrorResponse[Literal["duplicate_track"]]
+        | NinjaErrorResponse[Literal["invalid_filename"]]
+        | NinjaErrorResponse[Literal["invalid_surah_number"]],
+        401: NinjaErrorResponse[Literal["authentication_error"]],
+        403: NinjaErrorResponse[Literal["permission_denied"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]],
+        409: NinjaErrorResponse[Literal["duplicate_track"]],
     },
-    auth=ninja_jwt_auth,
 )
 def start_upload(request: Request, data: UploadStartIn):
-    if not request.user.is_staff:
-        raise PermissionDenied("Staff only")
 
     asset = get_object_or_404(Asset, id=data.asset_id)
 
@@ -131,14 +116,11 @@ class UploadSignPartOut(Schema):
     "recitation-tracks/uploads/sign-part/",
     response={
         200: UploadSignPartOut,
-        401: NinjaErrorResponse[Literal["authentication_error"], Literal[None]],
-        403: NinjaErrorResponse[Literal["permission_denied"], Literal[None]],
+        401: NinjaErrorResponse[Literal["authentication_error"]],
+        403: NinjaErrorResponse[Literal["permission_denied"]],
     },
-    auth=ninja_jwt_auth,
 )
 def sign_part(request: Request, data: UploadSignPartIn):
-    if not request.user.is_staff:
-        raise PermissionDenied("Staff only")
 
     service = AssetRecitationAudioTracksDirectUploadService()
     result = service.sign_part(key=data.key, upload_id=data.upload_id, part_number=data.part_number)
@@ -174,20 +156,16 @@ class UploadFinishOut(Schema):
     "recitation-tracks/uploads/finish/",
     response={
         200: UploadFinishOut,
-        400: NinjaErrorResponse[
-            Literal["duplicate_track", "invalid_filename", "invalid_surah_number"],
-            Literal[None],
-        ],
-        401: NinjaErrorResponse[Literal["authentication_error"], Literal[None]],
-        403: NinjaErrorResponse[Literal["permission_denied"], Literal[None]],
-        404: NinjaErrorResponse[Literal["asset_not_found"], Literal[None]],
-        409: NinjaErrorResponse[Literal["duplicate_track"], Literal[None]],
+        400: NinjaErrorResponse[Literal["duplicate_track"]]
+        | NinjaErrorResponse[Literal["invalid_filename"]]
+        | NinjaErrorResponse[Literal["invalid_surah_number"]],
+        401: NinjaErrorResponse[Literal["authentication_error"]],
+        403: NinjaErrorResponse[Literal["permission_denied"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]],
+        409: NinjaErrorResponse[Literal["duplicate_track"]],
     },
-    auth=ninja_jwt_auth,
 )
 def finish_upload(request: Request, data: UploadFinishIn):
-    if not request.user.is_staff:
-        raise PermissionDenied("Staff only")
 
     asset = get_object_or_404(Asset, id=data.asset_id)
 
@@ -227,47 +205,13 @@ class UploadAbortOut(Schema):
     "recitation-tracks/uploads/abort/",
     response={
         200: UploadAbortOut,
-        401: NinjaErrorResponse[Literal["authentication_error"], Literal[None]],
-        403: NinjaErrorResponse[Literal["permission_denied"], Literal[None]],
+        401: NinjaErrorResponse[Literal["authentication_error"]],
+        403: NinjaErrorResponse[Literal["permission_denied"]],
     },
-    auth=ninja_jwt_auth,
 )
 def abort_upload(request: Request, data: UploadAbortIn):
-    if not request.user.is_staff:
-        raise PermissionDenied("Staff only")
 
     service = AssetRecitationAudioTracksDirectUploadService()
     result = service.abort_upload(key=data.key, upload_id=data.upload_id)
 
     return UploadAbortOut(key=data.key, upload_id=data.upload_id, aborted=result["aborted"])
-
-
-class DeleteTracksIn(Schema):
-    track_ids: list[int]
-
-
-@router.delete(
-    "recitation-tracks/",
-    response={
-        204: None,
-        401: NinjaErrorResponse[Literal["authentication_error"], Literal[None]],
-        403: NinjaErrorResponse[Literal["permission_denied"], Literal[None]],
-    },
-    auth=ninja_jwt_auth,
-)
-def delete_tracks(request: Request, data: DeleteTracksIn):
-    if not request.user.is_staff:
-        raise PermissionDenied("Staff only")
-
-    repo = RecitationTrackRepository()
-    tracks = repo.get_recitation_tracks_by_ids(data.track_ids)
-
-    if not data.track_ids or len(tracks) != len(data.track_ids):
-        raise ItqanError(
-            error_name="track_not_found",
-            message="Some track IDs are invalid or do not exist.",
-            status_code=400,
-        )
-
-    repo.delete_recitation_tracks(tracks)
-    return 204, None

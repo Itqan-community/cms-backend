@@ -39,7 +39,7 @@ class RecitationSurahTrackOut(Schema):
 
 @router.get(
     "recitations/{asset_id}/",
-    response={200: list[RecitationSurahTrackOut], 404: NinjaErrorResponse[Literal["not_found"], Literal[None]]},
+    response={200: list[RecitationSurahTrackOut], 404: NinjaErrorResponse[Literal["not_found"]]},
 )
 @paginate
 def list_recitation_tracks(request: Request, asset_id: int):

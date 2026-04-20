@@ -27,9 +27,6 @@ def create_ninja_api(
 ) -> NinjaAPI:
     """
     Factory to create a NinjaAPI instance with Itqan defaults.
-
-    docs_base_path controls openapi_url
-    (e.g. '/cms-api' or '/developers-api').
     """
     router = default_router or ItqanRouter()
     throttle = NinjaUserPathRateThrottle() if enable_throttle else None
@@ -42,7 +39,7 @@ def create_ninja_api(
         default_router=router,
         throttle=throttle,
         parser=parser,
-        docs=ScalarViewer(openapi_url=f"{docs_base_path}/openapi.json"),
+        docs=ScalarViewer(openapi_url=f"{docs_base_path}/openapi.json", hide_models=True),
         docs_url="/docs/",
         urls_namespace=urls_namespace,
         docs_decorator=docs_decorator,

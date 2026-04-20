@@ -6,7 +6,6 @@ from pydantic import AwareDatetime
 
 from apps.content.models import Asset, LicenseChoice, ResourceVersion
 from apps.content.services.tafsir import TafsirService
-from apps.core.ninja_utils.auth import ninja_jwt_auth
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
@@ -169,11 +168,9 @@ def list_tafsirs(request: Request, filters: TafsirFilter = Query()):
     "tafsirs/",
     response={
         201: TafsirDetailOut,
-        400: NinjaErrorResponse[Literal["tafsir_name_required", "external_url_required"], Literal[None]],
-        404: NinjaErrorResponse[Literal["publisher_not_found"], Literal[None]]
-        | NinjaErrorResponse[Literal["tafsir_not_found"], Literal[None]],
+        400: NinjaErrorResponse[Literal["tafsir_name_required"]] | NinjaErrorResponse[Literal["external_url_required"]],
+        404: NinjaErrorResponse[Literal["publisher_not_found"]] | NinjaErrorResponse[Literal["tafsir_not_found"]],
     },
-    auth=ninja_jwt_auth,
 )
 def create_tafsir(
     request: Request,
@@ -202,7 +199,7 @@ def create_tafsir(
     "tafsirs/{tafsir_slug}/",
     response={
         200: TafsirDetailOut,
-        404: NinjaErrorResponse[Literal["tafsir_not_found"], Literal[None]],
+        404: NinjaErrorResponse[Literal["tafsir_not_found"]],
     },
 )
 def retrieve_tafsir(request: Request, tafsir_slug: str) -> Asset:
@@ -214,10 +211,9 @@ def retrieve_tafsir(request: Request, tafsir_slug: str) -> Asset:
     "tafsirs/{tafsir_slug}/",
     response={
         200: TafsirDetailOut,
-        400: NinjaErrorResponse[Literal["tafsir_name_required", "external_url_required"], Literal[None]],
-        404: NinjaErrorResponse[Literal["tafsir_not_found"], Literal[None]],
+        400: NinjaErrorResponse[Literal["tafsir_name_required"]] | NinjaErrorResponse[Literal["external_url_required"]],
+        404: NinjaErrorResponse[Literal["tafsir_not_found"]],
     },
-    auth=ninja_jwt_auth,
 )
 def update_tafsir_put(
     request: Request,
@@ -237,10 +233,9 @@ def update_tafsir_put(
     "tafsirs/{tafsir_slug}/",
     response={
         200: TafsirDetailOut,
-        400: NinjaErrorResponse[Literal["tafsir_name_required", "external_url_required"], Literal[None]],
-        404: NinjaErrorResponse[Literal["tafsir_not_found"], Literal[None]],
+        400: NinjaErrorResponse[Literal["tafsir_name_required"]] | NinjaErrorResponse[Literal["external_url_required"]],
+        404: NinjaErrorResponse[Literal["tafsir_not_found"]],
     },
-    auth=ninja_jwt_auth,
 )
 def update_tafsir_patch(
     request: Request,
@@ -260,9 +255,8 @@ def update_tafsir_patch(
     "tafsirs/{tafsir_slug}/",
     response={
         204: None,
-        404: NinjaErrorResponse[Literal["tafsir_not_found"], Literal[None]],
+        404: NinjaErrorResponse[Literal["tafsir_not_found"]],
     },
-    auth=ninja_jwt_auth,
 )
 def delete_tafsir(request: Request, tafsir_slug: str) -> tuple[int, None]:
     service = TafsirService()

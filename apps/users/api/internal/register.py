@@ -21,7 +21,7 @@ if not settings.ENABLE_ALLAUTH:
         auth=None,
         response={
             200: TokenResponseSchema,
-            400: NinjaErrorResponse[Literal["registration_failed"], Literal[None]],
+            400: NinjaErrorResponse[Literal["registration_failed"]],
         },
         summary="Register",
         description="Register new user with email and password",

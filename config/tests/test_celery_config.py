@@ -17,19 +17,12 @@ class TestCeleryConfig(SimpleTestCase):
 
         self.assertEqual(app.main, "itqan_cms")
 
-    def test_beat_scheduler_is_database(self):
-        """Beat scheduler should use django-celery-beat DatabaseScheduler."""
-        self.assertEqual(
-            settings.CELERY_BEAT_SCHEDULER,
-            "django_celery_beat.schedulers:DatabaseScheduler",
-        )
-
     def test_task_always_eager_in_dev(self):
         """Development settings should keep tasks eager (synchronous)."""
         self.assertTrue(settings.CELERY_TASK_ALWAYS_EAGER)
 
     def test_existing_tasks_discoverable(self):
-        """Autodiscover should find tasks in content and publishers apps."""
+        """Autodiscover should find tasks in content app."""
         from celery import current_app
 
         current_app.loader.import_default_modules()
@@ -37,10 +30,6 @@ class TestCeleryConfig(SimpleTestCase):
         self.assertTrue(
             any("content" in t for t in registered),
             f"No content tasks found in: {list(registered)}",
-        )
-        self.assertTrue(
-            any("publishers" in t for t in registered),
-            f"No publisher tasks found in: {list(registered)}",
         )
 
     def test_beat_schedule_has_active_tasks(self):

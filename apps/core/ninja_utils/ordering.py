@@ -23,7 +23,7 @@ class Ordering(OrderingBase):
         super().__init__(pass_parameter=pass_parameter)
         self.ordering_fields = ordering_fields or []
         self.query_param = query_param
-        self.Input = self.create_input(ordering_fields)  # type:ignore
+        self.Input = self.create_input(ordering_fields)  # type: ignore
 
     def create_input(self, ordering_fields: list[str] | None) -> type[Input]:
         query_param = self.query_param
@@ -32,7 +32,7 @@ class Ordering(OrderingBase):
             class DynamicInput(Ordering.Input):
                 ordering: Query[str | None, P(example=", ".join(ordering_fields), alias=query_param)] = (
                     None
-                )  # type:ignore
+                )  # type: ignore
 
             return DynamicInput
         return Ordering.Input

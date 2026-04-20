@@ -69,14 +69,17 @@ class RecitationTracksUploadAPITest(BaseTestCase):
         )
 
     def test_validate_upload_where_all_files_are_new_should_return_valid(self):
+        # Arrange
         self.authenticate_user(self.staff_user)
 
+        # Act
         response = self.client.post(
             "/portal/recitation-tracks/validate-upload/",
             {"asset_id": self.recitation_asset.id, "filenames": ["002.mp3", "003.mp3"]},
             format="json",
         )
 
+        # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
         self.assertEqual("valid", body["status"])
@@ -90,8 +93,10 @@ class RecitationTracksUploadAPITest(BaseTestCase):
         )
 
     def test_validate_upload_where_mix_of_new_existing_and_invalid_should_return_invalid(self):
+        # Arrange
         self.authenticate_user(self.staff_user)
 
+        # Act
         response = self.client.post(
             "/portal/recitation-tracks/validate-upload/",
             {
@@ -101,6 +106,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
             format="json",
         )
 
+        # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
         self.assertEqual("invalid", body["status"])
@@ -119,14 +125,17 @@ class RecitationTracksUploadAPITest(BaseTestCase):
         )
 
     def test_validate_upload_where_filename_extension_is_not_mp3_should_return_invalid(self):
+        # Arrange
         self.authenticate_user(self.staff_user)
 
+        # Act
         response = self.client.post(
             "/portal/recitation-tracks/validate-upload/",
             {"asset_id": self.recitation_asset.id, "filenames": ["002.wav"]},
             format="json",
         )
 
+        # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
         self.assertEqual("invalid", body["status"])
@@ -140,14 +149,17 @@ class RecitationTracksUploadAPITest(BaseTestCase):
         )
 
     def test_validate_upload_where_all_files_exist_should_return_invalid(self):
+        # Arrange
         self.authenticate_user(self.staff_user)
 
+        # Act
         response = self.client.post(
             "/portal/recitation-tracks/validate-upload/",
             {"asset_id": self.recitation_asset.id, "filenames": ["001.mp3"]},
             format="json",
         )
 
+        # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
         self.assertEqual("invalid", body["status"])
@@ -157,48 +169,58 @@ class RecitationTracksUploadAPITest(BaseTestCase):
         )
 
     def test_validate_upload_where_empty_list_should_return_invalid(self):
+        # Arrange
         self.authenticate_user(self.staff_user)
 
+        # Act
         response = self.client.post(
             "/portal/recitation-tracks/validate-upload/",
             {"asset_id": self.recitation_asset.id, "filenames": []},
             format="json",
         )
 
+        # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
         self.assertEqual("invalid", body["status"])
         self.assertEqual([], body["files"])
 
     def test_validate_upload_where_asset_not_found_should_return_404(self):
+        # Arrange
         self.authenticate_user(self.staff_user)
 
+        # Act
         response = self.client.post(
             "/portal/recitation-tracks/validate-upload/",
             {"asset_id": 999999, "filenames": ["001.mp3"]},
             format="json",
         )
 
+        # Assert
         self.assertEqual(404, response.status_code, response.content)
         self.assertEqual("not_found", response.json()["error_name"])
 
-    def test_validate_upload_where_non_staff_should_return_403(self):
-        self.authenticate_user(self.non_staff_user)
+    def test_validate_upload_where_non_staff_should_return_401(self):
+        # Arrange
+        self.authenticate_user(self.non_staff_user, add_superuser=False)
 
+        # Act
         response = self.client.post(
             "/portal/recitation-tracks/validate-upload/",
             {"asset_id": self.recitation_asset.id, "filenames": ["001.mp3"]},
             format="json",
         )
 
-        self.assertEqual(403, response.status_code, response.content)
-        self.assertEqual("permission_denied", response.json()["error_name"])
+        # Assert
+        self.assertEqual(401, response.status_code, response.content)
+        self.assertEqual("authentication_error", response.json()["error_name"])
 
     def test_start_upload_should_delegate_to_service(self):
+        # Arrange
         self.authenticate_user(self.staff_user)
 
         with patch(
-            "apps.content.api.portal.recitation_tracks_bulk.AssetRecitationAudioTracksDirectUploadService.start_upload",
+            "apps.content.api.portal.recitation_tracks_upload.AssetRecitationAudioTracksDirectUploadService.start_upload",
             return_value={
                 "key": "uploads/assets/1/recitations/002.mp3",
                 "uploadId": "upload-123",
@@ -206,6 +228,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
                 "surahNumber": 2,
             },
         ) as start_upload:
+            # Act
             response = self.client.post(
                 "/portal/recitation-tracks/uploads/start/",
                 {
@@ -217,6 +240,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
                 format="json",
             )
 
+        # Assert
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual(
             {
@@ -230,34 +254,40 @@ class RecitationTracksUploadAPITest(BaseTestCase):
         start_upload.assert_called_once_with(asset_id=self.recitation_asset.id, filename="002.mp3")
 
     def test_start_upload_where_service_raises_should_propagate_itqan_error(self):
+        # Arrange
         self.authenticate_user(self.staff_user)
 
         with patch(
-            "apps.content.api.portal.recitation_tracks_bulk.AssetRecitationAudioTracksDirectUploadService.start_upload",
+            "apps.content.api.portal.recitation_tracks_upload.AssetRecitationAudioTracksDirectUploadService.start_upload",
             side_effect=ItqanError("duplicate_track", "Track already exists", status_code=409),
         ):
+            # Act
             response = self.client.post(
                 "/portal/recitation-tracks/uploads/start/",
                 {"asset_id": self.recitation_asset.id, "filename": "001.mp3"},
                 format="json",
             )
 
+        # Assert
         self.assertEqual(409, response.status_code, response.content)
         self.assertEqual("duplicate_track", response.json()["error_name"])
 
     def test_sign_part_should_return_presigned_url(self):
+        # Arrange
         self.authenticate_user(self.staff_user)
 
         with patch(
-            "apps.content.api.portal.recitation_tracks_bulk.AssetRecitationAudioTracksDirectUploadService.sign_part",
+            "apps.content.api.portal.recitation_tracks_upload.AssetRecitationAudioTracksDirectUploadService.sign_part",
             return_value={"url": "https://example.test/presigned"},
         ) as sign_part:
+            # Act
             response = self.client.post(
                 "/portal/recitation-tracks/uploads/sign-part/",
                 {"key": "uploads/assets/1/recitations/002.mp3", "upload_id": "upload-123", "part_number": 1},
                 format="json",
             )
 
+        # Assert
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual({"url": "https://example.test/presigned"}, response.json())
         sign_part.assert_called_once_with(
@@ -267,10 +297,11 @@ class RecitationTracksUploadAPITest(BaseTestCase):
         )
 
     def test_finish_upload_should_delegate_to_service(self):
+        # Arrange
         self.authenticate_user(self.staff_user)
 
         with patch(
-            "apps.content.api.portal.recitation_tracks_bulk.AssetRecitationAudioTracksDirectUploadService.finish_upload",
+            "apps.content.api.portal.recitation_tracks_upload.AssetRecitationAudioTracksDirectUploadService.finish_upload",
             return_value={
                 "trackId": 55,
                 "assetId": self.recitation_asset.id,
@@ -280,6 +311,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
                 "key": "uploads/assets/1/recitations/002.mp3",
             },
         ) as finish_upload:
+            # Act
             response = self.client.post(
                 "/portal/recitation-tracks/uploads/finish/",
                 {
@@ -294,6 +326,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
                 format="json",
             )
 
+        # Assert
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual(55, response.json()["track_id"])
         self.assertEqual(self.recitation_asset.id, response.json()["asset_id"])
@@ -310,18 +343,21 @@ class RecitationTracksUploadAPITest(BaseTestCase):
         )
 
     def test_abort_upload_should_return_aborted_payload(self):
+        # Arrange
         self.authenticate_user(self.staff_user)
 
         with patch(
-            "apps.content.api.portal.recitation_tracks_bulk.AssetRecitationAudioTracksDirectUploadService.abort_upload",
+            "apps.content.api.portal.recitation_tracks_upload.AssetRecitationAudioTracksDirectUploadService.abort_upload",
             return_value={"aborted": True},
         ) as abort_upload:
+            # Act
             response = self.client.post(
                 "/portal/recitation-tracks/uploads/abort/",
                 {"key": "uploads/assets/1/recitations/002.mp3", "upload_id": "upload-123"},
                 format="json",
             )
 
+        # Assert
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual(
             {"key": "uploads/assets/1/recitations/002.mp3", "upload_id": "upload-123", "aborted": True},
@@ -333,16 +369,19 @@ class RecitationTracksUploadAPITest(BaseTestCase):
         )
 
     def test_upload_endpoints_where_unauthenticated_should_return_401(self):
+        # Act
         response = self.client.post(
             "/portal/recitation-tracks/uploads/sign-part/",
             {"key": "uploads/assets/1/recitations/002.mp3", "upload_id": "upload-123", "part_number": 1},
             format="json",
         )
 
+        # Assert
         self.assertEqual(401, response.status_code, response.content)
         self.assertEqual("authentication_error", response.json()["error_name"])
 
     def test_admin_uploads_start_view_should_still_work(self):
+        # Arrange
         self.client.force_login(self.staff_user)
 
         with patch(
@@ -356,12 +395,14 @@ class RecitationTracksUploadAPITest(BaseTestCase):
                 "filename": "002.mp3",
             },
         ) as start_upload:
+            # Act
             response = self.client.post(
                 "/django-admin/content/asset/uploads/start/",
                 data={"assetId": self.recitation_asset.id, "filename": "002.mp3"},
                 format="json",
             )
 
+        # Assert
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual("legacy-upload-1", response.json()["uploadId"])
         start_upload.assert_called_once_with(asset_id=self.recitation_asset.id, filename="002.mp3")

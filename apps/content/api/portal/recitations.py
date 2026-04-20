@@ -6,13 +6,13 @@ from pydantic import AwareDatetime
 
 from apps.content.models import Asset, LicenseChoice
 from apps.content.services.recitation import RecitationService
-from apps.core.ninja_utils.auth import ninja_jwt_auth
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.core.ninja_utils.types import AbsoluteUrl
 
 router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
 
@@ -85,11 +85,18 @@ class RecitationDetailOut(Schema):
     license: LicenseChoice
     created_at: AwareDatetime
     updated_at: AwareDatetime
+    ayah_timings_url: AbsoluteUrl | None = None
 
     @staticmethod
     def resolve_thumbnail_url(obj: Asset) -> str | None:
         if obj.thumbnail_url:
             return obj.thumbnail_url.url
+        return None
+
+    @staticmethod
+    def resolve_ayah_timings_url(obj: Asset) -> str | None:
+        if version := obj.versions.first():
+            return version.file_url.url if version.file_url else None
         return None
 
 
@@ -106,7 +113,7 @@ class RecitationCreateIn(Schema):
     qiraah_id: int | None = None
     riwayah_id: int | None = None
     madd_level: Asset.MaddLevelChoice | None = None
-    meem_behaviour: Asset.MeemBehaviourChoice = None
+    meem_behaviour: Asset.MeemBehaviourChoice | None = None
     year: int | None = None
     license: LicenseChoice = Field(...)
 
@@ -121,7 +128,7 @@ class RecitationPutIn(Schema):
     qiraah_id: int | None = None
     riwayah_id: int | None = None
     madd_level: Asset.MaddLevelChoice | None = None
-    meem_behaviour: Asset.MeemBehaviourChoice = None
+    meem_behaviour: Asset.MeemBehaviourChoice | None = None
     year: int | None = None
     license: LicenseChoice = Field(...)
 
@@ -197,21 +204,13 @@ def list_recitations(request: Request, filters: RecitationFilter = Query()):
     "recitations/",
     response={
         201: RecitationDetailOut,
-        400: NinjaErrorResponse[
-            Literal["recitation_name_required", "invalid_riwayah_qiraah_combo"],
-            Literal[None],
-        ],
-        404: NinjaErrorResponse[
-            Literal[
-                "publisher_not_found",
-                "reciter_not_found",
-                "qiraah_not_found",
-                "riwayah_not_found",
-            ],
-            Literal[None],
-        ],
+        400: NinjaErrorResponse[Literal["recitation_name_required"]]
+        | NinjaErrorResponse[Literal["invalid_riwayah_qiraah_combo"]],
+        404: NinjaErrorResponse[Literal["publisher_not_found"]]
+        | NinjaErrorResponse[Literal["reciter_not_found"]]
+        | NinjaErrorResponse[Literal["qiraah_not_found"]]
+        | NinjaErrorResponse[Literal["riwayah_not_found"]],
     },
-    auth=ninja_jwt_auth,
 )
 def create_recitation(
     request: Request,
@@ -239,34 +238,27 @@ def create_recitation(
     "recitations/{recitation_slug}/",
     response={
         200: RecitationDetailOut,
-        404: NinjaErrorResponse[Literal["recitation_not_found"], Literal[None]],
+        404: NinjaErrorResponse[Literal["recitation_not_found"]],
     },
 )
 def retrieve_recitation(request: Request, recitation_slug: str) -> Asset:
     service = RecitationService()
-    return service.get_recitation(recitation_slug)
+    recitation = service.get_recitation(recitation_slug)
+    return recitation
 
 
 @router.put(
     "recitations/{recitation_slug}/",
     response={
         200: RecitationDetailOut,
-        400: NinjaErrorResponse[
-            Literal["recitation_name_required", "invalid_riwayah_qiraah_combo"],
-            Literal[None],
-        ],
-        404: NinjaErrorResponse[
-            Literal[
-                "recitation_not_found",
-                "publisher_not_found",
-                "reciter_not_found",
-                "qiraah_not_found",
-                "riwayah_not_found",
-            ],
-            Literal[None],
-        ],
+        400: NinjaErrorResponse[Literal["recitation_name_required"]]
+        | NinjaErrorResponse[Literal["invalid_riwayah_qiraah_combo"]],
+        404: NinjaErrorResponse[Literal["recitation_not_found"]]
+        | NinjaErrorResponse[Literal["publisher_not_found"]]
+        | NinjaErrorResponse[Literal["reciter_not_found"]]
+        | NinjaErrorResponse[Literal["qiraah_not_found"]]
+        | NinjaErrorResponse[Literal["riwayah_not_found"]],
     },
-    auth=ninja_jwt_auth,
 )
 def update_recitation_put(
     request: Request,
@@ -283,22 +275,14 @@ def update_recitation_put(
     "recitations/{recitation_slug}/",
     response={
         200: RecitationDetailOut,
-        400: NinjaErrorResponse[
-            Literal["recitation_name_required", "invalid_riwayah_qiraah_combo"],
-            Literal[None],
-        ],
-        404: NinjaErrorResponse[
-            Literal[
-                "recitation_not_found",
-                "publisher_not_found",
-                "reciter_not_found",
-                "qiraah_not_found",
-                "riwayah_not_found",
-            ],
-            Literal[None],
-        ],
+        400: NinjaErrorResponse[Literal["recitation_name_required"]]
+        | NinjaErrorResponse[Literal["invalid_riwayah_qiraah_combo"]],
+        404: NinjaErrorResponse[Literal["recitation_not_found"]]
+        | NinjaErrorResponse[Literal["publisher_not_found"]]
+        | NinjaErrorResponse[Literal["reciter_not_found"]]
+        | NinjaErrorResponse[Literal["qiraah_not_found"]]
+        | NinjaErrorResponse[Literal["riwayah_not_found"]],
     },
-    auth=ninja_jwt_auth,
 )
 def update_recitation_patch(
     request: Request,
@@ -315,9 +299,8 @@ def update_recitation_patch(
     "recitations/{recitation_slug}/",
     response={
         204: None,
-        404: NinjaErrorResponse[Literal["recitation_not_found"], Literal[None]],
+        404: NinjaErrorResponse[Literal["recitation_not_found"]],
     },
-    auth=ninja_jwt_auth,
 )
 def delete_recitation(request: Request, recitation_slug: str) -> tuple[int, None]:
     service = RecitationService()

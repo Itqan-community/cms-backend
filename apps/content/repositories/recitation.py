@@ -5,15 +5,7 @@ from typing import TYPE_CHECKING, Any
 from django.db import models, transaction
 from django.db.models import Count, Q
 
-from apps.content.models import (
-    Asset,
-    LicenseChoice,
-    Qiraah,
-    RecitationSurahTrack,
-    Reciter,
-    Resource,
-    Riwayah,
-)
+from apps.content.models import Asset, LicenseChoice, Qiraah, RecitationSurahTrack, Reciter, Resource, Riwayah
 from apps.content.repositories.base import BaseRecitationRepository
 
 if TYPE_CHECKING:
@@ -114,8 +106,8 @@ class RecitationRepository(BaseRecitationRepository):
         reciter_id: int,
         qiraah_id: int,
         riwayah_id: int,
-        madd_level: str,
-        meem_behaviour: str,
+        madd_level: Asset.MaddLevelChoice | None,
+        meem_behaviour: Asset.MeemBehaviourChoice | None,
         year: int,
     ) -> Asset:
         """
