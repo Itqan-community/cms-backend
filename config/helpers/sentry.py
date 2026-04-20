@@ -24,7 +24,7 @@ def enable_sentry() -> None:
             RedisIntegration(),
             sentry_logging,
         ],
-        _experiments={"enable_logs": True},
+        enable_logs=True,
         # Sampling configuration
         sample_rate=config("SENTRY_ERRORS_SAMPLE_RATE", cast=float, default=1),
         traces_sample_rate=config("SENTRY_TRACES_SAMPLE_RATE", cast=float, default=1),
