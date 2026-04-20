@@ -1,3 +1,5 @@
+import logging
+
 from decouple import config
 
 
@@ -5,7 +7,13 @@ def enable_sentry() -> None:
     from sentry_sdk import init
     from sentry_sdk.integrations.celery import CeleryIntegration
     from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.logging import LoggingIntegration
     from sentry_sdk.integrations.redis import RedisIntegration
+
+    sentry_logging = LoggingIntegration(
+        level=logging.INFO,  # INFO+ captured as breadcrumbs
+        event_level=logging.ERROR,  # ERROR+ creates a Sentry issue
+    )
 
     init(
         server_name=config("DEFAULT_SERVER_NAME", default=""),
@@ -14,7 +22,9 @@ def enable_sentry() -> None:
             DjangoIntegration(transaction_style="url", middleware_spans=True),
             CeleryIntegration(propagate_traces=True, monitor_beat_tasks=True),
             RedisIntegration(),
+            sentry_logging,
         ],
+        _experiments={"enable_logs": True},
         # Sampling configuration
         sample_rate=config("SENTRY_ERRORS_SAMPLE_RATE", cast=float, default=1),
         traces_sample_rate=config("SENTRY_TRACES_SAMPLE_RATE", cast=float, default=1),

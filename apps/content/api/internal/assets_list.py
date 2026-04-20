@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated
 
 from ninja import FilterLookup, FilterSchema, Query, Schema
@@ -12,6 +13,7 @@ from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
 
 router = ItqanRouter(tags=[NinjaTag.ASSETS])
+logger = logging.getLogger(__name__)
 
 
 class ListAssetPublisherOut(Schema):
@@ -39,6 +41,7 @@ class AssetFilter(FilterSchema):
 @ordering(ordering_fields=["name", "category"])
 @searching(search_fields=["name", "description", "resource__publisher__name", "category"])
 def list_assets(request: Request, filters: AssetFilter = Query()):
+    logger.info("Assets list requested")
     assets = Asset.objects.filter(request.publisher_q("resource__publisher")).exclude(
         resource__status=Resource.StatusChoice.DRAFT
     )
