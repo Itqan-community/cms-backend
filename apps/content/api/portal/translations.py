@@ -91,36 +91,36 @@ class TranslationDetailOut(Schema):
 
     @staticmethod
     def resolve_versions(obj: Asset) -> list[TranslationVersionOut]:
-        return list(obj.resource.versions.all())
+        return list(obj.versions.all())
 
 
 # --- Input Schemas ---
 
 
 class TranslationCreateIn(Schema):
-    name_ar: str = Field(default="", max_length=255)
-    name_en: str = Field(default="", max_length=255)
+    name_ar: str | None = None
+    name_en: str | None = None
     description_ar: str = ""
     description_en: str = ""
     long_description_ar: str = ""
     long_description_en: str = ""
-    license: LicenseChoice = Field(...)
+    license: LicenseChoice
     language: str = Field(..., max_length=10)
-    publisher_id: int = Field(...)
+    publisher_id: int
     is_external: bool = False
     external_url: str | None = None
 
 
 class TranslationPutIn(Schema):
-    name_ar: str = Field(default="", max_length=255)
-    name_en: str = Field(default="", max_length=255)
-    description_ar: str = ""
-    description_en: str = ""
-    long_description_ar: str = ""
-    long_description_en: str = ""
-    license: LicenseChoice = Field(...)
+    name_ar: str | None = None
+    name_en: str | None = None
+    description_ar: str | None = None
+    description_en: str | None = None
+    long_description_ar: str | None = None
+    long_description_en: str | None = None
+    license: LicenseChoice
     language: str = Field(..., max_length=10)
-    publisher_id: int = Field(...)
+    publisher_id: int
     is_external: bool = False
     external_url: str | None = None
 

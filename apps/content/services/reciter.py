@@ -42,8 +42,8 @@ class ReciterService:
     def create_reciter(
         self,
         *,
-        name_ar: str,
-        name_en: str,
+        name_ar: str | None,
+        name_en: str | None,
         bio_ar: str = "",
         bio_en: str = "",
         nationality: str = "",

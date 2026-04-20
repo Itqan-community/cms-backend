@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, Resource, ResourceVersion
+from apps.content.models import Asset, AssetVersion, Resource, ResourceVersion
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -32,20 +32,22 @@ class TafsirDetailTest(BaseTestCase):
         )
 
         # Create resource versions
-        self.version1 = baker.make(
+        r_version1 = baker.make(
             ResourceVersion,
             resource=self.resource,
             name="Version 1.0",
             semvar="1.0.0",
             size_bytes=1024,
         )
-        self.version2 = baker.make(
+        r_version2 = baker.make(
             ResourceVersion,
             resource=self.resource,
             name="Version 2.0",
             semvar="2.0.0",
             size_bytes=2048,
         )
+        self.version1 = baker.make(AssetVersion, resource_version=r_version1, asset=self.tafsir, name="Version 1.0")
+        self.version2 = baker.make(AssetVersion, resource_version=r_version2, asset=self.tafsir, name="Version 2.0")
 
         self.user = User.objects.create_user(email="testuser@example.com", name="Test User")
 

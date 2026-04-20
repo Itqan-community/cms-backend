@@ -52,11 +52,11 @@ class RecitationService:
         description_en: str,
         license: LicenseChoice,
         reciter_id: int,
-        qiraah_id: int,
-        riwayah_id: int,
-        madd_level: Asset.MaddLevelChoice,
-        meem_behaviour: Asset.MeemBehaviourChoice,
-        year: int,
+        qiraah_id: int | None,
+        riwayah_id: int | None,
+        madd_level: Asset.MaddLevelChoice | None,
+        meem_behaviour: Asset.MeemBehaviourChoice | None,
+        year: int | None,
     ) -> Asset:
         """
         Business Logic: Create a new recitation.

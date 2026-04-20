@@ -108,29 +108,29 @@ class RecitationCreateIn(Schema):
     name_en: str = Field(default="", max_length=255)
     description_ar: str = ""
     description_en: str = ""
-    publisher_id: int = Field(...)
-    reciter_id: int = Field(...)
+    publisher_id: int
+    reciter_id: int
     qiraah_id: int | None = None
     riwayah_id: int | None = None
     madd_level: Asset.MaddLevelChoice | None = None
     meem_behaviour: Asset.MeemBehaviourChoice | None = None
     year: int | None = None
-    license: LicenseChoice = Field(...)
+    license: LicenseChoice
 
 
 class RecitationPutIn(Schema):
-    name_ar: str = Field(default="", max_length=255)
-    name_en: str = Field(default="", max_length=255)
-    description_ar: str = ""
-    description_en: str = ""
-    publisher_id: int = Field(...)
-    reciter_id: int = Field(...)
+    name_ar: str | None = Field(default=None, max_length=255)
+    name_en: str | None = Field(default=None, max_length=255)
+    description_ar: str | None = None
+    description_en: str | None = None
+    publisher_id: int
+    reciter_id: int
     qiraah_id: int | None = None
     riwayah_id: int | None = None
     madd_level: Asset.MaddLevelChoice | None = None
     meem_behaviour: Asset.MeemBehaviourChoice | None = None
     year: int | None = None
-    license: LicenseChoice = Field(...)
+    license: LicenseChoice
 
 
 class RecitationPatchIn(Schema):

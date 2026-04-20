@@ -44,12 +44,12 @@ class TafsirService:
         self,
         *,
         publisher_id: int,
-        name_ar: str,
-        name_en: str,
-        description_ar: str,
-        description_en: str,
-        long_description_ar: str,
-        long_description_en: str,
+        name_ar: str | None,
+        name_en: str | None,
+        description_ar: str | None,
+        description_en: str | None,
+        long_description_ar: str | None,
+        long_description_en: str | None,
         license: LicenseChoice,
         language: str,
         is_external: bool = False,
@@ -79,7 +79,7 @@ class TafsirService:
                 status_code=400,
             )
 
-        description = description_ar or description_en
+        description = description_ar or description_en or ""
 
         if is_external and not external_url:
             raise ItqanError(
