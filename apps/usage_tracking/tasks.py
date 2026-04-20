@@ -20,7 +20,7 @@ _TRANSIENT_ERRORS = (RequestsConnectionError, RequestsTimeout, ConnectionError, 
 def _build_ingest_client() -> MixpanelIngestClient:
     return MixpanelIngestClient(
         token=settings.MIXPANEL_PROJECT_TOKEN,
-        api_base=settings.MIXPANEL_API_BASE,
+        ingest_host=settings.MIXPANEL_INGEST_HOST,
         enabled=settings.MIXPANEL_ENABLED,
     )
 

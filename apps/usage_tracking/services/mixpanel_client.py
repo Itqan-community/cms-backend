@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from typing import Any
-from urllib.parse import urlparse
 
 import requests
 from mixpanel import Consumer, Mixpanel
@@ -15,9 +14,9 @@ class MixpanelQueryError(Exception):
 
 
 class MixpanelIngestClient:
-    def __init__(self, token: str, api_base: str, enabled: bool) -> None:
+    def __init__(self, token: str, ingest_host: str, enabled: bool) -> None:
         self._token = token
-        self._api_base = api_base
+        self._ingest_host = ingest_host
         self._enabled = enabled
         self._sdk: Mixpanel | None = None
 
@@ -25,8 +24,7 @@ class MixpanelIngestClient:
         if not self._enabled or not self._token:
             return
         if self._sdk is None:
-            api_host = urlparse(self._api_base).netloc or self._api_base
-            self._sdk = Mixpanel(self._token, consumer=Consumer(api_host=api_host))
+            self._sdk = Mixpanel(self._token, consumer=Consumer(api_host=self._ingest_host))
         self._sdk.track(distinct_id, event, properties)
 
 
