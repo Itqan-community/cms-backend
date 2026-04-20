@@ -58,7 +58,7 @@ THIRD_PARTY_APPS = [
 
 COUNTRIES_OVERRIDE = {"IL": None}
 
-LOCAL_APPS = ["apps.core", "apps.content", "apps.users", "apps.publishers"]
+LOCAL_APPS = ["apps.core", "apps.content", "apps.users", "apps.publishers", "apps.usage_tracking"]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
@@ -76,6 +76,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "oauth2_provider.middleware.OAuth2TokenMiddleware",
+    "oauth2_provider.middleware.OAuth2ExtraTokenMiddleware",
+    "apps.usage_tracking.middlewares.usage_tracking_middleware.UsageTrackingMiddleware",
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
@@ -464,3 +466,14 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000
 DATA_UPLOAD_MAX_NUMBER_FILES = 114
 
 LOGOUT_REDIRECT_URL = "/accounts/login"
+
+# ========================
+# Usage tracking (Mixpanel)
+# ========================
+MIXPANEL_ENABLED = config("MIXPANEL_ENABLED", default=False, cast=bool)
+MIXPANEL_PROJECT_TOKEN = config("MIXPANEL_PROJECT_TOKEN", default="")
+MIXPANEL_PROJECT_ID = config("MIXPANEL_PROJECT_ID", default="")
+MIXPANEL_SERVICE_USERNAME = config("MIXPANEL_SERVICE_USERNAME", default="")
+MIXPANEL_SERVICE_SECRET = config("MIXPANEL_SERVICE_SECRET", default="")
+MIXPANEL_API_BASE = config("MIXPANEL_API_BASE", default="https://eu.mixpanel.com")
+USAGE_TRACKING_CACHE_TTL = config("USAGE_TRACKING_CACHE_TTL", default=900, cast=int)
