@@ -162,8 +162,6 @@ class RecitationsListTest(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
-        for i in items:
-            print(f"{i=}")
         self.assertEqual(3, len(items))
 
     def test_list_recitations_should_show_recitation_with_qiraah_but_no_riwayah(self):

@@ -81,11 +81,11 @@ class RecitationFilter(FilterSchema):
         "name",
         "description",
         "publisher__name",
-        "reciter__name",
+        "reciter__name_en",
         "reciter__name_ar",
-        "riwayah__name",
+        "riwayah__name_en",
         "riwayah__name_ar",
-        "qiraah__name",
+        "qiraah__name_en",
         "qiraah__name_ar",
     ]
 )
