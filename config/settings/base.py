@@ -54,7 +54,7 @@ THIRD_PARTY_APPS = [
     "django_celery_beat",
     "django_countries",
     "django_extended_makemessages",
-    "django_watchfiles",
+    *(["django_watchfiles"] if DEBUG else []),
 ]
 
 COUNTRIES_OVERRIDE = {"IL": None}
