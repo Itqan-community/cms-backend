@@ -116,7 +116,9 @@ class TestUsageTrackingMiddleware:
         assert kwargs["properties"]["entity_ids"] == []
 
     @patch("apps.usage_tracking.middlewares.usage_tracking_middleware.track_api_request_task")
-    @patch("apps.usage_tracking.middlewares.usage_tracking_middleware.resolve_publisher_from_request")
+    @patch(
+        "apps.usage_tracking.middlewares.usage_tracking_middleware.resolve_publisher_from_request"
+    )
     def test_distinct_id_uses_user_id_when_authed(self, mock_resolve, mock_task):
         mock_resolve.return_value = (42, "acme")
         mw = _make_middleware()
