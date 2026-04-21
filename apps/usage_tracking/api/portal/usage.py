@@ -5,6 +5,7 @@ from __future__ import annotations
 from django.conf import settings
 from ninja import Schema
 
+from apps.core.ninja_utils.auth import ninja_jwt_auth_optional
 from apps.core.ninja_utils.errors import ItqanError
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -18,7 +19,7 @@ class BoardUrlOut(Schema):
     board_url: str | None
 
 
-@router.get("usage/board-url/", auth=None, response=BoardUrlOut, description="Get the Mixpanel board URL for the current user")
+@router.get("usage/board-url/", auth=ninja_jwt_auth_optional, response=BoardUrlOut, description="Get the Mixpanel board URL for the current user")
 def get_usage_board_url(request: Request, publisher_id: int | None = None) -> BoardUrlOut:
     user = request.user
     if not getattr(user, "is_authenticated", False):
