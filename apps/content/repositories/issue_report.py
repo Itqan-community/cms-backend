@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from django.db.models import Q
 
-from apps.content.models import Asset, ContentIssueReport, Resource
+from apps.content.models import Asset, ContentIssueReport
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
@@ -16,7 +16,7 @@ class IssueReportRepository:
     def create_issue_report(
         self,
         reporter: User,
-        content_object: Resource | Asset,
+        content_object: Asset,
         description: str,
         status: ContentIssueReport.StatusChoice = ContentIssueReport.StatusChoice.PENDING,
     ) -> ContentIssueReport:
@@ -67,14 +67,10 @@ class IssueReportRepository:
         report.save(update_fields=["status", "updated_at"])
         return report
 
-    def get_content_object(
-        self, content_type: Literal["resource", "asset"], content_id: int
-    ) -> Resource | Asset | None:
+    def get_content_object(self, content_type: Literal["asset"], content_id: int) -> Asset | None:
         """
-        Helper validation method to retrieve the content object (Resource or Asset).
+        Helper validation method to retrieve the content object (Asset).
         """
-        if content_type == "resource":
-            return Resource.objects.filter(id=content_id).first()
-        elif content_type == "asset":
+        if content_type == "asset":
             return Asset.objects.filter(id=content_id).first()
         return None

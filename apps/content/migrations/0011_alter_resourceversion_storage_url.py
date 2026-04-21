@@ -19,7 +19,6 @@ class Migration(migrations.Migration):
                 blank=True,
                 help_text="File storage for resource version",
                 null=True,
-                upload_to=apps.core.uploads.upload_to_resource_files,
                 validators=[
                     django.core.validators.FileExtensionValidator(
                         allowed_extensions=["pdf", "doc", "docx", "txt", "zip", "tar", "gz", "json", "xml", "csv"]

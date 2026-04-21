@@ -1,7 +1,7 @@
 from django.test.utils import CaptureQueriesContext
 from model_bakery import baker
 
-from apps.content.models import Asset, Qiraah, Resource, Riwayah
+from apps.content.models import Asset, CategoryChoice, Qiraah, Riwayah, StatusChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -26,25 +26,13 @@ class RecitationsListTest(BaseTestCase):
         self.reciter1 = baker.make("content.Reciter", name="Mishary Alafasy", name_ar="مشاري العفاسي")
         self.reciter2 = baker.make("content.Reciter", name="Saad Al-Ghamidi", name_ar="سعد الغامدي")
 
-        self.ready_resource = baker.make(
-            Resource,
-            publisher=self.publisher,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.READY,
-        )
-        self.draft_resource = baker.make(
-            Resource,
-            publisher=self.publisher,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.DRAFT,
-        )
-
         self.asset1 = baker.make(
             Asset,
             name="Alafasy Hafs Recitation",
             description="Beautiful recitation by Alafasy",
-            category=Resource.CategoryChoice.RECITATION,
-            resource=self.ready_resource,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             reciter=self.reciter1,
             riwayah=self.riwayah_hafs,
             qiraah=self.qiraah_asim,
@@ -53,8 +41,9 @@ class RecitationsListTest(BaseTestCase):
             Asset,
             name="Ghamidi Warsh Recitation",
             description="Calm recitation by Ghamidi",
-            category=Resource.CategoryChoice.RECITATION,
-            resource=self.ready_resource,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             reciter=self.reciter2,
             riwayah=self.riwayah_warsh,
             qiraah=self.qiraah_nafi,
@@ -64,8 +53,9 @@ class RecitationsListTest(BaseTestCase):
         baker.make(
             Asset,
             name="Draft Recitation",
-            category=Resource.CategoryChoice.RECITATION,
-            resource=self.draft_resource,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.DRAFT,
             reciter=self.reciter1,
             riwayah=self.riwayah_hafs,
             qiraah=self.qiraah_asim,

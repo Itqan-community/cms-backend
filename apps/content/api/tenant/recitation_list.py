@@ -54,12 +54,12 @@ class RecitationFilter(FilterSchema):
 @router.get("recitations/", response=list[RecitationListOut])
 @paginate
 @ordering(ordering_fields=["name", "created_at", "updated_at"])
-@searching(search_fields=["name", "description", "resource__publisher__name", "reciter__name"])
+@searching(search_fields=["name", "description", "publisher__name", "reciter__name"])
 def list_recitations(request: Request, filters: RecitationFilter = Query()):
     repo = RecitationRepository()
     service = RecitationService(repo)
 
-    publisher_q = request.publisher_q("resource__publisher")
+    publisher_q = request.publisher_q("publisher")
     qs = service.get_all_recitations(publisher_q, filters)
 
     return qs

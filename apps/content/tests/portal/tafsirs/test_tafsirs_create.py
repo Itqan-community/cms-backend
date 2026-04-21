@@ -1,7 +1,7 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
-from apps.content.models import Asset, Resource
+from apps.content.models import Asset, CategoryChoice, StatusChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -38,7 +38,6 @@ class TafsirCreateTest(BaseTestCase):
         self.assertEqual(201, response.status_code, response.content)
         body = response.json()
 
-        # Check that asset and resource were created
         self.assertIsNotNone(body["id"])
         self.assertEqual("تفسير الطبري", body["name_ar"])
         self.assertEqual("Tafsir Al-Tabari", body["name_en"])
@@ -48,8 +47,8 @@ class TafsirCreateTest(BaseTestCase):
 
         # Verify in database
         asset = Asset.objects.get(id=body["id"])
-        self.assertEqual(Resource.CategoryChoice.TAFSIR, asset.category)
-        self.assertEqual(Resource.StatusChoice.READY, asset.resource.status)
+        self.assertEqual(CategoryChoice.TAFSIR, asset.category)
+        self.assertEqual(StatusChoice.READY, asset.status)
         self.assertEqual("ar", asset.language)
 
     def test_create_tafsir_where_publisher_not_found_should_return_404(self):

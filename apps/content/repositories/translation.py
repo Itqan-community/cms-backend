@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 from django.db import transaction
 
-from apps.content.models import Asset, AssetVersion, LicenseChoice, Resource, ResourceVersion
+from apps.content.models import Asset, AssetVersion, CategoryChoice, LicenseChoice, StatusChoice
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
@@ -13,29 +13,26 @@ if TYPE_CHECKING:
 class TranslationRepository:
     def __init__(self) -> None:
         self.asset_model = Asset
-        self.resource_model = Resource
         self.asset_version_model = AssetVersion
-        self.resource_version_model = ResourceVersion
 
     def list_translations_qs(self, filters_dict: dict[str, Any]) -> QuerySet[Asset]:
         """
         Returns a queryset of Translation assets (category=TRANSLATION, status=READY).
         """
-        qs = self.asset_model.objects.select_related("resource", "resource__publisher").filter(
-            category=Resource.CategoryChoice.TRANSLATION,
-            resource__category=Resource.CategoryChoice.TRANSLATION,
-            resource__status=Resource.StatusChoice.READY,
+        qs = self.asset_model.objects.select_related("publisher").filter(
+            category=CategoryChoice.TRANSLATION,
+            status=StatusChoice.READY,
         )
 
         if filters_dict:
             if publisher_ids := filters_dict.get("publisher_id"):
-                qs = qs.filter(resource__publisher_id__in=publisher_ids)
+                qs = qs.filter(publisher_id__in=publisher_ids)
             if license_codes := filters_dict.get("license_code"):
                 qs = qs.filter(license__in=license_codes)
             if language := filters_dict.get("language"):
                 qs = qs.filter(language=language)
             if "is_external" in filters_dict:
-                qs = qs.filter(resource__is_external=filters_dict["is_external"])
+                qs = qs.filter(is_external=filters_dict["is_external"])
 
         return qs.distinct()
 
@@ -45,13 +42,12 @@ class TranslationRepository:
         """
         try:
             return (
-                self.asset_model.objects.select_related("resource", "resource__publisher")
-                .prefetch_related("resource__versions")
+                self.asset_model.objects.select_related("publisher")
+                .prefetch_related("versions")
                 .get(
                     slug=translation_slug,
-                    category=Resource.CategoryChoice.TRANSLATION,
-                    resource__category=Resource.CategoryChoice.TRANSLATION,
-                    resource__status=Resource.StatusChoice.READY,
+                    category=CategoryChoice.TRANSLATION,
+                    status=StatusChoice.READY,
                 )
             )
         except Asset.DoesNotExist:
@@ -75,25 +71,13 @@ class TranslationRepository:
         external_url: str | None = None,
     ) -> Asset:
         """
-        Create a Resource and Asset for a new Translation.
+        Create an Asset for a new Translation.
         """
         with transaction.atomic():
-            # Create Resource first
-            resource = self.resource_model.objects.create(
-                publisher_id=publisher_id,
-                category=Resource.CategoryChoice.TRANSLATION,
-                name=name,
-                description=description,
-                license=license,
-                status=Resource.StatusChoice.READY,
-                is_external=is_external,
-                external_url=external_url,
-            )
-
-            # Create Asset with localized fields
             asset = self.asset_model.objects.create(
-                resource=resource,
-                category=Resource.CategoryChoice.TRANSLATION,
+                publisher_id=publisher_id,
+                status=StatusChoice.READY,
+                category=CategoryChoice.TRANSLATION,
                 name=name,
                 name_ar=name_ar,
                 name_en=name_en,
@@ -106,7 +90,6 @@ class TranslationRepository:
                 language=language,
                 file_size="",
                 format="",
-                version="",
                 is_external=is_external,
                 external_url=external_url,
             )
@@ -119,16 +102,8 @@ class TranslationRepository:
         fields: dict[str, Any],
     ) -> Asset:
         """
-        Update translation asset fields and sync to resource.
-        Properly handles modeltranslation fields by setting localized fields only
-        and letting modeltranslation handle base field synchronization.
+        Update translation asset fields.
         """
-        # Fields that belong on the Resource model, not Asset
-        resource_only_fields = {"publisher_id"}
-        # Fields that must be mirrored on both Asset and Resource
-        mirrored_resource_fields = {"is_external", "external_url"}
-
-        # Separate translation fields from other fields
         translation_fields = {
             "name_ar",
             "name_en",
@@ -139,62 +114,31 @@ class TranslationRepository:
         }
 
         with transaction.atomic():
-            # Set all non-translation fields
             for field, value in fields.items():
-                if field in resource_only_fields:
-                    setattr(asset.resource, field, value)
-                elif field in mirrored_resource_fields:
-                    setattr(asset, field, value)
-                    setattr(asset.resource, field, value)
-                elif field not in translation_fields:
+                if field not in translation_fields:
                     setattr(asset, field, value)
 
-            # Set translation fields (skip empty strings to avoid overriding modeltranslation values)
             for field in translation_fields:
                 if field in fields:
                     value = fields[field]
-                    if value == "":  # Skip empty translation fields
+                    if value == "":
                         continue
                     setattr(asset, field, value)
 
-            # Update resource's name/description if asset's localized fields changed
-            # NOTE: Do NOT set asset.name or asset.description directly - modeltranslation will overwrite
-            # the localized fields if we do. Just update the resource fields.
-            if "name_ar" in fields or "name_en" in fields:
-                name_ar = getattr(asset, "name_ar", "") or ""
-                name_en = getattr(asset, "name_en", "") or ""
-                name = name_ar or name_en
-                if name:
-                    asset.resource.name = name
-
-            if "description_ar" in fields or "description_en" in fields:
-                desc_ar = getattr(asset, "description_ar", "") or ""
-                desc_en = getattr(asset, "description_en", "") or ""
-                desc = desc_ar or desc_en
-                if desc:
-                    asset.resource.description = desc
-
             asset.save()
-            asset.resource.save()
 
         return asset
 
     def delete_translation(self, asset: Asset) -> None:
         """
-        Delete the asset and its resource.
+        Delete the translation asset.
         """
-        with transaction.atomic():
-            resource = asset.resource
-            asset.delete()
-            resource.delete()
+        asset.delete()
 
     def list_translation_versions(self, asset: Asset):
         return AssetVersion.objects.filter(asset=asset).order_by("-created_at")
 
     def get_translation_version(self, asset: Asset, version_id: int) -> AssetVersion | None:
-        """
-        Fetch a single AssetVersion belonging to the asset.
-        """
         try:
             return self.asset_version_model.objects.get(asset=asset, id=version_id)
         except self.asset_version_model.DoesNotExist:
@@ -209,31 +153,9 @@ class TranslationRepository:
         file: Any = None,
     ) -> AssetVersion:
         """
-        Atomically creates a ResourceVersion and its corresponding AssetVersion.
-        Automatically handles semvar generation.
+        Create an AssetVersion and sync derived fields back to Asset.
         """
         with transaction.atomic():
-            # Generate sequential semvar based on existing resource versions
-            last_version = asset.resource.versions.order_by("-created_at").first()
-            if last_version:
-                try:
-                    # Simple increment of major version for now: X.0.0
-                    major = int(last_version.semvar.split(".")[0])
-                    new_semvar = f"{major + 1}.0.0"
-                except (ValueError, IndexError):
-                    new_semvar = "1.0.0"
-            else:
-                new_semvar = "1.0.0"
-
-            # Create the ResourceVersion
-            resource_version = self.resource_version_model.objects.create(
-                resource=asset.resource,
-                name=name,
-                summary=summary,
-                semvar=new_semvar,
-            )
-
-            # Compute file metadata from the uploaded file object
             size_bytes = 0
             if file:
                 try:
@@ -241,17 +163,14 @@ class TranslationRepository:
                 except Exception:
                     pass
 
-            # Create the AssetVersion
             asset_version = self.asset_version_model.objects.create(
                 asset=asset,
-                resource_version=resource_version,
                 name=name,
                 summary=summary,
                 file_url=file,
                 size_bytes=size_bytes,
             )
 
-            # Sync metadata back to Asset
             asset.file_size = asset_version.human_readable_size
             asset.save()
 
@@ -269,7 +188,7 @@ class TranslationRepository:
             for field, value in fields.items():
                 setattr(version, field, value)
 
-            # Compute file metadata when the file is being replaced
+            new_format = None
             if "file_url" in fields and fields["file_url"]:
                 file = fields["file_url"]
                 try:
@@ -277,32 +196,22 @@ class TranslationRepository:
                 except Exception:
                     pass
                 try:
-                    version.format = file.name.rsplit(".", 1)[-1].lower()
+                    new_format = file.name.rsplit(".", 1)[-1].lower()
                 except Exception:
                     pass
 
-            # If name or summary changed, we might want to sync back to resource_version
-            if "name" in fields:
-                version.resource_version.name = fields["name"]
-            if "summary" in fields:
-                version.resource_version.summary = fields["summary"]
-
             version.save()
-            version.resource_version.save()
 
-            # Sync metadata back to Asset if file was updated
             if "file_url" in fields:
                 version.asset.file_size = version.human_readable_size
-                version.asset.format = version.format
+                if new_format is not None:
+                    version.asset.format = new_format
                 version.asset.save()
 
         return version
 
     def delete_translation_version(self, version: AssetVersion) -> None:
         """
-        Delete the AssetVersion and its linked ResourceVersion.
+        Delete the AssetVersion.
         """
-        with transaction.atomic():
-            resource_version = version.resource_version
-            version.delete()
-            resource_version.delete()
+        version.delete()

@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetAccess, AssetAccessRequest, LicenseChoice, Resource
+from apps.content.models import Asset, AssetAccess, AssetAccessRequest, CategoryChoice, LicenseChoice, StatusChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -10,15 +10,14 @@ class AssetAccessTest(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.publisher = baker.make(Publisher, name="Test Publisher")
-        self.resource = baker.make("content.Resource", publisher=self.publisher)
         self.asset = baker.make(
             Asset,
-            resource=self.resource,
+            publisher=self.publisher,
             name="Test Asset",
             description="Test asset description",
-            category=Resource.CategoryChoice.TAFSIR,
+            category=CategoryChoice.TAFSIR,
             license=LicenseChoice.CC_BY_SA,
-            resource__status=Resource.StatusChoice.READY,
+            status=StatusChoice.READY,
         )
         self.user = baker.make(User, email="test@example.com")
 

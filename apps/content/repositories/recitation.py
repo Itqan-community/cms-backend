@@ -5,7 +5,16 @@ from typing import TYPE_CHECKING, Any
 from django.db import models, transaction
 from django.db.models import Count, Q
 
-from apps.content.models import Asset, LicenseChoice, Qiraah, RecitationSurahTrack, Reciter, Resource, Riwayah
+from apps.content.models import (
+    Asset,
+    CategoryChoice,
+    LicenseChoice,
+    Qiraah,
+    RecitationSurahTrack,
+    Reciter,
+    Riwayah,
+    StatusChoice,
+)
 from apps.content.repositories.base import BaseRecitationRepository
 
 if TYPE_CHECKING:
@@ -15,7 +24,6 @@ if TYPE_CHECKING:
 class RecitationRepository(BaseRecitationRepository):
     def __init__(self) -> None:
         self.asset_model = Asset
-        self.resource_model = Resource
         self.track_model = RecitationSurahTrack
         self.riwayah_model = Riwayah
         self.qiraah_model = Qiraah
@@ -26,12 +34,9 @@ class RecitationRepository(BaseRecitationRepository):
         """
         Returns a queryset of Asset objects.
         """
-        qs = self.asset_model.objects.select_related(
-            "resource", "resource__publisher", "reciter", "riwayah", "qiraah"
-        ).filter(
-            category=Resource.CategoryChoice.RECITATION,
-            resource__category=Resource.CategoryChoice.RECITATION,
-            resource__status=Resource.StatusChoice.READY,
+        qs = self.asset_model.objects.select_related("publisher", "reciter", "riwayah", "qiraah").filter(
+            category=CategoryChoice.RECITATION,
+            status=StatusChoice.READY,
         )
 
         if publisher_q is not None:
@@ -51,7 +56,7 @@ class RecitationRepository(BaseRecitationRepository):
             if qiraah_ids := filters_dict.get("qiraah_id"):
                 qs = qs.filter(qiraah_id__in=qiraah_ids)
             if publisher_ids := filters_dict.get("publisher_id"):
-                qs = qs.filter(resource__publisher_id__in=publisher_ids)
+                qs = qs.filter(publisher_id__in=publisher_ids)
             if madd_levels := filters_dict.get("madd_level"):
                 qs = qs.filter(madd_level__in=madd_levels)
             if meem_behaviours := filters_dict.get("meem_behaviour"):
@@ -79,14 +84,11 @@ class RecitationRepository(BaseRecitationRepository):
         """
         try:
             return (
-                self.asset_model.objects.select_related(
-                    "resource", "resource__publisher", "reciter", "riwayah", "qiraah"
-                )
-                .prefetch_related("resource__versions")
+                self.asset_model.objects.select_related("publisher", "reciter", "riwayah", "qiraah")
+                .prefetch_related("versions")
                 .get(
                     slug=recitation_slug,
-                    category=Resource.CategoryChoice.RECITATION,
-                    resource__category=Resource.CategoryChoice.RECITATION,
+                    category=CategoryChoice.RECITATION,
                 )
             )
         except Asset.DoesNotExist:
@@ -111,23 +113,13 @@ class RecitationRepository(BaseRecitationRepository):
         year: int | None,
     ) -> Asset:
         """
-        Create a Resource and Asset for a new Recitation.
+        Create an Asset for a new Recitation.
         """
         with transaction.atomic():
-            # Create Resource first
-            resource = self.resource_model.objects.create(
-                publisher_id=publisher_id,
-                category=Resource.CategoryChoice.RECITATION,
-                name=name,
-                description=description,
-                license=license,
-                status=Resource.StatusChoice.READY,
-            )
-
-            # Create Asset with localized fields and recitation specific fields
             asset = self.asset_model.objects.create(
-                resource=resource,
-                category=Resource.CategoryChoice.RECITATION,
+                publisher_id=publisher_id,
+                status=StatusChoice.READY,
+                category=CategoryChoice.RECITATION,
                 name=name,
                 name_ar=name_ar,
                 name_en=name_en,
@@ -138,7 +130,6 @@ class RecitationRepository(BaseRecitationRepository):
                 language="ar",  # Default for recitations?
                 file_size="",
                 format="",
-                version="",
                 reciter_id=reciter_id,
                 qiraah_id=qiraah_id,
                 riwayah_id=riwayah_id,
@@ -155,14 +146,8 @@ class RecitationRepository(BaseRecitationRepository):
         fields: dict[str, Any],
     ) -> Asset:
         """
-        Update recitation asset fields and sync to resource.
+        Update recitation asset fields.
         """
-        # Fields that belong on the Resource model, not Asset
-        resource_only_fields = {"publisher_id"}
-        # Fields that must be mirrored on both Asset and Resource
-        mirrored_resource_fields = {"license"}
-
-        # Separate translation fields from other fields
         translation_fields = {
             "name_ar",
             "name_en",
@@ -171,49 +156,32 @@ class RecitationRepository(BaseRecitationRepository):
         }
 
         with transaction.atomic():
-            # Set all non-translation fields, routing to the correct model
             for field, value in fields.items():
-                if field in resource_only_fields:
-                    setattr(asset.resource, field, value)
-                elif field in mirrored_resource_fields:
+                if field not in translation_fields:
                     setattr(asset, field, value)
-                    setattr(asset.resource, field, value)
-                elif field not in translation_fields:
-                    setattr(asset, field, value)
-                else:  # translation fields
+                else:
                     setattr(asset, field, (value or "").strip())
 
-            # Update mirrored name/description on both Asset and Resource if localized fields changed
+            # Mirror localized fields into the unlocalized name/description
             if any(f in fields for f in ["name_ar", "name_en"]):
                 name_ar = getattr(asset, "name_ar", "") or ""
                 name_en = getattr(asset, "name_en", "") or ""
-                name = name_ar or name_en
-                asset.name = name
-                asset.resource.name = name
+                asset.name = name_ar or name_en
 
             if any(f in fields for f in ["description_ar", "description_en"]):
                 desc_ar = getattr(asset, "description_ar", "") or ""
                 desc_en = getattr(asset, "description_en", "") or ""
-                desc = desc_ar or desc_en
-                asset.description = desc
-                asset.resource.description = desc
+                asset.description = desc_ar or desc_en
 
             asset.save()
-            asset.resource.save()
 
         return asset
 
     def delete_recitation(self, asset: Asset) -> None:
         """
-        Delete the asset and its resource if no other assets are referencing it.
+        Delete the recitation asset.
         """
-        with transaction.atomic():
-            resource = asset.resource
-            asset.delete()
-            # Only delete the resource if no other assets are referencing it
-            # (Asset.resource uses on_delete=models.PROTECT)
-            if not resource.assets.exists():
-                resource.delete()
+        asset.delete()
 
     def get_recitation_asset(self, asset_id: int, publisher_q: Q | None) -> dict[str, Any] | None:
         try:
@@ -233,13 +201,12 @@ class RecitationRepository(BaseRecitationRepository):
         try:
             query = Q(
                 id=asset_id,
-                category=Resource.CategoryChoice.RECITATION,
-                resource__category=Resource.CategoryChoice.RECITATION,
-                resource__status=Resource.StatusChoice.READY,
+                category=CategoryChoice.RECITATION,
+                status=StatusChoice.READY,
             )
             if publisher_q is not None:
                 query &= publisher_q
-            return self.asset_model.objects.select_related("resource", "resource__publisher").get(query)
+            return self.asset_model.objects.select_related("publisher").get(query)
         except Asset.DoesNotExist:
             return None
 
@@ -261,9 +228,8 @@ class RecitationRepository(BaseRecitationRepository):
         for the given publisher, with optional filters applied.
         """
         recitation_filter = Q(
-            assets__category=Resource.CategoryChoice.RECITATION,
-            assets__resource__category=Resource.CategoryChoice.RECITATION,
-            assets__resource__status=Resource.StatusChoice.READY,
+            assets__category=CategoryChoice.RECITATION,
+            assets__status=StatusChoice.READY,
         )
         if publisher_q is not None:
             recitation_filter &= publisher_q
@@ -297,19 +263,11 @@ class RecitationRepository(BaseRecitationRepository):
     def list_riwayahs_qs(self, publisher_q: Q | None, filters_dict: dict[str, Any]) -> QuerySet[Riwayah]:
         """
         Returns a queryset of Riwayah objects that have READY recitation assets.
-
-        Conditions:
-        - Riwayah.is_active = True
-        - Asset.category = RECITATION
-        - Asset.riwayah = this Riwayah
-        - Asset.resource.category = RECITATION
-        - Asset.resource.status = READY
         """
         recitation_filter = Q(
-            assets__category=Resource.CategoryChoice.RECITATION,
+            assets__category=CategoryChoice.RECITATION,
             assets__riwayah__isnull=False,
-            assets__resource__category=Resource.CategoryChoice.RECITATION,
-            assets__resource__status=Resource.StatusChoice.READY,
+            assets__status=StatusChoice.READY,
         )
         if publisher_q is not None:
             recitation_filter &= publisher_q
@@ -330,9 +288,7 @@ class RecitationRepository(BaseRecitationRepository):
             .select_related("qiraah")
         )
 
-        # Apply filters if provided
         if filters_dict:
-            # Allow explicit is_active filter (handles False correctly)
             if "is_active" in filters_dict:
                 qs = qs.filter(is_active=filters_dict.get("is_active"))
             if name := filters_dict.get("name"):
@@ -347,20 +303,11 @@ class RecitationRepository(BaseRecitationRepository):
     def list_qiraahs_qs(self, publisher_q: Q | None, filters_dict: dict[str, Any]) -> QuerySet[Qiraah]:
         """
         Returns a queryset of Qiraah objects that have READY recitation assets through riwayahs.
-
-        Conditions:
-        - Qiraah.is_active = True
-        - Qiraah has at least one active Riwayah
-        - Riwayah.is_active = True
-        - Asset.category = RECITATION
-        - Asset.resource.category = RECITATION
-        - Asset.resource.status = READY
         """
         recitation_filter = Q(
-            riwayahs__assets__category=Resource.CategoryChoice.RECITATION,
+            riwayahs__assets__category=CategoryChoice.RECITATION,
             riwayahs__assets__riwayah__isnull=False,
-            riwayahs__assets__resource__category=Resource.CategoryChoice.RECITATION,
-            riwayahs__assets__resource__status=Resource.StatusChoice.READY,
+            riwayahs__assets__status=StatusChoice.READY,
         )
         if publisher_q is not None:
             recitation_filter &= publisher_q
@@ -383,9 +330,7 @@ class RecitationRepository(BaseRecitationRepository):
             .prefetch_related("riwayahs")
         )
 
-        # Apply filters if provided
         if filters_dict:
-            # Allow explicit is_active filter to filter qiraahs (handles False correctly)
             if "is_active" in filters_dict:
                 qs = qs.filter(is_active=filters_dict.get("is_active"))
             if name := filters_dict.get("name"):

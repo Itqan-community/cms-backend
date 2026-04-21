@@ -4,7 +4,7 @@ from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
-from apps.content.models import Asset, LicenseChoice
+from apps.content.models import Asset, AssetVersion, LicenseChoice
 from apps.content.services.translation import TranslationService
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
@@ -42,10 +42,6 @@ class TranslationListOut(Schema):
             return obj.thumbnail_url.url
         return None
 
-    @staticmethod
-    def resolve_publisher(obj: Asset) -> TranslationPublisherOut:
-        return TranslationPublisherOut(id=obj.resource.publisher.id, name=obj.resource.publisher.name)
-
 
 class TranslationVersionOut(Schema):
     id: int
@@ -53,12 +49,6 @@ class TranslationVersionOut(Schema):
     file_url: str | None = None
     size_bytes: int
     created_at: AwareDatetime
-
-    @staticmethod
-    def resolve_file_url(obj) -> str | None:
-        if obj.storage_url:
-            return obj.storage_url.url
-        return None
 
 
 class TranslationDetailOut(Schema):
@@ -86,11 +76,7 @@ class TranslationDetailOut(Schema):
         return None
 
     @staticmethod
-    def resolve_publisher(obj: Asset) -> TranslationPublisherOut:
-        return TranslationPublisherOut(id=obj.resource.publisher.id, name=obj.resource.publisher.name)
-
-    @staticmethod
-    def resolve_versions(obj: Asset) -> list[TranslationVersionOut]:
+    def resolve_versions(obj: Asset) -> list[AssetVersion]:
         return list(obj.versions.all())
 
 
@@ -143,10 +129,10 @@ class TranslationPatchIn(Schema):
 
 
 class TranslationFilter(FilterSchema):
-    publisher_id: Annotated[list[int] | None, FilterLookup(q="resource__publisher_id__in")] = None
+    publisher_id: Annotated[list[int] | None, FilterLookup(q="publisher_id__in")] = None
     license_code: Annotated[list[str] | None, FilterLookup(q="license__in")] = None
     language: Annotated[str | None, FilterLookup(q="language")] = None
-    is_external: Annotated[bool | None, FilterLookup(q="resource__is_external")] = None
+    is_external: Annotated[bool | None, FilterLookup(q="is_external")] = None
 
 
 # --- Endpoints ---
@@ -155,7 +141,7 @@ class TranslationFilter(FilterSchema):
 @router.get("translations/", response=list[TranslationListOut])
 @paginate
 @ordering(ordering_fields=["id", "name", "created_at", "updated_at"])
-@searching(search_fields=["name", "name_ar", "description", "description_ar", "resource__publisher__name"])
+@searching(search_fields=["name", "name_ar", "description", "description_ar", "publisher__name"])
 def list_translations(request: Request, filters: TranslationFilter = Query()):
     service = TranslationService()
     qs = service.get_all_translations(filters)

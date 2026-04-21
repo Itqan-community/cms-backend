@@ -4,7 +4,7 @@ from ninja import Field, File, FilterLookup, FilterSchema, Form, Query, Schema, 
 from ninja.pagination import paginate
 from pydantic import AwareDatetime
 
-from apps.content.models import Asset, LicenseChoice, ResourceVersion
+from apps.content.models import Asset, AssetVersion, LicenseChoice
 from apps.content.services.tafsir import TafsirService
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
@@ -29,7 +29,7 @@ class TafsirListOut(Schema):
     slug: str
     name: str
     description: str
-    publisher: TafsirPublisherOut = Field(..., alias="resource.publisher")
+    publisher: TafsirPublisherOut = Field(..., alias="publisher")
     license: LicenseChoice
     language: str
     is_external: bool
@@ -51,9 +51,9 @@ class TafsirVersionOut(Schema):
     created_at: AwareDatetime
 
     @staticmethod
-    def resolve_file_url(obj: ResourceVersion) -> str | None:
-        if obj.storage_url:
-            return obj.storage_url.url
+    def resolve_file_url(obj: AssetVersion) -> str | None:
+        if obj.file_url:
+            return obj.file_url.url
         return None
 
 
@@ -67,7 +67,7 @@ class TafsirDetailOut(Schema):
     long_description_en: str | None = None
     slug: str
     thumbnail_url: str | None = None
-    publisher: TafsirPublisherOut = Field(..., alias="resource.publisher")
+    publisher: TafsirPublisherOut = Field(..., alias="publisher")
     license: LicenseChoice
     language: str
     is_external: bool
@@ -135,10 +135,10 @@ class TafsirPatchIn(Schema):
 
 
 class TafsirFilter(FilterSchema):
-    publisher_id: Annotated[list[int] | None, FilterLookup(q="resource__publisher_id__in")] = None
+    publisher_id: Annotated[list[int] | None, FilterLookup(q="publisher_id__in")] = None
     license_code: Annotated[list[str] | None, FilterLookup(q="license__in")] = None
     language: Annotated[str | None, FilterLookup(q="language")] = None
-    is_external: Annotated[bool | None, FilterLookup(q="resource__is_external")] = None
+    is_external: Annotated[bool | None, FilterLookup(q="is_external")] = None
 
 
 # --- Endpoints ---
@@ -155,7 +155,7 @@ class TafsirFilter(FilterSchema):
         "description",
         "description_ar",
         "description_en",
-        "resource__publisher__name",
+        "publisher__name",
     ]
 )
 def list_tafsirs(request: Request, filters: TafsirFilter = Query()):

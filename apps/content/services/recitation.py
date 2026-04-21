@@ -134,7 +134,7 @@ class RecitationService:
         # Validate metadata if any ID is changing
         if any(f in fields for f in ["publisher_id", "reciter_id", "qiraah_id", "riwayah_id"]):
             self._validate_recitation_metadata(
-                publisher_id=fields.get("publisher_id", asset.resource.publisher_id),
+                publisher_id=fields.get("publisher_id", asset.publisher_id),
                 reciter_id=fields.get("reciter_id", asset.reciter_id),
                 qiraah_id=fields.get("qiraah_id", asset.qiraah_id),
                 riwayah_id=fields.get("riwayah_id", asset.riwayah_id),

@@ -49,11 +49,10 @@ def list_qiraahs(request: Request, filters: QiraahFilter = Query()):
     - Qiraah.is_active = True
     - Qiraah.riwayah.is_active = True
     - Asset.category = RECITATION
-    - Asset.resource.category = RECITATION
-    - Asset.resource.status = READY
+    - Asset.status = READY
     """
     repo = RecitationRepository()
     service = RiwayahService(repo)
     return service.get_all_qiraahs(
-        publisher_q=request.publisher_q("riwayahs__assets__resource__publisher"), filters=filters
+        publisher_q=request.publisher_q("riwayahs__assets__publisher"), filters=filters
     ).order_by("id")

@@ -1,7 +1,5 @@
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from apps.usage_tracking.tasks import track_api_request_task
 
 

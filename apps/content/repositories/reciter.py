@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 from django.db.models import Count, Q
 from django.utils.text import slugify
 
-from apps.content.models import Reciter, Resource
+from apps.content.models import CategoryChoice, Reciter, StatusChoice
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
@@ -20,9 +20,8 @@ class ReciterRepository:
         Returns a queryset of Reciter models with their recitations_count annotated.
         """
         recitation_filter = Q(
-            assets__category=Resource.CategoryChoice.RECITATION,
-            assets__resource__category=Resource.CategoryChoice.RECITATION,
-            assets__resource__status=Resource.StatusChoice.READY,
+            assets__category=CategoryChoice.RECITATION,
+            assets__status=StatusChoice.READY,
         )
 
         qs = self.model.objects.annotate(

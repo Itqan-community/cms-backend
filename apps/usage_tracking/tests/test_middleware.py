@@ -1,12 +1,10 @@
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from django.http import HttpResponse, StreamingHttpResponse
 from django.test import RequestFactory
 
-from apps.usage_tracking.middlewares.usage_tracking_middleware import (
-    UsageTrackingMiddleware,
-)
+from apps.usage_tracking.middlewares.usage_tracking_middleware import UsageTrackingMiddleware
 
 
 class _Resp(HttpResponse):
@@ -25,9 +23,7 @@ class TestUsageTrackingMiddleware:
         self.factory = RequestFactory()
 
     @patch("apps.usage_tracking.middlewares.usage_tracking_middleware.track_api_request_task")
-    @patch(
-        "apps.usage_tracking.middlewares.usage_tracking_middleware.resolve_publisher_from_request"
-    )
+    @patch("apps.usage_tracking.middlewares.usage_tracking_middleware.resolve_publisher_from_request")
     def test_tracked_path_dispatches_celery_task(self, mock_resolve, mock_task):
         mock_resolve.return_value = (42, "acme")
         mw = _make_middleware()
@@ -76,9 +72,7 @@ class TestUsageTrackingMiddleware:
         mock_task.delay.assert_not_called()
 
     @patch("apps.usage_tracking.middlewares.usage_tracking_middleware.track_api_request_task")
-    @patch(
-        "apps.usage_tracking.middlewares.usage_tracking_middleware.resolve_publisher_from_request"
-    )
+    @patch("apps.usage_tracking.middlewares.usage_tracking_middleware.resolve_publisher_from_request")
     def test_unauthenticated_request_still_tracked_with_anon(self, mock_resolve, mock_task):
         mock_resolve.return_value = (None, None)
         mw = _make_middleware()
@@ -92,9 +86,7 @@ class TestUsageTrackingMiddleware:
         assert kwargs["properties"]["publisher_id"] is None
 
     @patch("apps.usage_tracking.middlewares.usage_tracking_middleware.track_api_request_task")
-    @patch(
-        "apps.usage_tracking.middlewares.usage_tracking_middleware.resolve_publisher_from_request"
-    )
+    @patch("apps.usage_tracking.middlewares.usage_tracking_middleware.resolve_publisher_from_request")
     def test_celery_dispatch_failure_does_not_break_request(self, mock_resolve, mock_task):
         mock_resolve.return_value = (42, "acme")
         mock_task.delay.side_effect = RuntimeError("broker down")
@@ -106,9 +98,7 @@ class TestUsageTrackingMiddleware:
         assert response.status_code == 200
 
     @patch("apps.usage_tracking.middlewares.usage_tracking_middleware.track_api_request_task")
-    @patch(
-        "apps.usage_tracking.middlewares.usage_tracking_middleware.resolve_publisher_from_request"
-    )
+    @patch("apps.usage_tracking.middlewares.usage_tracking_middleware.resolve_publisher_from_request")
     def test_streaming_response_is_not_buffered(self, mock_resolve, mock_task):
         mock_resolve.return_value = (42, "acme")
 
@@ -126,9 +116,7 @@ class TestUsageTrackingMiddleware:
         assert kwargs["properties"]["entity_ids"] == []
 
     @patch("apps.usage_tracking.middlewares.usage_tracking_middleware.track_api_request_task")
-    @patch(
-        "apps.usage_tracking.middlewares.usage_tracking_middleware.resolve_publisher_from_request"
-    )
+    @patch("apps.usage_tracking.middlewares.usage_tracking_middleware.resolve_publisher_from_request")
     def test_distinct_id_uses_token_id_when_authed(self, mock_resolve, mock_task):
         mock_resolve.return_value = (42, "acme")
         mw = _make_middleware()

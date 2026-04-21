@@ -41,14 +41,13 @@ def list_reciters(request: Request, filters: ReciterFilter = Query()):
     Conditions:
     - Reciter.is_active = True
     - Asset.category = RECITATION
-    - Asset.resource.category = RECITATION
-    - Asset.resource.status = READY
+    - Asset.status = READY
     - Asset owned by the tenant's publisher
     """
     repo = RecitationRepository()
     service = RecitationService(repo)
 
-    publisher_q = request.publisher_q("assets__resource__publisher")
+    publisher_q = request.publisher_q("assets__publisher")
     qs = service.get_all_reciters(publisher_q, filters)
 
     return qs

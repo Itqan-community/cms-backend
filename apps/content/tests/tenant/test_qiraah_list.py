@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, Qiraah, Resource, Riwayah
+from apps.content.models import Asset, CategoryChoice, Qiraah, Riwayah, StatusChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Domain, Publisher
 from apps.users.models import User
@@ -12,12 +12,6 @@ class QiraahListTest(BaseTestCase):
         self.publisher = baker.make(Publisher)
         self.domain = baker.make(Domain, publisher=self.publisher, domain="example.com")
         self.reciter = baker.make("content.Reciter", name="Test Reciter")
-        self.recitation_resource = baker.make(
-            Resource,
-            publisher=self.publisher,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.READY,
-        )
 
         # Create Qiraahs with multiple Riwayahs - use unique names to avoid constraint violations
         self.qiraah_asim = baker.make(Qiraah, is_active=True, name="Test Asim", slug="test-asim")
@@ -31,16 +25,18 @@ class QiraahListTest(BaseTestCase):
         # Add recitations for Asim Qiraah
         self.asset_hafs = baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             riwayah=self.riwayah_hafs,
-            resource=self.recitation_resource,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             reciter=self.reciter,
         )
         self.asset_qaloon = baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             riwayah=self.riwayah_qaloon,
-            resource=self.recitation_resource,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             reciter=self.reciter,
         )
 
@@ -51,9 +47,10 @@ class QiraahListTest(BaseTestCase):
         )
         self.asset_warsh = baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             riwayah=self.riwayah_warsh,
-            resource=self.recitation_resource,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             reciter=self.reciter,
         )
 
@@ -68,9 +65,10 @@ class QiraahListTest(BaseTestCase):
         )
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             riwayah=inactive_riwayah,
-            resource=self.recitation_resource,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             reciter=self.reciter,
         )
 
@@ -81,28 +79,24 @@ class QiraahListTest(BaseTestCase):
         )
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             riwayah=inactive_riwayah_hamza,
-            resource=self.recitation_resource,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             reciter=self.reciter,
         )
 
-        # Qiraah with draft resources - should not appear
-        draft_resource = baker.make(
-            Resource,
-            publisher=self.publisher,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.DRAFT,
-        )
+        # Qiraah with draft assets - should not appear
         qiraah_draft = baker.make(Qiraah, is_active=True, name="Test Draft Qiraah", slug="test-draft")
         riwayah_draft = baker.make(
             Riwayah, is_active=True, name="Test Draft Riwayah", slug="test-draft-riwayah", qiraah=qiraah_draft
         )
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             riwayah=riwayah_draft,
-            resource=draft_resource,
+            publisher=self.publisher,
+            status=StatusChoice.DRAFT,
             reciter=self.reciter,
         )
 
@@ -131,7 +125,7 @@ class QiraahListTest(BaseTestCase):
         self.assertIn("Test Nafi", qiraah_names)
         self.assertNotIn("Test Inactive Qiraah", qiraah_names)
         self.assertNotIn("Test Hamza", qiraah_names)  # All riwayahs are inactive
-        self.assertNotIn("Test Draft Qiraah", qiraah_names)  # Only draft resources
+        self.assertNotIn("Test Draft Qiraah", qiraah_names)  # Only draft assets
 
         self.assertEqual(2, len(items))
 
@@ -269,21 +263,16 @@ class QiraahListTest(BaseTestCase):
         self.assertEqual(sorted(names, reverse=True), names)
 
     def test_list_qiraahs_recitations_count_excludes_draft(self):
-        """Test that recitations_count doesn't include draft resources"""
+        """Test that recitations_count doesn't include draft assets"""
         # Arrange
         self.authenticate_user(self.user, domain=self.domain)
         # Add a draft asset to Asim Qiraah
-        draft_resource = baker.make(
-            Resource,
-            publisher=self.publisher,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.DRAFT,
-        )
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             riwayah=self.riwayah_hafs,
-            resource=draft_resource,
+            publisher=self.publisher,
+            status=StatusChoice.DRAFT,
             reciter=self.reciter,
         )
 

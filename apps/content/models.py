@@ -18,7 +18,6 @@ from apps.core.uploads import (
     upload_to_asset_thumbnails,
     upload_to_recitation_surah_track_files,
     upload_to_reciter_image,
-    upload_to_resource_files,
 )
 from apps.mixins.recitations_helpers import get_mp3_duration_ms
 from apps.publishers.models import Publisher
@@ -43,129 +42,21 @@ class LicenseChoice(models.TextChoices):
     )
 
 
-class Resource(BaseModel):
-    class CategoryChoice(models.TextChoices):
-        RECITATION = "recitation", _("Recitation")
-        MUSHAF = "mushaf", _("Mushaf")
-        TAFSIR = "tafsir", _("Tafsir")
-        PROGRAM = "program", _("Program")
-        LINGUISTIC = "linguistic", _("Linguistic")
-        TRANSLATION = "translation", _("Translation")
-        FONT = "font", _("Font")
-        SEARCH = "search", _("Search")
-        TAJWEED = "tajweed", _("Tajweed")
-
-    class StatusChoice(models.TextChoices):
-        DRAFT = "draft", _("Draft")
-        READY = "ready", _("Ready")
-
-    publisher = models.ForeignKey(Publisher, on_delete=models.PROTECT, related_name="resources")
-
-    name = models.CharField(max_length=255, help_text="Resource name e.g. 'Tafsir Ibn Katheer CSV'")
-
-    slug = models.SlugField(allow_unicode=True, help_text="URL slug e.g. 'tafsir-ibn-katheer-csv'", db_index=True)
-
-    description = models.TextField(help_text="Resource description")
-
-    category = models.CharField(max_length=20, choices=CategoryChoice.choices, help_text="Simple options in V1")
-
-    status = models.CharField(
-        max_length=20,
-        choices=StatusChoice.choices,
-        default=StatusChoice.DRAFT,
-        help_text="V1: ready = ready to extract Assets from",
-    )
-
-    license = models.CharField(
-        max_length=50,
-        choices=LicenseChoice,
-        default=LicenseChoice.CC0,
-        help_text="Asset license",
-    )
-
-    is_external = models.BooleanField(default=False)
-    external_url = models.URLField(
-        "External URL", null=True, blank=True, help_text="If is_external=True, URL to the external resource"
-    )
-
-    class Meta:
-        constraints = [
-            models.CheckConstraint(
-                condition=models.Q(is_external=False, external_url__isnull=True)
-                | models.Q(is_external=True, external_url__isnull=False),
-                name="resource_external_url_consistency",
-            )
-        ]
-
-    def __str__(self):
-        return f"Resource(name={self.name} category={self.category})"
-
-    def save(self, *args, **kwargs):
-        self.slug = slugify(self.name[:50], allow_unicode=True)
-        super().save(*args, **kwargs)
-
-    def get_latest_version(self):
-        return self.versions.order_by("-created_at").first()
+class CategoryChoice(models.TextChoices):
+    RECITATION = "recitation", _("Recitation")
+    MUSHAF = "mushaf", _("Mushaf")
+    TAFSIR = "tafsir", _("Tafsir")
+    PROGRAM = "program", _("Program")
+    LINGUISTIC = "linguistic", _("Linguistic")
+    TRANSLATION = "translation", _("Translation")
+    FONT = "font", _("Font")
+    SEARCH = "search", _("Search")
+    TAJWEED = "tajweed", _("Tajweed")
 
 
-class ResourceVersion(DeleteFilesOnDeleteMixin, BaseModel):
-    resource = models.ForeignKey(Resource, on_delete=models.CASCADE, related_name="versions")
-
-    name = models.CharField(
-        max_length=255,
-        help_text="Version name - V1: same as resource name, V2: updates on content",
-    )
-
-    summary = models.TextField(blank=True, help_text="Version summary")
-
-    semvar = models.CharField(
-        max_length=20,
-        help_text="Semantic versioning e.g. '1.0.0' - core to bind with an AssetVersion",
-    )
-
-    storage_url = models.FileField(
-        upload_to=upload_to_resource_files,
-        blank=True,
-        null=True,
-        validators=[
-            FileExtensionValidator(
-                allowed_extensions=[
-                    "pdf",
-                    "doc",
-                    "docx",
-                    "txt",
-                    "zip",
-                    "tar",
-                    "gz",
-                    "json",
-                    "xml",
-                    "csv",
-                ],
-            ),
-        ],
-        help_text="File storage for resource version",
-    )
-
-    size_bytes = models.PositiveBigIntegerField(default=0, help_text="File size in bytes")
-
-    class Meta:
-        verbose_name = "Resource Version"
-        verbose_name_plural = "Resource Versions"
-        unique_together = ["resource", "semvar"]
-
-    def __str__(self):
-        return f"ResourceVersion(resource={self.resource.name} semvar={self.semvar})"
-
-    def save(self, *args, **kwargs):
-        # Auto-compute human_readable_size from storage file when available and not set
-        if (not self.size_bytes or self.size_bytes == 0) and self.storage_url:
-            from contextlib import suppress
-
-            with suppress(Exception):
-                # FileField provides size when the file is available
-                self.size_bytes = self.storage_url.size or 0
-
-        super().save(*args, **kwargs)
+class StatusChoice(models.TextChoices):
+    DRAFT = "draft", _("Draft")
+    READY = "ready", _("Ready")
 
 
 class Asset(DeleteFilesOnDeleteMixin, BaseModel):
@@ -177,7 +68,17 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         SILAH = "silah", _("Silah")
         SKOUN = "skoun", _("Skoun")
 
-    resource = models.ForeignKey(Resource, on_delete=models.PROTECT, related_name="assets", db_index=True)
+    publisher = models.ForeignKey(
+        Publisher,
+        on_delete=models.PROTECT,
+        related_name="assets",
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=StatusChoice,
+        default=StatusChoice.DRAFT,
+    )
 
     name = models.CharField(max_length=255, help_text="Asset name")
 
@@ -198,7 +99,7 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
 
     category = models.CharField(
         max_length=20,
-        choices=Resource.CategoryChoice.choices,
+        choices=CategoryChoice,
         help_text="Asset category matching resource categories",
     )
 
@@ -209,8 +110,6 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
     format = models.CharField(max_length=50, help_text="File format")
 
     encoding = models.CharField(max_length=50, default="UTF-8", help_text="Text encoding")
-
-    version = models.CharField(max_length=50, help_text="Asset version")
 
     language = models.CharField(max_length=10, help_text="Asset language code")
 
@@ -349,8 +248,6 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
 class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="versions")
 
-    resource_version = models.ForeignKey(ResourceVersion, on_delete=models.CASCADE, related_name="asset_versions")
-
     name = models.CharField(max_length=255, help_text="Asset version name")
 
     summary = models.TextField(blank=True, help_text="Asset version summary")
@@ -381,7 +278,7 @@ class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
     size_bytes = models.PositiveBigIntegerField(default=0, help_text="File size in bytes")
 
     def __str__(self):
-        return f"AssetVersion(asset={self.asset.name}, version={self.resource_version.semvar})"
+        return f"AssetVersion(asset={self.asset.name}, name={self.name})"
 
     @property
     def human_readable_size(self):
@@ -440,7 +337,7 @@ class AssetAccessRequest(BaseModel):
 
     status = models.CharField(
         max_length=20,
-        choices=StatusChoice.choices,
+        choices=StatusChoice,
         default=StatusChoice.PENDING,
     )
 
@@ -529,25 +426,11 @@ class UsageEvent(BaseModel):
         VIEW = "view", _("View")
         API_ACCESS = "api_access", _("API Access")
 
-    class SubjectKindChoice(models.TextChoices):
-        RESOURCE = "resource", _("Resource")
-        ASSET = "asset", _("Asset")
-
     developer_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="usage_events", db_index=True)
 
     usage_kind = models.CharField(max_length=20, choices=UsageKindChoice.choices, help_text="Type of usage event")
 
-    subject_kind = models.CharField(
-        max_length=20,
-        choices=SubjectKindChoice.choices,
-        help_text="Whether tracking resource or asset",
-    )
-
-    resource_id = models.PositiveIntegerField(
-        null=True, blank=True, help_text="Resource ID if subject_kind = 'resource'"
-    )
-
-    asset_id = models.PositiveIntegerField(null=True, blank=True, help_text="Asset ID if subject_kind = 'asset'")
+    asset_id = models.PositiveIntegerField(help_text="Asset ID the event refers to")
 
     metadata = models.JSONField(default=dict, help_text="Additional event metadata")
 
@@ -561,24 +444,9 @@ class UsageEvent(BaseModel):
             models.Index(fields=["developer_user", "usage_kind"]),
             models.Index(fields=["created_at", "usage_kind"]),
         ]
-        constraints = [
-            models.CheckConstraint(
-                condition=models.Q(
-                    subject_kind="resource",
-                    resource_id__isnull=False,
-                    asset_id__isnull=True,
-                )
-                | models.Q(
-                    subject_kind="asset",
-                    asset_id__isnull=False,
-                    resource_id__isnull=True,
-                ),
-                name="usage_event_subject_kind_consistency",
-            )
-        ]
 
     def __str__(self):
-        return f"UsageEvent(user={self.developer_user_id}, kind={self.usage_kind}, subject={self.subject_kind})"
+        return f"UsageEvent(user={self.developer_user_id}, kind={self.usage_kind}, asset={self.asset_id})"
 
     @classmethod
     def get_user_stats(cls, user):
@@ -590,27 +458,13 @@ class UsageEvent(BaseModel):
             "downloads": events.filter(usage_kind="file_download").count(),
             "views": events.filter(usage_kind="view").count(),
             "api_calls": events.filter(usage_kind="api_access").count(),
-            "asset_interactions": events.filter(subject_kind="asset").count(),
-            "resource_interactions": events.filter(subject_kind="resource").count(),
+            "asset_interactions": events.count(),
         }
 
     @classmethod
     def get_asset_stats(cls, asset):
         """Get usage statistics for an asset"""
         events = cls.objects.filter(asset_id=asset.id)
-
-        return {
-            "total_events": events.count(),
-            "downloads": events.filter(usage_kind="file_download").count(),
-            "views": events.filter(usage_kind="view").count(),
-            "api_calls": events.filter(usage_kind="api_access").count(),
-            "unique_users": events.values("developer_user").distinct().count(),
-        }
-
-    @classmethod
-    def get_resource_stats(cls, resource):
-        """Get usage statistics for a resource"""
-        events = cls.objects.filter(resource_id=resource.id)
 
         return {
             "total_events": events.count(),
@@ -809,10 +663,7 @@ class RecitationAyahTiming(BaseModel):
 
 
 class ContentIssueReport(BaseModel):
-    """
-    Issue reports for content items (Resources or Assets).
-    Uses GenericForeignKey to allow reporting issues on any content type.
-    """
+    """Issue reports for Assets."""
 
     class StatusChoice(models.TextChoices):
         PENDING = "pending", _("Pending")
@@ -827,11 +678,10 @@ class ContentIssueReport(BaseModel):
         help_text="User who reported the issue",
     )
 
-    # Generic foreign key fields
     content_type = models.ForeignKey(
         "contenttypes.ContentType",
         on_delete=models.CASCADE,
-        limit_choices_to={"model__in": ["resource", "asset"]},
+        limit_choices_to={"model__in": ["asset"]},
         help_text="Django ContentType for the reported object",
     )
 
@@ -845,7 +695,7 @@ class ContentIssueReport(BaseModel):
 
     status = models.CharField(
         max_length=20,
-        choices=StatusChoice.choices,
+        choices=StatusChoice,
         default=StatusChoice.PENDING,
         help_text="Current status of the issue report",
     )

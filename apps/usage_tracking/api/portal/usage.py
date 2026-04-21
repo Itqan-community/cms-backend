@@ -18,7 +18,9 @@ class BoardUrlOut(Schema):
     board_url: str | None
 
 
-@router.get("usage/board-url/", auth=None, response=BoardUrlOut, description="Get the Mixpanel board URL for the current user")
+@router.get(
+    "usage/board-url/", auth=None, response=BoardUrlOut, description="Get the Mixpanel board URL for the current user"
+)
 def get_usage_board_url(request: Request) -> BoardUrlOut:
     user = request.user
     if not getattr(user, "is_authenticated", False):
@@ -27,9 +29,7 @@ def get_usage_board_url(request: Request) -> BoardUrlOut:
     if user.is_staff:
         return BoardUrlOut(board_url=settings.MIXPANEL_MAIN_BOARD_URL or None)
 
-    membership = (
-        PublisherMember.objects.filter(user=user).select_related("publisher").first()
-    )
+    membership = PublisherMember.objects.filter(user=user).select_related("publisher").first()
     if membership is None:
         raise ItqanError("no_publisher_membership", "No publisher membership", status_code=403)
 

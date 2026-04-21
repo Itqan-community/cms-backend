@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, Qiraah, Resource, Riwayah
+from apps.content.models import Asset, CategoryChoice, Qiraah, Riwayah, StatusChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Domain, Publisher
 from apps.users.models import User
@@ -12,19 +12,14 @@ class RiwayahsListTest(BaseTestCase):
         self.publisher = baker.make(Publisher)
         self.domain = baker.make(Domain, publisher=self.publisher, domain="example.com")
         self.reciter = baker.make("content.Reciter", name="Test Reciter")
-        self.recitation_resource = baker.make(
-            Resource,
-            publisher=self.publisher,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.READY,
-        )
         self.active_qiraah = baker.make(Qiraah, is_active=True, name="Active Qiraah", slug="active-qiraah")
         self.active_riwayah = baker.make(Riwayah, is_active=True, name="Active Riwayah", qiraah=self.active_qiraah)
         self.valid_asset = baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             riwayah=self.active_riwayah,
-            resource=self.recitation_resource,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             reciter=self.reciter,
         )
 
@@ -32,48 +27,31 @@ class RiwayahsListTest(BaseTestCase):
         self.inactive_riwayah = baker.make(Riwayah, is_active=False, name="Inactive Riwayah")
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             riwayah=self.inactive_riwayah,
-            resource=self.recitation_resource,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             reciter=self.reciter,
         )
 
         # Asset with non-RECITATION category – should not count
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.TAFSIR,
-            resource=self.recitation_resource,
+            category=CategoryChoice.TAFSIR,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
         )
 
-        # Resource not READY – should not count
-        draft_resource = baker.make(
-            Resource,
-            publisher=self.publisher,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.DRAFT,
-        )
+        # Asset with DRAFT status – should not count
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             riwayah=self.active_riwayah,
-            resource=draft_resource,
+            publisher=self.publisher,
+            status=StatusChoice.DRAFT,
             reciter=self.reciter,
         )
 
-        # Resource not RECITATION – should not count
-        tafsir_resource = baker.make(
-            Resource,
-            publisher=self.publisher,
-            category=Resource.CategoryChoice.TAFSIR,
-            status=Resource.StatusChoice.READY,
-        )
-        baker.make(
-            Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            riwayah=self.active_riwayah,
-            resource=tafsir_resource,
-            reciter=self.reciter,
-        )
         self.user = User.objects.create_user(email="oauthuser@example.com", name="OAuth User")
 
     def test_list_riwayahs_should_return_only_active_with_ready_recitations(self):
@@ -111,9 +89,10 @@ class RiwayahsListTest(BaseTestCase):
         other_riwayah = baker.make(Riwayah, is_active=True, name="A Riwayah")
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             riwayah=other_riwayah,
-            resource=self.recitation_resource,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             reciter=self.reciter,
         )
 

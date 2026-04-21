@@ -47,7 +47,7 @@ class RecitationListOut(Schema):
 
     @staticmethod
     def resolve_publisher(obj):
-        publisher = obj.resource.publisher
+        publisher = obj.publisher
         return {
             "id": publisher.id,
             "name": publisher.name,
@@ -67,7 +67,7 @@ class RecitationListOut(Schema):
 
 
 class RecitationFilter(FilterSchema):
-    publisher_id: Annotated[list[int] | None, FilterLookup(q="resource__publisher_id__in")] = None
+    publisher_id: Annotated[list[int] | None, FilterLookup(q="publisher_id__in")] = None
     reciter_id: Annotated[list[int] | None, FilterLookup(q="reciter_id__in")] = None
     riwayah_id: Annotated[list[int] | None, FilterLookup(q="riwayah_id__in")] = None
     qiraah_id: Annotated[list[int] | None, FilterLookup(q="qiraah_id__in")] = None
@@ -80,12 +80,12 @@ class RecitationFilter(FilterSchema):
     search_fields=[
         "name",
         "description",
-        "resource__publisher__name",
-        "reciter__name",
+        "publisher__name",
+        "reciter__name_en",
         "reciter__name_ar",
-        "riwayah__name",
+        "riwayah__name_en",
         "riwayah__name_ar",
-        "qiraah__name",
+        "qiraah__name_en",
         "qiraah__name_ar",
     ]
 )

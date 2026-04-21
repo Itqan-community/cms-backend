@@ -6,8 +6,7 @@ from typing import Any
 
 from celery import shared_task
 from django.conf import settings
-from requests.exceptions import ConnectionError as RequestsConnectionError
-from requests.exceptions import Timeout as RequestsTimeout
+from requests.exceptions import ConnectionError as RequestsConnectionError, Timeout as RequestsTimeout
 
 from apps.usage_tracking.services.mixpanel_client import MixpanelIngestClient
 

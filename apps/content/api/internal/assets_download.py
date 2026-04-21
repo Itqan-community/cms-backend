@@ -39,7 +39,7 @@ def download_asset(request: Request, id: int):
     Return a direct download URL for the latest asset version
     """
     # Get the asset
-    asset = get_object_or_404(Asset, request.publisher_q("resource__publisher"), id=id)
+    asset = get_object_or_404(Asset, request.publisher_q("publisher"), id=id)
 
     # Check if user has access using the service function
     if not user_has_access(request.user, asset):
@@ -68,9 +68,7 @@ def download_asset(request: Request, id: int):
         {
             "developer_user_id": request.user.id,
             "usage_kind": UsageEvent.UsageKindChoice.FILE_DOWNLOAD,
-            "subject_kind": UsageEvent.SubjectKindChoice.ASSET,
             "asset_id": asset.id,
-            "resource_id": None,
             "metadata": {},
             "ip_address": request.META.get("REMOTE_ADDR"),
             "user_agent": request.headers.get("User-Agent", ""),

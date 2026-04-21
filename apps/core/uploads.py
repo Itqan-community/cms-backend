@@ -4,7 +4,7 @@ import uuid
 from django.utils.text import slugify
 
 if TYPE_CHECKING:
-    from apps.content.models import Asset, AssetPreview, AssetVersion, RecitationSurahTrack, Reciter, ResourceVersion
+    from apps.content.models import Asset, AssetPreview, AssetVersion, RecitationSurahTrack, Reciter
     from apps.publishers.models import Publisher
 
 
@@ -46,17 +46,6 @@ def upload_to_asset_files(instance: "AssetVersion", filename: str) -> str:
     safe_filename = slugify(filename.rsplit(".", 1)[0]) + "." + filename.split(".")[-1].lower()
     version_id = instance.pk or f"tmp-{uuid.uuid4().hex[:8]}"
     return f"uploads/assets/{instance.asset_id}/versions/{version_id}/{safe_filename}"
-
-
-def upload_to_resource_files(instance: "ResourceVersion", filename: str) -> str:
-    """
-    Generate upload path for resource version files
-    Format: uploads/resources/{resource_id}/versions/{resource_version_id}/{filename}
-    """
-    # Keep original filename for downloadable resources
-    safe_filename = slugify(filename.rsplit(".", 1)[0]) + "." + filename.split(".")[-1].lower()
-    version_id = instance.pk or f"tmp-{uuid.uuid4().hex[:8]}"
-    return f"uploads/resources/{instance.resource_id}/versions/{version_id}/{safe_filename}"
 
 
 def upload_to_recitation_surah_track_files(instance: "RecitationSurahTrack", filename: str) -> str:

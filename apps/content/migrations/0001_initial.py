@@ -500,7 +500,7 @@ class Migration(migrations.Migration):
                     "storage_url",
                     models.FileField(
                         help_text="File storage for resource version",
-                        upload_to=apps.core.uploads.upload_to_resource_files,
+
                         validators=[
                             django.core.validators.FileExtensionValidator(
                                 allowed_extensions=[

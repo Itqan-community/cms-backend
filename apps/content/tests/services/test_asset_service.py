@@ -1,7 +1,7 @@
 from django.core import mail
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetAccess, AssetAccessRequest, AssetVersion, ResourceVersion
+from apps.content.models import Asset, AssetAccess, AssetAccessRequest, AssetVersion
 from apps.content.services.asset import AssetService
 from apps.core.tests import BaseTestCase
 from apps.users.models import User
@@ -10,11 +10,8 @@ from apps.users.models import User
 class TestAssetService(BaseTestCase):
     def test_create_version_when_there_are_subscribed_users_should_send_email(self):
         # Arrange
-        resource_version = baker.make(ResourceVersion, semvar="1.0.0")
-        resource = resource_version.resource
         asset = baker.make(
             Asset,
-            resource=resource,
             name="Test Asset",
             category="mushaf",
             reciter=None,
@@ -31,8 +28,7 @@ class TestAssetService(BaseTestCase):
         service = AssetService()
         asset_version = AssetVersion(
             asset=asset,
-            resource_version=resource_version,
-            name="Asset V1",
+            name="1.0.0",
             summary="Asset update summary",
         )
 
@@ -60,10 +56,8 @@ class TestAssetService(BaseTestCase):
 
     def test_create_version_when_no_subscribers_should_not_send_emails(self):
         # Arrange
-        resource_version = baker.make(ResourceVersion)
         asset = baker.make(
             Asset,
-            resource=resource_version.resource,
             category="mushaf",
             reciter=None,
             riwayah=None,
@@ -71,7 +65,7 @@ class TestAssetService(BaseTestCase):
         )
 
         service = AssetService()
-        asset_version = AssetVersion(asset=asset, resource_version=resource_version, name="Asset V1")
+        asset_version = AssetVersion(asset=asset, name="Asset V1")
 
         # Act
         service.create_version(asset_version)

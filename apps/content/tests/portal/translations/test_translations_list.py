@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, Resource
+from apps.content.models import Asset, CategoryChoice, StatusChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -12,41 +12,12 @@ class TranslationListTest(BaseTestCase):
         self.publisher1 = baker.make(Publisher, name="Publisher One")
         self.publisher2 = baker.make(Publisher, name="Publisher Two")
 
-        # Create READY translation resources
-        self.ready_translation_resource1 = baker.make(
-            Resource,
-            publisher=self.publisher1,
-            category=Resource.CategoryChoice.TRANSLATION,
-            status=Resource.StatusChoice.READY,
-        )
-        self.ready_translation_resource2 = baker.make(
-            Resource,
-            publisher=self.publisher2,
-            category=Resource.CategoryChoice.TRANSLATION,
-            status=Resource.StatusChoice.READY,
-        )
-
-        # Create DRAFT translation resource (should be excluded)
-        self.draft_translation_resource = baker.make(
-            Resource,
-            publisher=self.publisher1,
-            category=Resource.CategoryChoice.TRANSLATION,
-            status=Resource.StatusChoice.DRAFT,
-        )
-
-        # Create non-translation resource (should be excluded)
-        self.mushaf_resource = baker.make(
-            Resource,
-            publisher=self.publisher1,
-            category=Resource.CategoryChoice.MUSHAF,
-            status=Resource.StatusChoice.READY,
-        )
-
         # Valid translation assets
         self.translation1 = baker.make(
             Asset,
-            category=Resource.CategoryChoice.TRANSLATION,
-            resource=self.ready_translation_resource1,
+            category=CategoryChoice.TRANSLATION,
+            publisher=self.publisher1,
+            status=StatusChoice.READY,
             name="Sahih International",
             name_ar="ترجمة صحيح إنترناشيونال",
             name_en="Sahih International",
@@ -58,8 +29,9 @@ class TranslationListTest(BaseTestCase):
         )
         self.translation2 = baker.make(
             Asset,
-            category=Resource.CategoryChoice.TRANSLATION,
-            resource=self.ready_translation_resource2,
+            category=CategoryChoice.TRANSLATION,
+            publisher=self.publisher2,
+            status=StatusChoice.READY,
             name="Pickthall Translation",
             name_ar="ترجمة بيكتال",
             name_en="Pickthall Translation",
@@ -73,8 +45,9 @@ class TranslationListTest(BaseTestCase):
         # Translation that should NOT be returned (draft)
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.TRANSLATION,
-            resource=self.draft_translation_resource,
+            category=CategoryChoice.TRANSLATION,
+            publisher=self.publisher1,
+            status=StatusChoice.DRAFT,
             name="Draft Translation",
             description="Should not appear",
         )
@@ -82,8 +55,9 @@ class TranslationListTest(BaseTestCase):
         # Non-translation asset that should NOT be returned
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.MUSHAF,
-            resource=self.mushaf_resource,
+            category=CategoryChoice.MUSHAF,
+            publisher=self.publisher1,
+            status=StatusChoice.READY,
             name="Mushaf",
             description="Should not appear",
         )
@@ -156,19 +130,13 @@ class TranslationListTest(BaseTestCase):
 
     def test_list_translations_where_is_external_is_filtered_should_return_external_translation(self):
         self.authenticate_user(self.user)
-        # Create an external translation resource
-        external_resource = baker.make(
-            Resource,
-            publisher=self.publisher1,
-            category=Resource.CategoryChoice.TRANSLATION,
-            status=Resource.StatusChoice.READY,
-            is_external=True,
-            external_url="https://example.com/translation",
-        )
         external_translation = baker.make(
             Asset,
-            category=Resource.CategoryChoice.TRANSLATION,
-            resource=external_resource,
+            category=CategoryChoice.TRANSLATION,
+            publisher=self.publisher1,
+            status=StatusChoice.READY,
+            is_external=True,
+            external_url="https://example.com/translation",
             name="External Translation",
             description="External",
         )

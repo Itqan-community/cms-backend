@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-import requests
 from mixpanel import Consumer, Mixpanel
+import requests
 from requests.auth import HTTPBasicAuth
 
 
@@ -68,7 +68,5 @@ class MixpanelSegmentationClient:
         if not response.ok:
             # Deliberately omit response.text — Mixpanel error bodies can echo
             # credentials or project identifiers that would leak into Sentry.
-            raise MixpanelQueryError(
-                f"Mixpanel segmentation query failed: HTTP {response.status_code}"
-            )
+            raise MixpanelQueryError(f"Mixpanel segmentation query failed: HTTP {response.status_code}")
         return response.json()

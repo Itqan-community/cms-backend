@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, Resource
+from apps.content.models import Asset, CategoryChoice, StatusChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -12,16 +12,11 @@ class TranslationUpdateTest(BaseTestCase):
         self.publisher1 = baker.make(Publisher, name="Publisher One")
         self.publisher2 = baker.make(Publisher, name="Publisher Two")
 
-        self.resource = baker.make(
-            Resource,
-            publisher=self.publisher1,
-            category=Resource.CategoryChoice.TRANSLATION,
-            status=Resource.StatusChoice.READY,
-        )
         self.translation = baker.make(
             Asset,
-            category=Resource.CategoryChoice.TRANSLATION,
-            resource=self.resource,
+            category=CategoryChoice.TRANSLATION,
+            publisher=self.publisher1,
+            status=StatusChoice.READY,
             name="Original Translation",
             name_ar="ترجمة أصلية",
             name_en="Original Translation",
@@ -190,9 +185,9 @@ class TranslationUpdateTest(BaseTestCase):
     def test_update_translation_where_is_external_false_forces_url_null_should_return_200(self):
         self.authenticate_user(self.user)
         # first make it external
-        self.translation.resource.is_external = True
-        self.translation.resource.external_url = "https://example.com/old"
-        self.translation.resource.save()
+        self.translation.is_external = True
+        self.translation.external_url = "https://example.com/old"
+        self.translation.save()
 
         response = self.client.patch(
             f"/portal/translations/{self.translation.slug}/",
@@ -209,6 +204,6 @@ class TranslationUpdateTest(BaseTestCase):
         self.assertIsNone(body["external_url"])
 
         # check DB
-        self.translation.resource.refresh_from_db()
-        self.assertFalse(self.translation.resource.is_external)
-        self.assertIsNone(self.translation.resource.external_url)
+        self.translation.refresh_from_db()
+        self.assertFalse(self.translation.is_external)
+        self.assertIsNone(self.translation.external_url)

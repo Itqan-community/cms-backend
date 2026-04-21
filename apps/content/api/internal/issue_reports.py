@@ -33,7 +33,7 @@ class IssueReportOut(Schema):
 
 
 class IssueReportCreateIn(Schema):
-    content_type: Literal["resource", "asset"]
+    content_type: Literal["asset"]
     content_id: int
     description: str
 

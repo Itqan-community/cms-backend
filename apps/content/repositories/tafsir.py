@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 from django.db import transaction
 
-from apps.content.models import Asset, AssetVersion, LicenseChoice, Resource, ResourceVersion
+from apps.content.models import Asset, AssetVersion, CategoryChoice, LicenseChoice, StatusChoice
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
@@ -13,29 +13,26 @@ if TYPE_CHECKING:
 class TafsirRepository:
     def __init__(self) -> None:
         self.asset_model = Asset
-        self.resource_model = Resource
         self.asset_version_model = AssetVersion
-        self.resource_version_model = ResourceVersion
 
     def list_tafsirs_qs(self, filters_dict: dict[str, Any]) -> QuerySet[Asset]:
         """
         Returns a queryset of Tafsir assets (category=TAFSIR, status=READY).
         """
-        qs = self.asset_model.objects.select_related("resource", "resource__publisher").filter(
-            category=Resource.CategoryChoice.TAFSIR,
-            resource__category=Resource.CategoryChoice.TAFSIR,
-            resource__status=Resource.StatusChoice.READY,
+        qs = self.asset_model.objects.select_related("publisher").filter(
+            category=CategoryChoice.TAFSIR,
+            status=StatusChoice.READY,
         )
 
         if filters_dict:
             if publisher_ids := filters_dict.get("publisher_id"):
-                qs = qs.filter(resource__publisher_id__in=publisher_ids)
+                qs = qs.filter(publisher_id__in=publisher_ids)
             if license_codes := filters_dict.get("license_code"):
                 qs = qs.filter(license__in=license_codes)
             if language := filters_dict.get("language"):
                 qs = qs.filter(language=language)
             if "is_external" in filters_dict:
-                qs = qs.filter(resource__is_external=filters_dict["is_external"])
+                qs = qs.filter(is_external=filters_dict["is_external"])
 
         return qs.distinct()
 
@@ -45,12 +42,11 @@ class TafsirRepository:
         """
         try:
             return (
-                self.asset_model.objects.select_related("resource", "resource__publisher")
-                .prefetch_related("resource__versions")
+                self.asset_model.objects.select_related("publisher")
+                .prefetch_related("versions")
                 .get(
                     slug=tafsir_slug,
-                    category=Resource.CategoryChoice.TAFSIR,
-                    resource__category=Resource.CategoryChoice.TAFSIR,
+                    category=CategoryChoice.TAFSIR,
                 )
             )
         except Asset.DoesNotExist:
@@ -75,25 +71,13 @@ class TafsirRepository:
         thumbnail_url: Any | None = None,
     ) -> Asset:
         """
-        Create a Resource and Asset for a new Tafsir.
+        Create an Asset for a new Tafsir.
         """
         with transaction.atomic():
-            # Create Resource first
-            resource = self.resource_model.objects.create(
-                publisher_id=publisher_id,
-                category=Resource.CategoryChoice.TAFSIR,
-                name=name,
-                description=description,
-                license=license,
-                status=Resource.StatusChoice.READY,
-                is_external=is_external,
-                external_url=external_url,
-            )
-
-            # Create Asset with localized fields
             asset = self.asset_model.objects.create(
-                resource=resource,
-                category=Resource.CategoryChoice.TAFSIR,
+                publisher_id=publisher_id,
+                status=StatusChoice.READY,
+                category=CategoryChoice.TAFSIR,
                 name=name,
                 name_ar=name_ar,
                 name_en=name_en,
@@ -106,7 +90,6 @@ class TafsirRepository:
                 language=language,
                 file_size="",
                 format="",
-                version="",
                 is_external=is_external,
                 external_url=external_url,
                 thumbnail_url=thumbnail_url,
@@ -120,16 +103,9 @@ class TafsirRepository:
         fields: dict[str, Any],
     ) -> Asset:
         """
-        Update tafsir asset fields and sync to resource.
-        Properly handles modeltranslation fields by setting localized fields only
-        and letting modeltranslation handle base field synchronization.
+        Update tafsir asset fields. Handles translation fields via modeltranslation
+        by setting localized fields only.
         """
-        # Fields that belong on the Resource model, not Asset
-        resource_only_fields = {"publisher_id"}
-        # Fields that must be mirrored on both Asset and Resource
-        mirrored_resource_fields = {"is_external", "external_url"}
-
-        # Separate translation fields from other fields
         translation_fields = {
             "name_ar",
             "name_en",
@@ -140,51 +116,23 @@ class TafsirRepository:
         }
 
         with transaction.atomic():
-            # Set all non-translation fields, routing to the correct model
             for field, value in fields.items():
-                if field in resource_only_fields:
-                    setattr(asset.resource, field, value)
-                elif field in mirrored_resource_fields:
-                    setattr(asset, field, value)
-                    setattr(asset.resource, field, value)
-                elif field not in translation_fields:
+                if field not in translation_fields:
                     setattr(asset, field, value)
 
-            # Set translation fields; empty strings are valid when clearing optional content.
             for field in translation_fields:
                 if field in fields:
                     setattr(asset, field, fields[field])
 
-            # Update resource's name/description if asset's localized fields changed
-            # NOTE: Do NOT set asset.name or asset.description directly - modeltranslation will overwrite
-            # the localized fields if we do. Just update the resource fields.
-            if "name_ar" in fields or "name_en" in fields:
-                name_ar = getattr(asset, "name_ar", "") or ""
-                name_en = getattr(asset, "name_en", "") or ""
-                name = name_ar or name_en
-                if name:
-                    asset.resource.name = name
-
-            if "description_ar" in fields or "description_en" in fields:
-                desc_ar = getattr(asset, "description_ar", "") or ""
-                desc_en = getattr(asset, "description_en", "") or ""
-                desc = desc_ar or desc_en
-                if desc:
-                    asset.resource.description = desc
-
             asset.save()
-            asset.resource.save()
 
         return asset
 
     def delete_tafsir(self, asset: Asset) -> None:
         """
-        Delete the asset and its resource.
+        Delete the tafsir asset.
         """
-        with transaction.atomic():
-            resource = asset.resource
-            asset.delete()
-            resource.delete()
+        asset.delete()
 
     def list_tafsir_versions(self, asset: Asset):
         return AssetVersion.objects.filter(asset=asset).order_by("-created_at")
@@ -207,31 +155,9 @@ class TafsirRepository:
         file: Any = None,
     ) -> AssetVersion:
         """
-        Atomically creates a ResourceVersion and its corresponding AssetVersion.
-        Automatically handles semvar generation.
+        Create an AssetVersion for the asset.
         """
         with transaction.atomic():
-            # Generate sequential semvar based on existing resource versions
-            last_version = asset.resource.versions.order_by("-created_at").first()
-            if last_version:
-                try:
-                    # Simple increment of major version for now: X.0.0
-                    major = int(last_version.semvar.split(".")[0])
-                    new_semvar = f"{major + 1}.0.0"
-                except (ValueError, IndexError):
-                    new_semvar = "1.0.0"
-            else:
-                new_semvar = "1.0.0"
-
-            # Create the ResourceVersion
-            resource_version = self.resource_version_model.objects.create(
-                resource=asset.resource,
-                name=name,
-                summary=summary,
-                semvar=new_semvar,
-            )
-
-            # Compute file metadata from the uploaded file object
             size_bytes = 0
             if file:
                 try:
@@ -239,10 +165,8 @@ class TafsirRepository:
                 except Exception:
                     pass
 
-            # Create the AssetVersion
             asset_version = self.asset_version_model.objects.create(
                 asset=asset,
-                resource_version=resource_version,
                 name=name,
                 summary=summary,
                 file_url=file,
@@ -263,7 +187,6 @@ class TafsirRepository:
             for field, value in fields.items():
                 setattr(version, field, value)
 
-            # Compute file metadata when the file is being replaced
             if "file_url" in fields and fields["file_url"]:
                 file = fields["file_url"]
                 try:
@@ -271,22 +194,12 @@ class TafsirRepository:
                 except Exception:
                     pass
 
-            # If name or summary changed, sync back to resource_version
-            if "name" in fields:
-                version.resource_version.name = fields["name"]
-            if "summary" in fields:
-                version.resource_version.summary = fields["summary"]
-
             version.save()
-            version.resource_version.save()
 
         return version
 
     def delete_tafsir_version(self, version: AssetVersion) -> None:
         """
-        Delete the AssetVersion and its linked ResourceVersion.
+        Delete the AssetVersion.
         """
-        with transaction.atomic():
-            resource_version = version.resource_version
-            version.delete()
-            resource_version.delete()
+        version.delete()

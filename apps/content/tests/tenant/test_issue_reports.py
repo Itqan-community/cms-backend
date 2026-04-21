@@ -1,4 +1,4 @@
-from apps.content.models import Asset, ContentIssueReport, Qiraah, Reciter, Resource
+from apps.content.models import Asset, CategoryChoice, ContentIssueReport, Qiraah, Reciter, StatusChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Domain, Publisher
 from apps.users.models import User
@@ -12,34 +12,32 @@ class IssueReportTenantApiTests(BaseTestCase):
 
         self.user = User.objects.create_user(email="reporter@example.com", password="password123")
 
-        self.resource = Resource.objects.create(
-            name="Test Resource",
-            publisher=self.publisher,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.READY,
-        )
-
         # Create dependencies for Asset
         self.reciter = Reciter.objects.create(name="Test Reciter")
         self.qiraah = Qiraah.objects.create(name="Test Qiraah")
 
         self.asset = Asset.objects.create(
             name="Test Asset",
-            resource=self.resource,
-            category=Resource.CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
+            category=CategoryChoice.RECITATION,
             file_size="10 MB",
             format="mp3",
             reciter=self.reciter,
             qiraah=self.qiraah,
         )
 
-        # Another publisher resource
+        # Another publisher's asset
         self.publisher2 = Publisher.objects.create(name="Other Publisher")
-        self.resource2 = Resource.objects.create(
-            name="Other Resource",
+        self.asset2 = Asset.objects.create(
+            name="Other Asset",
             publisher=self.publisher2,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.READY,
+            status=StatusChoice.READY,
+            category=CategoryChoice.RECITATION,
+            file_size="10 MB",
+            format="mp3",
+            reciter=self.reciter,
+            qiraah=self.qiraah,
         )
 
     def test_create_issue_report_tenant_with_correct_data_should_return_201(self):
@@ -47,8 +45,8 @@ class IssueReportTenantApiTests(BaseTestCase):
         # Arrange
         self.authenticate_user(self.user, domain=self.domain)
         payload = {
-            "content_type": "resource",
-            "content_id": self.resource.id,
+            "content_type": "asset",
+            "content_id": self.asset.id,
             "description": "Tenant API Report",
         }
 
@@ -59,15 +57,15 @@ class IssueReportTenantApiTests(BaseTestCase):
         self.assertEqual(201, response.status_code)
         data = response.json()
         self.assertEqual("Tenant API Report", data["description"])
-        self.assertEqual(self.resource.id, data["object_id"])
+        self.assertEqual(self.asset.id, data["object_id"])
 
     def test_create_unauthenticated(self):
         """Test creating report without auth fails"""
         # Arrange
         self.authenticate_user(None, domain=self.domain)
         payload = {
-            "content_type": "resource",
-            "content_id": self.resource.id,
+            "content_type": "asset",
+            "content_id": self.asset.id,
             "description": "Anon Report",
         }
 
@@ -82,13 +80,13 @@ class IssueReportTenantApiTests(BaseTestCase):
         # Arrange
         ContentIssueReport.objects.create(
             reporter=self.user,
-            content_object=self.resource,
+            content_object=self.asset,
             description="Tenant Report",
             status="pending",
         )
         ContentIssueReport.objects.create(
             reporter=self.user,
-            content_object=self.resource2,
+            content_object=self.asset2,
             description="Other Publisher Report",
             status="pending",
         )
