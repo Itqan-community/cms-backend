@@ -1,3 +1,5 @@
+import logging
+
 from ninja import File, FilterSchema, Form, Query, Schema, UploadedFile
 from ninja.pagination import paginate
 from pydantic import AwareDatetime
@@ -13,6 +15,7 @@ from apps.publishers.repositories.publisher import PublisherRepository
 from apps.publishers.services.publisher import PublisherService
 
 router = ItqanRouter(tags=[NinjaTag.PUBLISHERS])
+logger = logging.getLogger(__name__)
 
 
 class PublisherCreateIn(Schema):
@@ -57,6 +60,7 @@ class PublisherCreateOut(Schema):
 def create_publisher(
     request: Request, data: Form[PublisherCreateIn], icon: UploadedFile = File(None)
 ) -> tuple[int, Publisher]:
+    logger.info(f"Creating publisher [user_id={request.user.id}]")
     service = PublisherService(PublisherRepository())
     publisher = service.create_publisher(
         name_ar=data.name_ar,
@@ -71,6 +75,7 @@ def create_publisher(
         country=data.country,
         icon_url=icon,
     )
+    logger.info(f"Publisher created [publisher_id={publisher.id}, user_id={request.user.id}]")
     return 201, publisher
 
 
@@ -183,11 +188,14 @@ class PublisherPutIn(Schema):
 def update_publisher_put(
     request: Request, publisher_id: int, data: Form[PublisherPutIn], icon: UploadedFile = File(None)
 ) -> Publisher:
+    logger.info(f"Updating publisher (PUT) [publisher_id={publisher_id}, user_id={request.user.id}]")
     service = PublisherService(PublisherRepository())
     fields = data.model_dump()
     if icon:
         fields["icon_url"] = icon
-    return service.update_publisher(publisher_id, fields=fields)
+    publisher = service.update_publisher(publisher_id, fields=fields)
+    logger.info(f"Publisher updated [publisher_id={publisher_id}, user_id={request.user.id}]")
+    return publisher
 
 
 @router.patch(
@@ -197,11 +205,14 @@ def update_publisher_put(
 def update_publisher_patch(
     request: Request, publisher_id: int, data: Form[PublisherPatchIn], icon: UploadedFile = File(None)
 ) -> Publisher:
+    logger.info(f"Updating publisher (PATCH) [publisher_id={publisher_id}, user_id={request.user.id}]")
     service = PublisherService(PublisherRepository())
     fields = data.model_dump(exclude_unset=True)
     if icon:
         fields["icon_url"] = icon
-    return service.update_publisher(publisher_id, fields=fields)
+    publisher = service.update_publisher(publisher_id, fields=fields)
+    logger.info(f"Publisher updated [publisher_id={publisher_id}, user_id={request.user.id}]")
+    return publisher
 
 
 # --- Delete Publisher ---
@@ -212,6 +223,8 @@ def update_publisher_patch(
     response={204: None, 404: NinjaErrorResponse},
 )
 def delete_publisher(request: Request, publisher_id: int) -> tuple[int, None]:
+    logger.info(f"Deleting publisher [publisher_id={publisher_id}, user_id={request.user.id}]")
     service = PublisherService(PublisherRepository())
     service.delete_publisher(publisher_id)
+    logger.info(f"Publisher deleted [publisher_id={publisher_id}, user_id={request.user.id}]")
     return 204, None

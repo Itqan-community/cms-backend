@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated, Literal
 
 from ninja import Field, FilterLookup, FilterSchema, Query, Schema
@@ -15,6 +16,7 @@ from apps.core.ninja_utils.tags import NinjaTag
 from apps.core.ninja_utils.types import AbsoluteUrl
 
 router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
+logger = logging.getLogger(__name__)
 
 
 # --- Output Schemas ---
@@ -216,6 +218,9 @@ def create_recitation(
     request: Request,
     data: RecitationCreateIn,
 ) -> tuple[int, Asset]:
+    logger.info(
+        f"Creating recitation [publisher_id={data.publisher_id}, reciter_id={data.reciter_id}, user_id={request.user.id}]"
+    )
     service = RecitationService()
     recitation = service.create_recitation(
         publisher_id=data.publisher_id,
@@ -231,6 +236,7 @@ def create_recitation(
         meem_behaviour=data.meem_behaviour,
         year=data.year,
     )
+    logger.info(f"Recitation created [recitation_id={recitation.id}, user_id={request.user.id}]")
     return 201, recitation
 
 
@@ -265,9 +271,11 @@ def update_recitation_put(
     recitation_slug: str,
     data: RecitationPutIn,
 ) -> Asset:
+    logger.info(f"Updating recitation (PUT) [recitation_slug={recitation_slug}, user_id={request.user.id}]")
     service = RecitationService()
     fields = data.model_dump()
     recitation = service.update_recitation(recitation_slug, fields=fields)
+    logger.info(f"Recitation updated [recitation_id={recitation.id}, user_id={request.user.id}]")
     return recitation
 
 
@@ -289,9 +297,11 @@ def update_recitation_patch(
     recitation_slug: str,
     data: RecitationPatchIn,
 ) -> Asset:
+    logger.info(f"Updating recitation (PATCH) [recitation_slug={recitation_slug}, user_id={request.user.id}]")
     service = RecitationService()
     fields = data.model_dump(exclude_unset=True)
     recitation = service.update_recitation(recitation_slug, fields=fields)
+    logger.info(f"Recitation updated [recitation_id={recitation.id}, user_id={request.user.id}]")
     return recitation
 
 
@@ -303,6 +313,8 @@ def update_recitation_patch(
     },
 )
 def delete_recitation(request: Request, recitation_slug: str) -> tuple[int, None]:
+    logger.info(f"Deleting recitation [recitation_slug={recitation_slug}, user_id={request.user.id}]")
     service = RecitationService()
     service.delete_recitation(recitation_slug)
+    logger.info(f"Recitation deleted [recitation_slug={recitation_slug}, user_id={request.user.id}]")
     return 204, None

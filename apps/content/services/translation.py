@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any
 
 from django.db.models import ProtectedError, QuerySet
@@ -9,6 +10,8 @@ from apps.content.models import AssetVersion, LicenseChoice
 from apps.content.repositories.translation import TranslationRepository
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
 
@@ -89,7 +92,7 @@ class TranslationService:
         if not is_external:
             external_url = None
 
-        return self.repo.create_translation(
+        translation = self.repo.create_translation(
             publisher_id=publisher_id,
             name=name,
             name_ar=normalized_name_ar,
@@ -104,6 +107,10 @@ class TranslationService:
             is_external=is_external,
             external_url=external_url,
         )
+        logger.info(
+            f"Translation created [asset_id={translation.pk}, publisher_id={publisher_id}, language={language}]"
+        )
+        return translation
 
     def update_translation(
         self,
@@ -148,7 +155,9 @@ class TranslationService:
             fields["is_external"] = False
             fields["external_url"] = None
 
-        return self.repo.update_translation(asset, fields=fields)
+        updated = self.repo.update_translation(asset, fields=fields)
+        logger.info(f"Translation updated [asset_id={updated.pk}, slug={translation_slug}]")
+        return updated
 
     def delete_translation(self, translation_slug: str) -> None:
         """
@@ -157,6 +166,7 @@ class TranslationService:
         asset = self.get_translation(translation_slug)
         try:
             self.repo.delete_translation(asset)
+            logger.info(f"Translation deleted [asset_id={asset.pk}, slug={translation_slug}]")
         except ProtectedError as exc:
             raise ItqanError(
                 error_name="related_objects_exist",
@@ -200,12 +210,16 @@ class TranslationService:
         Business Logic: Create a new version for a translation.
         """
         asset = self.get_translation(translation_slug)
-        return self.repo.create_translation_version(
+        version = self.repo.create_translation_version(
             asset,
             name=name,
             summary=summary,
             file=file,
         )
+        logger.info(
+            f"Translation version created [version_id={version.pk}, asset_id={asset.pk}, slug={translation_slug}]"
+        )
+        return version
 
     def update_translation_version(
         self,
@@ -217,7 +231,9 @@ class TranslationService:
         Business Logic: Update an existing translation version.
         """
         version = self.get_translation_version(translation_slug, version_id)
-        return self.repo.update_translation_version(version, fields=fields)
+        updated = self.repo.update_translation_version(version, fields=fields)
+        logger.info(f"Translation version updated [version_id={version_id}, asset_slug={translation_slug}]")
+        return updated
 
     def delete_translation_version(self, translation_slug: str, version_id: int) -> None:
         """
@@ -225,3 +241,4 @@ class TranslationService:
         """
         version = self.get_translation_version(translation_slug, version_id)
         self.repo.delete_translation_version(version)
+        logger.info(f"Translation version deleted [version_id={version_id}, asset_slug={translation_slug}]")

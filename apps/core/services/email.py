@@ -51,8 +51,9 @@ class EmailService:
         try:
             connection.open()
             connection.send_messages(messages)
+            logger.info(f"Email sent [subject={subject!r}, recipients={len(recipients)}]")
         except Exception as e:
-            logger.exception("Failed to send %d email(s) [subject=%r]: %s", len(recipients), subject, e)
+            logger.exception(f"Failed to send {len(recipients)} email(s) [subject={subject!r}]: {e}")
             if not self._fail_silently:
                 raise
         finally:

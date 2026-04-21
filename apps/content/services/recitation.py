@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any
 
 from django.db.models import ProtectedError, Q, QuerySet
@@ -9,6 +10,8 @@ from apps.content.models import LicenseChoice, Qiraah, Reciter, Riwayah
 from apps.content.repositories.recitation import RecitationRepository
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
 
@@ -87,7 +90,7 @@ class RecitationService:
             riwayah_id=riwayah_id,
         )
 
-        return self.repo.create_recitation(
+        recitation = self.repo.create_recitation(
             publisher_id=publisher_id,
             name=name,
             name_ar=normalized_name_ar,
@@ -103,6 +106,10 @@ class RecitationService:
             meem_behaviour=meem_behaviour,
             year=year,
         )
+        logger.info(
+            f"Recitation created [asset_id={recitation.pk}, publisher_id={publisher_id}, reciter_id={reciter_id}]"
+        )
+        return recitation
 
     def update_recitation(
         self,
@@ -140,7 +147,9 @@ class RecitationService:
                 riwayah_id=fields.get("riwayah_id", asset.riwayah_id),
             )
 
-        return self.repo.update_recitation(asset, fields=fields)
+        updated = self.repo.update_recitation(asset, fields=fields)
+        logger.info(f"Recitation updated [asset_id={updated.pk}, slug={recitation_slug}]")
+        return updated
 
     def _validate_recitation_metadata(
         self,
@@ -187,6 +196,7 @@ class RecitationService:
         asset = self.get_recitation(recitation_slug)
         try:
             self.repo.delete_recitation(asset)
+            logger.info(f"Recitation deleted [asset_id={asset.pk}, slug={recitation_slug}]")
         except ProtectedError as exc:
             raise ItqanError(
                 error_name="related_objects_exist",

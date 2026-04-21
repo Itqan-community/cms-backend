@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated, Literal
 
 from ninja import FilterLookup, FilterSchema, Query, Schema
@@ -13,6 +14,7 @@ from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
 
 router = ItqanRouter(tags=[NinjaTag.ISSUE_REPORTS])
+logger = logging.getLogger(__name__)
 
 
 class IssueReportOut(Schema):
@@ -38,7 +40,9 @@ class IssueReportFilter(FilterSchema):
 
 @router.post("issue-reports/", response={201: IssueReportOut}, auth=ninja_jwt_auth)
 def create_issue_report(request: Request, data: IssueReportCreateIn):
-
+    logger.info(
+        f"Creating issue report [content_type={data.content_type}, content_id={data.content_id}, user_id={request.user.id}]"
+    )
     service = IssueReportService(IssueReportRepository())
     report = service.create_issue_report(
         reporter=request.user,
@@ -46,6 +50,7 @@ def create_issue_report(request: Request, data: IssueReportCreateIn):
         content_id=data.content_id,
         description=data.description,
     )
+    logger.info(f"Issue report created [report_id={report.id}, user_id={request.user.id}]")
     return 201, report
 
 

@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import Literal
 
@@ -17,6 +18,7 @@ from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
 
 router = ItqanRouter(tags=[NinjaTag.ASSETS])
+logger = logging.getLogger(__name__)
 
 
 class DownloadAssetOut(Schema):
@@ -76,4 +78,5 @@ def download_asset(request: Request, id: int):
         }
     )
 
+    logger.info(f"Asset download initiated [asset_id={id}, user_id={request.user.id}]")
     return 200, DownloadAssetOut(download_url=download_url)

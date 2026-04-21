@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any
 
 from django.db.models import ProtectedError, QuerySet
@@ -9,6 +10,8 @@ from apps.content.models import LicenseChoice
 from apps.content.repositories.tafsir import TafsirRepository
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
 
@@ -90,7 +93,7 @@ class TafsirService:
         if not is_external:
             external_url = None
 
-        return self.repo.create_tafsir(
+        tafsir = self.repo.create_tafsir(
             publisher_id=publisher_id,
             name=name,
             name_ar=normalized_name_ar,
@@ -106,6 +109,8 @@ class TafsirService:
             external_url=external_url,
             thumbnail_url=thumbnail_url,
         )
+        logger.info(f"Tafsir created [asset_id={tafsir.pk}, publisher_id={publisher_id}, language={language}]")
+        return tafsir
 
     def update_tafsir(
         self,
@@ -150,7 +155,9 @@ class TafsirService:
             fields["is_external"] = False
             fields["external_url"] = None
 
-        return self.repo.update_tafsir(asset, fields=fields)
+        updated = self.repo.update_tafsir(asset, fields=fields)
+        logger.info(f"Tafsir updated [asset_id={updated.pk}, slug={tafsir_slug}]")
+        return updated
 
     def delete_tafsir(self, tafsir_slug: str) -> None:
         """
@@ -159,6 +166,7 @@ class TafsirService:
         asset = self.get_tafsir(tafsir_slug)
         try:
             self.repo.delete_tafsir(asset)
+            logger.info(f"Tafsir deleted [asset_id={asset.pk}, slug={tafsir_slug}]")
         except ProtectedError as exc:
             raise ItqanError(
                 error_name="related_objects_exist",
@@ -200,12 +208,14 @@ class TafsirService:
         Business Logic: Create a new version for a tafsir.
         """
         asset = self.get_tafsir(tafsir_slug)
-        return self.repo.create_tafsir_version(
+        version = self.repo.create_tafsir_version(
             asset,
             name=name,
             summary=summary,
             file=file,
         )
+        logger.info(f"Tafsir version created [version_id={version.pk}, asset_id={asset.pk}, slug={tafsir_slug}]")
+        return version
 
     def update_tafsir_version(
         self,
@@ -217,7 +227,9 @@ class TafsirService:
         Business Logic: Update an existing tafsir version.
         """
         version = self.get_tafsir_version(tafsir_slug, version_id)
-        return self.repo.update_tafsir_version(version, fields=fields)
+        updated = self.repo.update_tafsir_version(version, fields=fields)
+        logger.info(f"Tafsir version updated [version_id={version_id}, asset_slug={tafsir_slug}]")
+        return updated
 
     def delete_tafsir_version(self, tafsir_slug: str, version_id: int) -> None:
         """
@@ -225,3 +237,4 @@ class TafsirService:
         """
         version = self.get_tafsir_version(tafsir_slug, version_id)
         self.repo.delete_tafsir_version(version)
+        logger.info(f"Tafsir version deleted [version_id={version_id}, asset_slug={tafsir_slug}]")

@@ -1,4 +1,5 @@
 import datetime
+import logging
 from typing import Annotated, Literal
 
 from ninja import Field, File, FilterLookup, FilterSchema, Form, Query, Schema, UploadedFile
@@ -15,6 +16,7 @@ from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
 
 router = ItqanRouter(tags=[NinjaTag.RECITERS])
+logger = logging.getLogger(__name__)
 
 
 class ReciterListOut(Schema):
@@ -148,6 +150,7 @@ def create_reciter(
     data: Form[ReciterCreateIn],
     image: UploadedFile | None = File(None),
 ):
+    logger.info(f"Creating reciter [user_id={request.user.id}]")
     service = ReciterService()
     reciter = service.create_reciter(
         name_ar=data.name_ar,
@@ -158,6 +161,7 @@ def create_reciter(
         date_of_death=data.date_of_death,
         image_url=image,
     )
+    logger.info(f"Reciter created [reciter_id={reciter.id}, user_id={request.user.id}]")
     # The new reciter object won't have `recitations_count` annotated natively from create()
     # So we should fetch it from the service repo query
     return 201, service.get_reciter(reciter.slug)
@@ -177,11 +181,13 @@ def patch_reciter(
     reciter_slug: str,
     data: ReciterPatchIn,
 ):
+    logger.info(f"Updating reciter [reciter_slug={reciter_slug}, user_id={request.user.id}]")
     service = ReciterService()
 
     fields = data.model_dump(exclude_unset=True)
 
     reciter = service.update_reciter(reciter_slug, fields)
+    logger.info(f"Reciter updated [reciter_id={reciter.id}, user_id={request.user.id}]")
     return service.get_reciter(reciter.slug)
 
 
@@ -193,6 +199,8 @@ def patch_reciter(
     },
 )
 def delete_reciter(request: Request, reciter_slug: str):
+    logger.info(f"Deleting reciter [reciter_slug={reciter_slug}, user_id={request.user.id}]")
     service = ReciterService()
     service.delete_reciter(reciter_slug)
+    logger.info(f"Reciter deleted [reciter_slug={reciter_slug}, user_id={request.user.id}]")
     return 204, None

@@ -68,6 +68,7 @@ class TestMixpanelSegmentationClient:
         call = responses.calls[0]
         assert "Authorization" in call.request.headers
         assert call.request.headers["Authorization"].startswith("Basic ")
+        dict(call.request.params if hasattr(call.request, "params") else {})
         # query string parsing
         from urllib.parse import parse_qs, urlparse
 

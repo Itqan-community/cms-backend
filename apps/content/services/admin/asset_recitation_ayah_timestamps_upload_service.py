@@ -91,6 +91,7 @@ def bulk_upload_recitation_ayah_timestamps(asset_id: int, files: Iterable) -> Re
     Returns a stats dict with counts and details.
     """
     asset = Asset.objects.get(pk=asset_id)
+    logger.info(f"Ayah timestamps upload started [asset_id={asset_id}]")
 
     # Preload tracks for the asset
     tracks = RecitationSurahTrack.objects.filter(asset=asset).only("id", "surah_number")
@@ -108,7 +109,7 @@ def bulk_upload_recitation_ayah_timestamps(asset_id: int, files: Iterable) -> Re
                 try:
                     surah_number, rows = _parse_json_bytes(f.read())
                 except Exception as e:
-                    logger.error("Failed to parse timestamp file %s: %s", f.name, e)
+                    logger.error(f"Failed to parse timestamp file {f.name}: {e}")
                     file_errors.append(f"{f.name}: {e}")
                     continue
 
@@ -163,9 +164,12 @@ def bulk_upload_recitation_ayah_timestamps(asset_id: int, files: Iterable) -> Re
                 updated_total += len(to_update)
 
     except Exception as e:
-        logger.error("Bulk timestamp upload failed for asset %s: %s", asset_id, e)
+        logger.error(f"Bulk timestamp upload failed for asset {asset_id}: {e}")
         file_errors.append(str(e))
 
+    logger.info(
+        f"Ayah timestamps upload complete [asset_id={asset_id}, created={created_total}, updated={updated_total}, skipped={skipped_total}, missing_tracks={len(missing_tracks)}, errors={len(file_errors)}]"
+    )
     return {
         "created_total": created_total,
         "updated_total": updated_total,

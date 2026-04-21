@@ -17,11 +17,11 @@ def get_mp3_duration_ms(django_file) -> int:
         try:
             f.seek(0)
         except Exception as e:
-            logger.warning("Failed to seek MP3 file: %s", e)
+            logger.warning(f"Failed to seek MP3 file: {e}")
         audio = MP3(f)
         return int(audio.info.length * 1000)
     except Exception as e:
-        logger.warning("Failed to parse MP3 duration: %s", e)
+        logger.warning(f"Failed to parse MP3 duration: {e}")
         return 0
 
 
