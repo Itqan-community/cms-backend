@@ -1,6 +1,8 @@
 from django.db import migrations
 from django.utils.text import slugify
 
+from apps.content.models import CategoryChoice, StatusChoice
+
 
 def _generate_unique_slug(Asset, base_name):
     base_slug = slugify(base_name[:50], allow_unicode=True) or "asset"
@@ -15,9 +17,14 @@ def _generate_unique_slug(Asset, base_name):
 def forwards(apps, schema_editor):
     Resource = apps.get_model("content", "Resource")
     Asset = apps.get_model("content", "Asset")
+    Reciter = apps.get_model("content", "Reciter")
+    Riwayah = apps.get_model("content", "Riwayah")
     ContentIssueReport = apps.get_model("content", "ContentIssueReport")
     UsageEvent = apps.get_model("content", "UsageEvent")
     ContentType = apps.get_model("contenttypes", "ContentType")
+
+    reciter = Reciter.objects.first()
+    riwayah = Riwayah.objects.first()
 
     # 1. Create placeholder Asset for orphan Resources (Resources with zero Assets)
     orphan_resources = Resource.objects.filter(assets__isnull=True).iterator()
@@ -26,10 +33,14 @@ def forwards(apps, schema_editor):
         placeholder = Asset.objects.create(
             resource=resource,
             publisher_id=resource.publisher_id,
-            status=resource.status,
+            status=StatusChoice.DRAFT,
+            name_ar=resource.name_ar,
+            name_en=resource.name_en,
             name=resource.name,
             slug=_generate_unique_slug(Asset, resource.name),
             description=resource.description,
+            description_en=resource.description_en,
+            description_ar=resource.description_ar,
             long_description="",
             category=resource.category,
             license=resource.license,
@@ -40,6 +51,8 @@ def forwards(apps, schema_editor):
             language="",
             is_external=resource.is_external,
             external_url=resource.external_url,
+            reciter =reciter if resource.category==CategoryChoice.RECITATION else None,
+            riwayah=riwayah if resource.category==CategoryChoice.RECITATION else None,
         )
         orphan_asset_ids_by_resource[resource.id] = placeholder.id
 
