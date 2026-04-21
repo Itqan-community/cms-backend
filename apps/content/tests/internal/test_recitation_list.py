@@ -187,8 +187,7 @@ class RecitationsListTest(BaseTestCase):
         baker.make(
             Asset,
             _quantity=20,
-            category=Resource.CategoryChoice.RECITATION,
-            resource=self.ready_resource,
+            category=CategoryChoice.RECITATION,
             reciter=self.reciter1,
             riwayah=self.riwayah_hafs,
             qiraah=self.qiraah_asim,
