@@ -13,7 +13,7 @@ from apps.publishers.models import PublisherMember
 router = ItqanRouter(tags=[NinjaTag.USAGE])
 
 
-@router.get("usage/board-url/", description="Get the Mixpanel board URL for the current user")
+@router.get("usage/board-url/", auth=None, description="Get the Mixpanel board URL for the current user")
 def get_usage_board_url(request: Request):
     user = request.user
     if not getattr(user, "is_authenticated", False):
