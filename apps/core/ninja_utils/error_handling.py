@@ -26,7 +26,7 @@ def register_exception_handlers(api: NinjaAPI) -> None:
     def handle_permission_denied(request, exc: PermissionDenied):
         return api.create_response(
             request,
-            NinjaErrorResponse[str, Any](error_name="permission_denied", message=exc.detail),
+            NinjaErrorResponse[str, Any](error_name="permission_denied", message=str(exc.detail)),
             status=403,
         )
 

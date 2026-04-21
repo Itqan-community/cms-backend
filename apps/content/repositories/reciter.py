@@ -43,7 +43,7 @@ class ReciterRepository:
         except Reciter.DoesNotExist:
             return None
 
-    def _derive_slug(self, name_en: str, name_ar: str) -> str:
+    def _derive_slug(self, name_en: str | None, name_ar: str | None) -> str:
         """
         Derive a deterministic slug preferring name_ar if available.
         """

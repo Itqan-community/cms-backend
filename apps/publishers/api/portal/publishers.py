@@ -15,10 +15,10 @@ router = ItqanRouter(tags=[NinjaTag.PUBLISHERS])
 
 
 class PublisherCreateIn(Schema):
-    name_ar: str = ""
-    name_en: str = ""
-    description_ar: str = ""
-    description_en: str = ""
+    name_ar: str | None = None
+    name_en: str | None = None
+    description_ar: str | None = None
+    description_en: str | None = None
     address: str = ""
     website: str = ""
     contact_email: str = ""
@@ -33,7 +33,7 @@ class PublisherCreateOut(Schema):
     slug: str
     name_ar: str | None
     name_en: str | None
-    description_en: str
+    description_en: str | None
     description_ar: str | None
     address: str
     website: str
@@ -162,10 +162,10 @@ class PublisherPatchIn(Schema):
 
 
 class PublisherPutIn(Schema):
-    name_ar: str = ""
-    name_en: str = ""
-    description_ar: str = ""
-    description_en: str = ""
+    name_ar: str | None = None
+    name_en: str | None = None
+    description_ar: str | None = None
+    description_en: str | None = None
     address: str = ""
     website: str = ""
     contact_email: str = ""

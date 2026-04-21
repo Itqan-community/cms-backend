@@ -87,7 +87,7 @@ class CreatePublisherTest(BaseTestCase):
         body = response.json()
         self.assertEqual("Minimal Publisher", body["name"])
         self.assertEqual("minimal-publisher", body["slug"])
-        self.assertEqual("", body["description_en"])
+        self.assertEqual(None, body["description_en"])
         self.assertEqual("", body["address"])
         self.assertTrue(body["is_verified"])
         self.assertIsNone(body["foundation_year"])

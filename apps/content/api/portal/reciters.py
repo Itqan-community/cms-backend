@@ -42,10 +42,10 @@ class ReciterListOut(Schema):
 
 class ReciterDetailOut(Schema):
     id: int
-    name_ar: str
-    name_en: str
-    bio_ar: str
-    bio_en: str
+    name_ar: str | None
+    name_en: str | None
+    bio_ar: str | None
+    bio_en: str | None
     recitations_count: int = Field(0)
     nationality: str | None
     slug: str
@@ -82,8 +82,8 @@ class ReciterDetailOut(Schema):
 
 
 class ReciterCreateIn(Schema):
-    name_ar: str = Field(..., min_length=1)
-    name_en: str = Field(..., min_length=1)
+    name_ar: str | None = None
+    name_en: str | None = None
     bio_ar: str = ""
     bio_en: str = ""
     nationality: str = Field("", pattern=r"^$|^[A-Za-z]{2}$", description="2-letter ISO country code")
@@ -91,8 +91,8 @@ class ReciterCreateIn(Schema):
 
 
 class ReciterPatchIn(Schema):
-    name_ar: str | None = Field(None, min_length=1)
-    name_en: str | None = Field(None, min_length=1)
+    name_ar: str | None = None
+    name_en: str | None = None
     bio_ar: str | None = None
     bio_en: str | None = None
     nationality: str | None = Field(None, pattern=r"^$|^[A-Za-z]{2}$", description="2-letter ISO country code")
