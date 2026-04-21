@@ -16,7 +16,7 @@ class TestMixpanelIngestClient:
         sdk_instance = MagicMock()
         mock_mixpanel_cls.return_value = sdk_instance
 
-        client = MixpanelIngestClient(token="test-token", api_base="https://eu.mixpanel.com", enabled=True)
+        client = MixpanelIngestClient(token="test-token", ingest_host="api-eu.mixpanel.com", enabled=True)
         client.track(distinct_id="anon-1", event="public_api_request", properties={"endpoint": "GET /reciters"})
 
         sdk_instance.track.assert_called_once_with(
@@ -25,7 +25,7 @@ class TestMixpanelIngestClient:
 
     @patch("apps.usage_tracking.services.mixpanel_client.Mixpanel")
     def test_track_feature_flag_off_noop(self, mock_mixpanel_cls):
-        client = MixpanelIngestClient(token="test-token", api_base="https://eu.mixpanel.com", enabled=False)
+        client = MixpanelIngestClient(token="test-token", ingest_host="api-eu.mixpanel.com", enabled=False)
 
         client.track(distinct_id="anon-1", event="public_api_request", properties={})
 
@@ -33,7 +33,7 @@ class TestMixpanelIngestClient:
 
     @patch("apps.usage_tracking.services.mixpanel_client.Mixpanel")
     def test_track_no_token_noop(self, mock_mixpanel_cls):
-        client = MixpanelIngestClient(token="", api_base="https://eu.mixpanel.com", enabled=True)
+        client = MixpanelIngestClient(token="", ingest_host="api-eu.mixpanel.com", enabled=True)
 
         client.track(distinct_id="anon-1", event="public_api_request", properties={})
 
