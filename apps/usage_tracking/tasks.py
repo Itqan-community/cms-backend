@@ -11,18 +11,25 @@ from requests.exceptions import Timeout as RequestsTimeout
 
 from apps.usage_tracking.services.mixpanel_client import MixpanelIngestClient
 
-# Only retry on transient network errors. Permanent Mixpanel 4xx errors
-# (bad token, malformed event) should fail fast so the worker slot is
-# not wasted on an event that will never succeed.
 _TRANSIENT_ERRORS = (RequestsConnectionError, RequestsTimeout, ConnectionError, TimeoutError)
 
 
-def _build_ingest_client() -> MixpanelIngestClient:
-    return MixpanelIngestClient(
-        token=settings.MIXPANEL_PROJECT_TOKEN,
-        ingest_host=settings.MIXPANEL_INGEST_HOST,
-        enabled=settings.MIXPANEL_ENABLED,
-    )
+def _build_ingest_clients() -> list[MixpanelIngestClient]:
+    tokens = [
+        settings.MIXPANEL_PROJECT_TOKEN,
+        settings.MIXPANEL_PROJECT_TOKEN_2,
+        settings.MIXPANEL_PROJECT_TOKEN_3,
+        settings.MIXPANEL_PROJECT_TOKEN_4,
+    ]
+    return [
+        MixpanelIngestClient(
+            token=token,
+            ingest_host=settings.MIXPANEL_INGEST_HOST,
+            enabled=settings.MIXPANEL_ENABLED,
+        )
+        for token in tokens
+        if token
+    ]
 
 
 @shared_task(
@@ -43,5 +50,5 @@ def track_api_request_task(
 ) -> None:
     if not distinct_id:
         return
-    client = _build_ingest_client()
-    client.track(distinct_id, event, properties)
+    for client in _build_ingest_clients():
+        client.track(distinct_id, event, properties)
