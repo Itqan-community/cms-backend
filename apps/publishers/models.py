@@ -26,7 +26,9 @@ class Publisher(BaseModel):
 
     website = models.URLField(blank=True, help_text="Publisher website")
 
-    mixpanel_board_url = models.URLField(blank=True, null=True, help_text="Public Mixpanel board URL for this publisher's analytics dashboard")
+    mixpanel_board_url = models.URLField(
+        blank=True, null=True, help_text="Public Mixpanel board URL for this publisher's analytics dashboard"
+    )
 
     is_verified = models.BooleanField(default=True, help_text="Whether publisher is verified")
 
