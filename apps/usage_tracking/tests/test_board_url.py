@@ -65,3 +65,24 @@ class TestGetUsageBoardUrl(BaseTestCase):
         resp = self.client.get(self.URL)
 
         assert resp.status_code == 403
+
+    def test_staff_with_publisher_id_returns_publisher_board_url(self):
+        staff = User.objects.create_user(email="staff3@test.com", password="x", is_staff=True)
+        publisher = Publisher.objects.create(
+            name="Pub For Staff",
+            mixpanel_board_url="https://eu.mixpanel.com/public/PUB789",
+        )
+        self.authenticate_user(staff)
+
+        resp = self.client.get(self.URL, {"publisher_id": publisher.pk})
+
+        assert resp.status_code == 200
+        assert resp.json()["board_url"] == "https://eu.mixpanel.com/public/PUB789"
+
+    def test_staff_with_invalid_publisher_id_returns_404(self):
+        staff = User.objects.create_user(email="staff4@test.com", password="x", is_staff=True)
+        self.authenticate_user(staff)
+
+        resp = self.client.get(self.URL, {"publisher_id": 99999})
+
+        assert resp.status_code == 404

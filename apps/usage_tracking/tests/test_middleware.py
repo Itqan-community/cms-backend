@@ -129,13 +129,13 @@ class TestUsageTrackingMiddleware:
     @patch(
         "apps.usage_tracking.middlewares.usage_tracking_middleware.resolve_publisher_from_request"
     )
-    def test_distinct_id_uses_token_id_when_authed(self, mock_resolve, mock_task):
+    def test_distinct_id_uses_user_id_when_authed(self, mock_resolve, mock_task):
         mock_resolve.return_value = (42, "acme")
         mw = _make_middleware()
         request = self.factory.get("/reciters")
-        request.access_token = SimpleNamespace(id=7, user=SimpleNamespace(id=99))
+        request.user = SimpleNamespace(pk=99, is_authenticated=True)
 
         mw(request)
 
         _, kwargs = mock_task.delay.call_args
-        assert kwargs["distinct_id"] == "token-7"
+        assert kwargs["distinct_id"] == "user-99"
