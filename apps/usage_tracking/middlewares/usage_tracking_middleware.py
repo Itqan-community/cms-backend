@@ -81,7 +81,7 @@ class UsageTrackingMiddleware:
 
     @staticmethod
     def _distinct_id(request) -> str:
-        token = getattr(request, "access_token", None)
-        if token is not None and getattr(token, "id", None) is not None:
-            return f"token-{token.id}"
+        user = getattr(request, "user", None)
+        if user is not None and getattr(user, "is_authenticated", False):
+            return f"user-{user.pk}"
         return f"anon-{uuid.uuid4().hex[:12]}"
