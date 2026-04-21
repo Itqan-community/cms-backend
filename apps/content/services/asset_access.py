@@ -1,7 +1,11 @@
+import logging
+
 from django.utils import timezone
 
 from apps.content.models import Asset, AssetAccess, AssetAccessRequest
 from apps.users.models import User
+
+logger = logging.getLogger(__name__)
 
 
 def approve_request(
@@ -28,6 +32,9 @@ def approve_request(
         expires_at=None,
     )  # maybe add download url and expiration logic later
 
+    logger.info(
+        f"Asset access approved [request_id={asset_access_request.pk}, user_id={asset_access_request.developer_user_id}, asset_id={asset_access_request.asset_id}, access_id={access.pk}]"
+    )
     return access
 
 
@@ -40,6 +47,9 @@ def reject_request(asset_access_request: AssetAccessRequest, rejected_by_user=No
     asset_access_request.approved_by = rejected_by_user
     asset_access_request.admin_response = reason or "Request rejected"
     asset_access_request.save()
+    logger.info(
+        f"Asset access rejected [request_id={asset_access_request.pk}, user_id={asset_access_request.developer_user_id}, asset_id={asset_access_request.asset_id}]"
+    )
 
 
 def request_access(
@@ -49,6 +59,9 @@ def request_access(
 
     if existing_request:
         if existing_request.status == AssetAccessRequest.StatusChoice.APPROVED:
+            logger.warning(
+                f"Access request already approved — returning existing grant [user_id={user.pk}, asset_id={asset.pk}, request_id={existing_request.pk}]"
+            )
             access = getattr(existing_request, "access_grant", None)
             return existing_request, access
         elif existing_request.status == AssetAccessRequest.StatusChoice.PENDING:
@@ -68,6 +81,7 @@ def request_access(
         developer_access_reason=purpose,
         intended_use=intended_use,
     )
+    logger.info(f"Asset access requested [request_id={request.pk}, user_id={user.pk}, asset_id={asset.pk}]")
 
     access = None
     if auto_approve:

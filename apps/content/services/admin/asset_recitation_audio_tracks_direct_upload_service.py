@@ -102,7 +102,7 @@ class AssetRecitationAudioTracksDirectUploadService:
                 head = s3.head_object(Bucket=settings.CLOUDFLARE_R2_BUCKET, Key=r2_key)
                 size_bytes = int(head.get("ContentLength", 0))
             except Exception as e:
-                logger.warning("Failed to get size for uploaded object %s: %s", r2_key, e)
+                logger.warning(f"Failed to get size for uploaded object {r2_key}: {e}")
                 size_bytes = 0
 
         # Fall back to mutagen if duration_ms not provided or 0
@@ -113,7 +113,7 @@ class AssetRecitationAudioTracksDirectUploadService:
                 data = obj["Body"].read()
                 duration_ms = get_mp3_duration_ms(BytesIO(data))
             except Exception as e:
-                logger.warning("Failed to compute MP3 duration for %s: %s", r2_key, e)
+                logger.warning(f"Failed to compute MP3 duration for {r2_key}: {e}")
                 duration_ms = 0
 
         surah_number = extract_surah_number_from_mp3_filename(filename)
@@ -134,7 +134,7 @@ class AssetRecitationAudioTracksDirectUploadService:
             try:
                 s3.delete_object(Bucket=settings.CLOUDFLARE_R2_BUCKET, Key=r2_key)
             except Exception as e:
-                logger.warning("Failed to delete orphaned object in R2 %s: %s", r2_key, e)
+                logger.warning(f"Failed to delete orphaned object in R2 {r2_key}: {e}")
 
             raise ItqanError(
                 error_name="duplicate_track",
@@ -142,6 +142,9 @@ class AssetRecitationAudioTracksDirectUploadService:
                 status_code=409,
             ) from exc
 
+        logger.info(
+            f"Multipart upload complete [asset_id={asset_id}, surah_number={surah_number}, track_id={track.id}, size_bytes={track.size_bytes}]"
+        )
         return {
             "trackId": track.id,
             "assetId": track.asset_id,
@@ -166,7 +169,7 @@ class AssetRecitationAudioTracksDirectUploadService:
             error_code = getattr(e, "response", {}).get("Error", {}).get("Code", "")
             if error_code not in ("NoSuchUpload", "NotFound"):
                 raise
-            logger.warning("Multipart upload abort skipped for %s (code=%s): %s", r2_key, error_code, e)
+            logger.warning(f"Multipart upload abort skipped for {r2_key} (code={error_code}): {e}")
 
         return {"aborted": True}
 
@@ -203,10 +206,10 @@ class AssetRecitationAudioTracksDirectUploadService:
                         self.abort_upload(key=key, upload_id=upload_id)
                         aborted_count += 1
                     except Exception as e:
-                        logger.error("Failed to abort stuck upload %s: %s", key, e)
+                        logger.error(f"Failed to abort stuck upload {key}: {e}")
 
         except Exception as e:
-            logger.error("Stuck upload cleanup failed: %s", e)
+            logger.error(f"Stuck upload cleanup failed: {e}")
 
         return {
             "abortedUploads": aborted_count,

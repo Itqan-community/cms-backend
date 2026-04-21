@@ -1,3 +1,5 @@
+import logging
+
 from django.shortcuts import get_object_or_404
 from ninja import Schema
 from pydantic import AwareDatetime
@@ -9,6 +11,7 @@ from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
 
 router = ItqanRouter(tags=[NinjaTag.ASSETS])
+logger = logging.getLogger(__name__)
 
 
 class RequestAccessIn(Schema):
@@ -40,6 +43,9 @@ class AccessRequestResponseOut(Schema):
 @router.post("assets/{asset_id}/request-access/", response=AccessRequestResponseOut)
 def request_asset_access(request: Request, asset_id: int, data: RequestAccessIn):
     """Request access to an asset (V1: auto-approval)"""
+    logger.info(
+        f"Access requested for asset [asset_id={asset_id}, user_id={request.user.id}, intended_use={data.intended_use}]"
+    )
     asset = get_object_or_404(Asset, request.publisher_q("publisher"), id=asset_id)
 
     # Validation is now handled by the schema using IntendedUseChoice
@@ -54,6 +60,9 @@ def request_asset_access(request: Request, asset_id: int, data: RequestAccessIn)
         auto_approve=True,  # V1: Auto-approval
     )
 
+    logger.info(
+        f"Asset access granted [asset_id={asset_id}, user_id={request.user.id}, access_request_id={access_request.id}]"
+    )
     return {
         "request": {
             "id": access_request.id,

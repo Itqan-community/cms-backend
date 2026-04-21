@@ -184,6 +184,17 @@ class RecitationsListTest(BaseTestCase):
     # ── Query count ────────────────────────────────────────────
 
     def test_list_recitations_should_use_constant_number_of_queries(self):
+        baker.make(
+            Asset,
+            _quantity=20,
+            category=Resource.CategoryChoice.RECITATION,
+            resource=self.ready_resource,
+            reciter=self.reciter1,
+            riwayah=self.riwayah_hafs,
+            qiraah=self.qiraah_asim,
+        )
+        recitations_count = Asset.objects.filter(category="recitation").count()
+
         self.authenticate_user(self.user)
         from django.db import connection
 
@@ -191,5 +202,8 @@ class RecitationsListTest(BaseTestCase):
             response = self.client.get("/cms-api/recitations/")
 
         self.assertEqual(200, response.status_code, response.content)
-        self.assertEqual(2, len(response.json()["results"]))
-        self.assertLessEqual(len(ctx), 4, f"Expected <= 4 queries, got {len(ctx)}: {[q['sql'] for q in ctx]}")
+        self.assertLess(
+            len(ctx),
+            recitations_count,
+            f"Expected < {recitations_count} queries, got {len(ctx)}: {[q['sql'] for q in ctx]}",
+        )

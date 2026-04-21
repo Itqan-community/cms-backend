@@ -1,6 +1,9 @@
+import logging
 from typing import Literal
 
 from apps.content.models import AssetAccess, UsageEvent
+
+logger = logging.getLogger(__name__)
 
 
 def create_usage_event(
@@ -75,9 +78,12 @@ def log_asset_download(user, asset, ip_address=None, user_agent=""):
             "user_agent": user_agent,
         }
         if track_event_async(event_data):
+            logger.debug(f"Asset download event queued async [user_id={user.id}, asset_id={asset.id}]")
             return None  # Event queued for async processing
     except ImportError:
-        pass
+        logger.warning(
+            f"track_event_async not available — falling back to sync usage event [user_id={user.id}, asset_id={asset.id}]"
+        )
 
     # Fallback to synchronous creation
     return UsageEvent.objects.create(

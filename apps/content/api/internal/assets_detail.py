@@ -42,7 +42,7 @@ class DetailAssetOut(Schema):
 
 @router.get("assets/{id}/", response=DetailAssetOut, auth=None)
 def detail_assets(request: Request, id: int):
-    logger.info("Asset detail requested [asset_id=%s]", id)
+    logger.info(f"Asset detail requested [asset_id={id}]")
     asset = get_object_or_404(Asset, request.publisher_q("publisher"), id=id)
 
     # Only create usage event for authenticated users

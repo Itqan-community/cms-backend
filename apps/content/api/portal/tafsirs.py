@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated, Literal
 
 from ninja import Field, File, FilterLookup, FilterSchema, Form, Query, Schema, UploadedFile
@@ -14,6 +15,7 @@ from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
 
 router = ItqanRouter(tags=[NinjaTag.TAFSIRS])
+logger = logging.getLogger(__name__)
 
 
 # --- Output Schemas ---
@@ -177,6 +179,9 @@ def create_tafsir(
     data: Form[TafsirCreateIn],
     thumbnail: UploadedFile | None = File(None),
 ) -> tuple[int, Asset]:
+    logger.info(
+        f"Creating tafsir [publisher_id={data.publisher_id}, language={data.language}, user_id={request.user.id}]"
+    )
     service = TafsirService()
     tafsir = service.create_tafsir(
         publisher_id=data.publisher_id,
@@ -192,6 +197,7 @@ def create_tafsir(
         external_url=data.external_url,
         thumbnail_url=thumbnail,
     )
+    logger.info(f"Tafsir created [tafsir_id={tafsir.id}, user_id={request.user.id}]")
     return 201, tafsir
 
 
@@ -221,11 +227,13 @@ def update_tafsir_put(
     data: Form[TafsirPutIn],
     thumbnail: UploadedFile | None = File(None),
 ) -> Asset:
+    logger.info(f"Updating tafsir (PUT) [tafsir_slug={tafsir_slug}, user_id={request.user.id}]")
     service = TafsirService()
     fields = data.model_dump()
     if thumbnail is not None:
         fields["thumbnail_url"] = thumbnail
     tafsir = service.update_tafsir(tafsir_slug, fields=fields)
+    logger.info(f"Tafsir updated [tafsir_id={tafsir.id}, user_id={request.user.id}]")
     return tafsir
 
 
@@ -243,11 +251,13 @@ def update_tafsir_patch(
     data: Form[TafsirPatchIn],
     thumbnail: UploadedFile | None = File(None),
 ) -> Asset:
+    logger.info(f"Updating tafsir (PATCH) [tafsir_slug={tafsir_slug}, user_id={request.user.id}]")
     service = TafsirService()
     fields = data.model_dump(exclude_unset=True)
     if thumbnail is not None:
         fields["thumbnail_url"] = thumbnail
     tafsir = service.update_tafsir(tafsir_slug, fields=fields)
+    logger.info(f"Tafsir updated [tafsir_id={tafsir.id}, user_id={request.user.id}]")
     return tafsir
 
 
@@ -259,6 +269,8 @@ def update_tafsir_patch(
     },
 )
 def delete_tafsir(request: Request, tafsir_slug: str) -> tuple[int, None]:
+    logger.info(f"Deleting tafsir [tafsir_slug={tafsir_slug}, user_id={request.user.id}]")
     service = TafsirService()
     service.delete_tafsir(tafsir_slug)
+    logger.info(f"Tafsir deleted [tafsir_slug={tafsir_slug}, user_id={request.user.id}]")
     return 204, None

@@ -621,7 +621,7 @@ class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
                 try:
                     self.size_bytes = int(getattr(self.audio_file, "size", 0) or 0)
                 except Exception as e:
-                    logger.warning("Failed to get file size for RecitationSurahTrack: %s", e)
+                    logger.warning(f"Failed to get file size for RecitationSurahTrack: {e}")
                     self.size_bytes = 0
 
             if not self.duration_ms:
@@ -657,7 +657,7 @@ class RecitationAyahTiming(BaseModel):
         try:
             self.duration_ms = max(0, int(self.end_ms) - int(self.start_ms))
         except Exception as e:
-            logger.warning("Failed to compute ayah duration for %s: %s", self.ayah_key, e)
+            logger.warning(f"Failed to compute ayah duration for {self.ayah_key}: {e}")
             self.duration_ms = 0
         super().save(*args, **kwargs)
 

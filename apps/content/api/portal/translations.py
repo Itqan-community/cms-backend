@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated, Literal
 
 from ninja import FilterLookup, FilterSchema, Query, Schema
@@ -14,6 +15,7 @@ from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
 
 router = ItqanRouter(tags=[NinjaTag.TRANSLATIONS])
+logger = logging.getLogger(__name__)
 
 
 # --- Output Schemas ---
@@ -161,6 +163,9 @@ def create_translation(
     request: Request,
     data: TranslationCreateIn,
 ) -> tuple[int, Asset]:
+    logger.info(
+        f"Creating translation [publisher_id={data.publisher_id}, language={data.language}, user_id={request.user.id}]"
+    )
     service = TranslationService()
     translation = service.create_translation(
         publisher_id=data.publisher_id,
@@ -175,6 +180,7 @@ def create_translation(
         is_external=data.is_external,
         external_url=data.external_url,
     )
+    logger.info(f"Translation created [translation_id={translation.id}, user_id={request.user.id}]")
     return 201, translation
 
 
@@ -204,9 +210,11 @@ def update_translation_put(
     translation_slug: str,
     data: TranslationPutIn,
 ) -> Asset:
+    logger.info(f"Updating translation (PUT) [translation_slug={translation_slug}, user_id={request.user.id}]")
     service = TranslationService()
     fields = data.model_dump()
     translation = service.update_translation(translation_slug, fields=fields)
+    logger.info(f"Translation updated [translation_id={translation.id}, user_id={request.user.id}]")
     return translation
 
 
@@ -224,9 +232,11 @@ def update_translation_patch(
     translation_slug: str,
     data: TranslationPatchIn,
 ) -> Asset:
+    logger.info(f"Updating translation (PATCH) [translation_slug={translation_slug}, user_id={request.user.id}]")
     service = TranslationService()
     fields = data.model_dump(exclude_unset=True)
     translation = service.update_translation(translation_slug, fields=fields)
+    logger.info(f"Translation updated [translation_id={translation.id}, user_id={request.user.id}]")
     return translation
 
 
@@ -238,6 +248,8 @@ def update_translation_patch(
     },
 )
 def delete_translation(request: Request, translation_slug: str) -> tuple[int, None]:
+    logger.info(f"Deleting translation [translation_slug={translation_slug}, user_id={request.user.id}]")
     service = TranslationService()
     service.delete_translation(translation_slug)
+    logger.info(f"Translation deleted [translation_slug={translation_slug}, user_id={request.user.id}]")
     return 204, None

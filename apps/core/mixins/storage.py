@@ -46,10 +46,10 @@ def delete_associated_files_on_delete(sender, instance, **kwargs):
                     f.delete(save=False)
             except Exception as e:
                 # Best-effort: ignore storage errors during cleanup
-                logger.warning("Failed to delete file %s during cleanup: %s", field.name, e)
+                logger.warning(f"Failed to delete file {field.name} during cleanup: {e}")
     except Exception as e:
         # Do not raise from signals
-        logger.warning("Error in post_delete file cleanup for %s: %s", type(instance).__name__, e)
+        logger.warning(f"Error in post_delete file cleanup for {type(instance).__name__}: {e}")
 
 
 # ===========================

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import logging
 from typing import TYPE_CHECKING, Any
 
 from django.db import IntegrityError
@@ -9,6 +10,8 @@ from django.utils.translation import gettext as _
 
 from apps.content.repositories.reciter import ReciterRepository
 from apps.core.ninja_utils.errors import ItqanError
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
 
@@ -78,7 +81,9 @@ class ReciterService:
             if image_url is not None:
                 kwargs["image_url"] = image_url
 
-            return self.repo.create_reciter(**kwargs)
+            reciter = self.repo.create_reciter(**kwargs)
+            logger.info(f"Reciter created [reciter_id={reciter.pk}, name={reciter.name!r}]")
+            return reciter
         except IntegrityError as err:
             raise ItqanError(
                 error_name="reciter_already_exists",
@@ -114,7 +119,9 @@ class ReciterService:
             fields["name_en"] = final_name_en
 
         try:
-            return self.repo.update_reciter(reciter, fields=fields)
+            updated = self.repo.update_reciter(reciter, fields=fields)
+            logger.info(f"Reciter updated [reciter_id={updated.pk}, slug={reciter_slug}]")
+            return updated
         except IntegrityError as err:
             raise ItqanError(
                 error_name="reciter_already_exists",
@@ -129,6 +136,7 @@ class ReciterService:
         reciter = self.get_reciter(reciter_slug)
         try:
             self.repo.delete_reciter(reciter)
+            logger.info(f"Reciter deleted [reciter_id={reciter.pk}, slug={reciter_slug}]")
         except ProtectedError as exc:
             raise ItqanError(
                 error_name="related_objects_exist",

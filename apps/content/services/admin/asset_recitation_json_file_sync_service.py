@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 
 from django.core.files.base import ContentFile
 from django.db import transaction
@@ -9,6 +10,8 @@ from apps.content.api.public.recitation_track_list import RecitationAyahTimingOu
 from apps.content.models import Asset, AssetVersion, RecitationSurahTrack
 from apps.core.mixins.constants import QURAN_SURAHS
 from config.settings.base import CLOUDFLARE_R2_PUBLIC_BASE_URL
+
+logger = logging.getLogger(__name__)
 
 
 def _build_recitations_json(asset: Asset) -> tuple[str, str]:
@@ -64,6 +67,8 @@ def sync_asset_recitations_json_file(asset_id: int) -> tuple[AssetVersion, str]:
     - Raises ValueError if the Asset does not exist or if there is no latest AssetVersion.
     - Returns (updated_asset_version, filename) on success.
     """
+    logger.info(f"Recitation JSON sync started [asset_id={asset_id}]")
+
     asset: Asset | None = Asset.objects.filter(pk=asset_id).first()
     if not asset:
         raise ValueError(f"Asset {asset_id} not found")
@@ -74,6 +79,7 @@ def sync_asset_recitations_json_file(asset_id: int) -> tuple[AssetVersion, str]:
 
     payload, filename = _build_recitations_json(asset)
     payload_bytes = payload.encode("utf-8")
+    track_count = payload.count('"surah_number"')
 
     # Atomic write to the latest version file
     with transaction.atomic():
@@ -82,4 +88,7 @@ def sync_asset_recitations_json_file(asset_id: int) -> tuple[AssetVersion, str]:
         latest_version.size_bytes = len(payload_bytes)
         latest_version.save(update_fields=["file_url", "size_bytes", "updated_at"])
 
+    logger.info(
+        f"Recitation JSON sync complete [asset_id={asset_id}, version_id={latest_version.pk}, tracks={track_count}, size_bytes={len(payload_bytes)}, filename={filename}]"
+    )
     return latest_version, filename

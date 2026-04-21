@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any, Literal
 
 from django.core.exceptions import ValidationError
@@ -8,6 +9,8 @@ from django.utils.html import strip_tags
 
 from apps.content.models import ContentIssueReport
 from apps.content.repositories.issue_report import IssueReportRepository
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
@@ -44,12 +47,16 @@ class IssueReportService:
             raise ValidationError(f"Content object not found: {content_type} with ID {content_id}")
 
         # 4. Create report via repository
-        return self.repo.create_issue_report(
+        report = self.repo.create_issue_report(
             reporter=reporter,
             content_object=content_object,
             description=clean_description,
             status=ContentIssueReport.StatusChoice.PENDING,
         )
+        logger.info(
+            f"Issue report created [report_id={report.pk}, reporter_id={reporter.pk}, content_type={content_type}, content_id={content_id}]"
+        )
+        return report
 
     def get_issue_reports(
         self,
@@ -94,4 +101,8 @@ class IssueReportService:
         # Business logic: validate transition?
         # For now, allow any transition.
 
-        return self.repo.update_issue_report_status(report, new_status)
+        updated = self.repo.update_issue_report_status(report, new_status)
+        logger.info(
+            f"Issue report status updated [report_id={report_id}, new_status={new_status}, updated_by={user.pk}]"
+        )
+        return updated
