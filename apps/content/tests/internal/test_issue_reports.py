@@ -1,4 +1,4 @@
-from apps.content.models import Asset, ContentIssueReport, Qiraah, Reciter, Resource
+from apps.content.models import Asset, CategoryChoice, ContentIssueReport, Qiraah, Reciter, StatusChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -11,21 +11,15 @@ class IssueReportInternalApiTests(BaseTestCase):
         self.user = User.objects.create_user(email="reporter@example.com", password="password123")
         self.staff_user = User.objects.create_user(email="staff@example.com", password="password123", is_staff=True)
 
-        self.resource = Resource.objects.create(
-            name="Test Resource",
-            publisher=self.publisher,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.READY,
-        )
-
         # Create dependencies for Asset
         self.reciter = Reciter.objects.create(name="Test Reciter")
         self.qiraah = Qiraah.objects.create(name="Test Qiraah")
 
         self.asset = Asset.objects.create(
             name="Test Asset",
-            resource=self.resource,
-            category=Resource.CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
+            category=CategoryChoice.RECITATION,
             file_size="10 MB",
             format="mp3",
             reciter=self.reciter,
@@ -37,8 +31,8 @@ class IssueReportInternalApiTests(BaseTestCase):
         # Arrange
         self.authenticate_user(self.staff_user)
         payload = {
-            "content_type": "resource",
-            "content_id": self.resource.id,
+            "content_type": "asset",
+            "content_id": self.asset.id,
             "description": "API Test Issue Report",
         }
 
@@ -49,14 +43,14 @@ class IssueReportInternalApiTests(BaseTestCase):
         self.assertEqual(201, response.status_code)
         data = response.json()
         self.assertEqual("API Test Issue Report", data["description"])
-        self.assertEqual(self.resource.id, data["object_id"])
+        self.assertEqual(self.asset.id, data["object_id"])
 
     def test_list_issue_reports(self):
         """Test listing issue reports via internal API"""
         # Arrange
         ContentIssueReport.objects.create(
             reporter=self.user,
-            content_object=self.resource,
+            content_object=self.asset,
             description="Existing Report",
             status="pending",
         )

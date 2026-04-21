@@ -5,7 +5,7 @@ from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import Field
 
-from apps.content.models import Asset, LicenseChoice, Resource
+from apps.content.models import Asset, CategoryChoice, LicenseChoice, StatusChoice
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -26,24 +26,22 @@ class ListAssetOut(Schema):
     category: str
     name: str
     description: str
-    publisher: ListAssetPublisherOut = Field(alias="resource.publisher")
+    publisher: ListAssetPublisherOut = Field(alias="publisher")
     license: LicenseChoice
 
 
 class AssetFilter(FilterSchema):
-    category: Annotated[list[Resource.CategoryChoice] | None, FilterLookup(q="category__in")] = None
+    category: Annotated[list[CategoryChoice] | None, FilterLookup(q="category__in")] = None
     license_code: Annotated[list[str] | None, FilterLookup(q="license__in")] = None
-    publisher_id: Annotated[int | None, FilterLookup(q="resource__publisher")] = None
+    publisher_id: Annotated[int | None, FilterLookup(q="publisher")] = None
 
 
 @router.get("assets/", response=list[ListAssetOut], auth=None)
 @paginate
 @ordering(ordering_fields=["name", "category"])
-@searching(search_fields=["name", "description", "resource__publisher__name", "category"])
+@searching(search_fields=["name", "description", "publisher__name", "category"])
 def list_assets(request: Request, filters: AssetFilter = Query()):
     logger.info("Assets list requested")
-    assets = Asset.objects.filter(request.publisher_q("resource__publisher")).exclude(
-        resource__status=Resource.StatusChoice.DRAFT
-    )
+    assets = Asset.objects.filter(request.publisher_q("publisher")).exclude(status=StatusChoice.DRAFT)
     assets = filters.filter(assets)
     return assets

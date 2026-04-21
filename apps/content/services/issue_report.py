@@ -22,7 +22,7 @@ class IssueReportService:
     def create_issue_report(
         self,
         reporter: User,
-        content_type: Literal["resource", "asset"],
+        content_type: Literal["asset"],
         content_id: int,
         description: str,
     ) -> ContentIssueReport:
@@ -72,29 +72,12 @@ class IssueReportService:
         q_filter = Q()
 
         if publisher_q:
-            # We filter for reports where:
-            # 1. Content is a Resource owned by publisher
-            # 2. Content is an Asset whose Resource is owned by publisher
+            from apps.content.models import Asset
 
-            # We need to import models here to avoid circular imports at module level
-            from apps.content.models import Asset, Resource
+            # publisher_q is Q(publisher=publisher_obj). Applies directly to Asset.
+            allowed_asset_ids = Asset.objects.filter(publisher_q).values_list("id", flat=True)
 
-            # publisher_q typically is Q(publisher=publisher_obj).
-            # reliable to apply to Resource model which has 'publisher' field.
-
-            allowed_resource_ids = Resource.objects.filter(publisher_q).values_list("id", flat=True)
-
-            # 1. Resources
-            resource_published_q = Q(content_type__model="resource") & Q(object_id__in=allowed_resource_ids)
-
-            # 2. Assets
-            # Filter assets belonging to allowed resources
-            allowed_asset_ids = Asset.objects.filter(resource__id__in=allowed_resource_ids).values_list("id", flat=True)
-
-            asset_published_q = Q(content_type__model="asset") & Q(object_id__in=allowed_asset_ids)
-
-            # Combine
-            q_filter &= resource_published_q | asset_published_q
+            q_filter &= Q(content_type__model="asset") & Q(object_id__in=allowed_asset_ids)
 
         return self.repo.list_issue_reports_qs(filters=filters_dict, q_filter=q_filter)
 

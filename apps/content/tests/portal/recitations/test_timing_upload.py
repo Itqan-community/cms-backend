@@ -6,13 +6,13 @@ from model_bakery import baker
 from apps.content.models import (
     Asset,
     AssetVersion,
+    CategoryChoice,
     Qiraah,
     RecitationAyahTiming,
     RecitationSurahTrack,
     Reciter,
-    Resource,
-    ResourceVersion,
     Riwayah,
+    StatusChoice,
 )
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
@@ -55,16 +55,11 @@ class TimingUploadBaseTest(BaseTestCase):
         self.qiraah = baker.make(Qiraah, name="Test Qiraah")
         self.riwayah = baker.make(Riwayah, name="Test Riwayah", qiraah=self.qiraah)
 
-        self.resource = baker.make(
-            Resource,
-            publisher=self.publisher,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.READY,
-        )
         self.asset = baker.make(
             Asset,
-            resource=self.resource,
-            category=Resource.CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
+            category=CategoryChoice.RECITATION,
             reciter=self.reciter,
             qiraah=self.qiraah,
             riwayah=self.riwayah,
@@ -79,11 +74,9 @@ class TimingUploadBaseTest(BaseTestCase):
         )
 
         # AssetVersion required by sync_asset_recitations_json_file
-        self.resource_version = baker.make(ResourceVersion, resource=self.resource, semvar="1.0.0")
         self.asset_version = baker.make(
             AssetVersion,
             asset=self.asset,
-            resource_version=self.resource_version,
             name="v1",
         )
 
@@ -181,9 +174,8 @@ class TimingUploadSuccessTest(TimingUploadBaseTest):
     def test_upload_timing_where_no_asset_version_should_create_asset_version(self):
         # Arrange
         self.authenticate_user(self.staff_user)
-        # Delete the AssetVersion so sync will fail
+        # Delete the AssetVersion so sync will create a new one
         self.asset_version.delete()
-        self.resource_version.delete()
         timing_file = make_timing_file(surah_number=1)
 
         # Act
@@ -198,7 +190,6 @@ class TimingUploadSuccessTest(TimingUploadBaseTest):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         self.assertIsNotNone(AssetVersion.objects.filter(asset_id=self.asset.id, name="1").first())
-        self.assertIsNotNone(ResourceVersion.objects.filter(resource_id=self.asset.resource_id, name="1").first())
 
         # Verify the timing upload was also added
         self.assertEqual(2, RecitationAyahTiming.objects.filter(track=self.track).count())

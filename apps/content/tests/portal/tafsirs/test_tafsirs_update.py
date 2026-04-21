@@ -1,7 +1,7 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
-from apps.content.models import Asset, Resource
+from apps.content.models import Asset, CategoryChoice, StatusChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -13,16 +13,11 @@ class TafsirUpdateTest(BaseTestCase):
         self.publisher1 = baker.make(Publisher, name="Publisher One")
         self.publisher2 = baker.make(Publisher, name="Publisher Two")
 
-        self.resource = baker.make(
-            Resource,
-            publisher=self.publisher1,
-            category=Resource.CategoryChoice.TAFSIR,
-            status=Resource.StatusChoice.READY,
-        )
         self.tafsir = baker.make(
             Asset,
-            category=Resource.CategoryChoice.TAFSIR,
-            resource=self.resource,
+            category=CategoryChoice.TAFSIR,
+            publisher=self.publisher1,
+            status=StatusChoice.READY,
             name="Original Tafsir",
             name_ar="تفسير أصلي",
             name_en="Original Tafsir",
@@ -252,9 +247,9 @@ class TafsirUpdateTest(BaseTestCase):
         # Arrange
         self.authenticate_user(self.user)
         # first make it external
-        self.tafsir.resource.is_external = True
-        self.tafsir.resource.external_url = "https://example.com/original"
-        self.tafsir.resource.save()
+        self.tafsir.is_external = True
+        self.tafsir.external_url = "https://example.com/original"
+        self.tafsir.save()
 
         # Act
         # turning it false, the external url should be set to None natively
@@ -274,6 +269,6 @@ class TafsirUpdateTest(BaseTestCase):
         self.assertIsNone(body["external_url"])
 
         # Check db
-        self.tafsir.resource.refresh_from_db()
-        self.assertFalse(self.tafsir.resource.is_external)
-        self.assertIsNone(self.tafsir.resource.external_url)
+        self.tafsir.refresh_from_db()
+        self.assertFalse(self.tafsir.is_external)
+        self.assertIsNone(self.tafsir.external_url)

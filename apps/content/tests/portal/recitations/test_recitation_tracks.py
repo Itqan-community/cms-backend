@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, Qiraah, RecitationSurahTrack, Reciter, Resource, Riwayah
+from apps.content.models import Asset, CategoryChoice, Qiraah, RecitationSurahTrack, Reciter, Riwayah, StatusChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -26,16 +26,11 @@ class RecitationTracksListAPITest(BaseTestCase):
         self.qiraah = baker.make(Qiraah, name="List Qiraah")
         self.riwayah = baker.make(Riwayah, name="List Riwayah", qiraah=self.qiraah)
 
-        self.recitation_resource = baker.make(
-            Resource,
-            publisher=self.publisher,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.READY,
-        )
         self.recitation_asset = baker.make(
             Asset,
-            resource=self.recitation_resource,
-            category=Resource.CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
+            category=CategoryChoice.RECITATION,
             reciter=self.reciter,
             qiraah=self.qiraah,
             riwayah=self.riwayah,
@@ -43,8 +38,9 @@ class RecitationTracksListAPITest(BaseTestCase):
         )
         self.other_asset = baker.make(
             Asset,
-            resource=self.recitation_resource,
-            category=Resource.CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
+            category=CategoryChoice.RECITATION,
             reciter=self.reciter,
             qiraah=self.qiraah,
             riwayah=self.riwayah,
@@ -142,8 +138,9 @@ class RecitationTracksListAPITest(BaseTestCase):
 
         empty_asset = baker.make(
             Asset,
-            resource=self.recitation_resource,
-            category=Resource.CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
+            category=CategoryChoice.RECITATION,
             reciter=self.reciter,
             qiraah=self.qiraah,
             name="Empty Recitation",
@@ -202,16 +199,11 @@ class RecitationTracksDeleteAPITest(BaseTestCase):
         self.qiraah = baker.make(Qiraah, name="Delete Qiraah")
         self.riwayah = baker.make(Riwayah, name="Delete Riwayah", qiraah=self.qiraah)
 
-        self.recitation_resource = baker.make(
-            Resource,
-            publisher=self.publisher,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.READY,
-        )
         self.recitation_asset = baker.make(
             Asset,
-            resource=self.recitation_resource,
-            category=Resource.CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
+            category=CategoryChoice.RECITATION,
             reciter=self.reciter,
             qiraah=self.qiraah,
             riwayah=self.riwayah,
@@ -219,8 +211,9 @@ class RecitationTracksDeleteAPITest(BaseTestCase):
         )
         self.other_asset = baker.make(
             Asset,
-            resource=self.recitation_resource,
-            category=Resource.CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
+            category=CategoryChoice.RECITATION,
             reciter=self.reciter,
             qiraah=self.qiraah,
             riwayah=self.riwayah,

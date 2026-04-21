@@ -3,7 +3,7 @@ from unittest.mock import patch
 from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
-from apps.content.models import Asset, RecitationAyahTiming, RecitationSurahTrack, Resource
+from apps.content.models import Asset, CategoryChoice, RecitationAyahTiming, RecitationSurahTrack, StatusChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 
@@ -12,24 +12,15 @@ class RecitationModelsTest(BaseTestCase):
     def test_recitation_surah_track_save_with_audio_should_set_duration_ms(self):
         # Arrange
         pub = Publisher.objects.create(name="Test Pub")
-        res = Resource.objects.create(
-            publisher=pub,
-            name="Recitation Resource",
-            description="desc",
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.READY,
-            license="CC0",
-            slug="recitation-resource",
-        )
         asset = Asset.objects.create(
-            resource=res,
+            publisher=pub,
+            status=StatusChoice.READY,
             name="Recitation Set",
             description="desc",
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             license="CC0",
             file_size="1 MB",
             format="mp3",
-            version="1.0.0",
             language="ar",
             reciter=baker.make("content.Reciter", name="Test Reciter"),
             riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
@@ -54,24 +45,15 @@ class RecitationModelsTest(BaseTestCase):
     def test_recitation_ayah_timing_save_where_end_after_start_should_set_duration_ms(self):
         # Arrange
         pub = Publisher.objects.create(name="P")
-        res = Resource.objects.create(
-            publisher=pub,
-            name="R",
-            description="d",
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.READY,
-            license="CC0",
-            slug="r",
-        )
         asset = Asset.objects.create(
-            resource=res,
+            publisher=pub,
+            status=StatusChoice.READY,
             name="A",
             description="d",
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             license="CC0",
             file_size="1 MB",
             format="mp3",
-            version="1.0.0",
             language="ar",
             reciter=baker.make("content.Reciter", name="Test Reciter"),
             riwayah=baker.make("content.Riwayah", name="Test Riwayah"),

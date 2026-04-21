@@ -19,9 +19,7 @@ class TestMixpanelIngestClient:
         client = MixpanelIngestClient(token="test-token", ingest_host="api-eu.mixpanel.com", enabled=True)
         client.track(distinct_id="anon-1", event="public_api_request", properties={"endpoint": "GET /reciters"})
 
-        sdk_instance.track.assert_called_once_with(
-            "anon-1", "public_api_request", {"endpoint": "GET /reciters"}
-        )
+        sdk_instance.track.assert_called_once_with("anon-1", "public_api_request", {"endpoint": "GET /reciters"})
 
     @patch("apps.usage_tracking.services.mixpanel_client.Mixpanel")
     def test_track_feature_flag_off_noop(self, mock_mixpanel_cls):
@@ -70,7 +68,6 @@ class TestMixpanelSegmentationClient:
         call = responses.calls[0]
         assert "Authorization" in call.request.headers
         assert call.request.headers["Authorization"].startswith("Basic ")
-        params = dict(call.request.params if hasattr(call.request, "params") else {})
         # query string parsing
         from urllib.parse import parse_qs, urlparse
 
@@ -97,6 +94,7 @@ class TestMixpanelSegmentationClient:
         )
 
         from urllib.parse import parse_qs, urlparse
+
         qs = parse_qs(urlparse(responses.calls[0].request.url).query)
         assert qs["where"] == ['properties["publisher_id"] == 42']
 
@@ -117,6 +115,7 @@ class TestMixpanelSegmentationClient:
         )
 
         from urllib.parse import parse_qs, urlparse
+
         qs = parse_qs(urlparse(responses.calls[0].request.url).query)
         assert qs["on"] == ['properties["endpoint"]']
 

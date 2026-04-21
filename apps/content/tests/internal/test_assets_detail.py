@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, LicenseChoice, Resource, UsageEvent
+from apps.content.models import Asset, CategoryChoice, LicenseChoice, StatusChoice, UsageEvent
 from apps.core.tests import BaseTestCase
 from apps.users.models import User
 
@@ -16,10 +16,10 @@ class DetailAssetTest(BaseTestCase):
                 "This is a detailed explanation of the Quran by Ibn Katheer, covering various aspects of "
                 "Islamic interpretation."
             ),
-            category=Resource.CategoryChoice.TAFSIR,
+            category=CategoryChoice.TAFSIR,
             license=LicenseChoice.CC_BY_SA,
             thumbnail_url="thumbnails/tafseer.png",
-            resource__status=Resource.StatusChoice.READY,
+            status=StatusChoice.READY,
         )
 
         # Act
@@ -49,9 +49,9 @@ class DetailAssetTest(BaseTestCase):
             description="Test asset for schema validation",
             long_description="Extended description for schema testing",
             license=LicenseChoice.CC_BY,
-            category=Resource.CategoryChoice.MUSHAF,
+            category=CategoryChoice.MUSHAF,
             thumbnail_url="thumbs/schema.png",
-            resource__status=Resource.StatusChoice.READY,
+            status=StatusChoice.READY,
         )
 
         # Act
@@ -86,30 +86,30 @@ class DetailAssetTest(BaseTestCase):
                 Asset,
                 name="Tafsir Asset",
                 description="desc",
-                category=Resource.CategoryChoice.TAFSIR,
+                category=CategoryChoice.TAFSIR,
                 license=LicenseChoice.CC0,
                 thumbnail_url="thumbs/tafsir.png",
-                resource__status=Resource.StatusChoice.READY,
+                status=StatusChoice.READY,
             ),
             baker.make(
                 Asset,
                 name="Recitation Asset",
                 description="desc",
-                category=Resource.CategoryChoice.RECITATION,
+                category=CategoryChoice.RECITATION,
                 license=LicenseChoice.CC0,
                 thumbnail_url="thumbs/recitation.png",
                 reciter=baker.make("content.Reciter", name="Test Reciter"),
                 riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
-                resource__status=Resource.StatusChoice.READY,
+                status=StatusChoice.READY,
             ),
             baker.make(
                 Asset,
                 name="Mushaf Asset",
                 description="desc",
-                category=Resource.CategoryChoice.MUSHAF,
+                category=CategoryChoice.MUSHAF,
                 license=LicenseChoice.CC0,
                 thumbnail_url="thumbs/mushaf.png",
-                resource__status=Resource.StatusChoice.READY,
+                status=StatusChoice.READY,
             ),
         ]
 
@@ -136,10 +136,10 @@ class DetailAssetTest(BaseTestCase):
             name="اسم الأصل",
             description="وصف عربي",
             long_description="وصف عربي مطول",
-            category=Resource.CategoryChoice.TAFSIR,
+            category=CategoryChoice.TAFSIR,
             license=LicenseChoice.CC0,
             thumbnail_url="thumbs/localized.png",
-            resource__status=Resource.StatusChoice.READY,
+            status=StatusChoice.READY,
         )
 
         # Act
@@ -161,12 +161,12 @@ class DetailAssetTest(BaseTestCase):
             name="Asset Name",
             description="English description",
             long_description="English long description",
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             license=LicenseChoice.CC0,
             thumbnail_url="thumbs/en-only.png",
             reciter=baker.make("content.Reciter", name="Test Reciter"),
             riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
-            resource__status=Resource.StatusChoice.READY,
+            status=StatusChoice.READY,
         )
 
         # Act
@@ -217,10 +217,10 @@ class DetailAssetTest(BaseTestCase):
             Asset,
             name="Usage Event Test Asset",
             description="Test asset for usage event tracking",
-            category=Resource.CategoryChoice.TAFSIR,
+            category=CategoryChoice.TAFSIR,
             license=LicenseChoice.CC_BY,
             thumbnail_url="thumbnails/test.png",
-            resource__status=Resource.StatusChoice.READY,
+            status=StatusChoice.READY,
         )
 
         # Act
@@ -234,7 +234,6 @@ class DetailAssetTest(BaseTestCase):
         usage_events = UsageEvent.objects.filter(
             developer_user=user,
             usage_kind=UsageEvent.UsageKindChoice.VIEW,
-            subject_kind=UsageEvent.SubjectKindChoice.ASSET,
             asset_id=asset.id,
         )
         self.assertEqual(1, usage_events.count())
@@ -242,9 +241,7 @@ class DetailAssetTest(BaseTestCase):
         usage_event = usage_events.first()
         self.assertEqual(usage_event.developer_user, user)
         self.assertEqual(usage_event.usage_kind, UsageEvent.UsageKindChoice.VIEW)
-        self.assertEqual(usage_event.subject_kind, UsageEvent.SubjectKindChoice.ASSET)
         self.assertEqual(usage_event.asset_id, asset.id)
-        self.assertIsNone(usage_event.resource_id)
         self.assertEqual(usage_event.effective_license, asset.license)
         self.assertIsInstance(usage_event.metadata, dict)
 
@@ -255,10 +252,10 @@ class DetailAssetTest(BaseTestCase):
             Asset,
             name="Anonymous Test Asset",
             description="Test asset for anonymous access",
-            category=Resource.CategoryChoice.MUSHAF,
+            category=CategoryChoice.MUSHAF,
             license=LicenseChoice.CC0,
             thumbnail_url="thumbnails/anonymous.png",
-            resource__status=Resource.StatusChoice.READY,
+            status=StatusChoice.READY,
         )
 
         # Act
@@ -270,7 +267,6 @@ class DetailAssetTest(BaseTestCase):
         # Verify no usage event was created for anonymous user
         usage_events = UsageEvent.objects.filter(
             usage_kind=UsageEvent.UsageKindChoice.VIEW,
-            subject_kind=UsageEvent.SubjectKindChoice.ASSET,
             asset_id=asset.id,
         )
         self.assertEqual(0, usage_events.count())
@@ -285,12 +281,12 @@ class DetailAssetTest(BaseTestCase):
             Asset,
             name="Metadata Test Asset",
             description="Test asset for request metadata",
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             license=LicenseChoice.CC_BY_SA,
             thumbnail_url="thumbnails/metadata.png",
             reciter=baker.make("content.Reciter", name="Test Reciter"),
             riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
-            resource__status=Resource.StatusChoice.READY,
+            status=StatusChoice.READY,
         )
 
         # Act - Include custom headers
@@ -310,7 +306,6 @@ class DetailAssetTest(BaseTestCase):
         usage_events = UsageEvent.objects.filter(
             developer_user=user,
             usage_kind=UsageEvent.UsageKindChoice.VIEW,
-            subject_kind=UsageEvent.SubjectKindChoice.ASSET,
             asset_id=asset.id,
         )
         self.assertEqual(1, usage_events.count())
@@ -329,10 +324,10 @@ class DetailAssetTest(BaseTestCase):
             name="Asset Without Thumbnail",
             description="Test asset without thumbnail",
             long_description="This asset has no thumbnail URL to test optional field",
-            category=Resource.CategoryChoice.TAFSIR,
+            category=CategoryChoice.TAFSIR,
             license=LicenseChoice.CC0,
             thumbnail_url=None,  # Test the optional field
-            resource__status=Resource.StatusChoice.READY,
+            status=StatusChoice.READY,
         )
 
         # Act

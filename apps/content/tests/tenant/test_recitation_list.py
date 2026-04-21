@@ -1,7 +1,7 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
-from apps.content.models import Asset, Qiraah, RecitationSurahTrack, Reciter, Resource, Riwayah
+from apps.content.models import Asset, CategoryChoice, Qiraah, RecitationSurahTrack, Reciter, Riwayah, StatusChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -32,36 +32,12 @@ class RecitationsListTest(BaseTestCase):
         self.riwayah2 = baker.make(Riwayah, qiraah=self.qiraah1)
         self.riwayah3 = baker.make(Riwayah, qiraah=self.qiraah2)
 
-        self.ready_recitation_resource_pub1 = baker.make(
-            Resource,
-            publisher=self.publisher1,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.READY,
-        )
-        self.ready_recitation_resource2 = baker.make(
-            Resource,
-            publisher=self.publisher1,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.READY,
-        )
-        self.draft_recitation_resource = baker.make(
-            Resource,
-            publisher=self.publisher1,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.DRAFT,
-        )
-        self.other_category_resource = baker.make(
-            Resource,
-            publisher=self.publisher1,
-            category=Resource.CategoryChoice.TAFSIR,
-            status=Resource.StatusChoice.READY,
-        )
-
         # Valid assets that should be returned
         self.asset1 = baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            resource=self.ready_recitation_resource_pub1,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher1,
+            status=StatusChoice.READY,
             reciter=self.reciter1,
             riwayah=self.riwayah1,
             name="First Recitation",
@@ -69,8 +45,9 @@ class RecitationsListTest(BaseTestCase):
         )
         self.asset2 = baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            resource=self.ready_recitation_resource2,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher1,
+            status=StatusChoice.READY,
             reciter=self.reciter2,
             riwayah=self.riwayah2,
             name="Second Recitation",
@@ -87,22 +64,23 @@ class RecitationsListTest(BaseTestCase):
         # Assets that should NOT be returned
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            resource=self.draft_recitation_resource,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher1,
+            status=StatusChoice.DRAFT,
             reciter=self.reciter1,
             riwayah=baker.make("content.Riwayah", name="Test Riwayah1"),
         )
         self.asset3 = baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            resource=self.other_category_resource,
-            reciter=self.reciter1,
-            riwayah=baker.make("content.Riwayah", name="Test Riwayah2"),
+            category=CategoryChoice.TAFSIR,
+            publisher=self.publisher1,
+            status=StatusChoice.READY,
         )
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.TAFSIR,
-            resource=self.ready_recitation_resource_pub1,
+            category=CategoryChoice.TAFSIR,
+            publisher=self.publisher1,
+            status=StatusChoice.READY,
         )
         self.user = User.objects.create_user(email="oauthuser@example.com", name="OAuth User")
 
@@ -167,20 +145,15 @@ class RecitationsListTest(BaseTestCase):
     def test_list_recitations_filter_by_riwayah_should_show_also_sibling_riwayah(self):
         # Arrange
         self.authenticate_user(self.user, domain=self.domain1)
-        resource = baker.make(
-            Resource,
-            publisher=self.publisher1,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.READY,
-        )
         baker.make(
             Asset,
             name="recitation with only qiraah",
             riwayah=None,
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             qiraah=self.qiraah1,
             reciter=self.reciter1,
-            resource=resource,
+            publisher=self.publisher1,
+            status=StatusChoice.READY,
         )
 
         # Act
@@ -189,25 +162,22 @@ class RecitationsListTest(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         items = response.json()["results"]
+        for i in items:
+            print(f"{i=}")
         self.assertEqual(3, len(items))
 
     def test_list_recitations_should_show_recitation_with_qiraah_but_no_riwayah(self):
         # Arrange
         self.authenticate_user(self.user, domain=self.domain1)
-        resource = baker.make(
-            Resource,
-            publisher=self.publisher1,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.READY,
-        )
         asset = baker.make(
             Asset,
             name="recitation with only qiraah",
             riwayah=None,
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             qiraah_id=self.riwayah2.qiraah_id,
             reciter=self.reciter1,
-            resource=resource,
+            publisher=self.publisher1,
+            status=StatusChoice.READY,
         )
 
         # Act
@@ -264,8 +234,9 @@ class RecitationsListTest(BaseTestCase):
         # Create one asset with TWASSUT and one with QASR
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            resource=self.ready_recitation_resource_pub1,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher1,
+            status=StatusChoice.READY,
             reciter=self.reciter1,
             riwayah=self.riwayah1,
             name="Twassut Recitation",
@@ -274,8 +245,9 @@ class RecitationsListTest(BaseTestCase):
         )
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            resource=self.ready_recitation_resource_pub1,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher1,
+            status=StatusChoice.READY,
             reciter=self.reciter1,
             riwayah=self.riwayah1,
             name="Qasr Recitation",
@@ -301,8 +273,9 @@ class RecitationsListTest(BaseTestCase):
         # Create one asset with SILAH and one with SKOUN
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            resource=self.ready_recitation_resource_pub1,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher1,
+            status=StatusChoice.READY,
             reciter=self.reciter1,
             riwayah=self.riwayah1,
             name="Silah Recitation",
@@ -311,8 +284,9 @@ class RecitationsListTest(BaseTestCase):
         )
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            resource=self.ready_recitation_resource_pub1,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher1,
+            status=StatusChoice.READY,
             reciter=self.reciter1,
             riwayah=self.riwayah1,
             name="Skoun Recitation",

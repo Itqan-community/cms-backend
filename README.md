@@ -95,8 +95,8 @@ Example error response:
 
 ```json
 {
-  "error_name": "resource_not_found",
-  "message": "The requested resource does not exist.",
+  "error_name": "asset_not_found",
+  "message": "The requested asset does not exist.",
   "extra": null
 }
 ```

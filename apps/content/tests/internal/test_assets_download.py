@@ -9,8 +9,9 @@ from apps.content.models import (
     AssetAccess,
     AssetAccessRequest,
     AssetVersion,
+    CategoryChoice,
     LicenseChoice,
-    Resource,
+    StatusChoice,
     UsageEvent,
 )
 from apps.core.tests import BaseTestCase
@@ -22,15 +23,14 @@ class TestAssetDownload(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.publisher = baker.make(Publisher, name="Test Publisher")
-        self.resource = baker.make("content.Resource", publisher=self.publisher)
         self.asset = baker.make(
             Asset,
-            resource=self.resource,
+            publisher=self.publisher,
             name="Test Asset",
             description="Test asset description",
-            category=Resource.CategoryChoice.TAFSIR,
+            category=CategoryChoice.TAFSIR,
             license=LicenseChoice.CC_BY_SA,
-            resource__status=Resource.StatusChoice.READY,
+            status=StatusChoice.READY,
         )
         self.user = baker.make(User, email="test@example.com")
 
@@ -211,7 +211,6 @@ class TestAssetDownload(BaseTestCase):
         usage_events = UsageEvent.objects.filter(
             developer_user=self.user,
             usage_kind=UsageEvent.UsageKindChoice.FILE_DOWNLOAD,
-            subject_kind=UsageEvent.SubjectKindChoice.ASSET,
             asset_id=self.asset.id,
         )
         self.assertEqual(1, usage_events.count())
@@ -219,9 +218,7 @@ class TestAssetDownload(BaseTestCase):
         usage_event = usage_events.first()
         self.assertEqual(usage_event.developer_user, self.user)
         self.assertEqual(usage_event.usage_kind, UsageEvent.UsageKindChoice.FILE_DOWNLOAD)
-        self.assertEqual(usage_event.subject_kind, UsageEvent.SubjectKindChoice.ASSET)
         self.assertEqual(usage_event.asset_id, self.asset.id)
-        self.assertIsNone(usage_event.resource_id)
         self.assertEqual(usage_event.effective_license, self.asset.license)
         self.assertIsInstance(usage_event.metadata, dict)
 
@@ -241,7 +238,6 @@ class TestAssetDownload(BaseTestCase):
         usage_events = UsageEvent.objects.filter(
             developer_user=self.user,
             usage_kind=UsageEvent.UsageKindChoice.FILE_DOWNLOAD,
-            subject_kind=UsageEvent.SubjectKindChoice.ASSET,
             asset_id=self.asset.id,
         )
         self.assertEqual(0, usage_events.count())
@@ -272,7 +268,6 @@ class TestAssetDownload(BaseTestCase):
         usage_events = UsageEvent.objects.filter(
             developer_user=self.user,
             usage_kind=UsageEvent.UsageKindChoice.FILE_DOWNLOAD,
-            subject_kind=UsageEvent.SubjectKindChoice.ASSET,
             asset_id=self.asset.id,
         )
         self.assertEqual(1, usage_events.count())

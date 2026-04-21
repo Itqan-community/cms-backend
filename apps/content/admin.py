@@ -30,8 +30,6 @@ from .models import (
     RecitationAyahTiming,
     RecitationSurahTrack,
     Reciter,
-    Resource,
-    ResourceVersion,
     Riwayah,
     UsageEvent,
 )
@@ -40,132 +38,11 @@ from .services.admin.asset_recitation_ayah_timestamps_upload_service import bulk
 logger = logging.getLogger(__name__)
 
 
-class ResourceVersionInline(admin.TabularInline):
-    model = ResourceVersion
-    extra = 0
-    fields = ["semvar", "storage_url"]
-    readonly_fields = ["created_at"]
-
-
 class AssetVersionInline(admin.TabularInline):
     model = AssetVersion
     extra = 0
-    fields = ["resource_version", "file_url"]
+    fields = ["name", "file_url"]
     readonly_fields = ["created_at"]
-
-
-@admin.register(Resource)
-class ResourceAdmin(admin.ModelAdmin):
-    list_display = [
-        "name",
-        "publisher",
-        "category",
-        "status",
-        "is_external",
-        "latest_version",
-        "created_at",
-    ]
-    list_filter = ["category", "status", "publisher", "created_at"]
-    search_fields = ["name", "description", "slug"]
-    prepopulated_fields = {"slug": ("name_en",)}
-    inlines = [ResourceVersionInline]
-
-    fieldsets = (
-        (
-            "Basic Information",
-            {
-                "fields": ("name_en", "name_ar", "slug", "publisher"),
-            },
-        ),
-        (
-            "Content",
-            {
-                "fields": ("description_en", "description_ar", "category", "status", "is_external", "external_url"),
-            },
-        ),
-        (
-            "Timestamps",
-            {
-                "fields": ("created_at", "updated_at"),
-                "classes": ("collapse",),
-            },
-        ),
-    )
-    readonly_fields = ["created_at", "updated_at"]
-
-    def get_queryset(self, request):
-        """Optimize queryset with annotations"""
-        return (
-            super()
-            .get_queryset(request)
-            .select_related("publisher")
-            .annotate(
-                annotated_version_count=Count("versions"),
-            )
-        )
-
-    @admin.display(description="Versions", ordering="annotated_version_count")
-    def version_count(self, obj):
-        # Prefer annotated value; fall back to model property
-        return getattr(obj, "annotated_version_count", obj.version_count)
-
-    @admin.display(description="Latest Version")
-    def latest_version(self, obj):
-        latest = obj.get_latest_version()
-        if latest:
-            return f"{latest.semvar}"
-        return "No versions"
-
-    @admin.display(description="Versions")
-    def view_versions(self, obj):
-        """Link to view resource versions"""
-        url = reverse("admin:content_resourceversion_changelist")
-        count = getattr(obj, "annotated_version_count", obj.version_count)
-        return format_html(
-            '<a href="{}?resource__id__exact={}">View Versions ({})</a>',
-            url,
-            obj.pk,
-            count,
-        )
-
-    def save_formset(self, request, form, formset, change):
-        """
-        Override save_formset to use ResourceService for version creation.
-        """
-        if formset.model != ResourceVersion:
-            return super().save_formset(request, form, formset, change)
-
-        instances = formset.save(commit=False)
-
-        # Handle deletions
-        for obj in formset.deleted_objects:
-            obj.delete()
-
-        from apps.content.services.resource import ResourceService
-
-        service = ResourceService()
-
-        for instance in instances:
-            # If it's a new instance (no pk), use service to create and notify
-            if not instance.pk:
-                service.create_version(instance)
-            else:
-                instance.save()
-
-        formset.save_m2m()
-
-
-@admin.register(ResourceVersion)
-class ResourceVersionAdmin(admin.ModelAdmin):
-    list_display = [
-        "resource",
-        "semvar",
-        "size_bytes",
-        "created_at",
-    ]
-    list_filter = ["created_at"]
-    search_fields = ["resource__name", "semvar"]
-    readonly_fields = ["created_at", "updated_at"]
 
 
 @admin.register(Asset)
@@ -174,12 +51,13 @@ class AssetAdmin(admin.ModelAdmin):
         "name",
         "publisher_name",
         "category",
+        "status",
         "file_size",
         "format",
         "license",
         "created_at",
     ]
-    list_filter = ["category", "license", "resource__publisher", "format", "created_at"]
+    list_filter = ["category", "status", "license", "publisher", "format", "created_at"]
     search_fields = ["name", "description", "long_description"]
     inlines = [AssetVersionInline]
 
@@ -190,7 +68,7 @@ class AssetAdmin(admin.ModelAdmin):
         (
             "Basic Information",
             {
-                "fields": ("name_en", "name_ar", "resource", "category", "riwayah", "qiraah"),
+                "fields": ("name_en", "name_ar", "publisher", "category", "status", "riwayah", "qiraah"),
             },
         ),
         (
@@ -220,7 +98,7 @@ class AssetAdmin(admin.ModelAdmin):
         (
             "Licensing",
             {
-                "fields": ("license",),
+                "fields": ("license", "is_external", "external_url"),
             },
         ),
         (
@@ -238,16 +116,16 @@ class AssetAdmin(admin.ModelAdmin):
         return (
             super()
             .get_queryset(request)
-            .select_related("resource__publisher")
+            .select_related("publisher")
             .annotate(
                 access_requests_count=Count("access_requests"),
                 user_accesses_count=Count("user_accesses"),
             )
         )
 
-    @admin.display(description="Publisher", ordering="resource__publisher")
+    @admin.display(description="Publisher", ordering="publisher")
     def publisher_name(self, obj):
-        return obj.resource.publisher.name
+        return obj.publisher.name
 
     @admin.display(description="Access Requests", ordering="access_requests_count")
     def access_requests_count(self, obj):
@@ -631,7 +509,7 @@ class AssetAdmin(admin.ModelAdmin):
 
 @admin.register(AssetVersion)
 class AssetVersionAdmin(admin.ModelAdmin):
-    list_display = ["asset", "resource_version", "name", "size_bytes", "created_at"]
+    list_display = ["asset", "name", "size_bytes", "created_at"]
     list_filter = ["created_at"]
     search_fields = ["asset__name", "name"]
     readonly_fields = ["created_at", "updated_at"]
@@ -767,14 +645,12 @@ class AssetAccessAdmin(admin.ModelAdmin):
 class UsageEventAdmin(admin.ModelAdmin):
     """Admin for Usage Events"""
 
-    list_display = ["developer_user", "usage_kind", "subject_kind", "created_at"]
-    list_filter = ["usage_kind", "subject_kind", "created_at"]
+    list_display = ["developer_user", "usage_kind", "asset_id", "created_at"]
+    list_filter = ["usage_kind", "created_at"]
     search_fields = ["developer_user__email"]
     readonly_fields = [
         "developer_user",
         "usage_kind",
-        "subject_kind",
-        "resource_id",
         "asset_id",
         "metadata",
         "ip_address",
@@ -978,14 +854,10 @@ class ContentIssueReportAdmin(admin.ModelAdmin):
     @admin.display(description="Content Object")
     def content_object_display(self, obj: ContentIssueReport):
         """Display the related content object with link"""
-        if obj.content_object:
+        if obj.content_object and obj.content_type.model == "asset":
             content = obj.content_object
-            if obj.content_type.model == "resource":
-                url = reverse("admin:content_resource_change", args=[content.id])
-                return format_html('<a href="{}">{}</a>', url, content.name)
-            elif obj.content_type.model == "asset":
-                url = reverse("admin:content_asset_change", args=[content.id])
-                return format_html('<a href="{}">{}</a>', url, content.name)
+            url = reverse("admin:content_asset_change", args=[content.id])
+            return format_html('<a href="{}">{}</a>', url, content.name)
         return "N/A"
 
     @admin.action(description="Mark as Under Review")

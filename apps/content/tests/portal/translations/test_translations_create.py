@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, Resource
+from apps.content.models import Asset, CategoryChoice, StatusChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -35,7 +35,6 @@ class TranslationCreateTest(BaseTestCase):
         self.assertEqual(201, response.status_code, response.content)
         body = response.json()
 
-        # Check that asset and resource were created
         self.assertIsNotNone(body["id"])
         self.assertEqual("ترجمة صحيح إنترناشيونال", body["name_ar"])
         self.assertEqual("Sahih International", body["name_en"])
@@ -46,8 +45,8 @@ class TranslationCreateTest(BaseTestCase):
 
         # Verify in database
         asset = Asset.objects.get(id=body["id"])
-        self.assertEqual(Resource.CategoryChoice.TRANSLATION, asset.category)
-        self.assertEqual(Resource.StatusChoice.READY, asset.resource.status)
+        self.assertEqual(CategoryChoice.TRANSLATION, asset.category)
+        self.assertEqual(StatusChoice.READY, asset.status)
         self.assertEqual("en", asset.language)
 
     def test_create_translation_where_publisher_not_found_should_return_404(self):

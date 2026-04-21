@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, Resource
+from apps.content.models import Asset, CategoryChoice, StatusChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -12,41 +12,12 @@ class TafsirListTest(BaseTestCase):
         self.publisher1 = baker.make(Publisher, name="Publisher One")
         self.publisher2 = baker.make(Publisher, name="Publisher Two")
 
-        # Create READY tafsir resources
-        self.ready_tafsir_resource1 = baker.make(
-            Resource,
-            publisher=self.publisher1,
-            category=Resource.CategoryChoice.TAFSIR,
-            status=Resource.StatusChoice.READY,
-        )
-        self.ready_tafsir_resource2 = baker.make(
-            Resource,
-            publisher=self.publisher2,
-            category=Resource.CategoryChoice.TAFSIR,
-            status=Resource.StatusChoice.READY,
-        )
-
-        # Create DRAFT tafsir resource (should be excluded)
-        self.draft_tafsir_resource = baker.make(
-            Resource,
-            publisher=self.publisher1,
-            category=Resource.CategoryChoice.TAFSIR,
-            status=Resource.StatusChoice.DRAFT,
-        )
-
-        # Create non-tafsir resource (should be excluded)
-        self.mushaf_resource = baker.make(
-            Resource,
-            publisher=self.publisher1,
-            category=Resource.CategoryChoice.MUSHAF,
-            status=Resource.StatusChoice.READY,
-        )
-
         # Valid tafsir assets
         self.tafsir1 = baker.make(
             Asset,
-            category=Resource.CategoryChoice.TAFSIR,
-            resource=self.ready_tafsir_resource1,
+            category=CategoryChoice.TAFSIR,
+            publisher=self.publisher1,
+            status=StatusChoice.READY,
             name="Tafsir Al-Tabari",
             name_ar="تفسير الطبري",
             name_en="Tafsir Al-Tabari",
@@ -58,8 +29,9 @@ class TafsirListTest(BaseTestCase):
         )
         self.tafsir2 = baker.make(
             Asset,
-            category=Resource.CategoryChoice.TAFSIR,
-            resource=self.ready_tafsir_resource2,
+            category=CategoryChoice.TAFSIR,
+            publisher=self.publisher2,
+            status=StatusChoice.READY,
             name="Ibn Kathir Tafsir",
             name_ar="تفسير ابن كثير",
             name_en="Ibn Kathir Tafsir",
@@ -73,8 +45,9 @@ class TafsirListTest(BaseTestCase):
         # Tafsir that should NOT be returned (draft)
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.TAFSIR,
-            resource=self.draft_tafsir_resource,
+            category=CategoryChoice.TAFSIR,
+            publisher=self.publisher1,
+            status=StatusChoice.DRAFT,
             name="Draft Tafsir",
             description="Should not appear",
         )
@@ -82,8 +55,9 @@ class TafsirListTest(BaseTestCase):
         # Non-tafsir asset that should NOT be returned
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.MUSHAF,
-            resource=self.mushaf_resource,
+            category=CategoryChoice.MUSHAF,
+            publisher=self.publisher1,
+            status=StatusChoice.READY,
             name="Mushaf",
             description="Should not appear",
         )
@@ -155,19 +129,13 @@ class TafsirListTest(BaseTestCase):
 
     def test_list_tafsirs_where_is_external_is_filtered_should_return_external_tafsir(self):
         self.authenticate_user(self.user)
-        # Create an external tafsir resource
-        external_resource = baker.make(
-            Resource,
-            publisher=self.publisher1,
-            category=Resource.CategoryChoice.TAFSIR,
-            status=Resource.StatusChoice.READY,
-            is_external=True,
-            external_url="https://example.com/tafsir",
-        )
         external_tafsir = baker.make(
             Asset,
-            category=Resource.CategoryChoice.TAFSIR,
-            resource=external_resource,
+            category=CategoryChoice.TAFSIR,
+            publisher=self.publisher1,
+            status=StatusChoice.READY,
+            is_external=True,
+            external_url="https://example.com/tafsir",
             name="External Tafsir",
             description="External",
         )

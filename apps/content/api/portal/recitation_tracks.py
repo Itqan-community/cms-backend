@@ -4,7 +4,7 @@ from ninja import Schema
 from ninja.pagination import paginate
 from rest_framework.generics import get_object_or_404
 
-from apps.content.models import Asset, RecitationSurahTrack, Resource
+from apps.content.models import Asset, CategoryChoice, RecitationSurahTrack
 from apps.content.repositories.recitation_track import RecitationTrackRepository
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
@@ -44,7 +44,7 @@ class RecitationTrackOut(Schema):
 )
 @paginate
 def list_tracks(request: Request, recitation_slug: str):
-    asset = get_object_or_404(Asset, category=Resource.CategoryChoice.RECITATION, slug=recitation_slug)
+    asset = get_object_or_404(Asset, category=CategoryChoice.RECITATION, slug=recitation_slug)
     repo = RecitationTrackRepository()
     return repo.get_recitation_tracks_by_asset_id(asset_id=asset.id)
 

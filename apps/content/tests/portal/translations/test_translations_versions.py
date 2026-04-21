@@ -1,7 +1,7 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetVersion, Resource, ResourceVersion
+from apps.content.models import Asset, AssetVersion, CategoryChoice, StatusChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -11,16 +11,11 @@ class TranslationVersionBaseTest(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.publisher = baker.make(Publisher, name="Test Publisher")
-        self.resource = baker.make(
-            Resource,
-            publisher=self.publisher,
-            category=Resource.CategoryChoice.TRANSLATION,
-            status=Resource.StatusChoice.READY,
-        )
         self.translation = baker.make(
             Asset,
-            category=Resource.CategoryChoice.TRANSLATION,
-            resource=self.resource,
+            category=CategoryChoice.TRANSLATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             name="Translation Al-Tabari",
             slug="translation-al-tabari",
         )
@@ -31,10 +26,8 @@ class TranslationVersionListTest(TranslationVersionBaseTest):
     def test_list_versions_where_valid_slug_should_return_versions(self):
         # Arrange
         self.authenticate_user(self.user)
-        rv1 = baker.make(ResourceVersion, resource=self.resource, semvar="1.0.0")
-        rv2 = baker.make(ResourceVersion, resource=self.resource, semvar="2.0.0")
-        baker.make(AssetVersion, asset=self.translation, resource_version=rv1, name="V1")
-        baker.make(AssetVersion, asset=self.translation, resource_version=rv2, name="V2")
+        baker.make(AssetVersion, asset=self.translation, name="V1")
+        baker.make(AssetVersion, asset=self.translation, name="V2")
 
         # Act
         response = self.client.get(f"/portal/translations/{self.translation.slug}/versions/")
@@ -84,7 +77,6 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
         # Verify DB
         version = AssetVersion.objects.get(id=body["id"])
         self.assertEqual(self.translation, version.asset)
-        self.assertEqual("1.0.0", version.resource_version.semvar)
         self.assertEqual(len(b"content"), version.size_bytes)
 
     def test_create_version_where_asset_id_mismatch_should_return_400(self):
@@ -109,9 +101,7 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
 class TranslationVersionUpdateTest(TranslationVersionBaseTest):
     def setUp(self):
         super().setUp()
-        rv = baker.make(ResourceVersion, resource=self.resource, semvar="1.0.0")
-        # Ensure we have a valid file to avoid size calculation errors if needed
-        self.version = baker.make(AssetVersion, asset=self.translation, resource_version=rv, name="Old Name")
+        self.version = baker.make(AssetVersion, asset=self.translation, name="Old Name")
 
     def test_put_version_where_valid_data_should_return_200(self):
         from urllib.parse import urlencode
@@ -139,7 +129,6 @@ class TranslationVersionUpdateTest(TranslationVersionBaseTest):
 
         self.version.refresh_from_db()
         self.assertEqual("Updated Name", self.version.name)
-        self.assertEqual("Updated Name", self.version.resource_version.name)
 
     def test_patch_version_where_partial_data_should_return_200(self):
         # Arrange
@@ -168,8 +157,7 @@ class TranslationVersionDeleteTest(TranslationVersionBaseTest):
     def test_delete_version_should_return_204(self):
         # Arrange
         self.authenticate_user(self.user)
-        rv = baker.make(ResourceVersion, resource=self.resource)
-        version = baker.make(AssetVersion, asset=self.translation, resource_version=rv)
+        version = baker.make(AssetVersion, asset=self.translation)
 
         # Act
         response = self.client.delete(f"/portal/translations/{self.translation.slug}/versions/{version.id}/")
@@ -177,4 +165,3 @@ class TranslationVersionDeleteTest(TranslationVersionBaseTest):
         # Assert
         self.assertEqual(204, response.status_code)
         self.assertFalse(AssetVersion.objects.filter(id=version.id).exists())
-        self.assertFalse(ResourceVersion.objects.filter(id=rv.id).exists())

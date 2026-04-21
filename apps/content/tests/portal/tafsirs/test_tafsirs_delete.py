@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, Resource
+from apps.content.models import Asset, CategoryChoice, StatusChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -10,16 +10,11 @@ class TafsirDeleteTest(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.publisher = baker.make(Publisher, name="Test Publisher")
-        self.resource = baker.make(
-            Resource,
-            publisher=self.publisher,
-            category=Resource.CategoryChoice.TAFSIR,
-            status=Resource.StatusChoice.READY,
-        )
         self.tafsir = baker.make(
             Asset,
-            category=Resource.CategoryChoice.TAFSIR,
-            resource=self.resource,
+            category=CategoryChoice.TAFSIR,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             name="Tafsir to Delete",
             description="Will be deleted",
         )
@@ -36,19 +31,6 @@ class TafsirDeleteTest(BaseTestCase):
 
         # Verify asset was deleted
         self.assertFalse(Asset.objects.filter(slug=tafsir_slug).exists())
-
-    def test_delete_tafsir_where_valid_slug_should_also_delete_resource(self):
-        self.authenticate_user(self.user)
-        tafsir_slug = self.tafsir.slug
-        resource_id = self.resource.id
-
-        response = self.client.delete(f"/portal/tafsirs/{tafsir_slug}/")
-
-        self.assertEqual(204, response.status_code)
-
-        # Verify both asset and resource were deleted
-        self.assertFalse(Asset.objects.filter(slug=tafsir_slug).exists())
-        self.assertFalse(Resource.objects.filter(id=resource_id).exists())
 
     def test_delete_tafsir_where_not_found_should_return_404(self):
         self.authenticate_user(self.user)

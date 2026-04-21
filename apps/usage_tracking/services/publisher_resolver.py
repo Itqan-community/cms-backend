@@ -58,11 +58,7 @@ def _lookup_publisher_for_user(owner) -> tuple[int | None, str | None]:
         .first()
     )
     if membership is None:
-        membership = (
-            PublisherMember.objects.filter(user=owner)
-            .select_related("publisher")
-            .first()
-        )
+        membership = PublisherMember.objects.filter(user=owner).select_related("publisher").first()
     if membership is None:
         return None, None
     return membership.publisher_id, membership.publisher.slug

@@ -28,10 +28,6 @@ class DetailAssetPublisherOut(Schema):
     description: str
 
 
-class DetailAssetResourceOut(Schema):
-    id: int
-
-
 class DetailAssetOut(Schema):
     id: int
     category: str
@@ -39,8 +35,7 @@ class DetailAssetOut(Schema):
     description: str
     long_description: str
     thumbnail_url: AbsoluteUrl | None
-    publisher: DetailAssetPublisherOut = Field(alias="resource.publisher")
-    resource: DetailAssetResourceOut
+    publisher: DetailAssetPublisherOut = Field(alias="publisher")
     license: LicenseChoice
     snapshots: list[DetailAssetSnapshotOut] = Field(default_factory=list, alias="previews")
 
@@ -48,7 +43,7 @@ class DetailAssetOut(Schema):
 @router.get("assets/{id}/", response=DetailAssetOut, auth=None)
 def detail_assets(request: Request, id: int):
     logger.info("Asset detail requested [asset_id=%s]", id)
-    asset = get_object_or_404(Asset, request.publisher_q("resource__publisher"), id=id)
+    asset = get_object_or_404(Asset, request.publisher_q("publisher"), id=id)
 
     # Only create usage event for authenticated users
     if hasattr(request, "user") and request.user and request.user.is_authenticated:
@@ -57,9 +52,7 @@ def detail_assets(request: Request, id: int):
             {
                 "developer_user_id": request.user.id,
                 "usage_kind": UsageEvent.UsageKindChoice.VIEW,
-                "subject_kind": UsageEvent.SubjectKindChoice.ASSET,
                 "asset_id": asset.id,
-                "resource_id": None,
                 "metadata": {},
                 "ip_address": request.META.get("REMOTE_ADDR"),
                 "user_agent": request.headers.get("User-Agent", ""),

@@ -26,14 +26,14 @@ class IssueReportOut(Schema):
 
 
 class IssueReportCreateIn(Schema):
-    content_type: Literal["resource", "asset"]
+    content_type: Literal["asset"]
     content_id: int
     description: str
 
 
 class IssueReportFilter(FilterSchema):
     status: Annotated[list[str] | None, FilterLookup(q="status__in")] = None
-    content_type: Literal["resource", "asset"] | None = None
+    content_type: Literal["asset"] | None = None
 
 
 @router.post("issue-reports/", response={201: IssueReportOut}, auth=ninja_jwt_auth)

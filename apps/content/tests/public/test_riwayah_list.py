@@ -1,7 +1,7 @@
 from model_bakery import baker
 from oauth2_provider.models import Application
 
-from apps.content.models import Asset, Resource, Riwayah
+from apps.content.models import Asset, CategoryChoice, Riwayah, StatusChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -12,47 +12,45 @@ class RiwayahsListTest(BaseTestCase):
         super().setUp()
         self.publisher = baker.make(Publisher)
         self.reciter = baker.make("content.Reciter", name="Test Reciter")
-        self.recitation_resource = baker.make(
-            Resource,
-            publisher=self.publisher,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.READY,
-        )
 
         # Active riwayahs with ready recitations
         self.active_riwayah_hafs = baker.make(Riwayah, is_active=True, name="Hafs", slug="hafs")
         self.valid_asset_hafs = baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             riwayah=self.active_riwayah_hafs,
-            resource=self.recitation_resource,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             reciter=self.reciter,
         )
 
         self.active_riwayah_warsh = baker.make(Riwayah, is_active=True, name="Warsh", slug="warsh")
         self.valid_asset_warsh = baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             riwayah=self.active_riwayah_warsh,
-            resource=self.recitation_resource,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             reciter=self.reciter,
         )
 
         self.active_riwayah_qaloon = baker.make(Riwayah, is_active=True, name="Qaloon", slug="qaloon")
         self.valid_asset_qaloon = baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             riwayah=self.active_riwayah_qaloon,
-            resource=self.recitation_resource,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             reciter=self.reciter,
         )
 
         # Multiple assets for same riwayah
         self.valid_asset_hafs_2 = baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             riwayah=self.active_riwayah_hafs,
-            resource=self.recitation_resource,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             reciter=self.reciter,
         )
 
@@ -60,46 +58,28 @@ class RiwayahsListTest(BaseTestCase):
         self.inactive_riwayah = baker.make(Riwayah, is_active=False, name="Inactive Riwayah", slug="inactive")
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             riwayah=self.inactive_riwayah,
-            resource=self.recitation_resource,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             reciter=self.reciter,
         )
 
         # Asset with non-RECITATION category – should not count
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.TAFSIR,
-            resource=self.recitation_resource,
+            category=CategoryChoice.TAFSIR,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
         )
 
-        # Resource not READY – should not count
-        draft_resource = baker.make(
-            Resource,
-            publisher=self.publisher,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.DRAFT,
-        )
+        # Draft asset – should not count
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             riwayah=self.active_riwayah_hafs,
-            resource=draft_resource,
-            reciter=self.reciter,
-        )
-
-        # Resource not RECITATION – should not count
-        tafsir_resource = baker.make(
-            Resource,
             publisher=self.publisher,
-            category=Resource.CategoryChoice.TAFSIR,
-            status=Resource.StatusChoice.READY,
-        )
-        baker.make(
-            Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            riwayah=self.active_riwayah_hafs,
-            resource=tafsir_resource,
+            status=StatusChoice.DRAFT,
             reciter=self.reciter,
         )
 
@@ -280,9 +260,10 @@ class RiwayahsListTest(BaseTestCase):
         riwayah = baker.make(Riwayah, is_active=False, name="Test Inactive")
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             riwayah=riwayah,
-            resource=self.recitation_resource,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             reciter=self.reciter,
         )
 
@@ -300,17 +281,12 @@ class RiwayahsListTest(BaseTestCase):
         # Arrange
         self.authenticate_client(self.app)
         riwayah = baker.make(Riwayah, is_active=True, name="Draft Only Riwayah")
-        draft_resource = baker.make(
-            Resource,
-            publisher=self.publisher,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.DRAFT,
-        )
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             riwayah=riwayah,
-            resource=draft_resource,
+            publisher=self.publisher,
+            status=StatusChoice.DRAFT,
             reciter=self.reciter,
         )
 
@@ -328,17 +304,12 @@ class RiwayahsListTest(BaseTestCase):
         # Arrange
         self.authenticate_client(self.app)
         # Add a draft asset to Hafs
-        draft_resource = baker.make(
-            Resource,
-            publisher=self.publisher,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.DRAFT,
-        )
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             riwayah=self.active_riwayah_hafs,
-            resource=draft_resource,
+            publisher=self.publisher,
+            status=StatusChoice.DRAFT,
             reciter=self.reciter,
         )
 
@@ -375,9 +346,10 @@ class RiwayahsListTest(BaseTestCase):
         similar_riwayah = baker.make(Riwayah, is_active=True, name="Hafs Extended")
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             riwayah=similar_riwayah,
-            resource=self.recitation_resource,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             reciter=self.reciter,
         )
 

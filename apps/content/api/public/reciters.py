@@ -5,7 +5,7 @@ from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import Field
 
-from apps.content.models import Reciter, Resource
+from apps.content.models import CategoryChoice, Reciter, StatusChoice
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -39,14 +39,12 @@ def list_reciters(request: Request, filters: ReciterFilter = Query()):
     Conditions:
     - Reciter.is_active = True
     - Asset.category = RECITATION
-    - Asset.resource.category = RECITATION
-    - Asset.resource.status = READY
+    - Asset.status = READY
     """
 
     recitation_filter = Q(
-        assets__category=Resource.CategoryChoice.RECITATION,
-        assets__resource__category=Resource.CategoryChoice.RECITATION,
-        assets__resource__status=Resource.StatusChoice.READY,
+        assets__category=CategoryChoice.RECITATION,
+        assets__status=StatusChoice.READY,
     )
 
     qs = (

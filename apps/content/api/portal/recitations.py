@@ -47,7 +47,7 @@ class RecitationListOut(Schema):
     slug: str
     name: str
     description: str
-    publisher: PublisherRef = Field(alias="resource.publisher")
+    publisher: PublisherRef
     reciter: MinimalReciter | None = None
     qiraah: MinimalQiraah | None = None
     riwayah: MinimalRiwayah | None = None
@@ -75,7 +75,7 @@ class RecitationDetailOut(Schema):
     long_description_en: str | None = None
     slug: str
     thumbnail_url: str | None = None
-    publisher: PublisherRef = Field(alias="resource.publisher")
+    publisher: PublisherRef
     reciter: MinimalReciter | None = None
     qiraah: MinimalQiraah | None = None
     riwayah: MinimalRiwayah | None = None
@@ -152,7 +152,7 @@ class RecitationPatchIn(Schema):
 
 
 class RecitationFilter(FilterSchema):
-    publisher_id: Annotated[list[int] | None, FilterLookup(q="resource__publisher_id__in")] = None
+    publisher_id: Annotated[list[int] | None, FilterLookup(q="publisher_id__in")] = None
     reciter_id: Annotated[list[int] | None, FilterLookup(q="reciter_id__in")] = None
     qiraah_id: Annotated[list[int] | None, FilterLookup(q="qiraah_id__in")] = None
     riwayah_id: Annotated[list[int] | None, FilterLookup(q="riwayah_id__in")] = None
@@ -190,7 +190,7 @@ class RecitationFilter(FilterSchema):
         "description",
         "description_ar",
         "description_en",
-        "resource__publisher__name",
+        "publisher__name",
         "reciter__name",
     ]
 )

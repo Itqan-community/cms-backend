@@ -16,7 +16,6 @@ def create_usage_event(
     return UsageEvent.objects.create(
         developer_user=asset_access.user,
         usage_kind=usage_kind,
-        subject_kind="asset",
         asset_id=asset_access.asset.id,
         metadata={
             "asset_name": asset_access.asset.name,
@@ -30,14 +29,11 @@ def create_usage_event(
     )
 
 
-def log_asset_view(
-    user, asset, *, ip_address=None, user_agent=""
-):  # Add * to make ip_address and user_agent keyword-only
+def log_asset_view(user, asset, *, ip_address=None, user_agent=""):
     """Track asset view event"""
     return UsageEvent.objects.create(
         developer_user=user,
         usage_kind="view",
-        subject_kind="asset",
         asset_id=asset.id,
         metadata={"asset_title": asset.title, "category": asset.category},
         ip_address=ip_address,
@@ -45,43 +41,12 @@ def log_asset_view(
     )
 
 
-def log_resource_download(user, resource, ip_address=None, user_agent=""):
-    """Track resource download event"""
-    latest_version = resource.get_latest_version()
-    return UsageEvent.objects.create(
-        developer_user=user,
-        usage_kind="file_download",
-        subject_kind="resource",
-        resource_id=resource.id,
-        metadata={
-            "resource_name": resource.name,
-            "version": latest_version.semvar if latest_version else "unknown",
-            "category": resource.category,
-        },
-        ip_address=ip_address,
-        user_agent=user_agent,
-    )
-
-
-def log_api_access(
-    user, *, api_endpoint="", ip_address=None, user_agent="", resource=None, asset=None
-) -> UsageEvent | None:
+def log_api_access(user, *, api_endpoint="", ip_address=None, user_agent="", asset=None) -> UsageEvent | None:
     """Track API access event"""
-    if resource:
+    if asset:
         return UsageEvent.objects.create(
             developer_user=user,
             usage_kind="api_access",
-            subject_kind="resource",
-            resource_id=resource.id,
-            metadata={"api_endpoint": api_endpoint, "resource_name": resource.name},
-            ip_address=ip_address,
-            user_agent=user_agent,
-        )
-    elif asset:
-        return UsageEvent.objects.create(
-            developer_user=user,
-            usage_kind="api_access",
-            subject_kind="asset",
             asset_id=asset.id,
             metadata={"api_endpoint": api_endpoint, "asset_title": asset.title},
             ip_address=ip_address,
@@ -99,7 +64,6 @@ def log_asset_download(user, asset, ip_address=None, user_agent=""):
         event_data = {
             "developer_user_id": user.id,
             "usage_kind": "file_download",
-            "subject_kind": "asset",
             "asset_id": asset.id,
             "metadata": {
                 "asset_title": asset.title,
@@ -119,7 +83,6 @@ def log_asset_download(user, asset, ip_address=None, user_agent=""):
     return UsageEvent.objects.create(
         developer_user=user,
         usage_kind="file_download",
-        subject_kind="asset",
         asset_id=asset.id,
         metadata={
             "asset_title": asset.title,

@@ -2,7 +2,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 from oauth2_provider.models import Application
 
-from apps.content.models import Asset, RecitationAyahTiming, RecitationSurahTrack, Resource
+from apps.content.models import Asset, CategoryChoice, RecitationAyahTiming, RecitationSurahTrack, StatusChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -12,16 +12,11 @@ class RecitationTracksTest(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.publisher = baker.make(Publisher)
-        self.recitation_resource = baker.make(
-            Resource,
-            publisher=self.publisher,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.READY,
-        )
         self.asset = baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            resource=self.recitation_resource,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             reciter=baker.make("content.Reciter", name="Test Reciter"),
             riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
         )
@@ -103,32 +98,22 @@ class RecitationTracksTest(BaseTestCase):
         self.assertEqual(404, response.status_code, response.content)
 
         # Asset with wrong category should also 404 due to queryset filter
-        non_recitation_resource = baker.make(
-            Resource,
-            publisher=self.publisher,
-            category=Resource.CategoryChoice.TAFSIR,
-            status=Resource.StatusChoice.READY,
-        )
         non_recitation_asset = baker.make(
             Asset,
-            category=Resource.CategoryChoice.TAFSIR,
-            resource=non_recitation_resource,
+            category=CategoryChoice.TAFSIR,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
         )
 
         response = self.client.get(f"/recitations/{non_recitation_asset.id}/")
         self.assertEqual(404, response.status_code, response.content)
 
-        # Asset with RECITATION category but non-READY resource should 404
-        draft_resource = baker.make(
-            Resource,
-            publisher=self.publisher,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.DRAFT,
-        )
+        # Asset with RECITATION category but DRAFT status should 404
         draft_asset = baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            resource=draft_resource,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.DRAFT,
             reciter=baker.make("content.Reciter", name="Test Reciter1"),
             riwayah=baker.make("content.Riwayah", name="Test Riwayah1"),
         )

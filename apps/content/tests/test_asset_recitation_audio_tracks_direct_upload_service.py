@@ -7,7 +7,7 @@ from django.conf import settings
 from django.utils import timezone
 from model_bakery import baker
 
-from apps.content.models import Asset, RecitationSurahTrack, Reciter, Resource, Riwayah
+from apps.content.models import Asset, CategoryChoice, RecitationSurahTrack, Reciter, Riwayah
 from apps.content.services.admin.asset_recitation_audio_tracks_direct_upload_service import (
     AssetRecitationAudioTracksDirectUploadService,
 )
@@ -23,7 +23,7 @@ class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
         asset = baker.make(
             Asset,
             name="test",
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             reciter=reciter,
             riwayah=riwayah,
         )
@@ -54,7 +54,7 @@ class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
         asset = baker.make(
             Asset,
             name="test",
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             reciter=reciter,
             riwayah=riwayah,
         )
@@ -81,7 +81,7 @@ class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
         asset = baker.make(
             Asset,
             name="test",
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             reciter=reciter,
             riwayah=riwayah,
         )
@@ -109,7 +109,7 @@ class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
         asset = baker.make(
             Asset,
             name="test",
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             reciter=reciter,
             riwayah=riwayah,
         )
@@ -164,7 +164,7 @@ class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
         asset = baker.make(
             Asset,
             name="test",
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             reciter=reciter,
             riwayah=riwayah,
         )
@@ -213,7 +213,7 @@ class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
         asset = baker.make(
             Asset,
             name="test",
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             reciter=reciter,
             riwayah=riwayah,
         )
@@ -258,7 +258,7 @@ class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
         asset = baker.make(
             Asset,
             name="test",
-            category=Resource.CategoryChoice.RECITATION,
+            category=CategoryChoice.RECITATION,
             reciter=reciter,
             riwayah=riwayah,
         )

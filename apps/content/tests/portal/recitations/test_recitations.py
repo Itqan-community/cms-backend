@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetVersion, Qiraah, Reciter, Resource, Riwayah
+from apps.content.models import Asset, AssetVersion, CategoryChoice, Qiraah, Reciter, Riwayah, StatusChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -21,13 +21,9 @@ class RecitationPortalTest(BaseTestCase):
         self.authenticate_user(self.user)
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            resource=baker.make(
-                Resource,
-                publisher=self.publisher,
-                category=Resource.CategoryChoice.RECITATION,
-                status=Resource.StatusChoice.READY,
-            ),
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             reciter=self.reciter,
             qiraah=self.qiraah,
             riwayah=self.riwayah,
@@ -47,13 +43,9 @@ class RecitationPortalTest(BaseTestCase):
         pub2 = baker.make(Publisher, name="Other Publisher")
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            resource=baker.make(
-                Resource,
-                publisher=self.publisher,
-                category=Resource.CategoryChoice.RECITATION,
-                status=Resource.StatusChoice.READY,
-            ),
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             reciter=self.reciter,
             qiraah=self.qiraah,
             riwayah=self.riwayah,
@@ -61,13 +53,9 @@ class RecitationPortalTest(BaseTestCase):
         )
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            resource=baker.make(
-                Resource,
-                publisher=pub2,
-                category=Resource.CategoryChoice.RECITATION,
-                status=Resource.StatusChoice.READY,
-            ),
+            category=CategoryChoice.RECITATION,
+            publisher=pub2,
+            status=StatusChoice.READY,
             reciter=self.reciter,
             qiraah=self.qiraah,
             riwayah=self.riwayah,
@@ -90,13 +78,9 @@ class RecitationPortalTest(BaseTestCase):
 
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            resource=baker.make(
-                Resource,
-                publisher=self.publisher,
-                category=Resource.CategoryChoice.RECITATION,
-                status=Resource.StatusChoice.READY,
-            ),
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             reciter=reciter_z,
             qiraah=self.qiraah,
             riwayah=self.riwayah,
@@ -104,13 +88,9 @@ class RecitationPortalTest(BaseTestCase):
         )
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            resource=baker.make(
-                Resource,
-                publisher=self.publisher,
-                category=Resource.CategoryChoice.RECITATION,
-                status=Resource.StatusChoice.READY,
-            ),
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             reciter=reciter_a,
             qiraah=self.qiraah,
             riwayah=self.riwayah,
@@ -158,7 +138,7 @@ class RecitationPortalTest(BaseTestCase):
 
         # Verify DB
         asset = Asset.objects.get(id=body["id"])
-        self.assertEqual(self.publisher.id, asset.resource.publisher_id)
+        self.assertEqual(self.publisher.id, asset.publisher_id)
         self.assertEqual(self.reciter.id, asset.reciter_id)
 
     def test_update_recitation_put_should_return_200(self):
@@ -166,13 +146,9 @@ class RecitationPortalTest(BaseTestCase):
         self.authenticate_user(self.user)
         asset = baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            resource=baker.make(
-                Resource,
-                publisher=self.publisher,
-                category=Resource.CategoryChoice.RECITATION,
-                status=Resource.StatusChoice.READY,
-            ),
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             reciter=self.reciter,
             qiraah=self.qiraah,
             riwayah=self.riwayah,
@@ -211,39 +187,30 @@ class RecitationPortalTest(BaseTestCase):
         self.authenticate_user(self.user)
         asset = baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            resource=baker.make(
-                Resource,
-                publisher=self.publisher,
-                category=Resource.CategoryChoice.RECITATION,
-                status=Resource.StatusChoice.READY,
-            ),
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             reciter=self.reciter,
             qiraah=self.qiraah,
             riwayah=self.riwayah,
         )
-        resource_id = asset.resource_id
+        asset_id = asset.id
 
         # Act
         response = self.client.delete(f"/portal/recitations/{asset.slug}/")
 
         # Assert
         self.assertEqual(204, response.status_code)
-        self.assertFalse(Asset.objects.filter(id=asset.id).exists())
-        self.assertFalse(Resource.objects.filter(id=resource_id).exists())
+        self.assertFalse(Asset.objects.filter(id=asset_id).exists())
 
     def test_retrieve_recitation_where_version_exists_should_return_ayah_timings_url(self):
         # Arrange
         self.authenticate_user(self.user)
         asset = baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            resource=baker.make(
-                Resource,
-                publisher=self.publisher,
-                category=Resource.CategoryChoice.RECITATION,
-                status=Resource.StatusChoice.READY,
-            ),
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             reciter=self.reciter,
             qiraah=self.qiraah,
             riwayah=self.riwayah,
@@ -269,13 +236,9 @@ class RecitationPortalTest(BaseTestCase):
         self.authenticate_user(self.user)
         asset = baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            resource=baker.make(
-                Resource,
-                publisher=self.publisher,
-                category=Resource.CategoryChoice.RECITATION,
-                status=Resource.StatusChoice.READY,
-            ),
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
             reciter=self.reciter,
             qiraah=self.qiraah,
             riwayah=self.riwayah,

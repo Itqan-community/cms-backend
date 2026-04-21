@@ -119,12 +119,6 @@ msgstr "عرض"
 msgid "API Access"
 msgstr "الوصول إلى واجهة البرمجة (API)"
 
-msgid "Resource"
-msgstr "مورد"
-
-msgid "Asset"
-msgstr "أصل"
-
 msgid "API"
 msgstr "واجهة برمجة التطبيقات"
 

@@ -2,7 +2,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 from oauth2_provider.models import Application
 
-from apps.content.models import Asset, RecitationSurahTrack, Reciter, Resource, Riwayah
+from apps.content.models import Asset, CategoryChoice, RecitationSurahTrack, Reciter, Riwayah, StatusChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -18,36 +18,12 @@ class RecitationsListTest(BaseTestCase):
         self.riwayah1 = baker.make(Riwayah)
         self.riwayah2 = baker.make(Riwayah)
 
-        self.ready_recitation_resource_pub1 = baker.make(
-            Resource,
-            publisher=self.publisher1,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.READY,
-        )
-        self.ready_recitation_resource2 = baker.make(
-            Resource,
-            publisher=self.publisher2,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.READY,
-        )
-        self.draft_recitation_resource = baker.make(
-            Resource,
-            publisher=self.publisher1,
-            category=Resource.CategoryChoice.RECITATION,
-            status=Resource.StatusChoice.DRAFT,
-        )
-        self.other_category_resource = baker.make(
-            Resource,
-            publisher=self.publisher1,
-            category=Resource.CategoryChoice.TAFSIR,
-            status=Resource.StatusChoice.READY,
-        )
-
         # Valid assets that should be returned
         self.asset1 = baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            resource=self.ready_recitation_resource_pub1,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher1,
+            status=StatusChoice.READY,
             reciter=self.reciter1,
             riwayah=self.riwayah1,
             name="First Recitation",
@@ -55,8 +31,9 @@ class RecitationsListTest(BaseTestCase):
         )
         self.asset2 = baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            resource=self.ready_recitation_resource2,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher2,
+            status=StatusChoice.READY,
             reciter=self.reciter2,
             riwayah=self.riwayah2,
             name="Second Recitation",
@@ -73,22 +50,17 @@ class RecitationsListTest(BaseTestCase):
         # Assets that should NOT be returned
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            resource=self.draft_recitation_resource,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher1,
+            status=StatusChoice.DRAFT,
             reciter=self.reciter1,
             riwayah=baker.make("content.Riwayah", name="Test Riwayah1"),
         )
         baker.make(
             Asset,
-            category=Resource.CategoryChoice.RECITATION,
-            resource=self.other_category_resource,
-            reciter=self.reciter1,
-            riwayah=baker.make("content.Riwayah", name="Test Riwayah2"),
-        )
-        baker.make(
-            Asset,
-            category=Resource.CategoryChoice.TAFSIR,
-            resource=self.ready_recitation_resource_pub1,
+            category=CategoryChoice.TAFSIR,
+            publisher=self.publisher1,
+            status=StatusChoice.READY,
         )
         self.user = User.objects.create_user(email="oauthuser@example.com", name="OAuth User")
         self.app = Application.objects.create(

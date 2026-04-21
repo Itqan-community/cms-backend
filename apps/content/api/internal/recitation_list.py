@@ -44,7 +44,7 @@ class RecitationListOut(Schema):
 
 
 class RecitationFilter(FilterSchema):
-    publisher_id: Annotated[list[int] | None, FilterLookup(q="resource__publisher_id__in")] = None
+    publisher_id: Annotated[list[int] | None, FilterLookup(q="publisher_id__in")] = None
     reciter_id: Annotated[list[int] | None, FilterLookup(q="reciter_id__in")] = None
     riwayah_id: Annotated[list[int] | None, FilterLookup(q="riwayah_id__in")] = None
     qiraah_id: Annotated[list[int] | None, FilterLookup(q="qiraah_id__in")] = None
@@ -57,7 +57,7 @@ class RecitationFilter(FilterSchema):
     search_fields=[
         "name",
         "description",
-        "resource__publisher__name",
+        "publisher__name",
         "reciter__name",
         "reciter__name_ar",
         "riwayah__name",
@@ -70,7 +70,7 @@ def list_recitations(request: Request, filters: RecitationFilter = Query()):
     repo = RecitationRepository()
     service = RecitationService(repo)
 
-    publisher_q = request.publisher_q("resource__publisher")
+    publisher_q = request.publisher_q("publisher")
     qs = service.get_all_recitations(publisher_q, filters)
 
     return qs
