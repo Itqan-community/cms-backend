@@ -43,21 +43,26 @@ class LicenseChoice(models.TextChoices):
     )
 
 
-class Resource(BaseModel):
-    class CategoryChoice(models.TextChoices):
-        RECITATION = "recitation", _("Recitation")
-        MUSHAF = "mushaf", _("Mushaf")
-        TAFSIR = "tafsir", _("Tafsir")
-        PROGRAM = "program", _("Program")
-        LINGUISTIC = "linguistic", _("Linguistic")
-        TRANSLATION = "translation", _("Translation")
-        FONT = "font", _("Font")
-        SEARCH = "search", _("Search")
-        TAJWEED = "tajweed", _("Tajweed")
+class CategoryChoice(models.TextChoices):
+    RECITATION = "recitation", _("Recitation")
+    MUSHAF = "mushaf", _("Mushaf")
+    TAFSIR = "tafsir", _("Tafsir")
+    PROGRAM = "program", _("Program")
+    LINGUISTIC = "linguistic", _("Linguistic")
+    TRANSLATION = "translation", _("Translation")
+    FONT = "font", _("Font")
+    SEARCH = "search", _("Search")
+    TAJWEED = "tajweed", _("Tajweed")
 
-    class StatusChoice(models.TextChoices):
-        DRAFT = "draft", _("Draft")
-        READY = "ready", _("Ready")
+
+class StatusChoice(models.TextChoices):
+    DRAFT = "draft", _("Draft")
+    READY = "ready", _("Ready")
+
+
+class Resource(BaseModel):
+    CategoryChoice = CategoryChoice
+    StatusChoice = StatusChoice
 
     publisher = models.ForeignKey(Publisher, on_delete=models.PROTECT, related_name="resources")
 
@@ -67,11 +72,11 @@ class Resource(BaseModel):
 
     description = models.TextField(help_text="Resource description")
 
-    category = models.CharField(max_length=20, choices=CategoryChoice.choices, help_text="Simple options in V1")
+    category = models.CharField(max_length=20, choices=CategoryChoice, help_text="Simple options in V1")
 
     status = models.CharField(
         max_length=20,
-        choices=StatusChoice.choices,
+        choices=StatusChoice,
         default=StatusChoice.DRAFT,
         help_text="V1: ready = ready to extract Assets from",
     )
@@ -179,6 +184,23 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
 
     resource = models.ForeignKey(Resource, on_delete=models.PROTECT, related_name="assets", db_index=True)
 
+    publisher = models.ForeignKey(
+        Publisher,
+        on_delete=models.PROTECT,
+        related_name="assets",
+        null=True,
+        blank=True,
+        help_text="Publisher owning this asset (backfilled from Resource; non-null after 0040)",
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=StatusChoice,
+        null=True,
+        blank=True,
+        help_text="Asset status (backfilled from Resource; non-null after 0040)",
+    )
+
     name = models.CharField(max_length=255, help_text="Asset name")
 
     slug = models.SlugField(
@@ -198,7 +220,7 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
 
     category = models.CharField(
         max_length=20,
-        choices=Resource.CategoryChoice.choices,
+        choices=CategoryChoice,
         help_text="Asset category matching resource categories",
     )
 
@@ -440,7 +462,7 @@ class AssetAccessRequest(BaseModel):
 
     status = models.CharField(
         max_length=20,
-        choices=StatusChoice.choices,
+        choices=StatusChoice,
         default=StatusChoice.PENDING,
     )
 
@@ -845,7 +867,7 @@ class ContentIssueReport(BaseModel):
 
     status = models.CharField(
         max_length=20,
-        choices=StatusChoice.choices,
+        choices=StatusChoice,
         default=StatusChoice.PENDING,
         help_text="Current status of the issue report",
     )
