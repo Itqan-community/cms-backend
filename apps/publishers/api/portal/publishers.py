@@ -3,6 +3,7 @@ from ninja.pagination import paginate
 from pydantic import AwareDatetime
 
 from apps.core.ninja_utils.errors import NinjaErrorResponse
+from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
@@ -100,6 +101,7 @@ class PublisherFilter(FilterSchema):
 
 @router.get("publishers/", response=list[PublisherListOut])
 @paginate
+@ordering(ordering_fields=["name", "created_at", "foundation_year"])
 @searching(search_fields=["name_en", "name_ar", "description_en", "description_ar"])
 def list_publishers(request: Request, filters: PublisherFilter = Query(...)):
     qs = Publisher.objects.all()
