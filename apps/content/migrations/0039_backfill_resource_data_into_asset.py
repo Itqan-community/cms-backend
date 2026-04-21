@@ -19,12 +19,14 @@ def forwards(apps, schema_editor):
     Asset = apps.get_model("content", "Asset")
     Reciter = apps.get_model("content", "Reciter")
     Riwayah = apps.get_model("content", "Riwayah")
+    Qiraah = apps.get_model("content", "Qiraah")
     ContentIssueReport = apps.get_model("content", "ContentIssueReport")
     UsageEvent = apps.get_model("content", "UsageEvent")
     ContentType = apps.get_model("contenttypes", "ContentType")
 
     reciter = Reciter.objects.first()
     riwayah = Riwayah.objects.first()
+    qiraah = Qiraah.objects.first()
 
     # 1. Create placeholder Asset for orphan Resources (Resources with zero Assets)
     orphan_resources = Resource.objects.filter(assets__isnull=True).iterator()
@@ -53,6 +55,7 @@ def forwards(apps, schema_editor):
             external_url=resource.external_url,
             reciter =reciter if resource.category==CategoryChoice.RECITATION else None,
             riwayah=riwayah if resource.category==CategoryChoice.RECITATION else None,
+            qiraah=qiraah if resource.category==CategoryChoice.RECITATION else None,
         )
         orphan_asset_ids_by_resource[resource.id] = placeholder.id
 
