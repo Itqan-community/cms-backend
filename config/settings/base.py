@@ -76,8 +76,6 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "oauth2_provider.middleware.OAuth2TokenMiddleware",
-    "oauth2_provider.middleware.OAuth2ExtraTokenMiddleware",
     "apps.usage_tracking.middlewares.usage_tracking_middleware.UsageTrackingMiddleware",
 ]
 

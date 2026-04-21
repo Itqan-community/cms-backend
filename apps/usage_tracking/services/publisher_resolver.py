@@ -6,19 +6,21 @@ publisher that owns the OAuth2 application the consumer is using.
 
 from __future__ import annotations
 
+from django.core.cache import cache
+
 _CACHE_ATTR = "_usage_tracking_resolved_publisher"
+_REDIS_CACHE_TTL = 300  # 5 minutes
 
 
 def resolve_publisher_from_request(request) -> tuple[int | None, str | None]:
     """Return ``(publisher_id, publisher_slug)`` for the request, or ``(None, None)``.
 
     Resolution order:
-      1. ``request.access_token`` (set by ``OAuth2ExtraTokenMiddleware``)
-      2. ``access_token.application.user`` -> the OAuth2 app owner
-      3. The owner's ``PublisherMember`` (OWNER role preferred)
+      1. In-request memo (avoids duplicate calls within the same request)
+      2. Redis cache keyed by access_token.pk (avoids repeated DB lookups)
+      3. DB lookup via access_token → application → owner → PublisherMember
 
-    Result is memoised on the request to avoid duplicate DB queries when the
-    middleware and downstream code both need the publisher.
+    ``request.access_token`` must be set by OAuth2Auth before this is called.
     """
     cached = getattr(request, _CACHE_ATTR, None)
     if cached is not None:
@@ -37,6 +39,13 @@ def _resolve(request) -> tuple[int | None, str | None]:
     if token is None:
         return None, None
 
+    token_pk = getattr(token, "pk", None)
+    if token_pk is not None:
+        redis_key = f"pub_resolver:token:{token_pk}"
+        cached = cache.get(redis_key)
+        if cached is not None:
+            return tuple(cached)
+
     application = getattr(token, "application", None)
     if application is None:
         return None, None
@@ -45,7 +54,12 @@ def _resolve(request) -> tuple[int | None, str | None]:
     if owner is None:
         return None, None
 
-    return _lookup_publisher_for_user(owner)
+    result = _lookup_publisher_for_user(owner)
+
+    if token_pk is not None:
+        cache.set(redis_key, list(result), _REDIS_CACHE_TTL)
+
+    return result
 
 
 def _lookup_publisher_for_user(owner) -> tuple[int | None, str | None]:

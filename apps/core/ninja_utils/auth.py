@@ -1,7 +1,12 @@
+import hashlib
+
 from allauth.headless.contrib.ninja.security import jwt_token_auth
 from django.conf import settings
+from django.core.cache import cache
 from oauth2_provider.contrib.rest_framework import OAuth2Authentication
 from rest_framework_simplejwt.authentication import JWTAuthentication, JWTStatelessUserAuthentication
+
+_OAUTH2_CACHE_TTL = 60  # seconds — short enough that revoked tokens expire quickly
 
 
 class JWTAuth(JWTAuthentication):
@@ -33,12 +38,44 @@ class JWTAuthStateless(JWTStatelessUserAuthentication):
         return res
 
 
+def _extract_bearer(request) -> str | None:
+    auth = request.META.get("HTTP_AUTHORIZATION", "")
+    if auth.lower().startswith("bearer "):
+        return auth[7:].strip()
+    return None
+
+
 class OAuth2Auth(OAuth2Authentication):
     def __call__(self, request):
+        bearer = _extract_bearer(request)
+        if bearer:
+            cache_key = f"oauth2_auth:{hashlib.sha256(bearer.encode()).hexdigest()}"
+            cached = cache.get(cache_key)
+            if cached is not None:
+                from django.contrib.auth import get_user_model
+                from oauth2_provider.models import AccessToken
+
+                try:
+                    user_pk, token_pk = cached
+                    User = get_user_model()
+                    user = User.objects.get(pk=user_pk)
+                    token = AccessToken.objects.select_related("application__user").get(pk=token_pk)
+                    request.user = user
+                    request.access_token = token
+                    return (user, token)
+                except Exception:
+                    cache.delete(cache_key)
+
         res = self.authenticate(request)
         if res is None:
             return None
-        request.user = res[0]
+        user, token = res
+        request.user = user
+        request.access_token = token
+
+        if bearer and token is not None:
+            cache.set(cache_key, (user.pk, token.pk), _OAUTH2_CACHE_TTL)
+
         return res
 
 
