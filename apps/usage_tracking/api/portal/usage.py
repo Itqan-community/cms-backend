@@ -19,7 +19,12 @@ class BoardUrlOut(Schema):
     board_url: str | None
 
 
-@router.get("usage/board-url/", auth=ninja_jwt_auth_optional, response=BoardUrlOut, description="Get the Mixpanel board URL for the current user")
+@router.get(
+    "usage/board-url/",
+    auth=ninja_jwt_auth_optional,
+    response=BoardUrlOut,
+    description="Get the Mixpanel board URL for the current user",
+)
 def get_usage_board_url(request: Request, publisher_id: int | None = None) -> BoardUrlOut:
     user = request.user
     if not getattr(user, "is_authenticated", False):
