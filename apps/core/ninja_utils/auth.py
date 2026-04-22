@@ -39,7 +39,7 @@ class JWTAuthStateless(JWTStatelessUserAuthentication):
 
 
 def _extract_bearer(request) -> str | None:
-    auth = request.META.get("HTTP_AUTHORIZATION", "")
+    auth = request.headers.get("authorization", "")
     if auth.lower().startswith("bearer "):
         return auth[7:].strip()
     return None
