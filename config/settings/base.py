@@ -59,7 +59,7 @@ THIRD_PARTY_APPS = [
 
 COUNTRIES_OVERRIDE = {"IL": None}
 
-LOCAL_APPS = ["apps.core", "apps.content", "apps.users", "apps.publishers", "apps.usage_tracking"]
+LOCAL_APPS = ["apps.core", "apps.content", "apps.users", "apps.publishers"]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
@@ -76,7 +76,6 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "apps.usage_tracking.middlewares.usage_tracking_middleware.UsageTrackingMiddleware",
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
@@ -472,3 +471,9 @@ MIXPANEL_PROJECT_TOKEN_3 = config("MIXPANEL_PROJECT_TOKEN_3", default="")
 MIXPANEL_PROJECT_TOKEN_4 = config("MIXPANEL_PROJECT_TOKEN_4", default="")
 MIXPANEL_MAIN_BOARD_URL = config("MIXPANEL_MAIN_BOARD_URL", default="")
 USAGE_TRACKING_CACHE_TTL = config("USAGE_TRACKING_CACHE_TTL", default=900, cast=int)
+
+if MIXPANEL_ENABLED:
+    INSTALLED_APPS.append("apps.usage_tracking")
+    MIDDLEWARE.append("apps.usage_tracking.middlewares.usage_tracking_middleware.UsageTrackingMiddleware")
+else:
+    MIDDLEWARE.append("oauth2_provider.middleware.OAuth2TokenMiddleware")

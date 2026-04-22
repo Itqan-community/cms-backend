@@ -1,8 +1,12 @@
+from django.conf import settings
+import pytest
+
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher, PublisherMember
 from apps.users.models import User
 
 
+@pytest.mark.skipif(condition=not settings.MIXPANEL_ENABLED, reason="old flow before allauth")
 class TestGetUsageBoardUrl(BaseTestCase):
     URL = "/portal/usage/board-url/"
 
