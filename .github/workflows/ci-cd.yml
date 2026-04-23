@@ -173,6 +173,12 @@ jobs:
                 echo "MIXPANEL_SERVICE_SECRET=${{ secrets.MIXPANEL_SERVICE_SECRET }}";
                 echo "MIXPANEL_INGEST_HOST=${{ secrets.MIXPANEL_INGEST_HOST }}";
                 echo "MIXPANEL_API_BASE=${{ secrets.MIXPANEL_API_BASE }}";
+                echo "STAGING_EMAIL_HOST=${{ secrets.STAGING_EMAIL_HOST }}";
+                echo "STAGING_EMAIL_PORT=${{ secrets.STAGING_EMAIL_PORT }}";
+                echo "STAGING_EMAIL_HOST_USER=${{ secrets.STAGING_EMAIL_HOST_USER }}";
+                echo "STAGINgG_EMAIL_HOST_PASSWORD=${{ secrets.STAGING_EMAIL_HOST_PASSWORD }}";
+                echo "STAGING_EMAIL_SENDER_NAME=${{ secrets.STAGING_EMAIL_SENDER_NAME }}";
+                echo "STAGING_EMAIL_SENDER_EMAIL=${{ secrets.STAGING_EMAIL_SENDER_EMAIL }}";
               } > deployment/docker/.env
             elif [ "${{ env.ENV_NAME }}" = "production" ]; then
               {

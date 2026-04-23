@@ -88,6 +88,11 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 # =========================
+# Email (console)
+# =========================
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+# =========================
 # Debug Toolbar (optional)
 # =========================
 if importlib.util.find_spec("debug_toolbar"):
