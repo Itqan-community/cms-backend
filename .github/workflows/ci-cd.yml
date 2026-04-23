@@ -176,7 +176,7 @@ jobs:
                 echo "STAGING_EMAIL_HOST=${{ secrets.STAGING_EMAIL_HOST }}";
                 echo "STAGING_EMAIL_PORT=${{ secrets.STAGING_EMAIL_PORT }}";
                 echo "STAGING_EMAIL_HOST_USER=${{ secrets.STAGING_EMAIL_HOST_USER }}";
-                echo "STAGINgG_EMAIL_HOST_PASSWORD=${{ secrets.STAGING_EMAIL_HOST_PASSWORD }}";
+                echo "STAGING_EMAIL_HOST_PASSWORD=${{ secrets.STAGING_EMAIL_HOST_PASSWORD }}";
                 echo "STAGING_EMAIL_SENDER_NAME=${{ secrets.STAGING_EMAIL_SENDER_NAME }}";
                 echo "STAGING_EMAIL_SENDER_EMAIL=${{ secrets.STAGING_EMAIL_SENDER_EMAIL }}";
               } > deployment/docker/.env
