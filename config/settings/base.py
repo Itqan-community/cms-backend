@@ -299,9 +299,6 @@ CELERY_WORKER_SEND_TASK_EVENTS = True
 CELERY_TASK_SEND_SENT_EVENT = True
 CELERY_WORKER_HIJACK_ROOT_LOGGER = False
 
-# Email server
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-
 # Site ID (required for allauth)
 SITE_ID = 1
 
