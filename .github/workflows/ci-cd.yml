@@ -179,6 +179,7 @@ jobs:
                 echo "STAGING_EMAIL_HOST_PASSWORD=${{ secrets.STAGING_EMAIL_HOST_PASSWORD }}";
                 echo "STAGING_EMAIL_SENDER_NAME=${{ secrets.STAGING_EMAIL_SENDER_NAME }}";
                 echo "STAGING_EMAIL_SENDER_EMAIL=${{ secrets.STAGING_EMAIL_SENDER_EMAIL }}";
+                echo "ALLAUTH_JWT_PRIVATE_KEY=${{ secrets.STAGING_ALLAUTH_JWT_PRIVATE_KEY }}";
               } > deployment/docker/.env
             elif [ "${{ env.ENV_NAME }}" = "production" ]; then
               {
@@ -216,6 +217,7 @@ jobs:
                 echo "SENTRY_DSN=${{ secrets.PROD_SENTRY_DSN }}";
                 echo "ENV_NAME=production";
                 echo "DEFAULT_SERVER_NAME=cms-backend-production";
+                echo "ALLAUTH_JWT_PRIVATE_KEY=${{ secrets.PRODUCTION_ALLAUTH_JWT_PRIVATE_KEY }}";
               } > deployment/docker/.env
             fi
             # Append image coordinates for docker compose variable substitution

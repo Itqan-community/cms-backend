@@ -343,8 +343,11 @@ HEADLESS_SERVE_SPECIFICATION = True
 HEADLESS_SPECIFICATION_TEMPLATE_NAME = None  # disable html docs
 HEADLESS_TOKEN_STRATEGY = "allauth.headless.tokens.strategies.jwt.JWTTokenStrategy"
 if ENABLE_ALLAUTH:
-    with open(config("ALLAUTH_JWT_PRIVATE_KEY")) as jwt_key:
-        HEADLESS_JWT_PRIVATE_KEY = jwt_key.read()
+    allauth_private_key = config("ALLAUTH_JWT_PRIVATE_KEY").replace("\\n", "\n")
+    if len(allauth_private_key) < 250 and Path(allauth_private_key).exists():
+        with open(config("ALLAUTH_JWT_PRIVATE_KEY")) as jwt_key_file:
+            allauth_private_key = jwt_key_file.read()
+    HEADLESS_JWT_PRIVATE_KEY = allauth_private_key
     # Create Private key from here https://docs.allauth.org/en/latest/headless/token-strategies/jwt-tokens.html
 
 MFA_SUPPORTED_TYPES = ["totp", "recovery_codes", "webauthn"]
