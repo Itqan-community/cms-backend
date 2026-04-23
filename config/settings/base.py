@@ -20,7 +20,7 @@ ALLOWED_HOSTS: list[str] = []
 
 # Feature flags
 ENABLE_OAUTH2 = config("ENABLE_OAUTH2", cast=bool, default=False)
-ENABLE_ALLAUTH = config("ENABLE_ALLAUTH", cast=bool, default=False)
+ENABLE_ALLAUTH = config("ENABLE_ALLAUTH", cast=bool, default=True)
 
 # Application definition
 DJANGO_APPS = [
