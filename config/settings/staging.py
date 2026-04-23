@@ -58,12 +58,12 @@ settings.DATABASES.update(
 
 CSRF_TRUSTED_ORIGINS = [
     "https://staging--saudi-recitation-center.netlify.app",
-    "https://staging.api.cms.itqan.dev",
-    "https://staging.cms.itqan.dev",
+    "https://staging.cms.itqan.dev",  # Staging frontend
     "https://staging--itqan-cms.netlify.app",
     "https://cms.itqan.dev",
     "https://itqan-cms.netlify.app",
-    "http://localhost:3000",
+    "http://localhost:4200",  # Angular dev server
+    "http://localhost:3000",  # Local frontend development
     "http://127.0.0.1:3000",
 ]
 
@@ -125,16 +125,7 @@ SOCIALACCOUNT_PROVIDERS = {
 # ============================================================
 
 CORS_ALLOW_ALL_ORIGINS = False
-CORS_ALLOWED_ORIGINS = [
-    "https://staging--saudi-recitation-center.netlify.app",
-    "https://staging.cms.itqan.dev",  # Staging frontend
-    "https://staging--itqan-cms.netlify.app",
-    "https://cms.itqan.dev",
-    "https://itqan-cms.netlify.app",
-    "http://localhost:4200",  # Angular dev server
-    "http://localhost:3000",  # Local frontend development
-    "http://127.0.0.1:3000",
-]
+CORS_ALLOWED_ORIGINS = CSRF_TRUSTED_ORIGINS
 CORS_ALLOW_CREDENTIALS = True
 
 # ============================================================
