@@ -100,11 +100,6 @@ CSRF_TRUSTED_ORIGINS = [
 settings.LOGGING["handlers"]["console"]["level"] = "INFO"
 settings.LOGGING["root"]["level"] = "INFO"
 
-# ============================================================
-# Django-Allauth
-# ============================================================
-
-ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https"
 
 # ============================================================
 # Email

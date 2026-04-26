@@ -102,26 +102,6 @@ settings.LOGGING["handlers"]["console"]["level"] = "INFO"
 settings.LOGGING["root"]["level"] = "INFO"
 
 # ============================================================
-# Django-Allauth
-# ============================================================
-
-ACCOUNT_EMAIL_VERIFICATION = "mandatory"
-ACCOUNT_RATE_LIMITS = "login_failed"
-
-# OAuth apps are configured via Django admin for better security and flexibility
-SOCIALACCOUNT_PROVIDERS = {
-    "google": {
-        "SCOPE": ["profile", "email"],
-        "AUTH_PARAMS": {"access_type": "online"},
-        "OAUTH_PKCE_ENABLED": True,
-    },
-    "github": {
-        "SCOPE": ["user:email"],
-        "VERIFIED_EMAIL": True,
-    },
-}
-
-# ============================================================
 # CORS
 # ============================================================
 
