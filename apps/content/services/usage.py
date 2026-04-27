@@ -62,7 +62,7 @@ def log_asset_download(user, asset, ip_address=None, user_agent=""):
     """Track asset download event with async processing"""
     from .tasks import create_usage_event_task
 
-    create_usage_event_task.delay({
+    event_data = {
         "developer_user_id": user.id,
         "usage_kind": "file_download",
         "asset_id": asset.id,
@@ -74,5 +74,6 @@ def log_asset_download(user, asset, ip_address=None, user_agent=""):
         },
         "ip_address": ip_address,
         "user_agent": user_agent,
-    })
+    }
+    create_usage_event_task.delay(event_data)
     return None
