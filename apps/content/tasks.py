@@ -93,16 +93,6 @@ def create_usage_event_task(self, event_data):
         raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1)) from exc
 
 
-def track_event_async(event_data):
-    """Queue a usage event for async processing via Celery."""
-    try:
-        create_usage_event_task.delay(event_data)
-        return True
-    except Exception as e:
-        logger.error(f"Failed to queue usage event: {e}")
-        return False
-
-
 @shared_task
 def cleanup_stuck_multipart_uploads_task(older_than_hours: int = 2):
     """

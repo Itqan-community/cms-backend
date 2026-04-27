@@ -60,9 +60,9 @@ def log_api_access(user, *, api_endpoint="", ip_address=None, user_agent="", ass
 
 def log_asset_download(user, asset, ip_address=None, user_agent=""):
     """Track asset download event with async processing"""
-    from .tasks import track_event_async
+    from .tasks import create_usage_event_task
 
-    event_data = {
+    create_usage_event_task.delay({
         "developer_user_id": user.id,
         "usage_kind": "file_download",
         "asset_id": asset.id,
@@ -74,6 +74,5 @@ def log_asset_download(user, asset, ip_address=None, user_agent=""):
         },
         "ip_address": ip_address,
         "user_agent": user_agent,
-    }
-    track_event_async(event_data)
+    })
     return None
