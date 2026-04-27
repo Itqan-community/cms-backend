@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
@@ -10,6 +10,7 @@ from apps.usage_tracking.services.publisher_resolver import resolve_publisher_fr
 class TestPublisherResolver:
     def setup_method(self):
         cache.clear()
+
     def test_resolve_no_user_attr_returns_none(self):
         request = SimpleNamespace()
 
