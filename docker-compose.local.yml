@@ -15,6 +15,7 @@ x-common-env: &common-env
 
 services:
   django:
+    image: itqan-cms-backend-django
     build:
       context: .
       dockerfile: deployment/docker/Dockerfile.backend
