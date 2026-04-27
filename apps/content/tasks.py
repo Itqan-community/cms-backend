@@ -94,27 +94,13 @@ def create_usage_event_task(self, event_data):
 
 
 def track_event_async(event_data):
-    """
-    Helper function to queue usage event tracking
-
-    Args:
-        event_data: Event data dictionary
-    """
+    """Queue a usage event for async processing via Celery."""
     try:
-        # Queue the task for async processing
         create_usage_event_task.delay(event_data)
         return True
     except Exception as e:
         logger.error(f"Failed to queue usage event: {e}")
-        # Fallback to synchronous creation if Celery is unavailable
-        try:
-            from .models import UsageEvent
-
-            UsageEvent.objects.create(**event_data)
-            return True
-        except Exception as sync_e:
-            logger.error(f"Failed to create usage event synchronously: {sync_e}")
-            return False
+        return False
 
 
 @shared_task
