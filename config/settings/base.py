@@ -382,8 +382,8 @@ EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = config("EMAIL_USE_TLS", cast=bool, default=True)
 EMAIL_USE_SSL = config("EMAIL_USE_SSL", cast=bool, default=False)
-_EMAIL_SENDER_NAME = config("EMAIL_SENDER_NAME", default="")
-_EMAIL_SENDER_EMAIL = config("EMAIL_SENDER_EMAIL", default="")
+_EMAIL_SENDER_NAME = config("EMAIL_SENDER_NAME", default="Itqan")
+_EMAIL_SENDER_EMAIL = config("EMAIL_SENDER_EMAIL", default="noreply@itqan.dev")
 DEFAULT_FROM_EMAIL = f"{_EMAIL_SENDER_NAME} <{_EMAIL_SENDER_EMAIL}>" if _EMAIL_SENDER_NAME else _EMAIL_SENDER_EMAIL
 
 # Cache Configuration
