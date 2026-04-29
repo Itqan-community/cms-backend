@@ -252,6 +252,7 @@ CORS_ALLOW_HEADERS = [
     "x-csrftoken",
     "x-requested-with",
     "x-tenant",
+    "x-session-token",
 ]
 
 # Custom user model
