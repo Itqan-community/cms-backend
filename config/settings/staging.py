@@ -121,22 +121,6 @@ settings.REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
 }
 
 # ============================================================
-# Email (sandbox)
-# ============================================================
-
-_EMAIL_SENDER_NAME: str = config("STAGING_EMAIL_SENDER_NAME", default="")
-_EMAIL_SENDER_EMAIL: str = config("STAGING_EMAIL_SENDER_EMAIL", default="")
-
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-EMAIL_HOST = config("STAGING_EMAIL_HOST", default="")
-EMAIL_PORT = config("STAGING_EMAIL_PORT", cast=int, default=587)
-EMAIL_HOST_USER = config("STAGING_EMAIL_HOST_USER", default="")
-EMAIL_HOST_PASSWORD = config("STAGING_EMAIL_HOST_PASSWORD", default="")
-EMAIL_USE_TLS = True
-EMAIL_USE_SSL = False
-DEFAULT_FROM_EMAIL = f"{_EMAIL_SENDER_NAME} <{_EMAIL_SENDER_EMAIL}>" if _EMAIL_SENDER_NAME else _EMAIL_SENDER_EMAIL
-
-# ============================================================
 # Feature flags
 # ============================================================
 
