@@ -7,7 +7,7 @@ from __future__ import annotations
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.mfa.adapter import DefaultMFAAdapter
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
-from decouple import config
+from django.conf import settings
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -95,9 +95,7 @@ class MFAAdapter(DefaultMFAAdapter):
     """
 
     def get_public_key_credential_rp_entity(self) -> dict[str, str]:
-        rp_id = config("WEBAUTHN_RP_ID", default="localhost")
-        rp_name = config("WEBAUTHN_RP_NAME", default="Itqan CMS")
         return {
-            "id": rp_id,
-            "name": rp_name,
+            "id": settings.WEBAUTHN_RP_ID,
+            "name": self._get_site_name(),
         }

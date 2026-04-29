@@ -253,6 +253,8 @@ CORS_ALLOW_HEADERS = [
     "x-requested-with",
     "x-tenant",
     "x-session-token",
+    "x-email-verification-key",
+    "x-password-reset-key",
 ]
 
 # Custom user model
@@ -332,12 +334,13 @@ SOCIALACCOUNT_ADAPTER = "apps.users.adapters.SocialAccountAdapter"
 SOCIALACCOUNT_FORMS = {"signup": "apps.users.forms.UserSocialSignupForm"}
 
 # HEADLESS_ONLY = True
+FRONTEND_BASE_URL = config("FRONTEND_BASE_URL", default="http://localhost:4200")
 HEADLESS_FRONTEND_URLS = {
-    "account_confirm_email": "/accounts/confirm-email/{key}/",
-    "account_reset_password": "/account/password/reset",
-    "account_reset_password_from_key": "/account/password/reset/key/{key}",
-    "account_signup": "/account/signup",
-    "socialaccount_login_error": "/account/provider/callback",
+    "account_confirm_email": FRONTEND_BASE_URL + "/accounts/confirm-email/{key}/",
+    "account_reset_password": FRONTEND_BASE_URL + "/account/password/reset",
+    "account_reset_password_from_key": FRONTEND_BASE_URL + "/account/password/reset/key/{key}",
+    "account_signup": FRONTEND_BASE_URL + "/account/signup",
+    "socialaccount_login_error": FRONTEND_BASE_URL + "/account/provider/callback",
 }
 HEADLESS_CLIENTS = ["app", "browser"]
 HEADLESS_SERVE_SPECIFICATION = True
@@ -356,6 +359,9 @@ MFA_PASSKEY_LOGIN_ENABLED = True
 MFA_PASSKEY_SIGNUP_ENABLED = True
 MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = DEBUG
 MFA_ADAPTER = "apps.users.adapters.MFAAdapter"
+
+# WebAuthn Configuration
+WEBAUTHN_RP_ID = config("WEBAUTHN_RP_ID", default="localhost")
 
 SOCIALACCOUNT_PROVIDERS = {
     "google": {

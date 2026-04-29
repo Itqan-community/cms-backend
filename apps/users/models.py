@@ -27,7 +27,7 @@ class User(BaseModel, AbstractUser):
     objects: ClassVar[UserManager] = UserManager()
 
     def __str__(self):
-        return f"User(email={self.email} name={self.name})"
+        return f"{self.name}"
 
     def save(self, *args, **kwargs):
         if self.email:

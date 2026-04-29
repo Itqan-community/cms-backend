@@ -182,6 +182,7 @@ jobs:
                 echo "EMAIL_SENDER_EMAIL=${{ secrets.EMAIL_SENDER_EMAIL }}";
                 echo "WEBAUTHN_RP_ID=${{ secrets.STAGING_WEBAUTHN_RP_ID }}";
                 echo "ALLAUTH_JWT_PRIVATE_KEY=${{ secrets.STAGING_ALLAUTH_JWT_PRIVATE_KEY }}";
+                echo "FRONTEND_BASE_URL=${{ secrets.STAGING_FRONTEND_BASE_URL }}";
               } > deployment/docker/.env
             elif [ "${{ env.ENV_NAME }}" = "production" ]; then
               {
@@ -223,6 +224,7 @@ jobs:
                 echo "ENV_NAME=production";
                 echo "DEFAULT_SERVER_NAME=cms-backend-production";
                 echo "ALLAUTH_JWT_PRIVATE_KEY=${{ secrets.PRODUCTION_ALLAUTH_JWT_PRIVATE_KEY }}";
+                echo "FRONTEND_BASE_URL=${{ secrets.PRODUCTION_FRONTEND_BASE_URL }}";
               } > deployment/docker/.env
             fi
             # Append image coordinates for docker compose variable substitution
