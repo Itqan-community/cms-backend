@@ -355,6 +355,7 @@ MFA_SUPPORTED_TYPES = ["totp", "recovery_codes", "webauthn"]
 MFA_PASSKEY_LOGIN_ENABLED = True
 MFA_PASSKEY_SIGNUP_ENABLED = True
 MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = DEBUG
+MFA_ADAPTER = "apps.users.adapters.MFAAdapter"
 
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
