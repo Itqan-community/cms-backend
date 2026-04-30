@@ -373,7 +373,14 @@ SOCIALACCOUNT_PROVIDERS = {
         "AUTH_PARAMS": {"access_type": "online"},
         "OAUTH_PKCE_ENABLED": True,
     },
-    "github": {"SCOPE": ["user:email"], "VERIFIED_EMAIL": True},
+    "github": {
+        "APP": {
+            "client_id": config("GITHUB_CLIENT_ID", default=""),
+            "secret": config("GITHUB_CLIENT_SECRET", default=""),
+        },
+        "SCOPE": ["user:email"],
+        "VERIFIED_EMAIL": True,
+    },
 }
 
 # Django Oauth2 Toolkit: OAuth2 Provider Configuration
