@@ -183,6 +183,8 @@ jobs:
                 echo "WEBAUTHN_RP_ID=${{ secrets.STAGING_WEBAUTHN_RP_ID }}";
                 echo "ALLAUTH_JWT_PRIVATE_KEY=${{ secrets.STAGING_ALLAUTH_JWT_PRIVATE_KEY }}";
                 echo "FRONTEND_BASE_URL=${{ secrets.STAGING_FRONTEND_BASE_URL }}";
+                echo "GOOGLE_CLIENT_ID=${{ secrets.STAGING_GOOGLE_CLIENT_ID }}";
+                echo "GOOGLE_CLIENT_SECRET=${{ secrets.STAGING_GOOGLE_CLIENT_SECRET }}";
               } > deployment/docker/.env
             elif [ "${{ env.ENV_NAME }}" = "production" ]; then
               {
@@ -225,6 +227,8 @@ jobs:
                 echo "DEFAULT_SERVER_NAME=cms-backend-production";
                 echo "ALLAUTH_JWT_PRIVATE_KEY=${{ secrets.PRODUCTION_ALLAUTH_JWT_PRIVATE_KEY }}";
                 echo "FRONTEND_BASE_URL=${{ secrets.PRODUCTION_FRONTEND_BASE_URL }}";
+                echo "GOOGLE_CLIENT_ID=${{ secrets.PROD_GOOGLE_CLIENT_ID }}";
+                echo "GOOGLE_CLIENT_SECRET=${{ secrets.PROD_GOOGLE_CLIENT_SECRET }}";
               } > deployment/docker/.env
             fi
             # Append image coordinates for docker compose variable substitution
