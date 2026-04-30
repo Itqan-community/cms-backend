@@ -69,8 +69,8 @@ CSRF_TRUSTED_ORIGINS = [
 
 # Force HTTPS in allauth callback URLs
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https"
-SESSION_COOKIE_DOMAIN = "cms.itqan.dev"
-CSRF_COOKIE_DOMAIN = "cms.itqan.dev"
+SESSION_COOKIE_DOMAIN = ".itqan.dev"
+CSRF_COOKIE_DOMAIN = ".itqan.dev"
 # ============================================================
 # Cache
 # ============================================================
