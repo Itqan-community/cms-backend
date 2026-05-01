@@ -10,10 +10,13 @@ from apps.content.models import Reciter
 from apps.content.services.reciter import ReciterService
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
+from apps.core.ninja_utils.permission_required import permission_required
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.core.permission_utils import permission_class
+from apps.core.permissions import PermissionChoice
 
 router = ItqanRouter(tags=[NinjaTag.RECITERS])
 logger = logging.getLogger(__name__)
@@ -109,6 +112,7 @@ class ReciterFilter(FilterSchema):
 
 
 @router.get("reciters/", response=list[ReciterListOut])
+@permission_required([permission_class(PermissionChoice.READ_PORTAL_RECITER)])
 @paginate
 @ordering(
     ordering_fields=[
@@ -132,6 +136,7 @@ def list_reciters(request: Request, filters: ReciterFilter = Query()):
         404: NinjaErrorResponse[Literal["reciter_not_found"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.READ_PORTAL_RECITER)])
 def get_reciter(request: Request, reciter_slug: str):
     service = ReciterService()
     return service.get_reciter(reciter_slug)
@@ -145,6 +150,7 @@ def get_reciter(request: Request, reciter_slug: str):
         409: NinjaErrorResponse[Literal["reciter_already_exists"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.CREATE_PORTAL_RECITER)])
 def create_reciter(
     request: Request,
     data: Form[ReciterCreateIn],
@@ -176,6 +182,7 @@ def create_reciter(
         409: NinjaErrorResponse[Literal["reciter_already_exists"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.UPDATE_PORTAL_RECITER)])
 def patch_reciter(
     request: Request,
     reciter_slug: str,
@@ -198,6 +205,7 @@ def patch_reciter(
         404: NinjaErrorResponse[Literal["reciter_not_found"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.DROP_PORTAL_RECITER)])
 def delete_reciter(request: Request, reciter_slug: str):
     logger.info(f"Deleting reciter [reciter_slug={reciter_slug}, user_id={request.user.id}]")
     service = ReciterService()

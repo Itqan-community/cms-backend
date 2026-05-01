@@ -14,6 +14,7 @@ from oauth2_provider.models import AccessToken as OAuth2AccessToken, Application
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import AccessToken as JWTAccessToken
 
+from apps.core.permissions import PermissionChoice
 from apps.publishers.models import Domain
 from apps.users.models import User
 
@@ -97,7 +98,7 @@ class BaseTestCase(TestCase):
             kwargs.pop("HTTP_AUTHORIZATION", None)
         else:
             if add_superuser:
-                user.is_superuser = True
+                user.is_staff = True
                 user.save()
             if settings.ENABLE_ALLAUTH:
                 self.client.force_login(user=user)
@@ -168,3 +169,13 @@ class BaseTestCase(TestCase):
 
     def create_file(self, name: str, content: bytes, content_type: str) -> SimpleUploadedFile:
         return SimpleUploadedFile(name, content, content_type=content_type)
+
+    def give_permission(self, user: User, codename: PermissionChoice) -> None:
+        from django.contrib.auth.models import Permission
+
+        user.user_permissions.add(Permission.objects.get(codename=codename))
+
+    def remove_permission(self, user: User, codename: PermissionChoice) -> None:
+        from django.contrib.auth.models import Permission
+
+        user.user_permissions.remove(Permission.objects.get(codename=codename))

@@ -1,6 +1,7 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from apps.content.models import Reciter
+from apps.core.permissions import PermissionChoice
 from apps.core.tests import BaseTestCase
 from apps.users.models import User
 
@@ -13,6 +14,7 @@ class ReciterCreateTest(BaseTestCase):
     def test_create_reciter_where_valid_data_should_return_201(self):
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_RECITER)
 
         # Act
         response = self.client.post(
@@ -45,6 +47,7 @@ class ReciterCreateTest(BaseTestCase):
         # Arrange
         Reciter.objects.create(name="Existing Reciter", slug="existing-reciter")
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_RECITER)
 
         # Act
         response = self.client.post(
@@ -79,6 +82,7 @@ class ReciterCreateTest(BaseTestCase):
     def test_create_reciter_where_image_exists_should_return_201_and_upload_image(self):
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_RECITER)
         image = SimpleUploadedFile("test_image.jpg", b"file_content", content_type="image/jpeg")
 
         # Act
@@ -103,3 +107,21 @@ class ReciterCreateTest(BaseTestCase):
 
         # Clean up the file created during test
         reciter.image_url.delete()
+
+    def test_create_reciter_where_user_lacks_permission_should_return_403(self):
+        # Arrange
+        user_without_permission = User.objects.create_user(email="noperm@example.com", name="No Permission User")
+        self.authenticate_user(user_without_permission)
+
+        # Act
+        response = self.client.post(
+            "/portal/reciters/",
+            data={
+                "name_ar": "مقرئ جديد",
+                "name_en": "New Reciter",
+            },
+        )
+
+        # Assert
+        self.assertEqual(403, response.status_code)
+        self.assertEqual("permission_denied", response.json()["error_name"])

@@ -1,4 +1,5 @@
 from apps.content.models import Reciter
+from apps.core.permissions import PermissionChoice
 from apps.core.tests import BaseTestCase
 from apps.users.models import User
 
@@ -19,6 +20,7 @@ class ReciterDetailTest(BaseTestCase):
     def test_get_reciter_where_exists_should_return_200(self):
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.READ_PORTAL_RECITER)
 
         # Act
         response = self.client.get(f"/portal/reciters/{self.reciter.slug}/")
@@ -37,6 +39,7 @@ class ReciterDetailTest(BaseTestCase):
     def test_get_reciter_where_non_existent_slug_should_return_404(self):
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.READ_PORTAL_RECITER)
 
         # Act
         response = self.client.get("/portal/reciters/invalid-slug/")
@@ -44,3 +47,26 @@ class ReciterDetailTest(BaseTestCase):
         # Assert
         self.assertEqual(404, response.status_code)
         self.assertEqual("reciter_not_found", response.json()["error_name"])
+
+    def test_get_reciter_where_unauthenticated_should_return_401(self):
+        # Arrange
+        # No authentication
+
+        # Act
+        response = self.client.get(f"/portal/reciters/{self.reciter.slug}/")
+
+        # Assert
+        self.assertEqual(401, response.status_code)
+        self.assertEqual("authentication_error", response.json().get("error_name"))
+
+    def test_get_reciter_where_user_lacks_permission_should_return_403(self):
+        # Arrange
+        user_without_permission = User.objects.create_user(email="noperm@example.com", name="No Permission User")
+        self.authenticate_user(user_without_permission)
+
+        # Act
+        response = self.client.get(f"/portal/reciters/{self.reciter.slug}/")
+
+        # Assert
+        self.assertEqual(403, response.status_code)
+        self.assertEqual("permission_denied", response.json()["error_name"])

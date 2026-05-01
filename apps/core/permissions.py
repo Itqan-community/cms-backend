@@ -1,29 +1,10 @@
-from rest_framework import exceptions, permissions
-
-from apps.users.models import User
-
-
-def permission_class(permission_code_name) -> type[permissions.BasePermission]:
-    class CustomPermission(permissions.BasePermission):
-        def has_permission(self, request, view):
-            return check_permission(request.user, permission_code_name)
-
-    CustomPermission.permission_code_name = permission_code_name
-
-    def rep(cls):
-        return f"Permission({permission_code_name})"
-
-    CustomPermission.__class__.__repr__ = rep
-
-    return CustomPermission
+from django.db.models.enums import TextChoices
+from django.utils.translation import gettext_lazy as _
 
 
-def check_permission(user: User, permission: str, raise_exception: bool = False) -> bool:
-    if not (user and user.is_authenticated and user.is_active):
-        return False
-
-    is_granted = user.has_perm(permission)
-
-    if raise_exception and not is_granted:
-        raise exceptions.PermissionDenied
-    return is_granted
+class PermissionChoice(TextChoices):
+    # please steer away from [view, add, change, delete] format as it is used by django's default permissions
+    READ_PORTAL_RECITER = "read_portal_reciter", _("View Portal Reciters")
+    CREATE_PORTAL_RECITER = "create_portal_reciter", _("Create Portal Reciters")
+    UPDATE_PORTAL_RECITER = "update_portal_reciter", _("Update Portal Reciters")
+    DROP_PORTAL_RECITER = "drop_portal_reciter", _("Delete Portal Reciters")
