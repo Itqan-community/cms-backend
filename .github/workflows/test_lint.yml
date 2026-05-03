@@ -28,6 +28,15 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version-file: '.python-version'
+          cache: 'pip'
+
+      - name: Cache pre-commit environments
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+          restore-keys: pre-commit-
+
       # Consider using pre-commit.ci for open source project
       - name: Run pre-commit
         uses: pre-commit/action@v3.0.1
@@ -80,11 +89,19 @@ jobs:
           echo "Contents of .env:"
           cat .env
 
-      - name: Build Django service
-        run: docker compose -f docker-compose.local.yml build django
+      - name: Build Django image with layer cache
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deployment/docker/Dockerfile.backend
+          build-args: DEPENDENCY_GROUP=dev
+          load: true
+          tags: itqan-cms-backend-django:latest
+          cache-from: type=gha,scope=django-dev
+          cache-to: type=gha,scope=django-dev,mode=max,compression=zstd
 
       - name: Start services
-        run: docker compose -f docker-compose.local.yml up -d postgres redis
+        run: docker compose -f docker-compose.local.yml up -d --no-build postgres redis
 
       - name: Check DB Migrations
         run: docker compose -f docker-compose.local.yml run --rm django uv run python manage.py makemigrations --check
