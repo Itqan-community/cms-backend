@@ -309,6 +309,19 @@ msgstr "رابط المشروع"
 msgid "Job Title"
 msgstr "المسمى الوظيفي"
 
+msgid "Application not found."
+msgstr "التطبيق غير موجود."
+
+msgid "An application with this name already exists."
+msgstr "يوجد تطبيق بهذا الاسم بالفعل."
+
+msgid "Application name must not be empty."
+msgstr "اسم التطبيق لا يمكن أن يكون فارغاً."
+
+#, python-format
+msgid "Application name must not exceed %(max)d characters."
+msgstr "اسم التطبيق يجب ألا يتجاوز %(max)d حرفاً."
+
 msgid "Sign In"
 msgstr "تسجيل الدخول"
 
