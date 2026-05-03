@@ -387,10 +387,7 @@ SOCIALACCOUNT_PROVIDERS = {
 
 # Django Oauth2 Toolkit: OAuth2 Provider Configuration
 OAUTH2_PROVIDER = {
-    "PKCE_REQUIRED": True,
-    "ACCESS_TOKEN_EXPIRE_SECONDS": 3600,
-    "REFRESH_TOKEN_EXPIRE_SECONDS": 86400 * 30,  # 30 days
-    "OIDC_ENABLED": False,
+    "ACCESS_TOKEN_EXPIRE_SECONDS": 86400,  # 24 hours
 }
 
 # Email Configuration
