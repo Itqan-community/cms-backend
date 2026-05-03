@@ -252,6 +252,9 @@ CORS_ALLOW_HEADERS = [
     "x-csrftoken",
     "x-requested-with",
     "x-tenant",
+    "x-session-token",
+    "x-email-verification-key",
+    "x-password-reset-key",
 ]
 
 # Custom user model
@@ -313,8 +316,8 @@ ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 # ACCOUNT_ADAPTER = "apps.users.adapters.AccountAdapter"
 ACCOUNT_FORMS = {"signup": "apps.users.forms.UserSignupForm"}
-ACCOUNT_EMAIL_VERIFICATION = "none"
-ACCOUNT_EMAIL_VERIFICATION_BY_CODE_ENABLED = False
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+ACCOUNT_EMAIL_VERIFICATION_BY_CODE_ENABLED = True
 ACCOUNT_USER_MODEL_EMAIL_FIELD = "email"
 ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = False
 ACCOUNT_LOGOUT_ON_GET = False
@@ -331,12 +334,13 @@ SOCIALACCOUNT_ADAPTER = "apps.users.adapters.SocialAccountAdapter"
 SOCIALACCOUNT_FORMS = {"signup": "apps.users.forms.UserSocialSignupForm"}
 
 # HEADLESS_ONLY = True
+FRONTEND_BASE_URL = config("FRONTEND_BASE_URL", default="http://localhost:4200")
 HEADLESS_FRONTEND_URLS = {
-    "account_confirm_email": "/accounts/confirm-email/{key}/",
-    "account_reset_password": "/account/password/reset",
-    "account_reset_password_from_key": "/account/password/reset/key/{key}",
-    "account_signup": "/account/signup",
-    "socialaccount_login_error": "/account/provider/callback",
+    "account_confirm_email": FRONTEND_BASE_URL + "/accounts/confirm-email/{key}/",
+    "account_reset_password": FRONTEND_BASE_URL + "/account/password/reset",
+    "account_reset_password_from_key": FRONTEND_BASE_URL + "/account/password/reset/key/{key}",
+    "account_signup": FRONTEND_BASE_URL + "/account/signup",
+    "socialaccount_login_error": FRONTEND_BASE_URL + "/account/provider/callback",
 }
 HEADLESS_CLIENTS = ["app", "browser"]
 HEADLESS_SERVE_SPECIFICATION = True
@@ -352,16 +356,31 @@ if ENABLE_ALLAUTH:
 
 MFA_SUPPORTED_TYPES = ["totp", "recovery_codes", "webauthn"]
 MFA_PASSKEY_LOGIN_ENABLED = True
-MFA_PASSKEY_SIGNUP_ENABLED = False
+MFA_PASSKEY_SIGNUP_ENABLED = True
 MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = DEBUG
+MFA_ADAPTER = "apps.users.adapters.MFAAdapter"
+
+# WebAuthn Configuration
+WEBAUTHN_RP_ID = config("WEBAUTHN_RP_ID", default="localhost")
 
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
+        "APP": {
+            "client_id": config("GOOGLE_CLIENT_ID", default=""),
+            "secret": config("GOOGLE_CLIENT_SECRET", default=""),
+        },
         "SCOPE": ["profile", "email"],
         "AUTH_PARAMS": {"access_type": "online"},
         "OAUTH_PKCE_ENABLED": True,
     },
-    "github": {"SCOPE": ["user:email"], "VERIFIED_EMAIL": True},
+    "github": {
+        "APP": {
+            "client_id": config("GITHUB_CLIENT_ID", default=""),
+            "secret": config("GITHUB_CLIENT_SECRET", default=""),
+        },
+        "SCOPE": ["user:email"],
+        "VERIFIED_EMAIL": True,
+    },
 }
 
 # Django Oauth2 Toolkit: OAuth2 Provider Configuration
@@ -371,6 +390,18 @@ OAUTH2_PROVIDER = {
     "REFRESH_TOKEN_EXPIRE_SECONDS": 86400 * 30,  # 30 days
     "OIDC_ENABLED": False,
 }
+
+# Email Configuration
+EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
+EMAIL_HOST = config("EMAIL_HOST", default="")
+EMAIL_PORT = config("EMAIL_PORT", cast=int, default=587)
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", cast=bool, default=True)
+EMAIL_USE_SSL = config("EMAIL_USE_SSL", cast=bool, default=False)
+_EMAIL_SENDER_NAME = config("EMAIL_SENDER_NAME", default="Itqan")
+_EMAIL_SENDER_EMAIL = config("EMAIL_SENDER_EMAIL", default="noreply@itqan.dev")
+DEFAULT_FROM_EMAIL = f"{_EMAIL_SENDER_NAME} <{_EMAIL_SENDER_EMAIL}>" if _EMAIL_SENDER_NAME else _EMAIL_SENDER_EMAIL
 
 # Cache Configuration
 CACHES = {

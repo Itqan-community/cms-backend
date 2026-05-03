@@ -2,8 +2,12 @@
 Django Allauth adapters for custom user registration and social account handling
 """
 
+from __future__ import annotations
+
 from allauth.account.adapter import DefaultAccountAdapter
+from allauth.mfa.adapter import DefaultMFAAdapter
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
+from django.conf import settings
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -80,3 +84,18 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
             user.name = extra_data.get("name") or extra_data.get("login", "")
 
         return user
+
+
+class MFAAdapter(DefaultMFAAdapter):
+    """
+    Custom MFA adapter to control WebAuthn Relying Party (RP) entity.
+
+    Default allauth uses request host (often API domain), which can cause
+    passkey RP mismatch when FE runs on another subdomain.
+    """
+
+    def get_public_key_credential_rp_entity(self) -> dict[str, str]:
+        return {
+            "id": settings.WEBAUTHN_RP_ID,
+            "name": self._get_site_name(),
+        }
