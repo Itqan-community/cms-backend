@@ -24,7 +24,7 @@ class TafsirDeleteTest(BaseTestCase):
 
     def test_delete_tafsir_where_valid_slug_should_return_204(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.DELETE_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TAFSIR)
         tafsir_slug = self.tafsir.slug
 
         response = self.client.delete(f"/portal/tafsirs/{tafsir_slug}/")
@@ -36,7 +36,7 @@ class TafsirDeleteTest(BaseTestCase):
 
     def test_delete_tafsir_where_not_found_should_return_404(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.DELETE_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TAFSIR)
         response = self.client.delete("/portal/tafsirs/nonexistent-slug/")
 
         self.assertEqual(404, response.status_code, response.content)

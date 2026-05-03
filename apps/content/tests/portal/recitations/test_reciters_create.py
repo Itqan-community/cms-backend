@@ -14,7 +14,7 @@ class ReciterCreateTest(BaseTestCase):
     def test_create_reciter_where_valid_data_should_return_201(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_RECITER)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_RECITER)
 
         # Act
         response = self.client.post(
@@ -47,7 +47,7 @@ class ReciterCreateTest(BaseTestCase):
         # Arrange
         Reciter.objects.create(name="Existing Reciter", slug="existing-reciter")
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_RECITER)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_RECITER)
 
         # Act
         response = self.client.post(
@@ -82,7 +82,7 @@ class ReciterCreateTest(BaseTestCase):
     def test_create_reciter_where_image_exists_should_return_201_and_upload_image(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_RECITER)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_RECITER)
         image = SimpleUploadedFile("test_image.jpg", b"file_content", content_type="image/jpeg")
 
         # Act

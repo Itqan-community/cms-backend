@@ -35,7 +35,7 @@ class TranslationDetailTest(BaseTestCase):
 
     def test_retrieve_translation_where_valid_slug_should_return_all_fields(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
         response = self.client.get(f"/portal/translations/{self.translation.slug}/")
 
         self.assertEqual(200, response.status_code, response.content)
@@ -71,7 +71,7 @@ class TranslationDetailTest(BaseTestCase):
 
     def test_retrieve_translation_where_not_found_should_return_404(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
         response = self.client.get("/portal/translations/nonexistent-slug/")
 
         self.assertEqual(404, response.status_code, response.content)

@@ -62,7 +62,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
     def test_validate_upload_where_all_files_are_new_should_return_valid(self):
         # Arrange
         self.authenticate_user(self.staff_user)
-        self.give_permission(self.staff_user, PermissionChoice.UPDATE_PORTAL_RECITATION)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPDATE_RECITATION)
 
         # Act
         response = self.client.post(
@@ -87,7 +87,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
     def test_validate_upload_where_mix_of_new_existing_and_invalid_should_return_invalid(self):
         # Arrange
         self.authenticate_user(self.staff_user)
-        self.give_permission(self.staff_user, PermissionChoice.UPDATE_PORTAL_RECITATION)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPDATE_RECITATION)
 
         # Act
         response = self.client.post(
@@ -120,7 +120,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
     def test_validate_upload_where_filename_extension_is_not_mp3_should_return_invalid(self):
         # Arrange
         self.authenticate_user(self.staff_user)
-        self.give_permission(self.staff_user, PermissionChoice.UPDATE_PORTAL_RECITATION)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPDATE_RECITATION)
 
         # Act
         response = self.client.post(
@@ -145,7 +145,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
     def test_validate_upload_where_all_files_exist_should_return_invalid(self):
         # Arrange
         self.authenticate_user(self.staff_user)
-        self.give_permission(self.staff_user, PermissionChoice.UPDATE_PORTAL_RECITATION)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPDATE_RECITATION)
 
         # Act
         response = self.client.post(
@@ -166,7 +166,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
     def test_validate_upload_where_empty_list_should_return_invalid(self):
         # Arrange
         self.authenticate_user(self.staff_user)
-        self.give_permission(self.staff_user, PermissionChoice.UPDATE_PORTAL_RECITATION)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPDATE_RECITATION)
 
         # Act
         response = self.client.post(
@@ -184,7 +184,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
     def test_validate_upload_where_asset_not_found_should_return_404(self):
         # Arrange
         self.authenticate_user(self.staff_user)
-        self.give_permission(self.staff_user, PermissionChoice.UPDATE_PORTAL_RECITATION)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPDATE_RECITATION)
 
         # Act
         response = self.client.post(
@@ -227,7 +227,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
     def test_start_upload_should_delegate_to_service(self):
         # Arrange
         self.authenticate_user(self.staff_user)
-        self.give_permission(self.staff_user, PermissionChoice.UPDATE_PORTAL_RECITATION)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPDATE_RECITATION)
 
         with patch(
             "apps.content.api.portal.recitation_tracks_upload.AssetRecitationAudioTracksDirectUploadService.start_upload",
@@ -266,7 +266,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
     def test_start_upload_where_service_raises_should_propagate_itqan_error(self):
         # Arrange
         self.authenticate_user(self.staff_user)
-        self.give_permission(self.staff_user, PermissionChoice.CREATE_PORTAL_RECITATION)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_CREATE_RECITATION)
 
         with patch(
             "apps.content.api.portal.recitation_tracks_upload.AssetRecitationAudioTracksDirectUploadService.start_upload",
@@ -286,7 +286,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
     def test_sign_part_should_return_presigned_url(self):
         # Arrange
         self.authenticate_user(self.staff_user)
-        self.give_permission(self.staff_user, PermissionChoice.UPDATE_PORTAL_RECITATION)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPDATE_RECITATION)
 
         with patch(
             "apps.content.api.portal.recitation_tracks_upload.AssetRecitationAudioTracksDirectUploadService.sign_part",
@@ -311,7 +311,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
     def test_finish_upload_should_delegate_to_service(self):
         # Arrange
         self.authenticate_user(self.staff_user)
-        self.give_permission(self.staff_user, PermissionChoice.UPDATE_PORTAL_RECITATION)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPDATE_RECITATION)
 
         with patch(
             "apps.content.api.portal.recitation_tracks_upload.AssetRecitationAudioTracksDirectUploadService.finish_upload",
@@ -358,7 +358,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
     def test_abort_upload_should_return_aborted_payload(self):
         # Arrange
         self.authenticate_user(self.staff_user)
-        self.give_permission(self.staff_user, PermissionChoice.UPDATE_PORTAL_RECITATION)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPDATE_RECITATION)
 
         with patch(
             "apps.content.api.portal.recitation_tracks_upload.AssetRecitationAudioTracksDirectUploadService.abort_upload",

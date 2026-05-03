@@ -20,7 +20,7 @@ class RecitationPortalTest(BaseTestCase):
     def test_list_recitations_should_return_200(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.READ_PORTAL_RECITATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_RECITATION)
         baker.make(
             Asset,
             category=CategoryChoice.RECITATION,
@@ -42,7 +42,7 @@ class RecitationPortalTest(BaseTestCase):
     def test_filter_recitations_by_publisher_should_return_filtered_results(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.READ_PORTAL_RECITATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_RECITATION)
         pub2 = baker.make(Publisher, name="Other Publisher")
         baker.make(
             Asset,
@@ -76,7 +76,7 @@ class RecitationPortalTest(BaseTestCase):
     def test_sort_recitations_by_reciter_name_should_return_sorted_results(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.READ_PORTAL_RECITATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_RECITATION)
         reciter_a = baker.make(Reciter, name="A Reciter")
         reciter_z = baker.make(Reciter, name="Z Reciter")
 
@@ -113,7 +113,7 @@ class RecitationPortalTest(BaseTestCase):
     def test_create_recitation_should_return_201(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_RECITATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_RECITATION)
         payload = {
             "name_ar": "تلاوة جديدة",
             "name_en": "New Recitation",
@@ -149,7 +149,7 @@ class RecitationPortalTest(BaseTestCase):
     def test_update_recitation_put_should_return_200(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.UPDATE_PORTAL_RECITATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_RECITATION)
         asset = baker.make(
             Asset,
             category=CategoryChoice.RECITATION,
@@ -191,7 +191,7 @@ class RecitationPortalTest(BaseTestCase):
     def test_delete_recitation_should_return_204(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.DELETE_PORTAL_RECITATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_RECITATION)
         asset = baker.make(
             Asset,
             category=CategoryChoice.RECITATION,
@@ -213,7 +213,7 @@ class RecitationPortalTest(BaseTestCase):
     def test_retrieve_recitation_where_version_exists_should_return_ayah_timings_url(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.READ_PORTAL_RECITATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_RECITATION)
         asset = baker.make(
             Asset,
             category=CategoryChoice.RECITATION,
@@ -242,7 +242,7 @@ class RecitationPortalTest(BaseTestCase):
     def test_retrieve_recitation_where_no_version_exists_should_return_none_ayah_timings_url(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.READ_PORTAL_RECITATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_RECITATION)
         asset = baker.make(
             Asset,
             category=CategoryChoice.RECITATION,

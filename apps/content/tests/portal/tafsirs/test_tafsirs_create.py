@@ -17,7 +17,7 @@ class TafsirCreateTest(BaseTestCase):
     def test_create_tafsir_where_valid_data_should_return_201(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TAFSIR)
 
         # Act
         response = self.client.post(
@@ -56,7 +56,7 @@ class TafsirCreateTest(BaseTestCase):
     def test_create_tafsir_where_publisher_not_found_should_return_404(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TAFSIR)
 
         # Act
         response = self.client.post(
@@ -83,7 +83,7 @@ class TafsirCreateTest(BaseTestCase):
     def test_create_tafsir_where_name_missing_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TAFSIR)
 
         # Act
         response = self.client.post(
@@ -135,7 +135,7 @@ class TafsirCreateTest(BaseTestCase):
     def test_create_tafsir_where_only_english_name_should_create_successfully(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TAFSIR)
 
         # Act
         response = self.client.post(
@@ -162,7 +162,7 @@ class TafsirCreateTest(BaseTestCase):
     def test_create_tafsir_where_thumbnail_provided_should_upload_and_return_url(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TAFSIR)
         image = SimpleUploadedFile("test_image.jpg", b"file_content", content_type="image/jpeg")
 
         # Act
@@ -195,7 +195,7 @@ class TafsirCreateTest(BaseTestCase):
     def test_create_tafsir_where_is_external_true_and_url_present_should_return_201(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TAFSIR)
 
         # Act
         response = self.client.post(
@@ -220,7 +220,7 @@ class TafsirCreateTest(BaseTestCase):
     def test_create_tafsir_where_is_external_true_and_no_url_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TAFSIR)
 
         # Act
         response = self.client.post(

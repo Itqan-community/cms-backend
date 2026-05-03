@@ -15,7 +15,7 @@ class TranslationCreateTest(BaseTestCase):
 
     def test_create_translation_where_valid_data_should_return_201(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
         response = self.client.post(
             "/portal/translations/",
             data={
@@ -53,7 +53,7 @@ class TranslationCreateTest(BaseTestCase):
 
     def test_create_translation_where_publisher_not_found_should_return_404(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
         response = self.client.post(
             "/portal/translations/",
             data={
@@ -78,7 +78,7 @@ class TranslationCreateTest(BaseTestCase):
 
     def test_create_translation_where_name_missing_should_return_400(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
         response = self.client.post(
             "/portal/translations/",
             data={
@@ -124,7 +124,7 @@ class TranslationCreateTest(BaseTestCase):
 
     def test_create_translation_where_only_english_name_should_create_successfully(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
         response = self.client.post(
             "/portal/translations/",
             data={
@@ -149,7 +149,7 @@ class TranslationCreateTest(BaseTestCase):
 
     def test_create_translation_where_is_external_true_and_url_present_should_return_201(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
         response = self.client.post(
             "/portal/translations/",
             data={
@@ -171,7 +171,7 @@ class TranslationCreateTest(BaseTestCase):
 
     def test_create_translation_where_is_external_true_and_no_url_should_return_400(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
         response = self.client.post(
             "/portal/translations/",
             data={

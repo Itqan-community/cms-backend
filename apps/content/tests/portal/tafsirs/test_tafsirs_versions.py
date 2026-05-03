@@ -27,7 +27,7 @@ class TafsirVersionListTest(TafsirVersionBaseTest):
     def test_list_versions_where_valid_slug_should_return_versions(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
         baker.make(AssetVersion, asset=self.tafsir, name="V1")
         baker.make(AssetVersion, asset=self.tafsir, name="V2")
 
@@ -43,7 +43,7 @@ class TafsirVersionListTest(TafsirVersionBaseTest):
     def test_list_versions_where_tafsir_not_found_should_return_404(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
 
         # Act
         response = self.client.get("/portal/tafsirs/non-existent/versions/")
@@ -72,7 +72,7 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
     def test_create_version_where_valid_data_should_return_201(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TAFSIR)
         file = SimpleUploadedFile("tafsir.pdf", b"content", content_type="application/pdf")
 
         # Act
@@ -102,7 +102,7 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
     def test_create_version_where_asset_id_mismatch_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TAFSIR)
 
         # Act
         response = self.client.post(
@@ -149,7 +149,7 @@ class TafsirVersionUpdateTest(TafsirVersionBaseTest):
 
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.UPDATE_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
         payload = {
             "asset_id": self.tafsir.id,
             "name": "Updated Name",
@@ -175,7 +175,7 @@ class TafsirVersionUpdateTest(TafsirVersionBaseTest):
     def test_patch_version_where_partial_data_should_return_200(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.UPDATE_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
         from urllib.parse import urlencode
 
         payload = {
@@ -222,7 +222,7 @@ class TafsirVersionDeleteTest(TafsirVersionBaseTest):
     def test_delete_version_should_return_204(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.DELETE_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TAFSIR)
         version = baker.make(AssetVersion, asset=self.tafsir)
 
         # Act

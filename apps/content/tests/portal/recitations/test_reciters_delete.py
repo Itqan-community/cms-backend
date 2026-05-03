@@ -16,7 +16,7 @@ class ReciterDeleteTest(BaseTestCase):
     def test_delete_reciter_where_reciter_exists_should_return_204(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.DELETE_PORTAL_RECITER)
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_RECITER)
 
         # Act
         response = self.client.delete(f"/portal/reciters/{self.reciter.slug}/")
@@ -39,7 +39,7 @@ class ReciterDeleteTest(BaseTestCase):
     def test_delete_reciter_where_non_existent_slug_should_return_404(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.DELETE_PORTAL_RECITER)
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_RECITER)
 
         # Act
         response = self.client.delete("/portal/reciters/non-existent/")

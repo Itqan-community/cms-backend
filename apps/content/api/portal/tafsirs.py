@@ -150,7 +150,7 @@ class TafsirFilter(FilterSchema):
 
 
 @router.get("tafsirs/", response=list[TafsirListOut])
-@permission_required([permission_class(PermissionChoice.READ_PORTAL_TAFSIR)])
+@permission_required([permission_class(PermissionChoice.PORTAL_READ_TAFSIR)])
 @paginate
 @ordering(ordering_fields=["id", "name", "created_at", "updated_at"])
 @searching(
@@ -178,7 +178,7 @@ def list_tafsirs(request: Request, filters: TafsirFilter = Query()):
         404: NinjaErrorResponse[Literal["publisher_not_found"]] | NinjaErrorResponse[Literal["tafsir_not_found"]],
     },
 )
-@permission_required([permission_class(PermissionChoice.CREATE_PORTAL_TAFSIR)])
+@permission_required([permission_class(PermissionChoice.PORTAL_CREATE_TAFSIR)])
 def create_tafsir(
     request: Request,
     data: Form[TafsirCreateIn],
@@ -213,7 +213,7 @@ def create_tafsir(
         404: NinjaErrorResponse[Literal["tafsir_not_found"]],
     },
 )
-@permission_required([permission_class(PermissionChoice.READ_PORTAL_TAFSIR)])
+@permission_required([permission_class(PermissionChoice.PORTAL_READ_TAFSIR)])
 def retrieve_tafsir(request: Request, tafsir_slug: str) -> Asset:
     service = TafsirService()
     return service.get_tafsir(tafsir_slug)
@@ -227,7 +227,7 @@ def retrieve_tafsir(request: Request, tafsir_slug: str) -> Asset:
         404: NinjaErrorResponse[Literal["tafsir_not_found"]],
     },
 )
-@permission_required([permission_class(PermissionChoice.UPDATE_PORTAL_TAFSIR)])
+@permission_required([permission_class(PermissionChoice.PORTAL_UPDATE_TAFSIR)])
 def update_tafsir_put(
     request: Request,
     tafsir_slug: str,
@@ -252,7 +252,7 @@ def update_tafsir_put(
         404: NinjaErrorResponse[Literal["tafsir_not_found"]],
     },
 )
-@permission_required([permission_class(PermissionChoice.UPDATE_PORTAL_TAFSIR)])
+@permission_required([permission_class(PermissionChoice.PORTAL_UPDATE_TAFSIR)])
 def update_tafsir_patch(
     request: Request,
     tafsir_slug: str,
@@ -276,7 +276,7 @@ def update_tafsir_patch(
         404: NinjaErrorResponse[Literal["tafsir_not_found"]],
     },
 )
-@permission_required([permission_class(PermissionChoice.DELETE_PORTAL_TAFSIR)])
+@permission_required([permission_class(PermissionChoice.PORTAL_DELETE_TAFSIR)])
 def delete_tafsir(request: Request, tafsir_slug: str) -> tuple[int, None]:
     logger.info(f"Deleting tafsir [tafsir_slug={tafsir_slug}, user_id={request.user.id}]")
     service = TafsirService()

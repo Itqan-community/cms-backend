@@ -35,7 +35,7 @@ class TafsirDetailTest(BaseTestCase):
 
     def test_retrieve_tafsir_where_valid_slug_should_return_all_fields(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
         response = self.client.get(f"/portal/tafsirs/{self.tafsir.slug}/")
 
         self.assertEqual(200, response.status_code, response.content)
@@ -72,7 +72,7 @@ class TafsirDetailTest(BaseTestCase):
 
     def test_retrieve_tafsir_where_not_found_should_return_404(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
         response = self.client.get("/portal/tafsirs/nonexistent-slug/")
 
         self.assertEqual(404, response.status_code, response.content)

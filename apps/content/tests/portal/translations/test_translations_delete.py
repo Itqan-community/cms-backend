@@ -24,7 +24,7 @@ class TranslationDeleteTest(BaseTestCase):
 
     def test_delete_translation_where_valid_slug_should_return_204(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.DELETE_PORTAL_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TRANSLATION)
         translation_slug = self.translation.slug
 
         response = self.client.delete(f"/portal/translations/{translation_slug}/")
@@ -36,7 +36,7 @@ class TranslationDeleteTest(BaseTestCase):
 
     def test_delete_translation_where_not_found_should_return_404(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.DELETE_PORTAL_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TRANSLATION)
         response = self.client.delete("/portal/translations/nonexistent-slug/")
 
         self.assertEqual(404, response.status_code, response.content)

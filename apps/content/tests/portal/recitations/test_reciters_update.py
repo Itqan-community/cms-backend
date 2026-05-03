@@ -19,7 +19,7 @@ class ReciterUpdateTest(BaseTestCase):
     def test_update_reciter_where_valid_partial_data_should_return_200(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.UPDATE_PORTAL_RECITER)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_RECITER)
 
         # Act
         response = self.client.patch(
@@ -46,7 +46,7 @@ class ReciterUpdateTest(BaseTestCase):
     def test_update_reciter_where_empty_name_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.UPDATE_PORTAL_RECITER)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_RECITER)
 
         # Act
         response = self.client.patch(

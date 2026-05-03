@@ -34,7 +34,7 @@ class TranslationUpdateTest(BaseTestCase):
 
     def test_update_translation_where_put_updates_all_fields_should_return_200(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.UPDATE_PORTAL_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
         response = self.client.put(
             f"/portal/translations/{self.translation.slug}/",
             data={
@@ -74,7 +74,7 @@ class TranslationUpdateTest(BaseTestCase):
 
     def test_update_translation_where_patch_updates_partial_fields_should_return_200(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.UPDATE_PORTAL_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
         response = self.client.patch(
             f"/portal/translations/{self.translation.slug}/",
             data={
@@ -99,7 +99,7 @@ class TranslationUpdateTest(BaseTestCase):
 
     def test_update_translation_where_put_missing_required_field_should_return_400(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.UPDATE_PORTAL_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
         response = self.client.put(
             f"/portal/translations/{self.translation.slug}/",
             data={
@@ -118,7 +118,7 @@ class TranslationUpdateTest(BaseTestCase):
 
     def test_update_translation_where_patch_with_invalid_name_should_return_400(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.UPDATE_PORTAL_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
         response = self.client.patch(
             f"/portal/translations/{self.translation.slug}/",
             data={
@@ -134,7 +134,7 @@ class TranslationUpdateTest(BaseTestCase):
 
     def test_update_translation_where_not_found_should_return_404(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.UPDATE_PORTAL_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
         response = self.client.patch(
             "/portal/translations/nonexistent-slug/",
             data={
@@ -159,7 +159,7 @@ class TranslationUpdateTest(BaseTestCase):
 
     def test_update_translation_where_is_external_true_and_url_present_should_return_200(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.UPDATE_PORTAL_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
         response = self.client.patch(
             f"/portal/translations/{self.translation.slug}/",
             data={
@@ -176,7 +176,7 @@ class TranslationUpdateTest(BaseTestCase):
 
     def test_update_translation_where_is_external_true_and_no_url_should_return_400(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.UPDATE_PORTAL_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
         response = self.client.patch(
             f"/portal/translations/{self.translation.slug}/",
             data={
@@ -192,7 +192,7 @@ class TranslationUpdateTest(BaseTestCase):
 
     def test_update_translation_where_is_external_false_forces_url_null_should_return_200(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.UPDATE_PORTAL_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
         # first make it external
         self.translation.is_external = True
         self.translation.external_url = "https://example.com/old"

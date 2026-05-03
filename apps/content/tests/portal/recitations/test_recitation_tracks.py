@@ -74,7 +74,7 @@ class RecitationTracksListAPITest(BaseTestCase):
     def test_list_tracks_where_valid_asset_should_return_tracks_ordered_by_surah(self):
         # Arrange
         self.authenticate_user(self.staff_user)
-        self.give_permission(self.staff_user, PermissionChoice.READ_PORTAL_RECITATION)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_READ_RECITATION)
 
         # Act
         response = self.client.get(
@@ -92,7 +92,7 @@ class RecitationTracksListAPITest(BaseTestCase):
     def test_list_tracks_where_valid_asset_should_return_correct_fields(self):
         # Arrange
         self.authenticate_user(self.staff_user)
-        self.give_permission(self.staff_user, PermissionChoice.READ_PORTAL_RECITATION)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_READ_RECITATION)
 
         # Act
         response = self.client.get(
@@ -112,7 +112,7 @@ class RecitationTracksListAPITest(BaseTestCase):
     def test_list_tracks_where_asset_belongs_to_different_asset_should_not_appear(self):
         # Arrange
         self.authenticate_user(self.staff_user)
-        self.give_permission(self.staff_user, PermissionChoice.READ_PORTAL_RECITATION)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_READ_RECITATION)
 
         # Act
         response = self.client.get(
@@ -127,7 +127,7 @@ class RecitationTracksListAPITest(BaseTestCase):
     def test_list_tracks_where_asset_not_found_should_return_404(self):
         # Arrange
         self.authenticate_user(self.staff_user)
-        self.give_permission(self.staff_user, PermissionChoice.READ_PORTAL_RECITATION)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_READ_RECITATION)
 
         # Act
         response = self.client.get(
@@ -140,7 +140,7 @@ class RecitationTracksListAPITest(BaseTestCase):
     def test_list_tracks_where_asset_has_no_tracks_should_return_empty_list(self):
         # Arrange
         self.authenticate_user(self.staff_user)
-        self.give_permission(self.staff_user, PermissionChoice.READ_PORTAL_RECITATION)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_READ_RECITATION)
 
         empty_asset = baker.make(
             Asset,
@@ -248,7 +248,7 @@ class RecitationTracksDeleteAPITest(BaseTestCase):
     def test_delete_tracks_where_valid_payload_should_delete_tracks(self):
         # Arrange
         self.authenticate_user(self.staff_user)
-        self.give_permission(self.staff_user, PermissionChoice.DELETE_PORTAL_RECITATION)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_DELETE_RECITATION)
 
         # Act
         response = self.client.delete(
@@ -265,7 +265,7 @@ class RecitationTracksDeleteAPITest(BaseTestCase):
     def test_delete_tracks_where_track_ids_empty_should_return_400(self):
         # Arrange
         self.authenticate_user(self.staff_user)
-        self.give_permission(self.staff_user, PermissionChoice.DELETE_PORTAL_RECITATION)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_DELETE_RECITATION)
 
         # Act
         response = self.client.delete(
@@ -281,7 +281,7 @@ class RecitationTracksDeleteAPITest(BaseTestCase):
     def test_delete_tracks_where_some_track_ids_do_not_exist_should_return_400(self):
         # Arrange
         self.authenticate_user(self.staff_user)
-        self.give_permission(self.staff_user, PermissionChoice.DELETE_PORTAL_RECITATION)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_DELETE_RECITATION)
 
         # Act
         response = self.client.delete(
@@ -297,7 +297,7 @@ class RecitationTracksDeleteAPITest(BaseTestCase):
     def test_delete_tracks_where_all_track_ids_do_not_exist_should_return_400(self):
         # Arrange
         self.authenticate_user(self.staff_user)
-        self.give_permission(self.staff_user, PermissionChoice.DELETE_PORTAL_RECITATION)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_DELETE_RECITATION)
 
         # Act
         response = self.client.delete(

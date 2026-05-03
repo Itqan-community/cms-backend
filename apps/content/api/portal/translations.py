@@ -144,7 +144,7 @@ class TranslationFilter(FilterSchema):
 
 
 @router.get("translations/", response=list[TranslationListOut])
-@permission_required([permission_class(PermissionChoice.READ_PORTAL_TRANSLATION)])
+@permission_required([permission_class(PermissionChoice.PORTAL_READ_TRANSLATION)])
 @paginate
 @ordering(ordering_fields=["id", "name", "created_at", "updated_at"])
 @searching(search_fields=["name", "name_ar", "description", "description_ar", "publisher__name"])
@@ -163,7 +163,7 @@ def list_translations(request: Request, filters: TranslationFilter = Query()):
         404: NinjaErrorResponse[Literal["publisher_not_found"]],
     },
 )
-@permission_required([permission_class(PermissionChoice.CREATE_PORTAL_TRANSLATION)])
+@permission_required([permission_class(PermissionChoice.PORTAL_CREATE_TRANSLATION)])
 def create_translation(
     request: Request,
     data: TranslationCreateIn,
@@ -196,7 +196,7 @@ def create_translation(
         404: NinjaErrorResponse[Literal["translation_not_found"]],
     },
 )
-@permission_required([permission_class(PermissionChoice.READ_PORTAL_TRANSLATION)])
+@permission_required([permission_class(PermissionChoice.PORTAL_READ_TRANSLATION)])
 def retrieve_translation(request: Request, translation_slug: str) -> Asset:
     service = TranslationService()
     return service.get_translation(translation_slug)
@@ -211,7 +211,7 @@ def retrieve_translation(request: Request, translation_slug: str) -> Asset:
         404: NinjaErrorResponse[Literal["translation_not_found"]],
     },
 )
-@permission_required([permission_class(PermissionChoice.UPDATE_PORTAL_TRANSLATION)])
+@permission_required([permission_class(PermissionChoice.PORTAL_UPDATE_TRANSLATION)])
 def update_translation_put(
     request: Request,
     translation_slug: str,
@@ -234,7 +234,7 @@ def update_translation_put(
         404: NinjaErrorResponse[Literal["translation_not_found"]],
     },
 )
-@permission_required([permission_class(PermissionChoice.UPDATE_PORTAL_TRANSLATION)])
+@permission_required([permission_class(PermissionChoice.PORTAL_UPDATE_TRANSLATION)])
 def update_translation_patch(
     request: Request,
     translation_slug: str,
@@ -255,7 +255,7 @@ def update_translation_patch(
         404: NinjaErrorResponse[Literal["translation_not_found"]],
     },
 )
-@permission_required([permission_class(PermissionChoice.DELETE_PORTAL_TRANSLATION)])
+@permission_required([permission_class(PermissionChoice.PORTAL_DELETE_TRANSLATION)])
 def delete_translation(request: Request, translation_slug: str) -> tuple[int, None]:
     logger.info(f"Deleting translation [translation_slug={translation_slug}, user_id={request.user.id}]")
     service = TranslationService()

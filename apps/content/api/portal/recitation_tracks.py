@@ -45,7 +45,7 @@ class RecitationTrackOut(Schema):
         404: NinjaErrorResponse[Literal["asset_not_found"]],
     },
 )
-@permission_required([permission_class(PermissionChoice.READ_PORTAL_RECITATION)])
+@permission_required([permission_class(PermissionChoice.PORTAL_READ_RECITATION)])
 @paginate
 def list_tracks(request: Request, recitation_slug: str):
     asset = get_object_or_404(Asset, category=CategoryChoice.RECITATION, slug=recitation_slug)
@@ -65,7 +65,7 @@ class DeleteTracksIn(Schema):
         403: NinjaErrorResponse[Literal["permission_denied"]],
     },
 )
-@permission_required([permission_class(PermissionChoice.DELETE_PORTAL_RECITATION)])
+@permission_required([permission_class(PermissionChoice.PORTAL_DELETE_RECITATION)])
 def delete_tracks(request: Request, data: DeleteTracksIn):
     repo = RecitationTrackRepository()
     tracks = repo.get_recitation_tracks_by_ids(data.track_ids)

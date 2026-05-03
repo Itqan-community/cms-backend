@@ -24,7 +24,7 @@ class ReciterListTest(BaseTestCase):
     def test_list_reciters_where_valid_request_should_return_200(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.READ_PORTAL_RECITER)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_RECITER)
 
         # Act
         response = self.client.get("/portal/reciters/")
@@ -47,7 +47,7 @@ class ReciterListTest(BaseTestCase):
     def test_list_reciters_where_search_query_should_filter_correctly(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.READ_PORTAL_RECITER)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_RECITER)
 
         # Act
         response = self.client.get("/portal/reciters/?search=ahma")
@@ -61,7 +61,7 @@ class ReciterListTest(BaseTestCase):
     def test_list_reciters_where_ordering_query_should_sort_correctly(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.READ_PORTAL_RECITER)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_RECITER)
 
         # Act
         response_desc = self.client.get("/portal/reciters/?ordering=-name")

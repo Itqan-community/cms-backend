@@ -67,7 +67,7 @@ class TafsirListTest(BaseTestCase):
 
     def test_list_tafsirs_where_assets_are_ready_should_return_only_ready_tafsir_assets(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
         response = self.client.get("/portal/tafsirs/")
 
         self.assertEqual(200, response.status_code, response.content)
@@ -93,7 +93,7 @@ class TafsirListTest(BaseTestCase):
 
     def test_list_tafsirs_where_publisher_id_is_filtered_should_return_matching_tafsirs(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
         response = self.client.get(f"/portal/tafsirs/?publisher_id={self.publisher1.id}")
 
         self.assertEqual(200, response.status_code, response.content)
@@ -105,7 +105,7 @@ class TafsirListTest(BaseTestCase):
 
     def test_list_tafsirs_where_license_code_is_filtered_should_return_matching_tafsirs(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
         # Set different licenses on tafsirs
         self.tafsir1.license = "CC0"
         self.tafsir1.save()
@@ -122,7 +122,7 @@ class TafsirListTest(BaseTestCase):
 
     def test_list_tafsirs_where_language_is_filtered_should_return_matching_tafsirs(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
         response = self.client.get("/portal/tafsirs/?language=ar")
 
         self.assertEqual(200, response.status_code, response.content)
@@ -134,7 +134,7 @@ class TafsirListTest(BaseTestCase):
 
     def test_list_tafsirs_where_is_external_is_filtered_should_return_external_tafsir(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
         external_tafsir = baker.make(
             Asset,
             category=CategoryChoice.TAFSIR,
@@ -156,7 +156,7 @@ class TafsirListTest(BaseTestCase):
 
     def test_list_tafsirs_where_search_by_name_should_return_matching_tafsir(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
         response = self.client.get("/portal/tafsirs/?search=Tabari")
 
         self.assertEqual(200, response.status_code, response.content)
@@ -167,7 +167,7 @@ class TafsirListTest(BaseTestCase):
 
     def test_list_tafsirs_where_search_by_publisher_name_should_return_matching_tafsir(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
         response = self.client.get("/portal/tafsirs/?search=Publisher%20Two")
 
         self.assertEqual(200, response.status_code, response.content)
@@ -178,7 +178,7 @@ class TafsirListTest(BaseTestCase):
 
     def test_list_tafsirs_where_ordering_by_name_should_return_sorted_names(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
         response = self.client.get("/portal/tafsirs/?ordering=name")
 
         self.assertEqual(200, response.status_code, response.content)
@@ -189,7 +189,7 @@ class TafsirListTest(BaseTestCase):
 
     def test_list_tafsirs_where_pagination_is_applied_should_return_page_and_count(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
         response = self.client.get("/portal/tafsirs/?page_size=1")
 
         self.assertEqual(200, response.status_code, response.content)

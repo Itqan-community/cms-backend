@@ -27,7 +27,7 @@ class TranslationVersionListTest(TranslationVersionBaseTest):
     def test_list_versions_where_valid_slug_should_return_versions(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
         baker.make(AssetVersion, asset=self.translation, name="V1")
         baker.make(AssetVersion, asset=self.translation, name="V2")
 
@@ -43,7 +43,7 @@ class TranslationVersionListTest(TranslationVersionBaseTest):
     def test_list_versions_where_translation_not_found_should_return_404(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
 
         # Act
         response = self.client.get("/portal/translations/non-existent/versions/")
@@ -67,7 +67,7 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
     def test_create_version_where_valid_data_should_return_201(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
         file = SimpleUploadedFile("translation.pdf", b"content", content_type="application/pdf")
 
         # Act
@@ -97,7 +97,7 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
     def test_create_version_where_asset_id_mismatch_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
 
         # Act
         response = self.client.post(
@@ -149,7 +149,7 @@ class TranslationVersionUpdateTest(TranslationVersionBaseTest):
 
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.UPDATE_PORTAL_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
         payload = {
             "asset_id": self.translation.id,
             "name": "Updated Name",
@@ -175,7 +175,7 @@ class TranslationVersionUpdateTest(TranslationVersionBaseTest):
     def test_patch_version_where_partial_data_should_return_200(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.UPDATE_PORTAL_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
         from urllib.parse import urlencode
 
         payload = {
@@ -223,7 +223,7 @@ class TranslationVersionDeleteTest(TranslationVersionBaseTest):
     def test_delete_version_should_return_204(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.DELETE_PORTAL_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TRANSLATION)
         version = baker.make(AssetVersion, asset=self.translation)
 
         # Act

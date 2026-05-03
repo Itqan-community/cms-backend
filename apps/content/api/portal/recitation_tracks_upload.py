@@ -50,8 +50,8 @@ class ValidateUploadOut(Schema):
 )
 @permission_required(
     [
-        permission_class(PermissionChoice.UPDATE_PORTAL_RECITATION)
-        | permission_class(PermissionChoice.CREATE_PORTAL_RECITATION)
+        permission_class(PermissionChoice.PORTAL_UPDATE_RECITATION)
+        | permission_class(PermissionChoice.PORTAL_CREATE_RECITATION)
     ]
 )
 def validate_upload(request: Request, data: ValidateUploadIn):
@@ -98,8 +98,8 @@ class UploadStartOut(Schema):
 )
 @permission_required(
     [
-        permission_class(PermissionChoice.UPDATE_PORTAL_RECITATION)
-        | permission_class(PermissionChoice.CREATE_PORTAL_RECITATION)
+        permission_class(PermissionChoice.PORTAL_UPDATE_RECITATION)
+        | permission_class(PermissionChoice.PORTAL_CREATE_RECITATION)
     ]
 )
 def start_upload(request: Request, data: UploadStartIn):
@@ -137,8 +137,8 @@ class UploadSignPartOut(Schema):
 )
 @permission_required(
     [
-        permission_class(PermissionChoice.UPDATE_PORTAL_RECITATION)
-        | permission_class(PermissionChoice.CREATE_PORTAL_RECITATION)
+        permission_class(PermissionChoice.PORTAL_UPDATE_RECITATION)
+        | permission_class(PermissionChoice.PORTAL_CREATE_RECITATION)
     ]
 )
 def sign_part(request: Request, data: UploadSignPartIn):
@@ -188,8 +188,8 @@ class UploadFinishOut(Schema):
 )
 @permission_required(
     [
-        permission_class(PermissionChoice.UPDATE_PORTAL_RECITATION)
-        | permission_class(PermissionChoice.CREATE_PORTAL_RECITATION)
+        permission_class(PermissionChoice.PORTAL_UPDATE_RECITATION)
+        | permission_class(PermissionChoice.PORTAL_CREATE_RECITATION)
     ]
 )
 def finish_upload(request: Request, data: UploadFinishIn):
@@ -238,8 +238,8 @@ class UploadAbortOut(Schema):
 )
 @permission_required(
     [
-        permission_class(PermissionChoice.UPDATE_PORTAL_RECITATION)
-        | permission_class(PermissionChoice.CREATE_PORTAL_RECITATION)
+        permission_class(PermissionChoice.PORTAL_UPDATE_RECITATION)
+        | permission_class(PermissionChoice.PORTAL_CREATE_RECITATION)
     ]
 )
 def abort_upload(request: Request, data: UploadAbortIn):

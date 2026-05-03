@@ -46,7 +46,7 @@ class TimingUploadOut(Schema):
         404: NinjaErrorResponse[Literal["asset_not_found"]],
     },
 )
-@permission_required([permission_class(PermissionChoice.UPLOAD_PORTAL_TIMING)])
+@permission_required([permission_class(PermissionChoice.PORTAL_UPLOAD_TIMING)])
 def upload_timing(
     request: Request,
     data: Form[TimingUploadIn],
