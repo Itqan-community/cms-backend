@@ -76,7 +76,6 @@ class BaseTestCase(TestCase):
         user: User | None,
         language: Literal["en", "ar"] | None = "en",
         domain: Domain | None = None,
-        add_superuser: bool = True,
         **kwargs,
     ):
         """
@@ -97,9 +96,6 @@ class BaseTestCase(TestCase):
             kwargs.pop("HTTP_X_SESSION_TOKEN", None)
             kwargs.pop("HTTP_AUTHORIZATION", None)
         else:
-            if add_superuser:
-                user.is_staff = True
-                user.save()
             if settings.ENABLE_ALLAUTH:
                 self.client.force_login(user=user)
                 token = create_access_token(user, session=self.client.session, claims={})

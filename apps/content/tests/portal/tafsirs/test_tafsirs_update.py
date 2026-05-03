@@ -2,6 +2,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
 from apps.content.models import Asset, CategoryChoice, StatusChoice
+from apps.core.permissions import PermissionChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -35,6 +36,7 @@ class TafsirUpdateTest(BaseTestCase):
     def test_update_tafsir_where_put_updates_all_fields_should_return_200(self):
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.UPDATE_PORTAL_TAFSIR)
 
         # Act
         response = self.client.put(
@@ -77,6 +79,7 @@ class TafsirUpdateTest(BaseTestCase):
     def test_update_tafsir_where_patch_updates_partial_fields_should_return_200(self):
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.UPDATE_PORTAL_TAFSIR)
 
         # Act
         response = self.client.patch(
@@ -104,6 +107,7 @@ class TafsirUpdateTest(BaseTestCase):
     def test_update_tafsir_where_put_missing_required_field_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.UPDATE_PORTAL_TAFSIR)
 
         # Act
         response = self.client.put(
@@ -125,6 +129,7 @@ class TafsirUpdateTest(BaseTestCase):
     def test_update_tafsir_where_patch_with_invalid_name_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.UPDATE_PORTAL_TAFSIR)
 
         # Act
         response = self.client.patch(
@@ -143,6 +148,7 @@ class TafsirUpdateTest(BaseTestCase):
     def test_update_tafsir_where_not_found_should_return_404(self):
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.UPDATE_PORTAL_TAFSIR)
 
         # Act
         response = self.client.patch(
@@ -178,6 +184,7 @@ class TafsirUpdateTest(BaseTestCase):
     def test_update_tafsir_where_thumbnail_provided_should_upload_and_return_url(self):
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.UPDATE_PORTAL_TAFSIR)
         image = SimpleUploadedFile("thumb.jpg", b"file_content", content_type="image/jpeg")
 
         # Act
@@ -207,6 +214,7 @@ class TafsirUpdateTest(BaseTestCase):
     def test_update_tafsir_where_is_external_true_and_url_present_should_return_200(self):
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.UPDATE_PORTAL_TAFSIR)
 
         # Act
         response = self.client.patch(
@@ -227,6 +235,7 @@ class TafsirUpdateTest(BaseTestCase):
     def test_update_tafsir_where_is_external_true_and_no_url_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.UPDATE_PORTAL_TAFSIR)
 
         # Act
         response = self.client.patch(
@@ -246,6 +255,7 @@ class TafsirUpdateTest(BaseTestCase):
     def test_update_tafsir_where_is_external_false_forces_url_null_should_return_200(self):
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.UPDATE_PORTAL_TAFSIR)
         # first make it external
         self.tafsir.is_external = True
         self.tafsir.external_url = "https://example.com/original"
@@ -272,3 +282,19 @@ class TafsirUpdateTest(BaseTestCase):
         self.tafsir.refresh_from_db()
         self.assertFalse(self.tafsir.is_external)
         self.assertIsNone(self.tafsir.external_url)
+
+    def test_update_tafsir_where_user_lacks_permission_should_return_403(self):
+        # Arrange
+        user_without_permission = User.objects.create_user(email="noperm@example.com", name="No Permission User")
+        self.authenticate_user(user_without_permission)
+
+        # Act
+        response = self.client.patch(
+            f"/portal/tafsirs/{self.tafsir.slug}/",
+            data={"name_en": "Updated"},
+            format="multipart",
+        )
+
+        # Assert
+        self.assertEqual(403, response.status_code)
+        self.assertEqual("permission_denied", response.json()["error_name"])

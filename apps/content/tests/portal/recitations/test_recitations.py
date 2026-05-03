@@ -1,6 +1,7 @@
 from model_bakery import baker
 
 from apps.content.models import Asset, AssetVersion, CategoryChoice, Qiraah, Reciter, Riwayah, StatusChoice
+from apps.core.permissions import PermissionChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -19,6 +20,7 @@ class RecitationPortalTest(BaseTestCase):
     def test_list_recitations_should_return_200(self):
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.READ_PORTAL_RECITATION)
         baker.make(
             Asset,
             category=CategoryChoice.RECITATION,
@@ -40,6 +42,7 @@ class RecitationPortalTest(BaseTestCase):
     def test_filter_recitations_by_publisher_should_return_filtered_results(self):
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.READ_PORTAL_RECITATION)
         pub2 = baker.make(Publisher, name="Other Publisher")
         baker.make(
             Asset,
@@ -73,6 +76,7 @@ class RecitationPortalTest(BaseTestCase):
     def test_sort_recitations_by_reciter_name_should_return_sorted_results(self):
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.READ_PORTAL_RECITATION)
         reciter_a = baker.make(Reciter, name="A Reciter")
         reciter_z = baker.make(Reciter, name="Z Reciter")
 
@@ -109,6 +113,7 @@ class RecitationPortalTest(BaseTestCase):
     def test_create_recitation_should_return_201(self):
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_RECITATION)
         payload = {
             "name_ar": "تلاوة جديدة",
             "name_en": "New Recitation",
@@ -144,6 +149,7 @@ class RecitationPortalTest(BaseTestCase):
     def test_update_recitation_put_should_return_200(self):
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.UPDATE_PORTAL_RECITATION)
         asset = baker.make(
             Asset,
             category=CategoryChoice.RECITATION,
@@ -185,6 +191,7 @@ class RecitationPortalTest(BaseTestCase):
     def test_delete_recitation_should_return_204(self):
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.DELETE_PORTAL_RECITATION)
         asset = baker.make(
             Asset,
             category=CategoryChoice.RECITATION,
@@ -206,6 +213,7 @@ class RecitationPortalTest(BaseTestCase):
     def test_retrieve_recitation_where_version_exists_should_return_ayah_timings_url(self):
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.READ_PORTAL_RECITATION)
         asset = baker.make(
             Asset,
             category=CategoryChoice.RECITATION,
@@ -234,6 +242,7 @@ class RecitationPortalTest(BaseTestCase):
     def test_retrieve_recitation_where_no_version_exists_should_return_none_ayah_timings_url(self):
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.READ_PORTAL_RECITATION)
         asset = baker.make(
             Asset,
             category=CategoryChoice.RECITATION,
@@ -251,3 +260,133 @@ class RecitationPortalTest(BaseTestCase):
         self.assertEqual(200, response.status_code)
         body = response.json()
         self.assertIsNone(body["ayah_timings_url"])
+
+    def test_list_recitations_where_unauthenticated_should_return_401(self):
+        # Arrange
+        # No authentication
+
+        # Act
+        response = self.client.get("/portal/recitations/")
+
+        # Assert
+        self.assertEqual(401, response.status_code)
+        self.assertEqual("authentication_error", response.json()["error_name"])
+
+    def test_list_recitations_where_user_lacks_permission_should_return_403(self):
+        # Arrange
+        user_without_permission = User.objects.create_user(email="noperm@example.com", name="No Permission User")
+        self.authenticate_user(user_without_permission)
+
+        # Act
+        response = self.client.get("/portal/recitations/")
+
+        # Assert
+        self.assertEqual(403, response.status_code)
+        self.assertEqual("permission_denied", response.json()["error_name"])
+
+    def test_create_recitation_where_unauthenticated_should_return_401(self):
+        # Arrange
+        # No authentication
+
+        # Act
+        response = self.client.post("/portal/recitations/", data={}, content_type="application/json")
+
+        # Assert
+        self.assertEqual(401, response.status_code)
+        self.assertEqual("authentication_error", response.json()["error_name"])
+
+    def test_create_recitation_where_user_lacks_permission_should_return_403(self):
+        # Arrange
+        user_without_permission = User.objects.create_user(email="noperm2@example.com", name="No Permission User")
+        self.authenticate_user(user_without_permission)
+
+        # Act
+        response = self.client.post(
+            "/portal/recitations/",
+            data={
+                "reciter_id": self.reciter.id,
+                "publisher_id": self.publisher.id,
+                "license": "CC-BY",
+            },
+            content_type="application/json",
+        )
+
+        # Assert
+        self.assertEqual(403, response.status_code)
+        self.assertEqual("permission_denied", response.json()["error_name"])
+
+    def test_update_recitation_where_unauthenticated_should_return_401(self):
+        # Arrange
+        asset = baker.make(
+            Asset,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            reciter=self.reciter,
+            qiraah=self.qiraah,
+            riwayah=self.riwayah,
+        )
+
+        # Act
+        response = self.client.patch(f"/portal/recitations/{asset.slug}/", data={}, content_type="application/json")
+
+        # Assert
+        self.assertEqual(401, response.status_code)
+        self.assertEqual("authentication_error", response.json()["error_name"])
+
+    def test_update_recitation_where_user_lacks_permission_should_return_403(self):
+        # Arrange
+        asset = baker.make(
+            Asset,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            reciter=self.reciter,
+            qiraah=self.qiraah,
+            riwayah=self.riwayah,
+        )
+        user_without_permission = User.objects.create_user(email="noperm3@example.com", name="No Permission User")
+        self.authenticate_user(user_without_permission)
+
+        # Act
+        response = self.client.patch(f"/portal/recitations/{asset.slug}/", data={}, content_type="application/json")
+
+        # Assert
+        self.assertEqual(403, response.status_code)
+        self.assertEqual("permission_denied", response.json()["error_name"])
+
+    def test_delete_recitation_where_unauthenticated_should_return_401(self):
+        # Arrange
+        asset = baker.make(
+            Asset,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            reciter=self.reciter,
+            qiraah=self.qiraah,
+            riwayah=self.riwayah,
+        )
+
+        # Act
+        response = self.client.delete(f"/portal/recitations/{asset.slug}/")
+
+        # Assert
+        self.assertEqual(401, response.status_code)
+        self.assertEqual("authentication_error", response.json()["error_name"])
+
+    def test_delete_recitation_where_user_lacks_permission_should_return_403(self):
+        # Arrange
+        asset = baker.make(
+            Asset,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            reciter=self.reciter,
+            qiraah=self.qiraah,
+            riwayah=self.riwayah,
+        )
+        user_without_permission = User.objects.create_user(email="noperm4@example.com", name="No Permission User")
+        self.authenticate_user(user_without_permission)
+
+        # Act
+        response = self.client.delete(f"/portal/recitations/{asset.slug}/")
+
+        # Assert
+        self.assertEqual(403, response.status_code)
+        self.assertEqual("permission_denied", response.json()["error_name"])

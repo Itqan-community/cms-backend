@@ -1,6 +1,7 @@
 from model_bakery import baker
 
 from apps.content.models import Asset, CategoryChoice, StatusChoice
+from apps.core.permissions import PermissionChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -14,6 +15,7 @@ class TranslationCreateTest(BaseTestCase):
 
     def test_create_translation_where_valid_data_should_return_201(self):
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_TRANSLATION)
         response = self.client.post(
             "/portal/translations/",
             data={
@@ -51,6 +53,7 @@ class TranslationCreateTest(BaseTestCase):
 
     def test_create_translation_where_publisher_not_found_should_return_404(self):
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_TRANSLATION)
         response = self.client.post(
             "/portal/translations/",
             data={
@@ -75,6 +78,7 @@ class TranslationCreateTest(BaseTestCase):
 
     def test_create_translation_where_name_missing_should_return_400(self):
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_TRANSLATION)
         response = self.client.post(
             "/portal/translations/",
             data={
@@ -120,6 +124,7 @@ class TranslationCreateTest(BaseTestCase):
 
     def test_create_translation_where_only_english_name_should_create_successfully(self):
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_TRANSLATION)
         response = self.client.post(
             "/portal/translations/",
             data={
@@ -144,6 +149,7 @@ class TranslationCreateTest(BaseTestCase):
 
     def test_create_translation_where_is_external_true_and_url_present_should_return_201(self):
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_TRANSLATION)
         response = self.client.post(
             "/portal/translations/",
             data={
@@ -165,6 +171,7 @@ class TranslationCreateTest(BaseTestCase):
 
     def test_create_translation_where_is_external_true_and_no_url_should_return_400(self):
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.CREATE_PORTAL_TRANSLATION)
         response = self.client.post(
             "/portal/translations/",
             data={
@@ -182,3 +189,26 @@ class TranslationCreateTest(BaseTestCase):
         self.assertEqual(400, response.status_code, response.content)
         body = response.json()
         self.assertEqual("external_url_required", body["error_name"])
+
+    def test_create_translation_where_user_lacks_permission_should_return_403(self):
+        user_without_permission = User.objects.create_user(email="noperm@example.com", name="No Permission User")
+        self.authenticate_user(user_without_permission)
+        response = self.client.post(
+            "/portal/translations/",
+            data={
+                "name_ar": "ترجمة",
+                "name_en": "Translation",
+                "description_ar": "وصف",
+                "description_en": "Description",
+                "long_description_ar": "",
+                "long_description_en": "",
+                "license": "CC-BY",
+                "language": "en",
+                "publisher_id": self.publisher.id,
+                "is_external": False,
+                "external_url": None,
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(403, response.status_code)
+        self.assertEqual("permission_denied", response.json()["error_name"])

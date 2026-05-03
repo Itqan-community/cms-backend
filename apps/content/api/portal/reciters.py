@@ -205,7 +205,7 @@ def patch_reciter(
         404: NinjaErrorResponse[Literal["reciter_not_found"]],
     },
 )
-@permission_required([permission_class(PermissionChoice.DROP_PORTAL_RECITER)])
+@permission_required([permission_class(PermissionChoice.DELETE_PORTAL_RECITER)])
 def delete_reciter(request: Request, reciter_slug: str):
     logger.info(f"Deleting reciter [reciter_slug={reciter_slug}, user_id={request.user.id}]")
     service = ReciterService()

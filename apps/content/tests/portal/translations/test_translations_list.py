@@ -1,6 +1,7 @@
 from model_bakery import baker
 
 from apps.content.models import Asset, CategoryChoice, StatusChoice
+from apps.core.permissions import PermissionChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -66,6 +67,7 @@ class TranslationListTest(BaseTestCase):
 
     def test_list_translations_where_assets_are_ready_should_return_only_ready_assets(self):
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TRANSLATION)
         response = self.client.get("/portal/translations/")
 
         self.assertEqual(200, response.status_code, response.content)
@@ -90,6 +92,7 @@ class TranslationListTest(BaseTestCase):
 
     def test_list_translations_where_publisher_id_is_filtered_should_return_matching_translations(self):
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TRANSLATION)
         response = self.client.get(f"/portal/translations/?publisher_id={self.publisher1.id}")
 
         self.assertEqual(200, response.status_code, response.content)
@@ -101,6 +104,7 @@ class TranslationListTest(BaseTestCase):
 
     def test_list_translations_where_license_code_is_filtered_should_return_matching_translations(self):
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TRANSLATION)
         # Set different licenses on translations
         self.translation1.license = "CC0"
         self.translation1.save()
@@ -117,6 +121,7 @@ class TranslationListTest(BaseTestCase):
 
     def test_list_translations_where_language_is_filtered_should_return_matching_translations(self):
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TRANSLATION)
         self.translation1.language = "ar"
         self.translation1.save()
 
@@ -130,6 +135,7 @@ class TranslationListTest(BaseTestCase):
 
     def test_list_translations_where_is_external_is_filtered_should_return_external_translation(self):
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TRANSLATION)
         external_translation = baker.make(
             Asset,
             category=CategoryChoice.TRANSLATION,
@@ -151,6 +157,7 @@ class TranslationListTest(BaseTestCase):
 
     def test_list_translations_where_search_by_name_should_return_matching_translation(self):
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TRANSLATION)
         response = self.client.get("/portal/translations/?search=Sahih")
 
         self.assertEqual(200, response.status_code, response.content)
@@ -161,6 +168,7 @@ class TranslationListTest(BaseTestCase):
 
     def test_list_translations_where_search_by_publisher_name_should_return_matching_translation(self):
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TRANSLATION)
         response = self.client.get("/portal/translations/?search=Publisher%20Two")
 
         self.assertEqual(200, response.status_code, response.content)
@@ -171,6 +179,7 @@ class TranslationListTest(BaseTestCase):
 
     def test_list_translations_where_ordering_by_name_should_return_sorted_names(self):
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TRANSLATION)
         response = self.client.get("/portal/translations/?ordering=name")
 
         self.assertEqual(200, response.status_code, response.content)
@@ -181,6 +190,7 @@ class TranslationListTest(BaseTestCase):
 
     def test_list_translations_where_pagination_is_applied_should_return_page_and_count(self):
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TRANSLATION)
         response = self.client.get("/portal/translations/?page_size=1")
 
         self.assertEqual(200, response.status_code, response.content)
@@ -192,3 +202,10 @@ class TranslationListTest(BaseTestCase):
     def test_list_translations_where_unauthenticated_should_return_401(self):
         response = self.client.get("/portal/translations/")
         self.assertEqual(401, response.status_code)
+
+    def test_list_translations_where_user_lacks_permission_should_return_403(self):
+        user_without_permission = User.objects.create_user(email="noperm@example.com", name="No Permission User")
+        self.authenticate_user(user_without_permission)
+        response = self.client.get("/portal/translations/")
+        self.assertEqual(403, response.status_code)
+        self.assertEqual("permission_denied", response.json()["error_name"])

@@ -1,6 +1,7 @@
 from model_bakery import baker
 
 from apps.content.models import Asset, AssetVersion, CategoryChoice, StatusChoice
+from apps.core.permissions import PermissionChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -34,6 +35,7 @@ class TranslationDetailTest(BaseTestCase):
 
     def test_retrieve_translation_where_valid_slug_should_return_all_fields(self):
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TRANSLATION)
         response = self.client.get(f"/portal/translations/{self.translation.slug}/")
 
         self.assertEqual(200, response.status_code, response.content)
@@ -69,6 +71,7 @@ class TranslationDetailTest(BaseTestCase):
 
     def test_retrieve_translation_where_not_found_should_return_404(self):
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.READ_PORTAL_TRANSLATION)
         response = self.client.get("/portal/translations/nonexistent-slug/")
 
         self.assertEqual(404, response.status_code, response.content)
@@ -78,3 +81,10 @@ class TranslationDetailTest(BaseTestCase):
     def test_retrieve_translation_where_unauthenticated_should_return_401(self):
         response = self.client.get(f"/portal/translations/{self.translation.slug}/")
         self.assertEqual(401, response.status_code)
+
+    def test_retrieve_translation_where_user_lacks_permission_should_return_403(self):
+        user_without_permission = User.objects.create_user(email="noperm@example.com", name="No Permission User")
+        self.authenticate_user(user_without_permission)
+        response = self.client.get(f"/portal/translations/{self.translation.slug}/")
+        self.assertEqual(403, response.status_code)
+        self.assertEqual("permission_denied", response.json()["error_name"])

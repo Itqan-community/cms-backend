@@ -9,11 +9,14 @@ from apps.content.models import Asset, LicenseChoice
 from apps.content.services.recitation import RecitationService
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
+from apps.core.ninja_utils.permission_required import permission_required
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
 from apps.core.ninja_utils.types import AbsoluteUrl
+from apps.core.permission_utils import permission_class
+from apps.core.permissions import PermissionChoice
 
 router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
 logger = logging.getLogger(__name__)
@@ -168,6 +171,7 @@ class RecitationFilter(FilterSchema):
 
 
 @router.get("recitations/", response=list[RecitationListOut])
+@permission_required([permission_class(PermissionChoice.READ_PORTAL_RECITATION)])
 @paginate
 @ordering(
     ordering_fields=[
@@ -214,6 +218,7 @@ def list_recitations(request: Request, filters: RecitationFilter = Query()):
         | NinjaErrorResponse[Literal["riwayah_not_found"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.CREATE_PORTAL_RECITATION)])
 def create_recitation(
     request: Request,
     data: RecitationCreateIn,
@@ -247,6 +252,7 @@ def create_recitation(
         404: NinjaErrorResponse[Literal["recitation_not_found"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.READ_PORTAL_RECITATION)])
 def retrieve_recitation(request: Request, recitation_slug: str) -> Asset:
     service = RecitationService()
     recitation = service.get_recitation(recitation_slug)
@@ -266,6 +272,7 @@ def retrieve_recitation(request: Request, recitation_slug: str) -> Asset:
         | NinjaErrorResponse[Literal["riwayah_not_found"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.UPDATE_PORTAL_RECITATION)])
 def update_recitation_put(
     request: Request,
     recitation_slug: str,
@@ -292,6 +299,7 @@ def update_recitation_put(
         | NinjaErrorResponse[Literal["riwayah_not_found"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.UPDATE_PORTAL_RECITATION)])
 def update_recitation_patch(
     request: Request,
     recitation_slug: str,
@@ -312,6 +320,7 @@ def update_recitation_patch(
         404: NinjaErrorResponse[Literal["recitation_not_found"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.DELETE_PORTAL_RECITATION)])
 def delete_recitation(request: Request, recitation_slug: str) -> tuple[int, None]:
     logger.info(f"Deleting recitation [recitation_slug={recitation_slug}, user_id={request.user.id}]")
     service = RecitationService()
