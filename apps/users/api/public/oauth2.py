@@ -2,7 +2,7 @@ from django.conf import settings
 from django.http import HttpRequest, HttpResponseBase
 from django.views.decorators.csrf import csrf_exempt
 from ninja import Schema
-from oauth2_provider.views import AuthorizationView, RevokeTokenView, TokenView
+from oauth2_provider.views import RevokeTokenView, TokenView
 
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
@@ -10,17 +10,10 @@ from apps.core.ninja_utils.tags import NinjaTag
 router = ItqanRouter(tags=[NinjaTag.USERS])
 
 
-class OAuth2AuthorizeResponseSchema(Schema):
-    authorization_url: str
-    state: str
-
-
 class Oauth2TokenResponseSchema(Schema):
     access_token: str
     expires_in: int
     token_type: str
-    scope: str
-    refresh_token: str
 
 
 if settings.ENABLE_OAUTH2:
@@ -30,9 +23,11 @@ if settings.ENABLE_OAUTH2:
     def token_endpoint(request: HttpRequest) -> HttpResponseBase:
         """
         OAuth2 Token Endpoint.
-        Supports: authorization_code, password, client_credentials, refresh_token.
+        Supports: client_credentials only. grant_type is always enforced as client_credentials.
         Requires client credentials in the Authorization: Basic header.
         """
+        request.POST = request.POST.copy()
+        request.POST["grant_type"] = "client_credentials"
         view = TokenView.as_view()
         return view(request)
 
@@ -44,14 +39,4 @@ if settings.ENABLE_OAUTH2:
         Requires client credentials in the Authorization: Basic header.
         """
         view = RevokeTokenView.as_view()
-        return view(request)
-
-    @router.api_operation(["GET", "POST"], "authorize/", auth=None)
-    def authorize_endpoint(request: HttpRequest) -> HttpResponseBase:
-        """
-        OAuth2 Authorization Endpoint.
-        Supports: code.
-        Requires user to be logged in (SessionAuthentication).
-        """
-        view = AuthorizationView.as_view()
         return view(request)

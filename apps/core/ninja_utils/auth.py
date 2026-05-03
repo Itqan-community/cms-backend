@@ -62,7 +62,7 @@ class OAuth2Auth(OAuth2Authentication):
         request.user = user
         request.access_token = token
 
-        if bearer and token is not None:
+        if bearer and user is not None and token is not None:
             cache.set(cache_key, (user.pk, token.pk), _OAUTH2_CACHE_TTL)
 
         return res

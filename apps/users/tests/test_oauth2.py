@@ -10,103 +10,128 @@ import pytest
 from apps.core.tests import BaseTestCase
 from apps.users.models import User
 
+_CLIENT_ID = "test_client_id"
+_CLIENT_SECRET = "test_client_secret"
+
+
+def _basic_auth(client_id=_CLIENT_ID, client_secret=_CLIENT_SECRET) -> dict:
+    encoded = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
+    return {"HTTP_AUTHORIZATION": f"Basic {encoded}"}
+
 
 @pytest.mark.skipif(not settings.ENABLE_OAUTH2, reason="OAuth2 disabled in settings")
 class OAuth2Tests(BaseTestCase):
-    """
-    Test suite for OAuth2.0 implementation.
-    Tests all grant types and credential enforcement.
-    """
 
     def setUp(self):
         super().setUp()
-        self.user_password = "testpassword123"
-        self.user = User.objects.create_user(
-            email="oauthuser@example.com", password=self.user_password, name="OAuth User"
-        )
-        # Create an OAuth2 Application
+        self.user = User.objects.create_user(email="oauthuser@example.com", password="pass123", name="OAuth User")
         self.app = Application.objects.create(
-            name="Test App",
-            redirect_uris="http://localhost:8000/callback",
             user=self.user,
+            name="Test App",
             client_type=Application.CLIENT_CONFIDENTIAL,
-            authorization_grant_type=Application.GRANT_AUTHORIZATION_CODE,
-            client_id="test_client_id",
-            client_secret="test_client_secret",
+            authorization_grant_type=Application.GRANT_CLIENT_CREDENTIALS,
+            client_id=_CLIENT_ID,
+            client_secret=_CLIENT_SECRET,
         )
-        self.auth_header = {
-            "HTTP_AUTHORIZATION": "Basic " + base64.b64encode(b"test_client_id:test_client_secret").decode("ascii")
-        }
 
-    def test_client_credentials_grant_where_valid_header_should_return_200(self):
-        """Test client_credentials grant type"""
+    # --- Token endpoint ---
+
+    def test_token_where_valid_client_credentials_should_return_access_token(self):
         # Arrange
-        self.app.authorization_grant_type = Application.GRANT_CLIENT_CREDENTIALS
-        self.app.save()
         data = {"grant_type": "client_credentials"}
 
         # Act
-        response = self.client.post("/token/", data=data, **self.auth_header)
+        response = self.client.post("/token/", data=data, **_basic_auth())
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         res_data = response.json()
         self.assertIn("access_token", res_data)
         self.assertEqual("Bearer", res_data["token_type"])
+        self.assertNotIn("refresh_token", res_data)
 
-    def test_password_grant_where_valid_credentials_should_return_200(self):
-        """Test password grant type"""
+    def test_token_where_invalid_client_secret_should_return_401_invalid_client(self):
         # Arrange
-        self.app.authorization_grant_type = Application.GRANT_PASSWORD
-        self.app.save()
-        data = {
-            "grant_type": "password",
-            "username": self.user.email,
-            "password": self.user_password,
-        }
+        data = {"grant_type": "client_credentials"}
 
         # Act
-        response = self.client.post("/token/", data=data, **self.auth_header)
+        response = self.client.post("/token/", data=data, **_basic_auth(client_secret="wrong_secret"))
+
+        # Assert
+        self.assertEqual(401, response.status_code, response.content)
+        self.assertEqual("invalid_client", response.json()["error"])
+
+    def test_token_where_any_grant_type_is_overridden_to_client_credentials(self):
+        # Arrange — grant_type is always forced to client_credentials server-side
+        data = {"grant_type": "password", "username": "oauthuser@example.com", "password": "pass123"}
+
+        # Act
+        response = self.client.post("/token/", data=data, **_basic_auth())
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
-        res_data = response.json()
-        self.assertIn("access_token", res_data)
-        self.assertIn("refresh_token", res_data)
+        self.assertIn("access_token", response.json())
 
-    def test_protected_endpoint_where_valid_oauth2_token_should_return_200(self):
-        """Verify that Ninja endpoints accept the new OAuth2 tokens"""
+    def test_token_where_no_authorization_header_should_return_401(self):
         # Arrange
-        token = AccessToken.objects.create(
-            user=self.user,
-            application=self.app,
-            token=secrets.token_hex(20),
-            expires=timezone.now() + datetime.timedelta(days=1),  # Future date
-            scope="read write",
-        )
-        headers = {"HTTP_AUTHORIZATION": f"Bearer {token.token}"}
+        data = {"grant_type": "client_credentials"}
 
         # Act
-        # recitations/ endpoint is protected by ninja_oauth2_auth
-        response = self.client.get("/recitations/", **headers)
+        response = self.client.post("/token/", data=data)
 
         # Assert
-        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(401, response.status_code, response.content)
 
-    def test_revoke_token_where_valid_token_should_return_200(self):
-        """Test token revocation endpoint"""
+    # --- Protected developers_api endpoint ---
+
+    def test_protected_endpoint_where_valid_token_should_return_200(self):
         # Arrange
         token = AccessToken.objects.create(
             user=self.user,
             application=self.app,
             token=secrets.token_hex(20),
             expires=timezone.now() + datetime.timedelta(days=1),
-            scope="read write",
+            scope="read",
+        )
+
+        # Act
+        response = self.client.get("/recitations/", headers={"authorization": f"Bearer {token.token}"})
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+
+    def test_protected_endpoint_where_expired_token_should_return_401(self):
+        # Arrange
+        token = AccessToken.objects.create(
+            user=self.user,
+            application=self.app,
+            token=secrets.token_hex(20),
+            expires=timezone.now() - datetime.timedelta(seconds=1),
+            scope="read",
+        )
+
+        # Act
+        response = self.client.get("/recitations/", headers={"authorization": f"Bearer {token.token}"})
+
+        # Assert
+        self.assertEqual(401, response.status_code, response.content)
+
+    # --- Revoke endpoint ---
+
+    def test_revoke_token_where_valid_token_should_delete_it(self):
+        # Arrange
+        token = AccessToken.objects.create(
+            user=self.user,
+            application=self.app,
+            token=secrets.token_hex(20),
+            expires=timezone.now() + datetime.timedelta(days=1),
+            scope="read",
         )
         data = {"token": token.token}
 
         # Act
-        self.client.post("/revoke/", data=data, **self.auth_header)
+        response = self.client.post("/revoke/", data=data, **_basic_auth())
 
         # Assert
+        self.assertEqual(200, response.status_code, response.content)
         self.assertFalse(AccessToken.objects.filter(token=token.token).exists())
