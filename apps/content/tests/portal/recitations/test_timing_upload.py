@@ -14,6 +14,7 @@ from apps.content.models import (
     Riwayah,
     StatusChoice,
 )
+from apps.core.permissions import PermissionChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -85,6 +86,7 @@ class TimingUploadSuccessTest(TimingUploadBaseTest):
     def test_upload_timing_where_valid_files_should_return_200(self):
         # Arrange
         self.authenticate_user(self.staff_user)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPLOAD_TIMING)
         timing_file = make_timing_file(surah_number=1)
 
         # Act
@@ -115,6 +117,7 @@ class TimingUploadSuccessTest(TimingUploadBaseTest):
     def test_upload_timing_where_existing_timings_should_update_and_skip(self):
         # Arrange
         self.authenticate_user(self.staff_user)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPLOAD_TIMING)
         # Pre-create one timing (will be updated) and one that won't change (will be skipped)
         baker.make(
             RecitationAyahTiming,
@@ -153,6 +156,7 @@ class TimingUploadSuccessTest(TimingUploadBaseTest):
     def test_upload_timing_where_missing_track_for_surah_should_report_in_missing_tracks(self):
         # Arrange
         self.authenticate_user(self.staff_user)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPLOAD_TIMING)
         # File for surah 2, but no track exists for surah 2
         timing_file = make_timing_file(surah_number=2)
 
@@ -174,6 +178,7 @@ class TimingUploadSuccessTest(TimingUploadBaseTest):
     def test_upload_timing_where_no_asset_version_should_create_asset_version(self):
         # Arrange
         self.authenticate_user(self.staff_user)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPLOAD_TIMING)
         # Delete the AssetVersion so sync will create a new one
         self.asset_version.delete()
         timing_file = make_timing_file(surah_number=1)
@@ -212,9 +217,9 @@ class TimingUploadAuthTest(TimingUploadBaseTest):
         # Assert
         self.assertEqual(401, response.status_code, response.content)
 
-    def test_upload_timing_where_non_staff_should_return_401(self):
+    def test_upload_timing_where_user_lacks_permission_should_return_403(self):
         # Arrange
-        self.authenticate_user(self.non_staff_user, add_superuser=False)
+        self.authenticate_user(self.non_staff_user)
         timing_file = make_timing_file(surah_number=1)
 
         # Act
@@ -227,13 +232,15 @@ class TimingUploadAuthTest(TimingUploadBaseTest):
         )
 
         # Assert
-        self.assertEqual(401, response.status_code, response.content)
+        self.assertEqual(403, response.status_code, response.content)
+        self.assertEqual("permission_denied", response.json()["error_name"])
 
 
 class TimingUploadErrorTest(TimingUploadBaseTest):
     def test_upload_timing_where_asset_not_found_should_return_404(self):
         # Arrange
         self.authenticate_user(self.staff_user)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPLOAD_TIMING)
         timing_file = make_timing_file(surah_number=1)
 
         # Act
@@ -252,6 +259,7 @@ class TimingUploadErrorTest(TimingUploadBaseTest):
     def test_upload_timing_where_malformed_json_file_should_return_400(self):
         # Arrange
         self.authenticate_user(self.staff_user)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPLOAD_TIMING)
         bad_file = SimpleUploadedFile(
             name="001.json",
             content=b"not valid json {{{{",
@@ -274,6 +282,7 @@ class TimingUploadErrorTest(TimingUploadBaseTest):
     def test_upload_timing_where_end_before_start_should_return_400(self):
         # Arrange
         self.authenticate_user(self.staff_user)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPLOAD_TIMING)
         timing_file = make_timing_file(
             surah_number=1,
             ayahs=[{"ayah_number": 1, "start": 10.0, "end": 5.0}],  # end < start

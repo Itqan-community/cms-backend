@@ -7,10 +7,13 @@ from pydantic import AwareDatetime, Field
 from apps.content.models import AssetVersion
 from apps.content.services.tafsir import TafsirService
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
+from apps.core.ninja_utils.permission_required import permission_required
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.core.permission_utils import permission_class
+from apps.core.permissions import PermissionChoice
 
 router = ItqanRouter(tags=[NinjaTag.TAFSIRS])
 
@@ -56,6 +59,7 @@ class TafsirVersionPatchIn(Schema):
         404: NinjaErrorResponse[Literal["tafsir_not_found"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.PORTAL_READ_TAFSIR)])
 @paginate
 @searching(search_fields=["name", "summary"])
 def list_tafsir_versions(request: Request, tafsir_slug: str):
@@ -71,6 +75,7 @@ def list_tafsir_versions(request: Request, tafsir_slug: str):
         404: NinjaErrorResponse[Literal["tafsir_not_found"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.PORTAL_CREATE_TAFSIR)])
 def create_tafsir_version(
     request: Request,
     tafsir_slug: str,
@@ -103,6 +108,7 @@ def create_tafsir_version(
         404: NinjaErrorResponse[Literal["tafsir_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.PORTAL_UPDATE_TAFSIR)])
 def update_tafsir_version_put(
     request: Request,
     tafsir_slug: str,
@@ -135,6 +141,7 @@ def update_tafsir_version_put(
         404: NinjaErrorResponse[Literal["tafsir_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.PORTAL_UPDATE_TAFSIR)])
 def update_tafsir_version_patch(
     request: Request,
     tafsir_slug: str,
@@ -166,6 +173,7 @@ def update_tafsir_version_patch(
         404: NinjaErrorResponse[Literal["tafsir_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.PORTAL_DELETE_TAFSIR)])
 def delete_tafsir_version(request: Request, tafsir_slug: str, version_id: int) -> tuple[int, None]:
     service = TafsirService()
     service.delete_tafsir_version(tafsir_slug, version_id)

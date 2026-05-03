@@ -1,4 +1,5 @@
 from apps.content.models import Reciter
+from apps.core.permissions import PermissionChoice
 from apps.core.tests import BaseTestCase
 from apps.users.models import User
 
@@ -15,6 +16,7 @@ class ReciterDeleteTest(BaseTestCase):
     def test_delete_reciter_where_reciter_exists_should_return_204(self):
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_RECITER)
 
         # Act
         response = self.client.delete(f"/portal/reciters/{self.reciter.slug}/")
@@ -37,6 +39,7 @@ class ReciterDeleteTest(BaseTestCase):
     def test_delete_reciter_where_non_existent_slug_should_return_404(self):
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_RECITER)
 
         # Act
         response = self.client.delete("/portal/reciters/non-existent/")
@@ -44,3 +47,15 @@ class ReciterDeleteTest(BaseTestCase):
         # Assert
         self.assertEqual(404, response.status_code)
         self.assertEqual("reciter_not_found", response.json()["error_name"])
+
+    def test_delete_reciter_where_user_lacks_permission_should_return_403(self):
+        # Arrange
+        user_without_permission = User.objects.create_user(email="noperm@example.com", name="No Permission User")
+        self.authenticate_user(user_without_permission)
+
+        # Act
+        response = self.client.delete(f"/portal/reciters/{self.reciter.slug}/")
+
+        # Assert
+        self.assertEqual(403, response.status_code)
+        self.assertEqual("permission_denied", response.json()["error_name"])

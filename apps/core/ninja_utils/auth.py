@@ -1,6 +1,6 @@
 import hashlib
 
-from allauth.headless.contrib.ninja.security import JWTTokenAuth, jwt_token_auth
+from allauth.headless.contrib.ninja.security import jwt_token_auth
 from django.conf import settings
 from django.core.cache import cache
 from oauth2_provider.contrib.rest_framework import OAuth2Authentication
@@ -15,27 +15,6 @@ class JWTAuth(JWTAuthentication):
         if res is None:
             return None
         request.user = res[0]
-        return res
-
-
-class JWTAuthStaff(JWTAuthentication):
-    def __call__(self, request):
-        res = self.authenticate(request)
-        if res is None:
-            return None
-        request.user = res[0]
-        if not request.user.is_staff and not request.user.is_superuser:
-            return None
-        return res
-
-
-class JWTAllAuthStaff(JWTTokenAuth):
-    def __call__(self, request):
-        res = super().__call__(request)
-        if res is None:
-            return None
-        if not request.user.is_staff and not request.user.is_superuser:
-            return None
         return res
 
 
@@ -103,10 +82,8 @@ class OAuth2OptionalAuth(OAuth2Auth):
 
 if settings.ENABLE_ALLAUTH:
     ninja_jwt_auth = [jwt_token_auth]
-    ninja_jwt_staff_auth = JWTAllAuthStaff()
 else:
     ninja_jwt_auth = [JWTAuth(), JWTAuthStateless()]
-    ninja_jwt_staff_auth = JWTAuthStaff()
 if settings.ENABLE_OAUTH2:
     ninja_oauth2_auth = [OAuth2Auth()]
 else:

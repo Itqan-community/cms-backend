@@ -1,6 +1,7 @@
 from model_bakery import baker
 
 from apps.content.models import Asset, CategoryChoice, StatusChoice
+from apps.core.permissions import PermissionChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -33,6 +34,7 @@ class TranslationUpdateTest(BaseTestCase):
 
     def test_update_translation_where_put_updates_all_fields_should_return_200(self):
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
         response = self.client.put(
             f"/portal/translations/{self.translation.slug}/",
             data={
@@ -72,6 +74,7 @@ class TranslationUpdateTest(BaseTestCase):
 
     def test_update_translation_where_patch_updates_partial_fields_should_return_200(self):
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
         response = self.client.patch(
             f"/portal/translations/{self.translation.slug}/",
             data={
@@ -96,6 +99,7 @@ class TranslationUpdateTest(BaseTestCase):
 
     def test_update_translation_where_put_missing_required_field_should_return_400(self):
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
         response = self.client.put(
             f"/portal/translations/{self.translation.slug}/",
             data={
@@ -114,6 +118,7 @@ class TranslationUpdateTest(BaseTestCase):
 
     def test_update_translation_where_patch_with_invalid_name_should_return_400(self):
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
         response = self.client.patch(
             f"/portal/translations/{self.translation.slug}/",
             data={
@@ -129,6 +134,7 @@ class TranslationUpdateTest(BaseTestCase):
 
     def test_update_translation_where_not_found_should_return_404(self):
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
         response = self.client.patch(
             "/portal/translations/nonexistent-slug/",
             data={
@@ -153,6 +159,7 @@ class TranslationUpdateTest(BaseTestCase):
 
     def test_update_translation_where_is_external_true_and_url_present_should_return_200(self):
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
         response = self.client.patch(
             f"/portal/translations/{self.translation.slug}/",
             data={
@@ -169,6 +176,7 @@ class TranslationUpdateTest(BaseTestCase):
 
     def test_update_translation_where_is_external_true_and_no_url_should_return_400(self):
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
         response = self.client.patch(
             f"/portal/translations/{self.translation.slug}/",
             data={
@@ -184,6 +192,7 @@ class TranslationUpdateTest(BaseTestCase):
 
     def test_update_translation_where_is_external_false_forces_url_null_should_return_200(self):
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
         # first make it external
         self.translation.is_external = True
         self.translation.external_url = "https://example.com/old"
@@ -207,3 +216,14 @@ class TranslationUpdateTest(BaseTestCase):
         self.translation.refresh_from_db()
         self.assertFalse(self.translation.is_external)
         self.assertIsNone(self.translation.external_url)
+
+    def test_update_translation_where_user_lacks_permission_should_return_403(self):
+        user_without_permission = User.objects.create_user(email="noperm@example.com", name="No Permission User")
+        self.authenticate_user(user_without_permission)
+        response = self.client.patch(
+            f"/portal/translations/{self.translation.slug}/",
+            data={"name_en": "Updated"},
+            content_type="application/json",
+        )
+        self.assertEqual(403, response.status_code)
+        self.assertEqual("permission_denied", response.json()["error_name"])

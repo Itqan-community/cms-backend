@@ -1,5 +1,8 @@
+from typing import Any
+
 from django.conf import settings
 from django.contrib.auth import authenticate
+from ninja import Schema
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.core.ninja_utils.errors import ItqanError
@@ -8,9 +11,20 @@ from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
 from apps.users.models import Developer, User
 
-from ._schemas import LoginSchema, TokenResponseSchema
-
 router = ItqanRouter(tags=[NinjaTag.AUTH])
+
+
+class TokenResponseSchema(Schema):
+    access: str
+    refresh: str
+    user: dict[str, Any]
+
+
+class LoginSchema(Schema):
+    email: str
+    password: str
+
+
 if not settings.ENABLE_ALLAUTH:
 
     @router.post(

@@ -213,6 +213,57 @@ msgstr "خطأ في المصادقة"
 msgid "Something went wrong - Internal Server Error"
 msgstr "حدث خطأ ما - خطأ داخلي في الخادم"
 
+msgid "Portal - View Reciters"
+msgstr "لوحة التحكم - عرض القراء"
+
+msgid "Portal - Create Reciters"
+msgstr "لوحة التحكم - إنشاء قراء"
+
+msgid "Portal - Update Reciters"
+msgstr "لوحة التحكم - تحديث القراء"
+
+msgid "Portal - Delete Reciters"
+msgstr "لوحة التحكم - حذف القراء"
+
+msgid "Portal - View Recitations"
+msgstr "لوحة التحكم - عرض التلاوات"
+
+msgid "Portal - Create Recitations"
+msgstr "لوحة التحكم - إنشاء تلاوات"
+
+msgid "Portal - Update Recitations"
+msgstr "لوحة التحكم - تحديث التلاوات"
+
+msgid "Portal - Delete Recitations"
+msgstr "لوحة التحكم - حذف التلاوات"
+
+msgid "Portal - Upload Recitation Timings"
+msgstr "لوحة التحكم - تحميل أوقات التلاوات"
+
+msgid "Portal - View Tafsirs"
+msgstr "لوحة التحكم - عرض التفاسير"
+
+msgid "Portal - Create Tafsirs"
+msgstr "لوحة التحكم - إنشاء تفاسير"
+
+msgid "Portal - Update Tafsirs"
+msgstr "لوحة التحكم - تحديث التفاسير"
+
+msgid "Portal - Delete Tafsirs"
+msgstr "لوحة التحكم - حذف التفاسير"
+
+msgid "View Portal Translations"
+msgstr "عرض الترجمات في لوحة التحكم"
+
+msgid "Create Portal Translations"
+msgstr "إنشاء ترجمات في لوحة التحكم"
+
+msgid "Update Portal Translations"
+msgstr "تحديث الترجمات في لوحة التحكم"
+
+msgid "Delete Portal Translations"
+msgstr "حذف الترجمات من لوحة التحكم"
+
 msgid "Owner"
 msgstr "مالك"
 

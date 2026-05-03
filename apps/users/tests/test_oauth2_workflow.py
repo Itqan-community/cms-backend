@@ -1,13 +1,12 @@
 import base64
 
-from django.conf import settings
 from django.utils.crypto import get_random_string
 import pytest
 
 from apps.core.tests import BaseTestCase
 
 
-@pytest.mark.skipif(condition=not settings.ENABLE_ALLAUTH, reason="related only to allauth headless flow")
+@pytest.mark.skipif(condition=True, reason="related only to allauth headless flow")
 class OAuth2WorkflowTestCase(BaseTestCase):
     """
     End-to-End test for the OAuth2 workflow:

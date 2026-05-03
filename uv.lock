@@ -675,6 +675,18 @@ phonenumbers = [
 ]
 
 [[package]]
+name = "django-plain-permissions"
+version = "0.0.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a4/ad/8e9692f62ba4bc147d2a641eb5fb146b3191582f9bd13dc2be1b168efa79/django_plain_permissions-0.0.2.tar.gz", hash = "sha256:d9482f66e4d88f7fb836e8276753b540f2c75bde988ff558f35172ca363d6a02", size = 11122, upload-time = "2024-04-15T16:18:08.679Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5e/cd/fd58970d81be096b540a632e44daaf6c3503cd2a208d356cae2778ea5e9d/django_plain_permissions-0.0.2-py3-none-any.whl", hash = "sha256:0ff6063342151baae71186de2897fe8e5f733d881361639f833598aeea389349", size = 11001, upload-time = "2024-04-15T16:18:06.937Z" },
+]
+
+[[package]]
 name = "django-redis"
 version = "6.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1075,6 +1087,7 @@ dependencies = [
     { name = "django-ninja" },
     { name = "django-oauth-toolkit" },
     { name = "django-phonenumber-field", extra = ["phonenumbers"] },
+    { name = "django-plain-permissions" },
     { name = "django-redis" },
     { name = "django-storages", extra = ["s3"] },
     { name = "djangorestframework" },
@@ -1138,6 +1151,7 @@ requires-dist = [
     { name = "django-ninja", specifier = "==1.5.1" },
     { name = "django-oauth-toolkit", specifier = "==3.2.0" },
     { name = "django-phonenumber-field", extras = ["phonenumbers"], specifier = "==8.1.0" },
+    { name = "django-plain-permissions", specifier = "==0.0.2" },
     { name = "django-redis", specifier = "==6.0.*" },
     { name = "django-storages", extras = ["s3"], specifier = "==1.14.*" },
     { name = "djangorestframework", specifier = ">=3.16.1" },

@@ -4,6 +4,7 @@ import sys
 
 from decouple import config
 
+from apps.core.permissions import PermissionChoice
 from config.helpers.sentry import enable_sentry
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -55,6 +56,7 @@ THIRD_PARTY_APPS = [
     "django_countries",
     "django_extended_makemessages",
     *(["django_watchfiles"] if DEBUG else []),
+    "plain_permissions",
 ]
 
 COUNTRIES_OVERRIDE = {"IL": None}
@@ -508,3 +510,10 @@ if MIXPANEL_ENABLED:
     MIDDLEWARE.append("apps.usage_tracking.middlewares.usage_tracking_middleware.UsageTrackingMiddleware")
 else:
     MIDDLEWARE.append("oauth2_provider.middleware.OAuth2TokenMiddleware")
+
+
+# plain_permissions settings
+PERMISSIONS_SETTINGS = {
+    "PERMISSIONS": PermissionChoice.choices,
+    "MONKEYPATCH_USER": True,
+}
