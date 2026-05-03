@@ -171,7 +171,7 @@ jobs:
                 echo "EMAIL_HOST_PASSWORD=${{ secrets.EMAIL_HOST_PASSWORD }}";
                 echo "EMAIL_SENDER_NAME=${{ secrets.EMAIL_SENDER_NAME }}";
                 echo "EMAIL_SENDER_EMAIL=${{ secrets.EMAIL_SENDER_EMAIL }}";
-                echo "WEBAUTHN_RP_ID=${{ secrets.STAGING_WEBAUTHN_RP_ID }}";
+                echo "WEBAUTHN_RP_ID=${{ vars.STAGING_WEBAUTHN_RP_ID }}";
                 echo "ALLAUTH_JWT_PRIVATE_KEY=${{ secrets.STAGING_ALLAUTH_JWT_PRIVATE_KEY }}";
                 echo "FRONTEND_BASE_URL=${{ secrets.STAGING_FRONTEND_BASE_URL }}";
                 echo "GOOGLE_CLIENT_ID=${{ secrets.STAGING_GOOGLE_CLIENT_ID }}";
@@ -206,7 +206,7 @@ jobs:
                 echo "EMAIL_HOST_PASSWORD=${{ secrets.EMAIL_HOST_PASSWORD }}";
                 echo "EMAIL_SENDER_NAME=${{ secrets.EMAIL_SENDER_NAME }}";
                 echo "EMAIL_SENDER_EMAIL=${{ secrets.EMAIL_SENDER_EMAIL }}";
-                echo "WEBAUTHN_RP_ID=${{ secrets.PROD_WEBAUTHN_RP_ID }}";
+                echo "WEBAUTHN_RP_ID=${{ vars.PROD_WEBAUTHN_RP_ID }}";
                 echo "RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}";
                 echo "RABBITMQ_PASS=${{ secrets.RABBITMQ_PASS }}";
                 echo "CELERY_BROKER_URL=amqp://${{ secrets.RABBITMQ_USER }}:${{ secrets.RABBITMQ_PASS }}@rabbitmq:5672//";
