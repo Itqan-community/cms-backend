@@ -216,3 +216,58 @@ class ListAssetTest(BaseTestCase):
         response_body = response.json()
         self.assertEqual(1, len(response_body["results"]))
         self.assertEqual("Muhammad Refaat", response_body["results"][0]["name"])
+
+    # ── Pagination ────────────────────────────────────────────
+
+    def test_list_assets_default_page_size_should_return_20_items(self):
+        # Arrange — 25 assets, default page_size is 20
+        baker.make(Asset, _quantity=25, category=CategoryChoice.TAFSIR, status=StatusChoice.READY)
+
+        # Act
+        response = self.client.get("/cms-api/assets/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(25, body["count"])
+        self.assertEqual(20, len(body["results"]))
+
+    def test_list_assets_custom_page_size_should_return_requested_number_of_items(self):
+        # Arrange — 25 assets; passing page_size=25 must return all 25 (regression for the bug
+        # where page_size was silently reset to 20 by Pydantic re-initialisation in __init__)
+        baker.make(Asset, _quantity=25, category=CategoryChoice.TAFSIR, status=StatusChoice.READY)
+
+        # Act
+        response = self.client.get("/cms-api/assets/", data={"page_size": 25}, format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(25, body["count"])
+        self.assertEqual(25, len(body["results"]))
+
+    def test_list_assets_second_page_should_return_remaining_items(self):
+        # Arrange — 25 assets, page_size=20 → page 2 has 5
+        baker.make(Asset, _quantity=25, category=CategoryChoice.TAFSIR, status=StatusChoice.READY)
+
+        # Act
+        response = self.client.get("/cms-api/assets/", data={"page": 2, "page_size": 20}, format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(25, body["count"])
+        self.assertEqual(5, len(body["results"]))
+
+    def test_list_assets_page_size_exceeding_max_should_be_capped_at_1000(self):
+        # Arrange — 5 assets; page_size=2000 must be capped at MAX_PAGE_SIZE=1000
+        baker.make(Asset, _quantity=5, category=CategoryChoice.TAFSIR, status=StatusChoice.READY)
+
+        # Act
+        response = self.client.get("/cms-api/assets/", data={"page_size": 2000}, format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(5, body["count"])
+        self.assertEqual(5, len(body["results"]))
