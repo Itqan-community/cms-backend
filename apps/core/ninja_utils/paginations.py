@@ -17,8 +17,7 @@ class NinjaPagination(NinjaPageNumberPagination):
         page_size: int = Field(DEFAULT_PAGE_SIZE, ge=1)
 
         def __init__(self, page_size: int = DEFAULT_PAGE_SIZE, **kwargs: Any) -> None:
-            self.page_size = min(page_size, MAX_PAGE_SIZE)
-            super().__init__(**kwargs)
+            super().__init__(page_size=min(page_size, MAX_PAGE_SIZE), **kwargs)
 
     class Output(Schema):
         results: list[Any]
