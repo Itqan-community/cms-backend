@@ -5,14 +5,10 @@ import pytest
 
 from apps.core.tests import BaseTestCase
 from apps.users.models import User
-from config.settings.base import BASE_DIR
 
 
 @pytest.mark.skipif(not settings.ENABLE_OAUTH2, reason="OAuth2 disabled in settings")
-@override_settings(
-    ACCOUNT_EMAIL_VERIFICATION="none",
-    HEADLESS_JWT_PRIVATE_KEY=(BASE_DIR / "private_key.pem").read_text(),
-)
+@override_settings(ACCOUNT_EMAIL_VERIFICATION="none")
 class OAuthApplicationTests(BaseTestCase):
 
     # --- Create ---
