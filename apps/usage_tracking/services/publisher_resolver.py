@@ -1,4 +1,4 @@
-"""Resolve a request's publisher identity from its OAuth2 token.
+"""Resolve a request's publisher identity from the authenticated user.
 
 Used by the usage tracking middleware to tag each public API event with the
 publisher that owns the OAuth2 application the consumer is using.
@@ -17,10 +17,8 @@ def resolve_publisher_from_request(request) -> tuple[int | None, str | None]:
 
     Resolution order:
       1. In-request memo (avoids duplicate calls within the same request)
-      2. Redis cache keyed by access_token.pk (avoids repeated DB lookups)
-      3. DB lookup via access_token → application → owner → PublisherMember
-
-    ``request.access_token`` must be set by OAuth2Auth before this is called.
+      2. Redis cache keyed by user.pk (avoids repeated DB lookups)
+      3. DB lookup via request.user → PublisherMember
     """
     cached = getattr(request, _CACHE_ATTR, None)
     if cached is not None:
@@ -35,28 +33,20 @@ def resolve_publisher_from_request(request) -> tuple[int | None, str | None]:
 
 
 def _resolve(request) -> tuple[int | None, str | None]:
-    token = getattr(request, "access_token", None)
-    if token is None:
+    user = getattr(request, "user", None)
+    if user is None or not getattr(user, "is_authenticated", False):
         return None, None
 
-    token_pk = getattr(token, "pk", None)
-    if token_pk is not None:
-        redis_key = f"pub_resolver:token:{token_pk}"
+    user_pk = getattr(user, "pk", None)
+    if user_pk is not None:
+        redis_key = f"pub_resolver:user:{user_pk}"
         cached = cache.get(redis_key)
         if cached is not None:
             return tuple(cached)
 
-    application = getattr(token, "application", None)
-    if application is None:
-        return None, None
+    result = _lookup_publisher_for_user(user)
 
-    owner = getattr(application, "user", None)
-    if owner is None:
-        return None, None
-
-    result = _lookup_publisher_for_user(owner)
-
-    if token_pk is not None:
+    if user_pk is not None:
         cache.set(redis_key, list(result), _REDIS_CACHE_TTL)
 
     return result

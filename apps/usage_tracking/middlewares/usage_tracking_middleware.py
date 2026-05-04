@@ -55,8 +55,6 @@ class UsageTrackingMiddleware:
         entity_ids = extract_entity_ids(self._response_body(response))
 
         properties = {
-            "method": request.method,
-            "path": request.path,
             "endpoint": f"{request.method} {request.path}",
             "status_code": response.status_code,
             "latency_ms": latency_ms,

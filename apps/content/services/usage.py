@@ -60,42 +60,20 @@ def log_api_access(user, *, api_endpoint="", ip_address=None, user_agent="", ass
 
 def log_asset_download(user, asset, ip_address=None, user_agent=""):
     """Track asset download event with async processing"""
+    from .tasks import create_usage_event_task
 
-    try:
-        from .tasks import track_event_async
-
-        event_data = {
-            "developer_user_id": user.id,
-            "usage_kind": "file_download",
-            "asset_id": asset.id,
-            "metadata": {
-                "asset_title": asset.title,
-                "file_size": asset.file_size,
-                "format": asset.format,
-                "category": asset.category,
-            },
-            "ip_address": ip_address,
-            "user_agent": user_agent,
-        }
-        if track_event_async(event_data):
-            logger.debug(f"Asset download event queued async [user_id={user.id}, asset_id={asset.id}]")
-            return None  # Event queued for async processing
-    except ImportError:
-        logger.warning(
-            f"track_event_async not available — falling back to sync usage event [user_id={user.id}, asset_id={asset.id}]"
-        )
-
-    # Fallback to synchronous creation
-    return UsageEvent.objects.create(
-        developer_user=user,
-        usage_kind="file_download",
-        asset_id=asset.id,
-        metadata={
+    event_data = {
+        "developer_user_id": user.id,
+        "usage_kind": "file_download",
+        "asset_id": asset.id,
+        "metadata": {
             "asset_title": asset.title,
             "file_size": asset.file_size,
             "format": asset.format,
             "category": asset.category,
         },
-        ip_address=ip_address,
-        user_agent=user_agent,
-    )
+        "ip_address": ip_address,
+        "user_agent": user_agent,
+    }
+    create_usage_event_task.delay(event_data)
+    return None

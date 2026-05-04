@@ -38,8 +38,7 @@ class TestUsageTrackingMiddleware:
         props = kwargs["properties"]
         assert props["publisher_id"] == 42
         assert props["publisher_slug"] == "acme"
-        assert props["method"] == "GET"
-        assert props["path"] == "/reciters"
+        assert props["endpoint"] == "GET /reciters"
         assert props["status_code"] == 200
         assert "latency_ms" in props
         assert props["entity_ids"] == [1, 2]
