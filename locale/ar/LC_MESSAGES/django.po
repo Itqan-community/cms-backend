@@ -213,6 +213,9 @@ msgstr "خطأ في المصادقة"
 msgid "Something went wrong - Internal Server Error"
 msgstr "حدث خطأ ما - خطأ داخلي في الخادم"
 
+msgid "Access Portal"
+msgstr "الوصول للوحة التحكم"
+
 msgid "Portal - View Reciters"
 msgstr "لوحة التحكم - عرض القراء"
 
