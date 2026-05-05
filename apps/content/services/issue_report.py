@@ -129,8 +129,15 @@ class IssueReportService:
                 )
             description = clean_description
 
+        old_status = report.status
         updated = self.repo.update_issue_report(report, description=description, status=status)
         logger.info(f"Issue report updated [report_id={report_id}, updated_by={user.pk}]")
+
+        if status is not None and status != old_status:
+            from apps.content.tasks import send_issue_status_update_email
+
+            send_issue_status_update_email.delay(report_id, old_status, status)
+
         return updated
 
     def delete_issue_report(self, report_id: int, user: User) -> None:

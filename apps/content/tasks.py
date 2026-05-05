@@ -215,3 +215,22 @@ def send_asset_update_email(asset_version_id: int) -> None:
     logger.info(
         f"Task completed [task=send_asset_update_email, asset_version_id={asset_version_id}, recipients={len(list(users))}]"
     )
+
+
+@shared_task(bind=True, max_retries=3)
+def send_issue_status_update_email(self, report_id: int, old_status: str, new_status: str) -> None:
+    """
+    Async wrapper that delegates to IssueReportNotificationService.
+    Retries up to 3 times on transient failures with linear back-off.
+    """
+    logger.info(
+        f"Task started [task=send_issue_status_update_email, report_id={report_id}, {old_status!r} -> {new_status!r}]"
+    )
+    try:
+        from apps.content.services.issue_report_notifications import IssueReportNotificationService
+
+        IssueReportNotificationService().notify_status_changed(report_id, old_status, new_status)
+        logger.info(f"Task completed [task=send_issue_status_update_email, report_id={report_id}]")
+    except Exception as exc:
+        logger.error(f"Task failed [task=send_issue_status_update_email, report_id={report_id}]: {exc}")
+        raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1)) from exc

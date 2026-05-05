@@ -1,7 +1,11 @@
+from unittest.mock import patch
+
 from apps.content.models import Asset, CategoryChoice, ContentIssueReport, Qiraah, Reciter, StatusChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Domain, Publisher
 from apps.users.models import User
+
+_NOTIFY = "apps.content.services.issue_report_notifications.IssueReportNotificationService.notify_status_changed"
 
 
 class IssueReportTenantApiTests(BaseTestCase):
@@ -168,3 +172,18 @@ class IssueReportTenantApiTests(BaseTestCase):
         response = self.client.delete(f"/tenant/issue-reports/{report.id}/")
 
         self.assertEqual(401, response.status_code)
+
+    # --- Notifications ---
+
+    def test_patch_description_does_not_call_notification_service(self):
+        """Tenant PATCH only accepts description; status changes are not possible."""
+        report = self._create_report()
+        self.authenticate_user(self.user, domain=self.domain)
+
+        with patch(_NOTIFY) as mock_notify:
+            response = self.client.patch(
+                f"/tenant/issue-reports/{report.id}/", {"description": "Updated description text."}, format="json"
+            )
+
+        self.assertEqual(200, response.status_code)
+        mock_notify.assert_not_called()
