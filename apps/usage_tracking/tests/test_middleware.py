@@ -4,10 +4,7 @@ from unittest.mock import patch
 from django.http import HttpResponse, StreamingHttpResponse
 from django.test import RequestFactory
 
-from apps.usage_tracking.middlewares.usage_tracking_middleware import (
-    UsageTrackingMiddleware,
-    _classify_path,
-)
+from apps.usage_tracking.middlewares.usage_tracking_middleware import UsageTrackingMiddleware, _classify_path
 
 
 class _Resp(HttpResponse):
