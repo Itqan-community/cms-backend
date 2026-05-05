@@ -4,15 +4,32 @@ Each publisher in the Itqan CMS gets a dedicated Mixpanel dashboard, scoped to t
 
 ## Current dashboards
 
-| Pub ID | Name | Data View workspace | Dashboard URL |
-|---|---|---|---|
-| 1 | Saudi Center for Quranic Recitations | 4515692 | https://eu.mixpanel.com/project/4012890/view/4515692/app/boards#id=11163140 |
-| 2 | Tahbeer for the Ten Qira'at | 4517081 | https://eu.mixpanel.com/project/4012890/view/4517081/app/boards#id=11163657 |
-| 3 | المركز السعودي لتسجيل التلاوات | 4517082 | https://eu.mixpanel.com/project/4012890/view/4517082/app/boards#id=11163660 |
-| 4 | Ansary Group | 4517083 | https://eu.mixpanel.com/project/4012890/view/4517083/app/boards#id=11163661 |
-| 6 | جمعية مكنون (Maknoon) | 4517084 | https://eu.mixpanel.com/project/4012890/view/4517084/app/boards#id=11163663 |
-| 8 | Tahbeer | 4517085 | https://eu.mixpanel.com/project/4012890/view/4517085/app/boards#id=11163664 |
-| 10 | itqan | n/a | not provisioned (no PublisherMember) |
+### Public board URLs (share with publishers)
+
+| Pub ID | Publisher | Public board URL |
+|---|---|---|
+| 1 | Saudi Center for Quranic Recitations | https://eu.mixpanel.com/p/31tLcwyZw74b2ybpwJLAGj |
+| 2 | Tahbeer for the Ten Qira'at | https://eu.mixpanel.com/p/FJRNu2YgAZpvWsNH7k2A34 |
+| 3 | المركز السعودي لتسجيل التلاوات والأحاديث النبوية | https://eu.mixpanel.com/p/5r6CPB7CZPxtR36Z7zjpuh |
+| 4 | Ansary Group | https://eu.mixpanel.com/p/8iwEHiU26JF56CFCgBQCXV |
+| 6 | جمعية مكنون (Maknoon) | https://eu.mixpanel.com/p/StTfGZNtSYvoQ9HuLsSmXb |
+| 8 | Tahbeer | https://eu.mixpanel.com/p/6YcxFqry1aKSBdJ5x3tCuU |
+| 10 | itqan | not provisioned (no PublisherMember) |
+
+Public board URLs require no Mixpanel login — anyone with the link can view. Each board only shows events for its own publisher (filtered at the Data View workspace level).
+
+### Internal (logged-in) URLs
+
+For org members logged into Mixpanel:
+
+| Pub ID | Data View workspace | Dashboard URL |
+|---|---|---|
+| 1 | 4515692 | https://eu.mixpanel.com/project/4012890/view/4515692/app/boards#id=11163140 |
+| 2 | 4517081 | https://eu.mixpanel.com/project/4012890/view/4517081/app/boards#id=11163657 |
+| 3 | 4517082 | https://eu.mixpanel.com/project/4012890/view/4517082/app/boards#id=11163660 |
+| 4 | 4517083 | https://eu.mixpanel.com/project/4012890/view/4517083/app/boards#id=11163661 |
+| 6 | 4517084 | https://eu.mixpanel.com/project/4012890/view/4517084/app/boards#id=11163663 |
+| 8 | 4517085 | https://eu.mixpanel.com/project/4012890/view/4517085/app/boards#id=11163664 |
 
 Every dashboard lives in its own Data View workspace with a `publisher_id={N}` filter applied at the workspace level. Reports in the workspace inherit the filter automatically — events from other publishers cannot leak in.
 
