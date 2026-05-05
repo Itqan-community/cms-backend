@@ -49,5 +49,11 @@ def track_api_request_task(
 ) -> None:
     if not distinct_id:
         return
+    accessed_entity_id = properties.get("accessed_entity_id")
+    if accessed_entity_id is not None:
+        from apps.content.models import Asset
+
+        row = Asset.objects.filter(pk=accessed_entity_id).values("name").first()
+        properties = {**properties, "accessed_entity_name": row["name"] if row else None}
     for client in _build_ingest_clients():
         client.track(distinct_id, event, properties)
