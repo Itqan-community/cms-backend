@@ -30,6 +30,7 @@ class OAuth2Auth(OAuth2Authentication):
         if res is None:
             return None
         request.user = res[0]
+        request.access_token = res[1]
         return res
 
 

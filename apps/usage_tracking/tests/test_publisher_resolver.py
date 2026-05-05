@@ -86,3 +86,40 @@ class TestPublisherResolver:
         stored = mock_cache.set.call_args[0][1]
         assert isinstance(stored, tuple)
         assert result == (42, "acme", "Acme Publisher")
+
+    @patch("apps.usage_tracking.services.publisher_resolver.cache")
+    @patch("apps.usage_tracking.services.publisher_resolver._lookup_publisher_for_user")
+    def test_resolve_oauth2_client_credentials_falls_back_to_app_owner(self, mock_lookup, mock_cache):
+        """For OAuth2 client_credentials grant, request.user is anonymous but
+        access_token.application.user is the app owner — fall back to that."""
+        mock_cache.get.return_value = None
+        mock_lookup.return_value = (1, "scqr", "Saudi Center for Quranic Recitations")
+        app_owner = SimpleNamespace(is_authenticated=True, pk=99)
+        token = SimpleNamespace(application=SimpleNamespace(user=app_owner))
+        request = SimpleNamespace(user=AnonymousUser(), access_token=token)
+
+        publisher_id, slug, name = resolve_publisher_from_request(request)
+
+        assert publisher_id == 1
+        assert slug == "scqr"
+        assert name == "Saudi Center for Quranic Recitations"
+        mock_lookup.assert_called_once_with(app_owner)
+
+    def test_resolve_no_user_no_token_returns_none(self):
+        request = SimpleNamespace(user=AnonymousUser())
+
+        publisher_id, slug, name = resolve_publisher_from_request(request)
+
+        assert publisher_id is None
+        assert slug is None
+        assert name is None
+
+    def test_resolve_token_without_application_returns_none(self):
+        token = SimpleNamespace(application=None)
+        request = SimpleNamespace(user=AnonymousUser(), access_token=token)
+
+        publisher_id, slug, name = resolve_publisher_from_request(request)
+
+        assert publisher_id is None
+        assert slug is None
+        assert name is None
