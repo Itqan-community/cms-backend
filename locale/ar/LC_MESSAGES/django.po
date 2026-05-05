@@ -134,6 +134,32 @@ msgstr "تم الحل"
 msgid "Dismissed"
 msgstr "تم التجاهل"
 
+msgid "Description must be at least 10 characters long."
+msgstr "يجب أن يكون الوصف 10 أحرف على الأقل."
+
+msgid "Description cannot exceed 2000 characters."
+msgstr "لا يمكن أن يتجاوز الوصف 2000 حرف."
+
+#, python-brace-format
+msgid "Asset with ID {asset_id} not found."
+msgstr "المورد ذو المعرف {asset_id} غير موجود."
+
+#, python-brace-format
+msgid "Issue report with ID {report_id} not found."
+msgstr "تقرير المشكلة ذو المعرف {report_id} غير موجود."
+
+msgid "You can only update your own issue reports."
+msgstr "يمكنك فقط تعديل تقارير المشكلات الخاصة بك."
+
+msgid "You can only update pending issue reports."
+msgstr "يمكنك فقط تعديل تقارير المشكلات المعلقة."
+
+msgid "You can only delete your own issue reports."
+msgstr "يمكنك فقط حذف تقارير المشكلات الخاصة بك."
+
+msgid "You can only delete pending issue reports."
+msgstr "يمكنك فقط حذف تقارير المشكلات المعلقة."
+
 #, python-brace-format
 msgid "Recitation with slug {slug} not found."
 msgstr "لم يتم العثور على التلاوة بالمعرّف {slug}."
