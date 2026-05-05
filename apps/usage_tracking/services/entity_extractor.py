@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-MAX_ENTITY_IDS = 100
+MAX_ENTITY_IDS = 1000  # was 100; matches Ninja MAX_PAGE_SIZE
 _LIST_KEYS = ("items", "results", "data")
 _NAME_KEYS = ("name_en", "name", "title_en", "title")
 
