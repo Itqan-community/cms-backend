@@ -31,11 +31,7 @@ class RecitationService:
         filters_dict = filters.model_dump(exclude_none=True) if filters and hasattr(filters, "model_dump") else {}
         return self.repo.list_recitations_qs(publisher_q, filters_dict, annotate_surahs_count=annotate_surahs_count)
 
-    def get_recitation(self, recitation_slug: str) -> Asset:
-        """
-        Business Logic: Retrieve a single recitation by slug.
-        Raises ItqanError if not found.
-        """
+    def _get_recitation_or_404(self, recitation_slug: str) -> Asset:
         recitation = self.repo.get_recitation(recitation_slug)
         if recitation is None:
             raise ItqanError(
@@ -119,7 +115,7 @@ class RecitationService:
         """
         Business Logic: Update an existing recitation.
         """
-        asset = self.get_recitation(recitation_slug)
+        asset = self._get_recitation_or_404(recitation_slug)
 
         # Trim input fields if present
         for field in ["name_ar", "name_en", "description_ar", "description_en"]:
@@ -193,7 +189,7 @@ class RecitationService:
         """
         Business Logic: Delete a recitation and its resource.
         """
-        asset = self.get_recitation(recitation_slug)
+        asset = self._get_recitation_or_404(recitation_slug)
         try:
             self.repo.delete_recitation(asset)
             logger.info(f"Recitation deleted [asset_id={asset.pk}, slug={recitation_slug}]")

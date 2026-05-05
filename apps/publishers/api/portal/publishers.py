@@ -1,10 +1,12 @@
 import logging
+from typing import Literal
 
+from django.utils.translation import gettext_lazy as _
 from ninja import File, FilterSchema, Form, Query, Schema, UploadedFile
 from ninja.pagination import paginate
 from pydantic import AwareDatetime
 
-from apps.core.ninja_utils.errors import NinjaErrorResponse
+from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -145,11 +147,17 @@ class PublisherDetailOut(Schema):
 
 @router.get(
     "publishers/{int:publisher_id}/",
-    response={200: PublisherDetailOut, 404: NinjaErrorResponse},
+    response={200: PublisherDetailOut, 404: NinjaErrorResponse[Literal["publisher_not_found"]]},
 )
 def retrieve_publisher(request: Request, publisher_id: int) -> Publisher:
-    service = PublisherService(PublisherRepository())
-    return service.get_publisher(publisher_id)
+    try:
+        return Publisher.objects.get(id=publisher_id)
+    except Publisher.DoesNotExist as exc:
+        raise ItqanError(
+            error_name="publisher_not_found",
+            message=_("Publisher with id {id} not found").format(id=publisher_id),
+            status_code=404,
+        ) from exc
 
 
 # --- Update Publisher ---

@@ -1,13 +1,14 @@
 import logging
 from typing import Annotated, Literal
 
+from django.utils.translation import gettext_lazy as _
 from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
-from apps.content.models import Asset, AssetVersion, LicenseChoice
+from apps.content.models import Asset, AssetVersion, CategoryChoice, LicenseChoice, StatusChoice
 from apps.content.services.translation import TranslationService
-from apps.core.ninja_utils.errors import NinjaErrorResponse
+from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.permission_required import permission_required
 from apps.core.ninja_utils.request import Request
@@ -149,9 +150,22 @@ class TranslationFilter(FilterSchema):
 @ordering(ordering_fields=["id", "name", "created_at", "updated_at"])
 @searching(search_fields=["name", "name_ar", "description", "description_ar", "publisher__name"])
 def list_translations(request: Request, filters: TranslationFilter = Query()):
-    service = TranslationService()
-    qs = service.get_all_translations(filters)
-    return qs
+    qs = Asset.objects.select_related("publisher").filter(
+        category=CategoryChoice.TRANSLATION,
+        status=StatusChoice.READY,
+    )
+
+    filters_dict = filters.model_dump(exclude_none=True)
+    if publisher_ids := filters_dict.get("publisher_id"):
+        qs = qs.filter(publisher_id__in=publisher_ids)
+    if license_codes := filters_dict.get("license_code"):
+        qs = qs.filter(license__in=license_codes)
+    if language := filters_dict.get("language"):
+        qs = qs.filter(language=language)
+    if "is_external" in filters_dict:
+        qs = qs.filter(is_external=filters_dict["is_external"])
+
+    return qs.distinct()
 
 
 @router.post(
@@ -198,8 +212,22 @@ def create_translation(
 )
 @permission_required([permission_class(PermissionChoice.PORTAL_READ_TRANSLATION)])
 def retrieve_translation(request: Request, translation_slug: str) -> Asset:
-    service = TranslationService()
-    return service.get_translation(translation_slug)
+    try:
+        return (
+            Asset.objects.select_related("publisher")
+            .prefetch_related("versions")
+            .get(
+                slug=translation_slug,
+                category=CategoryChoice.TRANSLATION,
+                status=StatusChoice.READY,
+            )
+        )
+    except Asset.DoesNotExist as exc:
+        raise ItqanError(
+            error_name="translation_not_found",
+            message=_("Translation with slug {slug} not found.").format(slug=translation_slug),
+            status_code=404,
+        ) from exc
 
 
 @router.put(

@@ -75,18 +75,18 @@ class PublisherService:
                 status_code=400,
             ) from exc
 
-    def get_publisher(self, publisher_id: int) -> Publisher:
+    def _get_publisher_or_404(self, publisher_id: int) -> Publisher:
         publisher = self.repo.get_by_id(publisher_id)
         if publisher is None:
             raise ItqanError(
                 error_name="publisher_not_found",
-                message=f"Publisher with id {publisher_id} not found",
+                message=_("Publisher with id {id} not found").format(id=publisher_id),
                 status_code=404,
             )
         return publisher
 
     def update_publisher(self, publisher_id: int, *, fields: dict[str, object]) -> Publisher:
-        publisher = self.get_publisher(publisher_id)
+        publisher = self._get_publisher_or_404(publisher_id)
 
         if "name_ar" in fields or "name_en" in fields:
             name_ar = fields.get("name_ar")
@@ -136,7 +136,7 @@ class PublisherService:
         return publisher
 
     def delete_publisher(self, publisher_id: int) -> None:
-        publisher = self.get_publisher(publisher_id)
+        publisher = self._get_publisher_or_404(publisher_id)
         try:
             self.repo.delete(publisher)
         except ProtectedError as exc:

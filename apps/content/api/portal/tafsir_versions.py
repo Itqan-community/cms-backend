@@ -1,10 +1,11 @@
 from typing import Literal
 
+from django.utils.translation import gettext_lazy as _
 from ninja import File, Form, Schema, UploadedFile
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
-from apps.content.models import AssetVersion
+from apps.content.models import Asset, AssetVersion, CategoryChoice
 from apps.content.services.tafsir import TafsirService
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.permission_required import permission_required
@@ -63,8 +64,15 @@ class TafsirVersionPatchIn(Schema):
 @paginate
 @searching(search_fields=["name", "summary"])
 def list_tafsir_versions(request: Request, tafsir_slug: str):
-    service = TafsirService()
-    return service.get_tafsir_versions(tafsir_slug)
+    try:
+        asset = Asset.objects.get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
+    except Asset.DoesNotExist as exc:
+        raise ItqanError(
+            error_name="tafsir_not_found",
+            message=_("Tafsir with slug {slug} not found.").format(slug=tafsir_slug),
+            status_code=404,
+        ) from exc
+    return AssetVersion.objects.filter(asset=asset).order_by("-created_at")
 
 
 @router.post(
@@ -83,7 +91,14 @@ def create_tafsir_version(
     file: UploadedFile = File(...),
 ) -> tuple[int, AssetVersion]:
     service = TafsirService()
-    asset = service.get_tafsir(tafsir_slug)
+    try:
+        asset = Asset.objects.get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
+    except Asset.DoesNotExist as exc:
+        raise ItqanError(
+            error_name="tafsir_not_found",
+            message=_("Tafsir with slug {slug} not found.").format(slug=tafsir_slug),
+            status_code=404,
+        ) from exc
     if data.asset_id != asset.id:
         raise ItqanError(
             error_name="asset_id_mismatch",
@@ -117,7 +132,14 @@ def update_tafsir_version_put(
     file: UploadedFile | None = File(None),
 ) -> AssetVersion:
     service = TafsirService()
-    asset = service.get_tafsir(tafsir_slug)
+    try:
+        asset = Asset.objects.get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
+    except Asset.DoesNotExist as exc:
+        raise ItqanError(
+            error_name="tafsir_not_found",
+            message=_("Tafsir with slug {slug} not found.").format(slug=tafsir_slug),
+            status_code=404,
+        ) from exc
     if data.asset_id != asset.id:
         raise ItqanError(
             error_name="asset_id_mismatch",
@@ -150,7 +172,14 @@ def update_tafsir_version_patch(
     file: UploadedFile | None = File(None),
 ) -> AssetVersion:
     service = TafsirService()
-    asset = service.get_tafsir(tafsir_slug)
+    try:
+        asset = Asset.objects.get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
+    except Asset.DoesNotExist as exc:
+        raise ItqanError(
+            error_name="tafsir_not_found",
+            message=_("Tafsir with slug {slug} not found.").format(slug=tafsir_slug),
+            status_code=404,
+        ) from exc
     if data.asset_id is not None and data.asset_id != asset.id:
         raise ItqanError(
             error_name="asset_id_mismatch",
