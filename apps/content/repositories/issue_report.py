@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any
 
 from django.db.models import Q
 
@@ -13,19 +13,19 @@ if TYPE_CHECKING:
 
 
 class IssueReportRepository:
+    def get_asset_by_id(self, asset_id: int) -> Asset | None:
+        return Asset.objects.filter(id=asset_id).first()
+
     def create_issue_report(
         self,
         reporter: User,
-        content_object: Asset,
+        asset: Asset,
         description: str,
         status: ContentIssueReport.StatusChoice = ContentIssueReport.StatusChoice.PENDING,
     ) -> ContentIssueReport:
-        """
-        Create a new content issue report.
-        """
         return ContentIssueReport.objects.create(
             reporter=reporter,
-            content_object=content_object,
+            asset=asset,
             description=description,
             status=status,
         )
@@ -33,12 +33,7 @@ class IssueReportRepository:
     def list_issue_reports_qs(
         self, filters: dict[str, Any] | None = None, q_filter: Q | None = None
     ) -> QuerySet[ContentIssueReport]:
-        """
-        Return a queryset of issue reports filtered by criteria.
-        Expects filters dictionary to contain ready-to-use Django filter arguments.
-        Optionally accepts a Q object for complex queries.
-        """
-        qs = ContentIssueReport.objects.select_related("reporter", "content_type").order_by("-created_at")
+        qs = ContentIssueReport.objects.select_related("reporter", "asset").order_by("-created_at")
 
         if filters:
             qs = qs.filter(**filters)
@@ -49,28 +44,26 @@ class IssueReportRepository:
         return qs
 
     def get_issue_report_by_id(self, report_id: int) -> ContentIssueReport | None:
-        """
-        Retrieve a single issue report by ID.
-        """
         try:
-            return ContentIssueReport.objects.select_related("reporter", "content_type").get(id=report_id)
+            return ContentIssueReport.objects.select_related("reporter", "asset").get(id=report_id)
         except ContentIssueReport.DoesNotExist:
             return None
 
-    def update_issue_report_status(
-        self, report: ContentIssueReport, status: ContentIssueReport.StatusChoice
+    def update_issue_report(
+        self,
+        report: ContentIssueReport,
+        description: str | None = None,
+        status: ContentIssueReport.StatusChoice | None = None,
     ) -> ContentIssueReport:
-        """
-        Update the status of an issue report.
-        """
-        report.status = status
-        report.save(update_fields=["status", "updated_at"])
+        update_fields = ["updated_at"]
+        if description is not None:
+            report.description = description
+            update_fields.append("description")
+        if status is not None:
+            report.status = status
+            update_fields.append("status")
+        report.save(update_fields=update_fields)
         return report
 
-    def get_content_object(self, content_type: Literal["asset"], content_id: int) -> Asset | None:
-        """
-        Helper validation method to retrieve the content object (Asset).
-        """
-        if content_type == "asset":
-            return Asset.objects.filter(id=content_id).first()
-        return None
+    def delete_issue_report(self, report: ContentIssueReport) -> None:
+        report.delete()

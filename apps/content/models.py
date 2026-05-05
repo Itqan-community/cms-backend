@@ -2,7 +2,6 @@ import logging
 import re
 
 from django.conf import settings
-from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.validators import FileExtensionValidator, MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
@@ -678,16 +677,14 @@ class ContentIssueReport(BaseModel):
         help_text="User who reported the issue",
     )
 
-    content_type = models.ForeignKey(
-        "contenttypes.ContentType",
+    asset = models.ForeignKey(
+        "content.Asset",
         on_delete=models.CASCADE,
-        limit_choices_to={"model__in": ["asset"]},
-        help_text="Django ContentType for the reported object",
+        related_name="issue_reports",
+        help_text="Asset being reported",
+        blank=True,
+        null=True,
     )
-
-    object_id = models.PositiveIntegerField(help_text="ID of the reported content object")
-
-    content_object = GenericForeignKey("content_type", "object_id")
 
     description = models.TextField(
         help_text="Description of the issue (10-2000 characters)",
@@ -704,18 +701,17 @@ class ContentIssueReport(BaseModel):
         verbose_name = "Content Issue Report"
         verbose_name_plural = "Content Issue Reports"
         indexes = [
-            models.Index(fields=["content_type", "object_id"]),
+            models.Index(fields=["asset"]),
             models.Index(fields=["reporter", "status"]),
             models.Index(fields=["status", "created_at"]),
         ]
 
     def __str__(self) -> str:
-        content_type_name = self.content_type.model if self.content_type else "unknown"
-        return f"ContentIssueReport(reporter={self.reporter_id}, content={content_type_name}:{self.object_id}, status={self.status})"
+        return f"ContentIssueReport(reporter={self.reporter_id}, asset={self.asset_id}, status={self.status})"
 
     @property
-    def content_object_summary(self) -> str:
-        return str(self.content_object)
+    def asset_name(self) -> str:
+        return self.asset.name
 
     def clean(self):
         """Validate the model before saving"""

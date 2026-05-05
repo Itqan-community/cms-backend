@@ -6,6 +6,7 @@ from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime
 
+from apps.content.models import ContentIssueReport
 from apps.content.repositories.issue_report import IssueReportRepository
 from apps.content.services.issue_report import IssueReportService
 from apps.core.ninja_utils.auth import ninja_jwt_auth
@@ -19,8 +20,14 @@ router = ItqanRouter(tags=[NinjaTag.ISSUE_REPORTS])
 logger = logging.getLogger(__name__)
 
 
+class IssueReportOutReporter(Schema):
+    id: int
+    email: str
+
+
 class IssueReportOut(Schema):
     id: int
+    reporter: IssueReportOutReporter
     asset_id: int
     asset_name: str
     description: str
@@ -35,11 +42,13 @@ class IssueReportCreateIn(Schema):
 
 
 class IssueReportUpdateIn(Schema):
-    description: str
+    description: str | None = None
+    status: ContentIssueReport.StatusChoice | None = None
 
 
 class IssueReportFilter(FilterSchema):
-    status: Annotated[list[str] | None, FilterLookup(q="status__in")] = None
+    status: Annotated[list[ContentIssueReport.StatusChoice] | None, FilterLookup(q="status__in")] = None
+    reporter_id: Annotated[int | None, FilterLookup(q="reporter_id")] = None
 
 
 def _get_service() -> IssueReportService:
@@ -49,7 +58,8 @@ def _get_service() -> IssueReportService:
 @router.post("issue-reports/", response={201: IssueReportOut}, auth=ninja_jwt_auth)
 def create_issue_report(request: Request, data: IssueReportCreateIn):
     logger.info(f"Creating issue report [asset_id={data.asset_id}, user_id={request.user.id}]")
-    report = _get_service().create_issue_report(
+    service = _get_service()
+    report = service.create_issue_report(
         reporter=request.user,
         asset_id=data.asset_id,
         description=data.description,
@@ -58,14 +68,11 @@ def create_issue_report(request: Request, data: IssueReportCreateIn):
     return 201, report
 
 
-@router.get("issue-reports/", response=list[IssueReportOut])
+@router.get("issue-reports/", response=list[IssueReportOut], auth=ninja_jwt_auth)
 @paginate
 @ordering(ordering_fields=["created_at", "status"])
 def list_issue_reports(request: Request, filters: IssueReportFilter = Query()):
-    return _get_service().get_issue_reports(
-        publisher_q=request.publisher_q(),
-        filters=filters,
-    )
+    return _get_service().get_issue_reports(publisher_q=None, filters=filters)
 
 
 @router.get(
@@ -91,6 +98,7 @@ def update_issue_report(request: Request, report_id: int, data: IssueReportUpdat
         report_id=report_id,
         user=request.user,
         description=data.description,
+        status=data.status,
     )
     logger.info(f"Issue report updated [report_id={report_id}, user_id={request.user.id}]")
     return report

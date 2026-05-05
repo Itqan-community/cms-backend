@@ -811,17 +811,15 @@ class ContentIssueReportAdmin(admin.ModelAdmin):
     list_display = [
         "id",
         "reporter",
-        "content_type",
-        "object_id",
+        "asset",
         "status",
         "created_at",
     ]
-    list_filter = ["status", "content_type", "created_at"]
-    search_fields = ["reporter__email", "description", "object_id"]
+    list_filter = ["status", "created_at"]
+    search_fields = ["reporter__email", "description", "asset__name"]
     readonly_fields = [
         "created_at",
         "updated_at",
-        "content_object_display",
     ]
     raw_id_fields = ["reporter"]
 
@@ -831,9 +829,7 @@ class ContentIssueReportAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "reporter",
-                    "content_type",
-                    "object_id",
-                    "content_object_display",
+                    "asset",
                 )
             },
         ),
@@ -848,17 +844,7 @@ class ContentIssueReportAdmin(admin.ModelAdmin):
     actions = ["mark_as_under_review", "mark_as_resolved", "mark_as_dismissed"]
 
     def get_queryset(self, request):
-        """Optimize queryset"""
-        return super().get_queryset(request).select_related("reporter", "content_type")
-
-    @admin.display(description="Content Object")
-    def content_object_display(self, obj: ContentIssueReport):
-        """Display the related content object with link"""
-        if obj.content_object and obj.content_type.model == "asset":
-            content = obj.content_object
-            url = reverse("admin:content_asset_change", args=[content.id])
-            return format_html('<a href="{}">{}</a>', url, content.name)
-        return "N/A"
+        return super().get_queryset(request).select_related("reporter", "asset")
 
     @admin.action(description="Mark as Under Review")
     def mark_as_under_review(self, request, queryset):
