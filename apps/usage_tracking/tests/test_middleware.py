@@ -1,10 +1,19 @@
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from django.contrib.auth.models import AnonymousUser
 from django.http import HttpResponse, StreamingHttpResponse
 from django.test import RequestFactory
 
-from apps.usage_tracking.middlewares.usage_tracking_middleware import UsageTrackingMiddleware, _classify_path
+from apps.usage_tracking.middlewares.usage_tracking_middleware import (
+    UsageTrackingMiddleware,
+    _classify_path,
+    _client_ip,
+    _detect_auth_method,
+    _extract_error_code,
+    _parse_query_params,
+    _resolve_application,
+)
 
 
 class _Resp(HttpResponse):
@@ -49,6 +58,11 @@ class TestUsageTrackingMiddleware:
         assert "entity_type" in props
         assert "accessed_entity_id" in props
         assert "query_string" in props
+        assert "application_id" in props
+        assert "application_name" in props
+        assert "auth_method" in props
+        assert "user_agent" in props
+        assert "error_code" in props
 
     @patch("apps.usage_tracking.middlewares.usage_tracking_middleware.track_api_request_task")
     def test_excluded_path_portal_skipped(self, mock_task):
@@ -156,3 +170,147 @@ class TestClassifyPath:
 
     def test_unknown_path_returns_none(self):
         assert _classify_path("/portal/stats/") == (None, None)
+
+
+class TestDistinctId:
+    def setup_method(self):
+        self.factory = RequestFactory()
+
+    def test_oauth2_client_credentials_uses_app_id(self):
+        request = self.factory.get("/reciters/")
+        request.user = AnonymousUser()
+        request.access_token = SimpleNamespace(application=SimpleNamespace(id=42))
+
+        assert UsageTrackingMiddleware._distinct_id(request) == "app-42"
+
+    def test_jwt_authenticated_uses_user_pk(self):
+        request = self.factory.get("/reciters/")
+        request.user = SimpleNamespace(pk=99, is_authenticated=True)
+
+        assert UsageTrackingMiddleware._distinct_id(request) == "user-99"
+
+    def test_oauth2_token_takes_precedence_over_user(self):
+        request = self.factory.get("/reciters/")
+        request.user = SimpleNamespace(pk=99, is_authenticated=True)
+        request.access_token = SimpleNamespace(application=SimpleNamespace(id=42))
+
+        assert UsageTrackingMiddleware._distinct_id(request) == "app-42"
+
+    def test_anonymous_falls_back_to_uuid(self):
+        request = self.factory.get("/reciters/")
+        request.user = AnonymousUser()
+
+        result = UsageTrackingMiddleware._distinct_id(request)
+
+        assert result.startswith("anon-")
+        assert len(result) == 17  # "anon-" + 12 hex chars
+
+
+class TestClassifyPathDetailEndpoints:
+    def test_reciter_detail(self):
+        assert _classify_path("/reciters/7/") == ("reciter", 7)
+
+    def test_riwayah_detail(self):
+        assert _classify_path("/riwayahs/2/") == ("riwayah", 2)
+
+
+class TestDetectAuthMethod:
+    def setup_method(self):
+        self.factory = RequestFactory()
+
+    def test_oauth2_when_access_token_set(self):
+        request = self.factory.get("/")
+        request.access_token = SimpleNamespace()
+        request.user = AnonymousUser()
+        assert _detect_auth_method(request) == "oauth2"
+
+    def test_jwt_when_bearer_header(self):
+        request = self.factory.get("/", HTTP_AUTHORIZATION="Bearer xyz")
+        request.user = SimpleNamespace(is_authenticated=True)
+        assert _detect_auth_method(request) == "jwt"
+
+    def test_session_when_authed_no_bearer(self):
+        request = self.factory.get("/")
+        request.user = SimpleNamespace(is_authenticated=True)
+        assert _detect_auth_method(request) == "session"
+
+    def test_anonymous_when_unauthed(self):
+        request = self.factory.get("/")
+        request.user = AnonymousUser()
+        assert _detect_auth_method(request) == "anonymous"
+
+
+class TestParseQueryParams:
+    def test_empty_returns_empty(self):
+        assert _parse_query_params("") == {}
+
+    def test_extracts_page(self):
+        assert _parse_query_params("page=3") == {"page": 3}
+
+    def test_extracts_search(self):
+        assert _parse_query_params("search=mashary") == {"search": "mashary"}
+
+    def test_extracts_filters_as_int(self):
+        result = _parse_query_params("reciter_id=6&riwayah_id=2")
+        assert result == {"filter_reciter_id": 6, "filter_riwayah_id": 2}
+
+    def test_extracts_ordering(self):
+        assert _parse_query_params("ordering=-name") == {"ordering": "-name"}
+
+    def test_combined(self):
+        result = _parse_query_params("page=2&search=hafs&reciter_id=6&ordering=name")
+        assert result == {
+            "page": 2,
+            "search": "hafs",
+            "filter_reciter_id": 6,
+            "ordering": "name",
+        }
+
+    def test_invalid_page_skipped(self):
+        assert _parse_query_params("page=abc") == {}
+
+
+class TestExtractErrorCode:
+    def test_2xx_returns_none(self):
+        resp = HttpResponse(b'{"error_name": "should_be_ignored"}', status=200)
+        assert _extract_error_code(resp) is None
+
+    def test_4xx_with_error_name_extracts(self):
+        resp = HttpResponse(b'{"error_name": "validation_failed", "message": "bad"}', status=400)
+        assert _extract_error_code(resp) == "validation_failed"
+
+    def test_4xx_without_error_name_returns_none(self):
+        resp = HttpResponse(b'{"foo": "bar"}', status=400)
+        assert _extract_error_code(resp) is None
+
+    def test_streaming_returns_none(self):
+        resp = StreamingHttpResponse(iter([b"chunk"]), status=400)
+        assert _extract_error_code(resp) is None
+
+
+class TestResolveApplication:
+    def test_no_token_returns_none_pair(self):
+        request = SimpleNamespace()
+        assert _resolve_application(request) == (None, None)
+
+    def test_token_with_application(self):
+        request = SimpleNamespace(access_token=SimpleNamespace(application=SimpleNamespace(id=7, name="my-app")))
+        assert _resolve_application(request) == (7, "my-app")
+
+
+class TestClientIp:
+    def setup_method(self):
+        self.factory = RequestFactory()
+
+    def test_xff_first_entry_wins(self):
+        request = self.factory.get("/", HTTP_X_FORWARDED_FOR="1.2.3.4, 5.6.7.8")
+        assert _client_ip(request) == "1.2.3.4"
+
+    def test_falls_back_to_remote_addr(self):
+        request = self.factory.get("/", REMOTE_ADDR="9.9.9.9")
+        assert _client_ip(request) == "9.9.9.9"
+
+    def test_returns_none_when_neither_present(self):
+        request = self.factory.get("/")
+        request.META.pop("REMOTE_ADDR", None)
+        assert _client_ip(request) is None
