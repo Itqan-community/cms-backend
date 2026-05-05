@@ -44,3 +44,37 @@ class TestTrackApiRequestTask:
         )
 
         client.track.assert_called_once()
+
+    @patch("apps.usage_tracking.tasks._build_ingest_clients")
+    def test_task_resolves_accessed_entity_name(self, mock_build):
+        client = MagicMock()
+        mock_build.return_value = [client]
+
+        with patch("apps.content.models.Asset.objects") as mock_qs:
+            mock_qs.filter.return_value.values.return_value.first.return_value = {"name": "Hafs An Asim"}
+
+            track_api_request_task.run(
+                distinct_id="user-1",
+                event="public_api_request",
+                properties={"accessed_entity_id": 99, "entity_type": "recitation"},
+            )
+
+        sent_props = client.track.call_args[0][2]
+        assert sent_props["accessed_entity_name"] == "Hafs An Asim"
+
+    @patch("apps.usage_tracking.tasks._build_ingest_clients")
+    def test_task_accessed_entity_name_none_when_not_found(self, mock_build):
+        client = MagicMock()
+        mock_build.return_value = [client]
+
+        with patch("apps.content.models.Asset.objects") as mock_qs:
+            mock_qs.filter.return_value.values.return_value.first.return_value = None
+
+            track_api_request_task.run(
+                distinct_id="user-1",
+                event="public_api_request",
+                properties={"accessed_entity_id": 99},
+            )
+
+        sent_props = client.track.call_args[0][2]
+        assert sent_props["accessed_entity_name"] is None
