@@ -4,7 +4,7 @@ from apps.publishers.models import Publisher
 from apps.users.models import User
 
 
-class IssueReportInternalApiTests(BaseTestCase):
+class IssueReportPortalApiTests(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.publisher = Publisher.objects.create(name="Test Publisher")
@@ -39,7 +39,7 @@ class IssueReportInternalApiTests(BaseTestCase):
         self.authenticate_user(self.staff_user)
         payload = {"asset_id": self.asset.id, "description": "API Test Issue Report"}
 
-        response = self.client.post("/cms-api/issue-reports/", payload, format="json")
+        response = self.client.post("/portal/issue-reports/", payload, format="json")
 
         self.assertEqual(201, response.status_code)
         data = response.json()
@@ -50,7 +50,7 @@ class IssueReportInternalApiTests(BaseTestCase):
         self.authenticate_user(self.staff_user)
         payload = {"asset_id": 9999, "description": "Report for nonexistent asset"}
 
-        response = self.client.post("/cms-api/issue-reports/", payload, format="json")
+        response = self.client.post("/portal/issue-reports/", payload, format="json")
 
         self.assertEqual(404, response.status_code)
 
@@ -60,7 +60,7 @@ class IssueReportInternalApiTests(BaseTestCase):
         self._create_report()
         self.authenticate_user(self.staff_user)
 
-        response = self.client.get("/cms-api/issue-reports/")
+        response = self.client.get("/portal/issue-reports/")
 
         self.assertEqual(200, response.status_code)
         data = response.json()
@@ -73,7 +73,7 @@ class IssueReportInternalApiTests(BaseTestCase):
         self._create_report(description="Resolved report description.", status="resolved")
         self.authenticate_user(self.staff_user)
 
-        response = self.client.get("/cms-api/issue-reports/?status=pending")
+        response = self.client.get("/portal/issue-reports/?status=pending")
 
         self.assertEqual(200, response.status_code)
         data = response.json()
@@ -86,7 +86,7 @@ class IssueReportInternalApiTests(BaseTestCase):
         report = self._create_report()
         self.authenticate_user(self.staff_user)
 
-        response = self.client.get(f"/cms-api/issue-reports/{report.id}/")
+        response = self.client.get(f"/portal/issue-reports/{report.id}/")
 
         self.assertEqual(200, response.status_code)
         data = response.json()
@@ -96,7 +96,7 @@ class IssueReportInternalApiTests(BaseTestCase):
     def test_get_issue_report_not_found_returns_404(self):
         self.authenticate_user(self.staff_user)
 
-        response = self.client.get("/cms-api/issue-reports/9999/")
+        response = self.client.get("/portal/issue-reports/9999/")
 
         self.assertEqual(404, response.status_code)
 
@@ -107,7 +107,7 @@ class IssueReportInternalApiTests(BaseTestCase):
         self.authenticate_user(self.staff_user)
         payload = {"description": "Staff updated description text."}
 
-        response = self.client.patch(f"/cms-api/issue-reports/{report.id}/", payload, format="json")
+        response = self.client.patch(f"/portal/issue-reports/{report.id}/", payload, format="json")
 
         self.assertEqual(200, response.status_code)
         data = response.json()
@@ -118,7 +118,7 @@ class IssueReportInternalApiTests(BaseTestCase):
         self.authenticate_user(self.staff_user)
         payload = {"status": "resolved"}
 
-        response = self.client.patch(f"/cms-api/issue-reports/{report.id}/", payload, format="json")
+        response = self.client.patch(f"/portal/issue-reports/{report.id}/", payload, format="json")
 
         self.assertEqual(200, response.status_code)
         self.assertEqual("resolved", response.json()["status"])
@@ -126,7 +126,7 @@ class IssueReportInternalApiTests(BaseTestCase):
     def test_update_issue_report_not_found_returns_404(self):
         self.authenticate_user(self.staff_user)
 
-        response = self.client.patch("/cms-api/issue-reports/9999/", {"status": "resolved"}, format="json")
+        response = self.client.patch("/portal/issue-reports/9999/", {"status": "resolved"}, format="json")
 
         self.assertEqual(404, response.status_code)
 
@@ -136,7 +136,7 @@ class IssueReportInternalApiTests(BaseTestCase):
         report = self._create_report()
         self.authenticate_user(self.staff_user)
 
-        response = self.client.delete(f"/cms-api/issue-reports/{report.id}/")
+        response = self.client.delete(f"/portal/issue-reports/{report.id}/")
 
         self.assertEqual(204, response.status_code)
         self.assertFalse(ContentIssueReport.objects.filter(id=report.id).exists())
@@ -144,7 +144,7 @@ class IssueReportInternalApiTests(BaseTestCase):
     def test_delete_issue_report_not_found_returns_404(self):
         self.authenticate_user(self.staff_user)
 
-        response = self.client.delete("/cms-api/issue-reports/9999/")
+        response = self.client.delete("/portal/issue-reports/9999/")
 
         self.assertEqual(404, response.status_code)
 
@@ -153,6 +153,6 @@ class IssueReportInternalApiTests(BaseTestCase):
         report = self._create_report(status="resolved")
         self.authenticate_user(self.staff_user)
 
-        response = self.client.delete(f"/cms-api/issue-reports/{report.id}/")
+        response = self.client.delete(f"/portal/issue-reports/{report.id}/")
 
         self.assertEqual(204, response.status_code)
