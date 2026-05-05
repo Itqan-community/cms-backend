@@ -1,7 +1,11 @@
+from unittest.mock import patch
+
 from apps.content.models import Asset, CategoryChoice, ContentIssueReport, Qiraah, Reciter, StatusChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
+
+_NOTIFY = "apps.content.services.issue_report_notifications.IssueReportNotificationService.notify_status_changed"
 
 
 class IssueReportPortalApiTests(BaseTestCase):
@@ -156,3 +160,37 @@ class IssueReportPortalApiTests(BaseTestCase):
         response = self.client.delete(f"/portal/issue-reports/{report.id}/")
 
         self.assertEqual(204, response.status_code)
+
+    # --- Notifications ---
+
+    def test_patch_status_change_calls_notification_service(self):
+        report = self._create_report()
+        self.authenticate_user(self.staff_user)
+
+        with patch(_NOTIFY) as mock_notify:
+            response = self.client.patch(f"/portal/issue-reports/{report.id}/", {"status": "resolved"}, format="json")
+
+        self.assertEqual(200, response.status_code)
+        mock_notify.assert_called_once_with(report.id, "pending", "resolved")
+
+    def test_patch_description_only_does_not_call_notification_service(self):
+        report = self._create_report()
+        self.authenticate_user(self.staff_user)
+
+        with patch(_NOTIFY) as mock_notify:
+            response = self.client.patch(
+                f"/portal/issue-reports/{report.id}/", {"description": "Updated description text."}, format="json"
+            )
+
+        self.assertEqual(200, response.status_code)
+        mock_notify.assert_not_called()
+
+    def test_patch_same_status_does_not_call_notification_service(self):
+        report = self._create_report()  # default status: pending
+        self.authenticate_user(self.staff_user)
+
+        with patch(_NOTIFY) as mock_notify:
+            response = self.client.patch(f"/portal/issue-reports/{report.id}/", {"status": "pending"}, format="json")
+
+        self.assertEqual(200, response.status_code)
+        mock_notify.assert_not_called()
