@@ -3,10 +3,10 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
-from django.db.models import ProtectedError, QuerySet
+from django.db.models import ProtectedError
 from django.utils.translation import gettext as _
 
-from apps.content.models import AssetVersion, LicenseChoice
+from apps.content.models import Asset as AssetModel, AssetVersion, CategoryChoice, LicenseChoice, StatusChoice
 from apps.content.repositories.translation import TranslationRepository
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
@@ -22,26 +22,17 @@ class TranslationService:
     def __init__(self, repo: TranslationRepository | None = None) -> None:
         self.repo = repo or TranslationRepository()
 
-    def get_all_translations(self, filters: Any = None) -> QuerySet[Asset]:
-        """
-        Business Logic: Retrieve all translations with optional filtering.
-        """
-        filters_dict = filters.model_dump(exclude_none=True) if filters and hasattr(filters, "model_dump") else {}
-        return self.repo.list_translations_qs(filters_dict)
-
-    def get_translation(self, translation_slug: str) -> Asset:
-        """
-        Business Logic: Retrieve a single translation by slug.
-        Raises ItqanError if not found.
-        """
-        translation = self.repo.get_translation(translation_slug)
-        if translation is None:
+    def _get_translation_or_404(self, translation_slug: str) -> Asset:
+        try:
+            return AssetModel.objects.get(
+                slug=translation_slug, category=CategoryChoice.TRANSLATION, status=StatusChoice.READY
+            )
+        except AssetModel.DoesNotExist as exc:
             raise ItqanError(
                 error_name="translation_not_found",
                 message=_("Translation with slug {slug} not found.").format(slug=translation_slug),
                 status_code=404,
-            )
-        return translation
+            ) from exc
 
     def create_translation(
         self,
@@ -121,7 +112,7 @@ class TranslationService:
         Business Logic: Update an existing translation.
         Validates name requirement, lets repository handle field setting and syncing.
         """
-        asset = self.get_translation(translation_slug)
+        asset = self._get_translation_or_404(translation_slug)
 
         # Validate name fields if user is trying to update them
         if "name_ar" in fields or "name_en" in fields:
@@ -163,7 +154,7 @@ class TranslationService:
         """
         Business Logic: Delete a translation and its resource.
         """
-        asset = self.get_translation(translation_slug)
+        asset = self._get_translation_or_404(translation_slug)
         try:
             self.repo.delete_translation(asset)
             logger.info(f"Translation deleted [asset_id={asset.pk}, slug={translation_slug}]")
@@ -174,19 +165,8 @@ class TranslationService:
                 status_code=400,
             ) from exc
 
-    def get_translation_versions(self, translation_slug: str) -> QuerySet[AssetVersion]:
-        """
-        Business Logic: Retrieve all versions of a translation.
-        """
-        asset = self.get_translation(translation_slug)
-        return self.repo.list_translation_versions(asset)
-
-    def get_translation_version(self, translation_slug: str, version_id: int) -> AssetVersion:
-        """
-        Business Logic: Retrieve a single translation version.
-        Raises ItqanError if version not found.
-        """
-        asset = self.get_translation(translation_slug)
+    def _get_translation_version_or_404(self, translation_slug: str, version_id: int) -> AssetVersion:
+        asset = self._get_translation_or_404(translation_slug)
         version = self.repo.get_translation_version(asset, version_id)
         if version is None:
             raise ItqanError(
@@ -209,7 +189,7 @@ class TranslationService:
         """
         Business Logic: Create a new version for a translation.
         """
-        asset = self.get_translation(translation_slug)
+        asset = self._get_translation_or_404(translation_slug)
         version = self.repo.create_translation_version(
             asset,
             name=name,
@@ -230,7 +210,7 @@ class TranslationService:
         """
         Business Logic: Update an existing translation version.
         """
-        version = self.get_translation_version(translation_slug, version_id)
+        version = self._get_translation_version_or_404(translation_slug, version_id)
         updated = self.repo.update_translation_version(version, fields=fields)
         logger.info(f"Translation version updated [version_id={version_id}, asset_slug={translation_slug}]")
         return updated
@@ -239,6 +219,6 @@ class TranslationService:
         """
         Business Logic: Delete a translation version.
         """
-        version = self.get_translation_version(translation_slug, version_id)
+        version = self._get_translation_version_or_404(translation_slug, version_id)
         self.repo.delete_translation_version(version)
         logger.info(f"Translation version deleted [version_id={version_id}, asset_slug={translation_slug}]")

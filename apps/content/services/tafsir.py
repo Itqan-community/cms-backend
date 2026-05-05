@@ -3,10 +3,10 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
-from django.db.models import ProtectedError, QuerySet
+from django.db.models import ProtectedError
 from django.utils.translation import gettext as _
 
-from apps.content.models import LicenseChoice
+from apps.content.models import Asset as AssetModel, CategoryChoice, LicenseChoice
 from apps.content.repositories.tafsir import TafsirRepository
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
@@ -22,26 +22,15 @@ class TafsirService:
     def __init__(self, repo: TafsirRepository | None = None) -> None:
         self.repo = repo or TafsirRepository()
 
-    def get_all_tafsirs(self, filters: Any = None) -> QuerySet[Asset]:
-        """
-        Business Logic: Retrieve all tafsirs with optional filtering.
-        """
-        filters_dict = filters.model_dump(exclude_none=True) if filters and hasattr(filters, "model_dump") else {}
-        return self.repo.list_tafsirs_qs(filters_dict)
-
-    def get_tafsir(self, tafsir_slug: str) -> Asset:
-        """
-        Business Logic: Retrieve a single tafsir by slug.
-        Raises ItqanError if not found.
-        """
-        tafsir = self.repo.get_tafsir(tafsir_slug)
-        if tafsir is None:
+    def _get_tafsir_or_404(self, tafsir_slug: str) -> Asset:
+        try:
+            return AssetModel.objects.get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
+        except AssetModel.DoesNotExist as exc:
             raise ItqanError(
                 error_name="tafsir_not_found",
                 message=_("Tafsir with slug {slug} not found.").format(slug=tafsir_slug),
                 status_code=404,
-            )
-        return tafsir
+            ) from exc
 
     def create_tafsir(
         self,
@@ -121,7 +110,7 @@ class TafsirService:
         Business Logic: Update an existing tafsir.
         Validates name requirement, lets repository handle field setting and syncing.
         """
-        asset = self.get_tafsir(tafsir_slug)
+        asset = self._get_tafsir_or_404(tafsir_slug)
 
         # Validate name fields if user is trying to update them
         if "name_ar" in fields or "name_en" in fields:
@@ -163,7 +152,7 @@ class TafsirService:
         """
         Business Logic: Delete a tafsir and its resource.
         """
-        asset = self.get_tafsir(tafsir_slug)
+        asset = self._get_tafsir_or_404(tafsir_slug)
         try:
             self.repo.delete_tafsir(asset)
             logger.info(f"Tafsir deleted [asset_id={asset.pk}, slug={tafsir_slug}]")
@@ -174,19 +163,8 @@ class TafsirService:
                 status_code=400,
             ) from exc
 
-    def get_tafsir_versions(self, tafsir_slug: str) -> QuerySet[AssetVersion]:
-        """
-        Business Logic: Retrieve all versions of a tafsir.
-        """
-        asset = self.get_tafsir(tafsir_slug)
-        return self.repo.list_tafsir_versions(asset)
-
-    def get_tafsir_version(self, tafsir_slug: str, version_id: int) -> AssetVersion:
-        """
-        Business Logic: Retrieve a single tafsir version.
-        Raises ItqanError if version not found.
-        """
-        asset = self.get_tafsir(tafsir_slug)
+    def _get_tafsir_version_or_404(self, tafsir_slug: str, version_id: int) -> AssetVersion:
+        asset = self._get_tafsir_or_404(tafsir_slug)
         version = self.repo.get_tafsir_version(asset, version_id)
         if version is None:
             raise ItqanError(
@@ -207,7 +185,7 @@ class TafsirService:
         """
         Business Logic: Create a new version for a tafsir.
         """
-        asset = self.get_tafsir(tafsir_slug)
+        asset = self._get_tafsir_or_404(tafsir_slug)
         version = self.repo.create_tafsir_version(
             asset,
             name=name,
@@ -226,7 +204,7 @@ class TafsirService:
         """
         Business Logic: Update an existing tafsir version.
         """
-        version = self.get_tafsir_version(tafsir_slug, version_id)
+        version = self._get_tafsir_version_or_404(tafsir_slug, version_id)
         updated = self.repo.update_tafsir_version(version, fields=fields)
         logger.info(f"Tafsir version updated [version_id={version_id}, asset_slug={tafsir_slug}]")
         return updated
@@ -235,6 +213,6 @@ class TafsirService:
         """
         Business Logic: Delete a tafsir version.
         """
-        version = self.get_tafsir_version(tafsir_slug, version_id)
+        version = self._get_tafsir_version_or_404(tafsir_slug, version_id)
         self.repo.delete_tafsir_version(version)
         logger.info(f"Tafsir version deleted [version_id={version_id}, asset_slug={tafsir_slug}]")

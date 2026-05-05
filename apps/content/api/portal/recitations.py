@@ -1,13 +1,15 @@
 import logging
 from typing import Annotated, Literal
 
+from django.db.models import F, Q
+from django.utils.translation import gettext_lazy as _
 from ninja import Field, FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime
 
-from apps.content.models import Asset, LicenseChoice
+from apps.content.models import Asset, CategoryChoice, LicenseChoice, Riwayah, StatusChoice
 from apps.content.services.recitation import RecitationService
-from apps.core.ninja_utils.errors import NinjaErrorResponse
+from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.permission_required import permission_required
 from apps.core.ninja_utils.request import Request
@@ -201,9 +203,38 @@ class RecitationFilter(FilterSchema):
     ]
 )
 def list_recitations(request: Request, filters: RecitationFilter = Query()):
-    service = RecitationService()
-    qs = service.get_all_recitations(None, filters)
-    return qs
+    qs = Asset.objects.select_related("publisher", "reciter", "riwayah", "qiraah").filter(
+        category=CategoryChoice.RECITATION,
+        status=StatusChoice.READY,
+    )
+
+    filters_dict = filters.model_dump(exclude_none=True)
+    if reciter_ids := filters_dict.get("reciter_id"):
+        qs = qs.filter(reciter_id__in=reciter_ids)
+    if riwayah_ids := filters_dict.get("riwayah_id"):
+        qs = qs.filter(
+            Q(riwayah_id__in=riwayah_ids)
+            | Q(riwayah__isnull=True, qiraah__in=Riwayah.objects.filter(id__in=riwayah_ids).values("qiraah_id"))
+        )
+    if qiraah_ids := filters_dict.get("qiraah_id"):
+        qs = qs.filter(qiraah_id__in=qiraah_ids)
+    if publisher_ids := filters_dict.get("publisher_id"):
+        qs = qs.filter(publisher_id__in=publisher_ids)
+    if madd_levels := filters_dict.get("madd_level"):
+        qs = qs.filter(madd_level__in=madd_levels)
+    if meem_behaviours := filters_dict.get("meem_behaviour"):
+        qs = qs.filter(meem_behaviour__in=meem_behaviours)
+    if year := filters_dict.get("year"):
+        qs = qs.filter(year=year)
+    if license_codes := filters_dict.get("license_code"):
+        qs = qs.filter(license__in=license_codes)
+
+    qs = qs.annotate(
+        reciter_name=F("reciter__name"),
+        qiraah_name=F("qiraah__name"),
+        riwayah_name=F("riwayah__name"),
+    )
+    return qs.distinct()
 
 
 @router.post(
@@ -254,9 +285,18 @@ def create_recitation(
 )
 @permission_required([permission_class(PermissionChoice.PORTAL_READ_RECITATION)])
 def retrieve_recitation(request: Request, recitation_slug: str) -> Asset:
-    service = RecitationService()
-    recitation = service.get_recitation(recitation_slug)
-    return recitation
+    try:
+        return (
+            Asset.objects.select_related("publisher", "reciter", "riwayah", "qiraah")
+            .prefetch_related("versions")
+            .get(slug=recitation_slug, category=CategoryChoice.RECITATION)
+        )
+    except Asset.DoesNotExist as exc:
+        raise ItqanError(
+            error_name="recitation_not_found",
+            message=_("Recitation with slug {slug} not found.").format(slug=recitation_slug),
+            status_code=404,
+        ) from exc
 
 
 @router.put(

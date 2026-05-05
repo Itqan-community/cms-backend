@@ -1,8 +1,8 @@
 from typing import Literal
 
+from django.utils.translation import gettext_lazy as _
 from ninja import Schema
 from ninja.pagination import paginate
-from rest_framework.generics import get_object_or_404
 
 from apps.content.models import Asset, CategoryChoice, RecitationSurahTrack
 from apps.content.repositories.recitation_track import RecitationTrackRepository
@@ -48,9 +48,15 @@ class RecitationTrackOut(Schema):
 @permission_required([permission_class(PermissionChoice.PORTAL_READ_RECITATION)])
 @paginate
 def list_tracks(request: Request, recitation_slug: str):
-    asset = get_object_or_404(Asset, category=CategoryChoice.RECITATION, slug=recitation_slug)
-    repo = RecitationTrackRepository()
-    return repo.get_recitation_tracks_by_asset_id(asset_id=asset.id)
+    try:
+        asset = Asset.objects.get(category=CategoryChoice.RECITATION, slug=recitation_slug)
+    except Asset.DoesNotExist as exc:
+        raise ItqanError(
+            error_name="asset_not_found",
+            message=_("Asset with slug {slug} not found.").format(slug=recitation_slug),
+            status_code=404,
+        ) from exc
+    return RecitationSurahTrack.objects.filter(asset_id=asset.id).order_by("surah_number")
 
 
 class DeleteTracksIn(Schema):

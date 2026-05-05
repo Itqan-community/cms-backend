@@ -1,13 +1,14 @@
 import logging
 from typing import Annotated, Literal
 
+from django.utils.translation import gettext_lazy as _
 from ninja import Field, File, FilterLookup, FilterSchema, Form, Query, Schema, UploadedFile
 from ninja.pagination import paginate
 from pydantic import AwareDatetime
 
-from apps.content.models import Asset, AssetVersion, LicenseChoice
+from apps.content.models import Asset, AssetVersion, CategoryChoice, LicenseChoice, StatusChoice
 from apps.content.services.tafsir import TafsirService
-from apps.core.ninja_utils.errors import NinjaErrorResponse
+from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.permission_required import permission_required
 from apps.core.ninja_utils.request import Request
@@ -165,9 +166,22 @@ class TafsirFilter(FilterSchema):
     ]
 )
 def list_tafsirs(request: Request, filters: TafsirFilter = Query()):
-    service = TafsirService()
-    qs = service.get_all_tafsirs(filters)
-    return qs
+    qs = Asset.objects.select_related("publisher").filter(
+        category=CategoryChoice.TAFSIR,
+        status=StatusChoice.READY,
+    )
+
+    filters_dict = filters.model_dump(exclude_none=True)
+    if publisher_ids := filters_dict.get("publisher_id"):
+        qs = qs.filter(publisher_id__in=publisher_ids)
+    if license_codes := filters_dict.get("license_code"):
+        qs = qs.filter(license__in=license_codes)
+    if language := filters_dict.get("language"):
+        qs = qs.filter(language=language)
+    if "is_external" in filters_dict:
+        qs = qs.filter(is_external=filters_dict["is_external"])
+
+    return qs.distinct()
 
 
 @router.post(
@@ -215,8 +229,18 @@ def create_tafsir(
 )
 @permission_required([permission_class(PermissionChoice.PORTAL_READ_TAFSIR)])
 def retrieve_tafsir(request: Request, tafsir_slug: str) -> Asset:
-    service = TafsirService()
-    return service.get_tafsir(tafsir_slug)
+    try:
+        return (
+            Asset.objects.select_related("publisher")
+            .prefetch_related("versions")
+            .get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
+        )
+    except Asset.DoesNotExist as exc:
+        raise ItqanError(
+            error_name="tafsir_not_found",
+            message=_("Tafsir with slug {slug} not found.").format(slug=tafsir_slug),
+            status_code=404,
+        ) from exc
 
 
 @router.put(
