@@ -294,9 +294,7 @@ class TestResolveApplication:
         assert _resolve_application(request) == (None, None)
 
     def test_token_with_application(self):
-        request = SimpleNamespace(access_token=SimpleNamespace(
-            application=SimpleNamespace(id=7, name="my-app")
-        ))
+        request = SimpleNamespace(access_token=SimpleNamespace(application=SimpleNamespace(id=7, name="my-app")))
         assert _resolve_application(request) == (7, "my-app")
 
 

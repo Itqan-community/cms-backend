@@ -6,8 +6,8 @@ import json
 import logging
 import re
 import time
-import uuid
 from urllib.parse import parse_qs
+import uuid
 
 from apps.usage_tracking.services.entity_extractor import extract_entities
 from apps.usage_tracking.services.publisher_resolver import resolve_publisher_from_request
@@ -72,7 +72,7 @@ def _detect_auth_method(request) -> str:
     user = getattr(request, "user", None)
     if user is None or not getattr(user, "is_authenticated", False):
         return "anonymous"
-    auth_header = request.META.get("HTTP_AUTHORIZATION", "")
+    auth_header = request.headers.get("authorization", "")
     if auth_header.lower().startswith("bearer "):
         return "jwt"
     return "session"
@@ -80,7 +80,7 @@ def _detect_auth_method(request) -> str:
 
 def _client_ip(request) -> str | None:
     """Resolve real client IP behind nginx/cloudflare. Used for Mixpanel $ip."""
-    xff = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    xff = request.headers.get("x-forwarded-for", "")
     if xff:
         # X-Forwarded-For: client, proxy1, proxy2 — first entry is the real client.
         return xff.split(",")[0].strip() or None
@@ -181,7 +181,7 @@ class UsageTrackingMiddleware:
         query_string = request.META.get("QUERY_STRING") or None
         parsed_qs = _parse_query_params(query_string or "")
         error_code = _extract_error_code(response)
-        user_agent = request.META.get("HTTP_USER_AGENT") or None
+        user_agent = request.headers.get("user-agent") or None
         ip = _client_ip(request)
         auth_method = _detect_auth_method(request)
 
