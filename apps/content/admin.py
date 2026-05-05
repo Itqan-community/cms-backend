@@ -848,18 +848,24 @@ class ContentIssueReportAdmin(admin.ModelAdmin):
 
     @admin.action(description="Mark as Under Review")
     def mark_as_under_review(self, request, queryset):
-        """Bulk update status to under_review"""
-        count = queryset.update(status=ContentIssueReport.StatusChoice.UNDER_REVIEW)
-        self.message_user(request, f"Marked {count} reports as under review.")
+        new_status = ContentIssueReport.StatusChoice.UNDER_REVIEW
+        self._bulk_update_status(request, queryset, new_status, "under review")
 
     @admin.action(description="Mark as Resolved")
     def mark_as_resolved(self, request, queryset):
-        """Bulk update status to resolved"""
-        count = queryset.update(status=ContentIssueReport.StatusChoice.RESOLVED)
-        self.message_user(request, f"Marked {count} reports as resolved.")
+        new_status = ContentIssueReport.StatusChoice.RESOLVED
+        self._bulk_update_status(request, queryset, new_status, "resolved")
 
     @admin.action(description="Mark as Dismissed")
     def mark_as_dismissed(self, request, queryset):
-        """Bulk update status to dismissed"""
-        count = queryset.update(status=ContentIssueReport.StatusChoice.DISMISSED)
-        self.message_user(request, f"Marked {count} reports as dismissed.")
+        new_status = ContentIssueReport.StatusChoice.DISMISSED
+        self._bulk_update_status(request, queryset, new_status, "dismissed")
+
+    def _bulk_update_status(self, request, queryset, new_status, label):
+        from apps.content.tasks import send_issue_status_update_email
+
+        changing = list(queryset.exclude(status=new_status).values("id", "status"))
+        count = queryset.update(status=new_status)
+        for item in changing:
+            send_issue_status_update_email.delay(item["id"], item["status"], new_status)
+        self.message_user(request, f"Marked {count} reports as {label}.")

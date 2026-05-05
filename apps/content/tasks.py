@@ -215,3 +215,57 @@ def send_asset_update_email(asset_version_id: int) -> None:
     logger.info(
         f"Task completed [task=send_asset_update_email, asset_version_id={asset_version_id}, recipients={len(list(users))}]"
     )
+
+
+@shared_task(bind=True, max_retries=3)
+def send_issue_status_update_email(self, report_id: int, old_status: str, new_status: str) -> None:
+    """
+    Task to notify the issue reporter when the issue status changes.
+    """
+    logger.info(
+        f"Task started [task=send_issue_status_update_email, report_id={report_id}, {old_status!r} -> {new_status!r}]"
+    )
+    try:
+        from django.conf import settings
+
+        from apps.content.models import ContentIssueReport
+
+        try:
+            report = ContentIssueReport.objects.select_related("reporter", "asset").get(pk=report_id)
+        except ContentIssueReport.DoesNotExist:
+            logger.warning(f"ContentIssueReport not found, skipping email [report_id={report_id}]")
+            return
+
+        reporter_email = report.reporter.email
+        if not reporter_email:
+            logger.warning(f"Reporter has no email, skipping [report_id={report_id}]")
+            return
+
+        old_label = ContentIssueReport.StatusChoice(old_status).label
+        new_label = ContentIssueReport.StatusChoice(new_status).label
+        asset_name = report.asset.name if report.asset else f"Issue #{report_id}"
+        portal_base = getattr(settings, "FRONTEND_BASE_URL", "").rstrip("/")
+        issue_url = f"{portal_base}/issues/{report_id}"
+
+        subject = f"Your issue status has been updated: {old_label} → {new_label}"
+        context = {
+            "report_id": report_id,
+            "asset_name": asset_name,
+            "old_status": old_label,
+            "new_status": new_label,
+            "issue_url": issue_url,
+        }
+
+        email_service.send_email(
+            subject=subject,
+            recipients=[reporter_email],
+            template="emails/issue_status_update.html",
+            context=context,
+        )
+        logger.info(
+            f"Task completed [task=send_issue_status_update_email, report_id={report_id}, recipient={reporter_email}]"
+        )
+
+    except Exception as exc:
+        logger.error(f"Failed to send issue status update email [report_id={report_id}]: {exc}")
+        raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1)) from exc
