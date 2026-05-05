@@ -9,10 +9,8 @@ class IssueReportTenantApiTests(BaseTestCase):
         super().setUp()
         self.publisher = Publisher.objects.create(name="Test Publisher")
         self.domain = Domain.objects.create(domain="tenant.example.com", publisher=self.publisher, is_primary=True)
-
         self.user = User.objects.create_user(email="reporter@example.com", password="password123")
 
-        # Create dependencies for Asset
         self.reciter = Reciter.objects.create(name="Test Reciter")
         self.qiraah = Qiraah.objects.create(name="Test Qiraah")
 
@@ -27,7 +25,6 @@ class IssueReportTenantApiTests(BaseTestCase):
             qiraah=self.qiraah,
         )
 
-        # Another publisher's asset
         self.publisher2 = Publisher.objects.create(name="Other Publisher")
         self.asset2 = Asset.objects.create(
             name="Other Asset",
@@ -40,64 +37,134 @@ class IssueReportTenantApiTests(BaseTestCase):
             qiraah=self.qiraah,
         )
 
-    def test_create_issue_report_tenant_with_correct_data_should_return_201(self):
-        """Test creating an issue report via tenant API"""
-        # Arrange
-        self.authenticate_user(self.user, domain=self.domain)
-        payload = {
-            "content_type": "asset",
-            "content_id": self.asset.id,
-            "description": "Tenant API Report",
-        }
+    def _create_report(self, asset=None, user=None, description="Tenant Report", status="pending"):
+        return ContentIssueReport.objects.create(
+            reporter=user or self.user,
+            asset=asset or self.asset,
+            description=description,
+            status=status,
+        )
 
-        # Act
+    # --- Create ---
+
+    def test_create_issue_report_tenant_with_correct_data_should_return_201(self):
+        self.authenticate_user(self.user, domain=self.domain)
+        payload = {"asset_id": self.asset.id, "description": "Tenant API Report"}
+
         response = self.client.post("/tenant/issue-reports/", payload, format="json")
 
-        # Assert
         self.assertEqual(201, response.status_code)
         data = response.json()
         self.assertEqual("Tenant API Report", data["description"])
-        self.assertEqual(self.asset.id, data["object_id"])
+        self.assertEqual(self.asset.id, data["asset_id"])
 
-    def test_create_unauthenticated(self):
-        """Test creating report without auth fails"""
-        # Arrange
+    def test_create_unauthenticated_returns_401(self):
         self.authenticate_user(None, domain=self.domain)
-        payload = {
-            "content_type": "asset",
-            "content_id": self.asset.id,
-            "description": "Anon Report",
-        }
+        payload = {"asset_id": self.asset.id, "description": "Anon Report"}
 
-        # Act
         response = self.client.post("/tenant/issue-reports/", payload, format="json")
 
-        # Assert
         self.assertEqual(401, response.status_code)
 
+    # --- List ---
+
     def test_list_issue_reports_tenant_filtering(self):
-        """Test tenant API only lists reports for tenant's publisher content"""
-        # Arrange
-        ContentIssueReport.objects.create(
-            reporter=self.user,
-            content_object=self.asset,
-            description="Tenant Report",
-            status="pending",
-        )
-        ContentIssueReport.objects.create(
-            reporter=self.user,
-            content_object=self.asset2,
-            description="Other Publisher Report",
-            status="pending",
-        )
+        """Tenant API only returns reports scoped to the tenant's publisher assets"""
+        self._create_report()
+        self._create_report(asset=self.asset2, description="Other Publisher Report")
         self.authenticate_user(self.user, domain=self.domain)
 
-        # Act
         response = self.client.get("/tenant/issue-reports/")
 
-        # Assert
         self.assertEqual(200, response.status_code)
         data = response.json()
         self.assertIn("results", data)
         self.assertEqual(1, len(data["results"]))
         self.assertEqual("Tenant Report", data["results"][0]["description"])
+
+    # --- Retrieve ---
+
+    def test_get_issue_report_by_id(self):
+        report = self._create_report()
+        self.authenticate_user(self.user, domain=self.domain)
+
+        response = self.client.get(f"/tenant/issue-reports/{report.id}/")
+
+        self.assertEqual(200, response.status_code)
+        data = response.json()
+        self.assertEqual(report.id, data["id"])
+        self.assertEqual(self.asset.id, data["asset_id"])
+
+    def test_get_issue_report_not_found_returns_404(self):
+        self.authenticate_user(self.user, domain=self.domain)
+
+        response = self.client.get("/tenant/issue-reports/9999/")
+
+        self.assertEqual(404, response.status_code)
+
+    # --- Update ---
+
+    def test_update_own_pending_report_description(self):
+        report = self._create_report()
+        self.authenticate_user(self.user, domain=self.domain)
+        payload = {"description": "Updated description text here."}
+
+        response = self.client.patch(f"/tenant/issue-reports/{report.id}/", payload, format="json")
+
+        self.assertEqual(200, response.status_code)
+        self.assertEqual("Updated description text here.", response.json()["description"])
+
+    def test_update_non_pending_report_returns_403(self):
+        report = self._create_report(status="resolved")
+        self.authenticate_user(self.user, domain=self.domain)
+        payload = {"description": "Trying to update resolved report."}
+
+        response = self.client.patch(f"/tenant/issue-reports/{report.id}/", payload, format="json")
+
+        self.assertEqual(403, response.status_code)
+
+    def test_update_other_users_report_returns_403(self):
+        other_user = User.objects.create_user(email="other@example.com", password="password123")
+        report = self._create_report(user=other_user)
+        self.authenticate_user(self.user, domain=self.domain)
+        payload = {"description": "Hijacking someone else's report."}
+
+        response = self.client.patch(f"/tenant/issue-reports/{report.id}/", payload, format="json")
+
+        self.assertEqual(403, response.status_code)
+
+    # --- Delete ---
+
+    def test_delete_own_pending_report(self):
+        report = self._create_report()
+        self.authenticate_user(self.user, domain=self.domain)
+
+        response = self.client.delete(f"/tenant/issue-reports/{report.id}/")
+
+        self.assertEqual(204, response.status_code)
+        self.assertFalse(ContentIssueReport.objects.filter(id=report.id).exists())
+
+    def test_delete_non_pending_report_returns_403(self):
+        report = self._create_report(status="resolved")
+        self.authenticate_user(self.user, domain=self.domain)
+
+        response = self.client.delete(f"/tenant/issue-reports/{report.id}/")
+
+        self.assertEqual(403, response.status_code)
+
+    def test_delete_other_users_report_returns_403(self):
+        other_user = User.objects.create_user(email="other2@example.com", password="password123")
+        report = self._create_report(user=other_user)
+        self.authenticate_user(self.user, domain=self.domain)
+
+        response = self.client.delete(f"/tenant/issue-reports/{report.id}/")
+
+        self.assertEqual(403, response.status_code)
+
+    def test_delete_unauthenticated_returns_401(self):
+        report = self._create_report()
+        self.authenticate_user(None, domain=self.domain)
+
+        response = self.client.delete(f"/tenant/issue-reports/{report.id}/")
+
+        self.assertEqual(401, response.status_code)
