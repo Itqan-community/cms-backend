@@ -487,15 +487,15 @@ wheels = [
 
 [[package]]
 name = "django-allauth"
-version = "65.14.1"
+version = "65.16.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "asgiref" },
     { name = "django" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fb/02/549b6f41ba3e55d4e2cf8e181cdf57b50035a3c0bdddb710a7df0b24efb0/django_allauth-65.14.1.tar.gz", hash = "sha256:2467656d0adc835607e407847054979ab5a943778f6eb8980ed2a29eee6c5790", size = 1993088, upload-time = "2026-02-07T22:36:52.279Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3d/df/357187dfff18c7783e4911827a6c69437e290d7259a32a99c23fcd85997f/django_allauth-65.16.1.tar.gz", hash = "sha256:4425ac3088541c4c54983e16e08f6e3eb9f438dc1b1009534fa51c8bb739ed31", size = 2232835, upload-time = "2026-04-17T18:53:59.475Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/28/80/05e2b3fffb80260af2dbb179d186929d7531bc9331974ba774d1d8eb3e38/django_allauth-65.14.1-py3-none-any.whl", hash = "sha256:204d8a07f217c41769a62aa4c7ae7afeb2886c841bebda6964e613e5be72e8b3", size = 1793120, upload-time = "2026-02-07T22:37:03.486Z" },
+    { url = "https://files.pythonhosted.org/packages/ad/58/d95b6c3088d83697bfd93782ee57bc6a6462e41eb19121a947b8a015396a/django_allauth-65.16.1-py3-none-any.whl", hash = "sha256:e49df24056bf37c44e56aaad1e51f78994b7d175bc3476d65e8f8f58390a8ce8", size = 2051868, upload-time = "2026-04-17T18:54:12.032Z" },
 ]
 
 [package.optional-dependencies]
@@ -1141,7 +1141,7 @@ requires-dist = [
     { name = "boto3", specifier = "==1.40.*" },
     { name = "celery", specifier = "==5.5.*" },
     { name = "django", specifier = "==5.2.*" },
-    { name = "django-allauth", extras = ["mfa", "socialaccount", "headless"], specifier = "==65.14.1" },
+    { name = "django-allauth", extras = ["mfa", "socialaccount", "headless"], specifier = "==65.16.1" },
     { name = "django-celery-beat", specifier = "==2.9.*" },
     { name = "django-cors-headers", specifier = ">=4.7.0" },
     { name = "django-countries", specifier = ">=7.6" },
