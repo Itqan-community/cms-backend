@@ -8,12 +8,16 @@ from pydantic import AwareDatetime
 
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
+from apps.core.ninja_utils.permission_required import permission_required
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.core.permission_utils import permission_class
+from apps.core.permissions import PermissionChoice
 from apps.publishers.models import Publisher
 from apps.publishers.repositories.publisher import PublisherRepository
+from apps.publishers.services.membership import enforce_publisher_membership
 from apps.publishers.services.publisher import PublisherService
 
 router = ItqanRouter(tags=[NinjaTag.PUBLISHERS])
@@ -59,6 +63,7 @@ class PublisherCreateOut(Schema):
 
 
 @router.post("publishers/", response={201: PublisherCreateOut, 400: NinjaErrorResponse})
+@permission_required([permission_class(PermissionChoice.PORTAL_CREATE_PUBLISHER)])
 def create_publisher(
     request: Request, data: Form[PublisherCreateIn], icon: UploadedFile = File(None)
 ) -> tuple[int, Publisher]:
@@ -107,11 +112,12 @@ class PublisherFilter(FilterSchema):
 
 
 @router.get("publishers/", response=list[PublisherListOut])
+@permission_required([permission_class(PermissionChoice.PORTAL_READ_PUBLISHER)])
 @paginate
 @ordering(ordering_fields=["name", "created_at", "foundation_year"])
 @searching(search_fields=["name_en", "name_ar", "description_en", "description_ar"])
 def list_publishers(request: Request, filters: PublisherFilter = Query(...)):
-    qs = Publisher.objects.all()
+    qs = Publisher.objects.filter(request.user_publisher_q(lookup="id"))
     qs = filters.filter(qs)
     return qs
 
@@ -149,9 +155,10 @@ class PublisherDetailOut(Schema):
     "publishers/{int:publisher_id}/",
     response={200: PublisherDetailOut, 404: NinjaErrorResponse[Literal["publisher_not_found"]]},
 )
+@permission_required([permission_class(PermissionChoice.PORTAL_READ_PUBLISHER)])
 def retrieve_publisher(request: Request, publisher_id: int) -> Publisher:
     try:
-        return Publisher.objects.get(id=publisher_id)
+        return Publisher.objects.filter(request.user_publisher_q(lookup="id")).get(id=publisher_id)
     except Publisher.DoesNotExist as exc:
         raise ItqanError(
             error_name="publisher_not_found",
@@ -193,15 +200,19 @@ class PublisherPutIn(Schema):
     "publishers/{int:publisher_id}/",
     response={200: PublisherDetailOut, 400: NinjaErrorResponse, 404: NinjaErrorResponse},
 )
+@permission_required([permission_class(PermissionChoice.PORTAL_UPDATE_PUBLISHER)])
 def update_publisher_put(
     request: Request, publisher_id: int, data: Form[PublisherPutIn], icon: UploadedFile = File(None)
 ) -> Publisher:
+    enforce_publisher_membership(request.user, publisher_id)
     logger.info(f"Updating publisher (PUT) [publisher_id={publisher_id}, user_id={request.user.id}]")
     service = PublisherService(PublisherRepository())
     fields = data.model_dump()
     if icon:
         fields["icon_url"] = icon
-    publisher = service.update_publisher(publisher_id, fields=fields)
+    publisher = service.update_publisher(
+        publisher_id, fields=fields, user_publisher_q=request.user_publisher_q(lookup="id")
+    )
     logger.info(f"Publisher updated [publisher_id={publisher_id}, user_id={request.user.id}]")
     return publisher
 
@@ -210,15 +221,19 @@ def update_publisher_put(
     "publishers/{int:publisher_id}/",
     response={200: PublisherDetailOut, 400: NinjaErrorResponse, 404: NinjaErrorResponse},
 )
+@permission_required([permission_class(PermissionChoice.PORTAL_UPDATE_PUBLISHER)])
 def update_publisher_patch(
     request: Request, publisher_id: int, data: Form[PublisherPatchIn], icon: UploadedFile = File(None)
 ) -> Publisher:
     logger.info(f"Updating publisher (PATCH) [publisher_id={publisher_id}, user_id={request.user.id}]")
+    enforce_publisher_membership(request.user, publisher_id)
     service = PublisherService(PublisherRepository())
     fields = data.model_dump(exclude_unset=True)
     if icon:
         fields["icon_url"] = icon
-    publisher = service.update_publisher(publisher_id, fields=fields)
+    publisher = service.update_publisher(
+        publisher_id, fields=fields, user_publisher_q=request.user_publisher_q(lookup="id")
+    )
     logger.info(f"Publisher updated [publisher_id={publisher_id}, user_id={request.user.id}]")
     return publisher
 
@@ -230,6 +245,7 @@ def update_publisher_patch(
     "publishers/{int:publisher_id}/",
     response={204: None, 404: NinjaErrorResponse},
 )
+@permission_required([permission_class(PermissionChoice.PORTAL_DELETE_PUBLISHER)])
 def delete_publisher(request: Request, publisher_id: int) -> tuple[int, None]:
     logger.info(f"Deleting publisher [publisher_id={publisher_id}, user_id={request.user.id}]")
     service = PublisherService(PublisherRepository())

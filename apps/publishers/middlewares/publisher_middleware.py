@@ -36,6 +36,7 @@ class PublisherMiddleware:
         request.publisher_domain = domain
         request.publisher = domain.publisher if domain else None
         request.publisher_q = functools.partial(publisher_q, request.publisher)
+        request.user_publisher_q = lambda lookup="publisher": user_publisher_q(request.user, lookup)
         if domain is None:
             return None
         if not domain.is_active:
@@ -89,3 +90,38 @@ def publisher_q(publisher: Publisher | None, lookup: str = "publisher") -> Q:
     useful for frequent filtering
     """
     return Q(**{lookup: publisher}) if publisher else Q()
+
+
+class UserPublisherQ(Protocol):
+    """Protocol for user_publisher_q used in type hinting on the Request object."""
+
+    def __call__(self, lookup: str = "publisher_id") -> Q: ...
+
+
+def user_publisher_q(user, lookup: str = "publisher_id") -> Q:
+    """
+    Returns a Q object that scopes a queryset to the publishers the user belongs to.
+
+    - Anonymous users: matches nothing.
+    - Staff users: matches everything (Q()).
+    - Otherwise: matches rows where the `<lookup>` field is in the user's PublisherMember set.
+      Users with no memberships match nothing.
+
+    `lookup` is the full ORM lookup path to the publisher id (e.g. "publisher_id",
+    "asset__publisher_id", "id" when filtering Publisher itself).
+
+    The membership ID list is cached on the user instance for the request lifetime.
+    """
+    if user is None or not getattr(user, "is_authenticated", False):
+        return Q(pk__in=[])
+    if getattr(user, "is_staff", False):
+        return Q()
+
+    publisher_ids = getattr(user, "_cached_publisher_ids", None)
+    if publisher_ids is None:
+        publisher_ids = list(user.publishers.values_list("id", flat=True))
+        user._cached_publisher_ids = publisher_ids
+
+    if not publisher_ids:
+        return Q(pk__in=[])
+    return Q(**{f"{lookup}__in": publisher_ids})

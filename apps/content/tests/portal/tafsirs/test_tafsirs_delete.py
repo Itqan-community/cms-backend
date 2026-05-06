@@ -20,7 +20,7 @@ class TafsirDeleteTest(BaseTestCase):
             description="Will be deleted",
         )
 
-        self.user = User.objects.create_user(email="testuser@example.com", name="Test User")
+        self.user = User.objects.create_user(email="testuser@example.com", name="Test User", is_staff=True)
 
     def test_delete_tafsir_where_valid_slug_should_return_204(self):
         self.authenticate_user(self.user)
@@ -53,7 +53,9 @@ class TafsirDeleteTest(BaseTestCase):
 
     def test_delete_tafsir_where_user_lacks_permission_should_return_403(self):
         # Arrange
-        user_without_permission = User.objects.create_user(email="noperm@example.com", name="No Permission User")
+        user_without_permission = User.objects.create_user(
+            email="noperm@example.com", name="No Permission User", is_staff=True
+        )
         self.authenticate_user(user_without_permission)
 
         # Act

@@ -31,7 +31,7 @@ class TafsirDetailTest(BaseTestCase):
         self.version1 = baker.make(AssetVersion, asset=self.tafsir, name="Version 1.0", size_bytes=1024)
         self.version2 = baker.make(AssetVersion, asset=self.tafsir, name="Version 2.0", size_bytes=2048)
 
-        self.user = User.objects.create_user(email="testuser@example.com", name="Test User")
+        self.user = User.objects.create_user(email="testuser@example.com", name="Test User", is_staff=True)
 
     def test_retrieve_tafsir_where_valid_slug_should_return_all_fields(self):
         self.authenticate_user(self.user)
@@ -85,7 +85,9 @@ class TafsirDetailTest(BaseTestCase):
 
     def test_retrieve_tafsir_where_user_lacks_permission_should_return_403(self):
         # Arrange
-        user_without_permission = User.objects.create_user(email="noperm@example.com", name="No Permission User")
+        user_without_permission = User.objects.create_user(
+            email="noperm@example.com", name="No Permission User", is_staff=True
+        )
         self.authenticate_user(user_without_permission)
 
         # Act

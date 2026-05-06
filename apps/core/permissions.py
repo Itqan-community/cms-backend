@@ -33,3 +33,9 @@ class PermissionChoice(TextChoices):
     PORTAL_CREATE_TRANSLATION = "portal_create_translation", _("Create Portal Translations")
     PORTAL_UPDATE_TRANSLATION = "portal_update_translation", _("Update Portal Translations")
     PORTAL_DELETE_TRANSLATION = "portal_delete_translation", _("Delete Portal Translations")
+
+    # Publishers
+    PORTAL_READ_PUBLISHER = "portal_read_publisher", _("Portal - View Publishers")
+    PORTAL_CREATE_PUBLISHER = "portal_create_publisher", _("Portal - Create Publishers")
+    PORTAL_UPDATE_PUBLISHER = "portal_update_publisher", _("Portal - Update Publishers")
+    PORTAL_DELETE_PUBLISHER = "portal_delete_publisher", _("Portal - Delete Publishers")

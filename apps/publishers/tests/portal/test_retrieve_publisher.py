@@ -1,5 +1,6 @@
 from model_bakery import baker
 
+from apps.core.permissions import PermissionChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -7,11 +8,12 @@ from apps.users.models import User
 
 class RetrievePublisherTest(BaseTestCase):
     def setUp(self) -> None:
-        self.user = baker.make(User)
+        self.user = baker.make(User, is_staff=True)
 
     def test_retrieve_publisher_where_exists_should_return_200_with_all_fields(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_PUBLISHER)
         publisher = baker.make(
             Publisher,
             name="Tafsir Center",
@@ -49,6 +51,7 @@ class RetrievePublisherTest(BaseTestCase):
     def test_retrieve_publisher_where_not_found_should_return_404(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_PUBLISHER)
 
         # Act
         response = self.client.get("/portal/publishers/99999/")
@@ -71,6 +74,7 @@ class RetrievePublisherTest(BaseTestCase):
     def test_retrieve_publisher_where_has_translated_fields_should_include_them(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_PUBLISHER)
         publisher = baker.make(
             Publisher,
             name="International Publisher",
@@ -91,3 +95,16 @@ class RetrievePublisherTest(BaseTestCase):
         self.assertEqual("International Publisher EN", body["name_en"])
         self.assertEqual("وصف بالعربية", body["description_ar"])
         self.assertEqual("Description in English", body["description_en"])
+
+    def test_retrieve_publisher_where_no_permission_should_return_403(self) -> None:
+        # Arrange
+        self.authenticate_user(self.user)
+        publisher = baker.make(Publisher, name="Test", slug="test")
+
+        # Act
+        response = self.client.get(f"/portal/publishers/{publisher.id}/")
+
+        # Assert
+        self.assertEqual(403, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("permission_denied", body["error_name"])

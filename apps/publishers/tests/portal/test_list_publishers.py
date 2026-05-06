@@ -1,5 +1,6 @@
 from model_bakery import baker
 
+from apps.core.permissions import PermissionChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -7,12 +8,13 @@ from apps.users.models import User
 
 class ListPublishersTest(BaseTestCase):
     def setUp(self) -> None:
-        self.user = baker.make(User)
+        self.user = baker.make(User, is_staff=True)
         self.url = "/portal/publishers/"
 
     def test_list_publishers_where_no_filters_should_return_all_paginated(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_PUBLISHER)
         baker.make(Publisher, name="Publisher A", slug="publisher-a")
         baker.make(Publisher, name="Publisher B", slug="publisher-b")
         baker.make(Publisher, name="Publisher C", slug="publisher-c")
@@ -30,6 +32,7 @@ class ListPublishersTest(BaseTestCase):
     def test_list_publishers_where_search_by_name_should_filter_results(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_PUBLISHER)
         baker.make(Publisher, name="Tafsir Center", slug="tafsir-center")
         baker.make(Publisher, name="Hadith Press", slug="hadith-press")
 
@@ -45,6 +48,7 @@ class ListPublishersTest(BaseTestCase):
     def test_list_publishers_where_search_by_name_ar_should_filter_results(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_PUBLISHER)
         baker.make(Publisher, name="Tafsir Center", name_ar="مركز التفسير", slug="tafsir-center")
         baker.make(Publisher, name="Hadith Press", name_ar="دار الحديث", slug="hadith-press")
 
@@ -60,6 +64,7 @@ class ListPublishersTest(BaseTestCase):
     def test_list_publishers_where_search_by_description_should_filter_results(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_PUBLISHER)
         baker.make(Publisher, name="Tafsir Pub", slug="tafsir-pub", description="Specializes in Quran exegesis")
         baker.make(Publisher, name="Hadith Pub", slug="hadith-pub", description="Hadith collections")
 
@@ -75,6 +80,7 @@ class ListPublishersTest(BaseTestCase):
     def test_list_publishers_where_filter_is_verified_true_should_return_only_verified(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_PUBLISHER)
         baker.make(Publisher, name="Verified Pub", slug="verified-pub", is_verified=True)
         baker.make(Publisher, name="Unverified Pub", slug="unverified-pub", is_verified=False)
 
@@ -90,6 +96,7 @@ class ListPublishersTest(BaseTestCase):
     def test_list_publishers_where_filter_country_should_filter_results(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_PUBLISHER)
         baker.make(Publisher, name="Saudi Pub", slug="saudi-pub", country="Saudi Arabia")
         baker.make(Publisher, name="Egypt Pub", slug="egypt-pub", country="Egypt")
 
@@ -105,6 +112,7 @@ class ListPublishersTest(BaseTestCase):
     def test_list_publishers_where_page_2_should_return_correct_offset(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_PUBLISHER)
         for i in range(25):
             baker.make(Publisher, name=f"Publisher {i:02d}", slug=f"publisher-{i:02d}")
 
@@ -123,3 +131,15 @@ class ListPublishersTest(BaseTestCase):
 
         # Assert
         self.assertEqual(401, response.status_code, response.content)
+
+    def test_list_publishers_where_no_permission_should_return_403(self) -> None:
+        # Arrange
+        self.authenticate_user(self.user)
+
+        # Act
+        response = self.client.get(self.url)
+
+        # Assert
+        self.assertEqual(403, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("permission_denied", body["error_name"])

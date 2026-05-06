@@ -11,7 +11,7 @@ class TranslationCreateTest(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.publisher = baker.make(Publisher, name="Test Publisher")
-        self.user = User.objects.create_user(email="testuser@example.com", name="Test User")
+        self.user = User.objects.create_user(email="testuser@example.com", name="Test User", is_staff=True)
 
     def test_create_translation_where_valid_data_should_return_201(self):
         self.authenticate_user(self.user)
@@ -191,7 +191,9 @@ class TranslationCreateTest(BaseTestCase):
         self.assertEqual("external_url_required", body["error_name"])
 
     def test_create_translation_where_user_lacks_permission_should_return_403(self):
-        user_without_permission = User.objects.create_user(email="noperm@example.com", name="No Permission User")
+        user_without_permission = User.objects.create_user(
+            email="noperm@example.com", name="No Permission User", is_staff=True
+        )
         self.authenticate_user(user_without_permission)
         response = self.client.post(
             "/portal/translations/",

@@ -57,7 +57,9 @@ class TafsirVersionListTest(TafsirVersionBaseTest):
 
     def test_list_versions_where_user_lacks_permission_should_return_403(self):
         # Arrange
-        user_without_permission = User.objects.create_user(email="noperm@example.com", name="No Permission User")
+        user_without_permission = User.objects.create_user(
+            email="noperm@example.com", name="No Permission User", is_staff=True
+        )
         self.authenticate_user(user_without_permission)
 
         # Act
@@ -124,7 +126,9 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
 
     def test_create_version_where_user_lacks_permission_should_return_403(self):
         # Arrange
-        user_without_permission = User.objects.create_user(email="noperm@example.com", name="No Permission User")
+        user_without_permission = User.objects.create_user(
+            email="noperm@example.com", name="No Permission User", is_staff=True
+        )
         self.authenticate_user(user_without_permission)
         file = SimpleUploadedFile("tafsir.pdf", b"content", content_type="application/pdf")
 
@@ -203,7 +207,9 @@ class TafsirVersionUpdateTest(TafsirVersionBaseTest):
         from urllib.parse import urlencode
 
         # Arrange
-        user_without_permission = User.objects.create_user(email="noperm@example.com", name="No Permission User")
+        user_without_permission = User.objects.create_user(
+            email="noperm@example.com", name="No Permission User", is_staff=True
+        )
         self.authenticate_user(user_without_permission)
 
         # Act
@@ -240,7 +246,9 @@ class TafsirVersionDeleteTest(TafsirVersionBaseTest):
     def test_delete_version_where_user_lacks_permission_should_return_403(self):
         # Arrange
         version = baker.make(AssetVersion, asset=self.tafsir)
-        user_without_permission = User.objects.create_user(email="noperm@example.com", name="No Permission User")
+        user_without_permission = User.objects.create_user(
+            email="noperm@example.com", name="No Permission User", is_staff=True
+        )
         self.authenticate_user(user_without_permission)
 
         # Act

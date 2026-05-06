@@ -19,6 +19,7 @@ from apps.core.ninja_utils.tags import NinjaTag
 from apps.core.ninja_utils.types import AbsoluteUrl
 from apps.core.permission_utils import permission_class
 from apps.core.permissions import PermissionChoice
+from apps.publishers.services.membership import enforce_publisher_membership
 
 router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
 logger = logging.getLogger(__name__)
@@ -204,6 +205,7 @@ class RecitationFilter(FilterSchema):
 )
 def list_recitations(request: Request, filters: RecitationFilter = Query()):
     qs = Asset.objects.select_related("publisher", "reciter", "riwayah", "qiraah").filter(
+        request.user_publisher_q(),
         category=CategoryChoice.RECITATION,
         status=StatusChoice.READY,
     )
@@ -257,6 +259,7 @@ def create_recitation(
     logger.info(
         f"Creating recitation [publisher_id={data.publisher_id}, reciter_id={data.reciter_id}, user_id={request.user.id}]"
     )
+    enforce_publisher_membership(request.user, data.publisher_id)
     service = RecitationService()
     recitation = service.create_recitation(
         publisher_id=data.publisher_id,
@@ -289,6 +292,7 @@ def retrieve_recitation(request: Request, recitation_slug: str) -> Asset:
         return (
             Asset.objects.select_related("publisher", "reciter", "riwayah", "qiraah")
             .prefetch_related("versions")
+            .filter(request.user_publisher_q())
             .get(slug=recitation_slug, category=CategoryChoice.RECITATION)
         )
     except Asset.DoesNotExist as exc:
@@ -319,9 +323,11 @@ def update_recitation_put(
     data: RecitationPutIn,
 ) -> Asset:
     logger.info(f"Updating recitation (PUT) [recitation_slug={recitation_slug}, user_id={request.user.id}]")
+    if data.publisher_id is not None:
+        enforce_publisher_membership(request.user, data.publisher_id)
     service = RecitationService()
     fields = data.model_dump()
-    recitation = service.update_recitation(recitation_slug, fields=fields)
+    recitation = service.update_recitation(recitation_slug, fields=fields, user_publisher_q=request.user_publisher_q())
     logger.info(f"Recitation updated [recitation_id={recitation.id}, user_id={request.user.id}]")
     return recitation
 
@@ -346,9 +352,11 @@ def update_recitation_patch(
     data: RecitationPatchIn,
 ) -> Asset:
     logger.info(f"Updating recitation (PATCH) [recitation_slug={recitation_slug}, user_id={request.user.id}]")
+    if data.publisher_id is not None:
+        enforce_publisher_membership(request.user, data.publisher_id)
     service = RecitationService()
     fields = data.model_dump(exclude_unset=True)
-    recitation = service.update_recitation(recitation_slug, fields=fields)
+    recitation = service.update_recitation(recitation_slug, fields=fields, user_publisher_q=request.user_publisher_q())
     logger.info(f"Recitation updated [recitation_id={recitation.id}, user_id={request.user.id}]")
     return recitation
 
@@ -364,6 +372,6 @@ def update_recitation_patch(
 def delete_recitation(request: Request, recitation_slug: str) -> tuple[int, None]:
     logger.info(f"Deleting recitation [recitation_slug={recitation_slug}, user_id={request.user.id}]")
     service = RecitationService()
-    service.delete_recitation(recitation_slug)
+    service.delete_recitation(recitation_slug, user_publisher_q=request.user_publisher_q())
     logger.info(f"Recitation deleted [recitation_slug={recitation_slug}, user_id={request.user.id}]")
     return 204, None

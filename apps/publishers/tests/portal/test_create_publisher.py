@@ -1,6 +1,7 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
+from apps.core.permissions import PermissionChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -14,6 +15,7 @@ class CreatePublisherTest(BaseTestCase):
     def test_create_publisher_where_all_fields_provided_should_return_201(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_PUBLISHER)
         data = {
             "name_en": "Tafsir Center",
             "name_ar": "مركز التفسير",
@@ -51,6 +53,7 @@ class CreatePublisherTest(BaseTestCase):
     def test_create_publisher_where_icon_provided_should_return_201(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_PUBLISHER)
         icon = SimpleUploadedFile("icon.png", b"file_content", content_type="image/png")
         data = {
             "name_en": "Iconic Publisher",
@@ -77,6 +80,7 @@ class CreatePublisherTest(BaseTestCase):
     def test_create_publisher_where_only_name_provided_should_return_201_with_defaults(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_PUBLISHER)
         data = {"name_en": "Minimal Publisher"}
 
         # Act
@@ -95,6 +99,7 @@ class CreatePublisherTest(BaseTestCase):
     def test_create_publisher_where_name_empty_should_return_400(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_PUBLISHER)
         data = {"name_en": ""}
 
         # Act
@@ -108,6 +113,7 @@ class CreatePublisherTest(BaseTestCase):
     def test_create_publisher_where_duplicate_slug_should_return_400(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_PUBLISHER)
         baker.make(Publisher, name="Test Publisher", slug="test-publisher")
         data = {"name_en": "Test Publisher"}
 
@@ -122,6 +128,7 @@ class CreatePublisherTest(BaseTestCase):
     def test_create_publisher_where_translated_fields_provided_should_store_correctly(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_PUBLISHER)
         data = {
             "name_ar": "الناشر الدولي",
             "name_en": "International Publisher EN",
@@ -153,3 +160,16 @@ class CreatePublisherTest(BaseTestCase):
 
         # Assert
         self.assertEqual(401, response.status_code, response.content)
+
+    def test_create_publisher_where_no_permission_should_return_403(self) -> None:
+        # Arrange
+        self.authenticate_user(self.user)
+        data = {"name_en": "Test Publisher"}
+
+        # Act
+        response = self.client.post(self.url, data, format="multipart")
+
+        # Assert
+        self.assertEqual(403, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("permission_denied", body["error_name"])
