@@ -22,11 +22,11 @@ class TafsirService:
     def __init__(self, repo: TafsirRepository | None = None) -> None:
         self.repo = repo or TafsirRepository()
 
-    def _get_tafsir_or_404(self, tafsir_slug: str, user_publisher_q: Q | None = None) -> Asset:
+    def _get_tafsir_or_404(self, tafsir_slug: str, publisher_q: Q | None = None) -> Asset:
         try:
             qs = AssetModel.objects.all()
-            if user_publisher_q is not None:
-                qs = qs.filter(user_publisher_q)
+            if publisher_q is not None:
+                qs = qs.filter(publisher_q)
             return qs.get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
         except AssetModel.DoesNotExist as exc:
             raise ItqanError(
@@ -108,13 +108,13 @@ class TafsirService:
         self,
         tafsir_slug: str,
         fields: dict[str, Any],
-        user_publisher_q: Q | None = None,
+        publisher_q: Q | None = None,
     ) -> Asset:
         """
         Business Logic: Update an existing tafsir.
         Validates name requirement, lets repository handle field setting and syncing.
         """
-        asset = self._get_tafsir_or_404(tafsir_slug, user_publisher_q=user_publisher_q)
+        asset = self._get_tafsir_or_404(tafsir_slug, publisher_q=publisher_q)
 
         # Validate name fields if user is trying to update them
         if "name_ar" in fields or "name_en" in fields:
@@ -152,11 +152,11 @@ class TafsirService:
         logger.info(f"Tafsir updated [asset_id={updated.pk}, slug={tafsir_slug}]")
         return updated
 
-    def delete_tafsir(self, tafsir_slug: str, user_publisher_q: Q | None = None) -> None:
+    def delete_tafsir(self, tafsir_slug: str, publisher_q: Q | None = None) -> None:
         """
         Business Logic: Delete a tafsir and its resource.
         """
-        asset = self._get_tafsir_or_404(tafsir_slug, user_publisher_q=user_publisher_q)
+        asset = self._get_tafsir_or_404(tafsir_slug, publisher_q=publisher_q)
         try:
             self.repo.delete_tafsir(asset)
             logger.info(f"Tafsir deleted [asset_id={asset.pk}, slug={tafsir_slug}]")
@@ -168,9 +168,9 @@ class TafsirService:
             ) from exc
 
     def _get_tafsir_version_or_404(
-        self, tafsir_slug: str, version_id: int, user_publisher_q: Q | None = None
+        self, tafsir_slug: str, version_id: int, publisher_q: Q | None = None
     ) -> AssetVersion:
-        asset = self._get_tafsir_or_404(tafsir_slug, user_publisher_q=user_publisher_q)
+        asset = self._get_tafsir_or_404(tafsir_slug, publisher_q=publisher_q)
         version = self.repo.get_tafsir_version(asset, version_id)
         if version is None:
             raise ItqanError(
@@ -187,12 +187,12 @@ class TafsirService:
         name: str,
         summary: str = "",
         file: Any = None,
-        user_publisher_q: Q | None = None,
+        publisher_q: Q | None = None,
     ) -> AssetVersion:
         """
         Business Logic: Create a new version for a tafsir.
         """
-        asset = self._get_tafsir_or_404(tafsir_slug, user_publisher_q=user_publisher_q)
+        asset = self._get_tafsir_or_404(tafsir_slug, publisher_q=publisher_q)
         version = self.repo.create_tafsir_version(
             asset,
             name=name,
@@ -207,20 +207,20 @@ class TafsirService:
         tafsir_slug: str,
         version_id: int,
         fields: dict[str, Any],
-        user_publisher_q: Q | None = None,
+        publisher_q: Q | None = None,
     ) -> AssetVersion:
         """
         Business Logic: Update an existing tafsir version.
         """
-        version = self._get_tafsir_version_or_404(tafsir_slug, version_id, user_publisher_q=user_publisher_q)
+        version = self._get_tafsir_version_or_404(tafsir_slug, version_id, publisher_q=publisher_q)
         updated = self.repo.update_tafsir_version(version, fields=fields)
         logger.info(f"Tafsir version updated [version_id={version_id}, asset_slug={tafsir_slug}]")
         return updated
 
-    def delete_tafsir_version(self, tafsir_slug: str, version_id: int, user_publisher_q: Q | None = None) -> None:
+    def delete_tafsir_version(self, tafsir_slug: str, version_id: int, publisher_q: Q | None = None) -> None:
         """
         Business Logic: Delete a tafsir version.
         """
-        version = self._get_tafsir_version_or_404(tafsir_slug, version_id, user_publisher_q=user_publisher_q)
+        version = self._get_tafsir_version_or_404(tafsir_slug, version_id, publisher_q=publisher_q)
         self.repo.delete_tafsir_version(version)
         logger.info(f"Tafsir version deleted [version_id={version_id}, asset_slug={tafsir_slug}]")

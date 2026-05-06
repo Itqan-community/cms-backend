@@ -22,11 +22,11 @@ class TranslationService:
     def __init__(self, repo: TranslationRepository | None = None) -> None:
         self.repo = repo or TranslationRepository()
 
-    def _get_translation_or_404(self, translation_slug: str, user_publisher_q: Q | None = None) -> Asset:
+    def _get_translation_or_404(self, translation_slug: str, publisher_q: Q | None = None) -> Asset:
         try:
             qs = AssetModel.objects.all()
-            if user_publisher_q is not None:
-                qs = qs.filter(user_publisher_q)
+            if publisher_q is not None:
+                qs = qs.filter(publisher_q)
             return qs.get(slug=translation_slug, category=CategoryChoice.TRANSLATION, status=StatusChoice.READY)
         except AssetModel.DoesNotExist as exc:
             raise ItqanError(
@@ -108,13 +108,13 @@ class TranslationService:
         self,
         translation_slug: str,
         fields: dict[str, Any],
-        user_publisher_q: Q | None = None,
+        publisher_q: Q | None = None,
     ) -> Asset:
         """
         Business Logic: Update an existing translation.
         Validates name requirement, lets repository handle field setting and syncing.
         """
-        asset = self._get_translation_or_404(translation_slug, user_publisher_q=user_publisher_q)
+        asset = self._get_translation_or_404(translation_slug, publisher_q=publisher_q)
 
         # Validate name fields if user is trying to update them
         if "name_ar" in fields or "name_en" in fields:
@@ -152,11 +152,11 @@ class TranslationService:
         logger.info(f"Translation updated [asset_id={updated.pk}, slug={translation_slug}]")
         return updated
 
-    def delete_translation(self, translation_slug: str, user_publisher_q: Q | None = None) -> None:
+    def delete_translation(self, translation_slug: str, publisher_q: Q | None = None) -> None:
         """
         Business Logic: Delete a translation and its resource.
         """
-        asset = self._get_translation_or_404(translation_slug, user_publisher_q=user_publisher_q)
+        asset = self._get_translation_or_404(translation_slug, publisher_q=publisher_q)
         try:
             self.repo.delete_translation(asset)
             logger.info(f"Translation deleted [asset_id={asset.pk}, slug={translation_slug}]")
@@ -168,9 +168,9 @@ class TranslationService:
             ) from exc
 
     def _get_translation_version_or_404(
-        self, translation_slug: str, version_id: int, user_publisher_q: Q | None = None
+        self, translation_slug: str, version_id: int, publisher_q: Q | None = None
     ) -> AssetVersion:
-        asset = self._get_translation_or_404(translation_slug, user_publisher_q=user_publisher_q)
+        asset = self._get_translation_or_404(translation_slug, publisher_q=publisher_q)
         version = self.repo.get_translation_version(asset, version_id)
         if version is None:
             raise ItqanError(
@@ -189,12 +189,12 @@ class TranslationService:
         name: str,
         summary: str = "",
         file: Any = None,
-        user_publisher_q: Q | None = None,
+        publisher_q: Q | None = None,
     ) -> AssetVersion:
         """
         Business Logic: Create a new version for a translation.
         """
-        asset = self._get_translation_or_404(translation_slug, user_publisher_q=user_publisher_q)
+        asset = self._get_translation_or_404(translation_slug, publisher_q=publisher_q)
         version = self.repo.create_translation_version(
             asset,
             name=name,
@@ -211,22 +211,20 @@ class TranslationService:
         translation_slug: str,
         version_id: int,
         fields: dict[str, Any],
-        user_publisher_q: Q | None = None,
+        publisher_q: Q | None = None,
     ) -> AssetVersion:
         """
         Business Logic: Update an existing translation version.
         """
-        version = self._get_translation_version_or_404(translation_slug, version_id, user_publisher_q=user_publisher_q)
+        version = self._get_translation_version_or_404(translation_slug, version_id, publisher_q=publisher_q)
         updated = self.repo.update_translation_version(version, fields=fields)
         logger.info(f"Translation version updated [version_id={version_id}, asset_slug={translation_slug}]")
         return updated
 
-    def delete_translation_version(
-        self, translation_slug: str, version_id: int, user_publisher_q: Q | None = None
-    ) -> None:
+    def delete_translation_version(self, translation_slug: str, version_id: int, publisher_q: Q | None = None) -> None:
         """
         Business Logic: Delete a translation version.
         """
-        version = self._get_translation_version_or_404(translation_slug, version_id, user_publisher_q=user_publisher_q)
+        version = self._get_translation_version_or_404(translation_slug, version_id, publisher_q=publisher_q)
         self.repo.delete_translation_version(version)
         logger.info(f"Translation version deleted [version_id={version_id}, asset_slug={translation_slug}]")
