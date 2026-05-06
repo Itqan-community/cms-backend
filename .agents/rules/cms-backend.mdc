@@ -154,7 +154,13 @@ Each app has its own `api/` directory with subdirectories per API surface (`inte
 - Always use `AwareDateTime` instead of `datetime` in `Schema`
 
 ## Architecture
-- Always use Repositories for data access layer and Services for business logic layer
+- **WRITE operations** (POST/PUT/PATCH/DELETE): always go through Service → Repository → ORM. Services own validation, business rules, and transactions; Repositories own ORM access.
+- **READ operations in `portal_api`** (GET list / GET retrieve in `apps/*/api/portal/`): query the Model directly inside the view function. Do **not** introduce a Service or Repository for portal reads. For retrieve endpoints, use `try/except Model.DoesNotExist` and raise `ItqanError(error_name="<resource>_not_found", status_code=404)` so the typed `404: NinjaErrorResponse[Literal["..._not_found"]]` OpenAPI contract is preserved. Filters from `FilterSchema` should be applied inline. The rationale: portal read paths have no business logic — keeping the queryset visible at the call site removes pass-through indirection.
+- **READ operations in other API surfaces** (`tenant_api`, `developers_api`, `cms_api`/internal): continue to go through Service → Repository, since those surfaces typically need shared filtering (e.g. tenant scoping via `request.publisher_q()`) and other business logic.
+
+The example below illustrates the WRITE-side Service/Repository contract.
+
+- Always use Repositories for data access layer and Services for business logic layer (for WRITE operations and non-portal reads as described above)
 The following code is for demonstration purposes:
 A base repository so that it defines the contract for upcoming consumers therefore the code doesn't break.
 ```python

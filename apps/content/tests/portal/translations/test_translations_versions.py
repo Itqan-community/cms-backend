@@ -56,7 +56,9 @@ class TranslationVersionListTest(TranslationVersionBaseTest):
         self.assertEqual(401, response.status_code)
 
     def test_list_versions_where_user_lacks_permission_should_return_403(self):
-        user_without_permission = User.objects.create_user(email="noperm@example.com", name="No Permission User")
+        user_without_permission = User.objects.create_user(
+            email="noperm@example.com", name="No Permission User", is_staff=True
+        )
         self.authenticate_user(user_without_permission)
         response = self.client.get(f"/portal/translations/{self.translation.slug}/versions/")
         self.assertEqual(403, response.status_code)
@@ -125,7 +127,9 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
         self.assertEqual(401, response.status_code)
 
     def test_create_version_where_user_lacks_permission_should_return_403(self):
-        user_without_permission = User.objects.create_user(email="noperm@example.com", name="No Permission User")
+        user_without_permission = User.objects.create_user(
+            email="noperm@example.com", name="No Permission User", is_staff=True
+        )
         self.authenticate_user(user_without_permission)
         response = self.client.post(
             f"/portal/translations/{self.translation.slug}/versions/",
@@ -208,7 +212,9 @@ class TranslationVersionUpdateTest(TranslationVersionBaseTest):
     def test_update_version_where_user_lacks_permission_should_return_403(self):
         from urllib.parse import urlencode
 
-        user_without_permission = User.objects.create_user(email="noperm@example.com", name="No Permission User")
+        user_without_permission = User.objects.create_user(
+            email="noperm@example.com", name="No Permission User", is_staff=True
+        )
         self.authenticate_user(user_without_permission)
         response = self.client.patch(
             f"/portal/translations/{self.translation.slug}/versions/{self.version.id}/",
@@ -240,7 +246,9 @@ class TranslationVersionDeleteTest(TranslationVersionBaseTest):
 
     def test_delete_version_where_user_lacks_permission_should_return_403(self):
         version = baker.make(AssetVersion, asset=self.translation)
-        user_without_permission = User.objects.create_user(email="noperm@example.com", name="No Permission User")
+        user_without_permission = User.objects.create_user(
+            email="noperm@example.com", name="No Permission User", is_staff=True
+        )
         self.authenticate_user(user_without_permission)
         response = self.client.delete(f"/portal/translations/{self.translation.slug}/versions/{version.id}/")
         self.assertEqual(403, response.status_code)

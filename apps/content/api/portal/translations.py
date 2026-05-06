@@ -1,13 +1,14 @@
 import logging
 from typing import Annotated, Literal
 
+from django.utils.translation import gettext_lazy as _
 from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
-from apps.content.models import Asset, AssetVersion, LicenseChoice
+from apps.content.models import Asset, AssetVersion, CategoryChoice, LicenseChoice, StatusChoice
 from apps.content.services.translation import TranslationService
-from apps.core.ninja_utils.errors import NinjaErrorResponse
+from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.permission_required import permission_required
 from apps.core.ninja_utils.request import Request
@@ -16,6 +17,7 @@ from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
 from apps.core.permission_utils import permission_class
 from apps.core.permissions import PermissionChoice
+from apps.publishers.services.membership import enforce_publisher_membership
 
 router = ItqanRouter(tags=[NinjaTag.TRANSLATIONS])
 logger = logging.getLogger(__name__)
@@ -149,9 +151,23 @@ class TranslationFilter(FilterSchema):
 @ordering(ordering_fields=["id", "name", "created_at", "updated_at"])
 @searching(search_fields=["name", "name_ar", "description", "description_ar", "publisher__name"])
 def list_translations(request: Request, filters: TranslationFilter = Query()):
-    service = TranslationService()
-    qs = service.get_all_translations(filters)
-    return qs
+    qs = Asset.objects.select_related("publisher").filter(
+        request.publisher_q(),
+        category=CategoryChoice.TRANSLATION,
+        status=StatusChoice.READY,
+    )
+
+    filters_dict = filters.model_dump(exclude_none=True)
+    if publisher_ids := filters_dict.get("publisher_id"):
+        qs = qs.filter(publisher_id__in=publisher_ids)
+    if license_codes := filters_dict.get("license_code"):
+        qs = qs.filter(license__in=license_codes)
+    if language := filters_dict.get("language"):
+        qs = qs.filter(language=language)
+    if "is_external" in filters_dict:
+        qs = qs.filter(is_external=filters_dict["is_external"])
+
+    return qs.distinct()
 
 
 @router.post(
@@ -171,6 +187,7 @@ def create_translation(
     logger.info(
         f"Creating translation [publisher_id={data.publisher_id}, language={data.language}, user_id={request.user.id}]"
     )
+    enforce_publisher_membership(request.user, data.publisher_id)
     service = TranslationService()
     translation = service.create_translation(
         publisher_id=data.publisher_id,
@@ -198,8 +215,23 @@ def create_translation(
 )
 @permission_required([permission_class(PermissionChoice.PORTAL_READ_TRANSLATION)])
 def retrieve_translation(request: Request, translation_slug: str) -> Asset:
-    service = TranslationService()
-    return service.get_translation(translation_slug)
+    try:
+        return (
+            Asset.objects.select_related("publisher")
+            .prefetch_related("versions")
+            .filter(request.publisher_q())
+            .get(
+                slug=translation_slug,
+                category=CategoryChoice.TRANSLATION,
+                status=StatusChoice.READY,
+            )
+        )
+    except Asset.DoesNotExist as exc:
+        raise ItqanError(
+            error_name="translation_not_found",
+            message=_("Translation with slug {slug} not found.").format(slug=translation_slug),
+            status_code=404,
+        ) from exc
 
 
 @router.put(
@@ -218,9 +250,11 @@ def update_translation_put(
     data: TranslationPutIn,
 ) -> Asset:
     logger.info(f"Updating translation (PUT) [translation_slug={translation_slug}, user_id={request.user.id}]")
+    if data.publisher_id is not None:
+        enforce_publisher_membership(request.user, data.publisher_id)
     service = TranslationService()
     fields = data.model_dump()
-    translation = service.update_translation(translation_slug, fields=fields)
+    translation = service.update_translation(translation_slug, fields=fields, user_publisher_q=request.publisher_q())
     logger.info(f"Translation updated [translation_id={translation.id}, user_id={request.user.id}]")
     return translation
 
@@ -241,9 +275,11 @@ def update_translation_patch(
     data: TranslationPatchIn,
 ) -> Asset:
     logger.info(f"Updating translation (PATCH) [translation_slug={translation_slug}, user_id={request.user.id}]")
+    if data.publisher_id is not None:
+        enforce_publisher_membership(request.user, data.publisher_id)
     service = TranslationService()
     fields = data.model_dump(exclude_unset=True)
-    translation = service.update_translation(translation_slug, fields=fields)
+    translation = service.update_translation(translation_slug, fields=fields, user_publisher_q=request.publisher_q())
     logger.info(f"Translation updated [translation_id={translation.id}, user_id={request.user.id}]")
     return translation
 
@@ -259,6 +295,6 @@ def update_translation_patch(
 def delete_translation(request: Request, translation_slug: str) -> tuple[int, None]:
     logger.info(f"Deleting translation [translation_slug={translation_slug}, user_id={request.user.id}]")
     service = TranslationService()
-    service.delete_translation(translation_slug)
+    service.delete_translation(translation_slug, user_publisher_q=request.publisher_q())
     logger.info(f"Translation deleted [translation_slug={translation_slug}, user_id={request.user.id}]")
     return 204, None

@@ -1,57 +1,16 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from django.db import transaction
 
 from apps.content.models import Asset, AssetVersion, CategoryChoice, LicenseChoice, StatusChoice
-
-if TYPE_CHECKING:
-    from django.db.models import QuerySet
 
 
 class TranslationRepository:
     def __init__(self) -> None:
         self.asset_model = Asset
         self.asset_version_model = AssetVersion
-
-    def list_translations_qs(self, filters_dict: dict[str, Any]) -> QuerySet[Asset]:
-        """
-        Returns a queryset of Translation assets (category=TRANSLATION, status=READY).
-        """
-        qs = self.asset_model.objects.select_related("publisher").filter(
-            category=CategoryChoice.TRANSLATION,
-            status=StatusChoice.READY,
-        )
-
-        if filters_dict:
-            if publisher_ids := filters_dict.get("publisher_id"):
-                qs = qs.filter(publisher_id__in=publisher_ids)
-            if license_codes := filters_dict.get("license_code"):
-                qs = qs.filter(license__in=license_codes)
-            if language := filters_dict.get("language"):
-                qs = qs.filter(language=language)
-            if "is_external" in filters_dict:
-                qs = qs.filter(is_external=filters_dict["is_external"])
-
-        return qs.distinct()
-
-    def get_translation(self, translation_slug: str) -> Asset | None:
-        """
-        Get a single translation asset by slug with prefetched versions.
-        """
-        try:
-            return (
-                self.asset_model.objects.select_related("publisher")
-                .prefetch_related("versions")
-                .get(
-                    slug=translation_slug,
-                    category=CategoryChoice.TRANSLATION,
-                    status=StatusChoice.READY,
-                )
-            )
-        except Asset.DoesNotExist:
-            return None
 
     def create_translation(
         self,
@@ -134,9 +93,6 @@ class TranslationRepository:
         Delete the translation asset.
         """
         asset.delete()
-
-    def list_translation_versions(self, asset: Asset):
-        return AssetVersion.objects.filter(asset=asset).order_by("-created_at")
 
     def get_translation_version(self, asset: Asset, version_id: int) -> AssetVersion | None:
         try:

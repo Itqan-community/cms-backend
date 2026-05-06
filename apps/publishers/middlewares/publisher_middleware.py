@@ -35,7 +35,10 @@ class PublisherMiddleware:
         domain = get_publisher_domain(request, "X-Tenant") or get_publisher_domain(request, "Origin")
         request.publisher_domain = domain
         request.publisher = domain.publisher if domain else None
-        request.publisher_q = functools.partial(publisher_q, request.publisher)
+        if request.path.startswith("/portal/"):
+            request.publisher_q = lambda lookup="publisher": portal_publisher_q(request.user, lookup)
+        else:
+            request.publisher_q = functools.partial(publisher_q, request.publisher)
         if domain is None:
             return None
         if not domain.is_active:
@@ -89,3 +92,31 @@ def publisher_q(publisher: Publisher | None, lookup: str = "publisher") -> Q:
     useful for frequent filtering
     """
     return Q(**{lookup: publisher}) if publisher else Q()
+
+
+def portal_publisher_q(user, lookup: str = "publisher") -> Q:
+    """
+    Returns a Q object that scopes a /portal/ queryset to the publishers the user belongs to.
+
+    - Anonymous / unauthenticated users: matches nothing.
+    - Staff users: matches everything (Q()).
+    - Otherwise: Q(<lookup>__in=[user's publisher ids]).
+      Users with no memberships match nothing.
+
+    `lookup` uses the same FK relation-name convention as publisher_q (e.g. "publisher",
+    "asset__publisher", "id" when filtering Publisher itself).
+    The membership ID list is cached on the user instance for the request lifetime.
+    """
+    if user is None or not getattr(user, "is_authenticated", False):
+        return Q(pk__in=[])
+    if getattr(user, "is_staff", False):
+        return Q()
+
+    publisher_ids = getattr(user, "_cached_publisher_ids", None)
+    if publisher_ids is None:
+        publisher_ids = list(user.publishers.values_list("id", flat=True))
+        user._cached_publisher_ids = publisher_ids
+
+    if not publisher_ids:
+        return Q(pk__in=[])
+    return Q(**{f"{lookup}__in": publisher_ids})

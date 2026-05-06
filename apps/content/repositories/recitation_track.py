@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from django.db.models import Q
+
 from apps.content.models import RecitationSurahTrack
 
 
@@ -13,13 +15,14 @@ class RecitationTrackRepository:
         """Return the set of tracks surah numbers already uploaded for the given asset."""
         return set(self.model.objects.filter(asset_id=asset_id).values_list("surah_number", flat=True))
 
-    def get_recitation_tracks_by_asset_id(self, asset_id: int) -> list[RecitationSurahTrack]:
-        """Return all tracks for the given asset, ordered by surah number."""
-        return list(self.model.objects.filter(asset_id=asset_id).order_by("surah_number"))
-
-    def get_recitation_tracks_by_ids(self, track_ids: list[int]) -> list[RecitationSurahTrack]:
-        """Return tracks whose IDs are in track_ids"""
-        return list(self.model.objects.filter(id__in=track_ids))
+    def get_recitation_tracks_by_ids(
+        self, track_ids: list[int], user_publisher_q: Q | None = None
+    ) -> list[RecitationSurahTrack]:
+        """Return tracks whose IDs are in track_ids, optionally scoped by publisher membership via the parent asset."""
+        qs = self.model.objects.filter(id__in=track_ids)
+        if user_publisher_q is not None:
+            qs = qs.filter(user_publisher_q)
+        return list(qs)
 
     def create_recitation_track(
         self,

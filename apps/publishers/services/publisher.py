@@ -1,5 +1,5 @@
 from django.db import IntegrityError
-from django.db.models import ProtectedError
+from django.db.models import ProtectedError, Q
 from django.utils.text import slugify
 from django.utils.translation import gettext as _
 
@@ -75,18 +75,23 @@ class PublisherService:
                 status_code=400,
             ) from exc
 
-    def get_publisher(self, publisher_id: int) -> Publisher:
-        publisher = self.repo.get_by_id(publisher_id)
-        if publisher is None:
+    def _get_publisher_or_404(self, publisher_id: int, user_publisher_q: Q | None = None) -> Publisher:
+        qs = Publisher.objects.all()
+        if user_publisher_q is not None:
+            qs = qs.filter(user_publisher_q)
+        try:
+            return qs.get(id=publisher_id)
+        except Publisher.DoesNotExist as exc:
             raise ItqanError(
                 error_name="publisher_not_found",
-                message=f"Publisher with id {publisher_id} not found",
+                message=_("Publisher with id {id} not found").format(id=publisher_id),
                 status_code=404,
-            )
-        return publisher
+            ) from exc
 
-    def update_publisher(self, publisher_id: int, *, fields: dict[str, object]) -> Publisher:
-        publisher = self.get_publisher(publisher_id)
+    def update_publisher(
+        self, publisher_id: int, *, fields: dict[str, object], user_publisher_q: Q | None = None
+    ) -> Publisher:
+        publisher = self._get_publisher_or_404(publisher_id, user_publisher_q=user_publisher_q)
 
         if "name_ar" in fields or "name_en" in fields:
             name_ar = fields.get("name_ar")
@@ -135,8 +140,8 @@ class PublisherService:
         publisher.save()
         return publisher
 
-    def delete_publisher(self, publisher_id: int) -> None:
-        publisher = self.get_publisher(publisher_id)
+    def delete_publisher(self, publisher_id: int, user_publisher_q: Q | None = None) -> None:
+        publisher = self._get_publisher_or_404(publisher_id, user_publisher_q=user_publisher_q)
         try:
             self.repo.delete(publisher)
         except ProtectedError as exc:

@@ -31,7 +31,7 @@ class TranslationDetailTest(BaseTestCase):
         self.version1 = baker.make(AssetVersion, asset=self.translation, name="Version 1.0", size_bytes=1024)
         self.version2 = baker.make(AssetVersion, asset=self.translation, name="Version 2.0", size_bytes=2048)
 
-        self.user = User.objects.create_user(email="testuser@example.com", name="Test User")
+        self.user = User.objects.create_user(email="testuser@example.com", name="Test User", is_staff=True)
 
     def test_retrieve_translation_where_valid_slug_should_return_all_fields(self):
         self.authenticate_user(self.user)
@@ -83,7 +83,9 @@ class TranslationDetailTest(BaseTestCase):
         self.assertEqual(401, response.status_code)
 
     def test_retrieve_translation_where_user_lacks_permission_should_return_403(self):
-        user_without_permission = User.objects.create_user(email="noperm@example.com", name="No Permission User")
+        user_without_permission = User.objects.create_user(
+            email="noperm@example.com", name="No Permission User", is_staff=True
+        )
         self.authenticate_user(user_without_permission)
         response = self.client.get(f"/portal/translations/{self.translation.slug}/")
         self.assertEqual(403, response.status_code)

@@ -15,7 +15,7 @@ class RecitationPortalTest(BaseTestCase):
         self.qiraah = baker.make(Qiraah, name="Test Qiraah")
         self.riwayah = baker.make(Riwayah, name="Test Riwayah", qiraah=self.qiraah)
 
-        self.user = User.objects.create_user(email="admin@example.com", name="Admin User")
+        self.user = User.objects.create_user(email="admin@example.com", name="Admin User", is_staff=True)
 
     def test_list_recitations_should_return_200(self):
         # Arrange
@@ -274,7 +274,9 @@ class RecitationPortalTest(BaseTestCase):
 
     def test_list_recitations_where_user_lacks_permission_should_return_403(self):
         # Arrange
-        user_without_permission = User.objects.create_user(email="noperm@example.com", name="No Permission User")
+        user_without_permission = User.objects.create_user(
+            email="noperm@example.com", name="No Permission User", is_staff=True
+        )
         self.authenticate_user(user_without_permission)
 
         # Act
@@ -297,7 +299,9 @@ class RecitationPortalTest(BaseTestCase):
 
     def test_create_recitation_where_user_lacks_permission_should_return_403(self):
         # Arrange
-        user_without_permission = User.objects.create_user(email="noperm2@example.com", name="No Permission User")
+        user_without_permission = User.objects.create_user(
+            email="noperm2@example.com", name="No Permission User", is_staff=True
+        )
         self.authenticate_user(user_without_permission)
 
         # Act
@@ -343,7 +347,9 @@ class RecitationPortalTest(BaseTestCase):
             qiraah=self.qiraah,
             riwayah=self.riwayah,
         )
-        user_without_permission = User.objects.create_user(email="noperm3@example.com", name="No Permission User")
+        user_without_permission = User.objects.create_user(
+            email="noperm3@example.com", name="No Permission User", is_staff=True
+        )
         self.authenticate_user(user_without_permission)
 
         # Act
@@ -381,7 +387,9 @@ class RecitationPortalTest(BaseTestCase):
             qiraah=self.qiraah,
             riwayah=self.riwayah,
         )
-        user_without_permission = User.objects.create_user(email="noperm4@example.com", name="No Permission User")
+        user_without_permission = User.objects.create_user(
+            email="noperm4@example.com", name="No Permission User", is_staff=True
+        )
         self.authenticate_user(user_without_permission)
 
         # Act

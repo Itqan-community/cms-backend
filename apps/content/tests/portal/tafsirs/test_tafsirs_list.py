@@ -63,7 +63,7 @@ class TafsirListTest(BaseTestCase):
             description="Should not appear",
         )
 
-        self.user = User.objects.create_user(email="testuser@example.com", name="Test User")
+        self.user = User.objects.create_user(email="testuser@example.com", name="Test User", is_staff=True)
 
     def test_list_tafsirs_where_assets_are_ready_should_return_only_ready_tafsir_assets(self):
         self.authenticate_user(self.user)
@@ -204,7 +204,9 @@ class TafsirListTest(BaseTestCase):
 
     def test_list_tafsirs_where_user_lacks_permission_should_return_403(self):
         # Arrange
-        user_without_permission = User.objects.create_user(email="noperm@example.com", name="No Permission User")
+        user_without_permission = User.objects.create_user(
+            email="noperm@example.com", name="No Permission User", is_staff=True
+        )
         self.authenticate_user(user_without_permission)
 
         # Act
