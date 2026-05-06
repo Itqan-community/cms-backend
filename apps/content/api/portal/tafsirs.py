@@ -168,7 +168,7 @@ class TafsirFilter(FilterSchema):
 )
 def list_tafsirs(request: Request, filters: TafsirFilter = Query()):
     qs = Asset.objects.select_related("publisher").filter(
-        request.user_publisher_q(),
+        request.publisher_q(),
         category=CategoryChoice.TAFSIR,
         status=StatusChoice.READY,
     )
@@ -236,7 +236,7 @@ def retrieve_tafsir(request: Request, tafsir_slug: str) -> Asset:
         return (
             Asset.objects.select_related("publisher")
             .prefetch_related("versions")
-            .filter(request.user_publisher_q())
+            .filter(request.publisher_q())
             .get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
         )
     except Asset.DoesNotExist as exc:
@@ -269,7 +269,7 @@ def update_tafsir_put(
     fields = data.model_dump()
     if thumbnail is not None:
         fields["thumbnail_url"] = thumbnail
-    tafsir = service.update_tafsir(tafsir_slug, fields=fields, user_publisher_q=request.user_publisher_q())
+    tafsir = service.update_tafsir(tafsir_slug, fields=fields, user_publisher_q=request.publisher_q())
     logger.info(f"Tafsir updated [tafsir_id={tafsir.id}, user_id={request.user.id}]")
     return tafsir
 
@@ -296,7 +296,7 @@ def update_tafsir_patch(
     fields = data.model_dump(exclude_unset=True)
     if thumbnail is not None:
         fields["thumbnail_url"] = thumbnail
-    tafsir = service.update_tafsir(tafsir_slug, fields=fields, user_publisher_q=request.user_publisher_q())
+    tafsir = service.update_tafsir(tafsir_slug, fields=fields, user_publisher_q=request.publisher_q())
     logger.info(f"Tafsir updated [tafsir_id={tafsir.id}, user_id={request.user.id}]")
     return tafsir
 
@@ -312,6 +312,6 @@ def update_tafsir_patch(
 def delete_tafsir(request: Request, tafsir_slug: str) -> tuple[int, None]:
     logger.info(f"Deleting tafsir [tafsir_slug={tafsir_slug}, user_id={request.user.id}]")
     service = TafsirService()
-    service.delete_tafsir(tafsir_slug, user_publisher_q=request.user_publisher_q())
+    service.delete_tafsir(tafsir_slug, user_publisher_q=request.publisher_q())
     logger.info(f"Tafsir deleted [tafsir_slug={tafsir_slug}, user_id={request.user.id}]")
     return 204, None

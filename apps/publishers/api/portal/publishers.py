@@ -117,7 +117,7 @@ class PublisherFilter(FilterSchema):
 @ordering(ordering_fields=["name", "created_at", "foundation_year"])
 @searching(search_fields=["name_en", "name_ar", "description_en", "description_ar"])
 def list_publishers(request: Request, filters: PublisherFilter = Query(...)):
-    qs = Publisher.objects.filter(request.user_publisher_q(lookup="id"))
+    qs = Publisher.objects.filter(request.publisher_q("id"))
     qs = filters.filter(qs)
     return qs
 
@@ -158,7 +158,7 @@ class PublisherDetailOut(Schema):
 @permission_required([permission_class(PermissionChoice.PORTAL_READ_PUBLISHER)])
 def retrieve_publisher(request: Request, publisher_id: int) -> Publisher:
     try:
-        return Publisher.objects.filter(request.user_publisher_q(lookup="id")).get(id=publisher_id)
+        return Publisher.objects.filter(request.publisher_q("id")).get(id=publisher_id)
     except Publisher.DoesNotExist as exc:
         raise ItqanError(
             error_name="publisher_not_found",
@@ -210,9 +210,7 @@ def update_publisher_put(
     fields = data.model_dump()
     if icon:
         fields["icon_url"] = icon
-    publisher = service.update_publisher(
-        publisher_id, fields=fields, user_publisher_q=request.user_publisher_q(lookup="id")
-    )
+    publisher = service.update_publisher(publisher_id, fields=fields, user_publisher_q=request.publisher_q("id"))
     logger.info(f"Publisher updated [publisher_id={publisher_id}, user_id={request.user.id}]")
     return publisher
 
@@ -231,9 +229,7 @@ def update_publisher_patch(
     fields = data.model_dump(exclude_unset=True)
     if icon:
         fields["icon_url"] = icon
-    publisher = service.update_publisher(
-        publisher_id, fields=fields, user_publisher_q=request.user_publisher_q(lookup="id")
-    )
+    publisher = service.update_publisher(publisher_id, fields=fields, user_publisher_q=request.publisher_q("id"))
     logger.info(f"Publisher updated [publisher_id={publisher_id}, user_id={request.user.id}]")
     return publisher
 

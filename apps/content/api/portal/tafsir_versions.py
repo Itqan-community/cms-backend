@@ -65,7 +65,7 @@ class TafsirVersionPatchIn(Schema):
 @searching(search_fields=["name", "summary"])
 def list_tafsir_versions(request: Request, tafsir_slug: str):
     try:
-        asset = Asset.objects.filter(request.user_publisher_q()).get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
+        asset = Asset.objects.filter(request.publisher_q()).get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
     except Asset.DoesNotExist as exc:
         raise ItqanError(
             error_name="tafsir_not_found",
@@ -92,7 +92,7 @@ def create_tafsir_version(
 ) -> tuple[int, AssetVersion]:
     service = TafsirService()
     try:
-        asset = Asset.objects.filter(request.user_publisher_q()).get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
+        asset = Asset.objects.filter(request.publisher_q()).get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
     except Asset.DoesNotExist as exc:
         raise ItqanError(
             error_name="tafsir_not_found",
@@ -111,7 +111,7 @@ def create_tafsir_version(
         name=data.name,
         summary=data.summary,
         file=file,
-        user_publisher_q=request.user_publisher_q(),
+        user_publisher_q=request.publisher_q(),
     )
     return 201, version
 
@@ -134,7 +134,7 @@ def update_tafsir_version_put(
 ) -> AssetVersion:
     service = TafsirService()
     try:
-        asset = Asset.objects.filter(request.user_publisher_q()).get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
+        asset = Asset.objects.filter(request.publisher_q()).get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
     except Asset.DoesNotExist as exc:
         raise ItqanError(
             error_name="tafsir_not_found",
@@ -153,9 +153,7 @@ def update_tafsir_version_put(
     if file:
         fields["file_url"] = file
 
-    return service.update_tafsir_version(
-        tafsir_slug, version_id, fields=fields, user_publisher_q=request.user_publisher_q()
-    )
+    return service.update_tafsir_version(tafsir_slug, version_id, fields=fields, user_publisher_q=request.publisher_q())
 
 
 @router.patch(
@@ -176,7 +174,7 @@ def update_tafsir_version_patch(
 ) -> AssetVersion:
     service = TafsirService()
     try:
-        asset = Asset.objects.filter(request.user_publisher_q()).get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
+        asset = Asset.objects.filter(request.publisher_q()).get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
     except Asset.DoesNotExist as exc:
         raise ItqanError(
             error_name="tafsir_not_found",
@@ -195,9 +193,7 @@ def update_tafsir_version_patch(
     if file:
         fields["file_url"] = file
 
-    return service.update_tafsir_version(
-        tafsir_slug, version_id, fields=fields, user_publisher_q=request.user_publisher_q()
-    )
+    return service.update_tafsir_version(tafsir_slug, version_id, fields=fields, user_publisher_q=request.publisher_q())
 
 
 @router.delete(
@@ -210,5 +206,5 @@ def update_tafsir_version_patch(
 @permission_required([permission_class(PermissionChoice.PORTAL_DELETE_TAFSIR)])
 def delete_tafsir_version(request: Request, tafsir_slug: str, version_id: int) -> tuple[int, None]:
     service = TafsirService()
-    service.delete_tafsir_version(tafsir_slug, version_id, user_publisher_q=request.user_publisher_q())
+    service.delete_tafsir_version(tafsir_slug, version_id, user_publisher_q=request.publisher_q())
     return 204, None

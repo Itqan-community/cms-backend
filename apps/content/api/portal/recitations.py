@@ -205,7 +205,7 @@ class RecitationFilter(FilterSchema):
 )
 def list_recitations(request: Request, filters: RecitationFilter = Query()):
     qs = Asset.objects.select_related("publisher", "reciter", "riwayah", "qiraah").filter(
-        request.user_publisher_q(),
+        request.publisher_q(),
         category=CategoryChoice.RECITATION,
         status=StatusChoice.READY,
     )
@@ -292,7 +292,7 @@ def retrieve_recitation(request: Request, recitation_slug: str) -> Asset:
         return (
             Asset.objects.select_related("publisher", "reciter", "riwayah", "qiraah")
             .prefetch_related("versions")
-            .filter(request.user_publisher_q())
+            .filter(request.publisher_q())
             .get(slug=recitation_slug, category=CategoryChoice.RECITATION)
         )
     except Asset.DoesNotExist as exc:
@@ -327,7 +327,7 @@ def update_recitation_put(
         enforce_publisher_membership(request.user, data.publisher_id)
     service = RecitationService()
     fields = data.model_dump()
-    recitation = service.update_recitation(recitation_slug, fields=fields, user_publisher_q=request.user_publisher_q())
+    recitation = service.update_recitation(recitation_slug, fields=fields, user_publisher_q=request.publisher_q())
     logger.info(f"Recitation updated [recitation_id={recitation.id}, user_id={request.user.id}]")
     return recitation
 
@@ -356,7 +356,7 @@ def update_recitation_patch(
         enforce_publisher_membership(request.user, data.publisher_id)
     service = RecitationService()
     fields = data.model_dump(exclude_unset=True)
-    recitation = service.update_recitation(recitation_slug, fields=fields, user_publisher_q=request.user_publisher_q())
+    recitation = service.update_recitation(recitation_slug, fields=fields, user_publisher_q=request.publisher_q())
     logger.info(f"Recitation updated [recitation_id={recitation.id}, user_id={request.user.id}]")
     return recitation
 
@@ -372,6 +372,6 @@ def update_recitation_patch(
 def delete_recitation(request: Request, recitation_slug: str) -> tuple[int, None]:
     logger.info(f"Deleting recitation [recitation_slug={recitation_slug}, user_id={request.user.id}]")
     service = RecitationService()
-    service.delete_recitation(recitation_slug, user_publisher_q=request.user_publisher_q())
+    service.delete_recitation(recitation_slug, user_publisher_q=request.publisher_q())
     logger.info(f"Recitation deleted [recitation_slug={recitation_slug}, user_id={request.user.id}]")
     return 204, None

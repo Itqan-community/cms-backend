@@ -35,8 +35,10 @@ class PublisherMiddleware:
         domain = get_publisher_domain(request, "X-Tenant") or get_publisher_domain(request, "Origin")
         request.publisher_domain = domain
         request.publisher = domain.publisher if domain else None
-        request.publisher_q = functools.partial(publisher_q, request.publisher)
-        request.user_publisher_q = lambda lookup="publisher": user_publisher_q(request.user, lookup)
+        if request.path.startswith("/portal/"):
+            request.publisher_q = lambda lookup="publisher": portal_publisher_q(request.user, lookup)
+        else:
+            request.publisher_q = functools.partial(publisher_q, request.publisher)
         if domain is None:
             return None
         if not domain.is_active:
@@ -92,24 +94,17 @@ def publisher_q(publisher: Publisher | None, lookup: str = "publisher") -> Q:
     return Q(**{lookup: publisher}) if publisher else Q()
 
 
-class UserPublisherQ(Protocol):
-    """Protocol for user_publisher_q used in type hinting on the Request object."""
-
-    def __call__(self, lookup: str = "publisher_id") -> Q: ...
-
-
-def user_publisher_q(user, lookup: str = "publisher_id") -> Q:
+def portal_publisher_q(user, lookup: str = "publisher") -> Q:
     """
-    Returns a Q object that scopes a queryset to the publishers the user belongs to.
+    Returns a Q object that scopes a /portal/ queryset to the publishers the user belongs to.
 
-    - Anonymous users: matches nothing.
+    - Anonymous / unauthenticated users: matches nothing.
     - Staff users: matches everything (Q()).
-    - Otherwise: matches rows where the `<lookup>` field is in the user's PublisherMember set.
+    - Otherwise: Q(<lookup>__in=[user's publisher ids]).
       Users with no memberships match nothing.
 
-    `lookup` is the full ORM lookup path to the publisher id (e.g. "publisher_id",
-    "asset__publisher_id", "id" when filtering Publisher itself).
-
+    `lookup` uses the same FK relation-name convention as publisher_q (e.g. "publisher",
+    "asset__publisher", "id" when filtering Publisher itself).
     The membership ID list is cached on the user instance for the request lifetime.
     """
     if user is None or not getattr(user, "is_authenticated", False):

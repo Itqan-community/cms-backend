@@ -152,7 +152,7 @@ class TranslationFilter(FilterSchema):
 @searching(search_fields=["name", "name_ar", "description", "description_ar", "publisher__name"])
 def list_translations(request: Request, filters: TranslationFilter = Query()):
     qs = Asset.objects.select_related("publisher").filter(
-        request.user_publisher_q(),
+        request.publisher_q(),
         category=CategoryChoice.TRANSLATION,
         status=StatusChoice.READY,
     )
@@ -219,7 +219,7 @@ def retrieve_translation(request: Request, translation_slug: str) -> Asset:
         return (
             Asset.objects.select_related("publisher")
             .prefetch_related("versions")
-            .filter(request.user_publisher_q())
+            .filter(request.publisher_q())
             .get(
                 slug=translation_slug,
                 category=CategoryChoice.TRANSLATION,
@@ -254,9 +254,7 @@ def update_translation_put(
         enforce_publisher_membership(request.user, data.publisher_id)
     service = TranslationService()
     fields = data.model_dump()
-    translation = service.update_translation(
-        translation_slug, fields=fields, user_publisher_q=request.user_publisher_q()
-    )
+    translation = service.update_translation(translation_slug, fields=fields, user_publisher_q=request.publisher_q())
     logger.info(f"Translation updated [translation_id={translation.id}, user_id={request.user.id}]")
     return translation
 
@@ -281,9 +279,7 @@ def update_translation_patch(
         enforce_publisher_membership(request.user, data.publisher_id)
     service = TranslationService()
     fields = data.model_dump(exclude_unset=True)
-    translation = service.update_translation(
-        translation_slug, fields=fields, user_publisher_q=request.user_publisher_q()
-    )
+    translation = service.update_translation(translation_slug, fields=fields, user_publisher_q=request.publisher_q())
     logger.info(f"Translation updated [translation_id={translation.id}, user_id={request.user.id}]")
     return translation
 
@@ -299,6 +295,6 @@ def update_translation_patch(
 def delete_translation(request: Request, translation_slug: str) -> tuple[int, None]:
     logger.info(f"Deleting translation [translation_slug={translation_slug}, user_id={request.user.id}]")
     service = TranslationService()
-    service.delete_translation(translation_slug, user_publisher_q=request.user_publisher_q())
+    service.delete_translation(translation_slug, user_publisher_q=request.publisher_q())
     logger.info(f"Translation deleted [translation_slug={translation_slug}, user_id={request.user.id}]")
     return 204, None

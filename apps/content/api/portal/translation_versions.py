@@ -65,7 +65,7 @@ class TranslationVersionPatchIn(Schema):
 @searching(search_fields=["name", "summary"])
 def list_translation_versions(request: Request, translation_slug: str):
     try:
-        asset = Asset.objects.filter(request.user_publisher_q()).get(
+        asset = Asset.objects.filter(request.publisher_q()).get(
             slug=translation_slug, category=CategoryChoice.TRANSLATION, status=StatusChoice.READY
         )
     except Asset.DoesNotExist as exc:
@@ -94,7 +94,7 @@ def create_translation_version(
 ) -> tuple[int, AssetVersion]:
     service = TranslationService()
     try:
-        asset = Asset.objects.filter(request.user_publisher_q()).get(
+        asset = Asset.objects.filter(request.publisher_q()).get(
             slug=translation_slug, category=CategoryChoice.TRANSLATION, status=StatusChoice.READY
         )
     except Asset.DoesNotExist as exc:
@@ -115,7 +115,7 @@ def create_translation_version(
         name=data.name,
         summary=data.summary,
         file=file,
-        user_publisher_q=request.user_publisher_q(),
+        user_publisher_q=request.publisher_q(),
     )
     return 201, version
 
@@ -138,7 +138,7 @@ def update_translation_version_put(
 ) -> AssetVersion:
     service = TranslationService()
     try:
-        asset = Asset.objects.filter(request.user_publisher_q()).get(
+        asset = Asset.objects.filter(request.publisher_q()).get(
             slug=translation_slug, category=CategoryChoice.TRANSLATION, status=StatusChoice.READY
         )
     except Asset.DoesNotExist as exc:
@@ -160,7 +160,7 @@ def update_translation_version_put(
         fields["file_url"] = file
 
     return service.update_translation_version(
-        translation_slug, version_id, fields=fields, user_publisher_q=request.user_publisher_q()
+        translation_slug, version_id, fields=fields, user_publisher_q=request.publisher_q()
     )
 
 
@@ -182,7 +182,7 @@ def update_translation_version_patch(
 ) -> AssetVersion:
     service = TranslationService()
     try:
-        asset = Asset.objects.filter(request.user_publisher_q()).get(
+        asset = Asset.objects.filter(request.publisher_q()).get(
             slug=translation_slug, category=CategoryChoice.TRANSLATION, status=StatusChoice.READY
         )
     except Asset.DoesNotExist as exc:
@@ -204,7 +204,7 @@ def update_translation_version_patch(
         fields["file_url"] = file
 
     return service.update_translation_version(
-        translation_slug, version_id, fields=fields, user_publisher_q=request.user_publisher_q()
+        translation_slug, version_id, fields=fields, user_publisher_q=request.publisher_q()
     )
 
 
@@ -218,5 +218,5 @@ def update_translation_version_patch(
 @permission_required([permission_class(PermissionChoice.PORTAL_DELETE_TRANSLATION)])
 def delete_translation_version(request: Request, translation_slug: str, version_id: int) -> tuple[int, None]:
     service = TranslationService()
-    service.delete_translation_version(translation_slug, version_id, user_publisher_q=request.user_publisher_q())
+    service.delete_translation_version(translation_slug, version_id, user_publisher_q=request.publisher_q())
     return 204, None

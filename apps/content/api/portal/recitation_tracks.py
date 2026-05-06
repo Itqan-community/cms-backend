@@ -49,7 +49,7 @@ class RecitationTrackOut(Schema):
 @paginate
 def list_tracks(request: Request, recitation_slug: str):
     try:
-        asset = Asset.objects.filter(request.user_publisher_q()).get(
+        asset = Asset.objects.filter(request.publisher_q()).get(
             category=CategoryChoice.RECITATION, slug=recitation_slug
         )
     except Asset.DoesNotExist as exc:
@@ -76,9 +76,7 @@ class DeleteTracksIn(Schema):
 @permission_required([permission_class(PermissionChoice.PORTAL_DELETE_RECITATION)])
 def delete_tracks(request: Request, data: DeleteTracksIn):
     repo = RecitationTrackRepository()
-    tracks = repo.get_recitation_tracks_by_ids(
-        data.track_ids, user_publisher_q=request.user_publisher_q(lookup="asset__publisher_id")
-    )
+    tracks = repo.get_recitation_tracks_by_ids(data.track_ids, user_publisher_q=request.publisher_q("asset__publisher"))
 
     if not data.track_ids or len(tracks) != len(data.track_ids):
         raise ItqanError(
