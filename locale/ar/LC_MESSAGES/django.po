@@ -180,10 +180,6 @@ msgstr "يمكنك فقط حذف تقارير المشكلات الخاصة بك
 msgid "You can only delete pending issue reports."
 msgstr "يمكنك فقط حذف تقارير المشكلات المعلقة."
 
-#, python-brace-format
-msgid "Recitation with slug {slug} not found."
-msgstr "لم يتم العثور على التلاوة بالمعرّف {slug}."
-
 msgid "Recitation name (Arabic or English) is required."
 msgstr "اسم التلاوة (بالعربية أو الإنجليزية) مطلوب."
 
