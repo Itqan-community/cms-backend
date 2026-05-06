@@ -7,7 +7,7 @@ from apps.users.models import User
 class ReciterUpdateTest(BaseTestCase):
     def setUp(self):
         super().setUp()
-        self.user = User.objects.create_user(email="testuser@example.com", name="Test User")
+        self.user = User.objects.create_user(email="testuser@example.com", name="Test User", is_staff=True)
         self.reciter = Reciter.objects.create(
             name="Test Reciter",
             name_en="Test Reciter",
@@ -79,7 +79,9 @@ class ReciterUpdateTest(BaseTestCase):
 
     def test_update_reciter_where_user_lacks_permission_should_return_403(self):
         # Arrange
-        user_without_permission = User.objects.create_user(email="noperm@example.com", name="No Permission User")
+        user_without_permission = User.objects.create_user(
+            email="noperm@example.com", name="No Permission User", is_staff=True
+        )
         self.authenticate_user(user_without_permission)
 
         # Act

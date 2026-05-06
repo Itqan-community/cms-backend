@@ -1,6 +1,7 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
+from apps.core.permissions import PermissionChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -8,7 +9,7 @@ from apps.users.models import User
 
 class UpdatePublisherTest(BaseTestCase):
     def setUp(self) -> None:
-        self.user = baker.make(User)
+        self.user = baker.make(User, is_staff=True)
         self.publisher = baker.make(
             Publisher,
             name="Original Publisher",
@@ -26,6 +27,7 @@ class UpdatePublisherTest(BaseTestCase):
     def test_put_publisher_where_valid_data_should_return_200(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_PUBLISHER)
         data = {
             "name_en": "Updated Publisher",
             "description_en": "Updated description",
@@ -53,6 +55,7 @@ class UpdatePublisherTest(BaseTestCase):
     def test_put_publisher_where_not_found_should_return_404(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_PUBLISHER)
         data = {"name_en": "Updated"}
 
         # Act
@@ -66,6 +69,7 @@ class UpdatePublisherTest(BaseTestCase):
     def test_patch_publisher_where_partial_data_should_update_only_provided_fields(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_PUBLISHER)
         data = {"country": "Jordan"}
 
         # Act
@@ -83,6 +87,7 @@ class UpdatePublisherTest(BaseTestCase):
     def test_patch_publisher_where_name_changed_should_regenerate_slug(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_PUBLISHER)
         data = {"name_en": "New Name Publisher"}
 
         # Act
@@ -97,6 +102,7 @@ class UpdatePublisherTest(BaseTestCase):
     def test_patch_publisher_where_translated_fields_updated_should_persist(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_PUBLISHER)
         data = {"name_ar": "الناشر المحدث", "description_ar": "وصف محدث"}
 
         # Act
@@ -111,6 +117,7 @@ class UpdatePublisherTest(BaseTestCase):
     def test_patch_publisher_where_icon_provided_should_return_200(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_PUBLISHER)
         icon = SimpleUploadedFile("updated_icon.png", b"new_content", content_type="image/png")
         data = {"icon": icon}
 
@@ -140,3 +147,16 @@ class UpdatePublisherTest(BaseTestCase):
 
         # Assert
         self.assertEqual(401, response.status_code, response.content)
+
+    def test_update_publisher_where_no_permission_should_return_403(self) -> None:
+        # Arrange
+        self.authenticate_user(self.user)
+        data = {"name_en": "Updated"}
+
+        # Act
+        response = self.client.patch(self.url, data, format="multipart")
+
+        # Assert
+        self.assertEqual(403, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("permission_denied", body["error_name"])

@@ -65,7 +65,9 @@ class TranslationVersionPatchIn(Schema):
 @searching(search_fields=["name", "summary"])
 def list_translation_versions(request: Request, translation_slug: str):
     try:
-        asset = Asset.objects.get(slug=translation_slug, category=CategoryChoice.TRANSLATION, status=StatusChoice.READY)
+        asset = Asset.objects.filter(request.user_publisher_q()).get(
+            slug=translation_slug, category=CategoryChoice.TRANSLATION, status=StatusChoice.READY
+        )
     except Asset.DoesNotExist as exc:
         raise ItqanError(
             error_name="translation_not_found",
@@ -92,7 +94,9 @@ def create_translation_version(
 ) -> tuple[int, AssetVersion]:
     service = TranslationService()
     try:
-        asset = Asset.objects.get(slug=translation_slug, category=CategoryChoice.TRANSLATION, status=StatusChoice.READY)
+        asset = Asset.objects.filter(request.user_publisher_q()).get(
+            slug=translation_slug, category=CategoryChoice.TRANSLATION, status=StatusChoice.READY
+        )
     except Asset.DoesNotExist as exc:
         raise ItqanError(
             error_name="translation_not_found",
@@ -111,6 +115,7 @@ def create_translation_version(
         name=data.name,
         summary=data.summary,
         file=file,
+        user_publisher_q=request.user_publisher_q(),
     )
     return 201, version
 
@@ -133,7 +138,9 @@ def update_translation_version_put(
 ) -> AssetVersion:
     service = TranslationService()
     try:
-        asset = Asset.objects.get(slug=translation_slug, category=CategoryChoice.TRANSLATION, status=StatusChoice.READY)
+        asset = Asset.objects.filter(request.user_publisher_q()).get(
+            slug=translation_slug, category=CategoryChoice.TRANSLATION, status=StatusChoice.READY
+        )
     except Asset.DoesNotExist as exc:
         raise ItqanError(
             error_name="translation_not_found",
@@ -152,7 +159,9 @@ def update_translation_version_put(
     if file:
         fields["file_url"] = file
 
-    return service.update_translation_version(translation_slug, version_id, fields=fields)
+    return service.update_translation_version(
+        translation_slug, version_id, fields=fields, user_publisher_q=request.user_publisher_q()
+    )
 
 
 @router.patch(
@@ -173,7 +182,9 @@ def update_translation_version_patch(
 ) -> AssetVersion:
     service = TranslationService()
     try:
-        asset = Asset.objects.get(slug=translation_slug, category=CategoryChoice.TRANSLATION, status=StatusChoice.READY)
+        asset = Asset.objects.filter(request.user_publisher_q()).get(
+            slug=translation_slug, category=CategoryChoice.TRANSLATION, status=StatusChoice.READY
+        )
     except Asset.DoesNotExist as exc:
         raise ItqanError(
             error_name="translation_not_found",
@@ -192,7 +203,9 @@ def update_translation_version_patch(
     if file:
         fields["file_url"] = file
 
-    return service.update_translation_version(translation_slug, version_id, fields=fields)
+    return service.update_translation_version(
+        translation_slug, version_id, fields=fields, user_publisher_q=request.user_publisher_q()
+    )
 
 
 @router.delete(
@@ -205,5 +218,5 @@ def update_translation_version_patch(
 @permission_required([permission_class(PermissionChoice.PORTAL_DELETE_TRANSLATION)])
 def delete_translation_version(request: Request, translation_slug: str, version_id: int) -> tuple[int, None]:
     service = TranslationService()
-    service.delete_translation_version(translation_slug, version_id)
+    service.delete_translation_version(translation_slug, version_id, user_publisher_q=request.user_publisher_q())
     return 204, None

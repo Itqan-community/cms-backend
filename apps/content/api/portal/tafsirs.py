@@ -17,6 +17,7 @@ from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
 from apps.core.permission_utils import permission_class
 from apps.core.permissions import PermissionChoice
+from apps.publishers.services.membership import enforce_publisher_membership
 
 router = ItqanRouter(tags=[NinjaTag.TAFSIRS])
 logger = logging.getLogger(__name__)
@@ -167,6 +168,7 @@ class TafsirFilter(FilterSchema):
 )
 def list_tafsirs(request: Request, filters: TafsirFilter = Query()):
     qs = Asset.objects.select_related("publisher").filter(
+        request.user_publisher_q(),
         category=CategoryChoice.TAFSIR,
         status=StatusChoice.READY,
     )
@@ -201,6 +203,7 @@ def create_tafsir(
     logger.info(
         f"Creating tafsir [publisher_id={data.publisher_id}, language={data.language}, user_id={request.user.id}]"
     )
+    enforce_publisher_membership(request.user, data.publisher_id)
     service = TafsirService()
     tafsir = service.create_tafsir(
         publisher_id=data.publisher_id,
@@ -233,6 +236,7 @@ def retrieve_tafsir(request: Request, tafsir_slug: str) -> Asset:
         return (
             Asset.objects.select_related("publisher")
             .prefetch_related("versions")
+            .filter(request.user_publisher_q())
             .get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
         )
     except Asset.DoesNotExist as exc:
@@ -259,11 +263,13 @@ def update_tafsir_put(
     thumbnail: UploadedFile | None = File(None),
 ) -> Asset:
     logger.info(f"Updating tafsir (PUT) [tafsir_slug={tafsir_slug}, user_id={request.user.id}]")
+    if data.publisher_id is not None:
+        enforce_publisher_membership(request.user, data.publisher_id)
     service = TafsirService()
     fields = data.model_dump()
     if thumbnail is not None:
         fields["thumbnail_url"] = thumbnail
-    tafsir = service.update_tafsir(tafsir_slug, fields=fields)
+    tafsir = service.update_tafsir(tafsir_slug, fields=fields, user_publisher_q=request.user_publisher_q())
     logger.info(f"Tafsir updated [tafsir_id={tafsir.id}, user_id={request.user.id}]")
     return tafsir
 
@@ -284,11 +290,13 @@ def update_tafsir_patch(
     thumbnail: UploadedFile | None = File(None),
 ) -> Asset:
     logger.info(f"Updating tafsir (PATCH) [tafsir_slug={tafsir_slug}, user_id={request.user.id}]")
+    if data.publisher_id is not None:
+        enforce_publisher_membership(request.user, data.publisher_id)
     service = TafsirService()
     fields = data.model_dump(exclude_unset=True)
     if thumbnail is not None:
         fields["thumbnail_url"] = thumbnail
-    tafsir = service.update_tafsir(tafsir_slug, fields=fields)
+    tafsir = service.update_tafsir(tafsir_slug, fields=fields, user_publisher_q=request.user_publisher_q())
     logger.info(f"Tafsir updated [tafsir_id={tafsir.id}, user_id={request.user.id}]")
     return tafsir
 
@@ -304,6 +312,6 @@ def update_tafsir_patch(
 def delete_tafsir(request: Request, tafsir_slug: str) -> tuple[int, None]:
     logger.info(f"Deleting tafsir [tafsir_slug={tafsir_slug}, user_id={request.user.id}]")
     service = TafsirService()
-    service.delete_tafsir(tafsir_slug)
+    service.delete_tafsir(tafsir_slug, user_publisher_q=request.user_publisher_q())
     logger.info(f"Tafsir deleted [tafsir_slug={tafsir_slug}, user_id={request.user.id}]")
     return 204, None

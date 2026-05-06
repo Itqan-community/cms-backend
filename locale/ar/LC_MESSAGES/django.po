@@ -22,12 +22,32 @@ msgstr ""
 msgid "You do not have access to this asset"
 msgstr "ليس لديك صلاحية الوصول إلى هذا المورد"
 
+#, python-brace-format
+msgid "Asset with slug {slug} not found."
+msgstr "المورد ذو المعرف {slug} غير موجود."
+
+#, python-brace-format
+msgid "Recitation with slug {slug} not found."
+msgstr "لم يتم العثور على التلاوة بالمعرّف {slug}."
+
+#, python-brace-format
+msgid "Reciter with slug {slug} not found."
+msgstr "لم يتم العثور على القارئ بالمعرّف {slug}."
+
+#, python-brace-format
+msgid "Tafsir with slug {slug} not found."
+msgstr "لم يتم العثور على التفسير بالمعرّف {slug}."
+
 #, python-format
 msgid "Asset with id %s does not exist."
 msgstr "المورد ذو المعرف %s غير موجود."
 
 msgid "One or more timing files could not be processed."
 msgstr "تعذر معالجة ملف توقيت واحد أو أكثر."
+
+#, python-brace-format
+msgid "Translation with slug {slug} not found."
+msgstr "لم يتم العثور على الترجمة بالمعرّف {slug}."
 
 msgid "Creative Commons Zero"
 msgstr "المشاع الإبداعي - بدون حقوق (CC0)"
@@ -186,10 +206,6 @@ msgstr "لم يتم العثور على الرواية بالمعرّف {id}."
 msgid "Cannot delete Recitation because they are referenced through other objects"
 msgstr "لا يمكن حذف التلاوة لأن هناك بيانات أخرى مرتبطة بها"
 
-#, python-brace-format
-msgid "Reciter with slug {slug} not found."
-msgstr "لم يتم العثور على القارئ بالمعرّف {slug}."
-
 msgid "Reciter name (Arabic or English) is required."
 msgstr "اسم القارئ (بالعربية أو الإنجليزية) مطلوب."
 
@@ -198,10 +214,6 @@ msgstr "يوجد قارئ بهذا الاسم بالفعل."
 
 msgid "Cannot delete Reciter because they are referenced through other objects"
 msgstr "لا يمكن حذف القارئ لأن مرتبط به بيانات أخرى"
-
-#, python-brace-format
-msgid "Tafsir with slug {slug} not found."
-msgstr "لم يتم العثور على التفسير بالمعرّف {slug}."
 
 msgid "Tafsir name (Arabic or English) is required."
 msgstr "اسم التفسير (بالعربية أو الإنجليزية) مطلوب."
@@ -215,10 +227,6 @@ msgstr "لا يمكن حذف التفسير لأن مرتبط به بيانات 
 #, python-brace-format
 msgid "Version with id {id} not found for tafsir {slug}."
 msgstr "الإصدار ذو المعرف {id} غير موجود للتفسير {slug}."
-
-#, python-brace-format
-msgid "Translation with slug {slug} not found."
-msgstr "لم يتم العثور على الترجمة بالمعرّف {slug}."
 
 msgid "Translation name (Arabic or English) is required."
 msgstr "اسم الترجمة (بالعربية أو الإنجليزية) مطلوب."
@@ -293,11 +301,30 @@ msgstr "تحديث الترجمات في لوحة التحكم"
 msgid "Delete Portal Translations"
 msgstr "حذف الترجمات من لوحة التحكم"
 
+msgid "Portal - View Publishers"
+msgstr ""
+
+msgid "Portal - Create Publishers"
+msgstr ""
+
+msgid "Portal - Update Publishers"
+msgstr ""
+
+msgid "Portal - Delete Publishers"
+msgstr ""
+
+#, python-brace-format
+msgid "Publisher with id {id} not found"
+msgstr "لم يتم العثور على الناشر بالمعرّف {slug}."
+
 msgid "Owner"
 msgstr "مالك"
 
 msgid "Manager"
 msgstr "مدير"
+
+msgid "You do not have access to this publisher."
+msgstr "ليس لديك صلاحية الوصول لهذا الناشر"
 
 msgid "Cannot delete Publisher because they are referenced through other objects"
 msgstr "لا يمكن حذف الناشر لأن هناك بيانات أخري مرتبطة به"

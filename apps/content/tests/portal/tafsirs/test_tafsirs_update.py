@@ -31,7 +31,7 @@ class TafsirUpdateTest(BaseTestCase):
             language="ar",
         )
 
-        self.user = User.objects.create_user(email="testuser@example.com", name="Test User")
+        self.user = User.objects.create_user(email="testuser@example.com", name="Test User", is_staff=True)
 
     def test_update_tafsir_where_put_updates_all_fields_should_return_200(self):
         # Arrange
@@ -285,7 +285,9 @@ class TafsirUpdateTest(BaseTestCase):
 
     def test_update_tafsir_where_user_lacks_permission_should_return_403(self):
         # Arrange
-        user_without_permission = User.objects.create_user(email="noperm@example.com", name="No Permission User")
+        user_without_permission = User.objects.create_user(
+            email="noperm@example.com", name="No Permission User", is_staff=True
+        )
         self.authenticate_user(user_without_permission)
 
         # Act
