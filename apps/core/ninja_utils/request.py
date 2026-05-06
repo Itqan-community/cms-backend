@@ -1,6 +1,6 @@
 from django.http import HttpRequest
 
-from apps.publishers.middlewares.publisher_middleware import PublisherQ, UserPublisherQ
+from apps.publishers.middlewares.publisher_middleware import PublisherQ
 from apps.publishers.models import Domain, Publisher
 from apps.users.models import User
 
@@ -15,4 +15,3 @@ class Request(HttpRequest):
     publisher_domain: Domain | None
     publisher: Publisher | None
     publisher_q: PublisherQ
-    user_publisher_q: UserPublisherQ

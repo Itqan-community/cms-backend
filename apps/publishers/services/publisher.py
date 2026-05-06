@@ -75,10 +75,10 @@ class PublisherService:
                 status_code=400,
             ) from exc
 
-    def _get_publisher_or_404(self, publisher_id: int, user_publisher_q: Q | None = None) -> Publisher:
+    def _get_publisher_or_404(self, publisher_id: int, publisher_q: Q | None = None) -> Publisher:
         qs = Publisher.objects.all()
-        if user_publisher_q is not None:
-            qs = qs.filter(user_publisher_q)
+        if publisher_q is not None:
+            qs = qs.filter(publisher_q)
         try:
             return qs.get(id=publisher_id)
         except Publisher.DoesNotExist as exc:
@@ -89,9 +89,9 @@ class PublisherService:
             ) from exc
 
     def update_publisher(
-        self, publisher_id: int, *, fields: dict[str, object], user_publisher_q: Q | None = None
+        self, publisher_id: int, *, fields: dict[str, object], publisher_q: Q | None = None
     ) -> Publisher:
-        publisher = self._get_publisher_or_404(publisher_id, user_publisher_q=user_publisher_q)
+        publisher = self._get_publisher_or_404(publisher_id, publisher_q=publisher_q)
 
         if "name_ar" in fields or "name_en" in fields:
             name_ar = fields.get("name_ar")
@@ -140,8 +140,8 @@ class PublisherService:
         publisher.save()
         return publisher
 
-    def delete_publisher(self, publisher_id: int, user_publisher_q: Q | None = None) -> None:
-        publisher = self._get_publisher_or_404(publisher_id, user_publisher_q=user_publisher_q)
+    def delete_publisher(self, publisher_id: int, publisher_q: Q | None = None) -> None:
+        publisher = self._get_publisher_or_404(publisher_id, publisher_q=publisher_q)
         try:
             self.repo.delete(publisher)
         except ProtectedError as exc:

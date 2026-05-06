@@ -78,7 +78,7 @@ class RecitationRepository(BaseRecitationRepository):
 
         return qs.distinct()
 
-    def get_recitation(self, recitation_slug: str, user_publisher_q: Q | None = None) -> Asset | None:
+    def get_recitation(self, recitation_slug: str, publisher_q: Q | None = None) -> Asset | None:
         """
         Get a single recitation asset by slug, optionally scoped by publisher membership.
         """
@@ -86,8 +86,8 @@ class RecitationRepository(BaseRecitationRepository):
             qs = self.asset_model.objects.select_related("publisher", "reciter", "riwayah", "qiraah").prefetch_related(
                 "versions"
             )
-            if user_publisher_q is not None:
-                qs = qs.filter(user_publisher_q)
+            if publisher_q is not None:
+                qs = qs.filter(publisher_q)
             return qs.get(slug=recitation_slug, category=CategoryChoice.RECITATION)
         except Asset.DoesNotExist:
             return None

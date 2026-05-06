@@ -31,8 +31,8 @@ class RecitationService:
         filters_dict = filters.model_dump(exclude_none=True) if filters and hasattr(filters, "model_dump") else {}
         return self.repo.list_recitations_qs(publisher_q, filters_dict, annotate_surahs_count=annotate_surahs_count)
 
-    def _get_recitation_or_404(self, recitation_slug: str, user_publisher_q: Q | None = None) -> Asset:
-        recitation = self.repo.get_recitation(recitation_slug, user_publisher_q=user_publisher_q)
+    def _get_recitation_or_404(self, recitation_slug: str, publisher_q: Q | None = None) -> Asset:
+        recitation = self.repo.get_recitation(recitation_slug, publisher_q=publisher_q)
         if recitation is None:
             raise ItqanError(
                 error_name="recitation_not_found",
@@ -111,12 +111,12 @@ class RecitationService:
         self,
         recitation_slug: str,
         fields: dict[str, Any],
-        user_publisher_q: Q | None = None,
+        publisher_q: Q | None = None,
     ) -> Asset:
         """
         Business Logic: Update an existing recitation.
         """
-        asset = self._get_recitation_or_404(recitation_slug, user_publisher_q=user_publisher_q)
+        asset = self._get_recitation_or_404(recitation_slug, publisher_q=publisher_q)
 
         # Trim input fields if present
         for field in ["name_ar", "name_en", "description_ar", "description_en"]:
@@ -186,11 +186,11 @@ class RecitationService:
                 status_code=404,
             )
 
-    def delete_recitation(self, recitation_slug: str, user_publisher_q: Q | None = None) -> None:
+    def delete_recitation(self, recitation_slug: str, publisher_q: Q | None = None) -> None:
         """
         Business Logic: Delete a recitation and its resource.
         """
-        asset = self._get_recitation_or_404(recitation_slug, user_publisher_q=user_publisher_q)
+        asset = self._get_recitation_or_404(recitation_slug, publisher_q=publisher_q)
         try:
             self.repo.delete_recitation(asset)
             logger.info(f"Recitation deleted [asset_id={asset.pk}, slug={recitation_slug}]")

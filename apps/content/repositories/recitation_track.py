@@ -16,12 +16,12 @@ class RecitationTrackRepository:
         return set(self.model.objects.filter(asset_id=asset_id).values_list("surah_number", flat=True))
 
     def get_recitation_tracks_by_ids(
-        self, track_ids: list[int], user_publisher_q: Q | None = None
+        self, track_ids: list[int], publisher_q: Q | None = None
     ) -> list[RecitationSurahTrack]:
         """Return tracks whose IDs are in track_ids, optionally scoped by publisher membership via the parent asset."""
         qs = self.model.objects.filter(id__in=track_ids)
-        if user_publisher_q is not None:
-            qs = qs.filter(user_publisher_q)
+        if publisher_q is not None:
+            qs = qs.filter(publisher_q)
         return list(qs)
 
     def create_recitation_track(
