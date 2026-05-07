@@ -5,7 +5,6 @@ from __future__ import annotations
 from django.conf import settings
 from ninja import Schema
 
-from apps.core.ninja_utils.auth import internal_auth
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
@@ -19,7 +18,6 @@ class BoardUrlOut(Schema):
 
 @router.get(
     "usage/board-url/",
-    auth=internal_auth,
     response=BoardUrlOut,
     description="Get the Mixpanel board URL for the current user",
 )

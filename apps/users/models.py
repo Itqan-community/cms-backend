@@ -4,6 +4,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.db.models import CharField, EmailField
 from django.utils.translation import gettext_lazy as _
+from ninja_keys.models import AbstractAPIKey, APIKeyManager
 from phonenumber_field.modelfields import PhoneNumberField
 
 from apps.core.models import BaseModel
@@ -33,6 +34,28 @@ class User(BaseModel, AbstractUser):
         if self.email:
             self.email = self.email.lower()
         super().save(*args, **kwargs)
+
+
+class UserAPIKeyManager(APIKeyManager):
+    pass
+
+
+class UserAPIKey(AbstractAPIKey):
+    objects: ClassVar[UserAPIKeyManager] = UserAPIKeyManager()
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="api_keys",
+        verbose_name=_("User"),
+    )
+
+    class Meta(AbstractAPIKey.Meta):
+        verbose_name = _("User API Key")
+        verbose_name_plural = _("User API Keys")
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.user_id})"
 
 
 class Developer(BaseModel):
