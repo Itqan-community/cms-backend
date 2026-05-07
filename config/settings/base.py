@@ -347,7 +347,7 @@ HEADLESS_FRONTEND_URLS = {
 HEADLESS_CLIENTS = ["app", "browser"]
 HEADLESS_SERVE_SPECIFICATION = True
 HEADLESS_SPECIFICATION_TEMPLATE_NAME = None  # disable html docs
-HEADLESS_TOKEN_STRATEGY = "allauth.headless.tokens.strategies.jwt.JWTTokenStrategy"
+HEADLESS_TOKEN_STRATEGY = "allauth.headless.tokens.strategies.sessions.SessionTokenStrategy"
 if ENABLE_ALLAUTH:
     allauth_private_key = config("ALLAUTH_JWT_PRIVATE_KEY").replace("\\n", "\n")
     if len(allauth_private_key) < 250 and Path(allauth_private_key).exists():
