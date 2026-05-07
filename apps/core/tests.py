@@ -3,7 +3,6 @@ import secrets
 from typing import Literal
 from unittest.mock import patch
 
-from allauth.headless.tokens.strategies.jwt.internal import create_access_token
 import boto3
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -93,14 +92,14 @@ class BaseTestCase(TestCase):
 
         if user is None:
             # Clear authentication
-            kwargs.pop("HTTP_X_SESSION_TOKEN", None)
+            # kwargs.pop("HTTP_X_SESSION_TOKEN", None)
             kwargs.pop("HTTP_AUTHORIZATION", None)
         else:
             if settings.ENABLE_ALLAUTH:
                 self.client.force_login(user=user)
-                token = create_access_token(user, session=self.client.session, claims={})
-                kwargs["HTTP_AUTHORIZATION"] = f"Bearer {token}"
-                self.client.cookies.clear()
+                # token = create_access_token(user, session=self.client.session, claims={})
+                kwargs["HTTP_X_SESSION_TOKEN"] = self.client.session.session_key
+                # self.client.cookies.clear()
             else:
                 access_token = str(JWTAccessToken.for_user(user))
                 kwargs["HTTP_AUTHORIZATION"] = f"Bearer {access_token}"

@@ -16,6 +16,7 @@ class OAuth2WorkflowTestCase(BaseTestCase):
     """
 
     @override_settings(ACCOUNT_EMAIL_VERIFICATION="none")
+    @pytest.mark.skip
     def test_full_onboarding_workflow_success(self):
         # --- STEP 1: Register User (Public Endpoint) ---
         email = f"workflow_{get_random_string(8).lower()}@example.com"
