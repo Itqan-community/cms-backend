@@ -1,9 +1,32 @@
-from allauth.headless.contrib.ninja.security import jwt_token_auth
+from collections.abc import Callable
+
+from allauth.headless.contrib.ninja.security import x_session_token_auth
 from django.conf import settings
+from django.contrib.auth.models import AnonymousUser
+from ninja_keys.auth import ApiKeyAuth
 from oauth2_provider.contrib.rest_framework import OAuth2Authentication
 from rest_framework_simplejwt.authentication import JWTAuthentication, JWTStatelessUserAuthentication
 
-_OAUTH2_CACHE_TTL = 60  # seconds — short enough that revoked tokens expire quickly
+
+def make_optional(auth: Callable) -> Callable:
+    """
+    Wraps any auth instance so that a missing/invalid credential is accepted rather
+    than rejected.  The request proceeds with AnonymousUser instead of failing.
+
+    Usage:
+        @router.get("/endpoint/", auth=make_optional(JWTAuth()))
+        def my_view(request): ...
+    """
+
+    class _Optional:
+        def __call__(self, request):
+            result = auth(request)
+            if result is not None:
+                return result
+            request.user = AnonymousUser()
+            return None
+
+    return _Optional()
 
 
 class JWTAuth(JWTAuthentication):
@@ -34,45 +57,32 @@ class OAuth2Auth(OAuth2Authentication):
         return res
 
 
-class OAuth2OptionalAuth(OAuth2Auth):
-    def __call__(self, request):
-        ret = super().__call__(request)
-        if ret is not None:
-            return ret
-        from django.contrib.auth.models import AnonymousUser
-
-        anonymous_user = AnonymousUser()
-        request.user = anonymous_user
-        return anonymous_user
-
-
 if settings.ENABLE_ALLAUTH:
-    ninja_jwt_auth = [jwt_token_auth]
+    internal_auth = [x_session_token_auth]
 else:
-    ninja_jwt_auth = [JWTAuth(), JWTAuthStateless()]
+    internal_auth = [JWTAuth(), JWTAuthStateless()]
+
+public_auth = []
+if settings.ENABLE_API_KEY_AUTH:
+    public_auth.append(make_optional(ApiKeyAuth()))
+
 if settings.ENABLE_OAUTH2:
-    ninja_oauth2_auth = [OAuth2Auth()]
+    public_auth.append(OAuth2Auth())
 else:
-    ninja_oauth2_auth = [OAuth2OptionalAuth()]
+    public_auth.append(make_optional(OAuth2Auth()))
 
 
-class OptionalJWTAuth:
-    """Optional JWT authentication - allows both authenticated and anonymous users"""
+class _OptionalAllAuth:
+    """Tries every configured auth method; falls back to AnonymousUser."""
 
     def __call__(self, request):
-        # Try JWT authentication first
-        for auth_method in ninja_jwt_auth + ninja_oauth2_auth:
+        for auth_method in internal_auth + public_auth:
             result = auth_method(request)
             if result is not None:
                 return result
-
-        # If no JWT authentication succeeds, allow anonymous access
-        # We need to return a user object, so use AnonymousUser
-        from django.contrib.auth.models import AnonymousUser
-
         anonymous_user = AnonymousUser()
         request.user = anonymous_user
         return anonymous_user
 
 
-ninja_jwt_auth_optional = OptionalJWTAuth()
+optional_auth = _OptionalAllAuth()

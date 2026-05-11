@@ -22,6 +22,7 @@ ALLOWED_HOSTS: list[str] = []
 # Feature flags
 ENABLE_OAUTH2 = config("ENABLE_OAUTH2", cast=bool, default=True)
 ENABLE_ALLAUTH = config("ENABLE_ALLAUTH", cast=bool, default=True)
+ENABLE_API_KEY_AUTH = config("ENABLE_API_KEY_AUTH", cast=bool, default=True)
 
 # Application definition
 DJANGO_APPS = [
@@ -57,6 +58,7 @@ THIRD_PARTY_APPS = [
     "django_extended_makemessages",
     *(["django_watchfiles"] if DEBUG else []),
     "plain_permissions",
+    "ninja_keys",
 ]
 
 COUNTRIES_OVERRIDE = {"IL": None}
@@ -328,12 +330,13 @@ ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_LOGIN_BY_CODE_ENABLED = True
 ACCOUNT_PASSWORD_RESET_BY_CODE_ENABLED = True
 
-SOCIALACCOUNT_EMAIL_VERIFICATION = "mandatory"
+SOCIALACCOUNT_EMAIL_VERIFICATION = "optional"
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_QUERY_EMAIL = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_ADAPTER = "apps.users.adapters.SocialAccountAdapter"
 SOCIALACCOUNT_FORMS = {"signup": "apps.users.forms.UserSocialSignupForm"}
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 
 # HEADLESS_ONLY = True
 FRONTEND_BASE_URL = config("FRONTEND_BASE_URL", default="http://localhost:4200")
@@ -347,7 +350,7 @@ HEADLESS_FRONTEND_URLS = {
 HEADLESS_CLIENTS = ["app", "browser"]
 HEADLESS_SERVE_SPECIFICATION = True
 HEADLESS_SPECIFICATION_TEMPLATE_NAME = None  # disable html docs
-HEADLESS_TOKEN_STRATEGY = "allauth.headless.tokens.strategies.jwt.JWTTokenStrategy"
+HEADLESS_TOKEN_STRATEGY = "allauth.headless.tokens.strategies.sessions.SessionTokenStrategy"
 if ENABLE_ALLAUTH:
     allauth_private_key = config("ALLAUTH_JWT_PRIVATE_KEY").replace("\\n", "\n")
     if len(allauth_private_key) < 250 and Path(allauth_private_key).exists():
@@ -361,6 +364,7 @@ MFA_PASSKEY_LOGIN_ENABLED = True
 MFA_PASSKEY_SIGNUP_ENABLED = True
 MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = DEBUG
 MFA_ADAPTER = "apps.users.adapters.MFAAdapter"
+MFA_RECOVERY_CODES_SHOW_ONCE = True
 
 # WebAuthn Configuration
 WEBAUTHN_RP_ID = config("WEBAUTHN_RP_ID", default="localhost")
@@ -370,7 +374,9 @@ SOCIALACCOUNT_PROVIDERS = {
         "APP": {
             "client_id": config("GOOGLE_CLIENT_ID", default=""),
             "secret": config("GOOGLE_CLIENT_SECRET", default=""),
+            "verified_email": True,
         },
+        "EMAIL_AUTHENTICATION": True,
         "SCOPE": ["profile", "email"],
         "AUTH_PARAMS": {"access_type": "online"},
         "OAUTH_PKCE_ENABLED": True,
@@ -379,9 +385,10 @@ SOCIALACCOUNT_PROVIDERS = {
         "APP": {
             "client_id": config("GITHUB_CLIENT_ID", default=""),
             "secret": config("GITHUB_CLIENT_SECRET", default=""),
+            "verified_email": True,
         },
+        "EMAIL_AUTHENTICATION": True,
         "SCOPE": ["user:email"],
-        "VERIFIED_EMAIL": True,
     },
 }
 
@@ -412,6 +419,7 @@ CACHES = {
 
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
 SESSION_CACHE_ALIAS = "default"
+SESSION_COOKIE_HTTPONLY = False
 
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
@@ -514,3 +522,5 @@ PERMISSIONS_SETTINGS = {
     "PERMISSIONS": PermissionChoice.choices,
     "MONKEYPATCH_USER": True,
 }
+
+NINJA_KEYS_API_KEY_MODEL = "users.APIKey"

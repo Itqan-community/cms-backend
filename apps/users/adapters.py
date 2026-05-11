@@ -7,6 +7,7 @@ from __future__ import annotations
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.mfa.adapter import DefaultMFAAdapter
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
+from allauth.socialaccount.models import SocialLogin
 from django.conf import settings
 from django.contrib.auth import get_user_model
 
@@ -40,44 +41,17 @@ class AccountAdapter(DefaultAccountAdapter):
 
 
 class SocialAccountAdapter(DefaultSocialAccountAdapter):
-    """
-    Custom social account adapter for handling OAuth2 registration
-    """
 
-    def is_open_for_signup(self, request, sociallogin):
-        """
-        Allow social account signup
-        """
-        return True
-
-    def save_user(self, request, sociallogin, form=None):
-        """
-        Save user from social account data
-        """
-        user = sociallogin.user
-
-        # Extract data from social account
-        if sociallogin.account.provider == "google":
-            extra_data = sociallogin.account.extra_data
-            user.name = extra_data.get("name", "")
-
-        elif sociallogin.account.provider == "github":
-            extra_data = sociallogin.account.extra_data
-            user.name = extra_data.get("name") or extra_data.get("login", "")
-
-        user.save()
-        return user
-
-    def populate_user(self, request, sociallogin, data):
+    def populate_user(self, request, sociallogin: SocialLogin, common_fields):
         """
         Populate user from social account data
         """
-        user = super().populate_user(request, sociallogin, data)
+        user = super().populate_user(request, sociallogin, common_fields)
 
         # Set additional fields based on provider
         if sociallogin.account.provider == "google":
-            extra_data = sociallogin.account.extra_data
-            user.name = extra_data.get("name", "")
+            name = common_fields.get("given_name", "") + " " + common_fields.get("family_name", "")
+            user.name = name.strip()
 
         elif sociallogin.account.provider == "github":
             extra_data = sociallogin.account.extra_data

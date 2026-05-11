@@ -12,7 +12,7 @@ requires-python = ">=3.13"
 dependencies = [
     "boto3==1.40.*",
     "celery==5.5.*",
-    "django-allauth[mfa,socialaccount,headless]==65.14.1",
+    "django-allauth[mfa,socialaccount,headless]==65.16.1",
     "django-celery-beat==2.9.*",
     "django-cors-headers>=4.7.0",
     "django-countries>=7.6",
@@ -31,6 +31,7 @@ dependencies = [
     "flower==2.0.*",
     "mixpanel>=4.10.1",
     "mutagen>=1.47.0",
+    "ninja-keys>=1.0.1",
     "Pillow>=10.3.0",
     "psycopg2-binary==2.9.11",
     "python-decouple==3.8",
@@ -96,6 +97,9 @@ prod = [
 
 [tool.uv]
 managed = true
+
+[tool.uv.sources]
+ninja-keys = { git = "https://github.com/hassaanalansary/ninja-keys.git" }
 
 # ========================
 # Pytest

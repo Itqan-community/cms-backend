@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
 
-from apps.core.ninja_utils.auth import ninja_jwt_auth
+from apps.core.ninja_utils.auth import internal_auth
 from apps.core.ninja_utils.autodiscover import auto_discover_ninja_routers
 from apps.core.ninja_utils.error_handling import register_exception_handlers
 
@@ -13,7 +13,7 @@ cms_api = create_ninja_api(
     description="Internal APIs for CMS frontend",
     docs_base_path="/cms-api",
     urls_namespace="cms-api",
-    auth=ninja_jwt_auth,
+    auth=internal_auth,
     docs_decorator=staff_member_required,
 )
 if settings.ENABLE_ALLAUTH:
@@ -40,7 +40,7 @@ cms_auth_api = create_ninja_api(
     description="Internal APIs for CMS frontend",
     docs_base_path="/cms-api/auth",
     urls_namespace="cms-api-auth",
-    auth=ninja_jwt_auth,
+    auth=internal_auth,
     docs_decorator=staff_member_required,
 )
 
