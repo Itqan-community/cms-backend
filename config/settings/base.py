@@ -517,3 +517,7 @@ PERMISSIONS_SETTINGS = {
     "PERMISSIONS": PermissionChoice.choices,
     "MONKEYPATCH_USER": True,
 }
+
+MIGRATION_MODULES = {
+    "ninja_keys": "apps.ninja_keys.migrations",
+}
