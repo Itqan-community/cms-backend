@@ -4,14 +4,15 @@ Django Allauth adapters for custom user registration and social account handling
 
 from __future__ import annotations
 
+import logging
+
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.mfa.adapter import DefaultMFAAdapter
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from allauth.socialaccount.models import SocialLogin
 from django.conf import settings
-from django.contrib.auth import get_user_model
 
-User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class AccountAdapter(DefaultAccountAdapter):
@@ -47,7 +48,7 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
         Populate user from social account data
         """
         user = super().populate_user(request, sociallogin, common_fields)
-
+        logger.error({"commom_fields": common_fields, "social_provider": sociallogin.account.extra_data})
         # Set additional fields based on provider
         if sociallogin.account.provider == "google":
             user.name = common_fields.get("name", "").strip()
