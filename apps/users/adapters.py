@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.mfa.adapter import DefaultMFAAdapter
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
@@ -47,7 +49,8 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
         elif sociallogin.account.provider == "github":
             extra_data = sociallogin.account.extra_data
             user.name = common_fields.get("name") or common_fields.get("username") or extra_data.get("login", "")
-
+            logger = logging.getLogger(__name__)
+            logger.error({"extra_data": extra_data, "common_fields": common_fields})
         return user
 
 
