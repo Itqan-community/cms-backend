@@ -98,6 +98,9 @@ prod = [
 [tool.uv]
 managed = true
 
+[tool.uv.sources]
+ninja-keys = { git = "https://github.com/hassaanalansary/ninja-keys.git" }
+
 # ========================
 # Pytest
 # ========================

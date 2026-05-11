@@ -518,6 +518,4 @@ PERMISSIONS_SETTINGS = {
     "MONKEYPATCH_USER": True,
 }
 
-MIGRATION_MODULES = {
-    "ninja_keys": "apps.ninja_keys.migrations",
-}
+NINJA_KEYS_API_KEY_MODEL = "users.APIKey"

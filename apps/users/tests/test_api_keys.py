@@ -1,7 +1,7 @@
 from django.test import override_settings
 
 from apps.core.tests import BaseTestCase
-from apps.users.models import User, UserAPIKey
+from apps.users.models import APIKey, User
 
 
 @override_settings(ENABLE_API_KEY_AUTH=True)
@@ -18,7 +18,7 @@ class ApiKeyTests(BaseTestCase):
         response = self.client.post("/cms-api/api-keys/", data={"name": "My Key"}, format="json")
 
         # Assert
-        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(201, response.status_code, response.content)
         data = response.json()
         self.assertEqual("My Key", data["name"])
         self.assertIn("id", data)
@@ -39,7 +39,7 @@ class ApiKeyTests(BaseTestCase):
         # Arrange
         user = User.objects.create_user(email="user@example.com", password="pass123", name="User")
         self.authenticate_user(user)
-        UserAPIKey.objects.create_key(name="My Key", user=user)
+        APIKey.objects.create_key(name="My Key", user=user)
 
         # Act
         response = self.client.post("/cms-api/api-keys/", data={"name": "My Key"}, format="json")
@@ -72,10 +72,10 @@ class ApiKeyTests(BaseTestCase):
         self.assertEqual(400, response.status_code, response.content)
         self.assertEqual("invalid_api_key_name", response.json()["error_name"])
 
-    def test_create_api_key_where_duplicate_name_on_different_user_should_return_200(self):
+    def test_create_api_key_where_duplicate_name_on_different_user_should_return_201(self):
         # Arrange — same name is OK for a different user
         other = User.objects.create_user(email="other@example.com", password="pass123", name="Other")
-        UserAPIKey.objects.create_key(name="Shared Name", user=other)
+        APIKey.objects.create_key(name="Shared Name", user=other)
         user = User.objects.create_user(email="user@example.com", password="pass123", name="User")
         self.authenticate_user(user)
 
@@ -83,7 +83,7 @@ class ApiKeyTests(BaseTestCase):
         response = self.client.post("/cms-api/api-keys/", data={"name": "Shared Name"}, format="json")
 
         # Assert
-        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(201, response.status_code, response.content)
 
     # --- List ---
 
@@ -91,7 +91,7 @@ class ApiKeyTests(BaseTestCase):
         # Arrange
         user = User.objects.create_user(email="user@example.com", password="pass123", name="User")
         self.authenticate_user(user)
-        UserAPIKey.objects.create_key(name="Key 1", user=user)
+        APIKey.objects.create_key(name="Key 1", user=user)
 
         # Act
         response = self.client.get("/cms-api/api-keys/")
@@ -107,8 +107,8 @@ class ApiKeyTests(BaseTestCase):
         user = User.objects.create_user(email="user@example.com", password="pass123", name="User")
         other = User.objects.create_user(email="other@example.com", password="pass123", name="Other")
         self.authenticate_user(user)
-        UserAPIKey.objects.create_key(name="Mine", user=user)
-        UserAPIKey.objects.create_key(name="Theirs", user=other)
+        APIKey.objects.create_key(name="Mine", user=user)
+        APIKey.objects.create_key(name="Theirs", user=other)
 
         # Act
         response = self.client.get("/cms-api/api-keys/")
@@ -123,7 +123,7 @@ class ApiKeyTests(BaseTestCase):
         # Arrange
         user = User.objects.create_user(email="user@example.com", password="pass123", name="User")
         self.authenticate_user(user)
-        api_key, _ = UserAPIKey.objects.create_key(name="Old Key", user=user)
+        api_key, _ = APIKey.objects.create_key(name="Old Key", user=user)
         api_key.revoked = True
         api_key.save()
 
@@ -142,7 +142,7 @@ class ApiKeyTests(BaseTestCase):
         # Arrange
         user = User.objects.create_user(email="user@example.com", password="pass123", name="User")
         self.authenticate_user(user)
-        api_key, _ = UserAPIKey.objects.create_key(name="My Key", user=user)
+        api_key, _ = APIKey.objects.create_key(name="My Key", user=user)
 
         # Act
         response = self.client.get(f"/cms-api/api-keys/{api_key.id}/")
@@ -157,7 +157,7 @@ class ApiKeyTests(BaseTestCase):
         user = User.objects.create_user(email="user@example.com", password="pass123", name="User")
         other = User.objects.create_user(email="other@example.com", password="pass123", name="Other")
         self.authenticate_user(user)
-        api_key, _ = UserAPIKey.objects.create_key(name="Theirs", user=other)
+        api_key, _ = APIKey.objects.create_key(name="Theirs", user=other)
 
         # Act
         response = self.client.get(f"/cms-api/api-keys/{api_key.id}/")
@@ -172,7 +172,7 @@ class ApiKeyTests(BaseTestCase):
         # Arrange
         user = User.objects.create_user(email="user@example.com", password="pass123", name="User")
         self.authenticate_user(user)
-        api_key, _ = UserAPIKey.objects.create_key(name="Old Name", user=user)
+        api_key, _ = APIKey.objects.create_key(name="Old Name", user=user)
 
         # Act
         response = self.client.patch(f"/cms-api/api-keys/{api_key.id}/", data={"name": "New Name"}, format="json")
@@ -187,7 +187,7 @@ class ApiKeyTests(BaseTestCase):
         # Arrange
         user = User.objects.create_user(email="user@example.com", password="pass123", name="User")
         self.authenticate_user(user)
-        api_key, _ = UserAPIKey.objects.create_key(name="My Key", user=user)
+        api_key, _ = APIKey.objects.create_key(name="My Key", user=user)
 
         # Act
         response = self.client.patch(f"/cms-api/api-keys/{api_key.id}/", data={"revoked": True}, format="json")
@@ -202,7 +202,7 @@ class ApiKeyTests(BaseTestCase):
         # Arrange
         user = User.objects.create_user(email="user@example.com", password="pass123", name="User")
         self.authenticate_user(user)
-        api_key, _ = UserAPIKey.objects.create_key(name="My Key", user=user)
+        api_key, _ = APIKey.objects.create_key(name="My Key", user=user)
         api_key.revoked = True
         api_key.save()
 
@@ -217,8 +217,8 @@ class ApiKeyTests(BaseTestCase):
         # Arrange
         user = User.objects.create_user(email="user@example.com", password="pass123", name="User")
         self.authenticate_user(user)
-        UserAPIKey.objects.create_key(name="Existing", user=user)
-        api_key, _ = UserAPIKey.objects.create_key(name="My Key", user=user)
+        APIKey.objects.create_key(name="Existing", user=user)
+        api_key, _ = APIKey.objects.create_key(name="My Key", user=user)
 
         # Act
         response = self.client.patch(f"/cms-api/api-keys/{api_key.id}/", data={"name": "Existing"}, format="json")
@@ -232,7 +232,7 @@ class ApiKeyTests(BaseTestCase):
         user = User.objects.create_user(email="user@example.com", password="pass123", name="User")
         other = User.objects.create_user(email="other@example.com", password="pass123", name="Other")
         self.authenticate_user(user)
-        api_key, _ = UserAPIKey.objects.create_key(name="Theirs", user=other)
+        api_key, _ = APIKey.objects.create_key(name="Theirs", user=other)
 
         # Act
         response = self.client.patch(f"/cms-api/api-keys/{api_key.id}/", data={"name": "Hijack"}, format="json")
@@ -247,21 +247,21 @@ class ApiKeyTests(BaseTestCase):
         # Arrange
         user = User.objects.create_user(email="user@example.com", password="pass123", name="User")
         self.authenticate_user(user)
-        api_key, _ = UserAPIKey.objects.create_key(name="My Key", user=user)
+        api_key, _ = APIKey.objects.create_key(name="My Key", user=user)
 
         # Act
         response = self.client.delete(f"/cms-api/api-keys/{api_key.id}/")
 
         # Assert
         self.assertEqual(204, response.status_code, response.content)
-        self.assertFalse(UserAPIKey.objects.filter(id=api_key.id).exists())
+        self.assertFalse(APIKey.objects.filter(id=api_key.id).exists())
 
     def test_delete_api_key_where_not_owned_should_return_404_api_key_not_found(self):
         # Arrange
         user = User.objects.create_user(email="user@example.com", password="pass123", name="User")
         other = User.objects.create_user(email="other@example.com", password="pass123", name="Other")
         self.authenticate_user(user)
-        api_key, _ = UserAPIKey.objects.create_key(name="Theirs", user=other)
+        api_key, _ = APIKey.objects.create_key(name="Theirs", user=other)
 
         # Act
         response = self.client.delete(f"/cms-api/api-keys/{api_key.id}/")

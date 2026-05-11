@@ -10,7 +10,7 @@ from apps.core.ninja_utils.errors import ItqanError
 from apps.users.repositories.api_key import ApiKeyRepository
 
 if TYPE_CHECKING:
-    from apps.users.models import UserAPIKey
+    from apps.users.models import APIKey
 
 _NAME_MAX_LENGTH = 50
 
@@ -19,22 +19,22 @@ class ApiKeyService:
     def __init__(self, repo: ApiKeyRepository | None = None) -> None:
         self.repo = repo or ApiKeyRepository()
 
-    def list(self, user) -> list[UserAPIKey]:
+    def list(self, user) -> list[APIKey]:
         return list(self.repo.list_for_user(user))
 
-    def get(self, user, key_id: str) -> UserAPIKey:
+    def get(self, user, key_id: str) -> APIKey:
         api_key = self.repo.get_for_user(user, key_id)
         if api_key is None:
             raise ItqanError("api_key_not_found", _("API key not found."), status_code=404)
         return api_key
 
-    def create(self, user, name: str, expiry_date: datetime | None = None) -> tuple[UserAPIKey, str]:
+    def create(self, user, name: str, expiry_date: datetime | None = None) -> tuple[APIKey, str]:
         name = self._validate_name(name)
         if self.repo.name_exists_for_user(user, name):
             raise ItqanError("api_key_name_taken", _("An API key with this name already exists."), status_code=400)
         return self.repo.create_for_user(user, name, expiry_date=expiry_date)
 
-    def update(self, user, key_id: str, fields: dict) -> UserAPIKey:
+    def update(self, user, key_id: str, fields: dict) -> APIKey:
         api_key = self.get(user, key_id)
         if "name" in fields:
             fields["name"] = self._validate_name(fields["name"])

@@ -43,7 +43,7 @@ if settings.ENABLE_API_KEY_AUTH:
     @router.post(
         "api-keys/",
         response={
-            200: ApiKeyCreatedOutSchema,
+            201: ApiKeyCreatedOutSchema,
             400: NinjaErrorResponse[Literal["invalid_api_key_name"]]
             | NinjaErrorResponse[Literal["api_key_name_taken"]],
         },
@@ -52,14 +52,14 @@ if settings.ENABLE_API_KEY_AUTH:
     )
     def create_api_key(request: Request, data: ApiKeyCreateInSchema):
         api_key, raw_key = _service.create(request.user, data.name, expiry_date=data.expiry_date)
-        return {
-            "id": api_key.id,
-            "name": api_key.name,
-            "revoked": api_key.revoked,
-            "expiry_date": api_key.expiry_date,
-            "created": api_key.created,
-            "key": raw_key,
-        }
+        return 201, ApiKeyCreatedOutSchema(
+            id=api_key.id,
+            name=api_key.name,
+            revoked=api_key.revoked,
+            expiry_date=api_key.expiry_date,
+            created=api_key.created,
+            key=raw_key,
+        )
 
     @router.get(
         "api-keys/",

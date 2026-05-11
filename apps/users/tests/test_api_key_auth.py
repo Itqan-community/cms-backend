@@ -1,7 +1,8 @@
 from django.test import override_settings
-from ninja_keys.models import APIKey
+from model_bakery import baker
 
 from apps.core.tests import BaseTestCase
+from apps.users.models import APIKey, User
 
 
 @override_settings(ENABLE_API_KEY_AUTH=True, ENABLE_OAUTH2=True)
@@ -11,9 +12,14 @@ class ApiKeyWorkflowTestCase(BaseTestCase):
     Create API Key -> Access Protected API using X-API-Key header
     """
 
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.user = baker.make(User)
+
     def test_full_api_key_workflow_success(self):
         # Arrange
-        _, raw_key = APIKey.objects.create_key(name="E2E Test Key")
+        _, raw_key = APIKey.objects.create_key(name="E2E Test Key", user=self.user)
 
         # Act
         res = self.client.get("/recitations/", headers={"x-api-key": raw_key})
@@ -43,7 +49,7 @@ class ApiKeyWorkflowTestCase(BaseTestCase):
 
     def test_access_recitations_where_api_key_is_revoked_should_return_401(self):
         # Arrange
-        api_key, raw_key = APIKey.objects.create_key(name="Revoked Key")
+        api_key, raw_key = APIKey.objects.create_key(name="Revoked Key", user=self.user)
         api_key.revoked = True
         api_key.save()
 

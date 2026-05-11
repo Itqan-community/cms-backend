@@ -1,4 +1,4 @@
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 
 from allauth.headless.contrib.ninja.security import jwt_token_auth
 from django.conf import settings
@@ -8,7 +8,7 @@ from oauth2_provider.contrib.rest_framework import OAuth2Authentication
 from rest_framework_simplejwt.authentication import JWTAuthentication, JWTStatelessUserAuthentication
 
 
-def make_optional(auth: Callable | Sequence[Callable]) -> Callable:
+def make_optional(auth: Callable) -> Callable:
     """
     Wraps any auth instance so that a missing/invalid credential is accepted rather
     than rejected.  The request proceeds with AnonymousUser instead of failing.
