@@ -68,6 +68,15 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
         user.save()
         return user
 
+    def is_email_verified(self, provider, email) -> bool:
+        # Google and GitHub always return verified emails from their OAuth APIs.
+        # The default allauth path reads VERIFIED_EMAIL from settings but never
+        # passes it into GoogleProvider.extract_email_addresses(), so setting it
+        # there has no effect. We override here as the authoritative fix.
+        if provider.id in ("google", "github"):
+            return True
+        return super().is_email_verified(provider, email)
+
     def populate_user(self, request, sociallogin, data):
         """
         Populate user from social account data

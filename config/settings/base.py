@@ -372,7 +372,6 @@ SOCIALACCOUNT_PROVIDERS = {
         "APP": {
             "client_id": config("GOOGLE_CLIENT_ID", default=""),
             "secret": config("GOOGLE_CLIENT_SECRET", default=""),
-            "verified_email": True,
         },
         "EMAIL_AUTHENTICATION": True,
         "SCOPE": ["profile", "email"],
@@ -383,7 +382,6 @@ SOCIALACCOUNT_PROVIDERS = {
         "APP": {
             "client_id": config("GITHUB_CLIENT_ID", default=""),
             "secret": config("GITHUB_CLIENT_SECRET", default=""),
-            "verified_email": True,
         },
         "EMAIL_AUTHENTICATION": True,
         "SCOPE": ["user:email"],
