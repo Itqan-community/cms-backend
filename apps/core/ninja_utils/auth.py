@@ -1,6 +1,6 @@
 from collections.abc import Callable
 
-from allauth.headless.contrib.ninja.security import jwt_token_auth
+from allauth.headless.contrib.ninja.security import x_session_token_auth
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from ninja_keys.auth import ApiKeyAuth
@@ -58,7 +58,7 @@ class OAuth2Auth(OAuth2Authentication):
 
 
 if settings.ENABLE_ALLAUTH:
-    internal_auth = [jwt_token_auth]
+    internal_auth = [x_session_token_auth]
 else:
     internal_auth = [JWTAuth(), JWTAuthStateless()]
 

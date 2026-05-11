@@ -330,12 +330,13 @@ ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_LOGIN_BY_CODE_ENABLED = True
 ACCOUNT_PASSWORD_RESET_BY_CODE_ENABLED = True
 
-SOCIALACCOUNT_EMAIL_VERIFICATION = "mandatory"
+SOCIALACCOUNT_EMAIL_VERIFICATION = "optional"
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_QUERY_EMAIL = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_ADAPTER = "apps.users.adapters.SocialAccountAdapter"
 SOCIALACCOUNT_FORMS = {"signup": "apps.users.forms.UserSocialSignupForm"}
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 
 # HEADLESS_ONLY = True
 FRONTEND_BASE_URL = config("FRONTEND_BASE_URL", default="http://localhost:4200")
@@ -349,7 +350,7 @@ HEADLESS_FRONTEND_URLS = {
 HEADLESS_CLIENTS = ["app", "browser"]
 HEADLESS_SERVE_SPECIFICATION = True
 HEADLESS_SPECIFICATION_TEMPLATE_NAME = None  # disable html docs
-HEADLESS_TOKEN_STRATEGY = "allauth.headless.tokens.strategies.jwt.JWTTokenStrategy"
+HEADLESS_TOKEN_STRATEGY = "allauth.headless.tokens.strategies.sessions.SessionTokenStrategy"
 if ENABLE_ALLAUTH:
     allauth_private_key = config("ALLAUTH_JWT_PRIVATE_KEY").replace("\\n", "\n")
     if len(allauth_private_key) < 250 and Path(allauth_private_key).exists():
@@ -374,15 +375,18 @@ SOCIALACCOUNT_PROVIDERS = {
             "client_id": config("GOOGLE_CLIENT_ID", default=""),
             "secret": config("GOOGLE_CLIENT_SECRET", default=""),
         },
+        "EMAIL_AUTHENTICATION": True,
         "SCOPE": ["profile", "email"],
         "AUTH_PARAMS": {"access_type": "online"},
         "OAUTH_PKCE_ENABLED": True,
+        "VERIFIED_EMAIL": True,
     },
     "github": {
         "APP": {
             "client_id": config("GITHUB_CLIENT_ID", default=""),
             "secret": config("GITHUB_CLIENT_SECRET", default=""),
         },
+        "EMAIL_AUTHENTICATION": True,
         "SCOPE": ["user:email"],
         "VERIFIED_EMAIL": True,
     },
