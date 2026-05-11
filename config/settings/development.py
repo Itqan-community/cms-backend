@@ -71,22 +71,6 @@ SECURE_SSL_REDIRECT = False
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
 
-
-# =========================
-# OAuth providers (DB-backed)
-# =========================
-SOCIALACCOUNT_PROVIDERS = {
-    "google": {
-        "SCOPE": ["profile", "email"],
-        "AUTH_PARAMS": {"access_type": "online"},
-        "OAUTH_PKCE_ENABLED": True,
-    },
-    "github": {
-        "SCOPE": ["user:email"],
-        "VERIFIED_EMAIL": True,
-    },
-}
-
 # =========================
 # Debug Toolbar (optional)
 # =========================
