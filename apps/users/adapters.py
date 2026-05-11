@@ -7,6 +7,7 @@ from __future__ import annotations
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.mfa.adapter import DefaultMFAAdapter
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
+from allauth.socialaccount.models import SocialLogin
 from django.conf import settings
 from django.contrib.auth import get_user_model
 
@@ -40,44 +41,8 @@ class AccountAdapter(DefaultAccountAdapter):
 
 
 class SocialAccountAdapter(DefaultSocialAccountAdapter):
-    """
-    Custom social account adapter for handling OAuth2 registration
-    """
 
-    def is_open_for_signup(self, request, sociallogin):
-        """
-        Allow social account signup
-        """
-        return True
-
-    def save_user(self, request, sociallogin, form=None):
-        """
-        Save user from social account data
-        """
-        user = sociallogin.user
-
-        # Extract data from social account
-        if sociallogin.account.provider == "google":
-            extra_data = sociallogin.account.extra_data
-            user.name = extra_data.get("name", "")
-
-        elif sociallogin.account.provider == "github":
-            extra_data = sociallogin.account.extra_data
-            user.name = extra_data.get("name") or extra_data.get("login", "")
-
-        user.save()
-        return user
-
-    def is_email_verified(self, provider, email) -> bool:
-        # Google and GitHub always return verified emails from their OAuth APIs.
-        # The default allauth path reads VERIFIED_EMAIL from settings but never
-        # passes it into GoogleProvider.extract_email_addresses(), so setting it
-        # there has no effect. We override here as the authoritative fix.
-        if provider.id in ("google", "github"):
-            return True
-        return super().is_email_verified(provider, email)
-
-    def populate_user(self, request, sociallogin, data):
+    def populate_user(self, request, sociallogin: SocialLogin, data):
         """
         Populate user from social account data
         """
