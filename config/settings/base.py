@@ -334,6 +334,7 @@ SOCIALACCOUNT_QUERY_EMAIL = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_ADAPTER = "apps.users.adapters.SocialAccountAdapter"
 SOCIALACCOUNT_FORMS = {"signup": "apps.users.forms.UserSocialSignupForm"}
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 
 # HEADLESS_ONLY = True
 FRONTEND_BASE_URL = config("FRONTEND_BASE_URL", default="http://localhost:4200")
@@ -372,6 +373,7 @@ SOCIALACCOUNT_PROVIDERS = {
             "client_id": config("GOOGLE_CLIENT_ID", default=""),
             "secret": config("GOOGLE_CLIENT_SECRET", default=""),
         },
+        "EMAIL_AUTHENTICATION": True,
         "SCOPE": ["profile", "email"],
         "AUTH_PARAMS": {"access_type": "online"},
         "OAUTH_PKCE_ENABLED": True,
@@ -381,6 +383,7 @@ SOCIALACCOUNT_PROVIDERS = {
             "client_id": config("GITHUB_CLIENT_ID", default=""),
             "secret": config("GITHUB_CLIENT_SECRET", default=""),
         },
+        "EMAIL_AUTHENTICATION": True,
         "SCOPE": ["user:email"],
         "VERIFIED_EMAIL": True,
     },
