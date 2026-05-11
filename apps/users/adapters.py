@@ -50,8 +50,7 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
 
         # Set additional fields based on provider
         if sociallogin.account.provider == "google":
-            name = common_fields.get("given_name", "") + " " + common_fields.get("family_name", "")
-            user.name = name.strip()
+            user.name = common_fields.get("name", "").strip()
 
         elif sociallogin.account.provider == "github":
             extra_data = sociallogin.account.extra_data
