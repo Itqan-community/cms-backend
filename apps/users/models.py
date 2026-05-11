@@ -42,7 +42,11 @@ class APIKeyManager(BaseAPIKeyManager):
 
 class APIKey(AbstractAPIKey):
     objects: ClassVar[APIKeyManager] = APIKeyManager()
-
+    name = models.CharField(
+        max_length=50,
+        blank=False,
+        help_text=(_("A name for the API key. 50 characters max.")),
+    )
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
