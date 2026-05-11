@@ -22,6 +22,7 @@ ALLOWED_HOSTS: list[str] = []
 # Feature flags
 ENABLE_OAUTH2 = config("ENABLE_OAUTH2", cast=bool, default=True)
 ENABLE_ALLAUTH = config("ENABLE_ALLAUTH", cast=bool, default=True)
+ENABLE_API_KEY_AUTH = config("ENABLE_API_KEY_AUTH", cast=bool, default=True)
 
 # Application definition
 DJANGO_APPS = [
@@ -57,6 +58,7 @@ THIRD_PARTY_APPS = [
     "django_extended_makemessages",
     *(["django_watchfiles"] if DEBUG else []),
     "plain_permissions",
+    "ninja_keys",
 ]
 
 COUNTRIES_OVERRIDE = {"IL": None}
@@ -518,3 +520,5 @@ PERMISSIONS_SETTINGS = {
     "PERMISSIONS": PermissionChoice.choices,
     "MONKEYPATCH_USER": True,
 }
+
+NINJA_KEYS_API_KEY_MODEL = "users.APIKey"

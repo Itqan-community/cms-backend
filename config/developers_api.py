@@ -1,6 +1,6 @@
 from django.conf import settings
 
-from apps.core.ninja_utils.auth import ninja_oauth2_auth
+from apps.core.ninja_utils.auth import public_auth
 from apps.core.ninja_utils.autodiscover import auto_discover_ninja_routers
 from apps.core.ninja_utils.error_handling import register_exception_handlers
 
@@ -74,7 +74,7 @@ developers_api = create_ninja_api(
     title="Itqan CMS Public APIs For Developers",
     description=_DESCRIPTION,
     urls_namespace="",
-    auth=ninja_oauth2_auth,
+    auth=public_auth,
 )
 
 register_exception_handlers(developers_api)

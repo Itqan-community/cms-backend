@@ -8,7 +8,7 @@ from pydantic import AwareDatetime
 
 from apps.content.repositories.issue_report import IssueReportRepository
 from apps.content.services.issue_report import IssueReportService
-from apps.core.ninja_utils.auth import ninja_jwt_auth
+from apps.core.ninja_utils.auth import internal_auth
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
@@ -46,7 +46,7 @@ def _get_service() -> IssueReportService:
     return IssueReportService(IssueReportRepository())
 
 
-@router.post("issue-reports/", response={201: IssueReportOut}, auth=ninja_jwt_auth)
+@router.post("issue-reports/", response={201: IssueReportOut}, auth=internal_auth)
 def create_issue_report(request: Request, data: IssueReportCreateIn):
     logger.info(f"Creating issue report [asset_id={data.asset_id}, user_id={request.user.id}]")
     report = _get_service().create_issue_report(
@@ -71,7 +71,6 @@ def list_issue_reports(request: Request, filters: IssueReportFilter = Query()):
 @router.get(
     "issue-reports/{report_id}/",
     response={200: IssueReportOut, 404: NinjaErrorResponse[Literal["report_not_found"]]},
-    auth=ninja_jwt_auth,
 )
 def get_issue_report(request: Request, report_id: int):
     report = _get_service().get_issue_report(report_id)
@@ -83,7 +82,6 @@ def get_issue_report(request: Request, report_id: int):
 @router.patch(
     "issue-reports/{report_id}/",
     response={200: IssueReportOut, 404: NinjaErrorResponse[Literal["report_not_found"]]},
-    auth=ninja_jwt_auth,
 )
 def update_issue_report(request: Request, report_id: int, data: IssueReportUpdateIn):
     logger.info(f"Updating issue report [report_id={report_id}, user_id={request.user.id}]")
@@ -99,7 +97,7 @@ def update_issue_report(request: Request, report_id: int, data: IssueReportUpdat
 @router.delete(
     "issue-reports/{report_id}/",
     response={204: None, 404: NinjaErrorResponse[Literal["report_not_found"]]},
-    auth=ninja_jwt_auth,
+    auth=internal_auth,
 )
 def delete_issue_report(request: Request, report_id: int):
     logger.info(f"Deleting issue report [report_id={report_id}, user_id={request.user.id}]")

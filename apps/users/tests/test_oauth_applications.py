@@ -1,14 +1,11 @@
-from django.conf import settings
 from django.test import override_settings
 from oauth2_provider.models import Application
-import pytest
 
 from apps.core.tests import BaseTestCase
 from apps.users.models import User
 
 
-@pytest.mark.skipif(not settings.ENABLE_OAUTH2, reason="OAuth2 disabled in settings")
-@override_settings(ACCOUNT_EMAIL_VERIFICATION="none")
+@override_settings(ACCOUNT_EMAIL_VERIFICATION="none", ENABLE_OAUTH2=True)
 class OAuthApplicationTests(BaseTestCase):
 
     # --- Create ---
