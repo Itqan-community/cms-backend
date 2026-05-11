@@ -47,8 +47,8 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
         elif sociallogin.account.provider == "github":
             extra_data = sociallogin.account.extra_data
             user.name = common_fields.get("name") or common_fields.get("username") or extra_data.get("login", "")
-
-        user.save()
+        if sociallogin.is_existing:
+            user.save()
         return user
 
 
