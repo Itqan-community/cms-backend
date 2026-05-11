@@ -42,16 +42,16 @@ class AccountAdapter(DefaultAccountAdapter):
 
 class SocialAccountAdapter(DefaultSocialAccountAdapter):
 
-    def populate_user(self, request, sociallogin: SocialLogin, data):
+    def populate_user(self, request, sociallogin: SocialLogin, common_fields):
         """
         Populate user from social account data
         """
-        user = super().populate_user(request, sociallogin, data)
+        user = super().populate_user(request, sociallogin, common_fields)
 
         # Set additional fields based on provider
         if sociallogin.account.provider == "google":
-            extra_data = sociallogin.account.extra_data
-            user.name = extra_data.get("name", "")
+            name = common_fields.get("given_name", "") + " " + common_fields.get("family_name", "")
+            user.name = name.strip()
 
         elif sociallogin.account.provider == "github":
             extra_data = sociallogin.account.extra_data
