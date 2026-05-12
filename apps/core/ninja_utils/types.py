@@ -6,10 +6,13 @@ from pydantic_core.core_schema import SerializationInfo
 from apps.core.ninja_utils.request import Request
 
 
-def _build_url(url: str, info: SerializationInfo):
+def _build_url(url: str, info: SerializationInfo) -> str:
     if not url:
         return url
-    request: Request = info.context["request"]
+    context = info.context
+    if not context or "request" not in context:
+        return url
+    request: Request = context["request"]
     return request.build_absolute_uri(url)
 
 
