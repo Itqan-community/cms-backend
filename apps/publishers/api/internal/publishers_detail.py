@@ -24,7 +24,7 @@ class DetailPublisherOut(Schema):
 
     @field_serializer("icon_url")
     def serialize_icon_url(self, value, info: SerializationInfo) -> str:
-        request = info.context.get("request")
+        request = (info.context or {}).get("request")
         if request and isinstance(value, str) and not value.startswith("https"):
             return request.build_absolute_uri(value)
 
