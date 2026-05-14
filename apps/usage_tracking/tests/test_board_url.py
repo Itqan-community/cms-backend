@@ -27,7 +27,7 @@ class TestGetUsageBoardUrl(BaseTestCase):
             resp = self.client.get(self.URL)
 
         assert resp.status_code == 200
-        assert resp.json()["board_url"] is None
+        self.assertEqual("", resp.json()["board_url"])
 
     def test_unauthenticated_returns_401(self):
         self.authenticate_user(None)

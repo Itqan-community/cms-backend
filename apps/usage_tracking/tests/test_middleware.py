@@ -37,7 +37,6 @@ class TestUsageTrackingMiddleware:
         mock_resolve.return_value = (42, "acme", "Acme Publisher")
         mw = _make_middleware()
         request = self.factory.get("/reciters")
-        request.access_token = SimpleNamespace(id=7, user=SimpleNamespace(id=99))
 
         mw(request)
 
@@ -176,25 +175,11 @@ class TestDistinctId:
     def setup_method(self):
         self.factory = RequestFactory()
 
-    def test_oauth2_client_credentials_uses_app_id(self):
-        request = self.factory.get("/reciters/")
-        request.user = AnonymousUser()
-        request.access_token = SimpleNamespace(application=SimpleNamespace(id=42))
-
-        assert UsageTrackingMiddleware._distinct_id(request) == "app-42"
-
     def test_jwt_authenticated_uses_user_pk(self):
         request = self.factory.get("/reciters/")
         request.user = SimpleNamespace(pk=99, is_authenticated=True)
 
         assert UsageTrackingMiddleware._distinct_id(request) == "user-99"
-
-    def test_oauth2_token_takes_precedence_over_user(self):
-        request = self.factory.get("/reciters/")
-        request.user = SimpleNamespace(pk=99, is_authenticated=True)
-        request.access_token = SimpleNamespace(application=SimpleNamespace(id=42))
-
-        assert UsageTrackingMiddleware._distinct_id(request) == "app-42"
 
     def test_anonymous_falls_back_to_uuid(self):
         request = self.factory.get("/reciters/")
@@ -217,12 +202,6 @@ class TestClassifyPathDetailEndpoints:
 class TestDetectAuthMethod:
     def setup_method(self):
         self.factory = RequestFactory()
-
-    def test_oauth2_when_access_token_set(self):
-        request = self.factory.get("/")
-        request.access_token = SimpleNamespace()
-        request.user = AnonymousUser()
-        assert _detect_auth_method(request) == "oauth2"
 
     def test_jwt_when_bearer_header(self):
         request = self.factory.get("/", HTTP_AUTHORIZATION="Bearer xyz")

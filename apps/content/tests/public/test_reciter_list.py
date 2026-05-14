@@ -4,7 +4,7 @@ from oauth2_provider.models import Application
 from apps.content.models import Asset, CategoryChoice, Reciter, StatusChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
-from apps.users.adapters import User
+from apps.users.models import User
 
 
 class RecitersListTest(BaseTestCase):
