@@ -1,0 +1,11 @@
+name: Release Drafter
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+jobs:
+  draft:
+    uses: Itqan-community/.github/.github/workflows/release-drafter.yml@main
+    secrets: inherit

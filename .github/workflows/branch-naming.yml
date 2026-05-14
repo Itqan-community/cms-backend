@@ -1,0 +1,9 @@
+name: Branch Naming Check
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+    branches: [main, staging]
+
+jobs:
+  check:
+    uses: Itqan-community/.github/.github/workflows/branch-naming.yml@main
