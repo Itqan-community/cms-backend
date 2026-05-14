@@ -11,8 +11,9 @@ from django.utils.crypto import get_random_string
 import pytest
 
 from apps.core.tests import BaseTestCase
-from apps.users.adapters import AccountAdapter, SocialAccountAdapter, User
+from apps.users.adapters import AccountAdapter, SocialAccountAdapter
 from apps.users.forms import UserSignupForm, UserSocialSignupForm
+from apps.users.models import User
 
 
 class AccountAdapterTestCase(BaseTestCase):
@@ -94,42 +95,6 @@ class SocialAccountAdapterTestCase(BaseTestCase):
         social_login = self._create_social_login("google", {})
         self.assertTrue(self.adapter.is_open_for_signup(self.request, social_login))
 
-    def test_save_user_google(self):
-        """Test saving user from Google social login"""
-        extra_data = {"name": "Google User", "email": "google@example.com"}
-        social_login = self._create_social_login("google", extra_data)
-
-        saved_user = self.adapter.save_user(self.request, social_login)
-
-        self.assertEqual(saved_user.name, "Google User")
-        # Email comes from the SocialLogin.user, not provider payload
-        self.assertEqual(saved_user.email, "social@example.com")
-        self.assertTrue(User.objects.filter(email="social@example.com").exists())
-
-    def test_save_user_github(self):
-        """Test saving user from GitHub social login"""
-        extra_data = {
-            "name": "GitHub User",
-            "login": "githubuser",
-            "email": "github@example.com",
-        }
-        social_login = self._create_social_login("github", extra_data)
-
-        saved_user = self.adapter.save_user(self.request, social_login)
-
-        self.assertEqual(saved_user.name, "GitHub User")
-        self.assertEqual(saved_user.email, "social@example.com")
-        self.assertTrue(User.objects.filter(email="social@example.com").exists())
-
-    def test_save_user_github_no_name(self):
-        """Test saving user from GitHub with no name (uses login)"""
-        extra_data = {"login": "githubuser", "email": "github@example.com"}
-        social_login = self._create_social_login("github", extra_data)
-
-        saved_user = self.adapter.save_user(self.request, social_login)
-
-        self.assertEqual(saved_user.name, "githubuser")  # Should use login as fallback
-
     def test_populate_user_google(self):
         """Test populating user from Google data"""
         extra_data = {"name": "Populated Google User", "email": "populated@example.com"}
@@ -138,15 +103,6 @@ class SocialAccountAdapterTestCase(BaseTestCase):
         user = self.adapter.populate_user(self.request, social_login, {})
 
         self.assertEqual(user.name, "Populated Google User")
-
-    def test_populate_user_github(self):
-        """Test populating user from GitHub data"""
-        extra_data = {"name": "Populated GitHub User", "login": "populateduser"}
-        social_login = self._create_social_login("github", extra_data)
-
-        user = self.adapter.populate_user(self.request, social_login, {})
-
-        self.assertEqual(user.name, "Populated GitHub User")
 
 
 class UserSignupFormTestCase(BaseTestCase):

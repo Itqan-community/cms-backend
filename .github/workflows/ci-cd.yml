@@ -158,7 +158,7 @@ jobs:
                 echo "MIXPANEL_PROJECT_TOKEN_2=${{ secrets.MIXPANEL_PROJECT_TOKEN_2 }}";
                 echo "MIXPANEL_PROJECT_TOKEN_3=${{ secrets.MIXPANEL_PROJECT_TOKEN_3 }}";
                 echo "MIXPANEL_PROJECT_TOKEN_4=${{ secrets.MIXPANEL_PROJECT_TOKEN_4 }}";
-                echo "MIXPANEL_MAIN_BOARD_URL=${{ secrets.MIXPANEL_MAIN_BOARD_URL }}";
+                echo "MIXPANEL_MAIN_BOARD_URL=${{ vars.STAGING_MIXPANEL_MAIN_BOARD_URL }}";
                 echo "MIXPANEL_PROJECT_ID=${{ secrets.MIXPANEL_PROJECT_ID }}";
                 echo "MIXPANEL_SERVICE_USERNAME=${{ secrets.MIXPANEL_SERVICE_USERNAME }}";
                 echo "MIXPANEL_SERVICE_SECRET=${{ secrets.MIXPANEL_SERVICE_SECRET }}";

@@ -65,7 +65,6 @@ COUNTRIES_OVERRIDE = {"IL": None}
 
 LOCAL_APPS = ["apps.core", "apps.content", "apps.users", "apps.publishers"]
 
-INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
@@ -80,6 +79,7 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "oauth2_provider.middleware.OAuth2TokenMiddleware",
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
@@ -395,7 +395,10 @@ SOCIALACCOUNT_PROVIDERS = {
 # Django Oauth2 Toolkit: OAuth2 Provider Configuration
 OAUTH2_PROVIDER = {
     "ACCESS_TOKEN_EXPIRE_SECONDS": 86400,  # 24 hours
+    "OIDC_ENABLED": True,
 }
+if ENABLE_ALLAUTH:
+    OAUTH2_PROVIDER["OIDC_RSA_PRIVATE_KEY"] = HEADLESS_JWT_PRIVATE_KEY
 
 # Email Configuration
 EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
@@ -511,10 +514,8 @@ MIXPANEL_MAIN_BOARD_URL = config("MIXPANEL_MAIN_BOARD_URL", default="")
 USAGE_TRACKING_CACHE_TTL = config("USAGE_TRACKING_CACHE_TTL", default=900, cast=int)
 
 if MIXPANEL_ENABLED:
-    INSTALLED_APPS.append("apps.usage_tracking")
+    LOCAL_APPS.append("apps.usage_tracking")
     MIDDLEWARE.append("apps.usage_tracking.middlewares.usage_tracking_middleware.UsageTrackingMiddleware")
-else:
-    MIDDLEWARE.append("oauth2_provider.middleware.OAuth2TokenMiddleware")
 
 
 # plain_permissions settings
@@ -524,3 +525,4 @@ PERMISSIONS_SETTINGS = {
 }
 
 NINJA_KEYS_API_KEY_MODEL = "users.APIKey"
+INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
