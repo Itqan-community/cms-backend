@@ -3,6 +3,7 @@ from pathlib import Path
 import sys
 
 from decouple import config
+from saml2.sigver import get_xmlsec_binary
 
 from apps.core.permissions import PermissionChoice
 from config.helpers.sentry import enable_sentry
@@ -23,6 +24,7 @@ ALLOWED_HOSTS: list[str] = []
 ENABLE_OAUTH2 = config("ENABLE_OAUTH2", cast=bool, default=True)
 ENABLE_ALLAUTH = config("ENABLE_ALLAUTH", cast=bool, default=True)
 ENABLE_API_KEY_AUTH = config("ENABLE_API_KEY_AUTH", cast=bool, default=True)
+SAML_IDP_ENABLED = config("SAML_IDP_ENABLED", cast=bool, default=True)
 
 # Application definition
 DJANGO_APPS = [
@@ -59,6 +61,7 @@ THIRD_PARTY_APPS = [
     *(["django_watchfiles"] if DEBUG else []),
     "plain_permissions",
     "ninja_keys",
+    *(["djangosaml2idp"] if SAML_IDP_ENABLED else []),
 ]
 
 COUNTRIES_OVERRIDE = {"IL": None}
@@ -351,12 +354,19 @@ HEADLESS_CLIENTS = ["app", "browser"]
 HEADLESS_SERVE_SPECIFICATION = True
 HEADLESS_SPECIFICATION_TEMPLATE_NAME = None  # disable html docs
 HEADLESS_TOKEN_STRATEGY = "allauth.headless.tokens.strategies.sessions.SessionTokenStrategy"
+
+
+def read_file(file_name: str) -> str:
+    private_key = config(file_name).replace("\\n", "\n")
+    if len(private_key) < 250 and Path(private_key).exists():
+        with open(config(file_name)) as key_file:
+            private_key = key_file.read()
+    return private_key
+
+
 if ENABLE_ALLAUTH:
-    allauth_private_key = config("ALLAUTH_JWT_PRIVATE_KEY").replace("\\n", "\n")
-    if len(allauth_private_key) < 250 and Path(allauth_private_key).exists():
-        with open(config("ALLAUTH_JWT_PRIVATE_KEY")) as jwt_key_file:
-            allauth_private_key = jwt_key_file.read()
-    HEADLESS_JWT_PRIVATE_KEY = allauth_private_key
+
+    HEADLESS_JWT_PRIVATE_KEY = read_file("ALLAUTH_JWT_PRIVATE_KEY")
     # Create Private key from here https://docs.allauth.org/en/latest/headless/token-strategies/jwt-tokens.html
 
 MFA_SUPPORTED_TYPES = ["totp", "recovery_codes", "webauthn"]
@@ -399,6 +409,53 @@ OAUTH2_PROVIDER = {
 }
 if ENABLE_ALLAUTH:
     OAUTH2_PROVIDER["OIDC_RSA_PRIVATE_KEY"] = HEADLESS_JWT_PRIVATE_KEY
+
+# ========================
+# SAML IDP (djangosaml2idp)
+# ========================
+if SAML_IDP_ENABLED:
+    SAML_IDP_KEY_FILE = read_file("saml/idp_private.key")
+    SAML_IDP_CERT_FILE = read_file("saml/idp_certificate.cert")
+    SAML_IDP_BASE_URL = config("SAML_IDP_BASE_URL", default="https://cms.itqan.dev")
+
+    SAML_IDP_CONFIG = {
+        "debug": DEBUG,
+        "xmlsec_binary": get_xmlsec_binary([config("XMLSEC_BINARY", default="/usr/bin/xmlsec1"), "/opt/local/bin"]),
+        "entityid": f"{SAML_IDP_BASE_URL}/idp/metadata/",
+        "service": {
+            "idp": {
+                "name": "Itqan CMS IDP",
+                "endpoints": {
+                    "single_sign_on_service": [
+                        (f"{SAML_IDP_BASE_URL}/idp/sso/post/", "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"),
+                        (
+                            f"{SAML_IDP_BASE_URL}/idp/sso/redirect/",
+                            "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
+                        ),
+                    ],
+                    "single_logout_service": [
+                        (f"{SAML_IDP_BASE_URL}/idp/slo/post/", "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"),
+                        (
+                            f"{SAML_IDP_BASE_URL}/idp/slo/redirect/",
+                            "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
+                        ),
+                    ],
+                },
+                "sign_response": True,
+                "sign_assertion": True,
+            },
+        },
+        "key_file": SAML_IDP_KEY_FILE,
+        "cert_file": SAML_IDP_CERT_FILE,
+        "metadata": {"local": []},
+    }
+
+    # Use email as the NameID (Mixpanel expects email)
+    SAML_IDP_DJANGO_USERNAME_FIELD = "email"
+
+    # RSA-SHA256 signing (required by Mixpanel)
+    SAML_AUTHN_SIGN_ALG = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"
+    SAML_AUTHN_DIGEST_ALG = "http://www.w3.org/2001/04/xmlenc#sha256"
 
 # Email Configuration
 EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
