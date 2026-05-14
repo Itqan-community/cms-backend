@@ -1,0 +1,9 @@
+name: Stale PRs
+on:
+  schedule:
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+jobs:
+  stale:
+    uses: Itqan-community/.github/.github/workflows/stale.yml@main
