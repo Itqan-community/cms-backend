@@ -414,8 +414,8 @@ if ENABLE_ALLAUTH:
 # SAML IDP (djangosaml2idp)
 # ========================
 if SAML_IDP_ENABLED:
-    SAML_IDP_KEY_FILE = read_file("saml/idp_private.key")
-    SAML_IDP_CERT_FILE = read_file("saml/idp_certificate.cert")
+    SAML_IDP_KEY_FILE = read_file("SAML_IDP_KEY_FILE")
+    SAML_IDP_CERT_FILE = read_file("SAML_IDP_CERT_FILE")
     SAML_IDP_BASE_URL = config("SAML_IDP_BASE_URL", default="https://cms.itqan.dev")
 
     SAML_IDP_CONFIG = {
