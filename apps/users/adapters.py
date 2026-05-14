@@ -1,16 +1,51 @@
 from __future__ import annotations
 
+from allauth.account import app_settings
 from allauth.account.adapter import DefaultAccountAdapter
+from allauth.core import context as allauth_context
 from allauth.mfa.adapter import DefaultMFAAdapter
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from allauth.socialaccount.models import SocialLogin
 from django.conf import settings
+from django.core.mail import EmailMessage, EmailMultiAlternatives
+from django.template import TemplateDoesNotExist
+from django.template.loader import render_to_string
 
 
 class AccountAdapter(DefaultAccountAdapter):
     """
     Custom account adapter for handling user registration
     """
+
+    def render_mail(self, template_prefix, email, context, headers=None):
+        # allauth hardcodes _subject.txt; we override to use .html subject templates
+        to = [email] if isinstance(email, str) else email
+        html_ext = app_settings.TEMPLATE_EXTENSION
+        subject = render_to_string(f"{template_prefix}_subject.{html_ext}", context)
+        subject = " ".join(subject.splitlines()).strip()
+        subject = self.format_email_subject(subject)
+
+        from_email = self.get_from_email()
+        bodies = {}
+        for ext in [html_ext, "txt"]:
+            try:
+                bodies[ext] = render_to_string(
+                    f"{template_prefix}_message.{ext}",
+                    context,
+                    allauth_context.request,
+                ).strip()
+            except TemplateDoesNotExist:
+                if ext == "txt" and not bodies:
+                    raise
+
+        if "txt" in bodies:
+            msg = EmailMultiAlternatives(subject, bodies["txt"], from_email, to, headers=headers)
+            if html_ext in bodies:
+                msg.attach_alternative(bodies[html_ext], "text/html")
+        else:
+            msg = EmailMessage(subject, bodies[html_ext], from_email, to, headers=headers)
+            msg.content_subtype = "html"
+        return msg
 
     def is_open_for_signup(self, request):
         """

@@ -23,19 +23,5 @@ uv run python manage.py collectstatic --noinput
 echo "Compiling translations..."
 uv run python manage.py compilemessages --locale ar
 
-# Create superuser if it doesn't exist
-if [ -n "${DJANGO_SUPERUSER_EMAIL}" ] && [ -n "${DJANGO_SUPERUSER_PASSWORD}" ]; then
-    echo "Creating superuser if not exists..."
-    uv run python manage.py shell -c "
-from django.contrib.auth import get_user_model
-User = get_user_model()
-if not User.objects.filter(email='${DJANGO_SUPERUSER_EMAIL}').exists():
-    User.objects.create_superuser('${DJANGO_SUPERUSER_USERNAME:-admin}', '${DJANGO_SUPERUSER_EMAIL}', '${DJANGO_SUPERUSER_PASSWORD}')
-    print('Superuser created successfully')
-else:
-    print('Superuser already exists')
-" || echo "Failed to create superuser"
-fi
-
 echo "Starting Gunicorn server..."
 exec uv run gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 600 config.wsgi
