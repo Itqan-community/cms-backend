@@ -457,6 +457,53 @@ if SAML_IDP_ENABLED:
     SAML_AUTHN_SIGN_ALG = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"
     SAML_AUTHN_DIGEST_ALG = "http://www.w3.org/2001/04/xmlenc#sha256"
 
+# ========================
+# SAML IDP (djangosaml2idp)
+# ========================
+if SAML_IDP_ENABLED:
+    SAML_IDP_KEY_FILE = read_file("SAML_IDP_KEY_FILE")
+    SAML_IDP_CERT_FILE = read_file("SAML_IDP_CERT_FILE")
+    SAML_IDP_BASE_URL = config("SAML_IDP_BASE_URL", default="https://cms.itqan.dev")
+
+    SAML_IDP_CONFIG = {
+        "debug": DEBUG,
+        "xmlsec_binary": get_xmlsec_binary([config("XMLSEC_BINARY", default="/usr/bin/xmlsec1"), "/opt/local/bin"]),
+        "entityid": f"{SAML_IDP_BASE_URL}/idp/metadata/",
+        "service": {
+            "idp": {
+                "name": "Itqan CMS IDP",
+                "endpoints": {
+                    "single_sign_on_service": [
+                        (f"{SAML_IDP_BASE_URL}/idp/sso/post/", "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"),
+                        (
+                            f"{SAML_IDP_BASE_URL}/idp/sso/redirect/",
+                            "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
+                        ),
+                    ],
+                    "single_logout_service": [
+                        (f"{SAML_IDP_BASE_URL}/idp/slo/post/", "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"),
+                        (
+                            f"{SAML_IDP_BASE_URL}/idp/slo/redirect/",
+                            "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
+                        ),
+                    ],
+                },
+                "sign_response": True,
+                "sign_assertion": True,
+            },
+        },
+        "key_file": SAML_IDP_KEY_FILE,
+        "cert_file": SAML_IDP_CERT_FILE,
+        "metadata": {"local": []},
+    }
+
+    # Use email as the NameID (Mixpanel expects email)
+    SAML_IDP_DJANGO_USERNAME_FIELD = "email"
+
+    # RSA-SHA256 signing (required by Mixpanel)
+    SAML_AUTHN_SIGN_ALG = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"
+    SAML_AUTHN_DIGEST_ALG = "http://www.w3.org/2001/04/xmlenc#sha256"
+
 # Email Configuration
 EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
 EMAIL_HOST = config("EMAIL_HOST", default="")
