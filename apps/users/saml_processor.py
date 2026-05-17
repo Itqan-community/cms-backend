@@ -26,5 +26,5 @@ class MixpanelSAMLProcessor(BaseProcessor):
             return False
         return user.publisher_memberships.exists()
 
-    def get_user_id(self, user) -> str:
+    def get_user_id(self, user, name_id_format: str, service_provider, idp_config) -> str:
         return user.email
