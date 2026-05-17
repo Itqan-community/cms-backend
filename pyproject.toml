@@ -47,7 +47,6 @@ dev = [
     "django-coverage-plugin==3.1.1",
     "django-debug-toolbar==6.0.0",
     "django-extensions==4.1",
-    "django-silk==5.0.*",
     "django-stubs-ext>=5.2.8",
     "django-stubs[compatible-mypy]==5.2.8",
     "django-watchfiles>=1.4.0",
