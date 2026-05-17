@@ -33,7 +33,7 @@ class Command(BaseCommand):
         parser.add_argument("--processor", default="apps.users.saml_processor.MixpanelSAMLProcessor")
         parser.add_argument(
             "--attribute-mapping",
-            default='{"email": "email", "name": "name"}',
+            default='{"email": "email"}',
         )
         parser.add_argument(
             "--delete",
