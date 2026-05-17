@@ -67,18 +67,6 @@ wheels = [
 ]
 
 [[package]]
-name = "autopep8"
-version = "2.3.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pycodestyle" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/50/d8/30873d2b7b57dee9263e53d142da044c4600a46f2d28374b3e38b023df16/autopep8-2.3.2.tar.gz", hash = "sha256:89440a4f969197b69a995e4ce0661b031f455a9f776d2c5ba3dbd83466931758", size = 92210, upload-time = "2025-01-14T14:46:18.454Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/9e/43/53afb8ba17218f19b77c7834128566c5bbb100a0ad9ba2e8e89d089d7079/autopep8-2.3.2-py2.py3-none-any.whl", hash = "sha256:ce8ad498672c845a0c3de2629c15b635ec2b05ef8177a6e7c91c74f3e9b51128", size = 45807, upload-time = "2025-01-14T14:46:15.466Z" },
-]
-
-[[package]]
 name = "billiard"
 version = "4.2.4"
 source = { registry = "https://pypi.org/simple" }
@@ -500,6 +488,9 @@ wheels = [
 headless = [
     { name = "pyjwt", extra = ["crypto"] },
 ]
+headless-spec = [
+    { name = "pyyaml" },
+]
 mfa = [
     { name = "fido2" },
     { name = "qrcode" },
@@ -695,21 +686,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/08/53/dbcfa1e528e0d6c39947092625b2c89274b5d88f14d357cee53c4d6dbbd4/django_redis-6.0.0.tar.gz", hash = "sha256:2d9cb12a20424a4c4dde082c6122f486628bae2d9c2bee4c0126a4de7fda00dd", size = 56904, upload-time = "2025-06-17T18:15:46.376Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7e/79/055dfcc508cfe9f439d9f453741188d633efa9eab90fc78a67b0ab50b137/django_redis-6.0.0-py3-none-any.whl", hash = "sha256:20bf0063a8abee567eb5f77f375143c32810c8700c0674ced34737f8de4e36c0", size = 33687, upload-time = "2025-06-17T18:15:34.165Z" },
-]
-
-[[package]]
-name = "django-silk"
-version = "5.0.4"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "autopep8" },
-    { name = "django" },
-    { name = "gprof2dot" },
-    { name = "sqlparse" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/11/c3/87608811d2e2f6b299cba2e786ea7e89ed34a15bba8dd66862db9ba553f9/django-silk-5.0.4.tar.gz", hash = "sha256:8cbfbc647d182527726d8d52d3fcfa193f4d250f21406c3fb1062efa6fb95c63", size = 4391041, upload-time = "2023-09-23T23:34:11.812Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/6f/2d/3eb5f314db904d1dd61dbbb8cae105c8d33afc6ad470e31085e408665ea2/django_silk-5.0.4-py3-none-any.whl", hash = "sha256:b345d3973d1d382e09735eb525eaf3eebd3edee9a69d1003eb9b01badb2438db", size = 1839190, upload-time = "2023-09-23T23:33:41.377Z" },
 ]
 
 [[package]]
@@ -943,15 +919,6 @@ wheels = [
 ]
 
 [[package]]
-name = "gprof2dot"
-version = "2025.4.14"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/bb/fd/cad13fa1f7a463a607176432c4affa33ea162f02f58cc36de1d40d3e6b48/gprof2dot-2025.4.14.tar.gz", hash = "sha256:35743e2d2ca027bf48fa7cba37021aaf4a27beeae1ae8e05a50b55f1f921a6ce", size = 39536, upload-time = "2025-04-14T07:21:45.76Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/71/ed/89d760cb25279109b89eb52975a7b5479700d3114a2421ce735bfb2e7513/gprof2dot-2025.4.14-py3-none-any.whl", hash = "sha256:0742e4c0b4409a5e8777e739388a11e1ed3750be86895655312ea7c20bd0090e", size = 37555, upload-time = "2025-04-14T07:21:43.319Z" },
-]
-
-[[package]]
 name = "gunicorn"
 version = "21.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1100,7 +1067,7 @@ dependencies = [
     { name = "boto3" },
     { name = "celery" },
     { name = "django" },
-    { name = "django-allauth", extra = ["headless", "mfa", "socialaccount"] },
+    { name = "django-allauth", extra = ["headless", "headless-spec", "mfa", "socialaccount"] },
     { name = "django-celery-beat" },
     { name = "django-cors-headers" },
     { name = "django-countries" },
@@ -1140,7 +1107,6 @@ dev = [
     { name = "django-coverage-plugin" },
     { name = "django-debug-toolbar" },
     { name = "django-extensions" },
-    { name = "django-silk" },
     { name = "django-stubs", extra = ["compatible-mypy"] },
     { name = "django-stubs-ext" },
     { name = "django-watchfiles" },
@@ -1166,7 +1132,7 @@ requires-dist = [
     { name = "boto3", specifier = "==1.40.*" },
     { name = "celery", specifier = "==5.5.*" },
     { name = "django", specifier = "==5.2.*" },
-    { name = "django-allauth", extras = ["mfa", "socialaccount", "headless"], specifier = "==65.16.1" },
+    { name = "django-allauth", extras = ["mfa", "socialaccount", "headless", "headless-spec"], specifier = "==65.16.1" },
     { name = "django-celery-beat", specifier = "==2.9.*" },
     { name = "django-cors-headers", specifier = ">=4.7.0" },
     { name = "django-countries", specifier = ">=7.6" },
@@ -1203,7 +1169,6 @@ dev = [
     { name = "django-coverage-plugin", specifier = "==3.1.1" },
     { name = "django-debug-toolbar", specifier = "==6.0.0" },
     { name = "django-extensions", specifier = "==4.1" },
-    { name = "django-silk", specifier = "==5.0.*" },
     { name = "django-stubs", extras = ["compatible-mypy"], specifier = "==5.2.8" },
     { name = "django-stubs-ext", specifier = ">=5.2.8" },
     { name = "django-watchfiles", specifier = ">=1.4.0" },
@@ -1706,15 +1671,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/cd/05/0a34433a064256a578f1783a10da6df098ceaa4a57bbeaa96a6c0352786b/pure_eval-0.2.3.tar.gz", hash = "sha256:5f4e983f40564c576c7c8635ae88db5956bb2229d7e9237d03b3c0b0190eaf42", size = 19752, upload-time = "2024-07-21T12:58:21.801Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8e/37/efad0257dc6e593a18957422533ff0f87ede7c9c6ea010a2177d738fb82f/pure_eval-0.2.3-py3-none-any.whl", hash = "sha256:1db8e35b67b3d218d818ae653e27f06c3aa420901fa7b081ca98cbedc874e0d0", size = 11842, upload-time = "2024-07-21T12:58:20.04Z" },
-]
-
-[[package]]
-name = "pycodestyle"
-version = "2.14.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/11/e0/abfd2a0d2efe47670df87f3e3a0e2edda42f055053c85361f19c0e2c1ca8/pycodestyle-2.14.0.tar.gz", hash = "sha256:c4b5b517d278089ff9d0abdec919cd97262a3367449ea1c8b49b91529167b783", size = 39472, upload-time = "2025-06-20T18:49:48.75Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d7/27/a58ddaf8c588a3ef080db9d0b7e0b97215cee3a45df74f3a94dbbf5c893a/pycodestyle-2.14.0-py2.py3-none-any.whl", hash = "sha256:dd6bf7cb4ee77f8e016f9c8e74a35ddd9f67e1d5fd4184d86c3b98e07099f42d", size = 31594, upload-time = "2025-06-20T18:49:47.491Z" },
 ]
 
 [[package]]
