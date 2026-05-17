@@ -465,6 +465,7 @@ if SAML_IDP_ENABLED:
         "key_file": SAML_IDP_KEY_FILE,
         "cert_file": SAML_IDP_CERT_FILE,
         "metadata": {"local": []},
+        "attribute_map_dir": str(BASE_DIR / "saml" / "attributemaps"),
     }
 
     # Use email as the NameID (Mixpanel expects email)
