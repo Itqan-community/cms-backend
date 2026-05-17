@@ -455,6 +455,11 @@ if SAML_IDP_ENABLED:
                 },
                 "sign_response": True,
                 "sign_assertion": True,
+                "policy": {
+                    "default": {
+                        "name_form": "urn:oasis:names:tc:SAML:2.0:attrname-format:basic",
+                    },
+                },
             },
         },
         "key_file": SAML_IDP_KEY_FILE,

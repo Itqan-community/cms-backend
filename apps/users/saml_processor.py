@@ -29,9 +29,10 @@ class MixpanelSAMLProcessor(BaseProcessor):
         return user.publisher_memberships.exists()
 
     def create_identity(self, user: User, sp_attribute_mapping: dict[str, str]) -> dict[str, str]:
+        display_name = (user.name or user.email.split("@")[0]).strip()
         return {
             "email": user.email,
-            "firstName": user.name,
-            "lastName": user.name,
+            "firstName": display_name,
+            "lastName": display_name,
             "username": user.email,
         }
