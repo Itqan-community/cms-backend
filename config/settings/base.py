@@ -424,6 +424,8 @@ if ENABLE_ALLAUTH:
 if SAML_IDP_ENABLED:
     from saml2.sigver import get_xmlsec_binary
 
+    MIDDLEWARE += ["apps.users.saml_processor.SamlIdpReloadMiddleware"]
+
     SAML_IDP_KEY_FILE = write_temp_file(read_file("SAML_IDP_KEY_FILE"), suffix=".key")
     SAML_IDP_CERT_FILE = write_temp_file(read_file("SAML_IDP_CERT_FILE"), suffix=".crt")
     SAML_IDP_BASE_URL = config("SAML_IDP_BASE_URL", default="https://cms.itqan.dev")

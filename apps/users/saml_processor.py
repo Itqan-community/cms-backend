@@ -1,4 +1,22 @@
+from djangosaml2idp.idp import IDP
 from djangosaml2idp.processors import BaseProcessor
+
+
+class SamlIdpReloadMiddleware:
+    """Force IDP metadata reload on each SAML request.
+
+    Gunicorn forks multiple workers that each cache IDP._server_instance in memory.
+    When an SP is registered or updated, only the worker that processed the save()
+    gets a refreshed instance. This middleware ensures all workers reload from DB.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.path.startswith("/idp/"):
+            IDP._server_instance = None
+        return self.get_response(request)
 
 
 class MixpanelSAMLProcessor(BaseProcessor):

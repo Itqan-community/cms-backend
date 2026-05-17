@@ -27,17 +27,47 @@ class Command(BaseCommand):
     help = "Register or update a SAML Service Provider entry"
 
     def add_arguments(self, parser):
-        parser.add_argument("--entity-id", required=True)
-        parser.add_argument("--acs-url", required=True)
+        parser.add_argument("--entity-id", default=None)
+        parser.add_argument("--acs-url", default=None)
         parser.add_argument("--name", default="")
         parser.add_argument("--processor", default="apps.users.saml_processor.MixpanelSAMLProcessor")
         parser.add_argument(
             "--attribute-mapping",
             default='{"email": "email", "name": "name"}',
         )
+        parser.add_argument(
+            "--delete",
+            metavar="ENTITY_ID",
+            dest="delete_entity_id",
+            default=None,
+            help="Delete the SP with this entity ID",
+        )
+        parser.add_argument("--list", action="store_true", dest="list_sps", help="List all registered SPs")
 
     def handle(self, *args, **options):
         from djangosaml2idp.models import ServiceProvider
+
+        if options["list_sps"]:
+            sps = ServiceProvider.objects.all()
+            if not sps:
+                self.stdout.write("No SPs registered.")
+            for sp in sps:
+                self.stdout.write(
+                    f"  entity_id={sp.entity_id!r}  active={sp.active}  expiry={sp.metadata_expiration_dt}"
+                )
+            return
+
+        if options["delete_entity_id"]:
+            deleted, _ = ServiceProvider.objects.filter(entity_id=options["delete_entity_id"]).delete()
+            if deleted:
+                self.stdout.write(self.style.SUCCESS(f"Deleted SP: {options['delete_entity_id']}"))
+            else:
+                self.stdout.write(self.style.WARNING(f"No SP found with entity_id={options['delete_entity_id']!r}"))
+            return
+
+        if not options["entity_id"] or not options["acs_url"]:
+            self.stderr.write("--entity-id and --acs-url are required unless using --list or --delete")
+            return
 
         attribute_mapping = json.loads(options["attribute_mapping"])
         entity_id = options["entity_id"]
@@ -61,7 +91,7 @@ class Command(BaseCommand):
         sp.pretty_name = options["name"]
         sp.local_metadata = local_metadata
         sp.metadata_expiration_dt = datetime(2036, 1, 1, tzinfo=UTC)
-        sp._attribute_mapping = attribute_mapping
+        sp._attribute_mapping = json.dumps(attribute_mapping)
         sp._processor = options["processor"]
         sp._sign_response = True
         sp._sign_assertion = True
