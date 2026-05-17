@@ -49,7 +49,30 @@ if settings.ENABLE_ALLAUTH:
     ]
 
 if settings.SAML_IDP_ENABLED:
+    import base64
+    import zlib
+
+    from django.contrib.admin.views.decorators import staff_member_required
+    from django.http import HttpResponse
+
+    @staff_member_required
+    def saml_debug(request):
+        """Temporary: decode SAMLRequest param to reveal the Issuer entity ID."""
+        raw = request.GET.get("SAMLRequest", "") or request.session.get("SAMLRequest", "")
+        if not raw:
+            return HttpResponse("Pass ?SAMLRequest=... or trigger the SSO flow first", content_type="text/plain")
+        try:
+            decoded = base64.b64decode(raw)
+            try:
+                xml = zlib.decompress(decoded, -15).decode("utf-8")
+            except Exception:
+                xml = decoded.decode("utf-8")
+        except Exception as e:
+            xml = f"Error decoding: {e}"
+        return HttpResponse(xml, content_type="text/xml")
+
     urlpatterns += [
+        path("idp/debug/saml-request/", saml_debug),
         path("idp/", include("djangosaml2idp.urls")),
     ]
 
