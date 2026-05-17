@@ -21,5 +21,5 @@ class BoardUrlOut(Schema):
     response=BoardUrlOut,
     description="Get the Mixpanel board URL for the current user",
 )
-def get_usage_board_url(request: Request) -> str | None:
-    return Publisher.objects.order_by("id").first().mixpanel_board_url
+def get_usage_board_url(request: Request) -> BoardUrlOut:
+    return BoardUrlOut(board_url=Publisher.objects.order_by("id").first().mixpanel_board_url)
