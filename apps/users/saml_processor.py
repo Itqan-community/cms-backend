@@ -28,9 +28,6 @@ class MixpanelSAMLProcessor(BaseProcessor):
             return False
         return user.publisher_memberships.exists()
 
-    def get_user_id(self, user: User, name_id_format: str, service_provider, idp_config) -> str:
-        return user.email
-
     def create_identity(self, user: User, sp_attribute_mapping: dict[str, str]) -> dict[str, str]:
         return {
             "email": user.email,
