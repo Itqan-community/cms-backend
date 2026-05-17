@@ -3,7 +3,6 @@ from pathlib import Path
 import sys
 
 from decouple import config
-from saml2.sigver import get_xmlsec_binary
 
 from apps.core.permissions import PermissionChoice
 from config.helpers.sentry import enable_sentry
@@ -365,13 +364,12 @@ def read_file(file_name: str) -> str:
 
 
 def write_temp_file(content: str, suffix: str = "") -> str:
-    """Write content to a NamedTemporaryFile and return its path. The file persists for the process lifetime."""
+    """Write content to a temp file and return its path. The file persists for the process lifetime."""
     import tempfile
 
-    f = tempfile.NamedTemporaryFile(mode="w", suffix=suffix, delete=False)
-    f.write(content)
-    f.flush()
-    return f.name
+    with tempfile.NamedTemporaryFile(mode="w", suffix=suffix, delete=False) as f:
+        f.write(content)
+        return f.name
 
 
 if ENABLE_ALLAUTH:
@@ -424,8 +422,10 @@ if ENABLE_ALLAUTH:
 # SAML IDP (djangosaml2idp)
 # ========================
 if SAML_IDP_ENABLED:
-    SAML_IDP_KEY_FILE = write_temp_file(read_file("SAML_IDP_KEY_FILE"), suffix=".cert")
-    SAML_IDP_CERT_FILE = write_temp_file(read_file("SAML_IDP_CERT_FILE"), suffix=".key")
+    from saml2.sigver import get_xmlsec_binary
+
+    SAML_IDP_KEY_FILE = write_temp_file(read_file("SAML_IDP_KEY_FILE"), suffix=".key")
+    SAML_IDP_CERT_FILE = write_temp_file(read_file("SAML_IDP_CERT_FILE"), suffix=".crt")
     SAML_IDP_BASE_URL = config("SAML_IDP_BASE_URL", default="https://cms.itqan.dev")
 
     SAML_IDP_CONFIG = {
