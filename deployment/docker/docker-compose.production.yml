@@ -79,7 +79,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: uv run celery -A config worker -l info --concurrency=${CELERY_WORKER_CONCURRENCY:-2}
+    command: celery -A config worker -l info --concurrency=${CELERY_WORKER_CONCURRENCY:-2}
     restart: unless-stopped
 
   celery-beat:
@@ -95,7 +95,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: uv run celery -A config beat -l info
+    command: celery -A config beat -l info
     restart: unless-stopped
 
   flower:
@@ -110,7 +110,7 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    command: uv run celery -A config flower --port=5555 --basic_auth=${FLOWER_USER:-admin}:${FLOWER_PASS:-flower} --broker_api=http://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:15672/api/
+    command: celery -A config flower --port=5555 --basic_auth=${FLOWER_USER:-admin}:${FLOWER_PASS:-flower} --broker_api=http://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:15672/api/
     restart: unless-stopped
 
 volumes:

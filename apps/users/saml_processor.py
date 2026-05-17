@@ -1,3 +1,5 @@
+import logging
+
 from djangosaml2idp.idp import IDP
 from djangosaml2idp.processors import BaseProcessor
 
@@ -27,6 +29,12 @@ class MixpanelSAMLProcessor(BaseProcessor):
         if not (user and user.is_authenticated and user.is_active):
             return False
         return user.publisher_memberships.exists()
+
+    def get_user_id(self, user: User, name_id_format: str, service_provider, idp_config) -> str:
+        ret = super().get_user_id(user, name_id_format, service_provider, idp_config)
+        logger = logging.getLogger(__name__)
+        logger.error(ret)
+        return ret
 
     def create_identity(self, user: User, sp_attribute_mapping: dict[str, str]) -> dict[str, str]:
         return {

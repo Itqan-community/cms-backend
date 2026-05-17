@@ -15,13 +15,13 @@ fi
 
 # Run Django management commands
 echo "Running database migrations..."
-uv run python manage.py migrate --noinput
+python manage.py migrate --noinput
 
 echo "Collecting static files..."
-uv run python manage.py collectstatic --noinput
+python manage.py collectstatic --noinput
 
 echo "Compiling translations..."
-uv run python manage.py compilemessages --locale ar
+python manage.py compilemessages --locale ar
 
 echo "Starting Gunicorn server..."
-exec uv run gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 600 config.wsgi
+exec gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 600 config.wsgi
