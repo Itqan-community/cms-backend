@@ -379,6 +379,150 @@ msgstr "اسم التطبيق لا يمكن أن يكون فارغاً."
 msgid "Application name must not exceed %(max)d characters."
 msgstr "اسم التطبيق يجب ألا يتجاوز %(max)d حرفاً."
 
+#, python-format
+msgid ""
+"You are receiving this email because you or someone else tried to signup for an\n"
+"account using email address:\n"
+"\n"
+"%(email)s\n"
+"\n"
+"However, an account using that email address already exists.  In case you have\n"
+"forgotten about this, please use the password forgotten procedure to recover\n"
+"your account:\n"
+"\n"
+"%(password_reset_url)s"
+msgstr ""
+"أنت تتلقى هذا البريد الإلكتروني لأنك أو شخص آخر حاول إنشاء حساب باستخدام عنوان بريد إلكتروني:\n"
+"\n"
+"%(email)s\n"
+"\n"
+"ومع ذلك، يوجد حساب بهذا العنوان بالفعل. في حالة نسيانك لذلك، يرجى استخدام إجراء استعادة كلمة المرور لاستعادة حسابك:\n"
+"\n"
+"%(password_reset_url)s"
+
+msgid "Account Already Exists"
+msgstr "الحساب موجود بالفعل"
+
+#, python-format
+msgid "Hello from %(site_name)s!"
+msgstr "مرحباً بك"
+
+#, python-format
+msgid ""
+"Thank you for using %(site_name)s!\n"
+"%(site_domain)s"
+msgstr ""
+"شكراً لاستخدامك اتقان!\n"
+"%(site_domain)s"
+
+msgid "You are receiving this mail because the following change was made to your account:"
+msgstr "أنت تتلقى هذا البريد لأن التغيير التالي تم إجراؤه على حسابك:"
+
+#, python-format
+msgid ""
+"If you do not recognize this change then please take proper security precautions immediately. The change to your account originates from:\n"
+"\n"
+"- IP address: %(ip)s\n"
+"- Browser: %(user_agent)s\n"
+"- Date: %(timestamp)s"
+msgstr ""
+"إذا كنت لا تتعرف على هذا التغيير، يرجى اتخاذ الاحتياطات الأمنية المناسبة فوراً. التغيير على حسابك يأتي من:\n"
+"\n"
+"- عنوان IP: %(ip)s\n"
+"- المتصفح: %(user_agent)s\n"
+"- التاريخ: %(timestamp)s"
+
+#, python-format
+msgid "Your email has been changed from %(from_email)s to %(to_email)s."
+msgstr "تم تغيير بريدك الإلكتروني من %(from_email)s إلى %(to_email)s."
+
+msgid "Email Changed"
+msgstr "البريد الإلكتروني تم تغييره"
+
+msgid "Your email has been confirmed."
+msgstr "تم تأكيد بريدك الإلكتروني."
+
+msgid "Email Confirmation"
+msgstr "تأكيد البريد الإلكتروني"
+
+#, python-format
+msgid "You're receiving this email because user %(user_display)s has given your email address to register an account on %(site_domain)s."
+msgstr "أنت تتلقى هذا البريد الإلكتروني لأن المستخدم %(user_display)s أعطى عنوان بريدك الإلكتروني لإنشاء حساب على %(site_domain)s."
+
+msgid "Your email verification code is listed below. Please enter it in your open browser window."
+msgstr "رمز التحقق من بريدك الإلكتروني مدرج أدناه. يرجى إدخاله في نافذة المتصفح المفتوحة."
+
+#, python-format
+msgid "To confirm this is correct, go to %(activate_url)s"
+msgstr "للتأكيد، انتقل إلى %(activate_url)s"
+
+msgid "Please Confirm Your Email Address"
+msgstr "يرجى تأكيد عنوان بريدك الإلكتروني"
+
+#, python-format
+msgid "Email address %(deleted_email)s has been removed from your account."
+msgstr "تم حذف عنوان البريد الإلكتروني %(deleted_email)s من حسابك."
+
+msgid "Email Removed"
+msgstr "البريد الإلكتروني تم حذفه"
+
+msgid "Your sign-in code is listed below. Please enter it in your open browser window."
+msgstr "رمز تسجيل الدخول الخاص بك مدرج أدناه. يرجى إدخاله في نافذة المتصفح المفتوحة."
+
+msgid "This mail can be safely ignored if you did not initiate this action."
+msgstr "يمكن تجاهل هذا البريد بأمان إذا لم تقم بهذا الإجراء."
+
+msgid "Sign-In Code"
+msgstr "رمز تسجيل الدخول"
+
+msgid "Your password has been changed."
+msgstr "تم تغيير كلمة المرور الخاصة بك."
+
+msgid "Password Changed"
+msgstr "كلمة المرور تم تغييرها"
+
+msgid "Your password reset code is listed below. Please enter it in your open browser window."
+msgstr "رمز إعادة تعيين كلمة المرور الخاصة بك مدرج أدناه. يرجى إدخاله في نافذة المتصفح المفتوحة."
+
+msgid "Password Reset Code"
+msgstr "رمز إعادة تعيين كلمة المرور"
+
+msgid ""
+"You're receiving this email because you or someone else has requested a password reset for your user account.\n"
+"It can be safely ignored if you did not request a password reset. Click the link below to reset your password."
+msgstr ""
+"أنت تتلقى هذا البريد الإلكتروني لأنك أو شخص آخر طلب إعادة تعيين كلمة المرور لحسابك.\n"
+"يمكن تجاهله بأمان إذا لم تطلب إعادة تعيين كلمة المرور. انقر على الرابط أدناه لإعادة تعيين كلمة المرور."
+
+#, python-format
+msgid "In case you forgot, your username is %(username)s."
+msgstr "في حالة نسيانك، اسم المستخدم الخاص بك هو %(username)s."
+
+msgid "Password Reset Email"
+msgstr "بريد إعادة تعيين كلمة المرور"
+
+msgid "Your password has been reset."
+msgstr "تم إعادة تعيين كلمة المرور الخاصة بك."
+
+msgid "Password Reset"
+msgstr "إعادة تعيين كلمة المرور"
+
+msgid "Your password has been set."
+msgstr "تم تعيين كلمة المرور الخاصة بك."
+
+msgid "Password Set"
+msgstr "تم تعيين كلمة المرور"
+
+#, python-format
+msgid "You are receiving this email because you, or someone else, tried to access an account with email %(email)s. However, we do not have any record of such an account in our database."
+msgstr "أنت تتلقى هذا البريد الإلكتروني لأنك أو شخص آخر حاول الوصول إلى حساب بعنوان بريد %(email)s. ومع ذلك، ليس لدينا أي سجل لهذا الحساب في قاعدة البيانات."
+
+msgid "If it was you, you can sign up for an account using the link below."
+msgstr "إذا كنت أنت، يمكنك إنشاء حساب باستخدام الرابط أدناه."
+
+msgid "Unknown Account"
+msgstr "حساب غير معروف"
+
 msgid "Sign In"
 msgstr "تسجيل الدخول"
 
