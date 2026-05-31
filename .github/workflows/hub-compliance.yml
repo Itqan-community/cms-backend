@@ -6,4 +6,5 @@ on:
 
 jobs:
   check:
+    name: Org Compliance Check
     uses: Itqan-community/.github/.github/workflows/hub-compliance.yml@main
