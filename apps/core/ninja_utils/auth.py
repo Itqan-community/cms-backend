@@ -1,11 +1,13 @@
 from collections.abc import Callable
 
-from allauth.headless.contrib.ninja.security import x_session_token_auth
+from allauth.headless.contrib.ninja.security import XSessionTokenAuth
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from ninja_keys.auth import ApiKeyAuth
 from oauth2_provider.contrib.rest_framework import OAuth2Authentication
 from rest_framework_simplejwt.authentication import JWTAuthentication, JWTStatelessUserAuthentication
+
+from apps.users.models import User
 
 
 def make_optional(auth: Callable) -> Callable:
@@ -53,12 +55,20 @@ class OAuth2Auth(OAuth2Authentication):
         if res is None:
             return None
         request.user = res[0]
-        request.access_token = res[1]
+        return res
+
+
+class SessionToken(XSessionTokenAuth):
+    def __call__(self, request):
+        res: User | None = super().__call__(request)
+        if res is None:
+            return None
+        request.user = res
         return res
 
 
 if settings.ENABLE_ALLAUTH:
-    internal_auth = [x_session_token_auth]
+    internal_auth = [SessionToken()]
 else:
     internal_auth = [JWTAuth(), JWTAuthStateless()]
 

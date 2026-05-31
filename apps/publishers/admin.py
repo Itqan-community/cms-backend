@@ -10,7 +10,6 @@ class PublisherMemberInline(admin.TabularInline):
     model = PublisherMember
     extra = 0
     fields = ["user", "role"]
-    autocomplete_fields = ["user"]
     raw_id_fields = ["user"]
 
 
@@ -47,7 +46,17 @@ class PublisherAdmin(admin.ModelAdmin):
         ),
         (
             "Additional Information",
-            {"fields": ("contact_email", "website", "address")},
+            {
+                "fields": (
+                    "contact_email",
+                    "website",
+                    "address",
+                    "country",
+                    "foundation_year",
+                    "is_verified",
+                    "mixpanel_board_url",
+                )
+            },
         ),
         (
             "Timestamps",
@@ -95,6 +104,7 @@ class PublisherMemberAdmin(admin.ModelAdmin):
     list_display = ["user", "publisher", "role", "created_at"]
     list_filter = ["role", "created_at"]
     search_fields = ["user__email", "publisher__name"]
+    raw_id_fields = ["user", "publisher"]
 
 
 @admin.register(Domain)
@@ -102,3 +112,4 @@ class DomainAdmin(admin.ModelAdmin):
     list_display = ["domain", "publisher", "is_active", "created_at"]
     list_filter = ["is_active", "created_at"]
     search_fields = ["domain", "publisher__name"]
+    raw_id_fields = ["publisher"]

@@ -1,0 +1,55 @@
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+
+categories:
+  - title: '🚀 Features'
+    labels:
+      - feature
+      - feat
+    exclude-labels:
+      - community
+  - title: '🐛 Bug Fixes'
+    labels:
+      - fix
+      - bugfix
+      - bug
+    exclude-labels:
+      - community
+  - title: '🔧 Maintenance'
+    labels:
+      - chore
+      - maintenance
+      - deps
+    exclude-labels:
+      - community
+  - title: '🌍 Community Contributions'
+    labels:
+      - community
+
+change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
+change-title-escapes: '\<*_&'
+
+version-resolver:
+  major:
+    labels:
+      - major
+      - breaking-change
+  minor:
+    labels:
+      - minor
+      - feature
+      - feat
+  patch:
+    labels:
+      - patch
+      - fix
+      - bugfix
+      - chore
+  default: patch
+
+template: |
+  ## What's Changed
+
+  $CHANGES
+
+  **Full Changelog**: $PREVIOUS_TAG...v$RESOLVED_VERSION

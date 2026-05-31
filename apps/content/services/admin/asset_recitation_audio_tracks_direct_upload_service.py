@@ -6,6 +6,7 @@ from typing import Any
 
 import boto3
 from botocore.config import Config
+from botocore.exceptions import ClientError
 from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.utils import timezone
@@ -43,11 +44,20 @@ class AssetRecitationAudioTracksDirectUploadService:
         key = self._build_key(asset_id, surah_number)  # DB/storage name (no "media/" prefix)
         r2_key = self._to_r2_key(key)  # R2 object key with "media/" prefix
 
-        response = s3.create_multipart_upload(
-            Bucket=settings.CLOUDFLARE_R2_BUCKET,
-            Key=r2_key,
-            ContentType="audio/mpeg",
-        )
+        try:
+            response = s3.create_multipart_upload(
+                Bucket=settings.CLOUDFLARE_R2_BUCKET,
+                Key=r2_key,
+                ContentType="audio/mpeg",
+            )
+        except ClientError as exc:
+            error_code = exc.response.get("Error", {}).get("Code", "")
+            logger.error(f"R2 create_multipart_upload failed [key={r2_key}, code={error_code}]: {exc}")
+            raise ItqanError(
+                error_name="storage_error",
+                message=f"Failed to initiate upload (R2 error: {error_code})",
+                status_code=503,
+            ) from exc
         upload_id = response["UploadId"]
 
         return {

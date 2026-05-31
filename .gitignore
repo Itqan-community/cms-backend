@@ -334,8 +334,10 @@ media/
 .idea/
 .vscode/settings.json
 /private_key.pem
+/saml/idp_private.key
+/saml/idp_certificate.cert
 /.vscode/launch.json
-
 .ProjectMgmt/
 .chief/
 .claude/
+/temp/*

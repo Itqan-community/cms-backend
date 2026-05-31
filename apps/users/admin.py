@@ -5,7 +5,16 @@ from django.contrib.auth import admin as auth_admin, forms as admin_forms
 from django.forms import EmailField
 from django.utils.translation import gettext_lazy as _
 
+from apps.publishers.models import PublisherMember
+
 from .models import User
+
+
+class PublisherMemberInline(admin.TabularInline):
+    model = PublisherMember
+    extra = 0
+    raw_id_fields = ["publisher"]
+    fields = ["publisher", "role"]
 
 
 class UserAdminChangeForm(admin_forms.UserChangeForm):
@@ -57,6 +66,7 @@ class UserAdmin(auth_admin.UserAdmin):
         ),
         (_("Important dates"), {"fields": ("last_login",)}),
     )
+    inlines = [PublisherMemberInline]
     list_display = ["email", "name", "is_superuser"]
     search_fields = ["name"]
     ordering = ["id"]

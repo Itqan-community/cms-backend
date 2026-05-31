@@ -1,0 +1,11 @@
+name: Notion Sync
+on:
+  issues:
+    types: [opened]
+  pull_request:
+    types: [closed]
+
+jobs:
+  sync:
+    uses: Itqan-community/.github/.github/workflows/notion-sync.yml@main
+    secrets: inherit
