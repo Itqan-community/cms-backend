@@ -13,9 +13,10 @@ from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.core.ninja_utils.types import AbsoluteUrl
 from apps.core.permission_utils import permission_class
 from apps.core.permissions import PermissionChoice
-from apps.publishers.models import Publisher
+from apps.publishers.models import Domain, Publisher
 from apps.publishers.repositories.publisher import PublisherRepository
 from apps.publishers.services.membership import enforce_publisher_membership
 from apps.publishers.services.publisher import PublisherService
@@ -84,6 +85,35 @@ def create_publisher(
     )
     logger.info(f"Publisher created [publisher_id={publisher.id}, user_id={request.user.id}]")
     return 201, publisher
+
+
+# --- My Publishers ---
+
+
+class MyPublisherDomainOut(Schema):
+    id: int
+    domain: str
+    is_primary: bool
+    is_active: bool
+
+
+class MyPublisherOut(Schema):
+    id: int
+    name: str
+    slug: str
+    icon_url: AbsoluteUrl | None = None
+    domains: list[MyPublisherDomainOut]
+
+    @staticmethod
+    def resolve_domains(obj: Publisher) -> list[Domain]:
+        return list(obj.domains.all())
+
+
+@router.get("publishers/me/", response=list[MyPublisherOut])
+@permission_required([permission_class(PermissionChoice.PORTAL_READ_PUBLISHER)])
+def list_my_publishers(request: Request) -> list[Publisher]:
+    """Returns all publishers the authenticated user is a member of, with their domains."""
+    return list(Publisher.objects.filter(request.publisher_q("id")).prefetch_related("domains").order_by("name"))
 
 
 # --- List Publishers ---
