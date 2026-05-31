@@ -36,7 +36,7 @@ class PublisherMiddleware:
         request.publisher_domain = domain
         request.publisher = domain.publisher if domain else None
         if request.path.startswith("/portal/"):
-            request.publisher_q = lambda lookup="publisher": portal_publisher_q(request.user, lookup)
+            request.publisher_q = lambda lookup="publisher": portal_publisher_q(request.user, domain, lookup)
         else:
             request.publisher_q = functools.partial(publisher_q, request.publisher)
         if domain is None:
@@ -94,13 +94,14 @@ def publisher_q(publisher: Publisher | None, lookup: str = "publisher") -> Q:
     return Q(**{lookup: publisher}) if publisher else Q()
 
 
-def portal_publisher_q(user, lookup: str = "publisher") -> Q:
+def portal_publisher_q(user, domain: Domain | None = None, lookup: str = "publisher") -> Q:
     """
     Returns a Q object that scopes a /portal/ queryset to the publishers the user belongs to.
 
     - Anonymous / unauthenticated users: matches nothing.
-    - Staff users: matches everything (Q()).
-    - Otherwise: Q(<lookup>__in=[user's publisher ids]).
+    - Staff users: matches everything (Q()), or scoped to the X-Tenant publisher if provided.
+    - Otherwise: if X-Tenant header resolved to a publisher the user belongs to, scopes to
+      that single publisher; falls back to all of the user's publishers.
       Users with no memberships match nothing.
 
     `lookup` uses the same FK relation-name convention as publisher_q (e.g. "publisher",
@@ -109,6 +110,19 @@ def portal_publisher_q(user, lookup: str = "publisher") -> Q:
     """
     if user is None or not getattr(user, "is_authenticated", False):
         return Q(pk__in=[])
+
+    if domain is not None:
+        publisher = domain.publisher
+        if getattr(user, "is_staff", False):
+            return Q(**{f"{lookup}__in": [publisher.id]})
+        publisher_ids = getattr(user, "_cached_publisher_ids", None)
+        if publisher_ids is None:
+            publisher_ids = list(user.publishers.values_list("id", flat=True))
+            user._cached_publisher_ids = publisher_ids
+        if publisher.id in publisher_ids:
+            return Q(**{f"{lookup}__in": [publisher.id]})
+        return Q(pk__in=[])
+
     if getattr(user, "is_staff", False):
         return Q()
 
