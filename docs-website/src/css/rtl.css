@@ -1,0 +1,38 @@
+/**
+ * RTL layout overrides — scoped to [dir="rtl"] so they only apply to the
+ * Arabic locale. Docusaurus sets this attribute on <html> automatically
+ * based on the locale's direction config.
+ */
+
+/* Keep code blocks and inline code LTR regardless of page direction */
+[dir="rtl"] pre,
+[dir="rtl"] code,
+[dir="rtl"] kbd,
+[dir="rtl"] .prism-code {
+  direction: ltr;
+  text-align: left;
+}
+
+/* Tabs inside code blocks stay LTR */
+[dir="rtl"] .tabs {
+  direction: ltr;
+}
+
+/* Mirror the sidebar toggle chevron */
+[dir="rtl"] .menu__caret::before {
+  transform: rotate(180deg);
+}
+
+/* Table cells align right in RTL */
+[dir="rtl"] th,
+[dir="rtl"] td {
+  text-align: right;
+}
+
+/* Admonitions — icon stays on the correct (start) side */
+[dir="rtl"] .admonition {
+  border-left: none;
+  border-right: 4px solid var(--ifm-color-primary);
+  padding-right: 1rem;
+  padding-left: 0;
+}

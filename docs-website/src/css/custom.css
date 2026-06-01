@@ -1,0 +1,148 @@
+/**
+ * Itqan Developer Docs — global CSS overrides.
+ * Brand teal: #0d9488 (light) / #2dd4bf (dark).
+ * Infima CSS variable reference: https://infima.dev/docs/utilities/colors
+ */
+
+:root {
+  --ifm-font-family-base: 'Rubik', system-ui, sans-serif;
+  --ifm-heading-font-family: 'Rubik', system-ui, sans-serif;
+  --landing-heading-font: 'Fustat', 'Rubik', system-ui, sans-serif;
+
+  /* Teal accent — light mode */
+  --ifm-color-primary: #0d9488;
+  --ifm-color-primary-dark: #0b837a;
+  --ifm-color-primary-darker: #0a7b72;
+  --ifm-color-primary-darkest: #08655e;
+  --ifm-color-primary-light: #0fa598;
+  --ifm-color-primary-lighter: #10ada0;
+  --ifm-color-primary-lightest: #14c4b5;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.08);
+}
+
+/* Light-mode palette — scoped so dark mode is never touched */
+html:not([data-theme='dark']) {
+  --ifm-background-color: #F8FAF9;
+  --landing-card-bg: #FFFFFF;
+  --landing-card-border: rgba(15, 23, 42, 0.08);
+  --landing-section-alt-bg: #EDF1F0;
+  --landing-text-secondary: #667085;
+
+  /* Footer — consistent with soft light palette */
+  --ifm-footer-background-color: #E5ECEA;
+  --ifm-footer-color: #374151;
+  --ifm-footer-link-color: #4B5563;
+  --ifm-footer-link-hover-color: #0d9488;
+}
+
+[data-theme='dark'] {
+  /* Teal accent — dark mode (lighter for contrast on dark backgrounds) */
+  --ifm-color-primary: #2dd4bf;
+  --ifm-color-primary-dark: #1dcfb9;
+  --ifm-color-primary-darker: #1ac4af;
+  --ifm-color-primary-darkest: #16a390;
+  --ifm-color-primary-light: #43d9c5;
+  --ifm-color-primary-lighter: #4ddbc8;
+  --ifm-color-primary-lightest: #6de1d2;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+
+  /* Dark-mode equivalents for landing tokens */
+  --landing-card-bg: var(--ifm-background-color);
+  --landing-card-border: var(--ifm-color-emphasis-200);
+  --landing-section-alt-bg: var(--ifm-background-surface-color);
+  --landing-text-secondary: var(--ifm-color-emphasis-700);
+
+}
+
+/* ---------- Compact icon footer ---------- */
+
+.footer {
+  padding-block: 1.25rem;
+}
+
+html:not([data-theme='dark']) .footer {
+  background-color: #D6DFDD;
+  color: #374151;
+}
+
+html:not([data-theme='dark']) .footer a {
+  color: #4B5563;
+}
+
+html:not([data-theme='dark']) .footer a:hover {
+  color: #0d9488;
+}
+
+html:not([data-theme='dark']) .footer-icon-heading {
+  color: #374151;
+  opacity: 0.65;
+}
+
+.footer .footer__links {
+  justify-content: center;
+  margin-bottom: 0;
+}
+
+.footer .footer__col {
+  flex: none;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.footer-icon-heading {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.4;
+  margin: 0 0 0.625rem;
+  text-align: center;
+}
+
+.footer-icon-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.footer .footer__bottom {
+  margin-top: 1rem;
+}
+
+.footer-icon-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.55;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  color: var(--ifm-footer-color);
+}
+
+.footer-icon-link:hover {
+  opacity: 1;
+  transform: translateY(-2px);
+  color: var(--ifm-footer-color);
+}
+
+.footer-icon-link svg {
+  width: 20px;
+  height: 20px;
+}
+
+html[lang="ar"] .footer-heading-en { display: none; }
+html:not([lang="ar"]) .footer-heading-ar { display: none; }
+
+.footer-icon-sep {
+  display: inline-block;
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+html:not([data-theme='dark']) .footer-icon-sep {
+  background: rgba(15, 23, 42, 0.15);
+}
