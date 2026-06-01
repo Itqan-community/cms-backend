@@ -1,3 +1,6 @@
+from unittest import skipUnless
+
+from django.conf import settings
 from django.test import override_settings
 from oauth2_provider.models import Application
 
@@ -5,7 +8,11 @@ from apps.core.tests import BaseTestCase
 from apps.users.models import User
 
 
-@override_settings(ACCOUNT_EMAIL_VERIFICATION="none", ENABLE_OAUTH2=True)
+# The applications/ routes register only when settings.ENABLE_OAUTH2 is true at import
+# time (see apps/users/api/internal/applications.py). @override_settings cannot register
+# them at runtime, so these tests only run when OAuth2 is enabled at process start.
+@skipUnless(settings.ENABLE_OAUTH2, "OAuth2 disabled; applications routes not registered")
+@override_settings(ACCOUNT_EMAIL_VERIFICATION="none")
 class OAuthApplicationTests(BaseTestCase):
 
     # --- Create ---
