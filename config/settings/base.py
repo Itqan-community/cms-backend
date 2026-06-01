@@ -20,7 +20,7 @@ DEBUG = config("DEBUG", default=True, cast=bool)
 ALLOWED_HOSTS: list[str] = []
 
 # Feature flags
-ENABLE_OAUTH2 = config("ENABLE_OAUTH2", cast=bool, default=True)
+ENABLE_OAUTH2 = config("ENABLE_OAUTH2", cast=bool, default=False)
 ENABLE_ALLAUTH = config("ENABLE_ALLAUTH", cast=bool, default=True)
 ENABLE_API_KEY_AUTH = config("ENABLE_API_KEY_AUTH", cast=bool, default=True)
 SAML_IDP_ENABLED = config("SAML_IDP_ENABLED", cast=bool, default=True)
