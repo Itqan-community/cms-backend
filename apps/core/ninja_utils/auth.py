@@ -12,8 +12,13 @@ from apps.users.models import User
 
 def make_optional(auth: Callable) -> Callable:
     """
-    Wraps any auth instance so that a missing/invalid credential is accepted rather
-    than rejected.  The request proceeds with AnonymousUser instead of failing.
+    Wraps a single auth instance so that a missing/invalid credential is accepted
+    rather than rejected. The request proceeds as AnonymousUser instead of failing.
+
+    django-ninja considers a request authenticated only when an auth callback returns
+    a *truthy* value; returning ``None`` makes ninja raise ``AuthenticationError`` (401).
+    Therefore the fallback must return the (truthy) ``AnonymousUser`` — not ``None`` —
+    for anonymous access to actually be allowed.
 
     Usage:
         @router.get("/endpoint/", auth=make_optional(JWTAuth()))
@@ -26,7 +31,7 @@ def make_optional(auth: Callable) -> Callable:
             if result is not None:
                 return result
             request.user = AnonymousUser()
-            return None
+            return request.user
 
     return _Optional()
 
