@@ -2,7 +2,7 @@ from model_bakery import baker
 
 from apps.core.permissions import PermissionChoice
 from apps.core.tests import BaseTestCase
-from apps.publishers.models import Domain, Publisher, PublisherMember
+from apps.publishers.models import Publisher, PublisherMember
 from apps.users.models import User
 
 
@@ -17,7 +17,6 @@ class ListMyPublishersTest(BaseTestCase):
         self.give_permission(self.user, PermissionChoice.PORTAL_READ_PUBLISHER)
         publisher = baker.make(Publisher, name="Tafsir Center", slug="tafsir-center")
         baker.make(PublisherMember, user=self.user, publisher=publisher, role=PublisherMember.RoleChoice.OWNER)
-        baker.make(Domain, publisher=publisher, domain="tafsir.example.com", is_primary=True, is_active=True)
 
         # Act
         response = self.client.get(self.url)
@@ -28,10 +27,6 @@ class ListMyPublishersTest(BaseTestCase):
         self.assertEqual(1, len(body))
         self.assertEqual("Tafsir Center", body[0]["name"])
         self.assertEqual("tafsir-center", body[0]["slug"])
-        self.assertEqual(1, len(body[0]["domains"]))
-        self.assertEqual("tafsir.example.com", body[0]["domains"][0]["domain"])
-        self.assertTrue(body[0]["domains"][0]["is_primary"])
-        self.assertTrue(body[0]["domains"][0]["is_active"])
 
     def test_list_my_publishers_where_member_of_multiple_publishers_should_return_all(self) -> None:
         # Arrange
@@ -65,27 +60,6 @@ class ListMyPublishersTest(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual([], response.json())
-
-    def test_list_my_publishers_where_publisher_has_multiple_domains_should_return_all_domains(self) -> None:
-        # Arrange
-        self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_PUBLISHER)
-        publisher = baker.make(Publisher, name="Multi Domain Pub", slug="multi-domain-pub")
-        baker.make(PublisherMember, user=self.user, publisher=publisher, role=PublisherMember.RoleChoice.OWNER)
-        baker.make(Domain, publisher=publisher, domain="primary.example.com", is_primary=True, is_active=True)
-        baker.make(Domain, publisher=publisher, domain="secondary.example.com", is_primary=False, is_active=True)
-        baker.make(Domain, publisher=publisher, domain="inactive.example.com", is_primary=False, is_active=False)
-
-        # Act
-        response = self.client.get(self.url)
-
-        # Assert
-        self.assertEqual(200, response.status_code, response.content)
-        body = response.json()
-        self.assertEqual(1, len(body))
-        self.assertEqual(3, len(body[0]["domains"]))
-        domain_names = {d["domain"] for d in body[0]["domains"]}
-        self.assertEqual({"primary.example.com", "secondary.example.com", "inactive.example.com"}, domain_names)
 
     def test_list_my_publishers_where_results_are_ordered_by_name(self) -> None:
         # Arrange
@@ -145,7 +119,6 @@ class ListMyPublishersTest(BaseTestCase):
         self.give_permission(self.user, PermissionChoice.PORTAL_READ_PUBLISHER)
         publisher = baker.make(Publisher, name="Schema Test Pub", slug="schema-test-pub")
         baker.make(PublisherMember, user=self.user, publisher=publisher, role=PublisherMember.RoleChoice.OWNER)
-        baker.make(Domain, publisher=publisher, domain="schema.example.com", is_primary=True, is_active=True)
 
         # Act
         response = self.client.get(self.url)
@@ -153,8 +126,6 @@ class ListMyPublishersTest(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         pub = response.json()[0]
-        for field in ("id", "name", "slug", "icon_url", "domains"):
+        for field in ("id", "name", "slug", "icon_url"):
             self.assertIn(field, pub)
-        domain = pub["domains"][0]
-        for field in ("id", "domain", "is_primary", "is_active"):
-            self.assertIn(field, domain)
+        self.assertNotIn("domains", pub)
