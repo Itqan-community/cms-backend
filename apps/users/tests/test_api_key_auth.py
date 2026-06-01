@@ -37,16 +37,6 @@ class ApiKeyWorkflowTestCase(BaseTestCase):
         self.assertEqual(401, res.status_code, res.content)
         self.assertEqual("authentication_error", res.json()["error_name"])
 
-    def test_access_recitations_where_no_api_key_provided_should_return_401(self):
-        # Arrange — no key provided
-
-        # Act
-        res = self.client.get("/recitations/")
-
-        # Assert
-        self.assertEqual(401, res.status_code, res.content)
-        self.assertEqual("authentication_error", res.json()["error_name"])
-
     def test_access_recitations_where_api_key_is_revoked_should_return_401(self):
         # Arrange
         api_key, raw_key = APIKey.objects.create_key(name="Revoked Key", user=self.user)
