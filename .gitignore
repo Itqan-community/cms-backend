@@ -341,3 +341,4 @@ media/
 .chief/
 .claude/
 /temp/*
+/CLAUDE.md

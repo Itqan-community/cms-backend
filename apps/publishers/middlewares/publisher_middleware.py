@@ -32,13 +32,17 @@ class PublisherMiddleware:
     @staticmethod
     def is_publisher_active(request) -> bool | None:
         """modifies the request and adds publisher objects"""
+        if request.path.startswith("/portal/"):
+            portal_publisher = get_portal_publisher(request)
+            domain = get_publisher_domain(request, "Origin")
+            request.publisher_domain = domain
+            request.publisher = portal_publisher or (domain.publisher if domain else None)
+            request.publisher_q = lambda lookup="publisher": portal_publisher_q(request.user, portal_publisher, lookup)
+            return None
         domain = get_publisher_domain(request, "X-Tenant") or get_publisher_domain(request, "Origin")
         request.publisher_domain = domain
         request.publisher = domain.publisher if domain else None
-        if request.path.startswith("/portal/"):
-            request.publisher_q = lambda lookup="publisher": portal_publisher_q(request.user, domain, lookup)
-        else:
-            request.publisher_q = functools.partial(publisher_q, request.publisher)
+        request.publisher_q = functools.partial(publisher_q, request.publisher)
         if domain is None:
             return None
         if not domain.is_active:
@@ -55,6 +59,24 @@ def remove_www(hostname: str) -> str:
     if hostname.startswith("www."):
         return hostname[4:]
     return hostname
+
+
+def get_portal_publisher(request: HttpRequest) -> Publisher | None:
+    """
+    Resolves the active publisher for portal requests from the X-Tenant header.
+    Accepts either a publisher ID (int) or a domain string.
+    """
+    value = request.headers.get("X-Tenant", "").strip()
+    if not value:
+        return None
+    if value.isdigit():
+        result = cache.get(f"x_tenant_id-{value}")
+        if result is None:
+            result = Publisher.objects.filter(id=int(value)).first()
+            cache.set(f"x_tenant_id-{value}", result, timeout=60 * 5)
+        return result
+    domain = get_publisher_domain(request, "X-Tenant")
+    return domain.publisher if domain else None
 
 
 def get_publisher_domain(request: HttpRequest, header_name: str) -> Domain | None:
@@ -94,14 +116,14 @@ def publisher_q(publisher: Publisher | None, lookup: str = "publisher") -> Q:
     return Q(**{lookup: publisher}) if publisher else Q()
 
 
-def portal_publisher_q(user, domain: Domain | None = None, lookup: str = "publisher") -> Q:
+def portal_publisher_q(user, publisher: Publisher | None = None, lookup: str = "publisher") -> Q:
     """
     Returns a Q object that scopes a /portal/ queryset to the publishers the user belongs to.
 
     - Anonymous / unauthenticated users: matches nothing.
     - Staff users: matches everything (Q()), or scoped to the X-Tenant publisher if provided.
-    - Otherwise: if X-Tenant header resolved to a publisher the user belongs to, scopes to
-      that single publisher; falls back to all of the user's publishers.
+    - Otherwise: if X-Tenant resolved to a publisher the user belongs to, scopes to that single
+      publisher; falls back to all of the user's publishers.
       Users with no memberships match nothing.
 
     `lookup` uses the same FK relation-name convention as publisher_q (e.g. "publisher",
@@ -111,8 +133,7 @@ def portal_publisher_q(user, domain: Domain | None = None, lookup: str = "publis
     if user is None or not getattr(user, "is_authenticated", False):
         return Q(pk__in=[])
 
-    if domain is not None:
-        publisher = domain.publisher
+    if publisher is not None:
         if getattr(user, "is_staff", False):
             return Q(**{f"{lookup}__in": [publisher.id]})
         publisher_ids = getattr(user, "_cached_publisher_ids", None)
