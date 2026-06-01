@@ -1,0 +1,9 @@
+name = "docs-cms-itqan-dev"
+compatibility_date = "2025-01-01"
+pages_build_output_dir = "build"
+
+[env.production]
+name = "docs-cms-itqan-dev"
+
+[env.staging]
+name = "staging-docs-cms-itqan-dev"

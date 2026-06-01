@@ -342,3 +342,12 @@ media/
 .claude/
 /temp/*
 /CLAUDE.md
+
+# Docusaurus
+docs-website/build/
+docs-website/.docusaurus/
+docs-website/node_modules/
+docs-website/openapi/public.json
+docs-website/docs/reference/api/*.mdx
+docs-website/docs/reference/api/*.json
+docs-website/docs/reference/api/sidebar.ts
