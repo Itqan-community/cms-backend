@@ -1,0 +1,58 @@
+{
+  "version.label": {
+    "message": "Next",
+    "description": "The label for version current"
+  },
+  "sidebar.tutorialSidebar.category.Getting Started": {
+    "message": "البداية",
+    "description": "The label for category 'Getting Started' in sidebar 'tutorialSidebar'"
+  },
+  "sidebar.tutorialSidebar.category.API Guides": {
+    "message": "أدلة الواجهات البرمجية",
+    "description": "The label for category 'API Guides' in sidebar 'tutorialSidebar'"
+  },
+  "sidebar.tutorialSidebar.category.API Reference": {
+    "message": "مرجع الـ API",
+    "description": "The label for category 'API Reference' in sidebar 'tutorialSidebar'"
+  },
+  "sidebar.tutorialSidebar.category.Reciters": {
+    "message": "القراء",
+    "description": "The label for category 'Reciters' in sidebar 'tutorialSidebar'"
+  },
+  "sidebar.tutorialSidebar.category.Recitations": {
+    "message": "التلاوات",
+    "description": "The label for category 'Recitations' in sidebar 'tutorialSidebar'"
+  },
+  "sidebar.tutorialSidebar.category.Riwayahs": {
+    "message": "الروايات",
+    "description": "The label for category 'Riwayahs' in sidebar 'tutorialSidebar'"
+  },
+  "sidebar.tutorialSidebar.category.Users": {
+    "message": "المستخدمون",
+    "description": "The label for category 'Users' in sidebar 'tutorialSidebar'"
+  },
+  "sidebar.tutorialSidebar.doc.List Reciters": {
+    "message": "قائمة القراء",
+    "description": "The label for the doc item 'List Reciters' in sidebar 'tutorialSidebar'"
+  },
+  "sidebar.tutorialSidebar.doc.List Recitation Tracks": {
+    "message": "قائمة مسارات التلاوة",
+    "description": "The label for the doc item 'List Recitation Tracks' in sidebar 'tutorialSidebar'"
+  },
+  "sidebar.tutorialSidebar.doc.List Recitations": {
+    "message": "قائمة التلاوات",
+    "description": "The label for the doc item 'List Recitations' in sidebar 'tutorialSidebar'"
+  },
+  "sidebar.tutorialSidebar.doc.List Riwayahs": {
+    "message": "قائمة الروايات",
+    "description": "The label for the doc item 'List Riwayahs' in sidebar 'tutorialSidebar'"
+  },
+  "sidebar.tutorialSidebar.doc.Token Endpoint": {
+    "message": "نقطة نهاية التوكن",
+    "description": "The label for the doc item 'Token Endpoint' in sidebar 'tutorialSidebar'"
+  },
+  "sidebar.tutorialSidebar.doc.Revoke Endpoint": {
+    "message": "نقطة نهاية الإلغاء",
+    "description": "The label for the doc item 'Revoke Endpoint' in sidebar 'tutorialSidebar'"
+  }
+}
