@@ -23,6 +23,7 @@ ALLOWED_HOSTS: list[str] = []
 ENABLE_OAUTH2 = config("ENABLE_OAUTH2", cast=bool, default=False)
 ENABLE_ALLAUTH = config("ENABLE_ALLAUTH", cast=bool, default=True)
 ENABLE_API_KEY_AUTH = config("ENABLE_API_KEY_AUTH", cast=bool, default=True)
+ENABLE_ANONYMOUS_TRAFFIC = config("ENABLE_ANONYMOUS_TRAFFIC", cast=bool, default=True)
 SAML_IDP_ENABLED = config("SAML_IDP_ENABLED", cast=bool, default=True)
 
 # Application definition

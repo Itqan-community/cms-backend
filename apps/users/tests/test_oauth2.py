@@ -3,6 +3,7 @@ import datetime
 import secrets
 
 from django.conf import settings
+from django.test import override_settings
 from django.utils import timezone
 from oauth2_provider.models import AccessToken, Application
 import pytest
@@ -100,6 +101,7 @@ class OAuth2Tests(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
 
+    @override_settings(ENABLE_ANONYMOUS_TRAFFIC=False)
     def test_protected_endpoint_where_expired_token_should_return_401(self):
         # Arrange
         token = AccessToken.objects.create(
