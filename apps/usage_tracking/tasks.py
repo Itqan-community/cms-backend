@@ -46,7 +46,7 @@ def track_api_request_task(
     distinct_id: str,
     event: str,
     properties: dict[str, Any],
-    meta: dict[str, Any],
+    meta: dict[str, Any] | None = None,
 ) -> None:
     if not distinct_id:
         return

@@ -19,7 +19,9 @@ class TestMixpanelIngestClient:
         client = MixpanelIngestClient(token="test-token", ingest_host="api-eu.mixpanel.com", enabled=True)
         client.track(distinct_id="anon-1", event="public_api_request", properties={"endpoint": "GET /reciters"})
 
-        sdk_instance.track.assert_called_once_with("anon-1", "public_api_request", {"endpoint": "GET /reciters"})
+        sdk_instance.track.assert_called_once_with(
+            "anon-1", "public_api_request", {"endpoint": "GET /reciters"}, meta=None
+        )
 
     @patch("apps.usage_tracking.services.mixpanel_client.Mixpanel")
     def test_track_feature_flag_off_noop(self, mock_mixpanel_cls):

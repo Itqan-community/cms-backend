@@ -20,7 +20,9 @@ class MixpanelIngestClient:
         self._enabled = enabled
         self._sdk: Mixpanel | None = None
 
-    def track(self, distinct_id: str, event: str, properties: dict[str, Any], meta: dict[str, Any]) -> None:
+    def track(
+        self, distinct_id: str, event: str, properties: dict[str, Any], meta: dict[str, Any] | None = None
+    ) -> None:
         if not self._enabled or not self._token:
             return
         if self._sdk is None:

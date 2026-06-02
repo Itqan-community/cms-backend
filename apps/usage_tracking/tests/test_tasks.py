@@ -18,9 +18,7 @@ class TestTrackApiRequestTask:
 
         for client in [client_a, client_b]:
             client.track.assert_called_once_with(
-                "anon-1",
-                "public_api_request",
-                {"endpoint": "GET /reciters", "status_code": 200},
+                "anon-1", "public_api_request", {"endpoint": "GET /reciters", "status_code": 200}, meta=None
             )
 
     @patch("apps.usage_tracking.tasks._build_ingest_clients")
