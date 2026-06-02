@@ -46,6 +46,7 @@ def track_api_request_task(
     distinct_id: str,
     event: str,
     properties: dict[str, Any],
+    meta: dict[str, Any],
 ) -> None:
     if not distinct_id:
         return
@@ -58,4 +59,4 @@ def track_api_request_task(
         properties = {**properties, "accessed_entity_name": row["name"] if row else None}
 
     for client in _build_ingest_clients():
-        client.track(distinct_id, event, properties)
+        client.track(distinct_id, event, properties, meta=meta)
