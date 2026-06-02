@@ -209,7 +209,7 @@ class UsageTrackingMiddleware:
         meta = {}
         if ip:
             # Mixpanel resolves geo from $ip on ingest and does not store the raw IP.
-            meta["$ip"] = ip
+            meta["ip"] = ip
 
         track_api_request_task.delay(distinct_id=distinct_id, event=EVENT_NAME, properties=properties, meta=meta)
 
