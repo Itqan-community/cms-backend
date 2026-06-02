@@ -1,7 +1,7 @@
 from django.conf import settings
 import pytest
 
-from apps.core.tests import BaseTestCase
+from apps.core.tests.base import BaseTestCase
 from apps.users.models import User
 
 

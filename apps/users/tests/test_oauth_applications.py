@@ -4,7 +4,7 @@ from django.conf import settings
 from django.test import override_settings
 from oauth2_provider.models import Application
 
-from apps.core.tests import BaseTestCase
+from apps.core.tests.base import BaseTestCase
 from apps.users.models import User
 
 

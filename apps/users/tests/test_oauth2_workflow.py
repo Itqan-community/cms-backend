@@ -4,7 +4,7 @@ from django.test import override_settings
 from django.utils.crypto import get_random_string
 import pytest
 
-from apps.core.tests import BaseTestCase
+from apps.core.tests.base import BaseTestCase
 
 
 @override_settings(ENABLE_ALLAUTH=True, ENABLE_OAUTH2=True)

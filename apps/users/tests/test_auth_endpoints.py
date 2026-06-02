@@ -3,7 +3,7 @@ from django.utils.crypto import get_random_string
 import pytest
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.core.tests import BaseTestCase
+from apps.core.tests.base import BaseTestCase
 from apps.users.models import User
 
 

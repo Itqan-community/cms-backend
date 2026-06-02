@@ -8,7 +8,7 @@ from django.utils import timezone
 from oauth2_provider.models import AccessToken, Application
 import pytest
 
-from apps.core.tests import BaseTestCase
+from apps.core.tests.base import BaseTestCase
 from apps.users.models import User
 
 _CLIENT_ID = "test_client_id"

@@ -2,7 +2,7 @@ from model_bakery import baker
 from oauth2_provider.models import Application
 
 from apps.content.models import Asset, CategoryChoice, Riwayah, StatusChoice
-from apps.core.tests import BaseTestCase
+from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
 

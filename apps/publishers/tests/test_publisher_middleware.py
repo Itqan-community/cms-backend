@@ -2,7 +2,7 @@ from django.db.models import Q
 from model_bakery import baker
 
 from apps.core.permissions import PermissionChoice
-from apps.core.tests import BaseTestCase
+from apps.core.tests.base import BaseTestCase
 from apps.publishers.middlewares.publisher_middleware import portal_publisher_q
 from apps.publishers.models import Domain, Publisher, PublisherMember
 from apps.users.models import User
