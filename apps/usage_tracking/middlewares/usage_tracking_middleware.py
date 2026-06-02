@@ -214,6 +214,7 @@ class UsageTrackingMiddleware:
             distinct_id=distinct_id,
             event=EVENT_NAME,
             properties=properties,
+            meta={},
         )
 
     @staticmethod
