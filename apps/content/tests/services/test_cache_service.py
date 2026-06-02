@@ -4,7 +4,7 @@ from django.conf import settings
 from django.core.cache import cache
 import redis
 
-from apps.core.tests import BaseTestCase
+from apps.core.tests.base import BaseTestCase
 
 
 @unittest.skip("Requires Redis cache — skipped until Redis is configured in CI/CD")

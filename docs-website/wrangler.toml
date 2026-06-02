@@ -1,0 +1,7 @@
+# Pages project name is selected per-env via --project-name in the deploy
+# workflow (.github/workflows/docs-website-deploy.yml). No [env.*] blocks:
+# Pages only supports "preview"/"production" named-environments and rejects
+# any others during config validation.
+name = "docs-cms-itqan-dev"
+compatibility_date = "2025-01-01"
+pages_build_output_dir = "build"

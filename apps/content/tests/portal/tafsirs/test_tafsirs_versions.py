@@ -3,7 +3,7 @@ from model_bakery import baker
 
 from apps.content.models import Asset, AssetVersion, CategoryChoice, StatusChoice
 from apps.core.permissions import PermissionChoice
-from apps.core.tests import BaseTestCase
+from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
 

@@ -1,6 +1,6 @@
 from django.test import override_settings
 
-from apps.core.tests import BaseTestCase
+from apps.core.tests.base import BaseTestCase
 from apps.users.models import APIKey, User
 
 

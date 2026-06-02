@@ -12,7 +12,7 @@ from apps.content.services.admin.asset_recitation_audio_tracks_direct_upload_ser
     AssetRecitationAudioTracksDirectUploadService,
 )
 from apps.core.ninja_utils.errors import ItqanError
-from apps.core.tests import BaseTestCase
+from apps.core.tests.base import BaseTestCase
 
 
 class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):

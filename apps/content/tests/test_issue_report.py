@@ -4,7 +4,7 @@ from apps.content.models import Asset, CategoryChoice, ContentIssueReport, Qiraa
 from apps.content.repositories.issue_report import IssueReportRepository
 from apps.content.services.issue_report import IssueReportService
 from apps.core.ninja_utils.errors import ItqanError
-from apps.core.tests import BaseTestCase
+from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
 

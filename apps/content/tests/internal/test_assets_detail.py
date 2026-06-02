@@ -1,7 +1,7 @@
 from model_bakery import baker
 
 from apps.content.models import Asset, CategoryChoice, LicenseChoice, StatusChoice, UsageEvent
-from apps.core.tests import BaseTestCase
+from apps.core.tests.base import BaseTestCase
 from apps.users.models import User
 
 

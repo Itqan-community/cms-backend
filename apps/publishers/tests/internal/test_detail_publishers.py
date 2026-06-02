@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.core.tests import BaseTestCase
+from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 
 

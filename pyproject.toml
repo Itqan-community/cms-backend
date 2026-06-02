@@ -67,6 +67,17 @@ dev = [
     "ruff==0.14.*",
 ]
 
+# ==== Mypy ====
+# Configured for docs-website and `export_public_openapi.py` (the docs pipeline's OpenAPI export command)
+# explicit_package_bases: repo root is named "cms-backend" — hyphen breaks mypy's package
+#   resolution. This flag makes mypy find packages (apps/, config/) from current working directory instead.
+# follow_imports = "silent": `mypy export_public_openapi.py` reports errors only in thatbfile
+[tool.mypy]
+explicit_package_bases = true
+ignore_missing_imports = true
+follow_imports = "silent"
+plugins = ["mypy_django_plugin.main"]
+
 [tool.django-stubs]
 django_settings_module = "config.settings.development"
 
