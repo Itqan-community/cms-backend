@@ -4,50 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from mixpanel import Consumer, Mixpanel, MixpanelException
+from mixpanel import Consumer, Mixpanel
 import requests
 from requests.auth import HTTPBasicAuth
-
-
-class CustomConsumer(Consumer):
-    def _write_request(self, request_url, json_message, api_key=None, api_secret=None):
-        if isinstance(api_key, tuple):
-            # For compatibility with subclassers, allow the auth details to be
-            # packed into the existing api_key param.
-            api_key, api_secret = api_key
-
-        params = {
-            "data": json_message,
-            "verbose": 1,
-            "ip": "197.45.225.21",
-        }
-        if api_key:
-            params["api_key"] = api_key
-
-        basic_auth = None
-        if api_secret is not None:
-            basic_auth = HTTPBasicAuth(api_secret, "")
-
-        try:
-            response = self._session.post(
-                request_url,
-                data=params,
-                auth=basic_auth,
-                timeout=self._request_timeout,
-                verify=self._verify_cert,
-            )
-        except Exception as e:
-            raise MixpanelException(e) from e
-
-        try:
-            response_dict = response.json()
-        except ValueError as e:
-            raise MixpanelException(f"Cannot interpret Mixpanel server response: {response.text}") from e
-
-        if response_dict["status"] != 1:
-            raise MixpanelException("Mixpanel error: {}".format(response_dict["error"]))
-
-        return True  # <- TODO: remove return val with major release.
 
 
 class MixpanelQueryError(Exception):
@@ -65,7 +24,7 @@ class MixpanelIngestClient:
         if not self._enabled or not self._token:
             return
         if self._sdk is None:
-            self._sdk = Mixpanel(self._token, consumer=CustomConsumer(api_host=self._ingest_host))
+            self._sdk = Mixpanel(self._token, consumer=Consumer(api_host=self._ingest_host))
         self._sdk.track(distinct_id, event, properties, meta=meta)
 
 
