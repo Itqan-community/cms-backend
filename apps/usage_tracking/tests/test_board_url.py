@@ -4,6 +4,7 @@ from model_bakery import baker
 import pytest
 
 from apps.core.tests.base import BaseTestCase
+from apps.publishers.models import Publisher
 from apps.users.models import User
 
 
