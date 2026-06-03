@@ -12,6 +12,7 @@ from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.usage_tracking.decorators.track_usage import track_extra, track_usage
 from config.settings.base import CLOUDFLARE_R2_PUBLIC_BASE_URL
 
 router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
@@ -41,6 +42,7 @@ class RecitationSurahTrackOut(Schema):
     "recitations/{asset_id}/",
     response={200: list[RecitationSurahTrackOut], 404: NinjaErrorResponse[Literal["not_found"]]},
 )
+@track_usage()
 @paginate
 def list_recitation_tracks(request: Request, asset_id: int):
     repo = RecitationRepository()
@@ -49,7 +51,19 @@ def list_recitation_tracks(request: Request, asset_id: int):
     # Public API doesn't filter by publisher by default
     asset = repo.get_asset_object(asset_id, Q())
     if not asset:
+        # 404s raise before track_extra, so the decorator dispatches nothing for them.
         raise Http404("No asset matches the given query.")
+
+    # Publisher is a property of the served Asset (select_related in get_asset_object).
+    track_extra(
+        request,
+        entity_type="recitation",
+        accessed_entity_id=asset.id,
+        entity_ids=[asset.id],
+        entity_names=[asset.name],
+        publisher_ids=[asset.publisher_id] if asset.publisher_id else [],
+        publisher_names=[asset.publisher.name] if asset.publisher_id else [],
+    )
 
     tracks = service.get_asset_tracks(asset_id, Q(), prefetch_timings=True)
 

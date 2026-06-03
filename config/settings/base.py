@@ -581,7 +581,6 @@ MIXPANEL_INGEST_HOST = config("MIXPANEL_INGEST_HOST", default="api-eu.mixpanel.c
 
 if MIXPANEL_ENABLED:
     LOCAL_APPS.append("apps.usage_tracking")
-    MIDDLEWARE.append("apps.usage_tracking.middlewares.usage_tracking_middleware.UsageTrackingMiddleware")
 
 
 # plain_permissions settings

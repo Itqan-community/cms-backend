@@ -11,6 +11,7 @@ from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.usage_tracking.decorators.track_usage import track_usage
 
 router = ItqanRouter(tags=[NinjaTag.RECITERS])
 
@@ -29,6 +30,7 @@ class ReciterFilter(FilterSchema):
 
 
 @router.get("reciters/", response=list[ReciterOut])
+@track_usage(entity_type="reciter")
 @paginate
 @ordering(ordering_fields=["name"])
 @searching(search_fields=["name_en", "name_ar", "slug"])
