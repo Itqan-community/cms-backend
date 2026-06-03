@@ -58,18 +58,21 @@ settings.DATABASES.update(
 
 CSRF_TRUSTED_ORIGINS = [
     "https://staging--saudi-recitation-center.netlify.app",
-    "https://staging.api.cms.itqan.dev",
-    "https://staging.cms.itqan.dev",
+    "https://staging.cms.itqan.dev",  # Staging frontend
     "https://staging--itqan-cms.netlify.app",
     "https://cms.itqan.dev",
     "https://itqan-cms.netlify.app",
-    "http://localhost:3000",
+    "http://localhost:4200",  # Angular dev server
+    "http://localhost:3000",  # Local frontend development
     "http://127.0.0.1:3000",
+    "https://eu.mixpanel.com",  # SAML SSO: Mixpanel SP posts SAML assertions here
+    "https://mixpanel.com",
 ]
 
 # Force HTTPS in allauth callback URLs
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https"
-
+SESSION_COOKIE_DOMAIN = ".itqan.dev"
+CSRF_COOKIE_DOMAIN = ".itqan.dev"
 # ============================================================
 # Cache
 # ============================================================
@@ -101,40 +104,11 @@ settings.LOGGING["handlers"]["console"]["level"] = "INFO"
 settings.LOGGING["root"]["level"] = "INFO"
 
 # ============================================================
-# Django-Allauth
-# ============================================================
-
-ACCOUNT_EMAIL_VERIFICATION = "mandatory"
-ACCOUNT_RATE_LIMITS = "login_failed"
-
-# OAuth apps are configured via Django admin for better security and flexibility
-SOCIALACCOUNT_PROVIDERS = {
-    "google": {
-        "SCOPE": ["profile", "email"],
-        "AUTH_PARAMS": {"access_type": "online"},
-        "OAUTH_PKCE_ENABLED": True,
-    },
-    "github": {
-        "SCOPE": ["user:email"],
-        "VERIFIED_EMAIL": True,
-    },
-}
-
-# ============================================================
 # CORS
 # ============================================================
 
 CORS_ALLOW_ALL_ORIGINS = False
-CORS_ALLOWED_ORIGINS = [
-    "https://staging--saudi-recitation-center.netlify.app",
-    "https://staging.cms.itqan.dev",  # Staging frontend
-    "https://staging--itqan-cms.netlify.app",
-    "https://cms.itqan.dev",
-    "https://itqan-cms.netlify.app",
-    "http://localhost:4200",  # Angular dev server
-    "http://localhost:3000",  # Local frontend development
-    "http://127.0.0.1:3000",
-]
+CORS_ALLOWED_ORIGINS = CSRF_TRUSTED_ORIGINS
 CORS_ALLOW_CREDENTIALS = True
 
 # ============================================================

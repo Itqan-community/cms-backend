@@ -12,7 +12,7 @@ requires-python = ">=3.13"
 dependencies = [
     "boto3==1.40.*",
     "celery==5.5.*",
-    "django-allauth[mfa,socialaccount,headless]==65.14.1",
+    "django-allauth[mfa,socialaccount,headless,headless-spec]==65.16.1",
     "django-celery-beat==2.9.*",
     "django-cors-headers>=4.7.0",
     "django-countries>=7.6",
@@ -22,14 +22,17 @@ dependencies = [
     "django-ninja==1.5.1",
     "django-oauth-toolkit==3.2.0",
     "django-phonenumber-field[phonenumbers]==8.1.0",
+    "django-plain-permissions==0.0.2",
     "django-redis==6.0.*",
     "django-storages[s3]==1.14.*",
     "Django==5.2.*",
     "djangorestframework-simplejwt==5.5.*",
     "djangorestframework>=3.16.1",
+    "djangosaml2idp>=0.7.2",
     "flower==2.0.*",
     "mixpanel>=4.10.1",
     "mutagen>=1.47.0",
+    "ninja-keys>=1.0.1",
     "Pillow>=10.3.0",
     "psycopg2-binary==2.9.11",
     "python-decouple==3.8",
@@ -44,7 +47,6 @@ dev = [
     "django-coverage-plugin==3.1.1",
     "django-debug-toolbar==6.0.0",
     "django-extensions==4.1",
-    "django-silk==5.0.*",
     "django-stubs-ext>=5.2.8",
     "django-stubs[compatible-mypy]==5.2.8",
     "django-watchfiles>=1.4.0",
@@ -95,6 +97,9 @@ prod = [
 
 [tool.uv]
 managed = true
+
+[tool.uv.sources]
+ninja-keys = { git = "https://github.com/hassaanalansary/ninja-keys.git" }
 
 # ========================
 # Pytest

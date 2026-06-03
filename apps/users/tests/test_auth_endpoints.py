@@ -413,6 +413,77 @@ class UserProfileTestCase(BaseTestCase):
         # Assert
         self.assertEqual(401, response.status_code, response.content)
 
+    def test_get_profile_where_user_has_no_permissions_should_return_empty_permissions_list(self):
+        # Arrange
+        self.authenticate_user(self.user)
+
+        # Act
+        response = self.client.get("/cms-api/auth/profile/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual([], response.json()["permissions"])
+
+    def test_get_profile_where_user_has_direct_permissions_should_return_them(self):
+        from apps.core.permissions import PermissionChoice
+
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TAFSIR)
+
+        # Act
+        response = self.client.get("/cms-api/auth/profile/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        permissions = response.json()["permissions"]
+        self.assertEqual(2, len(permissions))
+
+        permission_codes = [p["code_name"] for p in permissions]
+        self.assertIn(PermissionChoice.PORTAL_READ_TAFSIR, permission_codes)
+        self.assertIn(PermissionChoice.PORTAL_CREATE_TAFSIR, permission_codes)
+        # Should not include unassigned permissions
+        self.assertNotIn(PermissionChoice.PORTAL_DELETE_TAFSIR, permission_codes)
+
+    def test_get_profile_where_user_has_group_permissions_should_return_them(self):
+        from django.contrib.auth.models import Group, Permission
+
+        from apps.core.permissions import PermissionChoice
+
+        # Arrange
+        self.authenticate_user(self.user)
+        group = Group.objects.create(name="Editors")
+        group.permissions.add(Permission.objects.get(codename=PermissionChoice.PORTAL_UPDATE_TRANSLATION))
+        self.user.groups.add(group)
+
+        # Act
+        response = self.client.get("/cms-api/auth/profile/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        permissions = response.json()["permissions"]
+        self.assertEqual(1, len(permissions))
+
+        permission_codes = [p["code_name"] for p in permissions]
+        self.assertIn(PermissionChoice.PORTAL_UPDATE_TRANSLATION, permission_codes)
+
+    def test_get_profile_where_permissions_should_not_include_django_builtin_permissions(self):
+        from django.contrib.auth.models import Permission
+
+        # Arrange
+        self.authenticate_user(self.user)
+        # Give a Django built-in permission (e.g. "add_user")
+        self.user.user_permissions.add(Permission.objects.get(codename="add_user"))
+
+        # Act
+        response = self.client.get("/cms-api/auth/profile/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        permissions = response.json()["permissions"]
+        self.assertEqual(0, len(permissions))
+
 
 @pytest.mark.skipif(condition=settings.ENABLE_ALLAUTH, reason="old flow before allauth")
 class LogoutTestCase(BaseTestCase):

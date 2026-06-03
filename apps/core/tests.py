@@ -3,7 +3,6 @@ import secrets
 from typing import Literal
 from unittest.mock import patch
 
-from allauth.headless.tokens.strategies.jwt.internal import create_access_token
 import boto3
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -14,6 +13,7 @@ from oauth2_provider.models import AccessToken as OAuth2AccessToken, Application
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import AccessToken as JWTAccessToken
 
+from apps.core.permissions import PermissionChoice
 from apps.publishers.models import Domain
 from apps.users.models import User
 
@@ -75,7 +75,6 @@ class BaseTestCase(TestCase):
         user: User | None,
         language: Literal["en", "ar"] | None = "en",
         domain: Domain | None = None,
-        add_superuser: bool = True,
         **kwargs,
     ):
         """
@@ -93,17 +92,14 @@ class BaseTestCase(TestCase):
 
         if user is None:
             # Clear authentication
-            kwargs.pop("HTTP_X_SESSION_TOKEN", None)
+            # kwargs.pop("HTTP_X_SESSION_TOKEN", None)
             kwargs.pop("HTTP_AUTHORIZATION", None)
         else:
-            if add_superuser:
-                user.is_superuser = True
-                user.save()
             if settings.ENABLE_ALLAUTH:
                 self.client.force_login(user=user)
-                token = create_access_token(user, session=self.client.session, claims={})
-                kwargs["HTTP_AUTHORIZATION"] = f"Bearer {token}"
-                self.client.cookies.clear()
+                # token = create_access_token(user, session=self.client.session, claims={})
+                kwargs["HTTP_X_SESSION_TOKEN"] = self.client.session.session_key
+                # self.client.cookies.clear()
             else:
                 access_token = str(JWTAccessToken.for_user(user))
                 kwargs["HTTP_AUTHORIZATION"] = f"Bearer {access_token}"
@@ -168,3 +164,13 @@ class BaseTestCase(TestCase):
 
     def create_file(self, name: str, content: bytes, content_type: str) -> SimpleUploadedFile:
         return SimpleUploadedFile(name, content, content_type=content_type)
+
+    def give_permission(self, user: User, codename: PermissionChoice) -> None:
+        from django.contrib.auth.models import Permission
+
+        user.user_permissions.add(Permission.objects.get(codename=codename))
+
+    def remove_permission(self, user: User, codename: PermissionChoice) -> None:
+        from django.contrib.auth.models import Permission
+
+        user.user_permissions.remove(Permission.objects.get(codename=codename))

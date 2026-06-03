@@ -1,11 +1,54 @@
+from ninja import Schema
+from pydantic import AwareDatetime
+
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.core.permissions import PermissionChoice
 from apps.users.models import Developer
 
-from ._schemas import UserProfileSchema, UserUpdateSchema
+_PERMISSION_CODENAMES: set[str] = set(PermissionChoice.values)
 
 router = ItqanRouter(tags=[NinjaTag.USERS])
+
+
+class PermissionSchema(Schema):
+    code_name: str
+    name: str
+
+
+class UserProfileSchema(Schema):
+    id: str
+    email: str
+    name: str
+    phone: str | None = None
+    is_active: bool
+    is_profile_completed: bool
+    bio: str = ""
+    project_summary: str = ""
+    project_url: str = ""
+    job_title: str = ""
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
+    permissions: list[PermissionSchema] = []
+
+    class Config:
+        from_attributes = True
+
+
+def _get_user_permissions(user):
+    permissions = []
+    for perm_code in user.get_all_permissions():
+        code_name = perm_code.split(".")[-1]
+        if code_name in _PERMISSION_CODENAMES:
+            perm_choice = PermissionChoice(code_name)
+            permissions.append(
+                {
+                    "code_name": code_name,
+                    "name": str(perm_choice.label),
+                }
+            )
+    return permissions
 
 
 @router.get(
@@ -31,7 +74,14 @@ def get_user_profile(request: Request):
         "job_title": user_developer_profile.job_title if user_developer_profile else "",
         "created_at": user.created_at,
         "updated_at": user.updated_at,
+        "permissions": _get_user_permissions(user),
     }
+
+
+class UserUpdateSchema(Schema):
+    bio: str = ""
+    project_summary: str = ""
+    project_url: str = ""
 
 
 @router.put(
@@ -68,4 +118,5 @@ def update_user_profile(request: Request, profile_data: UserUpdateSchema):
         "job_title": user_developer_profile.job_title if user_developer_profile else "",
         "created_at": user.created_at,
         "updated_at": user.updated_at,
+        "permissions": _get_user_permissions(user),
     }

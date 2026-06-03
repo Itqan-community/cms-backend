@@ -11,9 +11,12 @@ from apps.content.services.admin.asset_recitation_ayah_timestamps_upload_service
 )
 from apps.content.services.admin.asset_recitation_json_file_sync_service import sync_asset_recitations_json_file
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
+from apps.core.ninja_utils.permission_required import permission_required
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.core.permission_utils import permission_class
+from apps.core.permissions import PermissionChoice
 
 router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
 
@@ -43,6 +46,7 @@ class TimingUploadOut(Schema):
         404: NinjaErrorResponse[Literal["asset_not_found"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.PORTAL_UPLOAD_TIMING)])
 def upload_timing(
     request: Request,
     data: Form[TimingUploadIn],

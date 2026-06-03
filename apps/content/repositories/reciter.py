@@ -1,46 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-from django.db.models import Count, Q
 from django.utils.text import slugify
 
-from apps.content.models import CategoryChoice, Reciter, StatusChoice
-
-if TYPE_CHECKING:
-    from django.db.models import QuerySet
+from apps.content.models import Reciter
 
 
 class ReciterRepository:
     def __init__(self) -> None:
         self.model = Reciter
-
-    def list_reciters_qs(self) -> QuerySet[Reciter]:
-        """
-        Returns a queryset of Reciter models with their recitations_count annotated.
-        """
-        recitation_filter = Q(
-            assets__category=CategoryChoice.RECITATION,
-            assets__status=StatusChoice.READY,
-        )
-
-        qs = self.model.objects.annotate(
-            recitations_count=Count(
-                "assets",
-                filter=recitation_filter,
-                distinct=True,
-            )
-        )
-        return qs
-
-    def get_reciter(self, reciter_slug: str) -> Reciter | None:
-        """
-        Get a single reciter by slug.
-        """
-        try:
-            return self.list_reciters_qs().get(slug=reciter_slug)
-        except Reciter.DoesNotExist:
-            return None
 
     def _derive_slug(self, name_en: str | None, name_ar: str | None) -> str:
         """

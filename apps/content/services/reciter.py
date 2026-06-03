@@ -5,9 +5,10 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from django.db import IntegrityError
-from django.db.models import ProtectedError, QuerySet
+from django.db.models import ProtectedError
 from django.utils.translation import gettext as _
 
+from apps.content.models import Reciter as ReciterModel
 from apps.content.repositories.reciter import ReciterRepository
 from apps.core.ninja_utils.errors import ItqanError
 
@@ -22,25 +23,15 @@ class ReciterService:
     def __init__(self, repo: ReciterRepository | None = None) -> None:
         self.repo = repo or ReciterRepository()
 
-    def get_all_reciters(self) -> QuerySet[Reciter]:
-        """
-        Business Logic: Retrieve all reciters.
-        """
-        return self.repo.list_reciters_qs()
-
-    def get_reciter(self, reciter_slug: str) -> Reciter:
-        """
-        Business Logic: Retrieve a single reciter by slug.
-        Raises ItqanError if not found.
-        """
-        reciter = self.repo.get_reciter(reciter_slug)
-        if reciter is None:
+    def _get_reciter_or_404(self, reciter_slug: str) -> Reciter:
+        try:
+            return ReciterModel.objects.get(slug=reciter_slug)
+        except ReciterModel.DoesNotExist as exc:
             raise ItqanError(
                 error_name="reciter_not_found",
                 message=_("Reciter with slug {slug} not found.").format(slug=reciter_slug),
                 status_code=404,
-            )
-        return reciter
+            ) from exc
 
     def create_reciter(
         self,
@@ -100,7 +91,7 @@ class ReciterService:
         Business Logic: Update an existing reciter.
         Validates name requirement.
         """
-        reciter = self.get_reciter(reciter_slug)
+        reciter = self._get_reciter_or_404(reciter_slug)
 
         if "name_ar" in fields or "name_en" in fields:
             new_name_ar = fields.get("name_ar", getattr(reciter, "name_ar", ""))
@@ -133,7 +124,7 @@ class ReciterService:
         """
         Business Logic: Delete a reciter.
         """
-        reciter = self.get_reciter(reciter_slug)
+        reciter = self._get_reciter_or_404(reciter_slug)
         try:
             self.repo.delete_reciter(reciter)
             logger.info(f"Reciter deleted [reciter_id={reciter.pk}, slug={reciter_slug}]")

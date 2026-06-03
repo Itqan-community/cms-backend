@@ -33,13 +33,13 @@ class TestEntityExtractor:
 
         assert extract_entity_ids(body) == [99]
 
-    def test_extract_more_than_100_truncates(self):
-        body = json.dumps([{"id": i} for i in range(150)]).encode()
+    def test_extract_more_than_max_truncates(self):
+        body = json.dumps([{"id": i} for i in range(1500)]).encode()
 
         result = extract_entity_ids(body)
 
-        assert len(result) == 100
-        assert result == list(range(100))
+        assert len(result) == 1000
+        assert result == list(range(1000))
 
     def test_extract_no_id_field_returns_empty(self):
         body = json.dumps([{"name": "no id here"}, {"name": "neither"}]).encode()
@@ -55,3 +55,25 @@ class TestEntityExtractor:
         body = json.dumps([{"id": 1}, "string", 42, {"id": 2}]).encode()
 
         assert extract_entity_ids(body) == [1, 2]
+
+    def test_extract_entities_returns_names_alongside_ids(self):
+        from apps.usage_tracking.services.entity_extractor import extract_entities
+
+        body = json.dumps([{"id": 1, "name_en": "Ibn Kathir"}, {"id": 2, "name": "Al-Sudais"}]).encode()
+        ids, names = extract_entities(body)
+        assert ids == [1, 2]
+        assert names == ["Ibn Kathir", "Al-Sudais"]
+
+    def test_extract_name_falsy_string_zero_is_returned(self):
+        from apps.usage_tracking.services.entity_extractor import extract_entities
+
+        body = json.dumps([{"id": 1, "name": "0"}]).encode()
+        ids, names = extract_entities(body)
+        assert names == ["0"]
+
+    def test_extract_name_missing_returns_empty_string(self):
+        from apps.usage_tracking.services.entity_extractor import extract_entities
+
+        body = json.dumps([{"id": 1}]).encode()
+        _, names = extract_entities(body)
+        assert names == [""]

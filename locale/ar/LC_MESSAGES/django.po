@@ -22,12 +22,32 @@ msgstr ""
 msgid "You do not have access to this asset"
 msgstr "ليس لديك صلاحية الوصول إلى هذا المورد"
 
+#, python-brace-format
+msgid "Asset with slug {slug} not found."
+msgstr "المورد ذو المعرف {slug} غير موجود."
+
+#, python-brace-format
+msgid "Recitation with slug {slug} not found."
+msgstr "لم يتم العثور على التلاوة بالمعرّف {slug}."
+
+#, python-brace-format
+msgid "Reciter with slug {slug} not found."
+msgstr "لم يتم العثور على القارئ بالمعرّف {slug}."
+
+#, python-brace-format
+msgid "Tafsir with slug {slug} not found."
+msgstr "لم يتم العثور على التفسير بالمعرّف {slug}."
+
 #, python-format
 msgid "Asset with id %s does not exist."
 msgstr "المورد ذو المعرف %s غير موجود."
 
 msgid "One or more timing files could not be processed."
 msgstr "تعذر معالجة ملف توقيت واحد أو أكثر."
+
+#, python-brace-format
+msgid "Translation with slug {slug} not found."
+msgstr "لم يتم العثور على الترجمة بالمعرّف {slug}."
 
 msgid "Creative Commons Zero"
 msgstr "المشاع الإبداعي - بدون حقوق (CC0)"
@@ -134,9 +154,31 @@ msgstr "تم الحل"
 msgid "Dismissed"
 msgstr "تم التجاهل"
 
+msgid "Description must be at least 10 characters long."
+msgstr "يجب أن يكون الوصف 10 أحرف على الأقل."
+
+msgid "Description cannot exceed 2000 characters."
+msgstr "لا يمكن أن يتجاوز الوصف 2000 حرف."
+
 #, python-brace-format
-msgid "Recitation with slug {slug} not found."
-msgstr "لم يتم العثور على التلاوة بالمعرّف {slug}."
+msgid "Asset with ID {asset_id} not found."
+msgstr "المورد ذو المعرف {asset_id} غير موجود."
+
+#, python-brace-format
+msgid "Issue report with ID {report_id} not found."
+msgstr "تقرير المشكلة ذو المعرف {report_id} غير موجود."
+
+msgid "You can only update your own issue reports."
+msgstr "يمكنك فقط تعديل تقارير المشكلات الخاصة بك."
+
+msgid "You can only update pending issue reports."
+msgstr "يمكنك فقط تعديل تقارير المشكلات المعلقة."
+
+msgid "You can only delete your own issue reports."
+msgstr "يمكنك فقط حذف تقارير المشكلات الخاصة بك."
+
+msgid "You can only delete pending issue reports."
+msgstr "يمكنك فقط حذف تقارير المشكلات المعلقة."
 
 msgid "Recitation name (Arabic or English) is required."
 msgstr "اسم التلاوة (بالعربية أو الإنجليزية) مطلوب."
@@ -160,10 +202,6 @@ msgstr "لم يتم العثور على الرواية بالمعرّف {id}."
 msgid "Cannot delete Recitation because they are referenced through other objects"
 msgstr "لا يمكن حذف التلاوة لأن هناك بيانات أخرى مرتبطة بها"
 
-#, python-brace-format
-msgid "Reciter with slug {slug} not found."
-msgstr "لم يتم العثور على القارئ بالمعرّف {slug}."
-
 msgid "Reciter name (Arabic or English) is required."
 msgstr "اسم القارئ (بالعربية أو الإنجليزية) مطلوب."
 
@@ -172,10 +210,6 @@ msgstr "يوجد قارئ بهذا الاسم بالفعل."
 
 msgid "Cannot delete Reciter because they are referenced through other objects"
 msgstr "لا يمكن حذف القارئ لأن مرتبط به بيانات أخرى"
-
-#, python-brace-format
-msgid "Tafsir with slug {slug} not found."
-msgstr "لم يتم العثور على التفسير بالمعرّف {slug}."
 
 msgid "Tafsir name (Arabic or English) is required."
 msgstr "اسم التفسير (بالعربية أو الإنجليزية) مطلوب."
@@ -189,10 +223,6 @@ msgstr "لا يمكن حذف التفسير لأن مرتبط به بيانات 
 #, python-brace-format
 msgid "Version with id {id} not found for tafsir {slug}."
 msgstr "الإصدار ذو المعرف {id} غير موجود للتفسير {slug}."
-
-#, python-brace-format
-msgid "Translation with slug {slug} not found."
-msgstr "لم يتم العثور على الترجمة بالمعرّف {slug}."
 
 msgid "Translation name (Arabic or English) is required."
 msgstr "اسم الترجمة (بالعربية أو الإنجليزية) مطلوب."
@@ -213,11 +243,84 @@ msgstr "خطأ في المصادقة"
 msgid "Something went wrong - Internal Server Error"
 msgstr "حدث خطأ ما - خطأ داخلي في الخادم"
 
+msgid "Access Portal"
+msgstr "الوصول للوحة التحكم"
+
+msgid "Portal - View Reciters"
+msgstr "لوحة التحكم - عرض القراء"
+
+msgid "Portal - Create Reciters"
+msgstr "لوحة التحكم - إنشاء قراء"
+
+msgid "Portal - Update Reciters"
+msgstr "لوحة التحكم - تحديث القراء"
+
+msgid "Portal - Delete Reciters"
+msgstr "لوحة التحكم - حذف القراء"
+
+msgid "Portal - View Recitations"
+msgstr "لوحة التحكم - عرض التلاوات"
+
+msgid "Portal - Create Recitations"
+msgstr "لوحة التحكم - إنشاء تلاوات"
+
+msgid "Portal - Update Recitations"
+msgstr "لوحة التحكم - تحديث التلاوات"
+
+msgid "Portal - Delete Recitations"
+msgstr "لوحة التحكم - حذف التلاوات"
+
+msgid "Portal - Upload Recitation Timings"
+msgstr "لوحة التحكم - تحميل أوقات التلاوات"
+
+msgid "Portal - View Tafsirs"
+msgstr "لوحة التحكم - عرض التفاسير"
+
+msgid "Portal - Create Tafsirs"
+msgstr "لوحة التحكم - إنشاء تفاسير"
+
+msgid "Portal - Update Tafsirs"
+msgstr "لوحة التحكم - تحديث التفاسير"
+
+msgid "Portal - Delete Tafsirs"
+msgstr "لوحة التحكم - حذف التفاسير"
+
+msgid "View Portal Translations"
+msgstr "عرض الترجمات في لوحة التحكم"
+
+msgid "Create Portal Translations"
+msgstr "إنشاء ترجمات في لوحة التحكم"
+
+msgid "Update Portal Translations"
+msgstr "تحديث الترجمات في لوحة التحكم"
+
+msgid "Delete Portal Translations"
+msgstr "حذف الترجمات من لوحة التحكم"
+
+msgid "Portal - View Publishers"
+msgstr ""
+
+msgid "Portal - Create Publishers"
+msgstr ""
+
+msgid "Portal - Update Publishers"
+msgstr ""
+
+msgid "Portal - Delete Publishers"
+msgstr ""
+
+#, python-brace-format
+msgid "Publisher with id {id} not found"
+msgstr "لم يتم العثور على الناشر بالمعرّف {slug}."
+
 msgid "Owner"
 msgstr "مالك"
 
 msgid "Manager"
 msgstr "مدير"
+
+msgid "You do not have access to this publisher."
+msgstr "ليس لديك صلاحية الوصول لهذا الناشر"
 
 msgid "Cannot delete Publisher because they are referenced through other objects"
 msgstr "لا يمكن حذف الناشر لأن هناك بيانات أخري مرتبطة به"
@@ -246,6 +349,18 @@ msgstr "البريد الإلكتروني"
 msgid "Phone Number"
 msgstr "رقم الهاتف"
 
+msgid "A name for the API key. 50 characters max."
+msgstr "اسم لمفتاح API. 50 حرفاً كحد أقصى."
+
+msgid "User"
+msgstr "المستخدم"
+
+msgid "API Key"
+msgstr "مفتاح API"
+
+msgid "API Keys"
+msgstr "مفاتيح API"
+
 msgid "Bio"
 msgstr "نبذة"
 
@@ -257,6 +372,179 @@ msgstr "رابط المشروع"
 
 msgid "Job Title"
 msgstr "المسمى الوظيفي"
+
+msgid "API key not found."
+msgstr "مفتاح API غير موجود."
+
+msgid "An API key with this name already exists."
+msgstr "يوجد مفتاح API بهذا الاسم بالفعل."
+
+msgid "A revoked API key cannot be un-revoked."
+msgstr "لا يمكن إلغاء إبطال مفتاح API الذي تم إبطاله."
+
+msgid "API key name must not be empty."
+msgstr "اسم مفتاح API لا يمكن أن يكون فارغاً."
+
+#, python-format
+msgid "API key name must not exceed %(max)d characters."
+msgstr "اسم مفتاح API يجب ألا يتجاوز %(max)d حرفاً."
+
+msgid "Application not found."
+msgstr "التطبيق غير موجود."
+
+msgid "An application with this name already exists."
+msgstr "يوجد تطبيق بهذا الاسم بالفعل."
+
+msgid "Application name must not be empty."
+msgstr "اسم التطبيق لا يمكن أن يكون فارغاً."
+
+#, python-format
+msgid "Application name must not exceed %(max)d characters."
+msgstr "اسم التطبيق يجب ألا يتجاوز %(max)d حرفاً."
+
+#, python-format
+msgid ""
+"You are receiving this email because you or someone else tried to signup for an\n"
+"account using email address:\n"
+"\n"
+"%(email)s\n"
+"\n"
+"However, an account using that email address already exists.  In case you have\n"
+"forgotten about this, please use the password forgotten procedure to recover\n"
+"your account:\n"
+"\n"
+"%(password_reset_url)s"
+msgstr ""
+"أنت تتلقى هذا البريد الإلكتروني لأنك أو شخص آخر حاول إنشاء حساب باستخدام عنوان بريد إلكتروني:\n"
+"\n"
+"%(email)s\n"
+"\n"
+"ومع ذلك، يوجد حساب بهذا العنوان بالفعل. في حالة نسيانك لذلك، يرجى استخدام إجراء استعادة كلمة المرور لاستعادة حسابك:\n"
+"\n"
+"%(password_reset_url)s"
+
+msgid "Account Already Exists"
+msgstr "الحساب موجود بالفعل"
+
+#, python-format
+msgid "Hello from %(site_name)s!"
+msgstr "مرحباً بك"
+
+#, python-format
+msgid ""
+"Thank you for using %(site_name)s!\n"
+"%(site_domain)s"
+msgstr ""
+"شكراً لاستخدامك اتقان!\n"
+"%(site_domain)s"
+
+msgid "You are receiving this mail because the following change was made to your account:"
+msgstr "أنت تتلقى هذا البريد لأن التغيير التالي تم إجراؤه على حسابك:"
+
+#, python-format
+msgid ""
+"If you do not recognize this change then please take proper security precautions immediately. The change to your account originates from:\n"
+"\n"
+"- IP address: %(ip)s\n"
+"- Browser: %(user_agent)s\n"
+"- Date: %(timestamp)s"
+msgstr ""
+"إذا كنت لا تتعرف على هذا التغيير، يرجى اتخاذ الاحتياطات الأمنية المناسبة فوراً. التغيير على حسابك يأتي من:\n"
+"\n"
+"- عنوان IP: %(ip)s\n"
+"- المتصفح: %(user_agent)s\n"
+"- التاريخ: %(timestamp)s"
+
+#, python-format
+msgid "Your email has been changed from %(from_email)s to %(to_email)s."
+msgstr "تم تغيير بريدك الإلكتروني من %(from_email)s إلى %(to_email)s."
+
+msgid "Email Changed"
+msgstr "البريد الإلكتروني تم تغييره"
+
+msgid "Your email has been confirmed."
+msgstr "تم تأكيد بريدك الإلكتروني."
+
+msgid "Email Confirmation"
+msgstr "تأكيد البريد الإلكتروني"
+
+#, python-format
+msgid "You're receiving this email because user %(user_display)s has given your email address to register an account on %(site_domain)s."
+msgstr "أنت تتلقى هذا البريد الإلكتروني لأن المستخدم %(user_display)s أعطى عنوان بريدك الإلكتروني لإنشاء حساب على %(site_domain)s."
+
+msgid "Your email verification code is listed below. Please enter it in your open browser window."
+msgstr "رمز التحقق من بريدك الإلكتروني مدرج أدناه. يرجى إدخاله في نافذة المتصفح المفتوحة."
+
+#, python-format
+msgid "To confirm this is correct, go to %(activate_url)s"
+msgstr "للتأكيد، انتقل إلى %(activate_url)s"
+
+msgid "Please Confirm Your Email Address"
+msgstr "يرجى تأكيد عنوان بريدك الإلكتروني"
+
+#, python-format
+msgid "Email address %(deleted_email)s has been removed from your account."
+msgstr "تم حذف عنوان البريد الإلكتروني %(deleted_email)s من حسابك."
+
+msgid "Email Removed"
+msgstr "البريد الإلكتروني تم حذفه"
+
+msgid "Your sign-in code is listed below. Please enter it in your open browser window."
+msgstr "رمز تسجيل الدخول الخاص بك مدرج أدناه. يرجى إدخاله في نافذة المتصفح المفتوحة."
+
+msgid "This mail can be safely ignored if you did not initiate this action."
+msgstr "يمكن تجاهل هذا البريد بأمان إذا لم تقم بهذا الإجراء."
+
+msgid "Sign-In Code"
+msgstr "رمز تسجيل الدخول"
+
+msgid "Your password has been changed."
+msgstr "تم تغيير كلمة المرور الخاصة بك."
+
+msgid "Password Changed"
+msgstr "كلمة المرور تم تغييرها"
+
+msgid "Your password reset code is listed below. Please enter it in your open browser window."
+msgstr "رمز إعادة تعيين كلمة المرور الخاصة بك مدرج أدناه. يرجى إدخاله في نافذة المتصفح المفتوحة."
+
+msgid "Password Reset Code"
+msgstr "رمز إعادة تعيين كلمة المرور"
+
+msgid ""
+"You're receiving this email because you or someone else has requested a password reset for your user account.\n"
+"It can be safely ignored if you did not request a password reset. Click the link below to reset your password."
+msgstr ""
+"أنت تتلقى هذا البريد الإلكتروني لأنك أو شخص آخر طلب إعادة تعيين كلمة المرور لحسابك.\n"
+"يمكن تجاهله بأمان إذا لم تطلب إعادة تعيين كلمة المرور. انقر على الرابط أدناه لإعادة تعيين كلمة المرور."
+
+#, python-format
+msgid "In case you forgot, your username is %(username)s."
+msgstr "في حالة نسيانك، اسم المستخدم الخاص بك هو %(username)s."
+
+msgid "Password Reset Email"
+msgstr "بريد إعادة تعيين كلمة المرور"
+
+msgid "Your password has been reset."
+msgstr "تم إعادة تعيين كلمة المرور الخاصة بك."
+
+msgid "Password Reset"
+msgstr "إعادة تعيين كلمة المرور"
+
+msgid "Your password has been set."
+msgstr "تم تعيين كلمة المرور الخاصة بك."
+
+msgid "Password Set"
+msgstr "تم تعيين كلمة المرور"
+
+#, python-format
+msgid "You are receiving this email because you, or someone else, tried to access an account with email %(email)s. However, we do not have any record of such an account in our database."
+msgstr "أنت تتلقى هذا البريد الإلكتروني لأنك أو شخص آخر حاول الوصول إلى حساب بعنوان بريد %(email)s. ومع ذلك، ليس لدينا أي سجل لهذا الحساب في قاعدة البيانات."
+
+msgid "If it was you, you can sign up for an account using the link below."
+msgstr "إذا كنت أنت، يمكنك إنشاء حساب باستخدام الرابط أدناه."
+
+msgid "Unknown Account"
+msgstr "حساب غير معروف"
 
 msgid "Sign In"
 msgstr "تسجيل الدخول"

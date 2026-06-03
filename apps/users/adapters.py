@@ -1,18 +1,51 @@
-"""
-Django Allauth adapters for custom user registration and social account handling
-"""
+from __future__ import annotations
 
+from allauth.account import app_settings
 from allauth.account.adapter import DefaultAccountAdapter
+from allauth.core import context as allauth_context
+from allauth.mfa.adapter import DefaultMFAAdapter
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
+from allauth.socialaccount.models import SocialLogin
+from django.conf import settings
+from django.core.mail import EmailMessage, EmailMultiAlternatives
+from django.template import TemplateDoesNotExist
+from django.template.loader import render_to_string
 
 
 class AccountAdapter(DefaultAccountAdapter):
     """
     Custom account adapter for handling user registration
     """
+
+    def render_mail(self, template_prefix, email, context, headers=None):
+        # allauth hardcodes _subject.txt; we override to use .html subject templates
+        to = [email] if isinstance(email, str) else email
+        html_ext = app_settings.TEMPLATE_EXTENSION
+        subject = render_to_string(f"{template_prefix}_subject.{html_ext}", context)
+        subject = " ".join(subject.splitlines()).strip()
+        subject = self.format_email_subject(subject)
+
+        from_email = self.get_from_email()
+        bodies = {}
+        for ext in [html_ext, "txt"]:
+            try:
+                bodies[ext] = render_to_string(
+                    f"{template_prefix}_message.{ext}",
+                    context,
+                    allauth_context.request,
+                ).strip()
+            except TemplateDoesNotExist:
+                if ext == "txt" and not bodies:
+                    raise
+
+        if "txt" in bodies:
+            msg = EmailMultiAlternatives(subject, bodies["txt"], from_email, to, headers=headers)
+            if html_ext in bodies:
+                msg.attach_alternative(bodies[html_ext], "text/html")
+        else:
+            msg = EmailMessage(subject, bodies[html_ext], from_email, to, headers=headers)
+            msg.content_subtype = "html"
+        return msg
 
     def is_open_for_signup(self, request):
         """
@@ -36,47 +69,34 @@ class AccountAdapter(DefaultAccountAdapter):
 
 
 class SocialAccountAdapter(DefaultSocialAccountAdapter):
-    """
-    Custom social account adapter for handling OAuth2 registration
-    """
 
-    def is_open_for_signup(self, request, sociallogin):
-        """
-        Allow social account signup
-        """
-        return True
-
-    def save_user(self, request, sociallogin, form=None):
-        """
-        Save user from social account data
-        """
-        user = sociallogin.user
-
-        # Extract data from social account
-        if sociallogin.account.provider == "google":
-            extra_data = sociallogin.account.extra_data
-            user.name = extra_data.get("name", "")
-
-        elif sociallogin.account.provider == "github":
-            extra_data = sociallogin.account.extra_data
-            user.name = extra_data.get("name") or extra_data.get("login", "")
-
-        user.save()
-        return user
-
-    def populate_user(self, request, sociallogin, data):
+    def populate_user(self, request, sociallogin: SocialLogin, common_fields):
         """
         Populate user from social account data
         """
-        user = super().populate_user(request, sociallogin, data)
-
+        user = super().populate_user(request, sociallogin, common_fields)
         # Set additional fields based on provider
         if sociallogin.account.provider == "google":
-            extra_data = sociallogin.account.extra_data
-            user.name = extra_data.get("name", "")
+            user.name = sociallogin.account.extra_data.get("name", "").strip()
 
         elif sociallogin.account.provider == "github":
             extra_data = sociallogin.account.extra_data
-            user.name = extra_data.get("name") or extra_data.get("login", "")
-
+            user.name = common_fields.get("name") or common_fields.get("username") or extra_data.get("login", "")
+        if sociallogin.is_existing:
+            user.save()
         return user
+
+
+class MFAAdapter(DefaultMFAAdapter):
+    """
+    Custom MFA adapter to control WebAuthn Relying Party (RP) entity.
+
+    Default allauth uses request host (often API domain), which can cause
+    passkey RP mismatch when FE runs on another subdomain.
+    """
+
+    def get_public_key_credential_rp_entity(self) -> dict[str, str]:
+        return {
+            "id": settings.WEBAUTHN_RP_ID,
+            "name": self._get_site_name(),
+        }

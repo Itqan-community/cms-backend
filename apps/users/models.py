@@ -4,6 +4,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.db.models import CharField, EmailField
 from django.utils.translation import gettext_lazy as _
+from ninja_keys.models import AbstractAPIKey, APIKeyManager as BaseAPIKeyManager
 from phonenumber_field.modelfields import PhoneNumberField
 
 from apps.core.models import BaseModel
@@ -27,12 +28,41 @@ class User(BaseModel, AbstractUser):
     objects: ClassVar[UserManager] = UserManager()
 
     def __str__(self):
-        return f"User(email={self.email} name={self.name})"
+        return f"{self.name}"
 
     def save(self, *args, **kwargs):
         if self.email:
             self.email = self.email.lower()
         super().save(*args, **kwargs)
+
+
+class APIKeyManager(BaseAPIKeyManager):
+    pass
+
+
+class APIKey(AbstractAPIKey):
+    objects: ClassVar[APIKeyManager] = APIKeyManager()
+    name = models.CharField(
+        max_length=50,
+        blank=False,
+        help_text=(_("A name for the API key. 50 characters max.")),
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="api_keys",
+        verbose_name=_("User"),
+    )
+
+    class Meta(AbstractAPIKey.Meta):
+        verbose_name = _("API Key")
+        verbose_name_plural = _("API Keys")
+        constraints = [
+            models.UniqueConstraint(fields=["user", "name"], name="uniq_user_api_key_name"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.user_id})"
 
 
 class Developer(BaseModel):

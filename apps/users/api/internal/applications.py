@@ -1,98 +1,60 @@
-from typing import Literal
-
 from django.conf import settings
-from django.shortcuts import get_object_or_404
 from ninja import Schema
-from oauth2_provider.models import Application
 
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.users.services.oauth_application import OAuthApplicationService
 
 router = ItqanRouter(tags=[NinjaTag.AUTH])
 
+_service = OAuthApplicationService()
 
-class ApplicationResponseSchema(Schema):
+
+class ApplicationInSchema(Schema):
+    name: str
+
+
+class ApplicationOutSchema(Schema):
     id: int
     name: str
     client_id: str
-    client_secret: str
-    client_type: str
-    authorization_grant_type: str
-    redirect_uris: str
 
 
-class ApplicationCreateSchema(Schema):
-    name: str
-    client_type: Literal["confidential", "public"] = "confidential"
-    authorization_grant_type: Literal["password", "client-credentials", "authorization-code"] = "password"
-    redirect_uris: str = ""
-
-
-class ApplicationUpdateSchema(Schema):
-    name: str | None = None
-    client_type: Literal["confidential", "public"] | None = None
-    authorization_grant_type: Literal["password", "client-credentials", "authorization-code"] | None = None
-    redirect_uris: str | None = None
+class ApplicationCreatedOutSchema(ApplicationOutSchema):
+    client_secret: str  # plaintext — returned once only, never persisted in plaintext
 
 
 if settings.ENABLE_OAUTH2:
 
     @router.post(
         "applications/",
-        response=ApplicationResponseSchema,
+        response=ApplicationCreatedOutSchema,
         summary="Create OAuth2 Application",
-        description="Register a new OAuth2 application to get client_id and client_secret",
+        description="Register a new OAuth2 application. The client_secret is returned once and cannot be retrieved again.",
     )
-    def create_application(request: Request, data: ApplicationCreateSchema):
-        """Create a new OAuth2 application for the authenticated user"""
-        user = request.user
-
-        app = Application(
-            user=user,
-            name=data.name,
-            client_type=data.client_type,
-            authorization_grant_type=data.authorization_grant_type,
-            redirect_uris=data.redirect_uris,
-        )
-        # Generate and capture plain text secret before hashing on save
-        plain_text_secret = app.client_secret
-        app.save()
-
+    def create_application(request: Request, data: ApplicationInSchema):
+        app, plain_secret = _service.create(request.user, data.name)
         return {
             "id": app.id,
             "name": app.name,
             "client_id": app.client_id,
-            "client_secret": plain_text_secret,
-            "client_type": app.client_type,
-            "authorization_grant_type": app.authorization_grant_type,
-            "redirect_uris": app.redirect_uris,
+            "client_secret": plain_secret,
         }
 
-    @router.get("applications/", response=list[ApplicationResponseSchema], summary="List OAuth2 Applications")
+    @router.get("applications/", response=list[ApplicationOutSchema], summary="List OAuth2 Applications")
     def list_applications(request: Request):
-        """List all OAuth2 applications owned by the user"""
-        return Application.objects.filter(user=request.user)
+        return _service.list(request.user)
 
-    @router.get("applications/{app_id}/", response=ApplicationResponseSchema, summary="Get OAuth2 Application")
+    @router.get("applications/{app_id}/", response=ApplicationOutSchema, summary="Get OAuth2 Application")
     def get_application(request: Request, app_id: int):
-        """Get details of a specific OAuth2 application"""
-        return get_object_or_404(Application, id=app_id, user=request.user)
+        return _service.get(request.user, app_id)
 
-    @router.put("applications/{app_id}/", response=ApplicationResponseSchema, summary="Update OAuth2 Application")
-    def update_application(request: Request, app_id: int, data: ApplicationUpdateSchema):
-        """Update an existing OAuth2 application"""
-        app = get_object_or_404(Application, id=app_id, user=request.user)
-
-        for attr, value in data.dict(exclude_unset=True).items():
-            setattr(app, attr, value)
-
-        app.save()
-        return app
+    @router.patch("applications/{app_id}/", response=ApplicationOutSchema, summary="Rename OAuth2 Application")
+    def rename_application(request: Request, app_id: int, data: ApplicationInSchema):
+        return _service.rename(request.user, app_id, data.name)
 
     @router.delete("applications/{app_id}/", response={204: None}, summary="Delete OAuth2 Application")
     def delete_application(request: Request, app_id: int):
-        """Delete an OAuth2 application"""
-        app = get_object_or_404(Application, id=app_id, user=request.user)
-        app.delete()
+        _service.delete(request.user, app_id)
         return 204, None

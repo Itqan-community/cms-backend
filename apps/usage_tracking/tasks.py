@@ -13,22 +13,12 @@ from apps.usage_tracking.services.mixpanel_client import MixpanelIngestClient
 _TRANSIENT_ERRORS = (RequestsConnectionError, RequestsTimeout, ConnectionError, TimeoutError)
 
 
-def _build_ingest_clients() -> list[MixpanelIngestClient]:
-    tokens = [
-        settings.MIXPANEL_PROJECT_TOKEN,
-        settings.MIXPANEL_PROJECT_TOKEN_2,
-        settings.MIXPANEL_PROJECT_TOKEN_3,
-        settings.MIXPANEL_PROJECT_TOKEN_4,
-    ]
-    return [
-        MixpanelIngestClient(
-            token=token,
-            ingest_host=settings.MIXPANEL_INGEST_HOST,
-            enabled=settings.MIXPANEL_ENABLED,
-        )
-        for token in tokens
-        if token
-    ]
+def _build_ingest_client() -> MixpanelIngestClient:
+    return MixpanelIngestClient(
+        token=settings.MIXPANEL_PROJECT_TOKEN,
+        ingest_host=settings.MIXPANEL_INGEST_HOST,
+        enabled=settings.MIXPANEL_ENABLED,
+    )
 
 
 @shared_task(
@@ -46,8 +36,16 @@ def track_api_request_task(
     distinct_id: str,
     event: str,
     properties: dict[str, Any],
+    meta: dict[str, Any] | None = None,
 ) -> None:
     if not distinct_id:
         return
-    for client in _build_ingest_clients():
-        client.track(distinct_id, event, properties)
+
+    accessed_entity_id = properties.get("accessed_entity_id")
+    if accessed_entity_id is not None:
+        from apps.content.models import Asset
+
+        row = Asset.objects.filter(pk=accessed_entity_id).values("name").first()
+        properties = {**properties, "accessed_entity_name": row["name"] if row else None}
+    client = _build_ingest_client()
+    client.track(distinct_id, event, properties, meta=meta)

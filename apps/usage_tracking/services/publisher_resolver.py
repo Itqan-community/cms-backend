@@ -1,8 +1,4 @@
-"""Resolve a request's publisher identity from its OAuth2 token.
-
-Used by the usage tracking middleware to tag each public API event with the
-publisher that owns the OAuth2 application the consumer is using.
-"""
+"""Resolve a request's publisher identity from the authenticated user."""
 
 from __future__ import annotations
 
@@ -12,16 +8,8 @@ _CACHE_ATTR = "_usage_tracking_resolved_publisher"
 _REDIS_CACHE_TTL = 300  # 5 minutes
 
 
-def resolve_publisher_from_request(request) -> tuple[int | None, str | None]:
-    """Return ``(publisher_id, publisher_slug)`` for the request, or ``(None, None)``.
-
-    Resolution order:
-      1. In-request memo (avoids duplicate calls within the same request)
-      2. Redis cache keyed by access_token.pk (avoids repeated DB lookups)
-      3. DB lookup via access_token → application → owner → PublisherMember
-
-    ``request.access_token`` must be set by OAuth2Auth before this is called.
-    """
+def resolve_publisher_from_request(request) -> tuple[int | None, str | None, str | None]:
+    """Return ``(publisher_id, publisher_slug, publisher_name)`` for the request."""
     cached = getattr(request, _CACHE_ATTR, None)
     if cached is not None:
         return cached
@@ -34,35 +22,47 @@ def resolve_publisher_from_request(request) -> tuple[int | None, str | None]:
     return result
 
 
-def _resolve(request) -> tuple[int | None, str | None]:
-    token = getattr(request, "access_token", None)
-    if token is None:
-        return None, None
+def _resolve(request) -> tuple[int | None, str | None, str | None]:
+    owner = _resolve_owner(request)
+    if owner is None:
+        return None, None, None
 
-    token_pk = getattr(token, "pk", None)
-    if token_pk is not None:
-        redis_key = f"pub_resolver:token:{token_pk}"
+    user_pk = getattr(owner, "pk", None)
+    if user_pk is not None:
+        redis_key = f"pub_resolver:user:{user_pk}"
         cached = cache.get(redis_key)
         if cached is not None:
-            return tuple(cached)
-
-    application = getattr(token, "application", None)
-    if application is None:
-        return None, None
-
-    owner = getattr(application, "user", None)
-    if owner is None:
-        return None, None
+            return cached
 
     result = _lookup_publisher_for_user(owner)
 
-    if token_pk is not None:
-        cache.set(redis_key, list(result), _REDIS_CACHE_TTL)
+    if user_pk is not None:
+        cache.set(redis_key, result, _REDIS_CACHE_TTL)
 
     return result
 
 
-def _lookup_publisher_for_user(owner) -> tuple[int | None, str | None]:
+def _resolve_owner(request):
+    """Return the user whose publisher membership we should look up.
+
+    Prefers an authenticated request.user (JWT/session). Falls back to the
+    OAuth2 application owner so client_credentials tokens (which have no
+    resource owner) still resolve to a publisher.
+    """
+    user = getattr(request, "user", None)
+    if user is not None and getattr(user, "is_authenticated", False):
+        return user
+
+    token = getattr(request, "access_token", None)
+    if token is None:
+        return None
+    application = getattr(token, "application", None)
+    if application is None:
+        return None
+    return getattr(application, "user", None)
+
+
+def _lookup_publisher_for_user(owner) -> tuple[int | None, str | None, str | None]:
     """Database lookup, isolated for easy mocking in unit tests."""
     from apps.publishers.models import PublisherMember
 
@@ -74,5 +74,5 @@ def _lookup_publisher_for_user(owner) -> tuple[int | None, str | None]:
     if membership is None:
         membership = PublisherMember.objects.filter(user=owner).select_related("publisher").first()
     if membership is None:
-        return None, None
-    return membership.publisher_id, membership.publisher.slug
+        return None, None, None
+    return membership.publisher_id, membership.publisher.slug, membership.publisher.name

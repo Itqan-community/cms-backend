@@ -1,16 +1,20 @@
 from typing import Literal
 
+from django.utils.translation import gettext_lazy as _
 from ninja import File, Form, Schema, UploadedFile
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
-from apps.content.models import AssetVersion
+from apps.content.models import Asset, AssetVersion, CategoryChoice
 from apps.content.services.tafsir import TafsirService
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
+from apps.core.ninja_utils.permission_required import permission_required
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.core.permission_utils import permission_class
+from apps.core.permissions import PermissionChoice
 
 router = ItqanRouter(tags=[NinjaTag.TAFSIRS])
 
@@ -56,11 +60,19 @@ class TafsirVersionPatchIn(Schema):
         404: NinjaErrorResponse[Literal["tafsir_not_found"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.PORTAL_READ_TAFSIR)])
 @paginate
 @searching(search_fields=["name", "summary"])
 def list_tafsir_versions(request: Request, tafsir_slug: str):
-    service = TafsirService()
-    return service.get_tafsir_versions(tafsir_slug)
+    try:
+        asset = Asset.objects.filter(request.publisher_q()).get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
+    except Asset.DoesNotExist as exc:
+        raise ItqanError(
+            error_name="tafsir_not_found",
+            message=_("Tafsir with slug {slug} not found.").format(slug=tafsir_slug),
+            status_code=404,
+        ) from exc
+    return AssetVersion.objects.filter(asset=asset).order_by("-created_at")
 
 
 @router.post(
@@ -71,6 +83,7 @@ def list_tafsir_versions(request: Request, tafsir_slug: str):
         404: NinjaErrorResponse[Literal["tafsir_not_found"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.PORTAL_CREATE_TAFSIR)])
 def create_tafsir_version(
     request: Request,
     tafsir_slug: str,
@@ -78,7 +91,14 @@ def create_tafsir_version(
     file: UploadedFile = File(...),
 ) -> tuple[int, AssetVersion]:
     service = TafsirService()
-    asset = service.get_tafsir(tafsir_slug)
+    try:
+        asset = Asset.objects.filter(request.publisher_q()).get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
+    except Asset.DoesNotExist as exc:
+        raise ItqanError(
+            error_name="tafsir_not_found",
+            message=_("Tafsir with slug {slug} not found.").format(slug=tafsir_slug),
+            status_code=404,
+        ) from exc
     if data.asset_id != asset.id:
         raise ItqanError(
             error_name="asset_id_mismatch",
@@ -91,6 +111,7 @@ def create_tafsir_version(
         name=data.name,
         summary=data.summary,
         file=file,
+        publisher_q=request.publisher_q(),
     )
     return 201, version
 
@@ -103,6 +124,7 @@ def create_tafsir_version(
         404: NinjaErrorResponse[Literal["tafsir_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.PORTAL_UPDATE_TAFSIR)])
 def update_tafsir_version_put(
     request: Request,
     tafsir_slug: str,
@@ -111,7 +133,14 @@ def update_tafsir_version_put(
     file: UploadedFile | None = File(None),
 ) -> AssetVersion:
     service = TafsirService()
-    asset = service.get_tafsir(tafsir_slug)
+    try:
+        asset = Asset.objects.filter(request.publisher_q()).get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
+    except Asset.DoesNotExist as exc:
+        raise ItqanError(
+            error_name="tafsir_not_found",
+            message=_("Tafsir with slug {slug} not found.").format(slug=tafsir_slug),
+            status_code=404,
+        ) from exc
     if data.asset_id != asset.id:
         raise ItqanError(
             error_name="asset_id_mismatch",
@@ -124,7 +153,7 @@ def update_tafsir_version_put(
     if file:
         fields["file_url"] = file
 
-    return service.update_tafsir_version(tafsir_slug, version_id, fields=fields)
+    return service.update_tafsir_version(tafsir_slug, version_id, fields=fields, publisher_q=request.publisher_q())
 
 
 @router.patch(
@@ -135,6 +164,7 @@ def update_tafsir_version_put(
         404: NinjaErrorResponse[Literal["tafsir_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.PORTAL_UPDATE_TAFSIR)])
 def update_tafsir_version_patch(
     request: Request,
     tafsir_slug: str,
@@ -143,7 +173,14 @@ def update_tafsir_version_patch(
     file: UploadedFile | None = File(None),
 ) -> AssetVersion:
     service = TafsirService()
-    asset = service.get_tafsir(tafsir_slug)
+    try:
+        asset = Asset.objects.filter(request.publisher_q()).get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
+    except Asset.DoesNotExist as exc:
+        raise ItqanError(
+            error_name="tafsir_not_found",
+            message=_("Tafsir with slug {slug} not found.").format(slug=tafsir_slug),
+            status_code=404,
+        ) from exc
     if data.asset_id is not None and data.asset_id != asset.id:
         raise ItqanError(
             error_name="asset_id_mismatch",
@@ -156,7 +193,7 @@ def update_tafsir_version_patch(
     if file:
         fields["file_url"] = file
 
-    return service.update_tafsir_version(tafsir_slug, version_id, fields=fields)
+    return service.update_tafsir_version(tafsir_slug, version_id, fields=fields, publisher_q=request.publisher_q())
 
 
 @router.delete(
@@ -166,7 +203,8 @@ def update_tafsir_version_patch(
         404: NinjaErrorResponse[Literal["tafsir_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.PORTAL_DELETE_TAFSIR)])
 def delete_tafsir_version(request: Request, tafsir_slug: str, version_id: int) -> tuple[int, None]:
     service = TafsirService()
-    service.delete_tafsir_version(tafsir_slug, version_id)
+    service.delete_tafsir_version(tafsir_slug, version_id, publisher_q=request.publisher_q())
     return 204, None

@@ -2,18 +2,23 @@ import datetime
 import logging
 from typing import Annotated, Literal
 
+from django.db.models import Count, Q
+from django.utils.translation import gettext_lazy as _
 from ninja import Field, File, FilterLookup, FilterSchema, Form, Query, Schema, UploadedFile
 from ninja.pagination import paginate
 from pydantic import AwareDatetime
 
-from apps.content.models import Reciter
+from apps.content.models import CategoryChoice, Reciter, StatusChoice
 from apps.content.services.reciter import ReciterService
-from apps.core.ninja_utils.errors import NinjaErrorResponse
+from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
+from apps.core.ninja_utils.permission_required import permission_required
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.core.permission_utils import permission_class
+from apps.core.permissions import PermissionChoice
 
 router = ItqanRouter(tags=[NinjaTag.RECITERS])
 logger = logging.getLogger(__name__)
@@ -109,6 +114,7 @@ class ReciterFilter(FilterSchema):
 
 
 @router.get("reciters/", response=list[ReciterListOut])
+@permission_required([permission_class(PermissionChoice.PORTAL_READ_RECITER)])
 @paginate
 @ordering(
     ordering_fields=[
@@ -120,8 +126,13 @@ class ReciterFilter(FilterSchema):
 )
 @searching(search_fields=["name_en", "name_ar", "bio_en", "bio_ar"])
 def list_reciters(request: Request, filters: ReciterFilter = Query()):
-    service = ReciterService()
-    qs = service.get_all_reciters()
+    qs = Reciter.objects.annotate(
+        recitations_count=Count(
+            "assets",
+            filter=Q(assets__category=CategoryChoice.RECITATION, assets__status=StatusChoice.READY),
+            distinct=True,
+        )
+    )
     return filters.filter(qs)
 
 
@@ -132,9 +143,22 @@ def list_reciters(request: Request, filters: ReciterFilter = Query()):
         404: NinjaErrorResponse[Literal["reciter_not_found"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.PORTAL_READ_RECITER)])
 def get_reciter(request: Request, reciter_slug: str):
-    service = ReciterService()
-    return service.get_reciter(reciter_slug)
+    try:
+        return Reciter.objects.annotate(
+            recitations_count=Count(
+                "assets",
+                filter=Q(assets__category=CategoryChoice.RECITATION, assets__status=StatusChoice.READY),
+                distinct=True,
+            )
+        ).get(slug=reciter_slug)
+    except Reciter.DoesNotExist as exc:
+        raise ItqanError(
+            error_name="reciter_not_found",
+            message=_("Reciter with slug {slug} not found.").format(slug=reciter_slug),
+            status_code=404,
+        ) from exc
 
 
 @router.post(
@@ -145,6 +169,7 @@ def get_reciter(request: Request, reciter_slug: str):
         409: NinjaErrorResponse[Literal["reciter_already_exists"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.PORTAL_CREATE_RECITER)])
 def create_reciter(
     request: Request,
     data: Form[ReciterCreateIn],
@@ -162,9 +187,14 @@ def create_reciter(
         image_url=image,
     )
     logger.info(f"Reciter created [reciter_id={reciter.id}, user_id={request.user.id}]")
-    # The new reciter object won't have `recitations_count` annotated natively from create()
-    # So we should fetch it from the service repo query
-    return 201, service.get_reciter(reciter.slug)
+    # Re-fetch with recitations_count annotation for the response schema
+    return 201, Reciter.objects.annotate(
+        recitations_count=Count(
+            "assets",
+            filter=Q(assets__category=CategoryChoice.RECITATION, assets__status=StatusChoice.READY),
+            distinct=True,
+        )
+    ).get(slug=reciter.slug)
 
 
 @router.patch(
@@ -176,6 +206,7 @@ def create_reciter(
         409: NinjaErrorResponse[Literal["reciter_already_exists"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.PORTAL_UPDATE_RECITER)])
 def patch_reciter(
     request: Request,
     reciter_slug: str,
@@ -188,7 +219,13 @@ def patch_reciter(
 
     reciter = service.update_reciter(reciter_slug, fields)
     logger.info(f"Reciter updated [reciter_id={reciter.id}, user_id={request.user.id}]")
-    return service.get_reciter(reciter.slug)
+    return Reciter.objects.annotate(
+        recitations_count=Count(
+            "assets",
+            filter=Q(assets__category=CategoryChoice.RECITATION, assets__status=StatusChoice.READY),
+            distinct=True,
+        )
+    ).get(slug=reciter.slug)
 
 
 @router.delete(
@@ -198,6 +235,7 @@ def patch_reciter(
         404: NinjaErrorResponse[Literal["reciter_not_found"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.PORTAL_DELETE_RECITER)])
 def delete_reciter(request: Request, reciter_slug: str):
     logger.info(f"Deleting reciter [reciter_slug={reciter_slug}, user_id={request.user.id}]")
     service = ReciterService()

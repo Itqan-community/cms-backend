@@ -40,9 +40,6 @@ X_FRAME_OPTIONS = "DENY"
 
 CORS_ALLOWED_ORIGINS = [
     "https://cms.itqan.dev",
-    "https://itqan-cms.netlify.app",
-    "https://staging.cms.itqan.dev",
-    "https://staging--itqan-cms.netlify.app",
     "https://saudi-recitation-center.netlify.app",
     # Local frontend development
     "http://localhost:4200",
@@ -89,13 +86,13 @@ CELERY_TASK_ALWAYS_EAGER = False
 
 CSRF_TRUSTED_ORIGINS = [
     "https://api.cms.itqan.dev",
-    "https://staging.cms.itqan.dev",
-    "https://staging--itqan-cms.netlify.app",
     "https://cms.itqan.dev",
-    "https://itqan-cms.netlify.app",
     "https://saudi-recitation-center.netlify.app",
+    "http://localhost:4200",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "https://eu.mixpanel.com",  # SAML SSO: Mixpanel SP posts SAML assertions here
+    "https://mixpanel.com",
 ]
 
 # ============================================================
@@ -104,37 +101,3 @@ CSRF_TRUSTED_ORIGINS = [
 
 settings.LOGGING["handlers"]["console"]["level"] = "INFO"
 settings.LOGGING["root"]["level"] = "INFO"
-
-# ============================================================
-# Django-Allauth
-# ============================================================
-
-ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https"
-
-# ============================================================
-# Email
-# ============================================================
-
-_EMAIL_SENDER_NAME: str = config("EMAIL_SENDER_NAME", default="")
-_EMAIL_SENDER_EMAIL: str = config("EMAIL_SENDER_EMAIL", default="")
-
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = config("EMAIL_HOST", default="")
-EMAIL_PORT = config("EMAIL_PORT", cast=int, default=587)
-EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
-EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
-EMAIL_USE_TLS = True
-EMAIL_USE_SSL = False
-DEFAULT_FROM_EMAIL = f"{_EMAIL_SENDER_NAME} <{_EMAIL_SENDER_EMAIL}>" if _EMAIL_SENDER_NAME else _EMAIL_SENDER_EMAIL
-
-SOCIALACCOUNT_PROVIDERS = {
-    "google": {
-        "SCOPE": ["profile", "email"],
-        "AUTH_PARAMS": {"access_type": "online"},
-        "OAUTH_PKCE_ENABLED": True,
-    },
-    "github": {
-        "SCOPE": ["user:email"],
-        "VERIFIED_EMAIL": True,
-    },
-}

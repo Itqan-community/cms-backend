@@ -11,9 +11,12 @@ from apps.content.services.admin.asset_recitation_audio_tracks_direct_upload_ser
 )
 from apps.content.services.validate_recitation_tracks_upload_service import ValidateRecitationTracksUploadService
 from apps.core.ninja_utils.errors import NinjaErrorResponse
+from apps.core.ninja_utils.permission_required import permission_required
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.core.permission_utils import permission_class
+from apps.core.permissions import PermissionChoice
 
 router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
 
@@ -44,6 +47,12 @@ class ValidateUploadOut(Schema):
         403: NinjaErrorResponse[Literal["permission_denied"]],
         404: NinjaErrorResponse[Literal["asset_not_found"]],
     },
+)
+@permission_required(
+    [
+        permission_class(PermissionChoice.PORTAL_UPDATE_RECITATION)
+        | permission_class(PermissionChoice.PORTAL_CREATE_RECITATION)
+    ]
 )
 def validate_upload(request: Request, data: ValidateUploadIn):
 
@@ -87,6 +96,12 @@ class UploadStartOut(Schema):
         409: NinjaErrorResponse[Literal["duplicate_track"]],
     },
 )
+@permission_required(
+    [
+        permission_class(PermissionChoice.PORTAL_UPDATE_RECITATION)
+        | permission_class(PermissionChoice.PORTAL_CREATE_RECITATION)
+    ]
+)
 def start_upload(request: Request, data: UploadStartIn):
 
     asset = get_object_or_404(Asset, id=data.asset_id)
@@ -119,6 +134,12 @@ class UploadSignPartOut(Schema):
         401: NinjaErrorResponse[Literal["authentication_error"]],
         403: NinjaErrorResponse[Literal["permission_denied"]],
     },
+)
+@permission_required(
+    [
+        permission_class(PermissionChoice.PORTAL_UPDATE_RECITATION)
+        | permission_class(PermissionChoice.PORTAL_CREATE_RECITATION)
+    ]
 )
 def sign_part(request: Request, data: UploadSignPartIn):
 
@@ -165,6 +186,12 @@ class UploadFinishOut(Schema):
         409: NinjaErrorResponse[Literal["duplicate_track"]],
     },
 )
+@permission_required(
+    [
+        permission_class(PermissionChoice.PORTAL_UPDATE_RECITATION)
+        | permission_class(PermissionChoice.PORTAL_CREATE_RECITATION)
+    ]
+)
 def finish_upload(request: Request, data: UploadFinishIn):
 
     asset = get_object_or_404(Asset, id=data.asset_id)
@@ -208,6 +235,12 @@ class UploadAbortOut(Schema):
         401: NinjaErrorResponse[Literal["authentication_error"]],
         403: NinjaErrorResponse[Literal["permission_denied"]],
     },
+)
+@permission_required(
+    [
+        permission_class(PermissionChoice.PORTAL_UPDATE_RECITATION)
+        | permission_class(PermissionChoice.PORTAL_CREATE_RECITATION)
+    ]
 )
 def abort_upload(request: Request, data: UploadAbortIn):
 

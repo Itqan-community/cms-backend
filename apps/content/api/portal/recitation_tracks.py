@@ -1,15 +1,18 @@
 from typing import Literal
 
+from django.utils.translation import gettext_lazy as _
 from ninja import Schema
 from ninja.pagination import paginate
-from rest_framework.generics import get_object_or_404
 
 from apps.content.models import Asset, CategoryChoice, RecitationSurahTrack
 from apps.content.repositories.recitation_track import RecitationTrackRepository
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
+from apps.core.ninja_utils.permission_required import permission_required
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.core.permission_utils import permission_class
+from apps.core.permissions import PermissionChoice
 
 router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
 
@@ -42,11 +45,20 @@ class RecitationTrackOut(Schema):
         404: NinjaErrorResponse[Literal["asset_not_found"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.PORTAL_READ_RECITATION)])
 @paginate
 def list_tracks(request: Request, recitation_slug: str):
-    asset = get_object_or_404(Asset, category=CategoryChoice.RECITATION, slug=recitation_slug)
-    repo = RecitationTrackRepository()
-    return repo.get_recitation_tracks_by_asset_id(asset_id=asset.id)
+    try:
+        asset = Asset.objects.filter(request.publisher_q()).get(
+            category=CategoryChoice.RECITATION, slug=recitation_slug
+        )
+    except Asset.DoesNotExist as exc:
+        raise ItqanError(
+            error_name="asset_not_found",
+            message=_("Asset with slug {slug} not found.").format(slug=recitation_slug),
+            status_code=404,
+        ) from exc
+    return RecitationSurahTrack.objects.filter(asset_id=asset.id).order_by("surah_number")
 
 
 class DeleteTracksIn(Schema):
@@ -61,9 +73,10 @@ class DeleteTracksIn(Schema):
         403: NinjaErrorResponse[Literal["permission_denied"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.PORTAL_DELETE_RECITATION)])
 def delete_tracks(request: Request, data: DeleteTracksIn):
     repo = RecitationTrackRepository()
-    tracks = repo.get_recitation_tracks_by_ids(data.track_ids)
+    tracks = repo.get_recitation_tracks_by_ids(data.track_ids, publisher_q=request.publisher_q("asset__publisher"))
 
     if not data.track_ids or len(tracks) != len(data.track_ids):
         raise ItqanError(

@@ -9,7 +9,7 @@ from ninja.utils import normalize_path
 
 __all__ = ["ItqanRouter"]
 
-from apps.core.ninja_utils.auth import ninja_jwt_auth_optional
+from apps.core.ninja_utils.auth import optional_auth
 
 
 class ItqanRouter(Router):
@@ -33,7 +33,7 @@ class ItqanRouter(Router):
         return super().api_operation(
             methods=methods,
             path=path,
-            auth=ninja_jwt_auth_optional if auth is None else auth,
+            auth=optional_auth if auth is None else auth,
             throttle=throttle,
             response=response,
             **kwargs,

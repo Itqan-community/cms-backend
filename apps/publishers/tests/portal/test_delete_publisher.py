@@ -1,5 +1,6 @@
 from model_bakery import baker
 
+from apps.core.permissions import PermissionChoice
 from apps.core.tests import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -12,6 +13,7 @@ class DeletePublisherTest(BaseTestCase):
     def test_delete_publisher_where_exists_should_return_204(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_PUBLISHER)
         publisher = baker.make(Publisher, name="To Delete", slug="to-delete")
 
         # Act
@@ -24,6 +26,7 @@ class DeletePublisherTest(BaseTestCase):
     def test_delete_publisher_where_not_found_should_return_404(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_PUBLISHER)
 
         # Act
         response = self.client.delete("/portal/publishers/99999/")
@@ -42,3 +45,16 @@ class DeletePublisherTest(BaseTestCase):
 
         # Assert
         self.assertEqual(401, response.status_code, response.content)
+
+    def test_delete_publisher_where_no_permission_should_return_403(self) -> None:
+        # Arrange
+        self.authenticate_user(self.user)
+        publisher = baker.make(Publisher, name="Test", slug="test")
+
+        # Act
+        response = self.client.delete(f"/portal/publishers/{publisher.id}/")
+
+        # Assert
+        self.assertEqual(403, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("permission_denied", body["error_name"])

@@ -811,17 +811,15 @@ class ContentIssueReportAdmin(admin.ModelAdmin):
     list_display = [
         "id",
         "reporter",
-        "content_type",
-        "object_id",
+        "asset",
         "status",
         "created_at",
     ]
-    list_filter = ["status", "content_type", "created_at"]
-    search_fields = ["reporter__email", "description", "object_id"]
+    list_filter = ["status", "created_at"]
+    search_fields = ["reporter__email", "description", "asset__name"]
     readonly_fields = [
         "created_at",
         "updated_at",
-        "content_object_display",
     ]
     raw_id_fields = ["reporter"]
 
@@ -831,9 +829,7 @@ class ContentIssueReportAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "reporter",
-                    "content_type",
-                    "object_id",
-                    "content_object_display",
+                    "asset",
                 )
             },
         ),
@@ -848,32 +844,36 @@ class ContentIssueReportAdmin(admin.ModelAdmin):
     actions = ["mark_as_under_review", "mark_as_resolved", "mark_as_dismissed"]
 
     def get_queryset(self, request):
-        """Optimize queryset"""
-        return super().get_queryset(request).select_related("reporter", "content_type")
+        return super().get_queryset(request).select_related("reporter", "asset")
 
-    @admin.display(description="Content Object")
-    def content_object_display(self, obj: ContentIssueReport):
-        """Display the related content object with link"""
-        if obj.content_object and obj.content_type.model == "asset":
-            content = obj.content_object
-            url = reverse("admin:content_asset_change", args=[content.id])
-            return format_html('<a href="{}">{}</a>', url, content.name)
-        return "N/A"
+    def save_model(self, request, obj, form, change):
+        old_status = form.initial.get("status") if change and "status" in form.changed_data else None
+        super().save_model(request, obj, form, change)
+        if old_status is not None:
+            from apps.content.tasks import send_issue_status_update_email
+
+            send_issue_status_update_email.delay(obj.pk, old_status, obj.status)
 
     @admin.action(description="Mark as Under Review")
     def mark_as_under_review(self, request, queryset):
-        """Bulk update status to under_review"""
-        count = queryset.update(status=ContentIssueReport.StatusChoice.UNDER_REVIEW)
-        self.message_user(request, f"Marked {count} reports as under review.")
+        new_status = ContentIssueReport.StatusChoice.UNDER_REVIEW
+        self._bulk_update_status(request, queryset, new_status, "under review")
 
     @admin.action(description="Mark as Resolved")
     def mark_as_resolved(self, request, queryset):
-        """Bulk update status to resolved"""
-        count = queryset.update(status=ContentIssueReport.StatusChoice.RESOLVED)
-        self.message_user(request, f"Marked {count} reports as resolved.")
+        new_status = ContentIssueReport.StatusChoice.RESOLVED
+        self._bulk_update_status(request, queryset, new_status, "resolved")
 
     @admin.action(description="Mark as Dismissed")
     def mark_as_dismissed(self, request, queryset):
-        """Bulk update status to dismissed"""
-        count = queryset.update(status=ContentIssueReport.StatusChoice.DISMISSED)
-        self.message_user(request, f"Marked {count} reports as dismissed.")
+        new_status = ContentIssueReport.StatusChoice.DISMISSED
+        self._bulk_update_status(request, queryset, new_status, "dismissed")
+
+    def _bulk_update_status(self, request, queryset, new_status, label):
+        from apps.content.tasks import send_issue_status_update_email
+
+        changing = list(queryset.exclude(status=new_status).values("id", "status"))
+        count = queryset.update(status=new_status)
+        for item in changing:
+            send_issue_status_update_email.delay(item["id"], item["status"], new_status)
+        self.message_user(request, f"Marked {count} reports as {label}.")

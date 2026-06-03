@@ -93,30 +93,6 @@ def create_usage_event_task(self, event_data):
         raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1)) from exc
 
 
-def track_event_async(event_data):
-    """
-    Helper function to queue usage event tracking
-
-    Args:
-        event_data: Event data dictionary
-    """
-    try:
-        # Queue the task for async processing
-        create_usage_event_task.delay(event_data)
-        return True
-    except Exception as e:
-        logger.error(f"Failed to queue usage event: {e}")
-        # Fallback to synchronous creation if Celery is unavailable
-        try:
-            from .models import UsageEvent
-
-            UsageEvent.objects.create(**event_data)
-            return True
-        except Exception as sync_e:
-            logger.error(f"Failed to create usage event synchronously: {sync_e}")
-            return False
-
-
 @shared_task
 def cleanup_stuck_multipart_uploads_task(older_than_hours: int = 2):
     """
@@ -239,3 +215,22 @@ def send_asset_update_email(asset_version_id: int) -> None:
     logger.info(
         f"Task completed [task=send_asset_update_email, asset_version_id={asset_version_id}, recipients={len(list(users))}]"
     )
+
+
+@shared_task(bind=True, max_retries=3)
+def send_issue_status_update_email(self, report_id: int, old_status: str, new_status: str) -> None:
+    """
+    Async wrapper that delegates to IssueReportNotificationService.
+    Retries up to 3 times on transient failures with linear back-off.
+    """
+    logger.info(
+        f"Task started [task=send_issue_status_update_email, report_id={report_id}, {old_status!r} -> {new_status!r}]"
+    )
+    try:
+        from apps.content.services.issue_report_notifications import IssueReportNotificationService
+
+        IssueReportNotificationService().notify_status_changed(report_id, old_status, new_status)
+        logger.info(f"Task completed [task=send_issue_status_update_email, report_id={report_id}]")
+    except Exception as exc:
+        logger.error(f"Task failed [task=send_issue_status_update_email, report_id={report_id}]: {exc}")
+        raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1)) from exc

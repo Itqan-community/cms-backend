@@ -37,6 +37,7 @@ jobs:
         run: |
           # Robust lowercase owner for GHCR (some shells reject ${var,,})
           OWNER_LC=$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
+          IMAGE_REPO="ghcr.io/${OWNER_LC}/cms-backend"
           # Determine target branch
           if [[ "${{ github.event_name }}" == "push" ]]; then
             TARGET_BRANCH="${{ github.ref_name }}"
@@ -52,22 +53,31 @@ jobs:
             echo "ENV_URL=https://staging.api.cms.itqan.dev" >> $GITHUB_ENV
             echo "COMPOSE_FILE=deployment/docker/docker-compose.staging.yml" >> $GITHUB_ENV
             echo "BRANCH=staging" >> $GITHUB_ENV
-            echo "IMAGE_REPO=ghcr.io/${OWNER_LC}/cms-backend" >> $GITHUB_ENV
+            echo "IMAGE_REPO=${IMAGE_REPO}" >> $GITHUB_ENV
             echo "IMAGE_TAG=staging-${GITHUB_SHA::7}" >> $GITHUB_ENV
+            echo "image_repo=${IMAGE_REPO}" >> $GITHUB_OUTPUT
+            echo "image_tag=staging-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+            echo "branch=staging" >> $GITHUB_OUTPUT
           elif [[ "$TARGET_BRANCH" == "main" ]]; then
             echo "HOST=${{ secrets.PROD_HOST }}" >> $GITHUB_ENV
             echo "ENV_NAME=production" >> $GITHUB_ENV
             echo "ENV_URL=https://api.cms.itqan.dev" >> $GITHUB_ENV
             echo "COMPOSE_FILE=deployment/docker/docker-compose.production.yml" >> $GITHUB_ENV
             echo "BRANCH=main" >> $GITHUB_ENV
-            echo "IMAGE_REPO=ghcr.io/${OWNER_LC}/cms-backend" >> $GITHUB_ENV
+            echo "IMAGE_REPO=${IMAGE_REPO}" >> $GITHUB_ENV
             echo "IMAGE_TAG=prod-${GITHUB_SHA::7}" >> $GITHUB_ENV
+            echo "image_repo=${IMAGE_REPO}" >> $GITHUB_OUTPUT
+            echo "image_tag=prod-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+            echo "branch=main" >> $GITHUB_OUTPUT
           fi
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -77,33 +87,14 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push image to GHCR
-        run: |
-          echo "🛠️ Building image $IMAGE_REPO:$IMAGE_TAG for ${{ env.ENV_NAME }} environment"
-          docker build -f deployment/docker/Dockerfile.backend -t $IMAGE_REPO:$IMAGE_TAG .
-
-          echo "📤 Pushing image to GHCR..."
-          echo "🔍 Repository: $IMAGE_REPO"
-          echo "🏷️ Tag: $IMAGE_TAG"
-
-          # Make the repository public on first push (GHCR requirement)
-          echo "📦 Creating/updating GHCR repository..."
-
-          # Retry push up to 3 times with exponential backoff
-          for attempt in 1 2 3; do
-            echo "🔄 Push attempt $attempt/3..."
-            if docker push $IMAGE_REPO:$IMAGE_TAG; then
-              echo "✅ Image pushed successfully to GHCR on attempt $attempt"
-              break
-            else
-              if [ $attempt -eq 3 ]; then
-                echo "❌ All push attempts failed"
-                exit 1
-              fi
-              wait_time=$((attempt * 10))
-              echo "⏳ Waiting ${wait_time}s before retry..."
-              sleep $wait_time
-            fi
-          done
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deployment/docker/Dockerfile.backend
+          push: true
+          tags: ${{ steps.vars.outputs.image_repo }}:${{ steps.vars.outputs.image_tag }}
+          cache-from: type=registry,ref=${{ steps.vars.outputs.image_repo }}:buildcache-${{ steps.vars.outputs.branch }}
+          cache-to: type=registry,ref=${{ steps.vars.outputs.image_repo }}:buildcache-${{ steps.vars.outputs.branch }},mode=max,compression=zstd
 
       - name: Deploy to ${{ env.ENV_NAME }}
         uses: appleboy/ssh-action@v1.0.3
@@ -163,16 +154,28 @@ jobs:
                 echo "ENV_NAME=staging";
                 echo "DEFAULT_SERVER_NAME=cms-backend-staging";
                 echo "MIXPANEL_ENABLED=True";
-                echo "MIXPANEL_PROJECT_TOKEN=${{ secrets.MIXPANEL_PROJECT_TOKEN }}";
-                echo "MIXPANEL_PROJECT_TOKEN_2=${{ secrets.MIXPANEL_PROJECT_TOKEN_2 }}";
-                echo "MIXPANEL_PROJECT_TOKEN_3=${{ secrets.MIXPANEL_PROJECT_TOKEN_3 }}";
-                echo "MIXPANEL_PROJECT_TOKEN_4=${{ secrets.MIXPANEL_PROJECT_TOKEN_4 }}";
-                echo "MIXPANEL_MAIN_BOARD_URL=${{ secrets.MIXPANEL_MAIN_BOARD_URL }}";
-                echo "MIXPANEL_PROJECT_ID=${{ secrets.MIXPANEL_PROJECT_ID }}";
-                echo "MIXPANEL_SERVICE_USERNAME=${{ secrets.MIXPANEL_SERVICE_USERNAME }}";
-                echo "MIXPANEL_SERVICE_SECRET=${{ secrets.MIXPANEL_SERVICE_SECRET }}";
-                echo "MIXPANEL_INGEST_HOST=${{ secrets.MIXPANEL_INGEST_HOST }}";
-                echo "MIXPANEL_API_BASE=${{ secrets.MIXPANEL_API_BASE }}";
+                echo "MIXPANEL_PROJECT_TOKEN=${{ secrets.STAGING_MIXPANEL_PROJECT_TOKEN }}";
+                echo "MIXPANEL_PROJECT_ID=${{ vars.STAGING_MIXPANEL_PROJECT_ID }}";
+                echo "MIXPANEL_INGEST_HOST=${{ vars.STAGING_MIXPANEL_INGEST_HOST }}";
+                echo "EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend";
+                echo "EMAIL_HOST=${{ secrets.EMAIL_HOST }}";
+                echo "EMAIL_PORT=${{ secrets.EMAIL_PORT }}";
+                echo "EMAIL_HOST_USER=${{ secrets.EMAIL_HOST_USER }}";
+                echo "EMAIL_HOST_PASSWORD=${{ secrets.EMAIL_HOST_PASSWORD }}";
+                echo "EMAIL_SENDER_NAME=${{ secrets.EMAIL_SENDER_NAME }}";
+                echo "EMAIL_SENDER_EMAIL=${{ secrets.EMAIL_SENDER_EMAIL }}";
+                echo "WEBAUTHN_RP_ID=${{ vars.STAGING_WEBAUTHN_RP_ID }}";
+                echo "ALLAUTH_JWT_PRIVATE_KEY=${{ secrets.STAGING_ALLAUTH_JWT_PRIVATE_KEY }}";
+                echo "FRONTEND_BASE_URL=${{ secrets.STAGING_FRONTEND_BASE_URL }}";
+                echo "GOOGLE_CLIENT_ID=${{ secrets.STAGING_GOOGLE_CLIENT_ID }}";
+                echo "GOOGLE_CLIENT_SECRET=${{ secrets.STAGING_GOOGLE_CLIENT_SECRET }}";
+                echo "GITHUB_CLIENT_ID=${{ secrets.STAGING_GITHUB_CLIENT_ID }}";
+                echo "GITHUB_CLIENT_SECRET=${{ secrets.STAGING_GITHUB_CLIENT_SECRET }}";
+                echo "SAML_IDP_ENABLED=${{ vars.STAGING_SAML_IDP_ENABLED }}";
+                echo "SAML_IDP_KEY_FILE=${{ secrets.SAML_IDP_KEY_FILE }}";
+                echo "SAML_IDP_CERT_FILE=${{ secrets.SAML_IDP_CERT_FILE }}";
+                echo "SAML_IDP_BASE_URL=${{ vars.STAGING_SAML_IDP_BASE_URL }}";
+                echo "XMLSEC_BINARY=${{ vars.STAGING_XMLSEC_BINARY }}";
               } > deployment/docker/.env
             elif [ "${{ env.ENV_NAME }}" = "production" ]; then
               {
@@ -194,11 +197,14 @@ jobs:
                 echo "CLOUDFLARE_R2_ACCESS_KEY_ID=${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}";
                 echo "CLOUDFLARE_R2_SECRET_ACCESS_KEY=${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}";
                 echo "CLOUDFLARE_R2_PUBLIC_BASE_URL=${{ secrets.PROD_CLOUDFLARE_R2_PUBLIC_BASE_URL }}";
+                echo "EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend";
                 echo "EMAIL_HOST=${{ secrets.EMAIL_HOST }}";
+                echo "EMAIL_PORT=${{ secrets.EMAIL_PORT }}";
                 echo "EMAIL_HOST_USER=${{ secrets.EMAIL_HOST_USER }}";
                 echo "EMAIL_HOST_PASSWORD=${{ secrets.EMAIL_HOST_PASSWORD }}";
                 echo "EMAIL_SENDER_NAME=${{ secrets.EMAIL_SENDER_NAME }}";
                 echo "EMAIL_SENDER_EMAIL=${{ secrets.EMAIL_SENDER_EMAIL }}";
+                echo "WEBAUTHN_RP_ID=${{ vars.PROD_WEBAUTHN_RP_ID }}";
                 echo "RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}";
                 echo "RABBITMQ_PASS=${{ secrets.RABBITMQ_PASS }}";
                 echo "CELERY_BROKER_URL=amqp://${{ secrets.RABBITMQ_USER }}:${{ secrets.RABBITMQ_PASS }}@rabbitmq:5672//";
@@ -210,6 +216,21 @@ jobs:
                 echo "SENTRY_DSN=${{ secrets.PROD_SENTRY_DSN }}";
                 echo "ENV_NAME=production";
                 echo "DEFAULT_SERVER_NAME=cms-backend-production";
+                echo "MIXPANEL_ENABLED=${{ vars.PROD_MIXPANEL_ENABLED }}";
+                echo "MIXPANEL_PROJECT_TOKEN=${{ secrets.PROD_MIXPANEL_PROJECT_TOKEN }}";
+                echo "MIXPANEL_PROJECT_ID=${{ vars.PROD_MIXPANEL_PROJECT_ID }}";
+                echo "MIXPANEL_INGEST_HOST=${{ vars.PROD_MIXPANEL_INGEST_HOST }}";
+                echo "ALLAUTH_JWT_PRIVATE_KEY=${{ secrets.PRODUCTION_ALLAUTH_JWT_PRIVATE_KEY }}";
+                echo "FRONTEND_BASE_URL=${{ secrets.PRODUCTION_FRONTEND_BASE_URL }}";
+                echo "GOOGLE_CLIENT_ID=${{ secrets.PROD_GOOGLE_CLIENT_ID }}";
+                echo "GOOGLE_CLIENT_SECRET=${{ secrets.PROD_GOOGLE_CLIENT_SECRET }}";
+                echo "GITHUB_CLIENT_ID=${{ secrets.PROD_GITHUB_CLIENT_ID }}";
+                echo "GITHUB_CLIENT_SECRET=${{ secrets.PROD_GITHUB_CLIENT_SECRET }}";
+                echo "SAML_IDP_ENABLED=${{ vars.PROD_SAML_IDP_ENABLED }}";
+                echo "SAML_IDP_KEY_FILE=${{ secrets.SAML_IDP_KEY_FILE }}";
+                echo "SAML_IDP_CERT_FILE=${{ secrets.SAML_IDP_CERT_FILE }}";
+                echo "SAML_IDP_BASE_URL=${{ vars.PROD_SAML_IDP_BASE_URL }}";
+                echo "XMLSEC_BINARY=${{ vars.PROD_XMLSEC_BINARY }}";
               } > deployment/docker/.env
             fi
             # Append image coordinates for docker compose variable substitution

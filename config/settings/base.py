@@ -4,6 +4,7 @@ import sys
 
 from decouple import config
 
+from apps.core.permissions import PermissionChoice
 from config.helpers.sentry import enable_sentry
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -20,7 +21,10 @@ ALLOWED_HOSTS: list[str] = []
 
 # Feature flags
 ENABLE_OAUTH2 = config("ENABLE_OAUTH2", cast=bool, default=False)
-ENABLE_ALLAUTH = config("ENABLE_ALLAUTH", cast=bool, default=False)
+ENABLE_ALLAUTH = config("ENABLE_ALLAUTH", cast=bool, default=True)
+ENABLE_API_KEY_AUTH = config("ENABLE_API_KEY_AUTH", cast=bool, default=True)
+ENABLE_ANONYMOUS_TRAFFIC = config("ENABLE_ANONYMOUS_TRAFFIC", cast=bool, default=True)
+SAML_IDP_ENABLED = config("SAML_IDP_ENABLED", cast=bool, default=True)
 
 # Application definition
 DJANGO_APPS = [
@@ -55,13 +59,15 @@ THIRD_PARTY_APPS = [
     "django_countries",
     "django_extended_makemessages",
     *(["django_watchfiles"] if DEBUG else []),
+    "plain_permissions",
+    "ninja_keys",
+    *(["djangosaml2idp"] if SAML_IDP_ENABLED else []),
 ]
 
 COUNTRIES_OVERRIDE = {"IL": None}
 
 LOCAL_APPS = ["apps.core", "apps.content", "apps.users", "apps.publishers"]
 
-INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
@@ -76,6 +82,7 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "oauth2_provider.middleware.OAuth2TokenMiddleware",
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
@@ -252,6 +259,9 @@ CORS_ALLOW_HEADERS = [
     "x-csrftoken",
     "x-requested-with",
     "x-tenant",
+    "x-session-token",
+    "x-email-verification-key",
+    "x-password-reset-key",
 ]
 
 # Custom user model
@@ -299,9 +309,6 @@ CELERY_WORKER_SEND_TASK_EVENTS = True
 CELERY_TASK_SEND_SENT_EVENT = True
 CELERY_WORKER_HIJACK_ROOT_LOGGER = False
 
-# Email server
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-
 # Site ID (required for allauth)
 SITE_ID = 1
 
@@ -314,10 +321,10 @@ ACCOUNT_ALLOW_REGISTRATION = config("DJANGO_ACCOUNT_ALLOW_REGISTRATION", True, c
 ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
-# ACCOUNT_ADAPTER = "apps.users.adapters.AccountAdapter"
+ACCOUNT_ADAPTER = "apps.users.adapters.AccountAdapter"
 ACCOUNT_FORMS = {"signup": "apps.users.forms.UserSignupForm"}
-ACCOUNT_EMAIL_VERIFICATION = "none"
-ACCOUNT_EMAIL_VERIFICATION_BY_CODE_ENABLED = False
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+ACCOUNT_EMAIL_VERIFICATION_BY_CODE_ENABLED = True
 ACCOUNT_USER_MODEL_EMAIL_FIELD = "email"
 ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = False
 ACCOUNT_LOGOUT_ON_GET = False
@@ -332,45 +339,154 @@ SOCIALACCOUNT_QUERY_EMAIL = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_ADAPTER = "apps.users.adapters.SocialAccountAdapter"
 SOCIALACCOUNT_FORMS = {"signup": "apps.users.forms.UserSocialSignupForm"}
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 
 # HEADLESS_ONLY = True
+FRONTEND_BASE_URL = config("FRONTEND_BASE_URL", default="http://localhost:4200")
 HEADLESS_FRONTEND_URLS = {
-    "account_confirm_email": "/accounts/confirm-email/{key}/",
-    "account_reset_password": "/account/password/reset",
-    "account_reset_password_from_key": "/account/password/reset/key/{key}",
-    "account_signup": "/account/signup",
-    "socialaccount_login_error": "/account/provider/callback",
+    "account_confirm_email": FRONTEND_BASE_URL + "/accounts/confirm-email/{key}/",
+    "account_reset_password": FRONTEND_BASE_URL + "/account/password/reset",
+    "account_reset_password_from_key": FRONTEND_BASE_URL + "/account/password/reset/key/{key}",
+    "account_signup": FRONTEND_BASE_URL + "/account/signup",
+    "socialaccount_login_error": FRONTEND_BASE_URL + "/account/provider/callback",
 }
 HEADLESS_CLIENTS = ["app", "browser"]
 HEADLESS_SERVE_SPECIFICATION = True
 HEADLESS_SPECIFICATION_TEMPLATE_NAME = None  # disable html docs
-HEADLESS_TOKEN_STRATEGY = "allauth.headless.tokens.strategies.jwt.JWTTokenStrategy"
+HEADLESS_TOKEN_STRATEGY = "allauth.headless.tokens.strategies.sessions.SessionTokenStrategy"
+
+
+def read_file(file_name: str) -> str:
+    private_key = config(file_name).replace("\\n", "\n")
+    if len(private_key) < 250 and Path(private_key).exists():
+        with open(config(file_name)) as key_file:
+            private_key = key_file.read()
+    return private_key
+
+
+def write_temp_file(content: str, suffix: str = "") -> str:
+    """Write content to a temp file and return its path. The file persists for the process lifetime."""
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=suffix, delete=False) as f:
+        f.write(content)
+        return f.name
+
+
 if ENABLE_ALLAUTH:
-    with open(config("ALLAUTH_JWT_PRIVATE_KEY")) as jwt_key:
-        HEADLESS_JWT_PRIVATE_KEY = jwt_key.read()
+
+    HEADLESS_JWT_PRIVATE_KEY = read_file("ALLAUTH_JWT_PRIVATE_KEY")
     # Create Private key from here https://docs.allauth.org/en/latest/headless/token-strategies/jwt-tokens.html
 
 MFA_SUPPORTED_TYPES = ["totp", "recovery_codes", "webauthn"]
 MFA_PASSKEY_LOGIN_ENABLED = True
-MFA_PASSKEY_SIGNUP_ENABLED = False
+MFA_PASSKEY_SIGNUP_ENABLED = True
 MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = DEBUG
+MFA_ADAPTER = "apps.users.adapters.MFAAdapter"
+MFA_RECOVERY_CODES_SHOW_ONCE = True
+
+# WebAuthn Configuration
+WEBAUTHN_RP_ID = config("WEBAUTHN_RP_ID", default="localhost")
 
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
+        "APP": {
+            "client_id": config("GOOGLE_CLIENT_ID", default=""),
+            "secret": config("GOOGLE_CLIENT_SECRET", default=""),
+            "verified_email": True,
+        },
+        "EMAIL_AUTHENTICATION": True,
         "SCOPE": ["profile", "email"],
         "AUTH_PARAMS": {"access_type": "online"},
         "OAUTH_PKCE_ENABLED": True,
     },
-    "github": {"SCOPE": ["user:email"], "VERIFIED_EMAIL": True},
+    "github": {
+        "APP": {
+            "client_id": config("GITHUB_CLIENT_ID", default=""),
+            "secret": config("GITHUB_CLIENT_SECRET", default=""),
+            "verified_email": True,
+        },
+        "EMAIL_AUTHENTICATION": True,
+        "SCOPE": ["user:email"],
+    },
 }
 
 # Django Oauth2 Toolkit: OAuth2 Provider Configuration
 OAUTH2_PROVIDER = {
-    "PKCE_REQUIRED": True,
-    "ACCESS_TOKEN_EXPIRE_SECONDS": 3600,
-    "REFRESH_TOKEN_EXPIRE_SECONDS": 86400 * 30,  # 30 days
-    "OIDC_ENABLED": False,
+    "ACCESS_TOKEN_EXPIRE_SECONDS": 86400,  # 24 hours
+    "OIDC_ENABLED": True,
 }
+if ENABLE_ALLAUTH:
+    OAUTH2_PROVIDER["OIDC_RSA_PRIVATE_KEY"] = HEADLESS_JWT_PRIVATE_KEY
+
+# ========================
+# SAML IDP (djangosaml2idp)
+# ========================
+if SAML_IDP_ENABLED:
+    from saml2.sigver import get_xmlsec_binary
+
+    MIDDLEWARE += ["apps.users.saml_processor.SamlIdpReloadMiddleware"]
+
+    SAML_IDP_KEY_FILE = write_temp_file(read_file("SAML_IDP_KEY_FILE"), suffix=".key")
+    SAML_IDP_CERT_FILE = write_temp_file(read_file("SAML_IDP_CERT_FILE"), suffix=".crt")
+    SAML_IDP_BASE_URL = config("SAML_IDP_BASE_URL", default="https://cms.itqan.dev")
+
+    SAML_IDP_CONFIG = {
+        "debug": DEBUG,
+        "xmlsec_binary": get_xmlsec_binary([config("XMLSEC_BINARY", default="/usr/bin/xmlsec1"), "/opt/local/bin"]),
+        "entityid": f"{SAML_IDP_BASE_URL}/idp/metadata/",
+        "service": {
+            "idp": {
+                "name": "Itqan CMS IDP",
+                "endpoints": {
+                    "single_sign_on_service": [
+                        (f"{SAML_IDP_BASE_URL}/idp/sso/post/", "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"),
+                        (
+                            f"{SAML_IDP_BASE_URL}/idp/sso/redirect/",
+                            "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
+                        ),
+                    ],
+                    "single_logout_service": [
+                        (f"{SAML_IDP_BASE_URL}/idp/slo/post/", "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"),
+                        (
+                            f"{SAML_IDP_BASE_URL}/idp/slo/redirect/",
+                            "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
+                        ),
+                    ],
+                },
+                "sign_response": True,
+                "sign_assertion": True,
+                "policy": {
+                    "default": {
+                        "name_form": "urn:oasis:names:tc:SAML:2.0:attrname-format:basic",
+                    },
+                },
+            },
+        },
+        "key_file": SAML_IDP_KEY_FILE,
+        "cert_file": SAML_IDP_CERT_FILE,
+        "metadata": {"local": []},
+        "attribute_map_dir": str(BASE_DIR / "saml" / "attributemaps"),
+    }
+
+    # Use email as the NameID (Mixpanel expects email)
+    SAML_IDP_DJANGO_USERNAME_FIELD = "email"
+
+    # RSA-SHA256 signing (required by Mixpanel)
+    SAML_AUTHN_SIGN_ALG = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"
+    SAML_AUTHN_DIGEST_ALG = "http://www.w3.org/2001/04/xmlenc#sha256"
+
+# Email Configuration
+EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
+EMAIL_HOST = config("EMAIL_HOST", default="")
+EMAIL_PORT = config("EMAIL_PORT", cast=int, default=587)
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", cast=bool, default=True)
+EMAIL_USE_SSL = config("EMAIL_USE_SSL", cast=bool, default=False)
+_EMAIL_SENDER_NAME = config("EMAIL_SENDER_NAME", default="Itqan")
+_EMAIL_SENDER_EMAIL = config("EMAIL_SENDER_EMAIL", default="noreply@itqan.dev")
+DEFAULT_FROM_EMAIL = f"{_EMAIL_SENDER_NAME} <{_EMAIL_SENDER_EMAIL}>" if _EMAIL_SENDER_NAME else _EMAIL_SENDER_EMAIL
 
 # Cache Configuration
 CACHES = {
@@ -382,6 +498,7 @@ CACHES = {
 
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
 SESSION_CACHE_ALIAS = "default"
+SESSION_COOKIE_HTTPONLY = False  # not very secure, if FE moved to browser mode, remove this
 
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
@@ -456,24 +573,22 @@ DATA_UPLOAD_MAX_NUMBER_FILES = 114
 
 LOGOUT_REDIRECT_URL = "/accounts/login"
 
-# ========================
 # Usage tracking (Mixpanel)
-# ========================
 MIXPANEL_ENABLED = config("MIXPANEL_ENABLED", default=False, cast=bool)
 MIXPANEL_PROJECT_TOKEN = config("MIXPANEL_PROJECT_TOKEN", default="")
 MIXPANEL_PROJECT_ID = config("MIXPANEL_PROJECT_ID", default="")
-MIXPANEL_SERVICE_USERNAME = config("MIXPANEL_SERVICE_USERNAME", default="")
-MIXPANEL_SERVICE_SECRET = config("MIXPANEL_SERVICE_SECRET", default="")
-MIXPANEL_API_BASE = config("MIXPANEL_API_BASE", default="https://eu.mixpanel.com")
 MIXPANEL_INGEST_HOST = config("MIXPANEL_INGEST_HOST", default="api-eu.mixpanel.com")
-MIXPANEL_PROJECT_TOKEN_2 = config("MIXPANEL_PROJECT_TOKEN_2", default="")
-MIXPANEL_PROJECT_TOKEN_3 = config("MIXPANEL_PROJECT_TOKEN_3", default="")
-MIXPANEL_PROJECT_TOKEN_4 = config("MIXPANEL_PROJECT_TOKEN_4", default="")
-MIXPANEL_MAIN_BOARD_URL = config("MIXPANEL_MAIN_BOARD_URL", default="")
-USAGE_TRACKING_CACHE_TTL = config("USAGE_TRACKING_CACHE_TTL", default=900, cast=int)
 
 if MIXPANEL_ENABLED:
-    INSTALLED_APPS.append("apps.usage_tracking")
+    LOCAL_APPS.append("apps.usage_tracking")
     MIDDLEWARE.append("apps.usage_tracking.middlewares.usage_tracking_middleware.UsageTrackingMiddleware")
-else:
-    MIDDLEWARE.append("oauth2_provider.middleware.OAuth2TokenMiddleware")
+
+
+# plain_permissions settings
+PERMISSIONS_SETTINGS = {
+    "PERMISSIONS": PermissionChoice.choices,
+    "MONKEYPATCH_USER": True,
+}
+
+NINJA_KEYS_API_KEY_MODEL = "users.APIKey"
+INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
