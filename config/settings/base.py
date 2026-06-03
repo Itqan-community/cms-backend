@@ -573,25 +573,14 @@ DATA_UPLOAD_MAX_NUMBER_FILES = 114
 
 LOGOUT_REDIRECT_URL = "/accounts/login"
 
-# ========================
 # Usage tracking (Mixpanel)
-# ========================
 MIXPANEL_ENABLED = config("MIXPANEL_ENABLED", default=False, cast=bool)
 MIXPANEL_PROJECT_TOKEN = config("MIXPANEL_PROJECT_TOKEN", default="")
 MIXPANEL_PROJECT_ID = config("MIXPANEL_PROJECT_ID", default="")
-MIXPANEL_SERVICE_USERNAME = config("MIXPANEL_SERVICE_USERNAME", default="")
-MIXPANEL_SERVICE_SECRET = config("MIXPANEL_SERVICE_SECRET", default="")
-MIXPANEL_API_BASE = config("MIXPANEL_API_BASE", default="https://eu.mixpanel.com")
 MIXPANEL_INGEST_HOST = config("MIXPANEL_INGEST_HOST", default="api-eu.mixpanel.com")
-MIXPANEL_PROJECT_TOKEN_2 = config("MIXPANEL_PROJECT_TOKEN_2", default="")
-MIXPANEL_PROJECT_TOKEN_3 = config("MIXPANEL_PROJECT_TOKEN_3", default="")
-MIXPANEL_PROJECT_TOKEN_4 = config("MIXPANEL_PROJECT_TOKEN_4", default="")
-MIXPANEL_MAIN_BOARD_URL = config("MIXPANEL_MAIN_BOARD_URL", default="")
-USAGE_TRACKING_CACHE_TTL = config("USAGE_TRACKING_CACHE_TTL", default=900, cast=int)
 
 if MIXPANEL_ENABLED:
     LOCAL_APPS.append("apps.usage_tracking")
-    MIDDLEWARE.append("apps.usage_tracking.middlewares.usage_tracking_middleware.UsageTrackingMiddleware")
 
 
 # plain_permissions settings
