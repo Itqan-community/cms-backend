@@ -14,7 +14,7 @@ from apps.content.models import (
     StatusChoice,
     UsageEvent,
 )
-from apps.core.tests import BaseTestCase
+from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
 

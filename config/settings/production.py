@@ -40,6 +40,7 @@ X_FRAME_OPTIONS = "DENY"
 
 CORS_ALLOWED_ORIGINS = [
     "https://cms.itqan.dev",
+    "https://docs.cms.itqan.dev",  # Docs site "Try it" API calls
     "https://saudi-recitation-center.netlify.app",
     # Local frontend development
     "http://localhost:4200",
@@ -87,6 +88,7 @@ CELERY_TASK_ALWAYS_EAGER = False
 CSRF_TRUSTED_ORIGINS = [
     "https://api.cms.itqan.dev",
     "https://cms.itqan.dev",
+    "https://docs.cms.itqan.dev",  # Docs site "Try it" API calls
     "https://saudi-recitation-center.netlify.app",
     "http://localhost:4200",
     "http://localhost:3000",

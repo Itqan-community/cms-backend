@@ -59,6 +59,7 @@ settings.DATABASES.update(
 CSRF_TRUSTED_ORIGINS = [
     "https://staging--saudi-recitation-center.netlify.app",
     "https://staging.cms.itqan.dev",  # Staging frontend
+    "https://staging.docs.cms.itqan.dev",  # Docs site "Try it" API calls
     "https://staging--itqan-cms.netlify.app",
     "https://cms.itqan.dev",
     "https://itqan-cms.netlify.app",

@@ -1,0 +1,18 @@
+{
+  "title": {
+    "message": "وثائق المطورين",
+    "description": "The title in the navbar"
+  },
+  "logo.alt": {
+    "message": "شعار إتقان",
+    "description": "The alt text of navbar logo"
+  },
+  "item.label.Getting Started": {
+    "message": "ابدأ الآن",
+    "description": "Navbar item with label Getting Started"
+  },
+  "item.label.API Reference": {
+    "message": "مرجع الواجهات البرمجية (API)",
+    "description": "Navbar item with label API Reference"
+  }
+}

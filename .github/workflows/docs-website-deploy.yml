@@ -1,0 +1,106 @@
+name: docs-website-deploy
+
+on:
+  push:
+    branches: [main, staging]
+    paths:
+      - 'docs-website/**'
+      - 'apps/**/api/public/**'
+      - 'apps/core/management/commands/export_public_openapi.py'
+      - '.github/workflows/docs-website-deploy.yml'
+  pull_request:
+    branches: [main, staging]
+    paths:
+      - 'docs-website/**'
+      - 'apps/**/api/public/**'
+      - 'apps/core/management/commands/export_public_openapi.py'
+  workflow_dispatch:
+
+concurrency:
+  group: docs-website-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve target env
+        id: target
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.base_ref }}"
+          else
+            BASE="${{ github.ref_name }}"
+          fi
+          if [ "$BASE" = "main" ]; then
+            echo "env=production" >> "$GITHUB_OUTPUT"
+            echo "project=docs-cms-itqan-dev" >> "$GITHUB_OUTPUT"
+          else
+            echo "env=staging" >> "$GITHUB_OUTPUT"
+            echo "project=staging-docs-cms-itqan-dev" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ---------- Backend deps for OpenAPI export ----------
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - run: uv sync
+
+      - name: Regenerate public OpenAPI spec
+        # The OpenAPI spec is the API CONTRACT — identical for every env — so we generate it
+        # under the shared `base` settings, NOT a deployment env (staging/production). Only the
+        # deploy step below is env-specific.
+        #
+        # base.py's eager secret reads are gated by feature flags. Both auth subsystems are
+        # irrelevant to a static schema dump, so we turn them off — same pattern already used
+        # for SAML, not a workaround:
+        #   - ENABLE_ALLAUTH=false   -> skips read_file("ALLAUTH_JWT_PRIVATE_KEY") (base.py:377).
+        #                               allauth apps stay in INSTALLED_APPS (ungated), so the
+        #                               emitted spec is byte-identical.
+        #   - SAML_IDP_ENABLED=false -> skips the SAML key/cert reads (base.py:429-430).
+        # base.py's DB settings are defaults and no DB connection is opened during export, so
+        # NO database creds or other secrets are required. No dummy/fake values anywhere.
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.base
+          ENABLE_ALLAUTH: "false"
+          SAML_IDP_ENABLED: "false"
+        run: uv run manage.py export_public_openapi --out docs-website/openapi/public.json
+
+      # ---------- Frontend build ----------
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: docs-website/.nvmrc
+          cache: npm
+          cache-dependency-path: docs-website/package-lock.json
+
+      - name: Install docs deps
+        working-directory: docs-website
+        run: npm ci
+
+      - name: Build docs
+        working-directory: docs-website
+        env:
+          DOCS_ENV: ${{ steps.target.outputs.env }}
+        run: npm run build
+
+      # ---------- Deploy to Cloudflare Pages ----------
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN_FOR_DOCS_WEBSITE }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID_FOR_DOCS_WEBSITE }}
+          workingDirectory: docs-website
+          wranglerVersion: '3.90.0'
+
+          command: >-
+            pages deploy build
+            --project-name=${{ steps.target.outputs.project }}
+            --branch=${{ github.head_ref || github.ref_name }}
+            --commit-hash=${{ github.sha }}

@@ -2,7 +2,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 
 from apps.content.models import Reciter
 from apps.core.permissions import PermissionChoice
-from apps.core.tests import BaseTestCase
+from apps.core.tests.base import BaseTestCase
 from apps.users.models import User
 
 

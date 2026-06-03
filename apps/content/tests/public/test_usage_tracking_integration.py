@@ -8,7 +8,7 @@ from model_bakery import baker
 from oauth2_provider.models import Application
 
 from apps.content.models import Asset, CategoryChoice, StatusChoice
-from apps.core.tests import BaseTestCase
+from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.usage_tracking.decorators.track_usage import _RECITER_NAME_CACHE_KEY, _resolve_reciter_name
 from apps.users.models import User

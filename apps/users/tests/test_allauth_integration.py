@@ -10,7 +10,7 @@ from django.test import RequestFactory
 from django.utils.crypto import get_random_string
 import pytest
 
-from apps.core.tests import BaseTestCase
+from apps.core.tests.base import BaseTestCase
 from apps.users.adapters import AccountAdapter, SocialAccountAdapter
 from apps.users.forms import UserSignupForm, UserSocialSignupForm
 from apps.users.models import User
