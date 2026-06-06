@@ -442,6 +442,7 @@ class UsageEvent(BaseModel):
         indexes = [
             models.Index(fields=["developer_user", "usage_kind"]),
             models.Index(fields=["created_at", "usage_kind"]),
+            models.Index(fields=["asset_id"]),
         ]
 
     def __str__(self):
