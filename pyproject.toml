@@ -118,7 +118,7 @@ ninja-keys = { git = "https://github.com/hassaanalansary/ninja-keys.git" }
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "--ds=config.settings.development --reuse-db --import-mode=importlib"
+addopts = "--ds=config.settings.development --reuse-db --import-mode=importlib --cov=apps --cov-report=term-missing"
 filterwarnings = [
      "ignore::DeprecationWarning",
 ]

@@ -26,9 +26,64 @@ Thank you for helping improve Quranic accessibility. This guide keeps contributi
 - See `README.md` -> Quick Start
 
 ## Testing
-- Use `pytest` (not `manage.py test`)
+
+### Running tests
+
+Use `pytest` (not `manage.py test`). From the project root with the dev virtualenv active:
+
+```bash
+# Run all tests with coverage (same as CI)
+uv run pytest
+
+# Run a single app's tests (faster feedback)
+uv run pytest apps/content/tests/
+
+# Skip coverage for a quick local run
+uv run pytest --no-cov
+```
+
+### Framework
+
+| Tool | Purpose |
+|---|---|
+| `pytest-django` | Django test runner integration |
+| `pytest-cov` | Coverage measurement (sources: `apps/`) |
+| `model-bakery` | Model factories for test data |
+| `moto` | AWS/S3 mock for R2 storage tests |
+| `freezegun` | Time-freezing for date-sensitive tests |
+| `responses` | HTTP request mocking |
+
+Configuration lives in `pyproject.toml` under `[tool.pytest.ini_options]` and `[tool.coverage.*]`.
+
+### Coverage
+
+Every `pytest` run prints a terminal coverage report (missing lines highlighted). In CI, a `coverage.xml` artifact is uploaded to the GitHub Actions run for each PR.
+
+Coverage is measured over `apps/` and excludes migrations and test files themselves.
+
+### Test layout
+
+Tests live alongside each Django app under `apps/<app>/tests/`, mirroring the module they cover:
+
+```
+apps/
+  content/
+    tests/
+      public/          ← tests for the Public API surface
+      portal/          ← tests for the Portal API surface
+      tenant/          ← tests for the Tenant API surface
+      test_*.py        ← model / service tests
+  users/tests/
+  publishers/tests/
+  ...
+```
+
+### Standards
+
 - Follow Arrange–Act–Assert (AAA)
 - Name tests: `test_<function_name>_where<criteria>_should<expected_results>`
+- Every new feature or bug fix requires a corresponding test
+- A failing test blocks the CI pipeline — PRs cannot merge with a red test suite
 
 ## API & Errors
 - APIs: Django Ninja; document responses

@@ -111,7 +111,14 @@ jobs:
         run: docker compose -f docker-compose.local.yml run --rm django uv run python manage.py migrate
 
       - name: Run Django Tests
-        run: docker compose -f docker-compose.local.yml run --rm django uv run pytest
+        run: docker compose -f docker-compose.local.yml run --rm django uv run pytest --cov-report=xml
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
 
       - name: Tear down the Stack
         run: docker compose -f docker-compose.local.yml down
