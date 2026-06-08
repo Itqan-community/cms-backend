@@ -1,7 +1,8 @@
+from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetVersion, CategoryChoice, StatusChoice
+from apps.content.models import Asset, AssetAccess, AssetAccessRequest, AssetVersion, CategoryChoice, StatusChoice
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
@@ -141,6 +142,52 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
         )
         self.assertEqual(403, response.status_code)
         self.assertEqual("permission_denied", response.json()["error_name"])
+
+    def test_create_version_with_subscribers_should_send_email(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
+        baker.make(AssetVersion, asset=self.translation, name="1.0.0")
+        subscriber = baker.make(User, email="translation-subscriber@example.com")
+        access_request = baker.make(
+            AssetAccessRequest, developer_user=subscriber, asset=self.translation, status="approved"
+        )
+        baker.make(
+            AssetAccess,
+            asset_access_request=access_request,
+            user=subscriber,
+            asset=self.translation,
+            effective_license="CC0",
+        )
+        file = SimpleUploadedFile("translation.pdf", b"content", content_type="application/pdf")
+
+        # Act
+        response = self.client.post(
+            f"/portal/translations/{self.translation.slug}/versions/",
+            data={"asset_id": self.translation.id, "name": "2.0.0", "summary": "New release", "file": file},
+        )
+
+        # Assert
+        self.assertEqual(201, response.status_code, response.content)
+        recipients = [email for m in mail.outbox for email in m.to]
+        self.assertIn("translation-subscriber@example.com", recipients)
+
+    def test_create_version_without_subscribers_should_not_send_email(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
+        baker.make(AssetVersion, asset=self.translation, name="1.0.0")  # prior version so this is an update
+        file = SimpleUploadedFile("translation.pdf", b"content", content_type="application/pdf")
+
+        # Act
+        response = self.client.post(
+            f"/portal/translations/{self.translation.slug}/versions/",
+            data={"asset_id": self.translation.id, "name": "2.0.0", "file": file},
+        )
+
+        # Assert
+        self.assertEqual(201, response.status_code, response.content)
+        self.assertEqual(len(mail.outbox), 0)
 
 
 class TranslationVersionUpdateTest(TranslationVersionBaseTest):
