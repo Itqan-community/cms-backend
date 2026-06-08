@@ -175,46 +175,12 @@ def send_resource_update_email(resource_version_id: int) -> None:
 
 
 @shared_task
-def send_asset_update_email(asset_version_id: int) -> None:
-    """
-    Task to send email notifications for a new AssetVersion.
-    """
-    logger.info(f"Task started [task=send_asset_update_email, asset_version_id={asset_version_id}]")
-    from apps.content.models import AssetAccess, AssetVersion
+def notify_asset_version_created(asset_version_id: int) -> None:
+    logger.info(f"Task started [task=notify_asset_version_created, asset_version_id={asset_version_id}]")
+    from apps.content.services.asset_version_notifier import AssetVersionNotifier
 
-    try:
-        asset_version = AssetVersion.objects.select_related("asset").get(pk=asset_version_id)
-    except AssetVersion.DoesNotExist:
-        logger.warning(f"AssetVersion not found, skipping email [asset_version_id={asset_version_id}]")
-        return
-
-    users = (
-        AssetAccess.objects.filter(asset=asset_version.asset)
-        .select_related("user")
-        .values_list("user__email", flat=True)
-        .distinct()
-    )
-
-    if not users:
-        logger.info(f"No subscribers to notify [task=send_asset_update_email, asset_version_id={asset_version_id}]")
-        return
-
-    subject = f"New Update for {asset_version.asset.name}"
-    context = {
-        "asset_name": asset_version.asset.name,
-        "version": asset_version.name,
-        "summary": asset_version.summary,
-    }
-
-    email_service.send_email(
-        subject=subject,
-        recipients=list(users),
-        template="emails/asset_update.html",
-        context=context,
-    )
-    logger.info(
-        f"Task completed [task=send_asset_update_email, asset_version_id={asset_version_id}, recipients={len(list(users))}]"
-    )
+    AssetVersionNotifier().notify_new_version(asset_version_id)
+    logger.info(f"Task completed [task=notify_asset_version_created, asset_version_id={asset_version_id}]")
 
 
 @shared_task(bind=True, max_retries=3)
