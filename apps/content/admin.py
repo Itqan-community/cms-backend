@@ -92,7 +92,7 @@ class AssetAdmin(admin.ModelAdmin):
         (
             "Technical Details",
             {
-                "fields": ("format", "encoding", "file_size", "version", "language"),
+                "fields": ("format", "encoding", "file_size", "language"),
             },
         ),
         (
