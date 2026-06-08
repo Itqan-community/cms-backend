@@ -6,8 +6,9 @@ from typing import TYPE_CHECKING, Any
 from django.db.models import ProtectedError, Q
 from django.utils.translation import gettext as _
 
-from apps.content.models import Asset as AssetModel, CategoryChoice, LicenseChoice
+from apps.content.models import Asset as AssetModel, AssetVersion, CategoryChoice, LicenseChoice
 from apps.content.repositories.tafsir import TafsirRepository
+from apps.content.tasks import notify_asset_version_created
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
 
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
 
-    from apps.content.models import Asset, AssetVersion
+    from apps.content.models import Asset
 
 
 class TafsirService:
@@ -200,6 +201,7 @@ class TafsirService:
             file=file,
         )
         logger.info(f"Tafsir version created [version_id={version.pk}, asset_id={asset.pk}, slug={tafsir_slug}]")
+        notify_asset_version_created.delay(version.pk)
         return version
 
     def update_tafsir_version(

@@ -8,6 +8,7 @@ from django.utils.translation import gettext as _
 
 from apps.content.models import Asset as AssetModel, AssetVersion, CategoryChoice, LicenseChoice, StatusChoice
 from apps.content.repositories.translation import TranslationRepository
+from apps.content.tasks import notify_asset_version_created
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
 
@@ -204,6 +205,7 @@ class TranslationService:
         logger.info(
             f"Translation version created [version_id={version.pk}, asset_id={asset.pk}, slug={translation_slug}]"
         )
+        notify_asset_version_created.delay(version.pk)
         return version
 
     def update_translation_version(
