@@ -1,9 +1,9 @@
 from django.core.validators import FileExtensionValidator
 from django.db import models, transaction
-from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
 from apps.core.models import BaseModel
+from apps.core.slugs import slugify_name
 from apps.core.uploads import upload_to_publisher_icons
 from apps.users.models import User
 
@@ -46,7 +46,7 @@ class Publisher(BaseModel):
         return f"Publisher(name={self.name})"
 
     def save(self, *args, **kwargs):
-        self.slug = slugify(self.name[:50], allow_unicode=True)
+        self.slug = slugify_name(self.name_en, self.name_ar)
         super().save(*args, **kwargs)
 
 

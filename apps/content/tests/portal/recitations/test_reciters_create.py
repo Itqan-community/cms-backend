@@ -36,11 +36,11 @@ class ReciterCreateTest(BaseTestCase):
         self.assertIsNotNone(body["id"])
         self.assertEqual("New Reciter", body["name"])
         self.assertEqual("EG", body["nationality"])
-        self.assertEqual("مقرئ-جديد", body["slug"])
+        self.assertEqual("new-reciter", body["slug"])
 
         reciter = Reciter.objects.get(id=body["id"])
         self.assertEqual("New Reciter", reciter.name)
-        self.assertEqual("مقرئ-جديد", reciter.slug)
+        self.assertEqual("new-reciter", reciter.slug)
         self.assertEqual("EG", reciter.nationality.code)
 
     def test_create_reciter_where_duplicate_name_should_return_409(self):

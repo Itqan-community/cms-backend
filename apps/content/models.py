@@ -5,12 +5,12 @@ from django.conf import settings
 from django.core.validators import FileExtensionValidator, MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
-from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 from django_countries.fields import CountryField
 
 from apps.core.mixins.storage import DeleteFilesOnDeleteMixin
 from apps.core.models import BaseModel
+from apps.core.slugs import slugify_name
 from apps.core.uploads import (
     upload_to_asset_files,
     upload_to_asset_preview_images,
@@ -198,9 +198,7 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         if self.riwayah_id and not self.qiraah_id:
             self.qiraah_id = self.riwayah.qiraah_id
         if not self.slug:
-            from django.utils.text import slugify
-
-            base_slug = slugify(self.name[:50], allow_unicode=True) or f"asset-{self.pk or 0}"
+            base_slug = slugify_name(self.name_en, self.name_ar) or f"asset-{self.pk or 0}"
             slug = base_slug
             counter = 1
             while self.__class__.objects.filter(slug=slug).exclude(pk=self.pk).exists():
@@ -518,7 +516,7 @@ class Reciter(BaseModel):
 
     def save(self, *args, **kwargs) -> None:
         if not self.slug:
-            self.slug = slugify(self.name[:50], allow_unicode=True)
+            self.slug = slugify_name(self.name_en, self.name_ar)
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
@@ -535,7 +533,7 @@ class Qiraah(BaseModel):
 
     def save(self, *args, **kwargs) -> None:
         if not self.slug:
-            self.slug = slugify(self.name[:50], allow_unicode=True)
+            self.slug = slugify_name(self.name_en, self.name_ar)
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
@@ -564,7 +562,7 @@ class Riwayah(BaseModel):
 
     def save(self, *args, **kwargs) -> None:
         if not self.slug:
-            self.slug = slugify(self.name[:50], allow_unicode=True)
+            self.slug = slugify_name(self.name_en, self.name_ar)
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
