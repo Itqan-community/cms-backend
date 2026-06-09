@@ -282,6 +282,9 @@ jobs:
             echo "🗂️ Collecting static files (one-off)..."
             $COMPOSE run --rm --no-deps web python manage.py collectstatic --noinput
 
+            echo "🌐 Compiling translations (one-off)..."
+            $COMPOSE run --rm --no-deps web python manage.py compilemessages --locale ar
+
             # Recreate the application services on the new image. Caddy keeps proxying;
             # the only interruption is the few seconds the new `web` takes to boot gunicorn.
             echo "🔄 Recreating application services (web, celery, flower) on new image..."

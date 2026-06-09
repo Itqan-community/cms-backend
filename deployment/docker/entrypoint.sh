@@ -13,24 +13,25 @@ if [ -n "${DB_HOST}" ]; then
     echo "Database is ready!"
 fi
 
-# Run migrations + collectstatic only when explicitly requested.
+# NOTE: migrate, collectstatic and compilemessages are intentionally NOT run here.
 #
-# In production these are run as a single one-off step by the deploy pipeline
-# (BEFORE the web/celery containers are recreated) so that:
-#   - migrations run exactly once, not once per container, and
-#   - they don't race when web + celery + beat all boot together during a
-#     rolling deploy.
-# Set RUN_MIGRATIONS=1 to run them here instead (e.g. local/standalone runs).
-if [ "${RUN_MIGRATIONS:-0}" = "1" ]; then
+# They are slow, and we don't want a new container to be considered "ready" until
+# they're done. So the deploy pipeline runs all three as blocking one-off steps
+# (`docker compose run --rm web ...`) BEFORE the web/celery containers are
+# recreated. The old container keeps serving while they run; the new container
+# then starts with only gunicorn, so it boots fast and is ready almost immediately.
+#
+# For standalone/manual runs of this image, set RUN_PREP=1 to run them here.
+if [ "${RUN_PREP:-0}" = "1" ]; then
     echo "Running database migrations..."
     python manage.py migrate --noinput
 
     echo "Collecting static files..."
     python manage.py collectstatic --noinput
-fi
 
-echo "Compiling translations..."
-python manage.py compilemessages --locale ar
+    echo "Compiling translations..."
+    python manage.py compilemessages --locale ar
+fi
 
 echo "Starting Gunicorn server..."
 exec gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 600 config.wsgi
