@@ -1,3 +1,5 @@
+from django.core.files.uploadedfile import SimpleUploadedFile
+
 from apps.content.models import Reciter
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
@@ -24,11 +26,7 @@ class ReciterUpdateTest(BaseTestCase):
         # Act
         response = self.client.patch(
             f"/portal/reciters/{self.reciter.slug}/",
-            data={
-                "name_en": "Updated Reciter",
-                "nationality": "SA",
-            },
-            content_type="application/json",
+            data={"name_en": "Updated Reciter", "nationality": "SA"},
         )
 
         # Assert
@@ -43,6 +41,48 @@ class ReciterUpdateTest(BaseTestCase):
         self.assertEqual("Updated Reciter", self.reciter.name)
         self.assertEqual("SA", self.reciter.nationality.code)
 
+    def test_update_reciter_where_image_provided_should_update_image(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_RECITER)
+        image = SimpleUploadedFile("test_image.jpg", b"file_content", content_type="image/jpeg")
+
+        # Act
+        response = self.client.patch(
+            f"/portal/reciters/{self.reciter.slug}/",
+            data={"name_en": "Updated Reciter", "image": image},
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.reciter.refresh_from_db()
+        self.assertEqual("Updated Reciter", self.reciter.name_en)
+        self.assertTrue(bool(self.reciter.image_url))
+        self.assertTrue(self.reciter.image_url.name.startswith("uploads/reciters/"))
+
+    def test_update_reciter_where_image_part_is_empty_should_return_200_and_keep_name(self):
+        # Reproduces the multipart PATCH the CMS frontend sends with an empty image part,
+        # which previously raised RawPostDataException because the JSON-body endpoint tried
+        # to read request.body after the multipart stream had already been consumed.
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_RECITER)
+        empty_image = SimpleUploadedFile("empty.png", b"", content_type="image/png")
+
+        # Act
+        response = self.client.patch(
+            f"/portal/reciters/{self.reciter.slug}/",
+            data={"name_en": "Updated Reciter", "image": empty_image},
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual("Updated Reciter", response.json()["name_en"])
+        self.reciter.refresh_from_db()
+        self.assertEqual("Updated Reciter", self.reciter.name_en)
+        # Empty upload must not set an image
+        self.assertFalse(bool(self.reciter.image_url))
+
     def test_update_reciter_where_empty_name_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
@@ -51,11 +91,7 @@ class ReciterUpdateTest(BaseTestCase):
         # Act
         response = self.client.patch(
             f"/portal/reciters/{self.reciter.slug}/",
-            data={
-                "name_ar": "   ",
-                "name_en": "   ",
-            },
-            content_type="application/json",
+            data={"name_ar": "   ", "name_en": "   "},
         )
 
         # Assert
@@ -70,7 +106,6 @@ class ReciterUpdateTest(BaseTestCase):
         response = self.client.patch(
             f"/portal/reciters/{self.reciter.slug}/",
             data={"name_en": "Updated Reciter"},
-            content_type="application/json",
         )
 
         # Assert
@@ -88,7 +123,6 @@ class ReciterUpdateTest(BaseTestCase):
         response = self.client.patch(
             f"/portal/reciters/{self.reciter.slug}/",
             data={"name_en": "Updated Reciter"},
-            content_type="application/json",
         )
 
         # Assert
