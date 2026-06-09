@@ -311,7 +311,7 @@ msgstr ""
 
 #, python-brace-format
 msgid "Publisher with id {id} not found"
-msgstr "لم يتم العثور على الناشر بالمعرّف {slug}."
+msgstr "لم يتم العثور على الناشر بالمعرّف {id}."
 
 msgid "Owner"
 msgstr "مالك"
@@ -428,14 +428,14 @@ msgstr "الحساب موجود بالفعل"
 
 #, python-format
 msgid "Hello from %(site_name)s!"
-msgstr "مرحباً بك"
+msgstr "مرحباً بك من %(site_name)s!"
 
 #, python-format
 msgid ""
 "Thank you for using %(site_name)s!\n"
 "%(site_domain)s"
 msgstr ""
-"شكراً لاستخدامك اتقان!\n"
+"شكراً لاستخدامك %(site_name)s!\n"
 "%(site_domain)s"
 
 msgid "You are receiving this mail because the following change was made to your account:"
