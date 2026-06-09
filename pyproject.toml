@@ -104,6 +104,7 @@ indent_size = 2
 [project.optional-dependencies]
 prod = [
     "gunicorn==21.2.*",
+    "uvicorn[standard]==0.34.*",
     "sentry-sdk[django]==2.53.0",
 ]
 

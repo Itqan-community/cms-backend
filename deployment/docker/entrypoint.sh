@@ -33,5 +33,9 @@ if [ "${RUN_PREP:-0}" = "1" ]; then
     python manage.py compilemessages --locale ar
 fi
 
-echo "Starting Gunicorn server..."
-exec gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 600 config.wsgi
+echo "Starting Gunicorn (ASGI, Uvicorn workers)..."
+exec gunicorn config.asgi:application \
+    --bind 0.0.0.0:8000 \
+    --workers 3 \
+    --worker-class uvicorn.workers.UvicornWorker \
+    --timeout 600
