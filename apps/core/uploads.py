@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 import uuid
 
-from django.utils.text import slugify
+from apps.core.slugs import slugify_text
 
 if TYPE_CHECKING:
     from apps.content.models import Asset, AssetPreview, AssetVersion, RecitationSurahTrack, Reciter
@@ -33,7 +33,7 @@ def upload_to_asset_preview_images(instance: "AssetPreview", filename: str) -> s
     Generate upload path for asset preview images
     Format: uploads/assets/{asset_id}/preview/{filename}
     """
-    safe_filename = slugify(filename.rsplit(".", 1)[0]) + "." + filename.split(".")[-1].lower()
+    safe_filename = slugify_text(filename.rsplit(".", 1)[0], max_length=255) + "." + filename.split(".")[-1].lower()
     return f"uploads/assets/{instance.asset_id}/preview/{safe_filename}"
 
 
@@ -43,7 +43,7 @@ def upload_to_asset_files(instance: "AssetVersion", filename: str) -> str:
     Format: uploads/assets/{asset_id}/versions/{asset_version_id}/{filename}
     """
     # Keep original filename for downloadable assets
-    safe_filename = slugify(filename.rsplit(".", 1)[0]) + "." + filename.split(".")[-1].lower()
+    safe_filename = slugify_text(filename.rsplit(".", 1)[0], max_length=255) + "." + filename.split(".")[-1].lower()
     version_id = instance.pk or f"tmp-{uuid.uuid4().hex[:8]}"
     return f"uploads/assets/{instance.asset_id}/versions/{version_id}/{safe_filename}"
 

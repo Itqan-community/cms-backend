@@ -1,9 +1,9 @@
 from django.db import IntegrityError
 from django.db.models import ProtectedError, Q
-from django.utils.text import slugify
 from django.utils.translation import gettext as _
 
 from apps.core.ninja_utils.errors import ItqanError
+from apps.core.slugs import slugify_name
 from apps.publishers.models import Publisher
 from apps.publishers.repositories.publisher import PublisherRepository
 
@@ -35,7 +35,7 @@ class PublisherService:
                 status_code=400,
             )
 
-        slug = slugify(name[:50], allow_unicode=True)
+        slug = slugify_name(name_en, name_ar)
 
         if self.repo.slug_exists(slug):
             raise ItqanError(
@@ -109,7 +109,10 @@ class PublisherService:
                     message="Publisher name (Arabic or English) is required",
                     status_code=400,
                 )
-            slug = slugify(str(new_name)[:50], allow_unicode=True)
+            slug = slugify_name(
+                name_en or getattr(publisher, "name_en", ""),
+                name_ar or getattr(publisher, "name_ar", ""),
+            )
             if self.repo.slug_exists(slug, exclude_id=publisher_id):
                 raise ItqanError(
                     error_name="publisher_already_exists",

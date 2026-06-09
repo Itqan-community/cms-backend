@@ -13,15 +13,29 @@ if [ -n "${DB_HOST}" ]; then
     echo "Database is ready!"
 fi
 
-# Run Django management commands
-echo "Running database migrations..."
-python manage.py migrate --noinput
+# NOTE: migrate, collectstatic and compilemessages are intentionally NOT run here.
+#
+# They are slow, and we don't want a new container to be considered "ready" until
+# they're done. So the deploy pipeline runs all three as blocking one-off steps
+# (`docker compose run --rm web ...`) BEFORE the web/celery containers are
+# recreated. The old container keeps serving while they run; the new container
+# then starts with only gunicorn, so it boots fast and is ready almost immediately.
+#
+# For standalone/manual runs of this image, set RUN_PREP=1 to run them here.
+if [ "${RUN_PREP:-0}" = "1" ]; then
+    echo "Running database migrations..."
+    python manage.py migrate --noinput
 
-echo "Collecting static files..."
-python manage.py collectstatic --noinput
+    echo "Collecting static files..."
+    python manage.py collectstatic --noinput
 
-echo "Compiling translations..."
-python manage.py compilemessages --locale ar
+    echo "Compiling translations..."
+    python manage.py compilemessages --locale ar
+fi
 
-echo "Starting Gunicorn server..."
-exec gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 600 config.wsgi
+echo "Starting Gunicorn (ASGI, Uvicorn workers)..."
+exec gunicorn config.asgi:application \
+    --bind 0.0.0.0:8000 \
+    --workers 3 \
+    --worker-class config.workers.DjangoUvicornWorker \
+    --timeout 600

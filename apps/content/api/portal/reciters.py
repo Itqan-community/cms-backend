@@ -210,12 +210,15 @@ def create_reciter(
 def patch_reciter(
     request: Request,
     reciter_slug: str,
-    data: ReciterPatchIn,
+    data: Form[ReciterPatchIn],
+    image: UploadedFile | None = File(None),
 ):
     logger.info(f"Updating reciter [reciter_slug={reciter_slug}, user_id={request.user.id}]")
     service = ReciterService()
 
     fields = data.model_dump(exclude_unset=True)
+    if image is not None and image.size:
+        fields["image_url"] = image
 
     reciter = service.update_reciter(reciter_slug, fields)
     logger.info(f"Reciter updated [reciter_id={reciter.id}, user_id={request.user.id}]")

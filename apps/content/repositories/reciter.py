@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from django.utils.text import slugify
-
 from apps.content.models import Reciter
+from apps.core.slugs import slugify_name
 
 
 class ReciterRepository:
@@ -13,12 +12,9 @@ class ReciterRepository:
 
     def _derive_slug(self, name_en: str | None, name_ar: str | None) -> str:
         """
-        Derive a deterministic slug preferring name_ar if available.
+        Derive a deterministic slug, preferring name_en and falling back to name_ar.
         """
-        name_to_slugify = name_ar or name_en
-        if name_to_slugify:
-            return slugify(name_to_slugify[:50], allow_unicode=True)
-        return ""
+        return slugify_name(name_en, name_ar)
 
     def create_reciter(self, **kwargs: Any) -> Reciter:
         """

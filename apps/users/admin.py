@@ -64,7 +64,7 @@ class UserAdmin(auth_admin.UserAdmin):
                 ),
             },
         ),
-        (_("Important dates"), {"fields": ("last_login",)}),
+        (_("Important dates"), {"fields": ("last_login", "created_at", "updated_at")}),
     )
     inlines = [PublisherMemberInline]
     list_display = ["email", "name", "is_superuser"]

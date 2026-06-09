@@ -8,6 +8,7 @@ from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.usage_tracking.decorators.track_usage import track_usage
 
 router = ItqanRouter(tags=[NinjaTag.RIWAYAHS])
 
@@ -23,6 +24,7 @@ class RiwayahOut(Schema):
 
 
 @router.get("riwayahs/", response=list[RiwayahOut])
+@track_usage(entity_type="riwayah")
 @paginate
 @ordering(ordering_fields=["name"])
 def list_riwayahs(request: Request):
