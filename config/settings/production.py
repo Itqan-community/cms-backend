@@ -97,6 +97,10 @@ CSRF_TRUSTED_ORIGINS = [
     "https://mixpanel.com",
 ]
 
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https"
+SESSION_COOKIE_DOMAIN = ".itqan.dev"
+CSRF_COOKIE_DOMAIN = ".itqan.dev"
+
 # ============================================================
 # Logging
 # ============================================================
