@@ -10,7 +10,11 @@ from oauth2_provider.models import Application
 from apps.content.models import Asset, CategoryChoice, StatusChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
-from apps.usage_tracking.decorators.track_usage import _RECITER_NAME_CACHE_KEY, _resolve_reciter_name
+from apps.usage_tracking.decorators.track_usage import (
+    _RECITER_NAME_CACHE_KEY,
+    _resolve_reciter_name,
+    _resolve_reciter_names,
+)
 from apps.users.models import User
 
 _TASK = "apps.usage_tracking.decorators.track_usage.track_api_request_task"
@@ -114,6 +118,26 @@ class UsageTrackingIntegrationTest(BaseTestCase):
         props = self._props(mock_task)
         self.assertEqual(self.reciter.id, props["filter_reciter_id"])
         self.assertEqual(self.reciter.name, props["filter_reciter_name"])
+        self.assertEqual([self.reciter.name], props["filter_reciter_names"])
+
+    @patch(_TASK)
+    def test_multiple_reciter_id_filters_record_all_names(self, mock_task):
+        other_reciter = baker.make("content.Reciter", name="Reciter W", is_active=True)
+        baker.make(
+            Asset,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher_a,
+            status=StatusChoice.READY,
+            reciter=other_reciter,
+            riwayah=self.riwayah,
+        )
+
+        response = self.client.get(f"/recitations/?reciter_id={self.reciter.id}&reciter_id={other_reciter.id}")
+        self.assertEqual(200, response.status_code, response.content)
+
+        props = self._props(mock_task)
+        self.assertEqual([self.reciter.name, other_reciter.name], props["filter_reciter_names"])
+        self.assertEqual(self.reciter.name, props["filter_reciter_name"])
 
 
 class ResolveReciterNameTest(BaseTestCase):
@@ -135,3 +159,24 @@ class ResolveReciterNameTest(BaseTestCase):
             self.assertIsNone(_resolve_reciter_name(999999))
         with self.assertNumQueries(0):
             self.assertIsNone(_resolve_reciter_name(999999))
+
+    def test_batch_resolves_in_order_with_single_query(self):
+        other = baker.make("content.Reciter", name="Reciter Q")
+        with self.assertNumQueries(1):
+            names = _resolve_reciter_names([self.reciter.id, other.id])
+        self.assertEqual(["Reciter Z", "Reciter Q"], names)
+        # Both are now cached -- a repeat resolve hits no query.
+        with self.assertNumQueries(0):
+            self.assertEqual(["Reciter Z", "Reciter Q"], _resolve_reciter_names([self.reciter.id, other.id]))
+
+    def test_batch_resolves_only_uncached_misses(self):
+        other = baker.make("content.Reciter", name="Reciter Q")
+        _resolve_reciter_names([self.reciter.id])  # warm the cache for one id
+        # Only the uncached id triggers a query; cached one is reused.
+        with self.assertNumQueries(1):
+            names = _resolve_reciter_names([self.reciter.id, other.id])
+        self.assertEqual(["Reciter Z", "Reciter Q"], names)
+
+    def test_batch_missing_reciter_resolves_to_none(self):
+        names = _resolve_reciter_names([self.reciter.id, 999999])
+        self.assertEqual(["Reciter Z", None], names)

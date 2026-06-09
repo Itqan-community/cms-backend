@@ -211,10 +211,14 @@ def _dispatch(
         **(getattr(request, _EXTRA_ATTR, {}) or {}),
     }
 
-    # The reciter_id filter is opaque; add a human-readable name (cached) for Mixpanel.
-    reciter_id = parsed_qs.get("filter_reciter_id")
-    if isinstance(reciter_id, int):
-        properties["filter_reciter_name"] = _resolve_reciter_name(reciter_id)
+    # The reciter_id filter is opaque; add human-readable names (cached) for Mixpanel.
+    # reciter_id is a repeatable list filter (?reciter_id=1&reciter_id=2), so resolve a
+    # name for every id passed. filter_reciter_name (first id) is kept for back-compat.
+    reciter_ids = _parsed_reciter_ids(query_string or "")
+    if reciter_ids:
+        names = _resolve_reciter_names(reciter_ids)
+        properties["filter_reciter_names"] = names
+        properties["filter_reciter_name"] = names[0]
 
     ip = _client_ip(request)
     if ip:
@@ -227,6 +231,25 @@ def _dispatch(
         properties=properties,
         meta={},
     )
+
+
+def _parsed_reciter_ids(query_string: str) -> list[int]:
+    """Return all integer ``reciter_id`` values from the query string, de-duplicated and
+    order-preserving. ``reciter_id`` is a repeatable list filter on the public API."""
+    if not query_string:
+        return []
+    raw = parse_qs(query_string, keep_blank_values=False).get("reciter_id", [])
+    ids: list[int] = []
+    seen: set[int] = set()
+    for value in raw:
+        try:
+            reciter_id = int(value)
+        except (TypeError, ValueError):
+            continue
+        if reciter_id not in seen:
+            seen.add(reciter_id)
+            ids.append(reciter_id)
+    return ids
 
 
 def _resolve_reciter_name(reciter_id: int) -> str | None:
@@ -246,6 +269,30 @@ def _resolve_reciter_name(reciter_id: int) -> str | None:
     name = row["name"] if row else ""
     cache.set(key, name, _RECITER_NAME_CACHE_TTL)
     return name or None
+
+
+def _resolve_reciter_names(reciter_ids: list[int]) -> list[str | None]:
+    """Resolve a list of reciter ids to names (same order), reading cache first and
+    fetching only the misses in a single query. A missing reciter resolves to ``None``."""
+    names: dict[int, str | None] = {}
+    misses: list[int] = []
+    for reciter_id in reciter_ids:
+        cached = cache.get(_RECITER_NAME_CACHE_KEY.format(id=reciter_id))
+        if cached is not None:
+            names[reciter_id] = cached or None
+        else:
+            misses.append(reciter_id)
+
+    if misses:
+        from apps.content.models import Reciter
+
+        fetched = dict(Reciter.objects.filter(pk__in=misses).values_list("pk", "name"))
+        for reciter_id in misses:
+            name = fetched.get(reciter_id, "")
+            cache.set(_RECITER_NAME_CACHE_KEY.format(id=reciter_id), name, _RECITER_NAME_CACHE_TTL)
+            names[reciter_id] = name or None
+
+    return [names[reciter_id] for reciter_id in reciter_ids]
 
 
 def _resolve_application(request) -> tuple[int | None, str | None]:

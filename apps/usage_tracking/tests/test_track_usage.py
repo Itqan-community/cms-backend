@@ -142,7 +142,7 @@ class TestTrackUsageDecorator:
         assert props["filter_riwayah_id"] == 2
         assert props["ordering"] == "name"
 
-    @patch("apps.usage_tracking.decorators.track_usage._resolve_reciter_name", return_value="Mishary")
+    @patch("apps.usage_tracking.decorators.track_usage._resolve_reciter_names", return_value=["Mishary"])
     @patch("apps.usage_tracking.decorators.track_usage.track_api_request_task")
     def test_reciter_filter_adds_human_readable_name(self, mock_task, mock_resolve):
         @track_usage()
@@ -154,9 +154,28 @@ class TestTrackUsageDecorator:
         props = mock_task.delay.call_args.kwargs["properties"]
         assert props["filter_reciter_id"] == 6
         assert props["filter_reciter_name"] == "Mishary"
-        mock_resolve.assert_called_once_with(6)
+        assert props["filter_reciter_names"] == ["Mishary"]
+        mock_resolve.assert_called_once_with([6])
 
-    @patch("apps.usage_tracking.decorators.track_usage._resolve_reciter_name")
+    @patch(
+        "apps.usage_tracking.decorators.track_usage._resolve_reciter_names",
+        return_value=["Mishary", "Saad"],
+    )
+    @patch("apps.usage_tracking.decorators.track_usage.track_api_request_task")
+    def test_multiple_reciter_filters_resolve_all_names(self, mock_task, mock_resolve):
+        @track_usage()
+        def view(request):
+            return {"results": [], "count": 0}
+
+        view(self.factory.get("/recitations/?reciter_id=6&reciter_id=9"))
+
+        props = mock_task.delay.call_args.kwargs["properties"]
+        assert props["filter_reciter_names"] == ["Mishary", "Saad"]
+        # filter_reciter_name keeps the first id for back-compat.
+        assert props["filter_reciter_name"] == "Mishary"
+        mock_resolve.assert_called_once_with([6, 9])
+
+    @patch("apps.usage_tracking.decorators.track_usage._resolve_reciter_names")
     @patch("apps.usage_tracking.decorators.track_usage.track_api_request_task")
     def test_no_reciter_filter_skips_name_resolution(self, mock_task, mock_resolve):
         @track_usage()
@@ -167,6 +186,7 @@ class TestTrackUsageDecorator:
 
         props = mock_task.delay.call_args.kwargs["properties"]
         assert "filter_reciter_name" not in props
+        assert "filter_reciter_names" not in props
         mock_resolve.assert_not_called()
 
 
