@@ -139,6 +139,26 @@ class UsageTrackingIntegrationTest(BaseTestCase):
         self.assertEqual([self.reciter.name, other_reciter.name], props["filter_reciter_names"])
         self.assertEqual(self.reciter.name, props["filter_reciter_name"])
 
+    @patch(_TASK)
+    def test_recitations_list_where_qiraah_riwayah_reciter_filters_should_be_sent_to_mixpanel(self, mock_task):
+        # Arrange
+        qiraah = baker.make("content.Qiraah", name="Qiraah Q", is_active=True)
+
+        # Act
+        response = self.client.get(
+            f"/recitations/?qiraah_id={qiraah.id}&riwayah_id={self.riwayah.id}&reciter_id={self.reciter.id}"
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        props = self._props(mock_task)
+        self.assertEqual(qiraah.id, props["filter_qiraah_id"])
+        self.assertEqual(self.riwayah.id, props["filter_riwayah_id"])
+        self.assertEqual(self.reciter.id, props["filter_reciter_id"])
+        # reciter_id additionally resolves a human-readable name for Mixpanel.
+        self.assertEqual(self.reciter.name, props["filter_reciter_name"])
+        self.assertEqual([self.reciter.name], props["filter_reciter_names"])
+
 
 class ResolveReciterNameTest(BaseTestCase):
     def setUp(self):
@@ -180,3 +200,23 @@ class ResolveReciterNameTest(BaseTestCase):
     def test_batch_missing_reciter_resolves_to_none(self):
         names = _resolve_reciter_names([self.reciter.id, 999999])
         self.assertEqual(["Reciter Z", None], names)
+
+    def test_resolve_where_arabic_name_exists_should_prefer_arabic(self):
+        # Arrange
+        reciter = baker.make("content.Reciter", name_en="Mishary", name_ar="مشاري")
+
+        # Act
+        names = _resolve_reciter_names([reciter.id])
+
+        # Assert
+        self.assertEqual(["مشاري"], names)
+
+    def test_resolve_where_arabic_name_missing_should_fall_back_to_english(self):
+        # Arrange
+        reciter = baker.make("content.Reciter", name_en="Mishary", name_ar="")
+
+        # Act
+        names = _resolve_reciter_names([reciter.id])
+
+        # Assert
+        self.assertEqual(["Mishary"], names)

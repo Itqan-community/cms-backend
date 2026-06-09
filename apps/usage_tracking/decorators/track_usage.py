@@ -265,8 +265,8 @@ def _resolve_reciter_name(reciter_id: int) -> str | None:
 
     from apps.content.models import Reciter
 
-    row = Reciter.objects.filter(pk=reciter_id).values("name").first()
-    name = row["name"] if row else ""
+    row = Reciter.objects.filter(pk=reciter_id).values("name_ar", "name_en").first()
+    name = _prefer_arabic_name(row) if row else ""
     cache.set(key, name, _RECITER_NAME_CACHE_TTL)
     return name or None
 
@@ -286,13 +286,26 @@ def _resolve_reciter_names(reciter_ids: list[int]) -> list[str | None]:
     if misses:
         from apps.content.models import Reciter
 
-        fetched = dict(Reciter.objects.filter(pk__in=misses).values_list("pk", "name"))
+        fetched = {
+            row["pk"]: _prefer_arabic_name(row)
+            for row in Reciter.objects.filter(pk__in=misses).values("pk", "name_ar", "name_en")
+        }
         for reciter_id in misses:
             name = fetched.get(reciter_id, "")
             cache.set(_RECITER_NAME_CACHE_KEY.format(id=reciter_id), name, _RECITER_NAME_CACHE_TTL)
             names[reciter_id] = name or None
 
     return [names[reciter_id] for reciter_id in reciter_ids]
+
+
+def _prefer_arabic_name(row: dict) -> str:
+    """Pick a reciter's display name, prioritizing Arabic and falling back to English.
+
+    Reciter ``name`` is a django-modeltranslation field, so the active-language value is
+    non-deterministic on the Celery worker. We read the explicit ``name_ar``/``name_en``
+    columns and prefer Arabic, since these names feed Mixpanel for an Arabic-first audience.
+    """
+    return (row.get("name_ar") or "") or (row.get("name_en") or "")
 
 
 def _resolve_application(request) -> tuple[int | None, str | None]:
