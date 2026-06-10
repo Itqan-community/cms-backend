@@ -39,3 +39,48 @@ class PermissionChoice(TextChoices):
     PORTAL_CREATE_PUBLISHER = "portal_create_publisher", _("Portal - Create Publishers")
     PORTAL_UPDATE_PUBLISHER = "portal_update_publisher", _("Portal - Update Publishers")
     PORTAL_DELETE_PUBLISHER = "portal_delete_publisher", _("Portal - Delete Publishers")
+
+    # Groups (role management)
+    PORTAL_READ_GROUP = "portal_read_group", _("Portal - View Groups")
+    PORTAL_CREATE_GROUP = "portal_create_group", _("Portal - Create Groups")
+    PORTAL_UPDATE_GROUP = "portal_update_group", _("Portal - Update Groups")
+    PORTAL_DELETE_GROUP = "portal_delete_group", _("Portal - Delete Groups")
+
+
+# Permission hierarchy: maps each permission to the set of permissions it directly implies.
+#
+# Within a resource group, CREATE, UPDATE and DELETE each independently imply READ: you must
+# be able to read a resource to act on it at all, but the write actions do not depend on each
+# other (a user may UPDATE without being able to CREATE, or DELETE without being able to
+# UPDATE). The shape is a star pointing at READ, not a seniority chain.
+#
+# Only direct implications are listed here; the transitive closure (e.g. UPLOAD_TIMING -> READ)
+# is computed by the service layer, so this map stays easy to read and edit.
+PERMISSION_IMPLICATIONS: dict[PermissionChoice, frozenset[PermissionChoice]] = {
+    # Reciters
+    PermissionChoice.PORTAL_CREATE_RECITER: frozenset({PermissionChoice.PORTAL_READ_RECITER}),
+    PermissionChoice.PORTAL_UPDATE_RECITER: frozenset({PermissionChoice.PORTAL_READ_RECITER}),
+    PermissionChoice.PORTAL_DELETE_RECITER: frozenset({PermissionChoice.PORTAL_READ_RECITER}),
+    # Recitations
+    PermissionChoice.PORTAL_CREATE_RECITATION: frozenset({PermissionChoice.PORTAL_READ_RECITATION}),
+    PermissionChoice.PORTAL_UPDATE_RECITATION: frozenset({PermissionChoice.PORTAL_READ_RECITATION}),
+    PermissionChoice.PORTAL_DELETE_RECITATION: frozenset({PermissionChoice.PORTAL_READ_RECITATION}),
+    # Uploading timings mutates an existing recitation, so it requires being able to update it.
+    PermissionChoice.PORTAL_UPLOAD_TIMING: frozenset({PermissionChoice.PORTAL_UPDATE_RECITATION}),
+    # Tafsirs
+    PermissionChoice.PORTAL_CREATE_TAFSIR: frozenset({PermissionChoice.PORTAL_READ_TAFSIR}),
+    PermissionChoice.PORTAL_UPDATE_TAFSIR: frozenset({PermissionChoice.PORTAL_READ_TAFSIR}),
+    PermissionChoice.PORTAL_DELETE_TAFSIR: frozenset({PermissionChoice.PORTAL_READ_TAFSIR}),
+    # Translations
+    PermissionChoice.PORTAL_CREATE_TRANSLATION: frozenset({PermissionChoice.PORTAL_READ_TRANSLATION}),
+    PermissionChoice.PORTAL_UPDATE_TRANSLATION: frozenset({PermissionChoice.PORTAL_READ_TRANSLATION}),
+    PermissionChoice.PORTAL_DELETE_TRANSLATION: frozenset({PermissionChoice.PORTAL_READ_TRANSLATION}),
+    # Publishers
+    PermissionChoice.PORTAL_CREATE_PUBLISHER: frozenset({PermissionChoice.PORTAL_READ_PUBLISHER}),
+    PermissionChoice.PORTAL_UPDATE_PUBLISHER: frozenset({PermissionChoice.PORTAL_READ_PUBLISHER}),
+    PermissionChoice.PORTAL_DELETE_PUBLISHER: frozenset({PermissionChoice.PORTAL_READ_PUBLISHER}),
+    # Groups
+    PermissionChoice.PORTAL_CREATE_GROUP: frozenset({PermissionChoice.PORTAL_READ_GROUP}),
+    PermissionChoice.PORTAL_UPDATE_GROUP: frozenset({PermissionChoice.PORTAL_READ_GROUP}),
+    PermissionChoice.PORTAL_DELETE_GROUP: frozenset({PermissionChoice.PORTAL_READ_GROUP}),
+}
