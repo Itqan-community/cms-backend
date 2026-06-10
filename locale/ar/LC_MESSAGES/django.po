@@ -309,6 +309,18 @@ msgstr ""
 msgid "Portal - Delete Publishers"
 msgstr ""
 
+msgid "Portal - View Groups"
+msgstr "البوابة - عرض المجموعات"
+
+msgid "Portal - Create Groups"
+msgstr "البوابة - إنشاء المجموعات"
+
+msgid "Portal - Update Groups"
+msgstr "البوابة - تعديل المجموعات"
+
+msgid "Portal - Delete Groups"
+msgstr "البوابة - حذف المجموعات"
+
 #, python-brace-format
 msgid "Publisher with id {id} not found"
 msgstr "لم يتم العثور على الناشر بالمعرّف {id}."
@@ -339,6 +351,10 @@ msgstr "تواريخ مهمة"
 
 msgid "Successfully logged out"
 msgstr "تم تسجيل الخروج بنجاح"
+
+#, python-brace-format
+msgid "Group with id {id} not found."
+msgstr "لم يتم العثور على المجموعة بالمعرّف {id}."
 
 msgid "Name of User"
 msgstr "اسم المستخدم"
@@ -388,6 +404,20 @@ msgstr "اسم مفتاح API لا يمكن أن يكون فارغاً."
 #, python-format
 msgid "API key name must not exceed %(max)d characters."
 msgstr "اسم مفتاح API يجب ألا يتجاوز %(max)d حرفاً."
+
+msgid "A group with this name already exists."
+msgstr "توجد مجموعة بهذا الاسم بالفعل."
+
+msgid "Group name must not be empty."
+msgstr "اسم المجموعة لا يمكن أن يكون فارغاً."
+
+#, python-format
+msgid "Group name must not exceed %(max)d characters."
+msgstr "اسم المجموعة يجب ألا يتجاوز %(max)d حرفاً."
+
+#, python-brace-format
+msgid "Unknown permissions: {permissions}."
+msgstr "صلاحيات غير معروفة: {permissions}."
 
 msgid "Application not found."
 msgstr "التطبيق غير موجود."
