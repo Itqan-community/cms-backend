@@ -9,6 +9,7 @@ from apps.content.models import Asset
 from apps.content.services.admin.asset_recitation_audio_tracks_direct_upload_service import (
     AssetRecitationAudioTracksDirectUploadService,
 )
+from apps.content.services.admin.asset_recitation_json_file_sync_service import sync_asset_recitations_json_file
 from apps.content.services.validate_recitation_tracks_upload_service import ValidateRecitationTracksUploadService
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.permission_required import permission_required
@@ -206,6 +207,8 @@ def finish_upload(request: Request, data: UploadFinishIn):
         duration_ms=data.duration_ms,
         size_bytes=data.size_bytes,
     )
+
+    sync_asset_recitations_json_file(asset.id)
 
     return UploadFinishOut(
         track_id=result["trackId"],
