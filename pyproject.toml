@@ -65,7 +65,7 @@ dev = [
     "pytest-sugar==1.1.1",
     "pytest==8.4.2",
     "responses>=0.25.8",
-    "ruff==0.14.*",
+    "ruff>=0.14,<0.16",
 ]
 
 # ==== Mypy ====
