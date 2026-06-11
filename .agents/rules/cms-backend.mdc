@@ -133,6 +133,24 @@ raise ItqanError(
 - Use `pytest` to run test NOT `python manage.py test`
 - If you are testing an API endpoint, do not just test the status code for 4xx responses, you have to asset the `error_name` as well
 - When you try to run the runserver, migrations, or tests, try to use virtual env at .venv first.
+- When patching, do not use hardcoded dotted-path strings. Import the real symbol and use `patch.object` with `<symbol>.__name__` so renames propagate automatically and refactoring stays safe. Patch the name on the module where it is *imported/called* (the call site), not on its defining module. Example:
+```python
+from apps.content.api.portal import recitation_tracks_upload
+from apps.content.api.portal.recitation_tracks_upload import (
+    AssetRecitationAudioTracksDirectUploadService,
+    sync_asset_recitations_json_file,
+)
+
+with patch.object(
+    AssetRecitationAudioTracksDirectUploadService,
+    AssetRecitationAudioTracksDirectUploadService.finish_upload.__name__,
+    return_value=...,
+), patch.object(
+    recitation_tracks_upload,
+    sync_asset_recitations_json_file.__name__,
+) as sync_json:
+    ...
+```
 
 ## API Architecture
 This project exposes **four distinct APIs**, each serving a different audience. All are built with Django Ninja and share the same error handling structure (`ItqanError` / `NinjaErrorResponse`).
