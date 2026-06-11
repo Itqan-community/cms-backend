@@ -2,6 +2,11 @@ from unittest.mock import patch
 
 from model_bakery import baker
 
+from apps.content.api.portal import recitation_tracks_upload
+from apps.content.api.portal.recitation_tracks_upload import (
+    AssetRecitationAudioTracksDirectUploadService,
+    sync_asset_recitations_json_file,
+)
 from apps.content.models import Asset, CategoryChoice, Qiraah, RecitationSurahTrack, Reciter, Riwayah, StatusChoice
 from apps.core.ninja_utils.errors import ItqanError
 from apps.core.permissions import PermissionChoice
@@ -354,6 +359,48 @@ class RecitationTracksUploadAPITest(BaseTestCase):
             duration_ms=2000,
             size_bytes=777,
         )
+
+    def test_finish_upload_where_upload_succeeds_should_sync_recitations_json_file(self):
+        # Arrange
+        self.authenticate_user(self.staff_user)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPDATE_RECITATION)
+
+        with (
+            patch.object(
+                AssetRecitationAudioTracksDirectUploadService,
+                AssetRecitationAudioTracksDirectUploadService.finish_upload.__name__,
+                return_value={
+                    "trackId": 55,
+                    "assetId": self.recitation_asset.id,
+                    "surahNumber": 2,
+                    "sizeBytes": 777,
+                    "finishedAt": "2026-04-08T12:00:00+03:00",
+                    "key": "uploads/assets/1/recitations/002.mp3",
+                },
+            ),
+            patch.object(
+                recitation_tracks_upload,
+                sync_asset_recitations_json_file.__name__,
+            ) as sync_json,
+        ):
+            # Act
+            response = self.client.post(
+                "/portal/recitation-tracks/uploads/finish/",
+                {
+                    "asset_id": self.recitation_asset.id,
+                    "filename": "002.mp3",
+                    "key": "uploads/assets/1/recitations/002.mp3",
+                    "upload_id": "upload-123",
+                    "parts": [{"ETag": '"etag-1"', "PartNumber": 1}],
+                    "duration_ms": 2000,
+                    "size_bytes": 777,
+                },
+                format="json",
+            )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        sync_json.assert_called_once_with(self.recitation_asset.id)
 
     def test_abort_upload_should_return_aborted_payload(self):
         # Arrange
