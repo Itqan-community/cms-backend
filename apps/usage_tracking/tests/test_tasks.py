@@ -5,7 +5,7 @@ from apps.usage_tracking.tasks import track_api_request_task
 
 class TestTrackApiRequestTask:
     @patch("apps.usage_tracking.tasks._build_ingest_client")
-    def test_task_fans_out_to_all_clients(self, mock_build):
+    def test_task_sends_to_client(self, mock_build):
         client = MagicMock()
         mock_build.return_value = client
 
@@ -29,48 +29,34 @@ class TestTrackApiRequestTask:
         client.track.assert_not_called()
 
     @patch("apps.usage_tracking.tasks._build_ingest_client")
-    def test_task_fans_out_to_single_client_when_only_one_token(self, mock_build):
+    def test_task_passes_accessed_entity_name_from_properties_without_db(self, mock_build):
+        """Regression: entity name must come from properties, never from a DB query."""
         client = MagicMock()
         mock_build.return_value = client
 
         track_api_request_task.run(
-            distinct_id="user-1",
+            distinct_id="app-7",
             event="public_api_request",
-            properties={},
+            properties={
+                "accessed_entity_id": 99,
+                "accessed_entity_name": "Ibn Kathir",
+                "entity_type": "recitation",
+            },
         )
 
-        client.track.assert_called_once()
-
-    @patch("apps.usage_tracking.tasks._build_ingest_client")
-    def test_task_resolves_accessed_entity_name(self, mock_build):
-        client = MagicMock()
-        mock_build.return_value = client
-
-        with patch("apps.content.models.Asset.objects") as mock_qs:
-            mock_qs.filter.return_value.values.return_value.first.return_value = {"name": "Hafs An Asim"}
-
-            track_api_request_task.run(
-                distinct_id="user-1",
-                event="public_api_request",
-                properties={"accessed_entity_id": 99, "entity_type": "recitation"},
-            )
-
         sent_props = client.track.call_args[0][2]
-        assert sent_props["accessed_entity_name"] == "Hafs An Asim"
+        assert sent_props["accessed_entity_name"] == "Ibn Kathir"
 
     @patch("apps.usage_tracking.tasks._build_ingest_client")
-    def test_task_accessed_entity_name_none_when_not_found(self, mock_build):
+    def test_task_does_not_touch_db_for_entity_name(self, mock_build):
+        """Celery task must make zero DB queries - connection exhaustion fix."""
         client = MagicMock()
         mock_build.return_value = client
 
-        with patch("apps.content.models.Asset.objects") as mock_qs:
-            mock_qs.filter.return_value.values.return_value.first.return_value = None
-
+        with patch("apps.content.models.Asset") as mock_asset:
             track_api_request_task.run(
-                distinct_id="user-1",
+                distinct_id="app-7",
                 event="public_api_request",
                 properties={"accessed_entity_id": 99},
             )
-
-        sent_props = client.track.call_args[0][2]
-        assert sent_props["accessed_entity_name"] is None
+            mock_asset.objects.filter.assert_not_called()
