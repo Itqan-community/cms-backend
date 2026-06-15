@@ -58,7 +58,7 @@ def list_recitation_tracks(request: Request, asset_id: int):
     track_extra(
         request,
         entity_type="recitation",
-        accessed_entity_id=asset.id,
+        accessed_entity_name=asset.name,
         entity_ids=[asset.id],
         entity_names=[asset.name],
         publisher_ids=[asset.publisher_id] if asset.publisher_id else [],

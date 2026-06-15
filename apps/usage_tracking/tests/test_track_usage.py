@@ -73,7 +73,7 @@ class TestTrackUsageDecorator:
                 request,
                 entity_ids=[99],
                 entity_names=["Asset 99"],
-                accessed_entity_id=99,
+                accessed_entity_name="Asset 99",
                 publisher_ids=[7],
                 publisher_names=["Owner"],
             )
@@ -84,7 +84,7 @@ class TestTrackUsageDecorator:
         props = mock_task.delay.call_args.kwargs["properties"]
         assert props["entity_ids"] == [99]
         assert props["entity_names"] == ["Asset 99"]
-        assert props["accessed_entity_id"] == 99
+        assert props["accessed_entity_name"] == "Asset 99"
         assert props["publisher_ids"] == [7]
 
     @patch("apps.usage_tracking.decorators.track_usage.track_api_request_task")
