@@ -146,7 +146,9 @@ class MemberDetailTest(BaseTestCase):
         self.authenticate_user(self.admin)
         self.give_permission(self.admin, PermissionChoice.PORTAL_INVITE_PUBLISHER_MEMBERS)
         with (
-            patch("apps.publishers.services.publisher_member_invitation_service.send_publisher_member_invitation_email.delay") as mock_delay,
+            patch(
+                "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_invitation_email.delay"
+            ) as mock_delay,
             self.captureOnCommitCallbacks(execute=True),
         ):
             resp = self.client.post(f"/portal/members/{pending.id}/resend-invite/")

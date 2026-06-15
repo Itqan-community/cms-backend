@@ -26,7 +26,9 @@ class CreateMemberTest(BaseTestCase):
     def _post(self, **body):
         body.setdefault("publisher_id", self.publisher.id)
         with (
-            patch("apps.publishers.services.publisher_member_invitation_service.send_publisher_member_invitation_email.delay") as mock_delay,
+            patch(
+                "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_invitation_email.delay"
+            ) as mock_delay,
             self.captureOnCommitCallbacks(execute=True),
         ):
             resp = self.client.post(self.url, data=body, content_type="application/json")

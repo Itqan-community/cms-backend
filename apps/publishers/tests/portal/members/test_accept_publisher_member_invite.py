@@ -17,7 +17,9 @@ class AcceptInviteTest(BaseTestCase):
 
     def _invite(self, email="acceptme@example.com"):
         with (
-            patch("apps.publishers.services.publisher_member_invitation_service.send_publisher_member_invitation_email.delay"),
+            patch(
+                "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_invitation_email.delay"
+            ),
             self.captureOnCommitCallbacks(execute=True),
         ):
             member, inv, raw = PublisherMemberInvitationService().create_invitation(
@@ -31,7 +33,9 @@ class AcceptInviteTest(BaseTestCase):
     def test_accept_activates_member_no_auth_required(self):
         member, inv, raw = self._invite()
         with (
-            patch("apps.publishers.services.publisher_member_invitation_service.send_publisher_member_activated_email.delay"),
+            patch(
+                "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_activated_email.delay"
+            ),
             self.captureOnCommitCallbacks(execute=True),
         ):
             resp = self.client.post(f"/portal/invitations/{raw}/accept/")

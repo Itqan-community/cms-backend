@@ -23,7 +23,9 @@ class InvitationServiceTest(BaseTestCase):
     def _create(self, email="new@example.com", role=PublisherMember.RoleChoice.STAFF, publisher=None):
         publisher = publisher or self.publisher
         with (
-            patch("apps.publishers.services.publisher_member_invitation_service.send_publisher_member_invitation_email.delay") as mock_delay,
+            patch(
+                "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_invitation_email.delay"
+            ) as mock_delay,
             self.captureOnCommitCallbacks(execute=True),
         ):
             member, inv, raw = self.service.create_invitation(
@@ -91,7 +93,9 @@ class InvitationServiceTest(BaseTestCase):
     def test_accept_admin_activates_sets_password_and_grants_perms(self):
         member, inv, raw, _ = self._create(email="newbie@example.com", role=PublisherMember.RoleChoice.ADMIN)
         with (
-            patch("apps.publishers.services.publisher_member_invitation_service.send_publisher_member_activated_email.delay") as mock_ack,
+            patch(
+                "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_activated_email.delay"
+            ) as mock_ack,
             self.captureOnCommitCallbacks(execute=True),
         ):
             accepted = self.service.accept_invitation(raw)
@@ -108,7 +112,9 @@ class InvitationServiceTest(BaseTestCase):
         member, inv, raw, _ = self._create(email="grunt@example.com", role=PublisherMember.RoleChoice.STAFF)
         with (
             self.captureOnCommitCallbacks(execute=True),
-            patch("apps.publishers.services.publisher_member_invitation_service.send_publisher_member_activated_email.delay"),
+            patch(
+                "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_activated_email.delay"
+            ),
         ):
             accepted = self.service.accept_invitation(raw)
         accepted.member.refresh_from_db()

@@ -25,7 +25,9 @@ class AcceptanceCriteriaTest(BaseTestCase):
 
     def _invite_via_service(self, publisher, email, role="staff"):
         with (
-            patch("apps.publishers.services.publisher_member_invitation_service.send_publisher_member_invitation_email.delay"),
+            patch(
+                "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_invitation_email.delay"
+            ),
             self.captureOnCommitCallbacks(execute=True),
         ):
             return PublisherMemberInvitationService().create_invitation(
@@ -37,7 +39,9 @@ class AcceptanceCriteriaTest(BaseTestCase):
         self.authenticate_user(self.admin)
         self.give_permission(self.admin, PermissionChoice.PORTAL_INVITE_PUBLISHER_MEMBERS)
         with (
-            patch("apps.publishers.services.publisher_member_invitation_service.send_publisher_member_invitation_email.delay") as mock_delay,
+            patch(
+                "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_invitation_email.delay"
+            ) as mock_delay,
             self.captureOnCommitCallbacks(execute=True),
         ):
             resp = self.client.post(
@@ -56,7 +60,9 @@ class AcceptanceCriteriaTest(BaseTestCase):
     def test_accept_makes_active_no_perms_for_staff_and_token_single_use(self):
         member, inv, raw = self._invite_via_service(self.p1, "e2@example.com", role="staff")
         with (
-            patch("apps.publishers.services.publisher_member_invitation_service.send_publisher_member_activated_email.delay"),
+            patch(
+                "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_activated_email.delay"
+            ),
             self.captureOnCommitCallbacks(execute=True),
         ):
             resp = self.client.post(f"/portal/invitations/{raw}/accept/")
@@ -75,7 +81,9 @@ class AcceptanceCriteriaTest(BaseTestCase):
     def test_accept_admin_grants_member_perms(self):
         member, _inv, raw = self._invite_via_service(self.p1, "boss@example.com", role="admin")
         with (
-            patch("apps.publishers.services.publisher_member_invitation_service.send_publisher_member_activated_email.delay"),
+            patch(
+                "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_activated_email.delay"
+            ),
             self.captureOnCommitCallbacks(execute=True),
         ):
             self.client.post(f"/portal/invitations/{raw}/accept/")
@@ -133,13 +141,17 @@ class AcceptanceCriteriaTest(BaseTestCase):
 
         member, _inv, raw = self._invite_via_service(self.p1, "active@example.com")
         with (
-            patch("apps.publishers.services.publisher_member_invitation_service.send_publisher_member_activated_email.delay"),
+            patch(
+                "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_activated_email.delay"
+            ),
             self.captureOnCommitCallbacks(execute=True),
         ):
             self.client.post(f"/portal/invitations/{raw}/accept/")
         with (
             self.assertRaises(ItqanError) as ctx,
-            patch("apps.publishers.services.publisher_member_invitation_service.send_publisher_member_invitation_email.delay"),
+            patch(
+                "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_invitation_email.delay"
+            ),
             self.captureOnCommitCallbacks(execute=True),
         ):
             PublisherMemberInvitationService().create_invitation(
