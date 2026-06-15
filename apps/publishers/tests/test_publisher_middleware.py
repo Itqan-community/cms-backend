@@ -41,7 +41,13 @@ class PortalPublisherQUnitTest(BaseTestCase):
         # Arrange
         user = baker.make(User)
         publisher = baker.make(Publisher, slug="member-pub")
-        baker.make(PublisherMember, user=user, publisher=publisher, role=PublisherMember.RoleChoice.OWNER)
+        baker.make(
+            PublisherMember,
+            user=user,
+            publisher=publisher,
+            role=PublisherMember.RoleChoice.ADMIN,
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
 
         # Act
         q = portal_publisher_q(user, publisher=publisher)
@@ -65,8 +71,20 @@ class PortalPublisherQUnitTest(BaseTestCase):
         user = baker.make(User)
         pub_a = baker.make(Publisher, slug="pub-a")
         pub_b = baker.make(Publisher, slug="pub-b")
-        baker.make(PublisherMember, user=user, publisher=pub_a, role=PublisherMember.RoleChoice.OWNER)
-        baker.make(PublisherMember, user=user, publisher=pub_b, role=PublisherMember.RoleChoice.MANAGER)
+        baker.make(
+            PublisherMember,
+            user=user,
+            publisher=pub_a,
+            role=PublisherMember.RoleChoice.ADMIN,
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
+        baker.make(
+            PublisherMember,
+            user=user,
+            publisher=pub_b,
+            role=PublisherMember.RoleChoice.STAFF,
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
 
         # Act
         q = portal_publisher_q(user, publisher=None)
@@ -89,7 +107,13 @@ class PortalPublisherQUnitTest(BaseTestCase):
         # Arrange
         user = baker.make(User)
         publisher = baker.make(Publisher, slug="cached-pub")
-        baker.make(PublisherMember, user=user, publisher=publisher, role=PublisherMember.RoleChoice.OWNER)
+        baker.make(
+            PublisherMember,
+            user=user,
+            publisher=publisher,
+            role=PublisherMember.RoleChoice.ADMIN,
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
 
         # Act
         portal_publisher_q(user, publisher=None)
@@ -117,8 +141,20 @@ class XTenantHeaderScopingTest(BaseTestCase):
         self.give_permission(self.user, PermissionChoice.PORTAL_READ_PUBLISHER)
         pub_a = baker.make(Publisher, name="Alpha", slug="alpha")
         pub_b = baker.make(Publisher, name="Beta", slug="beta")
-        baker.make(PublisherMember, user=self.user, publisher=pub_a, role=PublisherMember.RoleChoice.OWNER)
-        baker.make(PublisherMember, user=self.user, publisher=pub_b, role=PublisherMember.RoleChoice.OWNER)
+        baker.make(
+            PublisherMember,
+            user=self.user,
+            publisher=pub_a,
+            role=PublisherMember.RoleChoice.ADMIN,
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
+        baker.make(
+            PublisherMember,
+            user=self.user,
+            publisher=pub_b,
+            role=PublisherMember.RoleChoice.ADMIN,
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
         self._set_x_tenant_id(self.user, pub_a)
 
         # Act
@@ -135,8 +171,20 @@ class XTenantHeaderScopingTest(BaseTestCase):
         self.give_permission(self.user, PermissionChoice.PORTAL_READ_PUBLISHER)
         pub_a = baker.make(Publisher, name="Alpha", slug="alpha-domain")
         pub_b = baker.make(Publisher, name="Beta", slug="beta-domain")
-        baker.make(PublisherMember, user=self.user, publisher=pub_a, role=PublisherMember.RoleChoice.OWNER)
-        baker.make(PublisherMember, user=self.user, publisher=pub_b, role=PublisherMember.RoleChoice.OWNER)
+        baker.make(
+            PublisherMember,
+            user=self.user,
+            publisher=pub_a,
+            role=PublisherMember.RoleChoice.ADMIN,
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
+        baker.make(
+            PublisherMember,
+            user=self.user,
+            publisher=pub_b,
+            role=PublisherMember.RoleChoice.ADMIN,
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
         domain_a = baker.make(Domain, publisher=pub_a, domain="alpha.example.com", is_active=True)
         self._set_x_tenant_domain(self.user, domain_a)
 
@@ -168,8 +216,20 @@ class XTenantHeaderScopingTest(BaseTestCase):
         self.give_permission(self.user, PermissionChoice.PORTAL_READ_PUBLISHER)
         pub_a = baker.make(Publisher, name="Alpha", slug="alpha-no-header")
         pub_b = baker.make(Publisher, name="Beta", slug="beta-no-header")
-        baker.make(PublisherMember, user=self.user, publisher=pub_a, role=PublisherMember.RoleChoice.OWNER)
-        baker.make(PublisherMember, user=self.user, publisher=pub_b, role=PublisherMember.RoleChoice.OWNER)
+        baker.make(
+            PublisherMember,
+            user=self.user,
+            publisher=pub_a,
+            role=PublisherMember.RoleChoice.ADMIN,
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
+        baker.make(
+            PublisherMember,
+            user=self.user,
+            publisher=pub_b,
+            role=PublisherMember.RoleChoice.ADMIN,
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
 
         # Act
         response = self.client.get(self.url)

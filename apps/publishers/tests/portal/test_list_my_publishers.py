@@ -16,7 +16,13 @@ class ListMyPublishersTest(BaseTestCase):
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_READ_PUBLISHER)
         publisher = baker.make(Publisher, name="Tafsir Center", slug="tafsir-center")
-        baker.make(PublisherMember, user=self.user, publisher=publisher, role=PublisherMember.RoleChoice.OWNER)
+        baker.make(
+            PublisherMember,
+            user=self.user,
+            publisher=publisher,
+            role=PublisherMember.RoleChoice.ADMIN,
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
 
         # Act
         response = self.client.get(self.url)
@@ -34,8 +40,20 @@ class ListMyPublishersTest(BaseTestCase):
         self.give_permission(self.user, PermissionChoice.PORTAL_READ_PUBLISHER)
         pub_a = baker.make(Publisher, name="Aaa Publisher", slug="aaa-publisher")
         pub_b = baker.make(Publisher, name="Bbb Publisher", slug="bbb-publisher")
-        baker.make(PublisherMember, user=self.user, publisher=pub_a, role=PublisherMember.RoleChoice.OWNER)
-        baker.make(PublisherMember, user=self.user, publisher=pub_b, role=PublisherMember.RoleChoice.MANAGER)
+        baker.make(
+            PublisherMember,
+            user=self.user,
+            publisher=pub_a,
+            role=PublisherMember.RoleChoice.ADMIN,
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
+        baker.make(
+            PublisherMember,
+            user=self.user,
+            publisher=pub_b,
+            role=PublisherMember.RoleChoice.STAFF,
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
 
         # Act
         response = self.client.get(self.url)
@@ -67,8 +85,20 @@ class ListMyPublishersTest(BaseTestCase):
         self.give_permission(self.user, PermissionChoice.PORTAL_READ_PUBLISHER)
         pub_z = baker.make(Publisher, name="Zzz Publisher", slug="zzz-publisher")
         pub_a = baker.make(Publisher, name="Aaa Publisher", slug="aaa-publisher")
-        baker.make(PublisherMember, user=self.user, publisher=pub_z, role=PublisherMember.RoleChoice.OWNER)
-        baker.make(PublisherMember, user=self.user, publisher=pub_a, role=PublisherMember.RoleChoice.OWNER)
+        baker.make(
+            PublisherMember,
+            user=self.user,
+            publisher=pub_z,
+            role=PublisherMember.RoleChoice.ADMIN,
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
+        baker.make(
+            PublisherMember,
+            user=self.user,
+            publisher=pub_a,
+            role=PublisherMember.RoleChoice.ADMIN,
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
 
         # Act
         response = self.client.get(self.url)
@@ -118,7 +148,13 @@ class ListMyPublishersTest(BaseTestCase):
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_READ_PUBLISHER)
         publisher = baker.make(Publisher, name="Schema Test Pub", slug="schema-test-pub")
-        baker.make(PublisherMember, user=self.user, publisher=publisher, role=PublisherMember.RoleChoice.OWNER)
+        baker.make(
+            PublisherMember,
+            user=self.user,
+            publisher=publisher,
+            role=PublisherMember.RoleChoice.ADMIN,
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
 
         # Act
         response = self.client.get(self.url)

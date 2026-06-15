@@ -46,6 +46,12 @@ class PermissionChoice(TextChoices):
     PORTAL_UPDATE_GROUP = "portal_update_group", _("Portal - Update Groups")
     PORTAL_DELETE_GROUP = "portal_delete_group", _("Portal - Delete Groups")
 
+    # Members
+    PORTAL_VIEW_PUBLISHER_MEMBERS = "portal_view_publisher_members", _("Portal - View Publisher Members")
+    PORTAL_INVITE_PUBLISHER_MEMBERS = "portal_invite_publisher_members", _("Portal - Invite Publisher Members")
+    PORTAL_UPDATE_PUBLISHER_MEMBERS = "portal_update_publisher_members", _("Portal - Update Publisher Members")
+    PORTAL_DELETE_PUBLISHER_MEMBERS = "portal_delete_publisher_members", _("Portal - Delete Publisher Members")
+
 
 # Permission hierarchy: maps each permission to the set of permissions it directly implies.
 #
@@ -83,4 +89,8 @@ PERMISSION_IMPLICATIONS: dict[PermissionChoice, frozenset[PermissionChoice]] = {
     PermissionChoice.PORTAL_CREATE_GROUP: frozenset({PermissionChoice.PORTAL_READ_GROUP}),
     PermissionChoice.PORTAL_UPDATE_GROUP: frozenset({PermissionChoice.PORTAL_READ_GROUP}),
     PermissionChoice.PORTAL_DELETE_GROUP: frozenset({PermissionChoice.PORTAL_READ_GROUP}),
+    # Members — every write action requires being able to view members first.
+    PermissionChoice.PORTAL_INVITE_PUBLISHER_MEMBERS: frozenset({PermissionChoice.PORTAL_VIEW_PUBLISHER_MEMBERS}),
+    PermissionChoice.PORTAL_UPDATE_PUBLISHER_MEMBERS: frozenset({PermissionChoice.PORTAL_VIEW_PUBLISHER_MEMBERS}),
+    PermissionChoice.PORTAL_DELETE_PUBLISHER_MEMBERS: frozenset({PermissionChoice.PORTAL_VIEW_PUBLISHER_MEMBERS}),
 }

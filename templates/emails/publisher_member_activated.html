@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Account activated</title></head>
+<body>
+    <h2>Welcome to {{ publisher_name }}</h2>
+    <p>Your account is now active. You can sign in to the Itqan portal.</p>
+    {% if password %}
+    <p>Your temporary password is: <strong>{{ password }}</strong></p>
+    <p>For your security, please sign in and change it as soon as you can.</p>
+    {% endif %}
+    <p><a href="{{ login_url }}">Go to the portal</a></p>
+    <p>Best regards,<br>Itqan Team</p>
+</body>
+</html>
