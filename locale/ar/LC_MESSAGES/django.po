@@ -298,16 +298,16 @@ msgid "Delete Portal Translations"
 msgstr "حذف الترجمات من لوحة التحكم"
 
 msgid "Portal - View Publishers"
-msgstr ""
+msgstr "البوابة - عرض الناشرين"
 
 msgid "Portal - Create Publishers"
-msgstr ""
+msgstr "البوابة - إنشاء الناشرين"
 
 msgid "Portal - Update Publishers"
-msgstr ""
+msgstr "البوابة - تعديل الناشرين"
 
 msgid "Portal - Delete Publishers"
-msgstr ""
+msgstr "البوابة - حذف الناشرين"
 
 msgid "Portal - View Groups"
 msgstr "البوابة - عرض المجموعات"
@@ -321,21 +321,72 @@ msgstr "البوابة - تعديل المجموعات"
 msgid "Portal - Delete Groups"
 msgstr "البوابة - حذف المجموعات"
 
+msgid "Portal - View Publisher Members"
+msgstr "البوابة - عرض أعضاء الناشر"
+
+msgid "Portal - Invite Publisher Members"
+msgstr "البوابة - دعوة أعضاء الناشر"
+
+msgid "Portal - Update Publisher Members"
+msgstr "البوابة - تعديل أعضاء الناشر"
+
+msgid "Portal - Delete Publisher Members"
+msgstr "البوابة - حذف أعضاء الناشر"
+
+msgid "You cannot change your own membership."
+msgstr "لا يمكنك تغيير عضويتك الخاصة."
+
+msgid "You cannot delete your own membership."
+msgstr "لا يمكنك حذف عضويتك الخاصة."
+
+msgid "Member is already active; nothing to resend."
+msgstr "العضو نشط بالفعل؛ لا يوجد ما يُعاد إرساله."
+
+msgid "No pending invitation to resend."
+msgstr "لا توجد دعوة معلقة لإعادة إرسالها."
+
 #, python-brace-format
 msgid "Publisher with id {id} not found"
 msgstr "لم يتم العثور على الناشر بالمعرّف {id}."
 
-msgid "Owner"
-msgstr "مالك"
-
-msgid "Manager"
+msgid "Admin"
 msgstr "مدير"
+
+msgid "Staff"
+msgstr "موظف"
+
+msgid "Active"
+msgstr "نشط"
+
+msgid "Accepted"
+msgstr "مقبول"
+
+msgid "Expired"
+msgstr "منتهي الصلاحية"
+
+msgid "Cancelled"
+msgstr "ملغي"
 
 msgid "You do not have access to this publisher."
 msgstr "ليس لديك صلاحية الوصول لهذا الناشر"
 
+msgid "You do not have access to this member."
+msgstr "ليس لديك صلاحية الوصول إلى هذا العضو."
+
 msgid "Cannot delete Publisher because they are referenced through other objects"
 msgstr "لا يمكن حذف الناشر لأن هناك بيانات أخري مرتبطة به"
+
+msgid "This user is already a member of this publisher."
+msgstr "هذا المستخدم عضو بالفعل لدى هذا الناشر."
+
+msgid "Only pending invitations can be resent."
+msgstr "يمكن إعادة إرسال الدعوات المعلقة فقط."
+
+msgid "Only pending invitations can be cancelled."
+msgstr "يمكن إلغاء الدعوات المعلقة فقط."
+
+msgid "This invitation is no longer valid."
+msgstr "هذه الدعوة لم تعد صالحة."
 
 msgid "This email has already been taken."
 msgstr "هذا البريد الإلكتروني مستخدم بالفعل."
@@ -631,6 +682,12 @@ msgstr ""
 "\n"
 "هل تريد المتابعة؟\n"
 "    "
+
+#~ msgid "Owner"
+#~ msgstr "مالك"
+
+#~ msgid "Manager"
+#~ msgstr "مدير"
 
 #~ msgid "This asset has no version to sync the recitation data into."
 #~ msgstr "لا توجد نسخة لهذا المورد لمزامنة بيانات التلاوة إليها."
