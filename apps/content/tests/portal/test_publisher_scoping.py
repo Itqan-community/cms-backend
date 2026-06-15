@@ -45,7 +45,12 @@ class PortalPublisherScopingTest(BaseTestCase):
         # Three personas
         self.staff_user = User.objects.create_user(email="staff@example.com", name="Staff", is_staff=True)
         self.member_user = User.objects.create_user(email="member@example.com", name="Member")
-        PublisherMember.objects.create(user=self.member_user, publisher=self.publisher_a, role="owner")
+        PublisherMember.objects.create(
+            user=self.member_user,
+            publisher=self.publisher_a,
+            role=PublisherMember.RoleChoice.ADMIN,
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
         self.no_membership_user = User.objects.create_user(email="orphan@example.com", name="Orphan")
 
         # Grant portal read perms (staff/membership filter is orthogonal to perm filter)

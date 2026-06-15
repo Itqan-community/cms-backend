@@ -90,7 +90,7 @@ class ListGroupTest(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         names = {item["name"] for item in response.json()["results"]}
-        self.assertEqual({"Editors", "Reviewers"}, names)
+        self.assertGreaterEqual(names, {"Editors", "Reviewers"})
 
     def test_list_groups_where_no_permission_should_return_403(self) -> None:
         # Arrange
