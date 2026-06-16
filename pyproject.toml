@@ -43,6 +43,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "commitizen==4.10.*",
     "boto3-stubs>=1.42.91",
     "coverage==7.10.6",
     "django-coverage-plugin==3.1.1",
@@ -200,3 +201,14 @@ omit = [
 [tool.coverage.report]
 skip_covered = true
 show_missing = true
+
+# ========================
+# Commitizen
+# ========================
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version_provider = "pep621"
+tag_format = "v$version"
+update_changelog_on_bump = true
+changelog_file = "CHANGELOG.md"

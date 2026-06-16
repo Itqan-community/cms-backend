@@ -1,0 +1,136 @@
+name: Version Bump
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  version-bump:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install commitizen and sentry-cli
+        run: |
+          pip install commitizen==4.10.*
+          npm install -g @sentry/cli
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version
+        id: bump
+        run: |
+          if cz bump --yes 2>&1; then
+            echo "bumped=true" >> $GITHUB_OUTPUT
+            echo "version=$(python3 -c "import tomllib; f=open('pyproject.toml','rb'); d=tomllib.load(f); print(d['project']['version'])")" >> $GITHUB_OUTPUT
+          else
+            echo "bumped=false" >> $GITHUB_OUTPUT
+            echo "No releasable commits found, skipping."
+          fi
+
+      - name: Generate AI release notes and update CHANGELOG
+        if: steps.bump.outputs.bumped == 'true'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          export SEMVER="${{ steps.bump.outputs.version }}"
+
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            COMMITS=$(git log "${PREV_TAG}..HEAD" --format="- %s" --no-merges 2>/dev/null)
+          else
+            COMMITS=$(git log --format="- %s" --no-merges --max-count=50 2>/dev/null)
+          fi
+
+          AI_NOTES=""
+          if [ -n "$COMMITS" ] && [ -n "$GEMINI_API_KEY" ]; then
+            PROMPT="You are a technical writer for an open-source Islamic/Quranic content management platform. Write concise release notes for version ${SEMVER} based on these git commits:\n\n${COMMITS}\n\nFormat: 1-2 sentence summary, then ## What's New, ## Bug Fixes, ## Breaking Changes (only if relevant). Be specific. Plain language. No filler."
+            RESPONSE=$(curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}" \
+              -H "Content-Type: application/json" \
+              -d "$(jq -n --arg text "$PROMPT" '{
+                contents: [{ parts: [{ text: $text }] }],
+                generationConfig: { maxOutputTokens: 1024, temperature: 0.3 }
+              }')")
+            AI_NOTES=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text // empty' 2>/dev/null || echo "")
+          fi
+
+          if [ -z "$AI_NOTES" ]; then
+            AI_NOTES="Release v${SEMVER}. See commit history for full details."
+          fi
+
+          echo "$AI_NOTES" > /tmp/ai-release-notes.txt
+          echo "AI release notes saved."
+
+          python3 .github/scripts/update-changelog.py
+
+          git add CHANGELOG.md
+          git commit --amend --no-edit
+          git tag -f -a "v${SEMVER}" -m "v${SEMVER}"
+
+      - name: Push version bump commit and tag
+        if: steps.bump.outputs.bumped == 'true'
+        run: |
+          git push origin main --follow-tags
+
+      - name: Create GitHub Release with AI notes
+        if: steps.bump.outputs.bumped == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="v${{ steps.bump.outputs.version }}"
+          AI_NOTES=$(cat /tmp/ai-release-notes.txt 2>/dev/null || echo "See commit history for details.")
+          gh release create "$VERSION" --title "$VERSION" --notes "$AI_NOTES"
+
+      - name: Create Sentry release
+        if: steps.bump.outputs.bumped == 'true'
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: itqan-3o
+          SENTRY_PROJECT: cms-backend
+        run: |
+          VERSION="v${{ steps.bump.outputs.version }}"
+          sentry-cli releases new "$VERSION"
+          sentry-cli releases set-commits "$VERSION" --auto
+          sentry-cli releases finalize "$VERSION"
+
+      - name: Post release to Slack
+        if: steps.bump.outputs.bumped == 'true'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_DEPLOY_WEBHOOK }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "SLACK_DEPLOY_WEBHOOK not set, skipping"
+            exit 0
+          fi
+          VERSION="v${{ steps.bump.outputs.version }}"
+          AI_NOTES=$(cat /tmp/ai-release-notes.txt 2>/dev/null | head -c 500)
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --arg version "$VERSION" \
+              --arg notes "$AI_NOTES" \
+              --arg repo "$GITHUB_REPOSITORY" \
+              '{
+                blocks: [{
+                  type: "section",
+                  text: {
+                    type: "mrkdwn",
+                    text: (":rocket: *CMS Backend " + $version + " Released*\n\n" + $notes + "\n\n<https://github.com/" + $repo + "/releases/tag/" + $version + "|View Release Notes>")
+                  }
+                }]
+              }')"

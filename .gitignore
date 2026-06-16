@@ -342,6 +342,7 @@ media/
 .claude/
 /temp/*
 /CLAUDE.md
+scripts/.mixpanel_traffic.env
 
 # Docusaurus
 docs-website/build/
