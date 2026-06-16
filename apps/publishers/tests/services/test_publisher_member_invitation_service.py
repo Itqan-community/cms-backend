@@ -105,10 +105,11 @@ class InvitationServiceTest(BaseTestCase):
         self.assertEqual(PublisherMemberInvitation.StatusChoice.ACCEPTED, accepted.status)
         self.assertTrue(accepted.member.user.is_active)
         self.assertTrue(accepted.member.user.has_usable_password())
+        self.assertTrue(accepted.member.user.groups.filter(name="Publisher Member").exists())
         self.assertTrue(accepted.member.user.groups.filter(name="Publisher Member Admin").exists())
         mock_ack.assert_called_once()
 
-    def test_accept_staff_activates_but_grants_no_perms(self):
+    def test_accept_staff_activates_with_read_baseline_only(self):
         member, inv, raw, _ = self._create(email="grunt@example.com", role=PublisherMember.RoleChoice.STAFF)
         with (
             self.captureOnCommitCallbacks(execute=True),
@@ -119,10 +120,15 @@ class InvitationServiceTest(BaseTestCase):
             accepted = self.service.accept_invitation(raw)
         accepted.member.refresh_from_db()
         accepted.member.user.refresh_from_db()
+        user = accepted.member.user
         self.assertEqual(PublisherMember.StatusChoice.ACTIVE, accepted.member.status)
-        self.assertTrue(accepted.member.user.is_active)
-        self.assertFalse(accepted.member.user.groups.filter(name="Publisher Member Admin").exists())
-        self.assertFalse(accepted.member.user.has_perm("portal_view_publisher_members"))
+        self.assertTrue(user.is_active)
+        # Staff get the READ baseline group, but not the admin (member-management) group.
+        self.assertTrue(user.groups.filter(name="Publisher Member").exists())
+        self.assertFalse(user.groups.filter(name="Publisher Member Admin").exists())
+        self.assertTrue(user.has_perm("portal_access"))
+        self.assertTrue(user.has_perm("portal_view_publisher_members"))
+        self.assertFalse(user.has_perm("portal_invite_publisher_members"))
 
     def test_accept_is_single_use(self):
         _, _, raw, _ = self._create(email="once@example.com")

@@ -109,6 +109,20 @@ class PublisherMemberInvitationService:
         self.repo.mark_cancelled(invitation, cancelled_by=cancelled_by, now=now)
         invitation.member.delete()
 
+    def get_invitation_details(self, raw_token: str) -> PublisherMemberInvitation:
+        invitation = self.repo.get_by_token_hash(_hash(raw_token))
+        if (
+            invitation is None
+            or invitation.status != PublisherMemberInvitation.StatusChoice.PENDING
+            or invitation.expires_at < timezone.now()
+        ):
+            raise ItqanError(
+                error_name="invalid_invitation",
+                message=_("This invitation is no longer valid."),
+                status_code=400,
+            )
+        return invitation
+
     @transaction.atomic
     def accept_invitation(self, raw_token: str) -> PublisherMemberInvitation:
         invitation = self.repo.lock_by_token_hash(_hash(raw_token))
@@ -136,8 +150,7 @@ class PublisherMemberInvitationService:
         user.save(update_fields=["password", "is_active"])
 
         self.member_repo.set_status(member, PublisherMember.StatusChoice.ACTIVE)
-        if member.role == PublisherMember.RoleChoice.ADMIN:
-            self.members.grant_member_perms(member)
+        self.members.grant_member_perms(member)
 
         now = timezone.now()
         self.repo.mark_accepted(invitation, now=now)
