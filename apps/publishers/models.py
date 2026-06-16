@@ -34,6 +34,11 @@ class Publisher(BaseModel):
 
     contact_email = models.EmailField(blank=True, help_text="Contact email for the publisher")
 
+    auto_accept_access_requests = models.BooleanField(
+        default=True,
+        help_text="When true, new asset access requests for this publisher's assets are granted automatically.",
+    )
+
     foundation_year = models.PositiveSmallIntegerField(
         null=True, blank=True, help_text="Year the publisher was established"
     )

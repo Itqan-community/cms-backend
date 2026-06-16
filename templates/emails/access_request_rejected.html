@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Access Request Rejected</title>
+</head>
+
+<body>
+    <h2>Your Access Request Was Rejected</h2>
+    <p>Your request to access <strong>{{ asset_name }}</strong> has been rejected.</p>
+
+    {% if rejection_reason %}
+    <p><strong>Reason:</strong> {{ rejection_reason }}</p>
+    {% endif %}
+
+    <p>Best regards,<br>Itqan Team</p>
+</body>
+
+</html>

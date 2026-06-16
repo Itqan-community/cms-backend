@@ -1,97 +1,139 @@
-import logging
+from __future__ import annotations
 
-from django.utils import timezone
+import logging
+from typing import TYPE_CHECKING
+
+from django.db import transaction
+from django.db.models import Q
+from django.utils.translation import gettext as _
 
 from apps.content.models import Asset, AssetAccess, AssetAccessRequest
-from apps.users.models import User
+from apps.content.repositories.access_request import AssetAccessRequestRepository
+from apps.core.ninja_utils.errors import ItqanError
+from apps.publishers.repositories.publisher import PublisherRepository
+from apps.publishers.services.membership import get_user_member_publisher_ids
+
+if TYPE_CHECKING:
+    from django.db.models import QuerySet
+
+    from apps.users.models import User
 
 logger = logging.getLogger(__name__)
 
 
-def approve_request(
-    asset_access_request: AssetAccessRequest,
-    approved_by: User | None,
-    admin_response: str,
-):
-    if asset_access_request.status != AssetAccessRequest.StatusChoice.PENDING:
-        raise ValueError(f"Cannot approve request with status '{asset_access_request.status}'")
+class AssetAccessRequestService:
+    def __init__(self, repo: AssetAccessRequestRepository, publisher_repo: PublisherRepository | None = None) -> None:
+        self.repo = repo
+        self.publisher_repo = publisher_repo or PublisherRepository()
 
-    asset_access_request.status = AssetAccessRequest.StatusChoice.APPROVED
-    asset_access_request.approved_at = timezone.now()
-    asset_access_request.approved_by = approved_by
+    # --- scoping ---
+    def list_requests(self, user: User) -> QuerySet[AssetAccessRequest]:
+        q_filter = None if user.is_staff else Q(asset__publisher_id__in=get_user_member_publisher_ids(user))
+        return self.repo.list_qs(q_filter=q_filter)
 
-    asset_access_request.admin_response = admin_response
+    def get_for_user(self, user: User, request_id: int) -> AssetAccessRequest:
+        req = self.repo.get_by_id(request_id)
+        if req is None or (not user.is_staff and req.asset.publisher_id not in get_user_member_publisher_ids(user)):
+            raise ItqanError("not_found", _("Not found."), status_code=404)
+        return req
 
-    asset_access_request.save()
-
-    access = AssetAccess.objects.create(
-        asset_access_request=asset_access_request,
-        user=asset_access_request.developer_user,
-        asset=asset_access_request.asset,
-        effective_license=asset_access_request.asset.license,
-        expires_at=None,
-    )  # maybe add download url and expiration logic later
-
-    logger.info(
-        f"Asset access approved [request_id={asset_access_request.pk}, user_id={asset_access_request.developer_user_id}, asset_id={asset_access_request.asset_id}, access_id={access.pk}]"
-    )
-    return access
-
-
-def reject_request(asset_access_request: AssetAccessRequest, rejected_by_user=None, reason=""):
-    if asset_access_request.status != AssetAccessRequest.StatusChoice.PENDING:
-        raise ValueError(f"Cannot reject request with status '{asset_access_request.status}'")
-
-    asset_access_request.status = AssetAccessRequest.StatusChoice.REJECTED
-    asset_access_request.approved_at = timezone.now()
-    asset_access_request.approved_by = rejected_by_user
-    asset_access_request.admin_response = reason or "Request rejected"
-    asset_access_request.save()
-    logger.info(
-        f"Asset access rejected [request_id={asset_access_request.pk}, user_id={asset_access_request.developer_user_id}, asset_id={asset_access_request.asset_id}]"
-    )
-
-
-def request_access(
-    user: User, asset: Asset, purpose: str, intended_use: str, auto_approve=True
-) -> tuple[AssetAccessRequest, AssetAccess | None]:
-    existing_request = AssetAccessRequest.objects.filter(developer_user=user, asset=asset).first()
-
-    if existing_request:
-        if existing_request.status == AssetAccessRequest.StatusChoice.APPROVED:
-            logger.warning(
-                f"Access request already approved — returning existing grant [user_id={user.pk}, asset_id={asset.pk}, request_id={existing_request.pk}]"
+    @staticmethod
+    def _guard_pending(req: AssetAccessRequest) -> None:
+        if req.status != AssetAccessRequest.StatusChoice.PENDING:
+            raise ItqanError(
+                "invalid_status",
+                _("Cannot act on request with status '{status}'.").format(status=req.status),
+                status_code=409,
             )
-            access = getattr(existing_request, "access_grant", None)
-            return existing_request, access
-        elif existing_request.status == AssetAccessRequest.StatusChoice.PENDING:
-            # Re-approve if auto_approve is enabled
-            if auto_approve:
-                access = approve_request(
-                    existing_request,
-                    approved_by=None,
-                    admin_response="Automatically approved (V1 policy)",
+
+    # --- publisher actions ---
+    def accept(self, user: User, request_id: int) -> AssetAccessRequest:
+        req = self.get_for_user(user, request_id)
+        self._guard_pending(req)
+        self.repo.mark_approved(req, approved_by=user)
+        self._enqueue_outcome_email(req.id)
+        logger.info(f"Asset access request accepted [request_id={req.pk}, approved_by={user.pk}]")
+        return req
+
+    def reject(self, user: User, request_id: int, reason: str) -> AssetAccessRequest:
+        if not (reason or "").strip():
+            raise ItqanError("validation_error", _("Rejection reason is required."), status_code=422)
+        req = self.get_for_user(user, request_id)
+        self._guard_pending(req)
+        self.repo.mark_rejected(req, rejected_by=user, reason=reason.strip())
+        self._enqueue_outcome_email(req.id)
+        logger.info(f"Asset access request rejected [request_id={req.pk}, rejected_by={user.pk}]")
+        return req
+
+    @staticmethod
+    def _enqueue_outcome_email(request_id: int) -> None:
+        from apps.content.tasks import send_access_request_outcome_email
+
+        transaction.on_commit(lambda: send_access_request_outcome_email.delay(request_id))
+
+    @staticmethod
+    def _enqueue_new_request_email(request_id: int) -> None:
+        from apps.content.tasks import send_access_request_new_request_email
+
+        transaction.on_commit(lambda: send_access_request_new_request_email.delay(request_id))
+
+    # --- developer flow ---
+    def request_access(
+        self, *, user: User, asset: Asset, purpose: str, intended_use: str
+    ) -> tuple[AssetAccessRequest, AssetAccess | None]:
+        auto_approve = asset.publisher.auto_accept_access_requests
+        existing_request = self.repo.get_existing(developer_user=user, asset=asset)
+
+        if existing_request:
+            if existing_request.status == AssetAccessRequest.StatusChoice.APPROVED:
+                logger.warning(
+                    f"Access request already approved — returning existing grant "
+                    f"[user_id={user.pk}, asset_id={asset.pk}, request_id={existing_request.pk}]"
                 )
+                access = getattr(existing_request, "access_grant", None)
                 return existing_request, access
-            return existing_request, None
+            elif existing_request.status == AssetAccessRequest.StatusChoice.PENDING:
+                if auto_approve:
+                    access = self.repo.mark_approved(existing_request, approved_by=None)
+                    self._enqueue_outcome_email(existing_request.id)
+                    return existing_request, access
+                return existing_request, None
 
-    request = AssetAccessRequest.objects.create(
-        developer_user=user,
-        asset=asset,
-        developer_access_reason=purpose,
-        intended_use=intended_use,
-    )
-    logger.info(f"Asset access requested [request_id={request.pk}, user_id={user.pk}, asset_id={asset.pk}]")
-
-    access = None
-    if auto_approve:
-        access = approve_request(
-            request,
-            approved_by=None,
-            admin_response="Automatically approved (V1 policy)",
+        request = self.repo.create_request(
+            developer_user=user,
+            asset=asset,
+            developer_access_reason=purpose,
+            intended_use=intended_use,
         )
+        logger.info(f"Asset access requested [request_id={request.pk}, user_id={user.pk}, asset_id={asset.pk}]")
+        self._enqueue_new_request_email(request.id)
 
-    return request, access
+        access = None
+        if auto_approve:
+            access = self.repo.mark_approved(request, approved_by=None)
+            self._enqueue_outcome_email(request.id)
+
+        return request, access
+
+    # --- settings ---
+    def _resolve_publisher_for_user(self, user: User, publisher_id: int):
+        from django.shortcuts import get_object_or_404
+
+        from apps.publishers.models import Publisher
+        from apps.publishers.services.membership import enforce_publisher_membership
+
+        publisher = get_object_or_404(Publisher, id=publisher_id)
+        enforce_publisher_membership(user, publisher_id)
+        return publisher
+
+    def get_settings(self, user: User, publisher_id: int) -> dict:
+        publisher = self._resolve_publisher_for_user(user, publisher_id)
+        return {"publisher_id": publisher.id, "auto_accept_access_requests": publisher.auto_accept_access_requests}
+
+    def set_auto_accept(self, user: User, publisher_id: int, value: bool) -> dict:
+        publisher = self._resolve_publisher_for_user(user, publisher_id)
+        self.publisher_repo.set_auto_accept(publisher, value)
+        return {"publisher_id": publisher.id, "auto_accept_access_requests": value}
 
 
 def user_has_access(user: User, asset: Asset) -> bool:

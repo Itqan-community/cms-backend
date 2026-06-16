@@ -24,6 +24,7 @@ class MemberGroupsSeedTest(BaseTestCase):
                 "portal_read_translation",
                 "portal_read_publisher",
                 "portal_view_publisher_members",
+                "portal_view_access_requests",
             },
             perms,
         )

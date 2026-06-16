@@ -5,7 +5,8 @@ from ninja import Schema
 from pydantic import AwareDatetime
 
 from apps.content.models import Asset, AssetAccessRequest
-from apps.content.services.asset_access import request_access
+from apps.content.repositories.access_request import AssetAccessRequestRepository
+from apps.content.services.asset_access import AssetAccessRequestService
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
@@ -42,7 +43,7 @@ class AccessRequestResponseOut(Schema):
 
 @router.post("assets/{asset_id}/request-access/", response=AccessRequestResponseOut)
 def request_asset_access(request: Request, asset_id: int, data: RequestAccessIn):
-    """Request access to an asset (V1: auto-approval)"""
+    """Request access to an asset (auto-approved when the publisher's auto-accept setting is on)"""
     logger.info(
         f"Access requested for asset [asset_id={asset_id}, user_id={request.user.id}, intended_use={data.intended_use}]"
     )
@@ -51,13 +52,12 @@ def request_asset_access(request: Request, asset_id: int, data: RequestAccessIn)
     # Validation is now handled by the schema using IntendedUseChoice
     # No need for manual validation since Django Ninja will validate the enum
 
-    # Use the service function to handle access request
-    access_request, access_grant = request_access(
+    service = AssetAccessRequestService(AssetAccessRequestRepository())
+    access_request, access_grant = service.request_access(
         user=request.user,
         asset=asset,
         purpose=data.purpose,
         intended_use=data.intended_use,
-        auto_approve=True,  # V1: Auto-approval
     )
 
     logger.info(

@@ -16,3 +16,8 @@ class PublisherRepository:
 
     def delete(self, publisher: Publisher) -> None:
         publisher.delete()
+
+    def set_auto_accept(self, publisher: Publisher, value: bool) -> Publisher:
+        publisher.auto_accept_access_requests = value
+        publisher.save(update_fields=["auto_accept_access_requests", "updated_at"])
+        return publisher
