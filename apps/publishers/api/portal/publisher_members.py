@@ -199,6 +199,36 @@ def resend_invite(request: Request, member_id: int):
     return _members_qs().get(id=member.id)
 
 
+class InvitationDetailsOut(Schema):
+    publisher_name: str
+    role: str
+    invited_by_name: str
+    email: str
+    expires_at: AwareDatetime
+    status: str
+
+    @staticmethod
+    def resolve_publisher_name(obj: PublisherMemberInvitation) -> str:
+        return obj.publisher.name
+
+    @staticmethod
+    def resolve_role(obj: PublisherMemberInvitation) -> str:
+        return obj.member.get_role_display()
+
+    @staticmethod
+    def resolve_invited_by_name(obj: PublisherMemberInvitation) -> str:
+        return obj.invited_by.name if obj.invited_by else "An administrator"
+
+
+@router.get(
+    "invitations/{token}/",
+    auth=None,
+    response={200: InvitationDetailsOut, 400: NinjaErrorResponse[Literal["invalid_invitation"]]},
+)
+def get_invitation(request: Request, token: str):
+    return 200, PublisherMemberInvitationService().get_invitation_details(token)
+
+
 class AcceptOut(Schema):
     status: str = "accepted"
 
