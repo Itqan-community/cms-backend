@@ -346,8 +346,6 @@ class AssetAccessRequest(BaseModel):
         help_text="Commercial or non-commercial use",
     )
 
-    admin_response = models.TextField(blank=True, help_text="Admin response message")
-
     approved_at = models.DateTimeField(null=True, blank=True, help_text="When request was approved")
 
     approved_by = models.ForeignKey(
@@ -356,6 +354,20 @@ class AssetAccessRequest(BaseModel):
         null=True,
         blank=True,
         related_name="approved_asset_requests",
+    )
+
+    rejected_at = models.DateTimeField(null=True, blank=True, help_text="When request was rejected")
+
+    rejected_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="rejected_asset_requests",
+    )
+
+    rejection_reason = models.TextField(
+        blank=True, help_text="Reason shown to the developer when a request is rejected"
     )
 
     class Meta:
