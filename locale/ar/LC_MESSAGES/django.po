@@ -154,6 +154,16 @@ msgstr "تم الحل"
 msgid "Dismissed"
 msgstr "تم التجاهل"
 
+msgid "Not found."
+msgstr "غير موجود."
+
+#, python-brace-format
+msgid "Cannot act on request with status '{status}'."
+msgstr "لا يمكن تنفيذ الإجراء على طلب بحالة '{status}'."
+
+msgid "Rejection reason is required."
+msgstr "سبب الرفض مطلوب."
+
 msgid "Description must be at least 10 characters long."
 msgstr "يجب أن يكون الوصف 10 أحرف على الأقل."
 
@@ -332,6 +342,15 @@ msgstr "البوابة - تعديل أعضاء الناشر"
 
 msgid "Portal - Delete Publisher Members"
 msgstr "البوابة - حذف أعضاء الناشر"
+
+msgid "Portal - View Access Requests"
+msgstr "البوابة - عرض طلبات الوصول"
+
+msgid "Portal - Accept or Reject Access Requests"
+msgstr "البوابة - قبول أو رفض طلبات الوصول"
+
+msgid "Portal - Manage Access Requests Settings"
+msgstr "البوابة - إدارة إعدادات طلبات الوصول"
 
 msgid "You cannot change your own membership."
 msgstr "لا يمكنك تغيير عضويتك الخاصة."
