@@ -200,3 +200,21 @@ def send_issue_status_update_email(self, report_id: int, old_status: str, new_st
     except Exception as exc:
         logger.error(f"Task failed [task=send_issue_status_update_email, report_id={report_id}]: {exc}")
         raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1)) from exc
+
+
+@shared_task
+def send_access_request_outcome_email(request_id: int) -> None:
+    logger.info(f"Task started [task=send_access_request_outcome_email, request_id={request_id}]")
+    from apps.content.services.access_request_notification_service import AccessRequestNotificationService
+
+    AccessRequestNotificationService().send_developer_outcome_email(request_id)
+    logger.info(f"Task completed [task=send_access_request_outcome_email, request_id={request_id}]")
+
+
+@shared_task
+def send_access_request_new_request_email(request_id: int) -> None:
+    logger.info(f"Task started [task=send_access_request_new_request_email, request_id={request_id}]")
+    from apps.content.services.access_request_notification_service import AccessRequestNotificationService
+
+    AccessRequestNotificationService().send_publisher_new_request_email(request_id)
+    logger.info(f"Task completed [task=send_access_request_new_request_email, request_id={request_id}]")
