@@ -57,7 +57,7 @@ class PublisherMemberNotificationService:
             context={
                 "publisher_name": member.publisher.name,
                 "password": password,
-                "login_url": f"{settings.FRONTEND_BASE_URL}/portal",
+                "login_url": f"{settings.FRONTEND_BASE_URL}/account/login",
             },
         )
         logger.info(f"Activation email sent [member_id={member_id}]")

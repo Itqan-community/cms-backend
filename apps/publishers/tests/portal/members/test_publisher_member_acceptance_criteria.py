@@ -56,8 +56,8 @@ class AcceptanceCriteriaTest(BaseTestCase):
         self.assertEqual("pending", inv.status)
         mock_delay.assert_called_once()
 
-    # AC#6 + AC#2: accept → active member + password set + token unusable. Staff role grants NO perms.
-    def test_accept_makes_active_no_perms_for_staff_and_token_single_use(self):
+    # AC#6 + AC#2: accept → active member + password set + token unusable. Staff get READ baseline only.
+    def test_accept_makes_active_read_baseline_for_staff_and_token_single_use(self):
         member, inv, raw = self._invite_via_service(self.p1, "e2@example.com", role="staff")
         with (
             patch(
@@ -72,8 +72,11 @@ class AcceptanceCriteriaTest(BaseTestCase):
         self.assertEqual("active", member.status)
         self.assertTrue(member.user.is_active)
         self.assertTrue(member.user.has_usable_password())
+        self.assertTrue(member.user.groups.filter(name="Publisher Member").exists())
         self.assertFalse(member.user.groups.filter(name="Publisher Member Admin").exists())
-        self.assertFalse(member.user.has_perm("portal_view_publisher_members"))
+        self.assertTrue(member.user.has_perm("portal_access"))
+        self.assertTrue(member.user.has_perm("portal_view_publisher_members"))
+        self.assertFalse(member.user.has_perm("portal_invite_publisher_members"))
         resp2 = self.client.post(f"/portal/invitations/{raw}/accept/")
         self.assertEqual(400, resp2.status_code)
 
