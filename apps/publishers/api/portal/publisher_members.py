@@ -84,7 +84,7 @@ def invite_member(request: Request, data: MemberCreateIn):
     publisher = get_object_or_404(Publisher, id=data.publisher_id)
     enforce_publisher_membership(request.user, data.publisher_id)
     member, _invitation, _raw = PublisherMemberInvitationService().create_invitation(
-        publisher=publisher, email=data.email, role=data.role, invited_by=request.user
+        publisher=publisher, email=data.email, role=data.role, invited_by=request.user, name=data.name
     )
     logger.info(f"Member invited [member_id={member.id}, publisher_id={data.publisher_id}, user_id={request.user.id}]")
     member = _members_qs().get(id=member.id)
