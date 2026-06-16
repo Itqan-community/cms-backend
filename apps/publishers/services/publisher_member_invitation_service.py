@@ -42,13 +42,13 @@ class PublisherMemberInvitationService:
 
     @transaction.atomic
     def create_invitation(
-        self, *, publisher: Publisher, email: str, role: str, invited_by: User
+        self, *, publisher: Publisher, email: str, role: str, invited_by: User, name: str = ""
     ) -> tuple[PublisherMember, PublisherMemberInvitation, str]:
         email = email.lower().strip()
 
         user = User.objects.filter(email=email).first()
         if user is None:
-            user = User.objects.create_user(email=email, password=None, is_active=False)
+            user = User.objects.create_user(email=email, password=None, is_active=False, name=name)
             user.set_unusable_password()
             user.save(update_fields=["password"])
 

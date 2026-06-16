@@ -40,13 +40,24 @@ class CreateMemberTest(BaseTestCase):
         resp, mock_delay = self._post(name="New Staff", email="staff@example.com", role="staff")
         self.assertEqual(201, resp.status_code, resp.content)
         body = resp.json()
+        self.assertEqual("New Staff", body["name"])
         self.assertEqual("staff@example.com", body["email"])
         self.assertEqual("pending", body["status"])
         self.assertIn("expires_at", body)
         member = PublisherMember.objects.get(id=body["id"])
         self.assertEqual(self.publisher.id, member.publisher_id)
+        self.assertEqual("New Staff", member.user.name)
         self.assertTrue(PublisherMemberInvitation.objects.filter(member=member).exists())
         mock_delay.assert_called_once()
+
+    def test_invite_existing_user_keeps_existing_name(self):
+        self.authenticate_user(self.admin)
+        self.give_permission(self.admin, PermissionChoice.PORTAL_INVITE_PUBLISHER_MEMBERS)
+        existing = baker.make(User, email="existing@example.com", name="Original Name")
+        resp, _ = self._post(name="Different Name", email="existing@example.com", role="staff")
+        self.assertEqual(201, resp.status_code, resp.content)
+        existing.refresh_from_db()
+        self.assertEqual("Original Name", existing.name)
 
     def test_invite_admin_role_needs_only_invite_perm(self):
         self.authenticate_user(self.admin)
