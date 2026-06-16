@@ -17,6 +17,7 @@ PUBLISHER_MEMBER_GROUP_PERMS = [
     PermissionChoice.PORTAL_READ_TRANSLATION.value,
     PermissionChoice.PORTAL_READ_PUBLISHER.value,
     PermissionChoice.PORTAL_VIEW_PUBLISHER_MEMBERS.value,
+    PermissionChoice.PORTAL_VIEW_ACCESS_REQUESTS.value,
 ]
 
 # Member-management permissions, granted to admin-role members on top of the baseline.
@@ -27,6 +28,9 @@ PUBLISHER_ADMIN_GROUP_PERMS = [
     PermissionChoice.PORTAL_INVITE_PUBLISHER_MEMBERS.value,
     PermissionChoice.PORTAL_UPDATE_PUBLISHER_MEMBERS.value,
     PermissionChoice.PORTAL_DELETE_PUBLISHER_MEMBERS.value,
+    PermissionChoice.PORTAL_VIEW_ACCESS_REQUESTS.value,
+    PermissionChoice.PORTAL_ACCEPT_OR_REJECT_ACCESS_REQUESTS.value,
+    PermissionChoice.PORTAL_MANAGE_ACCESS_REQUESTS_SETTINGS.value,
 ]
 
 

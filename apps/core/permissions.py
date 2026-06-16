@@ -52,6 +52,17 @@ class PermissionChoice(TextChoices):
     PORTAL_UPDATE_PUBLISHER_MEMBERS = "portal_update_publisher_members", _("Portal - Update Publisher Members")
     PORTAL_DELETE_PUBLISHER_MEMBERS = "portal_delete_publisher_members", _("Portal - Delete Publisher Members")
 
+    # Access Requests
+    PORTAL_VIEW_ACCESS_REQUESTS = "portal_view_access_requests", _("Portal - View Access Requests")
+    PORTAL_ACCEPT_OR_REJECT_ACCESS_REQUESTS = (
+        "portal_accept_or_reject_access_requests",
+        _("Portal - Accept or Reject Access Requests"),
+    )
+    PORTAL_MANAGE_ACCESS_REQUESTS_SETTINGS = (
+        "portal_manage_access_requests_settings",
+        _("Portal - Manage Access Requests Settings"),
+    )
+
 
 # Permission hierarchy: maps each permission to the set of permissions it directly implies.
 #
@@ -93,4 +104,7 @@ PERMISSION_IMPLICATIONS: dict[PermissionChoice, frozenset[PermissionChoice]] = {
     PermissionChoice.PORTAL_INVITE_PUBLISHER_MEMBERS: frozenset({PermissionChoice.PORTAL_VIEW_PUBLISHER_MEMBERS}),
     PermissionChoice.PORTAL_UPDATE_PUBLISHER_MEMBERS: frozenset({PermissionChoice.PORTAL_VIEW_PUBLISHER_MEMBERS}),
     PermissionChoice.PORTAL_DELETE_PUBLISHER_MEMBERS: frozenset({PermissionChoice.PORTAL_VIEW_PUBLISHER_MEMBERS}),
+    # Access Requests
+    PermissionChoice.PORTAL_ACCEPT_OR_REJECT_ACCESS_REQUESTS: frozenset({PermissionChoice.PORTAL_VIEW_ACCESS_REQUESTS}),
+    PermissionChoice.PORTAL_MANAGE_ACCESS_REQUESTS_SETTINGS: frozenset({PermissionChoice.PORTAL_VIEW_ACCESS_REQUESTS}),
 }
