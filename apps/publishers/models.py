@@ -127,7 +127,11 @@ class PublisherMemberInvitation(BaseModel):
     )
     status = models.CharField(max_length=20, choices=StatusChoice.choices, default=StatusChoice.PENDING)
     token_hash = models.CharField(
-        max_length=64, unique=True, help_text="sha256 of the raw token; raw token only in email."
+        max_length=64,
+        unique=True,
+        null=True,
+        blank=True,
+        help_text="sha256 of the raw token; raw token only in email. Cleared once the invitation is consumed.",
     )
     expires_at = models.DateTimeField()
     accepted_at = models.DateTimeField(null=True, blank=True)

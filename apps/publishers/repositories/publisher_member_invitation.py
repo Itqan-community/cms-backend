@@ -41,6 +41,13 @@ class PublisherMemberInvitationRepository:
     def get_pending_for_member(self, member: PublisherMember) -> PublisherMemberInvitation | None:
         return self.model.objects.filter(member=member, status=PublisherMemberInvitation.StatusChoice.PENDING).first()
 
+    def get_by_token_hash(self, token_hash: str) -> PublisherMemberInvitation | None:
+        return (
+            self.model.objects.select_related("member", "member__user", "publisher", "invited_by")
+            .filter(token_hash=token_hash)
+            .first()
+        )
+
     def lock_by_token_hash(self, token_hash: str) -> PublisherMemberInvitation | None:
         return (
             self.model.objects.select_for_update(of=("self",))
@@ -67,7 +74,7 @@ class PublisherMemberInvitationRepository:
     def mark_accepted(self, invitation: PublisherMemberInvitation, *, now) -> None:
         invitation.status = PublisherMemberInvitation.StatusChoice.ACCEPTED
         invitation.accepted_at = now
-        invitation.token_hash = ""
+        invitation.token_hash = None
         invitation.save(update_fields=["status", "accepted_at", "token_hash", "updated_at"])
 
     def get_for_email(self, invitation_id: int) -> PublisherMemberInvitation:
