@@ -1,3 +1,9 @@
+## v0.2.3 (2026-06-17)
+
+### Fix
+
+- **ci**: register sentry production deployment after release
+
 ## v0.2.2 (2026-06-17)
 
 ### Fix
