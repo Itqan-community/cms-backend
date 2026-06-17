@@ -9,7 +9,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
       - name: Checkout repository
@@ -85,30 +84,8 @@ jobs:
 
       - name: Push version bump commit and tag
         if: steps.bump.outputs.bumped == 'true'
-        env:
-          GH_PAT_ITQAAN: ${{ secrets.GH_PAT_ITQAAN }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SEMVER: ${{ steps.bump.outputs.version }}
         run: |
-          git remote set-url origin "https://x-access-token:${GH_PAT_ITQAAN}@github.com/${GITHUB_REPOSITORY}.git"
-          BRANCH="chore/release-v${SEMVER}"
-          git checkout -b "$BRANCH"
-          git push origin "$BRANCH" --follow-tags
-          PR_URL=$(gh pr create \
-            --title "chore(release): bump version to v${SEMVER}" \
-            --body "Automated version bump to v${SEMVER}." \
-            --base main \
-            --head "$BRANCH")
-          PR_NUMBER=$(echo "$PR_URL" | sed 's|.*/||')
-          echo "Waiting for Branch Naming Check to complete on PR #${PR_NUMBER}..."
-          for i in $(seq 1 30); do
-            STATUS=$(gh pr checks "$PR_NUMBER" --json name,state \
-              --jq '.[] | select(.name=="Branch Naming Check / check") | .state' 2>/dev/null || echo "")
-            echo "  attempt ${i}: Branch Naming Check = '${STATUS}'"
-            if [ "$STATUS" = "SUCCESS" ]; then break; fi
-            sleep 10
-          done
-          gh pr merge "$PR_URL" --squash --admin --delete-branch
+          git push origin main --follow-tags
 
       - name: Create GitHub Release with AI notes
         if: steps.bump.outputs.bumped == 'true'
