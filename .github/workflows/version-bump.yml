@@ -70,7 +70,7 @@ jobs:
           fi
 
           if [ -z "$AI_NOTES" ]; then
-            AI_NOTES="Release v${SEMVER}. See commit history for full details."
+            AI_NOTES="Release v${SEMVER}."$'\n\n'"## Changes"$'\n\n'"${COMMITS}"
           fi
 
           echo "$AI_NOTES" > /tmp/ai-release-notes.txt
