@@ -1,3 +1,9 @@
+## v0.2.2 (2026-06-17)
+
+### Fix
+
+- **ci**: include commits in fallback release notes when Gemini API unavailable
+
 ## v0.2.1 (2026-06-17)
 
 ### Fix
