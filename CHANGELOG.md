@@ -1,3 +1,9 @@
+## v0.2.1 (2026-06-17)
+
+### Fix
+
+- **ci**: trigger BE release notification to verify Slack integration
+
 ## v0.2.0 (2026-06-17)
 
 ### Feat
