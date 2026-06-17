@@ -9,6 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
 
     steps:
       - name: Checkout repository
@@ -86,9 +87,19 @@ jobs:
         if: steps.bump.outputs.bumped == 'true'
         env:
           GH_PAT_ITQAAN: ${{ secrets.GH_PAT_ITQAAN }}
+          GH_TOKEN: ${{ secrets.GH_PAT_ITQAAN }}
+          SEMVER: ${{ steps.bump.outputs.version }}
         run: |
           git remote set-url origin "https://x-access-token:${GH_PAT_ITQAAN}@github.com/${GITHUB_REPOSITORY}.git"
-          git push origin main --follow-tags
+          BRANCH="chore/release-v${SEMVER}"
+          git checkout -b "$BRANCH"
+          git push origin "$BRANCH" --follow-tags
+          PR_URL=$(gh pr create \
+            --title "chore(release): bump version to v${SEMVER}" \
+            --body "Automated version bump to v${SEMVER}." \
+            --base main \
+            --head "$BRANCH")
+          gh pr merge "$PR_URL" --squash --admin --delete-branch
 
       - name: Create GitHub Release with AI notes
         if: steps.bump.outputs.bumped == 'true'
