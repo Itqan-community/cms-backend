@@ -1,3 +1,9 @@
+## v0.2.5 (2026-06-17)
+
+### Fix
+
+- **release**: verify gemini ai release notes generation
+
 ## v0.2.4 (2026-06-17)
 
 ### Fix
