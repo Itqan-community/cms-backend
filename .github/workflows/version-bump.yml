@@ -99,6 +99,15 @@ jobs:
             --body "Automated version bump to v${SEMVER}." \
             --base main \
             --head "$BRANCH")
+          PR_NUMBER=$(echo "$PR_URL" | sed 's|.*/||')
+          echo "Waiting for Branch Naming Check to complete on PR #${PR_NUMBER}..."
+          for i in $(seq 1 30); do
+            STATUS=$(gh pr checks "$PR_NUMBER" --json name,state \
+              --jq '.[] | select(.name=="Branch Naming Check / check") | .state' 2>/dev/null || echo "")
+            echo "  attempt ${i}: Branch Naming Check = '${STATUS}'"
+            if [ "$STATUS" = "SUCCESS" ]; then break; fi
+            sleep 10
+          done
           gh pr merge "$PR_URL" --squash --admin --delete-branch
 
       - name: Create GitHub Release with AI notes
