@@ -1,3 +1,9 @@
+## v0.2.4 (2026-06-17)
+
+### Fix
+
+- **ci**: correct sentry deploys new syntax for v2 cli
+
 ## v0.2.3 (2026-06-17)
 
 ### Fix
