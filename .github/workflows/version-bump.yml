@@ -108,7 +108,7 @@ jobs:
           sentry-cli releases new "$VERSION"
           sentry-cli releases set-commits "$VERSION" --auto
           sentry-cli releases finalize "$VERSION"
-          sentry-cli releases deploys new "$VERSION" -e production
+          sentry-cli releases deploys new --release "$VERSION" -e production
 
       - name: Post release to Slack
         if: steps.bump.outputs.bumped == 'true'
