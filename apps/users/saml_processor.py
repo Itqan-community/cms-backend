@@ -26,7 +26,7 @@ class MixpanelSAMLProcessor(BaseProcessor):
         user = request.user
         if not (user and user.is_authenticated and user.is_active):
             return False
-        return user.publisher_memberships.exists()
+        return user.publisher_memberships.filter(status="active").exists()
 
     def create_identity(self, user: User, sp_attribute_mapping: dict[str, str]) -> dict[str, str]:
         display_name = (user.name or user.email.split("@")[0]).strip()

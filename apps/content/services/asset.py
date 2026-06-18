@@ -1,7 +1,7 @@
 import logging
 
 from apps.content.models import AssetVersion
-from apps.content.tasks import send_asset_update_email
+from apps.content.tasks import notify_asset_version_created
 
 logger = logging.getLogger(__name__)
 
@@ -23,5 +23,5 @@ class AssetService:
         """
         Notify users who have access to this asset.
         """
-        send_asset_update_email.delay(asset_version.pk)
+        notify_asset_version_created.delay(asset_version.pk)
         logger.info(f"Asset update email queued [asset_version_id={asset_version.pk}]")

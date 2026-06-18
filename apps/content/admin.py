@@ -10,10 +10,12 @@ from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils.html import format_html
 
+from apps.content.repositories.access_request import AssetAccessRequestRepository
 from apps.content.services.admin.asset_recitation_audio_tracks_direct_upload_service import (
     AssetRecitationAudioTracksDirectUploadService,
 )
 from apps.content.services.admin.asset_recitation_json_file_sync_service import sync_asset_recitations_json_file
+from apps.content.services.asset_access import AssetAccessRequestService
 from apps.core.ninja_utils.errors import ItqanError
 
 from ..core.mixins.constants import QURAN_SURAHS
@@ -535,8 +537,8 @@ class AssetAccessRequestAdmin(admin.ModelAdmin):
     ]
     list_filter = ["status", "intended_use", "created_at", "approved_at"]
     search_fields = ["developer_user__email", "asset__name", "developer_access_reason"]
-    readonly_fields = ["created_at", "approved_at"]
-    autocomplete_fields = ["developer_user", "asset", "approved_by"]
+    readonly_fields = ["created_at", "approved_at", "rejected_at"]
+    autocomplete_fields = ["developer_user", "asset", "approved_by", "rejected_by"]
 
     fieldsets = (
         (
@@ -550,10 +552,13 @@ class AssetAccessRequestAdmin(admin.ModelAdmin):
                 )
             },
         ),
-        ("Admin Review", {"fields": ("status", "admin_response", "approved_by")}),
+        (
+            "Admin Review",
+            {"fields": ("status", "approved_by", "approved_at", "rejected_by", "rejected_at", "rejection_reason")},
+        ),
         (
             "Timestamps",
-            {"fields": ("created_at", "approved_at"), "classes": ("collapse",)},
+            {"fields": ("created_at",), "classes": ("collapse",)},
         ),
     )
 
@@ -562,15 +567,16 @@ class AssetAccessRequestAdmin(admin.ModelAdmin):
     @admin.action(description="Approve selected requests")
     def approve_requests(self, request, queryset):
         """Bulk approve access requests"""
+        service = AssetAccessRequestService(AssetAccessRequestRepository())
         count = 0
         for access_request in queryset.filter(status="pending"):
             try:
-                access_request.approve_request(approved_by_user=request.user, auto_approved=False)
+                service.accept(request.user, access_request.id)
                 count += 1
-            except Exception as e:
+            except ItqanError as e:
                 self.message_user(
                     request,
-                    f"Error approving request {access_request.id}: {e}",
+                    f"Error approving request {access_request.id}: {e.message}",
                     level="ERROR",
                 )
 
@@ -579,15 +585,16 @@ class AssetAccessRequestAdmin(admin.ModelAdmin):
     @admin.action(description="Reject selected requests")
     def reject_requests(self, request, queryset):
         """Bulk reject access requests"""
+        service = AssetAccessRequestService(AssetAccessRequestRepository())
         count = 0
         for access_request in queryset.filter(status="pending"):
             try:
-                access_request.reject_request(rejected_by_user=request.user, reason="Bulk rejection from admin")
+                service.reject(request.user, access_request.id, "Bulk rejection from admin")
                 count += 1
-            except Exception as e:
+            except ItqanError as e:
                 self.message_user(
                     request,
-                    f"Error rejecting request {access_request.id}: {e}",
+                    f"Error rejecting request {access_request.id}: {e.message}",
                     level="ERROR",
                 )
 
@@ -595,7 +602,7 @@ class AssetAccessRequestAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         """Optimize queryset"""
-        return super().get_queryset(request).select_related("developer_user", "asset", "approved_by")
+        return super().get_queryset(request).select_related("developer_user", "asset", "approved_by", "rejected_by")
 
 
 @admin.register(AssetAccess)

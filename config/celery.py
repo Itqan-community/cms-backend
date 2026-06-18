@@ -25,6 +25,10 @@ app.conf.beat_schedule = {
         "task": "apps.content.tasks.cleanup_stuck_multipart_uploads_task",
         "schedule": crontab(minute=0, hour="*/4"),
     },
+    "expire-publisher-member-invitations": {
+        "task": "apps.publishers.tasks.expire_publisher_member_invitations",
+        "schedule": crontab(minute=0, hour=0),
+    },
 }
 
 

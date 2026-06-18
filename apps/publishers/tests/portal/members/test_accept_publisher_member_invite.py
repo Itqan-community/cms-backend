@@ -1,0 +1,71 @@
+from unittest.mock import patch
+
+from django.contrib.auth.models import Group
+from model_bakery import baker
+
+from apps.core.tests.base import BaseTestCase
+from apps.publishers.models import Publisher
+from apps.publishers.services.publisher_member_invitation_service import PublisherMemberInvitationService
+from apps.users.models import User
+
+
+class AcceptInviteTest(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        Group.objects.get_or_create(name="Publisher Member Admin")
+        self.publisher = baker.make(Publisher)
+
+    def _invite(self, email="acceptme@example.com"):
+        with (
+            patch(
+                "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_invitation_email.delay"
+            ),
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            member, inv, raw = PublisherMemberInvitationService().create_invitation(
+                publisher=self.publisher,
+                email=email,
+                role="staff",
+                invited_by=baker.make(User),
+            )
+        return member, inv, raw
+
+    def test_accept_activates_member_no_auth_required(self):
+        member, inv, raw = self._invite()
+        with (
+            patch(
+                "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_activated_email.delay"
+            ),
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            resp = self.client.post(f"/portal/invitations/{raw}/accept/")
+        self.assertEqual(200, resp.status_code, resp.content)
+        member.refresh_from_db()
+        self.assertEqual("active", member.status)
+
+    def test_accept_invalid_token_returns_400(self):
+        resp = self.client.post("/portal/invitations/not-a-real-token/accept/")
+        self.assertEqual(400, resp.status_code, resp.content)
+        self.assertEqual("invalid_invitation", resp.json()["error_name"])
+
+    def test_get_invitation_details_no_auth_required(self):
+        _member, inv, raw = self._invite()
+        resp = self.client.get(f"/portal/invitations/{raw}/")
+        self.assertEqual(200, resp.status_code, resp.content)
+        body = resp.json()
+        self.assertEqual(self.publisher.name, body["publisher_name"])
+        self.assertEqual("acceptme@example.com", body["email"])
+        self.assertEqual("pending", body["status"])
+
+    def test_get_invitation_details_invalid_token_returns_400(self):
+        resp = self.client.get("/portal/invitations/not-a-real-token/")
+        self.assertEqual(400, resp.status_code, resp.content)
+        self.assertEqual("invalid_invitation", resp.json()["error_name"])
+
+    def test_get_invitation_details_does_not_mutate(self):
+        member, inv, raw = self._invite()
+        self.client.get(f"/portal/invitations/{raw}/")
+        inv.refresh_from_db()
+        member.refresh_from_db()
+        self.assertEqual("pending", inv.status)
+        self.assertEqual("pending", member.status)

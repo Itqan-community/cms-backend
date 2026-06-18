@@ -6,7 +6,7 @@ from django.db.models import Q
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from rest_framework import status
 
-from apps.publishers.models import Domain, Publisher
+from apps.publishers.models import Domain, Publisher, PublisherMember
 
 if TYPE_CHECKING:
     from apps.core.ninja_utils.request import Request
@@ -135,7 +135,11 @@ def portal_publisher_q(user, publisher: Publisher | None = None, lookup: str = "
             return Q(**{f"{lookup}__in": [publisher.id]})
         publisher_ids = getattr(user, "_cached_publisher_ids", None)
         if publisher_ids is None:
-            publisher_ids = list(user.publishers.values_list("id", flat=True))
+            publisher_ids = list(
+                PublisherMember.objects.filter(user=user, status=PublisherMember.StatusChoice.ACTIVE).values_list(
+                    "publisher_id", flat=True
+                )
+            )
             user._cached_publisher_ids = publisher_ids
         if publisher.id in publisher_ids:
             return Q(**{f"{lookup}__in": [publisher.id]})
@@ -146,7 +150,11 @@ def portal_publisher_q(user, publisher: Publisher | None = None, lookup: str = "
 
     publisher_ids = getattr(user, "_cached_publisher_ids", None)
     if publisher_ids is None:
-        publisher_ids = list(user.publishers.values_list("id", flat=True))
+        publisher_ids = list(
+            PublisherMember.objects.filter(user=user, status=PublisherMember.StatusChoice.ACTIVE).values_list(
+                "publisher_id", flat=True
+            )
+        )
         user._cached_publisher_ids = publisher_ids
 
     if not publisher_ids:

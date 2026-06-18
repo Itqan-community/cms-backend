@@ -23,6 +23,7 @@ class TestAssetService(BaseTestCase):
 
         # Grant access to user1
         request = baker.make(AssetAccessRequest, developer_user=user1, asset=asset, status="approved")
+        baker.make(AssetVersion, asset=asset, name="0.9.0")
         baker.make(AssetAccess, asset_access_request=request, user=user1, asset=asset, effective_license="CC0")
 
         service = AssetService()

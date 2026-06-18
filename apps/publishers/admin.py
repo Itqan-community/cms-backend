@@ -3,7 +3,7 @@ from django.db.models import Count
 from django.urls import reverse
 from django.utils.html import format_html
 
-from .models import Domain, Publisher, PublisherMember
+from .models import Domain, Publisher, PublisherMember, PublisherMemberInvitation
 
 
 class PublisherMemberInline(admin.TabularInline):
@@ -105,6 +105,42 @@ class PublisherMemberAdmin(admin.ModelAdmin):
     list_filter = ["role", "created_at"]
     search_fields = ["user__email", "publisher__name"]
     raw_id_fields = ["user", "publisher"]
+
+
+@admin.register(PublisherMemberInvitation)
+class PublisherMemberInvitationAdmin(admin.ModelAdmin):
+    list_display = [
+        "email",
+        "publisher",
+        "role",
+        "status",
+        "invited_by",
+        "expires_at",
+        "accepted_at",
+        "created_at",
+    ]
+    list_filter = ["status", "created_at", "expires_at"]
+    search_fields = [
+        "member__user__email",
+        "publisher__name",
+        "invited_by__email",
+    ]
+    raw_id_fields = ["publisher", "member", "invited_by", "cancelled_by"]
+    readonly_fields = [
+        "token_hash",
+        "accepted_at",
+        "cancelled_at",
+        "created_at",
+        "updated_at",
+    ]
+
+    @admin.display(description="Email")
+    def email(self, obj):
+        return obj.email
+
+    @admin.display(description="Role")
+    def role(self, obj):
+        return obj.role
 
 
 @admin.register(Domain)

@@ -175,46 +175,12 @@ def send_resource_update_email(resource_version_id: int) -> None:
 
 
 @shared_task
-def send_asset_update_email(asset_version_id: int) -> None:
-    """
-    Task to send email notifications for a new AssetVersion.
-    """
-    logger.info(f"Task started [task=send_asset_update_email, asset_version_id={asset_version_id}]")
-    from apps.content.models import AssetAccess, AssetVersion
+def notify_asset_version_created(asset_version_id: int) -> None:
+    logger.info(f"Task started [task=notify_asset_version_created, asset_version_id={asset_version_id}]")
+    from apps.content.services.asset_version_notifier import AssetVersionNotifier
 
-    try:
-        asset_version = AssetVersion.objects.select_related("asset").get(pk=asset_version_id)
-    except AssetVersion.DoesNotExist:
-        logger.warning(f"AssetVersion not found, skipping email [asset_version_id={asset_version_id}]")
-        return
-
-    users = (
-        AssetAccess.objects.filter(asset=asset_version.asset)
-        .select_related("user")
-        .values_list("user__email", flat=True)
-        .distinct()
-    )
-
-    if not users:
-        logger.info(f"No subscribers to notify [task=send_asset_update_email, asset_version_id={asset_version_id}]")
-        return
-
-    subject = f"New Update for {asset_version.asset.name}"
-    context = {
-        "asset_name": asset_version.asset.name,
-        "version": asset_version.name,
-        "summary": asset_version.summary,
-    }
-
-    email_service.send_email(
-        subject=subject,
-        recipients=list(users),
-        template="emails/asset_update.html",
-        context=context,
-    )
-    logger.info(
-        f"Task completed [task=send_asset_update_email, asset_version_id={asset_version_id}, recipients={len(list(users))}]"
-    )
+    AssetVersionNotifier().notify_new_version(asset_version_id)
+    logger.info(f"Task completed [task=notify_asset_version_created, asset_version_id={asset_version_id}]")
 
 
 @shared_task(bind=True, max_retries=3)
@@ -234,3 +200,21 @@ def send_issue_status_update_email(self, report_id: int, old_status: str, new_st
     except Exception as exc:
         logger.error(f"Task failed [task=send_issue_status_update_email, report_id={report_id}]: {exc}")
         raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1)) from exc
+
+
+@shared_task
+def send_access_request_outcome_email(request_id: int) -> None:
+    logger.info(f"Task started [task=send_access_request_outcome_email, request_id={request_id}]")
+    from apps.content.services.access_request_notification_service import AccessRequestNotificationService
+
+    AccessRequestNotificationService().send_developer_outcome_email(request_id)
+    logger.info(f"Task completed [task=send_access_request_outcome_email, request_id={request_id}]")
+
+
+@shared_task
+def send_access_request_new_request_email(request_id: int) -> None:
+    logger.info(f"Task started [task=send_access_request_new_request_email, request_id={request_id}]")
+    from apps.content.services.access_request_notification_service import AccessRequestNotificationService
+
+    AccessRequestNotificationService().send_publisher_new_request_email(request_id)
+    logger.info(f"Task completed [task=send_access_request_new_request_email, request_id={request_id}]")

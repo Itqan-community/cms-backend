@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>New Access Request</title>
+</head>
+
+<body>
+    <h2>New Access Request</h2>
+    <p><strong>{{ developer_name }}</strong> requested access to <strong>{{ asset_name }}</strong>.</p>
+
+    {% if auto_accepted %}
+    <p>This request was automatically accepted based on your publisher settings.</p>
+    {% else %}
+    <p>This request is pending your review.</p>
+    {% endif %}
+
+    <p><a href="{{ access_requests_url }}">View access requests in the portal</a></p>
+
+    <p>Best regards,<br>Itqan Team</p>
+</body>
+
+</html>

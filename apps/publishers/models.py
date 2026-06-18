@@ -34,6 +34,11 @@ class Publisher(BaseModel):
 
     contact_email = models.EmailField(blank=True, help_text="Contact email for the publisher")
 
+    auto_accept_access_requests = models.BooleanField(
+        default=True,
+        help_text="When true, new asset access requests for this publisher's assets are granted automatically.",
+    )
+
     foundation_year = models.PositiveSmallIntegerField(
         null=True, blank=True, help_text="Year the publisher was established"
     )
@@ -53,19 +58,29 @@ class Publisher(BaseModel):
 class PublisherMember(BaseModel):
     """
     Junction table for User <-> Publisher relationships.
-    Defines membership roles within publishers.
+    A user may belong to more than one publisher (many-to-many).
     """
 
     class RoleChoice(models.TextChoices):
-        OWNER = "owner", _("Owner")
-        MANAGER = "manager", _("Manager")
+        ADMIN = "admin", _("Admin")
+        STAFF = "staff", _("Staff")
+
+    class StatusChoice(models.TextChoices):
+        PENDING = "pending", _("Pending")
+        ACTIVE = "active", _("Active")
 
     publisher = models.ForeignKey(Publisher, on_delete=models.CASCADE, related_name="memberships")
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="publisher_memberships")
     role = models.CharField(
         max_length=20,
         choices=RoleChoice.choices,
-        help_text="Member's role in the publisher, just for information. This field WILL NOT be used for permission checks. or any code checks",
+        help_text="Role label for this member. Drives permission group assignment on activation; has no effect on runtime authorization.",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=StatusChoice.choices,
+        default=StatusChoice.PENDING,
+        help_text="PENDING until the member accepts their invitation; ACTIVE after acceptance.",
     )
 
     class Meta:
@@ -94,3 +109,61 @@ class Domain(BaseModel):
             # Remove primary status of existing domains for tenant
             domain_list.update(is_primary=False)
         super().save(*args, **kwargs)
+
+
+class PublisherMemberInvitation(BaseModel):
+    """
+    A pending invitation for a user to become a member of a publisher.
+    Carries a single-use hashed token and audit trail.
+    """
+
+    class StatusChoice(models.TextChoices):
+        PENDING = "pending", _("Pending")
+        ACCEPTED = "accepted", _("Accepted")
+        EXPIRED = "expired", _("Expired")
+        CANCELLED = "cancelled", _("Cancelled")
+
+    publisher = models.ForeignKey(Publisher, on_delete=models.CASCADE, related_name="member_invitations")
+    invited_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="sent_member_invitations"
+    )
+    member = models.ForeignKey(
+        PublisherMember, on_delete=models.SET_NULL, null=True, blank=True, related_name="invitations"
+    )
+    status = models.CharField(max_length=20, choices=StatusChoice.choices, default=StatusChoice.PENDING)
+    token_hash = models.CharField(
+        max_length=64,
+        unique=True,
+        null=True,
+        blank=True,
+        help_text="sha256 of the raw token; raw token only in email. Cleared once the invitation is consumed.",
+    )
+    expires_at = models.DateTimeField()
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    cancelled_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="cancelled_member_invitations"
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["member"],
+                condition=models.Q(status="pending"),
+                name="uniq_pending_invite_per_member",
+            ),
+        ]
+        indexes = [models.Index(fields=["token_hash"])]
+
+    @property
+    def email(self) -> str | None:
+        """Derived from member's user. None if member was deleted (cancelled invitation audit trail)."""
+        return self.member.user.email if self.member_id else None
+
+    @property
+    def role(self) -> str | None:
+        """Derived from member. None if member was deleted (cancelled invitation audit trail)."""
+        return self.member.role if self.member_id else None
+
+    def __str__(self):
+        return f"PublisherMemberInvitation(member={self.member_id} publisher={self.publisher_id} status={self.status})"
