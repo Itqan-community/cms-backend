@@ -410,6 +410,12 @@ msgstr "يمكن إلغاء الدعوات المعلقة فقط."
 msgid "This invitation is no longer valid."
 msgstr "هذه الدعوة لم تعد صالحة."
 
+msgid "Sura does not exist."
+msgstr "السورة غير موجودة."
+
+msgid "Ayah does not exist."
+msgstr "الآية غير موجودة."
+
 msgid "Itqan Community"
 msgstr "مجتمع اتقان"
 
