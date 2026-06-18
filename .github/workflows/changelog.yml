@@ -1,0 +1,48 @@
+name: Changelog
+
+on:
+  push:
+    branches:
+      - 'release/v*'
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install commitizen
+        run: pip install commitizen==4.10.*
+
+      - name: Extract version from branch name
+        id: version
+        run: |
+          VERSION=$(echo "$GITHUB_REF_NAME" | sed 's|release/v||')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog entry
+        run: cz changelog --unreleased-version "v${{ steps.version.outputs.version }}"
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit and push changelog
+        run: |
+          git add CHANGELOG.md
+          git diff --cached --quiet && echo "No changelog changes" && exit 0
+          git commit -m "docs(changelog): entry for v${{ steps.version.outputs.version }} [skip ci]"
+          git push origin "$GITHUB_REF_NAME"

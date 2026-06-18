@@ -1,0 +1,25 @@
+name: Commitlint
+
+on:
+  pull_request:
+    branches: [staging, main]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  commitlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install commitizen
+        run: pip install commitizen==4.10.*
+
+      - name: Check commit messages
+        run: cz check --rev-range ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}

@@ -164,6 +164,19 @@ Each app has its own `api/` directory with subdirectories per API surface (`inte
 
 - All queries in `api/tenant` should be filtered for publisher, preferably using `request.publisher_q()`
 
+## Versioning
+- **Tool**: `commitizen` (configured in `pyproject.toml` under `[tool.commitizen]`)
+- **Version source**: `pyproject.toml` → `[project] version`
+- **Tag format**: `v{version}` (e.g. `v0.2.0`)
+- **Commit convention**: Conventional Commits enforced via pre-commit `commit-msg` hook and `commitlint.yml` CI workflow
+  - `feat:` → bumps MINOR
+  - `fix:` / `perf:` → bumps PATCH
+  - `BREAKING CHANGE:` footer → bumps MAJOR
+- **Bump command**: `cz bump --yes` (run by `version-bump.yml` on push to `main`)
+- **Changelog**: auto-generated at `CHANGELOG.md` by `cz bump`; release-branch scaffold via `changelog.yml`
+- **Sentry releases**: created automatically by `version-bump.yml` using org `itqan-3o`, project `cms-backend` / `cms-backend-staging`
+- **Release branches**: named `release/v{version}` (e.g. `release/v1.0.0`); pushing to one triggers `changelog.yml`
+
 ## General
 - **Dependency management**: Use `uv` (`uv sync` to install, `uv sync --group dev` for dev dependencies)
 - **Linting**: Use `pre-commit install` to set up Git hooks. All PRs must pass linting checks to be merged
