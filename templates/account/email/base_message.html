@@ -1,4 +1,4 @@
-{% load i18n static %}{% get_current_language_bidi as LANGUAGE_BIDI %}{% get_current_language as LANGUAGE_CODE %}<!doctype html>
+{% load i18n %}{% get_current_language_bidi as LANGUAGE_BIDI %}{% get_current_language as LANGUAGE_CODE %}<!doctype html>
 <html lang="{{ LANGUAGE_CODE|default:'en' }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
@@ -15,7 +15,7 @@
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                   <tr>
                     <td style="padding:8px 16px; background-color:#ffffff; border:1px solid #d9e7e2; border-radius:999px;">
-                      <img src="https://{{ current_site.domain }}{% static 'images/itqan-logo.png' %}" width="40" height="40" alt="{{ current_site.name }}" style="display:block; width:40px; height:40px; border:0;" />
+                      <img src="https://pub-9ee413c8af4041c6bd5223d08f5d0f0f.r2.dev/static/logo/logo.png" width="40" height="40" alt="{{ current_site.name }}" style="display:block; width:40px; height:40px; border:0;" />
                     </td>
                   </tr>
                 </table>
