@@ -2,8 +2,18 @@
 {% load account %}
 {% load i18n %}
 
-{% block content %}{% autoescape off %}{% user_display user as user_display %}{% blocktranslate with site_name=current_site.name site_domain=current_site.domain %}You're receiving this email because user {{ user_display }} has given your email address to register an account on {{ site_domain }}.{% endblocktranslate %}
+{% block content %}{% user_display user as user_display %}
+<p style="margin:0 0 16px;">{% blocktranslate with site_name=current_site.name site_domain=current_site.domain %}You're receiving this email because user {{ user_display }} has given your email address to register an account on {{ site_domain }}.{% endblocktranslate %}</p>
 
-{% if code %}{% blocktranslate %}Your email verification code is listed below. Please enter it in your open browser window.{% endblocktranslate %}
-
-{{ code }}{% else %}{% blocktranslate %}To confirm this is correct, go to {{ activate_url }}{% endblocktranslate %}{% endif %}{% endautoescape %}{% endblock content %}
+{% if code %}
+<p style="margin:0 0 16px;">{% blocktranslate %}Your email verification code is listed below. Please enter it in your open browser window.{% endblocktranslate %}</p>
+<p style="margin:0; text-align:center;">
+  <span style="display:inline-block; font-family:'Courier New',monospace; font-size:28px; font-weight:700; letter-spacing:6px; color:#2c5952; background-color:#eef6f1; border:1px solid #bfe0cd; border-radius:6px; padding:12px 24px;">{{ code }}</span>
+</p>
+{% else %}
+<p style="margin:0 0 24px;">{% blocktranslate %}To confirm this is correct, go to {{ activate_url }}{% endblocktranslate %}</p>
+<p style="margin:0; text-align:center;">
+  <a href="{{ activate_url }}" style="display:inline-block; background-color:#2c5952; color:#ffffff; font-size:15px; font-weight:600; text-decoration:none; padding:12px 28px; border-radius:6px;">{% trans "Confirm email address" %}</a>
+</p>
+{% endif %}
+{% endblock content %}

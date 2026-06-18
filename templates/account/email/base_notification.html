@@ -2,13 +2,15 @@
 {% load account %}
 {% load i18n %}
 
-{% block content %}{% autoescape off %}{% blocktrans %}You are receiving this mail because the following change was made to your account:{% endblocktrans %}
+{% block content %}
+<p style="margin:0 0 16px;">{% blocktrans %}You are receiving this mail because the following change was made to your account:{% endblocktrans %}</p>
 
-{% block notification_message %}
-{% endblock notification_message%}
+<p style="margin:0 0 16px; font-weight:700; color:#2c5952;">{% block notification_message %}{% endblock notification_message %}</p>
 
-{% blocktrans %}If you do not recognize this change then please take proper security precautions immediately. The change to your account originates from:
-
-- IP address: {{ip}}
-- Browser: {{user_agent}}
-- Date: {{timestamp}}{% endblocktrans %}{% endautoescape %}{% endblock %}
+<p style="margin:0 0 12px;">{% blocktrans %}If you do not recognize this change then please take proper security precautions immediately. The change to your account originates from:{% endblocktrans %}</p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px; color:#355f58;">
+  <tr><td style="padding:2px 8px 2px 0; color:#6e8782;">{% trans "IP address" %}:</td><td style="padding:2px 0;">{{ ip }}</td></tr>
+  <tr><td style="padding:2px 8px 2px 0; color:#6e8782;">{% trans "Browser" %}:</td><td style="padding:2px 0;">{{ user_agent }}</td></tr>
+  <tr><td style="padding:2px 8px 2px 0; color:#6e8782;">{% trans "Date" %}:</td><td style="padding:2px 0;">{{ timestamp }}</td></tr>
+</table>
+{% endblock content %}

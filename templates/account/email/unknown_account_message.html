@@ -1,10 +1,14 @@
 {% extends "account/email/base_message.html" %}
 {% load i18n %}
 
-{% block content %}{% autoescape off %}{% blocktranslate %}You are receiving this email because you, or someone else, tried to access an account with email {{ email }}. However, we do not have any record of such an account in our database.{% endblocktranslate %}
+{% block content %}
+<p style="margin:0 0 16px;">{% blocktranslate %}You are receiving this email because you, or someone else, tried to access an account with email {{ email }}. However, we do not have any record of such an account in our database.{% endblocktranslate %}</p>
 
-{% blocktranslate %}This mail can be safely ignored if you did not initiate this action.{% endblocktranslate %}
+<p style="margin:0 0 24px; color:#6e8782; font-size:14px;">{% blocktranslate %}This mail can be safely ignored if you did not initiate this action.{% endblocktranslate %}</p>
 
-{% blocktranslate %}If it was you, you can sign up for an account using the link below.{% endblocktranslate %}
+<p style="margin:0 0 24px;">{% blocktranslate %}If it was you, you can sign up for an account using the link below.{% endblocktranslate %}</p>
 
-{{ signup_url }}{% endautoescape %}{% endblock content %}
+<p style="margin:0; text-align:center;">
+  <a href="{{ signup_url }}" style="display:inline-block; background-color:#2c5952; color:#ffffff; font-size:15px; font-weight:600; text-decoration:none; padding:12px 28px; border-radius:6px;">{% trans "Sign up" %}</a>
+</p>
+{% endblock content %}
