@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: إصدار الحزمة\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-09 06:59+0300\n"
+"POT-Creation-Date: 2026-06-18 10:19+0300\n"
 "PO-Revision-Date: السنة-الشهر-اليوم الساعة:الدقيقة+المنطقة\n"
 "Last-Translator: الاسم الكامل <EMAIL@ADDRESS>\n"
 "Language-Team: اللغة <LL@li.org>\n"
@@ -407,6 +407,9 @@ msgstr "يمكن إلغاء الدعوات المعلقة فقط."
 msgid "This invitation is no longer valid."
 msgstr "هذه الدعوة لم تعد صالحة."
 
+msgid "Itqan Community"
+msgstr "مجتمع اتقان"
+
 msgid "This email has already been taken."
 msgstr "هذا البريد الإلكتروني مستخدم بالفعل."
 
@@ -523,12 +526,15 @@ msgstr ""
 "\n"
 "%(password_reset_url)s"
 
+msgid "Reset password"
+msgstr "إعادة تعيين كلمة المرور"
+
 msgid "Account Already Exists"
 msgstr "الحساب موجود بالفعل"
 
 #, python-format
-msgid "Hello from %(site_name)s!"
-msgstr "مرحباً بك من %(site_name)s!"
+msgid "Welcome to %(site_name)s!"
+msgstr "مرحباً بك في %(site_name)s!"
 
 #, python-format
 msgid ""
@@ -541,19 +547,23 @@ msgstr ""
 msgid "You are receiving this mail because the following change was made to your account:"
 msgstr "أنت تتلقى هذا البريد لأن التغيير التالي تم إجراؤه على حسابك:"
 
-#, python-format
-msgid ""
-"If you do not recognize this change then please take proper security precautions immediately. The change to your account originates from:\n"
-"\n"
-"- IP address: %(ip)s\n"
-"- Browser: %(user_agent)s\n"
-"- Date: %(timestamp)s"
+
+msgid "If you do not recognize this change then please take proper security precautions immediately. The change to your account originates from:"
 msgstr ""
 "إذا كنت لا تتعرف على هذا التغيير، يرجى اتخاذ الاحتياطات الأمنية المناسبة فوراً. التغيير على حسابك يأتي من:\n"
 "\n"
 "- عنوان IP: %(ip)s\n"
 "- المتصفح: %(user_agent)s\n"
 "- التاريخ: %(timestamp)s"
+
+msgid "IP address"
+msgstr "عنوان IP"
+
+msgid "Browser"
+msgstr "المتصفح"
+
+msgid "Date"
+msgstr "التاريخ"
 
 #, python-format
 msgid "Your email has been changed from %(from_email)s to %(to_email)s."
@@ -578,6 +588,9 @@ msgstr "رمز التحقق من بريدك الإلكتروني مدرج أدن
 #, python-format
 msgid "To confirm this is correct, go to %(activate_url)s"
 msgstr "للتأكيد، انتقل إلى %(activate_url)s"
+
+msgid "Confirm email address"
+msgstr "تأكيد البريد الإلكتروني"
 
 msgid "Please Confirm Your Email Address"
 msgstr "يرجى تأكيد عنوان بريدك الإلكتروني"
@@ -642,6 +655,9 @@ msgstr "أنت تتلقى هذا البريد الإلكتروني لأنك أو
 
 msgid "If it was you, you can sign up for an account using the link below."
 msgstr "إذا كنت أنت، يمكنك إنشاء حساب باستخدام الرابط أدناه."
+
+msgid "Sign up"
+msgstr "إنشاء حساب"
 
 msgid "Unknown Account"
 msgstr "حساب غير معروف"
