@@ -57,7 +57,7 @@ CORS_ALLOWED_ORIGINS = [
 settings.DATABASES["default"].update(
     {
         "ENGINE": "django.db.backends.postgresql",
-        "CONN_MAX_AGE": 60,
+        "CONN_MAX_AGE": 0,
         "OPTIONS": {
             "sslmode": "require",
             "connect_timeout": 10,
