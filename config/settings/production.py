@@ -55,11 +55,6 @@ CORS_ALLOWED_ORIGINS = [
 settings.DATABASES["default"].update(
     {
         "ENGINE": "django.db.backends.postgresql",
-        # Route through DO managed PgBouncer pool (transaction mode).
-        # CONN_MAX_AGE=0: Django must not hold persistent connections; the pool owns reuse.
-        # DISABLE_SERVER_SIDE_CURSORS: required for PgBouncer transaction mode.
-        "HOST": config("DB_POOL_HOST", default=config("DB_HOST", default="localhost")),
-        "PORT": config("DB_POOL_PORT", default=config("DB_PORT", default="5432")),
         "CONN_MAX_AGE": 0,
         "DISABLE_SERVER_SIDE_CURSORS": True,
         "OPTIONS": {
