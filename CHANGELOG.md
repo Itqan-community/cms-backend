@@ -1,3 +1,10 @@
+## v0.3.1 (2026-06-21)
+
+### Fix
+
+- set CONN_MAX_AGE=0 for PgBouncer transaction mode
+- set CONN_MAX_AGE=0 for PgBouncer transaction mode
+
 ## v0.3.0 (2026-06-18)
 
 ### Feat
