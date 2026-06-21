@@ -1,3 +1,9 @@
+## v0.3.2 (2026-06-21)
+
+### Fix
+
+- remove DB_POOL_HOST override causing Unix socket fallback
+
 ## v0.3.1 (2026-06-21)
 
 ### Fix
