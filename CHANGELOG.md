@@ -1,3 +1,10 @@
+## v0.3.3 (2026-06-21)
+
+### Fix
+
+- use PgBouncer port 25061 for prod DB in CI env generation
+- use PgBouncer port 25061 for prod DB in CI env generation
+
 ## v0.3.2 (2026-06-21)
 
 ### Fix
