@@ -188,9 +188,7 @@ jobs:
                 echo "DB_USER=${{ secrets.PROD_DB_USER }}";
                 echo "DB_PASSWORD=${{ secrets.PROD_DB_PASSWORD }}";
                 echo "DB_HOST=${{ secrets.PROD_DB_HOST }}";
-                echo "DB_PORT=25060";
-                echo "DB_POOL_HOST=${{ secrets.PROD_DB_POOL_HOST }}";
-                echo "DB_POOL_PORT=25061";
+                echo "DB_PORT=25061";
                 echo "PGSSLMODE=require";
                 echo "ALLOWED_HOSTS=api.cms.itqan.dev";
                 echo "CORS_ALLOWED_ORIGINS=https://cms.itqan.dev";
