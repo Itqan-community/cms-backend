@@ -1,5 +1,7 @@
 from django.apps import AppConfig
 
+from apps.core.permissions import PermissionChoice
+
 
 class PublishersConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
@@ -32,6 +34,7 @@ def _seed_group(group_name: str, codenames: list[str]) -> None:
 
 def _seed_publisher_member_groups(sender, **kwargs) -> None:
     from apps.publishers.services.publisher_member_service import (
+        ITQAN_INTERNAL_GROUP,
         PUBLISHER_ADMIN_GROUP,
         PUBLISHER_ADMIN_GROUP_PERMS,
         PUBLISHER_MEMBER_GROUP,
@@ -40,3 +43,4 @@ def _seed_publisher_member_groups(sender, **kwargs) -> None:
 
     _seed_group(PUBLISHER_MEMBER_GROUP, PUBLISHER_MEMBER_GROUP_PERMS)
     _seed_group(PUBLISHER_ADMIN_GROUP, PUBLISHER_ADMIN_GROUP_PERMS)
+    _seed_group(ITQAN_INTERNAL_GROUP, PermissionChoice.values)  # type: ignore[attr-defined]

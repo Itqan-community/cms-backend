@@ -33,6 +33,8 @@ PUBLISHER_ADMIN_GROUP_PERMS = [
     PermissionChoice.PORTAL_MANAGE_ACCESS_REQUESTS_SETTINGS.value,
 ]
 
+ITQAN_INTERNAL_GROUP = "Itqan Internal"  # For Itqan staff only; not related to publishers.
+
 
 class PublisherMemberService:
     def __init__(self, repo: PublisherMemberRepository | None = None) -> None:
