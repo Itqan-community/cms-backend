@@ -4,11 +4,11 @@ sidebar_position: 1
 
 # Quickstart
 
-The **Itqan CMS API** gives you authentic Quranic recitation data — reciters, recitations, riwayahs, qiraat, and ayah-level audio timings — from verified publishers, over a clean REST/JSON interface. No SDK, no setup: every endpoint is a plain `GET` you can run from a terminal right now.
+The **Itqan CMS API** gives you authentic Quranic recitation data — reciters, recitations, riwayahs, qiraat, and ayah-level audio timings — from verified publishers, over a clean REST/JSON interface.
 
 ## Your first request
 
-> **Time:** ~30 seconds. Copy, paste, run — no API key required to read public content.
+> **Time:** ~30 seconds. Copy, paste, run — public content is readable without a key today. For account-aware features and higher limits, [get an API key](/docs/getting-started/authentication) and send it in the `X-API-Key` header.
 
 Base URL: `{{API_BASE}}`
 
