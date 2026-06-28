@@ -37,13 +37,14 @@ class DetailAssetOut(Schema):
     thumbnail_url: AbsoluteUrl | None
     publisher: DetailAssetPublisherOut = Field(alias="publisher")
     license: LicenseChoice
+    is_open_access: bool
     snapshots: list[DetailAssetSnapshotOut] = Field(default_factory=list, alias="previews")
 
 
 @router.get("assets/{id}/", response=DetailAssetOut, auth=None)
 def detail_assets(request: Request, id: int):
     logger.info(f"Asset detail requested [asset_id={id}]")
-    asset = get_object_or_404(Asset, request.publisher_q("publisher"), id=id)
+    asset = get_object_or_404(Asset, request.publisher_q("publisher"), restricted_for_tenant=False, id=id)
 
     # Only create usage event for authenticated users
     if hasattr(request, "user") and request.user and request.user.is_authenticated:

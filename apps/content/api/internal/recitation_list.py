@@ -1,5 +1,6 @@
 from typing import Annotated
 
+from django.db.models import Q
 from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 
@@ -71,6 +72,6 @@ def list_recitations(request: Request, filters: RecitationFilter = Query()):
     service = RecitationService(repo)
 
     publisher_q = request.publisher_q("publisher")
-    qs = service.get_all_recitations(publisher_q, filters)
+    qs = service.get_all_recitations(publisher_q & Q(restricted_for_tenant=False), filters)
 
     return qs

@@ -40,6 +40,8 @@ class TranslationListOut(Schema):
     license: LicenseChoice
     language: str
     is_external: bool
+    is_open_access: bool
+    restricted_for_tenant: bool
     thumbnail_url: str | None = None
     created_at: AwareDatetime
 
@@ -73,6 +75,8 @@ class TranslationDetailOut(Schema):
     language: str
     is_external: bool
     external_url: str | None = None
+    is_open_access: bool
+    restricted_for_tenant: bool
     versions: list[TranslationVersionOut]
     created_at: AwareDatetime
 
@@ -102,6 +106,8 @@ class TranslationCreateIn(Schema):
     publisher_id: int
     is_external: bool = False
     external_url: str | None = None
+    is_open_access: bool = False
+    restricted_for_tenant: bool = False
 
 
 class TranslationPutIn(Schema):
@@ -116,6 +122,8 @@ class TranslationPutIn(Schema):
     publisher_id: int
     is_external: bool = False
     external_url: str | None = None
+    is_open_access: bool = False
+    restricted_for_tenant: bool = False
 
 
 class TranslationPatchIn(Schema):
@@ -130,6 +138,8 @@ class TranslationPatchIn(Schema):
     publisher_id: int | None = None
     is_external: bool | None = None
     external_url: str | None = None
+    is_open_access: bool | None = None
+    restricted_for_tenant: bool | None = None
 
 
 # --- Filter Schema ---
@@ -201,6 +211,8 @@ def create_translation(
         language=data.language,
         is_external=data.is_external,
         external_url=data.external_url,
+        is_open_access=data.is_open_access,
+        restricted_for_tenant=data.restricted_for_tenant,
     )
     logger.info(f"Translation created [translation_id={translation.id}, user_id={request.user.id}]")
     return 201, translation
