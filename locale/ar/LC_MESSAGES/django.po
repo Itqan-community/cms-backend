@@ -164,6 +164,9 @@ msgstr "لا يمكن تنفيذ الإجراء على طلب بحالة '{statu
 msgid "Rejection reason is required."
 msgstr "سبب الرفض مطلوب."
 
+msgid "This asset has open or granted access requests from public consumers and cannot be restricted to your tenant. Please contact Itqan team."
+msgstr "يحتوي هذا الأصل على طلبات وصول مفتوحة أو ممنوحة من مستهلكين عموميين، ولا يمكن حصره على موقعك. يرجى التواصل مع فريق إتقان."
+
 msgid "Description must be at least 10 characters long."
 msgstr "يجب أن يكون الوصف 10 أحرف على الأقل."
 
@@ -546,7 +549,6 @@ msgstr ""
 
 msgid "You are receiving this mail because the following change was made to your account:"
 msgstr "أنت تتلقى هذا البريد لأن التغيير التالي تم إجراؤه على حسابك:"
-
 
 msgid "If you do not recognize this change then please take proper security precautions immediately. The change to your account originates from:"
 msgstr ""

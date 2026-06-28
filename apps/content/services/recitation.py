@@ -8,6 +8,7 @@ from django.utils.translation import gettext as _
 
 from apps.content.models import LicenseChoice, Qiraah, Reciter, Riwayah
 from apps.content.repositories.recitation import RecitationRepository
+from apps.content.services.asset_access import guard_restrict_for_tenant
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
 
@@ -56,6 +57,8 @@ class RecitationService:
         madd_level: Asset.MaddLevelChoice | None,
         meem_behaviour: Asset.MeemBehaviourChoice | None,
         year: int | None,
+        is_open_access: bool = False,
+        restricted_for_tenant: bool = False,
     ) -> Asset:
         """
         Business Logic: Create a new recitation.
@@ -101,6 +104,8 @@ class RecitationService:
             madd_level=madd_level,
             meem_behaviour=meem_behaviour,
             year=year,
+            is_open_access=is_open_access,
+            restricted_for_tenant=restricted_for_tenant,
         )
         logger.info(
             f"Recitation created [asset_id={recitation.pk}, publisher_id={publisher_id}, reciter_id={reciter_id}]"
@@ -117,6 +122,9 @@ class RecitationService:
         Business Logic: Update an existing recitation.
         """
         asset = self._get_recitation_or_404(recitation_slug, publisher_q=publisher_q)
+
+        if fields.get("restricted_for_tenant") and not asset.restricted_for_tenant:
+            guard_restrict_for_tenant(asset)
 
         # Trim input fields if present
         for field in ["name_ar", "name_en", "description_ar", "description_en"]:

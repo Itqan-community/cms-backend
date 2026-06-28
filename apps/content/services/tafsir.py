@@ -8,6 +8,7 @@ from django.utils.translation import gettext as _
 
 from apps.content.models import Asset as AssetModel, AssetVersion, CategoryChoice, LicenseChoice
 from apps.content.repositories.tafsir import TafsirRepository
+from apps.content.services.asset_access import guard_restrict_for_tenant
 from apps.content.tasks import notify_asset_version_created
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
@@ -51,6 +52,8 @@ class TafsirService:
         is_external: bool = False,
         external_url: str | None = None,
         thumbnail_url: Any | None = None,
+        is_open_access: bool = False,
+        restricted_for_tenant: bool = False,
     ) -> Asset:
         """
         Business Logic: Create a new tafsir.
@@ -101,6 +104,8 @@ class TafsirService:
             is_external=is_external,
             external_url=external_url,
             thumbnail_url=thumbnail_url,
+            is_open_access=is_open_access,
+            restricted_for_tenant=restricted_for_tenant,
         )
         logger.info(f"Tafsir created [asset_id={tafsir.pk}, publisher_id={publisher_id}, language={language}]")
         return tafsir
@@ -116,6 +121,9 @@ class TafsirService:
         Validates name requirement, lets repository handle field setting and syncing.
         """
         asset = self._get_tafsir_or_404(tafsir_slug, publisher_q=publisher_q)
+
+        if fields.get("restricted_for_tenant") and not asset.restricted_for_tenant:
+            guard_restrict_for_tenant(asset)
 
         # Validate name fields if user is trying to update them
         if "name_ar" in fields or "name_en" in fields:
