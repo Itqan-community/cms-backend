@@ -45,7 +45,6 @@ class RecitationListOut(Schema):
     riwayah: RecitationRiwayahOut | None = None
     qiraah: RecitationQiraahOut | None = None
     surahs_count: int
-    is_open_access: bool
 
     @staticmethod
     def resolve_publisher(obj):
