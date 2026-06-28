@@ -1,6 +1,15 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetVersion, CategoryChoice, Qiraah, Reciter, Riwayah, StatusChoice
+from apps.content.models import (
+    Asset,
+    AssetAccessRequest,
+    AssetVersion,
+    CategoryChoice,
+    Qiraah,
+    Reciter,
+    Riwayah,
+    StatusChoice,
+)
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
@@ -145,6 +154,122 @@ class RecitationPortalTest(BaseTestCase):
         asset = Asset.objects.get(id=body["id"])
         self.assertEqual(self.publisher.id, asset.publisher_id)
         self.assertEqual(self.reciter.id, asset.reciter_id)
+
+    def test_create_recitation_defaults_visibility_flags_to_false(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_RECITATION)
+        payload = {
+            "name_en": "Default Visibility",
+            "publisher_id": self.publisher.id,
+            "reciter_id": self.reciter.id,
+            "qiraah_id": self.qiraah.id,
+            "license": "CC0",
+        }
+
+        # Act
+        response = self.client.post("/portal/recitations/", data=payload, content_type="application/json")
+
+        # Assert
+        self.assertEqual(201, response.status_code, response.content)
+        body = response.json()
+        self.assertFalse(body["is_open_access"])
+        self.assertFalse(body["restricted_for_tenant"])
+        asset = Asset.objects.get(id=body["id"])
+        self.assertFalse(asset.is_open_access)
+        self.assertFalse(asset.restricted_for_tenant)
+
+    def test_create_recitation_sets_visibility_flags(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_RECITATION)
+        payload = {
+            "name_en": "Open Tenant-only Recitation",
+            "publisher_id": self.publisher.id,
+            "reciter_id": self.reciter.id,
+            "qiraah_id": self.qiraah.id,
+            "license": "CC0",
+            "is_open_access": True,
+            "restricted_for_tenant": True,
+        }
+
+        # Act
+        response = self.client.post("/portal/recitations/", data=payload, content_type="application/json")
+
+        # Assert
+        self.assertEqual(201, response.status_code, response.content)
+        body = response.json()
+        self.assertTrue(body["is_open_access"])
+        self.assertTrue(body["restricted_for_tenant"])
+        asset = Asset.objects.get(id=body["id"])
+        self.assertTrue(asset.is_open_access)
+        self.assertTrue(asset.restricted_for_tenant)
+
+    def test_patch_recitation_updates_visibility_flags(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_RECITATION)
+        asset = baker.make(
+            Asset,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
+            reciter=self.reciter,
+            qiraah=self.qiraah,
+            is_open_access=False,
+            restricted_for_tenant=False,
+        )
+
+        # Act
+        response = self.client.patch(
+            f"/portal/recitations/{asset.slug}/",
+            data={"is_open_access": True, "restricted_for_tenant": True},
+            content_type="application/json",
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertTrue(body["is_open_access"])
+        self.assertTrue(body["restricted_for_tenant"])
+        asset.refresh_from_db()
+        self.assertTrue(asset.is_open_access)
+        self.assertTrue(asset.restricted_for_tenant)
+
+    def test_patch_restrict_for_tenant_blocked_when_access_requests_exist(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_RECITATION)
+        asset = baker.make(
+            Asset,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
+            reciter=self.reciter,
+            qiraah=self.qiraah,
+            restricted_for_tenant=False,
+        )
+        developer = baker.make(User)
+        AssetAccessRequest.objects.create(
+            developer_user=developer,
+            asset=asset,
+            status=AssetAccessRequest.StatusChoice.APPROVED,
+            developer_access_reason="reason",
+            intended_use=AssetAccessRequest.IntendedUseChoice.NON_COMMERCIAL,
+        )
+
+        # Act
+        response = self.client.patch(
+            f"/portal/recitations/{asset.slug}/",
+            data={"restricted_for_tenant": True},
+            content_type="application/json",
+        )
+
+        # Assert
+        self.assertEqual(409, response.status_code, response.content)
+        self.assertEqual("restricted_for_tenant_conflict", response.json()["error_name"])
+        asset.refresh_from_db()
+        self.assertFalse(asset.restricted_for_tenant)
 
     def test_update_recitation_put_should_return_200(self):
         # Arrange

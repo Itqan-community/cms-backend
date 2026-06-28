@@ -51,6 +51,54 @@ class TranslationCreateTest(BaseTestCase):
         self.assertEqual(StatusChoice.READY, asset.status)
         self.assertEqual("en", asset.language)
 
+    def test_create_translation_defaults_visibility_flags_to_false(self):
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
+        response = self.client.post(
+            "/portal/translations/",
+            data={
+                "name_en": "Default Visibility Translation",
+                "license": "CC-BY",
+                "language": "en",
+                "publisher_id": self.publisher.id,
+                "is_external": False,
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(201, response.status_code, response.content)
+        body = response.json()
+        self.assertFalse(body["is_open_access"])
+        self.assertFalse(body["restricted_for_tenant"])
+        asset = Asset.objects.get(id=body["id"])
+        self.assertFalse(asset.is_open_access)
+        self.assertFalse(asset.restricted_for_tenant)
+
+    def test_create_translation_sets_visibility_flags(self):
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
+        response = self.client.post(
+            "/portal/translations/",
+            data={
+                "name_en": "Open Tenant-only Translation",
+                "license": "CC-BY",
+                "language": "en",
+                "publisher_id": self.publisher.id,
+                "is_external": False,
+                "is_open_access": True,
+                "restricted_for_tenant": True,
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(201, response.status_code, response.content)
+        body = response.json()
+        self.assertTrue(body["is_open_access"])
+        self.assertTrue(body["restricted_for_tenant"])
+        asset = Asset.objects.get(id=body["id"])
+        self.assertTrue(asset.is_open_access)
+        self.assertTrue(asset.restricted_for_tenant)
+
     def test_create_translation_where_publisher_not_found_should_return_404(self):
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
