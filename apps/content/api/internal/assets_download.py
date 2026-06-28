@@ -41,7 +41,7 @@ def download_asset(request: Request, id: int):
     Return a direct download URL for the latest asset version
     """
     # Get the asset
-    asset = get_object_or_404(Asset, request.publisher_q("publisher"), id=id)
+    asset = get_object_or_404(Asset, request.publisher_q("publisher"), restricted_for_tenant=False, id=id)
 
     # Check if user has access using the service function
     if not user_has_access(request.user, asset):
@@ -55,10 +55,10 @@ def download_asset(request: Request, id: int):
     if not asset_latest_version.file_url:
         raise Http404("No file available for this asset")
 
-    # Get download URL
-    download_url = AssetAccess.objects.get(user=request.user, asset=asset).get_download_url()
-    if not download_url:
-        raise Http404("Download URL not available")
+    if not asset.is_open_access:
+        download_url = AssetAccess.objects.get(user=request.user, asset=asset).get_download_url()
+        if not download_url:
+            raise Http404("Download URL not available")
 
     # Generate pre-signed download url
     key = f"media/{asset_latest_version.file_url.name}"  # object key within the bucket

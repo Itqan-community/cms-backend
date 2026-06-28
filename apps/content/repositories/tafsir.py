@@ -29,6 +29,8 @@ class TafsirRepository:
         is_external: bool = False,
         external_url: str | None = None,
         thumbnail_url: Any | None = None,
+        is_open_access: bool = False,
+        restricted_for_tenant: bool = False,
     ) -> Asset:
         """
         Create an Asset for a new Tafsir.
@@ -53,6 +55,8 @@ class TafsirRepository:
                 is_external=is_external,
                 external_url=external_url,
                 thumbnail_url=thumbnail_url,
+                is_open_access=is_open_access,
+                restricted_for_tenant=restricted_for_tenant,
             )
 
         return asset

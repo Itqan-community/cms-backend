@@ -96,6 +96,6 @@ def list_recitations(request, filters: RecitationFilter = Query()):
     service = RecitationService(repo)
 
     # Public API doesn't filter by publisher by default, so we pass an empty Q object
-    qs = service.get_all_recitations(Q(), filters, annotate_surahs_count=True)
+    qs = service.get_all_recitations(Q(restricted_for_tenant=False), filters, annotate_surahs_count=True)
 
     return qs

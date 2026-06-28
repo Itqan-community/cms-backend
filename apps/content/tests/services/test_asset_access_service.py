@@ -4,7 +4,7 @@ from model_bakery import baker
 
 from apps.content.models import Asset, AssetAccessRequest, CategoryChoice, LicenseChoice, StatusChoice
 from apps.content.repositories.access_request import AssetAccessRequestRepository
-from apps.content.services.asset_access import AssetAccessRequestService
+from apps.content.services.asset_access import AssetAccessRequestService, guard_restrict_for_tenant, user_has_access
 from apps.core.ninja_utils.errors import ItqanError
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher, PublisherMember
@@ -122,6 +122,64 @@ class AssetAccessRequestServiceTests(BaseTestCase):
 
         self.assertEqual(AssetAccessRequest.StatusChoice.PENDING, request.status)
         self.assertIsNone(access)
+
+
+class UserHasAccessPublicAssetTests(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.publisher = baker.make(Publisher)
+        self.user = baker.make(User)
+
+    def test_public_asset_grants_access_without_access_record(self):
+        asset = _make_asset(self.publisher)
+        asset.is_open_access = True
+        asset.save(update_fields=["is_open_access"])
+
+        # No AssetAccess record exists for this user/asset
+        self.assertTrue(user_has_access(self.user, asset))
+
+
+class GuardRestrictForTenantTests(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.publisher = baker.make(Publisher)
+        self.developer = baker.make(User)
+
+    def _make_request(self, asset, status):
+        return AssetAccessRequest.objects.create(
+            developer_user=self.developer,
+            asset=asset,
+            status=status,
+            developer_access_reason="reason",
+            intended_use=AssetAccessRequest.IntendedUseChoice.NON_COMMERCIAL,
+        )
+
+    def test_no_requests_passes(self):
+        asset = _make_asset(self.publisher)
+        guard_restrict_for_tenant(asset)  # does not raise
+
+    def test_pending_request_blocks(self):
+        asset = _make_asset(self.publisher)
+        self._make_request(asset, AssetAccessRequest.StatusChoice.PENDING)
+
+        with self.assertRaises(ItqanError) as ctx:
+            guard_restrict_for_tenant(asset)
+        self.assertEqual("restricted_for_tenant_conflict", ctx.exception.error_name)
+        self.assertEqual(409, ctx.exception.status_code)
+        self.assertIn("Itqan team", str(ctx.exception.message))
+
+    def test_approved_request_blocks(self):
+        asset = _make_asset(self.publisher)
+        self._make_request(asset, AssetAccessRequest.StatusChoice.APPROVED)
+
+        with self.assertRaises(ItqanError) as ctx:
+            guard_restrict_for_tenant(asset)
+        self.assertEqual("restricted_for_tenant_conflict", ctx.exception.error_name)
+
+    def test_rejected_request_passes(self):
+        asset = _make_asset(self.publisher)
+        self._make_request(asset, AssetAccessRequest.StatusChoice.REJECTED)
+        guard_restrict_for_tenant(asset)  # does not raise
 
 
 _OUTCOME_TASK = "apps.content.tasks.send_access_request_outcome_email"

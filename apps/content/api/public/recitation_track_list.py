@@ -49,9 +49,8 @@ def list_recitation_tracks(request: Request, asset_id: int):
     service = RecitationService(repo)
 
     # Public API doesn't filter by publisher by default
-    asset = repo.get_asset_object(asset_id, Q())
+    asset = repo.get_asset_object(asset_id, Q(restricted_for_tenant=False))
     if not asset:
-        # 404s raise before track_extra, so the decorator dispatches nothing for them.
         raise Http404("No asset matches the given query.")
 
     # Publisher is a property of the served Asset (select_related in get_asset_object).
@@ -65,7 +64,7 @@ def list_recitation_tracks(request: Request, asset_id: int):
         publisher_names=[asset.publisher.name] if asset.publisher_id else [],
     )
 
-    tracks = service.get_asset_tracks(asset_id, Q(), prefetch_timings=True)
+    tracks = service.get_asset_tracks(asset_id, Q(asset__restricted_for_tenant=False), prefetch_timings=True)
 
     results: list[RecitationSurahTrackOut] = []
 

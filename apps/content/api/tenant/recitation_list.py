@@ -41,6 +41,7 @@ class RecitationListOut(Schema):
     reciter: RecitationReciterOut
     riwayah: RecitationRiwayahOut | None = None
     qiraah: RecitationQiraahOut
+    is_open_access: bool
 
 
 class RecitationFilter(FilterSchema):

@@ -136,7 +136,39 @@ class AssetAccessRequestService:
         return {"publisher_id": publisher.id, "auto_accept_access_requests": value}
 
 
+def guard_restrict_for_tenant(asset: Asset) -> None:
+    """Block restricting an asset to its tenant surface while public consumers rely on it.
+
+    Setting restricted_for_tenant=True removes the asset from public surfaces (the CMS
+    assets library and the public developers API). If developers already hold a granted
+    grant or have an open request, hiding it would break their integrations, so refuse
+    and ask the publisher to coordinate with Itqan team.
+    """
+    has_active_consumers = AssetAccessRequest.objects.filter(
+        asset=asset,
+        status__in=[
+            AssetAccessRequest.StatusChoice.PENDING,
+            AssetAccessRequest.StatusChoice.APPROVED,
+        ],
+    ).exists()
+    if not has_active_consumers:
+        return
+
+    logger.warning(f"Blocked restricting asset to tenant — open or granted access requests exist [asset_id={asset.pk}]")
+    raise ItqanError(
+        "restricted_for_tenant_conflict",
+        _(
+            "This asset has open or granted access requests from public consumers and "
+            "cannot be restricted to your tenant. Please contact Itqan team."
+        ),
+        status_code=409,
+    )
+
+
 def user_has_access(user: User, asset: Asset) -> bool:
+    if asset.is_open_access:
+        return True
+
     try:
         access = AssetAccess.objects.get(user=user, asset=asset)
         return access.is_active

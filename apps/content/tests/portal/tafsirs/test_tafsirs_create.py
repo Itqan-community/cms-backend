@@ -241,6 +241,60 @@ class TafsirCreateTest(BaseTestCase):
         body = response.json()
         self.assertEqual("external_url_required", body["error_name"])
 
+    def test_create_tafsir_defaults_visibility_flags_to_false(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TAFSIR)
+
+        # Act
+        response = self.client.post(
+            "/portal/tafsirs/",
+            data={
+                "name_en": "Default Visibility Tafsir",
+                "license": "CC-BY",
+                "language": "ar",
+                "publisher_id": self.publisher.id,
+                "is_external": False,
+            },
+        )
+
+        # Assert
+        self.assertEqual(201, response.status_code, response.content)
+        body = response.json()
+        self.assertFalse(body["is_open_access"])
+        self.assertFalse(body["restricted_for_tenant"])
+        asset = Asset.objects.get(id=body["id"])
+        self.assertFalse(asset.is_open_access)
+        self.assertFalse(asset.restricted_for_tenant)
+
+    def test_create_tafsir_sets_visibility_flags(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TAFSIR)
+
+        # Act
+        response = self.client.post(
+            "/portal/tafsirs/",
+            data={
+                "name_en": "Open Tenant-only Tafsir",
+                "license": "CC-BY",
+                "language": "ar",
+                "publisher_id": self.publisher.id,
+                "is_external": False,
+                "is_open_access": True,
+                "restricted_for_tenant": True,
+            },
+        )
+
+        # Assert
+        self.assertEqual(201, response.status_code, response.content)
+        body = response.json()
+        self.assertTrue(body["is_open_access"])
+        self.assertTrue(body["restricted_for_tenant"])
+        asset = Asset.objects.get(id=body["id"])
+        self.assertTrue(asset.is_open_access)
+        self.assertTrue(asset.restricted_for_tenant)
+
     def test_create_tafsir_where_user_lacks_permission_should_return_403(self):
         # Arrange
         user_without_permission = User.objects.create_user(
