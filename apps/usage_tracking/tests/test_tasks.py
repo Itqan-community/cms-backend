@@ -2,10 +2,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from apps.core.tests.base import BaseTestCase
 from apps.usage_tracking.tasks import UnexpectedDatabaseQuery, no_db_queries, track_api_request_task
 
 
-class TestTrackApiRequestTask:
+class TestTrackApiRequestTask(BaseTestCase):
     @patch("apps.usage_tracking.tasks._build_ingest_client")
     def test_task_fans_out_to_all_clients(self, mock_build):
         client = MagicMock()
@@ -58,15 +59,14 @@ class TestTrackApiRequestTask:
         sent_props = client.track.call_args[0][2]
         assert sent_props["accessed_entity_name"] == "Hafs An Asim"
 
-    @pytest.mark.django_db
     @patch("apps.usage_tracking.tasks._build_ingest_client")
-    def test_task_runs_without_db_queries(self, mock_build, django_assert_num_queries):
+    def test_task_runs_without_db_queries(self, mock_build):
         """The task body resolves nothing from the database; everything it needs is
         passed in via ``properties``."""
         client = MagicMock()
         mock_build.return_value = client
 
-        with django_assert_num_queries(0):
+        with self.assertNumQueries(0):
             track_api_request_task.run(
                 distinct_id="user-1",
                 event="public_api_request",
@@ -76,7 +76,6 @@ class TestTrackApiRequestTask:
         sent_props = client.track.call_args[0][2]
         assert sent_props["accessed_entity_name"] == "Hafs An Asim"
 
-    @pytest.mark.django_db
     @patch("apps.usage_tracking.tasks._build_ingest_client")
     def test_task_raises_if_body_issues_a_query(self, mock_build):
         """The no_db_queries guard turns any stray query inside the task into a hard error,
@@ -95,13 +94,12 @@ class TestTrackApiRequestTask:
             )
 
 
-class TestNoDbQueries:
-    @pytest.mark.django_db
+class TestNoDbQueries(BaseTestCase):
+
     def test_allows_block_without_queries(self):
         with no_db_queries():
             pass  # no query, no error
 
-    @pytest.mark.django_db
     def test_raises_on_query(self):
         from apps.content.models import Asset
 
