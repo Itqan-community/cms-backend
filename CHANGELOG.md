@@ -1,3 +1,9 @@
+## v0.4.0 (2026-06-29)
+
+### Feat
+
+- allow adding riwayah and qiraah for normal assets, i.e. fonts, mushafs, etc...
+
 ## v0.3.3 (2026-06-21)
 
 ### Fix
