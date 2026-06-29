@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('content', '0043_remove_assetaccessrequest_admin_response_and_more'),
+        ('content', '0044_remove_asset_asset_recitation_fields_consistency_and_more'),
     ]
 
     operations = [
