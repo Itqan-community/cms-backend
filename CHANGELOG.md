@@ -1,3 +1,54 @@
+## v0.5.0 (2026-06-29)
+
+### Feat
+
+- allow adding riwayah and qiraah for normal assets, i.e. fonts, mushafs, etc...
+
+## v0.4.0 (2026-06-29)
+
+### Feat
+
+- allow adding riwayah and qiraah for normal assets, i.e. fonts, mushafs, etc...
+
+## v0.3.3 (2026-06-21)
+
+### Fix
+
+- use PgBouncer port 25061 for prod DB in CI env generation
+- use PgBouncer port 25061 for prod DB in CI env generation
+
+## v0.3.2 (2026-06-21)
+
+### Fix
+
+- remove DB_POOL_HOST override causing Unix socket fallback
+
+## v0.3.1 (2026-06-21)
+
+### Fix
+
+- set CONN_MAX_AGE=0 for PgBouncer transaction mode
+- set CONN_MAX_AGE=0 for PgBouncer transaction mode
+
+## v0.3.0 (2026-06-18)
+
+### Feat
+
+- add readonly fields for created_at and updated_at in admin list display
+- Add Service for setting permissions, and for Groups and choosing permissions
+
+### Fix
+
+- **release**: verify gemini ai release notes generation
+- **ci**: correct sentry deploys new syntax for v2 cli
+- **ci**: register sentry production deployment after release
+- **ci**: include commits in fallback release notes when Gemini API unavailable
+- **ci**: trigger BE release notification to verify Slack integration
+- **ci**: re-trigger version bump after removing branch naming check requirement
+- **ci**: trigger version bump pipeline test
+- store name when inviting publisher member (#367)
+- remove db queries from track_api_task and guard it with no_db_queries context manager to prevent database queries in tasks
+
 ## v0.2.5 (2026-06-17)
 
 ### Fix

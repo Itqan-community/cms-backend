@@ -2,6 +2,7 @@ from allauth.account.decorators import secure_admin_login
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth import admin as auth_admin, forms as admin_forms
+from django.contrib.auth.models import Group
 from django.forms import EmailField
 from django.utils.translation import gettext_lazy as _
 
@@ -78,3 +79,9 @@ class UserAdmin(auth_admin.UserAdmin):
             "fields": ("email", "password1", "password2"),
         },
     )
+
+
+@admin.register(Group)
+class GroupAdmin(admin.ModelAdmin):
+    list_display = ["name"]
+    search_fields = ["name"]
