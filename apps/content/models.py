@@ -179,8 +179,6 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
                 | models.Q(
                     ~models.Q(category="recitation"),
                     reciter__isnull=True,
-                    riwayah__isnull=True,
-                    qiraah__isnull=True,
                 ),
                 name="asset_recitation_fields_consistency",
             ),
