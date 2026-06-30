@@ -1,10 +1,12 @@
 from typing import Literal
 
+from django.core.cache import cache
 from django.db.models import Q
 from django.http import Http404
 from ninja import Schema
 from ninja.pagination import paginate
 
+from apps.content.cache import RECITATION_TRACKS_CACHE_TTL, recitation_tracks_cache_key
 from apps.content.repositories.recitation import RecitationRepository
 from apps.content.services.recitation import RecitationService
 from apps.core.mixins.constants import QURAN_SURAHS
@@ -66,6 +68,13 @@ def list_recitation_tracks(request: Request, asset_id: int):
         publisher_names=[asset.publisher.name] if asset.publisher_id else [],
     )
 
+    # Cache the full track list per asset. The paginator slices from this list,
+    # so 144 concurrent devices all hitting the same asset pay the DB cost once.
+    _cache_key = recitation_tracks_cache_key(asset_id)
+    cached: list[RecitationSurahTrackOut] | None = cache.get(_cache_key)
+    if cached is not None:
+        return cached
+
     tracks = service.get_asset_tracks(asset_id, Q(), prefetch_timings=True)
 
     results: list[RecitationSurahTrackOut] = []
@@ -103,4 +112,5 @@ def list_recitation_tracks(request: Request, asset_id: int):
             )
         )
 
+    cache.set(_cache_key, results, RECITATION_TRACKS_CACHE_TTL)
     return results

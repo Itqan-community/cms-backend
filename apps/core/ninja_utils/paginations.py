@@ -7,7 +7,7 @@ from pydantic import Field
 
 MAX_PAGE_SIZE = 1000
 DEFAULT_PAGE_SIZE = 20
-PUBLIC_RECITATION_MAX_PAGE_SIZE = 50
+PUBLIC_RECITATION_MAX_PAGE_SIZE = 114
 
 
 class NinjaPagination(NinjaPageNumberPagination):

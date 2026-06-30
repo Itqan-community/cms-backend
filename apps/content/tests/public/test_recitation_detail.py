@@ -231,7 +231,7 @@ class RecitationTracksPageSizeCapTest(BaseTestCase):
                 audio_file=SimpleUploadedFile(f"s{surah_number}.mp3", b"dummy"),
             )
 
-    def test_list_recitation_tracks_where_page_size_200_should_be_clamped_to_50(self):
+    def test_list_recitation_tracks_where_page_size_exceeds_max_should_be_clamped(self):
         # page_size=200 was the request pattern causing CPU saturation (144 IPs × okhttp/4.12.0).
         # This test fails on the old code where @paginate had no cap.
         self.authenticate_client(self.app)
@@ -240,6 +240,27 @@ class RecitationTracksPageSizeCapTest(BaseTestCase):
 
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
-        # All 3 tracks are returned (< cap), and the effective page_size was clamped.
-        # If the cap were missing, a real dataset of 114 tracks would return all 114.
+        # All 3 tracks returned (< cap); effective page_size was clamped to PUBLIC_RECITATION_MAX_PAGE_SIZE.
         self.assertLessEqual(len(body["results"]), PUBLIC_RECITATION_MAX_PAGE_SIZE)
+
+    def test_list_recitation_tracks_where_second_request_should_hit_cache(self):
+        from django.core.cache import cache as django_cache
+
+        from apps.content.cache import recitation_tracks_cache_key
+
+        self.authenticate_client(self.app)
+        django_cache.clear()
+
+        # First request populates cache.
+        first = self.client.get(f"/recitations/{self.asset.id}/")
+        self.assertEqual(200, first.status_code, first.content)
+
+        # Cache entry must exist after first request.
+        cached = django_cache.get(recitation_tracks_cache_key(self.asset.id))
+        self.assertIsNotNone(cached)
+        self.assertEqual(3, len(cached))
+
+        # Second request returns same data (served from cache).
+        second = self.client.get(f"/recitations/{self.asset.id}/")
+        self.assertEqual(200, second.status_code, second.content)
+        self.assertEqual(first.json(), second.json())
