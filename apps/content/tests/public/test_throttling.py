@@ -8,7 +8,11 @@ from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
 from django.http import HttpRequest
 
-from apps.core.ninja_utils.throttle import PublicApiAnonRateThrottle, PublicApiUserRateThrottle
+from apps.core.ninja_utils.throttle import (
+    PublicApiAnonRateThrottle,
+    PublicApiUserRateThrottle,
+    build_throttle_log_context,
+)
 from apps.core.tests.base import BaseTestCase
 from apps.users.models import User
 
@@ -150,3 +154,59 @@ class PublicApiThrottleEndpointTest(BaseTestCase):
         self.assertEqual(429, second.status_code, second.content)
         self.assertEqual("throttled", second.json()["error_name"])
         self.assertIn("Retry-After", second)
+
+
+class ThrottleLoggingTest(BaseTestCase):
+    def test_throttle_failure_where_authenticated_should_log_error_with_user_data(self):
+        # Arrange
+        cache.clear()
+        user = User.objects.create_user(email="logged@example.com", name="Logged User")
+        throttle = PublicApiUserRateThrottle()
+        throttle.num_requests = 1
+        throttle.duration = 60
+        request = _make_request(user=user, remote_addr="198.51.100.5")
+        request.META["HTTP_USER_AGENT"] = "pytest-agent/1.0"
+
+        # Act
+        throttle.allow_request(request)  # consume the budget
+        with self.assertLogs("apps.core.ninja_utils.throttle", level="ERROR") as logs:
+            blocked = throttle.allow_request(request)  # this one is throttled -> logs
+
+        # Assert
+        self.assertFalse(blocked)
+        record = logs.records[0]
+        self.assertEqual("Public API request throttled", record.getMessage())
+        self.assertEqual("public_user", record.throttle_scope)
+        self.assertTrue(record.is_authenticated)
+        self.assertEqual(user.pk, record.user_id)
+        self.assertEqual("logged@example.com", record.user_email)
+        self.assertEqual("Logged User", record.user_name)
+        self.assertEqual("pytest-agent/1.0", record.user_agent)
+        self.assertEqual("198.51.100.5", record.remote_addr)
+
+    def test_build_throttle_log_context_where_anonymous_should_include_ip_and_path(self):
+        # Arrange
+        request = _make_request(user=AnonymousUser(), remote_addr="203.0.113.9")
+        request.META["HTTP_X_FORWARDED_FOR"] = "203.0.113.9, 70.41.3.18"
+        request.method = "GET"
+
+        # Act
+        context = build_throttle_log_context(request, scope="public_anon", rate="30/min", key="k")
+
+        # Assert
+        self.assertFalse(context["is_authenticated"])
+        self.assertEqual("public_anon", context["throttle_scope"])
+        self.assertEqual("30/min", context["throttle_rate"])
+        self.assertEqual("203.0.113.9, 70.41.3.18", context["client_ip"])
+        self.assertEqual("203.0.113.9", context["remote_addr"])
+        self.assertEqual("/reciters/", context["path"])
+        self.assertEqual("GET", context["method"])
+        self.assertNotIn("user_email", context)
+
+    def test_build_throttle_log_context_where_request_none_should_not_raise(self):
+        # Arrange / Act
+        context = build_throttle_log_context(None, scope="public_user", rate="60/min", key=None)
+
+        # Assert
+        self.assertEqual("public_user", context["throttle_scope"])
+        self.assertNotIn("is_authenticated", context)
