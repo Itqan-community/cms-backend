@@ -2,9 +2,14 @@ from unittest.mock import patch
 
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetAccessRequest, CategoryChoice, LicenseChoice, StatusChoice
+from apps.content.models import Asset, AssetAccess, AssetAccessRequest, CategoryChoice, LicenseChoice, StatusChoice
 from apps.content.repositories.access_request import AssetAccessRequestRepository
-from apps.content.services.asset_access import AssetAccessRequestService, guard_restrict_for_tenant, user_has_access
+from apps.content.services.asset_access import (
+    AssetAccessRequestService,
+    get_access_status,
+    guard_restrict_for_tenant,
+    user_has_access,
+)
 from apps.core.ninja_utils.errors import ItqanError
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher, PublisherMember
@@ -122,6 +127,71 @@ class AssetAccessRequestServiceTests(BaseTestCase):
 
         self.assertEqual(AssetAccessRequest.StatusChoice.PENDING, request.status)
         self.assertIsNone(access)
+
+    def test_get_existing_returns_newest_request(self):
+        asset = _make_asset(self.publisher, auto_accept=False)
+        older = self._make_request(asset)
+        newer = self._make_request(asset)
+        # Force a deterministic created_at ordering regardless of insert timing.
+        AssetAccessRequest.objects.filter(pk=older.pk).update(created_at="2020-01-01T00:00:00Z")
+        AssetAccessRequest.objects.filter(pk=newer.pk).update(created_at="2024-01-01T00:00:00Z")
+
+        result = self.service.repo.get_existing(developer_user=self.developer, asset=asset)
+        self.assertEqual(newer.id, result.id)
+
+
+class GetAccessStatusTests(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.publisher = baker.make(Publisher)
+        self.user = baker.make(User)
+
+    def _asset(self):
+        return _make_asset(self.publisher)
+
+    def _make_request(self, asset, status):
+        return AssetAccessRequest.objects.create(
+            developer_user=self.user,
+            asset=asset,
+            status=status,
+            developer_access_reason="reason",
+            intended_use=AssetAccessRequest.IntendedUseChoice.NON_COMMERCIAL,
+        )
+
+    def test_open_access_returns_none(self):
+        asset = self._asset()
+        asset.is_open_access = True
+        asset.save(update_fields=["is_open_access"])
+
+        self.assertIsNone(get_access_status(self.user, asset))
+
+    def test_anonymous_returns_none(self):
+        self.assertIsNone(get_access_status(user=None, asset=self._asset()))
+
+    def test_no_request_returns_not_requested(self):
+        self.assertEqual("not_requested", get_access_status(self.user, self._asset()))
+
+    def test_pending_returns_pending(self):
+        asset = self._asset()
+        self._make_request(asset, AssetAccessRequest.StatusChoice.PENDING)
+        self.assertEqual("pending", get_access_status(self.user, asset))
+
+    def test_rejected_returns_rejected(self):
+        asset = self._asset()
+        self._make_request(asset, AssetAccessRequest.StatusChoice.REJECTED)
+        self.assertEqual("rejected", get_access_status(self.user, asset))
+
+    def test_active_grant_returns_approved(self):
+        asset = self._asset()
+        req = self._make_request(asset, AssetAccessRequest.StatusChoice.APPROVED)
+        AssetAccess.objects.create(
+            asset_access_request=req,
+            user=self.user,
+            asset=asset,
+            effective_license=asset.license,
+            expires_at=None,
+        )
+        self.assertEqual("approved", get_access_status(self.user, asset))
 
 
 class UserHasAccessPublicAssetTests(BaseTestCase):
