@@ -52,9 +52,7 @@ class NinjaPagination(NinjaPageNumberPagination):
 class PublicRecitationPagination(NinjaPageNumberPagination):
     """Pagination for the public recitation tracks endpoint.
 
-    Caps page_size at 50 to prevent large responses from saturating gunicorn
-    workers. The Android client was requesting page_size=200, which caused
-    CPU saturation on a 2-vCPU box serving 144+ concurrent devices.
+    Caps page_size at 50 to prevent large responses from saturating gunicorn workers.
     """
 
     items_attribute: str = "results"
