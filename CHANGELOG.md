@@ -1,3 +1,9 @@
+## v0.6.2 (2026-06-30)
+
+### Fix
+
+- Caddy rewrite for missing trailing slash on /recitations/{id} (#383)
+
 ## v0.6.1 (2026-06-30)
 
 ### Fix
