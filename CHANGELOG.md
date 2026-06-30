@@ -1,3 +1,9 @@
+## v0.6.0 (2026-06-30)
+
+### Feat
+
+- implement global per-client throttling for public API with user and anonymous rate limits
+
 ## v0.5.0 (2026-06-29)
 
 ### Feat

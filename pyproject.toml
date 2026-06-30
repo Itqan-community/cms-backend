@@ -5,7 +5,7 @@
 
 [project]
 name = "itqan-cms-backend"
-version = "0.5.0"
+version = "0.6.0"
 description = "Itqan CMS Backend"
 readme = "README.md"
 requires-python = ">=3.13"
