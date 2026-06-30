@@ -158,6 +158,7 @@ class PublisherDetailOut(Schema):
     is_verified: bool
     foundation_year: int | None
     country: str
+    auto_accept_access_requests: bool
     icon_url: str | None = None
     created_at: AwareDatetime
     updated_at: AwareDatetime
@@ -199,6 +200,7 @@ class PublisherPatchIn(Schema):
     is_verified: bool | None = None
     foundation_year: int | None = None
     country: str | None = None
+    auto_accept_access_requests: bool | None = None
 
 
 class PublisherPutIn(Schema):
@@ -212,6 +214,7 @@ class PublisherPutIn(Schema):
     is_verified: bool = True
     foundation_year: int | None = None
     country: str = ""
+    auto_accept_access_requests: bool = True
 
 
 @router.put(
