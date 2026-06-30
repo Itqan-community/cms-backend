@@ -250,6 +250,9 @@ msgstr "إدخال غير صالح"
 msgid "Authentication Error"
 msgstr "خطأ في المصادقة"
 
+msgid "Request was throttled. Too many requests."
+msgstr "تم تقييد الطلب. عدد كبير جدًا من الطلبات."
+
 msgid "Something went wrong - Internal Server Error"
 msgstr "حدث خطأ ما - خطأ داخلي في الخادم"
 
