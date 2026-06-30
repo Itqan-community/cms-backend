@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from enum import Enum
 import logging
 from typing import TYPE_CHECKING
 
@@ -176,7 +177,14 @@ def user_has_access(user: User, asset: Asset) -> bool:
         return False
 
 
-def get_access_status(user: User | None, asset: Asset) -> str | None:
+class AssetAccessStatus(str, Enum):
+    NOT_REQUESTED = "not_requested"
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+def get_access_status(user: User | None, asset: Asset) -> AssetAccessStatus | None:
     if asset.is_open_access:
         return None
 
@@ -184,10 +192,10 @@ def get_access_status(user: User | None, asset: Asset) -> str | None:
         return None
 
     if user_has_access(user, asset):
-        return AssetAccessRequest.StatusChoice.APPROVED
+        return AssetAccessStatus.APPROVED
 
     req = AssetAccessRequestRepository().get_existing(developer_user=user, asset=asset)
     if req is None:
-        return "not_requested"
+        return AssetAccessStatus.NOT_REQUESTED
 
-    return req.status
+    return AssetAccessStatus(req.status)

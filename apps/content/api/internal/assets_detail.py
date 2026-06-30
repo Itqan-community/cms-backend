@@ -5,7 +5,7 @@ from ninja import Schema
 from pydantic import Field
 
 from apps.content.models import Asset, LicenseChoice, UsageEvent
-from apps.content.services.asset_access import get_access_status
+from apps.content.services.asset_access import AssetAccessStatus, get_access_status
 from apps.content.tasks import create_usage_event_task
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -40,7 +40,7 @@ class DetailAssetOut(Schema):
     license: LicenseChoice
     is_open_access: bool
     snapshots: list[DetailAssetSnapshotOut] = Field(default_factory=list, alias="previews")
-    access_status: str | None = None
+    access_status: AssetAccessStatus | None
 
 
 @router.get("assets/{id}/", response=DetailAssetOut, auth=None)
