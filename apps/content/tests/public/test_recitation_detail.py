@@ -1,5 +1,6 @@
+import unittest
+
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
 from model_bakery import baker
 from oauth2_provider.models import Application
 
@@ -188,7 +189,7 @@ class RecitationTracksTest(BaseTestCase):
         self.assertEqual([], items[0]["ayahs_timings"])
 
 
-class PublicRecitationPaginationTest(TestCase):
+class PublicRecitationPaginationTest(unittest.TestCase):
     def test_Input_where_page_size_exceeds_max_should_clamp_to_max(self):
         inp = PublicRecitationPagination.Input(page_size=200)
         self.assertEqual(PUBLIC_RECITATION_MAX_PAGE_SIZE, inp.page_size)
