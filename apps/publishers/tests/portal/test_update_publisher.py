@@ -52,6 +52,25 @@ class UpdatePublisherTest(BaseTestCase):
         self.assertEqual(2020, body["foundation_year"])
         self.assertEqual("Saudi Arabia", body["country"])
 
+    def test_put_publisher_where_auto_accept_access_requests_set_should_persist(self) -> None:
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_PUBLISHER)
+        data = {
+            "name_en": "Updated Publisher",
+            "auto_accept_access_requests": False,
+        }
+
+        # Act
+        response = self.client.put(self.url, data, format="multipart")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertFalse(body["auto_accept_access_requests"])
+        self.publisher.refresh_from_db()
+        self.assertFalse(self.publisher.auto_accept_access_requests)
+
     def test_put_publisher_where_not_found_should_return_404(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
@@ -113,6 +132,24 @@ class UpdatePublisherTest(BaseTestCase):
         body = response.json()
         self.assertEqual("الناشر المحدث", body["name_ar"])
         self.assertEqual("وصف محدث", body["description_ar"])
+
+    def test_patch_publisher_where_auto_accept_access_requests_set_should_persist(self) -> None:
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_PUBLISHER)
+        self.publisher.auto_accept_access_requests = True
+        self.publisher.save(update_fields=["auto_accept_access_requests"])
+        data = {"auto_accept_access_requests": False}
+
+        # Act
+        response = self.client.patch(self.url, data, format="multipart")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertFalse(body["auto_accept_access_requests"])
+        self.publisher.refresh_from_db()
+        self.assertFalse(self.publisher.auto_accept_access_requests)
 
     def test_patch_publisher_where_icon_provided_should_return_200(self) -> None:
         # Arrange
