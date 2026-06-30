@@ -232,8 +232,7 @@ class RecitationTracksPageSizeCapTest(BaseTestCase):
             )
 
     def test_list_recitation_tracks_where_page_size_exceeds_max_should_be_clamped(self):
-        # page_size=200 was the request pattern causing CPU saturation (144 IPs × okhttp/4.12.0).
-        # This test fails on the old code where @paginate had no cap.
+        # Fails on old code where @paginate had no cap.
         self.authenticate_client(self.app)
 
         response = self.client.get(f"/recitations/{self.asset.id}/?page_size=200")

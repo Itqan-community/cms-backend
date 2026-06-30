@@ -68,8 +68,8 @@ def list_recitation_tracks(request: Request, asset_id: int):
         publisher_names=[asset.publisher.name] if asset.publisher_id else [],
     )
 
-    # Cache the full track list per asset. The paginator slices from this list,
-    # so 144 concurrent devices all hitting the same asset pay the DB cost once.
+    # Cache full track list per asset; paginator slices from it so repeated requests
+    # for the same asset skip the DB and Python-sort entirely.
     _cache_key = recitation_tracks_cache_key(asset_id)
     cached: list[RecitationSurahTrackOut] | None = cache.get(_cache_key)
     if cached is not None:
