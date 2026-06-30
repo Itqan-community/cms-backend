@@ -1,3 +1,9 @@
+## v0.6.1 (2026-06-30)
+
+### Fix
+
+- cap page_size at 50 on public recitations endpoint (#382)
+
 ## v0.6.0 (2026-06-30)
 
 ### Feat
