@@ -52,7 +52,8 @@ class NinjaPagination(NinjaPageNumberPagination):
 class PublicRecitationPagination(NinjaPageNumberPagination):
     """Pagination for the public recitation tracks endpoint.
 
-    Caps page_size at 50 to prevent large responses from saturating gunicorn workers.
+    Caps page_size at 114 (full Quran surah count) to prevent pathological requests
+    while keeping the mobile app working without changes.
     """
 
     items_attribute: str = "results"
