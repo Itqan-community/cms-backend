@@ -385,3 +385,20 @@ class DetailAssetTest(BaseTestCase):
         # Verify other required fields are still present
         self.assertIn("publisher", body)
         self.assertIn("snapshots", body)
+
+    def test_detail_assets_response_should_include_access_status_field(self):
+        asset = baker.make(
+            Asset,
+            name="Access Status Asset",
+            description="desc",
+            category=CategoryChoice.TAFSIR,
+            license=LicenseChoice.CC_BY_SA,
+            status=StatusChoice.READY,
+        )
+
+        # Act
+        response = self.client.get(f"/cms-api/assets/{asset.id}/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertIn("access_status", response.json())
