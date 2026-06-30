@@ -1,3 +1,9 @@
+## v0.7.0 (2026-06-30)
+
+### Feat
+
+- add structured logging for throttled requests with user/client context
+
 ## v0.6.2 (2026-06-30)
 
 ### Fix
