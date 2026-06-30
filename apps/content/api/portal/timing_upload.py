@@ -4,6 +4,7 @@ from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 from ninja import File, Form, Schema, UploadedFile
 
+from apps.content.cache import invalidate_recitation_tracks_cache
 from apps.content.models import Asset
 from apps.content.services.admin.asset_recitation_ayah_timestamps_upload_service import (
     ResultDict,
@@ -73,6 +74,9 @@ def upload_timing(
             )
 
         asset_version, filename = sync_asset_recitations_json_file(asset_id=asset.id)
+
+    # bulk_create/bulk_update bypass Django signals, so invalidate explicitly.
+    invalidate_recitation_tracks_cache(asset.id)
 
     synced_file_url = asset_version.file_url.url if asset_version.file_url else None
 

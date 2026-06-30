@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from model_bakery import baker
 from oauth2_provider.models import Application
 
@@ -10,6 +11,9 @@ from apps.users.models import User
 class RiwayahsListTest(BaseTestCase):
     def setUp(self):
         super().setUp()
+        # Public API throttle buckets accumulate across tests (all share 127.0.0.1).
+        # Clear cache so each test starts with a fresh anon throttle counter.
+        cache.clear()
         self.publisher = baker.make(Publisher)
         self.reciter = baker.make("content.Reciter", name="Test Reciter")
 

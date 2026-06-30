@@ -1,14 +1,17 @@
 from typing import Literal
 
+from django.core.cache import cache
 from django.db.models import Q
 from django.http import Http404
 from ninja import Schema
 from ninja.pagination import paginate
 
+from apps.content.cache import RECITATION_TRACKS_CACHE_TTL, recitation_tracks_cache_key
 from apps.content.repositories.recitation import RecitationRepository
 from apps.content.services.recitation import RecitationService
 from apps.core.mixins.constants import QURAN_SURAHS
 from apps.core.ninja_utils.errors import NinjaErrorResponse
+from apps.core.ninja_utils.paginations import PublicRecitationPagination
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
@@ -43,7 +46,7 @@ class RecitationSurahTrackOut(Schema):
     response={200: list[RecitationSurahTrackOut], 404: NinjaErrorResponse[Literal["not_found"]]},
 )
 @track_usage()
-@paginate
+@paginate(PublicRecitationPagination)
 def list_recitation_tracks(request: Request, asset_id: int):
     repo = RecitationRepository()
     service = RecitationService(repo)
@@ -64,6 +67,13 @@ def list_recitation_tracks(request: Request, asset_id: int):
         publisher_ids=[asset.publisher_id] if asset.publisher_id else [],
         publisher_names=[asset.publisher.name] if asset.publisher_id else [],
     )
+
+    # Cache full track list per asset; paginator slices from it so repeated requests
+    # for the same asset skip the DB and Python-sort entirely.
+    _cache_key = recitation_tracks_cache_key(asset_id)
+    cached: list[RecitationSurahTrackOut] | None = cache.get(_cache_key)
+    if cached is not None:
+        return cached
 
     tracks = service.get_asset_tracks(asset_id, Q(), prefetch_timings=True)
 
@@ -102,4 +112,5 @@ def list_recitation_tracks(request: Request, asset_id: int):
             )
         )
 
+    cache.set(_cache_key, results, RECITATION_TRACKS_CACHE_TTL)
     return results
