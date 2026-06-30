@@ -13,6 +13,11 @@
         file_server
     }
 
+    # Android clients (okhttp) omit trailing slash on /recitations/{id}.
+    # Rewrite transparently before Django sees it so no 301 + second request.
+    @recitation_no_trail path_regexp notrail ^/recitations/(\d+)$
+    rewrite @recitation_no_trail /recitations/{re.notrail.1}/
+
     # Reverse proxy to Django application (for all other requests)
     reverse_proxy web:8000
 
