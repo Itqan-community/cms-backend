@@ -174,3 +174,20 @@ def user_has_access(user: User, asset: Asset) -> bool:
         return access.is_active
     except AssetAccess.DoesNotExist:
         return False
+
+
+def get_access_status(user: User | None, asset: Asset) -> str | None:
+    if asset.is_open_access:
+        return None
+
+    if not (user and user.is_authenticated):
+        return None
+
+    if user_has_access(user, asset):
+        return AssetAccessRequest.StatusChoice.APPROVED
+
+    req = AssetAccessRequestRepository().get_existing(developer_user=user, asset=asset)
+    if req is None:
+        return "not_requested"
+
+    return req.status
