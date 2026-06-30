@@ -1,8 +1,10 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase
 from model_bakery import baker
 from oauth2_provider.models import Application
 
 from apps.content.models import Asset, CategoryChoice, RecitationAyahTiming, RecitationSurahTrack, StatusChoice
+from apps.core.ninja_utils.paginations import PUBLIC_RECITATION_MAX_PAGE_SIZE, PublicRecitationPagination
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -184,3 +186,60 @@ class RecitationTracksTest(BaseTestCase):
         items = body["results"]
         self.assertEqual(1, len(items))
         self.assertEqual([], items[0]["ayahs_timings"])
+
+
+class PublicRecitationPaginationTest(TestCase):
+    def test_Input_where_page_size_exceeds_max_should_clamp_to_max(self):
+        inp = PublicRecitationPagination.Input(page_size=200)
+        self.assertEqual(PUBLIC_RECITATION_MAX_PAGE_SIZE, inp.page_size)
+
+    def test_Input_where_page_size_within_max_should_preserve_value(self):
+        inp = PublicRecitationPagination.Input(page_size=20)
+        self.assertEqual(20, inp.page_size)
+
+    def test_Input_where_page_size_equals_max_should_preserve_value(self):
+        inp = PublicRecitationPagination.Input(page_size=PUBLIC_RECITATION_MAX_PAGE_SIZE)
+        self.assertEqual(PUBLIC_RECITATION_MAX_PAGE_SIZE, inp.page_size)
+
+
+class RecitationTracksPageSizeCapTest(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.publisher = baker.make(Publisher)
+        self.asset = baker.make(
+            Asset,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
+            reciter=baker.make("content.Reciter", name="Test Reciter"),
+            riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
+        )
+        self.user = User.objects.create_user(email="pagecap@example.com", name="Page Cap User")
+        self.app = Application.objects.create(
+            user=self.user,
+            name="Page Cap App",
+            client_type="confidential",
+            authorization_grant_type="password",
+        )
+        for surah_number in range(1, 4):
+            baker.make(
+                RecitationSurahTrack,
+                asset=self.asset,
+                surah_number=surah_number,
+                duration_ms=1000,
+                size_bytes=512,
+                audio_file=SimpleUploadedFile(f"s{surah_number}.mp3", b"dummy"),
+            )
+
+    def test_list_recitation_tracks_where_page_size_200_should_be_clamped_to_50(self):
+        # page_size=200 was the request pattern causing CPU saturation (144 IPs × okhttp/4.12.0).
+        # This test fails on the old code where @paginate had no cap.
+        self.authenticate_client(self.app)
+
+        response = self.client.get(f"/recitations/{self.asset.id}/?page_size=200")
+
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        # All 3 tracks are returned (< cap), and the effective page_size was clamped.
+        # If the cap were missing, a real dataset of 114 tracks would return all 114.
+        self.assertLessEqual(len(body["results"]), PUBLIC_RECITATION_MAX_PAGE_SIZE)

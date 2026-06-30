@@ -9,6 +9,7 @@ from apps.content.repositories.recitation import RecitationRepository
 from apps.content.services.recitation import RecitationService
 from apps.core.mixins.constants import QURAN_SURAHS
 from apps.core.ninja_utils.errors import NinjaErrorResponse
+from apps.core.ninja_utils.paginations import PublicRecitationPagination
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
@@ -43,7 +44,7 @@ class RecitationSurahTrackOut(Schema):
     response={200: list[RecitationSurahTrackOut], 404: NinjaErrorResponse[Literal["not_found"]]},
 )
 @track_usage()
-@paginate
+@paginate(PublicRecitationPagination)
 def list_recitation_tracks(request: Request, asset_id: int):
     repo = RecitationRepository()
     service = RecitationService(repo)
