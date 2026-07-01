@@ -6,7 +6,12 @@ from django.http import Http404
 from ninja import Schema
 from ninja.pagination import paginate
 
-from apps.content.cache import RECITATION_TRACKS_CACHE_TTL, recitation_tracks_cache_key
+from apps.content.cache import (
+    RECITATION_ASSET_META_CACHE_TTL,
+    RECITATION_TRACKS_CACHE_TTL,
+    recitation_asset_meta_cache_key,
+    recitation_tracks_cache_key,
+)
 from apps.content.repositories.recitation import RecitationRepository
 from apps.content.services.recitation import RecitationService
 from apps.core.mixins.constants import QURAN_SURAHS
@@ -48,16 +53,41 @@ class RecitationSurahTrackOut(Schema):
 @track_usage()
 @paginate(PublicRecitationPagination)
 def list_recitation_tracks(request: Request, asset_id: int):
+    _tracks_key = recitation_tracks_cache_key(asset_id)
+    _meta_key = recitation_asset_meta_cache_key(asset_id)
+
+    cached_tracks: list[RecitationSurahTrackOut] | None = cache.get(_tracks_key)
+    cached_meta: dict | None = cache.get(_meta_key)
+
+    if cached_tracks is not None and cached_meta is not None:
+        # Full cache hit - no DB, no repo construction.
+        track_extra(
+            request,
+            entity_type="recitation",
+            accessed_entity_name=cached_meta["name"],
+            entity_ids=[asset_id],
+            entity_names=[cached_meta["name"]],
+            publisher_ids=[cached_meta["publisher_id"]] if cached_meta["publisher_id"] else [],
+            publisher_names=[cached_meta["publisher_name"]] if cached_meta["publisher_id"] else [],
+        )
+        return cached_tracks
+
+    # Cache miss (or meta expired) - hit the DB.
     repo = RecitationRepository()
     service = RecitationService(repo)
 
-    # Public API doesn't filter by publisher by default
     asset = repo.get_asset_object(asset_id, Q())
     if not asset:
         # 404s raise before track_extra, so the decorator dispatches nothing for them.
         raise Http404("No asset matches the given query.")
 
-    # Publisher is a property of the served Asset (select_related in get_asset_object).
+    publisher_name = asset.publisher.name if asset.publisher_id else None
+    asset_meta = {
+        "name": asset.name,
+        "publisher_id": asset.publisher_id,
+        "publisher_name": publisher_name,
+    }
+
     track_extra(
         request,
         entity_type="recitation",
@@ -65,15 +95,13 @@ def list_recitation_tracks(request: Request, asset_id: int):
         entity_ids=[asset.id],
         entity_names=[asset.name],
         publisher_ids=[asset.publisher_id] if asset.publisher_id else [],
-        publisher_names=[asset.publisher.name] if asset.publisher_id else [],
+        publisher_names=[publisher_name] if asset.publisher_id else [],
     )
 
-    # Cache full track list per asset; paginator slices from it so repeated requests
-    # for the same asset skip the DB and Python-sort entirely.
-    _cache_key = recitation_tracks_cache_key(asset_id)
-    cached: list[RecitationSurahTrackOut] | None = cache.get(_cache_key)
-    if cached is not None:
-        return cached
+    if cached_tracks is not None:
+        # Tracks cached but meta expired - repopulate meta and return.
+        cache.set(_meta_key, asset_meta, RECITATION_ASSET_META_CACHE_TTL)
+        return cached_tracks
 
     tracks = service.get_asset_tracks(asset_id, Q(), prefetch_timings=True)
 
@@ -112,5 +140,6 @@ def list_recitation_tracks(request: Request, asset_id: int):
             )
         )
 
-    cache.set(_cache_key, results, RECITATION_TRACKS_CACHE_TTL)
+    cache.set(_tracks_key, results, RECITATION_TRACKS_CACHE_TTL)
+    cache.set(_meta_key, asset_meta, RECITATION_ASSET_META_CACHE_TTL)
     return results
