@@ -194,8 +194,9 @@ class RecitationTracksTest(BaseTestCase):
         self.assertEqual([], items[0]["ayahs_timings"])
 
     def test_list_recitation_tracks_where_timings_inserted_out_of_order_should_return_ordered_by_start_ms(self):
-        # Regression: ayah timings were sorted in Python after fetching.
-        # This test inserts them in reverse order to prove the DB prefetch ORDER BY fires.
+        # Forward-guard: verifies timings return ordered by start_ms after removal of the
+        # Python sorted() call. Insertion order is intentionally scrambled so the test
+        # would catch any future regression that drops the Prefetch ORDER BY.
         track = baker.make(
             RecitationSurahTrack,
             asset=self.asset,
