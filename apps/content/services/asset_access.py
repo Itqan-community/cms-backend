@@ -166,6 +166,33 @@ def guard_restrict_for_tenant(asset: Asset) -> None:
     )
 
 
+def enforce_asset_access(user: User | None, asset: Asset) -> None:
+    """Gate consumption of an asset's content behind an API key + approved access.
+
+    Open-access assets are free to consume by anyone. For assets the publisher keeps
+    behind the access-request cycle, the consumer must (1) be authenticated — i.e. pass
+    a valid API key — and (2) hold an active access grant (an approved access request).
+    A missing/invalid key yields 401; an authenticated consumer without an approved
+    grant (not requested, pending, or rejected) yields 403.
+    """
+    if asset.is_open_access:
+        return
+
+    if not (user and user.is_authenticated):
+        raise ItqanError(
+            "authentication_required",
+            _("An API key is required to access this asset's content."),
+            status_code=401,
+        )
+
+    if not user_has_access(user, asset):
+        raise ItqanError(
+            "access_denied",
+            _("You don't have an approved access request for this asset."),
+            status_code=403,
+        )
+
+
 def user_has_access(user: User, asset: Asset) -> bool:
     if asset.is_open_access:
         return True

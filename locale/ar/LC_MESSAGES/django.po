@@ -167,6 +167,12 @@ msgstr "سبب الرفض مطلوب."
 msgid "This asset has open or granted access requests from public consumers and cannot be restricted to your tenant. Please contact Itqan team."
 msgstr "يحتوي هذا الأصل على طلبات وصول مفتوحة أو ممنوحة من مستهلكين عموميين، ولا يمكن حصره على موقعك. يرجى التواصل مع فريق إتقان."
 
+msgid "An API key is required to access this asset's content."
+msgstr "مطلوب مفتاح API للوصول إلى محتوى هذا الأصل."
+
+msgid "You don't have an approved access request for this asset."
+msgstr "ليس لديك طلب وصول مُوافَق عليه لهذا الأصل."
+
 msgid "Description must be at least 10 characters long."
 msgstr "يجب أن يكون الوصف 10 أحرف على الأقل."
 
