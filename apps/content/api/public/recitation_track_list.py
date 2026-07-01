@@ -1,22 +1,22 @@
+import json
 from typing import Literal
 
 from django.core.cache import cache
 from django.db.models import Q
-from django.http import Http404
-from ninja import Schema
-from ninja.pagination import paginate
+from django.http import Http404, HttpResponse
+from ninja import Query, Schema
 
 from apps.content.cache import (
     RECITATION_ASSET_META_CACHE_TTL,
-    RECITATION_TRACKS_CACHE_TTL,
+    RECITATION_RESPONSE_CACHE_TTL,
     recitation_asset_meta_cache_key,
-    recitation_tracks_cache_key,
+    recitation_response_cache_key,
 )
 from apps.content.repositories.recitation import RecitationRepository
 from apps.content.services.recitation import RecitationService
 from apps.core.mixins.constants import QURAN_SURAHS
 from apps.core.ninja_utils.errors import NinjaErrorResponse
-from apps.core.ninja_utils.paginations import PublicRecitationPagination
+from apps.core.ninja_utils.paginations import DEFAULT_PAGE_SIZE, PUBLIC_RECITATION_MAX_PAGE_SIZE
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
@@ -51,16 +51,21 @@ class RecitationSurahTrackOut(Schema):
     response={200: list[RecitationSurahTrackOut], 404: NinjaErrorResponse[Literal["not_found"]]},
 )
 @track_usage()
-@paginate(PublicRecitationPagination)
-def list_recitation_tracks(request: Request, asset_id: int):
-    _tracks_key = recitation_tracks_cache_key(asset_id)
+def list_recitation_tracks(
+    request: Request,
+    asset_id: int,
+    page: int = Query(1, ge=1, le=114),
+    page_size: int = Query(DEFAULT_PAGE_SIZE, ge=1),
+):
+    page_size = min(page_size, PUBLIC_RECITATION_MAX_PAGE_SIZE)
+
+    _resp_key = recitation_response_cache_key(asset_id, page, page_size)
     _meta_key = recitation_asset_meta_cache_key(asset_id)
 
-    cached_tracks: list[RecitationSurahTrackOut] | None = cache.get(_tracks_key)
+    cached_resp: bytes | None = cache.get(_resp_key)
     cached_meta: dict | None = cache.get(_meta_key)
 
-    if cached_tracks is not None and cached_meta is not None:
-        # Full cache hit - no DB, no repo construction.
+    if cached_resp is not None and cached_meta is not None:
         track_extra(
             request,
             entity_type="recitation",
@@ -70,15 +75,16 @@ def list_recitation_tracks(request: Request, asset_id: int):
             publisher_ids=[cached_meta["publisher_id"]] if cached_meta["publisher_id"] else [],
             publisher_names=[cached_meta["publisher_name"]] if cached_meta["publisher_id"] else [],
         )
-        return cached_tracks
+        resp = HttpResponse(cached_resp, content_type="application/json")
+        resp["Cache-Control"] = "public, max-age=300, s-maxage=300"
+        return resp
 
-    # Cache miss (or meta expired) - hit the DB.
+    # Cache miss - hit DB.
     repo = RecitationRepository()
     service = RecitationService(repo)
 
     asset = repo.get_asset_object(asset_id, Q())
     if not asset:
-        # 404s raise before track_extra, so the decorator dispatches nothing for them.
         raise Http404("No asset matches the given query.")
 
     publisher_name = asset.publisher.name if asset.publisher_id else None
@@ -98,48 +104,50 @@ def list_recitation_tracks(request: Request, asset_id: int):
         publisher_names=[publisher_name] if asset.publisher_id else [],
     )
 
-    if cached_tracks is not None:
-        # Tracks cached but meta expired - repopulate meta and return.
-        cache.set(_meta_key, asset_meta, RECITATION_ASSET_META_CACHE_TTL)
-        return cached_tracks
-
     tracks = service.get_asset_tracks(asset_id, Q(), prefetch_timings=True)
 
-    results: list[RecitationSurahTrackOut] = []
-
+    all_results = []
     for track in tracks:
         audio_url = f"{CLOUDFLARE_R2_PUBLIC_BASE_URL}/media/{track.audio_file.name}"
-
-        ayah_timings: list[RecitationAyahTimingOut] = []
-        sorted_ayah_timings_qs = sorted(
+        surah = QURAN_SURAHS[track.surah_number]
+        sorted_timings = sorted(
             track.ayah_timings.all(),
             key=lambda a: (int(a.ayah_key.split(":")[0]), int(a.ayah_key.split(":")[1])),
         )
-        for t in sorted_ayah_timings_qs:
-            ayah_timings.append(
-                RecitationAyahTimingOut(
-                    ayah_key=t.ayah_key,
-                    start_ms=t.start_ms,
-                    end_ms=t.end_ms,
-                    duration_ms=t.duration_ms,
-                )
-            )
-
-        results.append(
-            RecitationSurahTrackOut(
-                surah_number=track.surah_number,
-                surah_name=QURAN_SURAHS[track.surah_number]["name"],
-                surah_name_en=QURAN_SURAHS[track.surah_number]["name_en"],
-                audio_url=audio_url,
-                duration_ms=track.duration_ms,
-                size_bytes=track.size_bytes,
-                revelation_order=QURAN_SURAHS[track.surah_number]["revelation_order"],
-                revelation_place=QURAN_SURAHS[track.surah_number]["revelation_place"],
-                ayahs_count=QURAN_SURAHS[track.surah_number]["ayahs_count"],
-                ayahs_timings=ayah_timings,
-            )
+        all_results.append(
+            {
+                "surah_number": track.surah_number,
+                "surah_name": surah["name"],
+                "surah_name_en": surah["name_en"],
+                "audio_url": audio_url,
+                "duration_ms": track.duration_ms,
+                "size_bytes": track.size_bytes,
+                "revelation_order": surah["revelation_order"],
+                "revelation_place": surah["revelation_place"],
+                "ayahs_count": surah["ayahs_count"],
+                "ayahs_timings": [
+                    {
+                        "ayah_key": t.ayah_key,
+                        "start_ms": t.start_ms,
+                        "end_ms": t.end_ms,
+                        "duration_ms": t.duration_ms,
+                    }
+                    for t in sorted_timings
+                ],
+            }
         )
 
-    cache.set(_tracks_key, results, RECITATION_TRACKS_CACHE_TTL)
+    total = len(all_results)
+    offset = (page - 1) * page_size
+    paginated = all_results[offset : offset + page_size]
+
+    response_bytes = json.dumps({"results": paginated, "count": total}).encode()
+
+    if offset < total:
+        # Only cache pages that have content; out-of-range pages are not worth storing.
+        cache.set(_resp_key, response_bytes, RECITATION_RESPONSE_CACHE_TTL)
     cache.set(_meta_key, asset_meta, RECITATION_ASSET_META_CACHE_TTL)
-    return results
+
+    resp = HttpResponse(response_bytes, content_type="application/json")
+    resp["Cache-Control"] = "public, max-age=300, s-maxage=300"
+    return resp

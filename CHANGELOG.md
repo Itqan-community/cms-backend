@@ -1,3 +1,9 @@
+## v0.7.2 (2026-07-01)
+
+### Perf
+
+- pre-serialized response cache for /recitations endpoint (#385)
+
 ## v0.7.1 (2026-07-01)
 
 ### Perf
