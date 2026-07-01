@@ -6,6 +6,7 @@ from ninja import Schema
 from ninja.pagination import paginate
 
 from apps.content.repositories.recitation import RecitationRepository
+from apps.content.services.asset_access import enforce_asset_access
 from apps.content.services.recitation import RecitationService
 from apps.core.mixins.constants import QURAN_SURAHS
 from apps.core.ninja_utils.errors import NinjaErrorResponse
@@ -40,7 +41,12 @@ class RecitationSurahTrackOut(Schema):
 
 @router.get(
     "recitations/{asset_id}/",
-    response={200: list[RecitationSurahTrackOut], 404: NinjaErrorResponse[Literal["not_found"]]},
+    response={
+        200: list[RecitationSurahTrackOut],
+        401: NinjaErrorResponse[Literal["authentication_required"]],
+        403: NinjaErrorResponse[Literal["access_denied"]],
+        404: NinjaErrorResponse[Literal["not_found"]],
+    },
 )
 @track_usage()
 @paginate
@@ -52,6 +58,8 @@ def list_recitation_tracks(request: Request, asset_id: int):
     asset = repo.get_asset_object(asset_id, Q(restricted_for_tenant=False))
     if not asset:
         raise Http404("No asset matches the given query.")
+
+    enforce_asset_access(getattr(request, "user", None), asset)
 
     # Publisher is a property of the served Asset (select_related in get_asset_object).
     track_extra(
