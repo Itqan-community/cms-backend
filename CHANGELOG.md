@@ -1,3 +1,9 @@
+## v0.7.4 (2026-07-01)
+
+### Perf
+
+- move ayah timing sort to DB and scale gunicorn workers (#387)
+
 ## v0.7.3 (2026-07-01)
 
 ### Perf
