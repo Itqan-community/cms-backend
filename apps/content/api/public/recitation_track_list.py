@@ -54,7 +54,7 @@ class RecitationSurahTrackOut(Schema):
 def list_recitation_tracks(
     request: Request,
     asset_id: int,
-    page: int = Query(1, ge=1, le=100),
+    page: int = Query(1, ge=1, le=114),
     page_size: int = Query(DEFAULT_PAGE_SIZE, ge=1),
 ):
     page_size = min(page_size, PUBLIC_RECITATION_MAX_PAGE_SIZE)
