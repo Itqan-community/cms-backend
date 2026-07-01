@@ -4,8 +4,13 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 from oauth2_provider.models import Application
 
+from apps.content.cache import recitation_response_cache_key
 from apps.content.models import Asset, CategoryChoice, RecitationAyahTiming, RecitationSurahTrack, StatusChoice
-from apps.core.ninja_utils.paginations import PUBLIC_RECITATION_MAX_PAGE_SIZE, PublicRecitationPagination
+from apps.core.ninja_utils.paginations import (
+    DEFAULT_PAGE_SIZE,
+    PUBLIC_RECITATION_MAX_PAGE_SIZE,
+    PublicRecitationPagination,
+)
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -205,7 +210,10 @@ class PublicRecitationPaginationTest(unittest.TestCase):
 
 class RecitationTracksPageSizeCapTest(BaseTestCase):
     def setUp(self):
+        from django.core.cache import cache as django_cache
+
         super().setUp()
+        django_cache.clear()
         self.publisher = baker.make(Publisher)
         self.asset = baker.make(
             Asset,
@@ -244,9 +252,9 @@ class RecitationTracksPageSizeCapTest(BaseTestCase):
         self.assertLessEqual(len(body["results"]), PUBLIC_RECITATION_MAX_PAGE_SIZE)
 
     def test_list_recitation_tracks_where_second_request_should_hit_cache(self):
-        from django.core.cache import cache as django_cache
+        import json
 
-        from apps.content.cache import recitation_tracks_cache_key
+        from django.core.cache import cache as django_cache
 
         self.authenticate_client(self.app)
         django_cache.clear()
@@ -255,10 +263,13 @@ class RecitationTracksPageSizeCapTest(BaseTestCase):
         first = self.client.get(f"/recitations/{self.asset.id}/")
         self.assertEqual(200, first.status_code, first.content)
 
-        # Cache entry must exist after first request.
-        cached = django_cache.get(recitation_tracks_cache_key(self.asset.id))
-        self.assertIsNotNone(cached)
-        self.assertEqual(3, len(cached))
+        # Pre-serialized response bytes must exist after first request.
+        cached_bytes = django_cache.get(
+            recitation_response_cache_key(self.asset.id, page=1, page_size=DEFAULT_PAGE_SIZE)
+        )
+        self.assertIsNotNone(cached_bytes)
+        cached_data = json.loads(cached_bytes)
+        self.assertEqual(3, len(cached_data["results"]))
 
         # Second request returns same data (served from cache).
         second = self.client.get(f"/recitations/{self.asset.id}/")
@@ -278,10 +289,9 @@ class RecitationTracksPageSizeCapTest(BaseTestCase):
         first = self.client.get(f"/recitations/{self.asset.id}/")
         self.assertEqual(200, first.status_code, first.content)
 
-        # Second request: both caches are hot - repo must not be called.
+        # Second request: response + meta caches are hot - repo must not be called.
         with patch("apps.content.api.public.recitation_track_list.RecitationRepository") as mock_repo_cls:
             second = self.client.get(f"/recitations/{self.asset.id}/")
 
         self.assertEqual(200, second.status_code, second.content)
-        # Full cache hit must skip repo construction entirely, not just skip the DB call.
         mock_repo_cls.assert_not_called()
