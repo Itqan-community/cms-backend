@@ -3,13 +3,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from django.db import models, transaction
-from django.db.models import Count, Q
+from django.db.models import Count, Prefetch, Q
 
 from apps.content.models import (
     Asset,
     CategoryChoice,
     LicenseChoice,
     Qiraah,
+    RecitationAyahTiming,
     RecitationSurahTrack,
     Reciter,
     Riwayah,
@@ -217,7 +218,12 @@ class RecitationRepository(BaseRecitationRepository):
 
         qs = self.track_model.objects.select_related("asset__reciter").filter(query).order_by("surah_number")
         if prefetch_timings:
-            qs = qs.prefetch_related("ayah_timings")
+            qs = qs.prefetch_related(
+                Prefetch(
+                    "ayah_timings",
+                    queryset=RecitationAyahTiming.objects.order_by("start_ms"),
+                )
+            )
         return qs
 
     def list_reciters_qs(self, publisher_q: Q | None, filters_dict: dict[str, Any]) -> QuerySet[Reciter]:
