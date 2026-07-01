@@ -1,3 +1,9 @@
+## v0.7.3 (2026-07-01)
+
+### Perf
+
+- batch Mixpanel tracking via Redis buffer (#386)
+
 ## v0.7.2 (2026-07-01)
 
 ### Perf
