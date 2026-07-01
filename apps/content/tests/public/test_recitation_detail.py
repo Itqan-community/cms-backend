@@ -4,12 +4,12 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 from oauth2_provider.models import Application
 
-from apps.content.models import Asset, CategoryChoice, RecitationAyahTiming, RecitationSurahTrack, StatusChoice
 from apps.content.cache import recitation_response_cache_key
+from apps.content.models import Asset, CategoryChoice, RecitationAyahTiming, RecitationSurahTrack, StatusChoice
 from apps.core.ninja_utils.paginations import (
+    DEFAULT_PAGE_SIZE,
     PUBLIC_RECITATION_MAX_PAGE_SIZE,
     PublicRecitationPagination,
-    DEFAULT_PAGE_SIZE,
 )
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
