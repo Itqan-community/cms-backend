@@ -3,6 +3,7 @@ Celery configuration for Itqan CMS
 """
 
 import os
+from datetime import timedelta
 
 from celery import Celery
 from celery.schedules import crontab
@@ -28,6 +29,10 @@ app.conf.beat_schedule = {
     "expire-publisher-member-invitations": {
         "task": "apps.publishers.tasks.expire_publisher_member_invitations",
         "schedule": crontab(minute=0, hour=0),
+    },
+    "flush-tracking-buffer": {
+        "task": "apps.usage_tracking.tasks.flush_tracking_buffer_task",
+        "schedule": timedelta(seconds=30),
     },
 }
 

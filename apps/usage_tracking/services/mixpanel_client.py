@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from mixpanel import Consumer, Mixpanel
+from mixpanel import BufferedConsumer, Consumer, Mixpanel
 
 
 class MixpanelIngestClient:
@@ -20,3 +20,22 @@ class MixpanelIngestClient:
         if self._sdk is None:
             self._sdk = Mixpanel(self._token, consumer=Consumer(api_host=self._ingest_host))
         self._sdk.track(distinct_id, event, properties, meta=meta)
+
+    def track_batch(self, events: list[dict[str, Any]]) -> None:
+        """Send a batch of pre-serialized events in a single HTTP call.
+
+        Each event dict must have keys: distinct_id, event, properties, meta.
+        No-ops when disabled, empty list, or no token.
+        """
+        if not self._enabled or not self._token or not events:
+            return
+        consumer = BufferedConsumer(max_size=len(events), api_host=self._ingest_host)
+        sdk = Mixpanel(self._token, consumer=consumer)
+        for item in events:
+            sdk.track(
+                item["distinct_id"],
+                item["event"],
+                item.get("properties", {}),
+                meta=item.get("meta"),
+            )
+        consumer.flush()

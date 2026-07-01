@@ -22,9 +22,11 @@ from typing import Any
 from urllib.parse import parse_qs
 import uuid
 
+import json
+
 from django.core.cache import cache
 
-from apps.usage_tracking.tasks import track_api_request_task
+from apps.usage_tracking.tasks import TRACKING_BUFFER_KEY, _get_tracking_redis
 
 logger = logging.getLogger(__name__)
 
@@ -225,12 +227,18 @@ def _dispatch(
         # Mixpanel resolves geo from $ip on ingest and does not store the raw IP.
         properties["$ip"] = ip
 
-    track_api_request_task.delay(
-        distinct_id=_distinct_id(request),
-        event=event,
-        properties=properties,
-        meta={},
+    payload = json.dumps(
+        {
+            "distinct_id": _distinct_id(request),
+            "event": event,
+            "properties": properties,
+            "meta": {},
+        }
     )
+    try:
+        _get_tracking_redis().rpush(TRACKING_BUFFER_KEY, payload)
+    except Exception:
+        logger.exception("usage_tracking: failed to push event to Redis buffer")
 
 
 def _parsed_reciter_ids(query_string: str) -> list[int]:
