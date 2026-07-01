@@ -1,3 +1,9 @@
+## v0.7.1 (2026-07-01)
+
+### Perf
+
+- skip DB on cache hit in recitation tracks endpoint (#384)
+
 ## v0.7.0 (2026-06-30)
 
 ### Feat
