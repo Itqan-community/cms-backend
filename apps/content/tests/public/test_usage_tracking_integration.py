@@ -1,6 +1,7 @@
 """End-to-end checks that the @track_usage decorator records the *served* asset's
 publisher (not the requester's), across the four tracked public endpoints."""
 
+import json
 from unittest.mock import patch
 
 from django.core.cache import cache
@@ -17,7 +18,7 @@ from apps.usage_tracking.decorators.track_usage import (
 )
 from apps.users.models import User
 
-_TASK = "apps.usage_tracking.decorators.track_usage.track_api_request_task"
+_REDIS = "apps.usage_tracking.decorators.track_usage._get_tracking_redis"
 
 
 class UsageTrackingIntegrationTest(BaseTestCase):
@@ -57,71 +58,73 @@ class UsageTrackingIntegrationTest(BaseTestCase):
         )
         self.authenticate_client(self.app)
 
-    def _props(self, mock_task):
-        assert mock_task.delay.called
-        return mock_task.delay.call_args.kwargs["properties"]
+    def _props(self, mock_get_redis):
+        mock_r = mock_get_redis.return_value
+        assert mock_r.rpush.called, "expected rpush to be called on Redis mock"
+        raw = mock_r.rpush.call_args[0][1]
+        return json.loads(raw)["properties"]
 
-    @patch(_TASK)
-    def test_recitations_list_records_distinct_publishers_of_served_assets(self, mock_task):
+    @patch(_REDIS)
+    def test_recitations_list_records_distinct_publishers_of_served_assets(self, mock_get_redis):
         response = self.client.get("/recitations/")
         self.assertEqual(200, response.status_code, response.content)
 
-        props = self._props(mock_task)
+        props = self._props(mock_get_redis)
         self.assertEqual("recitation", props["entity_type"])
         self.assertCountEqual([self.asset_a.id, self.asset_b.id], props["entity_ids"])
         # Both publishers present -- derived per served asset, not from the requester.
         self.assertCountEqual([self.publisher_a.id, self.publisher_b.id], props["publisher_ids"])
 
-    @patch(_TASK)
-    def test_recitation_detail_records_only_that_assets_publisher(self, mock_task):
+    @patch(_REDIS)
+    def test_recitation_detail_records_only_that_assets_publisher(self, mock_get_redis):
         response = self.client.get(f"/recitations/{self.asset_b.id}/")
         self.assertEqual(200, response.status_code, response.content)
 
-        props = self._props(mock_task)
+        props = self._props(mock_get_redis)
         self.assertEqual("recitation", props["entity_type"])
         self.assertEqual([self.asset_b.id], props["entity_ids"])
         self.assertEqual(self.asset_b.name, props["accessed_entity_name"])
         # Served asset belongs to publisher_b, NOT the requester's publisher_a.
         self.assertEqual([self.publisher_b.id], props["publisher_ids"])
 
-    @patch(_TASK)
-    def test_recitation_detail_404_dispatches_nothing(self, mock_task):
+    @patch(_REDIS)
+    def test_recitation_detail_404_dispatches_nothing(self, mock_get_redis):
         response = self.client.get("/recitations/999999/")
         self.assertEqual(404, response.status_code, response.content)
-        mock_task.delay.assert_not_called()
+        mock_get_redis.return_value.rpush.assert_not_called()
 
-    @patch(_TASK)
-    def test_reciters_list_records_entities_with_no_publisher(self, mock_task):
+    @patch(_REDIS)
+    def test_reciters_list_records_entities_with_no_publisher(self, mock_get_redis):
         response = self.client.get("/reciters/")
         self.assertEqual(200, response.status_code, response.content)
 
-        props = self._props(mock_task)
+        props = self._props(mock_get_redis)
         self.assertEqual("reciter", props["entity_type"])
         self.assertIn(self.reciter.id, props["entity_ids"])
         self.assertEqual([], props["publisher_ids"])
 
-    @patch(_TASK)
-    def test_riwayahs_list_records_entities_with_no_publisher(self, mock_task):
+    @patch(_REDIS)
+    def test_riwayahs_list_records_entities_with_no_publisher(self, mock_get_redis):
         response = self.client.get("/riwayahs/")
         self.assertEqual(200, response.status_code, response.content)
 
-        props = self._props(mock_task)
+        props = self._props(mock_get_redis)
         self.assertEqual("riwayah", props["entity_type"])
         self.assertIn(self.riwayah.id, props["entity_ids"])
         self.assertEqual([], props["publisher_ids"])
 
-    @patch(_TASK)
-    def test_reciter_id_filter_records_reciter_name(self, mock_task):
+    @patch(_REDIS)
+    def test_reciter_id_filter_records_reciter_name(self, mock_get_redis):
         response = self.client.get(f"/recitations/?reciter_id={self.reciter.id}")
         self.assertEqual(200, response.status_code, response.content)
 
-        props = self._props(mock_task)
+        props = self._props(mock_get_redis)
         self.assertEqual(self.reciter.id, props["filter_reciter_id"])
         self.assertEqual(self.reciter.name, props["filter_reciter_name"])
         self.assertEqual([self.reciter.name], props["filter_reciter_names"])
 
-    @patch(_TASK)
-    def test_multiple_reciter_id_filters_record_all_names(self, mock_task):
+    @patch(_REDIS)
+    def test_multiple_reciter_id_filters_record_all_names(self, mock_get_redis):
         other_reciter = baker.make("content.Reciter", name="Reciter W", is_active=True)
         baker.make(
             Asset,
@@ -135,12 +138,12 @@ class UsageTrackingIntegrationTest(BaseTestCase):
         response = self.client.get(f"/recitations/?reciter_id={self.reciter.id}&reciter_id={other_reciter.id}")
         self.assertEqual(200, response.status_code, response.content)
 
-        props = self._props(mock_task)
+        props = self._props(mock_get_redis)
         self.assertEqual([self.reciter.name, other_reciter.name], props["filter_reciter_names"])
         self.assertEqual(self.reciter.name, props["filter_reciter_name"])
 
-    @patch(_TASK)
-    def test_recitations_list_where_qiraah_riwayah_reciter_filters_should_be_sent_to_mixpanel(self, mock_task):
+    @patch(_REDIS)
+    def test_recitations_list_where_qiraah_riwayah_reciter_filters_should_be_sent_to_mixpanel(self, mock_get_redis):
         # Arrange
         qiraah = baker.make("content.Qiraah", name="Qiraah Q", is_active=True)
 
@@ -151,7 +154,7 @@ class UsageTrackingIntegrationTest(BaseTestCase):
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
-        props = self._props(mock_task)
+        props = self._props(mock_get_redis)
         self.assertEqual(qiraah.id, props["filter_qiraah_id"])
         self.assertEqual(self.riwayah.id, props["filter_riwayah_id"])
         self.assertEqual(self.reciter.id, props["filter_reciter_id"])

@@ -1,8 +1,17 @@
+import json
 from unittest.mock import MagicMock, patch
 
 import pytest
+import redis
 
-from apps.usage_tracking.tasks import UnexpectedDatabaseQuery, no_db_queries, track_api_request_task
+from apps.usage_tracking.tasks import (
+    _TRACKING_INFLIGHT_KEY,
+    TRACKING_BUFFER_KEY,
+    UnexpectedDatabaseQuery,
+    flush_tracking_buffer_task,
+    no_db_queries,
+    track_api_request_task,
+)
 
 
 class TestTrackApiRequestTask:
@@ -107,3 +116,110 @@ class TestNoDbQueries:
 
         with pytest.raises(UnexpectedDatabaseQuery), no_db_queries():
             Asset.objects.filter(pk=1).exists()
+
+
+def _make_event(distinct_id="user-1", event="public_api_request", props=None):
+    return {
+        "distinct_id": distinct_id,
+        "event": event,
+        "properties": props or {"endpoint": "GET /recitations/"},
+        "meta": {},
+    }
+
+
+class TestFlushTrackingBufferTask:
+    def _mock_redis_with_events(self, events):
+        """Return a mock Redis client that simulates a buffer containing the given events."""
+        mock_r = MagicMock()
+        mock_r.rename.return_value = True
+        mock_r.lrange.return_value = [json.dumps(e) for e in events]
+        return mock_r
+
+    @patch("apps.usage_tracking.tasks._build_ingest_client")
+    @patch("apps.usage_tracking.tasks._get_tracking_redis")
+    def test_flush_tracking_buffer_task_where_buffer_has_events_should_send_batch(self, mock_get_redis, mock_build):
+        events = [_make_event("user-1"), _make_event("user-2")]
+        mock_r = self._mock_redis_with_events(events)
+        mock_get_redis.return_value = mock_r
+        client = MagicMock()
+        mock_build.return_value = client
+
+        flush_tracking_buffer_task.run()
+
+        mock_r.rename.assert_called_once_with(TRACKING_BUFFER_KEY, _TRACKING_INFLIGHT_KEY)
+        mock_r.lrange.assert_called_once_with(_TRACKING_INFLIGHT_KEY, 0, -1)
+        mock_r.delete.assert_called_once_with(_TRACKING_INFLIGHT_KEY)
+        client.track_batch.assert_called_once()
+        sent = client.track_batch.call_args[0][0]
+        assert len(sent) == 2
+        assert sent[0]["distinct_id"] == "user-1"
+        assert sent[1]["distinct_id"] == "user-2"
+
+    @patch("apps.usage_tracking.tasks._build_ingest_client")
+    @patch("apps.usage_tracking.tasks._get_tracking_redis")
+    def test_flush_tracking_buffer_task_where_buffer_empty_should_be_noop(self, mock_get_redis, mock_build):
+        mock_r = MagicMock()
+        mock_r.rename.side_effect = redis.ResponseError("ERR no such key")
+        mock_get_redis.return_value = mock_r
+        client = MagicMock()
+        mock_build.return_value = client
+
+        flush_tracking_buffer_task.run()
+
+        mock_r.lrange.assert_not_called()
+        client.track_batch.assert_not_called()
+
+    @patch("apps.usage_tracking.tasks._build_ingest_client")
+    @patch("apps.usage_tracking.tasks._get_tracking_redis")
+    def test_flush_tracking_buffer_task_where_inflight_is_empty_after_rename_should_be_noop(
+        self, mock_get_redis, mock_build
+    ):
+        mock_r = MagicMock()
+        mock_r.rename.return_value = True
+        mock_r.lrange.return_value = []
+        mock_get_redis.return_value = mock_r
+        client = MagicMock()
+        mock_build.return_value = client
+
+        flush_tracking_buffer_task.run()
+
+        client.track_batch.assert_not_called()
+
+    @patch("apps.usage_tracking.tasks._build_ingest_client")
+    @patch("apps.usage_tracking.tasks._get_tracking_redis")
+    def test_flush_tracking_buffer_task_where_track_batch_raises_should_still_delete_inflight(
+        self, mock_get_redis, mock_build
+    ):
+        """Inflight key is always deleted after the send attempt.
+
+        A network failure drops the batch (analytics loss is acceptable) but must
+        not leave the inflight key lingering -- next RENAME would silently overwrite
+        it, losing both old and new data.
+        """
+        events = [_make_event("user-1")]
+        mock_r = self._mock_redis_with_events(events)
+        mock_get_redis.return_value = mock_r
+        client = MagicMock()
+        client.track_batch.side_effect = ConnectionError("Mixpanel down")
+        mock_build.return_value = client
+
+        with pytest.raises(ConnectionError):
+            flush_tracking_buffer_task.run()
+
+        mock_r.delete.assert_called_once_with(_TRACKING_INFLIGHT_KEY)
+
+    @patch("apps.usage_tracking.tasks._build_ingest_client")
+    @patch("apps.usage_tracking.tasks._get_tracking_redis")
+    def test_flush_tracking_buffer_task_where_event_is_malformed_json_should_skip_it(self, mock_get_redis, mock_build):
+        mock_r = MagicMock()
+        mock_r.rename.return_value = True
+        mock_r.lrange.return_value = ["not-json", json.dumps(_make_event("user-good"))]
+        mock_get_redis.return_value = mock_r
+        client = MagicMock()
+        mock_build.return_value = client
+
+        flush_tracking_buffer_task.run()
+
+        sent = client.track_batch.call_args[0][0]
+        assert len(sent) == 1
+        assert sent[0]["distinct_id"] == "user-good"
