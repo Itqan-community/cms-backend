@@ -18,14 +18,13 @@ def recitation_response_cache_key(asset_id: int, page: int, page_size: int) -> s
 
 
 def invalidate_recitation_tracks_cache(asset_id: int) -> None:
+    # Deleting meta is sufficient: the view requires both resp AND meta for a cache hit,
+    # so clearing meta forces a full DB rebuild on the next request. Stale resp bytes
+    # for any (page, page_size) variant are overwritten on that rebuild and expire
+    # naturally within RECITATION_RESPONSE_CACHE_TTL (5 min) for untouched variants.
     cache.delete_many(
         [
             recitation_tracks_cache_key(asset_id),
             recitation_asset_meta_cache_key(asset_id),
         ]
     )
-    # Also wipe pre-serialized response keys for this asset (page/page_size vary, use pattern).
-    try:
-        cache.delete_pattern(f"*:public_recitation_resp:{asset_id}:*")
-    except AttributeError:
-        pass  # non-Redis backend (e.g. locmem in tests)

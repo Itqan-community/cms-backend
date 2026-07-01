@@ -54,7 +54,7 @@ class RecitationSurahTrackOut(Schema):
 def list_recitation_tracks(
     request: Request,
     asset_id: int,
-    page: int = Query(1, ge=1),
+    page: int = Query(1, ge=1, le=100),
     page_size: int = Query(DEFAULT_PAGE_SIZE, ge=1),
 ):
     page_size = min(page_size, PUBLIC_RECITATION_MAX_PAGE_SIZE)
@@ -143,7 +143,9 @@ def list_recitation_tracks(
 
     response_bytes = json.dumps({"results": paginated, "count": total}).encode()
 
-    cache.set(_resp_key, response_bytes, RECITATION_RESPONSE_CACHE_TTL)
+    if offset < total:
+        # Only cache pages that have content; out-of-range pages are not worth storing.
+        cache.set(_resp_key, response_bytes, RECITATION_RESPONSE_CACHE_TTL)
     cache.set(_meta_key, asset_meta, RECITATION_ASSET_META_CACHE_TTL)
 
     resp = HttpResponse(response_bytes, content_type="application/json")
