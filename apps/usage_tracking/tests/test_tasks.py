@@ -187,18 +187,23 @@ class TestFlushTrackingBufferTask:
 
     @patch("apps.usage_tracking.tasks._build_ingest_client")
     @patch("apps.usage_tracking.tasks._get_tracking_redis")
-    def test_flush_tracking_buffer_task_where_lrange_raises_should_still_delete_inflight(
+    def test_flush_tracking_buffer_task_where_track_batch_raises_should_still_delete_inflight(
         self, mock_get_redis, mock_build
     ):
-        """Inflight key is deleted in a finally block so it doesn't linger on crash."""
-        mock_r = MagicMock()
-        mock_r.rename.return_value = True
-        mock_r.lrange.side_effect = redis.ResponseError("ERR crash")
+        """Inflight key is always deleted after the send attempt.
+
+        A network failure drops the batch (analytics loss is acceptable) but must
+        not leave the inflight key lingering -- next RENAME would silently overwrite
+        it, losing both old and new data.
+        """
+        events = [_make_event("user-1")]
+        mock_r = self._mock_redis_with_events(events)
         mock_get_redis.return_value = mock_r
         client = MagicMock()
+        client.track_batch.side_effect = ConnectionError("Mixpanel down")
         mock_build.return_value = client
 
-        with pytest.raises(redis.ResponseError):
+        with pytest.raises(ConnectionError):
             flush_tracking_buffer_task.run()
 
         mock_r.delete.assert_called_once_with(_TRACKING_INFLIGHT_KEY)

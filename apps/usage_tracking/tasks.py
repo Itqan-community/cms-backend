@@ -74,14 +74,14 @@ _tracking_redis_client: redis.Redis | None = None
 def _get_tracking_redis() -> redis.Redis:
     """Return the module-level Redis client for the tracking buffer (DB 2).
 
-    Uses the same host/port as the Django cache (REDIS_URL) but a separate DB so
-    an allkeys-lru eviction policy on the cache DB cannot drop buffered events.
-    Lazy-initialised so Django settings are available at first call.
+    Derives host/port from CACHES["default"]["LOCATION"] (the authoritative cache URL)
+    and swaps the DB to the dedicated tracking DB so cache eviction policies cannot
+    drop buffered events. Lazy-initialised so Django settings are available at first call.
     """
     global _tracking_redis_client
     if _tracking_redis_client is None:
-        base_url: str = getattr(settings, "REDIS_URL", "redis://localhost:6379/1")
-        url_without_db = base_url.rsplit("/", 1)[0]
+        cache_url: str = settings.CACHES["default"]["LOCATION"]
+        url_without_db = cache_url.rsplit("/", 1)[0]
         tracking_url = f"{url_without_db}/{_TRACKING_REDIS_DB}"
         _tracking_redis_client = redis.Redis.from_url(
             tracking_url, socket_connect_timeout=1, socket_timeout=1, decode_responses=True
@@ -134,12 +134,10 @@ def flush_tracking_buffer_task() -> None:
     except redis.ResponseError:
         return  # buffer was empty
 
-    try:
-        raw_items: list[str] = r.lrange(_TRACKING_INFLIGHT_KEY, 0, -1)
-    finally:
-        r.delete(_TRACKING_INFLIGHT_KEY)
+    raw_items: list[str] = r.lrange(_TRACKING_INFLIGHT_KEY, 0, -1)
 
     if not raw_items:
+        r.delete(_TRACKING_INFLIGHT_KEY)
         return
 
     events: list[dict[str, Any]] = []
@@ -149,9 +147,13 @@ def flush_tracking_buffer_task() -> None:
         except (json.JSONDecodeError, TypeError):
             logger.warning("flush_tracking_buffer_task: skipping malformed event: %.120s", raw)
 
-    if not events:
-        return
-
-    client = _build_ingest_client()
-    client.track_batch(events)
-    logger.info("flush_tracking_buffer_task: sent %d events to Mixpanel", len(events))
+    # Send then delete in finally so inflight is always cleaned up. A network failure
+    # during track_batch logs and drops the batch -- analytics loss is acceptable and
+    # leaving inflight would not help (next RENAME silently overwrites it anyway).
+    try:
+        if events:
+            client = _build_ingest_client()
+            client.track_batch(events)
+            logger.info("flush_tracking_buffer_task: sent %d events to Mixpanel", len(events))
+    finally:
+        r.delete(_TRACKING_INFLIGHT_KEY)
