@@ -5,9 +5,9 @@ import pytest
 import redis
 
 from apps.usage_tracking.tasks import (
+    _TRACKING_INFLIGHT_KEY,
     TRACKING_BUFFER_KEY,
     UnexpectedDatabaseQuery,
-    _TRACKING_INFLIGHT_KEY,
     flush_tracking_buffer_task,
     no_db_queries,
     track_api_request_task,

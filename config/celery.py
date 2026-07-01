@@ -2,8 +2,8 @@
 Celery configuration for Itqan CMS
 """
 
-import os
 from datetime import timedelta
+import os
 
 from celery import Celery
 from celery.schedules import crontab

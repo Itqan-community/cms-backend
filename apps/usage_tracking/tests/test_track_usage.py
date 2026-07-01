@@ -1,6 +1,6 @@
 import json
 from types import SimpleNamespace
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import AnonymousUser
 from django.test import RequestFactory

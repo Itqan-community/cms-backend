@@ -2,7 +2,7 @@
 publisher (not the requester's), across the four tracked public endpoints."""
 
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from django.core.cache import cache
 from model_bakery import baker
