@@ -110,10 +110,6 @@ def list_recitation_tracks(
     for track in tracks:
         audio_url = f"{CLOUDFLARE_R2_PUBLIC_BASE_URL}/media/{track.audio_file.name}"
         surah = QURAN_SURAHS[track.surah_number]
-        sorted_timings = sorted(
-            track.ayah_timings.all(),
-            key=lambda a: (int(a.ayah_key.split(":")[0]), int(a.ayah_key.split(":")[1])),
-        )
         all_results.append(
             {
                 "surah_number": track.surah_number,
@@ -132,7 +128,7 @@ def list_recitation_tracks(
                         "end_ms": t.end_ms,
                         "duration_ms": t.duration_ms,
                     }
-                    for t in sorted_timings
+                    for t in track.ayah_timings.all()
                 ],
             }
         )

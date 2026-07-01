@@ -36,6 +36,6 @@ fi
 echo "Starting Gunicorn (ASGI, Uvicorn workers)..."
 exec gunicorn config.asgi:application \
     --bind 0.0.0.0:8000 \
-    --workers 3 \
+    --workers "${GUNICORN_WORKERS:-10}" \
     --worker-class config.workers.DjangoUvicornWorker \
     --timeout 600

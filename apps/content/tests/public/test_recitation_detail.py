@@ -193,6 +193,27 @@ class RecitationTracksTest(BaseTestCase):
         self.assertEqual(1, len(items))
         self.assertEqual([], items[0]["ayahs_timings"])
 
+    def test_list_recitation_tracks_where_timings_inserted_out_of_order_should_return_ordered_by_start_ms(self):
+        # Regression: ayah timings were sorted in Python after fetching.
+        # This test inserts them in reverse order to prove the DB prefetch ORDER BY fires.
+        track = baker.make(
+            RecitationSurahTrack,
+            asset=self.asset,
+            surah_number=1,
+            duration_ms=3000,
+            size_bytes=512,
+        )
+        baker.make(RecitationAyahTiming, track=track, ayah_key="1:3", start_ms=2000, end_ms=3000, duration_ms=1000)
+        baker.make(RecitationAyahTiming, track=track, ayah_key="1:1", start_ms=0, end_ms=1000, duration_ms=1000)
+        baker.make(RecitationAyahTiming, track=track, ayah_key="1:2", start_ms=1000, end_ms=2000, duration_ms=1000)
+        self.authenticate_client(self.app)
+
+        response = self.client.get(f"/recitations/{self.asset.id}/")
+
+        self.assertEqual(200, response.status_code, response.content)
+        timings = response.json()["results"][0]["ayahs_timings"]
+        self.assertEqual(["1:1", "1:2", "1:3"], [t["ayah_key"] for t in timings])
+
 
 class PublicRecitationPaginationTest(unittest.TestCase):
     def test_Input_where_page_size_exceeds_max_should_clamp_to_max(self):
