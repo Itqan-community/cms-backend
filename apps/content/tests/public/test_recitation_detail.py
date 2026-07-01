@@ -264,3 +264,24 @@ class RecitationTracksPageSizeCapTest(BaseTestCase):
         second = self.client.get(f"/recitations/{self.asset.id}/")
         self.assertEqual(200, second.status_code, second.content)
         self.assertEqual(first.json(), second.json())
+
+    def test_list_recitation_tracks_where_both_caches_warm_should_make_no_db_query(self):
+        # Fails on old code where get_asset_object always ran before the cache check.
+        from unittest.mock import patch
+
+        from django.core.cache import cache as django_cache
+
+        self.authenticate_client(self.app)
+        django_cache.clear()
+
+        # Warm both caches via a real first request.
+        first = self.client.get(f"/recitations/{self.asset.id}/")
+        self.assertEqual(200, first.status_code, first.content)
+
+        # Second request: both caches are hot - repo must not be called.
+        with patch("apps.content.api.public.recitation_track_list.RecitationRepository") as mock_repo_cls:
+            second = self.client.get(f"/recitations/{self.asset.id}/")
+
+        self.assertEqual(200, second.status_code, second.content)
+        # Full cache hit must skip repo construction entirely, not just skip the DB call.
+        mock_repo_cls.assert_not_called()
