@@ -1,3 +1,9 @@
+## v0.8.0 (2026-07-02)
+
+### Feat
+
+- increase throttle rates for public API users and anonymous clients
+
 ## v0.7.4 (2026-07-01)
 
 ### Perf
