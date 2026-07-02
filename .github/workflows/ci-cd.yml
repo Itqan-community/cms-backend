@@ -176,6 +176,7 @@ jobs:
                 echo "SAML_IDP_CERT_FILE=${{ secrets.SAML_IDP_CERT_FILE }}";
                 echo "SAML_IDP_BASE_URL=${{ vars.STAGING_SAML_IDP_BASE_URL }}";
                 echo "XMLSEC_BINARY=${{ vars.STAGING_XMLSEC_BINARY }}";
+                echo "ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=${{ vars.STAGING_ENFORCE_ASSET_ACCESS_ON_PUBLIC_API }}";
               } > deployment/docker/.env
             elif [ "${{ env.ENV_NAME }}" = "production" ]; then
               {
@@ -231,6 +232,7 @@ jobs:
                 echo "SAML_IDP_CERT_FILE=${{ secrets.SAML_IDP_CERT_FILE }}";
                 echo "SAML_IDP_BASE_URL=${{ vars.PROD_SAML_IDP_BASE_URL }}";
                 echo "XMLSEC_BINARY=${{ vars.PROD_XMLSEC_BINARY }}";
+                echo "ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=${{ vars.PROD_ENFORCE_ASSET_ACCESS_ON_PUBLIC_API }}";
               } > deployment/docker/.env
             fi
             # Append image coordinates for docker compose variable substitution
