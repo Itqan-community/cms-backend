@@ -546,8 +546,8 @@ USER_PATH_THROTTLE_RATE = config("USER_PATH_THROTTLE_RATE", default="10/sec")
 # Authenticated clients (OAuth app / API key / user) get the higher budget;
 # anonymous (per-IP) traffic gets a stricter one. Rate format: "<count>/<period>"
 # where period is one of s/sec, m/min, h/hour, d/day.
-PUBLIC_API_USER_THROTTLE_RATE = config("PUBLIC_API_USER_THROTTLE_RATE", default="60/min")
-PUBLIC_API_ANON_THROTTLE_RATE = config("PUBLIC_API_ANON_THROTTLE_RATE", default="30/min")
+PUBLIC_API_USER_THROTTLE_RATE = config("PUBLIC_API_USER_THROTTLE_RATE", default="10000/min")
+PUBLIC_API_ANON_THROTTLE_RATE = config("PUBLIC_API_ANON_THROTTLE_RATE", default="100/min")
 
 # Ninja configs
 NINJA_PAGINATION_CLASS = "apps.core.ninja_utils.paginations.NinjaPagination"
