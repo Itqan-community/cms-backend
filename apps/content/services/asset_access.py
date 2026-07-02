@@ -4,6 +4,7 @@ from enum import Enum
 import logging
 from typing import TYPE_CHECKING
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
 from django.utils.translation import gettext as _
@@ -166,7 +167,7 @@ def guard_restrict_for_tenant(asset: Asset) -> None:
     )
 
 
-def enforce_asset_access(user: User | None, asset: Asset) -> None:
+def enforce_asset_access_on_public_api(user: User | None, asset: Asset) -> None:
     """Gate consumption of an asset's content behind an API key + approved access.
 
     Open-access assets are free to consume by anyone. For assets the publisher keeps
@@ -175,6 +176,10 @@ def enforce_asset_access(user: User | None, asset: Asset) -> None:
     A missing/invalid key yields 401; an authenticated consumer without an approved
     grant (not requested, pending, or rejected) yields 403.
     """
+
+    if not settings.ENFORCE_ASSET_ACCESS_ON_PUBLIC_API:
+        return
+
     if asset.is_open_access:
         return
 

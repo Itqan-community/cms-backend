@@ -169,8 +169,8 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
     )
 
     is_open_access = models.BooleanField(
-        default=False,
-        help_text="If true, the asset can be consumed directly without going through the access-request cycle.",
+        default=True,
+        help_text="Flag to allow consuming the asset directly without the access-request cycle (default enabled).",
     )
     restricted_for_tenant = models.BooleanField(
         default=False,

@@ -1,4 +1,5 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
 from model_bakery import baker
 from oauth2_provider.models import Application
 
@@ -195,6 +196,7 @@ class RecitationTracksTest(BaseTestCase):
         self.assertEqual([], items[0]["ayahs_timings"])
 
 
+@override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=True)
 class RecitationTracksAccessControlTest(BaseTestCase):
     """Gating of the content endpoint behind API key + approved access request."""
 
@@ -286,6 +288,13 @@ class RecitationTracksAccessControlTest(BaseTestCase):
         self._grant_access(self.user, self.asset)
         self._authenticate_with_api_key(self.user)
 
+        response = self.client.get(f"/recitations/{self.asset.id}/")
+
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(1, len(response.json()["results"]))
+
+    @override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=False)
+    def test_flag_off_restricted_asset_consumable_without_api_key(self):
         response = self.client.get(f"/recitations/{self.asset.id}/")
 
         self.assertEqual(200, response.status_code, response.content)

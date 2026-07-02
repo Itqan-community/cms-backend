@@ -147,7 +147,10 @@ class GetAccessStatusTests(BaseTestCase):
         self.user = baker.make(User)
 
     def _asset(self):
-        return _make_asset(self.publisher)
+        asset = _make_asset(self.publisher)
+        asset.is_open_access = False
+        asset.save(update_fields=["is_open_access"])
+        return asset
 
     def _make_request(self, asset, status):
         return AssetAccessRequest.objects.create(
