@@ -73,6 +73,13 @@ class ApiKeyAuth(BaseApiKeyAuth):
 
 
 class PublicAuth:
+    openapi_security_schema: dict = {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API key issued for your Application, sent in the X-API-Key header.",
+    }
+
     def __call__(self, request):
         methods = []
         if settings.ENABLE_API_KEY_AUTH:
