@@ -1143,7 +1143,7 @@ wheels = [
 
 [[package]]
 name = "itqan-cms-backend"
-version = "0.7.3"
+version = "0.8.0"
 source = { virtual = "." }
 dependencies = [
     { name = "boto3" },
