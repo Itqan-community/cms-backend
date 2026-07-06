@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 class MinimalReciter(Schema):
     id: int
     name: str
+    slug: str
 
 
 class MinimalQiraah(Schema):

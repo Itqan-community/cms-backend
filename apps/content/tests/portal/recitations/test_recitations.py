@@ -48,6 +48,55 @@ class RecitationPortalTest(BaseTestCase):
         self.assertEqual(200, response.status_code)
         self.assertEqual(1, len(response.json()["results"]))
 
+    def test_list_recitations_where_reciter_set_should_return_reciter_slug(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_RECITATION)
+        baker.make(
+            Asset,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
+            reciter=self.reciter,
+            qiraah=self.qiraah,
+            riwayah=self.riwayah,
+            name="Recitation 1",
+        )
+
+        # Act
+        response = self.client.get("/portal/recitations/")
+
+        # Assert
+        self.assertEqual(200, response.status_code)
+        reciter = response.json()["results"][0]["reciter"]
+        self.assertEqual(self.reciter.id, reciter["id"])
+        self.assertEqual(self.reciter.name, reciter["name"])
+        self.assertEqual(self.reciter.slug, reciter["slug"])
+
+    def test_retrieve_recitation_where_reciter_set_should_return_reciter_slug(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_RECITATION)
+        asset = baker.make(
+            Asset,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
+            reciter=self.reciter,
+            qiraah=self.qiraah,
+            riwayah=self.riwayah,
+        )
+
+        # Act
+        response = self.client.get(f"/portal/recitations/{asset.slug}/")
+
+        # Assert
+        self.assertEqual(200, response.status_code)
+        reciter = response.json()["reciter"]
+        self.assertEqual(self.reciter.id, reciter["id"])
+        self.assertEqual(self.reciter.name, reciter["name"])
+        self.assertEqual(self.reciter.slug, reciter["slug"])
+
     def test_filter_recitations_by_publisher_should_return_filtered_results(self):
         # Arrange
         self.authenticate_user(self.user)
