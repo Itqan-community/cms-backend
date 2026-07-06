@@ -1,3 +1,9 @@
+## v0.9.0 (2026-07-06)
+
+### Feat
+
+- add reciter slug support in recitations API and update tests accordingly
+
 ## v0.8.0 (2026-07-02)
 
 ### Feat
