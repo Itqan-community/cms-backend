@@ -25,6 +25,7 @@ ENABLE_ALLAUTH = config("ENABLE_ALLAUTH", cast=bool, default=True)
 ENABLE_API_KEY_AUTH = config("ENABLE_API_KEY_AUTH", cast=bool, default=True)
 ENABLE_ANONYMOUS_TRAFFIC = config("ENABLE_ANONYMOUS_TRAFFIC", cast=bool, default=True)
 SAML_IDP_ENABLED = config("SAML_IDP_ENABLED", cast=bool, default=True)
+ENFORCE_ASSET_ACCESS_ON_PUBLIC_API = config("ENFORCE_ASSET_ACCESS_ON_PUBLIC_API", cast=bool, default=False)
 
 # Application definition
 DJANGO_APPS = [
@@ -66,7 +67,7 @@ THIRD_PARTY_APPS = [
 
 COUNTRIES_OVERRIDE = {"IL": None}
 
-LOCAL_APPS = ["apps.core", "apps.content", "apps.users", "apps.publishers"]
+LOCAL_APPS = ["apps.core", "apps.content", "apps.users", "apps.publishers", "apps.quran"]
 
 
 MIDDLEWARE = [

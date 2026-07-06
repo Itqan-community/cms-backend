@@ -110,6 +110,8 @@ class RecitationRepository(BaseRecitationRepository):
         madd_level: Asset.MaddLevelChoice | None,
         meem_behaviour: Asset.MeemBehaviourChoice | None,
         year: int | None,
+        is_open_access: bool = False,
+        restricted_for_tenant: bool = False,
     ) -> Asset:
         """
         Create an Asset for a new Recitation.
@@ -135,6 +137,8 @@ class RecitationRepository(BaseRecitationRepository):
                 madd_level=madd_level,
                 meem_behaviour=meem_behaviour,
                 year=year,
+                is_open_access=is_open_access,
+                restricted_for_tenant=restricted_for_tenant,
             )
 
         return asset

@@ -242,6 +242,59 @@ class TestAssetDownload(BaseTestCase):
         )
         self.assertEqual(0, usage_events.count())
 
+    def test_download_open_access_asset_without_access_record_should_return_file_response(self):
+        # Arrange — open access asset, brand-new user with no AssetAccess grant
+        public_asset = baker.make(
+            Asset,
+            publisher=self.publisher,
+            name="Open Access Asset",
+            category=CategoryChoice.TAFSIR,
+            license=LicenseChoice.CC0,
+            status=StatusChoice.READY,
+            is_open_access=True,
+        )
+        mock_file = SimpleUploadedFile("public_123abc.pdf", b"fake pdf content", content_type="application/pdf")
+        baker.make(AssetVersion, asset=public_asset, name="Version 1", file_url=mock_file)
+        user_without_access = baker.make(User, email="noaccess@example.com")
+
+        # Act — real user_has_access runs and short-circuits on is_open_access
+        self.authenticate_user(user_without_access)
+        response = self.client.get(f"/cms-api/assets/{public_asset.id}/download/")
+        body = response.json()
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertIn("download_url", body)
+        self.assertIn("/public_123abc", body["download_url"])
+
+    def test_download_open_access_asset_should_create_usage_event(self):
+        # Arrange
+        public_asset = baker.make(
+            Asset,
+            publisher=self.publisher,
+            name="Open Access Asset Usage",
+            category=CategoryChoice.TAFSIR,
+            license=LicenseChoice.CC0,
+            status=StatusChoice.READY,
+            is_open_access=True,
+        )
+        mock_file = SimpleUploadedFile("public.pdf", b"fake pdf content", content_type="application/pdf")
+        baker.make(AssetVersion, asset=public_asset, name="Version 1", file_url=mock_file)
+        user_without_access = baker.make(User, email="publicusage@example.com")
+
+        # Act
+        self.authenticate_user(user_without_access)
+        response = self.client.get(f"/cms-api/assets/{public_asset.id}/download/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        usage_events = UsageEvent.objects.filter(
+            developer_user=user_without_access,
+            usage_kind=UsageEvent.UsageKindChoice.FILE_DOWNLOAD,
+            asset_id=public_asset.id,
+        )
+        self.assertEqual(1, usage_events.count())
+
     @patch("apps.content.api.internal.assets_download.user_has_access")
     def test_download_asset_should_include_request_metadata_in_usage_event(self, mock_user_has_access):
         # Arrange
@@ -276,3 +329,23 @@ class TestAssetDownload(BaseTestCase):
         self.assertEqual(usage_event.user_agent, "Download Agent/2.0")
         # Note: IP address capture depends on Django test client configuration
         # In real requests, this would capture the client IP
+
+    def test_download_asset_where_restricted_for_tenant_should_return_404(self):
+        # Arrange
+        tenant_only_asset = baker.make(
+            Asset,
+            publisher=self.publisher,
+            name="Tenant Only Asset",
+            category=CategoryChoice.TAFSIR,
+            license=LicenseChoice.CC0,
+            status=StatusChoice.READY,
+            restricted_for_tenant=True,
+        )
+
+        # Act
+        self.authenticate_user(self.user)
+        response = self.client.get(f"/cms-api/assets/{tenant_only_asset.id}/download/")
+
+        # Assert
+        self.assertEqual(404, response.status_code, response.content)
+        self.assertEqual("not_found", response.json()["error_name"])

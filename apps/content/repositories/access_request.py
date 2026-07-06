@@ -30,7 +30,11 @@ class AssetAccessRequestRepository:
         return self.list_qs().filter(id=request_id).first()
 
     def get_existing(self, *, developer_user: User, asset: Asset) -> AssetAccessRequest | None:
-        return AssetAccessRequest.objects.filter(developer_user=developer_user, asset=asset).first()
+        return (
+            AssetAccessRequest.objects.filter(developer_user=developer_user, asset=asset)
+            .order_by("-created_at")
+            .first()
+        )
 
     def create_request(
         self, *, developer_user: User, asset: Asset, developer_access_reason: str, intended_use: str

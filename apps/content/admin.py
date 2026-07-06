@@ -57,9 +57,20 @@ class AssetAdmin(admin.ModelAdmin):
         "file_size",
         "format",
         "license",
+        "is_open_access",
+        "restricted_for_tenant",
         "created_at",
     ]
-    list_filter = ["category", "status", "license", "publisher", "format", "created_at"]
+    list_filter = [
+        "category",
+        "status",
+        "license",
+        "is_open_access",
+        "restricted_for_tenant",
+        "publisher",
+        "format",
+        "created_at",
+    ]
     search_fields = ["name", "description", "long_description"]
     inlines = [AssetVersionInline]
 
@@ -100,7 +111,7 @@ class AssetAdmin(admin.ModelAdmin):
         (
             "Licensing",
             {
-                "fields": ("license", "is_external", "external_url"),
+                "fields": ("license", "is_external", "external_url", "is_open_access", "restricted_for_tenant"),
             },
         ),
         (

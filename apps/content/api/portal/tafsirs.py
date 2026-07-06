@@ -40,6 +40,8 @@ class TafsirListOut(Schema):
     license: LicenseChoice
     language: str
     is_external: bool
+    is_open_access: bool
+    restricted_for_tenant: bool
     thumbnail_url: str | None = None
     created_at: AwareDatetime
 
@@ -79,6 +81,8 @@ class TafsirDetailOut(Schema):
     language: str
     is_external: bool
     external_url: str | None = None
+    is_open_access: bool
+    restricted_for_tenant: bool
     versions: list[TafsirVersionOut]
     created_at: AwareDatetime
 
@@ -108,6 +112,8 @@ class TafsirCreateIn(Schema):
     publisher_id: int
     is_external: bool = False
     external_url: str | None = None
+    is_open_access: bool = False
+    restricted_for_tenant: bool = False
 
 
 class TafsirPutIn(Schema):
@@ -122,6 +128,8 @@ class TafsirPutIn(Schema):
     publisher_id: int
     is_external: bool = False
     external_url: str | None = None
+    is_open_access: bool = False
+    restricted_for_tenant: bool = False
 
 
 class TafsirPatchIn(Schema):
@@ -136,6 +144,8 @@ class TafsirPatchIn(Schema):
     publisher_id: int | None = None
     is_external: bool | None = None
     external_url: str | None = None
+    is_open_access: bool | None = None
+    restricted_for_tenant: bool | None = None
 
 
 # --- Filter Schema ---
@@ -218,6 +228,8 @@ def create_tafsir(
         is_external=data.is_external,
         external_url=data.external_url,
         thumbnail_url=thumbnail,
+        is_open_access=data.is_open_access,
+        restricted_for_tenant=data.restricted_for_tenant,
     )
     logger.info(f"Tafsir created [tafsir_id={tafsir.id}, user_id={request.user.id}]")
     return 201, tafsir

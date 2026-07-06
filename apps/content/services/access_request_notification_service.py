@@ -66,7 +66,7 @@ class AccessRequestNotificationService:
                 "asset_name": req.asset.name,
                 "developer_name": req.developer_user.name,
                 "auto_accepted": req.status == AssetAccessRequest.StatusChoice.APPROVED,
-                "access_requests_url": f"{portal_base}/portal/access-requests",
+                "access_requests_url": f"{portal_base}/admin/access-requests",
             },
         )
         logger.info(f"Publisher new-request email sent [request_id={request_id}, recipients={len(recipients)}]")

@@ -1,7 +1,8 @@
 {% extends "account/email/base_message.html" %}
 {% load i18n %}
 
-{% block content %}{% autoescape off %}{% blocktrans %}You are receiving this email because you or someone else tried to signup for an
+{% block content %}
+<p style="margin:0 0 24px;">{% blocktrans %}You are receiving this email because you or someone else tried to signup for an
 account using email address:
 
 {{ email }}
@@ -10,4 +11,9 @@ However, an account using that email address already exists.  In case you have
 forgotten about this, please use the password forgotten procedure to recover
 your account:
 
-{{ password_reset_url }}{% endblocktrans %}{% endautoescape %}{% endblock content %}
+{{ password_reset_url }}{% endblocktrans %}</p>
+
+<p style="margin:0; text-align:center;">
+  <a href="{{ password_reset_url }}" style="display:inline-block; background-color:#2c5952; color:#ffffff; font-size:15px; font-weight:600; text-decoration:none; padding:12px 28px; border-radius:6px;">{% trans "Reset password" %}</a>
+</p>
+{% endblock content %}

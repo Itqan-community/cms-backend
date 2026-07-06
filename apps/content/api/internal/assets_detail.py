@@ -5,6 +5,7 @@ from ninja import Schema
 from pydantic import Field
 
 from apps.content.models import Asset, LicenseChoice, UsageEvent
+from apps.content.services.asset_access import AssetAccessStatus, get_access_status
 from apps.content.tasks import create_usage_event_task
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -37,13 +38,16 @@ class DetailAssetOut(Schema):
     thumbnail_url: AbsoluteUrl | None
     publisher: DetailAssetPublisherOut = Field(alias="publisher")
     license: LicenseChoice
+    is_open_access: bool
     snapshots: list[DetailAssetSnapshotOut] = Field(default_factory=list, alias="previews")
+    access_status: AssetAccessStatus | None
 
 
 @router.get("assets/{id}/", response=DetailAssetOut, auth=None)
 def detail_assets(request: Request, id: int):
     logger.info(f"Asset detail requested [asset_id={id}]")
-    asset = get_object_or_404(Asset, request.publisher_q("publisher"), id=id)
+    asset = get_object_or_404(Asset, request.publisher_q("publisher"), restricted_for_tenant=False, id=id)
+    asset.access_status = get_access_status(request.user, asset)
 
     # Only create usage event for authenticated users
     if hasattr(request, "user") and request.user and request.user.is_authenticated:

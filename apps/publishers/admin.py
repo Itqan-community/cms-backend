@@ -55,6 +55,7 @@ class PublisherAdmin(admin.ModelAdmin):
                     "foundation_year",
                     "is_verified",
                     "mixpanel_board_url",
+                    "auto_accept_access_requests",
                 )
             },
         ),

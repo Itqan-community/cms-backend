@@ -217,6 +217,78 @@ class ListAssetTest(BaseTestCase):
         self.assertEqual(1, len(response_body["results"]))
         self.assertEqual("Muhammad Refaat", response_body["results"][0]["name"])
 
+    def test_list_asset_should_include_is_open_access_field(self):
+        # Arrange
+        baker.make(
+            Asset,
+            name="Open Access Tafsir",
+            category=CategoryChoice.TAFSIR,
+            status=StatusChoice.READY,
+            is_open_access=True,
+        )
+
+        # Act
+        response = self.client.get("/cms-api/assets/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        response_body = response.json()
+        self.assertEqual(1, len(response_body["results"]))
+        self.assertTrue(response_body["results"][0]["is_open_access"])
+
+    def test_list_asset_filter_by_is_open_access_true_should_return_only_open_access_assets(self):
+        # Arrange
+        baker.make(
+            Asset,
+            name="Open Access Tafsir",
+            category=CategoryChoice.TAFSIR,
+            status=StatusChoice.READY,
+            is_open_access=True,
+        )
+        baker.make(
+            Asset,
+            name="Restricted Tafsir",
+            category=CategoryChoice.TAFSIR,
+            status=StatusChoice.READY,
+            is_open_access=False,
+        )
+
+        # Act
+        response = self.client.get("/cms-api/assets/", data={"is_open_access": "true"}, format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        response_body = response.json()
+        self.assertEqual(1, len(response_body["results"]))
+        self.assertEqual("Open Access Tafsir", response_body["results"][0]["name"])
+        self.assertTrue(response_body["results"][0]["is_open_access"])
+
+    def test_list_assets_where_restricted_for_tenant_should_be_excluded(self):
+        # Arrange
+        baker.make(
+            Asset,
+            name="Public Asset",
+            category=CategoryChoice.TAFSIR,
+            status=StatusChoice.READY,
+            restricted_for_tenant=False,
+        )
+        baker.make(
+            Asset,
+            name="Tenant Only Asset",
+            category=CategoryChoice.TAFSIR,
+            status=StatusChoice.READY,
+            restricted_for_tenant=True,
+        )
+
+        # Act
+        response = self.client.get("/cms-api/assets/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        response_body = response.json()
+        self.assertEqual(1, len(response_body["results"]))
+        self.assertEqual("Public Asset", response_body["results"][0]["name"])
+
     # ── Pagination ────────────────────────────────────────────
 
     def test_list_assets_default_page_size_should_return_20_items(self):

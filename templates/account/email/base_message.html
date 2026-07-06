@@ -1,7 +1,52 @@
-{% load i18n %}{% autoescape off %}{% blocktrans with site_name=current_site.name %}Hello from {{ site_name }}!{% endblocktrans %}
+{% load i18n %}{% get_current_language_bidi as LANGUAGE_BIDI %}{% get_current_language as LANGUAGE_CODE %}<!doctype html>
+<html lang="{{ LANGUAGE_CODE|default:'en' }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ site_name|default:current_site.name }}</title>
+  </head>
+  <body style="margin:0; padding:0; background-color:#f4f8f6; font-family:Arial, Helvetica, sans-serif; color:#2c5952;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f4f8f6; padding:24px 12px;" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:640px;">
+            <tr>
+              <td style="padding:0 0 16px 0;" align="center">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                  <tr>
+                    <td style="padding:8px 16px; background-color:#ffffff; border:1px solid #d9e7e2; border-radius:999px;">
+                      <img src="https://pub-9ee413c8af4041c6bd5223d08f5d0f0f.r2.dev/static/logo/logo.png" width="40" height="40" alt="{{ site_name|default:current_site.name }}" style="display:block; width:40px; height:40px; border:0;" />
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}" style="background-color:#ffffff; border:1px solid #d9e7e2; border-radius:16px; padding:28px 28px 24px 28px; text-align:{% if LANGUAGE_BIDI %}right{% else %}left{% endif %};">
+                <p style="margin:0 0 18px 0; font-size:18px; line-height:28px; color:#2c5952; font-weight:700;">
+                  {% blocktrans with site_name=site_name|default:current_site.name %}Welcome to {{ site_name }}!{% endblocktrans %}
+                </p>
 
+                <div style="margin:0; font-size:15px; line-height:26px; color:#355f58;">
 {% block content %}{% endblock content %}
+                </div>
 
-{% blocktrans with site_name=current_site.name site_domain=current_site.domain %}Thank you for using {{ site_name }}!
+                <hr style="border:0; border-top:1px solid #e4efeb; margin:24px 0 18px 0;" />
+
+                <p style="margin:0; font-size:14px; line-height:24px; color:#56746f;">
+                  {% blocktrans with site_name=site_name|default:current_site.name site_domain=current_site.domain %}Thank you for using {{ site_name }}!
 {{ site_domain }}{% endblocktrans %}
-{% endautoescape %}
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:14px 6px 0 6px; color:#6e8782; font-size:12px; line-height:18px;">
+                {{ site_name|default:current_site.name }}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

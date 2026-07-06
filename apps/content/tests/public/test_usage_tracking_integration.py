@@ -43,6 +43,7 @@ class UsageTrackingIntegrationTest(BaseTestCase):
             category=CategoryChoice.RECITATION,
             publisher=self.publisher_b,
             status=StatusChoice.READY,
+            is_open_access=True,
             reciter=self.reciter,
             riwayah=self.riwayah,
         )

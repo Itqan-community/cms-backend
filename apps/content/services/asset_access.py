@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from enum import Enum
 import logging
 from typing import TYPE_CHECKING
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
 from django.utils.translation import gettext as _
@@ -136,9 +138,96 @@ class AssetAccessRequestService:
         return {"publisher_id": publisher.id, "auto_accept_access_requests": value}
 
 
+def guard_restrict_for_tenant(asset: Asset) -> None:
+    """Block restricting an asset to its tenant surface while public consumers rely on it.
+
+    Setting restricted_for_tenant=True removes the asset from public surfaces (the CMS
+    assets library and the public developers API). If developers already hold a granted
+    grant or have an open request, hiding it would break their integrations, so refuse
+    and ask the publisher to coordinate with Itqan team.
+    """
+    has_active_consumers = AssetAccessRequest.objects.filter(
+        asset=asset,
+        status__in=[
+            AssetAccessRequest.StatusChoice.PENDING,
+            AssetAccessRequest.StatusChoice.APPROVED,
+        ],
+    ).exists()
+    if not has_active_consumers:
+        return
+
+    logger.warning(f"Blocked restricting asset to tenant — open or granted access requests exist [asset_id={asset.pk}]")
+    raise ItqanError(
+        "restricted_for_tenant_conflict",
+        _(
+            "This asset has open or granted access requests from public consumers and "
+            "cannot be restricted to your tenant. Please contact Itqan team."
+        ),
+        status_code=409,
+    )
+
+
+def enforce_asset_access_on_public_api(user: User | None, asset: Asset) -> None:
+    """Gate consumption of an asset's content behind an API key + approved access.
+
+    Open-access assets are free to consume by anyone. For assets the publisher keeps
+    behind the access-request cycle, the consumer must (1) be authenticated — i.e. pass
+    a valid API key — and (2) hold an active access grant (an approved access request).
+    A missing/invalid key yields 401; an authenticated consumer without an approved
+    grant (not requested, pending, or rejected) yields 403.
+    """
+
+    if not settings.ENFORCE_ASSET_ACCESS_ON_PUBLIC_API:
+        return
+
+    if asset.is_open_access:
+        return
+
+    if not (user and user.is_authenticated):
+        raise ItqanError(
+            "authentication_required",
+            _("An API key is required to access this asset's content."),
+            status_code=401,
+        )
+
+    if not user_has_access(user, asset):
+        raise ItqanError(
+            "access_denied",
+            _("You don't have an approved access request for this asset."),
+            status_code=403,
+        )
+
+
 def user_has_access(user: User, asset: Asset) -> bool:
+    if asset.is_open_access:
+        return True
+
     try:
         access = AssetAccess.objects.get(user=user, asset=asset)
         return access.is_active
     except AssetAccess.DoesNotExist:
         return False
+
+
+class AssetAccessStatus(str, Enum):
+    NOT_REQUESTED = "not_requested"
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+def get_access_status(user: User | None, asset: Asset) -> AssetAccessStatus | None:
+    if asset.is_open_access:
+        return None
+
+    if not (user and user.is_authenticated):
+        return None
+
+    if user_has_access(user, asset):
+        return AssetAccessStatus.APPROVED
+
+    req = AssetAccessRequestRepository().get_existing(developer_user=user, asset=asset)
+    if req is None:
+        return AssetAccessStatus.NOT_REQUESTED
+
+    return AssetAccessStatus(req.status)

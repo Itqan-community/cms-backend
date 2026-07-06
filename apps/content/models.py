@@ -168,6 +168,20 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         help_text="URL for external assets",
     )
 
+    is_open_access = models.BooleanField(
+        default=True,
+        help_text="Flag to allow consuming the asset directly without the access-request cycle (default enabled).",
+    )
+    restricted_for_tenant = models.BooleanField(
+        default=False,
+        help_text=(
+            "If true, the asset is restricted to the publisher's tenant surface "
+            "(their own website/API) and is hidden from public surfaces "
+            "(the CMS assets website and the public developers API). "
+            "If false (default), the asset is available everywhere."
+        ),
+    )
+
     class Meta:
         constraints = [
             models.CheckConstraint(

@@ -1,11 +1,20 @@
 import unittest
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
 from model_bakery import baker
 from oauth2_provider.models import Application
 
 from apps.content.cache import recitation_response_cache_key
-from apps.content.models import Asset, CategoryChoice, RecitationAyahTiming, RecitationSurahTrack, StatusChoice
+from apps.content.models import (
+    Asset,
+    AssetAccess,
+    AssetAccessRequest,
+    CategoryChoice,
+    RecitationAyahTiming,
+    RecitationSurahTrack,
+    StatusChoice,
+)
 from apps.core.ninja_utils.paginations import (
     DEFAULT_PAGE_SIZE,
     PUBLIC_RECITATION_MAX_PAGE_SIZE,
@@ -13,7 +22,7 @@ from apps.core.ninja_utils.paginations import (
 )
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
-from apps.users.models import User
+from apps.users.models import APIKey, User
 
 
 class RecitationTracksTest(BaseTestCase):
@@ -25,6 +34,7 @@ class RecitationTracksTest(BaseTestCase):
             category=CategoryChoice.RECITATION,
             publisher=self.publisher,
             status=StatusChoice.READY,
+            is_open_access=True,
             reciter=baker.make("content.Reciter", name="Test Reciter"),
             riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
         )
@@ -317,3 +327,108 @@ class RecitationTracksPageSizeCapTest(BaseTestCase):
 
         self.assertEqual(200, second.status_code, second.content)
         mock_repo_cls.assert_not_called()
+
+
+@override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=True)
+class RecitationTracksAccessControlTest(BaseTestCase):
+    """Gating of the content endpoint behind API key + approved access request."""
+
+    def setUp(self):
+        super().setUp()
+        self.publisher = baker.make(Publisher)
+        self.asset = baker.make(
+            Asset,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
+            is_open_access=False,
+            reciter=baker.make("content.Reciter", name="Test Reciter"),
+            riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
+        )
+        baker.make(
+            RecitationSurahTrack,
+            asset=self.asset,
+            surah_number=1,
+            duration_ms=1000,
+            size_bytes=512,
+        )
+        self.user = User.objects.create_user(email="dev@example.com", name="Dev")
+
+    def _authenticate_with_api_key(self, user: User) -> None:
+        _, raw_key = APIKey.objects.create_key(name="test-key", user=user)
+        self.client.credentials(HTTP_X_API_KEY=raw_key)
+
+    def _grant_access(self, user: User, asset: Asset) -> AssetAccess:
+        req = baker.make(
+            AssetAccessRequest,
+            developer_user=user,
+            asset=asset,
+            status=AssetAccessRequest.StatusChoice.APPROVED,
+        )
+        return baker.make(AssetAccess, asset_access_request=req, user=user, asset=asset, expires_at=None)
+
+    def test_open_access_asset_is_consumable_without_api_key(self):
+        self.asset.is_open_access = True
+        self.asset.save(update_fields=["is_open_access"])
+
+        response = self.client.get(f"/recitations/{self.asset.id}/")
+
+        self.assertEqual(200, response.status_code, response.content)
+
+    def test_restricted_asset_without_api_key_returns_401(self):
+        response = self.client.get(f"/recitations/{self.asset.id}/")
+
+        self.assertEqual(401, response.status_code, response.content)
+        self.assertEqual("authentication_required", response.json()["error_name"])
+
+    def test_restricted_asset_with_api_key_but_no_access_request_returns_403(self):
+        self._authenticate_with_api_key(self.user)
+
+        response = self.client.get(f"/recitations/{self.asset.id}/")
+
+        self.assertEqual(403, response.status_code, response.content)
+        self.assertEqual("access_denied", response.json()["error_name"])
+
+    def test_restricted_asset_with_rejected_access_request_returns_403(self):
+        baker.make(
+            AssetAccessRequest,
+            developer_user=self.user,
+            asset=self.asset,
+            status=AssetAccessRequest.StatusChoice.REJECTED,
+        )
+        self._authenticate_with_api_key(self.user)
+
+        response = self.client.get(f"/recitations/{self.asset.id}/")
+
+        self.assertEqual(403, response.status_code, response.content)
+        self.assertEqual("access_denied", response.json()["error_name"])
+
+    def test_restricted_asset_with_pending_access_request_returns_403(self):
+        baker.make(
+            AssetAccessRequest,
+            developer_user=self.user,
+            asset=self.asset,
+            status=AssetAccessRequest.StatusChoice.PENDING,
+        )
+        self._authenticate_with_api_key(self.user)
+
+        response = self.client.get(f"/recitations/{self.asset.id}/")
+
+        self.assertEqual(403, response.status_code, response.content)
+        self.assertEqual("access_denied", response.json()["error_name"])
+
+    def test_restricted_asset_with_approved_access_returns_200(self):
+        self._grant_access(self.user, self.asset)
+        self._authenticate_with_api_key(self.user)
+
+        response = self.client.get(f"/recitations/{self.asset.id}/")
+
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(1, len(response.json()["results"]))
+
+    @override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=False)
+    def test_flag_off_restricted_asset_consumable_without_api_key(self):
+        response = self.client.get(f"/recitations/{self.asset.id}/")
+
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(1, len(response.json()["results"]))

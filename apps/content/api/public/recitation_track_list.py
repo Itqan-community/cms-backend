@@ -13,6 +13,7 @@ from apps.content.cache import (
     recitation_response_cache_key,
 )
 from apps.content.repositories.recitation import RecitationRepository
+from apps.content.services.asset_access import enforce_asset_access_on_public_api
 from apps.content.services.recitation import RecitationService
 from apps.core.mixins.constants import QURAN_SURAHS
 from apps.core.ninja_utils.errors import NinjaErrorResponse
@@ -48,7 +49,12 @@ class RecitationSurahTrackOut(Schema):
 
 @router.get(
     "recitations/{asset_id}/",
-    response={200: list[RecitationSurahTrackOut], 404: NinjaErrorResponse[Literal["not_found"]]},
+    response={
+        200: list[RecitationSurahTrackOut],
+        401: NinjaErrorResponse[Literal["authentication_required"]],
+        403: NinjaErrorResponse[Literal["access_denied"]],
+        404: NinjaErrorResponse[Literal["not_found"]],
+    },
 )
 @track_usage()
 def list_recitation_tracks(
@@ -83,10 +89,13 @@ def list_recitation_tracks(
     repo = RecitationRepository()
     service = RecitationService(repo)
 
-    asset = repo.get_asset_object(asset_id, Q())
+    asset = repo.get_asset_object(asset_id, Q(restricted_for_tenant=False))
     if not asset:
         raise Http404("No asset matches the given query.")
 
+    enforce_asset_access_on_public_api(getattr(request, "user", None), asset)
+
+    # Publisher is a property of the served Asset (select_related in get_asset_object).
     publisher_name = asset.publisher.name if asset.publisher_id else None
     asset_meta = {
         "name": asset.name,
@@ -104,7 +113,7 @@ def list_recitation_tracks(
         publisher_names=[publisher_name] if asset.publisher_id else [],
     )
 
-    tracks = service.get_asset_tracks(asset_id, Q(), prefetch_timings=True)
+    tracks = service.get_asset_tracks(asset_id, Q(asset__restricted_for_tenant=False), prefetch_timings=True)
 
     all_results = []
     for track in tracks:

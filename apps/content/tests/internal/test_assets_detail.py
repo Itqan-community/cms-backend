@@ -315,6 +315,47 @@ class DetailAssetTest(BaseTestCase):
         # Note: IP address capture depends on Django test client configuration
         # In real requests, this would capture the client IP
 
+    def test_detail_assets_where_open_access_should_return_is_open_access_true(self):
+        # Arrange
+        asset = baker.make(
+            Asset,
+            name="Open Access Asset",
+            description="An open access asset",
+            category=CategoryChoice.TAFSIR,
+            license=LicenseChoice.CC0,
+            status=StatusChoice.READY,
+            is_open_access=True,
+        )
+
+        # Act
+        response = self.client.get(f"/cms-api/assets/{asset.id}/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertIn("is_open_access", body)
+        self.assertTrue(body["is_open_access"])
+
+    def test_detail_assets_where_restricted_for_tenant_should_return_404(self):
+        # Arrange
+        asset = baker.make(
+            Asset,
+            name="Tenant Only Asset",
+            description="A tenant-only asset",
+            category=CategoryChoice.TAFSIR,
+            license=LicenseChoice.CC0,
+            status=StatusChoice.READY,
+            restricted_for_tenant=True,
+        )
+
+        # Act
+        response = self.client.get(f"/cms-api/assets/{asset.id}/", format="json")
+
+        # Assert
+        self.assertEqual(404, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("not_found", body["error_name"])
+
     def test_detail_assets_where_thumbnail_url_is_null_should_return_valid_response(
         self,
     ):
@@ -344,3 +385,20 @@ class DetailAssetTest(BaseTestCase):
         # Verify other required fields are still present
         self.assertIn("publisher", body)
         self.assertIn("snapshots", body)
+
+    def test_detail_assets_response_should_include_access_status_field(self):
+        asset = baker.make(
+            Asset,
+            name="Access Status Asset",
+            description="desc",
+            category=CategoryChoice.TAFSIR,
+            license=LicenseChoice.CC_BY_SA,
+            status=StatusChoice.READY,
+        )
+
+        # Act
+        response = self.client.get(f"/cms-api/assets/{asset.id}/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertIn("access_status", response.json())

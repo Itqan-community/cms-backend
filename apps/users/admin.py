@@ -73,11 +73,13 @@ class UserAdmin(auth_admin.UserAdmin):
     ordering = ["id"]
     readonly_fields = ("created_at", "updated_at")
     add_fieldsets = (
-        None,
-        {
-            "classes": ("wide",),
-            "fields": ("email", "password1", "password2"),
-        },
+        (
+            None,
+            {
+                "classes": ("wide",),
+                "fields": ("email", "password1", "password2"),
+            },
+        ),
     )
 
 

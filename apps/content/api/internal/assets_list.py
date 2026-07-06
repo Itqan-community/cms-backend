@@ -28,12 +28,14 @@ class ListAssetOut(Schema):
     description: str
     publisher: ListAssetPublisherOut = Field(alias="publisher")
     license: LicenseChoice
+    is_open_access: bool
 
 
 class AssetFilter(FilterSchema):
     category: Annotated[list[CategoryChoice] | None, FilterLookup(q="category__in")] = None
     license_code: Annotated[list[str] | None, FilterLookup(q="license__in")] = None
     publisher_id: Annotated[int | None, FilterLookup(q="publisher")] = None
+    is_open_access: Annotated[bool | None, FilterLookup(q="is_open_access")] = None
 
 
 @router.get("assets/", response=list[ListAssetOut], auth=None)
@@ -42,6 +44,10 @@ class AssetFilter(FilterSchema):
 @searching(search_fields=["name", "description", "publisher__name", "category"])
 def list_assets(request: Request, filters: AssetFilter = Query()):
     logger.info("Assets list requested")
-    assets = Asset.objects.filter(request.publisher_q("publisher")).exclude(status=StatusChoice.DRAFT)
+    assets = (
+        Asset.objects.filter(request.publisher_q("publisher"))
+        .filter(restricted_for_tenant=False)
+        .exclude(status=StatusChoice.DRAFT)
+    )
     assets = filters.filter(assets)
     return assets

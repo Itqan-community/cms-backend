@@ -64,6 +64,8 @@ class RecitationListOut(Schema):
     meem_behaviour: str | None = None
     year: int | None = None
     license: LicenseChoice
+    is_open_access: bool
+    restricted_for_tenant: bool
     thumbnail_url: str | None = None
     created_at: AwareDatetime
 
@@ -92,6 +94,8 @@ class RecitationDetailOut(Schema):
     meem_behaviour: Asset.MeemBehaviourChoice | None = None
     year: int | None = None
     license: LicenseChoice
+    is_open_access: bool
+    restricted_for_tenant: bool
     created_at: AwareDatetime
     updated_at: AwareDatetime
     ayah_timings_url: AbsoluteUrl | None = None
@@ -125,6 +129,8 @@ class RecitationCreateIn(Schema):
     meem_behaviour: Asset.MeemBehaviourChoice | None = None
     year: int | None = None
     license: LicenseChoice
+    is_open_access: bool = False
+    restricted_for_tenant: bool = False
 
 
 class RecitationPutIn(Schema):
@@ -140,6 +146,8 @@ class RecitationPutIn(Schema):
     meem_behaviour: Asset.MeemBehaviourChoice | None = None
     year: int | None = None
     license: LicenseChoice
+    is_open_access: bool = False
+    restricted_for_tenant: bool = False
 
 
 class RecitationPatchIn(Schema):
@@ -155,6 +163,8 @@ class RecitationPatchIn(Schema):
     meem_behaviour: Asset.MeemBehaviourChoice | None = None
     year: int | None = None
     license: LicenseChoice | None = None
+    is_open_access: bool | None = None
+    restricted_for_tenant: bool | None = None
 
 
 # --- Filter Schema ---
@@ -275,6 +285,8 @@ def create_recitation(
         madd_level=data.madd_level,
         meem_behaviour=data.meem_behaviour,
         year=data.year,
+        is_open_access=data.is_open_access,
+        restricted_for_tenant=data.restricted_for_tenant,
     )
     logger.info(f"Recitation created [recitation_id={recitation.id}, user_id={request.user.id}]")
     return 201, recitation

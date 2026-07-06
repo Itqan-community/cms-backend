@@ -80,7 +80,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -176,6 +176,7 @@ jobs:
                 echo "SAML_IDP_CERT_FILE=${{ secrets.SAML_IDP_CERT_FILE }}";
                 echo "SAML_IDP_BASE_URL=${{ vars.STAGING_SAML_IDP_BASE_URL }}";
                 echo "XMLSEC_BINARY=${{ vars.STAGING_XMLSEC_BINARY }}";
+                echo "ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=${{ vars.STAGING_ENFORCE_ASSET_ACCESS_ON_PUBLIC_API }}";
               } > deployment/docker/.env
             elif [ "${{ env.ENV_NAME }}" = "production" ]; then
               {
@@ -231,6 +232,7 @@ jobs:
                 echo "SAML_IDP_CERT_FILE=${{ secrets.SAML_IDP_CERT_FILE }}";
                 echo "SAML_IDP_BASE_URL=${{ vars.PROD_SAML_IDP_BASE_URL }}";
                 echo "XMLSEC_BINARY=${{ vars.PROD_XMLSEC_BINARY }}";
+                echo "ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=${{ vars.PROD_ENFORCE_ASSET_ACCESS_ON_PUBLIC_API }}";
               } > deployment/docker/.env
             fi
             # Append image coordinates for docker compose variable substitution
@@ -341,18 +343,28 @@ jobs:
         if: always()
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_DEPLOY_WEBHOOK }}
+          # Pass GitHub context through env (never interpolate into the script
+          # body) so commit messages with quotes/newlines/backticks can't break
+          # the shell or inject commands.
+          JOB_STATUS: ${{ job.status }}
+          ENV_NAME: ${{ env.ENV_NAME }}
+          ENV_URL: ${{ env.ENV_URL }}
+          BRANCH: ${{ env.BRANCH }}
+          ACTOR: ${{ github.actor }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           if [ -z "$SLACK_WEBHOOK_URL" ]; then
             echo "⚠️ SLACK_DEPLOY_WEBHOOK secret not set, skipping notification"
             exit 0
           fi
 
-          COMMIT_MSG="${{ github.event.head_commit.message }}"
           if [ -z "$COMMIT_MSG" ]; then
             COMMIT_MSG=$(git log -1 --pretty=%s)
           fi
+          # Only the first line keeps the Slack message tidy.
+          COMMIT_MSG=$(printf '%s' "$COMMIT_MSG" | head -n1)
 
-          if [ "${{ job.status }}" = "success" ]; then
+          if [ "$JOB_STATUS" = "success" ]; then
             EMOJI=":white_check_mark:"
             STATUS="Deployed"
           else
@@ -360,18 +372,17 @@ jobs:
             STATUS="Failed"
           fi
 
-          ENV_LABEL=$(echo "${{ env.ENV_NAME }}" | tr '[:lower:]' '[:upper:]')
+          ENV_LABEL=$(printf '%s' "$ENV_NAME" | tr '[:lower:]' '[:upper:]')
+          SHORT_SHA=${GITHUB_SHA::7}
+
+          TEXT=$(printf '%s\n\n:link: <%s/admin/|View Admin>\n:seedling: Branch: `%s`\n:package: Commit: `%s`\n:memo: %s\n:bust_in_silhouette: By: %s' \
+            "${EMOJI} *[${ENV_LABEL}] CMS Backend ${STATUS}*" \
+            "$ENV_URL" "$BRANCH" "$SHORT_SHA" "$COMMIT_MSG" "$ACTOR")
+
+          # Build a valid JSON payload with jq so all values are properly escaped.
+          PAYLOAD=$(jq -n --arg text "$TEXT" \
+            '{blocks: [{type: "section", text: {type: "mrkdwn", text: $text}}]}')
 
           curl -s -X POST "$SLACK_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
-            -d "{
-              \"blocks\": [
-                {
-                  \"type\": \"section\",
-                  \"text\": {
-                    \"type\": \"mrkdwn\",
-                    \"text\": \"${EMOJI} *[${ENV_LABEL}] CMS Backend ${STATUS}*\n\n:link: <${{ env.ENV_URL }}/admin/|View Admin>\n:seedling: Branch: \`${{ env.BRANCH }}\`\n:package: Commit: \`${GITHUB_SHA::7}\`\n:memo: ${COMMIT_MSG}\n:bust_in_silhouette: By: ${{ github.actor }}\"
-                  }
-                }
-              ]
-            }"
+            -d "$PAYLOAD"

@@ -10,12 +10,20 @@ from django.conf import settings
 from django.core.mail import EmailMessage, EmailMultiAlternatives
 from django.template import TemplateDoesNotExist
 from django.template.loader import render_to_string
+from django.utils.translation import gettext_lazy as _
 
 
 class AccountAdapter(DefaultAccountAdapter):
     """
     Custom account adapter for handling user registration
     """
+
+    def send_mail(self, template_prefix, email, context):
+        # Inject a translatable site name so emails render the brand in the
+        # recipient's language (allauth activates it before sending) instead of
+        # the non-translatable Site.name from the database.
+        context.setdefault("site_name", _("Itqan Community"))
+        return super().send_mail(template_prefix, email, context)
 
     def render_mail(self, template_prefix, email, context, headers=None):
         # allauth hardcodes _subject.txt; we override to use .html subject templates
