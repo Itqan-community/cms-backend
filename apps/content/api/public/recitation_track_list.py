@@ -74,10 +74,10 @@ def list_recitation_tracks(
     if cached_resp is not None and cached_meta is not None:
         track_extra(
             request,
-            entity_type="recitation",
-            accessed_entity_name=cached_meta["name"],
+            entity_type="recitation_track",
+            accessed_entity_name=cached_meta["name_ar"],
             entity_ids=[asset_id],
-            entity_names=[cached_meta["name"]],
+            entity_names=[cached_meta["name_ar"]],
             publisher_ids=[cached_meta["publisher_id"]] if cached_meta["publisher_id"] else [],
             publisher_names=[cached_meta["publisher_name"]] if cached_meta["publisher_id"] else [],
         )
@@ -106,9 +106,9 @@ def list_recitation_tracks(
     track_extra(
         request,
         entity_type="recitation",
-        accessed_entity_name=asset.name,
+        accessed_entity_name=asset.name_ar,
         entity_ids=[asset.id],
-        entity_names=[asset.name],
+        entity_names=[asset.name_ar],
         publisher_ids=[asset.publisher_id] if asset.publisher_id else [],
         publisher_names=[publisher_name] if asset.publisher_id else [],
     )
