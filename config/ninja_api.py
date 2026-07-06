@@ -4,6 +4,7 @@ from collections.abc import Callable
 from typing import Any
 
 from ninja import NinjaAPI
+from ninja.throttling import BaseThrottle
 from ninja.types import TCallable
 from scalar_ninja import ScalarViewer
 
@@ -20,6 +21,7 @@ def create_ninja_api(
     docs_base_path: str = "",
     default_router: ItqanRouter | None = None,
     enable_throttle: bool = True,
+    throttle: BaseThrottle | list[BaseThrottle] | None = None,
     enable_parser: bool = True,
     urls_namespace: str | None = None,
     docs_decorator: Callable[[TCallable], TCallable] | None = None,
@@ -27,9 +29,17 @@ def create_ninja_api(
 ) -> NinjaAPI:
     """
     Factory to create a NinjaAPI instance with Itqan defaults.
+
+    ``throttle`` lets a caller supply its own throttle(s) (e.g. the public
+    ``developers_api`` uses enforcing per-client throttles). When omitted and
+    ``enable_throttle`` is True, the default non-enforcing
+    ``NinjaUserPathRateThrottle`` is used.
     """
     router = default_router or ItqanRouter()
-    throttle = NinjaUserPathRateThrottle() if enable_throttle else None
+    if not enable_throttle:
+        throttle = None
+    elif throttle is None:
+        throttle = NinjaUserPathRateThrottle()
     parser = NinjaParser() if enable_parser else None
 
     api = NinjaAPI(

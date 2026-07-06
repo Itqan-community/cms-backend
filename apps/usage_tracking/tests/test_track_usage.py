@@ -1,5 +1,6 @@
+import json
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import AnonymousUser
 from django.test import RequestFactory
@@ -13,6 +14,7 @@ from apps.usage_tracking.decorators.track_usage import (
     track_extra,
     track_usage,
 )
+from apps.usage_tracking.tasks import TRACKING_BUFFER_KEY
 
 
 def _obj(id_, name, publisher_id=None, publisher_name=None):
@@ -20,12 +22,29 @@ def _obj(id_, name, publisher_id=None, publisher_name=None):
     return SimpleNamespace(id=id_, name=name, publisher_id=publisher_id, publisher=publisher)
 
 
+def _mock_redis():
+    """Return a mock Redis client and a helper to inspect what was pushed."""
+    mock_r = MagicMock()
+    mock_get_redis = MagicMock(return_value=mock_r)
+    return mock_get_redis, mock_r
+
+
+def _dispatched_props(mock_r):
+    """Parse the JSON payload pushed to the tracking buffer and return its properties."""
+    assert mock_r.rpush.called, "expected rpush to be called on Redis mock"
+    raw = mock_r.rpush.call_args[0][1]
+    return json.loads(raw)["properties"]
+
+
 class TestTrackUsageDecorator:
     def setup_method(self):
         self.factory = RequestFactory()
 
-    @patch("apps.usage_tracking.decorators.track_usage.track_api_request_task")
-    def test_paginated_list_extracts_entities_and_publishers(self, mock_task):
+    @patch("apps.usage_tracking.decorators.track_usage._get_tracking_redis")
+    def test_paginated_list_extracts_entities_and_publishers(self, mock_get_redis):
+        mock_r = MagicMock()
+        mock_get_redis.return_value = mock_r
+
         @track_usage(entity_type="recitation", publisher_from="publisher")
         def view(request):
             return {
@@ -39,36 +58,40 @@ class TestTrackUsageDecorator:
 
         view(self.factory.get("/recitations/"))
 
-        assert mock_task.delay.called
-        props = mock_task.delay.call_args.kwargs["properties"]
+        props = _dispatched_props(mock_r)
         assert props["entity_type"] == "recitation"
         assert props["entity_ids"] == [1, 2, 3]
         assert props["entity_names"] == ["A", "B", "C"]
-        # distinct, preserving first-seen order
         assert props["publisher_ids"] == [10, 20]
         assert props["publisher_names"] == ["Pub10", "Pub20"]
         assert props["status_code"] == 200
         assert "latency_ms" in props
+        mock_r.rpush.assert_called_once_with(TRACKING_BUFFER_KEY, mock_r.rpush.call_args[0][1])
 
-    @patch("apps.usage_tracking.decorators.track_usage.track_api_request_task")
-    def test_no_publisher_from_leaves_publishers_empty(self, mock_task):
+    @patch("apps.usage_tracking.decorators.track_usage._get_tracking_redis")
+    def test_no_publisher_from_leaves_publishers_empty(self, mock_get_redis):
+        mock_r = MagicMock()
+        mock_get_redis.return_value = mock_r
+
         @track_usage(entity_type="reciter")
         def view(request):
             return {"results": [_obj(1, "Reciter")], "count": 1}
 
         view(self.factory.get("/reciters/"))
 
-        props = mock_task.delay.call_args.kwargs["properties"]
+        props = _dispatched_props(mock_r)
         assert props["entity_type"] == "reciter"
         assert props["entity_ids"] == [1]
         assert props["publisher_ids"] == []
         assert props["publisher_names"] == []
 
-    @patch("apps.usage_tracking.decorators.track_usage.track_api_request_task")
-    def test_track_extra_overrides_auto_extracted(self, mock_task):
+    @patch("apps.usage_tracking.decorators.track_usage._get_tracking_redis")
+    def test_track_extra_overrides_auto_extracted(self, mock_get_redis):
+        mock_r = MagicMock()
+        mock_get_redis.return_value = mock_r
+
         @track_usage(entity_type="recitation", publisher_from="publisher")
         def view(request):
-            # The detail endpoint serves track rows but wants to record the Asset.
             track_extra(
                 request,
                 entity_ids=[99],
@@ -81,14 +104,17 @@ class TestTrackUsageDecorator:
 
         view(self.factory.get("/recitations/99/"))
 
-        props = mock_task.delay.call_args.kwargs["properties"]
+        props = _dispatched_props(mock_r)
         assert props["entity_ids"] == [99]
         assert props["entity_names"] == ["Asset 99"]
         assert props["accessed_entity_name"] == "Asset 99"
         assert props["publisher_ids"] == [7]
 
-    @patch("apps.usage_tracking.decorators.track_usage.track_api_request_task")
-    def test_track_extra_merges_across_calls(self, mock_task):
+    @patch("apps.usage_tracking.decorators.track_usage._get_tracking_redis")
+    def test_track_extra_merges_across_calls(self, mock_get_redis):
+        mock_r = MagicMock()
+        mock_get_redis.return_value = mock_r
+
         @track_usage()
         def view(request):
             track_extra(request, a=1)
@@ -97,12 +123,15 @@ class TestTrackUsageDecorator:
 
         view(self.factory.get("/recitations/"))
 
-        props = mock_task.delay.call_args.kwargs["properties"]
+        props = _dispatched_props(mock_r)
         assert props["a"] == 1
         assert props["b"] == 2
 
-    @patch("apps.usage_tracking.decorators.track_usage.track_api_request_task")
-    def test_raising_view_does_not_dispatch(self, mock_task):
+    @patch("apps.usage_tracking.decorators.track_usage._get_tracking_redis")
+    def test_raising_view_does_not_dispatch(self, mock_get_redis):
+        mock_r = MagicMock()
+        mock_get_redis.return_value = mock_r
+
         @track_usage(entity_type="recitation")
         def view(request):
             raise ValueError("boom")
@@ -112,11 +141,13 @@ class TestTrackUsageDecorator:
         except ValueError:
             pass
 
-        mock_task.delay.assert_not_called()
+        mock_r.rpush.assert_not_called()
 
-    @patch("apps.usage_tracking.decorators.track_usage.track_api_request_task")
-    def test_dispatch_failure_does_not_break_response(self, mock_task):
-        mock_task.delay.side_effect = RuntimeError("broker down")
+    @patch("apps.usage_tracking.decorators.track_usage._get_tracking_redis")
+    def test_dispatch_failure_does_not_break_response(self, mock_get_redis):
+        mock_r = MagicMock()
+        mock_r.rpush.side_effect = RuntimeError("redis down")
+        mock_get_redis.return_value = mock_r
 
         @track_usage()
         def view(request):
@@ -126,32 +157,36 @@ class TestTrackUsageDecorator:
 
         assert result == {"results": [], "count": 0}
 
-    @patch("apps.usage_tracking.decorators.track_usage.track_api_request_task")
-    def test_query_params_captured(self, mock_task):
+    @patch("apps.usage_tracking.decorators.track_usage._get_tracking_redis")
+    def test_query_params_captured(self, mock_get_redis):
+        mock_r = MagicMock()
+        mock_get_redis.return_value = mock_r
+
         @track_usage()
         def view(request):
             return {"results": [], "count": 0}
 
-        # riwayah_id (not reciter_id) avoids the reciter-name DB lookup; that path has
-        # its own tests below.
         view(self.factory.get("/recitations/?page=2&search=hafs&riwayah_id=2&ordering=name"))
 
-        props = mock_task.delay.call_args.kwargs["properties"]
+        props = _dispatched_props(mock_r)
         assert props["page"] == 2
         assert props["search"] == "hafs"
         assert props["filter_riwayah_id"] == 2
         assert props["ordering"] == "name"
 
     @patch("apps.usage_tracking.decorators.track_usage._resolve_reciter_names", return_value=["Mishary"])
-    @patch("apps.usage_tracking.decorators.track_usage.track_api_request_task")
-    def test_reciter_filter_adds_human_readable_name(self, mock_task, mock_resolve):
+    @patch("apps.usage_tracking.decorators.track_usage._get_tracking_redis")
+    def test_reciter_filter_adds_human_readable_name(self, mock_get_redis, mock_resolve):
+        mock_r = MagicMock()
+        mock_get_redis.return_value = mock_r
+
         @track_usage()
         def view(request):
             return {"results": [], "count": 0}
 
         view(self.factory.get("/recitations/?reciter_id=6"))
 
-        props = mock_task.delay.call_args.kwargs["properties"]
+        props = _dispatched_props(mock_r)
         assert props["filter_reciter_id"] == 6
         assert props["filter_reciter_name"] == "Mishary"
         assert props["filter_reciter_names"] == ["Mishary"]
@@ -161,33 +196,71 @@ class TestTrackUsageDecorator:
         "apps.usage_tracking.decorators.track_usage._resolve_reciter_names",
         return_value=["Mishary", "Saad"],
     )
-    @patch("apps.usage_tracking.decorators.track_usage.track_api_request_task")
-    def test_multiple_reciter_filters_resolve_all_names(self, mock_task, mock_resolve):
+    @patch("apps.usage_tracking.decorators.track_usage._get_tracking_redis")
+    def test_multiple_reciter_filters_resolve_all_names(self, mock_get_redis, mock_resolve):
+        mock_r = MagicMock()
+        mock_get_redis.return_value = mock_r
+
         @track_usage()
         def view(request):
             return {"results": [], "count": 0}
 
         view(self.factory.get("/recitations/?reciter_id=6&reciter_id=9"))
 
-        props = mock_task.delay.call_args.kwargs["properties"]
+        props = _dispatched_props(mock_r)
         assert props["filter_reciter_names"] == ["Mishary", "Saad"]
-        # filter_reciter_name keeps the first id for back-compat.
         assert props["filter_reciter_name"] == "Mishary"
         mock_resolve.assert_called_once_with([6, 9])
 
     @patch("apps.usage_tracking.decorators.track_usage._resolve_reciter_names")
-    @patch("apps.usage_tracking.decorators.track_usage.track_api_request_task")
-    def test_no_reciter_filter_skips_name_resolution(self, mock_task, mock_resolve):
+    @patch("apps.usage_tracking.decorators.track_usage._get_tracking_redis")
+    def test_no_reciter_filter_skips_name_resolution(self, mock_get_redis, mock_resolve):
+        mock_r = MagicMock()
+        mock_get_redis.return_value = mock_r
+
         @track_usage()
         def view(request):
             return {"results": [], "count": 0}
 
         view(self.factory.get("/recitations/"))
 
-        props = mock_task.delay.call_args.kwargs["properties"]
+        props = _dispatched_props(mock_r)
         assert "filter_reciter_name" not in props
         assert "filter_reciter_names" not in props
         mock_resolve.assert_not_called()
+
+    @patch("apps.usage_tracking.decorators.track_usage._get_tracking_redis")
+    def test_dispatch_pushes_to_correct_buffer_key(self, mock_get_redis):
+        """Event must land on TRACKING_BUFFER_KEY so flush task finds it."""
+        mock_r = MagicMock()
+        mock_get_redis.return_value = mock_r
+
+        @track_usage()
+        def view(request):
+            return {"results": [], "count": 0}
+
+        view(self.factory.get("/recitations/"))
+
+        assert mock_r.rpush.call_args[0][0] == TRACKING_BUFFER_KEY
+
+    @patch("apps.usage_tracking.decorators.track_usage._get_tracking_redis")
+    def test_dispatch_payload_is_valid_json_with_required_keys(self, mock_get_redis):
+        """Flush task expects distinct_id, event, properties, meta keys."""
+        mock_r = MagicMock()
+        mock_get_redis.return_value = mock_r
+
+        @track_usage()
+        def view(request):
+            return {"results": [], "count": 0}
+
+        view(self.factory.get("/recitations/"))
+
+        raw = mock_r.rpush.call_args[0][1]
+        payload = json.loads(raw)
+        assert "distinct_id" in payload
+        assert "event" in payload
+        assert "properties" in payload
+        assert "meta" in payload
 
 
 class TestDistinctId:

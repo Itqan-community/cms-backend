@@ -13,7 +13,7 @@ from django.http import Http404
 from django.utils.encoding import force_str
 from django.utils.translation import gettext as _
 from ninja import NinjaAPI
-from ninja.errors import AuthenticationError, HttpError, ValidationError as NinjaValidationError
+from ninja.errors import AuthenticationError, HttpError, Throttled, ValidationError as NinjaValidationError
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.serializers import as_serializer_error
 from rest_framework_simplejwt.exceptions import AuthenticationFailed, InvalidToken
@@ -93,6 +93,24 @@ def register_exception_handlers(api: NinjaAPI) -> None:
             NinjaErrorResponse[str, Any](error_name="token_not_valid", message=force_str(exc.default_detail)),
             status=401,
         )
+
+    @api.exception_handler(Throttled)
+    def handle_throttled(request, exc: Throttled):
+        # Raised by ninja's throttling when a client exceeds its rate budget.
+        # Return our standard error shape (Throttled subclasses HttpError, so
+        # without this it would hit the HttpError handler and crash on the
+        # missing __cause__).
+        response = api.create_response(
+            request,
+            NinjaErrorResponse[str, Any](
+                error_name="throttled",
+                message=_("Request was throttled. Too many requests."),
+            ),
+            status=429,
+        )
+        if exc.wait is not None:
+            response["Retry-After"] = str(int(exc.wait) + 1)
+        return response
 
     @api.exception_handler(HttpError)
     def handle_ninja_http_error(request, exc: HttpError):

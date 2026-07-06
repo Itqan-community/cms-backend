@@ -7,6 +7,7 @@ from pydantic import Field
 
 MAX_PAGE_SIZE = 1000
 DEFAULT_PAGE_SIZE = 20
+PUBLIC_RECITATION_MAX_PAGE_SIZE = 114
 
 
 class NinjaPagination(NinjaPageNumberPagination):
@@ -45,4 +46,37 @@ class NinjaPagination(NinjaPageNumberPagination):
         return {
             "results": queryset[offset : offset + pagination.page_size],
             "count": await self._aitems_count(queryset),
+        }
+
+
+class PublicRecitationPagination(NinjaPageNumberPagination):
+    """Pagination for the public recitation tracks endpoint.
+
+    Caps page_size at 114 (full Quran surah count) to prevent pathological requests
+    while keeping the mobile app working without changes.
+    """
+
+    items_attribute: str = "results"
+
+    class Input(Schema):
+        page: int = Field(1, ge=1)
+        page_size: int = Field(DEFAULT_PAGE_SIZE, ge=1)
+
+        def __init__(self, page_size: int = DEFAULT_PAGE_SIZE, **kwargs: Any) -> None:
+            super().__init__(page_size=min(page_size, PUBLIC_RECITATION_MAX_PAGE_SIZE), **kwargs)
+
+    class Output(Schema):
+        results: list[Any]
+        count: int
+
+    def paginate_queryset(
+        self,
+        queryset: Any,
+        pagination: Input,
+        **params: Any,
+    ) -> Any:
+        offset = (pagination.page - 1) * pagination.page_size
+        return {
+            "results": queryset[offset : offset + pagination.page_size],
+            "count": self._items_count(queryset),
         }

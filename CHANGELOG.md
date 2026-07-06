@@ -1,3 +1,63 @@
+## v0.9.0 (2026-07-06)
+
+### Feat
+
+- add reciter slug support in recitations API and update tests accordingly
+
+## v0.8.0 (2026-07-02)
+
+### Feat
+
+- increase throttle rates for public API users and anonymous clients
+
+## v0.7.4 (2026-07-01)
+
+### Perf
+
+- move ayah timing sort to DB and scale gunicorn workers (#387)
+
+## v0.7.3 (2026-07-01)
+
+### Perf
+
+- batch Mixpanel tracking via Redis buffer (#386)
+
+## v0.7.2 (2026-07-01)
+
+### Perf
+
+- pre-serialized response cache for /recitations endpoint (#385)
+
+## v0.7.1 (2026-07-01)
+
+### Perf
+
+- skip DB on cache hit in recitation tracks endpoint (#384)
+
+## v0.7.0 (2026-06-30)
+
+### Feat
+
+- add structured logging for throttled requests with user/client context
+
+## v0.6.2 (2026-06-30)
+
+### Fix
+
+- Caddy rewrite for missing trailing slash on /recitations/{id} (#383)
+
+## v0.6.1 (2026-06-30)
+
+### Fix
+
+- cap page_size at 50 on public recitations endpoint (#382)
+
+## v0.6.0 (2026-06-30)
+
+### Feat
+
+- implement global per-client throttling for public API with user and anonymous rate limits
+
 ## v0.5.0 (2026-06-29)
 
 ### Feat

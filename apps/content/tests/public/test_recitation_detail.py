@@ -1,8 +1,17 @@
+import unittest
+
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from model_bakery import baker
 from oauth2_provider.models import Application
 
+from apps.content.cache import recitation_response_cache_key
+from apps.content.models import Asset, CategoryChoice, RecitationAyahTiming, RecitationSurahTrack, StatusChoice
+from apps.core.ninja_utils.paginations import (
+    DEFAULT_PAGE_SIZE,
+    PUBLIC_RECITATION_MAX_PAGE_SIZE,
+    PublicRecitationPagination,
+)
 from apps.content.models import (
     Asset,
     AssetAccess,
@@ -194,6 +203,131 @@ class RecitationTracksTest(BaseTestCase):
         items = body["results"]
         self.assertEqual(1, len(items))
         self.assertEqual([], items[0]["ayahs_timings"])
+
+    def test_list_recitation_tracks_where_timings_inserted_out_of_order_should_return_ordered_by_start_ms(self):
+        # Forward-guard: verifies timings return ordered by start_ms after removal of the
+        # Python sorted() call. Insertion order is intentionally scrambled so the test
+        # would catch any future regression that drops the Prefetch ORDER BY.
+        track = baker.make(
+            RecitationSurahTrack,
+            asset=self.asset,
+            surah_number=1,
+            duration_ms=3000,
+            size_bytes=512,
+        )
+        baker.make(RecitationAyahTiming, track=track, ayah_key="1:3", start_ms=2000, end_ms=3000, duration_ms=1000)
+        baker.make(RecitationAyahTiming, track=track, ayah_key="1:1", start_ms=0, end_ms=1000, duration_ms=1000)
+        baker.make(RecitationAyahTiming, track=track, ayah_key="1:2", start_ms=1000, end_ms=2000, duration_ms=1000)
+        self.authenticate_client(self.app)
+
+        response = self.client.get(f"/recitations/{self.asset.id}/")
+
+        self.assertEqual(200, response.status_code, response.content)
+        timings = response.json()["results"][0]["ayahs_timings"]
+        self.assertEqual(["1:1", "1:2", "1:3"], [t["ayah_key"] for t in timings])
+
+
+class PublicRecitationPaginationTest(unittest.TestCase):
+    def test_Input_where_page_size_exceeds_max_should_clamp_to_max(self):
+        inp = PublicRecitationPagination.Input(page_size=200)
+        self.assertEqual(PUBLIC_RECITATION_MAX_PAGE_SIZE, inp.page_size)
+
+    def test_Input_where_page_size_within_max_should_preserve_value(self):
+        inp = PublicRecitationPagination.Input(page_size=20)
+        self.assertEqual(20, inp.page_size)
+
+    def test_Input_where_page_size_equals_max_should_preserve_value(self):
+        inp = PublicRecitationPagination.Input(page_size=PUBLIC_RECITATION_MAX_PAGE_SIZE)
+        self.assertEqual(PUBLIC_RECITATION_MAX_PAGE_SIZE, inp.page_size)
+
+
+class RecitationTracksPageSizeCapTest(BaseTestCase):
+    def setUp(self):
+        from django.core.cache import cache as django_cache
+
+        super().setUp()
+        django_cache.clear()
+        self.publisher = baker.make(Publisher)
+        self.asset = baker.make(
+            Asset,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
+            reciter=baker.make("content.Reciter", name="Test Reciter"),
+            riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
+        )
+        self.user = User.objects.create_user(email="pagecap@example.com", name="Page Cap User")
+        self.app = Application.objects.create(
+            user=self.user,
+            name="Page Cap App",
+            client_type="confidential",
+            authorization_grant_type="password",
+        )
+        for surah_number in range(1, 4):
+            baker.make(
+                RecitationSurahTrack,
+                asset=self.asset,
+                surah_number=surah_number,
+                duration_ms=1000,
+                size_bytes=512,
+                audio_file=SimpleUploadedFile(f"s{surah_number}.mp3", b"dummy"),
+            )
+
+    def test_list_recitation_tracks_where_page_size_exceeds_max_should_be_clamped(self):
+        # Fails on old code where @paginate had no cap.
+        self.authenticate_client(self.app)
+
+        response = self.client.get(f"/recitations/{self.asset.id}/?page_size=200")
+
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        # All 3 tracks returned (< cap); effective page_size was clamped to PUBLIC_RECITATION_MAX_PAGE_SIZE.
+        self.assertLessEqual(len(body["results"]), PUBLIC_RECITATION_MAX_PAGE_SIZE)
+
+    def test_list_recitation_tracks_where_second_request_should_hit_cache(self):
+        import json
+
+        from django.core.cache import cache as django_cache
+
+        self.authenticate_client(self.app)
+        django_cache.clear()
+
+        # First request populates cache.
+        first = self.client.get(f"/recitations/{self.asset.id}/")
+        self.assertEqual(200, first.status_code, first.content)
+
+        # Pre-serialized response bytes must exist after first request.
+        cached_bytes = django_cache.get(
+            recitation_response_cache_key(self.asset.id, page=1, page_size=DEFAULT_PAGE_SIZE)
+        )
+        self.assertIsNotNone(cached_bytes)
+        cached_data = json.loads(cached_bytes)
+        self.assertEqual(3, len(cached_data["results"]))
+
+        # Second request returns same data (served from cache).
+        second = self.client.get(f"/recitations/{self.asset.id}/")
+        self.assertEqual(200, second.status_code, second.content)
+        self.assertEqual(first.json(), second.json())
+
+    def test_list_recitation_tracks_where_both_caches_warm_should_make_no_db_query(self):
+        # Fails on old code where get_asset_object always ran before the cache check.
+        from unittest.mock import patch
+
+        from django.core.cache import cache as django_cache
+
+        self.authenticate_client(self.app)
+        django_cache.clear()
+
+        # Warm both caches via a real first request.
+        first = self.client.get(f"/recitations/{self.asset.id}/")
+        self.assertEqual(200, first.status_code, first.content)
+
+        # Second request: response + meta caches are hot - repo must not be called.
+        with patch("apps.content.api.public.recitation_track_list.RecitationRepository") as mock_repo_cls:
+            second = self.client.get(f"/recitations/{self.asset.id}/")
+
+        self.assertEqual(200, second.status_code, second.content)
+        mock_repo_cls.assert_not_called()
 
 
 @override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=True)
