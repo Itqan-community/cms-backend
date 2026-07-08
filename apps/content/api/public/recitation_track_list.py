@@ -75,9 +75,9 @@ def list_recitation_tracks(
         track_extra(
             request,
             entity_type="recitation_track",
-            accessed_entity_name=cached_meta["name_ar"],
+            accessed_entity_name=cached_meta["name"],
             entity_ids=[asset_id],
-            entity_names=[cached_meta["name_ar"]],
+            entity_names=[cached_meta["name"]],
             publisher_ids=[cached_meta["publisher_id"]] if cached_meta["publisher_id"] else [],
             publisher_names=[cached_meta["publisher_name"]] if cached_meta["publisher_id"] else [],
         )
@@ -96,9 +96,9 @@ def list_recitation_tracks(
     enforce_asset_access_on_public_api(getattr(request, "user", None), asset)
 
     # Publisher is a property of the served Asset (select_related in get_asset_object).
-    publisher_name = asset.publisher.name if asset.publisher_id else None
+    publisher_name = asset.publisher.name_ar if asset.publisher_id else None
     asset_meta = {
-        "name": asset.name,
+        "name": asset.name_ar,
         "publisher_id": asset.publisher_id,
         "publisher_name": publisher_name,
     }

@@ -68,24 +68,48 @@ def _build_ingest_client() -> MixpanelIngestClient:
     )
 
 
-_tracking_redis_client: redis.Redis | None = None
+# Sentinel distinguishing "not resolved yet" from a resolved-to-None client (no Redis,
+# e.g. dev's LocMemCache), so we resolve at most once instead of on every call.
+_UNSET = object()
+_tracking_redis_client: redis.Redis | None | object = _UNSET
 
 
-def _get_tracking_redis() -> redis.Redis:
-    """Return the module-level Redis client for the tracking buffer (DB 2).
+def _build_tracking_redis() -> redis.Redis | None:
+    """Build the tracking-buffer Redis client, or ``None`` when no Redis is available.
 
-    Derives host/port from CACHES["default"]["LOCATION"] (the authoritative cache URL)
-    and swaps the DB to the dedicated tracking DB so cache eviction policies cannot
-    drop buffered events. Lazy-initialised so Django settings are available at first call.
+    Connection details reuse the ``default`` cache's django-redis connection (host, port,
+    auth, TLS, socket opts), then swap to a dedicated DB so cache eviction policies cannot
+    drop buffered events.
+
+    Returns ``None`` when the cache backend is not django-redis (e.g. dev's LocMemCache):
+    callers treat that as tracking disabled, so dev needs no Redis running.
+    """
+    try:
+        from django_redis import get_redis_connection
+
+        cache_conn = get_redis_connection("default")
+    except (ImportError, NotImplementedError):
+        # ImportError: django-redis absent. NotImplementedError: get_redis_connection on a
+        # non-django-redis backend (LocMemCache in dev). Either way, no Redis to reuse.
+        return None
+
+    kwargs = dict(cache_conn.connection_pool.connection_kwargs)
+    kwargs["db"] = _TRACKING_REDIS_DB
+    kwargs.setdefault("socket_connect_timeout", 1)
+    kwargs.setdefault("socket_timeout", 1)
+    kwargs["decode_responses"] = True
+    return redis.Redis(**kwargs)
+
+
+def _get_tracking_redis() -> redis.Redis | None:
+    """Return the module-level tracking-buffer Redis client, or ``None`` when unavailable.
+
+    Lazy-initialised (settings must be loaded) and resolved once; see
+    :func:`_build_tracking_redis` for how the connection is derived.
     """
     global _tracking_redis_client
-    if _tracking_redis_client is None:
-        cache_url: str = settings.CACHES["default"]["LOCATION"]
-        url_without_db = cache_url.rsplit("/", 1)[0]
-        tracking_url = f"{url_without_db}/{_TRACKING_REDIS_DB}"
-        _tracking_redis_client = redis.Redis.from_url(
-            tracking_url, socket_connect_timeout=1, socket_timeout=1, decode_responses=True
-        )
+    if _tracking_redis_client is _UNSET:
+        _tracking_redis_client = _build_tracking_redis()
     return _tracking_redis_client
 
 
@@ -126,6 +150,8 @@ def flush_tracking_buffer_task() -> None:
     delete cannot cause double-processing of the same batch on the next flush.
     """
     r = _get_tracking_redis()
+    if r is None:
+        return  # no Redis available (e.g. dev/LocMemCache); tracking disabled
 
     # Atomically claim the current buffer. If the key doesn't exist, RENAME raises
     # ResponseError -- treat that as empty buffer.

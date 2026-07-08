@@ -26,7 +26,6 @@ dependencies = [
     "django-redis==6.0.*",
     "django-storages[s3]==1.14.*",
     "Django==5.2.*",
-    "djangorestframework-simplejwt==5.5.*",
     "djangorestframework>=3.16.1",
     "djangosaml2idp>=0.7.2",
     "flower==2.0.*",

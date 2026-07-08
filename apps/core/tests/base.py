@@ -11,7 +11,6 @@ from django.utils import timezone
 from moto import mock_aws
 from oauth2_provider.models import AccessToken as OAuth2AccessToken, Application
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import AccessToken as JWTAccessToken
 
 from apps.core.permissions import PermissionChoice
 from apps.publishers.models import Domain
@@ -95,14 +94,10 @@ class BaseTestCase(TestCase):
             # kwargs.pop("HTTP_X_SESSION_TOKEN", None)
             kwargs.pop("HTTP_AUTHORIZATION", None)
         else:
-            if settings.ENABLE_ALLAUTH:
-                self.client.force_login(user=user)
-                # token = create_access_token(user, session=self.client.session, claims={})
-                kwargs["HTTP_X_SESSION_TOKEN"] = self.client.session.session_key
-                # self.client.cookies.clear()
-            else:
-                access_token = str(JWTAccessToken.for_user(user))
-                kwargs["HTTP_AUTHORIZATION"] = f"Bearer {access_token}"
+            self.client.force_login(user=user)
+            # token = create_access_token(user, session=self.client.session, claims={})
+            kwargs["HTTP_X_SESSION_TOKEN"] = self.client.session.session_key
+            # self.client.cookies.clear()
 
         headers = {
             "HTTP_ACCEPT_LANGUAGE": language,

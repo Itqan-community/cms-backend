@@ -440,9 +440,6 @@ msgstr "الصلاحيات"
 msgid "Important dates"
 msgstr "تواريخ مهمة"
 
-msgid "Successfully logged out"
-msgstr "تم تسجيل الخروج بنجاح"
-
 #, python-brace-format
 msgid "Group with id {id} not found."
 msgstr "لم يتم العثور على المجموعة بالمعرّف {id}."
@@ -734,6 +731,9 @@ msgstr ""
 "\n"
 "هل تريد المتابعة؟\n"
 "    "
+
+#~ msgid "Successfully logged out"
+#~ msgstr "تم تسجيل الخروج بنجاح"
 
 #~ msgid "Owner"
 #~ msgstr "مالك"

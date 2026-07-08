@@ -236,7 +236,7 @@ Containerized deployment uses Caddy (TLS, static) and the Django app container. 
 - Use strong unique `SECRET_KEY` per environment; keep it out of VCS
 - CORS/CSRF configured per environment settings
 - OAuth `client_secret` must be kept secure (see [docs/AUTHENTICATION.md](./docs/AUTHENTICATION.md))
-- JWT tokens via SimpleJWT for `cms-api`, `tenant/`, and `portal/`; OAuth2 via django-oauth-toolkit for the Public API
+- django-allauth-headless for `cms-api/`, `tenant/`, and `portal/`;  api-key via ninja-keys for the Public API
 
 ## License
 
