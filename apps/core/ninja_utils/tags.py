@@ -15,6 +15,8 @@ class NinjaTag(models.TextChoices):
     ISSUE_REPORTS = "Issue Reports"
     TAFSIRS = "Tafsirs"
     TRANSLATIONS = "Translations"
+    MUSHAFS = "Mushafs"
+    FONTS = "Fonts"
     FILTERS = "Filters"
     USAGE = "Usage"
     GROUPS = "Groups"

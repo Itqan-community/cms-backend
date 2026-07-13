@@ -23,6 +23,14 @@ msgid "You do not have access to this asset"
 msgstr "ليس لديك صلاحية الوصول إلى هذا المورد"
 
 #, python-brace-format
+msgid "Font with slug {slug} not found."
+msgstr "لم يتم العثور على الخط بالمعرّف {slug}."
+
+#, python-brace-format
+msgid "Mushaf with slug {slug} not found."
+msgstr "لم يتم العثور على المصحف بالمعرّف {slug}."
+
+#, python-brace-format
 msgid "Asset with slug {slug} not found."
 msgstr "المورد ذو المعرف {slug} غير موجود."
 
@@ -173,6 +181,23 @@ msgstr "مطلوب مفتاح API للوصول إلى محتوى هذا الأص
 msgid "You don't have an approved access request for this asset."
 msgstr "ليس لديك طلب وصول مُوافَق عليه لهذا الأصل."
 
+#, python-brace-format
+msgid "Publisher with id {id} not found."
+msgstr "لم يتم العثور على الناشر بالمعرّف {id}."
+
+msgid "Font name (Arabic or English) is required."
+msgstr "اسم الخط (بالعربية أو الإنجليزية) مطلوب."
+
+msgid "External URL is required when is_external is True."
+msgstr "الرابط الخارجي مطلوب عندما يكون المصدري خارجي."
+
+msgid "Cannot delete Font because they are referenced through other objects"
+msgstr "لا يمكن حذف الخط لأن هناك بيانات أخرى مرتبطة به"
+
+#, python-brace-format
+msgid "Version with id {id} not found for font {slug}."
+msgstr "الإصدار ذو المعرف {id} غير موجود للخط {slug}."
+
 msgid "Description must be at least 10 characters long."
 msgstr "يجب أن يكون الوصف 10 أحرف على الأقل."
 
@@ -199,12 +224,18 @@ msgstr "يمكنك فقط حذف تقارير المشكلات الخاصة بك
 msgid "You can only delete pending issue reports."
 msgstr "يمكنك فقط حذف تقارير المشكلات المعلقة."
 
-msgid "Recitation name (Arabic or English) is required."
-msgstr "اسم التلاوة (بالعربية أو الإنجليزية) مطلوب."
+msgid "Mushaf name (Arabic or English) is required."
+msgstr "اسم المصحف (بالعربية أو الإنجليزية) مطلوب."
+
+msgid "Cannot delete Mushaf because they are referenced through other objects"
+msgstr "لا يمكن حذف المصحف لأن هناك بيانات أخرى مرتبطة به"
 
 #, python-brace-format
-msgid "Publisher with id {id} not found."
-msgstr "لم يتم العثور على الناشر بالمعرّف {id}."
+msgid "Version with id {id} not found for mushaf {slug}."
+msgstr "الإصدار ذو المعرف {id} غير موجود للمصحف {slug}."
+
+msgid "Recitation name (Arabic or English) is required."
+msgstr "اسم التلاوة (بالعربية أو الإنجليزية) مطلوب."
 
 #, python-brace-format
 msgid "Reciter with id {id} not found."
@@ -232,9 +263,6 @@ msgstr "لا يمكن حذف القارئ لأن مرتبط به بيانات أ
 
 msgid "Tafsir name (Arabic or English) is required."
 msgstr "اسم التفسير (بالعربية أو الإنجليزية) مطلوب."
-
-msgid "External URL is required when is_external is True."
-msgstr "الرابط الخارجي مطلوب عندما يكون المصدري خارجي."
 
 msgid "Cannot delete Tafsir because they are referenced through other objects"
 msgstr "لا يمكن حذف التفسير لأن مرتبط به بيانات أخرى"
@@ -318,6 +346,30 @@ msgstr "تحديث الترجمات في لوحة التحكم"
 
 msgid "Delete Portal Translations"
 msgstr "حذف الترجمات من لوحة التحكم"
+
+msgid "Portal - View Mushafs"
+msgstr "لوحة التحكم - عرض المصاحف"
+
+msgid "Portal - Create Mushafs"
+msgstr "لوحة التحكم - إنشاء المصاحف"
+
+msgid "Portal - Update Mushafs"
+msgstr "لوحة التحكم - تحديث المصاحف"
+
+msgid "Portal - Delete Mushafs"
+msgstr "لوحة التحكم - حذف المصاحف"
+
+msgid "Portal - View Fonts"
+msgstr "لوحة التحكم - عرض الخطوط"
+
+msgid "Portal - Create Fonts"
+msgstr "لوحة التحكم - إنشاء الخطوط"
+
+msgid "Portal - Update Fonts"
+msgstr "لوحة التحكم - تحديث الخطوط"
+
+msgid "Portal - Delete Fonts"
+msgstr "لوحة التحكم - حذف الخطوط"
 
 msgid "Portal - View Publishers"
 msgstr "البوابة - عرض الناشرين"
