@@ -98,7 +98,7 @@ def list_recitation_tracks(
     # Publisher is a property of the served Asset (select_related in get_asset_object).
     publisher_name = asset.publisher.name if asset.publisher_id else None
     asset_meta = {
-        "name": asset.name,
+        "name_ar": asset.name_ar,
         "publisher_id": asset.publisher_id,
         "publisher_name": publisher_name,
     }

@@ -84,7 +84,7 @@ class UsageTrackingIntegrationTest(BaseTestCase):
         props = self._props(mock_get_redis)
         self.assertEqual("recitation", props["entity_type"])
         self.assertEqual([self.asset_b.id], props["entity_ids"])
-        self.assertEqual(self.asset_b.name, props["accessed_entity_name"])
+        self.assertEqual(self.asset_b.name_ar, props["accessed_entity_name"])
         # Served asset belongs to publisher_b, NOT the requester's publisher_a.
         self.assertEqual([self.publisher_b.id], props["publisher_ids"])
 
