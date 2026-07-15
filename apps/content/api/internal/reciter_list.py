@@ -23,18 +23,26 @@ class ReciterOut(Schema):
     slug: str
     bio: str
     recitations_count: int = Field(0, description="Number of READY recitation assets for this reciter")
+    nationality: str | None = Field(None, description="2-letter ISO country code")
     image_url: AbsoluteUrl | None
     created_at: AwareDatetime
     updated_at: AwareDatetime
+
+    @staticmethod
+    def resolve_nationality(obj) -> str | None:
+        if obj.nationality and hasattr(obj.nationality, "code"):
+            return obj.nationality.code
+        return obj.nationality if isinstance(obj.nationality, str) else None
 
 
 class ReciterFilter(FilterSchema):
     name: Annotated[list[str] | None, FilterLookup(q="name__in")] = None
     name_ar: Annotated[list[str] | None, FilterLookup(q="name_ar__in")] = None
     slug: Annotated[list[str] | None, FilterLookup(q="slug__in")] = None
+    nationality: Annotated[str | None, FilterLookup(q="nationality")] = None
 
 
-@router.get("reciters/", response=list[ReciterOut])
+@router.get("reciters/", response=list[ReciterOut], auth=None)
 @paginate
 @ordering(ordering_fields=["name", "name_ar", "name_en", "created_at", "updated_at"])
 @searching(search_fields=["name", "name_en", "name_ar", "slug"])

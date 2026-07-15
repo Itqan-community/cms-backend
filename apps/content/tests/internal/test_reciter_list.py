@@ -151,3 +151,56 @@ class RecitersListTest(BaseTestCase):
         body = response.json()
         self.assertEqual(1, body["count"])
         self.assertEqual("مشاري راشد العفاسي", body["results"][0]["name"])
+
+    def test_list_reciters_where_unauthenticated_should_return_200(self):
+        # Arrange — no self.authenticate_user() call: client stays anonymous
+
+        # Act
+        response = self.client.get("/cms-api/reciters/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        reciter_names = {item["name"] for item in response.json()["results"]}
+        self.assertIn("Active Reciter", reciter_names)
+
+    def test_list_reciters_should_include_nationality_field(self):
+        # Arrange
+        self._make_reciter_with_recitation(name="Saudi Reciter", is_active=True, nationality="SA")
+        self.authenticate_user(self.user)
+
+        # Act
+        response = self.client.get("/cms-api/reciters/", data={"search": "Saudi Reciter"})
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(1, body["count"])
+        self.assertEqual("SA", body["results"][0]["nationality"])
+
+    def test_list_reciters_where_nationality_missing_should_return_null(self):
+        # Arrange — self.active_reciter (created in setUp) has no nationality set
+        self.authenticate_user(self.user)
+
+        # Act
+        response = self.client.get("/cms-api/reciters/", data={"search": "Active Reciter"})
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(1, body["count"])
+        self.assertIsNone(body["results"][0]["nationality"])
+
+    def test_list_reciters_filter_by_nationality_should_return_only_matching_reciters(self):
+        # Arrange
+        self._make_reciter_with_recitation(name="Saudi Reciter", is_active=True, nationality="SA")
+        self._make_reciter_with_recitation(name="Egyptian Reciter", is_active=True, nationality="EG")
+        self.authenticate_user(self.user)
+
+        # Act
+        response = self.client.get("/cms-api/reciters/", data={"nationality": "EG"})
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(1, body["count"])
+        self.assertEqual("Egyptian Reciter", body["results"][0]["name"])
