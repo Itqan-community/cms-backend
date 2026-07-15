@@ -21,12 +21,18 @@ class ListAssetPublisherOut(Schema):
     name: str
 
 
+class ListAssetReciterOut(Schema):
+    id: int
+    name: str
+
+
 class ListAssetOut(Schema):
     id: int
     category: str
     name: str
     description: str
     publisher: ListAssetPublisherOut = Field(alias="publisher")
+    reciter: ListAssetReciterOut | None = None
     license: LicenseChoice
     is_open_access: bool
 
@@ -35,6 +41,7 @@ class AssetFilter(FilterSchema):
     category: Annotated[list[CategoryChoice] | None, FilterLookup(q="category__in")] = None
     license_code: Annotated[list[str] | None, FilterLookup(q="license__in")] = None
     publisher_id: Annotated[int | None, FilterLookup(q="publisher")] = None
+    reciter_id: Annotated[int | None, FilterLookup(q="reciter")] = None
     is_open_access: Annotated[bool | None, FilterLookup(q="is_open_access")] = None
 
 
