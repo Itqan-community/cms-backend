@@ -402,3 +402,43 @@ class DetailAssetTest(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         self.assertIn("access_status", response.json())
+
+    def test_detail_assets_where_recitation_should_include_reciter_field(self):
+        # Arrange
+        reciter = baker.make("content.Reciter", name="Muhammad Refaat")
+        asset = baker.make(
+            Asset,
+            name="Recitation Asset",
+            description="desc",
+            category=CategoryChoice.RECITATION,
+            license=LicenseChoice.CC0,
+            reciter=reciter,
+            riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
+            status=StatusChoice.READY,
+        )
+
+        # Act
+        response = self.client.get(f"/cms-api/assets/{asset.id}/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual({"id": reciter.id, "name": "Muhammad Refaat"}, body["reciter"])
+
+    def test_detail_assets_where_not_recitation_should_have_null_reciter(self):
+        # Arrange
+        asset = baker.make(
+            Asset,
+            name="Tafsir Asset",
+            description="desc",
+            category=CategoryChoice.TAFSIR,
+            license=LicenseChoice.CC0,
+            status=StatusChoice.READY,
+        )
+
+        # Act
+        response = self.client.get(f"/cms-api/assets/{asset.id}/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertIsNone(response.json()["reciter"])
