@@ -343,3 +343,70 @@ class ListAssetTest(BaseTestCase):
         body = response.json()
         self.assertEqual(5, body["count"])
         self.assertEqual(5, len(body["results"]))
+
+    # ── Reciter ───────────────────────────────────────────────
+
+    def test_list_asset_where_recitation_should_include_reciter_field(self):
+        # Arrange
+        reciter = baker.make("content.Reciter", name="Muhammad Refaat")
+        baker.make(
+            Asset,
+            name="Recitation Asset",
+            category=CategoryChoice.RECITATION,
+            reciter=reciter,
+            riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
+            status=StatusChoice.READY,
+        )
+
+        # Act
+        response = self.client.get("/cms-api/assets/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(1, len(body["results"]))
+        self.assertEqual({"id": reciter.id, "name": "Muhammad Refaat"}, body["results"][0]["reciter"])
+
+    def test_list_asset_where_not_recitation_should_have_null_reciter(self):
+        # Arrange
+        baker.make(Asset, name="Tafsir Asset", category=CategoryChoice.TAFSIR, status=StatusChoice.READY)
+
+        # Act
+        response = self.client.get("/cms-api/assets/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(1, len(body["results"]))
+        self.assertIsNone(body["results"][0]["reciter"])
+
+    def test_list_asset_filter_by_reciter_id_should_return_only_that_reciters_assets(self):
+        # Arrange
+        target_reciter = baker.make("content.Reciter", name="Target Reciter")
+        other_reciter = baker.make("content.Reciter", name="Other Reciter")
+        riwayah = baker.make("content.Riwayah", name="Test Riwayah")
+        baker.make(
+            Asset,
+            name="Target Recitation",
+            category=CategoryChoice.RECITATION,
+            reciter=target_reciter,
+            riwayah=riwayah,
+            status=StatusChoice.READY,
+        )
+        baker.make(
+            Asset,
+            name="Other Recitation",
+            category=CategoryChoice.RECITATION,
+            reciter=other_reciter,
+            riwayah=riwayah,
+            status=StatusChoice.READY,
+        )
+
+        # Act
+        response = self.client.get("/cms-api/assets/", data={"reciter_id": target_reciter.id}, format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(1, len(body["results"]))
+        self.assertEqual("Target Recitation", body["results"][0]["name"])
