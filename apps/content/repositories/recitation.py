@@ -265,6 +265,8 @@ class RecitationRepository(BaseRecitationRepository):
                 qs = qs.filter(name_ar__in=names_ar)
             if slugs := filters_dict.get("slug__in"):
                 qs = qs.filter(slug__in=slugs)
+            if nationality := filters_dict.get("nationality"):
+                qs = qs.filter(nationality=nationality)
 
         return qs
 
