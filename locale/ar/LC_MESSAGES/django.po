@@ -23,6 +23,10 @@ msgid "You do not have access to this asset"
 msgstr "ليس لديك صلاحية الوصول إلى هذا المورد"
 
 #, python-brace-format
+msgid "Reciter with slug {slug} not found."
+msgstr "لم يتم العثور على القارئ بالمعرّف {slug}."
+
+#, python-brace-format
 msgid "Font with slug {slug} not found."
 msgstr "لم يتم العثور على الخط بالمعرّف {slug}."
 
@@ -37,10 +41,6 @@ msgstr "المورد ذو المعرف {slug} غير موجود."
 #, python-brace-format
 msgid "Recitation with slug {slug} not found."
 msgstr "لم يتم العثور على التلاوة بالمعرّف {slug}."
-
-#, python-brace-format
-msgid "Reciter with slug {slug} not found."
-msgstr "لم يتم العثور على القارئ بالمعرّف {slug}."
 
 #, python-brace-format
 msgid "Tafsir with slug {slug} not found."
