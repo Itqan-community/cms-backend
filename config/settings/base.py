@@ -1,6 +1,6 @@
-from datetime import timedelta
 from pathlib import Path
 import sys
+from typing import Any
 
 from decouple import config
 
@@ -21,7 +21,6 @@ ALLOWED_HOSTS: list[str] = []
 
 # Feature flags
 ENABLE_OAUTH2 = config("ENABLE_OAUTH2", cast=bool, default=False)
-ENABLE_ALLAUTH = config("ENABLE_ALLAUTH", cast=bool, default=True)
 ENABLE_API_KEY_AUTH = config("ENABLE_API_KEY_AUTH", cast=bool, default=True)
 ENABLE_ANONYMOUS_TRAFFIC = config("ENABLE_ANONYMOUS_TRAFFIC", cast=bool, default=True)
 SAML_IDP_ENABLED = config("SAML_IDP_ENABLED", cast=bool, default=True)
@@ -42,8 +41,6 @@ DJANGO_APPS = [
 THIRD_PARTY_APPS = [
     "modeltranslation",  # Must be before Django apps that use translations
     "rest_framework",
-    "rest_framework_simplejwt",
-    "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     "django_filters",
     "allauth",
@@ -203,7 +200,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Django REST Framework
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",
         "rest_framework.authentication.TokenAuthentication",
     ],
@@ -269,32 +265,11 @@ CORS_ALLOW_HEADERS = [
 AUTH_USER_MODEL = "users.User"
 
 AUTHENTICATION_BACKENDS = [
-    *(["allauth.account.auth_backends.AuthenticationBackend"] if ENABLE_ALLAUTH else []),
+    "allauth.account.auth_backends.AuthenticationBackend",
     "django.contrib.auth.backends.ModelBackend",
     "oauth2_provider.backends.OAuth2Backend",
 ]
 
-# Simple JWT Configuration
-SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
-    "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": True,
-    "UPDATE_LAST_LOGIN": True,
-    "ALGORITHM": "HS256",
-    "SIGNING_KEY": SECRET_KEY,
-    "VERIFYING_KEY": None,
-    "AUDIENCE": None,
-    "ISSUER": "itqan-cms",
-    "AUTH_HEADER_TYPES": ("Bearer",),
-    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
-    "USER_ID_FIELD": "id",
-    "USER_ID_CLAIM": "user_id",
-    "USER_AUTHENTICATION_RULE": "rest_framework_simplejwt.authentication.default_user_authentication_rule",
-    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
-    "TOKEN_TYPE_CLAIM": "token_type",
-    "JTI_CLAIM": "jti",
-}
 
 # Celery Configuration
 CELERY_BROKER_URL = config("CELERY_BROKER_URL", default="amqp://guest:guest@localhost:5672//")
@@ -358,7 +333,9 @@ HEADLESS_TOKEN_STRATEGY = "allauth.headless.tokens.strategies.sessions.SessionTo
 
 
 def read_file(file_name: str) -> str:
-    private_key = config(file_name).replace("\\n", "\n")
+    private_key = config(file_name, default="").replace("\\n", "\n")
+    if private_key == "":
+        return ""
     if len(private_key) < 250 and Path(private_key).exists():
         with open(config(file_name)) as key_file:
             private_key = key_file.read()
@@ -374,10 +351,8 @@ def write_temp_file(content: str, suffix: str = "") -> str:
         return f.name
 
 
-if ENABLE_ALLAUTH:
-
-    HEADLESS_JWT_PRIVATE_KEY = read_file("ALLAUTH_JWT_PRIVATE_KEY")
-    # Create Private key from here https://docs.allauth.org/en/latest/headless/token-strategies/jwt-tokens.html
+HEADLESS_JWT_PRIVATE_KEY = read_file("ALLAUTH_JWT_PRIVATE_KEY")
+# Create Private key from here https://docs.allauth.org/en/latest/headless/token-strategies/jwt-tokens.html
 
 MFA_SUPPORTED_TYPES = ["totp", "recovery_codes", "webauthn"]
 MFA_PASSKEY_LOGIN_ENABLED = True
@@ -413,12 +388,11 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 # Django Oauth2 Toolkit: OAuth2 Provider Configuration
-OAUTH2_PROVIDER = {
+OAUTH2_PROVIDER: dict[str, Any] = {
     "ACCESS_TOKEN_EXPIRE_SECONDS": 86400,  # 24 hours
     "OIDC_ENABLED": True,
 }
-if ENABLE_ALLAUTH:
-    OAUTH2_PROVIDER["OIDC_RSA_PRIVATE_KEY"] = HEADLESS_JWT_PRIVATE_KEY
+OAUTH2_PROVIDER["OIDC_RSA_PRIVATE_KEY"] = HEADLESS_JWT_PRIVATE_KEY
 
 # ========================
 # SAML IDP (djangosaml2idp)
@@ -492,7 +466,7 @@ DEFAULT_FROM_EMAIL = f"{_EMAIL_SENDER_NAME} <{_EMAIL_SENDER_EMAIL}>" if _EMAIL_S
 # Cache Configuration
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": config("REDIS_URL", default="redis://localhost:6379/1"),
     }
 }

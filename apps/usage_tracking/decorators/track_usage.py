@@ -234,8 +234,11 @@ def _dispatch(
             "meta": {},
         }
     )
+    redis_client = _get_tracking_redis()
+    if redis_client is None:
+        return  # no Redis available (e.g. dev/LocMemCache); tracking disabled
     try:
-        _get_tracking_redis().rpush(TRACKING_BUFFER_KEY, payload)
+        redis_client.rpush(TRACKING_BUFFER_KEY, payload)
     except Exception:
         logger.exception("usage_tracking: failed to push event to Redis buffer")
 

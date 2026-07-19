@@ -1,7 +1,9 @@
+from datetime import timedelta
 from unittest import skipUnless
 
 from django.conf import settings
 from django.test import override_settings
+from django.utils import timezone
 from model_bakery import baker
 
 from apps.core.tests.base import BaseTestCase
@@ -35,6 +37,12 @@ class ApiKeyWorkflowTestCase(BaseTestCase):
         # Assert
         self.assertEqual(200, res.status_code, res.content)
 
+    # A missing/invalid/revoked key can only produce 401 when anonymous traffic is off;
+    # with ENABLE_ANONYMOUS_TRAFFIC=True these requests are downgraded to AnonymousUser and
+    # return 200. ENABLE_ANONYMOUS_TRAFFIC is read at request time, so overriding it here
+    # takes effect (unlike the import-time-bound auth-method list). An *expired* key differs:
+    # it 401s regardless of this flag (see the expired test below).
+    @override_settings(ENABLE_ANONYMOUS_TRAFFIC=False)
     def test_access_recitations_where_invalid_api_key_should_return_401(self):
         # Arrange — no valid key created
 
@@ -45,6 +53,7 @@ class ApiKeyWorkflowTestCase(BaseTestCase):
         self.assertEqual(401, res.status_code, res.content)
         self.assertEqual("authentication_error", res.json()["error_name"])
 
+    @override_settings(ENABLE_ANONYMOUS_TRAFFIC=False)
     def test_access_recitations_where_api_key_is_revoked_should_return_401(self):
         # Arrange
         api_key, raw_key = APIKey.objects.create_key(name="Revoked Key", user=self.user)
@@ -57,3 +66,20 @@ class ApiKeyWorkflowTestCase(BaseTestCase):
         # Assert
         self.assertEqual(401, res.status_code, res.content)
         self.assertEqual("authentication_error", res.json()["error_name"])
+
+    @override_settings(ENABLE_ANONYMOUS_TRAFFIC=True)
+    def test_access_recitations_where_api_key_is_expired_should_return_401_expired(self):
+        # Arrange -- an expired key is a presented-but-stale credential; it must 401 with an
+        # "expired" message even when anonymous traffic is enabled, not fall through to 200.
+        api_key, raw_key = APIKey.objects.create_key(name="Expired Key", user=self.user)
+        api_key.expiry_date = timezone.now() - timedelta(days=1)
+        api_key.save()
+
+        # Act
+        res = self.client.get("/recitations/", headers={"x-api-key": raw_key})
+
+        # Assert
+        self.assertEqual(401, res.status_code, res.content)
+        body = res.json()
+        self.assertEqual("authentication_error", body["error_name"])
+        self.assertIn("expired", body["message"].lower())
