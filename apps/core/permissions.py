@@ -34,6 +34,18 @@ class PermissionChoice(TextChoices):
     PORTAL_UPDATE_TRANSLATION = "portal_update_translation", _("Update Portal Translations")
     PORTAL_DELETE_TRANSLATION = "portal_delete_translation", _("Delete Portal Translations")
 
+    # Mushafs
+    PORTAL_READ_MUSHAF = "portal_read_mushaf", _("Portal - View Mushafs")
+    PORTAL_CREATE_MUSHAF = "portal_create_mushaf", _("Portal - Create Mushafs")
+    PORTAL_UPDATE_MUSHAF = "portal_update_mushaf", _("Portal - Update Mushafs")
+    PORTAL_DELETE_MUSHAF = "portal_delete_mushaf", _("Portal - Delete Mushafs")
+
+    # Fonts
+    PORTAL_READ_FONT = "portal_read_font", _("Portal - View Fonts")
+    PORTAL_CREATE_FONT = "portal_create_font", _("Portal - Create Fonts")
+    PORTAL_UPDATE_FONT = "portal_update_font", _("Portal - Update Fonts")
+    PORTAL_DELETE_FONT = "portal_delete_font", _("Portal - Delete Fonts")
+
     # Publishers
     PORTAL_READ_PUBLISHER = "portal_read_publisher", _("Portal - View Publishers")
     PORTAL_CREATE_PUBLISHER = "portal_create_publisher", _("Portal - Create Publishers")
@@ -92,6 +104,14 @@ PERMISSION_IMPLICATIONS: dict[PermissionChoice, frozenset[PermissionChoice]] = {
     PermissionChoice.PORTAL_CREATE_TRANSLATION: frozenset({PermissionChoice.PORTAL_READ_TRANSLATION}),
     PermissionChoice.PORTAL_UPDATE_TRANSLATION: frozenset({PermissionChoice.PORTAL_READ_TRANSLATION}),
     PermissionChoice.PORTAL_DELETE_TRANSLATION: frozenset({PermissionChoice.PORTAL_READ_TRANSLATION}),
+    # Mushafs
+    PermissionChoice.PORTAL_CREATE_MUSHAF: frozenset({PermissionChoice.PORTAL_READ_MUSHAF}),
+    PermissionChoice.PORTAL_UPDATE_MUSHAF: frozenset({PermissionChoice.PORTAL_READ_MUSHAF}),
+    PermissionChoice.PORTAL_DELETE_MUSHAF: frozenset({PermissionChoice.PORTAL_READ_MUSHAF}),
+    # Fonts
+    PermissionChoice.PORTAL_CREATE_FONT: frozenset({PermissionChoice.PORTAL_READ_FONT}),
+    PermissionChoice.PORTAL_UPDATE_FONT: frozenset({PermissionChoice.PORTAL_READ_FONT}),
+    PermissionChoice.PORTAL_DELETE_FONT: frozenset({PermissionChoice.PORTAL_READ_FONT}),
     # Publishers
     PermissionChoice.PORTAL_CREATE_PUBLISHER: frozenset({PermissionChoice.PORTAL_READ_PUBLISHER}),
     PermissionChoice.PORTAL_UPDATE_PUBLISHER: frozenset({PermissionChoice.PORTAL_READ_PUBLISHER}),

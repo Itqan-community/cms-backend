@@ -29,6 +29,11 @@ class DetailAssetPublisherOut(Schema):
     description: str
 
 
+class DetailAssetReciterOut(Schema):
+    id: int
+    name: str
+
+
 class DetailAssetOut(Schema):
     id: int
     category: str
@@ -37,6 +42,7 @@ class DetailAssetOut(Schema):
     long_description: str
     thumbnail_url: AbsoluteUrl | None
     publisher: DetailAssetPublisherOut = Field(alias="publisher")
+    reciter: DetailAssetReciterOut | None = None
     license: LicenseChoice
     is_open_access: bool
     snapshots: list[DetailAssetSnapshotOut] = Field(default_factory=list, alias="previews")
