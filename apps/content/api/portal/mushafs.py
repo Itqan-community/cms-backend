@@ -114,6 +114,8 @@ class MushafCreateIn(Schema):
     external_url: str | None = None
     is_open_access: bool = False
     restricted_for_tenant: bool = False
+    version_name: str | None = Field(default=None, max_length=255)
+    version_summary: str = ""
 
 
 class MushafPutIn(Schema):
@@ -200,7 +202,9 @@ def list_mushafs(request: Request, filters: MushafFilter = Query()):
     "mushafs/",
     response={
         201: MushafDetailOut,
-        400: NinjaErrorResponse[Literal["mushaf_name_required"]] | NinjaErrorResponse[Literal["external_url_required"]],
+        400: NinjaErrorResponse[Literal["mushaf_name_required"]]
+        | NinjaErrorResponse[Literal["external_url_required"]]
+        | NinjaErrorResponse[Literal["version_name_required"]],
         404: NinjaErrorResponse[Literal["publisher_not_found"]] | NinjaErrorResponse[Literal["mushaf_not_found"]],
     },
 )
@@ -209,13 +213,17 @@ def create_mushaf(
     request: Request,
     data: Form[MushafCreateIn],
     thumbnail: UploadedFile | None = File(None),
+    file: UploadedFile | None = File(None),
 ) -> tuple[int, Asset]:
     logger.info(
         f"Creating mushaf [publisher_id={data.publisher_id}, language={data.language}, user_id={request.user.id}]"
     )
     enforce_publisher_membership(request.user, data.publisher_id)
     service = MushafService()
-    mushaf = service.create_mushaf(
+    mushaf = service.create_mushaf_with_optional_version(
+        version_name=data.version_name,
+        version_summary=data.version_summary,
+        file=file,
         publisher_id=data.publisher_id,
         name_ar=data.name_ar,
         name_en=data.name_en,

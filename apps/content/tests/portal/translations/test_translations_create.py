@@ -29,9 +29,7 @@ class TranslationCreateTest(BaseTestCase):
                 "language": "en",
                 "publisher_id": self.publisher.id,
                 "is_external": False,
-                "external_url": None,
             },
-            content_type="application/json",
         )
 
         self.assertEqual(201, response.status_code, response.content)
@@ -63,7 +61,6 @@ class TranslationCreateTest(BaseTestCase):
                 "publisher_id": self.publisher.id,
                 "is_external": False,
             },
-            content_type="application/json",
         )
 
         self.assertEqual(201, response.status_code, response.content)
@@ -88,7 +85,6 @@ class TranslationCreateTest(BaseTestCase):
                 "is_open_access": True,
                 "restricted_for_tenant": True,
             },
-            content_type="application/json",
         )
 
         self.assertEqual(201, response.status_code, response.content)
@@ -115,9 +111,7 @@ class TranslationCreateTest(BaseTestCase):
                 "language": "en",
                 "publisher_id": 99999,  # Non-existent publisher
                 "is_external": False,
-                "external_url": None,
             },
-            content_type="application/json",
         )
 
         self.assertEqual(404, response.status_code, response.content)
@@ -140,9 +134,7 @@ class TranslationCreateTest(BaseTestCase):
                 "language": "en",
                 "publisher_id": self.publisher.id,
                 "is_external": False,
-                "external_url": None,
             },
-            content_type="application/json",
         )
 
         self.assertEqual(400, response.status_code, response.content)
@@ -163,9 +155,7 @@ class TranslationCreateTest(BaseTestCase):
                 "language": "en",
                 "publisher_id": self.publisher.id,
                 "is_external": False,
-                "external_url": None,
             },
-            content_type="application/json",
         )
 
         self.assertEqual(401, response.status_code, response.content)
@@ -186,9 +176,7 @@ class TranslationCreateTest(BaseTestCase):
                 "language": "en",
                 "publisher_id": self.publisher.id,
                 "is_external": False,
-                "external_url": None,
             },
-            content_type="application/json",
         )
 
         self.assertEqual(201, response.status_code, response.content)
@@ -209,7 +197,6 @@ class TranslationCreateTest(BaseTestCase):
                 "is_external": True,
                 "external_url": "https://example.com/translation",
             },
-            content_type="application/json",
         )
 
         self.assertEqual(201, response.status_code, response.content)
@@ -231,7 +218,6 @@ class TranslationCreateTest(BaseTestCase):
                 "is_external": True,
                 "external_url": "",  # explicitly empty/absent
             },
-            content_type="application/json",
         )
 
         self.assertEqual(400, response.status_code, response.content)
@@ -256,9 +242,7 @@ class TranslationCreateTest(BaseTestCase):
                 "language": "en",
                 "publisher_id": self.publisher.id,
                 "is_external": False,
-                "external_url": None,
             },
-            content_type="application/json",
         )
         self.assertEqual(403, response.status_code)
         self.assertEqual("permission_denied", response.json()["error_name"])
