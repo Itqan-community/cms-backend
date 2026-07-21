@@ -1,7 +1,7 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
-from apps.content.models import Asset, CategoryChoice, StatusChoice
+from apps.content.models import Asset, AssetVersion, CategoryChoice, StatusChoice
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
@@ -294,6 +294,89 @@ class FontCreateTest(BaseTestCase):
         asset = Asset.objects.get(id=body["id"])
         self.assertTrue(asset.is_open_access)
         self.assertTrue(asset.restricted_for_tenant)
+
+    def test_create_font_where_file_and_version_name_provided_should_create_asset_and_version(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_FONT)
+        file = SimpleUploadedFile("font.pdf", b"font_bytes", content_type="application/pdf")
+
+        # Act
+        response = self.client.post(
+            "/portal/fonts/",
+            data={
+                "name_en": "Font With Version",
+                "license": "CC-BY",
+                "language": "ar",
+                "publisher_id": self.publisher.id,
+                "is_external": False,
+                "version_name": "1.0.0",
+                "version_summary": "Initial release",
+                "file": file,
+            },
+        )
+
+        # Assert
+        self.assertEqual(201, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(1, len(body["versions"]))
+        self.assertEqual("1.0.0", body["versions"][0]["name"])
+        self.assertIsNotNone(body["versions"][0]["file_url"])
+
+        asset = Asset.objects.get(id=body["id"])
+        version = AssetVersion.objects.get(asset=asset)
+        self.assertEqual("1.0.0", version.name)
+        self.assertEqual(len(b"font_bytes"), version.size_bytes)
+
+    def test_create_font_where_file_without_version_name_should_return_400(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_FONT)
+        file = SimpleUploadedFile("font.pdf", b"font_bytes", content_type="application/pdf")
+
+        # Act
+        response = self.client.post(
+            "/portal/fonts/",
+            data={
+                "name_en": "Font Missing Version Name",
+                "license": "CC-BY",
+                "language": "ar",
+                "publisher_id": self.publisher.id,
+                "is_external": False,
+                "file": file,
+            },
+        )
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("version_name_required", response.json()["error_name"])
+        # Asset must not be persisted (atomic rollback)
+        self.assertFalse(Asset.objects.filter(name="Font Missing Version Name").exists())
+
+    def test_create_font_where_no_file_provided_should_create_asset_without_version(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_FONT)
+
+        # Act
+        response = self.client.post(
+            "/portal/fonts/",
+            data={
+                "name_en": "Font Without Version",
+                "license": "CC-BY",
+                "language": "ar",
+                "publisher_id": self.publisher.id,
+                "is_external": False,
+                "version_name": "ignored-without-file",
+            },
+        )
+
+        # Assert
+        self.assertEqual(201, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual([], body["versions"])
+        asset = Asset.objects.get(id=body["id"])
+        self.assertFalse(AssetVersion.objects.filter(asset=asset).exists())
 
     def test_create_font_where_user_lacks_permission_should_return_403(self):
         # Arrange

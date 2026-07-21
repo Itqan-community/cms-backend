@@ -191,6 +191,9 @@ msgstr "اسم الخط (بالعربية أو الإنجليزية) مطلوب.
 msgid "External URL is required when is_external is True."
 msgstr "الرابط الخارجي مطلوب عندما يكون المصدري خارجي."
 
+msgid "Version name is required when a file is provided."
+msgstr "اسم الإصدار مطلوب عند تقديم ملف."
+
 msgid "Cannot delete Font because they are referenced through other objects"
 msgstr "لا يمكن حذف الخط لأن هناك بيانات أخرى مرتبطة به"
 

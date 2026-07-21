@@ -114,6 +114,8 @@ class FontCreateIn(Schema):
     external_url: str | None = None
     is_open_access: bool = False
     restricted_for_tenant: bool = False
+    version_name: str | None = Field(default=None, max_length=255)
+    version_summary: str = ""
 
 
 class FontPutIn(Schema):
@@ -200,7 +202,9 @@ def list_fonts(request: Request, filters: FontFilter = Query()):
     "fonts/",
     response={
         201: FontDetailOut,
-        400: NinjaErrorResponse[Literal["font_name_required"]] | NinjaErrorResponse[Literal["external_url_required"]],
+        400: NinjaErrorResponse[Literal["font_name_required"]]
+        | NinjaErrorResponse[Literal["external_url_required"]]
+        | NinjaErrorResponse[Literal["version_name_required"]],
         404: NinjaErrorResponse[Literal["publisher_not_found"]] | NinjaErrorResponse[Literal["font_not_found"]],
     },
 )
@@ -209,13 +213,17 @@ def create_font(
     request: Request,
     data: Form[FontCreateIn],
     thumbnail: UploadedFile | None = File(None),
+    file: UploadedFile | None = File(None),
 ) -> tuple[int, Asset]:
     logger.info(
         f"Creating font [publisher_id={data.publisher_id}, language={data.language}, user_id={request.user.id}]"
     )
     enforce_publisher_membership(request.user, data.publisher_id)
     service = FontService()
-    font = service.create_font(
+    font = service.create_font_with_optional_version(
+        version_name=data.version_name,
+        version_summary=data.version_summary,
+        file=file,
         publisher_id=data.publisher_id,
         name_ar=data.name_ar,
         name_en=data.name_en,

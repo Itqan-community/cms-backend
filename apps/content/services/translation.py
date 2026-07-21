@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
+from django.db import transaction
 from django.db.models import ProtectedError, Q
 from django.utils.translation import gettext as _
 
@@ -108,6 +109,39 @@ class TranslationService:
         logger.info(
             f"Translation created [asset_id={translation.pk}, publisher_id={publisher_id}, language={language}]"
         )
+        return translation
+
+    def create_translation_with_optional_version(
+        self,
+        *,
+        version_name: str | None = None,
+        version_summary: str = "",
+        file: Any = None,
+        **translation_kwargs: Any,
+    ) -> Asset:
+        """
+        Business Logic: Create a translation and, when a file is provided, its
+        first version in a single atomic transaction.
+
+        ``translation_kwargs`` are forwarded verbatim to :meth:`create_translation`.
+        """
+        if file is not None and not (version_name or "").strip():
+            raise ItqanError(
+                error_name="version_name_required",
+                message=_("Version name is required when a file is provided."),
+                status_code=400,
+            )
+
+        with transaction.atomic():
+            translation = self.create_translation(**translation_kwargs)
+            if file is not None:
+                self.create_translation_version(
+                    translation.slug,
+                    name=version_name or "",
+                    summary=version_summary,
+                    file=file,
+                )
+        translation.refresh_from_db()
         return translation
 
     def update_translation(

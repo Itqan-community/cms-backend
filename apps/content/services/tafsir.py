@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
+from django.db import transaction
 from django.db.models import ProtectedError, Q
 from django.utils.translation import gettext as _
 
@@ -108,6 +109,39 @@ class TafsirService:
             restricted_for_tenant=restricted_for_tenant,
         )
         logger.info(f"Tafsir created [asset_id={tafsir.pk}, publisher_id={publisher_id}, language={language}]")
+        return tafsir
+
+    def create_tafsir_with_optional_version(
+        self,
+        *,
+        version_name: str | None = None,
+        version_summary: str = "",
+        file: Any = None,
+        **tafsir_kwargs: Any,
+    ) -> Asset:
+        """
+        Business Logic: Create a tafsir and, when a file is provided, its first
+        version in a single atomic transaction.
+
+        ``tafsir_kwargs`` are forwarded verbatim to :meth:`create_tafsir`.
+        """
+        if file is not None and not (version_name or "").strip():
+            raise ItqanError(
+                error_name="version_name_required",
+                message=_("Version name is required when a file is provided."),
+                status_code=400,
+            )
+
+        with transaction.atomic():
+            tafsir = self.create_tafsir(**tafsir_kwargs)
+            if file is not None:
+                self.create_tafsir_version(
+                    tafsir.slug,
+                    name=version_name or "",
+                    summary=version_summary,
+                    file=file,
+                )
+        tafsir.refresh_from_db()
         return tafsir
 
     def update_tafsir(

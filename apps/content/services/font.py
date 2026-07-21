@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
+from django.db import transaction
 from django.db.models import ProtectedError, Q
 from django.utils.translation import gettext as _
 
@@ -108,6 +109,39 @@ class FontService:
             restricted_for_tenant=restricted_for_tenant,
         )
         logger.info(f"Font created [asset_id={font.pk}, publisher_id={publisher_id}, language={language}]")
+        return font
+
+    def create_font_with_optional_version(
+        self,
+        *,
+        version_name: str | None = None,
+        version_summary: str = "",
+        file: Any = None,
+        **font_kwargs: Any,
+    ) -> Asset:
+        """
+        Business Logic: Create a font and, when a file is provided, its first
+        version in a single atomic transaction.
+
+        ``font_kwargs`` are forwarded verbatim to :meth:`create_font`.
+        """
+        if file is not None and not (version_name or "").strip():
+            raise ItqanError(
+                error_name="version_name_required",
+                message=_("Version name is required when a file is provided."),
+                status_code=400,
+            )
+
+        with transaction.atomic():
+            font = self.create_font(**font_kwargs)
+            if file is not None:
+                self.create_font_version(
+                    font.slug,
+                    name=version_name or "",
+                    summary=version_summary,
+                    file=file,
+                )
+        font.refresh_from_db()
         return font
 
     def update_font(
