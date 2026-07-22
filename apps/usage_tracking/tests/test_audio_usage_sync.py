@@ -7,7 +7,7 @@ import pytest
 
 from apps.content.models import Asset
 from apps.core.tests.base import BaseTestCase
-from apps.usage_tracking.repositories.asset_usage import AssetDimensions
+from apps.usage_tracking.repositories.recitations_usage import RecitationInfo
 from apps.usage_tracking.services import audio_usage_sync
 from apps.usage_tracking.services.audio_usage_sync import (
     build_events,
@@ -174,7 +174,7 @@ class TestBuildEvents:
     def test_build_events_where_asset_is_in_lookup_should_carry_publisher_and_reciter_info(self):
         # Arrange
         lookup = {
-            2: AssetDimensions(
+            2: RecitationInfo(
                 name="Test Asset",
                 publisher_id=7,
                 publisher_name="Test Pub",

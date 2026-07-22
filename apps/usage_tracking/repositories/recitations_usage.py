@@ -6,7 +6,7 @@ from apps.content.models import Asset
 
 
 @dataclass(frozen=True, slots=True)
-class AssetDimensions:
+class RecitationInfo:
     name: str
     publisher_id: int | None
     publisher_name: str | None
@@ -15,8 +15,8 @@ class AssetDimensions:
     qiraah: str | None
 
 
-class AssetUsageRepository:
-    def get_dimensions_by_ids(self, asset_ids: set[int]) -> dict[int, AssetDimensions]:
+class RecitationUsageRepository:
+    def get_info_by_ids(self, asset_ids: set[int]) -> dict[int, RecitationInfo]:
         if not asset_ids:
             return {}
 
@@ -35,7 +35,7 @@ class AssetUsageRepository:
         )
 
         return {
-            row["id"]: AssetDimensions(
+            row["id"]: RecitationInfo(
                 name=row["name"],
                 publisher_id=row["publisher_id"],
                 publisher_name=row["publisher__name"],

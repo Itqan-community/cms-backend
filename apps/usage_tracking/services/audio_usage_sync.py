@@ -17,7 +17,7 @@ import uuid
 
 from django.conf import settings
 
-from apps.usage_tracking.repositories.asset_usage import AssetDimensions, AssetUsageRepository
+from apps.usage_tracking.repositories.recitations_usage import RecitationInfo, RecitationUsageRepository
 from apps.usage_tracking.services.cf_analytics_client import CFUsageRow, CloudflareAnalyticsClient
 from apps.usage_tracking.services.mixpanel_client import MixpanelIngestClient
 
@@ -97,8 +97,8 @@ def compute_time_window(now: datetime, window_hours: int = 6) -> SyncWindow:
     return SyncWindow(start=window_start, end=window_end)
 
 
-def load_assets_lookup(asset_ids: set[int]) -> dict[int, AssetDimensions]:
-    return AssetUsageRepository().get_dimensions_by_ids(asset_ids)
+def load_assets_lookup(asset_ids: set[int]) -> dict[int, RecitationInfo]:
+    return RecitationUsageRepository().get_info_by_ids(asset_ids)
 
 
 def build_insert_id(window_start: datetime, path: str, country: str, device: str, status: int, cache: str) -> str:
@@ -119,7 +119,7 @@ def _dimensions_key(dims: CFUsageRow) -> tuple[str, str, str, int, str]:
 
 def _build_event_properties(
     row: CFUsageRow,
-    asset: AssetDimensions | None,
+    asset: RecitationInfo | None,
     parsed: ParsedAudioPath | None,
     window: SyncWindow,
 ) -> dict[str, Any]:
@@ -159,7 +159,7 @@ def _build_event_properties(
 
 def build_events(
     rows: list[CFUsageRow],
-    assets_lookup: dict[int, AssetDimensions],
+    assets_lookup: dict[int, RecitationInfo],
     window_start: datetime,
     window_end: datetime,
 ) -> list[dict[str, Any]]:
