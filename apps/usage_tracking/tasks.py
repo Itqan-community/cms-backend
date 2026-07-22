@@ -15,6 +15,7 @@ from django.db import connections
 import redis
 from requests.exceptions import ConnectionError as RequestsConnectionError, Timeout as RequestsTimeout
 
+from apps.usage_tracking.services.audio_usage_sync import sync_audio_usage
 from apps.usage_tracking.services.mixpanel_client import MixpanelIngestClient
 
 logger = logging.getLogger(__name__)
@@ -65,6 +66,7 @@ def _build_ingest_client() -> MixpanelIngestClient:
         token=settings.MIXPANEL_PROJECT_TOKEN,
         ingest_host=settings.MIXPANEL_INGEST_HOST,
         enabled=settings.MIXPANEL_ENABLED,
+        project_id=settings.MIXPANEL_PROJECT_ID,
     )
 
 
@@ -183,3 +185,27 @@ def flush_tracking_buffer_task() -> None:
             logger.info("flush_tracking_buffer_task: sent %d events to Mixpanel", len(events))
     finally:
         r.delete(_TRACKING_INFLIGHT_KEY)
+
+
+@shared_task(
+    bind=True,
+    autoretry_for=_TRANSIENT_ERRORS,
+    retry_backoff=True,
+    retry_backoff_max=60,
+    retry_jitter=True,
+    max_retries=3,
+    acks_late=True,
+    soft_time_limit=300,
+    time_limit=360,
+    ignore_result=True,
+)
+def sync_audio_usage_task(self, window_hours: int = 6) -> None:
+    """
+    Pull the last elapsed `window_hours` window of `.mp3` edge usage from Cloudflare and import it to Mixpanel.
+
+    `acks_late` + retries are safe here even on redelivery after a worker crash: the
+    Mixpanel `/import` call dedups on `$insert_id`, so reprocessing the same window
+    imports 0 new records instead of duplicating them.
+    """
+    imported = sync_audio_usage(window_hours=window_hours)
+    logger.info("sync_audio_usage_task: imported %d events to Mixpanel", imported)
