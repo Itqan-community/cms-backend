@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 # One event = one aggregated CF row (a 6h window grouped by path/country/device/status/cache),
 # not a single HTTP request -- `request_count` carries the underlying request volume.
-EVENT_NAME = "audio_usage_summary"
+EVENT_NAME = "Asset Audio Requests"
 
 # Fixed namespace for deriving Mixpanel `$insert_id`s -- any stable UUID works, it
 # only needs to never change so the same (window, path, dims) always hashes to the
