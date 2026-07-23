@@ -162,6 +162,10 @@ msgstr "تم الحل"
 msgid "Dismissed"
 msgstr "تم التجاهل"
 
+#, python-brace-format
+msgid "You have {count} pending access request(s)"
+msgstr "لديك {count} طلب(ات) وصول معلقة"
+
 msgid "Not found."
 msgstr "غير موجود."
 
