@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Pending Access Requests</title>
+</head>
+
+<body>
+    <h2>You have {{ count }} pending access request{{ count|pluralize }}</h2>
+    <p>The following access requests are awaiting your review:</p>
+
+    <ul>
+        {% for request in requests %}
+        <li>
+            <strong>{{ request.developer_name }}</strong> requested access to <strong>{{ request.asset_name }}</strong>
+            <br>Intended use: {{ request.intended_use }}
+            <br>Reason: {{ request.developer_access_reason }}
+            <br>Requested at: {{ request.created_at }}
+        </li>
+        {% endfor %}
+    </ul>
+
+    <p><a href="{{ access_requests_url }}">Review requests</a></p>
+
+    <p>Best regards,<br>Itqan Team</p>
+</body>
+
+</html>
