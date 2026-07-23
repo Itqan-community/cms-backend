@@ -41,6 +41,10 @@ app.conf.beat_schedule = {
         "schedule": crontab(minute=5, hour=f"*/{settings.AUDIO_USAGE_SYNC_WINDOW_HOURS}"),
         "kwargs": {"window_hours": settings.AUDIO_USAGE_SYNC_WINDOW_HOURS},
     },
+    "notify-publishers-pending-access-requests": {
+        "task": "apps.content.tasks.notify_publishers_pending_access_requests",
+        "schedule": crontab(minute=0, hour=settings.PENDING_ACCESS_REQUEST_NOTIFICATION_HOUR),
+    },
 }
 
 
