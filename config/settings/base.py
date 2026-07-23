@@ -568,7 +568,7 @@ if MIXPANEL_ENABLED:
 CF_ZONE_ID = config("CF_ZONE_ID", default="")
 CF_API_TOKEN = config("CF_API_TOKEN", default="")
 CF_R2_CUSTOM_DOMAIN = config("CF_R2_CUSTOM_DOMAIN", default="")
-ENABLE_AUDIO_USAGE_SYNC = config("ENABLE_AUDIO_USAGE_SYNC", default=MIXPANEL_ENABLED, cast=bool)
+ENABLE_AUDIO_USAGE_SYNC = config("ENABLE_AUDIO_USAGE_SYNC", default=False, cast=bool)
 AUDIO_USAGE_SYNC_WINDOW_HOURS = config("AUDIO_USAGE_SYNC_WINDOW_HOURS", default=6, cast=int)
 
 
