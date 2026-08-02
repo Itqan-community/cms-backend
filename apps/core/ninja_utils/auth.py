@@ -1,7 +1,6 @@
 from allauth.headless.contrib.ninja.security import XSessionTokenAuth
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
-from ninja.errors import AuthenticationError
 from ninja_keys.auth import ApiKeyAuth as BaseApiKeyAuth
 from oauth2_provider.contrib.rest_framework import OAuth2Authentication
 
@@ -41,22 +40,12 @@ class ApiKeyAuth(BaseApiKeyAuth):
         if not key:
             return None
         model = self.model
-        # Fetch by prefix from non-revoked keys and verify the hash ourselves, rather than
-        # model.objects.get_from_key(), which folds expiry into DoesNotExist and so can't
-        # distinguish an expired key from a missing one. A revoked key is excluded here
-        # (get_usable_keys) and stays a silent None -- it falls through to anonymous like a
-        # missing key. An *expired* key, by contrast, is a presented-but-stale credential:
-        # we raise so the caller gets an explicit 401 telling them the key expired, instead
-        # of being silently downgraded to anonymous traffic.
-        prefix = key.partition(".")[0]
         try:
-            api_key = model.objects.get_usable_keys().get(prefix=prefix)
+            api_key = model.objects.get_from_key(key)
         except model.DoesNotExist:
             return None
-        if not api_key.is_valid(key):
-            return None
         if api_key.has_expired:
-            raise AuthenticationError(message="API key has expired.")
+            return None
         request.user = api_key.user
         return api_key.user
 

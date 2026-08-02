@@ -1,3 +1,10 @@
+## v0.10.0 (2026-07-22)
+
+### Feat
+
+- **reciters**: make reciters list public and add detail endpoint
+- **assets**: add reciter field and reciter_id filter to public assets API
+
 ## v0.9.0 (2026-07-06)
 
 ### Feat
