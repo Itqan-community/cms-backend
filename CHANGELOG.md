@@ -1,3 +1,9 @@
+## v0.10.3 (2026-08-02)
+
+### Fix
+
+- restore Cloudflare Origin CA cert config, fix bind-mount drift
+
 ## v0.10.2 (2026-08-02)
 
 ### Fix
