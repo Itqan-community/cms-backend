@@ -36,9 +36,9 @@ fi
 echo "Starting Gunicorn (WSGI, gthread workers)..."
 exec gunicorn config.wsgi:application \
     --bind 0.0.0.0:8000 \
-    --workers "${GUNICORN_WORKERS:-6}" \
+    --workers "${GUNICORN_WORKERS:-10}" \
     --worker-class gthread \
-    --threads "${GUNICORN_THREADS:-4}" \
+    --threads "${GUNICORN_THREADS:-6}" \
     --max-requests 1000 \
     --max-requests-jitter 100 \
     --timeout 60
