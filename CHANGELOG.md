@@ -1,3 +1,9 @@
+## v0.10.2 (2026-08-02)
+
+### Fix
+
+- forward real client IP (Cf-Connecting-Ip) to Django, not Cloudflare's edge IP
+
 ## v0.10.1 (2026-08-02)
 
 ### Fix
