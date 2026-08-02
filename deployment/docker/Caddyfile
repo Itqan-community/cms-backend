@@ -1,4 +1,11 @@
 {$SITE_DOMAIN} {
+    # Cloudflare Origin CA cert (manually provisioned 2026-07-09, files live in
+    # the persistent caddy_data volume at /data/cf-origin/). Was previously
+    # only added by hand directly on the box, never committed here -- meant
+    # Caddy silently fell back to its own Let's Encrypt ACME issuance whenever
+    # this file-bind-mounted container got recreated from a fresh checkout.
+    tls /data/cf-origin/api_cms_origin.crt /data/cf-origin/api_cms_origin.key
+
     # Enable gzip compression
     encode gzip
 

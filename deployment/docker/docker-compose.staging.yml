@@ -33,7 +33,10 @@ services:
     environment:
       SITE_DOMAIN: ${SITE_DOMAIN}
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Mount the directory, not the file: git checkout/reset replaces files
+      # with new inodes, which orphans a single-file bind mount from the live
+      # container until it's recreated. A directory mount survives that.
+      - ./:/etc/caddy:ro
       - caddy_data:/data
       - caddy_config:/config
       - static_volume:/srv/static:ro
