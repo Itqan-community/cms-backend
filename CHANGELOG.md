@@ -1,3 +1,9 @@
+## v0.10.1 (2026-08-02)
+
+### Fix
+
+- switch gunicorn to sync WSGI/gthread workers with bounded concurrency
+
 ## v0.10.0 (2026-07-22)
 
 ### Feat
