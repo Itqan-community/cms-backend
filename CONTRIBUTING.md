@@ -2,6 +2,17 @@
 
 Thank you for helping improve Quranic accessibility. This guide keeps contributions smooth, consistent, and aligned with our workflow.
 
+## Finding Something to Work On
+
+Planned work lives on the **[Fanar board](https://github.com/orgs/Itqan-community/projects/12)** — the execution view of our [1448 Q1 & Q2 roadmap](./docs/ROADMAP.md). Every item is a real issue with context, acceptance criteria, and links to the code it touches.
+
+- **New here?** Filter by [`Good First Issue`](https://github.com/Itqan-community/cms-backend/issues?q=is%3Aissue+is%3Aopen+label%3A%22Good+First+Issue%22) — small, well-bounded, and unlikely to collide with in-flight work.
+- **Want something substantial?** Filter by [`Help Wanted`](https://github.com/Itqan-community/cms-backend/issues?q=is%3Aissue+is%3Aopen+label%3A%22Help+Wanted%22).
+- **Skip anything labelled `blocked`** — those wait on a decision or a prerequisite task, and the issue says which.
+- Issues are grouped by `epic:` labels so you can follow one thread end to end rather than jumping between areas.
+
+Comment on an issue before you start so two people don't build the same thing. If you stall partway, say so — that's useful information, not a failure.
+
 ## Branch Strategy
 - **Protected branches**: `main`, `staging` (PRs only; no direct commits)
 - **Active development**: `{feature_branch}` (direct commits allowed)
@@ -67,10 +78,21 @@ We deeply appreciate every contributor—maintainers, reviewers, issue reporters
 - All contributors will be acknowledged on the GitHub contributors page
 
 ## Important For AI/LLM Users
-This is an open-source project that aim to help the muslim community and provide a way to distribute Quranic content through safe verified channels.
-I want to emphasize that we need to foster a community that will continue to contribute to this project in the future as well as now.
-AI is welcomed, however the contributor needs to be aware of the project goals and try to adhere to the best coding standards.
-## Most Importantly: YOU NEED TO KNOW WHAT YOUR CODE DOES AND TEST IT**
-Many hours have been wasted on trying to test and verify code that their owners didn't read or test themselves, and it is affecting all the maintainers negatively.
-We all have access to AI and LLMs, if you are a just a middleman between The maintainer and the AI, then I hate to tell you that you are not benefiting this project, you are harming it.
+
+This is an open-source project that aims to help the Muslim community and provide a way to distribute Quranic content through safe, verified channels. For it to outlive any one of us, the people contributing need to genuinely understand how it works internally — that understanding is the thing we are actually building.
+
+**Using AI to help you work is welcome and expected.** We all have subscriptions. What we are asking is that you stay the author of your contribution, not a middleman between the maintainer and a model.
+
+### Most importantly: you need to know what your code does, and test it
+
+Before you open a PR, make sure you:
+
+- **understand** the code you're submitting, well enough to explain why it works
+- **ran** it on your own machine and saw it behave correctly
+- **tested** it — including the cases you expect to fail
+
+Many hours have been lost verifying code that its own author never read or ran, and that cost lands on every maintainer. If you copy an issue into an agent, paste back whatever it produces, and open a PR you haven't read, you are taking more from this project than you are giving it.
+
+If you're not planning to work that way on a given issue, please leave it for someone who will. And if you get stuck halfway, say so in the comments — a half-finished PR you understand is far more welcome than a complete one you don't.
+
 Jazakum Allahu khairan for advancing Quranic accessibility!
