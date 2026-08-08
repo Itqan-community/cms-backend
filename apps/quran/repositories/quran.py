@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from apps.quran.models import Ayah, Sura
+from django.db.models import Count
+
+from apps.quran.models import Ayah, Sura, Word
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
@@ -14,6 +16,7 @@ class QuranRepository:
     def __init__(self) -> None:
         self.sura_model = Sura
         self.ayah_model = Ayah
+        self.word_model = Word
 
     def list_suras(self) -> QuerySet[Sura]:
         return self.sura_model.objects.all()
@@ -36,3 +39,21 @@ class QuranRepository:
             )
         except self.ayah_model.DoesNotExist:
             return None
+
+    def list_hierarchy_tree(self) -> QuerySet[Sura]:
+        return self.sura_model.objects.all().order_by("id")
+
+    def list_surah_ayah_tree(self, sura_id: int) -> QuerySet[Ayah]:
+        return (
+            self.ayah_model.objects.filter(sura_id=sura_id)
+            .annotate(words_count=Count("words"))
+            .order_by("number_in_sura")
+        )
+
+    def ayah_exists(self, sura_id: int, number_in_sura: int) -> bool:
+        return self.ayah_model.objects.filter(sura_id=sura_id, number_in_sura=number_in_sura).exists()
+
+    def get_ayah_words(self, sura_id: int, number_in_sura: int) -> QuerySet[Word]:
+        return self.word_model.objects.filter(sura_id=sura_id, ayah__number_in_sura=number_in_sura).order_by(
+            "position_in_ayah"
+        )
