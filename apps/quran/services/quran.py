@@ -10,7 +10,7 @@ from apps.quran.repositories.quran import QuranRepository
 if TYPE_CHECKING:
     from django.db.models import QuerySet
 
-    from apps.quran.models import Ayah, Sura
+    from apps.quran.models import Ayah, Sura, Word
 
 
 class QuranService:
@@ -48,3 +48,20 @@ class QuranService:
     def list_ayahs_for_sura(self, sura_id: int) -> QuerySet[Ayah]:
         self.get_sura(sura_id)
         return self.repo.list_ayahs_for_sura(sura_id)
+
+    def list_hierarchy_tree(self) -> QuerySet[Sura]:
+        return self.repo.list_hierarchy_tree()
+
+    def list_surah_ayah_tree(self, sura_id: int) -> QuerySet[Ayah]:
+        self.get_sura(sura_id)
+        return self.repo.list_surah_ayah_tree(sura_id)
+
+    def get_ayah_words(self, sura_id: int, number_in_sura: int) -> QuerySet[Word]:
+        self.get_sura(sura_id)
+        if not self.repo.ayah_exists(sura_id, number_in_sura):
+            raise ItqanError(
+                error_name="ayah_not_found",
+                message=_("Ayah does not exist."),
+                status_code=404,
+            )
+        return self.repo.get_ayah_words(sura_id, number_in_sura)
