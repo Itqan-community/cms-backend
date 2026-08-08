@@ -73,7 +73,7 @@ class HierarchyWorkflowTest(BaseTestCase):
         user = baker.make(User, email="workflow@example.com", is_active=True)
         self.authenticate_user(user)
 
-        # Step 1–2: successful expands
+        # Step 1-2: successful expands
         tree_res = self.client.get("/cms-api/hierarchy/tree/")
         self.assertEqual(tree_res.status_code, 200)
         sura_id = tree_res.json()[0]["id"]
