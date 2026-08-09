@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING
 
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
+from django.utils.translation import gettext_lazy as _
 from plain_permissions.models import Permission as CustomPermission
 
 from apps.core.permissions import PERMISSION_IMPLICATIONS, PermissionChoice
@@ -143,5 +144,9 @@ class PermissionHierarchyService:
 
         missing = set(codenames) - {row.codename for row in rows}
         if missing:
-            raise ValueError(f"Permissions are not synced to the database: {sorted(missing)}. Run `manage.py migrate`.")
+            raise ValueError(
+                _("Permissions are not synced to the database: {missing}. Run `manage.py migrate`.").format(
+                    missing=sorted(missing)
+                )
+            )
         return rows

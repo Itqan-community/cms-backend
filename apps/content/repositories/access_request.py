@@ -29,6 +29,13 @@ class AssetAccessRequestRepository:
     def get_by_id(self, request_id: int) -> AssetAccessRequest | None:
         return self.list_qs().filter(id=request_id).first()
 
+    def list_pending_for_publisher_notification(self) -> QuerySet[AssetAccessRequest]:
+        return (
+            self.list_qs()
+            .filter(status=AssetAccessRequest.StatusChoice.PENDING)
+            .order_by("asset__publisher_id", "-created_at")
+        )
+
     def get_existing(self, *, developer_user: User, asset: Asset) -> AssetAccessRequest | None:
         return (
             AssetAccessRequest.objects.filter(developer_user=developer_user, asset=asset)

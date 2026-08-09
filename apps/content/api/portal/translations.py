@@ -2,7 +2,7 @@ import logging
 from typing import Annotated, Literal
 
 from django.utils.translation import gettext_lazy as _
-from ninja import FilterLookup, FilterSchema, Query, Schema
+from ninja import File, FilterLookup, FilterSchema, Form, Query, Schema, UploadedFile
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
@@ -108,6 +108,8 @@ class TranslationCreateIn(Schema):
     external_url: str | None = None
     is_open_access: bool = False
     restricted_for_tenant: bool = False
+    version_name: str | None = Field(default=None, max_length=255)
+    version_summary: str = ""
 
 
 class TranslationPutIn(Schema):
@@ -185,21 +187,26 @@ def list_translations(request: Request, filters: TranslationFilter = Query()):
     response={
         201: TranslationDetailOut,
         400: NinjaErrorResponse[Literal["translation_name_required"]]
-        | NinjaErrorResponse[Literal["external_url_required"]],
+        | NinjaErrorResponse[Literal["external_url_required"]]
+        | NinjaErrorResponse[Literal["version_name_required"]],
         404: NinjaErrorResponse[Literal["publisher_not_found"]],
     },
 )
 @permission_required([permission_class(PermissionChoice.PORTAL_CREATE_TRANSLATION)])
 def create_translation(
     request: Request,
-    data: TranslationCreateIn,
+    data: Form[TranslationCreateIn],
+    file: UploadedFile | None = File(None),
 ) -> tuple[int, Asset]:
     logger.info(
         f"Creating translation [publisher_id={data.publisher_id}, language={data.language}, user_id={request.user.id}]"
     )
     enforce_publisher_membership(request.user, data.publisher_id)
     service = TranslationService()
-    translation = service.create_translation(
+    translation = service.create_translation_with_optional_version(
+        version_name=data.version_name,
+        version_summary=data.version_summary,
+        file=file,
         publisher_id=data.publisher_id,
         name_ar=data.name_ar,
         name_en=data.name_en,

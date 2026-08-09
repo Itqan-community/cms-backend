@@ -364,6 +364,28 @@ Currently, all authenticated applications have full read/write access. Future ve
 
 ---
 
+## Planned: Self-Identification Auth (App Header + Per-User Identifier)
+
+OAuth2 client-credentials requires a confidential backend to protect `client_secret`,
+which blocks developers who only want a mobile or web client with no backend of their
+own. A lower-friction, header-based self-identification model is planned to sit alongside
+OAuth2: apps identify themselves via a request header (no secret exchange), and
+optionally attach a developer-chosen, non-PII per-end-user identifier so usage can be
+measured per user as well as per app — without Itqan ever holding end-user PII. This
+also gives publishers visibility into how their licensed content is actually used
+downstream.
+
+**Phase 1 decisions:** it does **not** replace OAuth2 or any existing auth method.
+App identifiers are open (not secret-backed) — spoofing is technically possible and
+accepted for now; a stricter scheme will follow only if abuse becomes a real problem.
+Since the per-user identifier is fully anonymised (no PII), its usage history can be
+retained indefinitely.
+
+See [ROADMAP.md — §1](./ROADMAP.md#1-appuser-scoped-authentication-self-identification-model)
+for the full problem statement and open questions.
+
+---
+
 ## Token Lifecycle
 
 ### Access Token Expiration
@@ -433,4 +455,5 @@ sequenceDiagram
 
 **See also:**
 - [Architecture Documentation](./ARCHITECTURE.md)
+- [Roadmap](./ROADMAP.md) — planned self-identification auth model
 - [API Documentation](http://localhost:8000/docs/)

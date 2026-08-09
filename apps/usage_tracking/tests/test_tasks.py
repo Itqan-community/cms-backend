@@ -11,6 +11,7 @@ from apps.usage_tracking.tasks import (
     UnexpectedDatabaseQuery,
     flush_tracking_buffer_task,
     no_db_queries,
+    sync_audio_usage_task,
     track_api_request_task,
 )
 
@@ -101,6 +102,19 @@ class TestTrackApiRequestTask(BaseTestCase):
                 event="public_api_request",
                 properties={"entity_type": "recitation"},
             )
+
+
+class TestSyncAudioUsageTask:
+    @patch("apps.usage_tracking.tasks.sync_audio_usage")
+    def test_sync_audio_usage_task_should_forward_window_hours_and_return_imported_count(self, mock_sync):
+        # Arrange
+        mock_sync.return_value = 7
+
+        # Act
+        sync_audio_usage_task.run(window_hours=12)
+
+        # Assert
+        mock_sync.assert_called_once_with(window_hours=12)
 
 
 class TestNoDbQueries(BaseTestCase):

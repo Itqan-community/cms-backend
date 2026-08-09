@@ -10,13 +10,11 @@ from typing import Any
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import Http404
-from django.utils.encoding import force_str
 from django.utils.translation import gettext as _
 from ninja import NinjaAPI
 from ninja.errors import AuthenticationError, HttpError, Throttled, ValidationError as NinjaValidationError
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.serializers import as_serializer_error
-from rest_framework_simplejwt.exceptions import AuthenticationFailed, InvalidToken
 
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 
@@ -75,22 +73,6 @@ def register_exception_handlers(api: NinjaAPI) -> None:
                 error_name="authentication_error",
                 message=exc.message or _("Authentication Error"),
             ),
-            status=401,
-        )
-
-    @api.exception_handler(InvalidToken)
-    def handle_token_invalid_error(request, exc: InvalidToken):
-        return api.create_response(
-            request,
-            NinjaErrorResponse[str, Any](error_name="token_not_valid", message=force_str(exc.default_detail)),
-            status=401,
-        )
-
-    @api.exception_handler(AuthenticationFailed)
-    def handle_authentication_failed(request, exc: AuthenticationFailed):
-        return api.create_response(
-            request,
-            NinjaErrorResponse[str, Any](error_name="token_not_valid", message=force_str(exc.default_detail)),
             status=401,
         )
 

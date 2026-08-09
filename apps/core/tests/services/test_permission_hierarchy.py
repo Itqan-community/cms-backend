@@ -10,7 +10,7 @@ class PermissionHierarchyWithImpliedTests(BaseTestCase):
     def setUp(self) -> None:
         self.service = PermissionHierarchyService()
 
-    def test_with_implied_where_create_should_imply_read(self):
+    def test_with_implied_where_create_should_imply_read_and_update(self):
         # Arrange
         permissions = [PermissionChoice.PORTAL_CREATE_RECITER]
 
@@ -18,12 +18,17 @@ class PermissionHierarchyWithImpliedTests(BaseTestCase):
         expanded = self.service.with_implied(permissions)
 
         # Assert
+        # CREATE and UPDATE are mutually implied, so CREATE pulls in UPDATE as well as READ.
         self.assertEqual(
             expanded,
-            {PermissionChoice.PORTAL_CREATE_RECITER, PermissionChoice.PORTAL_READ_RECITER},
+            {
+                PermissionChoice.PORTAL_CREATE_RECITER,
+                PermissionChoice.PORTAL_UPDATE_RECITER,
+                PermissionChoice.PORTAL_READ_RECITER,
+            },
         )
 
-    def test_with_implied_where_delete_should_imply_only_read(self):
+    def test_with_implied_where_delete_should_imply_full_crud_set(self):
         # Arrange
         permissions = [PermissionChoice.PORTAL_DELETE_RECITER]
 
@@ -31,16 +36,18 @@ class PermissionHierarchyWithImpliedTests(BaseTestCase):
         expanded = self.service.with_implied(permissions)
 
         # Assert
-        # DELETE implies READ only; it does not pull in CREATE or UPDATE.
+        # DELETE sits above the CREATE/UPDATE pair, so it pulls in every weaker permission.
         self.assertEqual(
             expanded,
             {
                 PermissionChoice.PORTAL_DELETE_RECITER,
+                PermissionChoice.PORTAL_UPDATE_RECITER,
+                PermissionChoice.PORTAL_CREATE_RECITER,
                 PermissionChoice.PORTAL_READ_RECITER,
             },
         )
 
-    def test_with_implied_where_update_should_imply_only_read(self):
+    def test_with_implied_where_update_should_imply_read_and_create(self):
         # Arrange
         permissions = [PermissionChoice.PORTAL_UPDATE_RECITER]
 
@@ -48,11 +55,12 @@ class PermissionHierarchyWithImpliedTests(BaseTestCase):
         expanded = self.service.with_implied(permissions)
 
         # Assert
-        # UPDATE implies READ only; it does not require CREATE.
+        # UPDATE and CREATE are mutually implied, so UPDATE pulls in CREATE as well as READ.
         self.assertEqual(
             expanded,
             {
                 PermissionChoice.PORTAL_UPDATE_RECITER,
+                PermissionChoice.PORTAL_CREATE_RECITER,
                 PermissionChoice.PORTAL_READ_RECITER,
             },
         )
@@ -75,11 +83,13 @@ class PermissionHierarchyWithImpliedTests(BaseTestCase):
         expanded = self.service.with_implied(permissions)
 
         # Assert
+        # UPDATE_RECITATION now implies CREATE_RECITATION, so it joins the chain too.
         self.assertEqual(
             expanded,
             {
                 PermissionChoice.PORTAL_UPLOAD_TIMING,
                 PermissionChoice.PORTAL_UPDATE_RECITATION,
+                PermissionChoice.PORTAL_CREATE_RECITATION,
                 PermissionChoice.PORTAL_READ_RECITATION,
             },
         )
@@ -94,7 +104,11 @@ class PermissionHierarchyWithImpliedTests(BaseTestCase):
         # Assert
         self.assertEqual(
             expanded,
-            {PermissionChoice.PORTAL_CREATE_TAFSIR, PermissionChoice.PORTAL_READ_TAFSIR},
+            {
+                PermissionChoice.PORTAL_CREATE_TAFSIR,
+                PermissionChoice.PORTAL_UPDATE_TAFSIR,
+                PermissionChoice.PORTAL_READ_TAFSIR,
+            },
         )
 
     def test_with_implied_where_mixed_groups_should_expand_independently(self):
@@ -109,8 +123,11 @@ class PermissionHierarchyWithImpliedTests(BaseTestCase):
             expanded,
             {
                 PermissionChoice.PORTAL_CREATE_RECITER,
+                PermissionChoice.PORTAL_UPDATE_RECITER,
                 PermissionChoice.PORTAL_READ_RECITER,
                 PermissionChoice.PORTAL_DELETE_PUBLISHER,
+                PermissionChoice.PORTAL_UPDATE_PUBLISHER,
+                PermissionChoice.PORTAL_CREATE_PUBLISHER,
                 PermissionChoice.PORTAL_READ_PUBLISHER,
             },
         )
@@ -156,12 +173,15 @@ class PermissionHierarchyWithDependentsTests(BaseTestCase):
         expanded = self.service.with_dependents(permissions)
 
         # Assert
-        # UPLOAD_TIMING depends on UPDATE, but DELETE does not, so DELETE survives.
+        # UPLOAD_TIMING depends on UPDATE; CREATE is mutually implied and DELETE sits above
+        # the pair, so revoking UPDATE now strips both of those as well.
         self.assertEqual(
             expanded,
             {
                 PermissionChoice.PORTAL_UPDATE_RECITATION,
                 PermissionChoice.PORTAL_UPLOAD_TIMING,
+                PermissionChoice.PORTAL_CREATE_RECITATION,
+                PermissionChoice.PORTAL_DELETE_RECITATION,
             },
         )
 
@@ -197,8 +217,8 @@ class PermissionHierarchyGrantTests(BaseTestCase):
         self.service.grant_to_user(self.user, permissions)
 
         # Assert
-        # DELETE implies READ only, so the user holds exactly {DELETE, READ}.
-        self.assertEqual(self.user.user_permissions.count(), 2)
+        # DELETE implies the whole group, so the user holds {DELETE, UPDATE, CREATE, READ}.
+        self.assertEqual(self.user.user_permissions.count(), 4)
 
     def test_grant_to_user_where_granted_should_return_expanded_set(self):
         # Arrange
@@ -210,10 +230,14 @@ class PermissionHierarchyGrantTests(BaseTestCase):
         # Assert
         self.assertEqual(
             applied,
-            {PermissionChoice.PORTAL_CREATE_RECITER, PermissionChoice.PORTAL_READ_RECITER},
+            {
+                PermissionChoice.PORTAL_CREATE_RECITER,
+                PermissionChoice.PORTAL_UPDATE_RECITER,
+                PermissionChoice.PORTAL_READ_RECITER,
+            },
         )
 
-    def test_grant_to_group_where_update_granted_should_assign_read_only(self):
+    def test_grant_to_group_where_update_granted_should_assign_read_and_create(self):
         # Arrange
         group = Group.objects.create(name="editors")
         permissions = [PermissionChoice.PORTAL_UPDATE_TRANSLATION]
@@ -222,12 +246,13 @@ class PermissionHierarchyGrantTests(BaseTestCase):
         self.service.grant_to_group(group, permissions)
 
         # Assert
-        # UPDATE implies READ only; it does not pull in CREATE.
+        # UPDATE is mutually implied with CREATE, so both land alongside READ.
         codenames = {perm.codename for perm in group.permissions.all()}
         self.assertEqual(
             codenames,
             {
                 PermissionChoice.PORTAL_UPDATE_TRANSLATION.value,
+                PermissionChoice.PORTAL_CREATE_TRANSLATION.value,
                 PermissionChoice.PORTAL_READ_TRANSLATION.value,
             },
         )
@@ -257,7 +282,7 @@ class PermissionHierarchyRevokeTests(BaseTestCase):
         self.assertNotIn(PermissionChoice.PORTAL_UPDATE_RECITER.value, codenames)
         self.assertNotIn(PermissionChoice.PORTAL_DELETE_RECITER.value, codenames)
 
-    def test_revoke_from_user_where_update_revoked_should_keep_sibling_writes_and_read(self):
+    def test_revoke_from_user_where_update_revoked_should_cascade_to_create_and_delete(self):
         # Arrange
         self.service.grant_to_user(
             self.user,
@@ -272,12 +297,13 @@ class PermissionHierarchyRevokeTests(BaseTestCase):
         self.service.revoke_from_user(self.user, [PermissionChoice.PORTAL_UPDATE_RECITER])
 
         # Assert
-        # UPDATE has no dependents of its own, so its siblings CREATE and DELETE survive.
+        # CREATE is mutually implied with UPDATE and DELETE sits above the pair, so revoking
+        # UPDATE strips both. Only READ survives.
         codenames = self._user_perm_codenames()
         self.assertIn(PermissionChoice.PORTAL_READ_RECITER.value, codenames)
-        self.assertIn(PermissionChoice.PORTAL_CREATE_RECITER.value, codenames)
-        self.assertIn(PermissionChoice.PORTAL_DELETE_RECITER.value, codenames)
         self.assertNotIn(PermissionChoice.PORTAL_UPDATE_RECITER.value, codenames)
+        self.assertNotIn(PermissionChoice.PORTAL_CREATE_RECITER.value, codenames)
+        self.assertNotIn(PermissionChoice.PORTAL_DELETE_RECITER.value, codenames)
 
     def test_revoke_from_user_where_permission_not_held_should_be_idempotent(self):
         # Arrange

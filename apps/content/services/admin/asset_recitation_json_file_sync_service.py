@@ -5,6 +5,7 @@ import logging
 
 from django.core.files.base import ContentFile
 from django.db import transaction
+from django.utils.translation import gettext_lazy as _
 
 from apps.content.api.public.recitation_track_list import RecitationAyahTimingOut, RecitationSurahTrackOut
 from apps.content.models import Asset, AssetVersion, RecitationSurahTrack
@@ -71,7 +72,7 @@ def sync_asset_recitations_json_file(asset_id: int) -> tuple[AssetVersion, str]:
 
     asset: Asset | None = Asset.objects.filter(pk=asset_id).first()
     if not asset:
-        raise ValueError(f"Asset {asset_id} not found")
+        raise ValueError(_("Asset {asset_id} not found").format(asset_id=asset_id))
 
     latest_version: AssetVersion | None = asset.get_latest_version()
     if not latest_version:

@@ -7,6 +7,7 @@ import logging
 from typing import TypedDict
 
 from django.db import transaction
+from django.utils.translation import gettext_lazy as _
 
 from apps.content.models import Asset, RecitationAyahTiming, RecitationSurahTrack
 
@@ -47,7 +48,7 @@ def _parse_json_bytes(data: bytes) -> tuple[int, list[AyahRow]]:
     """
     payload = json.loads(data.decode("utf-8"))
     if "surah_id" not in payload:
-        raise ValueError("Missing surah_id in uploaded JSON")
+        raise ValueError(_("Missing surah_id in uploaded JSON"))
 
     surah_number = int(payload["surah_id"])
     ayahs = payload.get("ayahs") or []
@@ -58,7 +59,7 @@ def _parse_json_bytes(data: bytes) -> tuple[int, list[AyahRow]]:
         start_ms = _sec_to_ms(item["start"])
         end_ms = _sec_to_ms(item["end"])
         if end_ms < start_ms:
-            raise ValueError(f"Invalid timing for ayah {ayah_number}: end < start")
+            raise ValueError(_("Invalid timing for ayah {ayah_number}: end < start").format(ayah_number=ayah_number))
         rows.append(
             AyahRow(
                 surah_number=surah_number,

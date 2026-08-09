@@ -22,6 +22,8 @@ class MemberGroupsSeedTest(BaseTestCase):
                 "portal_read_recitation",
                 "portal_read_tafsir",
                 "portal_read_translation",
+                "portal_read_mushaf",
+                "portal_read_font",
                 "portal_read_publisher",
                 "portal_view_publisher_members",
                 "portal_view_access_requests",

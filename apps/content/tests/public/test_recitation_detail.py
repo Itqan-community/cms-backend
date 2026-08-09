@@ -308,6 +308,21 @@ class RecitationTracksPageSizeCapTest(BaseTestCase):
         self.assertEqual(200, second.status_code, second.content)
         self.assertEqual(first.json(), second.json())
 
+    def test_list_recitation_tracks_where_meta_cache_warm_should_not_500_on_second_request(self):
+        # Regression: asset_meta cache write must supply every key the cache-hit
+        # read path looks up (name_ar), or the second request raises KeyError -> 500.
+        from django.core.cache import cache as django_cache
+
+        self.authenticate_client(self.app)
+        django_cache.clear()
+
+        first = self.client.get(f"/recitations/{self.asset.id}/")
+        self.assertEqual(200, first.status_code, first.content)
+
+        second = self.client.get(f"/recitations/{self.asset.id}/")
+        self.assertEqual(200, second.status_code, second.content)
+        self.assertEqual(first.json(), second.json())
+
     def test_list_recitation_tracks_where_both_caches_warm_should_make_no_db_query(self):
         # Fails on old code where get_asset_object always ran before the cache check.
         from unittest.mock import patch

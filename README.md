@@ -215,16 +215,30 @@ Each app contains an `api/` directory with subdirectories per API surface (`inte
 - **[Documentation Index](./docs/)** — Overview of all available documentation
 - **[Architecture Guide](./docs/ARCHITECTURE.md)** — System architecture, domain models, and component interactions
 - **[Authentication Guide](./docs/AUTHENTICATION.md)** — Complete OAuth flows, security practices, and developer guides
+- **[Roadmap](./docs/ROADMAP.md)** — What we're building in 1448 Q1–Q2 and why
 - **[Contributing Guide](./CONTRIBUTING.md)** — How to contribute to the project
+
+## Roadmap
+
+Planned work for Hijri 1448 Q1–Q2 is tracked in [docs/ROADMAP.md](./docs/ROADMAP.md) and executed on the **[Fanar board](https://github.com/orgs/Itqan-community/projects/12)**. Current objectives:
+
+- **Self-identifying authentication** — API keys as a public, non-secret app identifier, plus an opaque per-end-user identifier, so client-only apps can integrate without a backend
+- **Ayah-by-ayah recitation delivery** — serve individual ayahs instead of whole-surah downloads
+- **Recitation folders** — multiple variants (clear, echo, bitrates) under one asset, each with its own ayah timings
+- **Itqan Dependabot & package manager** — manifest, registry, `itqan install` CLI, and automated version-bump PRs so published corrections reach the field
+- **Audit log** — full-snapshot history in a separate database, with reversal on demand
+- **Developer-ready data views** and **usage insight dashboards**
 
 ## Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines.
 
 **Quick Summary:**
+- Pick up work from the [Fanar board](https://github.com/orgs/Itqan-community/projects/12) — start with `Good First Issue`, skip anything `blocked`
 - `main` and `staging`: PR-only (no direct commits)
 - Flow: `feature branch`→ `staging` (PR) → `main` (PR)
 - Start all changes from `staging` or feature branches
+- **Understand, run, and test your code before opening a PR** — see [Important For AI/LLM Users](./CONTRIBUTING.md#important-for-aillm-users)
 
 
 ## Deployment
@@ -236,7 +250,7 @@ Containerized deployment uses Caddy (TLS, static) and the Django app container. 
 - Use strong unique `SECRET_KEY` per environment; keep it out of VCS
 - CORS/CSRF configured per environment settings
 - OAuth `client_secret` must be kept secure (see [docs/AUTHENTICATION.md](./docs/AUTHENTICATION.md))
-- JWT tokens via SimpleJWT for `cms-api`, `tenant/`, and `portal/`; OAuth2 via django-oauth-toolkit for the Public API
+- django-allauth-headless for `cms-api/`, `tenant/`, and `portal/`;  api-key via ninja-keys for the Public API
 
 ## License
 

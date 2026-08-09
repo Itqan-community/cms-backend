@@ -73,12 +73,6 @@ class AssetAccessRequestService:
 
         transaction.on_commit(lambda: send_access_request_outcome_email.delay(request_id))
 
-    @staticmethod
-    def _enqueue_new_request_email(request_id: int) -> None:
-        from apps.content.tasks import send_access_request_new_request_email
-
-        transaction.on_commit(lambda: send_access_request_new_request_email.delay(request_id))
-
     # --- developer flow ---
     def request_access(
         self, *, user: User, asset: Asset, purpose: str, intended_use: str
@@ -108,7 +102,6 @@ class AssetAccessRequestService:
             intended_use=intended_use,
         )
         logger.info(f"Asset access requested [request_id={request.pk}, user_id={user.pk}, asset_id={asset.pk}]")
-        self._enqueue_new_request_email(request.id)
 
         access = None
         if auto_approve:

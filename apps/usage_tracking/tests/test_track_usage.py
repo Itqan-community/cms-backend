@@ -18,8 +18,8 @@ from apps.usage_tracking.tasks import TRACKING_BUFFER_KEY
 
 
 def _obj(id_, name, publisher_id=None, publisher_name=None):
-    publisher = SimpleNamespace(id=publisher_id, name=publisher_name) if publisher_id else None
-    return SimpleNamespace(id=id_, name=name, publisher_id=publisher_id, publisher=publisher)
+    publisher = SimpleNamespace(id=publisher_id, name=publisher_name, name_ar=publisher_name) if publisher_id else None
+    return SimpleNamespace(id=id_, name=name, name_ar=name, publisher_id=publisher_id, publisher=publisher)
 
 
 def _mock_redis():

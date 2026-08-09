@@ -10,6 +10,7 @@ from botocore.exceptions import ClientError
 from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 from apps.content.repositories.recitation_track import RecitationTrackRepository
 from apps.core.ninja_utils.errors import ItqanError
@@ -55,7 +56,7 @@ class AssetRecitationAudioTracksDirectUploadService:
             logger.error(f"R2 create_multipart_upload failed [key={r2_key}, code={error_code}]: {exc}")
             raise ItqanError(
                 error_name="storage_error",
-                message=f"Failed to initiate upload (R2 error: {error_code})",
+                message=_("Failed to initiate upload (R2 error: {error_code}).").format(error_code=error_code),
                 status_code=503,
             ) from exc
         upload_id = response["UploadId"]
@@ -148,7 +149,9 @@ class AssetRecitationAudioTracksDirectUploadService:
 
             raise ItqanError(
                 error_name="duplicate_track",
-                message=f"A track for asset {asset_id} surah {surah_number} already exists",
+                message=_("A track for asset {asset_id} surah {surah_number} already exists.").format(
+                    asset_id=asset_id, surah_number=surah_number
+                ),
                 status_code=409,
             ) from exc
 

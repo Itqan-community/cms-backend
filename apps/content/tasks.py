@@ -212,9 +212,9 @@ def send_access_request_outcome_email(request_id: int) -> None:
 
 
 @shared_task
-def send_access_request_new_request_email(request_id: int) -> None:
-    logger.info(f"Task started [task=send_access_request_new_request_email, request_id={request_id}]")
+def notify_publishers_pending_access_requests() -> None:
+    logger.info("Task started [task=notify_publishers_pending_access_requests]")
     from apps.content.services.access_request_notification_service import AccessRequestNotificationService
 
-    AccessRequestNotificationService().send_publisher_new_request_email(request_id)
-    logger.info(f"Task completed [task=send_access_request_new_request_email, request_id={request_id}]")
+    AccessRequestNotificationService().notify_publishers_of_pending_requests()
+    logger.info("Task completed [task=notify_publishers_pending_access_requests]")

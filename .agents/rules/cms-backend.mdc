@@ -93,8 +93,6 @@ Use exactly this shape when converting inputs:
 - ninja docs: https://django-ninja.dev/
 - django docs: https://docs.djangoproject.com/en/5.2/
 - django-allauth docs: https://docs.allauth.org/en/dev/ is used for handling social auth and OAuth2
-- dj-rest-auth docs: https://dj-rest-auth.readthedocs.io/en/latest/ is used for handling authentication and registration
-- djangorestframework-simplejwt docs: https://django-rest-framework-simplejwt.readthedocs.io/en/latest/ is used for handling JWT authentication
 
 
 ## Raising errors

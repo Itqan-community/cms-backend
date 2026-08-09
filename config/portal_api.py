@@ -1,5 +1,3 @@
-from django.conf import settings
-
 from apps.core.ninja_utils.auth import internal_auth
 from apps.core.ninja_utils.autodiscover import auto_discover_ninja_routers
 from apps.core.ninja_utils.error_handling import register_exception_handlers
@@ -14,15 +12,14 @@ portal_api = create_ninja_api(
     urls_namespace="portal",
     auth=internal_auth,
 )
-if settings.ENABLE_ALLAUTH:
-    portal_api.openapi_extra = {
-        "info": {
-            "description": "# Authentication\n\n"
-            "## Authentication docs\n\n"
-            "Authentication supports many features, and it has its own extensive documentation.\n\n"
-            "You can find authentication documentation [Here](../auth/docs)",
-        }
+portal_api.openapi_extra = {
+    "info": {
+        "description": "# Authentication\n\n"
+        "## Authentication docs\n\n"
+        "Authentication supports many features, and it has its own extensive documentation.\n\n"
+        "You can find authentication documentation [Here](../auth/docs)",
     }
+}
 
 
 register_exception_handlers(portal_api)

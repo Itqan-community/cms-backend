@@ -1,4 +1,5 @@
 from django import forms
+from django.utils.translation import gettext_lazy as _
 
 
 class MultipleFileInput(forms.ClearableFileInput):
@@ -28,8 +29,10 @@ class RecitationAyahTimestampsBulkUploadForm(forms.Form):
     def clean_json_files(self):
         files = self.files.getlist("json_files")
         if not files:
-            raise forms.ValidationError("Please select at least one file.")
+            raise forms.ValidationError(_("Please select at least one file."))
         invalid = [f.name for f in files if not f.name.lower().endswith(".json")]
         if invalid:
-            raise forms.ValidationError(f"All files must have .json extension. Invalid: {', '.join(invalid[:5])}")
+            raise forms.ValidationError(
+                _("All files must have .json extension. Invalid: {invalid}").format(invalid=", ".join(invalid[:5]))
+            )
         return files

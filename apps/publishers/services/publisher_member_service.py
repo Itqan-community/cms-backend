@@ -15,6 +15,8 @@ PUBLISHER_MEMBER_GROUP_PERMS = [
     PermissionChoice.PORTAL_READ_RECITATION.value,
     PermissionChoice.PORTAL_READ_TAFSIR.value,
     PermissionChoice.PORTAL_READ_TRANSLATION.value,
+    PermissionChoice.PORTAL_READ_MUSHAF.value,
+    PermissionChoice.PORTAL_READ_FONT.value,
     PermissionChoice.PORTAL_READ_PUBLISHER.value,
     PermissionChoice.PORTAL_VIEW_PUBLISHER_MEMBERS.value,
     PermissionChoice.PORTAL_VIEW_ACCESS_REQUESTS.value,

@@ -742,9 +742,9 @@ class ContentIssueReport(BaseModel):
         # Validate description length
         if self.description:
             if len(self.description) < 10:
-                raise ValidationError({"description": "Description must be at least 10 characters long."})
+                raise ValidationError({"description": _("Description must be at least 10 characters long.")})
             if len(self.description) > 2000:
-                raise ValidationError({"description": "Description cannot exceed 2000 characters."})
+                raise ValidationError({"description": _("Description cannot exceed 2000 characters.")})
 
     def save(self, *args, **kwargs) -> None:
         self.full_clean()

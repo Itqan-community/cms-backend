@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Protocol
 from django.core.cache import cache
 from django.db.models import Q
 from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.utils.translation import gettext as _
 from rest_framework import status
 
 from apps.publishers.models import Domain, Publisher, PublisherMember
@@ -17,13 +18,12 @@ class PublisherMiddleware:
         self.get_response = get_response
 
     def __call__(self, request: "Request") -> HttpResponse | JsonResponse:
-
         active = self.is_publisher_active(request)
         if active is None:
             pass
         elif not active:
             return JsonResponse(
-                {"error": "Publisher's page is closed for maintenance, please try again later"},
+                {"error": _("Publisher's page is closed for maintenance, please try again later")},
                 status=status.HTTP_423_LOCKED,
             )
 

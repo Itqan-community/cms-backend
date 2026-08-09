@@ -20,6 +20,8 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 # Auto-discover tasks from all Django apps
 app.autodiscover_tasks()
 
+from django.conf import settings  # noqa: E402
+
 # Periodic tasks (active entries only - commented-out licensing tasks removed)
 app.conf.beat_schedule = {
     "cleanup-stuck-multipart-uploads": {
@@ -33,6 +35,15 @@ app.conf.beat_schedule = {
     "flush-tracking-buffer": {
         "task": "apps.usage_tracking.tasks.flush_tracking_buffer_task",
         "schedule": timedelta(seconds=30),
+    },
+    "sync-audio-usage": {
+        "task": "apps.usage_tracking.tasks.sync_audio_usage_task",
+        "schedule": crontab(minute=5, hour=f"*/{settings.AUDIO_USAGE_SYNC_WINDOW_HOURS}"),
+        "kwargs": {"window_hours": settings.AUDIO_USAGE_SYNC_WINDOW_HOURS},
+    },
+    "notify-publishers-pending-access-requests": {
+        "task": "apps.content.tasks.notify_publishers_pending_access_requests",
+        "schedule": crontab(minute=0, hour=settings.PENDING_ACCESS_REQUEST_NOTIFICATION_HOUR),
     },
 }
 

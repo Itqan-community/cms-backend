@@ -151,7 +151,7 @@ def _extract_entities(objects: list) -> tuple[list, list]:
         if obj_id is None:
             continue
         ids.append(obj_id)
-        names.append(getattr(obj, "name", "") or "")
+        names.append(getattr(obj, "name_ar", "") or "")
     return ids, names
 
 
@@ -166,7 +166,7 @@ def _extract_publishers(objects: list, publisher_from: str) -> tuple[list, list]
         seen.add(pub_id)
         ids.append(pub_id)
         publisher = getattr(obj, publisher_from, None)
-        names.append(getattr(publisher, "name", "") or "" if publisher is not None else "")
+        names.append(getattr(publisher, "name_ar", "") or "" if publisher is not None else "")
     return ids, names
 
 
@@ -234,8 +234,11 @@ def _dispatch(
             "meta": {},
         }
     )
+    redis_client = _get_tracking_redis()
+    if redis_client is None:
+        return  # no Redis available (e.g. dev/LocMemCache); tracking disabled
     try:
-        _get_tracking_redis().rpush(TRACKING_BUFFER_KEY, payload)
+        redis_client.rpush(TRACKING_BUFFER_KEY, payload)
     except Exception:
         logger.exception("usage_tracking: failed to push event to Redis buffer")
 

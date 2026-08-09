@@ -41,12 +41,9 @@ urlpatterns = [
     path("portal/", portal_api.urls),
     # Public developers API mount
     path("", developers_api.urls),
+    path("cms-api/auth/", include("allauth.headless.urls")),
+    path("cms-api/auth/", cms_auth_api.urls),  # just to show documentation
 ]
-if settings.ENABLE_ALLAUTH:
-    urlpatterns += [
-        path("cms-api/auth/", include("allauth.headless.urls")),
-        path("cms-api/auth/", cms_auth_api.urls),  # just to show documentation
-    ]
 
 if settings.SAML_IDP_ENABLED:
     urlpatterns += [

@@ -4,6 +4,7 @@ from typing import Literal
 from django.core.cache import cache
 from django.db.models import Q
 from django.http import Http404, HttpResponse
+from django.utils.translation import gettext_lazy as _
 from ninja import Query, Schema
 
 from apps.content.cache import (
@@ -74,10 +75,10 @@ def list_recitation_tracks(
     if cached_resp is not None and cached_meta is not None:
         track_extra(
             request,
-            entity_type="recitation",
-            accessed_entity_name=cached_meta["name"],
+            entity_type="recitation_track",
+            accessed_entity_name=cached_meta["name_ar"],
             entity_ids=[asset_id],
-            entity_names=[cached_meta["name"]],
+            entity_names=[cached_meta["name_ar"]],
             publisher_ids=[cached_meta["publisher_id"]] if cached_meta["publisher_id"] else [],
             publisher_names=[cached_meta["publisher_name"]] if cached_meta["publisher_id"] else [],
         )
@@ -91,14 +92,14 @@ def list_recitation_tracks(
 
     asset = repo.get_asset_object(asset_id, Q(restricted_for_tenant=False))
     if not asset:
-        raise Http404("No asset matches the given query.")
+        raise Http404(str(_("No asset matches the given query.")))
 
     enforce_asset_access_on_public_api(getattr(request, "user", None), asset)
 
     # Publisher is a property of the served Asset (select_related in get_asset_object).
     publisher_name = asset.publisher.name if asset.publisher_id else None
     asset_meta = {
-        "name": asset.name,
+        "name_ar": asset.name_ar,
         "publisher_id": asset.publisher_id,
         "publisher_name": publisher_name,
     }
@@ -106,9 +107,9 @@ def list_recitation_tracks(
     track_extra(
         request,
         entity_type="recitation",
-        accessed_entity_name=asset.name,
+        accessed_entity_name=asset.name_ar,
         entity_ids=[asset.id],
-        entity_names=[asset.name],
+        entity_names=[asset.name_ar],
         publisher_ids=[asset.publisher_id] if asset.publisher_id else [],
         publisher_names=[publisher_name] if asset.publisher_id else [],
     )

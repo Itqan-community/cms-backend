@@ -1,5 +1,6 @@
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import UserManager as DjangoUserManager
+from django.utils.translation import gettext_lazy as _
 
 
 class UserManager(DjangoUserManager["User"]):
@@ -10,7 +11,7 @@ class UserManager(DjangoUserManager["User"]):
         Create and save a user with the given email and password.
         """
         if not email:
-            msg = "The given email must be set"
+            msg = _("The given email must be set")
             raise ValueError(msg)
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
@@ -28,10 +29,10 @@ class UserManager(DjangoUserManager["User"]):
         extra_fields.setdefault("is_superuser", True)
 
         if extra_fields.get("is_staff") is not True:
-            msg = "Superuser must have is_staff=True."
+            msg = _("Superuser must have is_staff=True.")
             raise ValueError(msg)
         if extra_fields.get("is_superuser") is not True:
-            msg = "Superuser must have is_superuser=True."
+            msg = _("Superuser must have is_superuser=True.")
             raise ValueError(msg)
 
         return self._create_user(email, password, **extra_fields)

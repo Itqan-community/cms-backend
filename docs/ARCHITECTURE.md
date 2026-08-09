@@ -364,6 +364,11 @@ erDiagram
     }
 ```
 
+> **Note:** `RecitationAyahTiming` already has the offsets needed to serve individual
+> ayah audio, but recitations are currently only distributed as full-surah files.
+> Preprocessing surah tracks into servable per-ayah clips is planned — see
+> [ROADMAP.md — §2](./ROADMAP.md#2-ayah-by-ayah-recitation-delivery).
+
 ---
 
 ## Summary
@@ -384,4 +389,7 @@ erDiagram
 
 **See also:**
 - [Authentication Guide](./AUTHENTICATION.md) — Complete OAuth flows and security practices
+- [Roadmap](./ROADMAP.md) — Planned features: app/user self-identification auth,
+  ayah-by-ayah recitation delivery, developer-ready data views, Itqan Dependabot &
+  asset package manager
 - [README.md](./README.md) — Quick start and project overview

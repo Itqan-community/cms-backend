@@ -197,7 +197,7 @@ class SetGroupPermissionsTest(BaseTestCase):
             content_type="application/json",
         )
 
-    def test_set_permissions_where_create_given_should_apply_implied_read(self) -> None:
+    def test_set_permissions_where_create_given_should_apply_implied_read_and_update(self) -> None:
         # Arrange
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_GROUP)
@@ -207,19 +207,16 @@ class SetGroupPermissionsTest(BaseTestCase):
         response = self._set_permissions(group.id, [PermissionChoice.PORTAL_CREATE_RECITER.value])
 
         # Assert
+        # CREATE and UPDATE are mutually implied, so both land alongside READ.
+        expected = {
+            PermissionChoice.PORTAL_CREATE_RECITER.value,
+            PermissionChoice.PORTAL_UPDATE_RECITER.value,
+            PermissionChoice.PORTAL_READ_RECITER.value,
+        }
         self.assertEqual(200, response.status_code, response.content)
-        self.assertEqual(
-            {
-                PermissionChoice.PORTAL_CREATE_RECITER.value,
-                PermissionChoice.PORTAL_READ_RECITER.value,
-            },
-            set(response.json()["permissions"]),
-        )
+        self.assertEqual(expected, set(response.json()["permissions"]))
         stored = {perm.codename for perm in group.permissions.all()}
-        self.assertEqual(
-            {PermissionChoice.PORTAL_CREATE_RECITER.value, PermissionChoice.PORTAL_READ_RECITER.value},
-            stored,
-        )
+        self.assertEqual(expected, stored)
 
     def test_set_permissions_where_called_again_should_replace_not_accumulate(self) -> None:
         # Arrange

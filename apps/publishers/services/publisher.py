@@ -31,7 +31,7 @@ class PublisherService:
         if not name or not name.strip():
             raise ItqanError(
                 error_name="publisher_name_required",
-                message="Publisher name (Arabic or English) is required",
+                message=_("Publisher name (Arabic or English) is required"),
                 status_code=400,
             )
 
@@ -40,7 +40,7 @@ class PublisherService:
         if self.repo.slug_exists(slug):
             raise ItqanError(
                 error_name="publisher_already_exists",
-                message=f"A publisher with slug '{slug}' already exists",
+                message=_("A publisher with slug '{slug}' already exists").format(slug=slug),
                 status_code=400,
             )
 
@@ -71,7 +71,7 @@ class PublisherService:
         except IntegrityError as exc:
             raise ItqanError(
                 error_name="publisher_already_exists",
-                message=f"A publisher with slug '{slug}' already exists",
+                message=_("A publisher with slug '{slug}' already exists").format(slug=slug),
                 status_code=400,
             ) from exc
 
@@ -106,7 +106,7 @@ class PublisherService:
             if not str(new_name).strip():
                 raise ItqanError(
                     error_name="publisher_name_required",
-                    message="Publisher name (Arabic or English) is required",
+                    message=_("Publisher name (Arabic or English) is required"),
                     status_code=400,
                 )
             slug = slugify_name(
@@ -116,7 +116,7 @@ class PublisherService:
             if self.repo.slug_exists(slug, exclude_id=publisher_id):
                 raise ItqanError(
                     error_name="publisher_already_exists",
-                    message=f"A publisher with slug '{slug}' already exists",
+                    message=_("A publisher with slug '{slug}' already exists").format(slug=slug),
                     status_code=400,
                 )
             fields["name"] = str(new_name).strip()

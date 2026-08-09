@@ -1,6 +1,8 @@
 import logging
 import re
 
+from django.utils.translation import gettext_lazy as _
+
 from apps.core.ninja_utils.errors import ItqanError
 
 logger = logging.getLogger(__name__)
@@ -31,8 +33,11 @@ def extract_surah_number_from_mp3_filename(filename: str) -> int:
     """
     m = re.search(r"(\d{3})\.mp3$", filename.strip(), flags=re.IGNORECASE)
     if not m:
-        raise ItqanError("invalid_filename", f"Filename must end with surah number as 3 digits .mp3: {filename}")
+        raise ItqanError(
+            "invalid_filename",
+            _("Filename must end with surah number as 3 digits .mp3: {filename}").format(filename=filename),
+        )
     num = int(m.group(1))
     if not (1 <= num <= 114):
-        raise ItqanError("invalid_surah_number", f"Surah number is out of range 1..114: {num}")
+        raise ItqanError("invalid_surah_number", _("Surah number is out of range 1..114: {num}").format(num=num))
     return num

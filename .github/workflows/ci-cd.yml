@@ -157,6 +157,11 @@ jobs:
                 echo "MIXPANEL_PROJECT_TOKEN=${{ secrets.STAGING_MIXPANEL_PROJECT_TOKEN }}";
                 echo "MIXPANEL_PROJECT_ID=${{ vars.STAGING_MIXPANEL_PROJECT_ID }}";
                 echo "MIXPANEL_INGEST_HOST=${{ vars.STAGING_MIXPANEL_INGEST_HOST }}";
+                echo "CF_ZONE_ID=${{ secrets.STAGING_CF_ZONE_ID }}";
+                echo "CF_API_TOKEN=${{ secrets.STAGING_CF_API_TOKEN }}";
+                echo "CF_R2_CUSTOM_DOMAIN=${{ vars.STAGING_CF_R2_CUSTOM_DOMAIN }}";
+                echo "ENABLE_AUDIO_USAGE_SYNC=${{ vars.STAGING_ENABLE_AUDIO_USAGE_SYNC }}";
+                echo "AUDIO_USAGE_SYNC_WINDOW_HOURS=${{ vars.STAGING_AUDIO_USAGE_SYNC_WINDOW_HOURS }}";
                 echo "EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend";
                 echo "EMAIL_HOST=${{ secrets.EMAIL_HOST }}";
                 echo "EMAIL_PORT=${{ secrets.EMAIL_PORT }}";
@@ -221,6 +226,11 @@ jobs:
                 echo "MIXPANEL_PROJECT_TOKEN=${{ secrets.PROD_MIXPANEL_PROJECT_TOKEN }}";
                 echo "MIXPANEL_PROJECT_ID=${{ vars.PROD_MIXPANEL_PROJECT_ID }}";
                 echo "MIXPANEL_INGEST_HOST=${{ vars.PROD_MIXPANEL_INGEST_HOST }}";
+                echo "CF_ZONE_ID=${{ secrets.PROD_CF_ZONE_ID }}";
+                echo "CF_API_TOKEN=${{ secrets.PROD_CF_API_TOKEN }}";
+                echo "CF_R2_CUSTOM_DOMAIN=${{ vars.PROD_CF_R2_CUSTOM_DOMAIN }}";
+                echo "ENABLE_AUDIO_USAGE_SYNC=${{ vars.PROD_ENABLE_AUDIO_USAGE_SYNC }}";
+                echo "AUDIO_USAGE_SYNC_WINDOW_HOURS=${{ vars.PROD_AUDIO_USAGE_SYNC_WINDOW_HOURS }}";
                 echo "ALLAUTH_JWT_PRIVATE_KEY=${{ secrets.PRODUCTION_ALLAUTH_JWT_PRIVATE_KEY }}";
                 echo "FRONTEND_BASE_URL=${{ secrets.PRODUCTION_FRONTEND_BASE_URL }}";
                 echo "GOOGLE_CLIENT_ID=${{ secrets.PROD_GOOGLE_CLIENT_ID }}";

@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
 
 from apps.core.ninja_utils.auth import internal_auth
@@ -16,15 +15,14 @@ cms_api = create_ninja_api(
     auth=internal_auth,
     docs_decorator=staff_member_required,
 )
-if settings.ENABLE_ALLAUTH:
-    cms_api.openapi_extra = {
-        "info": {
-            "description": "# Authentication\n\n"
-            "## Authentication docs\n\n"
-            "Authentication supports many features, and it has its own extensive documentation.\n\n"
-            "You can find authentication documentation [Here](../auth/docs)",
-        }
+cms_api.openapi_extra = {
+    "info": {
+        "description": "# Authentication\n\n"
+        "## Authentication docs\n\n"
+        "Authentication supports many features, and it has its own extensive documentation.\n\n"
+        "You can find authentication documentation [Here](../auth/docs)",
     }
+}
 
 
 # Register standard exception handlers
