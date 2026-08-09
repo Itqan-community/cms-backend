@@ -1,3 +1,9 @@
+## v0.11.1 (2026-08-09)
+
+### Fix
+
+- update Redis connection logic to use connection pool for better configurability
+
 ## v0.11.0 (2026-08-09)
 
 ### Feat
