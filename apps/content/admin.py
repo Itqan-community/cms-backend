@@ -9,6 +9,7 @@ from django.shortcuts import redirect, render
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils.html import format_html
+from django.utils.translation import gettext_lazy as _
 
 from apps.content.repositories.access_request import AssetAccessRequestRepository
 from apps.content.services.admin.asset_recitation_audio_tracks_direct_upload_service import (
@@ -315,7 +316,7 @@ class AssetAdmin(admin.ModelAdmin):
     # -------- Direct-to-R2 Upload Views (Admin-only) --------
     def upload_page(self, request: HttpRequest, asset_id: int) -> HttpResponse:
         if not request.user.is_staff:
-            raise PermissionDenied("Staff only")
+            raise PermissionDenied(_("Staff only"))
         form = DirectUploadRecitationsForm()
         ctx = {
             **self.admin_site.each_context(request),
@@ -331,9 +332,9 @@ class AssetAdmin(admin.ModelAdmin):
 
     def uploads_start_view(self, request: HttpRequest) -> JsonResponse:
         if not request.user.is_staff:
-            raise PermissionDenied("Staff only")
+            raise PermissionDenied(_("Staff only"))
         if request.method != "POST":
-            return JsonResponse({"error_name": "method_not_allowed", "message": "POST required"}, status=405)
+            return JsonResponse({"error_name": "method_not_allowed", "message": str(_("POST required"))}, status=405)
         try:
             if request.content_type == "application/json":
                 body = json.loads(request.body or "{}")
@@ -358,15 +359,15 @@ class AssetAdmin(admin.ModelAdmin):
         except Exception:
             logger.exception(f"uploads_start_view failed (asset_id={locals().get('asset_id')})")
             return JsonResponse(
-                {"error_name": "server_error", "message": "An unexpected error occurred"},
+                {"error_name": "server_error", "message": str(_("An unexpected error occurred"))},
                 status=500,
             )
 
     def uploads_sign_part_view(self, request: HttpRequest) -> JsonResponse:
         if not request.user.is_staff:
-            raise PermissionDenied("Staff only")
+            raise PermissionDenied(_("Staff only"))
         if request.method != "POST":
-            return JsonResponse({"error_name": "method_not_allowed", "message": "POST required"}, status=405)
+            return JsonResponse({"error_name": "method_not_allowed", "message": str(_("POST required"))}, status=405)
         try:
             body = json.loads(request.body or "{}")
             service = AssetRecitationAudioTracksDirectUploadService()
@@ -382,21 +383,23 @@ class AssetAdmin(admin.ModelAdmin):
                 {"error_name": e.error_name, "message": e.message, "extra": e.extra}, status=e.status_code
             )
         except Exception:
-            logger.exception(f"uploads_sign_part_view failed (\
+            logger.exception(
+                f"uploads_sign_part_view failed (\
                     key={(locals().get('body') or {}).get('key')},\
                     upload_id={(locals().get('body') or {}).get('uploadId')},\
                     part_number={(locals().get('body') or {}).get('partNumber')}\
-                )")
+                )"
+            )
             return JsonResponse(
-                {"error_name": "server_error", "message": "An unexpected error occurred"},
+                {"error_name": "server_error", "message": str(_("An unexpected error occurred"))},
                 status=500,
             )
 
     def uploads_finish_view(self, request: HttpRequest) -> JsonResponse:
         if not request.user.is_staff:
-            raise PermissionDenied("Staff only")
+            raise PermissionDenied(_("Staff only"))
         if request.method != "POST":
-            return JsonResponse({"error_name": "method_not_allowed", "message": "POST required"}, status=405)
+            return JsonResponse({"error_name": "method_not_allowed", "message": str(_("POST required"))}, status=405)
         try:
             body = json.loads(request.body or "{}")
             service = AssetRecitationAudioTracksDirectUploadService()
@@ -415,20 +418,22 @@ class AssetAdmin(admin.ModelAdmin):
                 {"error_name": e.error_name, "message": e.message, "extra": e.extra}, status=e.status_code
             )
         except Exception:
-            logger.exception(f"uploads_finish_view failed (\
+            logger.exception(
+                f"uploads_finish_view failed (\
                     key={(locals().get('body') or {}).get('key')},\
                     upload_id={(locals().get('body') or {}).get('uploadId')}\
-                )")
+                )"
+            )
             return JsonResponse(
-                {"error_name": "server_error", "message": "An unexpected error occurred"},
+                {"error_name": "server_error", "message": str(_("An unexpected error occurred"))},
                 status=500,
             )
 
     def uploads_abort_view(self, request: HttpRequest) -> JsonResponse:
         if not request.user.is_staff:
-            raise PermissionDenied("Staff only")
+            raise PermissionDenied(_("Staff only"))
         if request.method != "POST":
-            return JsonResponse({"error_name": "method_not_allowed", "message": "POST required"}, status=405)
+            return JsonResponse({"error_name": "method_not_allowed", "message": str(_("POST required"))}, status=405)
         try:
             body = json.loads(request.body or "{}")
             service = AssetRecitationAudioTracksDirectUploadService()
@@ -439,20 +444,22 @@ class AssetAdmin(admin.ModelAdmin):
                 {"error_name": e.error_name, "message": e.message, "extra": e.extra}, status=e.status_code
             )
         except Exception:
-            logger.exception(f"uploads_abort_view failed (\
+            logger.exception(
+                f"uploads_abort_view failed (\
                     key={(locals().get('body') or {}).get('key')},\
                     upload_id={(locals().get('body') or {}).get('uploadId')}\
-                )")
+                )"
+            )
             return JsonResponse(
-                {"error_name": "server_error", "message": "An unexpected error occurred"},
+                {"error_name": "server_error", "message": str(_("An unexpected error occurred"))},
                 status=500,
             )
 
     def validate_recitation_filenames_view(self, request: HttpRequest) -> JsonResponse:
         if not request.user.is_staff:
-            raise PermissionDenied("Staff only")
+            raise PermissionDenied(_("Staff only"))
         if request.method != "POST":
-            return JsonResponse({"error_name": "method_not_allowed", "message": "POST required"}, status=405)
+            return JsonResponse({"error_name": "method_not_allowed", "message": str(_("POST required"))}, status=405)
 
         try:
             from apps.mixins.recitations_helpers import extract_surah_number_from_mp3_filename

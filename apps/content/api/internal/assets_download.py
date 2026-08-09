@@ -50,15 +50,15 @@ def download_asset(request: Request, id: int):
     # Get latest asset version
     asset_latest_version = asset.get_latest_version()
     if not asset_latest_version:
-        raise Http404("No versions found for this asset")
+        raise Http404(str(_("No versions found for this asset")))
 
     if not asset_latest_version.file_url:
-        raise Http404("No file available for this asset")
+        raise Http404(str(_("No file available for this asset")))
 
     if not asset.is_open_access:
         download_url = AssetAccess.objects.get(user=request.user, asset=asset).get_download_url()
         if not download_url:
-            raise Http404("Download URL not available")
+            raise Http404(str(_("Download URL not available")))
 
     # Generate pre-signed download url
     key = f"media/{asset_latest_version.file_url.name}"  # object key within the bucket

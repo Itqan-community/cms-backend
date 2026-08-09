@@ -81,7 +81,7 @@ def delete_tracks(request: Request, data: DeleteTracksIn):
     if not data.track_ids or len(tracks) != len(data.track_ids):
         raise ItqanError(
             error_name="track_not_found",
-            message="Some track IDs are invalid or do not exist.",
+            message=_("Some track IDs are invalid or do not exist."),
             status_code=400,
         )
 

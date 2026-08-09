@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from typing import Any
 
+from django.utils.translation import gettext_lazy as _
 from ninja import Router
 from ninja.constants import NOT_SET, NOT_SET_TYPE
 from ninja.throttling import BaseThrottle
@@ -27,9 +28,9 @@ class ItqanRouter(Router):
         **kwargs: Any,
     ) -> Callable[[TCallable], TCallable]:
         if not path.endswith("/"):
-            raise ValueError("Path must end with /")
+            raise ValueError(_("Path must end with /"))
         if path.startswith("/"):
-            raise ValueError("Path must not start with /")
+            raise ValueError(_("Path must not start with /"))
         return super().api_operation(
             methods=methods,
             path=path,

@@ -106,7 +106,9 @@ def create_translation_version(
     if data.asset_id != asset.id:
         raise ItqanError(
             error_name="asset_id_mismatch",
-            message=f"Provided asset_id {data.asset_id} does not match translation asset id {asset.id}",
+            message=_("Provided asset_id {asset_id} does not match translation asset id {expected_id}.").format(
+                asset_id=data.asset_id, expected_id=asset.id
+            ),
             status_code=400,
         )
 
@@ -150,7 +152,9 @@ def update_translation_version_put(
     if data.asset_id != asset.id:
         raise ItqanError(
             error_name="asset_id_mismatch",
-            message=f"Provided asset_id {data.asset_id} does not match translation asset id {asset.id}",
+            message=_("Provided asset_id {asset_id} does not match translation asset id {expected_id}.").format(
+                asset_id=data.asset_id, expected_id=asset.id
+            ),
             status_code=400,
         )
 
@@ -194,7 +198,9 @@ def update_translation_version_patch(
     if data.asset_id is not None and data.asset_id != asset.id:
         raise ItqanError(
             error_name="asset_id_mismatch",
-            message=f"Provided asset_id {data.asset_id} does not match translation asset id {asset.id}",
+            message=_("Provided asset_id {asset_id} does not match translation asset id {expected_id}.").format(
+                asset_id=data.asset_id, expected_id=asset.id
+            ),
             status_code=400,
         )
 

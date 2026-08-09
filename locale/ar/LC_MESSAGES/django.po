@@ -19,8 +19,29 @@ msgstr ""
 "Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 "
 "&& n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5;\n"
 
+msgid "Staff only"
+msgstr "للموظفين فقط"
+
+msgid "POST required"
+msgstr "طلب POST مطلوب"
+
+msgid "An unexpected error occurred"
+msgstr "حدث خطأ غير متوقع"
+
 msgid "You do not have access to this asset"
 msgstr "ليس لديك صلاحية الوصول إلى هذا المورد"
+
+msgid "No versions found for this asset"
+msgstr "لا توجد إصدارات لهذا الأصل"
+
+msgid "No file available for this asset"
+msgstr "لا يوجد ملف متاح لهذا الأصل"
+
+msgid "Download URL not available"
+msgstr "رابط التحميل غير متاح"
+
+msgid "No asset matches the given query."
+msgstr "لا يوجد أصل مطابق للاستعلام المُقدَّم."
 
 #, python-brace-format
 msgid "Reciter with slug {slug} not found."
@@ -31,12 +52,26 @@ msgid "Font with slug {slug} not found."
 msgstr "لم يتم العثور على الخط بالمعرّف {slug}."
 
 #, python-brace-format
+msgid "Provided asset_id {asset_id} does not match font asset id {expected_id}."
+msgstr "المعرّف asset_id {asset_id} المُقدَّم لا يطابق معرّف أصل الخط {expected_id}."
+
+msgid "Issue report not found."
+msgstr "بلاغ المشكلة غير موجود."
+
+#, python-brace-format
 msgid "Mushaf with slug {slug} not found."
 msgstr "لم يتم العثور على المصحف بالمعرّف {slug}."
 
 #, python-brace-format
+msgid "Provided asset_id {asset_id} does not match mushaf asset id {expected_id}."
+msgstr "المعرّف asset_id {asset_id} المُقدَّم لا يطابق معرّف أصل المصحف {expected_id}."
+
+#, python-brace-format
 msgid "Asset with slug {slug} not found."
 msgstr "المورد ذو المعرف {slug} غير موجود."
+
+msgid "Some track IDs are invalid or do not exist."
+msgstr "بعض معرّفات المقاطع غير صالحة أو غير موجودة."
 
 #, python-brace-format
 msgid "Recitation with slug {slug} not found."
@@ -45,6 +80,10 @@ msgstr "لم يتم العثور على التلاوة بالمعرّف {slug}."
 #, python-brace-format
 msgid "Tafsir with slug {slug} not found."
 msgstr "لم يتم العثور على التفسير بالمعرّف {slug}."
+
+#, python-brace-format
+msgid "Provided asset_id {asset_id} does not match tafsir asset id {expected_id}."
+msgstr "المعرّف asset_id {asset_id} المُقدَّم لا يطابق معرّف أصل التفسير {expected_id}."
 
 #, python-format
 msgid "Asset with id %s does not exist."
@@ -56,6 +95,17 @@ msgstr "تعذر معالجة ملف توقيت واحد أو أكثر."
 #, python-brace-format
 msgid "Translation with slug {slug} not found."
 msgstr "لم يتم العثور على الترجمة بالمعرّف {slug}."
+
+#, python-brace-format
+msgid "Provided asset_id {asset_id} does not match translation asset id {expected_id}."
+msgstr "المعرّف asset_id {asset_id} المُقدَّم لا يطابق معرّف أصل الترجمة {expected_id}."
+
+msgid "Please select at least one file."
+msgstr "يرجى اختيار ملف واحد على الأقل."
+
+#, python-brace-format
+msgid "All files must have .json extension. Invalid: {invalid}"
+msgstr "يجب أن تكون جميع الملفات بامتداد ‎.json. غير صالحة: {invalid}"
 
 msgid "Creative Commons Zero"
 msgstr "المشاع الإبداعي - بدون حقوق (CC0)"
@@ -162,9 +212,34 @@ msgstr "تم الحل"
 msgid "Dismissed"
 msgstr "تم التجاهل"
 
+msgid "Description must be at least 10 characters long."
+msgstr "يجب أن يكون الوصف 10 أحرف على الأقل."
+
+msgid "Description cannot exceed 2000 characters."
+msgstr "لا يمكن أن يتجاوز الوصف 2000 حرف."
+
 #, python-brace-format
 msgid "You have {count} pending access request(s)"
 msgstr "لديك {count} طلب(ات) وصول معلقة"
+
+#, python-brace-format
+msgid "Failed to initiate upload (R2 error: {error_code})."
+msgstr "فشل بدء الرفع (خطأ R2: {error_code})."
+
+#, python-brace-format
+msgid "A track for asset {asset_id} surah {surah_number} already exists."
+msgstr "يوجد مقطع بالفعل للأصل {asset_id} والسورة {surah_number}."
+
+msgid "Missing surah_id in uploaded JSON"
+msgstr "الحقل surah_id مفقود في ملف JSON المرفوع"
+
+#, python-brace-format
+msgid "Invalid timing for ayah {ayah_number}: end < start"
+msgstr "توقيت غير صالح للآية {ayah_number}: النهاية قبل البداية"
+
+#, python-brace-format
+msgid "Asset {asset_id} not found"
+msgstr "الأصل {asset_id} غير موجود"
 
 msgid "Not found."
 msgstr "غير موجود."
@@ -204,12 +279,6 @@ msgstr "لا يمكن حذف الخط لأن هناك بيانات أخرى مر
 #, python-brace-format
 msgid "Version with id {id} not found for font {slug}."
 msgstr "الإصدار ذو المعرف {id} غير موجود للخط {slug}."
-
-msgid "Description must be at least 10 characters long."
-msgstr "يجب أن يكون الوصف 10 أحرف على الأقل."
-
-msgid "Description cannot exceed 2000 characters."
-msgstr "لا يمكن أن يتجاوز الوصف 2000 حرف."
 
 #, python-brace-format
 msgid "Asset with ID {asset_id} not found."
@@ -288,6 +357,9 @@ msgstr "لا يمكن حذف الترجمة لأن هناك بيانات أخر�
 msgid "Version with id {id} not found for translation {slug}."
 msgstr "الإصدار ذو المعرف {id} غير موجود للترجمة {slug}."
 
+msgid "API key has expired."
+msgstr "انتهت صلاحية مفتاح API."
+
 msgid "Invalid Input"
 msgstr "إدخال غير صالح"
 
@@ -299,6 +371,12 @@ msgstr "تم تقييد الطلب. عدد كبير جدًا من الطلبات
 
 msgid "Something went wrong - Internal Server Error"
 msgstr "حدث خطأ ما - خطأ داخلي في الخادم"
+
+msgid "Path must end with /"
+msgstr "يجب أن ينتهي المسار بـ /"
+
+msgid "Path must not start with /"
+msgstr "يجب ألا يبدأ المسار بـ /"
 
 msgid "Access Portal"
 msgstr "الوصول للوحة التحكم"
@@ -423,6 +501,18 @@ msgstr "البوابة - قبول أو رفض طلبات الوصول"
 msgid "Portal - Manage Access Requests Settings"
 msgstr "البوابة - إدارة إعدادات طلبات الوصول"
 
+#, python-brace-format
+msgid "Permissions are not synced to the database: {missing}. Run `manage.py migrate`."
+msgstr "الصلاحيات غير متزامنة مع قاعدة البيانات: {missing}. نفّذ الأمر `manage.py migrate`."
+
+#, python-brace-format
+msgid "Filename must end with surah number as 3 digits .mp3: {filename}"
+msgstr "يجب أن ينتهي اسم الملف برقم السورة من 3 أرقام .mp3: {filename}"
+
+#, python-brace-format
+msgid "Surah number is out of range 1..114: {num}"
+msgstr "رقم السورة خارج النطاق 1..114: {num}"
+
 msgid "You cannot change your own membership."
 msgstr "لا يمكنك تغيير عضويتك الخاصة."
 
@@ -438,6 +528,9 @@ msgstr "لا توجد دعوة معلقة لإعادة إرسالها."
 #, python-brace-format
 msgid "Publisher with id {id} not found"
 msgstr "لم يتم العثور على الناشر بالمعرّف {id}."
+
+msgid "Publisher's page is closed for maintenance, please try again later"
+msgstr "صفحة الناشر مغلقة للصيانة، يرجى المحاولة لاحقًا"
 
 msgid "Admin"
 msgstr "مدير"
@@ -463,6 +556,13 @@ msgstr "ليس لديك صلاحية الوصول لهذا الناشر"
 msgid "You do not have access to this member."
 msgstr "ليس لديك صلاحية الوصول إلى هذا العضو."
 
+msgid "Publisher name (Arabic or English) is required"
+msgstr "اسم الناشر (بالعربية أو الإنجليزية) مطلوب"
+
+#, python-brace-format
+msgid "A publisher with slug '{slug}' already exists"
+msgstr "يوجد ناشر بالمعرّف '{slug}' بالفعل"
+
 msgid "Cannot delete Publisher because they are referenced through other objects"
 msgstr "لا يمكن حذف الناشر لأن هناك بيانات أخري مرتبطة به"
 
@@ -483,6 +583,10 @@ msgstr "السورة غير موجودة."
 
 msgid "Ayah does not exist."
 msgstr "الآية غير موجودة."
+
+#, python-brace-format
+msgid "window_hours must divide 24 evenly, got {window_hours}"
+msgstr "يجب أن يقسّم window_hours الرقم 24 دون باقٍ، القيمة المُعطاة {window_hours}"
 
 msgid "Itqan Community"
 msgstr "مجتمع اتقان"
@@ -508,6 +612,15 @@ msgstr "الصلاحيات"
 #, python-brace-format
 msgid "Group with id {id} not found."
 msgstr "لم يتم العثور على المجموعة بالمعرّف {id}."
+
+msgid "The given email must be set"
+msgstr "يجب تحديد البريد الإلكتروني"
+
+msgid "Superuser must have is_staff=True."
+msgstr "يجب أن يكون للمستخدم المتميز is_staff=True."
+
+msgid "Superuser must have is_superuser=True."
+msgstr "يجب أن يكون للمستخدم المتميز is_superuser=True."
 
 msgid "Name of User"
 msgstr "اسم المستخدم"

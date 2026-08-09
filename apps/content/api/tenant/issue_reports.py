@@ -2,6 +2,7 @@ import logging
 from typing import Annotated, Literal
 
 from django.http import Http404
+from django.utils.translation import gettext_lazy as _
 from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime
@@ -75,7 +76,7 @@ def list_issue_reports(request: Request, filters: IssueReportFilter = Query()):
 def get_issue_report(request: Request, report_id: int):
     report = _get_service().get_issue_report(report_id)
     if not report:
-        raise Http404("Issue report not found.")
+        raise Http404(str(_("Issue report not found.")))
     return report
 
 

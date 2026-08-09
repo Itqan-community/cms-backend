@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from django import forms
+from django.utils.translation import gettext_lazy as _
 
 
 class MultipleFileInput(forms.ClearableFileInput):
@@ -30,5 +31,5 @@ class DirectUploadRecitationsForm(forms.Form):
     def clean_audio_files(self):
         files = self.files.getlist("audio_files")
         if not files:
-            raise forms.ValidationError("Please select at least one file.")
+            raise forms.ValidationError(_("Please select at least one file."))
         return files

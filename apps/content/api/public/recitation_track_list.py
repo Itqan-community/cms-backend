@@ -4,6 +4,7 @@ from typing import Literal
 from django.core.cache import cache
 from django.db.models import Q
 from django.http import Http404, HttpResponse
+from django.utils.translation import gettext_lazy as _
 from ninja import Query, Schema
 
 from apps.content.cache import (
@@ -91,7 +92,7 @@ def list_recitation_tracks(
 
     asset = repo.get_asset_object(asset_id, Q(restricted_for_tenant=False))
     if not asset:
-        raise Http404("No asset matches the given query.")
+        raise Http404(str(_("No asset matches the given query.")))
 
     enforce_asset_access_on_public_api(getattr(request, "user", None), asset)
 

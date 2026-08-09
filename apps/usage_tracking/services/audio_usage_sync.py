@@ -16,6 +16,7 @@ from typing import Any
 import uuid
 
 from django.conf import settings
+from django.utils.translation import gettext_lazy as _
 
 from apps.usage_tracking.repositories.recitations_usage import RecitationInfo, RecitationUsageRepository
 from apps.usage_tracking.services.cf_analytics_client import CFUsageRow, CloudflareAnalyticsClient
@@ -88,7 +89,7 @@ def compute_time_window(now: datetime, window_hours: int = 6) -> SyncWindow:
     would never produce a `20:00-01:00` window, silently dropping hours).
     """
     if window_hours <= 0 or 24 % window_hours:
-        raise ValueError(f"window_hours must divide 24 evenly, got {window_hours}")
+        raise ValueError(_("window_hours must divide 24 evenly, got {window_hours}").format(window_hours=window_hours))
 
     now_utc = now.astimezone(UTC)
     aligned_hour = (now_utc.hour // window_hours) * window_hours

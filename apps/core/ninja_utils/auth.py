@@ -1,6 +1,7 @@
 from allauth.headless.contrib.ninja.security import XSessionTokenAuth
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
+from django.utils.translation import gettext_lazy as _
 from ninja.errors import AuthenticationError
 from ninja_keys.auth import ApiKeyAuth as BaseApiKeyAuth
 from oauth2_provider.contrib.rest_framework import OAuth2Authentication
@@ -46,7 +47,7 @@ class ApiKeyAuth(BaseApiKeyAuth):
         except model.DoesNotExist:
             return None
         if api_key.has_expired:
-            raise AuthenticationError(message="API key has expired.")
+            raise AuthenticationError(message=str(_("API key has expired.")))
 
         request.user = api_key.user
         return api_key.user
