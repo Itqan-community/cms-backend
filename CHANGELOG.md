@@ -1,3 +1,39 @@
+## v0.11.0 (2026-08-09)
+
+### Feat
+
+- implement translation support for validation messages and exceptions across backend services
+- redefine permission hierarchy for CRUD symmetry and implement expanded tests
+- improve group management in admin with validation, permission hierarchy application, and related tests
+- **usage**: update event name
+- **usage**: add env vars (#400)
+- add support for file upload with versioning in asset creation APIs (#398)
+- **reciters**: make reciters list public and add detail endpoint
+- **assets**: add reciter field and reciter_id filter to public assets API
+- enhance API description, authentication guidance, and upgrade dependencies
+- add reciter slug support in recitations API and update tests accordingly
+- **quran**: add Quran module with sura/ayah data models, APIs, and import command
+
+### Fix
+
+- refine logging format and update static markup nosec flag
+- correct default type for `AUDIO_USAGE_SYNC_WINDOW_HOURS` config parameter
+- correct default type for `AUDIO_USAGE_SYNC_WINDOW_HOURS` config parameter
+- health-check staging pushes against staging API, not production (#397)
+- cache asset name_ar so recitation detail cache-hit path does not 500
+- use Arabic name fields for recitation tracking and publisher metadata and deffrentiate between recitation and recitation_track
+- **migrations**: update dependency for asset migration file to correct sequence
+- bug when creating new users from admin page
+- **emails**: localize site name in account emails and update Arabic translations
+- **emails**: update hosted logo URL and remove unused STATICFILES_DIRS
+- **emails**: use hosted logo image and fix RTL direction in account emails
+- **emails**: use hosted logo image and fix RTL direction in account emails
+- **emails**: render allauth account emails as branded HTML
+
+### Refactor
+
+- **auth**: remove legacy authentication endpoints and associated tests covered by ENABLE_ALLAUTH as it fully rolled out (#392)
+
 ## v0.10.3 (2026-08-02)
 
 ### Fix
