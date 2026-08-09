@@ -487,17 +487,23 @@ msgstr "الآية غير موجودة."
 msgid "Itqan Community"
 msgstr "مجتمع اتقان"
 
+msgid "Permissions"
+msgstr "الصلاحيات"
+
+msgid "User Permissions"
+msgstr "صلاحيات المستخدم"
+
 msgid "This email has already been taken."
 msgstr "هذا البريد الإلكتروني مستخدم بالفعل."
 
 msgid "Personal info"
 msgstr "المعلومات الشخصية"
 
-msgid "Permissions"
-msgstr "الصلاحيات"
-
 msgid "Important dates"
 msgstr "تواريخ مهمة"
+
+msgid "permissions"
+msgstr "الصلاحيات"
 
 #, python-brace-format
 msgid "Group with id {id} not found."
