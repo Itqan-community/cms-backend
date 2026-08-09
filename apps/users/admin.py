@@ -114,7 +114,7 @@ class UserAdmin(auth_admin.UserAdmin):
 # Deliberately NOT wrapped in gettext: both languages must appear at once, whereas gettext
 # would resolve to whichever one is active. The Arabic half carries dir="rtl" so it renders
 # correctly even while the admin is in English.
-PERMISSION_HIERARCHY_HELP_TEXT = mark_safe(  # noqa: S308 - static author-controlled markup
+PERMISSION_HIERARCHY_HELP_TEXT = mark_safe(  # nosec B308 - static, hardcoded markup; no request/user input to sanitize.
     "<span>"
     "Permissions are expanded automatically when you save, so you only need to pick the "
     "strongest one for each resource. Within a resource: <strong>Create</strong> and "

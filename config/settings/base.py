@@ -579,7 +579,6 @@ PERMISSIONS_SETTINGS = {
     "PERMISSIONS": PermissionChoice.choices,
     "MONKEYPATCH_USER": True,
     "OVERRIDE_GROUP_ADMIN": False,
-
 }
 
 NINJA_KEYS_API_KEY_MODEL = "users.APIKey"
