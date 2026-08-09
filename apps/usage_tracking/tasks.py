@@ -95,12 +95,18 @@ def _build_tracking_redis() -> redis.Redis | None:
         # non-django-redis backend (LocMemCache in dev). Either way, no Redis to reuse.
         return None
 
-    kwargs = dict(cache_conn.connection_pool.connection_kwargs)
+    cache_pool = cache_conn.connection_pool
+    kwargs = dict(cache_pool.connection_kwargs)
     kwargs["db"] = _TRACKING_REDIS_DB
     kwargs.setdefault("socket_connect_timeout", 1)
     kwargs.setdefault("socket_timeout", 1)
     kwargs["decode_responses"] = True
-    return redis.Redis(**kwargs)
+
+    # These are *connection* kwargs (django-redis injects `parser_class`, among others),
+    # so they go to a pool rather than to `redis.Redis(**kwargs)`, whose signature does
+    # not accept them. Reuse the cache's connection class to keep TLS / unix-socket setups.
+    pool = redis.ConnectionPool(connection_class=cache_pool.connection_class, **kwargs)
+    return redis.Redis(connection_pool=pool)
 
 
 def _get_tracking_redis() -> redis.Redis | None:
