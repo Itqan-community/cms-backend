@@ -78,48 +78,132 @@ class PermissionChoice(TextChoices):
 
 # Permission hierarchy: maps each permission to the set of permissions it directly implies.
 #
-# Within a resource group, CREATE, UPDATE and DELETE each independently imply READ: you must
-# be able to read a resource to act on it at all, but the write actions do not depend on each
-# other (a user may UPDATE without being able to CREATE, or DELETE without being able to
-# UPDATE). The shape is a star pointing at READ, not a seniority chain.
+# Within a resource group, every write action implies READ: you must be able to read a resource
+# to act on it at all. On top of that, CREATE and UPDATE imply *each other* — they are treated
+# as a single "may author content" capability, so granting either grants both and revoking
+# either revokes both. There is deliberately no way to hold CREATE without UPDATE. DELETE sits
+# above the pair and implies both, so granting DELETE yields the full CRUD set.
+#
+# The CREATE <-> UPDATE cycle is intentional; `PermissionHierarchyService._closure` walks the
+# graph with a visited-set, so cycles terminate normally.
 #
 # Only direct implications are listed here; the transitive closure (e.g. UPLOAD_TIMING -> READ)
 # is computed by the service layer, so this map stays easy to read and edit.
 PERMISSION_IMPLICATIONS: dict[PermissionChoice, frozenset[PermissionChoice]] = {
     # Reciters
-    PermissionChoice.PORTAL_CREATE_RECITER: frozenset({PermissionChoice.PORTAL_READ_RECITER}),
-    PermissionChoice.PORTAL_UPDATE_RECITER: frozenset({PermissionChoice.PORTAL_READ_RECITER}),
-    PermissionChoice.PORTAL_DELETE_RECITER: frozenset({PermissionChoice.PORTAL_READ_RECITER}),
+    PermissionChoice.PORTAL_CREATE_RECITER: frozenset(
+        {PermissionChoice.PORTAL_READ_RECITER, PermissionChoice.PORTAL_UPDATE_RECITER}
+    ),
+    PermissionChoice.PORTAL_UPDATE_RECITER: frozenset(
+        {PermissionChoice.PORTAL_READ_RECITER, PermissionChoice.PORTAL_CREATE_RECITER}
+    ),
+    PermissionChoice.PORTAL_DELETE_RECITER: frozenset(
+        {
+            PermissionChoice.PORTAL_READ_RECITER,
+            PermissionChoice.PORTAL_UPDATE_RECITER,
+            PermissionChoice.PORTAL_CREATE_RECITER,
+        }
+    ),
     # Recitations
-    PermissionChoice.PORTAL_CREATE_RECITATION: frozenset({PermissionChoice.PORTAL_READ_RECITATION}),
-    PermissionChoice.PORTAL_UPDATE_RECITATION: frozenset({PermissionChoice.PORTAL_READ_RECITATION}),
-    PermissionChoice.PORTAL_DELETE_RECITATION: frozenset({PermissionChoice.PORTAL_READ_RECITATION}),
+    PermissionChoice.PORTAL_CREATE_RECITATION: frozenset(
+        {PermissionChoice.PORTAL_READ_RECITATION, PermissionChoice.PORTAL_UPDATE_RECITATION}
+    ),
+    PermissionChoice.PORTAL_UPDATE_RECITATION: frozenset(
+        {PermissionChoice.PORTAL_READ_RECITATION, PermissionChoice.PORTAL_CREATE_RECITATION}
+    ),
+    PermissionChoice.PORTAL_DELETE_RECITATION: frozenset(
+        {
+            PermissionChoice.PORTAL_READ_RECITATION,
+            PermissionChoice.PORTAL_UPDATE_RECITATION,
+            PermissionChoice.PORTAL_CREATE_RECITATION,
+        }
+    ),
     # Uploading timings mutates an existing recitation, so it requires being able to update it.
     PermissionChoice.PORTAL_UPLOAD_TIMING: frozenset({PermissionChoice.PORTAL_UPDATE_RECITATION}),
     # Tafsirs
-    PermissionChoice.PORTAL_CREATE_TAFSIR: frozenset({PermissionChoice.PORTAL_READ_TAFSIR}),
-    PermissionChoice.PORTAL_UPDATE_TAFSIR: frozenset({PermissionChoice.PORTAL_READ_TAFSIR}),
-    PermissionChoice.PORTAL_DELETE_TAFSIR: frozenset({PermissionChoice.PORTAL_READ_TAFSIR}),
+    PermissionChoice.PORTAL_CREATE_TAFSIR: frozenset(
+        {PermissionChoice.PORTAL_READ_TAFSIR, PermissionChoice.PORTAL_UPDATE_TAFSIR}
+    ),
+    PermissionChoice.PORTAL_UPDATE_TAFSIR: frozenset(
+        {PermissionChoice.PORTAL_READ_TAFSIR, PermissionChoice.PORTAL_CREATE_TAFSIR}
+    ),
+    PermissionChoice.PORTAL_DELETE_TAFSIR: frozenset(
+        {
+            PermissionChoice.PORTAL_READ_TAFSIR,
+            PermissionChoice.PORTAL_UPDATE_TAFSIR,
+            PermissionChoice.PORTAL_CREATE_TAFSIR,
+        }
+    ),
     # Translations
-    PermissionChoice.PORTAL_CREATE_TRANSLATION: frozenset({PermissionChoice.PORTAL_READ_TRANSLATION}),
-    PermissionChoice.PORTAL_UPDATE_TRANSLATION: frozenset({PermissionChoice.PORTAL_READ_TRANSLATION}),
-    PermissionChoice.PORTAL_DELETE_TRANSLATION: frozenset({PermissionChoice.PORTAL_READ_TRANSLATION}),
+    PermissionChoice.PORTAL_CREATE_TRANSLATION: frozenset(
+        {PermissionChoice.PORTAL_READ_TRANSLATION, PermissionChoice.PORTAL_UPDATE_TRANSLATION}
+    ),
+    PermissionChoice.PORTAL_UPDATE_TRANSLATION: frozenset(
+        {PermissionChoice.PORTAL_READ_TRANSLATION, PermissionChoice.PORTAL_CREATE_TRANSLATION}
+    ),
+    PermissionChoice.PORTAL_DELETE_TRANSLATION: frozenset(
+        {
+            PermissionChoice.PORTAL_READ_TRANSLATION,
+            PermissionChoice.PORTAL_UPDATE_TRANSLATION,
+            PermissionChoice.PORTAL_CREATE_TRANSLATION,
+        }
+    ),
     # Mushafs
-    PermissionChoice.PORTAL_CREATE_MUSHAF: frozenset({PermissionChoice.PORTAL_READ_MUSHAF}),
-    PermissionChoice.PORTAL_UPDATE_MUSHAF: frozenset({PermissionChoice.PORTAL_READ_MUSHAF}),
-    PermissionChoice.PORTAL_DELETE_MUSHAF: frozenset({PermissionChoice.PORTAL_READ_MUSHAF}),
+    PermissionChoice.PORTAL_CREATE_MUSHAF: frozenset(
+        {PermissionChoice.PORTAL_READ_MUSHAF, PermissionChoice.PORTAL_UPDATE_MUSHAF}
+    ),
+    PermissionChoice.PORTAL_UPDATE_MUSHAF: frozenset(
+        {PermissionChoice.PORTAL_READ_MUSHAF, PermissionChoice.PORTAL_CREATE_MUSHAF}
+    ),
+    PermissionChoice.PORTAL_DELETE_MUSHAF: frozenset(
+        {
+            PermissionChoice.PORTAL_READ_MUSHAF,
+            PermissionChoice.PORTAL_UPDATE_MUSHAF,
+            PermissionChoice.PORTAL_CREATE_MUSHAF,
+        }
+    ),
     # Fonts
-    PermissionChoice.PORTAL_CREATE_FONT: frozenset({PermissionChoice.PORTAL_READ_FONT}),
-    PermissionChoice.PORTAL_UPDATE_FONT: frozenset({PermissionChoice.PORTAL_READ_FONT}),
-    PermissionChoice.PORTAL_DELETE_FONT: frozenset({PermissionChoice.PORTAL_READ_FONT}),
+    PermissionChoice.PORTAL_CREATE_FONT: frozenset(
+        {PermissionChoice.PORTAL_READ_FONT, PermissionChoice.PORTAL_UPDATE_FONT}
+    ),
+    PermissionChoice.PORTAL_UPDATE_FONT: frozenset(
+        {PermissionChoice.PORTAL_READ_FONT, PermissionChoice.PORTAL_CREATE_FONT}
+    ),
+    PermissionChoice.PORTAL_DELETE_FONT: frozenset(
+        {
+            PermissionChoice.PORTAL_READ_FONT,
+            PermissionChoice.PORTAL_UPDATE_FONT,
+            PermissionChoice.PORTAL_CREATE_FONT,
+        }
+    ),
     # Publishers
-    PermissionChoice.PORTAL_CREATE_PUBLISHER: frozenset({PermissionChoice.PORTAL_READ_PUBLISHER}),
-    PermissionChoice.PORTAL_UPDATE_PUBLISHER: frozenset({PermissionChoice.PORTAL_READ_PUBLISHER}),
-    PermissionChoice.PORTAL_DELETE_PUBLISHER: frozenset({PermissionChoice.PORTAL_READ_PUBLISHER}),
+    PermissionChoice.PORTAL_CREATE_PUBLISHER: frozenset(
+        {PermissionChoice.PORTAL_READ_PUBLISHER, PermissionChoice.PORTAL_UPDATE_PUBLISHER}
+    ),
+    PermissionChoice.PORTAL_UPDATE_PUBLISHER: frozenset(
+        {PermissionChoice.PORTAL_READ_PUBLISHER, PermissionChoice.PORTAL_CREATE_PUBLISHER}
+    ),
+    PermissionChoice.PORTAL_DELETE_PUBLISHER: frozenset(
+        {
+            PermissionChoice.PORTAL_READ_PUBLISHER,
+            PermissionChoice.PORTAL_UPDATE_PUBLISHER,
+            PermissionChoice.PORTAL_CREATE_PUBLISHER,
+        }
+    ),
     # Groups
-    PermissionChoice.PORTAL_CREATE_GROUP: frozenset({PermissionChoice.PORTAL_READ_GROUP}),
-    PermissionChoice.PORTAL_UPDATE_GROUP: frozenset({PermissionChoice.PORTAL_READ_GROUP}),
-    PermissionChoice.PORTAL_DELETE_GROUP: frozenset({PermissionChoice.PORTAL_READ_GROUP}),
+    PermissionChoice.PORTAL_CREATE_GROUP: frozenset(
+        {PermissionChoice.PORTAL_READ_GROUP, PermissionChoice.PORTAL_UPDATE_GROUP}
+    ),
+    PermissionChoice.PORTAL_UPDATE_GROUP: frozenset(
+        {PermissionChoice.PORTAL_READ_GROUP, PermissionChoice.PORTAL_CREATE_GROUP}
+    ),
+    PermissionChoice.PORTAL_DELETE_GROUP: frozenset(
+        {
+            PermissionChoice.PORTAL_READ_GROUP,
+            PermissionChoice.PORTAL_UPDATE_GROUP,
+            PermissionChoice.PORTAL_CREATE_GROUP,
+        }
+    ),
     # Members — every write action requires being able to view members first.
     PermissionChoice.PORTAL_INVITE_PUBLISHER_MEMBERS: frozenset({PermissionChoice.PORTAL_VIEW_PUBLISHER_MEMBERS}),
     PermissionChoice.PORTAL_UPDATE_PUBLISHER_MEMBERS: frozenset({PermissionChoice.PORTAL_VIEW_PUBLISHER_MEMBERS}),

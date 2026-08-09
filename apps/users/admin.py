@@ -9,6 +9,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import QuerySet
 from django.forms import EmailField, ModelForm
 from django.http import HttpRequest
+from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from plain_permissions.utils import get_permissions_queryset
 
@@ -109,6 +110,29 @@ class UserAdmin(auth_admin.UserAdmin):
     )
 
 
+# Shown to staff on the group form to explain why saving adds permissions they did not tick.
+# Deliberately NOT wrapped in gettext: both languages must appear at once, whereas gettext
+# would resolve to whichever one is active. The Arabic half carries dir="rtl" so it renders
+# correctly even while the admin is in English.
+PERMISSION_HIERARCHY_HELP_TEXT = mark_safe(  # noqa: S308 - static author-controlled markup
+    "<span>"
+    "Permissions are expanded automatically when you save, so you only need to pick the "
+    "strongest one for each resource. Within a resource: <strong>Create</strong> and "
+    "<strong>Update</strong> imply each other (choosing either grants both), "
+    "<strong>Delete</strong> grants Create and Update as well, and every write permission "
+    "grants <strong>View</strong>. Selecting “Delete Reciters” therefore also stores Create, "
+    "Update and View for reciters. Extra permissions appearing after you save are expected."
+    "</span>"
+    '<span dir="rtl" lang="ar" style="display:block; margin-top:0.5em;">'
+    "يتم توسيع الصلاحيات تلقائيًا عند الحفظ، لذا يكفي اختيار الصلاحية الأقوى لكل مورد. "
+    "ضمن المورد الواحد: <strong>الإنشاء</strong> و<strong>التعديل</strong> يستلزم كل منهما "
+    "الآخر (اختيار أيهما يمنح الاثنين)، و<strong>الحذف</strong> يمنح الإنشاء والتعديل أيضًا، "
+    "وكل صلاحية كتابة تمنح <strong>العرض</strong>. لذلك فإن اختيار «حذف القراء» يخزّن أيضًا "
+    "الإنشاء والتعديل والعرض للقراء. ظهور صلاحيات إضافية بعد الحفظ أمر متوقع."
+    "</span>"
+)
+
+
 class GroupAdminForm(ModelForm):
     """Group form that enforces :class:`GroupService`'s name rules inside the admin.
 
@@ -128,6 +152,7 @@ class GroupAdminForm(ModelForm):
             Group._meta.get_field("permissions").remote_field,
             admin.site,
         ),
+        help_text=PERMISSION_HIERARCHY_HELP_TEXT,
     )
 
     class Meta:
