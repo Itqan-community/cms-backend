@@ -1,22 +1,18 @@
-<!DOCTYPE html>
-<html>
+{% extends "emails/base_message.html" %}
+{% load i18n %}
 
-<head>
-    <meta charset="UTF-8">
-    <title>Issue Status Updated</title>
-</head>
+{% block title %}{% trans "Issue Status Updated" %}{% endblock title %}
 
-<body>
-    <h2>Your Issue Status Has Been Updated</h2>
-    <p>The status of your issue report for <strong>{{ asset_name }}</strong> (Issue #{{ report_id }}) has changed.</p>
+{% block heading %}{% trans "Your issue status has been updated" %}{% endblock heading %}
 
-    <p><strong>Status change:</strong> {{ old_status }} &rarr; {{ new_status }}</p>
+{% block content %}
+<p style="margin:0 0 24px;">{% blocktrans %}The status of your issue report for <strong>{{ asset_name }}</strong> (Issue #{{ report_id }}) has changed.{% endblocktrans %}</p>
 
-    <p><a href="{{ issue_url }}">View your issue in the portal</a></p>
+<p style="margin:0 0 24px;"><strong>{% trans "Status change:" %}</strong> {{ old_status }} → {{ new_status }}</p>
 
-    <p>You are receiving this email because you opened this issue report.</p>
+<p style="margin:0 0 24px; text-align:center;">
+  <a href="{{ issue_url }}" style="display:inline-block; background-color:#2c5952; color:#ffffff; font-size:15px; font-weight:600; text-decoration:none; padding:12px 28px; border-radius:6px;">{% trans "View your issue" %}</a>
+</p>
 
-    <p>Best regards,<br>Itqan Team</p>
-</body>
-
-</html>
+<p style="margin:0; color:#6e8782; font-size:14px;">{% trans "You are receiving this email because you opened this issue report." %}</p>
+{% endblock content %}

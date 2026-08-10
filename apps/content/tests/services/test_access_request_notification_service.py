@@ -8,6 +8,7 @@ from apps.content.services.access_request_notification_service import AccessRequ
 from apps.core.services.email import email_service
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher, PublisherMember
+from apps.publishers.tests.group_helpers import admin_group
 from apps.users.models import User
 
 _SEND_EMAIL = "apps.content.services.access_request_notification_service.email_service.send_email"
@@ -199,7 +200,7 @@ class AccessRequestNotificationServiceContactEmailTests(BaseTestCase):
         PublisherMember.objects.create(
             user=admin,
             publisher=self.publisher,
-            role=PublisherMember.RoleChoice.ADMIN,
+            group=admin_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         AssetAccessRequest.objects.create(

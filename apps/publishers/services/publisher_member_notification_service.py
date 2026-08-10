@@ -27,7 +27,6 @@ class PublisherMemberNotificationService:
             logger.warning(f"Invitation not found, skipping email [invitation_id={invitation_id}]")
             return
 
-        role_display = inv.member.get_role_display()
         accept_url = f"{settings.FRONTEND_BASE_URL}/portal/invitations/accept?token={raw_token}"
         email_service.send_email(
             subject=f"You're invited to {inv.publisher.name}",
@@ -36,7 +35,7 @@ class PublisherMemberNotificationService:
             context={
                 "publisher_name": inv.publisher.name,
                 "invited_by_name": inv.invited_by.name if inv.invited_by else "An administrator",
-                "role": role_display,
+                "group_name": inv.group_name,
                 "accept_url": accept_url,
                 "expires_at": inv.expires_at.date().isoformat(),
             },

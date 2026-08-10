@@ -38,6 +38,7 @@ Use exactly this shape when converting inputs:
 - Always display the JSON version of the user's input before acting and act on that
 - Always wait for answers to clarifying questions before taking any action.
 - **NEVER commit changes to Git** - user handles all commits manually
+- **After finishing each task, update the docs if relevant** - see the Documentation section
 - Keep language direct and clear.
 - Keep questions proportionate to complexity.
 
@@ -118,6 +119,31 @@ raise ItqanError(
 )
 ```
 - After adding any new translatable string (any call to `_(...)`), you **must** run `makemessages` as specified in the Actions section, then add the Arabic translation in `locale/ar/LC_MESSAGES/django.po`.
+
+## Documentation
+As the **last step of every task**, check whether the change made any documentation stale and update it in the same change set. Do not defer this to a follow-up task.
+
+### Where the docs live
+- `docs/ARCHITECTURE.md` — domain models, the ER diagram, API surfaces, access control and content lifecycle. Update when you add/remove/rename a model or field, change how authorization works, or change what an API surface is for.
+- `docs/AUTHENTICATION.md` — auth flows (allauth, OAuth2, JWT, SAML) and their error codes. Update when you touch login, tokens, scopes, or auth-related error responses.
+- `README.md` / `CONTRIBUTING.md` — setup, dependencies, commands, workflow. Update when you change how the project is installed, configured, or run.
+- `docs-website/docs/` — the **public developer API** site (Docusaurus). Only covers `developers_api`. Update when you change a public endpoint's request/response shape, pagination, filtering, or error contract. **Portal/tenant/internal-only changes do not belong here.**
+
+### When it is relevant
+Update the docs if the change does any of:
+- adds, removes, or renames a model, field, or relationship that the docs describe
+- changes an API contract (request/response fields, status codes, `error_name` values)
+- changes authorization: permissions, groups, or who may perform an action
+- changes a documented workflow, command, or environment variable
+- makes an existing statement in the docs factually wrong
+
+Skip the docs only when the change is genuinely invisible to them — an internal refactor, a test-only change, or a bugfix that restores already-documented behaviour.
+
+### How
+- Fix **surrounding** stale statements you notice while editing, not just the line your change touched. Docs drift; leaving a known-wrong neighbouring line is not acceptable.
+- Keep the existing structure, tone, and formatting of the file. Do not restructure a doc as a side effect of a small change.
+- Keep mermaid diagrams in sync with the models they depict.
+- Say plainly in your final summary which docs you updated, or that none were relevant and why.
 
 ## Actions:
 - migrate: uv run manage.py migrate

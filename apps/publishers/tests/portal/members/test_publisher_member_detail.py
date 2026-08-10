@@ -7,6 +7,7 @@ from model_bakery import baker
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher, PublisherMember, PublisherMemberInvitation
+from apps.publishers.tests.group_helpers import admin_group, itqan_internal_group, member_group
 from apps.users.models import User
 
 
@@ -20,19 +21,19 @@ class MemberDetailTest(BaseTestCase):
         PublisherMember.objects.create(
             user=self.admin,
             publisher=self.p1,
-            role=PublisherMember.RoleChoice.ADMIN,
+            group=admin_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         self.p1_other = PublisherMember.objects.create(
             user=baker.make(User),
             publisher=self.p1,
-            role=PublisherMember.RoleChoice.STAFF,
+            group=member_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         self.p2_member = PublisherMember.objects.create(
             user=baker.make(User),
             publisher=self.p2,
-            role=PublisherMember.RoleChoice.STAFF,
+            group=member_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
 
@@ -48,18 +49,44 @@ class MemberDetailTest(BaseTestCase):
         resp = self.client.get(f"/portal/members/{self.p2_member.id}/")
         self.assertEqual(403, resp.status_code, resp.content)
 
-    def test_update_member_promotes_to_admin(self):
+    def test_update_member_where_group_changed_should_swap_group(self):
+        # Arrange
         self.authenticate_user(self.admin)
         self.give_permission(self.admin, PermissionChoice.PORTAL_UPDATE_PUBLISHER_MEMBERS)
+
+        # Act
         resp = self.client.patch(
             f"/portal/members/{self.p1_other.id}/",
-            data={"role": "admin"},
+            data={"group_id": admin_group().id},
             content_type="application/json",
         )
+
+        # Assert
         self.assertEqual(200, resp.status_code, resp.content)
+        self.assertEqual(admin_group().id, resp.json()["group_id"])
+        self.assertEqual(admin_group().name, resp.json()["group_name"])
         self.p1_other.refresh_from_db()
-        self.assertEqual("admin", self.p1_other.role)
+        self.assertEqual(admin_group().id, self.p1_other.group_id)
         self.assertTrue(self.p1_other.user.groups.filter(name="Publisher Member Admin").exists())
+
+    def test_update_member_where_group_is_itqan_internal_should_return_400(self):
+        # Arrange
+        self.authenticate_user(self.admin)
+        self.give_permission(self.admin, PermissionChoice.PORTAL_UPDATE_PUBLISHER_MEMBERS)
+        original_group_id = self.p1_other.group_id
+
+        # Act
+        resp = self.client.patch(
+            f"/portal/members/{self.p1_other.id}/",
+            data={"group_id": itqan_internal_group().id},
+            content_type="application/json",
+        )
+
+        # Assert
+        self.assertEqual(400, resp.status_code, resp.content)
+        self.assertEqual("invalid_group", resp.json()["error_name"])
+        self.p1_other.refresh_from_db()
+        self.assertEqual(original_group_id, self.p1_other.group_id)
 
     def test_patch_without_update_perm_403(self):
         self.authenticate_user(self.admin)
@@ -111,7 +138,7 @@ class MemberDetailTest(BaseTestCase):
         pending = PublisherMember.objects.create(
             user=baker.make(User, is_active=False),
             publisher=self.p1,
-            role=PublisherMember.RoleChoice.STAFF,
+            group=member_group(),
             status=PublisherMember.StatusChoice.PENDING,
         )
         inv = PublisherMemberInvitation.objects.create(
@@ -133,7 +160,7 @@ class MemberDetailTest(BaseTestCase):
         pending = PublisherMember.objects.create(
             user=baker.make(User, is_active=False),
             publisher=self.p1,
-            role=PublisherMember.RoleChoice.STAFF,
+            group=member_group(),
             status=PublisherMember.StatusChoice.PENDING,
         )
         old_inv = PublisherMemberInvitation.objects.create(

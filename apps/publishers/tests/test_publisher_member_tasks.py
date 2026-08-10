@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+from django.core import mail
 from django.utils import timezone
 from model_bakery import baker
 
@@ -7,6 +8,7 @@ from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher, PublisherMember, PublisherMemberInvitation
 from apps.publishers.services.publisher_member_notification_service import PublisherMemberNotificationService
 from apps.publishers.tasks import send_publisher_member_activated_email, send_publisher_member_invitation_email
+from apps.publishers.tests.group_helpers import member_group
 from apps.users.models import User
 
 
@@ -14,7 +16,7 @@ class MemberTasksTest(BaseTestCase):
     def _invitation(self):
         publisher = baker.make(Publisher, name="Tafsir Center")
         user = baker.make(User, email="invitee@example.com")
-        member = PublisherMember.objects.create(user=user, publisher=publisher, role=PublisherMember.RoleChoice.STAFF)
+        member = PublisherMember.objects.create(user=user, publisher=publisher, group=member_group())
         return PublisherMemberInvitation.objects.create(
             publisher=publisher,
             invited_by=baker.make(User, name="Boss"),
@@ -44,6 +46,25 @@ class MemberTasksTest(BaseTestCase):
         self.assertEqual(["invitee@example.com"], kwargs["recipients"])
         self.assertEqual("emails/publisher_member_invitation.html", kwargs["template"])
         self.assertIn("rawtoken123", kwargs["context"]["accept_url"])
+
+    def test_send_invitation_email_where_rendered_should_contain_branding_and_group(self):
+        # Arrange: the other tests mock send_email, so nothing exercises the template itself.
+        # A broken {% blocktrans %} or a bad {% extends %} only fails at render time.
+        inv = self._invitation()
+
+        # Act
+        with self.settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend"):
+            PublisherMemberNotificationService().send_invitation_email(inv.id, "rawtoken123")
+
+        # Assert
+        self.assertEqual(1, len(mail.outbox))
+        html = mail.outbox[0].alternatives[0][0]
+        self.assertIn("Tafsir Center", html)
+        self.assertIn(member_group().name, html)
+        self.assertIn("rawtoken123", html)
+        # Inherited from emails/base_message.html rather than the old bare markup.
+        self.assertIn("Thank you for using Itqan!", html)
+        self.assertIn("background-color:#f4f8f6", html)
 
     @patch("apps.publishers.services.publisher_member_notification_service.email_service.send_email")
     def test_notification_service_sends_activation_email_with_password(self, mock_send):

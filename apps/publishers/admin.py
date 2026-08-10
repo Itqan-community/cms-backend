@@ -9,7 +9,7 @@ from .models import Domain, Publisher, PublisherMember, PublisherMemberInvitatio
 class PublisherMemberInline(admin.TabularInline):
     model = PublisherMember
     extra = 0
-    fields = ["user", "role"]
+    fields = ["user", "group"]
     raw_id_fields = ["user"]
 
 
@@ -102,8 +102,8 @@ class PublisherAdmin(admin.ModelAdmin):
 
 @admin.register(PublisherMember)
 class PublisherMemberAdmin(admin.ModelAdmin):
-    list_display = ["user", "publisher", "role", "created_at"]
-    list_filter = ["role", "created_at"]
+    list_display = ["user", "publisher", "group", "created_at"]
+    list_filter = ["group", "created_at"]
     search_fields = ["user__email", "publisher__name"]
     raw_id_fields = ["user", "publisher"]
 
@@ -113,7 +113,7 @@ class PublisherMemberInvitationAdmin(admin.ModelAdmin):
     list_display = [
         "email",
         "publisher",
-        "role",
+        "group_name",
         "status",
         "invited_by",
         "expires_at",
@@ -139,9 +139,9 @@ class PublisherMemberInvitationAdmin(admin.ModelAdmin):
     def email(self, obj):
         return obj.email
 
-    @admin.display(description="Role")
-    def role(self, obj):
-        return obj.role
+    @admin.display(description="Group")
+    def group_name(self, obj):
+        return obj.group_name
 
 
 @admin.register(Domain)
