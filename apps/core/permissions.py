@@ -29,10 +29,10 @@ class PermissionChoice(TextChoices):
     PORTAL_DELETE_TAFSIR = "portal_delete_tafsir", _("Portal - Delete Tafsirs")
 
     # Translations
-    PORTAL_READ_TRANSLATION = "portal_read_translation", _("View Portal Translations")
-    PORTAL_CREATE_TRANSLATION = "portal_create_translation", _("Create Portal Translations")
-    PORTAL_UPDATE_TRANSLATION = "portal_update_translation", _("Update Portal Translations")
-    PORTAL_DELETE_TRANSLATION = "portal_delete_translation", _("Delete Portal Translations")
+    PORTAL_READ_TRANSLATION = "portal_read_translation", _("Portal - View Translations")
+    PORTAL_CREATE_TRANSLATION = "portal_create_translation", _("Portal - Create Translations")
+    PORTAL_UPDATE_TRANSLATION = "portal_update_translation", _("Portal - Update Translations")
+    PORTAL_DELETE_TRANSLATION = "portal_delete_translation", _("Portal - Delete Translations")
 
     # Mushafs
     PORTAL_READ_MUSHAF = "portal_read_mushaf", _("Portal - View Mushafs")
@@ -180,9 +180,7 @@ PERMISSION_IMPLICATIONS: dict[PermissionChoice, frozenset[PermissionChoice]] = {
     PermissionChoice.PORTAL_CREATE_PUBLISHER: frozenset(
         {PermissionChoice.PORTAL_READ_PUBLISHER, PermissionChoice.PORTAL_UPDATE_PUBLISHER}
     ),
-    PermissionChoice.PORTAL_UPDATE_PUBLISHER: frozenset(
-        {PermissionChoice.PORTAL_READ_PUBLISHER, PermissionChoice.PORTAL_CREATE_PUBLISHER}
-    ),
+    PermissionChoice.PORTAL_UPDATE_PUBLISHER: frozenset({PermissionChoice.PORTAL_READ_PUBLISHER}),
     PermissionChoice.PORTAL_DELETE_PUBLISHER: frozenset(
         {
             PermissionChoice.PORTAL_READ_PUBLISHER,
