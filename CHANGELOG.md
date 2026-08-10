@@ -1,3 +1,14 @@
+## v0.12.0 (2026-08-10)
+
+### Feat
+
+- ensure Arabic catalog is compiled during tests and runtime
+- implement assignable group logic and update translations
+
+### Fix
+
+- adjust translation and publisher permission labels and hierarchy logic
+
 ## v0.11.1 (2026-08-09)
 
 ### Fix
