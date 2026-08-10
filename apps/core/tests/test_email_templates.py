@@ -1,7 +1,21 @@
+from pathlib import Path
+
+from django.conf import settings
 from django.template.loader import render_to_string
 from django.test import SimpleTestCase
 from django.utils import translation
 from django.utils.html import strip_tags
+
+
+def arabic_catalog_is_compiled() -> bool:
+    """Whether locale/ar/LC_MESSAGES/django.mo exists.
+
+    .mo files are gitignored, so a fresh checkout has none until compilemessages
+    runs. Without it gettext silently falls back to English, which would make the
+    assertions below fail with a confusing diff rather than a clear cause.
+    """
+    return any(Path(path, "ar", "LC_MESSAGES", "django.mo").exists() for path in settings.LOCALE_PATHS)
+
 
 # Every app email extends emails/base_message.html. Most callers are tested with
 # send_email mocked, so nothing else renders these templates -- a broken
@@ -82,6 +96,8 @@ class EmailTemplateRenderTest(SimpleTestCase):
 
     def test_render_where_arabic_should_flip_to_rtl_and_translate(self):
         # Arrange
+        if not arabic_catalog_is_compiled():
+            self.skipTest("Arabic catalog not compiled; run: manage.py compilemessages --locale ar")
         with translation.override("ar"):
             for template, context in EMAIL_TEMPLATES.items():
                 with self.subTest(template=template):
@@ -107,6 +123,8 @@ class EmailTemplateRenderTest(SimpleTestCase):
 
     def test_render_pending_requests_where_count_varies_should_use_arabic_plural_forms(self):
         # Arabic has six plural forms; |pluralize could not express them.
+        if not arabic_catalog_is_compiled():
+            self.skipTest("Arabic catalog not compiled; run: manage.py compilemessages --locale ar")
         template = "emails/pending_access_requests_notification.html"
         base = EMAIL_TEMPLATES[template]
         expected = {
