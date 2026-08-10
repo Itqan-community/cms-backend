@@ -3,6 +3,7 @@ from model_bakery import baker
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher, PublisherMember
+from apps.publishers.tests.group_helpers import admin_group, member_group
 from apps.users.models import User
 
 
@@ -15,13 +16,13 @@ class ListMembersTest(BaseTestCase):
         PublisherMember.objects.create(
             user=self.admin,
             publisher=self.p1,
-            role=PublisherMember.RoleChoice.ADMIN,
+            group=admin_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         PublisherMember.objects.create(
             user=baker.make(User),
             publisher=self.p2,
-            role=PublisherMember.RoleChoice.STAFF,
+            group=member_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
 
@@ -45,7 +46,7 @@ class ListMembersTest(BaseTestCase):
             PublisherMember,
             publisher=self.p1,
             user=baker.make(User),
-            role=PublisherMember.RoleChoice.STAFF,
+            group=member_group(),
             status=PublisherMember.StatusChoice.PENDING,
         )
         self.authenticate_user(self.admin)

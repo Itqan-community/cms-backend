@@ -6,6 +6,7 @@ from model_bakery import baker
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.publishers.services.publisher_member_invitation_service import PublisherMemberInvitationService
+from apps.publishers.tests.group_helpers import member_group
 from apps.users.models import User
 
 
@@ -25,7 +26,7 @@ class AcceptInviteTest(BaseTestCase):
             member, inv, raw = PublisherMemberInvitationService().create_invitation(
                 publisher=self.publisher,
                 email=email,
-                role="staff",
+                group_id=member_group().id,
                 invited_by=baker.make(User),
             )
         return member, inv, raw
@@ -56,6 +57,9 @@ class AcceptInviteTest(BaseTestCase):
         self.assertEqual(self.publisher.name, body["publisher_name"])
         self.assertEqual("acceptme@example.com", body["email"])
         self.assertEqual("pending", body["status"])
+        # The accept page shows the group the invitee is being granted.
+        self.assertEqual(member_group().name, body["group_name"])
+        self.assertNotIn("role", body)
 
     def test_get_invitation_details_invalid_token_returns_400(self):
         resp = self.client.get("/portal/invitations/not-a-real-token/")

@@ -4,6 +4,7 @@ from rest_framework.exceptions import PermissionDenied
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher, PublisherMember
 from apps.publishers.services.membership import enforce_member_scope, enforce_publisher_membership
+from apps.publishers.tests.group_helpers import admin_group, member_group
 from apps.users.models import User
 
 
@@ -14,7 +15,7 @@ class MemberScopingTest(BaseTestCase):
         PublisherMember.objects.create(
             user=user,
             publisher=publisher,
-            role=PublisherMember.RoleChoice.STAFF,
+            group=member_group(),
             status=PublisherMember.StatusChoice.PENDING,
         )
         with self.assertRaises(PermissionDenied):
@@ -26,7 +27,7 @@ class MemberScopingTest(BaseTestCase):
         PublisherMember.objects.create(
             user=user,
             publisher=publisher,
-            role=PublisherMember.RoleChoice.STAFF,
+            group=member_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         enforce_publisher_membership(user, publisher.id)  # no raise
@@ -38,13 +39,13 @@ class MemberScopingTest(BaseTestCase):
         PublisherMember.objects.create(
             user=admin,
             publisher=p1,
-            role=PublisherMember.RoleChoice.ADMIN,
+            group=admin_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         other = PublisherMember.objects.create(
             user=baker.make(User),
             publisher=p2,
-            role=PublisherMember.RoleChoice.STAFF,
+            group=member_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         with self.assertRaises(PermissionDenied):
@@ -57,19 +58,19 @@ class MemberScopingTest(BaseTestCase):
         PublisherMember.objects.create(
             user=actor,
             publisher=p1,
-            role=PublisherMember.RoleChoice.ADMIN,
+            group=admin_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         PublisherMember.objects.create(
             user=actor,
             publisher=p2,
-            role=PublisherMember.RoleChoice.ADMIN,
+            group=admin_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         target = PublisherMember.objects.create(
             user=baker.make(User),
             publisher=p2,
-            role=PublisherMember.RoleChoice.STAFF,
+            group=member_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         enforce_member_scope(actor, target)  # no raise
@@ -80,7 +81,7 @@ class MemberScopingTest(BaseTestCase):
         other = PublisherMember.objects.create(
             user=baker.make(User),
             publisher=p2,
-            role=PublisherMember.RoleChoice.STAFF,
+            group=member_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         enforce_member_scope(itqan, other)  # no raise

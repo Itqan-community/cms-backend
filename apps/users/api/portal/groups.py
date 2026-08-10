@@ -81,7 +81,8 @@ class GroupFilter(FilterSchema):
 @ordering(ordering_fields=["name", "id"])
 @searching(search_fields=["name"])
 def list_groups(request: Request, filters: GroupFilter = Query(...)):
-    qs = Group.objects.all()
+    # Itqan Internal carries every permission in the system and is never offered for assignment.
+    qs = _service().assignable_groups_qs()
     qs = filters.filter(qs)
     return qs
 

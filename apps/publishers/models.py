@@ -61,20 +61,17 @@ class PublisherMember(BaseModel):
     A user may belong to more than one publisher (many-to-many).
     """
 
-    class RoleChoice(models.TextChoices):
-        ADMIN = "admin", _("Admin")
-        STAFF = "staff", _("Staff")
-
     class StatusChoice(models.TextChoices):
         PENDING = "pending", _("Pending")
         ACTIVE = "active", _("Active")
 
     publisher = models.ForeignKey(Publisher, on_delete=models.CASCADE, related_name="memberships")
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="publisher_memberships")
-    role = models.CharField(
-        max_length=20,
-        choices=RoleChoice.choices,
-        help_text="Role label for this member. Drives permission group assignment on activation; has no effect on runtime authorization.",
+    group = models.ForeignKey(
+        "auth.Group",
+        on_delete=models.PROTECT,
+        related_name="publisher_memberships",
+        help_text="Permission group for this member. Applied to the user's groups on activation; per-membership, so a user in several publishers keeps a distinct group for each.",
     )
     status = models.CharField(
         max_length=20,
@@ -87,7 +84,7 @@ class PublisherMember(BaseModel):
         unique_together = ["publisher", "user"]
 
     def __str__(self):
-        return f"PublisherMember(email={self.user.email} publisher={self.publisher_id} role={self.role})"
+        return f"PublisherMember(email={self.user.email} publisher={self.publisher_id} group={self.group_id})"
 
 
 class Domain(BaseModel):
@@ -161,9 +158,9 @@ class PublisherMemberInvitation(BaseModel):
         return self.member.user.email if self.member_id else None
 
     @property
-    def role(self) -> str | None:
+    def group_name(self) -> str | None:
         """Derived from member. None if member was deleted (cancelled invitation audit trail)."""
-        return self.member.role if self.member_id else None
+        return self.member.group.name if self.member_id else None
 
     def __str__(self):
         return f"PublisherMemberInvitation(member={self.member_id} publisher={self.publisher_id} status={self.status})"

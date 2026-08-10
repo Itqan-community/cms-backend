@@ -1,20 +1,14 @@
-<!DOCTYPE html>
-<html>
+{% extends "emails/base_message.html" %}
+{% load i18n %}
 
-<head>
-    <meta charset="UTF-8">
-    <title>Access Request Rejected</title>
-</head>
+{% block title %}{% trans "Access Request Rejected" %}{% endblock title %}
 
-<body>
-    <h2>Your Access Request Was Rejected</h2>
-    <p>Your request to access <strong>{{ asset_name }}</strong> has been rejected.</p>
+{% block heading %}{% trans "Your access request was rejected" %}{% endblock heading %}
 
-    {% if rejection_reason %}
-    <p><strong>Reason:</strong> {{ rejection_reason }}</p>
-    {% endif %}
+{% block content %}
+<p style="margin:0 0 24px;">{% blocktrans %}Your request to access <strong>{{ asset_name }}</strong> has been rejected.{% endblocktrans %}</p>
 
-    <p>Best regards,<br>Itqan Team</p>
-</body>
-
-</html>
+{% if rejection_reason %}
+<p style="margin:0;"><strong>{% trans "Reason:" %}</strong> {{ rejection_reason }}</p>
+{% endif %}
+{% endblock content %}

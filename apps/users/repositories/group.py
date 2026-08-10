@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from django.contrib.auth.models import Group, Permission
+from django.db.models import QuerySet
+
+ITQAN_INTERNAL_GROUP = "Itqan Internal"  # For Itqan staff only; holds every permission in the system.
 
 
 class GroupRepository:
@@ -9,6 +12,17 @@ class GroupRepository:
 
     def get_by_id(self, group_id: int) -> Group | None:
         return Group.objects.filter(id=group_id).first()
+
+    def assignable_qs(self) -> QuerySet[Group]:
+        """Groups that may be listed or assigned through the portal APIs.
+
+        Itqan Internal carries every permission in the system, so it is never
+        offered for assignment nor exposed in the groups listing.
+        """
+        return Group.objects.exclude(name=ITQAN_INTERNAL_GROUP)
+
+    def get_assignable_by_id(self, group_id: int) -> Group | None:
+        return self.assignable_qs().filter(id=group_id).first()
 
     def name_exists(self, name: str, *, exclude_id: int | None = None) -> bool:
         qs = Group.objects.filter(name=name)

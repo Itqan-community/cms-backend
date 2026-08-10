@@ -1,18 +1,12 @@
-<!DOCTYPE html>
-<html>
+{% extends "emails/base_message.html" %}
+{% load i18n %}
 
-<head>
-    <meta charset="UTF-8">
-    <title>Access Request Accepted</title>
-</head>
+{% block title %}{% trans "Access Request Accepted" %}{% endblock title %}
 
-<body>
-    <h2>Your Access Request Was Accepted</h2>
-    <p>Your request to access <strong>{{ asset_name }}</strong> has been accepted.</p>
+{% block heading %}{% trans "Your access request was accepted" %}{% endblock heading %}
 
-    <p>You can now access this asset from the portal.</p>
+{% block content %}
+<p style="margin:0 0 24px;">{% blocktrans %}Your request to access <strong>{{ asset_name }}</strong> has been accepted.{% endblocktrans %}</p>
 
-    <p>Best regards,<br>Itqan Team</p>
-</body>
-
-</html>
+<p style="margin:0;">{% trans "You can now access this asset from the portal." %}</p>
+{% endblock content %}

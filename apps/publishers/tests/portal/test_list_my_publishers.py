@@ -3,6 +3,7 @@ from model_bakery import baker
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher, PublisherMember
+from apps.publishers.tests.group_helpers import admin_group, member_group
 from apps.users.models import User
 
 
@@ -20,7 +21,7 @@ class ListMyPublishersTest(BaseTestCase):
             PublisherMember,
             user=self.user,
             publisher=publisher,
-            role=PublisherMember.RoleChoice.ADMIN,
+            group=admin_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
 
@@ -44,14 +45,14 @@ class ListMyPublishersTest(BaseTestCase):
             PublisherMember,
             user=self.user,
             publisher=pub_a,
-            role=PublisherMember.RoleChoice.ADMIN,
+            group=admin_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         baker.make(
             PublisherMember,
             user=self.user,
             publisher=pub_b,
-            role=PublisherMember.RoleChoice.STAFF,
+            group=member_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
 
@@ -89,14 +90,14 @@ class ListMyPublishersTest(BaseTestCase):
             PublisherMember,
             user=self.user,
             publisher=pub_z,
-            role=PublisherMember.RoleChoice.ADMIN,
+            group=admin_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         baker.make(
             PublisherMember,
             user=self.user,
             publisher=pub_a,
-            role=PublisherMember.RoleChoice.ADMIN,
+            group=admin_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
 
@@ -152,7 +153,7 @@ class ListMyPublishersTest(BaseTestCase):
             PublisherMember,
             user=self.user,
             publisher=publisher,
-            role=PublisherMember.RoleChoice.ADMIN,
+            group=admin_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
 

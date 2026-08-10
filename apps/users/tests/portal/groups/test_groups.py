@@ -6,6 +6,7 @@ from model_bakery import baker
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.users.models import User
+from apps.users.services.group import ITQAN_INTERNAL_GROUP
 
 
 class CreateGroupTest(BaseTestCase):
@@ -91,6 +92,51 @@ class ListGroupTest(BaseTestCase):
         self.assertEqual(200, response.status_code, response.content)
         names = {item["name"] for item in response.json()["results"]}
         self.assertGreaterEqual(names, {"Editors", "Reviewers"})
+
+    def test_list_groups_where_itqan_internal_exists_should_exclude_it(self) -> None:
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_GROUP)
+        Group.objects.get_or_create(name=ITQAN_INTERNAL_GROUP)
+        baker.make(Group, name="Editors")
+
+        # Act
+        response = self.client.get(self.url)
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        names = {item["name"] for item in response.json()["results"]}
+        self.assertIn("Editors", names)
+        self.assertNotIn(ITQAN_INTERNAL_GROUP, names)
+
+    def test_list_groups_where_staff_user_should_still_exclude_itqan_internal(self) -> None:
+        # Arrange: hidden for everyone, staff included.
+        staff = baker.make(User, is_staff=True)
+        self.authenticate_user(staff)
+        self.give_permission(staff, PermissionChoice.PORTAL_READ_GROUP)
+        Group.objects.get_or_create(name=ITQAN_INTERNAL_GROUP)
+
+        # Act
+        response = self.client.get(self.url)
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        names = {item["name"] for item in response.json()["results"]}
+        self.assertNotIn(ITQAN_INTERNAL_GROUP, names)
+
+    def test_list_groups_where_searching_for_itqan_internal_should_return_nothing(self) -> None:
+        # Arrange: the exclusion must survive the search filter, not just the plain listing.
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_GROUP)
+        Group.objects.get_or_create(name=ITQAN_INTERNAL_GROUP)
+
+        # Act
+        response = self.client.get(self.url, {"search": "Itqan"})
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        names = {item["name"] for item in response.json()["results"]}
+        self.assertNotIn(ITQAN_INTERNAL_GROUP, names)
 
     def test_list_groups_where_no_permission_should_return_403(self) -> None:
         # Arrange

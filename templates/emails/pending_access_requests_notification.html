@@ -1,29 +1,34 @@
-<!DOCTYPE html>
-<html>
+{% extends "emails/base_message.html" %}
+{% load i18n %}
 
-<head>
-    <meta charset="UTF-8">
-    <title>Pending Access Requests</title>
-</head>
+{% block title %}{% trans "Pending Access Requests" %}{% endblock title %}
 
-<body>
-    <h2>You have {{ count }} pending access request{{ count|pluralize }}</h2>
-    <p>The following access requests are awaiting your review:</p>
+{% comment %}
+blocktrans/plural rather than the |pluralize filter so Arabic gets all six of its
+plural forms (see Plural-Forms in locale/ar/LC_MESSAGES/django.po), which a simple
+English "s" suffix cannot express.
+{% endcomment %}
+{% block heading %}{% blocktrans count counter=count %}You have {{ counter }} pending access request{% plural %}You have {{ counter }} pending access requests{% endblocktrans %}{% endblock heading %}
 
-    <ul>
-        {% for request in requests %}
-        <li>
-            <strong>{{ request.developer_name }}</strong> requested access to <strong>{{ request.asset_name }}</strong>
-            <br>Intended use: {{ request.intended_use }}
-            <br>Reason: {{ request.developer_access_reason }}
-            <br>Requested at: {{ request.created_at }}
-        </li>
-        {% endfor %}
-    </ul>
+{% block content %}
+<p style="margin:0 0 18px;">{% trans "The following access requests are awaiting your review:" %}</p>
 
-    <p><a href="{{ access_requests_url }}">Review requests</a></p>
+{% for request in requests %}
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 12px 0; background-color:#f8fbfa; border:1px solid #e4efeb; border-radius:10px;">
+  <tr>
+    <td style="padding:14px 16px; font-size:14px; line-height:22px; color:#355f58;">
+      <p style="margin:0 0 6px;">{% blocktrans with developer_name=request.developer_name asset_name=request.asset_name %}<strong>{{ developer_name }}</strong> requested access to <strong>{{ asset_name }}</strong>{% endblocktrans %}</p>
+      <p style="margin:0; color:#6e8782;">
+        {% trans "Intended use:" %} {{ request.intended_use }}<br />
+        {% trans "Reason:" %} {{ request.developer_access_reason }}<br />
+        {% trans "Requested at:" %} {{ request.created_at }}
+      </p>
+    </td>
+  </tr>
+</table>
+{% endfor %}
 
-    <p>Best regards,<br>Itqan Team</p>
-</body>
-
-</html>
+<p style="margin:18px 0 0; text-align:center;">
+  <a href="{{ access_requests_url }}" style="display:inline-block; background-color:#2c5952; color:#ffffff; font-size:15px; font-weight:600; text-decoration:none; padding:12px 28px; border-radius:6px;">{% trans "Review requests" %}</a>
+</p>
+{% endblock content %}

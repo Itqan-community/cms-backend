@@ -42,9 +42,10 @@ class PublisherMemberInvitationService:
 
     @transaction.atomic
     def create_invitation(
-        self, *, publisher: Publisher, email: str, role: str, invited_by: User, name: str = ""
+        self, *, publisher: Publisher, email: str, group_id: int, invited_by: User, name: str = ""
     ) -> tuple[PublisherMember, PublisherMemberInvitation, str]:
         email = email.lower().strip()
+        group = self.members.groups.resolve_assignable_group(group_id)
 
         user = User.objects.filter(email=email).first()
         if user is None:
@@ -61,8 +62,11 @@ class PublisherMemberInvitationService:
             )
         if member is None:
             member = self.member_repo.create_member(
-                user=user, publisher=publisher, role=role, status=PublisherMember.StatusChoice.PENDING
+                user=user, publisher=publisher, group=group, status=PublisherMember.StatusChoice.PENDING
             )
+        elif member.group_id != group.id:
+            # Re-inviting a pending member with a different group: honour the new choice.
+            self.member_repo.set_group(member, group)
 
         now = timezone.now()
         self.repo.cancel_pending_invitations(member=member, cancelled_by=invited_by, now=now)

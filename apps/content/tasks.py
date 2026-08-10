@@ -11,8 +11,6 @@ from typing import TYPE_CHECKING, TypedDict
 from celery import shared_task
 from django.db import transaction
 
-from apps.core.services.email import email_service
-
 if TYPE_CHECKING:
     from apps.content.models import UsageEvent
 
@@ -126,52 +124,6 @@ def cleanup_stuck_multipart_uploads_task(older_than_hours: int = 2):
         message = f"Failed to cleanup stuck multipart uploads: {exc}"
         logger.error(message)
         return {"abortedUploads": 0, "message": message}
-
-
-@shared_task
-def send_resource_update_email(resource_version_id: int) -> None:
-    """
-    Task to send email notifications for a new ResourceVersion.
-    """
-    logger.info(f"Task started [task=send_resource_update_email, resource_version_id={resource_version_id}]")
-    from apps.content.models import AssetAccess, ResourceVersion
-
-    try:
-        resource_version = ResourceVersion.objects.select_related("resource").get(pk=resource_version_id)
-    except ResourceVersion.DoesNotExist:
-        logger.warning(f"ResourceVersion not found, skipping email [resource_version_id={resource_version_id}]")
-        return
-
-    # Find users with active access to any asset of this resource
-    users = (
-        AssetAccess.objects.filter(asset__resource=resource_version.resource)
-        .select_related("user")
-        .values_list("user__email", flat=True)
-        .distinct()
-    )
-
-    if not users:
-        logger.info(
-            f"No subscribers to notify [task=send_resource_update_email, resource_version_id={resource_version_id}]"
-        )
-        return
-
-    subject = f"New Update for {resource_version.resource.name}"
-    context = {
-        "resource_name": resource_version.resource.name,
-        "version": resource_version.semvar,
-        "summary": resource_version.summary,
-    }
-
-    email_service.send_email(
-        subject=subject,
-        recipients=list(users),
-        template="emails/resource_update.html",
-        context=context,
-    )
-    logger.info(
-        f"Task completed [task=send_resource_update_email, resource_version_id={resource_version_id}, recipients={len(list(users))}]"
-    )
 
 
 @shared_task

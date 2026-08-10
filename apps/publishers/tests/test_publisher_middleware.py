@@ -5,6 +5,7 @@ from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.middlewares.publisher_middleware import portal_publisher_q
 from apps.publishers.models import Domain, Publisher, PublisherMember
+from apps.publishers.tests.group_helpers import admin_group, member_group
 from apps.users.models import User
 
 
@@ -45,7 +46,7 @@ class PortalPublisherQUnitTest(BaseTestCase):
             PublisherMember,
             user=user,
             publisher=publisher,
-            role=PublisherMember.RoleChoice.ADMIN,
+            group=admin_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
 
@@ -75,14 +76,14 @@ class PortalPublisherQUnitTest(BaseTestCase):
             PublisherMember,
             user=user,
             publisher=pub_a,
-            role=PublisherMember.RoleChoice.ADMIN,
+            group=admin_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         baker.make(
             PublisherMember,
             user=user,
             publisher=pub_b,
-            role=PublisherMember.RoleChoice.STAFF,
+            group=member_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
 
@@ -111,7 +112,7 @@ class PortalPublisherQUnitTest(BaseTestCase):
             PublisherMember,
             user=user,
             publisher=publisher,
-            role=PublisherMember.RoleChoice.ADMIN,
+            group=admin_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
 
@@ -145,14 +146,14 @@ class XTenantHeaderScopingTest(BaseTestCase):
             PublisherMember,
             user=self.user,
             publisher=pub_a,
-            role=PublisherMember.RoleChoice.ADMIN,
+            group=admin_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         baker.make(
             PublisherMember,
             user=self.user,
             publisher=pub_b,
-            role=PublisherMember.RoleChoice.ADMIN,
+            group=admin_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         self._set_x_tenant_id(self.user, pub_a)
@@ -175,14 +176,14 @@ class XTenantHeaderScopingTest(BaseTestCase):
             PublisherMember,
             user=self.user,
             publisher=pub_a,
-            role=PublisherMember.RoleChoice.ADMIN,
+            group=admin_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         baker.make(
             PublisherMember,
             user=self.user,
             publisher=pub_b,
-            role=PublisherMember.RoleChoice.ADMIN,
+            group=admin_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         domain_a = baker.make(Domain, publisher=pub_a, domain="alpha.example.com", is_active=True)
@@ -220,14 +221,14 @@ class XTenantHeaderScopingTest(BaseTestCase):
             PublisherMember,
             user=self.user,
             publisher=pub_a,
-            role=PublisherMember.RoleChoice.ADMIN,
+            group=admin_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         baker.make(
             PublisherMember,
             user=self.user,
             publisher=pub_b,
-            role=PublisherMember.RoleChoice.ADMIN,
+            group=admin_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
 

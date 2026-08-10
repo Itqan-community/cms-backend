@@ -420,17 +420,17 @@ msgstr "لوحة التحكم - تحديث التفاسير"
 msgid "Portal - Delete Tafsirs"
 msgstr "لوحة التحكم - حذف التفاسير"
 
-msgid "View Portal Translations"
-msgstr "عرض الترجمات في لوحة التحكم"
+msgid "Portal - View Translations"
+msgstr "لوحة التحكم - عرض الترجمات"
 
-msgid "Create Portal Translations"
-msgstr "إنشاء ترجمات في لوحة التحكم"
+msgid "Portal - Create Translations"
+msgstr "لوحة التحكم - إنشاء ترجمات"
 
-msgid "Update Portal Translations"
-msgstr "تحديث الترجمات في لوحة التحكم"
+msgid "Portal - Update Translations"
+msgstr "لوحة التحكم - تحديث الترجمات"
 
-msgid "Delete Portal Translations"
-msgstr "حذف الترجمات من لوحة التحكم"
+msgid "Portal - Delete Translations"
+msgstr "لوحة التحكم - حذف الترجمات"
 
 msgid "Portal - View Mushafs"
 msgstr "لوحة التحكم - عرض المصاحف"
@@ -531,12 +531,6 @@ msgstr "لم يتم العثور على الناشر بالمعرّف {id}."
 
 msgid "Publisher's page is closed for maintenance, please try again later"
 msgstr "صفحة الناشر مغلقة للصيانة، يرجى المحاولة لاحقًا"
-
-msgid "Admin"
-msgstr "مدير"
-
-msgid "Staff"
-msgstr "موظف"
 
 msgid "Active"
 msgstr "نشط"
@@ -670,6 +664,10 @@ msgstr "اسم مفتاح API لا يمكن أن يكون فارغاً."
 #, python-format
 msgid "API key name must not exceed %(max)d characters."
 msgstr "اسم مفتاح API يجب ألا يتجاوز %(max)d حرفاً."
+
+#, python-brace-format
+msgid "Group with id {id} is not available for assignment."
+msgstr "المجموعة ذات المعرّف {id} غير متاحة للتعيين."
 
 msgid "A group with this name already exists."
 msgstr "توجد مجموعة بهذا الاسم بالفعل."
@@ -909,6 +907,184 @@ msgstr ""
 "\n"
 "هل تريد المتابعة؟\n"
 "    "
+
+msgid "Access Request Accepted"
+msgstr "تم قبول طلب الوصول"
+
+msgid "Your access request was accepted"
+msgstr "تم قبول طلب الوصول الخاص بك"
+
+#, python-format
+msgid "Your request to access <strong>%(asset_name)s</strong> has been accepted."
+msgstr "تم قبول طلبك للوصول إلى <strong>%(asset_name)s</strong>."
+
+msgid "You can now access this asset from the portal."
+msgstr "يمكنك الآن الوصول إلى هذا الأصل من لوحة التحكم."
+
+msgid "New Access Request"
+msgstr "طلب وصول جديد"
+
+msgid "New access request"
+msgstr "طلب وصول جديد"
+
+#, python-format
+msgid "<strong>%(developer_name)s</strong> requested access to <strong>%(asset_name)s</strong>."
+msgstr "طلب <strong>%(developer_name)s</strong> الوصول إلى <strong>%(asset_name)s</strong>."
+
+msgid "This request was automatically accepted based on your publisher settings."
+msgstr "تم قبول هذا الطلب تلقائيًا بناءً على إعدادات الناشر الخاصة بك."
+
+msgid "This request is pending your review."
+msgstr "هذا الطلب في انتظار مراجعتك."
+
+msgid "View access requests"
+msgstr "عرض طلبات الوصول"
+
+msgid "Access Request Rejected"
+msgstr "تم رفض طلب الوصول"
+
+msgid "Your access request was rejected"
+msgstr "تم رفض طلب الوصول الخاص بك"
+
+#, python-format
+msgid "Your request to access <strong>%(asset_name)s</strong> has been rejected."
+msgstr "تم رفض طلبك للوصول إلى <strong>%(asset_name)s</strong>."
+
+msgid "Reason:"
+msgstr "السبب:"
+
+msgid "New Asset Version Available"
+msgstr "إصدار جديد متاح من الأصل"
+
+#, python-format
+msgid "New version for %(asset_name)s"
+msgstr "إصدار جديد من %(asset_name)s"
+
+#, python-format
+msgid "A new version (%(version)s) of the asset \"%(asset_name)s\" is now available."
+msgstr "أصبح إصدار جديد (%(version)s) من الأصل \"%(asset_name)s\" متاحًا الآن."
+
+msgid "Summary of changes:"
+msgstr "ملخص التغييرات:"
+
+msgid "You are receiving this email because you have access to this asset."
+msgstr "تصلك هذه الرسالة لأن لديك صلاحية الوصول إلى هذا الأصل."
+
+msgid "Thank you for using Itqan!"
+msgstr "شكرًا لاستخدامك إتقان!"
+
+msgid "Issue Status Updated"
+msgstr "تم تحديث حالة البلاغ"
+
+msgid "Your issue status has been updated"
+msgstr "تم تحديث حالة البلاغ الخاص بك"
+
+#, python-format
+msgid "The status of your issue report for <strong>%(asset_name)s</strong> (Issue #%(report_id)s) has changed."
+msgstr "تغيّرت حالة بلاغك بخصوص <strong>%(asset_name)s</strong> (البلاغ رقم %(report_id)s)."
+
+msgid "Status change:"
+msgstr "تغيير الحالة:"
+
+msgid "View your issue"
+msgstr "عرض البلاغ"
+
+msgid "You are receiving this email because you opened this issue report."
+msgstr "تصلك هذه الرسالة لأنك من قام بفتح هذا البلاغ."
+
+msgid "Pending Access Requests"
+msgstr "طلبات الوصول المعلقة"
+
+#, python-format
+msgid "You have %(counter)s pending access request"
+msgid_plural "You have %(counter)s pending access requests"
+msgstr[0] "ليس لديك طلبات وصول معلقة"
+msgstr[1] "لديك طلب وصول معلق واحد"
+msgstr[2] "لديك طلبا وصول معلقان"
+msgstr[3] "لديك %(counter)s طلبات وصول معلقة"
+msgstr[4] "لديك %(counter)s طلب وصول معلق"
+msgstr[5] "لديك %(counter)s طلب وصول معلق"
+
+msgid "The following access requests are awaiting your review:"
+msgstr "طلبات الوصول التالية في انتظار مراجعتك:"
+
+#, python-format
+msgid "<strong>%(developer_name)s</strong> requested access to <strong>%(asset_name)s</strong>"
+msgstr "طلب <strong>%(developer_name)s</strong> الوصول إلى <strong>%(asset_name)s</strong>"
+
+msgid "Intended use:"
+msgstr "الاستخدام المقصود:"
+
+msgid "Requested at:"
+msgstr "تاريخ الطلب:"
+
+msgid "Review requests"
+msgstr "مراجعة الطلبات"
+
+msgid "Account activated"
+msgstr "تم تفعيل الحساب"
+
+#, python-format
+msgid "Welcome to %(publisher_name)s"
+msgstr "مرحبًا بك في %(publisher_name)s"
+
+msgid "Your account is now active. You can sign in to the Itqan portal."
+msgstr "أصبح حسابك نشطًا الآن. يمكنك تسجيل الدخول إلى لوحة تحكم إتقان."
+
+#, python-format
+msgid "Your temporary password is: <strong>%(password)s</strong>"
+msgstr "كلمة المرور المؤقتة الخاصة بك هي: <strong>%(password)s</strong>"
+
+msgid "For your security, please sign in and change it as soon as you can."
+msgstr "لأمان حسابك، يرجى تسجيل الدخول وتغييرها في أقرب وقت ممكن."
+
+msgid "Sign in and access the portal"
+msgstr "تسجيل الدخول إلى لوحة التحكم"
+
+msgid "You're invited"
+msgstr "لقد تمت دعوتك"
+
+#, python-format
+msgid "You've been invited to %(publisher_name)s"
+msgstr "لقد تمت دعوتك للانضمام إلى %(publisher_name)s"
+
+#, python-format
+msgid "%(invited_by_name)s invited you to join <strong>%(publisher_name)s</strong> on the Itqan portal as %(group_name)s."
+msgstr "دعاك %(invited_by_name)s للانضمام إلى <strong>%(publisher_name)s</strong> في لوحة تحكم إتقان بصفة %(group_name)s."
+
+msgid "Accept your invitation"
+msgstr "اقبل الدعوة"
+
+#, python-format
+msgid "This invitation expires on %(expires_at)s."
+msgstr "تنتهي صلاحية هذه الدعوة في %(expires_at)s."
+
+msgid "Welcome"
+msgstr "مرحبًا"
+
+msgid "Welcome to Itqan CMS!"
+msgstr "مرحبًا بك في نظام إتقان لإدارة المحتوى!"
+
+msgid "This is a test email to verify the email service is working correctly."
+msgstr "هذه رسالة اختبارية للتأكد من عمل خدمة البريد الإلكتروني بشكل صحيح."
+
+#~ msgid "View Portal Translations"
+#~ msgstr "عرض الترجمات في لوحة التحكم"
+
+#~ msgid "Create Portal Translations"
+#~ msgstr "إنشاء ترجمات في لوحة التحكم"
+
+#~ msgid "Update Portal Translations"
+#~ msgstr "تحديث الترجمات في لوحة التحكم"
+
+#~ msgid "Delete Portal Translations"
+#~ msgstr "حذف الترجمات من لوحة التحكم"
+
+#~ msgid "Admin"
+#~ msgstr "مدير"
+
+#~ msgid "Staff"
+#~ msgstr "موظف"
 
 #~ msgid "Successfully logged out"
 #~ msgstr "تم تسجيل الخروج بنجاح"
