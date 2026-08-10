@@ -45,7 +45,7 @@ The system serves **four distinct API surfaces**, each with their own audience a
 | **CMS API** (Internal) | `cms-api/` | Powers the frontend SPA. Users can create accounts, explore the platform, and create OAuth applications. | django-allauth (JWT), social login (Google/GitHub) |
 | **Public API** (Developers') | `/` (root) | Public-facing API consumed by external developers using OAuth applications created via the CMS API. **Expected to receive the majority of traffic.** | django-oauth-toolkit (OAuth2 client credentials) |
 | **Tenant API** | `tenant/` | Multi-tenant SaaS API for publishers. Each publisher can have their own domain; content is filtered by the `Domain` the request originates from. All tenants share a single database. | JWT/Session |
-| **Portal API** | `portal/` | Internal admin portal for uploading, writing, updating, and managing content (full CRUD). All users are internal company staff. | JWT/Session + role-based permissions |
+| **Portal API** | `portal/` | Internal admin portal for uploading, writing, updating, and managing content (full CRUD). All users are internal company staff. | JWT/Session + group-based permissions |
 
 ---
 
@@ -58,6 +58,7 @@ erDiagram
     Publisher ||--o{ Resource : "uploads"
     Publisher ||--o{ PublisherMember : "has members"
     User ||--o{ PublisherMember : "belongs to"
+    Group ||--o{ PublisherMember : "grants permissions to"
 
     Resource ||--o{ ResourceVersion : "has versions"
     Resource ||--o{ Asset : "derives"
@@ -77,6 +78,13 @@ erDiagram
         string slug
         string description
         boolean is_verified
+    }
+
+    PUBLISHERMEMBER {
+        int publisher_id
+        int user_id
+        int group_id
+        string status
     }
 
     RESOURCE {
@@ -116,7 +124,11 @@ The **Publisher** represents an organization or individual who owns and uploads 
 - Uploads **Resources** (original, unmodified content)
 - Manages licensing terms for their content
 - Can require approval for each usage request or enable auto-approval
-- Has members with roles (Owner, Manager)
+- Has members, each assigned a **permission group** (`PublisherMember.group`, a Django `auth.Group`)
+  - Members are invited by `group_id`; the group is chosen from `GET /portal/groups/`, not a fixed role list
+  - The group is applied to the user's `auth` groups on invitation acceptance, and drives runtime authorization
+  - Membership is per-publisher, so one user may hold a different group at each publisher they belong to
+  - The `Itqan Internal` group holds every permission and is never listed or assignable through the portal APIs
 
 ### 2. Resource
 

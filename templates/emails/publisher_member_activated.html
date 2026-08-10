@@ -1,14 +1,19 @@
-<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><title>Account activated</title></head>
-<body>
-    <h2>Welcome to {{ publisher_name }}</h2>
-    <p>Your account is now active. You can sign in to the Itqan portal.</p>
-    {% if password %}
-    <p>Your temporary password is: <strong>{{ password }}</strong></p>
-    <p>For your security, please sign in and change it as soon as you can.</p>
-    {% endif %}
-    <p><a href="{{ login_url }}">Sign in and access the portal</a></p>
-    <p>Best regards,<br>Itqan Team</p>
-</body>
-</html>
+{% extends "emails/base_message.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Account activated" %}{% endblock title %}
+
+{% block heading %}{% blocktrans %}Welcome to {{ publisher_name }}{% endblocktrans %}{% endblock heading %}
+
+{% block content %}
+<p style="margin:0 0 24px;">{% trans "Your account is now active. You can sign in to the Itqan portal." %}</p>
+
+{% if password %}
+<p style="margin:0 0 8px;">{% blocktrans %}Your temporary password is: <strong>{{ password }}</strong>{% endblocktrans %}</p>
+<p style="margin:0 0 24px; color:#6e8782; font-size:14px;">{% trans "For your security, please sign in and change it as soon as you can." %}</p>
+{% endif %}
+
+<p style="margin:0; text-align:center;">
+  <a href="{{ login_url }}" style="display:inline-block; background-color:#2c5952; color:#ffffff; font-size:15px; font-weight:600; text-decoration:none; padding:12px 28px; border-radius:6px;">{% trans "Sign in and access the portal" %}</a>
+</p>
+{% endblock content %}

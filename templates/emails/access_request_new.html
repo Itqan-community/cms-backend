@@ -1,24 +1,20 @@
-<!DOCTYPE html>
-<html>
+{% extends "emails/base_message.html" %}
+{% load i18n %}
 
-<head>
-    <meta charset="UTF-8">
-    <title>New Access Request</title>
-</head>
+{% block title %}{% trans "New Access Request" %}{% endblock title %}
 
-<body>
-    <h2>New Access Request</h2>
-    <p><strong>{{ developer_name }}</strong> requested access to <strong>{{ asset_name }}</strong>.</p>
+{% block heading %}{% trans "New access request" %}{% endblock heading %}
 
-    {% if auto_accepted %}
-    <p>This request was automatically accepted based on your publisher settings.</p>
-    {% else %}
-    <p>This request is pending your review.</p>
-    {% endif %}
+{% block content %}
+<p style="margin:0 0 24px;">{% blocktrans %}<strong>{{ developer_name }}</strong> requested access to <strong>{{ asset_name }}</strong>.{% endblocktrans %}</p>
 
-    <p><a href="{{ access_requests_url }}">View access requests in the portal</a></p>
+{% if auto_accepted %}
+<p style="margin:0 0 24px;">{% trans "This request was automatically accepted based on your publisher settings." %}</p>
+{% else %}
+<p style="margin:0 0 24px;">{% trans "This request is pending your review." %}</p>
+{% endif %}
 
-    <p>Best regards,<br>Itqan Team</p>
-</body>
-
-</html>
+<p style="margin:0; text-align:center;">
+  <a href="{{ access_requests_url }}" style="display:inline-block; background-color:#2c5952; color:#ffffff; font-size:15px; font-weight:600; text-decoration:none; padding:12px 28px; border-radius:6px;">{% trans "View access requests" %}</a>
+</p>
+{% endblock content %}

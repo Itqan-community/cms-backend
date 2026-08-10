@@ -7,10 +7,13 @@ from django.utils.translation import gettext_lazy as _
 from apps.core.ninja_utils.errors import ItqanError
 from apps.core.permissions import PermissionChoice
 from apps.core.services.permissions import PermissionHierarchyService
-from apps.users.repositories.group import GroupRepository
+from apps.users.repositories.group import ITQAN_INTERNAL_GROUP, GroupRepository
 
 if TYPE_CHECKING:
     from django.contrib.auth.models import Group
+    from django.db.models import QuerySet
+
+__all__ = ["ITQAN_INTERNAL_GROUP", "GroupService"]
 
 _NAME_MAX_LENGTH = 150  # matches django.contrib.auth.models.Group.name
 
@@ -23,6 +26,29 @@ class GroupService:
     ) -> None:
         self.repo = repo or GroupRepository()
         self.hierarchy = hierarchy or PermissionHierarchyService()
+
+    def assignable_groups_qs(self) -> QuerySet[Group]:
+        """Groups that may be listed or assigned through the portal APIs.
+
+        Itqan Internal carries every permission in the system, so it is never offered
+        for assignment nor exposed in the groups listing.
+        """
+        return self.repo.assignable_qs()
+
+    def resolve_assignable_group(self, group_id: int) -> Group:
+        """Look up a group by id, rejecting ids that do not exist or are not assignable.
+
+        Both cases raise the same error so the endpoint never confirms whether the
+        Itqan Internal group exists or what its id is.
+        """
+        group = self.repo.get_assignable_by_id(group_id)
+        if group is None:
+            raise ItqanError(
+                error_name="invalid_group",
+                message=_("Group with id {id} is not available for assignment.").format(id=group_id),
+                status_code=400,
+            )
+        return group
 
     def create(self, name: str) -> Group:
         name = self._validate_name(name)

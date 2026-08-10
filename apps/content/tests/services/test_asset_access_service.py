@@ -13,6 +13,7 @@ from apps.content.services.asset_access import (
 from apps.core.ninja_utils.errors import ItqanError
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher, PublisherMember
+from apps.publishers.tests.group_helpers import admin_group
 from apps.users.models import User
 
 
@@ -44,7 +45,7 @@ class AssetAccessRequestServiceTests(BaseTestCase):
         PublisherMember.objects.create(
             user=self.member,
             publisher=self.publisher,
-            role=PublisherMember.RoleChoice.ADMIN,
+            group=admin_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         self.staff = baker.make(User, is_staff=True)
@@ -273,7 +274,7 @@ class AssetAccessRequestServiceNotificationsTests(BaseTestCase):
         PublisherMember.objects.create(
             user=self.member,
             publisher=self.publisher,
-            role=PublisherMember.RoleChoice.ADMIN,
+            group=admin_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
 

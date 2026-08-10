@@ -7,6 +7,7 @@ from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher, PublisherMember, PublisherMemberInvitation
 from apps.publishers.services.publisher_member_invitation_service import PublisherMemberInvitationService
+from apps.publishers.tests.group_helpers import admin_group, member_group
 from apps.users.models import User
 
 
@@ -19,11 +20,12 @@ class AcceptanceCriteriaTest(BaseTestCase):
         PublisherMember.objects.create(
             user=self.admin,
             publisher=self.p1,
-            role=PublisherMember.RoleChoice.ADMIN,
+            group=admin_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
 
-    def _invite_via_service(self, publisher, email, role="staff"):
+    def _invite_via_service(self, publisher, email, group=None):
+        group = group or member_group()
         with (
             patch(
                 "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_invitation_email.delay"
@@ -31,7 +33,7 @@ class AcceptanceCriteriaTest(BaseTestCase):
             self.captureOnCommitCallbacks(execute=True),
         ):
             return PublisherMemberInvitationService().create_invitation(
-                publisher=publisher, email=email, role=role, invited_by=self.admin
+                publisher=publisher, email=email, group_id=group.id, invited_by=self.admin
             )
 
     # AC#5 + AC#1: invite creates pending invitation + sends email (flat endpoint)
@@ -46,7 +48,12 @@ class AcceptanceCriteriaTest(BaseTestCase):
         ):
             resp = self.client.post(
                 "/portal/members/",
-                data={"publisher_id": self.p1.id, "name": "E1", "email": "e1@example.com", "role": "staff"},
+                data={
+                    "publisher_id": self.p1.id,
+                    "name": "E1",
+                    "email": "e1@example.com",
+                    "group_id": member_group().id,
+                },
                 content_type="application/json",
             )
         self.assertEqual(201, resp.status_code, resp.content)
@@ -58,7 +65,7 @@ class AcceptanceCriteriaTest(BaseTestCase):
 
     # AC#6 + AC#2: accept → active member + password set + token unusable. Staff get READ baseline only.
     def test_accept_makes_active_read_baseline_for_staff_and_token_single_use(self):
-        member, inv, raw = self._invite_via_service(self.p1, "e2@example.com", role="staff")
+        member, inv, raw = self._invite_via_service(self.p1, "e2@example.com", group=member_group())
         with (
             patch(
                 "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_activated_email.delay"
@@ -82,7 +89,7 @@ class AcceptanceCriteriaTest(BaseTestCase):
 
     # AC#6 admin variant: accept as admin → 4 perms granted
     def test_accept_admin_grants_member_perms(self):
-        member, _inv, raw = self._invite_via_service(self.p1, "boss@example.com", role="admin")
+        member, _inv, raw = self._invite_via_service(self.p1, "boss@example.com", group=admin_group())
         with (
             patch(
                 "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_activated_email.delay"
@@ -102,7 +109,7 @@ class AcceptanceCriteriaTest(BaseTestCase):
         other = PublisherMember.objects.create(
             user=baker.make(User),
             publisher=p2,
-            role=PublisherMember.RoleChoice.STAFF,
+            group=member_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         self.authenticate_user(self.admin)
@@ -116,7 +123,7 @@ class AcceptanceCriteriaTest(BaseTestCase):
         PublisherMember.objects.create(
             user=baker.make(User),
             publisher=p2,
-            role=PublisherMember.RoleChoice.STAFF,
+            group=member_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         itqan = baker.make(User, is_staff=True)
@@ -158,6 +165,6 @@ class AcceptanceCriteriaTest(BaseTestCase):
             self.captureOnCommitCallbacks(execute=True),
         ):
             PublisherMemberInvitationService().create_invitation(
-                publisher=self.p1, email="active@example.com", role="staff", invited_by=self.admin
+                publisher=self.p1, email="active@example.com", group_id=member_group().id, invited_by=self.admin
             )
         self.assertEqual("already_a_member", ctx.exception.error_name)

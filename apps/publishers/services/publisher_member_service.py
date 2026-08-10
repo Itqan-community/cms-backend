@@ -1,11 +1,20 @@
 from __future__ import annotations
 
-from django.contrib.auth.models import Group as PermissionsGroup
 from django.db import transaction
 
 from apps.core.permissions import PermissionChoice
 from apps.publishers.models import PublisherMember
 from apps.publishers.repositories.publisher_member import PublisherMemberRepository
+from apps.users.services.group import ITQAN_INTERNAL_GROUP, GroupService
+
+__all__ = [
+    "ITQAN_INTERNAL_GROUP",
+    "PUBLISHER_ADMIN_GROUP",
+    "PUBLISHER_ADMIN_GROUP_PERMS",
+    "PUBLISHER_MEMBER_GROUP",
+    "PUBLISHER_MEMBER_GROUP_PERMS",
+    "PublisherMemberService",
+]
 
 # READ-only baseline granted to every active member (staff and admin).
 PUBLISHER_MEMBER_GROUP = "Publisher Member"
@@ -35,28 +44,36 @@ PUBLISHER_ADMIN_GROUP_PERMS = [
     PermissionChoice.PORTAL_MANAGE_ACCESS_REQUESTS_SETTINGS.value,
 ]
 
-ITQAN_INTERNAL_GROUP = "Itqan Internal"  # For Itqan staff only; not related to publishers.
-
 
 class PublisherMemberService:
-    def __init__(self, repo: PublisherMemberRepository | None = None) -> None:
+    def __init__(
+        self,
+        repo: PublisherMemberRepository | None = None,
+        groups: GroupService | None = None,
+    ) -> None:
         self.repo = repo or PublisherMemberRepository()
+        self.groups = groups or GroupService()
 
-    def _base_group(self) -> PermissionsGroup:
-        return PermissionsGroup.objects.get(name=PUBLISHER_MEMBER_GROUP)
+    def _groups_from_other_memberships(self, member: PublisherMember) -> set[int]:
+        """Group ids this user still needs for their *other* publisher memberships.
 
-    def _admin_group(self) -> PermissionsGroup:
-        return PermissionsGroup.objects.get(name=PUBLISHER_ADMIN_GROUP)
+        Django groups are global while membership is per-publisher, so a group must
+        only be stripped once no remaining active membership depends on it.
+        """
+        return set(
+            self.repo.other_active_membership_group_ids(
+                user_id=member.user_id, exclude_member_id=member.id, publisher_id=member.publisher_id
+            )
+        )
 
     def grant_member_perms(self, member: PublisherMember) -> None:
-        """Grant the READ baseline to any member; add the admin group for admins."""
-        member.user.groups.add(self._base_group())
-        if member.role == PublisherMember.RoleChoice.ADMIN:
-            member.user.groups.add(self._admin_group())
+        """Apply the member's group to the user."""
+        member.user.groups.add(member.group)
 
     def revoke_member_perms(self, member: PublisherMember) -> None:
-        """Remove both groups (member is being removed)."""
-        member.user.groups.remove(self._base_group(), self._admin_group())
+        """Remove this membership's group unless another membership still needs it."""
+        if member.group_id not in self._groups_from_other_memberships(member):
+            member.user.groups.remove(member.group)
 
     @transaction.atomic
     def update_member(self, member: PublisherMember, *, fields: dict) -> PublisherMember:
@@ -64,15 +81,15 @@ class PublisherMemberService:
         if name is not None:
             member.user.name = name
             member.user.save(update_fields=["name"])
-        new_role = fields.get("role")
-        if new_role is not None and new_role != member.role:
-            self.repo.set_role(member, new_role)
+        new_group_id = fields.get("group_id")
+        if new_group_id is not None and new_group_id != member.group_id:
+            new_group = self.groups.resolve_assignable_group(new_group_id)
+            previous_group = member.group
+            self.repo.set_group(member, new_group)
             if member.status == PublisherMember.StatusChoice.ACTIVE:
-                # Base READ group stays; only the admin group toggles with the role.
-                if new_role == PublisherMember.RoleChoice.ADMIN:
-                    member.user.groups.add(self._admin_group())
-                else:
-                    member.user.groups.remove(self._admin_group())
+                if previous_group.id not in self._groups_from_other_memberships(member):
+                    member.user.groups.remove(previous_group)
+                member.user.groups.add(new_group)
         return member
 
     @transaction.atomic

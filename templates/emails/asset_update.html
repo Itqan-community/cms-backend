@@ -1,23 +1,17 @@
-<!DOCTYPE html>
-<html>
+{% extends "emails/base_message.html" %}
+{% load i18n %}
 
-<head>
-    <meta charset="UTF-8">
-    <title>New Asset Version Available</title>
-</head>
+{% block title %}{% trans "New Asset Version Available" %}{% endblock title %}
 
-<body>
-    <h2>New Version for {{ asset_name }}</h2>
-    <p>A new version ({{ version }}) of the asset "{{ asset_name }}" is now available.</p>
+{% block heading %}{% blocktrans %}New version for {{ asset_name }}{% endblocktrans %}{% endblock heading %}
 
-    {% if summary %}
-    <p><strong>Summary of changes:</strong></p>
-    <p>{{ summary }}</p>
-    {% endif %}
+{% block content %}
+<p style="margin:0 0 24px;">{% blocktrans %}A new version ({{ version }}) of the asset "{{ asset_name }}" is now available.{% endblocktrans %}</p>
 
-    <p>You are receiving this email because you have access to this asset.</p>
+{% if summary %}
+<p style="margin:0 0 8px;"><strong>{% trans "Summary of changes:" %}</strong></p>
+<p style="margin:0 0 24px;">{{ summary }}</p>
+{% endif %}
 
-    <p>Best regards,<br>Itqan Team</p>
-</body>
-
-</html>
+<p style="margin:0; color:#6e8782; font-size:14px;">{% trans "You are receiving this email because you have access to this asset." %}</p>
+{% endblock content %}

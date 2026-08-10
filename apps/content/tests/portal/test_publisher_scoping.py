@@ -4,6 +4,7 @@ from apps.content.models import Asset, CategoryChoice, Qiraah, Reciter, Riwayah,
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher, PublisherMember
+from apps.publishers.tests.group_helpers import admin_group
 from apps.users.models import User
 
 
@@ -48,7 +49,7 @@ class PortalPublisherScopingTest(BaseTestCase):
         PublisherMember.objects.create(
             user=self.member_user,
             publisher=self.publisher_a,
-            role=PublisherMember.RoleChoice.ADMIN,
+            group=admin_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         self.no_membership_user = User.objects.create_user(email="orphan@example.com", name="Orphan")

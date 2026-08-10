@@ -9,6 +9,7 @@ from apps.core.ninja_utils.errors import ItqanError
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher, PublisherMember, PublisherMemberInvitation
 from apps.publishers.services.publisher_member_invitation_service import PublisherMemberInvitationService
+from apps.publishers.tests.group_helpers import admin_group, itqan_internal_group, member_group
 from apps.users.models import User
 
 
@@ -20,8 +21,9 @@ class InvitationServiceTest(BaseTestCase):
         self.inviter = baker.make(User, name="Inviter")
         Group.objects.get_or_create(name="Publisher Member Admin")
 
-    def _create(self, email="new@example.com", role=PublisherMember.RoleChoice.STAFF, publisher=None):
+    def _create(self, email="new@example.com", group=None, publisher=None):
         publisher = publisher or self.publisher
+        group = group or member_group()
         with (
             patch(
                 "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_invitation_email.delay"
@@ -29,7 +31,7 @@ class InvitationServiceTest(BaseTestCase):
             self.captureOnCommitCallbacks(execute=True),
         ):
             member, inv, raw = self.service.create_invitation(
-                publisher=publisher, email=email, role=role, invited_by=self.inviter
+                publisher=publisher, email=email, group_id=group.id, invited_by=self.inviter
             )
         return member, inv, raw, mock_delay
 
@@ -46,7 +48,7 @@ class InvitationServiceTest(BaseTestCase):
         PublisherMember.objects.create(
             user=existing,
             publisher=self.publisher,
-            role=PublisherMember.RoleChoice.STAFF,
+            group=member_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         with self.assertRaises(ItqanError) as ctx:
@@ -59,7 +61,7 @@ class InvitationServiceTest(BaseTestCase):
         PublisherMember.objects.create(
             user=existing,
             publisher=other_pub,
-            role=PublisherMember.RoleChoice.STAFF,
+            group=member_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         member, inv, raw, mock_delay = self._create(email="multi@example.com")
@@ -91,7 +93,7 @@ class InvitationServiceTest(BaseTestCase):
         self.assertEqual("invalid_invitation", ctx.exception.error_name)
 
     def test_accept_admin_activates_sets_password_and_grants_perms(self):
-        member, inv, raw, _ = self._create(email="newbie@example.com", role=PublisherMember.RoleChoice.ADMIN)
+        member, inv, raw, _ = self._create(email="newbie@example.com", group=admin_group())
         with (
             patch(
                 "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_activated_email.delay"
@@ -105,12 +107,13 @@ class InvitationServiceTest(BaseTestCase):
         self.assertEqual(PublisherMemberInvitation.StatusChoice.ACCEPTED, accepted.status)
         self.assertTrue(accepted.member.user.is_active)
         self.assertTrue(accepted.member.user.has_usable_password())
-        self.assertTrue(accepted.member.user.groups.filter(name="Publisher Member").exists())
+        # The member's single chosen group is applied; nothing else is implied.
         self.assertTrue(accepted.member.user.groups.filter(name="Publisher Member Admin").exists())
+        self.assertFalse(accepted.member.user.groups.filter(name="Publisher Member").exists())
         mock_ack.assert_called_once()
 
     def test_accept_staff_activates_with_read_baseline_only(self):
-        member, inv, raw, _ = self._create(email="grunt@example.com", role=PublisherMember.RoleChoice.STAFF)
+        member, inv, raw, _ = self._create(email="grunt@example.com", group=member_group())
         with (
             self.captureOnCommitCallbacks(execute=True),
             patch(
@@ -129,6 +132,74 @@ class InvitationServiceTest(BaseTestCase):
         self.assertTrue(user.has_perm("portal_access"))
         self.assertTrue(user.has_perm("portal_view_publisher_members"))
         self.assertFalse(user.has_perm("portal_invite_publisher_members"))
+
+    def test_create_invitation_where_group_is_itqan_internal_should_reject(self):
+        # Arrange
+        internal = itqan_internal_group()
+
+        # Act
+        with self.assertRaises(ItqanError) as ctx:
+            self._create(email="sneaky@example.com", group=internal)
+
+        # Assert
+        self.assertEqual("invalid_group", ctx.exception.error_name)
+        self.assertFalse(PublisherMember.objects.filter(user__email="sneaky@example.com").exists())
+
+    def test_create_invitation_where_group_does_not_exist_should_reject(self):
+        # Arrange
+        missing_group_id = 10_000_000
+
+        # Act
+        with self.assertRaises(ItqanError) as ctx:
+            self.service.create_invitation(
+                publisher=self.publisher,
+                email="ghost@example.com",
+                group_id=missing_group_id,
+                invited_by=self.inviter,
+            )
+
+        # Assert
+        self.assertEqual("invalid_group", ctx.exception.error_name)
+
+    def test_create_invitation_where_member_pending_with_other_group_should_update_group(self):
+        # Arrange
+        member, _, _, _ = self._create(email="changed@example.com", group=member_group())
+        self.assertEqual(member_group().id, member.group_id)
+
+        # Act
+        updated, _, _, _ = self._create(email="changed@example.com", group=admin_group())
+
+        # Assert
+        updated.refresh_from_db()
+        self.assertEqual(member.id, updated.id)
+        self.assertEqual(admin_group().id, updated.group_id)
+
+    def test_accept_where_member_belongs_to_another_publisher_should_keep_both_groups(self):
+        # Arrange: same user is already an active admin at another publisher.
+        user = baker.make(User, email="multi2@example.com", is_active=True)
+        other_publisher = baker.make(Publisher)
+        PublisherMember.objects.create(
+            user=user,
+            publisher=other_publisher,
+            group=admin_group(),
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
+        user.groups.add(admin_group())
+        _, _, raw, _ = self._create(email="multi2@example.com", group=member_group())
+
+        # Act
+        with (
+            self.captureOnCommitCallbacks(execute=True),
+            patch(
+                "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_activated_email.delay"
+            ),
+        ):
+            self.service.accept_invitation(raw)
+
+        # Assert: the new membership's group is added without disturbing the other one.
+        user.refresh_from_db()
+        self.assertTrue(user.groups.filter(name="Publisher Member").exists())
+        self.assertTrue(user.groups.filter(name="Publisher Member Admin").exists())
 
     def test_accept_is_single_use(self):
         _, _, raw, _ = self._create(email="once@example.com")

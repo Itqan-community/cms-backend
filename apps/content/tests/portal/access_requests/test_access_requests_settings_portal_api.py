@@ -4,6 +4,7 @@ from apps.content.models import Asset, AssetAccessRequest, CategoryChoice, Licen
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher, PublisherMember
+from apps.publishers.tests.group_helpers import admin_group
 from apps.users.models import User
 
 
@@ -15,7 +16,7 @@ class AccessRequestsSettingsPortalApiTests(BaseTestCase):
         PublisherMember.objects.create(
             user=self.member,
             publisher=self.publisher,
-            role=PublisherMember.RoleChoice.ADMIN,
+            group=admin_group(),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         self.staff_user = baker.make(User, is_staff=True)

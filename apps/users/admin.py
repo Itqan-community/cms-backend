@@ -24,7 +24,7 @@ class PublisherMemberInline(admin.TabularInline):
     model = PublisherMember
     extra = 0
     raw_id_fields = ["publisher"]
-    fields = ["publisher", "role"]
+    fields = ["publisher", "group"]
 
 
 class UserAdminChangeForm(admin_forms.UserChangeForm):

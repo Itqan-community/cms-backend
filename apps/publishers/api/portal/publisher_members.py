@@ -33,7 +33,8 @@ class MemberOut(Schema):
     id: int
     name: str
     email: str
-    role: str
+    group_id: int
+    group_name: str
     status: str
     publisher_id: int
     expires_at: AwareDatetime | None = None
@@ -48,6 +49,10 @@ class MemberOut(Schema):
         return obj.user.email
 
     @staticmethod
+    def resolve_group_name(obj: PublisherMember) -> str:
+        return obj.group.name
+
+    @staticmethod
     def resolve_expires_at(obj: PublisherMember):
         inv = next(
             (i for i in obj.invitations.all() if i.status == PublisherMemberInvitation.StatusChoice.PENDING),
@@ -60,12 +65,12 @@ class MemberCreateIn(Schema):
     publisher_id: int
     name: str
     email: str
-    role: Literal["admin", "staff"] = "staff"
+    group_id: int
 
 
 def _members_qs():
     return (
-        PublisherMember.objects.select_related("user", "publisher")
+        PublisherMember.objects.select_related("user", "publisher", "group")
         .prefetch_related("invitations")
         .order_by("-created_at")
     )
@@ -75,6 +80,7 @@ def _members_qs():
     "members/",
     response={
         201: MemberOut,
+        400: NinjaErrorResponse[Literal["invalid_group"]],
         403: NinjaErrorResponse,
         409: NinjaErrorResponse[Literal["already_a_member"]],
     },
@@ -84,7 +90,7 @@ def invite_member(request: Request, data: MemberCreateIn):
     publisher = get_object_or_404(Publisher, id=data.publisher_id)
     enforce_publisher_membership(request.user, data.publisher_id)
     member, _invitation, _raw = PublisherMemberInvitationService().create_invitation(
-        publisher=publisher, email=data.email, role=data.role, invited_by=request.user, name=data.name
+        publisher=publisher, email=data.email, group_id=data.group_id, invited_by=request.user, name=data.name
     )
     logger.info(f"Member invited [member_id={member.id}, publisher_id={data.publisher_id}, user_id={request.user.id}]")
     member = _members_qs().get(id=member.id)
@@ -98,7 +104,7 @@ class MemberFilter(FilterSchema):
 
 class MemberPatchIn(Schema):
     name: str | None = None
-    role: Literal["admin", "staff"] | None = None
+    group_id: int | None = None
 
 
 @router.get("members/", response=list[MemberOut])
@@ -127,7 +133,12 @@ def retrieve_member(request: Request, member_id: int):
 
 @router.patch(
     "members/{int:member_id}/",
-    response={200: MemberOut, 403: NinjaErrorResponse, 404: NinjaErrorResponse},
+    response={
+        200: MemberOut,
+        400: NinjaErrorResponse[Literal["invalid_group"]],
+        403: NinjaErrorResponse,
+        404: NinjaErrorResponse,
+    },
 )
 @permission_required([permission_class(PermissionChoice.PORTAL_UPDATE_PUBLISHER_MEMBERS)])
 def update_member(request: Request, member_id: int, data: MemberPatchIn):
@@ -139,7 +150,8 @@ def update_member(request: Request, member_id: int, data: MemberPatchIn):
             message=_("You cannot change your own membership."),
             status_code=403,
         )
-    return PublisherMemberService().update_member(member, fields=data.model_dump(exclude_unset=True))
+    PublisherMemberService().update_member(member, fields=data.model_dump(exclude_unset=True))
+    return _members_qs().get(id=member.id)
 
 
 @router.delete(
@@ -201,7 +213,7 @@ def resend_invite(request: Request, member_id: int):
 
 class InvitationDetailsOut(Schema):
     publisher_name: str
-    role: str
+    group_name: str
     invited_by_name: str
     email: str
     expires_at: AwareDatetime
@@ -212,8 +224,8 @@ class InvitationDetailsOut(Schema):
         return obj.publisher.name
 
     @staticmethod
-    def resolve_role(obj: PublisherMemberInvitation) -> str:
-        return obj.member.get_role_display()
+    def resolve_group_name(obj: PublisherMemberInvitation) -> str:
+        return obj.member.group.name
 
     @staticmethod
     def resolve_invited_by_name(obj: PublisherMemberInvitation) -> str:
