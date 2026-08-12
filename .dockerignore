@@ -14,6 +14,16 @@ docker-compose*
 # Dependencies
 node_modules
 npm-debug.log*
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.mypy_cache
+.ruff_cache
+celerybeat-schedule*
 
 # Build outputs
 .next

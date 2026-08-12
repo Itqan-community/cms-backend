@@ -291,6 +291,10 @@ jobs:
             echo "🗄️ Running database migrations (one-off)..."
             $COMPOSE run --rm --no-deps web python manage.py migrate --noinput
 
+            # Ensure staticfiles and media volumes are owned by appuser (UID 1001) for existing root-owned volumes
+            echo "🔒 Ensuring volume permissions for appuser..."
+            $COMPOSE run --rm --no-deps --user root web chown -R appuser:appgroup /app/staticfiles /app/media
+
             echo "🗂️ Collecting static files (one-off)..."
             $COMPOSE run --rm --no-deps web python manage.py collectstatic --noinput
 
