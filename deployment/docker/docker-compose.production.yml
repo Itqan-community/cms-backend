@@ -95,7 +95,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: celery -A config beat -l info
+    command: celery -A config beat -l info -s /tmp/celerybeat-schedule
     restart: unless-stopped
 
   flower:
