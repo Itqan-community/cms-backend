@@ -119,7 +119,7 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    command: uv run celery -A config beat -l info
+    command: uv run celery -A config beat -l info -s /tmp/celerybeat-schedule
 
   flower:
     build:
