@@ -41,16 +41,16 @@ class HierarchyWorkflowTest(BaseTestCase):
 
         # Step 1: root tree
         tree_res = self.client.get("/cms-api/hierarchy/tree/")
-        self.assertEqual(tree_res.status_code, 200, tree_res.content)
+        self.assertEqual(200, tree_res.status_code, tree_res.content)
         suras = tree_res.json()
-        self.assertGreaterEqual(len(suras), 1)
+        self.assertEqual(1, len(suras))
         sura_id = suras[0]["id"]
         self.assertEqual(suras[0]["ayas_count"], 2)
         self.assertEqual(suras[0]["start_offset"], 0)
 
         # Step 2: expand surah → ayahs with counts, no nested words
         ayah_tree_res = self.client.get(f"/cms-api/hierarchy/surah/{sura_id}/tree/")
-        self.assertEqual(ayah_tree_res.status_code, 200, ayah_tree_res.content)
+        self.assertEqual(200, ayah_tree_res.status_code, ayah_tree_res.content)
         ayahs = ayah_tree_res.json()
         self.assertEqual(len(ayahs), 2)
         for ayah in ayahs:
@@ -62,7 +62,7 @@ class HierarchyWorkflowTest(BaseTestCase):
 
         # Step 3: expand ayah → ordered words; length matches words_count
         words_res = self.client.get(f"/cms-api/hierarchy/ayah/{sura_id}/{ayah_with_words['number_in_sura']}/words/")
-        self.assertEqual(words_res.status_code, 200, words_res.content)
+        self.assertEqual(200, words_res.status_code, words_res.content)
         words = words_res.json()
         self.assertEqual(len(words), ayah_with_words["words_count"])
         self.assertEqual([w["position_in_ayah"] for w in words], [1, 2])
@@ -75,14 +75,14 @@ class HierarchyWorkflowTest(BaseTestCase):
 
         # Step 1-2: successful expands
         tree_res = self.client.get("/cms-api/hierarchy/tree/")
-        self.assertEqual(tree_res.status_code, 200)
+        self.assertEqual(200, tree_res.status_code, tree_res.content)
         sura_id = tree_res.json()[0]["id"]
 
         ayah_tree_res = self.client.get(f"/cms-api/hierarchy/surah/{sura_id}/tree/")
-        self.assertEqual(ayah_tree_res.status_code, 200)
+        self.assertEqual(200, ayah_tree_res.status_code, ayah_tree_res.content)
         self.assertEqual(len(ayah_tree_res.json()), 2)
 
         # Step 3: missing ayah after a valid expand
         words_res = self.client.get(f"/cms-api/hierarchy/ayah/{sura_id}/99/words/")
-        self.assertEqual(words_res.status_code, 404)
+        self.assertEqual(404, words_res.status_code, words_res.content)
         self.assertEqual(words_res.json()["error_name"], "ayah_not_found")

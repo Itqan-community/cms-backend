@@ -55,7 +55,7 @@ def list_surah_ayah_tree(request: Request, sura_id: int):
     "hierarchy/ayah/{int:sura_id}/{int:number_in_sura}/words/",
     response={
         200: list[HierarchyWordOut],
-        404: NinjaErrorResponse[Literal["sura_not_found"]] | NinjaErrorResponse[Literal["ayah_not_found"]],
+        404: NinjaErrorResponse[Literal["ayah_not_found"]],
     },
 )
 def get_ayah_words(request: Request, sura_id: int, number_in_sura: int):
