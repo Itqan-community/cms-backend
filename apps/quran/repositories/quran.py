@@ -50,10 +50,9 @@ class QuranRepository:
             .order_by("number_in_sura")
         )
 
-    def ayah_exists(self, sura_id: int, number_in_sura: int) -> bool:
-        return self.ayah_model.objects.filter(sura_id=sura_id, number_in_sura=number_in_sura).exists()
-
-    def get_ayah_words(self, sura_id: int, number_in_sura: int) -> QuerySet[Word]:
+    def get_ayah_words(self, sura_id: int, number_in_sura: int) -> QuerySet[Word] | None:
+        if not self.ayah_model.objects.filter(sura_id=sura_id, number_in_sura=number_in_sura).exists():
+            return None
         return self.word_model.objects.filter(sura_id=sura_id, ayah__number_in_sura=number_in_sura).order_by(
             "position_in_ayah"
         )

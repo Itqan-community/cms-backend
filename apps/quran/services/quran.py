@@ -57,11 +57,11 @@ class QuranService:
         return self.repo.list_surah_ayah_tree(sura_id)
 
     def get_ayah_words(self, sura_id: int, number_in_sura: int) -> QuerySet[Word]:
-        self.get_sura(sura_id)
-        if not self.repo.ayah_exists(sura_id, number_in_sura):
+        words = self.repo.get_ayah_words(sura_id, number_in_sura)
+        if words is None:
             raise ItqanError(
                 error_name="ayah_not_found",
                 message=_("Ayah does not exist."),
                 status_code=404,
             )
-        return self.repo.get_ayah_words(sura_id, number_in_sura)
+        return words
