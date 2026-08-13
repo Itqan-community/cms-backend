@@ -1,3 +1,4 @@
+from django.db import transaction
 from ninja import Schema
 from pydantic import AwareDatetime
 
@@ -79,9 +80,11 @@ def get_user_profile(request: Request):
 
 
 class UserUpdateSchema(Schema):
-    bio: str = ""
-    project_summary: str = ""
-    project_url: str = ""
+    name: str | None = None
+    bio: str | None = None
+    project_summary: str | None = None
+    project_url: str | None = None
+    job_title: str | None = None
 
 
 @router.put(
@@ -93,17 +96,18 @@ class UserUpdateSchema(Schema):
 def update_user_profile(request: Request, profile_data: UserUpdateSchema):
     """Update authenticated user's profile"""
     user = request.user
-    user_developer_profile, _ = Developer.objects.get_or_create(user=user)
+    update_fields = profile_data.model_dump(exclude_unset=True)
 
-    # Update allowed fields
-    if profile_data.bio is not None:
-        user_developer_profile.bio = profile_data.bio
-    if profile_data.project_summary is not None:
-        user_developer_profile.project_summary = profile_data.project_summary
-    if profile_data.project_url is not None:
-        user_developer_profile.project_url = profile_data.project_url
+    with transaction.atomic():
+        if "name" in update_fields:
+            user.name = (update_fields.pop("name") or "").strip()
+            user.save(update_fields=["name"])
 
-    user_developer_profile.save()
+        user_developer_profile, _ = Developer.objects.get_or_create(user=user)
+        for field, value in update_fields.items():
+            if hasattr(user_developer_profile, field):
+                setattr(user_developer_profile, field, (value or "").strip())
+        user_developer_profile.save()
 
     return {
         "id": str(user.id),
