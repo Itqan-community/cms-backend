@@ -38,7 +38,7 @@ class HierarchyEndpointsTest(BaseTestCase):
         response = self.client.get("/cms-api/hierarchy/tree/")
 
         # Assert
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(200, response.status_code, response.content)
         body = response.json()
         self.assertEqual(len(body), 1)
         self.assertEqual(
@@ -62,7 +62,7 @@ class HierarchyEndpointsTest(BaseTestCase):
         response = self.client.get("/cms-api/hierarchy/surah/1/tree/")
 
         # Assert
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(200, response.status_code, response.content)
         body = response.json()
         self.assertEqual(len(body), 2)
         self.assertEqual(body[0]["id"], 1)
@@ -81,7 +81,7 @@ class HierarchyEndpointsTest(BaseTestCase):
         response = self.client.get("/cms-api/hierarchy/surah/999/tree/")
 
         # Assert
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(404, response.status_code, response.content)
         self.assertEqual(response.json()["error_name"], "sura_not_found")
 
     def test_get_ayah_words_where_exists_should_return_ordered_words(self):
@@ -93,7 +93,7 @@ class HierarchyEndpointsTest(BaseTestCase):
         response = self.client.get("/cms-api/hierarchy/ayah/1/1/words/")
 
         # Assert
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(200, response.status_code, response.content)
         body = response.json()
         self.assertEqual([w["text"] for w in body], ["بِسْمِ", "اللَّهِ"])
         self.assertEqual([w["position_in_ayah"] for w in body], [1, 2])
@@ -107,7 +107,7 @@ class HierarchyEndpointsTest(BaseTestCase):
         response = self.client.get("/cms-api/hierarchy/ayah/1/99/words/")
 
         # Assert
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(404, response.status_code, response.content)
         self.assertEqual(response.json()["error_name"], "ayah_not_found")
 
     def test_list_hierarchy_tree_where_unauthenticated_should_return_401(self):
@@ -115,4 +115,4 @@ class HierarchyEndpointsTest(BaseTestCase):
         response = self.client.get("/cms-api/hierarchy/tree/")
 
         # Assert
-        self.assertEqual(response.status_code, 401)
+        self.assertEqual(401, response.status_code, response.content)
