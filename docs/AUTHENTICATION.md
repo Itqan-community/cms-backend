@@ -364,25 +364,21 @@ Currently, all authenticated applications have full read/write access. Future ve
 
 ---
 
-## Planned: Self-Identification Auth (App Header + Per-User Identifier)
+## Application Self-Identification (API Keys)
 
-OAuth2 client-credentials requires a confidential backend to protect `client_secret`,
-which blocks developers who only want a mobile or web client with no backend of their
-own. A lower-friction, header-based self-identification model is planned to sit alongside
-OAuth2: apps identify themselves via a request header (no secret exchange), and
-optionally attach a developer-chosen, non-PII per-end-user identifier so usage can be
-measured per user as well as per app — without Itqan ever holding end-user PII. This
-also gives publishers visibility into how their licensed content is actually used
-downstream.
+### Architecture Decision
+Itqan CMS uses the existing **API Key system** (`X-API-Key` header) as the standard mechanism for application self-identification.
 
-**Phase 1 decisions:** it does **not** replace OAuth2 or any existing auth method.
-App identifiers are open (not secret-backed) — spoofing is technically possible and
-accepted for now; a stricter scheme will follow only if abuse becomes a real problem.
-Since the per-user identifier is fully anonymised (no PII), its usage history can be
-retained indefinitely.
+> 💡 **Key Decision:** OAuth2 Applications and custom app-identity headers are **NOT used** for application self-identification in this epic.
 
-See [ROADMAP.md — §1](./ROADMAP.md#1-appuser-scoped-authentication-self-identification-model)
-for the full problem statement and open questions.
+---
+
+### Core Properties & Requirements
+
+* **Application Self-Identification:** The API key serves as the application self-identification token (`1 Key = 1 App`).
+* **Ownership Binding:** Every key is bound to a logged-in developer via `APIKey.user`. This ensures any application using the system can be mapped directly to a developer for contact and governance.
+* **Multiple Applications Support:** A single developer can hold multiple keys (one per application). This is supported directly by the `unique_together = ("user", "name")` constraint on the `APIKey` model.
+* **Schema Impact:** No database schema changes or new models are required. The existing `APIKey` model satisfies all requirements.
 
 ---
 
