@@ -71,6 +71,7 @@ class TimingUploadBaseTest(BaseTestCase):
         self.track = baker.make(
             RecitationSurahTrack,
             asset=self.asset,
+            folder=self.asset.recitation_folders.get(is_default=True),
             surah_number=1,
         )
 
@@ -192,9 +193,11 @@ class TimingUploadSuccessTest(TimingUploadBaseTest):
             },
         )
 
-        # Assert
+        # Assert - versions are now named after the folder they export, so each
+        # variant's timings get their own AssetVersion instead of overwriting one.
         self.assertEqual(200, response.status_code, response.content)
-        self.assertIsNotNone(AssetVersion.objects.filter(asset_id=self.asset.id, name="1").first())
+        default_folder = self.asset.recitation_folders.get(is_default=True)
+        self.assertIsNotNone(AssetVersion.objects.filter(asset_id=self.asset.id, name=default_folder.slug).first())
 
         # Verify the timing upload was also added
         self.assertEqual(2, RecitationAyahTiming.objects.filter(track=self.track).count())

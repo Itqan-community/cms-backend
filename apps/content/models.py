@@ -593,6 +593,69 @@ class Riwayah(BaseModel):
         return f"Riwayah(name={self.name})"
 
 
+class RecitationFolder(BaseModel):
+    """
+    A variant of a recitation Asset holding its own full set of surah tracks.
+
+    The same recitation by the same reciter may be published in several forms
+    (clear sound, with echo and delay, 128kbps, 320kbps, video). Each form is a
+    folder under the one Asset, so the recitation keeps a single page instead of
+    being split across separate Assets.
+
+    Every Asset has exactly one folder flagged ``is_default``, which is what the
+    APIs serve when the caller does not name a folder.
+    """
+
+    DEFAULT_NAME_AR = "افتراضي"
+    DEFAULT_NAME_EN = "Default"
+    DEFAULT_SLUG = "default"
+
+    asset = models.ForeignKey(
+        Asset,
+        on_delete=models.CASCADE,
+        related_name="recitation_folders",
+        help_text="Parent Asset representing the recitation set",
+    )
+    name = models.CharField(max_length=255, help_text="Folder/variant name e.g. 'Clear', 'With echo', '128kbps'")
+    slug = models.SlugField(
+        allow_unicode=True,
+        db_index=True,
+        default="",
+        help_text="URL-friendly slug, unique per asset. Used as the ?folder= API query value.",
+    )
+    is_default = models.BooleanField(
+        default=False,
+        help_text="The folder served when the API caller does not specify one. Exactly one per asset.",
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["asset", "slug"], name="folder_unique_slug_per_asset"),
+            models.UniqueConstraint(
+                fields=["asset"],
+                condition=models.Q(is_default=True),
+                name="folder_one_default_per_asset",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["asset", "slug"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"RecitationFolder(asset={self.asset_id}, name={self.name})"
+
+    def save(self, *args, **kwargs) -> None:
+        if not self.slug:
+            base_slug = slugify_name(self.name_en, self.name_ar) or self.DEFAULT_SLUG
+            slug = base_slug
+            counter = 1
+            while self.__class__.objects.filter(asset_id=self.asset_id, slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base_slug[:40]}-{counter}"
+                counter += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
+
+
 class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
     """Audio track per-surah for a recitation Asset"""
 
@@ -601,6 +664,12 @@ class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
         on_delete=models.CASCADE,
         related_name="recitation_tracks",
         help_text="Parent Asset representing the recitation set",
+    )
+    folder = models.ForeignKey(
+        RecitationFolder,
+        on_delete=models.CASCADE,
+        related_name="tracks",
+        help_text="Folder (variant) this track belongs to",
     )
     surah_number = models.PositiveSmallIntegerField(
         help_text="Surah number (1..114)",
@@ -627,15 +696,34 @@ class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
     upload_finished_at = models.DateTimeField(null=True, blank=True, help_text="When audio file upload was completed")
 
     class Meta:
-        unique_together = [["asset", "surah_number"]]
+        # Uniqueness is per folder, not per asset: an asset may publish the same surah
+        # once in each of its variants (clear, with echo, 128kbps, ...).
+        unique_together = [["folder", "surah_number"]]
         indexes = [
+            models.Index(fields=["folder", "surah_number"]),
             models.Index(fields=["asset", "surah_number"]),
         ]
 
     def __str__(self) -> str:
-        return f"RecitationSurahTrack(asset={self.asset_id}, surah={self.surah_number})"
+        return f"RecitationSurahTrack(asset={self.asset_id}, folder={self.folder_id}, surah={self.surah_number})"
 
     def save(self, *args, **kwargs) -> None:
+        # No folder named: fall back to the asset's default variant, mirroring what the
+        # APIs do when a caller omits ?folder. Keeps callers that predate folders working.
+        if not self.folder_id and self.asset_id:
+            default_folder = RecitationFolder.objects.filter(asset_id=self.asset_id, is_default=True).first()
+            if default_folder is None:
+                raise ValueError(f"Asset {self.asset_id} has no default RecitationFolder to place this track in.")
+            self.folder_id = default_folder.id
+
+        # A track must never end up under a folder belonging to a different Asset: asset is
+        # kept denormalized here (queries scope by asset__publisher), so the two must agree.
+        if self.folder_id and self.folder.asset_id != self.asset_id:
+            raise ValueError(
+                f"RecitationSurahTrack.folder belongs to asset {self.folder.asset_id}, "
+                f"but the track is assigned to asset {self.asset_id}."
+            )
+
         # Auto-compute duration and size when an MP3 file is present. And set the original filename for admin/manual uploads.
         if self.audio_file:
             if not self.size_bytes:

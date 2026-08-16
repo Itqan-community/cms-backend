@@ -9,6 +9,7 @@ from django.utils.translation import gettext as _
 from apps.content.models import LicenseChoice, Qiraah, Reciter, Riwayah
 from apps.content.repositories.recitation import RecitationRepository
 from apps.content.services.asset_access import guard_restrict_for_tenant
+from apps.content.services.recitation_folder_resolution import find_folder_by_token
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
 
@@ -210,13 +211,37 @@ class RecitationService:
             ) from exc
 
     def get_asset_tracks(
-        self, asset_id: int, publisher_q: Q, prefetch_timings: bool = False
+        self,
+        asset_id: int,
+        publisher_q: Q,
+        prefetch_timings: bool = False,
+        folder: str | None = None,
     ) -> QuerySet[RecitationSurahTrack]:
         """
         Business Logic: Retrieve tracks for a specific asset if it belongs to the publisher.
+
+        Results are scoped to one folder (variant): the one identified by ``folder``,
+        which accepts either the folder's slug or its name, or the asset's default
+        folder when it is None. An unresolvable value raises ``folder_not_found``
+        rather than returning an empty list, so callers can tell a typo apart from a
+        folder that has no tracks yet.
         """
+        folder_id = None
+        if folder is not None:
+            matched = find_folder_by_token(asset_id, folder)
+            if matched is None:
+                raise ItqanError(
+                    error_name="folder_not_found",
+                    message=_("Folder {folder} not found.").format(folder=folder),
+                    status_code=404,
+                )
+            folder_id = matched.id
+
         return self.repo.list_recitation_tracks_for_asset(
-            asset_id, publisher_q=publisher_q, prefetch_timings=prefetch_timings
+            asset_id,
+            publisher_q=publisher_q,
+            prefetch_timings=prefetch_timings,
+            folder_id=folder_id,
         )
 
     def get_all_reciters(self, publisher_q: Q, filters: Any = None) -> QuerySet:

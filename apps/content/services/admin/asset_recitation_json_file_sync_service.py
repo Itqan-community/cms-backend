@@ -8,16 +8,16 @@ from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 
 from apps.content.api.public.recitation_track_list import RecitationAyahTimingOut, RecitationSurahTrackOut
-from apps.content.models import Asset, AssetVersion, RecitationSurahTrack
+from apps.content.models import Asset, AssetVersion, RecitationFolder, RecitationSurahTrack
 from apps.core.mixins.constants import QURAN_SURAHS
 from config.settings.base import CLOUDFLARE_R2_PUBLIC_BASE_URL
 
 logger = logging.getLogger(__name__)
 
 
-def _build_recitations_json(asset: Asset) -> tuple[str, str]:
+def _build_recitations_json(asset: Asset, folder: RecitationFolder) -> tuple[str, str]:
     tracks = (
-        RecitationSurahTrack.objects.filter(asset=asset)
+        RecitationSurahTrack.objects.filter(asset=asset, folder=folder)
         .prefetch_related("ayah_timings")
         .order_by("surah_number")
         .only("surah_number", "audio_file", "duration_ms", "size_bytes")
@@ -56,40 +56,63 @@ def _build_recitations_json(asset: Asset) -> tuple[str, str]:
 
     payload = json.dumps([i.model_dump() for i in result], ensure_ascii=False, indent=2)
     reciter_slug = asset.reciter.slug if getattr(asset, "reciter", None) else ""
-    filename = (
-        f"asset_{asset.id}_{reciter_slug}_recitations.json" if reciter_slug else f"asset_{asset.id}_recitations.json"
-    )
+    # The folder slug is part of the filename so variants (clear, with-echo, ...)
+    # each get their own export instead of overwriting one another.
+    parts = [f"asset_{asset.id}"]
+    if reciter_slug:
+        parts.append(reciter_slug)
+    parts.append(folder.slug)
+    filename = "_".join(parts) + "_recitations.json"
     return payload, filename
 
 
-def sync_asset_recitations_json_file(asset_id: int) -> tuple[AssetVersion, str]:
+def sync_asset_recitations_json_file(asset_id: int, folder_id: int | None = None) -> tuple[AssetVersion, str]:
     """
-    Build the recitation JSON for the Asset and save it into the LATEST AssetVersion.file_url.
-    - Raises ValueError if the Asset does not exist or if there is no latest AssetVersion.
-    - Returns (updated_asset_version, filename) on success.
+    Build the recitation JSON for one folder of the Asset and save it to an AssetVersion.
+
+    Each folder (variant) gets its own AssetVersion, named after the folder slug, because
+    echo/delay variants have genuinely different ayah offsets and must not overwrite each
+    other's export. ``folder_id`` defaults to the asset's default folder.
+
+    - Raises ValueError if the Asset or the folder does not exist.
+    - Returns (asset_version, filename) on success.
     """
-    logger.info(f"Recitation JSON sync started [asset_id={asset_id}]")
+    logger.info(f"Recitation JSON sync started [asset_id={asset_id}, folder_id={folder_id}]")
 
     asset: Asset | None = Asset.objects.filter(pk=asset_id).first()
     if not asset:
         raise ValueError(_("Asset {asset_id} not found").format(asset_id=asset_id))
 
-    latest_version: AssetVersion | None = asset.get_latest_version()
-    if not latest_version:
-        latest_version: AssetVersion = AssetVersion.objects.create(asset=asset, name="1")
+    if folder_id is not None:
+        folder: RecitationFolder | None = RecitationFolder.objects.filter(pk=folder_id, asset_id=asset_id).first()
+    else:
+        folder = RecitationFolder.objects.filter(asset_id=asset_id, is_default=True).first()
 
-    payload, filename = _build_recitations_json(asset)
+    if not folder:
+        raise ValueError(
+            _("Folder {folder_id} not found for asset {asset_id}").format(folder_id=folder_id, asset_id=asset_id)
+        )
+
+    # One version per folder, identified by the folder slug. Looking it up by name
+    # keeps repeated syncs of the same variant updating a single row.
+    version_name = folder.slug
+    version: AssetVersion | None = AssetVersion.objects.filter(asset=asset, name=version_name).first()
+    if not version:
+        version = AssetVersion.objects.create(asset=asset, name=version_name)
+
+    payload, filename = _build_recitations_json(asset, folder)
     payload_bytes = payload.encode("utf-8")
     track_count = payload.count('"surah_number"')
 
-    # Atomic write to the latest version file
+    # Atomic write to this folder's version file
     with transaction.atomic():
         content = ContentFile(payload_bytes)
-        latest_version.file_url.save(filename, content, save=False)
-        latest_version.size_bytes = len(payload_bytes)
-        latest_version.save(update_fields=["file_url", "size_bytes", "updated_at"])
+        version.file_url.save(filename, content, save=False)
+        version.size_bytes = len(payload_bytes)
+        version.save(update_fields=["file_url", "size_bytes", "updated_at"])
 
     logger.info(
-        f"Recitation JSON sync complete [asset_id={asset_id}, version_id={latest_version.pk}, tracks={track_count}, size_bytes={len(payload_bytes)}, filename={filename}]"
+        f"Recitation JSON sync complete [asset_id={asset_id}, folder_id={folder.pk}, version_id={version.pk}, "
+        f"tracks={track_count}, size_bytes={len(payload_bytes)}, filename={filename}]"
     )
-    return latest_version, filename
+    return version, filename

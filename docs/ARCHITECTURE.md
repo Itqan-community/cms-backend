@@ -156,7 +156,8 @@ An **Asset** is a **derivation** of a Resource. It represents content that has b
 - Linked to a parent Resource
 - Inherits or specifies its own license
 - Can have multiple preview images
-- For recitation assets: linked to a **Reciter** and **Riwayah**
+- For recitation assets: linked to a **Reciter** and **Riwayah**, and owns one or more
+  **RecitationFolder** variants (see [Recitation-Specific Components](#recitation-specific-components))
 
 ### 5. AssetVersion
 
@@ -348,7 +349,9 @@ For recitation-type assets, the system provides specialized tracking:
 
 ```mermaid
 erDiagram
-    Asset ||--o{ RecitationSurahTrack : "contains"
+    Asset ||--o{ RecitationFolder : "has variants"
+    RecitationFolder ||--o{ RecitationSurahTrack : "contains"
+    Asset ||--o{ RecitationSurahTrack : "owns (denormalized)"
     RecitationSurahTrack ||--o{ RecitationAyahTiming : "has timings"
     Asset }o--|| Reciter : "performed by"
     Asset }o--|| Riwayah : "follows"
@@ -363,6 +366,12 @@ erDiagram
         string slug
     }
 
+    RECITATIONFOLDER {
+        string name
+        string slug
+        bool is_default
+    }
+
     RECITATIONSURAHTRACK {
         int surah_number
         file audio_file
@@ -375,6 +384,60 @@ erDiagram
         int end_ms
     }
 ```
+
+### Folders (recitation variants)
+
+A **RecitationFolder** sits between `Asset` and `RecitationSurahTrack`. It lets one
+recitation be published in several forms — clear sound, with echo and delay, 128kbps,
+320kbps, video — without splitting it into separate Assets, so the recitation keeps a
+single page.
+
+- Each folder holds its own set of up to 114 surah tracks.
+- Uniqueness is `(folder, surah_number)`, **not** `(asset, surah_number)`: the same
+  surah exists once per variant.
+- Ayah timings hang off the track, so they are per-folder automatically — which matters
+  because echo/delay variants have genuinely different offsets.
+- Every recitation Asset gets exactly one folder flagged `is_default`, created by a
+  `post_save` signal on `Asset` so the invariant also holds for assets made through
+  Django admin, fixtures, or data imports.
+- `Asset` is kept as a denormalized FK on the track alongside `folder`, because
+  publisher scoping (`asset__publisher`) and most queries filter by asset. A model-level
+  check rejects any track whose `folder.asset_id` disagrees with its `asset_id`.
+
+**API surface.** No new top-level resources were added.
+
+- Every recitation **track** endpoint accepts an optional `?folder=` filter, resolved by
+  `find_folder_by_token`: the value may be a folder's slug **or** its name (matched
+  case-insensitively across `name`, `name_ar`, `name_en`). Slug wins when both could
+  match, since it is unique per asset. Names are not unique — two folders called "Clear"
+  get slugs `clear` and `clear-1` — so an ambiguous name resolves to the default folder
+  if present, otherwise the oldest. Omitting the parameter serves the default folder, so
+  callers written before folders existed are unaffected. An unresolvable value returns
+  `404 folder_not_found` rather than an empty list, so a typo is distinguishable from a
+  variant that has no tracks yet.
+- The public track endpoint's cache key embeds the **requested** `?folder=` value, not the
+  resolved folder, so a warm cache still serves without a DB read. Because that value is
+  user input, `folder_cache_token` sanitizes it first — slug-shaped values pass through for
+  readability, anything else (spaces, Arabic, overlong input) is hashed, and case is folded
+  so equivalent names share one entry.
+- Every recitation **list** endpoint (public, tenant, internal) returns a `folders` array
+  per row — name, slug, `is_default`, default first — so a consumer can discover the valid
+  `?folder=` values. Only the portal API has a recitation *detail* endpoint; it carries the
+  same array. The list queryset prefetches `recitation_folders`, so this costs one extra
+  query per page rather than one per row.
+- Folder CRUD is nested under the existing portal recitations resource at
+  `/portal/recitations/{slug}/folders/`. The default folder cannot be deleted
+  (`400 cannot_delete_default_folder`), since every other endpoint falls back to it.
+- Renaming a folder deliberately does **not** change its slug: the slug is the public
+  `?folder=` value, and moving it would break existing links and cached responses.
+
+**Storage.** New uploads are keyed
+`uploads/assets/{asset_id}/recitations/{folder_id}/{surah:03}.mp3`. Tracks uploaded
+before folders existed keep their original flat keys — nothing in R2 was moved, and each
+row stores its own full key, so both layouts coexist permanently.
+
+**Ayah-timing exports.** `sync_asset_recitations_json_file` writes one `AssetVersion`
+per folder, named after the folder slug, so variants do not overwrite each other's JSON.
 
 > **Note:** `RecitationAyahTiming` already has the offsets needed to serve individual
 > ayah audio, but recitations are currently only distributed as full-surah files.

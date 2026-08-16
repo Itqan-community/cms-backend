@@ -5,7 +5,7 @@ from django.test import override_settings
 from model_bakery import baker
 from oauth2_provider.models import Application
 
-from apps.content.cache import recitation_response_cache_key
+from apps.content.cache import DEFAULT_FOLDER_CACHE_TOKEN, recitation_response_cache_key
 from apps.content.models import (
     Asset,
     AssetAccess,
@@ -51,6 +51,7 @@ class RecitationTracksTest(BaseTestCase):
         baker.make(
             RecitationSurahTrack,
             asset=self.asset,
+            folder=self.asset.recitation_folders.get(is_default=True),
             surah_number=2,
             duration_ms=2000,
             size_bytes=1024,
@@ -59,6 +60,7 @@ class RecitationTracksTest(BaseTestCase):
         baker.make(
             RecitationSurahTrack,
             asset=self.asset,
+            folder=self.asset.recitation_folders.get(is_default=True),
             surah_number=1,
             duration_ms=1000,
             size_bytes=512,
@@ -90,6 +92,7 @@ class RecitationTracksTest(BaseTestCase):
         baker.make(
             RecitationSurahTrack,
             asset=self.asset,
+            folder=self.asset.recitation_folders.get(is_default=True),
             surah_number=1,
             duration_ms=1000,
             size_bytes=512,
@@ -144,6 +147,7 @@ class RecitationTracksTest(BaseTestCase):
         track = baker.make(
             RecitationSurahTrack,
             asset=self.asset,
+            folder=self.asset.recitation_folders.get(is_default=True),
             surah_number=1,
             duration_ms=1000,
             size_bytes=512,
@@ -187,6 +191,7 @@ class RecitationTracksTest(BaseTestCase):
         baker.make(
             RecitationSurahTrack,
             asset=self.asset,
+            folder=self.asset.recitation_folders.get(is_default=True),
             surah_number=1,
             duration_ms=1000,
             size_bytes=512,
@@ -210,6 +215,7 @@ class RecitationTracksTest(BaseTestCase):
         track = baker.make(
             RecitationSurahTrack,
             asset=self.asset,
+            folder=self.asset.recitation_folders.get(is_default=True),
             surah_number=1,
             duration_ms=3000,
             size_bytes=512,
@@ -266,6 +272,7 @@ class RecitationTracksPageSizeCapTest(BaseTestCase):
             baker.make(
                 RecitationSurahTrack,
                 asset=self.asset,
+                folder=self.asset.recitation_folders.get(is_default=True),
                 surah_number=surah_number,
                 duration_ms=1000,
                 size_bytes=512,
@@ -297,7 +304,9 @@ class RecitationTracksPageSizeCapTest(BaseTestCase):
 
         # Pre-serialized response bytes must exist after first request.
         cached_bytes = django_cache.get(
-            recitation_response_cache_key(self.asset.id, page=1, page_size=DEFAULT_PAGE_SIZE)
+            recitation_response_cache_key(
+                self.asset.id, page=1, page_size=DEFAULT_PAGE_SIZE, folder_slug=DEFAULT_FOLDER_CACHE_TOKEN
+            )
         )
         self.assertIsNotNone(cached_bytes)
         cached_data = json.loads(cached_bytes)
@@ -363,6 +372,7 @@ class RecitationTracksAccessControlTest(BaseTestCase):
         baker.make(
             RecitationSurahTrack,
             asset=self.asset,
+            folder=self.asset.recitation_folders.get(is_default=True),
             surah_number=1,
             duration_ms=1000,
             size_bytes=512,
