@@ -11,9 +11,15 @@ class RecitationTrackRepository:
     def __init__(self) -> None:
         self.model = RecitationSurahTrack
 
-    def get_recitation_tracks_surah_numbers_by_asset_id(self, asset_id: int) -> set[int]:
-        """Return the set of tracks surah numbers already uploaded for the given asset."""
-        return set(self.model.objects.filter(asset_id=asset_id).values_list("surah_number", flat=True))
+    def get_recitation_tracks_surah_numbers_by_folder_id(self, folder_id: int) -> set[int]:
+        """
+        Return the surah numbers already uploaded into the given folder.
+
+        Scoped to the folder rather than the asset: the same surah legitimately
+        exists once per variant, so an asset-wide check would wrongly report a
+        surah as already uploaded when only a *different* variant has it.
+        """
+        return set(self.model.objects.filter(folder_id=folder_id).values_list("surah_number", flat=True))
 
     def get_recitation_tracks_by_ids(
         self, track_ids: list[int], publisher_q: Q | None = None
@@ -27,6 +33,7 @@ class RecitationTrackRepository:
     def create_recitation_track(
         self,
         asset_id: int,
+        folder_id: int,
         surah_number: int,
         audio_file: str,
         original_filename: str | None = None,
@@ -37,6 +44,7 @@ class RecitationTrackRepository:
         """Persist a new RecitationSurahTrack row and return it."""
         return self.model.objects.create(
             asset_id=asset_id,
+            folder_id=folder_id,
             surah_number=surah_number,
             audio_file=audio_file,
             original_filename=original_filename,

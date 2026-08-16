@@ -35,9 +35,14 @@ class RecitationRepository(BaseRecitationRepository):
         """
         Returns a queryset of Asset objects.
         """
-        qs = self.asset_model.objects.select_related("publisher", "reciter", "riwayah", "qiraah").filter(
-            category=CategoryChoice.RECITATION,
-            status=StatusChoice.READY,
+        qs = (
+            self.asset_model.objects.select_related("publisher", "reciter", "riwayah", "qiraah")
+            # Folders are serialized on every list row, so prefetch them: the list is
+            # paginated and resolving them lazily would be one extra query per row.
+            .prefetch_related("recitation_folders").filter(
+                category=CategoryChoice.RECITATION,
+                status=StatusChoice.READY,
+            )
         )
 
         if publisher_q is not None:
@@ -68,7 +73,16 @@ class RecitationRepository(BaseRecitationRepository):
                 qs = qs.filter(license__in=license_codes)
 
         if annotate_surahs_count:
-            qs = qs.annotate(surahs_count=Count("recitation_tracks"))
+            # Count the default folder's tracks only. Counting every folder would
+            # report 228 for a recitation published in two variants, when what the
+            # caller wants is "how many surahs does this recitation cover".
+            qs = qs.annotate(
+                surahs_count=Count(
+                    "recitation_tracks",
+                    filter=Q(recitation_tracks__folder__is_default=True),
+                    distinct=True,
+                )
+            )
 
         # Sorting support
         qs = qs.annotate(
@@ -85,7 +99,7 @@ class RecitationRepository(BaseRecitationRepository):
         """
         try:
             qs = self.asset_model.objects.select_related("publisher", "reciter", "riwayah", "qiraah").prefetch_related(
-                "versions"
+                "versions", "recitation_folders"
             )
             if publisher_q is not None:
                 qs = qs.filter(publisher_q)
@@ -140,6 +154,9 @@ class RecitationRepository(BaseRecitationRepository):
                 is_open_access=is_open_access,
                 restricted_for_tenant=restricted_for_tenant,
             )
+            # The default folder is created by the post_save signal on Asset
+            # (apps/content/signals.py), which keeps the invariant true for assets
+            # created outside this repository too.
 
         return asset
 
@@ -214,13 +231,24 @@ class RecitationRepository(BaseRecitationRepository):
             return None
 
     def list_recitation_tracks_for_asset(
-        self, asset_id: int, publisher_q: Q | None, prefetch_timings: bool = False
+        self,
+        asset_id: int,
+        publisher_q: Q | None,
+        prefetch_timings: bool = False,
+        folder_id: int | None = None,
     ) -> QuerySet[RecitationSurahTrack]:
         query = Q(asset_id=asset_id)
         if publisher_q is not None:
             query &= publisher_q
 
-        qs = self.track_model.objects.select_related("asset__reciter").filter(query).order_by("surah_number")
+        if folder_id is None:
+            # No folder requested: serve the default one so callers that predate the
+            # folder feature keep seeing exactly one track per surah.
+            query &= Q(folder__is_default=True)
+        else:
+            query &= Q(folder_id=folder_id)
+
+        qs = self.track_model.objects.select_related("asset__reciter", "folder").filter(query).order_by("surah_number")
         if prefetch_timings:
             qs = qs.prefetch_related(
                 Prefetch(

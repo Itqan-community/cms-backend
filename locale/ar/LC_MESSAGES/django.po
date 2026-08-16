@@ -67,15 +67,19 @@ msgid "Provided asset_id {asset_id} does not match mushaf asset id {expected_id}
 msgstr "المعرّف asset_id {asset_id} المُقدَّم لا يطابق معرّف أصل المصحف {expected_id}."
 
 #, python-brace-format
+msgid "Recitation with slug {slug} not found."
+msgstr "لم يتم العثور على التلاوة بالمعرّف {slug}."
+
+#, python-brace-format
 msgid "Asset with slug {slug} not found."
 msgstr "المورد ذو المعرف {slug} غير موجود."
 
+#, python-brace-format
+msgid "Folder {folder} not found."
+msgstr "لم يتم العثور على المجلد {folder}."
+
 msgid "Some track IDs are invalid or do not exist."
 msgstr "بعض معرّفات المقاطع غير صالحة أو غير موجودة."
-
-#, python-brace-format
-msgid "Recitation with slug {slug} not found."
-msgstr "لم يتم العثور على التلاوة بالمعرّف {slug}."
 
 #, python-brace-format
 msgid "Tafsir with slug {slug} not found."
@@ -227,8 +231,8 @@ msgid "Failed to initiate upload (R2 error: {error_code})."
 msgstr "فشل بدء الرفع (خطأ R2: {error_code})."
 
 #, python-brace-format
-msgid "A track for asset {asset_id} surah {surah_number} already exists."
-msgstr "يوجد مقطع بالفعل للأصل {asset_id} والسورة {surah_number}."
+msgid "A track for surah {surah_number} already exists in folder {folder_id}."
+msgstr "يوجد بالفعل مقطع للسورة {surah_number} في المجلد {folder_id}."
 
 msgid "Missing surah_id in uploaded JSON"
 msgstr "الحقل surah_id مفقود في ملف JSON المرفوع"
@@ -238,8 +242,16 @@ msgid "Invalid timing for ayah {ayah_number}: end < start"
 msgstr "توقيت غير صالح للآية {ayah_number}: النهاية قبل البداية"
 
 #, python-brace-format
+msgid "Folder {folder_id} not found for asset {asset_id}."
+msgstr "لم يتم العثور على المجلد {folder_id} للأصل {asset_id}."
+
+#, python-brace-format
 msgid "Asset {asset_id} not found"
 msgstr "الأصل {asset_id} غير موجود"
+
+#, python-brace-format
+msgid "Folder {folder_id} not found for asset {asset_id}"
+msgstr "لم يتم العثور على المجلد {folder_id} للأصل {asset_id}"
 
 msgid "Not found."
 msgstr "غير موجود."
@@ -327,6 +339,23 @@ msgstr "لم يتم العثور على الرواية بالمعرّف {id}."
 
 msgid "Cannot delete Recitation because they are referenced through other objects"
 msgstr "لا يمكن حذف التلاوة لأن هناك بيانات أخرى مرتبطة بها"
+
+#, python-brace-format
+msgid "Folder with slug {slug} not found."
+msgstr "لم يتم العثور على مجلد بالمعرف {slug}."
+
+msgid "This recitation has no default folder."
+msgstr "لا يحتوي هذا التسجيل على مجلد افتراضي."
+
+msgid "Folder name (Arabic or English) is required."
+msgstr "اسم المجلد (بالعربية أو الإنجليزية) مطلوب."
+
+msgid "The default folder cannot be deleted."
+msgstr "لا يمكن حذف المجلد الافتراضي."
+
+#, python-brace-format
+msgid "Folder {folder_id} does not belong to asset {asset_id}."
+msgstr "المجلد {folder_id} لا ينتمي إلى الأصل {asset_id}."
 
 msgid "Reciter name (Arabic or English) is required."
 msgstr "اسم القارئ (بالعربية أو الإنجليزية) مطلوب."
@@ -1067,6 +1096,10 @@ msgstr "مرحبًا بك في نظام إتقان لإدارة المحتوى!"
 
 msgid "This is a test email to verify the email service is working correctly."
 msgstr "هذه رسالة اختبارية للتأكد من عمل خدمة البريد الإلكتروني بشكل صحيح."
+
+#, python-brace-format
+#~ msgid "A track for asset {asset_id} surah {surah_number} already exists."
+#~ msgstr "يوجد مقطع بالفعل للأصل {asset_id} والسورة {surah_number}."
 
 #~ msgid "View Portal Translations"
 #~ msgstr "عرض الترجمات في لوحة التحكم"

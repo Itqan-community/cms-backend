@@ -28,9 +28,13 @@ class RecitationsListTest(BaseTestCase):
         self.reciter2 = baker.make(Reciter, name="Reciter Two")
         self.qiraah1 = baker.make(Qiraah, name="Qiraah One")
         self.qiraah2 = baker.make(Qiraah, name="Qiraah Two")
-        self.riwayah1 = baker.make(Riwayah, qiraah=self.qiraah1)
-        self.riwayah2 = baker.make(Riwayah, qiraah=self.qiraah1)
-        self.riwayah3 = baker.make(Riwayah, qiraah=self.qiraah2)
+        # Name these explicitly. Left to model_bakery, `name` (and so `name_en`) becomes
+        # a 255-char random string, and riwayah names are in this endpoint's
+        # search_fields -- so a random run could contain a search term like "two" and
+        # make an unrelated asset match.
+        self.riwayah1 = baker.make(Riwayah, name="Hafs", qiraah=self.qiraah1)
+        self.riwayah2 = baker.make(Riwayah, name="Warsh", qiraah=self.qiraah1)
+        self.riwayah3 = baker.make(Riwayah, name="Qalun", qiraah=self.qiraah2)
 
         # Valid assets that should be returned
         self.asset1 = baker.make(

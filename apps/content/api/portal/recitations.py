@@ -7,8 +7,9 @@ from ninja import Field, FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime
 
-from apps.content.models import Asset, CategoryChoice, LicenseChoice, Riwayah, StatusChoice
+from apps.content.models import Asset, CategoryChoice, LicenseChoice, RecitationFolder, Riwayah, StatusChoice
 from apps.content.services.recitation import RecitationService
+from apps.content.services.recitation_folder_resolution import sorted_asset_folders
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.permission_required import permission_required
@@ -49,6 +50,13 @@ class MinimalRiwayah(Schema):
 class PublisherRef(Schema):
     id: int
     name: str
+
+
+class FolderOut(Schema):
+    id: int
+    name: str
+    slug: str
+    is_default: bool
 
 
 class RecitationListOut(Schema):
@@ -99,6 +107,7 @@ class RecitationDetailOut(Schema):
     created_at: AwareDatetime
     updated_at: AwareDatetime
     ayah_timings_url: AbsoluteUrl | None = None
+    folders: list[FolderOut] = []
 
     @staticmethod
     def resolve_thumbnail_url(obj: Asset) -> str | None:
@@ -107,9 +116,26 @@ class RecitationDetailOut(Schema):
         return None
 
     @staticmethod
+    def resolve_folders(obj: Asset) -> list[RecitationFolder]:
+        return sorted_asset_folders(obj)
+
+    @staticmethod
     def resolve_ayah_timings_url(obj: Asset) -> str | None:
-        if version := obj.versions.first():
-            return version.file_url.url if version.file_url else None
+        # Each folder now has its own AssetVersion, named after the folder slug.
+        # This top-level field keeps pointing at the default folder's export so the
+        # existing contract is unchanged; per-folder URLs come from the folders list.
+        default_folder = next((f for f in obj.recitation_folders.all() if f.is_default), None)
+        versions = list(obj.versions.all())
+
+        version = None
+        if default_folder:
+            version = next((v for v in versions if v.name == default_folder.slug), None)
+        if version is None:
+            # Recitations created before folders may still have a legacy version row.
+            version = versions[0] if versions else None
+
+        if version and version.file_url:
+            return version.file_url.url
         return None
 
 
@@ -304,7 +330,7 @@ def retrieve_recitation(request: Request, recitation_slug: str) -> Asset:
     try:
         return (
             Asset.objects.select_related("publisher", "reciter", "riwayah", "qiraah")
-            .prefetch_related("versions")
+            .prefetch_related("versions", "recitation_folders")
             .filter(request.publisher_q())
             .get(slug=recitation_slug, category=CategoryChoice.RECITATION)
         )

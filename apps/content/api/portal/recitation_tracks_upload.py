@@ -10,6 +10,7 @@ from apps.content.services.admin.asset_recitation_audio_tracks_direct_upload_ser
     AssetRecitationAudioTracksDirectUploadService,
 )
 from apps.content.services.admin.asset_recitation_json_file_sync_service import sync_asset_recitations_json_file
+from apps.content.services.recitation_folder_resolution import resolve_folder_for_asset
 from apps.content.services.validate_recitation_tracks_upload_service import ValidateRecitationTracksUploadService
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.permission_required import permission_required
@@ -30,10 +31,12 @@ class ValidateFileOut(Schema):
 class ValidateUploadIn(Schema):
     asset_id: int
     filenames: list[str]
+    folder_id: int | None = None
 
 
 class ValidateUploadOut(Schema):
     asset_id: int
+    folder_id: int
     status: Literal["valid", "invalid"]
     message: str
     files: list[ValidateFileOut]
@@ -58,12 +61,14 @@ class ValidateUploadOut(Schema):
 def validate_upload(request: Request, data: ValidateUploadIn):
 
     asset = get_object_or_404(Asset, id=data.asset_id)
+    folder = resolve_folder_for_asset(asset.id, data.folder_id)
 
     service = ValidateRecitationTracksUploadService()
-    result = service.validate(asset_id=asset.id, filenames=data.filenames)
+    result = service.validate(asset_id=asset.id, filenames=data.filenames, folder_id=folder.id)
 
     return ValidateUploadOut(
         asset_id=result.asset_id,
+        folder_id=folder.id,
         status=result.status,
         message=result.message,
         files=[ValidateFileOut(filename=f.filename, status=f.status) for f in result.files],
@@ -75,6 +80,7 @@ class UploadStartIn(Schema):
     filename: str
     duration_ms: int | None = None
     size_bytes: int | None = None
+    folder_id: int | None = None
 
 
 class UploadStartOut(Schema):
@@ -82,6 +88,7 @@ class UploadStartOut(Schema):
     upload_id: str
     content_type: str
     surah_number: int
+    folder_id: int
 
 
 @router.post(
@@ -108,13 +115,14 @@ def start_upload(request: Request, data: UploadStartIn):
     asset = get_object_or_404(Asset, id=data.asset_id)
 
     service = AssetRecitationAudioTracksDirectUploadService()
-    result = service.start_upload(asset_id=asset.id, filename=data.filename)
+    result = service.start_upload(asset_id=asset.id, filename=data.filename, folder_id=data.folder_id)
 
     return UploadStartOut(
         key=result["key"],
         upload_id=result["uploadId"],
         content_type=result["contentType"],
         surah_number=result["surahNumber"],
+        folder_id=result["folderId"],
     )
 
 
@@ -163,11 +171,13 @@ class UploadFinishIn(Schema):
     parts: list[UploadPartIn]
     duration_ms: int | None = None
     size_bytes: int | None = None
+    folder_id: int | None = None
 
 
 class UploadFinishOut(Schema):
     track_id: int
     asset_id: int
+    folder_id: int
     surah_number: int
     size_bytes: int
     finished_at: datetime
@@ -206,13 +216,15 @@ def finish_upload(request: Request, data: UploadFinishIn):
         filename=data.filename,
         duration_ms=data.duration_ms,
         size_bytes=data.size_bytes,
+        folder_id=data.folder_id,
     )
 
-    sync_asset_recitations_json_file(asset.id)
+    sync_asset_recitations_json_file(asset.id, folder_id=result["folderId"])
 
     return UploadFinishOut(
         track_id=result["trackId"],
         asset_id=result["assetId"],
+        folder_id=result["folderId"],
         surah_number=result["surahNumber"],
         size_bytes=result["sizeBytes"],
         finished_at=result["finishedAt"],

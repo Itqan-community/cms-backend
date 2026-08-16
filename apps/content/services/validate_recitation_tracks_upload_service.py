@@ -26,8 +26,10 @@ class ValidateRecitationTracksUploadService:
     def __init__(self, repo: RecitationTrackRepository | None = None) -> None:
         self.repo = repo or RecitationTrackRepository()
 
-    def validate(self, *, asset_id: int, filenames: list[str]) -> TrackUploadValidationResult:
-        existing_surah_numbers = self.repo.get_recitation_tracks_surah_numbers_by_asset_id(asset_id)
+    def validate(self, *, asset_id: int, filenames: list[str], folder_id: int) -> TrackUploadValidationResult:
+        # Scoped to the folder: the same surah legitimately exists once per variant,
+        # so an asset-wide check would mark a file "skip" when only another variant has it.
+        existing_surah_numbers = self.repo.get_recitation_tracks_surah_numbers_by_folder_id(folder_id)
         seen_filenames: set[str] = set()
         files: list[FileValidationResult] = []
 
