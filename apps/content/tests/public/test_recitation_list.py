@@ -2,7 +2,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 from oauth2_provider.models import Application
 
-from apps.content.models import Asset, CategoryChoice, RecitationSurahTrack, Reciter, Riwayah, StatusChoice
+from apps.content.models import Asset, CategoryChoice, Qiraah, RecitationSurahTrack, Reciter, Riwayah, StatusChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -15,8 +15,12 @@ class RecitationsListTest(BaseTestCase):
         self.publisher2 = baker.make(Publisher, name="Publisher Two")
         self.reciter1 = baker.make(Reciter, name="Reciter One")
         self.reciter2 = baker.make(Reciter, name="Reciter Two")
-        self.riwayah1 = baker.make(Riwayah)
-        self.riwayah2 = baker.make(Riwayah)
+        # Name these explicitly. Left to model_bakery, `name` (and so `name_en`) becomes
+        # a 255-char random string, and riwayah/qiraah names are in this endpoint's
+        # search_fields -- so a random run could contain a search term like "two" and
+        # make an unrelated asset match. That made this suite flaky in CI.
+        self.riwayah1 = baker.make(Riwayah, name="Hafs", qiraah=baker.make(Qiraah, name="Asim"))
+        self.riwayah2 = baker.make(Riwayah, name="Warsh", qiraah=baker.make(Qiraah, name="Nafi"))
 
         # Valid assets that should be returned
         self.asset1 = baker.make(

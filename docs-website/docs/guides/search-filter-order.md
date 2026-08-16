@@ -46,6 +46,12 @@ Pass a parameter multiple times to match any of the values (OR logic):
 curl "{{API_BASE}}/recitations/?reciter_id=12&reciter_id=15"
 ```
 
+### Surah Tracks (`/recitations/{id}/`)
+
+| Parameter | Type | Description |
+|---|---|---|
+| `folder` | string | Select an audio variant by **slug or name** (names match case-insensitively, Arabic or English). Omit for the recitation's default rendering. Prefer the slug — it is unique per recitation. See [Folders](/docs/guides/recitations-ayah-timings#folders-audio-variants). |
+
 ## Ordering (`ordering=`)
 
 Sort results by one or more fields. Prefix a field name with `-` for descending order. Separate multiple fields with a comma.

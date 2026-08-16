@@ -12,11 +12,14 @@ Sync audio to text at ayah resolution.
 
 ```
 Recitation (GET /recitations/)
-  └─ Surah Tracks (GET /recitations/{id}/)
-       └─ Ayah Timings (embedded in each track)
+  └─ Folder / variant  (?folder=<slug>)
+       └─ Surah Tracks (GET /recitations/{id}/)
+            └─ Ayah Timings (embedded in each track)
 ```
 
 A **Recitation** is a complete recorded reading by a specific reciter in a specific narration (riwayah/qiraah). Each recitation has one or more **Surah Tracks** — one per chapter of the Quran. Each track carries an embedded array of **Ayah Timings** that map individual verses to millisecond offsets within the audio file.
+
+A recitation may also be published in more than one **folder** — alternative renderings of the same reading, such as clear sound versus a version with echo and delay. Each folder holds its own complete set of surah tracks and its own ayah timings, since the offsets differ between renderings. See [Folders (Audio Variants)](#folders-audio-variants).
 
 ## Listing Recitations
 
@@ -38,13 +41,21 @@ curl {{API_BASE}}/recitations/
       "reciter": { "id": 12, "name": "Mishary Rashid Alafasy" },
       "riwayah": { "id": 1, "name": "Hafs" },
       "qiraah": { "id": 2, "name": "Asim", "bio": "One of the seven canonical readers." },
-      "surahs_count": 114
+      "surahs_count": 114,
+      "folders": [
+        { "name": "Default", "slug": "default", "is_default": true },
+        { "name": "With echo", "slug": "with-echo", "is_default": false }
+      ]
     }
   ]
 }
 ```
 
-`surahs_count` tells you how many surah tracks are available for this recitation. See [Related Object Embeds](/docs/guides/related-resources) for how the embedded `publisher`, `reciter`, `riwayah`, and `qiraah` objects work.
+`surahs_count` tells you how many surah tracks are available for this recitation, counted from its default folder.
+
+`folders` lists the audio variants this recitation is published in, default first. Use a folder's `slug` as the `?folder=` value when fetching tracks — see [Folders (Audio Variants)](#folders-audio-variants). Most recitations return a single default folder.
+
+See [Related Object Embeds](/docs/guides/related-resources) for how the embedded `publisher`, `reciter`, `riwayah`, and `qiraah` objects work.
 
 ## Fetching Surah Tracks and Ayah Timings
 
@@ -107,6 +118,50 @@ curl {{API_BASE}}/recitations/7/
 | `duration_ms` | integer | `end_ms - start_ms` |
 
 Timings within a track are sorted by `ayah_key` (surah number first, then ayah number).
+
+## Folders (Audio Variants)
+
+Some recitations are published in several renderings of the same reading — for example a clear recording and one with echo and delay. Each rendering is a **folder**, identified by a slug, and holds its own full set of surah tracks.
+
+`GET /recitations/` returns a `folders` array on every recitation, so you can discover which slugs are available before fetching tracks:
+
+```json
+"folders": [
+  { "name": "Default",   "slug": "default",   "is_default": true },
+  { "name": "With echo", "slug": "with-echo", "is_default": false }
+]
+```
+
+Pass `?folder=` to `GET /recitations/{id}/` to choose one. The value accepts either the folder's **slug** or its **name**:
+
+```bash
+# The recitation's default rendering
+curl {{API_BASE}}/recitations/7/
+
+# By slug
+curl {{API_BASE}}/recitations/7/?folder=with-echo
+
+# By name (URL-encoded); Arabic names work too
+curl {{API_BASE}}/recitations/7/?folder=With%20echo
+```
+
+| Behaviour | Result |
+|---|---|
+| `folder` omitted | Returns the recitation's **default** folder. This is what every recitation returned before folders existed, so existing integrations need no change. |
+| `folder` matches a slug | Returns only that folder's tracks, with that folder's ayah timings. |
+| `folder` matches a name | Same, matched case-insensitively against the Arabic and English names. |
+| `folder` matches nothing | `404` with `error_name: "folder_not_found"`. |
+| Folder exists but has no tracks yet | `200` with an empty `results` array. |
+
+:::tip
+**Prefer the slug.** It is unique within a recitation, so it always identifies exactly one folder. Names are not guaranteed unique — if two folders share a name, the value resolves to the default one, or the oldest when neither is default. Slugs are returned in the `folders` array, so you never need to guess one.
+:::
+
+Because timings belong to the track, a variant's `ayahs_timings` reflect **that** rendering's offsets. Do not reuse timings fetched from one folder against another folder's audio.
+
+:::note
+Most recitations have only a default folder. Unless you specifically need an alternative rendering, you can ignore the `folder` parameter entirely.
+:::
 
 ## Worked Example: Ayah-Synchronized Player
 

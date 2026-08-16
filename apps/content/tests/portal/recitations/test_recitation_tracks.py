@@ -51,6 +51,7 @@ class RecitationTracksListAPITest(BaseTestCase):
         self.track_one = baker.make(
             RecitationSurahTrack,
             asset=self.recitation_asset,
+            folder=self.recitation_asset.recitation_folders.get(is_default=True),
             surah_number=1,
             audio_file=f"uploads/assets/{self.recitation_asset.id}/recitations/001.mp3",
             duration_ms=30000,
@@ -59,6 +60,7 @@ class RecitationTracksListAPITest(BaseTestCase):
         self.track_two = baker.make(
             RecitationSurahTrack,
             asset=self.recitation_asset,
+            folder=self.recitation_asset.recitation_folders.get(is_default=True),
             surah_number=2,
             audio_file=f"uploads/assets/{self.recitation_asset.id}/recitations/002.mp3",
             duration_ms=45000,
@@ -67,6 +69,7 @@ class RecitationTracksListAPITest(BaseTestCase):
         self.other_track = baker.make(
             RecitationSurahTrack,
             asset=self.other_asset,
+            folder=self.other_asset.recitation_folders.get(is_default=True),
             surah_number=3,
             audio_file=f"uploads/assets/{self.other_asset.id}/recitations/003.mp3",
         )
@@ -229,18 +232,21 @@ class RecitationTracksDeleteAPITest(BaseTestCase):
         self.track_one = baker.make(
             RecitationSurahTrack,
             asset=self.recitation_asset,
+            folder=self.recitation_asset.recitation_folders.get(is_default=True),
             surah_number=1,
             audio_file=f"uploads/assets/{self.recitation_asset.slug}/recitations/001.mp3",
         )
         self.track_two = baker.make(
             RecitationSurahTrack,
             asset=self.recitation_asset,
+            folder=self.recitation_asset.recitation_folders.get(is_default=True),
             surah_number=2,
             audio_file=f"uploads/assets/{self.recitation_asset.slug}/recitations/002.mp3",
         )
         self.other_track = baker.make(
             RecitationSurahTrack,
             asset=self.other_asset,
+            folder=self.other_asset.recitation_folders.get(is_default=True),
             surah_number=3,
             audio_file=f"uploads/assets/{self.other_asset.id}/recitations/003.mp3",
         )

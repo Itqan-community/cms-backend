@@ -11,6 +11,7 @@ from apps.content.services.admin.asset_recitation_ayah_timestamps_upload_service
     bulk_upload_recitation_ayah_timestamps,
 )
 from apps.content.services.admin.asset_recitation_json_file_sync_service import sync_asset_recitations_json_file
+from apps.content.services.recitation_folder_resolution import resolve_folder_for_asset
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.permission_required import permission_required
 from apps.core.ninja_utils.request import Request
@@ -24,10 +25,12 @@ router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
 
 class TimingUploadIn(Schema):
     asset_id: int
+    folder_id: int | None = None
 
 
 class TimingUploadOut(Schema):
     asset_id: int
+    folder_id: int
     created_total: int
     updated_total: int
     skipped_total: int
@@ -62,8 +65,10 @@ def upload_timing(
             status_code=404,
         ) from None
 
+    folder = resolve_folder_for_asset(asset.id, data.folder_id)
+
     with transaction.atomic():
-        stats = bulk_upload_recitation_ayah_timestamps(asset_id=asset.id, files=files)
+        stats = bulk_upload_recitation_ayah_timestamps(asset_id=asset.id, files=files, folder_id=folder.id)
 
         if stats["file_errors"]:
             raise ItqanError(
@@ -73,7 +78,7 @@ def upload_timing(
                 extra=stats,
             )
 
-        asset_version, filename = sync_asset_recitations_json_file(asset_id=asset.id)
+        asset_version, filename = sync_asset_recitations_json_file(asset_id=asset.id, folder_id=folder.id)
 
     # bulk_create/bulk_update bypass Django signals, so invalidate explicitly.
     invalidate_recitation_tracks_cache(asset.id)
@@ -82,6 +87,7 @@ def upload_timing(
 
     return TimingUploadOut(
         asset_id=asset.id,
+        folder_id=folder.id,
         created_total=stats["created_total"],
         updated_total=stats["updated_total"],
         skipped_total=stats["skipped_total"],
