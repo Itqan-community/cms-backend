@@ -2,7 +2,7 @@ from typing import Literal
 
 from django.http import Http404
 from django.utils.translation import gettext_lazy as _
-from ninja import Schema
+from ninja import Query, Schema
 from ninja.pagination import paginate
 from pydantic import Field
 
@@ -46,10 +46,13 @@ class RecitationSurahTrackOut(Schema):
 
 @router.get(
     "recitation-tracks/{asset_id}/",
-    response={200: list[RecitationSurahTrackOut], 404: NinjaErrorResponse[Literal["not_found"]]},
+    response={
+        200: list[RecitationSurahTrackOut],
+        404: NinjaErrorResponse[Literal["not_found"]] | NinjaErrorResponse[Literal["folder_not_found"]],
+    },
 )
 @paginate
-def list_recitation_tracks(request: Request, asset_id: int):
+def list_recitation_tracks(request: Request, asset_id: int, folder: str | None = Query(None)):
     repo = RecitationRepository()
     service = RecitationService(repo)
 
@@ -59,6 +62,6 @@ def list_recitation_tracks(request: Request, asset_id: int):
     if not asset:
         raise Http404(str(_("No asset matches the given query.")))
 
-    tracks = service.get_asset_tracks(asset_id, request.publisher_q("asset__publisher"))
+    tracks = service.get_asset_tracks(asset_id, request.publisher_q("asset__publisher"), folder=folder)
 
     return tracks
