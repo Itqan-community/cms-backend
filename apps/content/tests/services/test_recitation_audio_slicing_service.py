@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import subprocess
 import tempfile
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import boto3
@@ -413,6 +414,95 @@ class TestRecitationAudioSlicingService(BaseTestCase):
         for flag in ("-y", "-i", "-ss", "-to", "-af", "-c:a", "libmp3lame"):
             self.assertIn(flag, cmd)
         self.assertTrue(cmd[-1].endswith("001_001.mp3"))
+
+    def _capturing_ffmpeg(self, cmd, **kwargs):
+        Path(cmd[-1]).write_bytes(b"slice")
+        self.captured_cmds.append(cmd)
+        return subprocess.CompletedProcess(args=cmd, returncode=0)
+
+    def test_slice_track_where_source_params_valid_should_pass_preservation_flags(self):
+        # Arrange - mutagen reports bps, Hz and channel count; all three must
+        # reach ffmpeg verbatim as -b:a / -ar / -ac
+        source = Mock()
+        source.info.bitrate = 192000
+        source.info.sample_rate = 44100
+        source.info.channels = 2
+        self.captured_cmds = []
+        self._upload_source_audio()
+        self._add_timing("1:1", start_ms=0, end_ms=1000)
+
+        # Act
+        with (
+            patch(
+                "mutagen.mp3.MP3",
+                return_value=source,
+            ),
+            patch("subprocess.run", side_effect=self._capturing_ffmpeg),
+        ):
+            self.service.slice_track(self.track.id)
+
+        # Assert - exact flag/value pairs, output still ends at the slice file
+        cmd = self.captured_cmds[0]
+        self.assertEqual("-b:a", cmd[cmd.index("-b:a")])
+        self.assertEqual("192000", cmd[cmd.index("-b:a") + 1])
+        self.assertEqual("44100", cmd[cmd.index("-ar") + 1])
+        self.assertEqual("2", cmd[cmd.index("-ac") + 1])
+        self.assertTrue(cmd[-1].endswith("001_001.mp3"))
+
+    def test_slice_track_where_probe_fails_should_still_slice_without_preservation_flags(self):
+        # Arrange - an unreadable/unparseable source must not abort slicing
+        self.captured_cmds = []
+        self._upload_source_audio()
+        self._add_timing("1:1", start_ms=0, end_ms=1000)
+
+        # Act
+        with (
+            patch(
+                "mutagen.mp3.MP3",
+                side_effect=Exception("corrupt"),
+            ),
+            patch("subprocess.run", side_effect=self._capturing_ffmpeg),
+        ):
+            result = self.service.slice_track(self.track.id)
+
+        # Assert - the slice completes and libmp3lame defaults are kept
+        self.assertEqual(1, result["sliced"])
+        cmd = self.captured_cmds[0]
+        for flag in ("-b:a", "-ar", "-ac"):
+            self.assertNotIn(flag, cmd)
+
+    def test_slice_track_where_metadata_partially_missing_should_omit_only_missing_flags(self):
+        # Arrange - sub-sets of known metadata must add only their own flags
+        self._upload_source_audio()
+        cases = [
+            (SimpleNamespace(bitrate=128000), ["-b:a"], ["-ar", "-ac"]),
+            (SimpleNamespace(sample_rate=44100, channels=1), ["-ar", "-ac"], ["-b:a"]),
+            (SimpleNamespace(), [], ["-b:a", "-ar", "-ac"]),
+        ]
+        for info, expected_flags, absent_flags in cases:
+            with self.subTest(info=expected_flags):
+                self._add_timing("1:1", start_ms=0, end_ms=1000)
+                source = Mock()
+                source.info = info
+                self.captured_cmds = []
+
+                # Act
+                with (
+                    patch(
+                        "mutagen.mp3.MP3",
+                        return_value=source,
+                    ),
+                    patch("subprocess.run", side_effect=self._capturing_ffmpeg),
+                ):
+                    self.service.slice_track(self.track.id)
+
+                # Assert
+                cmd = self.captured_cmds[0]
+                for flag in expected_flags:
+                    self.assertIn(flag, cmd)
+                for flag in absent_flags:
+                    self.assertNotIn(flag, cmd)
+                self.track.ayah_timings.all().delete()
 
     def test_slice_track_where_ayah_key_has_leading_zeros_should_fail_whole_track(self):
         # Arrange - "1:01" and "01:1" parse numerically but are non-canonical; accepting
