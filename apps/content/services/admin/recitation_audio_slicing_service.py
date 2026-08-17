@@ -107,11 +107,13 @@ class RecitationAudioSlicingService:
                     status_code=503,
                 ) from exc
 
+            audio_params = self._probe_audio_params(source_path)
+
             for timing in timings:
                 ayah_number = self._parse_ayah_number(timing.ayah_key, track.surah_number)
                 key = self._build_slice_key(track.asset_id, track.folder_id, track.surah_number, ayah_number)
                 output_path = temp_dir / f"{track.surah_number:03}_{ayah_number:03}.mp3"
-                self._run_ffmpeg(source_path, output_path, timing.start_ms, timing.end_ms)
+                self._run_ffmpeg(source_path, output_path, timing.start_ms, timing.end_ms, audio_params)
                 try:
                     with open(output_path, "rb") as f:
                         s3.put_object(
@@ -180,7 +182,40 @@ class RecitationAudioSlicingService:
             )
         return ayah_number
 
-    def _run_ffmpeg(self, source_path: Path, output_path: Path, start_ms: int, end_ms: int) -> None:
+    def _probe_audio_params(self, source_path: Path) -> dict[str, int | None]:
+        """
+        Read source MP3 audio parameters with mutagen for output fidelity.
+
+        Only plain integers that are reliably available from MP3 metadata are
+        returned (bitrate in bits/second, sample rate in Hz, channel count).
+        Any failure - unreadable file, missing attribute, unexpected type -
+        yields None for the affected property so slicing never depends on a
+        probe succeeding. Details are logged internally; users only ever see
+        ffmpeg failures, never probe internals.
+        """
+        try:
+            from mutagen.mp3 import MP3  # type: ignore[import-not-found]
+
+            audio = MP3(source_path)
+        except Exception:
+            logger.warning("Failed to probe source audio metadata for %s", source_path, exc_info=True)
+            return {"bitrate": None, "sample_rate": None, "channels": None}
+
+        info = getattr(audio, "info", None)
+        params: dict[str, int | None] = {}
+        for name in ("bitrate", "sample_rate", "channels"):
+            value = None
+            if info is not None:
+                try:
+                    value = getattr(info, name, None)
+                except Exception as exc:
+                    logger.warning("Failed to read %s from source audio %s: %s", name, source_path, exc)
+            params[name] = value if isinstance(value, int) and value > 0 else None
+        return params
+
+    def _run_ffmpeg(
+        self, source_path: Path, output_path: Path, start_ms: int, end_ms: int, audio_params: dict[str, int | None]
+    ) -> None:
         """Slice [start_ms, end_ms) out of the source MP3 and apply short boundary fades."""
         duration_s = (end_ms - start_ms) / 1000
         fade_out_start_s = max(duration_s - FADE_DURATION_SECONDS, FADE_DURATION_SECONDS)
@@ -201,8 +236,19 @@ class RecitationAudioSlicingService:
             fade_filter,
             "-c:a",
             "libmp3lame",
-            str(output_path),
         ]
+        # Preserve the source MP3 characteristics through the re-encode where
+        # they are known. mutagen reports bitrate in bits/second and ffmpeg's
+        # -b:a accepts a plain bits-per-second integer, so no conversion is
+        # needed; -ar and -ac take Hz and channel count directly. Unknown
+        # properties are omitted, keeping libmp3lame defaults.
+        if audio_params.get("bitrate"):
+            cmd += ["-b:a", str(audio_params["bitrate"])]
+        if audio_params.get("sample_rate"):
+            cmd += ["-ar", str(audio_params["sample_rate"])]
+        if audio_params.get("channels"):
+            cmd += ["-ac", str(audio_params["channels"])]
+        cmd.append(str(output_path))
         try:
             completed = subprocess.run(cmd, capture_output=True, text=True, timeout=FFMPEG_SLICE_TIMEOUT_SECONDS)
         except FileNotFoundError as exc:
