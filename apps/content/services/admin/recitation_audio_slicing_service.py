@@ -29,6 +29,46 @@ FADE_DURATION_SECONDS = 0.02
 FFMPEG_SLICE_TIMEOUT_SECONDS = 30
 
 
+def _split_ayah_key(ayah_key: str) -> tuple[str, str] | None:
+    """Split a "surah:ayah" key into its two parts, or None when either part is not decimal."""
+    parts = ayah_key.split(":")
+    if len(parts) != 2 or not parts[0].isdecimal() or not parts[1].isdecimal():
+        return None
+    return parts[0], parts[1]
+
+
+def is_canonical_ayah_key(ayah_key: str, surah_number: int) -> bool:
+    """True when the key is the canonical "{surah}:{ayah}" decimal form (no leading zeros, ayah >= 1)."""
+    parts = _split_ayah_key(ayah_key)
+    if parts is None:
+        return False
+    ayah_number = int(parts[1])
+    return parts[0] == str(surah_number) and parts[1] == str(ayah_number) and ayah_number >= 1
+
+
+def timing_eligibility_reason(
+    ayah_key: str, start_ms: int, end_ms: int, surah_number: int, track_duration_ms: int
+) -> str | None:
+    """
+    Return why the slicer would reject this timing, or None when it is eligible.
+
+    Single source of truth for the ayah-timing eligibility contract, shared by
+    the slicer (which raises on rejection) and the storage sizing estimator
+    (which excludes ineligible rows from its estimate and reports them
+    separately). Eligibility is exactly: canonical "{surah}:{ayah}" key,
+    start_ms >= 0, end_ms > start_ms and end_ms <= track.duration_ms.
+    """
+    if not is_canonical_ayah_key(ayah_key, surah_number):
+        return "invalid or non-canonical ayah key"
+    if start_ms < 0:
+        return "start_ms must not be negative"
+    if end_ms <= start_ms:
+        return "end_ms must be greater than start_ms"
+    if end_ms > track_duration_ms:
+        return "end_ms must not exceed the track duration"
+    return None
+
+
 class RecitationAudioSlicingService:
     """
     Slice a surah MP3 track into one audio file per ayah using its ayah timings.
@@ -94,8 +134,10 @@ class RecitationAudioSlicingService:
                 body = s3.get_object(Bucket=settings.CLOUDFLARE_R2_BUCKET, Key=self._to_r2_key(track.audio_file.name))[
                     "Body"
                 ]
-                with open(source_path, "wb") as f:
-                    shutil.copyfileobj(body, f)
+                try:
+                    with open(source_path, "wb") as f:
+                        shutil.copyfileobj(body, f)
+                finally:
                     body.close()
             except (ClientError, BotoCoreError) as exc:
                 logger.warning("Failed to read source audio from storage for track %s", track.id, exc_info=True)
@@ -140,12 +182,11 @@ class RecitationAudioSlicingService:
         """Reject the whole track when any ayah timing is invalid, before any slicing."""
         for timing in timings:
             self._parse_ayah_number(timing.ayah_key, track.surah_number)
-            if timing.start_ms < 0:
-                self._raise_invalid_timing(track, timing, _("start_ms must not be negative"))
-            if timing.end_ms <= timing.start_ms:
-                self._raise_invalid_timing(track, timing, _("end_ms must be greater than start_ms"))
-            if timing.end_ms > track.duration_ms:
-                self._raise_invalid_timing(track, timing, _("end_ms must not exceed the track duration"))
+            reason = timing_eligibility_reason(
+                timing.ayah_key, timing.start_ms, timing.end_ms, track.surah_number, track.duration_ms
+            )
+            if reason is not None:
+                self._raise_invalid_timing(track, timing, reason)
 
     @staticmethod
     def _raise_invalid_timing(track: RecitationSurahTrack, timing: RecitationAyahTiming, reason: str) -> None:
@@ -160,8 +201,8 @@ class RecitationAudioSlicingService:
     @staticmethod
     def _parse_ayah_number(ayah_key: str, surah_number: int) -> int:
         """Parse a canonical "surah:ayah" key and return the ayah number; reject malformed keys."""
-        parts = ayah_key.split(":")
-        if len(parts) != 2 or not parts[0].isdecimal() or not parts[1].isdecimal():
+        parts = _split_ayah_key(ayah_key)
+        if parts is None:
             raise ItqanError(
                 error_name="invalid_ayah_timing",
                 message=_('Ayah key {ayah_key} has an invalid format; expected "surah:ayah" using decimal digits.').format(

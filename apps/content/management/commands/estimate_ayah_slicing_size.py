@@ -20,6 +20,13 @@ best available given the track model stores only size_bytes and duration_ms.
 Tracks without usable duration/size fall back to the configured
 AYAH_SLICING_ESTIMATED_OUTPUT_BITRATE (bits per second, converted to the same
 per-millisecond unit) or are reported as not estimated.
+
+Timing rows that the slicer would reject (non-canonical ayah keys or
+out-of-range start/end offsets, per the shared eligibility contract in
+RecitationAudioSlicingService) are excluded from the expected object count and
+byte estimate and reported separately; the raw row count stays visible.
+Cost math uses decimal GB (1 GB = 1,000,000,000 bytes) because Cloudflare R2
+rates are quoted per decimal GB; human-readable size display stays binary GiB.
 """
 
 from __future__ import annotations
@@ -30,6 +37,10 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from apps.content.models import Asset, CategoryChoice, RecitationAyahTiming, RecitationFolder, RecitationSurahTrack
+from apps.content.services.admin.recitation_audio_slicing_service import timing_eligibility_reason
+
+# Decimal GB for cost math: Cloudflare R2 prices are quoted per decimal GB.
+DECIMAL_GB_BYTES = 1_000_000_000
 
 
 def estimate_slicing_size() -> dict[str, Any]:
@@ -40,25 +51,40 @@ def estimate_slicing_size() -> dict[str, Any]:
     timing_count = RecitationAyahTiming.objects.count()
 
     track_bitrate: dict[int, float | None] = {}
+    track_duration: dict[int, int] = {}
+    track_surah: dict[int, int] = {}
     total_source_bytes = 0
-    for track_id, size_bytes, duration_ms in RecitationSurahTrack.objects.values_list(
-        "id", "size_bytes", "duration_ms"
+    for track_id, size_bytes, duration_ms, surah_number in RecitationSurahTrack.objects.values_list(
+        "id", "size_bytes", "duration_ms", "surah_number"
     ):
         total_source_bytes += size_bytes
+        track_duration[track_id] = duration_ms
+        track_surah[track_id] = surah_number
         if size_bytes and duration_ms:
             track_bitrate[track_id] = size_bytes * 8 / duration_ms
         else:
             track_bitrate[track_id] = None
 
-    # A 0/None setting means "not configured" (decouple cannot return None defaults).
-    fallback_bps = getattr(settings, "AYAH_SLICING_ESTIMATED_OUTPUT_BITRATE", None) or None
+    # A 0/None setting means "not configured" (base.py uses 0 as its decouple sentinel).
+    fallback_bps = settings.AYAH_SLICING_ESTIMATED_OUTPUT_BITRATE or None
 
     estimated_output_bytes = 0
     estimated_timing_count = 0
     unestimated_timing_count = 0
     unestimated_track_ids: set[int] = set()
     fallback_used_timing_count = 0
-    for track_id, timing_duration_ms in RecitationAyahTiming.objects.values_list("track_id", "duration_ms"):
+    invalid_timing_count = 0
+    invalid_timing_reasons: dict[str, int] = {}
+    for track_id, ayah_key, start_ms, end_ms, timing_duration_ms in RecitationAyahTiming.objects.values_list(
+        "track_id", "ayah_key", "start_ms", "end_ms", "duration_ms"
+    ):
+        reason = timing_eligibility_reason(
+            ayah_key, start_ms, end_ms, track_surah[track_id], track_duration[track_id]
+        )
+        if reason is not None:
+            invalid_timing_count += 1
+            invalid_timing_reasons[reason] = invalid_timing_reasons.get(reason, 0) + 1
+            continue
         bitrate = track_bitrate.get(track_id)
         used_fallback = False
         if bitrate is None and fallback_bps:
@@ -73,25 +99,31 @@ def estimate_slicing_size() -> dict[str, Any]:
             unestimated_timing_count += 1
             unestimated_track_ids.add(track_id)
 
-    gib = 1 << 30
-    storage_cost_per_gb = getattr(settings, "R2_STORAGE_COST_PER_GB_MONTH", None) or None
-    egress_cost_per_gb = getattr(settings, "R2_EGRESS_COST_PER_GB", None) or None
+    expected_object_count = timing_count - invalid_timing_count
+    storage_cost_per_gb = settings.R2_STORAGE_COST_PER_GB_MONTH or None
+    egress_cost_per_gb = settings.R2_EGRESS_COST_PER_GB or None
     estimated_storage_cost_per_month = (
-        round(estimated_output_bytes / gib * storage_cost_per_gb, 4) if storage_cost_per_gb is not None else None
+        round(estimated_output_bytes / DECIMAL_GB_BYTES * storage_cost_per_gb, 4)
+        if storage_cost_per_gb is not None
+        else None
     )
     estimated_egress_cost = (
-        round(estimated_output_bytes / gib * egress_cost_per_gb, 4) if egress_cost_per_gb is not None else None
+        round(estimated_output_bytes / DECIMAL_GB_BYTES * egress_cost_per_gb, 4)
+        if egress_cost_per_gb is not None
+        else None
     )
 
-    warn_object_count = getattr(settings, "AYAH_SLICING_WARN_OBJECT_COUNT", None) or None
-    warn_estimated_bytes = getattr(settings, "AYAH_SLICING_WARN_ESTIMATED_BYTES", None) or None
+    warn_object_count = settings.AYAH_SLICING_WARN_OBJECT_COUNT or None
+    warn_estimated_bytes = settings.AYAH_SLICING_WARN_ESTIMATED_BYTES or None
 
     return {
         "asset_count": asset_count,
         "folder_count": folder_count,
         "track_count": track_count,
         "timing_count": timing_count,
-        "expected_object_count": timing_count,
+        "invalid_timing_count": invalid_timing_count,
+        "invalid_timing_reasons": invalid_timing_reasons,
+        "expected_object_count": expected_object_count,
         "total_source_bytes": total_source_bytes,
         "estimated_output_bytes": int(round(estimated_output_bytes)),
         "estimated_timing_count": estimated_timing_count,
@@ -105,7 +137,7 @@ def estimate_slicing_size() -> dict[str, Any]:
         "estimated_egress_cost": estimated_egress_cost,
         "warn_object_count": warn_object_count,
         "warn_estimated_bytes": warn_estimated_bytes,
-        "object_threshold_exceeded": warn_object_count is not None and timing_count > warn_object_count,
+        "object_threshold_exceeded": warn_object_count is not None and expected_object_count > warn_object_count,
         "bytes_threshold_exceeded": warn_estimated_bytes is not None
         and int(round(estimated_output_bytes)) > warn_estimated_bytes,
     }
@@ -125,7 +157,16 @@ class Command(BaseCommand):
         line("Recitation assets:", str(report["asset_count"]))
         line("Recitation folders:", str(report["folder_count"]))
         line("Surah tracks:", str(report["track_count"]))
-        line("Ayah timing rows:", str(report["timing_count"]))
+        line("Ayah timing rows (raw):", str(report["timing_count"]))
+        if report["invalid_timing_count"]:
+            out.write(
+                self.style.WARNING(
+                    f"NOTE: {report['invalid_timing_count']} timing row(s) rejected by the slicer's "
+                    "eligibility rules; excluded from the estimate below."
+                )
+            )
+            for reason, count in sorted(report["invalid_timing_reasons"].items()):
+                out.write(f"    - {reason}: {count}")
         line("Expected sliced objects:", str(report["expected_object_count"]))
         line(
             "Total source audio bytes:",
@@ -159,13 +200,13 @@ class Command(BaseCommand):
                 line(
                     "Estimated storage cost:",
                     f"${report['estimated_storage_cost_per_month']:.4f}/month "
-                    f"(at ${report['storage_cost_per_gb_month']:.4f}/GiB/month)",
+                    f"(at ${report['storage_cost_per_gb_month']:.4f}/GB/month, decimal GB)",
                 )
             if report["estimated_egress_cost"] is not None:
                 line(
                     "Estimated egress cost:",
                     f"${report['estimated_egress_cost']:.4f} "
-                    f"(at ${report['egress_cost_per_gb']:.4f}/GiB, one-time full download)",
+                    f"(at ${report['egress_cost_per_gb']:.4f}/GB, decimal GB, one-time full download)",
                 )
         else:
             out.write(
@@ -179,7 +220,7 @@ class Command(BaseCommand):
             out.write(
                 self.style.ERROR(
                     "WARNING: EXCEEDS configured threshold "
-                    f"(objects: {report['timing_count']} > {report['warn_object_count']}) "
+                    f"(expected objects: {report['expected_object_count']} > {report['warn_object_count']}) "
                     "- revisit full precompute vs lazy slicing."
                 )
             )
@@ -196,4 +237,5 @@ class Command(BaseCommand):
 
     @staticmethod
     def _format_bytes(n: int) -> str:
-        return f"{n:,} bytes ({n / (1 << 30):.2f} GiB)"
+        # Binary GiB for human-readable sizes; cost math uses decimal GB (see DECIMAL_GB_BYTES).
+        return f"{n:,} bytes ({n / (1 << 30):.2f} GiB, binary)"
