@@ -380,6 +380,64 @@ Itqan CMS uses the existing **API Key system** (`X-API-Key` header) as the stand
 * **Multiple Applications Support:** A single developer can hold multiple keys (one per application). This is supported directly by the `unique_together = ("user", "name")` constraint on the `APIKey` model.
 * **Schema Impact:** No database schema changes or new models are required. The existing `APIKey` model satisfies all requirements.
 
+## API Keys: Public Identifiers, Not Secrets
+
+> **Note:** this section applies only to the `X-API-Key` identifier, not the OAuth2
+> `client_secret` described above. The OAuth2 `client_secret` remains a true secret and
+> must stay server-side per the guidance in **Security Best Practices**.
+
+API keys issued by Itqan (`X-API-Key`) are **public application identifiers, not secrets**.
+They are designed to be embedded directly in frontend and mobile client code. Unlike a
+traditional API secret, an Itqan API key does not need to be protected from exposure by
+the developer using it, that exposure is expected and is not a security incident.
+
+### Threat model
+
+An Itqan API key identifies *which application* is calling the API. It does **not** grant
+privileged access, and it is not a bearer credential in the traditional sense:
+
+- A leaked key allows the app to be identified and attributed, nothing more.
+- A leaked key does **not** grant access to another developer's data, another app's
+  identity, or any administrative capability.
+- Abuse from a leaked or misused key is handled through **revocation and rate limiting**
+  (with spoofing accepted as a known limitation in this Phase 1), not through treating
+  the key as a confidential secret.
+
+If a key is exposed in a public client bundle, no rotation is required as a security
+response, though a developer may still choose to rotate it simply to obtain a new
+identifier.
+
+### Rotation and revocation
+
+- **Rotation** is reframed: a developer rotates a key to get a *new identifier*, not
+  because the old one "leaked." Rotation is a routine action, not an incident response.
+- **Revocation** is unchanged and remains the primary abuse-control mechanism, it lets a
+  developer (or Itqan) disable a specific app identity independent of whether the key was
+  ever exposed.
+
+### Storage
+
+Because the key is non-secret to its intended developer audience, developers can view and
+copy it from the dashboard at any time. There is no reveal-once restriction, and no
+"click to reveal" gating — hiding the key by default would imply a secrecy requirement
+that no longer applies.
+
+This "view/copy anytime" behavior is only possible because of a storage change. Two
+different threats are relevant here, and they are not the same thing:
+
+1. A developer exposing *their own* key in a public client bundle, accepted, non-incident.
+2. A breach of Itqan's own database, a single incident that could expose *every* app's
+   key at once if keys were stored in plaintext.
+
+The previous hash-only storage (irreversible by design) cannot support "view anytime" at
+all, a one-way hash cannot be turned back into the original key. To enable re-viewability
+while still protecting against (2), the raw key is stored **encrypted at rest**
+(AES-256-GCM), with the encryption key managed separately from the database (e.g. via a
+KMS or Django's secret management), rather than hashed irreversibly, and rather than
+stored in plaintext. This is a deliberate departure from the hashed-at-rest default,
+acceptable specifically because the key does not grant privileged access.
+
+
 ---
 
 ## Token Lifecycle
