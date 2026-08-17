@@ -96,7 +96,7 @@ class TestRecitationAudioSlicingService(BaseTestCase):
         if download_error is not None:
             s3.get_object.side_effect = download_error
         else:
-            s3.get_object.return_value = {"Body": Mock(read=Mock(return_value=b"source-bytes"))}
+            s3.get_object.return_value = {"Body": Mock(read=Mock(side_effect=[b"source-bytes", b""]))}
         if upload_error is not None:
             s3.put_object.side_effect = upload_error
         return s3
