@@ -95,7 +95,8 @@ class RecitationAudioSlicingService:
                     "Body"
                 ]
                 with open(source_path, "wb") as f:
-                    f.write(body.read())
+                    shutil.copyfileobj(body, f)
+                    body.close()
             except (ClientError, BotoCoreError) as exc:
                 logger.warning("Failed to read source audio from storage for track %s", track.id, exc_info=True)
                 raise ItqanError(
@@ -112,12 +113,13 @@ class RecitationAudioSlicingService:
                 output_path = temp_dir / f"{track.surah_number:03}_{ayah_number:03}.mp3"
                 self._run_ffmpeg(source_path, output_path, timing.start_ms, timing.end_ms)
                 try:
-                    s3.put_object(
-                        Bucket=settings.CLOUDFLARE_R2_BUCKET,
-                        Key=self._to_r2_key(key),
-                        Body=output_path.read_bytes(),
-                        ContentType="audio/mpeg",
-                    )
+                    with open(output_path, "rb") as f:
+                        s3.put_object(
+                            Bucket=settings.CLOUDFLARE_R2_BUCKET,
+                            Key=self._to_r2_key(key),
+                            Body=f,
+                            ContentType="audio/mpeg",
+                        )
                 except (ClientError, BotoCoreError) as exc:
                     logger.warning("Failed to store sliced ayah audio for track %s", track.id, exc_info=True)
                     raise ItqanError(
@@ -160,8 +162,8 @@ class RecitationAudioSlicingService:
         if len(parts) != 2 or not parts[0].isdecimal() or not parts[1].isdecimal():
             raise ItqanError(
                 error_name="invalid_ayah_timing",
-                message=_("Ayah key {ayah_key} does not match track surah {surah_number}.").format(
-                    ayah_key=ayah_key, surah_number=surah_number
+                message=_('Ayah key {ayah_key} has an invalid format; expected "surah:ayah" using decimal digits.').format(
+                    ayah_key=ayah_key
                 ),
                 status_code=400,
             )

@@ -230,7 +230,10 @@ def slice_recitation_track_task(self, track_id: int) -> dict:
     return result
 
 
-@shared_task
+@shared_task(
+    soft_time_limit=300,
+    time_limit=360,
+)
 def slice_all_recitation_tracks_task() -> dict:
     """
     Enqueue slice_recitation_track_task for every existing recitation track.
