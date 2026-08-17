@@ -1,3 +1,4 @@
+import contextvars
 import logging
 from typing import Any
 
@@ -7,6 +8,10 @@ from ninja.throttling import AnonRateThrottle as NinjaAnonRateThrottle, UserRate
 from rest_framework.throttling import UserRateThrottle as DRFUserRateThrottle
 
 logger = logging.getLogger(__name__)
+
+_throttle_request_ctx: contextvars.ContextVar[HttpRequest | None] = contextvars.ContextVar(
+    "throttle_request_ctx", default=None
+)
 
 
 def build_throttle_log_context(
@@ -88,8 +93,8 @@ class _LoggingThrottleMixin:
     """
     Emits a structured error log with all the user/client data we have whenever
     a request is throttled. Relies on the throttle's ``get_cache_key`` having
-    stashed the request on ``self._request`` (the only throttle hook that
-    receives the request), so ``throttle_failure`` can read it back.
+    stashed the request in thread/async-isolated context storage (``_throttle_request_ctx``),
+    so ``throttle_failure`` can read it back safely without mutating singleton state.
     """
 
     scope: str
@@ -98,7 +103,7 @@ class _LoggingThrottleMixin:
 
     def throttle_failure(self) -> bool:
         context = build_throttle_log_context(
-            getattr(self, "_request", None),
+            _throttle_request_ctx.get(),
             scope=self.scope,
             rate=self.rate,
             key=getattr(self, "key", None),
@@ -129,7 +134,7 @@ class PublicApiUserRateThrottle(_LoggingThrottleMixin, NinjaUserRateThrottle):
         return settings.PUBLIC_API_USER_THROTTLE_RATE
 
     def get_cache_key(self, request: HttpRequest) -> str | None:
-        self._request = request
+        _throttle_request_ctx.set(request)
         # Only throttle authenticated clients here; anonymous traffic is
         # covered by PublicApiAnonRateThrottle so the two never share a bucket.
         if not (request.user and request.user.is_authenticated):
@@ -163,7 +168,7 @@ class PublicApiAnonRateThrottle(_LoggingThrottleMixin, NinjaAnonRateThrottle):
         return settings.PUBLIC_API_ANON_THROTTLE_RATE
 
     def get_cache_key(self, request: HttpRequest) -> str | None:
-        self._request = request
+        _throttle_request_ctx.set(request)
         if request.user and request.user.is_authenticated:
             return None  # Authenticated clients are handled by the user throttle.
 
