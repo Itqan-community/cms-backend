@@ -25,8 +25,11 @@ Timing rows that the slicer would reject (non-canonical ayah keys or
 out-of-range start/end offsets, per the shared eligibility contract in
 RecitationAudioSlicingService) are excluded from the expected object count and
 byte estimate and reported separately; the raw row count stays visible.
-Cost math uses decimal GB (1 GB = 1,000,000,000 bytes) because Cloudflare R2
-rates are quoted per decimal GB; human-readable size display stays binary GiB.
+The slicer also rejects a track as a whole when ANY of its timings is invalid,
+so every row of such a track is excluded from the estimate too, not just the
+invalid row(s). Cost math uses decimal GB (1 GB = 1,000,000,000 bytes) because
+Cloudflare R2 rates are quoted per decimal GB; human-readable size display
+stays binary GiB.
 """
 
 from __future__ import annotations
@@ -75,15 +78,33 @@ def estimate_slicing_size() -> dict[str, Any]:
     fallback_used_timing_count = 0
     invalid_timing_count = 0
     invalid_timing_reasons: dict[str, int] = {}
-    for track_id, ayah_key, start_ms, end_ms, timing_duration_ms in RecitationAyahTiming.objects.values_list(
-        "track_id", "ayah_key", "start_ms", "end_ms", "duration_ms"
-    ):
+    invalid_track_ids: set[int] = set()
+    rejected_track_timing_count = 0
+
+    timing_rows = list(
+        RecitationAyahTiming.objects.values_list("track_id", "ayah_key", "start_ms", "end_ms", "duration_ms")
+    )
+
+    # Phase 1 - the slicer rejects a track as a whole when any of its timings is
+    # invalid, so first find every track with at least one ineligible row and
+    # tally the row-level reasons (single source of truth: timing_eligibility_reason).
+    rows_with_reason: list[tuple[int, str, int, int, int, str | None]] = []
+    for track_id, ayah_key, start_ms, end_ms, timing_duration_ms in timing_rows:
         reason = timing_eligibility_reason(
             ayah_key, start_ms, end_ms, track_surah[track_id], track_duration[track_id]
         )
+        rows_with_reason.append((track_id, ayah_key, start_ms, end_ms, timing_duration_ms, reason))
         if reason is not None:
             invalid_timing_count += 1
             invalid_timing_reasons[reason] = invalid_timing_reasons.get(reason, 0) + 1
+            invalid_track_ids.add(track_id)
+
+    # Phase 2 - only fully eligible tracks contribute objects/bytes; every row of a
+    # rejected track is excluded (otherwise-valid rows are counted separately).
+    for track_id, _ayah_key, _start_ms, _end_ms, timing_duration_ms, reason in rows_with_reason:
+        if track_id in invalid_track_ids:
+            if reason is None:
+                rejected_track_timing_count += 1
             continue
         bitrate = track_bitrate.get(track_id)
         used_fallback = False
@@ -99,7 +120,7 @@ def estimate_slicing_size() -> dict[str, Any]:
             unestimated_timing_count += 1
             unestimated_track_ids.add(track_id)
 
-    expected_object_count = timing_count - invalid_timing_count
+    expected_object_count = timing_count - invalid_timing_count - rejected_track_timing_count
     storage_cost_per_gb = settings.R2_STORAGE_COST_PER_GB_MONTH or None
     egress_cost_per_gb = settings.R2_EGRESS_COST_PER_GB or None
     estimated_storage_cost_per_month = (
@@ -123,6 +144,8 @@ def estimate_slicing_size() -> dict[str, Any]:
         "timing_count": timing_count,
         "invalid_timing_count": invalid_timing_count,
         "invalid_timing_reasons": invalid_timing_reasons,
+        "invalid_track_count": len(invalid_track_ids),
+        "rejected_track_timing_count": rejected_track_timing_count,
         "expected_object_count": expected_object_count,
         "total_source_bytes": total_source_bytes,
         "estimated_output_bytes": int(round(estimated_output_bytes)),
@@ -167,6 +190,14 @@ class Command(BaseCommand):
             )
             for reason, count in sorted(report["invalid_timing_reasons"].items()):
                 out.write(f"    - {reason}: {count}")
+        if report["invalid_track_count"]:
+            out.write(
+                self.style.WARNING(
+                    f"NOTE: {report['invalid_track_count']} track(s) rejected as a whole because at least "
+                    f"one timing is invalid; {report['rejected_track_timing_count']} otherwise-valid "
+                    "timing row(s) on them are also excluded."
+                )
+            )
         line("Expected sliced objects:", str(report["expected_object_count"]))
         line(
             "Total source audio bytes:",
