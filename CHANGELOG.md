@@ -1,3 +1,18 @@
+## v0.13.0 (2026-08-17)
+
+### Feat
+
+- introduce folder management for recitations
+- **quran**: add surah to ayah to word hierarchy tree api
+
+### Fix
+
+- **quran**: address hierarchy pr review feedback
+
+### Perf
+
+- **docker**: optimize Dockerfile.backend and compose setups
+
 ## v0.12.0 (2026-08-10)
 
 ### Feat
