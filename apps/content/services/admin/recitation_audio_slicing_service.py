@@ -268,10 +268,14 @@ class RecitationAudioSlicingService:
     ) -> None:
         """Slice [start_ms, end_ms) out of the source MP3 and apply short boundary fades."""
         duration_s = (end_ms - start_ms) / 1000
-        fade_out_start_s = max(duration_s - FADE_DURATION_SECONDS, FADE_DURATION_SECONDS)
+        # Symmetrically clamp both fades so they always fit fully inside the
+        # slice; slices >= 2 * FADE_DURATION_SECONDS keep the full configured
+        # fade duration unchanged.
+        fade_duration_s = min(FADE_DURATION_SECONDS, duration_s / 2)
+        fade_out_start_s = duration_s - fade_duration_s
         fade_filter = (
-            f"afade=t=in:st=0:d={FADE_DURATION_SECONDS},"
-            f"afade=t=out:st={fade_out_start_s:.3f}:d={FADE_DURATION_SECONDS}"
+            f"afade=t=in:st=0:d={fade_duration_s},"
+            f"afade=t=out:st={fade_out_start_s:.3f}:d={fade_duration_s}"
         )
         cmd = [
             "ffmpeg",
