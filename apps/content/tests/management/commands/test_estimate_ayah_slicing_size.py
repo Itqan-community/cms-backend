@@ -83,48 +83,111 @@ class EstimateAyahSlicingSizeCommandTest(BaseTestCase):
         self.assertEqual(0, report["invalid_timing_count"])
         self.assertEqual(2, report["expected_object_count"])
 
-    def test_invalid_timing_rows_are_excluded_from_estimate_and_reported(self):
-        # Arrange - one valid row and one of each rejected range/key shape
-        track = self._make_track(self.default_folder, 1, size_bytes=32000, duration_ms=4000)
-        self._make_timing(track, 1, start_ms=0, end_ms=1000)
-        RecitationAyahTiming.objects.create(track=track, ayah_key="1:2", start_ms=1000, end_ms=1000)
-        RecitationAyahTiming.objects.create(track=track, ayah_key="1:3", start_ms=2000, end_ms=1500)
-        RecitationAyahTiming.objects.create(track=track, ayah_key="1:4", start_ms=3000, end_ms=5000)
-        RecitationAyahTiming.objects.create(track=track, ayah_key="1:05", start_ms=0, end_ms=1000)
+    def test_rejected_track_rows_are_excluded_from_estimate_and_reported(self):
+        # Arrange - Track A has one valid + one of each rejected row shape and is
+        # rejected as a whole; Track B is fully valid and is the only contributor
+        track_a = self._make_track(self.default_folder, 1, size_bytes=32000, duration_ms=4000)
+        track_b = self._make_track(self.echo_folder, 1, size_bytes=32000, duration_ms=4000)
+        self._make_timing(track_a, 1, start_ms=0, end_ms=1000)
+        RecitationAyahTiming.objects.create(track=track_a, ayah_key="1:2", start_ms=1000, end_ms=1000)
+        RecitationAyahTiming.objects.create(track=track_a, ayah_key="1:3", start_ms=2000, end_ms=1500)
+        RecitationAyahTiming.objects.create(track=track_a, ayah_key="1:4", start_ms=3000, end_ms=5000)
+        RecitationAyahTiming.objects.create(track=track_a, ayah_key="1:05", start_ms=0, end_ms=1000)
+        self._make_timing(track_b, 1, start_ms=0, end_ms=1000)
+        self._make_timing(track_b, 2, start_ms=1000, end_ms=2000)
 
         # Act
         report = estimate_slicing_size()
         output = self._run_command()
 
-        # Assert - raw count kept, invalid rows excluded from objects/bytes/reasons listed
-        self.assertEqual(5, report["timing_count"])
+        # Assert - only Track B contributes; Track A's rows are all excluded
+        self.assertEqual(7, report["timing_count"])
         self.assertEqual(4, report["invalid_timing_count"])
-        self.assertEqual(1, report["expected_object_count"])
-        self.assertEqual(8000, report["estimated_output_bytes"])
-        self.assertEqual(1, report["estimated_timing_count"])
-        self.assertIn("end_ms must be greater than start_ms", report["invalid_timing_reasons"])
-        self.assertIn("end_ms must not exceed the track duration", report["invalid_timing_reasons"])
-        self.assertIn("invalid or non-canonical ayah key", report["invalid_timing_reasons"])
+        self.assertEqual(1, report["invalid_track_count"])
+        self.assertEqual(1, report["rejected_track_timing_count"])
+        self.assertEqual(2, report["expected_object_count"])
+        self.assertEqual(16000, report["estimated_output_bytes"])
+        self.assertEqual(2, report["estimated_timing_count"])
+        reasons = report["invalid_timing_reasons"]
+        self.assertIn("end_ms must be greater than start_ms", reasons)
+        self.assertIn("end_ms must not exceed the track duration", reasons)
+        self.assertIn("invalid or non-canonical ayah key", reasons)
         self.assertIn("rejected by the slicer", output)
+        self.assertIn("rejected as a whole", output)
+
+    def test_track_with_one_invalid_timing_produces_zero_objects(self):
+        # Arrange - regression: one valid + one invalid timing on the SAME track
+        # means the slicer rejects the whole track, so zero objects are expected
+        track = self._make_track(self.default_folder, 1, size_bytes=32000, duration_ms=4000)
+        self._make_timing(track, 1, start_ms=0, end_ms=1000)
+        RecitationAyahTiming.objects.create(track=track, ayah_key="1:2", start_ms=2000, end_ms=5000)
+
+        # Act
+        report = estimate_slicing_size()
+
+        # Assert
+        self.assertEqual(2, report["timing_count"])
+        self.assertEqual(1, report["invalid_timing_count"])
+        self.assertEqual(1, report["rejected_track_timing_count"])
+        self.assertEqual(1, report["invalid_track_count"])
+        self.assertEqual(0, report["expected_object_count"])
+        self.assertEqual(0, report["estimated_output_bytes"])
+        self.assertEqual(0, report["estimated_timing_count"])
 
     @override_settings(AYAH_SLICING_WARN_OBJECT_COUNT=1)
-    def test_object_threshold_uses_valid_count_not_raw_rows(self):
-        # Arrange - 4 raw timing rows, only 1 eligible, threshold of 1
-        track = self._make_track(self.default_folder, 1, size_bytes=32000, duration_ms=4000)
-        self._make_timing(track, 1, start_ms=0, end_ms=1000)
-        RecitationAyahTiming.objects.create(track=track, ayah_key="1:2", start_ms=1000, end_ms=1000)
-        RecitationAyahTiming.objects.create(track=track, ayah_key="1:3", start_ms=2000, end_ms=1500)
-        RecitationAyahTiming.objects.create(track=track, ayah_key="1:4", start_ms=3000, end_ms=5000)
+    def test_object_threshold_uses_only_fully_valid_tracks(self):
+        # Arrange - Track A rejected as a whole (1 valid + 1 invalid), Track B fully valid
+        track_a = self._make_track(self.default_folder, 1, size_bytes=32000, duration_ms=4000)
+        track_b = self._make_track(self.echo_folder, 1, size_bytes=32000, duration_ms=4000)
+        self._make_timing(track_a, 1, start_ms=0, end_ms=1000)
+        RecitationAyahTiming.objects.create(track=track_a, ayah_key="1:2", start_ms=1000, end_ms=1000)
+        self._make_timing(track_b, 1, start_ms=0, end_ms=1000)
 
         # Act
         report = estimate_slicing_size()
         output = self._run_command()
 
-        # Assert - eligible count (1) is not > 1, so no warning despite 4 raw rows
-        self.assertEqual(4, report["timing_count"])
+        # Assert - only Track B's single object counts; 1 is not > 1, so no warning despite 3 raw rows
+        self.assertEqual(3, report["timing_count"])
         self.assertEqual(1, report["expected_object_count"])
         self.assertFalse(report["object_threshold_exceeded"])
         self.assertNotIn("EXCEEDS", output)
+
+    @override_settings(AYAH_SLICING_ESTIMATED_OUTPUT_BITRATE=64000)
+    def test_fallback_usage_excludes_rejected_tracks(self):
+        # Arrange - Track A rejected as a whole; Track B valid but underivable (no size)
+        track_a = self._make_track(self.default_folder, 1, size_bytes=32000, duration_ms=4000)
+        track_b = self._make_track(self.echo_folder, 1, size_bytes=0, duration_ms=4000)
+        self._make_timing(track_a, 1, start_ms=0, end_ms=1000)
+        RecitationAyahTiming.objects.create(track=track_a, ayah_key="1:2", start_ms=2000, end_ms=5000)
+        self._make_timing(track_b, 1, start_ms=0, end_ms=1000)
+
+        # Act
+        report = estimate_slicing_size()
+
+        # Assert - fallback applies only to Track B's timing, not Track A's valid row
+        self.assertEqual(1, report["rejected_track_timing_count"])
+        self.assertEqual(8000, report["estimated_output_bytes"])
+        self.assertEqual(1, report["estimated_timing_count"])
+        self.assertEqual(1, report["fallback_used_timing_count"])
+        self.assertEqual(0, report["unestimated_timing_count"])
+        self.assertEqual(0, report["unestimated_track_count"])
+
+    def test_unestimated_counts_exclude_rejected_tracks(self):
+        # Arrange - Track A rejected as a whole; Track B valid but underivable, no fallback
+        track_a = self._make_track(self.default_folder, 1, size_bytes=32000, duration_ms=4000)
+        track_b = self._make_track(self.echo_folder, 1, size_bytes=0, duration_ms=4000)
+        self._make_timing(track_a, 1, start_ms=0, end_ms=1000)
+        RecitationAyahTiming.objects.create(track=track_a, ayah_key="1:2", start_ms=2000, end_ms=5000)
+        self._make_timing(track_b, 1, start_ms=0, end_ms=1000)
+
+        # Act
+        report = estimate_slicing_size()
+
+        # Assert - Track A's valid row is not counted as unestimated
+        self.assertEqual(1, report["rejected_track_timing_count"])
+        self.assertEqual(1, report["unestimated_timing_count"])
+        self.assertEqual(1, report["unestimated_track_count"])
 
     def test_total_source_bytes_are_summed(self):
         # Arrange

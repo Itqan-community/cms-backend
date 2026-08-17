@@ -646,6 +646,55 @@ class TestRecitationAudioSlicingService(BaseTestCase):
         self._assert_slicing_rejected(ctx, "storage_error", 503)
         body.close.assert_called_once()
 
+    def test_slice_track_where_body_close_raises_after_successful_copy_should_still_slice(self):
+        # Arrange - a cleanup failure must not fail an otherwise-successful download
+        self._upload_source_audio()
+        self._add_timing("1:1", start_ms=0, end_ms=1000)
+        body = Mock(
+            read=Mock(side_effect=[b"source-bytes", b""]),
+            close=Mock(side_effect=RuntimeError("close failed")),
+        )
+        s3 = Mock()
+        s3.get_object.return_value = {"Body": body}
+
+        # Act
+        with (
+            patch.object(self.service, "_get_s3_client", return_value=s3),
+            patch("subprocess.run", side_effect=self._fake_ffmpeg(b"x")),
+            self.assertLogs("apps.content.services.admin.recitation_audio_slicing_service", level="WARNING") as logs,
+        ):
+            result = self.service.slice_track(self.track.id)
+
+        # Assert - slicing completes, body closed exactly once, cleanup failure logged
+        self.assertEqual(1, result["sliced"])
+        body.close.assert_called_once()
+        self.assertTrue(any("Failed to close source audio stream" in m for m in logs.output))
+
+    def test_slice_track_where_copy_and_close_both_raise_should_keep_storage_error(self):
+        # Arrange - a close failure must not mask the primary copy failure
+        self._upload_source_audio()
+        self._add_timing("1:1", start_ms=0, end_ms=1000)
+        for exc in (
+            ClientError({"Error": {"Code": "500", "Message": "copy failed"}}, "GetObject"),
+            EndpointConnectionError(endpoint_url="http://internal-r2.local:5000"),
+        ):
+            with self.subTest(error=type(exc).__name__):
+                body = Mock(close=Mock(side_effect=RuntimeError("close failed")))
+                s3 = Mock()
+                s3.get_object.return_value = {"Body": body}
+
+                # Act / Assert - original storage failure stays mapped to storage_error 503
+                with patch.object(self.service, "_get_s3_client", return_value=s3):
+                    with patch(
+                        "apps.content.services.admin.recitation_audio_slicing_service.shutil.copyfileobj",
+                        side_effect=exc,
+                    ):
+                        with self.assertRaises(ItqanError) as ctx:
+                            self.service.slice_track(self.track.id)
+
+                self._assert_slicing_rejected(ctx, "storage_error", 503)
+                body.close.assert_called_once()
+
     def test_slice_track_where_upload_connection_fails_should_raise_storage_error_with_generic_message(self):
         # Arrange
         self._add_timing("1:1", start_ms=0, end_ms=1000)

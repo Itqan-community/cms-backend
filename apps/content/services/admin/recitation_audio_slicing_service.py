@@ -138,7 +138,16 @@ class RecitationAudioSlicingService:
                     with open(source_path, "wb") as f:
                         shutil.copyfileobj(body, f)
                 finally:
-                    body.close()
+                    # Close always runs, but a cleanup failure must not mask a copy
+                    # failure nor fail an otherwise-successful download.
+                    try:
+                        body.close()
+                    except Exception:
+                        logger.warning(
+                            "Failed to close source audio stream for track %s",
+                            track.id,
+                            exc_info=True,
+                        )
             except (ClientError, BotoCoreError) as exc:
                 logger.warning("Failed to read source audio from storage for track %s", track.id, exc_info=True)
                 raise ItqanError(
