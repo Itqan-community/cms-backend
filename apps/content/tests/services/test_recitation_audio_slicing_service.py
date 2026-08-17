@@ -179,8 +179,9 @@ class TestRecitationAudioSlicingService(BaseTestCase):
         fade = cmd[cmd.index("-af") + 1]
         self.assertEqual("afade=t=in:st=0:d=0.02,afade=t=out:st=2.204:d=0.02", fade)
 
-    def test_slice_track_where_ayah_shorter_than_fade_should_clamp_fade_out_start(self):
-        # Arrange - a 10ms ayah is shorter than the 20ms fade; the fade-out start must never be negative
+    def test_slice_track_where_ayah_shorter_than_fade_should_clamp_both_fades_symmetrically(self):
+        # Arrange - a 10ms ayah is shorter than the 20ms fade; both fades must be
+        # clamped to half the slice (5ms) and stay fully inside it
         self._upload_source_audio()
         self._add_timing("1:1", start_ms=0, end_ms=10)
 
@@ -188,10 +189,24 @@ class TestRecitationAudioSlicingService(BaseTestCase):
         with patch("subprocess.run", side_effect=self._fake_ffmpeg(b"x")) as mock_run:
             self.service.slice_track(self.track.id)
 
-        # Assert
+        # Assert - fade-in 0..0.005, fade-out 0.005..0.010, nothing beyond the slice
         cmd = mock_run.call_args.args[0]
         fade = cmd[cmd.index("-af") + 1]
-        self.assertEqual("afade=t=in:st=0:d=0.02,afade=t=out:st=0.020:d=0.02", fade)
+        self.assertEqual("afade=t=in:st=0:d=0.005,afade=t=out:st=0.005:d=0.005", fade)
+
+    def test_slice_track_where_ayah_of_30ms_should_clamp_both_fades_to_half_the_slice(self):
+        # Arrange - 30ms < 2 * 20ms fade; fades clamp to 15ms and stay fully inside
+        self._upload_source_audio()
+        self._add_timing("1:1", start_ms=0, end_ms=30)
+
+        # Act
+        with patch("subprocess.run", side_effect=self._fake_ffmpeg(b"x")) as mock_run:
+            self.service.slice_track(self.track.id)
+
+        # Assert - fade-in 0..0.015, fade-out 0.015..0.030, nothing beyond the slice
+        cmd = mock_run.call_args.args[0]
+        fade = cmd[cmd.index("-af") + 1]
+        self.assertEqual("afade=t=in:st=0:d=0.015,afade=t=out:st=0.015:d=0.015", fade)
 
     def test_build_slice_key_where_two_folders_should_produce_distinct_storage_keys(self):
         # Arrange
