@@ -71,8 +71,8 @@ class EstimateAyahSlicingSizeCommandTest(BaseTestCase):
         self.assertEqual(2, report["track_count"])
         self.assertEqual(3, report["timing_count"])
 
-    def test_expected_object_count_equals_timing_row_count(self):
-        # Arrange
+    def test_expected_object_count_equals_valid_timing_row_count(self):
+        # Arrange - all rows valid, so raw == valid == expected
         track = self._make_track(self.default_folder, 1, size_bytes=32000, duration_ms=4000)
         self._make_timing(track, 1, start_ms=0, end_ms=1000)
         self._make_timing(track, 2, start_ms=1000, end_ms=2000)
@@ -80,7 +80,51 @@ class EstimateAyahSlicingSizeCommandTest(BaseTestCase):
         # Act / Assert
         report = estimate_slicing_size()
         self.assertEqual(report["timing_count"], report["expected_object_count"])
+        self.assertEqual(0, report["invalid_timing_count"])
         self.assertEqual(2, report["expected_object_count"])
+
+    def test_invalid_timing_rows_are_excluded_from_estimate_and_reported(self):
+        # Arrange - one valid row and one of each rejected range/key shape
+        track = self._make_track(self.default_folder, 1, size_bytes=32000, duration_ms=4000)
+        self._make_timing(track, 1, start_ms=0, end_ms=1000)
+        RecitationAyahTiming.objects.create(track=track, ayah_key="1:2", start_ms=1000, end_ms=1000)
+        RecitationAyahTiming.objects.create(track=track, ayah_key="1:3", start_ms=2000, end_ms=1500)
+        RecitationAyahTiming.objects.create(track=track, ayah_key="1:4", start_ms=3000, end_ms=5000)
+        RecitationAyahTiming.objects.create(track=track, ayah_key="1:05", start_ms=0, end_ms=1000)
+
+        # Act
+        report = estimate_slicing_size()
+        output = self._run_command()
+
+        # Assert - raw count kept, invalid rows excluded from objects/bytes/reasons listed
+        self.assertEqual(5, report["timing_count"])
+        self.assertEqual(4, report["invalid_timing_count"])
+        self.assertEqual(1, report["expected_object_count"])
+        self.assertEqual(8000, report["estimated_output_bytes"])
+        self.assertEqual(1, report["estimated_timing_count"])
+        self.assertIn("end_ms must be greater than start_ms", report["invalid_timing_reasons"])
+        self.assertIn("end_ms must not exceed the track duration", report["invalid_timing_reasons"])
+        self.assertIn("invalid or non-canonical ayah key", report["invalid_timing_reasons"])
+        self.assertIn("rejected by the slicer", output)
+
+    @override_settings(AYAH_SLICING_WARN_OBJECT_COUNT=1)
+    def test_object_threshold_uses_valid_count_not_raw_rows(self):
+        # Arrange - 4 raw timing rows, only 1 eligible, threshold of 1
+        track = self._make_track(self.default_folder, 1, size_bytes=32000, duration_ms=4000)
+        self._make_timing(track, 1, start_ms=0, end_ms=1000)
+        RecitationAyahTiming.objects.create(track=track, ayah_key="1:2", start_ms=1000, end_ms=1000)
+        RecitationAyahTiming.objects.create(track=track, ayah_key="1:3", start_ms=2000, end_ms=1500)
+        RecitationAyahTiming.objects.create(track=track, ayah_key="1:4", start_ms=3000, end_ms=5000)
+
+        # Act
+        report = estimate_slicing_size()
+        output = self._run_command()
+
+        # Assert - eligible count (1) is not > 1, so no warning despite 4 raw rows
+        self.assertEqual(4, report["timing_count"])
+        self.assertEqual(1, report["expected_object_count"])
+        self.assertFalse(report["object_threshold_exceeded"])
+        self.assertNotIn("EXCEEDS", output)
 
     def test_total_source_bytes_are_summed(self):
         # Arrange
@@ -106,8 +150,8 @@ class EstimateAyahSlicingSizeCommandTest(BaseTestCase):
 
     @override_settings(AYAH_SLICING_ESTIMATED_OUTPUT_BITRATE=64000)
     def test_fallback_bitrate_when_derivation_impossible(self):
-        # Arrange - track without usable size/duration -> 64000 bps fallback = 64 bits per ms
-        track = self._make_track(self.default_folder, 1, size_bytes=0, duration_ms=0)
+        # Arrange - usable duration but no source size -> no derived bitrate; 64000 bps fallback
+        track = self._make_track(self.default_folder, 1, size_bytes=0, duration_ms=4000)
         self._make_timing(track, 1, start_ms=0, end_ms=1000)
 
         # Act
@@ -121,8 +165,8 @@ class EstimateAyahSlicingSizeCommandTest(BaseTestCase):
         self.assertEqual(64000, report["fallback_bitrate_bps"])
 
     def test_missing_fallback_reports_unestimated_timings(self):
-        # Arrange - no fallback configured and the track has no usable size/duration
-        track = self._make_track(self.default_folder, 1, size_bytes=0, duration_ms=0)
+        # Arrange - no fallback configured and the track has no usable size (but a valid duration)
+        track = self._make_track(self.default_folder, 1, size_bytes=0, duration_ms=4000)
         self._make_timing(track, 1, start_ms=0, end_ms=1000)
 
         # Act
@@ -194,7 +238,7 @@ class EstimateAyahSlicingSizeCommandTest(BaseTestCase):
         R2_EGRESS_COST_PER_GB=0.09,
     )
     def test_cost_calculated_when_pricing_configured(self):
-        # Arrange - 800000000 estimated bytes -> ~0.745 GiB
+        # Arrange - 800000000 estimated bytes -> 0.8 decimal GB
         track = self._make_track(self.default_folder, 1, size_bytes=3200000000, duration_ms=4000)
         self._make_timing(track, 1, start_ms=0, end_ms=1000)
 
@@ -202,12 +246,15 @@ class EstimateAyahSlicingSizeCommandTest(BaseTestCase):
         report = estimate_slicing_size()
         output = self._run_command()
 
-        # Assert - storage monthly and one-time full-download egress on estimated bytes
+        # Assert - decimal GB (1 GB = 1e9 bytes): 0.8 * 0.015 and 0.8 * 0.09
         self.assertEqual(800000000, report["estimated_output_bytes"])
-        self.assertAlmostEqual(0.0112, report["estimated_storage_cost_per_month"], places=4)
-        self.assertAlmostEqual(0.0671, report["estimated_egress_cost"], places=4)
+        self.assertAlmostEqual(0.012, report["estimated_storage_cost_per_month"], places=4)
+        self.assertAlmostEqual(0.072, report["estimated_egress_cost"], places=4)
         self.assertIn("Estimated storage cost", output)
         self.assertIn("Estimated egress cost", output)
+        self.assertIn("decimal GB", output)
+        self.assertIn("/GB/month", output)
+        self.assertNotIn("GiB/month", output)
 
     def test_command_performs_no_writes(self):
         # Arrange

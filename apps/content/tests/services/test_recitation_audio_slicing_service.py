@@ -624,6 +624,28 @@ class TestRecitationAudioSlicingService(BaseTestCase):
         self._assert_slicing_rejected(ctx, "storage_error", 503)
         self.assertNotIn("internal-r2.local", ctx.exception.message)
 
+    def test_slice_track_where_source_copy_raises_should_still_close_body(self):
+        # Arrange - the streaming body must be closed even when copyfileobj raises
+        self._upload_source_audio()
+        self._add_timing("1:1", start_ms=0, end_ms=1000)
+        body = Mock()
+        failing_s3 = Mock()
+        failing_s3.get_object.return_value = {"Body": body}
+
+        # Act / Assert
+        with patch.object(self.service, "_get_s3_client", return_value=failing_s3):
+            with patch(
+                "apps.content.services.admin.recitation_audio_slicing_service.shutil.copyfileobj",
+                side_effect=ClientError(
+                    {"Error": {"Code": "500", "Message": "copy failed"}}, "GetObject"
+                ),
+            ):
+                with self.assertRaises(ItqanError) as ctx:
+                    self.service.slice_track(self.track.id)
+
+        self._assert_slicing_rejected(ctx, "storage_error", 503)
+        body.close.assert_called_once()
+
     def test_slice_track_where_upload_connection_fails_should_raise_storage_error_with_generic_message(self):
         # Arrange
         self._add_timing("1:1", start_ms=0, end_ms=1000)
