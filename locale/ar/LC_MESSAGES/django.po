@@ -255,36 +255,36 @@ msgstr "لم يتم العثور على المجلد {folder_id} للأصل {ass
 
 #, python-brace-format
 msgid "Recitation track {track_id} not found."
-msgstr ""
+msgstr "لم يتم العثور على مسار التلاوة {track_id}."
 
 #, python-brace-format
 msgid "Failed to read source audio from storage for track {track_id}."
-msgstr ""
+msgstr "تعذرت قراءة الصوت المصدر من التخزين لمسار التلاوة {track_id}."
 
 #, python-brace-format
 msgid "Failed to store sliced ayah audio for track {track_id}."
-msgstr ""
+msgstr "تعذر تخزين المقطع الصوتي للآية لمسار التلاوة {track_id}."
 
 #, python-brace-format
 msgid "Track {track_id} has invalid ayah timing for {ayah_key}: {reason}"
-msgstr ""
+msgstr "يحتوي مسار التلاوة {track_id} على توقيت غير صالح للآية {ayah_key}: {reason}"
 
 #, python-brace-format
 msgid "Ayah key {ayah_key} has an invalid format; expected \"surah:ayah\" using decimal digits."
-msgstr ""
+msgstr "مفتاح الآية {ayah_key} بتنسيق غير صالح؛ التنسيق المتوقع هو \"surah:ayah\" باستخدام أرقام عشرية."
 
 #, python-brace-format
 msgid "Ayah key {ayah_key} must be canonical \"{surah}:{ayah}\" with no leading zeros."
-msgstr ""
+msgstr "يجب أن يكون مفتاح الآية {ayah_key} بالصيغة القياسية \"{surah}:{ayah}\" دون أصفار بادئة."
 
 msgid "ffmpeg binary not found; audio slicing is unavailable."
-msgstr ""
+msgstr "لم يتم العثور على ملف ffmpeg التنفيذي؛ تقطيع الصوت غير متاح."
 
 msgid "Slicing ayah audio timed out."
-msgstr ""
+msgstr "انتهت المهلة الزمنية لتقطيع صوت الآية."
 
 msgid "Failed to slice ayah audio with ffmpeg."
-msgstr ""
+msgstr "تعذر تقطيع صوت الآية باستخدام ffmpeg."
 
 msgid "Not found."
 msgstr "غير موجود."
