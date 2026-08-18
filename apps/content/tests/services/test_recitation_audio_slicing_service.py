@@ -651,9 +651,7 @@ class TestRecitationAudioSlicingService(BaseTestCase):
         with patch.object(self.service, "_get_s3_client", return_value=failing_s3):
             with patch(
                 "apps.content.services.admin.recitation_audio_slicing_service.shutil.copyfileobj",
-                side_effect=ClientError(
-                    {"Error": {"Code": "500", "Message": "copy failed"}}, "GetObject"
-                ),
+                side_effect=ClientError({"Error": {"Code": "500", "Message": "copy failed"}}, "GetObject"),
             ):
                 with self.assertRaises(ItqanError) as ctx:
                     self.service.slice_track(self.track.id)
