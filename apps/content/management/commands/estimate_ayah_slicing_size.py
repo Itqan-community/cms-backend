@@ -90,9 +90,7 @@ def estimate_slicing_size() -> dict[str, Any]:
     # tally the row-level reasons (single source of truth: timing_eligibility_reason).
     rows_with_reason: list[tuple[int, str, int, int, int, str | None]] = []
     for track_id, ayah_key, start_ms, end_ms, timing_duration_ms in timing_rows:
-        reason = timing_eligibility_reason(
-            ayah_key, start_ms, end_ms, track_surah[track_id], track_duration[track_id]
-        )
+        reason = timing_eligibility_reason(ayah_key, start_ms, end_ms, track_surah[track_id], track_duration[track_id])
         rows_with_reason.append((track_id, ayah_key, start_ms, end_ms, timing_duration_ms, reason))
         if reason is not None:
             invalid_timing_count += 1

@@ -9,14 +9,7 @@ from django.test import override_settings
 from model_bakery import baker
 
 from apps.content.cache import recitation_asset_meta_cache_key, recitation_tracks_cache_key
-from apps.content.models import (
-    Asset,
-    CategoryChoice,
-    RecitationFolder,
-    RecitationSurahTrack,
-    Reciter,
-    Riwayah,
-)
+from apps.content.models import Asset, CategoryChoice, RecitationFolder, RecitationSurahTrack, Reciter, Riwayah
 from apps.content.tasks import slice_all_recitation_tracks_task, slice_recitation_track_task
 from apps.core.ninja_utils.errors import ItqanError
 from apps.core.tests.base import BaseTestCase

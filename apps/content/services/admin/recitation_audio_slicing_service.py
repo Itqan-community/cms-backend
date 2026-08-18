@@ -214,9 +214,9 @@ class RecitationAudioSlicingService:
         if parts is None:
             raise ItqanError(
                 error_name="invalid_ayah_timing",
-                message=_('Ayah key {ayah_key} has an invalid format; expected "surah:ayah" using decimal digits.').format(
-                    ayah_key=ayah_key
-                ),
+                message=_(
+                    'Ayah key {ayah_key} has an invalid format; expected "surah:ayah" using decimal digits.'
+                ).format(ayah_key=ayah_key),
                 status_code=400,
             )
         ayah_number = int(parts[1])
@@ -274,8 +274,7 @@ class RecitationAudioSlicingService:
         fade_duration_s = min(FADE_DURATION_SECONDS, duration_s / 2)
         fade_out_start_s = duration_s - fade_duration_s
         fade_filter = (
-            f"afade=t=in:st=0:d={fade_duration_s},"
-            f"afade=t=out:st={fade_out_start_s:.3f}:d={fade_duration_s}"
+            f"afade=t=in:st=0:d={fade_duration_s}," f"afade=t=out:st={fade_out_start_s:.3f}:d={fade_duration_s}"
         )
         cmd = [
             "ffmpeg",

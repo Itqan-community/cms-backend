@@ -253,6 +253,39 @@ msgstr "الأصل {asset_id} غير موجود"
 msgid "Folder {folder_id} not found for asset {asset_id}"
 msgstr "لم يتم العثور على المجلد {folder_id} للأصل {asset_id}"
 
+#, python-brace-format
+msgid "Recitation track {track_id} not found."
+msgstr ""
+
+#, python-brace-format
+msgid "Failed to read source audio from storage for track {track_id}."
+msgstr ""
+
+#, python-brace-format
+msgid "Failed to store sliced ayah audio for track {track_id}."
+msgstr ""
+
+#, python-brace-format
+msgid "Track {track_id} has invalid ayah timing for {ayah_key}: {reason}"
+msgstr ""
+
+#, python-brace-format
+msgid "Ayah key {ayah_key} has an invalid format; expected \"surah:ayah\" using decimal digits."
+msgstr ""
+
+#, python-brace-format
+msgid "Ayah key {ayah_key} must be canonical \"{surah}:{ayah}\" with no leading zeros."
+msgstr ""
+
+msgid "ffmpeg binary not found; audio slicing is unavailable."
+msgstr ""
+
+msgid "Slicing ayah audio timed out."
+msgstr ""
+
+msgid "Failed to slice ayah audio with ffmpeg."
+msgstr ""
+
 msgid "Not found."
 msgstr "غير موجود."
 
