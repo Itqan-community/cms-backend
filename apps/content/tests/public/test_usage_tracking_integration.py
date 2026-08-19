@@ -5,6 +5,7 @@ import json
 from unittest.mock import patch
 
 from django.core.cache import cache
+from django.test import override_settings
 from model_bakery import baker
 from oauth2_provider.models import Application
 
@@ -16,7 +17,7 @@ from apps.usage_tracking.decorators.track_usage import (
     _resolve_reciter_name,
     _resolve_reciter_names,
 )
-from apps.users.models import User
+from apps.users.models import APIKey, User
 
 _REDIS = "apps.usage_tracking.decorators.track_usage._get_tracking_redis"
 
@@ -162,6 +163,61 @@ class UsageTrackingIntegrationTest(BaseTestCase):
         # reciter_id additionally resolves a human-readable name for Mixpanel.
         self.assertEqual(self.reciter.name, props["filter_reciter_name"])
         self.assertEqual([self.reciter.name], props["filter_reciter_names"])
+
+    @override_settings(ENABLE_API_KEY_AUTH=True)
+    @patch(_REDIS)
+    def test_api_key_request_records_key_prefix_as_application_identity(self, mock_get_redis):
+        api_key, raw_key = APIKey.objects.create_key(
+            name="Tracking App",
+            user=self.user,
+        )
+
+        response = self.client.get(
+            "/recitations/",
+            headers={"x-api-key": raw_key},
+        )
+
+        self.assertEqual(200, response.status_code, response.content)
+
+        props = self._props(mock_get_redis)
+
+        self.assertEqual(api_key.prefix, props["application_id"])
+        self.assertIsNone(props["application_name"])
+
+    @override_settings(ENABLE_API_KEY_AUTH=True)
+    @patch(_REDIS)
+    def test_api_keys_for_same_user_record_distinct_application_ids(self, mock_get_redis):
+        first_key, first_raw = APIKey.objects.create_key(
+            name="App One",
+            user=self.user,
+        )
+        second_key, second_raw = APIKey.objects.create_key(
+            name="App Two",
+            user=self.user,
+        )
+
+        first_response = self.client.get(
+            "/recitations/",
+            headers={"x-api-key": first_raw},
+        )
+        second_response = self.client.get(
+            "/recitations/",
+            headers={"x-api-key": second_raw},
+        )
+
+        self.assertEqual(200, first_response.status_code, first_response.content)
+        self.assertEqual(200, second_response.status_code, second_response.content)
+
+        calls = mock_get_redis.return_value.rpush.call_args_list
+        first_props = json.loads(calls[-2].args[1])["properties"]
+        second_props = json.loads(calls[-1].args[1])["properties"]
+
+        self.assertEqual(first_key.prefix, first_props["application_id"])
+        self.assertEqual(second_key.prefix, second_props["application_id"])
+        self.assertNotEqual(
+            first_props["application_id"],
+            second_props["application_id"],
+        )
 
 
 class ResolveReciterNameTest(BaseTestCase):
