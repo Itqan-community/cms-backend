@@ -318,15 +318,20 @@ def _prefer_arabic_name(row: dict) -> str:
     return (row.get("name_ar") or "") or (row.get("name_en") or "")
 
 
-def _resolve_application(request) -> tuple[int | None, str | None]:
-    """Return (application_id, application_name) for OAuth2-authed requests."""
+def _resolve_application(request) -> tuple[int | str | None, str | None]:
+    """Return the application identity for OAuth2 or API-key requests."""
     token = getattr(request, "access_token", None)
-    if token is None:
-        return None, None
-    application = getattr(token, "application", None)
-    if application is None:
-        return None, None
-    return getattr(application, "id", None), getattr(application, "name", None)
+    if token is not None:
+        application = getattr(token, "application", None)
+        if application is not None:
+            return getattr(application, "id", None), getattr(application, "name", None)
+
+    auth = getattr(request, "auth", None)
+    prefix = getattr(auth, "prefix", None)
+    if prefix:
+        return prefix, None
+
+    return None, None
 
 
 def _detect_auth_method(request) -> str:
