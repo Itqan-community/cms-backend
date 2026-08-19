@@ -358,7 +358,10 @@ class RecitationTracksAccessControlTest(BaseTestCase):
     """Gating of the content endpoint behind API key + approved access request."""
 
     def setUp(self):
+        from django.core.cache import cache as django_cache
+
         super().setUp()
+        django_cache.clear()
         self.publisher = baker.make(Publisher)
         self.asset = baker.make(
             Asset,
@@ -399,6 +402,7 @@ class RecitationTracksAccessControlTest(BaseTestCase):
         response = self.client.get(f"/recitations/{self.asset.id}/")
 
         self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual("public, max-age=300, s-maxage=300", response.headers.get("Cache-Control"))
 
     def test_restricted_asset_without_api_key_returns_401(self):
         response = self.client.get(f"/recitations/{self.asset.id}/")
@@ -450,6 +454,96 @@ class RecitationTracksAccessControlTest(BaseTestCase):
 
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual(1, len(response.json()["results"]))
+        self.assertEqual("private, no-cache", response.headers.get("Cache-Control"))
+
+    def test_restricted_asset_warm_cache_still_rejects_unauthenticated_request(self):
+        # 1. Warm cache with an authorized request
+        self._grant_access(self.user, self.asset)
+        self._authenticate_with_api_key(self.user)
+        auth_response = self.client.get(f"/recitations/{self.asset.id}/")
+        self.assertEqual(200, auth_response.status_code, auth_response.content)
+
+        # 2. Subsequent unauthenticated request must be rejected (not served from cache)
+        self.client.credentials()  # Remove API key
+        anon_response = self.client.get(f"/recitations/{self.asset.id}/")
+        self.assertEqual(401, anon_response.status_code, anon_response.content)
+        self.assertEqual("authentication_required", anon_response.json()["error_name"])
+
+    def test_restricted_asset_warm_cache_still_rejects_unauthorized_user(self):
+        # 1. Warm cache with User A (authorized)
+        self._grant_access(self.user, self.asset)
+        self._authenticate_with_api_key(self.user)
+        auth_response = self.client.get(f"/recitations/{self.asset.id}/")
+        self.assertEqual(200, auth_response.status_code, auth_response.content)
+
+        # 2. Request from User B (authenticated, but has no access grant)
+        other_user = User.objects.create_user(email="other_dev@example.com", name="Other Dev")
+        self._authenticate_with_api_key(other_user)
+        unauth_response = self.client.get(f"/recitations/{self.asset.id}/")
+        self.assertEqual(403, unauth_response.status_code, unauth_response.content)
+        self.assertEqual("access_denied", unauth_response.json()["error_name"])
+
+    def test_restricted_asset_warm_cache_serves_another_authorized_user(self):
+        # 1. User A warms cache
+        self._grant_access(self.user, self.asset)
+        self._authenticate_with_api_key(self.user)
+        resp_a = self.client.get(f"/recitations/{self.asset.id}/")
+        self.assertEqual(200, resp_a.status_code, resp_a.content)
+
+        # 2. User B (also authorized) hits cache
+        user_b = User.objects.create_user(email="dev_b@example.com", name="Dev B")
+        self._grant_access(user_b, self.asset)
+        self._authenticate_with_api_key(user_b)
+        resp_b = self.client.get(f"/recitations/{self.asset.id}/")
+        self.assertEqual(200, resp_b.status_code, resp_b.content)
+        self.assertEqual(resp_a.json(), resp_b.json())
+        self.assertEqual("private, no-cache", resp_b.headers.get("Cache-Control"))
+
+    def test_restricted_asset_legacy_cache_without_is_open_access_falls_back_to_db_and_enforces_access(self):
+        import json
+
+        from django.core.cache import cache as django_cache
+
+        from apps.content.cache import (
+            DEFAULT_FOLDER_CACHE_TOKEN,
+            RECITATION_ASSET_META_CACHE_TTL,
+            RECITATION_RESPONSE_CACHE_TTL,
+            recitation_asset_meta_cache_key,
+            recitation_response_cache_key,
+        )
+
+        # Simulate legacy cache entry (populated before deployment) missing "is_open_access"
+        resp_key = recitation_response_cache_key(
+            self.asset.id, page=1, page_size=DEFAULT_PAGE_SIZE, folder_slug=DEFAULT_FOLDER_CACHE_TOKEN
+        )
+        meta_key = recitation_asset_meta_cache_key(self.asset.id)
+
+        legacy_meta = {
+            "name_ar": self.asset.name_ar,
+            "publisher_id": self.asset.publisher_id,
+            "publisher_name": self.asset.publisher.name,
+            # Notice: "is_open_access" is absent!
+        }
+        legacy_resp = json.dumps({"results": [], "count": 0}).encode()
+
+        django_cache.set(resp_key, legacy_resp, RECITATION_RESPONSE_CACHE_TTL)
+        django_cache.set(meta_key, legacy_meta, RECITATION_ASSET_META_CACHE_TTL)
+
+        # Unauthenticated request must NOT be served from cache; it must hit DB and return 401
+        response = self.client.get(f"/recitations/{self.asset.id}/")
+        self.assertEqual(401, response.status_code, response.content)
+        self.assertEqual("authentication_required", response.json()["error_name"])
+
+        # Authenticated request with approved grant updates cache with new schema
+        self._grant_access(self.user, self.asset)
+        self._authenticate_with_api_key(self.user)
+        auth_response = self.client.get(f"/recitations/{self.asset.id}/")
+        self.assertEqual(200, auth_response.status_code, auth_response.content)
+
+        # Verify cache meta now includes "is_open_access"
+        updated_meta = django_cache.get(meta_key)
+        self.assertIn("is_open_access", updated_meta)
+        self.assertFalse(updated_meta["is_open_access"])
 
     @override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=False)
     def test_flag_off_restricted_asset_consumable_without_api_key(self):
