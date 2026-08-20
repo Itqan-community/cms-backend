@@ -100,11 +100,12 @@ No other keys are accepted anywhere in the file.
 ### Asset identity
 
 The key is the asset's `slug` as it exists in the CMS, and it must be a **string**. `SlugField`
-permits slugs such as `true`, `no` or `123`, which as bare YAML keys resolve to a bool or an
-integer even under the 1.2 Core Schema. Such slugs must be quoted (`"true"`, `"123"`); a key
-that resolves to any non-string type is rejected with a Non-String Asset Key error rather than
-stringified. The same rule applies to the lockfile's `assets` keys, which §5 requires to be
-quoted unconditionally.
+permits slugs such as `true` or `123`, which as bare YAML keys resolve to a bool or an integer
+even under the YAML 1.2 Core Schema. Such slugs must be quoted (`"true"`, `"123"`); a key that
+resolves to any non-string type is rejected with a Non-String Asset Key error rather than
+stringified. A slug such as `no` must be quoted only for compatibility with YAML 1.1 parsers,
+which resolve that spelling as a boolean. The same rule applies to the lockfile's `assets` keys,
+which §5 requires to be quoted unconditionally.
 
 It is matched **exactly**:
 case-sensitive, character-for-character, with no Unicode normalization, case folding, or
@@ -326,10 +327,12 @@ reproducible state it already had.
 | Unsatisfiable Version Constraint | eligible versions exist, none match |
 | Duplicate Version Collision | two eligible versions canonicalize to the same version |
 
-Each is a distinct, named error identifying the asset slug involved, the requested constraint,
-and observed candidate versions where applicable. Where two rows could describe the same input,
-the **more specific** one wins: a non-string `assets` key is a Non-String Asset Key error, not
-the general YAML Profile Violation for wrong scalar types.
+Each is a distinct, named error. An error includes the asset slug, requested constraint, and
+observed candidate versions **only when that context is applicable and available**; root-level
+errors such as Unsupported Schema Version and top-level Unknown Field do not need to provide
+asset-specific context that does not exist. Where two rows could describe the same input, the
+**more specific** one wins: a non-string `assets` key is a Non-String Asset Key error, not the
+general YAML Profile Violation for wrong scalar types.
 
 ---
 
@@ -369,9 +372,16 @@ Each entry has exactly two fields:
 | Field | Type | Meaning |
 |---|---|---|
 | `constraint` | string | The manifest's `version` value copied **verbatim** — `~1.2` stays `~1.2`. |
-| `version` | string | The resolved version, always in **canonical three-component** form and **never carrying build metadata** — a version published as `3.0` is recorded as `3.0.0`. Two-component values and any `+build` suffix make the lockfile `INVALID`, mirroring the eligibility rule in §4. |
+| `version` | string | The resolved version, recorded in **canonical three-component** form and **never carrying build metadata** — a version published as `3.0` is recorded as `3.0.0`. Two-component values and any `+build` suffix make the lockfile `INVALID`, mirroring the eligibility rule in §4. |
 
 No other keys are accepted anywhere in the lockfile (the schema is closed).
+
+When the registry and installer resolve this field, they canonicalize the requested version and
+compare it with the canonical form of eligible `PACKAGE` versions. Equivalent forms such as
+`1.2` and `1.2.0` therefore match. Resolution must return the unique matching `AssetVersion` /
+`PACKAGE` record; if no canonical-equivalent record exists, it fails with a named No Canonical
+Version Match error identifying the asset and requested version rather than fabricating or
+selecting a different record.
 
 Two things are deliberately absent. `package` never reaches the lockfile. And there is no
 `checksum` or `integrity` field in V1 — artifact identity is owned by #425 and is not yet
@@ -698,8 +708,12 @@ construction, since an exact pin matches exactly one version. Visibility decides
 ### The update baseline has to be trustworthy
 
 Both classifications compare against "the currently locked version", which presumes there is
-one. **Update classification requires a `FRESH` lockfile.** In the other five states there is no
-authoritative answer to "what am I on right now":
+one. **Update classification requires a `FRESH` lockfile, and a `FRESH` lockfile must first be
+checked against the current `PACKAGE` catalog.** The locked version must still be eligible for
+that asset. If it is unavailable, update checking fails with a named Locked Version Unavailable
+error that identifies the asset and locked version; it must not be reported as Up to date,
+In-Range Update, or Out-of-Range Update. In the other five states there is no authoritative
+answer to "what am I on right now":
 
 | State | Why there is no baseline |
 |---|---|
