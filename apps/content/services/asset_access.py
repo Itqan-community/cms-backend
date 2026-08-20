@@ -160,7 +160,28 @@ def guard_restrict_for_tenant(asset: Asset) -> None:
     )
 
 
-def enforce_asset_access_on_public_api(user: User | None, asset: Asset) -> None:
+def user_has_asset_id_access(user: User, asset_id: int) -> bool:
+    try:
+        access = AssetAccess.objects.get(user=user, asset_id=asset_id)
+        return access.is_active
+    except AssetAccess.DoesNotExist:
+        return False
+
+
+def user_has_access(user: User, asset: Asset) -> bool:
+    if asset.is_open_access:
+        return True
+
+    return user_has_asset_id_access(user, asset.pk)
+
+
+def enforce_asset_access_on_public_api(
+    user: User | None,
+    asset: Asset | None = None,
+    *,
+    asset_id: int | None = None,
+    is_open_access: bool | None = None,
+) -> None:
     """Gate consumption of an asset's content behind an API key + approved access.
 
     Open-access assets are free to consume by anyone. For assets the publisher keeps
@@ -173,7 +194,8 @@ def enforce_asset_access_on_public_api(user: User | None, asset: Asset) -> None:
     if not settings.ENFORCE_ASSET_ACCESS_ON_PUBLIC_API:
         return
 
-    if asset.is_open_access:
+    open_access = asset.is_open_access if asset is not None else bool(is_open_access)
+    if open_access:
         return
 
     if not (user and user.is_authenticated):
@@ -183,23 +205,13 @@ def enforce_asset_access_on_public_api(user: User | None, asset: Asset) -> None:
             status_code=401,
         )
 
-    if not user_has_access(user, asset):
+    target_asset_id = asset.pk if asset is not None else asset_id
+    if target_asset_id is None or not user_has_asset_id_access(user, target_asset_id):
         raise ItqanError(
             "access_denied",
             _("You don't have an approved access request for this asset."),
             status_code=403,
         )
-
-
-def user_has_access(user: User, asset: Asset) -> bool:
-    if asset.is_open_access:
-        return True
-
-    try:
-        access = AssetAccess.objects.get(user=user, asset=asset)
-        return access.is_active
-    except AssetAccess.DoesNotExist:
-        return False
 
 
 class AssetAccessStatus(str, Enum):

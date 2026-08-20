@@ -77,7 +77,15 @@ def list_recitation_tracks(
     cached_resp: bytes | None = cache.get(_resp_key)
     cached_meta: dict | None = cache.get(_meta_key)
 
-    if cached_resp is not None and cached_meta is not None:
+    if cached_resp is not None and cached_meta is not None and "is_open_access" in cached_meta:
+        is_open_access: bool = cached_meta["is_open_access"]
+        if not is_open_access:
+            enforce_asset_access_on_public_api(
+                getattr(request, "user", None),
+                asset_id=asset_id,
+                is_open_access=is_open_access,
+            )
+
         track_extra(
             request,
             entity_type="recitation_track",
@@ -88,7 +96,7 @@ def list_recitation_tracks(
             publisher_names=[cached_meta["publisher_name"]] if cached_meta["publisher_id"] else [],
         )
         resp = HttpResponse(cached_resp, content_type="application/json")
-        resp["Cache-Control"] = "public, max-age=300, s-maxage=300"
+        resp["Cache-Control"] = "public, max-age=300, s-maxage=300" if is_open_access else "private, no-cache"
         return resp
 
     # Cache miss - hit DB.
@@ -107,6 +115,7 @@ def list_recitation_tracks(
         "name_ar": asset.name_ar,
         "publisher_id": asset.publisher_id,
         "publisher_name": publisher_name,
+        "is_open_access": asset.is_open_access,
     }
 
     track_extra(
@@ -165,5 +174,5 @@ def list_recitation_tracks(
     cache.set(_meta_key, asset_meta, RECITATION_ASSET_META_CACHE_TTL)
 
     resp = HttpResponse(response_bytes, content_type="application/json")
-    resp["Cache-Control"] = "public, max-age=300, s-maxage=300"
+    resp["Cache-Control"] = "public, max-age=300, s-maxage=300" if asset.is_open_access else "private, no-cache"
     return resp
