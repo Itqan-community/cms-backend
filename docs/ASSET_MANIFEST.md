@@ -99,7 +99,14 @@ No other keys are accepted anywhere in the file.
 
 ### Asset identity
 
-The key is the asset's `slug` as it exists in the CMS. It is matched **exactly**:
+The key is the asset's `slug` as it exists in the CMS, and it must be a **string**. `SlugField`
+permits slugs such as `true`, `no` or `123`, which as bare YAML keys resolve to a bool or an
+integer even under the 1.2 Core Schema. Such slugs must be quoted (`"true"`, `"123"`); a key
+that resolves to any non-string type is rejected with a Non-String Asset Key error rather than
+stringified. The same rule applies to the lockfile's `assets` keys, which §5 requires to be
+quoted unconditionally.
+
+It is matched **exactly**:
 case-sensitive, character-for-character, with no Unicode normalization, case folding, or
 whitespace trimming. Arabic and other non-ASCII slugs work and are compared byte-for-byte.
 
@@ -225,6 +232,7 @@ In short:
 | `v1.2.3` | No `v` prefix. |
 | `1.2.3+build1` | Build metadata is not allowed in a constraint. |
 | `01.2.0` | No leading zeros. |
+| `^1.2.3-beta.1`, `~1.2.3-beta.1` | Ranged prerelease constraints. `^` and `~` never select a prerelease (§7), so a prerelease lower bound would name a version its own range excludes. Pin the prerelease exactly, or widen to a stable range. |
 
 The grammar is small on purpose. Every form listed above has to mean *exactly* the same thing
 to the registry, the CLI and the updater; a form we can add later costs nothing, while a form
@@ -297,6 +305,10 @@ Resolution is **atomic**. Either every declared asset resolves and a lockfile is
 one fails and **no lockfile is produced at all**. A partial lockfile is worse than none: it
 looks valid, installs a subset, and the real failure surfaces later and somewhere else.
 
+A failed resolution must neither create nor replace the lockfile: any existing
+`itqan-assets.lock` is left byte-for-byte untouched, so the repository keeps whatever
+reproducible state it already had.
+
 ### Failure modes
 
 | Error | When |
@@ -304,6 +316,7 @@ looks valid, installs a subset, and the real failure surfaces later and somewher
 | Unsupported Schema Version | `schema_version` missing or not `1` |
 | YAML Profile Violation | any strict-parsing rule in §2 |
 | Scalar Shorthand Entry | an entry is a scalar instead of a mapping |
+| Non-String Asset Key | an `assets` key resolves to a bool, integer, float or any non-string type |
 | Unknown Field | any key outside the tables in §2 |
 | Missing Required Field | an entry has no `version` |
 | Invalid Constraint Syntax | `version` is not in the §3 grammar |
@@ -314,7 +327,9 @@ looks valid, installs a subset, and the real failure surfaces later and somewher
 | Duplicate Version Collision | two eligible versions canonicalize to the same version |
 
 Each is a distinct, named error identifying the asset slug involved, the requested constraint,
-and observed candidate versions where applicable.
+and observed candidate versions where applicable. Where two rows could describe the same input,
+the **more specific** one wins: a non-string `assets` key is a Non-String Asset Key error, not
+the general YAML Profile Violation for wrong scalar types.
 
 ---
 
@@ -354,7 +369,7 @@ Each entry has exactly two fields:
 | Field | Type | Meaning |
 |---|---|---|
 | `constraint` | string | The manifest's `version` value copied **verbatim** — `~1.2` stays `~1.2`. |
-| `version` | string | The resolved version, always in **canonical three-component** form — a version published as `3.0` is recorded as `3.0.0`. |
+| `version` | string | The resolved version, always in **canonical three-component** form and **never carrying build metadata** — a version published as `3.0` is recorded as `3.0.0`. Two-component values and any `+build` suffix make the lockfile `INVALID`, mirroring the eligibility rule in §4. |
 
 No other keys are accepted anywhere in the lockfile (the schema is closed).
 
@@ -405,19 +420,22 @@ different implementations, must produce byte-identical files.
 
 ### Lockfile states
 
-Any tool inspecting the pair reports exactly one of five states, evaluated in this order:
+Any tool inspecting the pair reports exactly one of six states, evaluated in this order:
 
 | Order | State | Meaning |
 |---|---|---|
-| 1 | `ORPHAN` | Lockfile present, manifest absent. |
-| 2 | `MISSING` | Manifest present, lockfile absent — resolution has never run. |
-| 3 | `INVALID` | Malformed YAML, a strict-profile violation, an unsupported `lockfile_version` or `manifest_schema_version`, a missing/extra/wrong-typed field, or a `version` that is not valid SemVer. |
-| 4 | `STALE` | Structurally fine, but no longer matches the manifest. |
-| 5 | `FRESH` | Structurally fine and fully matching. |
+| 1 | `ABSENT` | Neither file present — the repository declares no Itqan assets. Not an error. |
+| 2 | `ORPHAN` | Lockfile present, manifest absent. |
+| 3 | `INVALID` | The manifest is present but fails §2/§3 validation; **or** the lockfile is malformed YAML, violates the strict profile, carries an unsupported `lockfile_version` or `manifest_schema_version`, has a missing/extra/wrong-typed field, or records a `version` that is not a canonical three-component SemVer version without build metadata. |
+| 4 | `MISSING` | Manifest present **and valid**, lockfile absent — resolution has never run. |
+| 5 | `STALE` | Structurally fine, but no longer matches the manifest. |
+| 6 | `FRESH` | Structurally fine and fully matching. |
 
-The order matters. **An unsupported version is `INVALID`, never `STALE`** — a lockfile written
-by a newer version of the tooling is not "out of date", it is unreadable, and guessing at it
-is worse than refusing it.
+The order matters twice. **An unsupported version is `INVALID`, never `STALE`** — a lockfile
+written by a newer version of the tooling is not "out of date", it is unreadable, and guessing
+at it is worse than refusing it. And **`INVALID` precedes `MISSING`**: a manifest that does not
+parse or validate is reported as a manifest problem, not as "resolution has never run", which
+would send the user off to run a resolution that cannot succeed.
 
 A lockfile becomes `STALE` when:
 
@@ -680,14 +698,15 @@ construction, since an exact pin matches exactly one version. Visibility decides
 ### The update baseline has to be trustworthy
 
 Both classifications compare against "the currently locked version", which presumes there is
-one. **Update classification requires a `FRESH` lockfile.** In the other four states there is no
+one. **Update classification requires a `FRESH` lockfile.** In the other five states there is no
 authoritative answer to "what am I on right now":
 
 | State | Why there is no baseline |
 |---|---|
+| `ABSENT` | There are no dependency files at all; there is nothing to check. |
 | `MISSING` | Resolution has never run; nothing is locked. |
 | `STALE` | The locked versions answer a question the manifest no longer asks. |
-| `INVALID` | The file cannot be read as a lockfile at all. |
+| `INVALID` | The manifest or the lockfile fails validation, so neither the declaration nor the baseline can be trusted. |
 | `ORPHAN` | There is no manifest, so there is no declared intent to compare against. |
 
 Reporting an update from a `STALE` lockfile means computing a diff against a version the
