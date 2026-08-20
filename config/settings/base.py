@@ -163,6 +163,17 @@ CLOUDFLARE_R2_ACCESS_KEY_ID = config("CLOUDFLARE_R2_ACCESS_KEY_ID", default="")
 CLOUDFLARE_R2_SECRET_ACCESS_KEY = config("CLOUDFLARE_R2_SECRET_ACCESS_KEY", default="")
 CLOUDFLARE_R2_PUBLIC_BASE_URL = config("CLOUDFLARE_R2_PUBLIC_BASE_URL", default="")
 
+# Read-only ayah-slicing sizing inputs for the estimate_ayah_slicing_size management
+# command (issue #412 storage-sizing criterion). All optional: a value of 0 disables
+# the corresponding section of the report instead of inventing numbers.
+# Cost rates (R2_STORAGE_COST_PER_GB_MONTH / R2_EGRESS_COST_PER_GB) are per decimal
+# GB: 1 GB = 1,000,000,000 bytes, matching the estimator's cost calculations.
+AYAH_SLICING_ESTIMATED_OUTPUT_BITRATE = config("AYAH_SLICING_ESTIMATED_OUTPUT_BITRATE", cast=int, default=0)
+AYAH_SLICING_WARN_OBJECT_COUNT = config("AYAH_SLICING_WARN_OBJECT_COUNT", cast=int, default=0)
+AYAH_SLICING_WARN_ESTIMATED_BYTES = config("AYAH_SLICING_WARN_ESTIMATED_BYTES", cast=int, default=0)
+R2_STORAGE_COST_PER_GB_MONTH = config("R2_STORAGE_COST_PER_GB_MONTH", cast=float, default=0)
+R2_EGRESS_COST_PER_GB = config("R2_EGRESS_COST_PER_GB", cast=float, default=0)
+
 # Use R2 if configured, otherwise fall back to local storage
 if CLOUDFLARE_R2_ENDPOINT:
     CLOUDFLARE_R2_CONFIG_OPTIONS = {

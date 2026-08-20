@@ -48,7 +48,9 @@ if settings.ENABLE_API_KEY_AUTH:
             | NinjaErrorResponse[Literal["api_key_name_taken"]],
         },
         summary="Create API Key",
-        description="Create a new API key. The raw key is returned once and cannot be retrieved again.",
+        description="Create a new API key. This key is a public application identifier, not a "
+        "secret, it is safe to embed in frontend or mobile client code. The key can be "
+        "re-viewed later from the dashboard.",
     )
     def create_api_key(request: Request, data: ApiKeyCreateInSchema):
         api_key, raw_key = _service.create(request.user, data.name, expiry_date=data.expiry_date)
