@@ -279,8 +279,9 @@ and artifact packaging (#425).
 
 1. Parse and validate the manifest. Any error stops everything.
 2. Build the eligible pool for the slug.
-3. If two eligible versions canonicalize to the same version (e.g., records named `1.2` and
-   `1.2.0`), **fail** with a duplicate version collision error. This is reachable because
+3. If multiple eligible `PACKAGE` or `AssetVersion` records canonicalize to the same version
+   (e.g., records named `1.2` and `1.2.0`), **fail** with a named Canonical Version Collision
+   error identifying the asset and requested version. This is reachable because
    `AssetVersion.name` in the backend is an unvalidated `CharField` (see Appendix). There is
    deliberately no tie-breaker — not creation time, not database id, not row order, not
    response order, and not lexicographical sorting. Any of those would make your build depend
@@ -325,7 +326,7 @@ reproducible state it already had.
 | Unknown Asset | the slug matches no asset |
 | No Eligible Package Versions | the asset exists but has no SemVer-valid `PACKAGE` version |
 | Unsatisfiable Version Constraint | eligible versions exist, none match |
-| Duplicate Version Collision | two eligible versions canonicalize to the same version |
+| Canonical Version Collision | multiple eligible `PACKAGE` or `AssetVersion` records canonicalize to the same version; identifies the asset and requested version |
 
 Each is a distinct, named error. An error includes the asset slug, requested constraint, and
 observed candidate versions **only when that context is applicable and available**; root-level
@@ -409,16 +410,18 @@ for. So the serialization is fixed:
 | Entry field order | `constraint`, then `version` |
 | Collection style | block mappings; `{}` only for an empty `assets` |
 | Blank lines | exactly one after `manifest_schema_version`; none between asset entries |
-| Quoting | asset keys and all string values double-quoted; the four fixed schema keys plain |
+| Quoting | asset keys and all string values use the canonical double-quoted escaping policy below; the four fixed schema keys plain |
 | Comments | never emitted |
 
 Two of those rows are load-bearing beyond tidiness. Asset ordering is by byte sequence, not by
 any locale's collation — a locale-aware sort would order `تفسير-الجلالين` differently on
-different machines. And asset keys are **always** quoted because `SlugField` permits slugs such
-as `true` or `123`, which as bare YAML keys resolve to a bool and an integer even under 1.2
-Core; a writer that quoted only "when necessary" would have to reimplement that judgement
-identically everywhere, and getting it wrong emits a lockfile that fails its own validation.
-Quoting unconditionally removes the judgement call.
+different machines. Asset keys and string values are **always** double-quoted and use one
+canonical escaping policy: emit every non-ASCII Unicode scalar literally as UTF-8; escape `"` as
+`\"` and `\` as `\\`; escape U+0008, U+0009, U+000A, U+000C and U+000D as `\b`, `\t`, `\n`,
+`\f` and `\r`, respectively; and escape every other control character in U+0000–U+001F or
+U+007F–U+009F as lowercase `\u` followed by four lowercase hexadecimal digits. No other
+characters are escaped. The four fixed schema keys remain plain. This policy makes independent
+writers produce byte-identical YAML rather than relying on a "when necessary" judgement call.
 
 Nothing that varies between runs, machines or users belongs in the file: no `generated_at`, no
 tool version, no hostname, no absolute paths. A timestamp alone would mean every `install`
@@ -430,22 +433,24 @@ different implementations, must produce byte-identical files.
 
 ### Lockfile states
 
-Any tool inspecting the pair reports exactly one of six states, evaluated in this order:
+Any tool inspecting the pair reports exactly one of six states. It evaluates them in this order:
 
 | Order | State | Meaning |
 |---|---|---|
 | 1 | `ABSENT` | Neither file present — the repository declares no Itqan assets. Not an error. |
-| 2 | `ORPHAN` | Lockfile present, manifest absent. |
-| 3 | `INVALID` | The manifest is present but fails §2/§3 validation; **or** the lockfile is malformed YAML, violates the strict profile, carries an unsupported `lockfile_version` or `manifest_schema_version`, has a missing/extra/wrong-typed field, or records a `version` that is not a canonical three-component SemVer version without build metadata. |
+| 2 | `INVALID` | The manifest is present but fails §2/§3 validation; **or** the lockfile is present but malformed YAML, violates the strict profile, carries an unsupported `lockfile_version` or `manifest_schema_version`, has a missing/extra/wrong-typed field, or records a `version` that is not a canonical three-component SemVer version without build metadata. Lockfile validation occurs before assigning `ORPHAN`. |
+| 3 | `ORPHAN` | Lockfile is valid and present, manifest absent. |
 | 4 | `MISSING` | Manifest present **and valid**, lockfile absent — resolution has never run. |
 | 5 | `STALE` | Structurally fine, but no longer matches the manifest. |
 | 6 | `FRESH` | Structurally fine and fully matching. |
 
-The order matters twice. **An unsupported version is `INVALID`, never `STALE`** — a lockfile
-written by a newer version of the tooling is not "out of date", it is unreadable, and guessing
-at it is worse than refusing it. And **`INVALID` precedes `MISSING`**: a manifest that does not
-parse or validate is reported as a manifest problem, not as "resolution has never run", which
-would send the user off to run a resolution that cannot succeed.
+The order matters three times. **An unsupported version is `INVALID`, never `STALE`** — a
+lockfile written by a newer version of the tooling is not "out of date", it is unreadable, and
+guessing at it is worse than refusing it. **Lockfile validation precedes `ORPHAN`**, so a
+malformed lockfile with no manifest is `INVALID`, not `ORPHAN`. Finally, **`INVALID` precedes
+`MISSING`**: a manifest that does not parse or validate is reported as a manifest problem, not
+as "resolution has never run", which would send the user off to run a resolution that cannot
+succeed.
 
 A lockfile becomes `STALE` when:
 
@@ -675,14 +680,19 @@ the state into one of three discrete categories:
 
 1. **Up to date**: No visible candidate version has higher SemVer precedence than the
    currently locked version.
-2. **In-Range Update**: An eligible candidate version exists with higher SemVer precedence
-   than the currently locked version, and it **satisfies** the existing manifest constraint.
-   This can be applied automatically by regenerating `itqan-assets.lock` alone, leaving
-   `itqan-assets.yaml` untouched.
-3. **Out-of-Range Update**: An eligible candidate version exists with higher SemVer
-   precedence than the currently locked version, but it **does not satisfy** the existing
-   manifest constraint. Applying this update requires a human decision to edit
-   `itqan-assets.yaml` and broaden or bump the constraint.
+2. **In-Range Update**: The **highest visible candidate** has higher SemVer precedence than the
+   currently locked version and **satisfies** the existing manifest constraint. This can be
+   applied automatically by regenerating `itqan-assets.lock` alone, leaving `itqan-assets.yaml`
+   untouched.
+3. **Out-of-Range Update**: The **highest visible candidate** has higher SemVer precedence than
+   the currently locked version but **does not satisfy** the existing manifest constraint.
+   Applying this update requires a human decision to edit `itqan-assets.yaml` and broaden or
+   bump the constraint.
+
+If higher candidates exist in both categories, the highest visible candidate determines the
+single result: its constraint membership selects In-Range Update or Out-of-Range Update. The
+highest in-range candidate is not reported separately, and the tool never reports both update
+categories.
 
 ### Which versions are even visible to an update check
 
