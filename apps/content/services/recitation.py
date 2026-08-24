@@ -250,3 +250,17 @@ class RecitationService:
         """
         filters_dict = filters.model_dump(exclude_none=True) if filters and hasattr(filters, "model_dump") else {}
         return self.repo.list_reciters_qs(publisher_q, filters_dict=filters_dict)
+
+    def get_sample_recitation(self, publisher_q: Q | None = None) -> Asset | None:
+        """
+        Business Logic: First complete READY recitation for the public media-player
+        sample endpoint (None when no qualifying recitation exists).
+        """
+        return self.repo.get_sample_asset(publisher_q)
+
+    def get_sample_track(self, asset_id: int, surah_number: int) -> RecitationSurahTrack | None:
+        """
+        Business Logic: The default-folder track covering one surah of the
+        sample recitation, with ayah timings prefetched in playback order.
+        """
+        return self.repo.get_default_track_for_surah(asset_id, surah_number)

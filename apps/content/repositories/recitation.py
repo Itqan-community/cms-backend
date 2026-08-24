@@ -230,6 +230,41 @@ class RecitationRepository(BaseRecitationRepository):
         except Asset.DoesNotExist:
             return None
 
+    def get_sample_asset(self, publisher_q: Q | None = None) -> Asset | None:
+        """
+        First READY recitation fit for a public media-player sample: the sample
+        contract renders reciter/qiraah/riwayah, so incomplete assets are skipped
+        rather than served with placeholder names.
+        """
+        qs = (
+            self.asset_model.objects.select_related("publisher", "reciter", "riwayah", "qiraah")
+            .filter(
+                category=CategoryChoice.RECITATION,
+                status=StatusChoice.READY,
+                restricted_for_tenant=False,
+                reciter__isnull=False,
+                qiraah__isnull=False,
+                riwayah__isnull=False,
+            )
+            .order_by("id")
+        )
+        if publisher_q is not None:
+            qs = qs.filter(publisher_q)
+        return qs.first()
+
+    def get_default_track_for_surah(self, asset_id: int, surah_number: int) -> RecitationSurahTrack | None:
+        """
+        The default-folder track covering one surah, with its ayah timings
+        prefetched in playback order -- the media-player sample needs both in
+        a single query round-trip.
+        """
+        return (
+            self.track_model.objects.select_related("folder")
+            .prefetch_related(Prefetch("ayah_timings", queryset=RecitationAyahTiming.objects.order_by("start_ms")))
+            .filter(asset_id=asset_id, folder__is_default=True, surah_number=surah_number)
+            .first()
+        )
+
     def list_recitation_tracks_for_asset(
         self,
         asset_id: int,

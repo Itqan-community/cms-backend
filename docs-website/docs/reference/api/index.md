@@ -36,4 +36,6 @@ The Quranic CMS API is a REST API for Quranic recitation data — reciters, reci
 
 **Riwayahs** — Narration chains (e.g. Hafs an Asim, Warsh). Start with [List Riwayahs](/docs/reference/api/apps-content-api-public-riwayahs-list-riwayahs).
 
+**Sample Data** — Ready-made developer samples for one ayah: Quran text with uthmani script, tafsir, translation, and a playable recitation with ayah timings. Start with [Get Joined Ayah](/docs/reference/api/apps-content-api-public-samples-get-joined-ayah).
+
 **Authentication** — Token issuance and revocation for authenticated operations. See the [Authentication guide](/docs/getting-started/authentication).

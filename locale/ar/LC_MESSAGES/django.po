@@ -1130,6 +1130,27 @@ msgstr "مرحبًا بك في نظام إتقان لإدارة المحتوى!"
 msgid "This is a test email to verify the email service is working correctly."
 msgstr "هذه رسالة اختبارية للتأكد من عمل خدمة البريد الإلكتروني بشكل صحيح."
 
+msgid "No tafsir available"
+msgstr "لا يوجد تفسير متاح"
+
+#, python-brace-format
+msgid "This tafsir does not provide text for surah {surah}, ayah {ayah}."
+msgstr "هذا التفسير لا يوفّر نصاً للسورة {surah}، الآية {ayah}."
+
+msgid "No translation available"
+msgstr "لا توجد ترجمة متاحة"
+
+#, python-brace-format
+msgid "This translation does not provide text for surah {surah}, ayah {ayah}."
+msgstr "هذه الترجمة لا توفّر نصاً للسورة {surah}، الآية {ayah}."
+
+msgid "No recitation available"
+msgstr "لا تتوفر تلاوة"
+
+#, python-brace-format
+msgid "No recitation track available for surah {surah}."
+msgstr "لا يتوفر مسار تلاوة للسورة {surah}."
+
 #, python-brace-format
 #~ msgid "A track for asset {asset_id} surah {surah_number} already exists."
 #~ msgstr "يوجد مقطع بالفعل للأصل {asset_id} والسورة {surah_number}."
