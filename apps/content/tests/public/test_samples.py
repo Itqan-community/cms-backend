@@ -611,6 +611,36 @@ class ContentSamplesTest(TestCase):
         self.assertEqual(400, response.status_code)
         self.assertEqual("validation_error", response.json()["error_name"])
 
+    def test_get_tafsir_sample_where_two_ayahs_requested_from_one_version_should_parse_file_only_once(self):
+        """Two distinct ayahs from one version open/parse the stored file exactly once."""
+        # Arrange - one version carrying two valid verses
+        self._seed_versioned_asset(
+            CategoryChoice.TAFSIR,
+            "Multi-verse Tafsir",
+            {"1:1": "نص الآية الأولى", "1:2": "نص الآية الثانية"},
+        )
+        real_reader = asset_verse_text._read_version_json
+        parse_calls = []
+
+        def counting_reader(version):
+            parse_calls.append(version)
+            return real_reader(version)
+
+        # Act - two DIFFERENT ayahs from the same version, then a repeat of the first
+        with mock.patch.object(
+            asset_verse_text, asset_verse_text._read_version_json.__name__, side_effect=counting_reader
+        ):
+            first = self.client.get("/sample-data/tafsir/", {"surah": 1, "ayah": 1})
+            second = self.client.get("/sample-data/tafsir/", {"surah": 1, "ayah": 2})
+            repeat = self.client.get("/sample-data/tafsir/", {"surah": 1, "ayah": 1})
+        # Assert - every response correct; storage open+parse ran exactly once
+        self.assertEqual(200, first.status_code)
+        self.assertEqual(200, second.status_code)
+        self.assertEqual("نص الآية الأولى", first.json()["sample_verse"]["text"])
+        self.assertEqual("نص الآية الثانية", second.json()["sample_verse"]["text"])
+        self.assertEqual("نص الآية الأولى", repeat.json()["sample_verse"]["text"])
+        self.assertEqual(1, len(parse_calls))
+
     def test_get_tafsir_sample_where_version_file_updated_in_place_should_return_fresh_text_immediately(self):
         """In-place updates go through full Model.save(), bumping updated_at -> key rotates."""
         # Arrange - first request caches the original text for this version

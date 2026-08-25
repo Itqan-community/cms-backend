@@ -34,12 +34,18 @@ _TEXT_SENTINEL = ""  # negative-caching marker so absent verses skip storage rea
 
 def extract_verse_text(asset: Asset, surah: int, ayah: int) -> str | None:
     """
-    Text for one ayah from the asset's latest version file, cached per version.
+    Text for one ayah from the asset's latest version file, with a two-tier cache.
 
-    Returns None when the asset has no usable JSON payload or the requested
-    location is absent. Results (including misses) are cached so repeated
-    sample requests do not re-read the stored file. The latest version is
-    resolved exactly once per call.
+    Tier 1 (payload): the parsed JSON of the selected ``AssetVersion`` file,
+    keyed per asset/version -- so iterating different ayahs of the same version
+    opens and parses the stored file at most once per TTL window.
+    Tier 2 (verse): the resolved text (or negative sentinel) per
+    ``(surah, ayah)``, letting hot samples answer without touching tier 1.
+
+    Returns ``None`` when the asset has no usable JSON payload or the requested
+    location is absent. The latest version is resolved exactly once per call,
+    and both keys embed the version identity + last-modified stamp so any
+    change to that row rotates every cached entry at once.
     """
     latest = asset.get_latest_version()
     # The key carries BOTH the selected row's identity and its last-modified
@@ -51,16 +57,33 @@ def extract_verse_text(asset: Asset, surah: int, ayah: int) -> str | None:
     # Sub-second precision matters: consecutive saves routinely land within
     # the same wall-clock second.
     if latest is None:
-        version_token = "none"
+        version_cache_component = "none"
     else:
-        version_token = f"{latest.pk}:{latest.updated_at.isoformat()}"
-    cache_key = f"sample-verse-text:{asset.pk}:{version_token}:{surah}:{ayah}"
-    cached = cache.get(cache_key)
-    if cached is not None:
-        return None if cached == _TEXT_SENTINEL else cached
+        version_cache_component = f"{latest.pk}:{latest.updated_at.isoformat()}"
 
-    text = _lookup_verse(_read_version_json(latest), surah, ayah)
-    cache.set(cache_key, text if text is not None else _TEXT_SENTINEL, SAMPLE_VERSE_CACHE_TTL)
+    payload_cache_key = f"sample-verse-payload:{asset.pk}:{version_cache_component}"
+    verse_cache_key = f"sample-verse-text:{asset.pk}:{version_cache_component}:{surah}:{ayah}"
+
+    # Fast path: this exact verse (including its negative result) was resolved
+    # within the TTL window -- answer without touching the payload tier.
+    cached_verse = cache.get(verse_cache_key)
+    if cached_verse is not None:
+        return None if cached_verse == _TEXT_SENTINEL else cached_verse
+
+    # Payload tier: parse the stored file at most once per version/TTL window.
+    cached_payload = cache.get(payload_cache_key)
+    if cached_payload is not None:
+        payload = None if cached_payload == _TEXT_SENTINEL else cached_payload
+    else:
+        payload = _read_version_json(latest)
+        cache.set(
+            payload_cache_key,
+            payload if isinstance(payload, dict) else _TEXT_SENTINEL,
+            SAMPLE_VERSE_CACHE_TTL,
+        )
+
+    text = _lookup_verse(payload, surah, ayah)
+    cache.set(verse_cache_key, text if text is not None else _TEXT_SENTINEL, SAMPLE_VERSE_CACHE_TTL)
     return text
 
 
