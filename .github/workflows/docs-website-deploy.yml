@@ -47,7 +47,7 @@ jobs:
           fi
 
       # ---------- Backend deps for OpenAPI export ----------
-      - uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
 
