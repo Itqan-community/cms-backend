@@ -42,7 +42,19 @@ def extract_verse_text(asset: Asset, surah: int, ayah: int) -> str | None:
     resolved exactly once per call.
     """
     latest = asset.get_latest_version()
-    cache_key = f"sample-verse-text:{asset.pk}:{latest.pk if latest else 0}:{surah}:{ayah}"
+    # The key carries BOTH the selected row's identity and its last-modified
+    # stamp at FULL microsecond precision, so stale text can never outlive the
+    # version row that produced it:
+    # - a NEW AssetVersion row becomes latest -> different pk -> fresh key;
+    # - an IN-PLACE edit (portal PUT/PATCH re-saving the same row) bumps
+    #   updated_at (BaseModel auto_now) -> rotated key without any signals.
+    # Sub-second precision matters: consecutive saves routinely land within
+    # the same wall-clock second.
+    if latest is None:
+        version_token = "none"
+    else:
+        version_token = f"{latest.pk}:{latest.updated_at.isoformat()}"
+    cache_key = f"sample-verse-text:{asset.pk}:{version_token}:{surah}:{ayah}"
     cached = cache.get(cache_key)
     if cached is not None:
         return None if cached == _TEXT_SENTINEL else cached
@@ -72,6 +84,13 @@ def _read_version_json(version: AssetVersion | None) -> dict[str, Any] | None:
 
 
 def _lookup_verse(payload: dict[str, Any] | None, surah: int, ayah: int) -> str | None:
+    """
+    Resolve one ``(surah, ayah)`` location inside a parsed payload.
+
+    Tries the flat ``"surah:ayah"`` key first, then the nested
+    ``{"<surah>": {"<ayah>": ...}}`` shape. Blank or non-string values count as
+    absent so callers never surface whitespace-only "verses".
+    """
     if not payload:
         return None
 

@@ -17,6 +17,8 @@ DEFAULT_SAMPLE_AYAH = 1
 
 
 class SuraSampleOut(Schema):
+    """Public sample payload describing a single sura (Al-Fatiha by default)."""
+
     id: int
     name: str
     transliterated_name: str
@@ -28,6 +30,8 @@ class SuraSampleOut(Schema):
 
 
 class AyahSampleOut(Schema):
+    """Public sample payload for one ayah, exposing its Uthmani text and mushaf location."""
+
     id: int
     surah_id: int
     number_in_surah: int
@@ -38,6 +42,7 @@ class AyahSampleOut(Schema):
 
 
 def serialize_sura(sura: Sura) -> dict:
+    """Map a ``Sura`` row onto the approved public contract field names."""
     # Keys are the approved public contract; the model column is sura_id but the
     # API exposes surah_id, so ORM objects are not returned directly.
     return {
@@ -53,6 +58,7 @@ def serialize_sura(sura: Sura) -> dict:
 
 
 def serialize_ayah(ayah: Ayah) -> dict:
+    """Map an ``Ayah`` row onto the approved public contract (Uthmani text included)."""
     return {
         "id": ayah.id,
         "surah_id": ayah.sura_id,

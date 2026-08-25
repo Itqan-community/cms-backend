@@ -9,6 +9,8 @@ from apps.content.models import Asset, AssetVersion, CategoryChoice, LicenseChoi
 
 
 class TafsirRepository:
+    """ORM access for tafsir assets and their versions (read + write)."""
+
     def __init__(self) -> None:
         self.asset_model = Asset
         self.asset_version_model = AssetVersion

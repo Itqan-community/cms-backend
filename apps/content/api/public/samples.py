@@ -29,27 +29,37 @@ router = ItqanRouter(tags=[NinjaTag.SAMPLE_DATA])
 
 
 class PublisherMinimalOut(Schema):
+    """Minimal publisher identity embedded inside sample payloads."""
+
     id: int
     name: str
 
 
 class ReciterOut(Schema):
+    """Reciter identity rendered by the recitation sample."""
+
     id: int
     name: str
 
 
 class RiwayahOut(Schema):
+    """Narration/qiraah identity rendered by the recitation sample."""
+
     id: int
     name: str
 
 
 class AyahTimingOut(Schema):
+    """Single ayah timing window in playback order."""
+
     ayah_number: int
     start_ms: int
     end_ms: int
 
 
 class SampleTrackOut(Schema):
+    """One surah audio track with its playback metadata and full timing map."""
+
     surah_number: int
     audio_url: str
     duration_ms: int
@@ -57,6 +67,8 @@ class SampleTrackOut(Schema):
 
 
 class RecitationSampleOut(Schema):
+    """Media-player-ready recitation sample: identities plus the default surah track."""
+
     id: int
     name: str
     reciter: ReciterOut
@@ -67,12 +79,16 @@ class RecitationSampleOut(Schema):
 
 
 class SampleVerseOut(Schema):
+    """The anchored verse a content asset actually provides text for."""
+
     surah: int
     ayah: int
     text: str
 
 
 class TafsirSampleOut(Schema):
+    """Tafsir sample payload; ``sample_verse.text`` is read from the version file."""
+
     asset_id: int
     asset_name: str
     publisher: PublisherMinimalOut
@@ -82,6 +98,8 @@ class TafsirSampleOut(Schema):
 
 
 class TranslationSampleOut(Schema):
+    """Translation sample payload; ``sample_verse.text`` is read from the version file."""
+
     asset_id: int
     asset_name: str
     publisher: PublisherMinimalOut
@@ -209,6 +227,12 @@ def get_recitation_sample(request: Request, surah: int = Query(DEFAULT_SAMPLE_SU
 
 
 def _recitation_payload(asset: Asset, track: RecitationSurahTrack) -> dict:
+    """
+    Build the media-player payload for one recitation asset and its track.
+
+    Timings are parsed from ``"<surah>:<ayah>"`` keys into ordered
+    ``ayah_number`` entries; malformed keys are skipped rather than guessed.
+    """
     # get_sample_asset() only returns complete assets; the guard keeps the
     # invariant explicit and satisfies null-safety for the FK accesses below.
     reciter, riwayah, qiraah = asset.reciter, asset.riwayah, asset.qiraah
@@ -250,6 +274,8 @@ def _ayah_number_from_key(ayah_key: str) -> int | None:
 
 
 class JoinedAyahSampleOut(Schema):
+    """One ayah joined across domains; content sections degrade to null, never fabricate."""
+
     surah: SuraSampleOut
     ayah: AyahSampleOut
     tafsir: TafsirSampleOut | None = None

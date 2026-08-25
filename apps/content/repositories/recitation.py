@@ -23,6 +23,8 @@ if TYPE_CHECKING:
 
 
 class RecitationRepository(BaseRecitationRepository):
+    """ORM access for recitation assets, folders, tracks and timings."""
+
     def __init__(self) -> None:
         self.asset_model = Asset
         self.track_model = RecitationSurahTrack
@@ -204,6 +206,7 @@ class RecitationRepository(BaseRecitationRepository):
         asset.delete()
 
     def get_recitation_asset(self, asset_id: int, publisher_q: Q | None) -> dict[str, Any] | None:
+        """Build the public recitation summary dict for one asset, or None."""
         try:
             asset = self.get_asset_object(asset_id, publisher_q)
             if not asset:
@@ -272,6 +275,10 @@ class RecitationRepository(BaseRecitationRepository):
         prefetch_timings: bool = False,
         folder_id: int | None = None,
     ) -> QuerySet[RecitationSurahTrack]:
+        """
+        Tracks for one asset ordered by surah, optionally scoped to a folder and
+        with ayah timings prefetched in playback order.
+        """
         query = Q(asset_id=asset_id)
         if publisher_q is not None:
             query &= publisher_q

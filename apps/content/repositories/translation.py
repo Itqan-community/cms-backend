@@ -9,6 +9,8 @@ from apps.content.models import Asset, AssetVersion, CategoryChoice, LicenseChoi
 
 
 class TranslationRepository:
+    """ORM access for translation assets and their versions (read + write)."""
+
     def __init__(self) -> None:
         self.asset_model = Asset
         self.asset_version_model = AssetVersion
@@ -113,6 +115,7 @@ class TranslationRepository:
         asset.delete()
 
     def get_translation_version(self, asset: Asset, version_id: int) -> AssetVersion | None:
+        """Fetch one version of a translation asset, or None when it does not exist."""
         try:
             return self.asset_version_model.objects.get(asset=asset, id=version_id)
         except self.asset_version_model.DoesNotExist:

@@ -21,6 +21,8 @@ if TYPE_CHECKING:
 
 
 class RecitationService:
+    """Business layer for recitation reads/writes; owns validation and 404 semantics."""
+
     def __init__(self, repo: RecitationRepository | None = None) -> None:
         self.repo = repo or RecitationRepository()
 
@@ -34,6 +36,7 @@ class RecitationService:
         return self.repo.list_recitations_qs(publisher_q, filters_dict, annotate_surahs_count=annotate_surahs_count)
 
     def _get_recitation_or_404(self, recitation_slug: str, publisher_q: Q | None = None) -> Asset:
+        """Fetch a READY recitation by slug or raise the canonical 404 error."""
         recitation = self.repo.get_recitation(recitation_slug, publisher_q=publisher_q)
         if recitation is None:
             raise ItqanError(
