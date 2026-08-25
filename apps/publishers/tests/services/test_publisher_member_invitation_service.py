@@ -217,3 +217,19 @@ class InvitationServiceTest(BaseTestCase):
         with self.assertRaises(ItqanError) as ctx:
             self.service.accept_invitation(raw)
         self.assertEqual("invalid_invitation", ctx.exception.error_name)
+
+    def test_cancel_rejects_invitation_with_deleted_member(self):
+        _, inv, _, _ = self._create(email="gone@example.com")
+        PublisherMemberInvitation.objects.filter(pk=inv.id).update(member=None)
+        inv.refresh_from_db()
+        with self.assertRaises(ItqanError) as ctx:
+            self.service.cancel(inv, cancelled_by=self.inviter)
+        self.assertEqual("invalid_invitation", ctx.exception.error_name)
+
+    def test_resend_rejects_invitation_with_deleted_member(self):
+        _, inv, _, _ = self._create(email="gone2@example.com")
+        PublisherMemberInvitation.objects.filter(pk=inv.id).update(member=None)
+        inv.refresh_from_db()
+        with self.assertRaises(ItqanError) as ctx:
+            self.service.resend(inv, actor=self.inviter)
+        self.assertEqual("invalid_invitation", ctx.exception.error_name)
