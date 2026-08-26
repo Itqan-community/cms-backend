@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from functools import wraps
+import hashlib
 import json
 import logging
 import time
@@ -24,6 +25,7 @@ from urllib.parse import parse_qs
 import uuid
 
 from django.core.cache import cache
+from django.utils import timezone
 
 from apps.usage_tracking.tasks import TRACKING_BUFFER_KEY, _get_tracking_redis
 
@@ -400,6 +402,18 @@ def _distinct_id(request) -> str:
     if user is not None and getattr(user, "is_authenticated", False):
         return f"user-{user.pk}"
 
-    # True anonymous -- every request gets a fresh ID. Acceptable; we have no better
-    # signal. Most public-API traffic should hit one of the branches above.
+    # True anonymous -- derive a day-stable id from ip+user-agent+date so repeat
+    # requests from the same device on the same day count as one Mixpanel-tracked
+    # user instead of one per request (a fresh uuid4 here was inflating tracked-user
+    # volume 1:1 with request volume). Rotating daily bounds mobile-carrier-NAT
+    # collapse (many real devices sharing one egress IP) to a single day, rather than
+    # merging them permanently.
+    ip = _client_ip(request)
+    if ip:
+        user_agent = request.headers.get("user-agent") or ""
+        day = timezone.now().strftime("%Y-%m-%d")
+        digest = hashlib.sha256(f"{ip}:{user_agent}:{day}".encode()).hexdigest()[:12]
+        return f"anon-{digest}"
+
+    # No ip available (should not happen outside tests) -- fall back to a fresh id.
     return f"anon-{uuid.uuid4().hex[:12]}"

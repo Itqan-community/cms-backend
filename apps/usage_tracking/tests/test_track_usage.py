@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import AnonymousUser
 from django.test import RequestFactory
+from freezegun import freeze_time
 
 from apps.usage_tracking.decorators.track_usage import (
     _client_ip,
@@ -277,12 +278,54 @@ class TestDistinctId:
         request.user = SimpleNamespace(pk=99, is_authenticated=True)
         assert _distinct_id(request) == "user-99"
 
-    def test_anonymous_falls_back_to_uuid(self):
-        request = self.factory.get("/recitations/")
-        request.user = AnonymousUser()
-        result = _distinct_id(request)
-        assert result.startswith("anon-")
-        assert len(result) == 17  # "anon-" + 12 hex chars
+    def test_anonymous_same_ip_and_user_agent_same_day_yields_same_id(self):
+        with freeze_time("2026-08-20"):
+            request1 = self.factory.get("/recitations/", REMOTE_ADDR="9.9.9.9", HTTP_USER_AGENT="okhttp/4.12.0")
+            request1.user = AnonymousUser()
+            request2 = self.factory.get("/reciters/", REMOTE_ADDR="9.9.9.9", HTTP_USER_AGENT="okhttp/4.12.0")
+            request2.user = AnonymousUser()
+            result1 = _distinct_id(request1)
+            result2 = _distinct_id(request2)
+
+        assert result1 == result2
+        assert result1.startswith("anon-")
+        assert len(result1) == 17  # "anon-" + 12 hex chars
+
+    def test_anonymous_different_ip_yields_different_id(self):
+        with freeze_time("2026-08-20"):
+            request1 = self.factory.get("/recitations/", REMOTE_ADDR="9.9.9.9", HTTP_USER_AGENT="okhttp/4.12.0")
+            request1.user = AnonymousUser()
+            request2 = self.factory.get("/recitations/", REMOTE_ADDR="1.1.1.1", HTTP_USER_AGENT="okhttp/4.12.0")
+            request2.user = AnonymousUser()
+            assert _distinct_id(request1) != _distinct_id(request2)
+
+    def test_anonymous_different_day_yields_different_id(self):
+        """Daily rotation bounds carrier-NAT collapse to a single day."""
+        kwargs = {"REMOTE_ADDR": "9.9.9.9", "HTTP_USER_AGENT": "okhttp/4.12.0"}
+        with freeze_time("2026-08-20"):
+            request1 = self.factory.get("/recitations/", **kwargs)
+            request1.user = AnonymousUser()
+            result_day1 = _distinct_id(request1)
+        with freeze_time("2026-08-21"):
+            request2 = self.factory.get("/recitations/", **kwargs)
+            request2.user = AnonymousUser()
+            result_day2 = _distinct_id(request2)
+        assert result_day1 != result_day2
+
+    def test_anonymous_without_ip_falls_back_to_fresh_uuid(self):
+        request1 = self.factory.get("/recitations/")
+        del request1.META["REMOTE_ADDR"]
+        request1.user = AnonymousUser()
+        request2 = self.factory.get("/recitations/")
+        del request2.META["REMOTE_ADDR"]
+        request2.user = AnonymousUser()
+
+        result1 = _distinct_id(request1)
+        result2 = _distinct_id(request2)
+
+        assert result1.startswith("anon-")
+        assert len(result1) == 17  # "anon-" + 12 hex chars
+        assert result1 != result2  # fresh per request, unlike the ip-keyed path above
 
 
 class TestDetectAuthMethod:
