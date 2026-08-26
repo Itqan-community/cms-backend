@@ -4,8 +4,10 @@ from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import TemplateView
-from oauth2_provider import urls as oauth2_urls
+from oauth2_provider.urls import base_urlpatterns
+from oauth2_provider.views import TokenView as DefaultTokenView
 
 from config.cms_api import cms_api, cms_auth_api
 from config.developers_api import developers_api
@@ -24,6 +26,35 @@ def health_check(request):
     )
 
 
+# Override TokenView to force grant_type=client_credentials
+class CustomTokenView(DefaultTokenView):
+    """
+    Overrides grant_type to always use client_credentials.
+    This allows any input grant_type to be accepted at the endpoint level.
+    """
+    
+    def post(self, request, *args, **kwargs):
+        # Force grant_type to client_credentials
+        post_data = request.POST.copy()
+        post_data["grant_type"] = "client_credentials"
+        request._post = post_data
+        
+        # Call parent post
+        return super().post(request, *args, **kwargs)
+
+
+# Build custom oauth2 patterns
+oauth2_patterns = []
+for pattern in base_urlpatterns:
+    # Replace the token pattern with our custom view
+    if hasattr(pattern, 'name') and pattern.name == 'token':
+        oauth2_patterns.append(
+            path("token/", csrf_exempt(CustomTokenView.as_view()), name="token")
+        )
+    else:
+        oauth2_patterns.append(pattern)
+
+
 urlpatterns = [
     path("health/", health_check, name="health_check"),
     # Django Admin
@@ -32,7 +63,7 @@ urlpatterns = [
     path("accounts/", include("allauth.urls")),
     path("accounts/profile/", TemplateView.as_view(template_name="profile.html")),
     path("i18n/", include("django.conf.urls.i18n")),
-    path("o/", include(oauth2_urls)),
+    path("o/", include(oauth2_patterns)),
     # Internal API mount
     path("cms-api/", cms_api.urls),
     # Tenant API mount

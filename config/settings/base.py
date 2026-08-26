@@ -264,6 +264,7 @@ CORS_ALLOW_HEADERS = [
     "origin",
     "sentry-trace",
     "user-agent",
+    "x-api-key",  
     "x-csrftoken",
     "x-requested-with",
     "x-tenant",

@@ -1,0 +1,105 @@
+[1mdiff --git a/apps/users/tests/test_api_key_auth.py b/apps/users/tests/test_api_key_auth.py[m
+[1mindex a628bc3e..fa5c026e 100644[m
+[1m--- a/apps/users/tests/test_api_key_auth.py[m
+[1m+++ b/apps/users/tests/test_api_key_auth.py[m
+[36m@@ -1,5 +1,4 @@[m
+ from datetime import timedelta[m
+[31m-from unittest import skipUnless[m
+ [m
+ from django.conf import settings[m
+ from django.test import override_settings[m
+[36m@@ -10,11 +9,6 @@[m [mfrom apps.core.tests.base import BaseTestCase[m
+ from apps.users.models import APIKey, User[m
+ [m
+ [m
+[31m-# Auth config (auth.py public_auth) is built at import time from settings, so[m
+[31m-# @override_settings cannot make OAuth2 required at runtime. These tests are only[m
+[31m-# meaningful when OAuth2 is actually enabled at process start; otherwise the public[m
+[31m-# auth falls back to AnonymousUser and invalid-key calls return 200 instead of 401.[m
+[31m-@skipUnless(settings.ENABLE_OAUTH2, "OAuth2 disabled; auth config is import-time bound")[m
+ @override_settings(ENABLE_API_KEY_AUTH=True)[m
+ class ApiKeyWorkflowTestCase(BaseTestCase):[m
+     """[m
+[36m@@ -37,11 +31,48 @@[m [mclass ApiKeyWorkflowTestCase(BaseTestCase):[m
+         # Assert[m
+         self.assertEqual(200, res.status_code, res.content)[m
+ [m
+[31m-    # A missing/invalid/revoked key can only produce 401 when anonymous traffic is off;[m
+[31m-    # with ENABLE_ANONYMOUS_TRAFFIC=True these requests are downgraded to AnonymousUser and[m
+[31m-    # return 200. ENABLE_ANONYMOUS_TRAFFIC is read at request time, so overriding it here[m
+[31m-    # takes effect (unlike the import-time-bound auth-method list). An *expired* key differs:[m
+[31m-    # it 401s regardless of this flag (see the expired test below).[m
+[32m+[m[32m    @override_settings(ENABLE_ANONYMOUS_TRAFFIC=True)[m
+[32m+[m[32m    def test_missing_api_key_falls_through_to_anonymous(self):[m
+[32m+[m[32m    # Act[m
+[32m+[m[32m        res = self.client.get("/recitations/")[m
+[32m+[m
+[32m+[m[32m    # Assert[m
+[32m+[m[32m        self.assertEqual(200, res.status_code, res.content)[m
+[32m+[m
+[32m+[m[32m    def test_cors_preflight_allows_x_api_key_header(self):[m
+[32m+[m[32m        # Act - emulate browser preflight OPTIONS request[m
+[32m+[m[32m        res = self.client.options([m
+[32m+[m[32m            "/recitations/",[m
+[32m+[m[32m            headers={[m
+[32m+[m[32m                "origin": "http://localhost:3000",[m
+[32m+[m[32m                "access-control-request-method": "GET",[m
+[32m+[m[32m                "access-control-request-headers": "x-api-key",[m
+[32m+[m[32m            },[m
+[32m+[m[32m        )[m
+[32m+[m
+[32m+[m[32m        # Assert[m
+[32m+[m[32m        self.assertEqual(200, res.status_code, res.content)[m
+[32m+[m[32m        self.assertEqual(res.headers.get("access-control-allow-origin"), "http://localhost:3000")[m
+[32m+[m[32m        allowed_headers = res.headers.get("access-control-allow-headers", "").lower()[m
+[32m+[m[32m        self.assertIn("x-api-key", allowed_headers)[m
+[32m+[m
+[32m+[m[32m    def test_cross_origin_request_with_valid_api_key(self):[m
+[32m+[m[32m        # Arrange[m
+[32m+[m[32m        _, raw_key = APIKey.objects.create_key(name="CORS Test Key", user=self.user)[m
+[32m+[m
+[32m+[m[32m        # Act - cross-origin GET request with x-api-key[m
+[32m+[m[32m        res = self.client.get([m
+[32m+[m[32m            "/recitations/",[m
+[32m+[m[32m            headers={[m
+[32m+[m[32m                "origin": "http://localhost:3000",[m
+[32m+[m[32m                "x-api-key": raw_key,[m
+[32m+[m[32m            },[m
+[32m+[m[32m        )[m
+[32m+[m
+[32m+[m[32m        # Assert[m
+[32m+[m[32m        self.assertEqual(200, res.status_code, res.content)[m
+[32m+[m[32m        self.assertEqual(res.headers.get("access-control-allow-origin"), "http://localhost:3000")[m
+[32m+[m
+     @override_settings(ENABLE_ANONYMOUS_TRAFFIC=False)[m
+     def test_access_recitations_where_invalid_api_key_should_return_401(self):[m
+         # Arrange — no valid key created[m
+[36m@@ -69,8 +100,7 @@[m [mclass ApiKeyWorkflowTestCase(BaseTestCase):[m
+ [m
+     @override_settings(ENABLE_ANONYMOUS_TRAFFIC=True)[m
+     def test_access_recitations_where_api_key_is_expired_should_return_401_expired(self):[m
+[31m-        # Arrange -- an expired key is a presented-but-stale credential; it must 401 with an[m
+[31m-        # "expired" message even when anonymous traffic is enabled, not fall through to 200.[m
+[32m+[m[32m        # Arrange[m
+         api_key, raw_key = APIKey.objects.create_key(name="Expired Key", user=self.user)[m
+         api_key.expiry_date = timezone.now() - timedelta(days=1)[m
+         api_key.save()[m
+[36m@@ -82,4 +112,4 @@[m [mclass ApiKeyWorkflowTestCase(BaseTestCase):[m
+         self.assertEqual(401, res.status_code, res.content)[m
+         body = res.json()[m
+         self.assertEqual("authentication_error", body["error_name"])[m
+[31m-        self.assertIn("expired", body["message"].lower())[m
+[32m+[m[32m        self.assertIn("expired", body["message"].lower())[m
+\ No newline at end of file[m
+[1mdiff --git a/config/settings/base.py b/config/settings/base.py[m
+[1mindex 8dac074d..d089defb 100644[m
+[1m--- a/config/settings/base.py[m
+[1m+++ b/config/settings/base.py[m
+[36m@@ -264,6 +264,7 @@[m [mCORS_ALLOW_HEADERS = [[m
+     "origin",[m
+     "sentry-trace",[m
+     "user-agent",[m
+[32m+[m[32m    "x-api-key",  # <-- Added for browser client API key auth[m
+     "x-csrftoken",[m
+     "x-requested-with",[m
+     "x-tenant",[m

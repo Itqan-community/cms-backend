@@ -33,6 +33,7 @@ class OAuth2Tests(BaseTestCase):
             authorization_grant_type=Application.GRANT_CLIENT_CREDENTIALS,
             client_id=_CLIENT_ID,
             client_secret=_CLIENT_SECRET,
+            skip_authorization=True,
         )
 
     # --- Token endpoint ---
@@ -42,7 +43,7 @@ class OAuth2Tests(BaseTestCase):
         data = {"grant_type": "client_credentials"}
 
         # Act
-        response = self.client.post("/token/", data=data, **_basic_auth())
+        response = self.client.post("/o/token/", data=data, **_basic_auth())
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -56,7 +57,7 @@ class OAuth2Tests(BaseTestCase):
         data = {"grant_type": "client_credentials"}
 
         # Act
-        response = self.client.post("/token/", data=data, **_basic_auth(client_secret="wrong_secret"))
+        response = self.client.post("/o/token/", data=data, **_basic_auth(client_secret="wrong_secret"))
 
         # Assert
         self.assertEqual(401, response.status_code, response.content)
@@ -67,7 +68,7 @@ class OAuth2Tests(BaseTestCase):
         data = {"grant_type": "password", "username": "oauthuser@example.com", "password": "pass123"}
 
         # Act
-        response = self.client.post("/token/", data=data, **_basic_auth())
+        response = self.client.post("/o/token/", data=data, **_basic_auth())
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -78,7 +79,7 @@ class OAuth2Tests(BaseTestCase):
         data = {"grant_type": "client_credentials"}
 
         # Act
-        response = self.client.post("/token/", data=data)
+        response = self.client.post("/o/token/", data=data)
 
         # Assert
         self.assertEqual(401, response.status_code, response.content)
@@ -132,7 +133,7 @@ class OAuth2Tests(BaseTestCase):
         data = {"token": token.token}
 
         # Act
-        response = self.client.post("/revoke/", data=data, **_basic_auth())
+        response = self.client.post("/o/revoke_token/", data=data, **_basic_auth())
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
