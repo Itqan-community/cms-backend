@@ -92,6 +92,11 @@ jobs:
 
       # ---------- Deploy to Cloudflare Pages ----------
       - name: Deploy to Cloudflare Pages
+        # GitHub withholds repository secrets from fork pull_request events by
+        # design (security boundary). Skip the deploy when this is a fork PR so
+        # the workflow does not fail on a missing API token.  Deployment still
+        # runs for push/workflow_dispatch events and for same-repo PRs.
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN_FOR_DOCS_WEBSITE }}
