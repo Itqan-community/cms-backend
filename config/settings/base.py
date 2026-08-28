@@ -120,8 +120,21 @@ DATABASES = {
         "OPTIONS": {
             "connect_timeout": 60,
         },
-    }
+    },
+    "audit": {
+        "ENGINE": config("AUDIT_DB_ENGINE", default="django.db.backends.postgresql"),
+        "NAME": config("AUDIT_DB_NAME", default="itqan_audit"),
+        "USER": config("AUDIT_DB_USER", default="postgres"),
+        "PASSWORD": config("AUDIT_DB_PASSWORD", default="postgres"),
+        "HOST": config("AUDIT_DB_HOST", default="localhost"),
+        "PORT": config("AUDIT_DB_PORT", default="5432"),
+        "OPTIONS": {
+            "connect_timeout": 60,
+        },
+    },
 }
+
+DATABASE_ROUTERS = ["apps.core.db_routers.AuditRouter"]
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
