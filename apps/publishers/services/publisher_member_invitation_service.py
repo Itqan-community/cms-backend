@@ -95,6 +95,12 @@ class PublisherMemberInvitationService:
                 message=_("Only pending invitations can be resent."),
                 status_code=400,
             )
+        if invitation.member_id is None:
+            raise ItqanError(
+                error_name="invalid_invitation",
+                message=_("This invitation is no longer valid."),
+                status_code=400,
+            )
         member = invitation.member
         now = timezone.now()
         self.repo.cancel_pending_invitations(member=member, cancelled_by=actor, now=now)
@@ -107,6 +113,12 @@ class PublisherMemberInvitationService:
             raise ItqanError(
                 error_name="invalid_invitation",
                 message=_("Only pending invitations can be cancelled."),
+                status_code=400,
+            )
+        if invitation.member_id is None:
+            raise ItqanError(
+                error_name="invalid_invitation",
+                message=_("This invitation is no longer valid."),
                 status_code=400,
             )
         now = timezone.now()
