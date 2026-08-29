@@ -15,6 +15,7 @@ _SAFE_CACHE_TOKEN_RE = re.compile(r"^[a-z0-9_.-]{1,64}$")
 RECITATION_TRACKS_CACHE_TTL = 60 * 5  # 5 minutes
 RECITATION_ASSET_META_CACHE_TTL = 60 * 60  # 1 hour - asset name/publisher rarely changes
 RECITATION_RESPONSE_CACHE_TTL = 60 * 5  # 5 minutes
+RECITATION_AYAH_RESPONSE_CACHE_TTL = 60 * 5  # 5 minutes
 
 
 def recitation_tracks_cache_key(asset_id: int) -> str:
@@ -51,6 +52,11 @@ def recitation_response_cache_key(asset_id: int, page: int, page_size: int, fold
     # The folder is part of the key: two variants of the same recitation share an
     # asset_id, so omitting it would serve one variant's audio for the other.
     return f"public_recitation_resp:{asset_id}:{folder_slug}:{page}:{page_size}"
+
+
+def recitation_ayah_response_cache_key(asset_id: int, folder_token: str, ayah_key: str) -> str:
+    """Build the Redis cache key for a single ayah audio public response."""
+    return f"public_recitation_ayah_resp:{asset_id}:{folder_token}:{ayah_key}"
 
 
 def invalidate_recitation_tracks_cache(asset_id: int) -> None:
