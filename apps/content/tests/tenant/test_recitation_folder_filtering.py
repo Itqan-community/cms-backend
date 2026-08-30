@@ -1,13 +1,7 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
-from apps.content.models import (
-    Asset,
-    CategoryChoice,
-    RecitationFolder,
-    RecitationSurahTrack,
-    StatusChoice,
-)
+from apps.content.models import Asset, CategoryChoice, RecitationFolder, RecitationSurahTrack, StatusChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User

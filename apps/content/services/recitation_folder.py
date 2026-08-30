@@ -129,9 +129,7 @@ class RecitationFolderService:
             if is_visible is not None and is_visible != folder.is_visible:
                 folder.is_visible = is_visible
                 visibility_changed = True
-                logger.info(
-                    f"Recitation folder visibility changed [folder_id={folder.pk}, is_visible={is_visible}]"
-                )
+                logger.info(f"Recitation folder visibility changed [folder_id={folder.pk}, is_visible={is_visible}]")
 
         name_fields = {k: v for k, v in fields.items() if k in ("name_ar", "name_en")}
         if name_fields:

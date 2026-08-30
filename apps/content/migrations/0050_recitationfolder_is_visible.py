@@ -16,12 +16,4 @@ class Migration(migrations.Migration):
                 help_text="When false, the folder is omitted from public/tenant APIs and its timings export is withdrawn.",
             ),
         ),
-        migrations.AddIndex(
-            model_name="recitationfolder",
-            index=models.Index(
-                condition=models.Q(("is_visible", True)),
-                fields=["asset"],
-                name="content_recitationfolder_visible_idx",
-            ),
-        ),
     ]

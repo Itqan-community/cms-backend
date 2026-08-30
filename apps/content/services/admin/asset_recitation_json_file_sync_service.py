@@ -137,6 +137,4 @@ def unpublish_folder_recitations_json(asset_id: int, folder_id: int) -> None:
         version.size_bytes = 0
         version.save(update_fields=["file_url", "size_bytes", "updated_at"])
 
-    logger.info(
-        f"Recitation JSON unpublished [asset_id={asset_id}, folder_id={folder_id}, version_id={version.pk}]"
-    )
+    logger.info(f"Recitation JSON unpublished [asset_id={asset_id}, folder_id={folder_id}, version_id={version.pk}]")
