@@ -10,10 +10,12 @@ def permission_class(permission_code_name) -> type[permissions.BasePermission]:
 
     CustomPermission.permission_code_name = permission_code_name
 
-    def rep(cls):
-        return f"Permission({permission_code_name})"
-
-    CustomPermission.__class__.__repr__ = rep
+    # Rename the class itself instead of patching __repr__ on its metaclass.
+    # CustomPermission.__class__ is DRF's BasePermissionMetaclass, which is shared by
+    # every permission class in the process (including DRF's built-ins), so mutating
+    # it leaks the last-created permission's label onto all of them.
+    CustomPermission.__name__ = f"Permission({permission_code_name})"
+    CustomPermission.__qualname__ = CustomPermission.__name__
 
     return CustomPermission
 
