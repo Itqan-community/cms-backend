@@ -1,3 +1,13 @@
+## v0.14.0 (2026-08-30)
+
+### Feat
+
+- exclude reciter endpoints from Sentry performance tracing
+
+### Refactor
+
+- remove reciter usage tracking to reduce costs
+
 ## v0.13.0 (2026-08-17)
 
 ### Feat
