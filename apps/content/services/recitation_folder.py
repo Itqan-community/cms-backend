@@ -10,10 +10,6 @@ from django.utils.translation import gettext_lazy as _
 from apps.content.cache import invalidate_recitation_folder_cache
 from apps.content.models import RecitationFolder
 from apps.content.repositories.recitation_folder import RecitationFolderRepository
-from apps.content.services.admin.asset_recitation_json_file_sync_service import (
-    sync_asset_recitations_json_file,
-    unpublish_folder_recitations_json,
-)
 from apps.core.ninja_utils.errors import ItqanError
 
 if TYPE_CHECKING:
@@ -153,10 +149,6 @@ class RecitationFolderService:
             folder.save(update_fields=["is_visible", "updated_at"])
 
         if visibility_changed:
-            if folder.is_visible:
-                sync_asset_recitations_json_file(asset_id, folder_id=folder.pk)
-            else:
-                unpublish_folder_recitations_json(asset_id, folder_id=folder.pk)
             invalidate_recitation_folder_cache(asset_id, folder)
 
         if name_fields or visibility_changed:
