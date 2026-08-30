@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from apps.content.models import AssetAccess, AssetVersion
+from apps.content.models import AssetAccess, AssetVersion, VersionStateChoice
 from apps.core.services.email import email_service
 
 logger = logging.getLogger(__name__)
@@ -19,7 +19,9 @@ class AssetVersionNotifier:
             return
 
         is_first_version = (
-            not AssetVersion.objects.filter(asset=asset_version.asset).exclude(pk=asset_version_id).exists()
+            not AssetVersion.objects.filter(asset=asset_version.asset, state=VersionStateChoice.PUBLISHED)
+            .exclude(pk=asset_version_id)
+            .exists()
         )
         if is_first_version:
             logger.info(f"First version for asset, skipping notification [asset_version_id={asset_version_id}]")

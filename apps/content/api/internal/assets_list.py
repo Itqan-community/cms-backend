@@ -50,9 +50,14 @@ class AssetFilter(FilterSchema):
 @ordering(ordering_fields=["name", "category"])
 @searching(search_fields=["name", "description", "publisher__name", "category"])
 def list_assets(request: Request, filters: AssetFilter = Query()):
+    """
+    Retrieve a paginated list of assets for the internal CMS.
+    Optimized with select_related for publisher and reciter to prevent N+1 queries.
+    """
     logger.info("Assets list requested")
     assets = (
-        Asset.objects.filter(request.publisher_q("publisher"))
+        Asset.objects.select_related("publisher", "reciter")
+        .filter(request.publisher_q("publisher"))
         .filter(restricted_for_tenant=False)
         .exclude(status=StatusChoice.DRAFT)
     )

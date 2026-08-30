@@ -19,6 +19,7 @@ class NinjaTag(models.TextChoices):
     FONTS = "Fonts"
     FILTERS = "Filters"
     USAGE = "Usage"
+    RECOMMENDATIONS = "Recommendations"
     GROUPS = "Groups"
     QURAN = "Quran"
     SAMPLE_DATA = "Sample Data"

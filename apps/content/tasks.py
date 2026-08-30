@@ -5,6 +5,7 @@ Handles usage event tracking and analytics computations
 
 from __future__ import annotations
 
+from datetime import timedelta
 import logging
 from typing import TYPE_CHECKING, TypedDict
 
@@ -234,6 +235,82 @@ def slice_recitation_track_task(self, track_id: int) -> dict:
     soft_time_limit=300,
     time_limit=360,
 )
+def compute_similar_recommendations_task() -> dict:
+    """
+    Nightly recompute of "similar content" recommendation scores.
+
+    Delegates to RecommendationsService.compute_similar_recommendations, which scores
+    every READY, publicly-visible asset against others sharing reciter/riwayah/qiraah/
+    category and writes the top matches per asset to Redis as sorted sets. See
+    apps.content.services.recommendations for the scoring design.
+
+    Runs nightly at 2:00 via Celery beat (config/celery.py). Catalog-sized workloads
+    are expected to finish well within the 5-minute soft limit; the limits mirror
+    sync_audio_usage_task's 20%-headroom convention (300s soft / 360s hard).
+    """
+    logger.info("Task started [task=compute_similar_recommendations_task]")
+    from apps.content.services.recommendations import compute_similar_recommendations
+
+    result = compute_similar_recommendations()
+    logger.info(f"Task completed [task=compute_similar_recommendations_task, result={result}]")
+    return result
+
+
+@shared_task(
+    soft_time_limit=120,
+    time_limit=180,
+)
+def compute_trending_recommendations_task() -> dict:
+    """
+    Recompute "trending" recommendation scores from recent usage events.
+
+    Delegates to RecommendationsService.compute_trending_recommendations, which
+    aggregates recent UsageEvent rows (weighted by event kind) into a global and a
+    per-category Redis leaderboard. See apps.content.services.recommendations for the
+    scoring design.
+
+    Runs every 15 minutes via Celery beat (config/celery.py) -- much more often than
+    similar/personalized, since "trending" is meant to track recent activity rather
+    than a nightly snapshot. The 2-minute soft limit reflects that this only scans a
+    trailing usage-event window, not the whole catalog.
+    """
+    logger.info("Task started [task=compute_trending_recommendations_task]")
+    from apps.content.services.recommendations import compute_trending_recommendations
+
+    result = compute_trending_recommendations()
+    logger.info(f"Task completed [task=compute_trending_recommendations_task, result={result}]")
+    return result
+
+
+@shared_task(
+    soft_time_limit=300,
+    time_limit=360,
+)
+def compute_personalized_recommendations_task() -> dict:
+    """
+    Nightly recompute of personalized recommendation scores for recently active users.
+
+    Delegates to RecommendationsService.compute_personalized_recommendations, which
+    builds each active user's facet profile from their recent usage history and scores
+    the catalog against it, writing the top matches per user to Redis. See
+    apps.content.services.recommendations for the scoring design.
+
+    Runs nightly at 2:15 (config/celery.py), just after compute_similar_recommendations
+    at 2:00 -- both draw on the same catalog snapshot without racing each other. Limits
+    mirror compute_similar_recommendations' convention (300s soft / 360s hard).
+    """
+    logger.info("Task started [task=compute_personalized_recommendations_task]")
+    from apps.content.services.recommendations import compute_personalized_recommendations
+
+    result = compute_personalized_recommendations()
+    logger.info(f"Task completed [task=compute_personalized_recommendations_task, result={result}]")
+    return result
+
+
+@shared_task(
+    soft_time_limit=300,
+    time_limit=360,
+)
 def slice_all_recitation_tracks_task() -> dict:
     """
     Enqueue slice_recitation_track_task for every existing recitation track.
@@ -252,3 +329,33 @@ def slice_all_recitation_tracks_task() -> dict:
         slice_recitation_track_task.delay(track_id)
     logger.info(f"Task completed [task=slice_all_recitation_tracks_task, scheduled={len(track_ids)}]")
     return {"scheduled_count": len(track_ids)}
+
+
+@shared_task
+def cleanup_abandoned_content_drafts_task(older_than_hours: int = 24) -> dict[str, int]:
+    """
+    Periodic task to delete abandoned per-ayah content draft versions.
+
+    A draft is abandoned when it has not been touched (``updated_at``) for
+    longer than the threshold and was never published. Active editing bumps
+    ``updated_at`` via autosave, so in-progress drafts are preserved.
+
+    Args:
+        older_than_hours: Delete drafts not updated within this many hours.
+
+    Returns:
+        Dictionary with the number of drafts deleted.
+    """
+    logger.info(f"Task started [task=cleanup_abandoned_content_drafts_task, older_than_hours={older_than_hours}]")
+    from django.utils import timezone
+
+    from apps.content.models import AssetVersion, VersionStateChoice
+
+    cutoff = timezone.now() - timedelta(hours=older_than_hours)
+    stale = AssetVersion.objects.filter(state=VersionStateChoice.DRAFT, updated_at__lt=cutoff)
+    _, deleted_by_model = stale.delete()
+    # delete() returns the total incl. cascaded AssetVersionEntry rows; report the
+    # number of draft versions only.
+    deleted = deleted_by_model.get(AssetVersion._meta.label, 0)
+    logger.info(f"Task completed [task=cleanup_abandoned_content_drafts_task, deleted={deleted}]")
+    return {"deleted": deleted}

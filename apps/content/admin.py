@@ -30,6 +30,8 @@ from .models import (
     AssetVersion,
     CategoryChoice,
     ContentIssueReport,
+    EditorialRecommendation,
+    EditorialRecommendationAsset,
     Qiraah,
     RecitationAyahTiming,
     RecitationFolder,
@@ -943,3 +945,38 @@ class ContentIssueReportAdmin(admin.ModelAdmin):
         for item in changing:
             send_issue_status_update_email.delay(item["id"], item["status"], new_status)
         self.message_user(request, f"Marked {count} reports as {label}.")
+
+
+class EditorialRecommendationAssetInline(admin.TabularInline):
+    """Ordered assets within an editorial recommendation collection."""
+
+    model = EditorialRecommendationAsset
+    extra = 1
+    fields = ["asset", "position"]
+    raw_id_fields = ["asset"]
+    ordering = ["position"]
+
+
+@admin.register(EditorialRecommendation)
+class EditorialRecommendationAdmin(admin.ModelAdmin):
+    list_display = ["id", "title", "is_active", "starts_at", "ends_at", "assets_count", "created_at"]
+    list_filter = ["is_active"]
+    search_fields = ["title_en", "title_ar", "description_en", "description_ar"]
+    readonly_fields = ["created_at", "updated_at"]
+    inlines = [EditorialRecommendationAssetInline]
+
+    fieldsets = (
+        (
+            "Basic Information",
+            {"fields": ("title_en", "title_ar", "description_en", "description_ar", "is_active")},
+        ),
+        ("Active Window", {"fields": ("starts_at", "ends_at")}),
+        (
+            "Timestamps",
+            {"fields": ("created_at", "updated_at"), "classes": ("collapse",)},
+        ),
+    )
+
+    @admin.display(description="Assets")
+    def assets_count(self, obj: EditorialRecommendation) -> int:
+        return obj.recommendation_assets.count() if obj.pk else 0

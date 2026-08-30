@@ -58,6 +58,19 @@ class StatusChoice(models.TextChoices):
     READY = "ready", _("Ready")
 
 
+class VersionStateChoice(models.TextChoices):
+    """Lifecycle state of an AssetVersion.
+
+    A ``draft`` version holds in-progress per-ayah edits and MUST be excluded
+    from every "latest / published versions" query so it never surfaces on the
+    public, tenant or developers surfaces. Publishing flips it to ``published``,
+    at which point newest-wins makes it the latest version.
+    """
+
+    DRAFT = "draft", _("Draft")
+    PUBLISHED = "published", _("Published")
+
+
 class Asset(DeleteFilesOnDeleteMixin, BaseModel):
     class MaddLevelChoice(models.TextChoices):
         TWASSUT = "twassut", _("Twassut")
@@ -246,7 +259,7 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         return int(size * units.get(unit, 1))
 
     def get_latest_version(self):
-        return self.versions.order_by("-created_at").first()
+        return self.versions.filter(state=VersionStateChoice.PUBLISHED).order_by("-created_at").first()
 
     @property
     def human_readable_size(self):
@@ -286,6 +299,42 @@ class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
 
     size_bytes = models.PositiveBigIntegerField(default=0, help_text="File size in bytes")
 
+    state = models.CharField(
+        max_length=20,
+        choices=VersionStateChoice,
+        default=VersionStateChoice.PUBLISHED,
+        db_index=True,
+        help_text="Lifecycle state. Draft versions are excluded from 'latest' and public listings.",
+    )
+
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_asset_versions",
+        help_text="User who created this version (e.g. started the draft).",
+    )
+
+    content_edited = models.BooleanField(
+        default=False,
+        help_text=(
+            "True once a draft's per-ayah entries have been edited after seeding. "
+            "Publishing an unedited draft would just duplicate the latest version, "
+            "so it is disallowed."
+        ),
+    )
+
+    class Meta:
+        constraints = [
+            # At most one in-flight draft per asset (shared, get-or-create).
+            models.UniqueConstraint(
+                fields=["asset"],
+                condition=models.Q(state=VersionStateChoice.DRAFT),
+                name="unique_draft_version_per_asset",
+            ),
+        ]
+
     def __str__(self):
         return f"AssetVersion(asset={self.asset.name}, name={self.name})"
 
@@ -308,6 +357,42 @@ class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
         s = round(size / p, 2)
 
         return f"{s} {units[i]}"
+
+
+class AssetVersionEntry(BaseModel):
+    """Per-ayah content of a text-based asset version (translation / tafsir).
+
+    Editing happens row-by-row against these entries rather than the version's
+    uploaded file, so a single edit never rewrites a file. Coverage is sparse:
+    a version may have entries for only a subset of ayahs.
+    """
+
+    version = models.ForeignKey(
+        AssetVersion,
+        on_delete=models.CASCADE,
+        related_name="entries",
+        help_text="Asset version this entry belongs to",
+    )
+    ayah = models.ForeignKey(
+        "quran.Ayah",
+        on_delete=models.PROTECT,
+        related_name="+",
+        help_text="Canonical ayah (1-6236) this entry provides text for",
+    )
+    text = models.TextField(blank=True, help_text="Translation / tafsir text for this ayah")
+    footnotes = models.TextField(blank=True, help_text="Footnotes or margin content for this ayah")
+    order = models.PositiveIntegerField(default=0, help_text="Display order (defaults to the canonical ayah index)")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["version", "ayah"], name="unique_entry_per_version_ayah"),
+        ]
+        indexes = [
+            models.Index(fields=["version", "order"]),
+        ]
+
+    def __str__(self):
+        return f"AssetVersionEntry(version={self.version_id}, ayah={self.ayah_id})"
 
 
 class AssetPreview(DeleteFilesOnDeleteMixin, BaseModel):
@@ -837,3 +922,53 @@ class ContentIssueReport(BaseModel):
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
         super().save(*args, **kwargs)
+
+
+class EditorialRecommendation(BaseModel):
+    """Admin-curated collection of assets for a featured spotlight (e.g. Ramadan, Hajj).
+
+    Served by GET /recommendations/editorial/ (apps.content.services.recommendations)
+    while ``is_active`` and within [starts_at, ends_at] -- both bounds are optional, so
+    a collection can be always-on or scheduled ahead of time and left to auto-expire.
+    """
+
+    title = models.CharField(max_length=255, help_text="Collection title, e.g. 'Ramadan Recitations'")
+    description = models.TextField(blank=True, default="")
+    is_active = models.BooleanField(default=True, help_text="Whether this collection is eligible to be served")
+    starts_at = models.DateTimeField(null=True, blank=True, help_text="Optional start of the active window")
+    ends_at = models.DateTimeField(null=True, blank=True, help_text="Optional end of the active window")
+
+    assets = models.ManyToManyField(
+        Asset,
+        through="EditorialRecommendationAsset",
+        related_name="editorial_recommendations",
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"EditorialRecommendation({self.title})"
+
+
+class EditorialRecommendationAsset(BaseModel):
+    """One asset's position within an EditorialRecommendation collection."""
+
+    recommendation = models.ForeignKey(
+        EditorialRecommendation,
+        on_delete=models.CASCADE,
+        related_name="recommendation_assets",
+    )
+    asset = models.ForeignKey(
+        Asset,
+        on_delete=models.CASCADE,
+        related_name="editorial_recommendation_assets",
+    )
+    position = models.PositiveIntegerField(default=1, help_text="Display order within the collection")
+
+    class Meta:
+        unique_together = [["recommendation", "asset"]]
+        ordering = ["position"]
+
+    def __str__(self) -> str:
+        return f"EditorialRecommendationAsset(recommendation={self.recommendation_id}, asset={self.asset_id})"

@@ -104,26 +104,29 @@ msgstr "لم يتم العثور على الترجمة بالمعرّف {slug}."
 msgid "Provided asset_id {asset_id} does not match translation asset id {expected_id}."
 msgstr "المعرّف asset_id {asset_id} المُقدَّم لا يطابق معرّف أصل الترجمة {expected_id}."
 
+msgid "You must be signed in to get personalized recommendations."
+msgstr "يجب تسجيل الدخول للحصول على التوصيات الشخصية."
+
 msgid "No tafsir available"
-msgstr "لا يوجد تفسير متاح"
+msgstr ""
 
 #, python-brace-format
 msgid "This tafsir does not provide text for surah {surah}, ayah {ayah}."
-msgstr "هذا التفسير لا يوفّر نصاً للسورة {surah}، الآية {ayah}."
+msgstr ""
 
 msgid "No translation available"
-msgstr "لا توجد ترجمة متاحة"
+msgstr ""
 
 #, python-brace-format
 msgid "This translation does not provide text for surah {surah}, ayah {ayah}."
-msgstr "هذه الترجمة لا توفّر نصاً للسورة {surah}، الآية {ayah}."
+msgstr ""
 
 msgid "No recitation available"
-msgstr "لا تتوفر تلاوة"
+msgstr ""
 
 #, python-brace-format
 msgid "No recitation track available for surah {surah}."
-msgstr "لا يتوفر مسار تلاوة للسورة {surah}."
+msgstr ""
 
 msgid "Please select at least one file."
 msgstr "يرجى اختيار ملف واحد على الأقل."
@@ -185,6 +188,9 @@ msgstr "مسودة"
 
 msgid "Ready"
 msgstr "جاهز"
+
+msgid "Published"
+msgstr "منشور"
 
 msgid "Twassut"
 msgstr "توسط"
@@ -325,6 +331,24 @@ msgstr "مطلوب مفتاح API للوصول إلى محتوى هذا الأص
 
 msgid "You don't have an approved access request for this asset."
 msgstr "ليس لديك طلب وصول مُوافَق عليه لهذا الأصل."
+
+#, python-brace-format
+msgid "{category} with slug {slug} not found."
+msgstr ""
+
+#, python-brace-format
+msgid "Version with id {id} not found."
+msgstr ""
+
+msgid "Only draft versions can be edited."
+msgstr ""
+
+#, python-brace-format
+msgid "Could not parse the uploaded content file: {reason}"
+msgstr ""
+
+msgid "There are no changes to publish."
+msgstr "لا توجد تغييرات للنشر."
 
 #, python-brace-format
 msgid "Publisher with id {id} not found."
@@ -1150,30 +1174,6 @@ msgstr "مرحبًا بك في نظام إتقان لإدارة المحتوى!"
 
 msgid "This is a test email to verify the email service is working correctly."
 msgstr "هذه رسالة اختبارية للتأكد من عمل خدمة البريد الإلكتروني بشكل صحيح."
-
-#~ msgid "You must be signed in to get personalized recommendations."
-#~ msgstr "يجب تسجيل الدخول للحصول على التوصيات الشخصية."
-
-#~ msgid "Published"
-#~ msgstr "منشور"
-
-#, python-brace-format
-#~ msgid "{category} with slug {slug} not found."
-#~ msgstr "{category} ذو المعرّف {slug} غير موجود."
-
-#, python-brace-format
-#~ msgid "Version with id {id} not found."
-#~ msgstr "الإصدار ذو المعرف {id} غير موجود."
-
-#~ msgid "Only draft versions can be edited."
-#~ msgstr "يمكن تحرير المسودات فقط."
-
-#, python-brace-format
-#~ msgid "Could not parse the uploaded content file: {reason}"
-#~ msgstr "تعذّر تحليل الملف المرفوع: {reason}."
-
-#~ msgid "There are no changes to publish."
-#~ msgstr "لا توجد تغييرات للنشر."
 
 #, python-brace-format
 #~ msgid "A track for asset {asset_id} surah {surah_number} already exists."
