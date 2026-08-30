@@ -1,13 +1,19 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
+from django.db import transaction
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 
+from apps.content.cache import invalidate_recitation_folder_cache
 from apps.content.models import RecitationFolder
 from apps.content.repositories.recitation_folder import RecitationFolderRepository
+from apps.content.services.admin.asset_recitation_json_file_sync_service import (
+    sync_asset_recitations_json_file,
+    unpublish_folder_recitations_json,
+)
 from apps.core.ninja_utils.errors import ItqanError
 
 if TYPE_CHECKING:
@@ -47,9 +53,6 @@ class RecitationFolderService:
 
         default_folder = self.repo.get_default_for_asset(asset_id)
         if default_folder is None:
-            # Every recitation gets a default folder at creation, and existing ones
-            # were backfilled, so this means the asset was built outside the service
-            # layer. Surface it rather than silently returning no tracks.
             logger.error(f"Recitation asset has no default folder [asset_id={asset_id}]")
             raise ItqanError(
                 error_name="folder_not_found",
@@ -92,39 +95,97 @@ class RecitationFolderService:
         *,
         asset_id: int,
         folder_slug: str,
-        fields: dict[str, str | None],
+        fields: dict[str, Any],
         publisher_q: Q | None = None,
     ) -> RecitationFolder:
         """
-        Business Logic: rename a folder.
+        Business Logic: update a folder's names, visibility, or default status.
 
         The slug is left alone on rename: it is the public ``?folder=`` value, and
         changing it would break links and cached responses already pointing at it.
         """
         folder = self.get_folder_or_404(asset_id, folder_slug, publisher_q=publisher_q)
 
-        for field in ("name_ar", "name_en"):
-            if field in fields:
-                fields[field] = (fields[field] or "").strip()
+        if "is_default" in fields:
+            is_default = fields.pop("is_default")
+            if is_default is False:
+                raise ItqanError(
+                    error_name="cannot_unset_default_folder",
+                    message=_("Use another folder's set-default action instead of clearing the default flag."),
+                    status_code=400,
+                )
+            if is_default is True:
+                return self._promote_to_default(folder)
 
-        final_name_ar = fields.get("name_ar", folder.name_ar) or ""
-        final_name_en = fields.get("name_en", folder.name_en) or ""
-        if not final_name_ar and not final_name_en:
+        visibility_changed = False
+        if "is_visible" in fields:
+            is_visible = fields.pop("is_visible")
+            if is_visible is False and folder.is_default:
+                raise ItqanError(
+                    error_name="cannot_hide_default_folder",
+                    message=_("The default folder cannot be hidden."),
+                    status_code=400,
+                )
+            if is_visible is not None and is_visible != folder.is_visible:
+                folder.is_visible = is_visible
+                visibility_changed = True
+                logger.info(
+                    f"Recitation folder visibility changed [folder_id={folder.pk}, is_visible={is_visible}]"
+                )
+
+        name_fields = {k: v for k, v in fields.items() if k in ("name_ar", "name_en")}
+        if name_fields:
+            for field in ("name_ar", "name_en"):
+                if field in name_fields:
+                    name_fields[field] = (name_fields[field] or "").strip()
+
+            final_name_ar = name_fields.get("name_ar", folder.name_ar) or ""
+            final_name_en = name_fields.get("name_en", folder.name_en) or ""
+            if not final_name_ar and not final_name_en:
+                raise ItqanError(
+                    error_name="folder_name_required",
+                    message=_("Folder name (Arabic or English) is required."),
+                    status_code=400,
+                )
+
+            ordered_fields: dict[str, str | None] = {"name": final_name_ar or final_name_en}
+            ordered_fields.update(name_fields)
+            folder = self.repo.update_folder(folder, fields=ordered_fields)
+        elif visibility_changed:
+            folder.save(update_fields=["is_visible", "updated_at"])
+
+        if visibility_changed:
+            if folder.is_visible:
+                sync_asset_recitations_json_file(asset_id, folder_id=folder.pk)
+            else:
+                unpublish_folder_recitations_json(asset_id, folder_id=folder.pk)
+            invalidate_recitation_folder_cache(asset_id, folder)
+
+        if name_fields or visibility_changed:
+            logger.info(f"Recitation folder updated [folder_id={folder.pk}, asset_id={asset_id}]")
+        return folder
+
+    def _promote_to_default(self, folder: RecitationFolder) -> RecitationFolder:
+        if folder.is_default:
+            return folder
+
+        if not folder.is_visible:
             raise ItqanError(
-                error_name="folder_name_required",
-                message=_("Folder name (Arabic or English) is required."),
+                error_name="cannot_set_hidden_folder_as_default",
+                message=_("A hidden folder cannot be set as the default."),
                 status_code=400,
             )
 
-        # `name` is a modeltranslation descriptor that writes through to the active
-        # language's column, so it must be applied *before* the explicit name_ar /
-        # name_en values — otherwise it silently overwrites one of them.
-        ordered_fields: dict[str, str | None] = {"name": final_name_ar or final_name_en}
-        ordered_fields.update(fields)
+        with transaction.atomic():
+            RecitationFolder.objects.filter(asset_id=folder.asset_id, is_default=True).update(is_default=False)
+            folder.is_default = True
+            folder.save(update_fields=["is_default", "updated_at"])
 
-        updated = self.repo.update_folder(folder, fields=ordered_fields)
-        logger.info(f"Recitation folder updated [folder_id={updated.pk}, asset_id={asset_id}]")
-        return updated
+        logger.info(
+            f"Recitation folder promoted to default [folder_id={folder.pk}, asset_id={folder.asset_id}, slug={folder.slug}]"
+        )
+        invalidate_recitation_folder_cache(folder.asset_id, folder)
+        return folder
 
     def delete_folder(self, *, asset_id: int, folder_slug: str, publisher_q: Q | None = None) -> None:
         """
@@ -142,5 +203,7 @@ class RecitationFolderService:
                 status_code=400,
             )
 
+        asset_id = folder.asset_id
         self.repo.delete_folder(folder)
+        invalidate_recitation_folder_cache(asset_id, folder)
         logger.info(f"Recitation folder deleted [asset_id={asset_id}, slug={folder_slug}]")

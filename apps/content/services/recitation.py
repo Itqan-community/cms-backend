@@ -216,6 +216,7 @@ class RecitationService:
         publisher_q: Q,
         prefetch_timings: bool = False,
         folder: str | None = None,
+        require_visible_folder: bool = False,
     ) -> QuerySet[RecitationSurahTrack]:
         """
         Business Logic: Retrieve tracks for a specific asset if it belongs to the publisher.
@@ -228,7 +229,7 @@ class RecitationService:
         """
         folder_id = None
         if folder is not None:
-            matched = find_folder_by_token(asset_id, folder)
+            matched = find_folder_by_token(asset_id, folder, require_visible=require_visible_folder)
             if matched is None:
                 raise ItqanError(
                     error_name="folder_not_found",

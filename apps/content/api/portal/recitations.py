@@ -57,6 +57,7 @@ class FolderOut(Schema):
     name: str
     slug: str
     is_default: bool
+    is_visible: bool
 
 
 class RecitationListOut(Schema):

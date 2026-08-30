@@ -231,6 +231,74 @@ class FindFolderByTokenTest(BaseTestCase):
         self.assertEqual(found.id, self.echo.id)
 
 
+class RecitationFolderVisibilityTest(BaseTestCase):
+    def setUp(self) -> None:
+        self.asset = make_recitation_asset()
+        self.default_folder = RecitationFolder.objects.get(asset=self.asset, is_default=True)
+        RecitationFolder.objects.create(asset=self.asset, name="With echo", name_en="With echo")
+        self.service = RecitationFolderService()
+
+    def test_hide_variant_should_set_is_visible_false(self):
+        updated = self.service.update_folder(
+            asset_id=self.asset.id,
+            folder_slug="with-echo",
+            fields={"is_visible": False},
+        )
+        self.assertFalse(updated.is_visible)
+
+    def test_hide_default_should_raise_cannot_hide_default_folder(self):
+        with self.assertRaises(ItqanError) as ctx:
+            self.service.update_folder(
+                asset_id=self.asset.id,
+                folder_slug=RecitationFolder.DEFAULT_SLUG,
+                fields={"is_visible": False},
+            )
+        self.assertEqual(ctx.exception.error_name, "cannot_hide_default_folder")
+
+    def test_promote_variant_should_swap_default_flag(self):
+        promoted = self.service.update_folder(
+            asset_id=self.asset.id,
+            folder_slug="with-echo",
+            fields={"is_default": True},
+        )
+        self.default_folder.refresh_from_db()
+        self.assertTrue(promoted.is_default)
+        self.assertFalse(self.default_folder.is_default)
+
+    def test_promote_hidden_folder_should_raise_cannot_set_hidden_folder_as_default(self):
+        echo = RecitationFolder.objects.get(asset=self.asset, slug="with-echo")
+        echo.is_visible = False
+        echo.save(update_fields=["is_visible"])
+        with self.assertRaises(ItqanError) as ctx:
+            self.service.update_folder(
+                asset_id=self.asset.id,
+                folder_slug="with-echo",
+                fields={"is_default": True},
+            )
+        self.assertEqual(ctx.exception.error_name, "cannot_set_hidden_folder_as_default")
+
+    def test_unset_default_flag_should_raise_cannot_unset_default_folder(self):
+        with self.assertRaises(ItqanError) as ctx:
+            self.service.update_folder(
+                asset_id=self.asset.id,
+                folder_slug=RecitationFolder.DEFAULT_SLUG,
+                fields={"is_default": False},
+            )
+        self.assertEqual(ctx.exception.error_name, "cannot_unset_default_folder")
+
+
+class FindFolderVisibilityTest(BaseTestCase):
+    def setUp(self) -> None:
+        self.asset = make_recitation_asset()
+        self.echo = RecitationFolder.objects.create(asset=self.asset, name="With echo", name_en="With echo")
+
+    def test_find_folder_where_hidden_and_require_visible_should_return_none(self):
+        self.echo.is_visible = False
+        self.echo.save(update_fields=["is_visible"])
+        self.assertIsNone(find_folder_by_token(self.asset.id, "with-echo", require_visible=True))
+        self.assertIsNotNone(find_folder_by_token(self.asset.id, "with-echo", require_visible=False))
+
+
 class RecitationServiceFolderScopingTest(BaseTestCase):
     def setUp(self) -> None:
         self.asset = make_recitation_asset()
@@ -293,6 +361,18 @@ class RecitationServiceFolderScopingTest(BaseTestCase):
 
         # Assert - 2 default tracks + 1 echo track must not report 3 surahs
         self.assertEqual(recitation.surahs_count, 2)
+
+    def test_get_asset_tracks_where_folder_hidden_should_raise_folder_not_found(self):
+        self.echo_folder.is_visible = False
+        self.echo_folder.save(update_fields=["is_visible"])
+        with self.assertRaises(ItqanError) as ctx:
+            self.service.get_asset_tracks(
+                self.asset.id,
+                publisher_q=None,
+                folder="with-echo",
+                require_visible_folder=True,
+            )
+        self.assertEqual(ctx.exception.error_name, "folder_not_found")
 
 
 class RecitationCreationDefaultFolderTest(BaseTestCase):

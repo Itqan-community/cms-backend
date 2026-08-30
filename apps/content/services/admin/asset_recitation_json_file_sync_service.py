@@ -116,3 +116,27 @@ def sync_asset_recitations_json_file(asset_id: int, folder_id: int | None = None
         f"tracks={track_count}, size_bytes={len(payload_bytes)}, filename={filename}]"
     )
     return version, filename
+
+
+def unpublish_folder_recitations_json(asset_id: int, folder_id: int) -> None:
+    """
+    Withdraw a folder's timings JSON export when the folder is hidden from public APIs.
+
+    The AssetVersion row is kept so a later show + sync can republish under the same slug.
+    """
+    folder: RecitationFolder | None = RecitationFolder.objects.filter(pk=folder_id, asset_id=asset_id).first()
+    if folder is None:
+        return
+
+    version: AssetVersion | None = AssetVersion.objects.filter(asset_id=asset_id, name=folder.slug).first()
+    if version is None or not version.file_url:
+        return
+
+    with transaction.atomic():
+        version.file_url.delete(save=False)
+        version.size_bytes = 0
+        version.save(update_fields=["file_url", "size_bytes", "updated_at"])
+
+    logger.info(
+        f"Recitation JSON unpublished [asset_id={asset_id}, folder_id={folder_id}, version_id={version.pk}]"
+    )
