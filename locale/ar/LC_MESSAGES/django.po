@@ -2,7 +2,7 @@
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <h.alansary@itqan.dev>, 2026.
-#
+# 
 #, fuzzy
 msgid ""
 msgstr ""
@@ -103,6 +103,27 @@ msgstr "لم يتم العثور على الترجمة بالمعرّف {slug}."
 #, python-brace-format
 msgid "Provided asset_id {asset_id} does not match translation asset id {expected_id}."
 msgstr "المعرّف asset_id {asset_id} المُقدَّم لا يطابق معرّف أصل الترجمة {expected_id}."
+
+msgid "No tafsir available"
+msgstr "لا يوجد تفسير متاح"
+
+#, python-brace-format
+msgid "This tafsir does not provide text for surah {surah}, ayah {ayah}."
+msgstr "هذا التفسير لا يوفّر نصاً للسورة {surah}، الآية {ayah}."
+
+msgid "No translation available"
+msgstr "لا توجد ترجمة متاحة"
+
+#, python-brace-format
+msgid "This translation does not provide text for surah {surah}, ayah {ayah}."
+msgstr "هذه الترجمة لا توفّر نصاً للسورة {surah}، الآية {ayah}."
+
+msgid "No recitation available"
+msgstr "لا تتوفر تلاوة"
+
+#, python-brace-format
+msgid "No recitation track available for surah {surah}."
+msgstr "لا يتوفر مسار تلاوة للسورة {surah}."
 
 msgid "Please select at least one file."
 msgstr "يرجى اختيار ملف واحد على الأقل."
@@ -1130,26 +1151,29 @@ msgstr "مرحبًا بك في نظام إتقان لإدارة المحتوى!"
 msgid "This is a test email to verify the email service is working correctly."
 msgstr "هذه رسالة اختبارية للتأكد من عمل خدمة البريد الإلكتروني بشكل صحيح."
 
-msgid "No tafsir available"
-msgstr "لا يوجد تفسير متاح"
+#~ msgid "You must be signed in to get personalized recommendations."
+#~ msgstr "يجب تسجيل الدخول للحصول على التوصيات الشخصية."
+
+#~ msgid "Published"
+#~ msgstr "منشور"
 
 #, python-brace-format
-msgid "This tafsir does not provide text for surah {surah}, ayah {ayah}."
-msgstr "هذا التفسير لا يوفّر نصاً للسورة {surah}، الآية {ayah}."
-
-msgid "No translation available"
-msgstr "لا توجد ترجمة متاحة"
+#~ msgid "{category} with slug {slug} not found."
+#~ msgstr "{category} ذو المعرّف {slug} غير موجود."
 
 #, python-brace-format
-msgid "This translation does not provide text for surah {surah}, ayah {ayah}."
-msgstr "هذه الترجمة لا توفّر نصاً للسورة {surah}، الآية {ayah}."
+#~ msgid "Version with id {id} not found."
+#~ msgstr "الإصدار ذو المعرف {id} غير موجود."
 
-msgid "No recitation available"
-msgstr "لا تتوفر تلاوة"
+#~ msgid "Only draft versions can be edited."
+#~ msgstr "يمكن تحرير المسودات فقط."
 
 #, python-brace-format
-msgid "No recitation track available for surah {surah}."
-msgstr "لا يتوفر مسار تلاوة للسورة {surah}."
+#~ msgid "Could not parse the uploaded content file: {reason}"
+#~ msgstr "تعذّر تحليل الملف المرفوع: {reason}."
+
+#~ msgid "There are no changes to publish."
+#~ msgstr "لا توجد تغييرات للنشر."
 
 #, python-brace-format
 #~ msgid "A track for asset {asset_id} surah {surah_number} already exists."
