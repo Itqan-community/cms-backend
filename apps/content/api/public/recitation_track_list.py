@@ -133,6 +133,7 @@ def list_recitation_tracks(
         Q(asset__restricted_for_tenant=False),
         prefetch_timings=True,
         folder=folder,
+        require_visible_folder=True,
     )
 
     all_results = []

@@ -712,6 +712,11 @@ class RecitationFolder(BaseModel):
         default=False,
         help_text="The folder served when the API caller does not specify one. Exactly one per asset.",
     )
+    is_visible = models.BooleanField(
+        default=True,
+        db_index=True,
+        help_text="When false, the folder is omitted from public/tenant APIs and its timings export is withdrawn.",
+    )
 
     class Meta:
         constraints = [

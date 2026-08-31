@@ -202,6 +202,45 @@ class RecitationFoldersPortalAPITest(BaseTestCase):
         self.assertEqual(403, response.status_code, response.content)
         self.assertEqual("permission_denied", response.json()["error_name"])
 
+    def test_update_folder_where_hidden_should_return_200_with_is_visible(self):
+        self.authenticate_user(self.staff_user)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPDATE_RECITATION)
+        echo = RecitationFolder.objects.create(asset=self.asset, name="With echo", name_en="With echo")
+
+        response = self.client.patch(f"{self.url}with-echo/", {"is_visible": False}, format="json")
+
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertFalse(response.json()["is_visible"])
+        echo.refresh_from_db()
+        self.assertFalse(echo.is_visible)
+
+    def test_update_folder_where_default_hidden_should_return_400(self):
+        self.authenticate_user(self.staff_user)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPDATE_RECITATION)
+
+        response = self.client.patch(
+            f"{self.url}{self.default_folder.slug}/",
+            {"is_visible": False},
+            format="json",
+        )
+
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("cannot_hide_default_folder", response.json()["error_name"])
+
+    def test_update_folder_where_set_default_should_promote_variant(self):
+        self.authenticate_user(self.staff_user)
+        self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPDATE_RECITATION)
+        echo = RecitationFolder.objects.create(asset=self.asset, name="With echo", name_en="With echo")
+
+        response = self.client.patch(f"{self.url}with-echo/", {"is_default": True}, format="json")
+
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertTrue(response.json()["is_default"])
+        self.default_folder.refresh_from_db()
+        echo.refresh_from_db()
+        self.assertFalse(self.default_folder.is_default)
+        self.assertTrue(echo.is_default)
+
 
 class RecitationFoldersPortalScopingTest(BaseTestCase):
     """Folders must never be reachable through another publisher's recitation."""

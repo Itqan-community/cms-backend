@@ -6,7 +6,7 @@ from ninja.pagination import paginate
 from apps.content.models import Asset
 from apps.content.repositories.recitation import RecitationRepository
 from apps.content.services.recitation import RecitationService
-from apps.content.services.recitation_folder_resolution import sorted_asset_folders
+from apps.content.services.recitation_folder_resolution import visible_asset_folders
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -54,7 +54,7 @@ class RecitationListOut(Schema):
     @staticmethod
     def resolve_folders(obj):
         # Lets a consumer discover which ?folder= values this recitation accepts.
-        return sorted_asset_folders(obj)
+        return visible_asset_folders(obj)
 
 
 class RecitationFilter(FilterSchema):

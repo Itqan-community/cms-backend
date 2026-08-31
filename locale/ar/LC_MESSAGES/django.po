@@ -428,6 +428,15 @@ msgstr "لا يحتوي هذا التسجيل على مجلد افتراضي."
 msgid "Folder name (Arabic or English) is required."
 msgstr "اسم المجلد (بالعربية أو الإنجليزية) مطلوب."
 
+msgid "Use another folder's set-default action instead of clearing the default flag."
+msgstr "استخدم إجراء تعيين الافتراضي لمجلد آخر بدلاً من إلغاء علامة الافتراضي."
+
+msgid "The default folder cannot be hidden."
+msgstr "لا يمكن إخفاء المجلد الافتراضي."
+
+msgid "A hidden folder cannot be set as the default."
+msgstr "لا يمكن تعيين مجلد مخفي كمجلد افتراضي."
+
 msgid "The default folder cannot be deleted."
 msgstr "لا يمكن حذف المجلد الافتراضي."
 

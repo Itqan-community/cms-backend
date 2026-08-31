@@ -3,6 +3,8 @@ import re
 
 from django.core.cache import cache
 
+from apps.core.ninja_utils.paginations import DEFAULT_PAGE_SIZE, PUBLIC_RECITATION_MAX_PAGE_SIZE
+
 # Stands in for "caller did not name a folder" in cache keys, so the default-folder
 # response gets its own entry without a DB lookup to resolve the real slug.
 DEFAULT_FOLDER_CACHE_TOKEN = "__default__"
@@ -62,3 +64,24 @@ def invalidate_recitation_tracks_cache(asset_id: int) -> None:
             recitation_asset_meta_cache_key(asset_id),
         ]
     )
+
+
+def invalidate_recitation_folder_cache(asset_id: int, folder) -> None:
+    """
+    Bust public recitation caches after a folder's visibility or default status changes.
+
+    Per-folder response keys for every page size cannot be enumerated cheaply, so the
+    asset meta key is cleared to force rebuilds; known folder tokens are deleted when
+    present so the common first-page case is immediate.
+    """
+    invalidate_recitation_tracks_cache(asset_id)
+
+    tokens = {folder.slug, folder_cache_token(folder.slug)}
+    for name in (folder.name, folder.name_ar, folder.name_en):
+        if name:
+            tokens.add(folder_cache_token(name))
+
+    for token in tokens:
+        for page in (1,):
+            for page_size in (DEFAULT_PAGE_SIZE, PUBLIC_RECITATION_MAX_PAGE_SIZE):
+                cache.delete(recitation_response_cache_key(asset_id, page, page_size, token))
