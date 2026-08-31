@@ -23,7 +23,7 @@ media/                    # Binary files for media assets (Recitation/Mushaf)
 ```
 
 - **`itqan-package.json`**: Describes the asset identity, semantic version, category, and contains a file-level integrity hash map. The `asset.version` field in this manifest is the canonical version source for the package. It MUST strictly adhere to a semantic-version (semver) format. Furthermore, the combination of the asset slug and this version MUST be globally unique across the manifest, local filesystem paths (`assets/<asset_slug>/<version>/`), and remote R2 keys to guarantee consistent identity mapping.
-- **`data/`**: Used for textual assets. Contains a structured JSON dump of all `AssetVersionEntry` records associated with this version (e.g., `data/entries.json`).
+- **`data/`**: Used for textual assets. Contains a structured JSON dump of all `AssetVersionEntry` records associated with this version (e.g., `data/entries.json`). The `data/entries.json` MUST use an explicit V1 wire schema with UTF-8 encoding. The top-level shape MUST be a JSON array of objects ordered by `sura` then `aya`. Each object maps to an `AssetVersionEntry` via a composite `ayah_id` persistence key derived from these fields. Required fields are `sura` (integer), `aya` (integer), and `text` (string). The `footnotes` field is optional (string). Duplicate entries for the same `sura` and `aya` are strictly forbidden.
 - **`media/`**: Used for binary/media assets. Contains audio files (`RecitationSurahTrack` files) or font/image files. For recitations, the structure maps to variants, e.g., `media/{folder_slug}/{surah:03}.mp3`.
 
 ---
@@ -51,7 +51,7 @@ The `itqan-package.json` file is the contract between the registry and the appli
 ```
 
 ### Integrity Metadata
-The `files` dictionary provides a SHA256 checksum and exact byte size for every file in the package (excluding `itqan-package.json` itself). The installer MUST enforce strict membership between the archive contents and this dictionary: it MUST reject the package if any archive file is missing from the manifest, if any manifest entry is missing from the archive, or if there are duplicate archive member paths. The installer uses this to verify that no files were corrupted during download or tampered with at rest.
+The `files` dictionary provides a SHA256 checksum and exact byte size for every file in the package (excluding `itqan-package.json` itself). The installer MUST inspect tar member types before extraction and reject every member that is neither a regular file nor a directory, including symlinks, hardlinks, devices, and FIFOs. The installer MUST enforce strict membership between the permitted archive contents and this dictionary: it MUST reject the package if any archive file is missing from the manifest, if any manifest entry is missing from the archive, or if there are duplicate archive member paths. The installer uses this to verify that no files were corrupted during download or tampered with at rest.
 
 ---
 
@@ -76,14 +76,14 @@ assets/
         entries.json
 ```
 
-- Packages are nested by `assets/<asset_slug>/<version>/`. To prevent path traversal attacks, the asset slug and version strings MUST be validated by the create/update APIs as safe, single path components (rejecting `/`, `..`, etc.). The installer MUST independently verify that the resolved extraction path remains strictly contained within the intended `assets/` base directory before any filesystem access occurs.
+- Packages are nested by `assets/<asset_slug>/<version>/`. To prevent path traversal attacks, the asset slug and version strings MUST be validated by the create/update APIs as safe, single path components (rejecting `/`, `..`, etc.). The installer MUST normalize every archive member as a relative path and require it to remain within the exact `assets/<asset_slug>/<version>/` package directory. The installer MUST reject absolute paths and any member containing traversal components such as `..` before performing extraction or filesystem access.
 - **`.itqan-installer-state.json`**: An internal file maintained by the CLI to track the currently materialized assets and their outer tarball checksums.
 
 ### Idempotency and Updates
 1. The registry API returns the SHA256 checksum of the `.tar.gz` artifact.
 2. The installer checks `.itqan-installer-state.json` to see if `assets/<asset_slug>/<version>` exists and its recorded tarball checksum matches the registry.
-3. If it matches, the installer MUST revalidate the existing installation before skipping (by verifying the installed manifest and all expected file hashes, or by checking a trusted persisted local verification record). If validation succeeds, it **skips** downloading entirely. If it fails, it repairs the installation by downloading and unpacking again.
-4. If it differs (or is missing), it fetches the tarball, verifies the outer checksum, unpacks it into the versioned directory, and verifies the inner file checksums against `itqan-package.json`.
+3. If the checksum matches, the installer MUST revalidate the existing installation before skipping (by verifying the installed manifest and all expected file hashes, or by checking a trusted persisted local verification record). If validation succeeds, it **skips** downloading entirely. If it fails, it repairs the installation.
+4. If it differs (or is missing) or requires repair, the installer fetches the tarball and verifies the outer checksum. It MUST extract the archive into a fresh staging directory, validate the complete package and all inner file checksums against `itqan-package.json`, and require that the extracted manifest's `asset.slug` and `asset.version` exactly match the lock-selected asset slug and version. If this identity check or validation fails, it rejects the artifact. Upon success, it atomically replaces the versioned target directory with the staging directory and updates `.itqan-installer-state.json`. This ensures files absent from the new archive are removed and stale installations cannot remain after rebuilds.
 
 ---
 
@@ -95,6 +95,8 @@ The package format maps directly to the `PACKAGE` channel of the `Distribution` 
 For a package to be eligible for resolution via the registry:
 1. An `AssetVersion` must exist and its `state` must be `published`.
 2. A `Distribution` record must exist linked to this `AssetVersion` with `channel="PACKAGE"`.
+3. The `asset.version` MUST be derived from the canonicalized `AssetVersion.name`, excluding names that are not valid SemVer or contain build metadata.
+4. Eligibility MUST preserve the published `(slug, version)` pair immutably, aligning with `docs/ASSET_MANIFEST.md` rather than treating every `PACKAGE` distribution as unconditionally eligible.
 
 ### 4.2 Build Task: On-Publish vs On-Demand
 Packages MUST be built **asynchronously on-publish**, not on-demand during a registry request.
@@ -103,11 +105,11 @@ Packages MUST be built **asynchronously on-publish**, not on-demand during a reg
 Recitation assets can contain 114 high-quality MP3 files across multiple folders (e.g., variants for delay, bitrate). Tarballing gigabytes of audio synchronously will time out any standard HTTP request and crash worker nodes. 
 
 **The Build Pipeline:**
-1. An admin action (e.g., via `AssetContentService.publish_draft()`) triggers publication. The system MUST implement idempotent triggers that queue the build task regardless of whether the `AssetVersion` publication or the `PACKAGE` Distribution creation happens first, ensuring a published package never remains without an artifact.
+1. An admin action (e.g., via `AssetContentService.publish_draft()`) triggers publication. The system MUST implement a post-commit, idempotent package-build trigger spanning `AssetContentService.publish_draft()`, `AssetVersion` publication, and `PACKAGE` Distribution creation. Ensure either event queues `build_asset_package_artifact` after the transaction commits, regardless of ordering, while deduplicating repeated triggers and preserving existing publication behavior. This MUST include the necessary package artifact/readiness state or durable outbox so a published package cannot remain without an artifact.
 2. The Celery task (`build_asset_package_artifact`) executes.
 3. **For Text Assets:** The task queries `AssetVersionEntry` rows, serializing them into a structured `data/entries.json`.
 4. **For Media Assets:** The task streams files from R2/S3 into the tarball (`media/...`).
 5. The task generates the `itqan-package.json` populated with all internal checksums.
-6. The final `.tar.gz` is compressed and uploaded to R2. The build flow MUST record the artifact's locator (e.g., an S3 object key like `packages/{slug}/{version}.tar.gz`) alongside the checksum. The registry API will use this locator to expose an unambiguous tarball source (e.g., by issuing a short-lived presigned URL, rather than proxying bytes through the Django app).
-7. The outer SHA256 checksum of the `.tar.gz` is calculated and saved.
-8. The `Distribution` model MUST define an explicit package-readiness predicate (e.g., a `build_state` enum: `pending`, `ready`, `failed`, `stale-checksum`). Readiness depends strictly on artifact availability and checksum alignment. The registry API MUST ONLY expose `ready` distributions to `itqan install` clients, guaranteeing it never returns a checksum from a superseded or incomplete rebuild.
+6. The final `.tar.gz` is compressed and uploaded to R2. The artifact publication MUST bind the exact artifact locator (e.g., an S3 object key like `packages/{slug}/{version}.tar.gz`) and checksum together atomically using content-addressed storage or an equivalent locking/compare-and-set mechanism. This prevents concurrent or retried builds from exposing mismatched ready metadata and object bytes. The registry API will use this locator to expose an unambiguous tarball source (e.g., by issuing a short-lived presigned URL, rather than proxying bytes through the Django app).
+7. The outer SHA256 checksum of the `.tar.gz` is calculated and saved atomically with the locator.
+8. The `Distribution` model MUST define an explicit package-readiness predicate (e.g., a `build_state` enum: `pending`, `ready`, `failed`). The registry API MUST ONLY expose a readiness record after this atomic binding succeeds, guaranteeing it never returns a checksum from a superseded or incomplete rebuild.
