@@ -682,11 +682,11 @@ msgstr "هذا المستخدم عضو بالفعل لدى هذا الناشر."
 msgid "Only pending invitations can be resent."
 msgstr "يمكن إعادة إرسال الدعوات المعلقة فقط."
 
-msgid "Only pending invitations can be cancelled."
-msgstr "يمكن إلغاء الدعوات المعلقة فقط."
-
 msgid "This invitation is no longer valid."
 msgstr "هذه الدعوة لم تعد صالحة."
+
+msgid "Only pending invitations can be cancelled."
+msgstr "يمكن إلغاء الدعوات المعلقة فقط."
 
 msgid "Sura does not exist."
 msgstr "السورة غير موجودة."
