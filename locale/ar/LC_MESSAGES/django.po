@@ -419,6 +419,18 @@ msgid "Cannot delete Recitation because they are referenced through other object
 msgstr "لا يمكن حذف التلاوة لأن هناك بيانات أخرى مرتبطة بها"
 
 #, python-brace-format
+msgid "Ayah {ayah_key} not found."
+msgstr "لم يتم العثور على الآية {ayah_key}."
+
+#, python-brace-format
+msgid "Asset with id {id} not found."
+msgstr "لم يتم العثور على المورد ذو المعرف {id}."
+
+#, python-brace-format
+msgid "Default folder for asset {id} not found."
+msgstr "لم يتم العثور على المجلد الافتراضي للمورد {id}."
+
+#, python-brace-format
 msgid "Folder with slug {slug} not found."
 msgstr "لم يتم العثور على مجلد بالمعرف {slug}."
 
