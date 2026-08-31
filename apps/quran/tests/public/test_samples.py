@@ -1,12 +1,12 @@
 """Tests for Quran sample endpoints (surah, ayah)."""
 
-from django.test import TestCase
 from model_bakery import baker
 
+from apps.core.tests.base import BaseTestCase
 from apps.quran.models import Ayah, Sura
 
 
-class QuranSamplesTest(TestCase):
+class QuranSamplesTest(BaseTestCase):
     """Tests for /sample-data/surah/ and /sample-data/ayah/ endpoints."""
 
     def setUp(self) -> None:

@@ -6,7 +6,6 @@ from unittest import mock
 from django.conf import settings
 from django.core.cache import cache
 from django.core.files.base import ContentFile
-from django.test import TestCase
 from model_bakery import baker
 
 from apps.content.models import (
@@ -22,11 +21,12 @@ from apps.content.models import (
     StatusChoice,
 )
 from apps.content.services import asset_verse_text
+from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.quran.models import Ayah, Sura
 
 
-class ContentSamplesTest(TestCase):
+class ContentSamplesTest(BaseTestCase):
     """Tests for /sample-data/tafsir/, /sample-data/translation/, /sample-data/recitation/, and /sample-data/joined-ayah/ endpoints."""
 
     def setUp(self):
