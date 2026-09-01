@@ -23,3 +23,4 @@ class NinjaTag(models.TextChoices):
     GROUPS = "Groups"
     QURAN = "Quran"
     SAMPLE_DATA = "Sample Data"
+    PACKAGES = "Packages"
