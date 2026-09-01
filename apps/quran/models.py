@@ -54,6 +54,11 @@ class Ayah(BaseModel):
     hizb_quarter = models.PositiveSmallIntegerField(help_text="Hizb quarter number this ayah belongs to")
     page = models.PositiveSmallIntegerField(help_text="Mushaf page number this ayah appears on")
 
+    @property
+    def text_uthmani(self) -> str:
+        """Alias for backward compatibility with API contract."""
+        return self.text
+
     class Meta:
         ordering = ["id"]
         constraints = [

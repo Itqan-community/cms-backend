@@ -107,6 +107,27 @@ msgstr "المعرّف asset_id {asset_id} المُقدَّم لا يطابق م
 msgid "You must be signed in to get personalized recommendations."
 msgstr "يجب تسجيل الدخول للحصول على التوصيات الشخصية."
 
+msgid "No tafsir available"
+msgstr "لا يوجد تفسير متاح"
+
+#, python-brace-format
+msgid "This tafsir does not provide text for surah {surah}, ayah {ayah}."
+msgstr "هذا التفسير لا يوفّر نصًّا للسورة {surah}، الآية {ayah}."
+
+msgid "No translation available"
+msgstr "لا توجد ترجمة متاحة"
+
+#, python-brace-format
+msgid "This translation does not provide text for surah {surah}, ayah {ayah}."
+msgstr "هذه الترجمة لا توفّر نصًّا للسورة {surah}، الآية {ayah}."
+
+msgid "No recitation available"
+msgstr "لا توجد تلاوة متاحة"
+
+#, python-brace-format
+msgid "No recitation track available for surah {surah}."
+msgstr "لا يوجد مقطع تلاوة متاح للسورة {surah}."
+
 msgid "Please select at least one file."
 msgstr "يرجى اختيار ملف واحد على الأقل."
 
@@ -313,18 +334,18 @@ msgstr "ليس لديك طلب وصول مُوافَق عليه لهذا الأ�
 
 #, python-brace-format
 msgid "{category} with slug {slug} not found."
-msgstr ""
+msgstr "لم يتم العثور على {category} بالمعرّف {slug}."
 
 #, python-brace-format
 msgid "Version with id {id} not found."
-msgstr ""
+msgstr "الإصدار ذو المعرف {id} غير موجود."
 
 msgid "Only draft versions can be edited."
-msgstr ""
+msgstr "لا يمكن تعديل سوى إصدارات المسودة."
 
 #, python-brace-format
 msgid "Could not parse the uploaded content file: {reason}"
-msgstr ""
+msgstr "تعذر تحليل ملف المحتوى المرفوع: {reason}"
 
 msgid "There are no changes to publish."
 msgstr "لا توجد تغييرات للنشر."
@@ -661,11 +682,11 @@ msgstr "هذا المستخدم عضو بالفعل لدى هذا الناشر."
 msgid "Only pending invitations can be resent."
 msgstr "يمكن إعادة إرسال الدعوات المعلقة فقط."
 
-msgid "Only pending invitations can be cancelled."
-msgstr "يمكن إلغاء الدعوات المعلقة فقط."
-
 msgid "This invitation is no longer valid."
 msgstr "هذه الدعوة لم تعد صالحة."
+
+msgid "Only pending invitations can be cancelled."
+msgstr "يمكن إلغاء الدعوات المعلقة فقط."
 
 msgid "Sura does not exist."
 msgstr "السورة غير موجودة."
