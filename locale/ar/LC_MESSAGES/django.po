@@ -400,6 +400,26 @@ msgstr "لا يمكن حذف المصحف لأن هناك بيانات أخرى 
 msgid "Version with id {id} not found for mushaf {slug}."
 msgstr "الإصدار ذو المعرف {id} غير موجود للمصحف {slug}."
 
+#, python-brace-format
+msgid "Asset {slug} has no eligible PACKAGE versions with valid SemVer names."
+msgstr ""
+
+#, python-brace-format
+msgid "Canonical version collision for asset {slug}: versions '{existing}' and '{duplicate}' both canonicalize to '{canonical}'."
+msgstr ""
+
+#, python-brace-format
+msgid "Invalid version constraint '{constraint}': {reason}."
+msgstr ""
+
+#, python-brace-format
+msgid "Version {version} not found for asset {slug}."
+msgstr ""
+
+#, python-brace-format
+msgid "No eligible PACKAGE version for asset {slug} satisfies constraint '{constraint}' ({range_desc}). Available: {available}."
+msgstr ""
+
 msgid "Recitation name (Arabic or English) is required."
 msgstr "اسم التلاوة (بالعربية أو الإنجليزية) مطلوب."
 
