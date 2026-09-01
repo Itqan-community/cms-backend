@@ -380,7 +380,6 @@ class AssetVersionEntry(BaseModel):
         help_text="Canonical ayah (1-6236) this entry provides text for",
     )
     text = models.TextField(blank=True, help_text="Translation / tafsir text for this ayah")
-    footnotes = models.TextField(blank=True, help_text="Footnotes or margin content for this ayah")
     order = models.PositiveIntegerField(default=0, help_text="Display order (defaults to the canonical ayah index)")
 
     class Meta:

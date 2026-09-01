@@ -102,7 +102,6 @@ class AssetContentRepository:
                     version=draft,
                     ayah_id=entry.ayah_id,
                     text=entry.text,
-                    footnotes=entry.footnotes,
                     order=entry.order,
                 )
                 for entry in source_version.entries.all().iterator()
@@ -129,7 +128,6 @@ class AssetContentRepository:
                     version=version,
                     ayah_id=ayah_id,
                     text=parsed_entry.text,
-                    footnotes=parsed_entry.footnotes,
                     order=ayah_id,
                 )
             )
@@ -150,27 +148,24 @@ class AssetContentRepository:
         for row in rows:
             ayah_id = int(row["ayah_id"])
             text = str(row.get("text", "") or "")
-            footnotes = str(row.get("footnotes", "") or "")
             entry = existing.get(ayah_id)
             if entry is None:
                 entry = AssetVersionEntry(
                     version=version,
                     ayah_id=ayah_id,
                     text=text,
-                    footnotes=footnotes,
                     order=ayah_id,
                 )
                 to_create.append(entry)
             else:
                 entry.text = text
-                entry.footnotes = footnotes
                 to_update.append(entry)
             changed.append(entry)
 
         if to_create:
             AssetVersionEntry.objects.bulk_create(to_create, batch_size=1000)
         if to_update:
-            AssetVersionEntry.objects.bulk_update(to_update, ["text", "footnotes"], batch_size=1000)
+            AssetVersionEntry.objects.bulk_update(to_update, ["text"], batch_size=1000)
         # Mark the draft as edited so an unchanged draft can't be published.
         if changed and not version.content_edited:
             version.content_edited = True
@@ -178,12 +173,12 @@ class AssetContentRepository:
         return changed
 
     def entries_to_csv_bytes(self, version: AssetVersion) -> bytes:
-        """Serialize a version's per-ayah entries to CSV (sura,aya,text,footnotes)."""
+        """Serialize a version's per-ayah entries to CSV (sura,aya,text)."""
         buffer = io.StringIO()
         writer = csv.writer(buffer)
-        writer.writerow(["sura", "aya", "text", "footnotes"])
+        writer.writerow(["sura", "aya", "text"])
         for entry in version.entries.select_related("ayah").order_by("order", "ayah_id").iterator():
-            writer.writerow([entry.ayah.sura_id, entry.ayah.number_in_sura, entry.text, entry.footnotes])
+            writer.writerow([entry.ayah.sura_id, entry.ayah.number_in_sura, entry.text])
         return buffer.getvalue().encode("utf-8")
 
     @transaction.atomic
