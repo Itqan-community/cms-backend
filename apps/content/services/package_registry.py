@@ -439,5 +439,7 @@ def _constraint_range_desc(constraint: VersionConstraint) -> str:
         upper = f" <{constraint.upper_exclusive.to_canonical_string()}" if constraint.upper_exclusive else ""
         return f">={constraint.base.to_canonical_string()}{upper}"
     if constraint.kind == "tilde":
-        return f">={constraint.base.to_canonical_string()} <{constraint.upper_exclusive.to_canonical_string()}"
+        if constraint.upper_exclusive:
+            return f">={constraint.base.to_canonical_string()} <{constraint.upper_exclusive.to_canonical_string()}"
+        return f">={constraint.base.to_canonical_string()}"
     return str(constraint.base)
