@@ -1,11 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import (
-    Asset,
-    AssetVersion,
-    Distribution,
-    VersionStateChoice,
-)
+from apps.content.models import Asset, AssetVersion, Distribution, VersionStateChoice
 from apps.content.repositories.package_registry import PackageRegistryRepository
 from apps.content.services.package_registry import (
     PackageRegistryService,
