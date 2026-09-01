@@ -212,7 +212,7 @@ class PatchEntriesTest(AssetContentBaseTest):
             f"/portal/content/translations/{self.translation.slug}/versions/{draft.id}/entries/",
             data={
                 "rows": [
-                    {"ayah_id": 1, "text": "au nom", "footnotes": "[note]"},
+                    {"ayah_id": 1, "text": "au nom"},
                     {"ayah_id": 2, "text": "louange"},
                 ]
             },
@@ -224,7 +224,6 @@ class PatchEntriesTest(AssetContentBaseTest):
         self.assertEqual(2, draft.entries.count())
         entry = draft.entries.get(ayah_id=1)
         self.assertEqual("au nom", entry.text)
-        self.assertEqual("[note]", entry.footnotes)
 
     def test_patch_entries_where_existing_row_should_update_text(self):
         # Arrange
@@ -334,7 +333,7 @@ class PublishDraftTest(AssetContentBaseTest):
             file_url=None,
             content_edited=True,
         )
-        baker.make(AssetVersionEntry, version=draft, ayah=self.ayahs[0], text="au nom", footnotes="[n]")
+        baker.make(AssetVersionEntry, version=draft, ayah=self.ayahs[0], text="au nom")
 
         # Act
         response = self.client.post(
@@ -350,7 +349,7 @@ class PublishDraftTest(AssetContentBaseTest):
         draft.file_url.open("rb")
         content = draft.file_url.read().decode("utf-8")
         draft.file_url.close()
-        self.assertIn("sura,aya,text,footnotes", content)
+        self.assertIn("sura,aya,text", content)
         self.assertIn("au nom", content)
 
     def test_publish_draft_where_not_a_draft_should_return_400(self):
@@ -480,7 +479,7 @@ class VersionUploadImportTest(AssetContentBaseTest):
             name="Tabari",
             slug="tabari-import",
         )
-        csv_bytes = b"sura,aya,text,footnotes\n" b"1,1,imported one,fn1\n" b"1,2,imported two,\n"
+        csv_bytes = b"sura,aya,text\n" b"1,1,imported one\n" b"1,2,imported two\n"
         upload = SimpleUploadedFile("t.csv", csv_bytes, content_type="text/csv")
 
         # Act
@@ -491,7 +490,6 @@ class VersionUploadImportTest(AssetContentBaseTest):
         # Assert — entries populated from the file content
         self.assertEqual(2, version.entries.count())
         self.assertEqual("imported one", version.entries.get(ayah_id=1).text)
-        self.assertEqual("fn1", version.entries.get(ayah_id=1).footnotes)
 
 
 class ExportVersionTest(AssetContentBaseTest):
@@ -500,7 +498,7 @@ class ExportVersionTest(AssetContentBaseTest):
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
         version = baker.make(AssetVersion, asset=self.translation, name="v1", state=VersionStateChoice.PUBLISHED)
-        baker.make(AssetVersionEntry, version=version, ayah=self.ayahs[0], text="au nom", footnotes="[n]")
+        baker.make(AssetVersionEntry, version=version, ayah=self.ayahs[0], text="au nom")
 
         # Act
         response = self.client.get(
@@ -512,7 +510,7 @@ class ExportVersionTest(AssetContentBaseTest):
         self.assertIn("text/csv", response["Content-Type"])
         self.assertIn("attachment", response["Content-Disposition"])
         body = response.content.decode("utf-8")
-        self.assertIn("sura,aya,text,footnotes", body)
+        self.assertIn("sura,aya,text", body)
         self.assertIn("au nom", body)
 
     def test_export_where_version_name_is_arabic_should_encode_content_disposition(self):

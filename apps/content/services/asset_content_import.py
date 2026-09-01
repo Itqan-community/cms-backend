@@ -4,10 +4,10 @@ Supported formats (both are the QuranEnc CSV export shapes present in the
 project's sample data):
 
 * Translation CSV: an optional multi-line comment/preamble row, then a header
-  row ``id,sura,aya,translation,footnotes`` followed by one row per ayah.
+  row ``id,sura,aya,translation`` followed by one row per ayah.
 * Tafsir CSV (Arabic QuranEnc): a header row that includes
-  ``رقم السورة`` (sura number), ``رقم الآية`` (ayah number), ``المحتوى`` (content)
-  and ``الهامش`` (margin / footnotes), plus import-only metadata columns.
+  ``رقم السورة`` (sura number), ``رقم الآية`` (ayah number) and ``المحتوى``
+  (content), plus import-only metadata columns.
 
 The parser is header-driven, so it tolerates column reordering and the two
 different schemas without a per-category branch at the call site.
@@ -30,7 +30,6 @@ csv.field_size_limit(sys.maxsize)
 _SURA_HEADERS = {"sura", "surah", "رقم السورة"}
 _AYA_HEADERS = {"aya", "ayah", "رقم الآية"}
 _TEXT_HEADERS = {"translation", "text", "content", "المحتوى"}
-_FOOTNOTE_HEADERS = {"footnotes", "footnote", "الهامش"}
 
 
 @dataclass(frozen=True)
@@ -40,7 +39,6 @@ class ParsedEntry:
     sura: int
     aya: int
     text: str
-    footnotes: str
 
 
 class AssetContentParseError(Exception):
@@ -80,8 +78,6 @@ def _column_map(header: list[str]) -> dict[str, int]:
             mapping["aya"] = index
         elif key in _TEXT_HEADERS and "text" not in mapping:
             mapping["text"] = index
-        elif key in _FOOTNOTE_HEADERS and "footnotes" not in mapping:
-            mapping["footnotes"] = index
 
     missing = {"sura", "aya", "text"} - mapping.keys()
     if missing:
@@ -103,7 +99,6 @@ def parse_content_file(raw: bytes) -> list[ParsedEntry]:
 
     header_index = _find_header_row(rows)
     columns = _column_map(rows[header_index])
-    footnote_col = columns.get("footnotes")
 
     entries: dict[tuple[int, int], ParsedEntry] = {}
     for row in rows[header_index + 1 :]:
@@ -117,11 +112,8 @@ def parse_content_file(raw: bytes) -> list[ParsedEntry]:
             continue
 
         content = (row[columns["text"]] or "").strip()
-        footnotes = ""
-        if footnote_col is not None and len(row) > footnote_col:
-            footnotes = (row[footnote_col] or "").strip()
 
-        entries[(sura, aya)] = ParsedEntry(sura=sura, aya=aya, text=content, footnotes=footnotes)
+        entries[(sura, aya)] = ParsedEntry(sura=sura, aya=aya, text=content)
 
     if not entries:
         raise AssetContentParseError("No ayah rows found after the header.")
