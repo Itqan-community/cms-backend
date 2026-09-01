@@ -262,6 +262,26 @@ class TestTrackUsageDecorator:
         assert "properties" in payload
         assert "meta" in payload
 
+    @patch("apps.usage_tracking.decorators.track_usage._get_tracking_redis")
+    def test_api_key_application_identity_is_dispatched(self, mock_get_redis):
+        mock_r = MagicMock()
+        mock_get_redis.return_value = mock_r
+
+        @track_usage()
+        def view(request):
+            return {"results": [], "count": 0}
+
+        request = self.factory.get("/recitations/")
+        request.user = SimpleNamespace(pk=99, is_authenticated=True)
+        request.auth = SimpleNamespace(prefix="app12345")
+
+        view(request)
+
+        props = _dispatched_props(mock_r)
+
+        assert props["application_id"] == "app12345"
+        assert props["application_name"] is None
+
 
 class TestDistinctId:
     def setup_method(self):
@@ -332,6 +352,21 @@ class TestResolveApplication:
     def test_token_with_application(self):
         request = SimpleNamespace(access_token=SimpleNamespace(application=SimpleNamespace(id=7, name="my-app")))
         assert _resolve_application(request) == (7, "my-app")
+
+    def test_api_key_auth_uses_key_prefix_as_application_id(self):
+        request = SimpleNamespace(
+            auth=SimpleNamespace(prefix="app12345"),
+        )
+        assert _resolve_application(request) == ("app12345", None)
+
+    def test_oauth_application_takes_precedence_over_api_key_auth(self):
+        request = SimpleNamespace(
+            access_token=SimpleNamespace(
+                application=SimpleNamespace(id=7, name="oauth-app"),
+            ),
+            auth=SimpleNamespace(prefix="app12345"),
+        )
+        assert _resolve_application(request) == (7, "oauth-app")
 
 
 class TestClientIp:

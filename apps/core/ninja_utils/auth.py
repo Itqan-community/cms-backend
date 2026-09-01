@@ -33,9 +33,11 @@ internal_auth = [SessionToken()]
 class ApiKeyAuth(BaseApiKeyAuth):
     """API key auth that binds the key's owner to ``request.user``.
 
-    The upstream ``ApiKeyAuth.authenticate`` only returns a boolean, so the
-    consumer identity is lost. Per-asset access checks (access requests) need the
-    actual user, so we resolve the key to its owner and set ``request.user``.
+    The resolved ``APIKey`` itself is returned so Django Ninja exposes it as
+    ``request.auth``. Usage tracking can then use the key's non-secret prefix for
+    per-app attribution without re-resolving the raw X-API-Key header.
+    ``request.user`` is still set to the key's owner for per-asset access checks
+    and user-scoped permissions.
     """
 
     def authenticate(self, request, key):
@@ -50,7 +52,7 @@ class ApiKeyAuth(BaseApiKeyAuth):
             raise AuthenticationError(message=str(_("API key has expired.")))
 
         request.user = api_key.user
-        return api_key.user
+        return api_key
 
 
 class PublicAuth:

@@ -56,7 +56,7 @@ class RecitationFolderRepository:
             is_default=is_default,
         )
 
-    def update_folder(self, folder: RecitationFolder, fields: dict[str, str | None]) -> RecitationFolder:
+    def update_folder(self, folder: RecitationFolder, fields: dict[str, str | bool | None]) -> RecitationFolder:
         """Apply field updates to a folder and save it."""
         for field, value in fields.items():
             setattr(folder, field, value)

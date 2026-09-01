@@ -47,6 +47,10 @@ settings.DATABASES.update(
             "OPTIONS": {
                 "sslmode": "require",
                 "connect_timeout": 10,
+                # Bounds any query (incl. migrate, which shares this settings module) to 30s
+                # so a slow/stuck query fails fast instead of wedging an async worker for
+                # gunicorn's full --timeout 600.
+                "options": "-c statement_timeout=30000",
             },
         }
     }

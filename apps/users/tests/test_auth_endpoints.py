@@ -1,7 +1,7 @@
 from django.utils.crypto import get_random_string
 
 from apps.core.tests.base import BaseTestCase
-from apps.users.models import User
+from apps.users.models import Developer, User
 
 
 class AuthEndpointsTestCase(BaseTestCase):
@@ -106,9 +106,18 @@ class UserProfileTestCase(BaseTestCase):
     def test_update_profile_where_partial_data_should_return_200_with_partial_update(
         self,
     ):
-        """Test partial profile update with only some fields"""
+        """Test partial profile update with only some fields preserves all existing profile fields"""
         # Arrange
         self.authenticate_user(user=self.user)
+        self.user.name = "Initial Name"
+        self.user.save(update_fields=["name"])
+
+        dev, _ = Developer.objects.get_or_create(user=self.user)
+        dev.bio = "Initial Bio"
+        dev.project_summary = "Existing Summary"
+        dev.project_url = "https://example.com"
+        dev.job_title = "Backend Engineer"
+        dev.save()
 
         data = {"bio": "Only bio updated"}
 
@@ -121,9 +130,40 @@ class UserProfileTestCase(BaseTestCase):
 
         # Check updated data
         self.assertEqual(data["bio"], response_data["bio"])
-        # Other fields should remain unchanged
-        self.assertEqual("", response_data["project_summary"])
-        self.assertEqual("", response_data["project_url"])
+        # All other fields should remain unchanged and preserved
+        self.assertEqual("Initial Name", response_data["name"])
+        self.assertEqual("Existing Summary", response_data["project_summary"])
+        self.assertEqual("https://example.com", response_data["project_url"])
+        self.assertEqual("Backend Engineer", response_data["job_title"])
+
+        # Verify DB preservation
+        self.user.refresh_from_db()
+        self.user.developer_profile.refresh_from_db()
+        self.assertEqual("Initial Name", self.user.name)
+        self.assertEqual("Existing Summary", self.user.developer_profile.project_summary)
+        self.assertEqual("https://example.com", self.user.developer_profile.project_url)
+        self.assertEqual("Backend Engineer", self.user.developer_profile.job_title)
+
+    def test_update_profile_where_explicit_null_clears_field(self):
+        """Test sending explicit JSON null clears the corresponding field to empty string"""
+        # Arrange
+        self.authenticate_user(user=self.user)
+        dev, _ = Developer.objects.get_or_create(user=self.user)
+        dev.job_title = "Lead Architect"
+        dev.save()
+
+        data = {"job_title": None}
+
+        # Act
+        response = self.client.put("/cms-api/auth/profile/", data=data, format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        response_data = response.json()
+        self.assertEqual("", response_data["job_title"])
+
+        self.user.developer_profile.refresh_from_db()
+        self.assertEqual("", self.user.developer_profile.job_title)
 
     def test_update_profile_where_unauthenticated_should_return_401(self):
         """Test profile update without authentication returns error"""

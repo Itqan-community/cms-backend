@@ -342,3 +342,27 @@ class PublicRecitationFolderFilteringTest(BaseTestCase):
         # Assert
         self.assertEqual(0, default_items[0]["ayahs_timings"][0]["start_ms"])
         self.assertEqual(250, echo_items[0]["ayahs_timings"][0]["start_ms"])
+
+    def test_list_recitations_should_omit_hidden_folders(self):
+        self.echo_folder.is_visible = False
+        self.echo_folder.save(update_fields=["is_visible"])
+        self.authenticate_client(self.app)
+
+        response = self.client.get("/recitations/")
+
+        self.assertEqual(200, response.status_code, response.content)
+        recitation = next(r for r in response.json()["results"] if r["id"] == self.asset.id)
+        self.assertEqual(
+            [{"name": "Default", "slug": "default", "is_default": True}],
+            recitation["folders"],
+        )
+
+    def test_list_tracks_where_folder_hidden_should_return_404(self):
+        self.echo_folder.is_visible = False
+        self.echo_folder.save(update_fields=["is_visible"])
+        self.authenticate_client(self.app)
+
+        response = self.client.get(f"/recitations/{self.asset.id}/?folder=with-echo")
+
+        self.assertEqual(404, response.status_code, response.content)
+        self.assertEqual("folder_not_found", response.json()["error_name"])

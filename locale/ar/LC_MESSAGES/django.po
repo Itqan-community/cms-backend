@@ -104,6 +104,30 @@ msgstr "لم يتم العثور على الترجمة بالمعرّف {slug}."
 msgid "Provided asset_id {asset_id} does not match translation asset id {expected_id}."
 msgstr "المعرّف asset_id {asset_id} المُقدَّم لا يطابق معرّف أصل الترجمة {expected_id}."
 
+msgid "You must be signed in to get personalized recommendations."
+msgstr "يجب تسجيل الدخول للحصول على التوصيات الشخصية."
+
+msgid "No tafsir available"
+msgstr "لا يوجد تفسير متاح"
+
+#, python-brace-format
+msgid "This tafsir does not provide text for surah {surah}, ayah {ayah}."
+msgstr "هذا التفسير لا يوفّر نصًّا للسورة {surah}، الآية {ayah}."
+
+msgid "No translation available"
+msgstr "لا توجد ترجمة متاحة"
+
+#, python-brace-format
+msgid "This translation does not provide text for surah {surah}, ayah {ayah}."
+msgstr "هذه الترجمة لا توفّر نصًّا للسورة {surah}، الآية {ayah}."
+
+msgid "No recitation available"
+msgstr "لا توجد تلاوة متاحة"
+
+#, python-brace-format
+msgid "No recitation track available for surah {surah}."
+msgstr "لا يوجد مقطع تلاوة متاح للسورة {surah}."
+
 msgid "Please select at least one file."
 msgstr "يرجى اختيار ملف واحد على الأقل."
 
@@ -164,6 +188,9 @@ msgstr "مسودة"
 
 msgid "Ready"
 msgstr "جاهز"
+
+msgid "Published"
+msgstr "منشور"
 
 msgid "Twassut"
 msgstr "توسط"
@@ -253,6 +280,43 @@ msgstr "الأصل {asset_id} غير موجود"
 msgid "Folder {folder_id} not found for asset {asset_id}"
 msgstr "لم يتم العثور على المجلد {folder_id} للأصل {asset_id}"
 
+#, python-brace-format
+msgid "Recitation track {track_id} not found."
+msgstr "لم يتم العثور على مسار التلاوة {track_id}."
+
+#, python-brace-format
+msgid "Failed to read source audio from storage for track {track_id}."
+msgstr "تعذرت قراءة الصوت المصدر من التخزين لمسار التلاوة {track_id}."
+
+#, python-brace-format
+msgid "Failed to store sliced ayah audio for track {track_id}."
+msgstr "تعذر تخزين المقطع الصوتي للآية لمسار التلاوة {track_id}."
+
+#, python-brace-format
+msgid "Track {track_id} has invalid ayah timing for {ayah_key}: {reason}"
+msgstr "يحتوي مسار التلاوة {track_id} على توقيت غير صالح للآية {ayah_key}: {reason}"
+
+#, python-brace-format
+msgid "Ayah key {ayah_key} has an invalid format; expected \"surah:ayah\" using decimal digits."
+msgstr "مفتاح الآية {ayah_key} بتنسيق غير صالح؛ التنسيق المتوقع هو \"surah:ayah\" باستخدام أرقام عشرية."
+
+#, python-brace-format
+msgid "Ayah key {ayah_key} must be canonical \"{surah}:{ayah}\" with no leading zeros."
+msgstr "يجب أن يكون مفتاح الآية {ayah_key} بالصيغة القياسية \"{surah}:{ayah}\" دون أصفار بادئة."
+
+msgid "ffmpeg binary not found; audio slicing is unavailable."
+msgstr "لم يتم العثور على ملف ffmpeg التنفيذي؛ تقطيع الصوت غير متاح."
+
+msgid "Slicing ayah audio timed out."
+msgstr "انتهت المهلة الزمنية لتقطيع صوت الآية."
+
+msgid "Failed to slice ayah audio with ffmpeg."
+msgstr "تعذر تقطيع صوت الآية باستخدام ffmpeg."
+
+#, python-brace-format
+msgid "Folder {folder_id} not found for asset {asset_id}"
+msgstr "لم يتم العثور على المجلد {folder_id} للأصل {asset_id}"
+
 msgid "Not found."
 msgstr "غير موجود."
 
@@ -271,6 +335,24 @@ msgstr "مطلوب مفتاح API للوصول إلى محتوى هذا الأص
 
 msgid "You don't have an approved access request for this asset."
 msgstr "ليس لديك طلب وصول مُوافَق عليه لهذا الأصل."
+
+#, python-brace-format
+msgid "{category} with slug {slug} not found."
+msgstr "لم يتم العثور على {category} بالمعرّف {slug}."
+
+#, python-brace-format
+msgid "Version with id {id} not found."
+msgstr "الإصدار ذو المعرف {id} غير موجود."
+
+msgid "Only draft versions can be edited."
+msgstr "لا يمكن تعديل سوى إصدارات المسودة."
+
+#, python-brace-format
+msgid "Could not parse the uploaded content file: {reason}"
+msgstr "تعذر تحليل ملف المحتوى المرفوع: {reason}"
+
+msgid "There are no changes to publish."
+msgstr "لا توجد تغييرات للنشر."
 
 #, python-brace-format
 msgid "Publisher with id {id} not found."
@@ -339,6 +421,32 @@ msgstr "لم يتم العثور على الرواية بالمعرّف {id}."
 
 msgid "Cannot delete Recitation because they are referenced through other objects"
 msgstr "لا يمكن حذف التلاوة لأن هناك بيانات أخرى مرتبطة بها"
+
+#, python-brace-format
+msgid "Folder with slug {slug} not found."
+msgstr "لم يتم العثور على مجلد بالمعرف {slug}."
+
+msgid "This recitation has no default folder."
+msgstr "لا يحتوي هذا التسجيل على مجلد افتراضي."
+
+msgid "Folder name (Arabic or English) is required."
+msgstr "اسم المجلد (بالعربية أو الإنجليزية) مطلوب."
+
+msgid "Use another folder's set-default action instead of clearing the default flag."
+msgstr "استخدم إجراء تعيين الافتراضي لمجلد آخر بدلاً من إلغاء علامة الافتراضي."
+
+msgid "The default folder cannot be hidden."
+msgstr "لا يمكن إخفاء المجلد الافتراضي."
+
+msgid "A hidden folder cannot be set as the default."
+msgstr "لا يمكن تعيين مجلد مخفي كمجلد افتراضي."
+
+msgid "The default folder cannot be deleted."
+msgstr "لا يمكن حذف المجلد الافتراضي."
+
+#, python-brace-format
+msgid "Folder {folder_id} does not belong to asset {asset_id}."
+msgstr "المجلد {folder_id} لا ينتمي إلى الأصل {asset_id}."
 
 #, python-brace-format
 msgid "Folder with slug {slug} not found."
@@ -595,11 +703,11 @@ msgstr "هذا المستخدم عضو بالفعل لدى هذا الناشر."
 msgid "Only pending invitations can be resent."
 msgstr "يمكن إعادة إرسال الدعوات المعلقة فقط."
 
-msgid "Only pending invitations can be cancelled."
-msgstr "يمكن إلغاء الدعوات المعلقة فقط."
-
 msgid "This invitation is no longer valid."
 msgstr "هذه الدعوة لم تعد صالحة."
+
+msgid "Only pending invitations can be cancelled."
+msgstr "يمكن إلغاء الدعوات المعلقة فقط."
 
 msgid "Sura does not exist."
 msgstr "السورة غير موجودة."

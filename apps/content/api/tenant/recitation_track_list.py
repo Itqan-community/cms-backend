@@ -62,6 +62,8 @@ def list_recitation_tracks(request: Request, asset_id: int, folder: str | None =
     if not asset:
         raise Http404(str(_("No asset matches the given query.")))
 
-    tracks = service.get_asset_tracks(asset_id, request.publisher_q("asset__publisher"), folder=folder)
+    tracks = service.get_asset_tracks(
+        asset_id, request.publisher_q("asset__publisher"), folder=folder, require_visible_folder=True
+    )
 
     return tracks

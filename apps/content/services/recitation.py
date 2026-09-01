@@ -21,6 +21,8 @@ if TYPE_CHECKING:
 
 
 class RecitationService:
+    """Business layer for recitation reads/writes; owns validation and 404 semantics."""
+
     def __init__(self, repo: RecitationRepository | None = None) -> None:
         self.repo = repo or RecitationRepository()
 
@@ -34,6 +36,7 @@ class RecitationService:
         return self.repo.list_recitations_qs(publisher_q, filters_dict, annotate_surahs_count=annotate_surahs_count)
 
     def _get_recitation_or_404(self, recitation_slug: str, publisher_q: Q | None = None) -> Asset:
+        """Fetch a READY recitation by slug or raise the canonical 404 error."""
         recitation = self.repo.get_recitation(recitation_slug, publisher_q=publisher_q)
         if recitation is None:
             raise ItqanError(
@@ -216,6 +219,7 @@ class RecitationService:
         publisher_q: Q,
         prefetch_timings: bool = False,
         folder: str | None = None,
+        require_visible_folder: bool = False,
     ) -> QuerySet[RecitationSurahTrack]:
         """
         Business Logic: Retrieve tracks for a specific asset if it belongs to the publisher.
@@ -228,7 +232,7 @@ class RecitationService:
         """
         folder_id = None
         if folder is not None:
-            matched = find_folder_by_token(asset_id, folder)
+            matched = find_folder_by_token(asset_id, folder, require_visible=require_visible_folder)
             if matched is None:
                 raise ItqanError(
                     error_name="folder_not_found",
@@ -250,3 +254,17 @@ class RecitationService:
         """
         filters_dict = filters.model_dump(exclude_none=True) if filters and hasattr(filters, "model_dump") else {}
         return self.repo.list_reciters_qs(publisher_q, filters_dict=filters_dict)
+
+    def get_sample_recitation(self, publisher_q: Q | None = None) -> Asset | None:
+        """
+        Business Logic: First complete READY recitation for the public media-player
+        sample endpoint (None when no qualifying recitation exists).
+        """
+        return self.repo.get_sample_asset(publisher_q)
+
+    def get_sample_track(self, asset_id: int, surah_number: int) -> RecitationSurahTrack | None:
+        """
+        Business Logic: The default-folder track covering one surah of the
+        sample recitation, with ayah timings prefetched in playback order.
+        """
+        return self.repo.get_default_track_for_surah(asset_id, surah_number)

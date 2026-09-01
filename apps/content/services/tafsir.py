@@ -10,6 +10,7 @@ from django.utils.translation import gettext as _
 from apps.content.models import Asset as AssetModel, AssetVersion, CategoryChoice, LicenseChoice
 from apps.content.repositories.tafsir import TafsirRepository
 from apps.content.services.asset_access import guard_restrict_for_tenant
+from apps.content.services.asset_content import import_uploaded_file_into_entries
 from apps.content.tasks import notify_asset_version_created
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
@@ -242,6 +243,8 @@ class TafsirService:
             summary=summary,
             file=file,
         )
+        if file:
+            import_uploaded_file_into_entries(version)
         logger.info(f"Tafsir version created [version_id={version.pk}, asset_id={asset.pk}, slug={tafsir_slug}]")
         notify_asset_version_created.delay(version.pk)
         return version
@@ -258,6 +261,8 @@ class TafsirService:
         """
         version = self._get_tafsir_version_or_404(tafsir_slug, version_id, publisher_q=publisher_q)
         updated = self.repo.update_tafsir_version(version, fields=fields)
+        if fields.get("file_url"):
+            import_uploaded_file_into_entries(updated)
         logger.info(f"Tafsir version updated [version_id={version_id}, asset_slug={tafsir_slug}]")
         return updated
 

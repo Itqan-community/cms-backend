@@ -217,3 +217,35 @@ class InvitationServiceTest(BaseTestCase):
         with self.assertRaises(ItqanError) as ctx:
             self.service.accept_invitation(raw)
         self.assertEqual("invalid_invitation", ctx.exception.error_name)
+
+    def test_resend_where_member_is_none_should_raise_invalid_invitation(self):
+        # Arrange: a pending invitation whose member row was deleted (member_id -> NULL).
+        member, inv, _, _ = self._create(email="orphan-resend@example.com")
+        member.delete()
+        inv.refresh_from_db()
+        self.assertIsNone(inv.member_id)
+        self.assertEqual(PublisherMemberInvitation.StatusChoice.PENDING, inv.status)
+
+        # Act
+        with self.assertRaises(ItqanError) as ctx:
+            self.service.resend(inv, self.inviter)
+
+        # Assert
+        self.assertEqual("invalid_invitation", ctx.exception.error_name)
+        self.assertEqual(400, ctx.exception.status_code)
+
+    def test_cancel_where_member_is_none_should_raise_invalid_invitation(self):
+        # Arrange: a pending invitation whose member row was deleted (member_id -> NULL).
+        member, inv, _, _ = self._create(email="orphan-cancel@example.com")
+        member.delete()
+        inv.refresh_from_db()
+        self.assertIsNone(inv.member_id)
+        self.assertEqual(PublisherMemberInvitation.StatusChoice.PENDING, inv.status)
+
+        # Act
+        with self.assertRaises(ItqanError) as ctx:
+            self.service.cancel(inv, self.inviter)
+
+        # Assert
+        self.assertEqual("invalid_invitation", ctx.exception.error_name)
+        self.assertEqual(400, ctx.exception.status_code)
