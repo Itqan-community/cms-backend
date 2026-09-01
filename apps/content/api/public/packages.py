@@ -56,17 +56,17 @@ _MANIFEST_ERRORS = {
 }
 
 
-def _resolve_package_to_schema(result: ResolvedPackage) -> dict:
+def _resolve_package_to_schema(result: ResolvedPackage) -> PackageVersionOut:
     file_url = result.asset_version.file_url
-    return {
-        "slug": result.asset.slug,
-        "asset_version_id": result.asset_version.pk,
-        "resolved_version": result.canonical_version,
-        "asset_name": result.asset.name,
-        "publisher_id": result.asset.publisher_id,
-        "publisher_name": result.asset.publisher.name if result.asset.publisher_id else None,
-        "download_url": file_url.url if file_url else None,
-    }
+    return PackageVersionOut(
+        slug=result.asset.slug,
+        asset_version_id=result.asset_version.pk,
+        resolved_version=result.canonical_version,
+        asset_name=result.asset.name,
+        publisher_id=result.asset.publisher_id,
+        publisher_name=result.asset.publisher.name if result.asset.publisher_id else None,
+        download_url=file_url.url if file_url else None,
+    )
 
 
 @router.post(
