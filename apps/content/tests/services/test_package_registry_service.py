@@ -416,6 +416,13 @@ class ResolveSingleTests(BaseTestCase):
         self.assertEqual("unsatisfiable_version_constraint", ctx.exception.error_name)
         self.assertEqual(422, ctx.exception.status_code)
 
+    def test_resolve_where_unsatisfiable_error_does_not_leak_version_list(self):
+        _create_asset_with_versions(self.publisher, "no-leak", ["1.0.0", "1.1.0"])
+        with self.assertRaises(ItqanError) as ctx:
+            self.service.resolve_single("no-leak", "^9.0.0")
+        self.assertNotIn("Available:", ctx.exception.message)
+        self.assertNotIn("1.0.0", ctx.exception.message)
+
     # --- draft versions excluded ---
 
     def test_resolve_where_draft_version_excluded(self):
@@ -573,7 +580,7 @@ class ZeroMajorCaretTests(BaseTestCase):
     def test_caret_0_0_1_excludes_0_0_2(self):
         c = _parse_constraint("^0.0.1")
         self.assertTrue(_matches_constraint(_parse_candidate_version("0.0.1"), c))
-        self.assertTrue(_matches_constraint(_parse_candidate_version("0.0.1"), c))
+        self.assertFalse(_matches_constraint(_parse_candidate_version("0.0.0"), c))
         self.assertFalse(_matches_constraint(_parse_candidate_version("0.0.2"), c))
 
     def test_caret_0_0_0_range(self):

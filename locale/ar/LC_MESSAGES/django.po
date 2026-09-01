@@ -417,7 +417,9 @@ msgid "Version {version} not found for asset {slug}."
 msgstr ""
 
 #, python-brace-format
-msgid "No eligible PACKAGE version for asset {slug} satisfies constraint '{constraint}' ({range_desc}). Available: {available}."
+msgid ""
+"No eligible PACKAGE version for asset {slug} satisfies constraint "
+"'{constraint}' ({range_desc})."
 msgstr ""
 
 msgid "Recitation name (Arabic or English) is required."

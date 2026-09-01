@@ -1,6 +1,6 @@
 from typing import Literal
 
-from ninja import Query, Schema
+from ninja import Field, Query, Schema
 
 from apps.content.services.asset_access import enforce_asset_access_on_public_api
 from apps.content.services.package_registry import PackageRegistryService, ResolvedPackage
@@ -28,7 +28,7 @@ class PackageSingleOut(Schema):
 
 
 class PackageManifestEntryIn(Schema):
-    assets: dict[str, str]
+    assets: dict[str, str] = Field(..., max_length=100)
 
 
 class PackageManifestOut(Schema):
@@ -88,7 +88,7 @@ def resolve_package_manifest(request: Request, body: PackageManifestEntryIn):
 
     entity_ids: list[int] = []
     entity_names: list[str] = []
-    publisher_ids: list[int | None] = []
+    publisher_ids: list[int] = []
     publisher_names: list[str | None] = []
     seen_publishers: set[int] = set()
     for r in results:
