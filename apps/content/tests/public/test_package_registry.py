@@ -297,3 +297,12 @@ class PackageManifestResolveAPITests(BaseTestCase):
             content_type="application/json",
         )
         self.assertEqual(400, response.status_code, response.content)
+
+    def test_resolve_manifest_where_exceeds_100_entries_returns_400(self):
+        assets = {f"pkg-{i:03d}": "1.0.0" for i in range(101)}
+        response = self.client.post(
+            "/packages/resolve/manifest/",
+            data={"assets": assets},
+            content_type="application/json",
+        )
+        self.assertEqual(400, response.status_code, response.content)

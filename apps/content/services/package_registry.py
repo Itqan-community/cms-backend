@@ -351,17 +351,14 @@ class PackageRegistryService:
 
         # 8. Range constraint: no match -> 422.
         if not matching:
-            available_names = [sv.to_canonical_string() for _, sv in valid_candidates]
             raise ItqanError(
                 error_name="unsatisfiable_version_constraint",
                 message=_(
-                    "No eligible PACKAGE version for asset {slug} satisfies constraint "
-                    "'{constraint}' ({range_desc}). Available: {available}."
+                    "No eligible PACKAGE version for asset {slug} satisfies constraint '{constraint}' ({range_desc})."
                 ).format(
                     slug=slug,
                     constraint=version_constraint,
                     range_desc=_constraint_range_desc(constraint),
-                    available=", ".join(available_names) if available_names else "none",
                 ),
                 status_code=422,
             )

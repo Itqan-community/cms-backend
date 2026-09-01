@@ -13,10 +13,14 @@ class PackageRegistryRepository:
     """
 
     def get_asset_by_slug(self, slug: str) -> Asset | None:
-        return Asset.objects.filter(
-            slug=slug,
-            restricted_for_tenant=False,
-        ).first()
+        return (
+            Asset.objects.select_related("publisher")
+            .filter(
+                slug=slug,
+                restricted_for_tenant=False,
+            )
+            .first()
+        )
 
     def get_eligible_package_versions(self, asset: Asset) -> QuerySet[AssetVersion]:
         return (
