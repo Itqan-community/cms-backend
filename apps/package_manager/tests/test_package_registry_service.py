@@ -11,6 +11,7 @@ from apps.package_manager.services.package_registry import (
     _matches_constraint,
     _parse_candidate_version,
     _parse_constraint,
+    _parse_semver,
 )
 from apps.publishers.models import Publisher
 
@@ -171,6 +172,20 @@ class CanonicalizationTests(BaseTestCase):
         with self.assertRaises(ValueError):
             _canonicalize_version("01.2.0")
 
+    def test_parse_semver_rejects_prerelease_leading_zero(self):
+        self.assertIsNone(_parse_semver("1.0.0-01"))
+        self.assertIsNone(_parse_semver("1.0.0-alpha.01"))
+        self.assertIsNone(_parse_semver("1.0.0-001"))
+
+    def test_parse_semver_accepts_valid_prerelease(self):
+        sv = _parse_semver("1.0.0-0")
+        self.assertIsNotNone(sv)
+        self.assertEqual("0", sv.prerelease)
+
+        sv2 = _parse_semver("1.0.0-alpha.1")
+        self.assertIsNotNone(sv2)
+        self.assertEqual("alpha.1", sv2.prerelease)
+
     def test_build_metadata_rejected(self):
         with self.assertRaises(ValueError):
             _canonicalize_version("1.2.3+build1")
@@ -230,6 +245,24 @@ class ConstraintParsingTests(BaseTestCase):
         c = _parse_constraint("1.2.3-beta.1")
         self.assertEqual(c.kind, "exact")
         self.assertEqual(c.base.to_canonical_string(), "1.2.3-beta.1")
+
+    def test_exact_prerelease_leading_zero_rejected(self):
+        with self.assertRaises(ValueError):
+            _parse_constraint("1.0.0-01")
+        with self.assertRaises(ValueError):
+            _parse_constraint("1.0.0-alpha.01")
+        with self.assertRaises(ValueError):
+            _parse_constraint("1.0.0-001")
+
+    def test_exact_prerelease_valid_zero_accepted(self):
+        c = _parse_constraint("1.0.0-0")
+        self.assertEqual(c.kind, "exact")
+        self.assertEqual("0", c.base.prerelease)
+
+    def test_exact_prerelease_alpha_dot_1_accepted(self):
+        c = _parse_constraint("1.0.0-alpha.1")
+        self.assertEqual(c.kind, "exact")
+        self.assertEqual("alpha.1", c.base.prerelease)
 
     def test_ranged_prerelease_rejected(self):
         with self.assertRaises(ValueError):
@@ -513,6 +546,19 @@ class ResolveSingleTests(BaseTestCase):
             self.service.resolve_single("collision-out-of-range", "~4.5.0")
         self.assertEqual("canonical_version_collision", ctx.exception.error_name)
         self.assertEqual(422, ctx.exception.status_code)
+
+    def test_resolve_where_collision_error_message_does_not_disclose_versions(self):
+        """Collision message must not expose version names (information disclosure fix)."""
+        asset = _make_asset(self.publisher, slug="collision-leak")
+        _make_version(asset, name="1.2")
+        _make_version(asset, name="1.2.0")
+        with self.assertRaises(ItqanError) as ctx:
+            self.service.resolve_single("collision-leak", "~4.5.0")
+        self.assertEqual("canonical_version_collision", ctx.exception.error_name)
+        msg = ctx.exception.message
+        self.assertNotIn("1.2", msg)
+        self.assertNotIn("1.2.0", msg)
+        self.assertIn("collision-leak", msg)
 
     # --- restricted_for_tenant ---
 

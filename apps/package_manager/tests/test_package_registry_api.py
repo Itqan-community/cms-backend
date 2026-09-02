@@ -126,6 +126,18 @@ class PackageSingleResolveAPITests(BaseTestCase):
         body = response.json()
         self.assertEqual("authentication_required", body["error_name"])
 
+    @override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=True)
+    def test_resolve_single_collision_error_does_not_disclose_versions(self):
+        """Collision error must not expose version names to anonymous users (info-disclosure fix)."""
+        asset = self._create_asset_with_versions("controlled-collision", ["1.2", "1.2.0"], is_open_access=False)
+        response = self.client.get(f"/packages/resolve/{asset.slug}/?version=~1.0.0")
+        self.assertEqual(422, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("canonical_version_collision", body["error_name"])
+        body_str = response.content.decode()
+        self.assertNotIn("1.2", body_str)
+        self.assertNotIn("1.2.0", body_str)
+
     @skipUnless(False, "API key auth not functional in this test environment; see test_api_key_auth.py")
     @override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=True)
     def test_resolve_single_where_restricted_api_key_no_access_returns_403(self):
