@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('content', '0051_assetversion_content_edited'),
+        ('content', '0052_merge_20260826_1701'),
     ]
 
     operations = [
