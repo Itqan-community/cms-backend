@@ -359,6 +359,10 @@ class RecitationService:
                 status_code=404,
             )
 
+        # Media URL generation: Follows the project-wide storage architecture
+        # (MediaFileStorage / CLOUDFLARE_R2_PUBLIC_BASE_URL). Access control is enforced
+        # at the API gateway layer via enforce_asset_access_on_public_api before this URL
+        # is returned to consumers, matching recitation_track_list and samples endpoints.
         base_url = getattr(settings, "CLOUDFLARE_R2_PUBLIC_BASE_URL", CLOUDFLARE_R2_PUBLIC_BASE_URL).rstrip("/")
         slice_key = f"uploads/assets/{asset_id}/recitations/{folder_obj.id}/{surah_number:03}/ayah_{ayah_number:03}.mp3"
         audio_url = f"{base_url}/media/{slice_key}"
