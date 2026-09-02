@@ -118,6 +118,14 @@ class PackageSingleResolveAPITests(BaseTestCase):
         response = self.client.get("/packages/resolve/open-pkg/?version=1.0.0")
         self.assertEqual(200, response.status_code, response.content)
 
+    def test_resolve_single_where_open_access_collision_returns_422(self):
+        """Open-access asset with colliding versions still detects collision (no security override)."""
+        self._create_asset_with_versions("open-collision", ["1.2", "1.2.0"], is_open_access=True)
+        response = self.client.get("/packages/resolve/open-collision/?version=~1.0.0")
+        self.assertEqual(422, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("canonical_version_collision", body["error_name"])
+
     @override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=True)
     def test_resolve_single_where_restricted_anonymous_returns_401(self):
         asset = self._create_asset_with_versions("restricted-pkg", ["1.0.0"], is_open_access=False)
@@ -128,15 +136,42 @@ class PackageSingleResolveAPITests(BaseTestCase):
 
     @override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=True)
     def test_resolve_single_collision_error_does_not_disclose_versions(self):
-        """Collision error must not expose version names to anonymous users (info-disclosure fix)."""
+        """Access check runs before resolver; restricted asset returns 401, not 422."""
         asset = self._create_asset_with_versions("controlled-collision", ["1.2", "1.2.0"], is_open_access=False)
         response = self.client.get(f"/packages/resolve/{asset.slug}/?version=~1.0.0")
-        self.assertEqual(422, response.status_code, response.content)
+        self.assertEqual(401, response.status_code, response.content)
         body = response.json()
-        self.assertEqual("canonical_version_collision", body["error_name"])
+        self.assertEqual("authentication_required", body["error_name"])
         body_str = response.content.decode()
         self.assertNotIn("1.2", body_str)
         self.assertNotIn("1.2.0", body_str)
+
+    @override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=True)
+    def test_resolve_single_where_restricted_anonymous_collision_returns_401(self):
+        """Restricted asset with colliding versions returns 401, NOT 422."""
+        asset = self._create_asset_with_versions("restricted-collision", ["1.2", "1.2.0"], is_open_access=False)
+        response = self.client.get(f"/packages/resolve/{asset.slug}/?version=~1.0.0")
+        self.assertEqual(401, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("authentication_required", body["error_name"])
+
+    @override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=True)
+    def test_resolve_single_where_restricted_anonymous_invalid_constraint_returns_401(self):
+        """Restricted asset with invalid constraint returns 401, NOT 422."""
+        asset = self._create_asset_with_versions("restricted-invalid", ["1.0.0"], is_open_access=False)
+        response = self.client.get(f"/packages/resolve/{asset.slug}/?version=>=1.0.0")
+        self.assertEqual(401, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("authentication_required", body["error_name"])
+
+    @override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=True)
+    def test_resolve_single_where_restricted_anonymous_unsatisfiable_returns_401(self):
+        """Restricted asset with unsatisfiable constraint returns 401, NOT 422."""
+        asset = self._create_asset_with_versions("restricted-unsat", ["1.0.0"], is_open_access=False)
+        response = self.client.get(f"/packages/resolve/{asset.slug}/?version=^9.0.0")
+        self.assertEqual(401, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("authentication_required", body["error_name"])
 
     @skipUnless(False, "API key auth not functional in this test environment; see test_api_key_auth.py")
     @override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=True)
@@ -258,6 +293,52 @@ class PackageManifestResolveAPITests(BaseTestCase):
         body = response.json()
         self.assertEqual("access_denied", body["error_name"])
         self.assertNotIn("results", body)
+
+    @override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=True)
+    def test_resolve_manifest_where_restricted_anonymous_returns_401_before_resolution(self):
+        """Access check runs before version resolution; restricted asset returns 401."""
+        self._create_asset_with_versions("open-pkg", ["1.0.0"], is_open_access=True)
+        self._create_asset_with_versions(
+            "restricted-manifest",
+            ["1.2", "1.2.0"],
+            is_open_access=False,
+        )
+        response = self.client.post(
+            "/packages/resolve/manifest/",
+            data={"assets": {"open-pkg": "^1.0.0", "restricted-manifest": "~1.0.0"}},
+            content_type="application/json",
+        )
+        self.assertEqual(401, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("authentication_required", body["error_name"])
+        body_str = response.content.decode()
+        self.assertNotIn("1.2", body_str)
+        self.assertNotIn("1.2.0", body_str)
+
+    @override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=True)
+    def test_resolve_manifest_where_restricted_collision_returns_401_not_422(self):
+        """Manifest restricted asset with colliding versions returns 401, NOT 422."""
+        self._create_asset_with_versions("restricted-collision", ["1.2", "1.2.0"], is_open_access=False)
+        response = self.client.post(
+            "/packages/resolve/manifest/",
+            data={"assets": {"restricted-collision": "~1.0.0"}},
+            content_type="application/json",
+        )
+        self.assertEqual(401, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("authentication_required", body["error_name"])
+
+    def test_resolve_manifest_where_open_access_collision_still_returns_422(self):
+        """Open-access asset with colliding versions still gets 422 (no security override)."""
+        self._create_asset_with_versions("open-collision", ["1.2", "1.2.0"], is_open_access=True)
+        response = self.client.post(
+            "/packages/resolve/manifest/",
+            data={"assets": {"open-collision": "~1.0.0"}},
+            content_type="application/json",
+        )
+        self.assertEqual(422, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("canonical_version_collision", body["error_name"])
 
     def test_resolve_manifest_all_accessible_returns_200(self):
         self._create_asset_with_versions("pkg-a", ["1.0.0"])
