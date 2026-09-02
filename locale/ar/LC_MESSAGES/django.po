@@ -400,28 +400,6 @@ msgstr "لا يمكن حذف المصحف لأن هناك بيانات أخرى 
 msgid "Version with id {id} not found for mushaf {slug}."
 msgstr "الإصدار ذو المعرف {id} غير موجود للمصحف {slug}."
 
-#, python-brace-format
-msgid "Asset {slug} has no eligible PACKAGE versions with valid SemVer names."
-msgstr ""
-
-#, python-brace-format
-msgid "Canonical version collision for asset {slug}: versions '{existing}' and '{duplicate}' both canonicalize to '{canonical}'."
-msgstr ""
-
-#, python-brace-format
-msgid "Invalid version constraint '{constraint}': {reason}."
-msgstr ""
-
-#, python-brace-format
-msgid "Version {version} not found for asset {slug}."
-msgstr ""
-
-#, python-brace-format
-msgid ""
-"No eligible PACKAGE version for asset {slug} satisfies constraint "
-"'{constraint}' ({range_desc})."
-msgstr ""
-
 msgid "Recitation name (Arabic or English) is required."
 msgstr "اسم التلاوة (بالعربية أو الإنجليزية) مطلوب."
 
@@ -650,6 +628,26 @@ msgstr "يجب أن ينتهي اسم الملف برقم السورة من 3 أ
 #, python-brace-format
 msgid "Surah number is out of range 1..114: {num}"
 msgstr "رقم السورة خارج النطاق 1..114: {num}"
+
+#, python-brace-format
+msgid "Asset {slug} has no eligible PACKAGE versions with valid SemVer names."
+msgstr "لا توجد إصدارات PACKAGE مؤهلة للمورد {slug} بأسماء SemVer صالحة."
+
+#, python-brace-format
+msgid "Canonical version collision for asset {slug}: versions '{existing}' and '{duplicate}' both canonicalize to '{canonical}'."
+msgstr "تعارض في الإصدار المكافئ للمورد {slug}: الإصداران '{existing}' و '{duplicate}' يُرجَعان إلى '{canonical}'."
+
+#, python-brace-format
+msgid "Invalid version constraint '{constraint}': {reason}."
+msgstr "قيد الإصدار '{constraint}' غير صالح: {reason}."
+
+#, python-brace-format
+msgid "Version {version} not found for asset {slug}."
+msgstr "الإصدار {version} غير موجود للمورد {slug}."
+
+#, python-brace-format
+msgid "No eligible PACKAGE version for asset {slug} satisfies constraint '{constraint}' ({range_desc})."
+msgstr "لا يوجد إصدار PACKAGE مؤهل للمورد {slug} يحقق القيد '{constraint}' ({range_desc})."
 
 msgid "You cannot change your own membership."
 msgstr "لا يمكنك تغيير عضويتك الخاصة."

@@ -1,8 +1,10 @@
 from model_bakery import baker
 
 from apps.content.models import Asset, AssetVersion, Distribution, VersionStateChoice
-from apps.content.repositories.package_registry import PackageRegistryRepository
-from apps.content.services.package_registry import (
+from apps.core.ninja_utils.errors import ItqanError
+from apps.core.tests.base import BaseTestCase
+from apps.package_manager.repositories.package_registry import PackageRegistryRepository
+from apps.package_manager.services.package_registry import (
     PackageRegistryService,
     _canonicalize_version,
     _constraint_range_desc,
@@ -10,8 +12,6 @@ from apps.content.services.package_registry import (
     _parse_candidate_version,
     _parse_constraint,
 )
-from apps.core.ninja_utils.errors import ItqanError
-from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 
 # ---------------------------------------------------------------------------

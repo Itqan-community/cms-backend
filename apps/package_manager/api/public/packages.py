@@ -3,11 +3,11 @@ from typing import Literal
 from ninja import Field, Query, Schema
 
 from apps.content.services.asset_access import enforce_asset_access_on_public_api
-from apps.content.services.package_registry import PackageRegistryService, ResolvedPackage
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.package_manager.services.package_registry import PackageRegistryService, ResolvedPackage
 from apps.usage_tracking.decorators.track_usage import track_extra, track_usage
 
 router = ItqanRouter(tags=[NinjaTag.PACKAGES])
@@ -35,27 +35,6 @@ class PackageManifestOut(Schema):
     results: list[PackageVersionOut]
 
 
-_SINGLE_ERRORS = {
-    401: NinjaErrorResponse[Literal["authentication_required"]],
-    403: NinjaErrorResponse[Literal["access_denied"]],
-    404: NinjaErrorResponse[Literal["asset_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
-    422: NinjaErrorResponse[Literal["invalid_version_constraint"]]
-    | NinjaErrorResponse[Literal["no_eligible_package_versions"]]
-    | NinjaErrorResponse[Literal["unsatisfiable_version_constraint"]]
-    | NinjaErrorResponse[Literal["canonical_version_collision"]],
-}
-
-_MANIFEST_ERRORS = {
-    401: NinjaErrorResponse[Literal["authentication_required"]],
-    403: NinjaErrorResponse[Literal["access_denied"]],
-    404: NinjaErrorResponse[Literal["asset_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
-    422: NinjaErrorResponse[Literal["invalid_version_constraint"]]
-    | NinjaErrorResponse[Literal["no_eligible_package_versions"]]
-    | NinjaErrorResponse[Literal["unsatisfiable_version_constraint"]]
-    | NinjaErrorResponse[Literal["canonical_version_collision"]],
-}
-
-
 def _resolve_package_to_schema(result: ResolvedPackage) -> PackageVersionOut:
     file_url = result.asset_version.file_url
     return PackageVersionOut(
@@ -73,7 +52,13 @@ def _resolve_package_to_schema(result: ResolvedPackage) -> PackageVersionOut:
     "packages/resolve/manifest/",
     response={
         200: PackageManifestOut,
-        **_MANIFEST_ERRORS,
+        401: NinjaErrorResponse[Literal["authentication_required"]],
+        403: NinjaErrorResponse[Literal["access_denied"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
+        422: NinjaErrorResponse[Literal["invalid_version_constraint"]]
+        | NinjaErrorResponse[Literal["no_eligible_package_versions"]]
+        | NinjaErrorResponse[Literal["unsatisfiable_version_constraint"]]
+        | NinjaErrorResponse[Literal["canonical_version_collision"]],
     },
 )
 @track_usage(entity_type="package")
@@ -89,7 +74,7 @@ def resolve_package_manifest(request: Request, body: PackageManifestEntryIn):
     entity_ids: list[int] = []
     entity_names: list[str] = []
     publisher_ids: list[int] = []
-    publisher_names: list[str | None] = []
+    publisher_names: list[str] = []
     seen_publishers: set[int] = set()
     for r in results:
         entity_ids.append(r.asset.id)
@@ -98,7 +83,7 @@ def resolve_package_manifest(request: Request, body: PackageManifestEntryIn):
         if pub_id is not None and pub_id not in seen_publishers:
             seen_publishers.add(pub_id)
             publisher_ids.append(pub_id)
-            publisher_names.append(r.asset.publisher.name if r.asset.publisher_id else None)
+            publisher_names.append(r.asset.publisher.name)
 
     track_extra(
         request,
@@ -114,7 +99,13 @@ def resolve_package_manifest(request: Request, body: PackageManifestEntryIn):
     "packages/resolve/{slug}/",
     response={
         200: PackageSingleOut,
-        **_SINGLE_ERRORS,
+        401: NinjaErrorResponse[Literal["authentication_required"]],
+        403: NinjaErrorResponse[Literal["access_denied"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
+        422: NinjaErrorResponse[Literal["invalid_version_constraint"]]
+        | NinjaErrorResponse[Literal["no_eligible_package_versions"]]
+        | NinjaErrorResponse[Literal["unsatisfiable_version_constraint"]]
+        | NinjaErrorResponse[Literal["canonical_version_collision"]],
     },
 )
 @track_usage(entity_type="package")
@@ -133,7 +124,7 @@ def resolve_package_single(
         entity_ids=[result.asset.id],
         entity_names=[result.asset.name],
         publisher_ids=[result.asset.publisher_id] if result.asset.publisher_id else [],
-        publisher_names=[result.asset.publisher.name if result.asset.publisher_id else None],
+        publisher_names=[result.asset.publisher.name] if result.asset.publisher_id else [],
     )
 
     return 200, PackageSingleOut(result=_resolve_package_to_schema(result))
