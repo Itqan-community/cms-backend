@@ -270,7 +270,7 @@ msgstr "توقيت غير صالح للآية {ayah_number}: النهاية قب
 
 #, python-brace-format
 msgid "Folder {folder_id} not found for asset {asset_id}."
-msgstr "لم يتم العثور على المجلد {folder_id} للأصل {asset_id}."
+msgstr ""
 
 #, python-brace-format
 msgid "Asset {asset_id} not found"

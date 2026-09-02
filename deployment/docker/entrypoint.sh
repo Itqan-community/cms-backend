@@ -33,9 +33,12 @@ if [ "${RUN_PREP:-0}" = "1" ]; then
     python manage.py compilemessages --locale ar
 fi
 
-echo "Starting Gunicorn (ASGI, Uvicorn workers)..."
-exec gunicorn config.asgi:application \
+echo "Starting Gunicorn (WSGI, gthread workers)..."
+exec gunicorn config.wsgi:application \
     --bind 0.0.0.0:8000 \
     --workers "${GUNICORN_WORKERS:-10}" \
-    --worker-class config.workers.DjangoUvicornWorker \
-    --timeout 600
+    --worker-class gthread \
+    --threads "${GUNICORN_THREADS:-6}" \
+    --max-requests 1000 \
+    --max-requests-jitter 100 \
+    --timeout 60
