@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('content', '0049_recitation_track_folder_constraints'),
+        ('content', '0050_editorialrecommendation_editorialrecommendationasset_and_more'),
         ('quran', '0001_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
