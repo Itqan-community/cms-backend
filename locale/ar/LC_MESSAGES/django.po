@@ -270,7 +270,7 @@ msgstr "توقيت غير صالح للآية {ayah_number}: النهاية قب
 
 #, python-brace-format
 msgid "Folder {folder_id} not found for asset {asset_id}."
-msgstr "لم يتم العثور على المجلد {folder_id} للأصل {asset_id}."
+msgstr ""
 
 #, python-brace-format
 msgid "Asset {asset_id} not found"
@@ -312,10 +312,6 @@ msgstr "انتهت المهلة الزمنية لتقطيع صوت الآية."
 
 msgid "Failed to slice ayah audio with ffmpeg."
 msgstr "تعذر تقطيع صوت الآية باستخدام ffmpeg."
-
-#, python-brace-format
-msgid "Folder {folder_id} not found for asset {asset_id}"
-msgstr "لم يتم العثور على المجلد {folder_id} للأصل {asset_id}"
 
 msgid "Not found."
 msgstr "غير موجود."
@@ -440,23 +436,6 @@ msgstr "لا يمكن إخفاء المجلد الافتراضي."
 
 msgid "A hidden folder cannot be set as the default."
 msgstr "لا يمكن تعيين مجلد مخفي كمجلد افتراضي."
-
-msgid "The default folder cannot be deleted."
-msgstr "لا يمكن حذف المجلد الافتراضي."
-
-#, python-brace-format
-msgid "Folder {folder_id} does not belong to asset {asset_id}."
-msgstr "المجلد {folder_id} لا ينتمي إلى الأصل {asset_id}."
-
-#, python-brace-format
-msgid "Folder with slug {slug} not found."
-msgstr "لم يتم العثور على مجلد بالمعرف {slug}."
-
-msgid "This recitation has no default folder."
-msgstr "لا يحتوي هذا التسجيل على مجلد افتراضي."
-
-msgid "Folder name (Arabic or English) is required."
-msgstr "اسم المجلد (بالعربية أو الإنجليزية) مطلوب."
 
 msgid "The default folder cannot be deleted."
 msgstr "لا يمكن حذف المجلد الافتراضي."
