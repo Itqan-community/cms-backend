@@ -100,11 +100,19 @@ def _parse_semver(version_str: str) -> SemVer | None:
     m = _SEMVER_RE.match(version_str)
     if m is None:
         return None
+
+    # SemVer 2.0.0 §11: numeric identifiers MUST NOT include leading zeros.
+    prerelease_raw = m.group("prerelease")
+    if prerelease_raw is not None:
+        for ident in prerelease_raw.split("."):
+            if ident.isdigit() and len(ident) > 1 and ident.startswith("0"):
+                return None
+
     return SemVer(
         major=int(m.group("major")),
         minor=int(m.group("minor")),
         patch=int(m.group("patch")),
-        prerelease=m.group("prerelease"),
+        prerelease=prerelease_raw,
     )
 
 
@@ -199,6 +207,12 @@ def _parse_constraint(constraint_str: str) -> VersionConstraint:
         raise ValueError(f"Invalid version in constraint: {constraint_str}")
 
     if kind == "exact":
+        # SemVer 2.0.0 §11: numeric identifiers MUST NOT include leading zeros.
+        if "-" in raw_version:
+            prerelease_part = raw_version.split("-", 1)[1]
+            for ident in prerelease_part.split("."):
+                if ident.isdigit() and len(ident) > 1 and ident.startswith("0"):
+                    raise ValueError(f"Leading zeros not allowed in prerelease identifier: {ident}")
         return VersionConstraint(kind="exact", base=semver)
 
     if kind == "caret":
@@ -301,15 +315,7 @@ class PackageRegistryService:
             if canon in seen_canonicals:
                 raise ItqanError(
                     error_name="canonical_version_collision",
-                    message=_(
-                        "Canonical version collision for asset {slug}: "
-                        "versions '{existing}' and '{duplicate}' both canonicalize to '{canonical}'."
-                    ).format(
-                        slug=slug,
-                        existing=seen_canonicals[canon].name,
-                        duplicate=av.name,
-                        canonical=canon,
-                    ),
+                    message=_("Canonical version collision detected for asset {slug}.").format(slug=slug),
                     status_code=422,
                 )
             seen_canonicals[canon] = av

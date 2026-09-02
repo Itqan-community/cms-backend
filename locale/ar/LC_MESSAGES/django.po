@@ -634,8 +634,8 @@ msgid "Asset {slug} has no eligible PACKAGE versions with valid SemVer names."
 msgstr "لا توجد إصدارات PACKAGE مؤهلة للمورد {slug} بأسماء SemVer صالحة."
 
 #, python-brace-format
-msgid "Canonical version collision for asset {slug}: versions '{existing}' and '{duplicate}' both canonicalize to '{canonical}'."
-msgstr "تعارض في الإصدار المكافئ للمورد {slug}: الإصداران '{existing}' و '{duplicate}' يُرجَعان إلى '{canonical}'."
+msgid "Canonical version collision detected for asset {slug}."
+msgstr "تم اكتشاف تعارض في الإصدار المكافئ للمورد {slug}."
 
 #, python-brace-format
 msgid "Invalid version constraint '{constraint}': {reason}."
