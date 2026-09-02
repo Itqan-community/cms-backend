@@ -2,6 +2,7 @@ from typing import Literal
 
 from ninja import Field, Query, Schema
 
+from apps.content.models import Asset
 from apps.content.services.asset_access import enforce_asset_access_on_public_api
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
@@ -64,12 +65,18 @@ def _resolve_package_to_schema(result: ResolvedPackage) -> PackageVersionOut:
 @track_usage(entity_type="package")
 def resolve_package_manifest(request: Request, body: PackageManifestEntryIn):
     service = PackageRegistryService()
-    results = service.resolve_manifest(body.assets)
 
-    # Enforce access for every resolved asset atomically — no partial result
-    # is returned if any single asset fails the access check.
-    for result in results:
-        enforce_asset_access_on_public_api(getattr(request, "user", None), result.asset)
+    # Access check BEFORE any version resolution — iterate every slug, look up
+    # the Asset, enforce access, and collect the pre-fetched objects so that
+    # resolve_manifest can reuse them without a second query per slug.
+    pre_fetched_assets: dict[str, Asset] = {}
+    user = getattr(request, "user", None)
+    for slug in body.assets:
+        asset = service.find_asset(slug)
+        enforce_asset_access_on_public_api(user, asset)
+        pre_fetched_assets[slug] = asset
+
+    results = service.resolve_manifest(body.assets, assets=pre_fetched_assets)
 
     entity_ids: list[int] = []
     entity_names: list[str] = []
@@ -115,9 +122,10 @@ def resolve_package_single(
     version: str = Query(..., description="SemVer constraint or exact pin (e.g. '^1.2.0', '2.4.1')"),
 ):
     service = PackageRegistryService()
-    result = service.resolve_single(slug, version)
 
-    enforce_asset_access_on_public_api(getattr(request, "user", None), result.asset)
+    asset = service.find_asset(slug)
+    enforce_asset_access_on_public_api(getattr(request, "user", None), asset)
+    result = service.resolve_single(slug, version, asset=asset)
 
     track_extra(
         request,

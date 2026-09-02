@@ -275,12 +275,8 @@ class PackageRegistryService:
     def __init__(self, repo: PackageRegistryRepository | None = None) -> None:
         self.repo = repo or PackageRegistryRepository()
 
-    def resolve_single(self, slug: str, version_constraint: str) -> ResolvedPackage:
-        """Resolve a single asset slug + constraint to a concrete AssetVersion.
-
-        Raises ItqanError on failure with the appropriate error_name and status_code.
-        """
-        # 1. Asset lookup.
+    def find_asset(self, slug: str) -> Asset:
+        """Look up an Asset by slug. Raises 404 if not found or tenant-restricted."""
         asset = self.repo.get_asset_by_slug(slug)
         if asset is None:
             raise ItqanError(
@@ -288,6 +284,28 @@ class PackageRegistryService:
                 message=_("Asset with slug {slug} not found.").format(slug=slug),
                 status_code=404,
             )
+        return asset
+
+    def resolve_single(
+        self,
+        slug: str,
+        version_constraint: str,
+        *,
+        asset: Asset | None = None,
+    ) -> ResolvedPackage:
+        """Resolve a single asset slug + constraint to a concrete AssetVersion.
+
+        Raises ItqanError on failure with the appropriate error_name and status_code.
+        """
+        # 1. Asset lookup (reuse pre-fetched asset when available).
+        if asset is None:
+            asset = self.repo.get_asset_by_slug(slug)
+            if asset is None:
+                raise ItqanError(
+                    error_name="asset_not_found",
+                    message=_("Asset with slug {slug} not found.").format(slug=slug),
+                    status_code=404,
+                )
 
         # 2. Obtain eligible PACKAGE versions.
         eligible_qs = self.repo.get_eligible_package_versions(asset)
@@ -378,7 +396,12 @@ class PackageRegistryService:
             requested_constraint=version_constraint,
         )
 
-    def resolve_manifest(self, entries: dict[str, str]) -> list[ResolvedPackage]:
+    def resolve_manifest(
+        self,
+        entries: dict[str, str],
+        *,
+        assets: dict[str, Asset] | None = None,
+    ) -> list[ResolvedPackage]:
         """Resolve a full manifest dependency set atomically.
 
         Accepts a mapping of asset slug → version constraint and resolves each
@@ -401,7 +424,8 @@ class PackageRegistryService:
         results: list[ResolvedPackage] = []
         for slug in ordered_slugs:
             constraint = entries[slug]
-            results.append(self.resolve_single(slug, constraint))
+            pre_fetched = assets.get(slug) if assets is not None else None
+            results.append(self.resolve_single(slug, constraint, asset=pre_fetched))
 
         return results
 
