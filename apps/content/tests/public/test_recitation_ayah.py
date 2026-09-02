@@ -294,3 +294,19 @@ class RecitationAyahAudioPublicApiTest(BaseTestCase):
         second_resp = self.client.get(f"/recitations/{self.asset.id}/ayah/2:255/")
         self.assertEqual(200, second_resp.status_code, second_resp.content)
         self.assertEqual(first_resp.json(), second_resp.json())
+
+    @override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=True)
+    def test_get_ayah_audio_where_asset_becomes_private_should_invalidate_cache_and_require_auth(self):
+        """Verify that modifying an asset's visibility invalidates cache and requires auth on subsequent requests."""
+        # Act 1: Initial public request warms the cache
+        resp1 = self.client.get(f"/recitations/{self.asset.id}/ayah/2:255/")
+        self.assertEqual(200, resp1.status_code, resp1.content)
+
+        # Act 2: Admin modifies asset to private
+        self.asset.is_open_access = False
+        self.asset.save()
+
+        # Act 3: Subsequent unauthenticated request must be rejected (401), not served from stale cache
+        resp2 = self.client.get(f"/recitations/{self.asset.id}/ayah/2:255/")
+        self.assertEqual(401, resp2.status_code, resp2.content)
+        self.assertEqual("authentication_required", resp2.json().get("error_name"))

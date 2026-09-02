@@ -57,6 +57,9 @@ def get_recitation_ayah(
     """
     Public developers API endpoint to return audio URL and metadata for a single Ayah.
     """
+    # Key on the requested folder token rather than the resolved folder: resolving it
+    # requires a DB read before the cache lookup, defeating the warm-cache zero-query
+    # guarantee. Matches the established pattern in recitation_track_list.
     token = folder_cache_token(folder)
     _resp_key = recitation_ayah_response_cache_key(asset_id, token, ayah_key)
     _meta_key = recitation_asset_meta_cache_key(asset_id)
