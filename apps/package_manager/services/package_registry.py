@@ -6,8 +6,8 @@ import re
 from django.utils.translation import gettext as _
 
 from apps.content.models import Asset, AssetVersion
-from apps.content.repositories.package_registry import PackageRegistryRepository
 from apps.core.ninja_utils.errors import ItqanError
+from apps.package_manager.repositories.package_registry import PackageRegistryRepository
 
 # ---------------------------------------------------------------------------
 # SemVer primitives (stdlib-only, no external dependency)
