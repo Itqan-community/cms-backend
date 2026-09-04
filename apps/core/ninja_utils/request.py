@@ -12,6 +12,7 @@ class Request(HttpRequest):
 
     auth: User
     user: User
+    itqan_user_id: str | None
     publisher_domain: Domain | None
     publisher: Publisher | None
     publisher_q: PublisherQ

@@ -1,3 +1,5 @@
+import re
+
 from allauth.headless.contrib.ninja.security import XSessionTokenAuth
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
@@ -6,7 +8,42 @@ from ninja.errors import AuthenticationError
 from ninja_keys.auth import ApiKeyAuth as BaseApiKeyAuth
 from oauth2_provider.contrib.rest_framework import OAuth2Authentication
 
+from apps.core.ninja_utils.errors import ItqanError
 from apps.users.models import User
+
+ITQAN_USER_ID_HEADER = "X-Itqan-User-Id"
+ITQAN_USER_ID_MAX_LENGTH = 64
+ITQAN_USER_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$")
+
+
+def _validate_itqan_user_id(request):
+    value = request.META.get("HTTP_X_ITQAN_USER_ID")
+    if value is None:
+        setattr(request, "itqan_user_id", None)
+        return None
+
+    candidate = value.strip()
+    if not candidate:
+        raise ItqanError(
+            "invalid_itqan_user_id",
+            _("The end-user identifier cannot be empty."),
+            status_code=422,
+        )
+    if len(candidate) > ITQAN_USER_ID_MAX_LENGTH:
+        raise ItqanError(
+            "invalid_itqan_user_id",
+            _("The end-user identifier is too long."),
+            status_code=422,
+        )
+    if not ITQAN_USER_ID_RE.fullmatch(candidate):
+        raise ItqanError(
+            "invalid_itqan_user_id",
+            _("The end-user identifier contains invalid characters."),
+            status_code=422,
+        )
+
+    setattr(request, "itqan_user_id", candidate)
+    return candidate
 
 
 class OAuth2Auth(OAuth2Authentication):
@@ -64,6 +101,8 @@ class PublicAuth:
     }
 
     def __call__(self, request):
+        _validate_itqan_user_id(request)
+
         methods = []
         if settings.ENABLE_API_KEY_AUTH:
             methods.append(ApiKeyAuth())

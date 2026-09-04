@@ -29,6 +29,10 @@ variable or secret manager, never commit it to source control or expose it in \
 client-side code.
 
 Send the key in the `X-API-Key` header on each request.
+
+For per-end-user usage metrics, include an opaque identifier in the
+`X-Itqan-User-Id` header. This value is developer-chosen, never contains PII,
+and is treated as opaque metadata for usage accounting only.
 """
 
 developers_api = create_ninja_api(

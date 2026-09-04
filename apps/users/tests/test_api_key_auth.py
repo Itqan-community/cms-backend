@@ -83,3 +83,4 @@ class ApiKeyWorkflowTestCase(BaseTestCase):
         body = res.json()
         self.assertEqual("authentication_error", body["error_name"])
         self.assertIn("expired", body["message"].lower())
+
