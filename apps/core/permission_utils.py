@@ -10,10 +10,13 @@ def permission_class(permission_code_name) -> type[permissions.BasePermission]:
 
     CustomPermission.permission_code_name = permission_code_name
 
-    def rep(cls):
-        return f"Permission({permission_code_name})"
-
-    CustomPermission.__class__.__repr__ = rep
+    # Give the generated class a readable name. NOTE: do NOT implement this by
+    # assigning __repr__ on CustomPermission.__class__ — that is the shared
+    # BasePermission metaclass, so it would override the repr of every DRF
+    # permission class in the process (see issue #456). Renaming the class
+    # itself keeps the default type repr, which renders __name__.
+    CustomPermission.__name__ = f"Permission({permission_code_name})"
+    CustomPermission.__qualname__ = CustomPermission.__name__
 
     return CustomPermission
 
