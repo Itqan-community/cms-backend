@@ -4,8 +4,15 @@ from apps.users.models import User
 
 
 def permission_class(permission_code_name) -> type[permissions.BasePermission]:
+    """Build a DRF permission class granting access only to users holding ``permission_code_name``.
+
+    Each call returns a fresh class named after the permission code (e.g. ``Permission(portal_read_reciter)``)
+    so reprs stay unique and informative without mutating DRF's shared BasePermissionMetaclass.
+    """
+
     class CustomPermission(permissions.BasePermission):
         def has_permission(self, request, view):
+            """Grant access when the request's user holds the wrapped permission."""
             return check_permission(request.user, permission_code_name)
 
     CustomPermission.permission_code_name = permission_code_name
@@ -21,6 +28,11 @@ def permission_class(permission_code_name) -> type[permissions.BasePermission]:
 
 
 def check_permission(user: User, permission: str, raise_exception: bool = False) -> bool:
+    """Return whether ``user`` holds ``permission``.
+
+    Unauthenticated or inactive users never hold a permission. With ``raise_exception=True``
+    a PermissionDenied is raised instead of returning False.
+    """
     if not (user and user.is_authenticated and user.is_active):
         return False
 
