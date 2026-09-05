@@ -23,6 +23,15 @@ fi
 #
 # For standalone/manual runs of this image, set RUN_PREP=1 to run them here.
 if [ "${RUN_PREP:-0}" = "1" ]; then
+    if [ -n "${AUDIT_DB_HOST}" ]; then
+        echo "Waiting for audit database at ${AUDIT_DB_HOST}:${AUDIT_DB_PORT:-5432}..."
+        until nc -z "${AUDIT_DB_HOST}" "${AUDIT_DB_PORT:-5432}"; do
+            echo "Audit database not ready, waiting..."
+            sleep 1
+        done
+        echo "Audit database is ready!"
+    fi
+
     echo "Running database migrations..."
     python manage.py migrate --noinput
     python manage.py migrate --database=audit --noinput
