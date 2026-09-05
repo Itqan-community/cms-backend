@@ -25,6 +25,7 @@ fi
 if [ "${RUN_PREP:-0}" = "1" ]; then
     echo "Running database migrations..."
     python manage.py migrate --noinput
+    python manage.py migrate --database=audit --noinput
 
     echo "Collecting static files..."
     python manage.py collectstatic --noinput

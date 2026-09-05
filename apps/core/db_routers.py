@@ -4,7 +4,13 @@ AUDIT_APP_LABEL = "simple_history"
 class AuditRouter:
     """
     Routes django-simple-history models to the "audit" database,
-    while all other models are routed to the "default" database.
+    other models are routed to the "default" database.
+
+    NOTE: Every `HistoricalRecords()` call MUST be instantiated with
+    `app="simple_history"` (matching AUDIT_APP_LABEL above).
+
+    TODO: Configure HistoricalRecords so `history_user`is stored as a plain user id
+    (no FK/constraint) instead
     """
 
     def db_for_read(self, model, **hints):

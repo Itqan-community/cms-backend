@@ -121,6 +121,9 @@ DATABASES = {
             "connect_timeout": 60,
         },
     },
+
+    # Note: "audit" is backed up independently from "default".
+    # Retention is handled in #434.
     "audit": {
         "ENGINE": config("AUDIT_DB_ENGINE", default="django.db.backends.postgresql"),
         "NAME": config("AUDIT_DB_NAME", default="itqan_audit"),
