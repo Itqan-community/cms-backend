@@ -1,3 +1,9 @@
+## v0.15.0 (2026-09-06)
+
+### Feat
+
+- **client-version**: add middleware and logging for client identification via headers
+
 ## v0.14.0 (2026-08-30)
 
 ### Feat
