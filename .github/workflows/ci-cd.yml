@@ -182,6 +182,7 @@ jobs:
                 echo "SAML_IDP_BASE_URL=${{ vars.STAGING_SAML_IDP_BASE_URL }}";
                 echo "XMLSEC_BINARY=${{ vars.STAGING_XMLSEC_BINARY }}";
                 echo "ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=${{ vars.STAGING_ENFORCE_ASSET_ACCESS_ON_PUBLIC_API }}";
+                echo "GUNICORN_WORKERS=${{ vars.STAGING_GUNICORN_WORKERS }}";
               } > deployment/docker/.env
             elif [ "${{ env.ENV_NAME }}" = "production" ]; then
               {

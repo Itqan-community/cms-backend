@@ -7,7 +7,15 @@ from ninja import Field, FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime
 
-from apps.content.models import Asset, CategoryChoice, LicenseChoice, RecitationFolder, Riwayah, StatusChoice
+from apps.content.models import (
+    Asset,
+    CategoryChoice,
+    LicenseChoice,
+    RecitationFolder,
+    Riwayah,
+    StatusChoice,
+    VersionStateChoice,
+)
 from apps.content.services.recitation import RecitationService
 from apps.content.services.recitation_folder_resolution import sorted_asset_folders
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
@@ -57,6 +65,7 @@ class FolderOut(Schema):
     name: str
     slug: str
     is_default: bool
+    is_visible: bool
 
 
 class RecitationListOut(Schema):
@@ -125,10 +134,10 @@ class RecitationDetailOut(Schema):
         # This top-level field keeps pointing at the default folder's export so the
         # existing contract is unchanged; per-folder URLs come from the folders list.
         default_folder = next((f for f in obj.recitation_folders.all() if f.is_default), None)
-        versions = list(obj.versions.all())
+        versions = list(obj.versions.filter(state=VersionStateChoice.PUBLISHED))
 
         version = None
-        if default_folder:
+        if default_folder and default_folder.is_visible:
             version = next((v for v in versions if v.name == default_folder.slug), None)
         if version is None:
             # Recitations created before folders may still have a legacy version row.

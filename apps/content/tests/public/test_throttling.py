@@ -210,3 +210,58 @@ class ThrottleLoggingTest(BaseTestCase):
         # Assert
         self.assertEqual("public_user", context["throttle_scope"])
         self.assertNotIn("is_authenticated", context)
+
+    def test_throttle_logging_concurrent_requests_isolation(self):
+        import threading
+
+        cache.clear()
+        user_alice = User.objects.create_user(email="alice@test.com", name="Alice")
+        user_bob = User.objects.create_user(email="bob@test.com", name="Bob")
+
+        throttle = PublicApiUserRateThrottle()
+        throttle.num_requests = 1
+        throttle.duration = 60
+
+        req_alice = _make_request(user=user_alice, remote_addr="10.0.0.1")
+        req_bob = _make_request(user=user_bob, remote_addr="10.0.0.2")
+
+        # Exhaust Alice's budget so next call will fail
+        throttle.allow_request(req_alice)
+
+        alice_cached_event = threading.Event()
+        bob_cached_event = threading.Event()
+        alice_logs = []
+
+        def run_alice():
+            # 1. Alice evaluates cache key
+            throttle.get_cache_key(req_alice)
+            # 2. Signal that Alice has cached her request context
+            alice_cached_event.set()
+            # 3. Wait until Bob has definitely called get_cache_key on the shared singleton
+            self.assertTrue(bob_cached_event.wait(timeout=2.0))
+            # 4. Now Alice triggers throttle failure
+            with self.assertLogs("apps.core.ninja_utils.throttle", level="ERROR") as logs:
+                throttle.throttle_failure()
+                alice_logs.extend(logs.records)
+
+        def run_bob():
+            # 1. Wait for Alice to cache her context first
+            self.assertTrue(alice_cached_event.wait(timeout=2.0))
+            # 2. Bob evaluates cache key concurrently on the shared singleton
+            throttle.get_cache_key(req_bob)
+            # 3. Signal to Alice that Bob has finished storing his context
+            bob_cached_event.set()
+
+        t1 = threading.Thread(target=run_alice)
+        t2 = threading.Thread(target=run_bob)
+
+        # Act
+        t1.start()
+        t2.start()
+        t1.join()
+        t2.join()
+
+        # Assert: Alice's log must contain Alice's email, not Bob's
+        self.assertTrue(len(alice_logs) > 0)
+        self.assertEqual("alice@test.com", alice_logs[0].user_email)
+        self.assertEqual("10.0.0.1", alice_logs[0].remote_addr)

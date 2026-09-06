@@ -47,7 +47,7 @@ jobs:
           fi
 
       # ---------- Backend deps for OpenAPI export ----------
-      - uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
 
@@ -92,7 +92,12 @@ jobs:
 
       # ---------- Deploy to Cloudflare Pages ----------
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
+        # GitHub withholds repository secrets from fork pull_request events by
+        # design (security boundary). Skip the deploy when this is a fork PR so
+        # the workflow does not fail on a missing API token.  Deployment still
+        # runs for push/workflow_dispatch events and for same-repo PRs.
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN_FOR_DOCS_WEBSITE }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID_FOR_DOCS_WEBSITE }}

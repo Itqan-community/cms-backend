@@ -29,6 +29,7 @@ class FolderOut(Schema):
     name_en: str | None = None
     slug: str
     is_default: bool
+    is_visible: bool
     tracks_count: int = 0
     created_at: AwareDatetime
     updated_at: AwareDatetime
@@ -46,6 +47,8 @@ class FolderCreateIn(Schema):
 class FolderPatchIn(Schema):
     name_ar: str | None = Field(default=None, max_length=255)
     name_en: str | None = Field(default=None, max_length=255)
+    is_visible: bool | None = None
+    is_default: bool | None = None
 
 
 # --- Helpers ---
@@ -107,7 +110,14 @@ def create_folder(request: Request, recitation_slug: str, data: FolderCreateIn):
     "recitations/{recitation_slug}/folders/{folder_slug}/",
     response={
         200: FolderOut,
-        400: NinjaErrorResponse[Literal["folder_name_required"]],
+        400: NinjaErrorResponse[
+            Literal[
+                "folder_name_required",
+                "cannot_hide_default_folder",
+                "cannot_unset_default_folder",
+                "cannot_set_hidden_folder_as_default",
+            ]
+        ],
         401: NinjaErrorResponse[Literal["authentication_error"]],
         403: NinjaErrorResponse[Literal["permission_denied"]],
         404: NinjaErrorResponse[Literal["recitation_not_found"]] | NinjaErrorResponse[Literal["folder_not_found"]],

@@ -5,7 +5,7 @@ from ninja import File, Form, Schema, UploadedFile
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
-from apps.content.models import Asset, AssetVersion, CategoryChoice, StatusChoice
+from apps.content.models import Asset, AssetVersion, CategoryChoice, StatusChoice, VersionStateChoice
 from apps.content.services.translation import TranslationService
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.permission_required import permission_required
@@ -74,7 +74,7 @@ def list_translation_versions(request: Request, translation_slug: str):
             message=_("Translation with slug {slug} not found.").format(slug=translation_slug),
             status_code=404,
         ) from exc
-    return AssetVersion.objects.filter(asset=asset).order_by("-created_at")
+    return AssetVersion.objects.filter(asset=asset, state=VersionStateChoice.PUBLISHED).order_by("-created_at")
 
 
 @router.post(

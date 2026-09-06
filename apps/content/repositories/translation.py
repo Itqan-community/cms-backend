@@ -3,14 +3,30 @@ from __future__ import annotations
 from typing import Any
 
 from django.db import transaction
+from django.db.models import Q
 
 from apps.content.models import Asset, AssetVersion, CategoryChoice, LicenseChoice, StatusChoice
 
 
 class TranslationRepository:
+    """ORM access for translation assets and their versions (read + write)."""
+
     def __init__(self) -> None:
         self.asset_model = Asset
         self.asset_version_model = AssetVersion
+
+    def get_ready_asset(self, publisher_q: Q | None = None) -> Asset | None:
+        """
+        First READY translation asset (lowest id), optionally scoped by publisher membership.
+        """
+        qs = self.asset_model.objects.select_related("publisher").filter(
+            category=CategoryChoice.TRANSLATION,
+            status=StatusChoice.READY,
+            restricted_for_tenant=False,
+        )
+        if publisher_q is not None:
+            qs = qs.filter(publisher_q)
+        return qs.order_by("id").first()
 
     def create_translation(
         self,
@@ -99,6 +115,7 @@ class TranslationRepository:
         asset.delete()
 
     def get_translation_version(self, asset: Asset, version_id: int) -> AssetVersion | None:
+        """Fetch one version of a translation asset, or None when it does not exist."""
         try:
             return self.asset_version_model.objects.get(asset=asset, id=version_id)
         except self.asset_version_model.DoesNotExist:

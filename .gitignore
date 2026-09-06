@@ -340,6 +340,7 @@ media/
 .ProjectMgmt/
 .chief/
 .claude/
+.kilo/
 /temp/*
 /CLAUDE.md
 scripts/.mixpanel_traffic.env
