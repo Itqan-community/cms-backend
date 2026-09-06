@@ -27,6 +27,10 @@ class WatchedRepositoryRepository:
             status=WatchedRepository.StatusChoice.OPTED_IN,
         ).order_by("id")
 
+    def list_by_installation(self, installation_id: int) -> QuerySet[WatchedRepository]:
+        """All rows granted through one GitHub App installation, any status."""
+        return WatchedRepository.objects.filter(installation_id=installation_id).order_by("id")
+
     def create_or_update_opt_in(
         self,
         *,

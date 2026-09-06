@@ -438,6 +438,7 @@ GITHUB_APP_PRIVATE_KEY = read_file("GITHUB_APP_PRIVATE_KEY")
 GITHUB_API_BASE_URL = config("GITHUB_API_BASE_URL", default="https://api.github.com")
 GITHUB_HTTP_TIMEOUT_SECONDS = config("GITHUB_HTTP_TIMEOUT_SECONDS", cast=float, default=10)
 GITHUB_TOKEN_CACHE_SKEW_SECONDS = config("GITHUB_TOKEN_CACHE_SKEW_SECONDS", cast=int, default=60)
+GITHUB_WEBHOOK_SECRET = config("GITHUB_WEBHOOK_SECRET", default="")
 
 # ========================
 # SAML IDP (djangosaml2idp)
