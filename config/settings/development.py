@@ -79,3 +79,18 @@ if importlib.util.find_spec("debug_toolbar"):
     # Place it right after the security middleware if present
     insert_at = 1 if "django.middleware.security.SecurityMiddleware" in settings.MIDDLEWARE else 0
     settings.MIDDLEWARE.insert(insert_at, "debug_toolbar.middleware.DebugToolbarMiddleware")
+
+# =========================
+# Database
+# =========================
+# libpq TCP keepalives: keep idle connections alive through NAT/port proxies
+# (e.g. Windows Docker Desktop) and make dead peers fail fast instead of
+# stalling until connect_timeout=60s during long pytest --reuse-db sessions.
+settings.DATABASES["default"]["OPTIONS"].update(
+    {
+        "keepalives": 1,
+        "keepalives_idle": 30,
+        "keepalives_interval": 10,
+        "keepalives_count": 3,
+    }
+)
