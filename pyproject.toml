@@ -34,6 +34,7 @@ dependencies = [
     "ninja-keys>=1.0.1",
     "Pillow>=10.3.0",
     "psycopg2-binary==2.9.11",
+    "pyjwt==2.12.*",
     "python-decouple==3.8",
     "redis==6.4.0",
     "scalar-ninja==0.3.0",
