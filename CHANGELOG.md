@@ -1,3 +1,56 @@
+## v0.16.0 (2026-09-06)
+
+### Feat
+
+- **api**: implement real sample data endpoints (#464)
+- **recitations**: add folder visibility and set-default portal support
+- log entry replacement details and return count from entry processing
+- enforce draft edit tracking and restrict publishing unedited drafts
+- extend version handling with draft rebuilding, export, and file processing
+- editing part 1
+- add support for file upload with versioning in asset creation APIs
+- **content**: add similar-content recommendations (step 1 of #226)
+- **recitations**: add ayah slicing storage sizing
+- **recitations**: add ayah audio slicing
+- **usage-tracking**: track API key prefix as application identity
+- introduce folder management for recitations
+- **quran**: add surah to ayah to word hierarchy tree api
+- ensure Arabic catalog is compiled during tests and runtime
+- implement assignable group logic and update translations
+
+### Fix
+
+- **migrations**: rename migration files and update dependencies
+- **i18n**: update Arabic translations and remove unused entries
+- **publishers**: handle invitations with missing member (#470)
+- **migrations**: renumber is_visible migration to 0053 on staging
+- **i18n**: remove trailing whitespace from django.po header
+- **i18n**: add Arabic translations for folder visibility errors
+- **recitations**: soft-unpublish folder timings without deleting JSON file
+- **ci**: align migration 0050 with model and pass pre-commit
+- **content**: resolve redis test client host from REDIS_URL, not django-redis
+- **content**: resolve redis test client host from django-redis instead of hardcoding localhost
+- **content**: restore missing closing brace in celery beat schedule
+- **content**: correct import ordering in recommendation tests
+- **content**: enforce access control and private caching on public recitation tracks
+- **recitations**: add Arabic slicing error translations
+- **recitations**: satisfy lint and localization checks
+- **recitations**: clamp fades for short ayah slices
+- **recitations**: address ayah slicing review feedback
+- **recitations**: address ayah slicing review feedback
+- **recitations**: preserve source audio parameters when slicing
+- **recitations**: address audio slicing review feedback
+- **core**: prevent race condition and data leak in throttle logging
+- **users**: prevent data loss on partial developer profile updates
+- **quran**: address hierarchy pr review feedback
+- adjust translation and publisher permission labels and hierarchy logic
+- refine logging format and update static markup nosec flag
+
+### Perf
+
+- **content**: resolve N+1 queries in internal asset endpoints
+- **docker**: optimize Dockerfile.backend and compose setups
+
 ## v0.15.0 (2026-09-06)
 
 ### Feat
