@@ -116,7 +116,7 @@ jobs:
         run: docker compose -f docker-compose.local.yml run --rm django uv run python manage.py compilemessages --locale ar
 
       - name: Run Django Tests
-        run: docker compose -f docker-compose.local.yml run --rm django uv run pytest
+        run: docker compose -f docker-compose.local.yml run --rm django uv run pytest --durations=25
 
       - name: Tear down the Stack
         run: docker compose -f docker-compose.local.yml down
