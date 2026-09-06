@@ -70,6 +70,9 @@ LOCAL_APPS = ["apps.core", "apps.content", "apps.users", "apps.publishers", "app
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    # Early, so the client identity is on the Sentry scope and the log context before
+    # any downstream middleware or view can fail.
+    "apps.core.middlewares.client_version.ClientVersionMiddleware",
     "ninja.compatibility.files.fix_request_files_middleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
@@ -270,7 +273,14 @@ CORS_ALLOW_HEADERS = [
     "x-session-token",
     "x-email-verification-key",
     "x-password-reset-key",
+    # Optional, self-reported by public API consumers; see apps.core.middlewares.client_version.
+    "x-client-name",
+    "x-client-version",
 ]
+
+# Browser clients cannot read a non-simple response header unless it is exposed, and the
+# advisory about a malformed X-Client-* header is useless if the developer cannot see it.
+CORS_EXPOSE_HEADERS = ["X-Itqan-Warning"]
 
 # Custom user model
 AUTH_USER_MODEL = "users.User"
@@ -496,18 +506,24 @@ X_FRAME_OPTIONS = "DENY"
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    # ``client`` is supplied by ClientContextFilter and is empty unless the caller sent
+    # X-Client-Name / X-Client-Version, so ordinary log lines are unchanged.
+    "filters": {
+        "client_context": {"()": "apps.core.logging_filters.ClientContextFilter"},
+    },
     "formatters": {
         "verbose": {
-            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}{client}",
             "style": "{",
         },
-        "simple": {"format": "{levelname} {message}", "style": "{"},
+        "simple": {"format": "{levelname} {message}{client}", "style": "{"},
     },
     "handlers": {
         "console": {
             "level": "INFO",
             "class": "logging.StreamHandler",
             "formatter": "simple",
+            "filters": ["client_context"],
         },
     },
     "root": {"handlers": ["console"], "level": "INFO"},
