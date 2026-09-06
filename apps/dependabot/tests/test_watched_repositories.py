@@ -180,6 +180,74 @@ class WatchedRepositoryOptInTest(TestCase):
             self.service.suspend(host=HOST, owner="ghost", repository_name="nothing")
         assert ctx.exception.error_name == "dependabot_repository_not_found"
 
+    # --- Atomic installation transitions (single conditional UPDATE) ---
+
+    def test_suspend_installation_where_single_statement_transitions_matching_rows(self):
+        self._opt_in(installation_id=111)
+        self.service.opt_in(host=HOST, owner=OWNER, repository_name="other", installation_id=111)
+        self.service.opt_out(host=HOST, owner=OWNER, repository_name="other")
+
+        with self.assertNumQueries(1):
+            transitioned = self.service.suspend_installation(host=HOST, installation_id=111)
+
+        assert transitioned == 1
+        statuses = dict(WatchedRepository.objects.filter(host=HOST).values_list("repository_name", "status"))
+        assert statuses == {REPO: "suspended", "other": "opted_out"}
+
+    def test_suspend_installation_where_redelivery_transitions_zero(self):
+        self._opt_in(installation_id=111)
+        assert self.service.suspend_installation(host=HOST, installation_id=111) == 1
+        assert self.service.suspend_installation(host=HOST, installation_id=111) == 0
+
+    def test_unsuspend_installation_where_only_suspended_flip_and_history_kept(self):
+        before = self._opt_in(installation_id=111, default_branch="develop", opted_in_by=self.user)
+        self.service.suspend_installation(host=HOST, installation_id=111)
+
+        with self.assertNumQueries(1):
+            transitioned = self.service.unsuspend_installation(host=HOST, installation_id=111)
+
+        assert transitioned == 1
+        restored = self.repo.get_by_owner_repo(HOST, OWNER, REPO)
+        assert restored.status == WatchedRepository.StatusChoice.OPTED_IN
+        assert restored.opted_in_at >= before.opted_in_at
+        assert restored.opted_in_by_id == self.user.pk
+        assert restored.default_branch == "develop"
+
+    def test_opt_out_installation_where_redelivery_transitions_zero(self):
+        self._opt_in(installation_id=111)
+        assert self.service.opt_out_installation(host=HOST, installation_id=111) == 1
+        assert self.service.opt_out_installation(host=HOST, installation_id=111) == 0
+        assert WatchedRepository.objects.count() == 1
+
+    def test_opt_out_from_installation_where_stale_installation_leaves_newer_consent(self):
+        self.service.opt_in(host=HOST, owner=OWNER, repository_name=REPO, installation_id=111)
+        self.service.opt_in(host=HOST, owner=OWNER, repository_name=REPO, installation_id=222)
+
+        assert (
+            self.service.opt_out_from_installation(host=HOST, owner=OWNER, repository_name=REPO, installation_id=111)
+            is False
+        )
+        current = self.repo.get_by_owner_repo(HOST, OWNER, REPO)
+        assert current.status == WatchedRepository.StatusChoice.OPTED_IN
+        assert current.installation_id == 222
+
+    def test_opt_out_from_installation_where_matching_transitions(self):
+        self.service.opt_in(host=HOST, owner=OWNER, repository_name=REPO, installation_id=111)
+
+        assert (
+            self.service.opt_out_from_installation(host=HOST, owner=OWNER, repository_name=REPO, installation_id=111)
+            is True
+        )
+        assert self.repo.get_by_owner_repo(HOST, OWNER, REPO).status == WatchedRepository.StatusChoice.OPTED_OUT
+
+    def test_opt_out_from_installation_where_unknown_returns_false(self):
+        assert (
+            self.service.opt_out_from_installation(
+                host=HOST, owner="ghost", repository_name="nothing", installation_id=111
+            )
+            is False
+        )
+
     # --- Discovery state ---
 
     def test_record_discovery_where_opted_in_persists_state(self):

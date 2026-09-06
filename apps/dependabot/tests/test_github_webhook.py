@@ -226,6 +226,34 @@ class GitHubWebhookEndpointTest(TestCase):
             "affected": 0,
         }
 
+    def test_removed_where_stale_replay_after_reinstall_leaves_newer_consent(self):
+        old_installation = INSTALLATION_ID
+        new_installation = INSTALLATION_ID + 1
+        created_old = {
+            "action": "created",
+            "installation": {"id": old_installation, "account": {"login": OWNER}},
+            "repositories": [{"full_name": f"{OWNER}/a"}],
+        }
+        created_new = {
+            "action": "created",
+            "installation": {"id": new_installation, "account": {"login": OWNER}},
+            "repositories": [{"full_name": f"{OWNER}/a"}],
+        }
+        stale_removal = {
+            "action": "removed",
+            "installation": {"id": old_installation},
+            "repositories_removed": [{"full_name": f"{OWNER}/a"}],
+        }
+        with self._settings():
+            assert self._deliver(event="installation", payload=created_old).status_code == 200
+            assert self._deliver(event="installation", payload=created_new).status_code == 200
+            stale = self._deliver(event="installation_repositories", payload=stale_removal)
+        assert stale.status_code == 200
+        assert stale.json()["affected"] == 0
+        row = WatchedRepository.objects.get(host=HOST, owner=OWNER, repository_name="a")
+        assert row.status == WatchedRepository.StatusChoice.OPTED_IN
+        assert row.installation_id == new_installation
+
     def test_suspend_where_only_opted_in_rows_suspended(self):
         self.watched.opt_in(host=HOST, owner=OWNER, repository_name="a", installation_id=INSTALLATION_ID)
         self.watched.opt_in(host=HOST, owner=OWNER, repository_name="b", installation_id=INSTALLATION_ID)

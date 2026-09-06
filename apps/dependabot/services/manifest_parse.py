@@ -64,18 +64,20 @@ class ManifestDocumentError(Exception):
 
 
 # --- YAML 1.2 Core Schema resolvers (applied to plain scalars only) ---
+#
+# Integer and float spellings follow the documented YAML 1.2 Core Schema
+# forms only: decimal ``[-+]?[0-9]+``, octal ``0o[0-7]+``, hexadecimal
+# ``0x[0-9a-fA-F]+``, and decimal/scientific floats. Deliberately excluded:
+# YAML 1.1 leading-zero octals (``010``), binary ``0b``, underscore
+# separators (``1_0``), and sexagesimal (``1:30``) — all of these stay
+# strings, which is exactly what asset slugs spelled that way require.
+# (PyYAML's constructor would also misread ``010`` as octal 8, so letting
+# such spellings resolve as integers would be wrong twice over.)
 
 _CORE_BOOL_RE = r"^(?:true|True|TRUE|false|False|FALSE)$"
 _CORE_NULL_RE = r"^(?:~|null|Null|NULL|)$"
-_CORE_INT_RE = (
-    r"^(?:[-+]?0b[0-1_]+|[-+]?0[0-7_]+|[-+]?(?:0|[1-9][0-9_]*)"
-    r"|[-+]?0x[0-9a-fA-F_]+|[-+]?[1-9][0-9_]*(?::[0-5]?[0-9])+)$"
-)
-# Plain decimal/scientific floats only. exotic spellings (.inf/.nan,
-# sexagesimal floats) intentionally stay strings: they can never satisfy a
-# ``schema_version == 1`` check, and SafeConstructor float parsing is only
-# exercised on spellings float() itself accepts.
-_CORE_FLOAT_RE = r"^(?:[-+]?(?:[0-9][0-9_]*)(?:\.[0-9_]*)?(?:[eE][-+]?[0-9]+)?|\.[0-9_]+(?:[eE][-+]?[0-9]+)?)$"
+_CORE_INT_RE = r"^(?:[-+]?[0-9]+|0o[0-7]+|0x[0-9a-fA-F]+)$"
+_CORE_FLOAT_RE = r"^(?:[-+]?(?:[0-9]+)(?:\.[0-9]*)?(?:[eE][-+]?[0-9]+)?|\.[0-9]+(?:[eE][-+]?[0-9]+)?)$"
 
 
 class _StrictLoader(SafeLoader):

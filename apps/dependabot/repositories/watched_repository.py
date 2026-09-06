@@ -27,10 +27,6 @@ class WatchedRepositoryRepository:
             status=WatchedRepository.StatusChoice.OPTED_IN,
         ).order_by("id")
 
-    def list_by_installation(self, installation_id: int) -> QuerySet[WatchedRepository]:
-        """All rows granted through one GitHub App installation, any status."""
-        return WatchedRepository.objects.filter(installation_id=installation_id).order_by("id")
-
     def create_or_update_opt_in(
         self,
         *,
@@ -84,6 +80,56 @@ class WatchedRepositoryRepository:
         watched.status = WatchedRepository.StatusChoice.SUSPENDED
         watched.save(update_fields=["status", "updated_at"])
         return watched
+
+    def opt_out_if_installation_matches(
+        self, host: str, owner: str, repository_name: str, installation_id: int
+    ) -> bool:
+        """Atomically opt out only if the row still belongs to the installation.
+
+        Single conditional ``UPDATE ... WHERE identity + installation_id``:
+        a stale removal replayed after the repo re-opted-in under a newer
+        installation matches nothing. Already-``opted_out`` rows are left
+        alone. Returns True when a row transitioned.
+        """
+        updated = (
+            WatchedRepository.objects.filter(
+                host=host,
+                owner=owner,
+                repository_name=repository_name,
+                installation_id=installation_id,
+            )
+            .exclude(status=WatchedRepository.StatusChoice.OPTED_OUT)
+            .update(status=WatchedRepository.StatusChoice.OPTED_OUT, updated_at=timezone.now())
+        )
+        return updated > 0
+
+    def set_installation_status(
+        self,
+        installation_id: int,
+        *,
+        host: str,
+        expected_status: str | None,
+        new_status: str,
+        refresh_opt_in_at: bool = False,
+    ) -> int:
+        """Atomically flip one installation's rows in a single UPDATE statement.
+
+        The expected current status is part of the WHERE clause, so concurrent
+        deliveries cannot interleave between a read and a write. ``QuerySet.
+        update()`` skips ``auto_now``, hence ``updated_at`` (and
+        ``opted_in_at`` when restoring consent) is set explicitly. A None
+        ``expected_status`` matches every status except ``new_status`` itself,
+        keeping redeliveries idempotent. Returns transitioned rows.
+        """
+        rows = WatchedRepository.objects.filter(installation_id=installation_id, host=host)
+        if expected_status is None:
+            rows = rows.exclude(status=new_status)
+        else:
+            rows = rows.filter(status=expected_status)
+        now = timezone.now()
+        if refresh_opt_in_at:
+            return rows.update(status=new_status, updated_at=now, opted_in_at=now)
+        return rows.update(status=new_status, updated_at=now)
 
     def update_discovery_state(
         self,

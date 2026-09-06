@@ -126,11 +126,30 @@ class WatchedRepositoryService:
         return watched
 
     def opt_out(self, *, host: str, owner: str, repository_name: str) -> WatchedRepository:
-        """Flip a row to ``opted_out``, preserving its history."""
+        """Flip a row to ``opted_out``, preserving its history.
+
+        Identity-based staff/operator path. Webhook removals must use
+        :meth:`opt_out_from_installation` instead so stale replays cannot
+        touch consent granted under a newer installation.
+        """
         watched = self._get_existing(host=host, owner=owner, repository_name=repository_name)
         result = self.repo.set_opt_out(watched.host, watched.owner, watched.repository_name)
         assert result is not None  # fetched above; races resolve as a later opt-in, not a loss
         return result
+
+    def opt_out_from_installation(self, *, host: str, owner: str, repository_name: str, installation_id: int) -> bool:
+        """Opt out only if the row still belongs to the event's installation.
+
+        A removal replayed after the repo re-opted-in under a newer
+        installation matches nothing and changes nothing. Returns True when
+        a row transitioned; False covers unknown rows, already-opted-out
+        rows, and stale replays alike (all already the desired end state).
+        """
+        _validate_host(host)
+        _validate_name(owner, field="owner")
+        _validate_name(repository_name, field="repository_name")
+        _validate_installation_id(installation_id)
+        return self.repo.opt_out_if_installation_matches(host, owner, repository_name, installation_id)
 
     def suspend(self, *, host: str, owner: str, repository_name: str) -> WatchedRepository:
         """Flip a row to ``suspended`` (e.g. installation suspended on GitHub's side)."""
@@ -142,61 +161,50 @@ class WatchedRepositoryService:
     def suspend_installation(self, *, host: str, installation_id: int) -> int:
         """Suspend one installation's repositories without touching explicit opt-outs.
 
-        Only currently opted-in rows flip to suspended, so a later unsuspend
-        can never revive a repository whose owner explicitly opted out.
-        Returns the number of rows transitioned.
+        Single conditional UPDATE: only currently opted-in rows flip, so a
+        later unsuspend can never revive a repository whose owner explicitly
+        opted out. Returns the number of rows transitioned.
         """
         _validate_host(host)
         _validate_installation_id(installation_id)
-        transitioned = 0
-        rows = self.repo.list_by_installation(installation_id).filter(
+        return self.repo.set_installation_status(
+            installation_id,
             host=host,
-            status=WatchedRepository.StatusChoice.OPTED_IN,
+            expected_status=WatchedRepository.StatusChoice.OPTED_IN,
+            new_status=WatchedRepository.StatusChoice.SUSPENDED,
         )
-        for watched in rows:
-            if self.repo.set_suspended(watched.host, watched.owner, watched.repository_name) is not None:
-                transitioned += 1
-        return transitioned
 
     def unsuspend_installation(self, *, host: str, installation_id: int) -> int:
         """Restore a previously suspended installation to opted-in.
 
-        Only suspended rows are restored; opted-out rows are never revived —
-        an explicit opt-out outlives any suspension cycle. Returns the number
-        of rows transitioned.
+        Single conditional UPDATE over suspended rows only; opted-out rows
+        are never revived — an explicit opt-out outlives any suspension
+        cycle. Refreshes ``opted_in_at`` like an explicit re-opt-in while
+        preserving ``opted_in_by``. Returns rows transitioned.
         """
         _validate_host(host)
         _validate_installation_id(installation_id)
-        transitioned = 0
-        rows = self.repo.list_by_installation(installation_id).filter(
+        return self.repo.set_installation_status(
+            installation_id,
             host=host,
-            status=WatchedRepository.StatusChoice.SUSPENDED,
+            expected_status=WatchedRepository.StatusChoice.SUSPENDED,
+            new_status=WatchedRepository.StatusChoice.OPTED_IN,
+            refresh_opt_in_at=True,
         )
-        for watched in rows:
-            self.opt_in(
-                host=watched.host,
-                owner=watched.owner,
-                repository_name=watched.repository_name,
-                installation_id=installation_id,
-            )
-            transitioned += 1
-        return transitioned
 
     def opt_out_installation(self, *, host: str, installation_id: int) -> int:
         """Withdraw a whole installation (App uninstalled): every row becomes
         opted_out with history preserved. Reinstalling re-opts in explicitly
-        through a new installation event. Returns rows transitioned."""
+        through a new installation event. Single conditional UPDATE over all
+        rows not already opted out. Returns rows transitioned."""
         _validate_host(host)
         _validate_installation_id(installation_id)
-        transitioned = 0
-        for watched in (
-            self.repo.list_by_installation(installation_id)
-            .filter(host=host)
-            .exclude(status=WatchedRepository.StatusChoice.OPTED_OUT)
-        ):
-            if self.repo.set_opt_out(watched.host, watched.owner, watched.repository_name) is not None:
-                transitioned += 1
-        return transitioned
+        return self.repo.set_installation_status(
+            installation_id,
+            host=host,
+            expected_status=None,
+            new_status=WatchedRepository.StatusChoice.OPTED_OUT,
+        )
 
     def require_opted_in(self, *, host: str, owner: str, repository_name: str) -> WatchedRepository:
         """Return the row if it is currently opted in, else raise."""

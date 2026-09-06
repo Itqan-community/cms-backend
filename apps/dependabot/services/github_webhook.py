@@ -280,15 +280,22 @@ class GitHubWebhookService:
             if parsed.action == "removed":
                 affected = 0
                 for repo in parsed.repositories:
-                    try:
-                        self._watched.opt_out(host=host, owner=repo.owner, repository_name=repo.repository_name)
-                    except ItqanError as exc:
-                        # Removing an untracked repository is already the
-                        # desired end state; anything else is a real error.
-                        if exc.error_name != "dependabot_repository_not_found":
-                            raise
-                        continue
-                    affected += 1
+                    # Installation-scoped: a stale replay after the repo
+                    # re-opted-in under a newer installation matches nothing.
+                    # Unknown rows are already the desired end state.
+                    if self._watched.opt_out_from_installation(
+                        host=host,
+                        owner=repo.owner,
+                        repository_name=repo.repository_name,
+                        installation_id=parsed.installation_id,
+                    ):
+                        affected += 1
+                    else:
+                        logger.debug(
+                            "github_webhook: removal matched no row [owner=%s, repo=%s]",
+                            repo.owner,
+                            repo.repository_name,
+                        )
                 return affected
             return -1
         return -1
