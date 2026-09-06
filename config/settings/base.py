@@ -64,7 +64,15 @@ THIRD_PARTY_APPS = [
 
 COUNTRIES_OVERRIDE = {"IL": None}
 
-LOCAL_APPS = ["apps.core", "apps.content", "apps.users", "apps.publishers", "apps.quran", "apps.package_manager"]
+LOCAL_APPS = [
+    "apps.core",
+    "apps.content",
+    "apps.users",
+    "apps.publishers",
+    "apps.quran",
+    "apps.package_manager",
+    "apps.dependabot",
+]
 
 
 MIDDLEWARE = [
