@@ -273,7 +273,7 @@ CORS_ALLOW_HEADERS = [
     "x-session-token",
     "x-email-verification-key",
     "x-password-reset-key",
-    # Optional, self-reported by public API consumers; see apps.core.middlewares.client_version.
+    "x-api-key",
     "x-client-name",
     "x-client-version",
 ]

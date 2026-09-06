@@ -183,6 +183,7 @@ jobs:
                 echo "XMLSEC_BINARY=${{ vars.STAGING_XMLSEC_BINARY }}";
                 echo "ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=${{ vars.STAGING_ENFORCE_ASSET_ACCESS_ON_PUBLIC_API }}";
                 echo "GUNICORN_WORKERS=${{ vars.STAGING_GUNICORN_WORKERS }}";
+                echo "SENTRY_TRACES_SAMPLE_RATE=${{ vars.STAGING_SENTRY_TRACES_SAMPLE_RATE }}";
               } > deployment/docker/.env
             elif [ "${{ env.ENV_NAME }}" = "production" ]; then
               {
@@ -244,6 +245,7 @@ jobs:
                 echo "SAML_IDP_BASE_URL=${{ vars.PROD_SAML_IDP_BASE_URL }}";
                 echo "XMLSEC_BINARY=${{ vars.PROD_XMLSEC_BINARY }}";
                 echo "ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=${{ vars.PROD_ENFORCE_ASSET_ACCESS_ON_PUBLIC_API }}";
+                echo "SENTRY_TRACES_SAMPLE_RATE=${{ vars.PROD_SENTRY_TRACES_SAMPLE_RATE }}";
               } > deployment/docker/.env
             fi
             # Append image coordinates for docker compose variable substitution
