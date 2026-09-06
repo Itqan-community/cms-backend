@@ -244,7 +244,7 @@ def test_file_where_other_path_rejected_without_request():
     ],
 )
 def test_file_where_undecodable_is_present_but_unreadable(payload):
-    if isinstance(payload, (str, int)):
+    if isinstance(payload, str | int):
         response = httpx.Response(200, json=payload)
     else:
         response = httpx.Response(200, json=payload)

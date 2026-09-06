@@ -131,7 +131,7 @@ def _validate_config(config: GitHubAppConfig) -> None:
             500,
         )
     if (
-        not isinstance(config.timeout_seconds, (int, float))
+        not isinstance(config.timeout_seconds, int | float)
         or isinstance(config.timeout_seconds, bool)
         or not math.isfinite(config.timeout_seconds)
         or config.timeout_seconds <= 0
