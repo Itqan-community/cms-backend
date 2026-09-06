@@ -375,6 +375,13 @@ measured per user as well as per app — without Itqan ever holding end-user PII
 also gives publishers visibility into how their licensed content is actually used
 downstream.
 
+> **Not a contradiction:** the public API also accepts optional `X-Client-Name` and
+> `X-Client-Version` headers (see [ARCHITECTURE.md](./ARCHITECTURE.md#client-release-identification)).
+> Those are **diagnostic only** — self-reported, unverified, and never consulted for
+> identity, authorization, or rate limiting. The API key remains the sole application
+> identity.
+
+---
 **Phase 1 decisions:** it does **not** replace OAuth2 or any existing auth method.
 App identifiers are open (not secret-backed) — spoofing is technically possible and
 accepted for now; a stricter scheme will follow only if abuse becomes a real problem.

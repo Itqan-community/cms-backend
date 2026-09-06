@@ -246,6 +246,26 @@ Developers can create **OAuth2 applications** via the CMS frontend to access the
 
 **For complete OAuth flow diagrams, security best practices, and step-by-step guides, see [AUTHENTICATION.md](./AUTHENTICATION.md)**
 
+### Client Release Identification
+
+Consumers of `developers_api` may self-report which build is calling via two optional
+request headers, so a defect can be attributed to the release that introduced it:
+
+| Header | Constraint |
+|---|---|
+| `X-Client-Name` | ≤ 64 chars of `A-Z a-z 0-9 . _ -` |
+| `X-Client-Version` | ≤ 32 chars of `A-Z a-z 0-9 . _ + -` |
+
+`apps.core.middlewares.client_version.ClientVersionMiddleware` validates both, exposes
+them as `request.client_name` / `request.client_version`, tags the Sentry scope
+(`client.name`, `client.version`), and publishes them to the log context consumed by
+`apps.core.logging_filters.ClientContextFilter`. `apps.usage_tracking` reads them off
+the request and sends them to Mixpanel as `client_name` / `client_version`.
+
+The values are **unverified and purely diagnostic** — they never influence identity,
+authorization, or throttling. A malformed value is dropped rather than rejected, and the
+response carries an advisory `X-Itqan-Warning` header; a missing header is silent.
+
 ---
 
 
