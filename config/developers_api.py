@@ -31,8 +31,10 @@ client-side code.
 Send the key in the `X-API-Key` header on each request.
 
 For per-end-user usage metrics, include an opaque identifier in the
-`X-Itqan-User-Id` header. This value is developer-chosen, never contains PII,
-and is treated as opaque metadata for usage accounting only.
+`X-Itqan-User-Id` header. The value is trimmed and must be 1-64 ASCII
+characters, start with an alphanumeric character, and otherwise contain only
+letters, digits, `.`, `_`, `:`, or `-`. Do not send PII. The value is treated
+as opaque metadata for usage accounting only.
 """
 
 developers_api = create_ninja_api(
