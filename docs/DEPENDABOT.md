@@ -83,6 +83,23 @@ Webhook deliveries are idempotent (repeated deliveries change nothing),
 unsupported events/actions are acknowledged and ignored, and everything
 stays inert while `ENABLE_ITQAN_DEPENDABOT` is `False`.
 
+Delivery deduplication: `X-GitHub-Delivery` GUIDs are stable across
+redeliveries, so each verified delivery is recorded once
+(`WebhookDelivery`: GUID + event/action only, never payloads or secrets)
+in the same transaction as its effects, after they are applied. All
+effects are idempotent status flips, so a crash before commit simply
+replays cleanly on redelivery.
+
+Known ordering limitation: distinct events carry no reliable ordering
+signal — these payloads contain no sequence numbers or timestamps, and
+delivery GUIDs are random — so same-installation events apply in arrival
+order (GitHub's usual order; only failures/replays reorder). Staleness
+across installations is impossible (every write is installation-scoped),
+suspend/unsuspend races resolve in a single conditional statement, and any
+later legitimate event converges state; discovery itself always reads live
+GitHub state. Do not build timestamp watermarks on unverified payload
+fields to work around this.
+
 ## 5. Environment variables
 
 | Variable | Default | Meaning |

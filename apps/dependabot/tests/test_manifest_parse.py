@@ -70,12 +70,34 @@ def test_parse_manifest_where_slug_is_yaml11_only_form_stays_string(slug):
     assert slug in parsed.assets
 
 
-@pytest.mark.parametrize("slug", ["true", "True", "TRUE", "false", "null", "Null", "123", "1.5", "0o17", "0x1A", "010"])
+@pytest.mark.parametrize(
+    "slug",
+    [
+        "true",
+        "True",
+        "TRUE",
+        "false",
+        "null",
+        "Null",
+        "123",
+        "1.5",
+        "0o17",
+        "0x1A",
+        "010",
+        ".inf",
+        "-.Inf",
+        "+.INF",
+        ".nan",
+        ".NaN",
+        ".NAN",
+    ],
+)
 def test_parse_manifest_where_slug_resolves_non_string_rejected(slug):
     # 010 matches the Core Schema decimal form [-+]?[0-9]+ (spec §10.3.2),
     # exactly like 123: unquoted non-string keys are rejected.
-    with pytest.raises(ManifestDocumentError):
+    with pytest.raises(ManifestDocumentError) as exc_info:
         parse_manifest_document(_manifest(f"{slug}:", '    version: "1.0.0"'))
+    assert exc_info.value.code == "non_string_key"
 
 
 def test_parse_manifest_where_schema_version_true_rejected_as_bool():
