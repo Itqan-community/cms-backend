@@ -35,6 +35,19 @@ For per-end-user usage metrics, include an opaque identifier in the
 characters, start with an alphanumeric character, and otherwise contain only
 letters, digits, `.`, `_`, `:`, or `-`. Do not send PII. The value is treated
 as opaque metadata for usage accounting only.
+# Identifying your app
+
+Two optional headers let you tell us which build of your application is calling, \
+so an error can be traced back to the release that introduced it:
+
+- `X-Client-Name` — a stable identifier for your app, e.g. `quran-companion` \
+(max 64 chars of `A-Z a-z 0-9 . _ -`)
+- `X-Client-Version` — the version making the call, e.g. `2.4.1` \
+(max 32 chars of `A-Z a-z 0-9 . _ + -`; semver pre-release and build metadata are accepted)
+
+Neither header affects the response, your rate limit, or authentication. A malformed \
+value is ignored rather than rejected, and the response carries an `X-Itqan-Warning` \
+header explaining what was dropped.
 """
 
 developers_api = create_ninja_api(

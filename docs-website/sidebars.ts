@@ -40,6 +40,7 @@ const sidebars: SidebarsConfig = {
         'guides/recitations-ayah-timings',
         'guides/search-filter-order',
         'guides/errors',
+        'guides/client-version',
       ],
     },
     {

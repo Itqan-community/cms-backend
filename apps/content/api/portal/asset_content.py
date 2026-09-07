@@ -83,7 +83,6 @@ class EntryOut(Schema):
     surah_name: str
     uthmani: str
     text: str
-    footnotes: str
     order: int
 
     @staticmethod
@@ -106,7 +105,6 @@ class EntryOut(Schema):
 class EntryPatchRow(Schema):
     ayah_id: int
     text: str = ""
-    footnotes: str = ""
 
 
 class EntriesPatchIn(Schema):

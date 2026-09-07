@@ -201,6 +201,11 @@ def _dispatch(
         "application_name": application_name,
         "auth_method": _detect_auth_method(request),
         "user_agent": request.headers.get("user-agent") or None,
+        # Self-reported by the caller via X-Client-Name / X-Client-Version and validated
+        # by ClientVersionMiddleware; getattr keeps the decorator usable on requests
+        # built without the middleware (tests, management commands).
+        "client_name": getattr(request, "client_name", None),
+        "client_version": getattr(request, "client_version", None),
         "entity_type": entity_type,
         "entity_ids": entity_ids,
         "entity_names": entity_names,
