@@ -42,6 +42,12 @@ class WebhookOut(Schema):
         | NinjaErrorResponse[Literal["dependabot_invalid_repository"]],
         401: NinjaErrorResponse[Literal["github_webhook_signature_invalid"]],
         500: NinjaErrorResponse[Literal["github_app_misconfigured"]],
+        502: NinjaErrorResponse[
+            Literal["github_upstream_error"]
+            | Literal["github_malformed_response"]
+            | Literal["github_authentication_failed"]
+        ],
+        503: NinjaErrorResponse[Literal["github_rate_limited"]],
     },
 )
 def github_webhook(request: Request):
@@ -55,6 +61,7 @@ def github_webhook(request: Request):
         payload=request.body,
         signature_header=request.headers.get("X-Hub-Signature-256"),
         secret=secret,
+        delivery_id=request.headers.get("X-GitHub-Delivery"),
     )
     return 200, WebhookOut(
         status=outcome.status,

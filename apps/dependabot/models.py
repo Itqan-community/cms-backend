@@ -112,3 +112,34 @@ class WatchedRepository(BaseModel):
     def is_opted_in(self) -> bool:
         """Whether this repository is currently eligible for manifest discovery."""
         return self.status == self.StatusChoice.OPTED_IN
+
+
+class WebhookDelivery(BaseModel):
+    """Ledger of processed GitHub webhook deliveries.
+
+    ``delivery_id`` is the ``X-GitHub-Delivery`` GUID, which GitHub keeps
+    stable across redeliveries of the same delivery — recording it makes
+    duplicate receipts converge instead of re-applying. Only the GUID plus
+    event/action names are stored (audit/debug); never payloads or secrets.
+    Claims happen in the same transaction as the business effects, after
+    they are applied: a crash rolls everything back and the redelivery
+    replays cleanly, while a committed claim marks the delivery done.
+    """
+
+    delivery_id = models.CharField(
+        max_length=64,
+        unique=True,
+        help_text="X-GitHub-Delivery GUID. Unique per delivery, stable across redeliveries.",
+    )
+
+    event = models.CharField(max_length=64, help_text="X-GitHub-Event value of the delivery.")
+
+    action = models.CharField(
+        max_length=64,
+        null=True,
+        blank=True,
+        help_text="Top-level payload action, if the event carries one.",
+    )
+
+    def __str__(self):
+        return f"WebhookDelivery(delivery_id={self.delivery_id}, event={self.event})"

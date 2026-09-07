@@ -23,6 +23,20 @@ Consent decisions encoded here:
 - No outbound GitHub API calls are made: every required fact (owner,
   repository names, installation ID) arrives inside the signed payload.
 
+Delivery semantics:
+
+- ``X-GitHub-Delivery`` GUIDs are stable across redeliveries, so each
+  verified delivery is recorded once (``WebhookDelivery``) in the same
+  transaction as its effects; redeliveries are acknowledged without
+  re-applying. All effects are idempotent, so a crash before commit
+  simply replays cleanly.
+- Known limitation: distinct events carry no reliable ordering signal
+  (no sequence numbers or timestamps in these payloads, GUIDs are
+  random), so same-installation events apply in arrival order.
+  Cross-installation staleness is impossible (installation-scoped
+  updates), and any later legitimate event converges state; discovery
+  itself always reads live GitHub state.
+
 Security rules: the webhook secret is never logged; unverified payloads are
 never processed; failures carry no secret material.
 """
@@ -36,8 +50,11 @@ import json
 import logging
 from typing import Literal
 
+from django.db import transaction
+
 from apps.core.ninja_utils.errors import ItqanError
-from apps.dependabot.models import WatchedRepository
+from apps.dependabot.models import WatchedRepository, WebhookDelivery
+from apps.dependabot.services.github_client import GitHubContentsClient
 from apps.dependabot.services.watched_repositories import WatchedRepositoryService
 
 logger = logging.getLogger(__name__)
@@ -193,8 +210,13 @@ def parse_webhook_payload(*, event: str | None, payload: bytes) -> WebhookEvent:
 class GitHubWebhookService:
     """Dispatch verified webhook events to opt-in transitions."""
 
-    def __init__(self, watched_service: WatchedRepositoryService | None = None) -> None:
+    def __init__(
+        self,
+        watched_service: WatchedRepositoryService | None = None,
+        github_client: GitHubContentsClient | None = None,
+    ) -> None:
         self._watched = watched_service or WatchedRepositoryService()
+        self._github = github_client or GitHubContentsClient()
 
     def handle(
         self,
@@ -203,8 +225,17 @@ class GitHubWebhookService:
         payload: bytes,
         signature_header: str | None,
         secret: str,
+        delivery_id: str | None,
     ) -> WebhookOutcome:
-        """Verify, parse, and apply one delivery. Never processes unverified data."""
+        """Verify, parse, and apply one delivery. Never processes unverified data.
+
+        Duplicate receipts (same ``X-GitHub-Delivery`` GUID, which GitHub
+        keeps stable across redeliveries) are acknowledged without
+        re-applying: the GUID ledger is claimed in the same transaction as
+        the business effects, after they are applied. All effects are
+        idempotent, so a crash between applying and claiming simply replays
+        cleanly on redelivery.
+        """
         if not secret:
             raise ItqanError(
                 "github_app_misconfigured",
@@ -218,13 +249,44 @@ class GitHubWebhookService:
                 "GitHub webhook signature is invalid.",
                 401,
             )
+        if not delivery_id:
+            raise ItqanError(
+                "github_invalid_webhook_payload",
+                "GitHub webhook delivery header is missing.",
+                400,
+            )
         if event not in SUPPORTED_EVENTS:
             # Unsupported events are acknowledged without parsing: their
             # payloads carry no installation contract we understand.
             logger.info("github_webhook: ignored event [event=%s]", event or "unknown")
             return WebhookOutcome(status="ignored", event=event or "unknown", action=None, affected=0)
         parsed = parse_webhook_payload(event=event, payload=payload)
-        return self._dispatch_outcome(parsed)
+        with transaction.atomic():
+            if WebhookDelivery.objects.filter(delivery_id=delivery_id).exists():
+                logger.info(
+                    "github_webhook: duplicate delivery ignored [event=%s, action=%s]",
+                    parsed.event,
+                    parsed.action,
+                )
+                return WebhookOutcome(status="ignored", event=parsed.event, action=parsed.action, affected=0)
+            outcome = self._dispatch_outcome(parsed)
+            # Claimed after the effects it covers: a crash rolls everything
+            # back and the redelivery replays; a committed claim marks it done.
+            # Concurrent duplicates race here, but get_or_create resolves the
+            # race on the unique constraint and all effects are idempotent, so
+            # the loser simply reports itself as a duplicate below.
+            _, created = WebhookDelivery.objects.get_or_create(
+                delivery_id=delivery_id,
+                defaults={"event": parsed.event, "action": parsed.action},
+            )
+            if not created:
+                logger.info(
+                    "github_webhook: duplicate delivery ignored [event=%s, action=%s]",
+                    parsed.event,
+                    parsed.action,
+                )
+                return WebhookOutcome(status="ignored", event=parsed.event, action=parsed.action, affected=0)
+            return outcome
 
     def _dispatch_outcome(self, parsed: WebhookEvent) -> WebhookOutcome:
         """Apply one supported event. Unknown actions are safely ignored."""
@@ -245,12 +307,28 @@ class GitHubWebhookService:
         return WebhookOutcome(status="processed", event=parsed.event, action=parsed.action, affected=affected)
 
     def _dispatch(self, parsed: WebhookEvent) -> int:
-        """Apply one event. Returns affected-row count, or -1 when safely ignored."""
+        """Apply one event. Returns affected-row count, or -1 when safely ignored.
+
+        State-granting transitions (created/added/unsuspend) reconcile with
+        GitHub's current state first: a stale event that no longer reflects
+        reality is silently dropped. Restrictive transitions (removed/deleted/
+        suspend) apply without reconciliation — removing access is always safe.
+        Any reconciliation failure is propagated as an error: consent is never
+        granted when GitHub's current state cannot be verified.
+        """
         host = WatchedRepository.HostChoice.GITHUB
         if parsed.event == "installation":
             if parsed.action == "created":
-                # The install selection itself is the consent: opt in exactly
-                # the listed repositories, never anything unlisted.
+                # Reconcile: installation must currently exist and not be
+                # suspended for this to be a legitimate opt-in.
+                state = self._github.get_installation_state(installation_id=parsed.installation_id)
+                if state != "active":
+                    logger.info(
+                        "github_webhook: stale created ignored [installation_id=%d, state=%s]",
+                        parsed.installation_id,
+                        state or "deleted",
+                    )
+                    return 0
                 for repo in parsed.repositories:
                     self._watched.opt_in(
                         host=host,
@@ -265,18 +343,37 @@ class GitHubWebhookService:
             if parsed.action == "suspend":
                 return self._watched.suspend_installation(host=host, installation_id=parsed.installation_id)
             if parsed.action == "unsuspend":
+                # Reconcile: installation must currently be suspended for this
+                # to be a legitimate unsuspend.
+                state = self._github.get_installation_state(installation_id=parsed.installation_id)
+                if state != "suspended":
+                    logger.info(
+                        "github_webhook: stale unsuspend ignored [installation_id=%d, state=%s]",
+                        parsed.installation_id,
+                        state or "deleted",
+                    )
+                    return 0
                 return self._watched.unsuspend_installation(host=host, installation_id=parsed.installation_id)
             return -1
         if parsed.event == "installation_repositories":
             if parsed.action == "added":
+                # Reconcile: each repository must currently be accessible to
+                # the installation. A stale add for a removed repo is dropped.
+                added = 0
                 for repo in parsed.repositories:
-                    self._watched.opt_in(
-                        host=host,
+                    if self._github.is_repository_accessible(
                         owner=repo.owner,
                         repository_name=repo.repository_name,
                         installation_id=parsed.installation_id,
-                    )
-                return len(parsed.repositories)
+                    ):
+                        self._watched.opt_in(
+                            host=host,
+                            owner=repo.owner,
+                            repository_name=repo.repository_name,
+                            installation_id=parsed.installation_id,
+                        )
+                        added += 1
+                return added
             if parsed.action == "removed":
                 affected = 0
                 for repo in parsed.repositories:

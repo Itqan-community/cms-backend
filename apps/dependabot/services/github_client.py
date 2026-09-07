@@ -23,6 +23,7 @@ import re
 import httpx
 
 from apps.core.ninja_utils.errors import ItqanError
+from apps.dependabot.services.github_jwt import create_github_app_jwt
 from apps.dependabot.services.github_token import (
     GITHUB_ACCEPT_HEADER,
     GITHUB_API_VERSION,
@@ -360,3 +361,117 @@ class GitHubContentsClient:
                 "GitHub request failed due to a network error.",
                 502,
             ) from None
+
+    def get_installation_state(self, *, installation_id: int) -> str | None:
+        """Check current installation state via App JWT.
+
+        Returns ``"active"`` if the installation exists and is not suspended,
+        ``"suspended"`` if currently suspended, or ``None`` if the
+        installation no longer exists. Never raises for 401/403 (maps to
+        ``None`` — treat as not found).
+        """
+        config = load_github_app_config()
+        app_jwt = create_github_app_jwt(app_id=config.app_id, private_key_pem=config.private_key_pem)
+        url = f"{config.api_base_url.rstrip('/')}/app/installations/{installation_id}"
+        headers = {
+            "Authorization": f"Bearer {app_jwt}",
+            "Accept": GITHUB_ACCEPT_HEADER,
+            "X-GitHub-Api-Version": GITHUB_API_VERSION,
+            "User-Agent": GITHUB_USER_AGENT,
+        }
+        try:
+            if self._http_client is not None:
+                response = self._http_client.get(url, headers=headers, timeout=config.timeout_seconds)
+            else:
+                with httpx.Client(timeout=config.timeout_seconds) as client:
+                    response = client.get(url, headers=headers)
+        except httpx.TimeoutException:
+            raise ItqanError(
+                "github_upstream_error",
+                "GitHub request timed out.",
+                502,
+            ) from None
+        except httpx.HTTPError as exc:
+            logger.warning("github_client: network error [error_type=%s]", type(exc).__name__)
+            raise ItqanError(
+                "github_upstream_error",
+                "GitHub request failed due to a network error.",
+                502,
+            ) from None
+        if response.status_code in (401, 403, 404):
+            return None
+        if response.status_code != 200:
+            raise ItqanError(
+                "github_upstream_error",
+                f"GitHub request failed (status {response.status_code}).",
+                502,
+            )
+        try:
+            payload = response.json()
+        except ValueError:
+            raise ItqanError(
+                "github_malformed_response",
+                "GitHub returned an unreadable installation response.",
+                502,
+            ) from None
+        if not isinstance(payload, dict):
+            raise ItqanError(
+                "github_malformed_response",
+                "GitHub returned an unexpected installation response.",
+                502,
+            )
+        suspended_by = payload.get("suspended_by")
+        if suspended_by is not None:
+            return "suspended"
+        return "active"
+
+    def is_repository_accessible(self, *, owner: str, repository_name: str, installation_id: int) -> bool:
+        """Check whether the installation currently has access to the repository.
+
+        Uses the installation token to query repository metadata. Returns
+        ``True`` if the repository exists and is accessible, ``False`` if
+        404/403 (inaccessible), ``True`` on other errors (conservative —
+        allow the webhook through rather than blocking a legitimate event).
+        """
+        config = load_github_app_config()
+        token = self._token_service.get_installation_token(installation_id)
+        url = f"{config.api_base_url.rstrip('/')}/repos/{owner}/{repository_name}"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": GITHUB_ACCEPT_HEADER,
+            "X-GitHub-Api-Version": GITHUB_API_VERSION,
+            "User-Agent": GITHUB_USER_AGENT,
+        }
+        try:
+            if self._http_client is not None:
+                response = self._http_client.get(url, headers=headers, timeout=config.timeout_seconds)
+            else:
+                with httpx.Client(timeout=config.timeout_seconds) as client:
+                    response = client.get(url, headers=headers)
+        except (httpx.TimeoutException, httpx.HTTPError):
+            # On network errors, conservatively allow the event through —
+            # stale events are harmless (they would just re-opt-in a repo
+            # that's already opted in, which is idempotent).
+            logger.warning(
+                "github_client: network error checking repo accessibility [owner=%s, repo=%s]",
+                owner,
+                repository_name,
+            )
+            return True
+        if response.status_code in (403, 404):
+            return False
+        if response.status_code != 200:
+            # On unexpected errors, fail closed: do not grant access when
+            # current state cannot be verified.
+            logger.warning(
+                "github_client: unexpected status checking repo accessibility [owner=%s, repo=%s, status=%d]",
+                owner,
+                repository_name,
+                response.status_code,
+            )
+            raise ItqanError(
+                "github_upstream_error",
+                f"GitHub repository check failed (status {response.status_code}).",
+                502,
+            )
+        return True

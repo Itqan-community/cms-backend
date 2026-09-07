@@ -65,19 +65,25 @@ class ManifestDocumentError(Exception):
 
 # --- YAML 1.2 Core Schema resolvers (applied to plain scalars only) ---
 #
-# Integer and float spellings follow the documented YAML 1.2 Core Schema
-# forms only: decimal ``[-+]?[0-9]+``, octal ``0o[0-7]+``, hexadecimal
-# ``0x[0-9a-fA-F]+``, and decimal/scientific floats. Deliberately excluded:
-# YAML 1.1 leading-zero octals (``010``), binary ``0b``, underscore
-# separators (``1_0``), and sexagesimal (``1:30``) — all of these stay
-# strings, which is exactly what asset slugs spelled that way require.
-# (PyYAML's constructor would also misread ``010`` as octal 8, so letting
-# such spellings resolve as integers would be wrong twice over.)
+# Spellings follow spec §10.3.2 exactly: decimal ``[-+]?[0-9]+`` (so ``010``
+# resolves as an integer and is rejected as a non-string key, like ``123``),
+# octal ``0o[0-7]+``, hexadecimal ``0x[0-9a-fA-F]+``, decimal/scientific
+# floats, infinities ``[-+]?.inf|Inf|INF``, and unsigned ``.nan|NaN|NAN``.
+# Deliberately excluded 1.1-only forms stay strings: ``on/off/yes/no``,
+# binary ``0b``, underscore separators (``1_0``), and sexagesimal (``1:30``).
+# (PyYAML's constructor reads ``010`` as octal 8 rather than spec decimal
+# 10; unobservable here — any int key is rejected before its value matters,
+# and only ``== 1`` comparisons use int values.)
 
 _CORE_BOOL_RE = r"^(?:true|True|TRUE|false|False|FALSE)$"
 _CORE_NULL_RE = r"^(?:~|null|Null|NULL|)$"
 _CORE_INT_RE = r"^(?:[-+]?[0-9]+|0o[0-7]+|0x[0-9a-fA-F]+)$"
-_CORE_FLOAT_RE = r"^(?:[-+]?(?:[0-9]+)(?:\.[0-9]*)?(?:[eE][-+]?[0-9]+)?|\.[0-9]+(?:[eE][-+]?[0-9]+)?)$"
+_CORE_FLOAT_RE = (
+    r"^(?:[-+]?(?:[0-9]+)(?:\.[0-9]*)?(?:[eE][-+]?[0-9]+)?"
+    r"|\.[0-9]+(?:[eE][-+]?[0-9]+)?"
+    r"|[-+]?\.(?:inf|Inf|INF)"
+    r"|\.(?:nan|NaN|NAN))$"
+)
 
 
 class _StrictLoader(SafeLoader):
