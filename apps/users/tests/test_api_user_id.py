@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from django.test import override_settings
 from model_bakery import baker
 
@@ -13,7 +15,8 @@ class PublicApiUserIdHeaderTestCase(BaseTestCase):
         cls.user = baker.make(User)
 
     def _make_request(self, value):
-        _, raw_key = APIKey.objects.create_key(name="User ID Key", user=self.user)
+        unique_name = f"User ID Key {uuid4().hex}"
+        _, raw_key = APIKey.objects.create_key(name=unique_name, user=self.user)
         return self.client.get(
             "/recitations/",
             headers={"x-api-key": raw_key, "X-Itqan-User-Id": value},

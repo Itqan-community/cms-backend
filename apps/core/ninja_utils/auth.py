@@ -17,9 +17,9 @@ ITQAN_USER_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$")
 
 
 def _validate_itqan_user_id(request):
-    value = request.META.get("HTTP_X_ITQAN_USER_ID")
+    value = request.headers.get("x-itqan-user-id")
     if value is None:
-        setattr(request, "itqan_user_id", None)
+        request.itqan_user_id = None
         return None
 
     candidate = value.strip()
@@ -42,7 +42,7 @@ def _validate_itqan_user_id(request):
             status_code=422,
         )
 
-    setattr(request, "itqan_user_id", candidate)
+    request.itqan_user_id = candidate
     return candidate
 
 
