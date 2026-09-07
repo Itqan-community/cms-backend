@@ -16,6 +16,8 @@ from typing import Any
 import unittest
 import uuid
 
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 from django.test import SimpleTestCase, TestCase, override_settings
 import pytest
 
@@ -36,36 +38,15 @@ INSTALLATION_ID = 111
 WEBHOOK_SECRET = "whsec_test_secret"
 WEBHOOK_URL = "/cms-api/dependabot/github/webhook/"
 GITHUB_APP_ID = 12345
-GITHUB_APP_PRIVATE_KEY = """\
------BEGIN PRIVATE KEY-----
-MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDK0qSLkPZnq7Y7
-5hQ9WpmW2kkn7r3gzs/uKM2Qi3hPU92wdgsp7HbMHUyKADQO41H5MuvpyDj2fj+E
-rS/t9zJwdRritvsgu7JOj/REMUw986NTdE9rr5Qnx7BUlUyIPrkjjRDvBCtNadrH
-HCClIbCl6DXXKjWwTy7CnmmgTCCfFjEA19rnh9vx6xqBq7vqTTtHxeVZhEnA5Mwy
-lDSdCh3ZOc9oqdevOirCXSNO512o49Q+c+jw7S/AhKTWrXdTPkSsd0SJJuq0LLOn
-mWLLf+ovicF6eHkwxkoU9ago7GL8Jo3aKy3IK8dOokEFlIhJeDfAYXz1anwaL3x1
-wPY8HUk5AgMBAAECggEANC0vNlZDBVV3qn4ca9IwW83o7vRsdXZOqHJnu40dlK67
-A6fCZHUX9Jd+9qtpuQDCuExgw0IGYWcF+SBCicHDgImnsnYnMXsHuk0vJhHWjsNs
-G057FfVTtE4bLw8/YndcUmh6WDqm1yHprbovLbv2gR+1JhaOPD6KhXeSLbIX3ES3
-z5DQafEfG16Y5tQtStKTQ8N0NqdRPD+sBltAbIIrjUx1SRZ1Q2c0ePTpGwOE8TYv
-URhvxoTjDPfnxfOKUAwMnm1kiUOQyHdAxDd0Ilg/bvqfxjPg3CddXZXipi182LzT
-mVkf3TFIOE6LGOMRAuVMQCfp7sp5ZR2BF+3FAuq/dwKBgQD9LgiCjQ/oGipyo2BA
-gof+Y2A7tYnC5Ku2UvwO9YY6IgwFdRO2QXguDHgmn+cxPJ2BCucQneGajWK+klPu
-TOKReLxasDpFLemRBW14Ba4ehpwk122iklwgdOjez5EN/5UUmteL2i+bdjxbLGKW
-MoSdMS/vXv7zN9JEepkuZ86ghwKBgQDNFQL8wAdA9s0n6UWciZxYXPEtMDCs/qHO
-uhPH+IO2xyzmOVjbRY7JmvGwEoBp0TXlKAduEqN0jj8gKMz2YYblmWOS5krq7nbN
-0mqXtcGcyE5BljWS27m+SbsbRHnroHUic38h5AG486pCVF4oBmF7m1ibFVT9opV9
-FA1aanf4PwKBgDFEUPGeo5bF6LawJh3HiNEu414bIHilaOis01HR41HSqEYzlydj
-LBDB6muRuDpzki63QWmRX4Jkuu9cqCp6Gai3Nufq3RvzKD1JMhkl+dEE3sOojDQT
-iQvj1CDvgUmZD5iX3RPg3FzDMFGJnJGfuQChvrM06CXKGgerV72ZA7NnAoGALkTp
-UaD5gfysuK52mCSr83u0ph9TPBSO6RcuU1WMUfaJ+L9DfuUom++rS7BA7J7Y7ASl
-+H2YBzn4oAbUh1nll3ON9ZyjlnGKuFEa33OQZREEJuP+3k1YkMgNwM8oOrMO+mDY
-dAr/IH1JEoH6ZElcQQkBaqvbawX9eCTIBngy7P0CgYEAgWdz+l8LODDtnG5B6obW
-zFJY/1/HnL2lAVYpH1PbXtY6pYdCQGo67pmSdPe0iX67dFNt+kVBQsapqVG3az28
-iKA/al4RaxdPXoN3Envp9XFgmi1aFc2VCvPUppfDZxnBwgqyTPIHm/OA0vjuN2qP
-klyH69JEzGm27oxNxkvOCpA=
------END PRIVATE KEY-----
-"""
+# Ephemeral RSA-2048 key generated once per test process. Replaces a hardcoded
+# PEM that would trigger secret-scanning tools; any valid RSA key works here
+# because the tests only verify signing/validation round-trips, not a specific key.
+_GH_KEY_PAIR = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+GITHUB_APP_PRIVATE_KEY = _GH_KEY_PAIR.private_bytes(
+    encoding=serialization.Encoding.PEM,
+    format=serialization.PrivateFormat.PKCS8,
+    encryption_algorithm=serialization.NoEncryption(),
+).decode("ascii")
 STUB_TOKEN = "ghs_test_stub_token"
 FAR_FUTURE = __import__("datetime").datetime(2099, 1, 1, tzinfo=__import__("datetime").timezone.utc)
 
