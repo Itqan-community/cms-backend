@@ -121,7 +121,6 @@ DATABASES = {
             "connect_timeout": 60,
         },
     },
-
     # Note: "audit" is backed up independently from "default".
     # Retention is handled in #434.
     "audit": {
