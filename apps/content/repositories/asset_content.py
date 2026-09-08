@@ -81,6 +81,25 @@ class AssetContentRepository:
         return version.entries.select_related("ayah", "ayah__sura").order_by("order", "ayah_id")
 
     @transaction.atomic
+    def ensure_mushaf_coverage(self, draft: AssetVersion, mushaf_version: AssetVersion) -> int:
+        """Add empty-text rows for any mushaf ayahs the draft doesn't cover yet.
+
+        Keeps a translation draft showing the whole original even if it was created
+        sparse (before full-mushaf seeding, via upload, or when the source had
+        fewer ayahs). Existing entries — including in-progress edits — are kept.
+        Returns the number of rows added.
+        """
+        existing_ayahs = set(draft.entries.values_list("ayah_id", flat=True))
+        to_create = [
+            AssetVersionEntry(version=draft, ayah_id=entry.ayah_id, text="", order=entry.order)
+            for entry in mushaf_version.entries.all().order_by("order", "ayah_id").iterator()
+            if entry.ayah_id not in existing_ayahs
+        ]
+        if to_create:
+            AssetVersionEntry.objects.bulk_create(to_create, batch_size=1000)
+        return len(to_create)
+
+    @transaction.atomic
     def create_draft_seeded_from(
         self,
         asset: Asset,

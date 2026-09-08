@@ -64,6 +64,23 @@ def import_uploaded_file_into_entries(version: AssetVersion) -> None:
     logger.info(f"Uploaded file imported into entries [version_id={version.pk}, entries={entries_count}]")
 
 
+def set_version_language(version: AssetVersion, language: str | None) -> None:
+    """Tag an uploaded version with a specific (already-registered) language.
+
+    A no-op when ``language`` is falsy — the version keeps the source language
+    assigned by ``AssetVersion.save()``. Raises ``language_not_available`` (404)
+    if the language is not one of the asset's registered languages.
+    """
+    if not language:
+        return
+    from apps.content.services.asset_language import AssetLanguageService
+
+    asset_language = AssetLanguageService().get_asset_language_or_404(version.asset, language)
+    if version.asset_language_id != asset_language.id:
+        version.asset_language = asset_language
+        version.save(update_fields=["asset_language", "updated_at"])
+
+
 class AssetContentService:
     """Shared per-ayah content editing for text-based assets."""
 
@@ -137,6 +154,10 @@ class AssetContentService:
                 if existing is not None:
                     is_stale = source is not None and source.created_at > existing.created_at
                     if not is_stale:
+                        # Keep a translation draft covering the whole mushaf, even if
+                        # it was created sparse (e.g. before full-mushaf seeding).
+                        if mushaf is not None:
+                            self.repo.ensure_mushaf_coverage(existing, mushaf)
                         return existing
                     # A newer version exists than this draft — discard the stale
                     # draft and rebuild it below from the current latest version.
