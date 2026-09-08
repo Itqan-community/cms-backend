@@ -7,8 +7,9 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("content", "0054_recitationfolder_is_visible"),
+        ("content", "0057_tighten_asset_language"),
     ]
+
 
     operations = [
         migrations.AddField(
