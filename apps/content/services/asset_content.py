@@ -273,7 +273,7 @@ class AssetContentService:
             draft.summary = summary
         published = self.repo.publish_draft(draft)
         logger.info(f"Draft published [version_id={published.pk}, asset_id={asset.pk}]")
-        notify_asset_version_created.delay(published.pk)
+        transaction.on_commit(lambda: notify_asset_version_created.delay(published.pk))
         return published
 
     def discard_draft(
