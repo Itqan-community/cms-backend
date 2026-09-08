@@ -133,10 +133,14 @@ def test_issue_jwt_where_private_key_empty_raises_misconfigured(rsa_keypair, bad
     [
         "not a pem at all",  # non-PEM string
         (
-            "-----BEGIN RSA PRIVATE KEY-----\n"
+            # Header label is deliberately not a real key type: a literal
+            # "BEGIN ... PRIVATE KEY" header would trip detect-private-key's
+            # fixed-substring scan. Any unparseable PEM exercises the same
+            # error path and non-echo behavior.
+            "-----BEGIN MALFORMED KEY-----\n"
             "CANARY-MALFORMED-PEM\n"
             "not_base64_at_all\n"
-            "-----END RSA PRIVATE KEY-----\n"
+            "-----END MALFORMED KEY-----\n"
         ),
     ],
 )
@@ -203,10 +207,10 @@ class CreateGithubAppJwtSecurityTest(SimpleTestCase):
     def test_issue_jwt_does_not_leak_private_key_in_exception_on_signing_failure(self):
         marker = "CANARY-MARKER-DO-NOT-LEAK"
         corrupted_pem = (
-            "-----BEGIN PRIVATE KEY-----\n"
+            "-----BEGIN MALFORMED KEY-----\n"
             f"{marker}\n"
             "AAAAAAAAAAAAA_invalid_base64_BBBBBBBBBBBB\n"
-            "-----END PRIVATE KEY-----\n"
+            "-----END MALFORMED KEY-----\n"
         )
         with self.assertRaises(ItqanError) as ctx:
             create_github_app_jwt(
@@ -220,7 +224,7 @@ class CreateGithubAppJwtSecurityTest(SimpleTestCase):
 
     def test_issue_jwt_does_not_log_private_key_on_signing_failure(self):
         marker = "CANARY-PRIVATE-KEY-LOG"
-        bad_pem = "-----BEGIN RSA PRIVATE KEY-----\n" f"{marker}\n" "-----END RSA PRIVATE KEY-----\n"
+        bad_pem = "-----BEGIN MALFORMED KEY-----\n" f"{marker}\n" "-----END MALFORMED KEY-----\n"
         with self.assertLogs("apps.dependabot.services.github_jwt", level=logging.DEBUG) as cm:
             with self.assertRaises(ItqanError):
                 create_github_app_jwt(

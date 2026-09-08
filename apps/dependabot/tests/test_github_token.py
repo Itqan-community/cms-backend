@@ -551,11 +551,15 @@ class InstallationTokenSecrecyTest(SimpleTestCase):
 
     def test_exchange_does_not_leak_private_key_on_signing_failure(self):
         marker = "CANARY-PRIVATE-KEY-MATERIAL"
+        # Header label is deliberately not a real key type: a literal
+        # "BEGIN ... PRIVATE KEY" header would trip detect-private-key's
+        # fixed-substring scan. Any unparseable PEM exercises the same
+        # error path and non-echo behavior.
         bad_pem = (
-            "-----BEGIN PRIVATE KEY-----\n"
+            "-----BEGIN MALFORMED KEY-----\n"
             f"{marker}\n"
             "AAAAAAAAAAAAA_invalid_base64_BBBBBBBBBBBB\n"
-            "-----END PRIVATE KEY-----\n"
+            "-----END MALFORMED KEY-----\n"
         )
 
         def handler(request: httpx.Request) -> httpx.Response:  # pragma: no cover - must not run

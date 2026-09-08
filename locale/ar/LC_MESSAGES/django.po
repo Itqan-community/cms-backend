@@ -633,6 +633,18 @@ msgstr "البوابة - إدارة إعدادات طلبات الوصول"
 msgid "Permissions are not synced to the database: {missing}. Run `manage.py migrate`."
 msgstr "الصلاحيات غير متزامنة مع قاعدة البيانات: {missing}. نفّذ الأمر `manage.py migrate`."
 
+msgid "GitHub"
+msgstr "GitHub"
+
+msgid "Opted in"
+msgstr "مشترك"
+
+msgid "Opted out"
+msgstr "غير مشترك"
+
+msgid "Suspended"
+msgstr "موقوف"
+
 #, python-brace-format
 msgid "Filename must end with surah number as 3 digits .mp3: {filename}"
 msgstr "يجب أن ينتهي اسم الملف برقم السورة من 3 أرقام .mp3: {filename}"
