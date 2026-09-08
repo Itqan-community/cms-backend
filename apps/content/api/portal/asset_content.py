@@ -254,7 +254,7 @@ def export_version(request: Request, category: str, slug: str, version_id: int):
             status_code=404,
         )
 
-    content = service.repo.entries_to_csv_bytes(version)
+    content = service.repo.entries_to_csv_bytes(version, verbose=True)
     filename = f"{slug}-{version.name}.csv"
     response = HttpResponse(content, content_type="text/csv; charset=utf-8")
     # content_disposition_header safely handles non-ASCII (Arabic) and quoted names.

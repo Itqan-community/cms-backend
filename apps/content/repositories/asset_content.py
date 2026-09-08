@@ -219,13 +219,34 @@ class AssetContentRepository:
             version.save(update_fields=["content_edited", "updated_at"])
         return changed
 
-    def entries_to_csv_bytes(self, version: AssetVersion) -> bytes:
-        """Serialize a version's per-ayah entries to CSV (sura,aya,text)."""
+    def entries_to_csv_bytes(self, version: AssetVersion, *, verbose: bool = False) -> bytes:
+        """Serialize a version's per-ayah entries to CSV.
+
+        Lean by default (``surah,ayah,text``) for the stored/consumer download.
+        When ``verbose`` is set, the surah name and the Arabic ayah text are added
+        (``surah,ayah,surah_name,ayah_text,text``) so a reviewer can verify a
+        translation/tafsir against the original at a glance. The extra columns are
+        ignored on re-import (the parser is header-driven and keys off ``text``).
+        """
         buffer = io.StringIO()
         writer = csv.writer(buffer)
-        writer.writerow(["sura", "aya", "text"])
-        for entry in version.entries.select_related("ayah").order_by("order", "ayah_id").iterator():
-            writer.writerow([entry.ayah.sura_id, entry.ayah.number_in_sura, entry.text])
+        entries = version.entries.order_by("order", "ayah_id")
+        if verbose:
+            writer.writerow(["surah", "ayah", "surah_name", "ayah_text", "text"])
+            for entry in entries.select_related("ayah", "ayah__sura").iterator():
+                writer.writerow(
+                    [
+                        entry.ayah.sura_id,
+                        entry.ayah.number_in_sura,
+                        entry.ayah.sura.name,
+                        entry.ayah.text,
+                        entry.text,
+                    ]
+                )
+        else:
+            writer.writerow(["surah", "ayah", "text"])
+            for entry in entries.select_related("ayah").iterator():
+                writer.writerow([entry.ayah.sura_id, entry.ayah.number_in_sura, entry.text])
         return buffer.getvalue().encode("utf-8")
 
     @transaction.atomic

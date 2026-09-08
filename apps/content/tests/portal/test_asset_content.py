@@ -527,7 +527,7 @@ class PublishDraftTest(AssetContentBaseTest):
         draft.file_url.open("rb")
         content = draft.file_url.read().decode("utf-8")
         draft.file_url.close()
-        self.assertIn("sura,aya,text", content)
+        self.assertIn("surah,ayah,text", content)
         self.assertIn("au nom", content)
 
     def test_publish_draft_where_not_a_draft_should_return_400(self):
@@ -696,13 +696,15 @@ class ExportVersionTest(AssetContentBaseTest):
             f"/portal/content/translations/{self.translation.slug}/versions/{version.id}/export/"
         )
 
-        # Assert
+        # Assert — verbose columns help reviewers verify against the original
         self.assertEqual(200, response.status_code, response.content)
         self.assertIn("text/csv", response["Content-Type"])
         self.assertIn("attachment", response["Content-Disposition"])
         body = response.content.decode("utf-8")
-        self.assertIn("sura,aya,text", body)
-        self.assertIn("au nom", body)
+        self.assertIn("surah,ayah,surah_name,ayah_text,text", body)
+        self.assertIn("au nom", body)  # the entry text
+        self.assertIn("الفاتحة", body)  # surah name
+        self.assertIn("ayah 1", body)  # the original ayah text
 
     def test_export_where_version_name_is_arabic_should_encode_content_disposition(self):
         # Arrange — a version name with non-ASCII (Arabic) characters
