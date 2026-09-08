@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 
 from django.db import IntegrityError, transaction
-from django.db.models import Q
+from django.db.models import OuterRef, Q, Subquery
 from django.utils.translation import gettext as _
 
 from apps.content.models import Asset, AssetVersion, AssetVersionEntry, CategoryChoice, StatusChoice, VersionStateChoice
@@ -104,22 +104,36 @@ class AssetContentService:
         slug: str,
         category: CategoryChoice,
         *,
+        language: str,
         created_by_id: int | None,
         publisher_q: Q | None = None,
     ) -> AssetVersion:
-        """Return the asset's shared draft, seeding it from the latest published
-        version. Creates the draft if none exists; if an existing draft predates
-        the latest published version (e.g. a new version was uploaded after the
-        draft was started), the stale draft is rebuilt from that newer version so
-        the editor always reflects the current content."""
+        """Return the shared draft for one language, seeding it from that
+        language's latest published version. Creates the draft if none exists; if
+        an existing draft predates the latest published version of the language
+        (e.g. a new version was published after the draft was started), the stale
+        draft is rebuilt so the editor always reflects the current content."""
+        from apps.content.services.asset_language import AssetLanguageService
+
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
+        # The source rendition is created lazily, so guarantee it exists before a
+        # source-language edit; translation languages must be added first.
+        asset.get_or_create_source_language()
+        asset_language = AssetLanguageService().get_asset_language_or_404(asset, language)
         # Lock the asset row so concurrent editor-opens can't both create a draft
-        # and violate the one-draft-per-asset constraint (which would 500).
+        # and violate the one-draft-per-(asset,language) constraint (which would 500).
         try:
             with transaction.atomic():
                 locked_asset = Asset.objects.select_for_update().get(pk=asset.pk)
-                source = locked_asset.get_latest_version()
-                existing = self.repo.get_draft(locked_asset)
+                source = locked_asset.get_latest_version(language)
+                # When editing a translation, always seed from the full source
+                # mushaf so the editor shows every original ayah (overlaying any
+                # existing translation), even ayahs the translation hasn't reached
+                # yet or that a previous sparse publish dropped.
+                mushaf = None
+                if not asset_language.is_source:
+                    mushaf = locked_asset.get_latest_version(locked_asset.language)
+                existing = self.repo.get_draft(locked_asset, asset_language)
                 if existing is not None:
                     is_stale = source is not None and source.created_at > existing.created_at
                     if not is_stale:
@@ -128,7 +142,7 @@ class AssetContentService:
                     # draft and rebuild it below from the current latest version.
                     logger.info(
                         f"Rebuilding stale draft [draft_id={existing.pk}, asset_id={locked_asset.pk}, "
-                        f"newer_version_id={source.pk}]"
+                        f"language={language}, newer_version_id={source.pk}]"
                     )
                     self.repo.delete_version(existing)
                 # Versions carry distinct names, so a draft must not reuse the source
@@ -139,19 +153,21 @@ class AssetContentService:
                 draft = self.repo.create_draft_seeded_from(
                     locked_asset,
                     source,
+                    asset_language=asset_language,
                     name=name,
                     summary=summary,
                     created_by_id=created_by_id,
+                    mushaf_version=mushaf,
                 )
         except IntegrityError:
             # A concurrent request created the draft between our checks — return it.
-            existing = self.repo.get_draft(asset)
+            existing = self.repo.get_draft(asset, asset_language)
             if existing is not None:
                 return existing
             raise
         logger.info(
             f"Draft version created [version_id={draft.pk}, asset_id={asset.pk}, "
-            f"seeded_from={source.pk if source else None}]"
+            f"language={language}, seeded_from={source.pk if source else None}]"
         )
         return draft
 
@@ -162,9 +178,24 @@ class AssetContentService:
         version_id: int,
         publisher_q: Q | None = None,
     ):
-        """Return a version's per-ayah entries (any state; used by the editor)."""
+        """Return a version's per-ayah entries (any state; used by the editor).
+
+        When the version is a translation (non-source language), each row is
+        annotated with ``source_text`` — the source language's latest published
+        text for the same ayah — so the editor can show it as a read-only
+        reference beside the editable target text.
+        """
         version = self.get_version_or_404(slug, category, version_id, publisher_q=publisher_q)
-        return self.repo.get_entries(version)
+        qs = self.repo.get_entries(version)
+        lang = version.asset_language
+        if lang is not None and not lang.is_source:
+            source_version = version.asset.get_latest_version(version.asset.language)
+            if source_version is not None:
+                source_text = AssetVersionEntry.objects.filter(
+                    version=source_version, ayah_id=OuterRef("ayah_id")
+                ).values("text")[:1]
+                qs = qs.annotate(source_text=Subquery(source_text))
+        return qs
 
     def get_version_or_404(
         self,
