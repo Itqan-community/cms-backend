@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
+from django.conf import settings
 from django.db.models import ProtectedError, Q, QuerySet
 from django.utils.translation import gettext as _
 
@@ -12,6 +13,7 @@ from apps.content.services.asset_access import guard_restrict_for_tenant
 from apps.content.services.recitation_folder_resolution import find_folder_by_token
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
+from config.settings.base import CLOUDFLARE_R2_PUBLIC_BASE_URL
 
 logger = logging.getLogger(__name__)
 
@@ -268,3 +270,115 @@ class RecitationService:
         sample recitation, with ayah timings prefetched in playback order.
         """
         return self.repo.get_default_track_for_surah(asset_id, surah_number)
+
+    def get_ayah_audio_data(
+        self,
+        asset_id: int,
+        ayah_key: str,
+        folder: str | None = None,
+        publisher_q: Q | None = None,
+        require_visible_folder: bool = False,
+    ) -> dict[str, Any]:
+        """
+        Business Logic: Retrieve audio URL and metadata for a single ayah of an asset.
+
+        Args:
+            asset_id: The ID of the asset.
+            ayah_key: Canonical ayah identifier (e.g. '2:255').
+            folder: Optional folder slug or name variant.
+            publisher_q: Optional publisher access constraint filter.
+            require_visible_folder: When True, rejects hidden folders (is_visible=False).
+
+        Returns:
+            Dict containing asset, folder, timing metadata, and Cloudflare R2 audio URL.
+        """
+        parts = ayah_key.strip().split(":")
+        if len(parts) != 2:
+            raise ItqanError(
+                error_name="ayah_not_found",
+                message=_("Ayah {ayah_key} not found.").format(ayah_key=ayah_key),
+                status_code=404,
+            )
+
+        try:
+            surah_number = int(parts[0])
+            ayah_number = int(parts[1])
+        except ValueError as exc:
+            raise ItqanError(
+                error_name="ayah_not_found",
+                message=_("Ayah {ayah_key} not found.").format(ayah_key=ayah_key),
+                status_code=404,
+            ) from exc
+
+        if not (1 <= surah_number <= 114) or ayah_number < 1:
+            raise ItqanError(
+                error_name="ayah_not_found",
+                message=_("Ayah {ayah_key} not found.").format(ayah_key=ayah_key),
+                status_code=404,
+            )
+
+        asset = self.repo.get_asset_object(asset_id, publisher_q=publisher_q)
+        if asset is None:
+            raise ItqanError(
+                error_name="asset_not_found",
+                message=_("Asset with id {id} not found.").format(id=asset_id),
+                status_code=404,
+            )
+
+        if folder is not None:
+            folder_obj = find_folder_by_token(asset_id, folder, require_visible=require_visible_folder)
+            if folder_obj is None:
+                raise ItqanError(
+                    error_name="folder_not_found",
+                    message=_("Folder {folder} not found.").format(folder=folder),
+                    status_code=404,
+                )
+        else:
+            default_qs = asset.recitation_folders.filter(is_default=True)
+            if require_visible_folder:
+                default_qs = default_qs.filter(is_visible=True)
+            folder_obj = default_qs.first()
+            if folder_obj is None:
+                raise ItqanError(
+                    error_name="folder_not_found",
+                    message=_("Default folder for asset {id} not found.").format(id=asset_id),
+                    status_code=404,
+                )
+
+        normalized_ayah_key = f"{surah_number}:{ayah_number}"
+        timing = self.repo.get_ayah_timing_for_asset(
+            asset_id=asset_id,
+            folder_id=folder_obj.id,
+            surah_number=surah_number,
+            ayah_key=normalized_ayah_key,
+        )
+        if timing is None:
+            raise ItqanError(
+                error_name="ayah_not_found",
+                message=_("Ayah {ayah_key} not found.").format(ayah_key=ayah_key),
+                status_code=404,
+            )
+
+        # Media URL generation: Follows the project-wide storage architecture
+        # (MediaFileStorage / CLOUDFLARE_R2_PUBLIC_BASE_URL). Access control is enforced
+        # at the API gateway layer via enforce_asset_access_on_public_api before this URL
+        # is returned to consumers, matching recitation_track_list and samples endpoints.
+        base_url = getattr(settings, "CLOUDFLARE_R2_PUBLIC_BASE_URL", CLOUDFLARE_R2_PUBLIC_BASE_URL).rstrip("/")
+        slice_key = f"uploads/assets/{asset_id}/recitations/{folder_obj.id}/{surah_number:03}/ayah_{ayah_number:03}.mp3"
+        audio_url = f"{base_url}/media/{slice_key}"
+
+        size_bytes: int | None = None
+        track = timing.track
+        if track and track.duration_ms and track.size_bytes:
+            size_bytes = int(track.size_bytes * timing.duration_ms // track.duration_ms)
+
+        return {
+            "asset": asset,
+            "folder": folder_obj,
+            "surah_number": surah_number,
+            "ayah_number": ayah_number,
+            "ayah_key": normalized_ayah_key,
+            "duration_ms": timing.duration_ms,
+            "size_bytes": size_bytes,
+            "audio_url": audio_url,
+        }

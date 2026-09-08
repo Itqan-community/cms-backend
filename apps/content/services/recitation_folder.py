@@ -49,6 +49,9 @@ class RecitationFolderService:
 
         default_folder = self.repo.get_default_for_asset(asset_id)
         if default_folder is None:
+            # Every recitation gets a default folder at creation, and existing ones
+            # were backfilled, so this means the asset was built outside the service
+            # layer. Surface it rather than silently returning no tracks.
             logger.error(f"Recitation asset has no default folder [asset_id={asset_id}]")
             raise ItqanError(
                 error_name="folder_not_found",
