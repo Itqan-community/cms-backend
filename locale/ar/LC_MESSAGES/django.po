@@ -353,6 +353,9 @@ msgstr "تعذر تحليل ملف المحتوى المرفوع: {reason}"
 msgid "There are no changes to publish."
 msgstr "لا توجد تغييرات للنشر."
 
+msgid "Only published versions can be restored."
+msgstr "لا يمكن استعادة سوى الإصدارات المنشورة."
+
 #, python-brace-format
 msgid "Language {language} already exists for this asset."
 msgstr "اللغة {language} موجودة بالفعل لهذا المورد."

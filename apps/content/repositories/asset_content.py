@@ -9,6 +9,7 @@ from __future__ import annotations
 import csv
 import io
 import logging
+import os
 import re
 
 from django.core.files.base import ContentFile
@@ -298,6 +299,46 @@ class AssetContentRepository:
             asset_fields.append("format")
         draft.asset.save(update_fields=asset_fields)
         return draft
+
+    @transaction.atomic
+    def restore_version(self, version: AssetVersion, *, created_by_id: int | None = None) -> AssetVersion:
+        """Duplicate a version's content into a new published version so it becomes
+        the latest (active) one for its language. The original is left intact, so
+        history is preserved.
+        """
+        asset = version.asset
+        name = self.unique_version_name(asset, version.name)
+        new_version = self.asset_version_model.objects.create(
+            asset=asset,
+            asset_language=version.asset_language,
+            name=name,
+            summary=version.summary,
+            state=VersionStateChoice.PUBLISHED,
+            created_by_id=created_by_id,
+        )
+        copies = [
+            AssetVersionEntry(version=new_version, ayah_id=entry.ayah_id, text=entry.text, order=entry.order)
+            for entry in version.entries.all().iterator()
+        ]
+        if copies:
+            AssetVersionEntry.objects.bulk_create(copies, batch_size=1000)
+            content = self.entries_to_csv_bytes(new_version)
+            filename = f"{asset.slug}-{name}.csv".replace(" ", "_")
+            new_version.file_url.save(filename, ContentFile(content), save=False)
+            new_version.size_bytes = len(content)
+            new_version.save(update_fields=["file_url", "size_bytes"])
+        elif version.file_url:
+            # Legacy file-only version: copy the stored file into the new version.
+            extension = os.path.splitext(version.file_url.name)[1]
+            filename = f"{asset.slug}-{name}{extension}".replace(" ", "_")
+            version.file_url.open("rb")
+            try:
+                new_version.file_url.save(filename, ContentFile(version.file_url.read()), save=False)
+            finally:
+                version.file_url.close()
+            new_version.size_bytes = version.size_bytes
+            new_version.save(update_fields=["file_url", "size_bytes"])
+        return new_version
 
     def backfill_file_from_entries(self, version: AssetVersion) -> bool:
         """Generate a CSV file for a published version that has entries but no

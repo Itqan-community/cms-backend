@@ -309,3 +309,26 @@ class AssetContentService:
         draft = self._get_editable_draft_or_400(asset, version_id)
         self.repo.delete_version(draft)
         logger.info(f"Draft discarded [version_id={version_id}, asset_id={asset.pk}]")
+
+    def restore_version(
+        self,
+        slug: str,
+        category: CategoryChoice,
+        version_id: int,
+        *,
+        created_by_id: int | None = None,
+        publisher_q: Q | None = None,
+    ) -> AssetVersion:
+        """Restore a published version's content as a new version, making it the
+        latest (active) one for its language."""
+        version = self.get_version_or_404(slug, category, version_id, publisher_q=publisher_q)
+        if version.state != VersionStateChoice.PUBLISHED:
+            raise ItqanError(
+                error_name="version_not_restorable",
+                message=_("Only published versions can be restored."),
+                status_code=400,
+            )
+        restored = self.repo.restore_version(version, created_by_id=created_by_id)
+        logger.info(f"Version restored [source_version_id={version.pk}, new_version_id={restored.pk}]")
+        notify_asset_version_created.delay(restored.pk)
+        return restored

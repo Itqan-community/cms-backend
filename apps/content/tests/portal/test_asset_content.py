@@ -526,6 +526,36 @@ class PublishDraftTest(AssetContentBaseTest):
         draft.refresh_from_db()
         self.assertTrue(draft.content_edited)
 
+    def test_restore_version_makes_it_the_active_version(self):
+        # Arrange — an older v1 and a newer v2 (both published, source language)
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        ar = self.translation.get_or_create_source_language()
+        old = baker.make(
+            AssetVersion, asset=self.translation, asset_language=ar, name="v1", state=VersionStateChoice.PUBLISHED
+        )
+        baker.make(AssetVersionEntry, version=old, ayah=self.ayahs[0], text="old text")
+        baker.make(
+            AssetVersion, asset=self.translation, asset_language=ar, name="v2", state=VersionStateChoice.PUBLISHED
+        )
+        AssetVersion.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(hours=1))
+
+        # Act — restore the older v1
+        response = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/versions/{old.id}/restore/",
+            data={},
+            content_type="application/json",
+        )
+
+        # Assert — a new version becomes active with v1's content; original kept
+        self.assertEqual(200, response.status_code, response.content)
+        restored_id = response.json()["id"]
+        self.assertNotEqual(old.id, restored_id)
+        latest = self.translation.get_latest_version("ar")
+        self.assertEqual(restored_id, latest.id)
+        self.assertEqual("old text", latest.entries.get(ayah_id=self.ayahs[0].id).text)
+        self.assertTrue(AssetVersion.objects.filter(pk=old.pk).exists())
+
     def test_publish_draft_should_generate_downloadable_file_from_entries(self):
         # Arrange
         self.authenticate_user(self.user)
