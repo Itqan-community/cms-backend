@@ -38,7 +38,7 @@ class BaseTestCase(TestCase):
             cls.mock_aws.stop()
         except Exception:
             pass
-        super().tearDownClass()  
+        super().tearDownClass()
 
     @classmethod
     def mock_storage(cls):
