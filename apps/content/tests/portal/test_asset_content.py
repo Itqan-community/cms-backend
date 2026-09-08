@@ -439,6 +439,33 @@ class SourceReferenceEntriesTest(AssetContentBaseTest):
         self.assertEqual("", rows[self.ayahs[1].id]["text"])
         self.assertEqual("source two", rows[self.ayahs[1].id]["source_text"])
 
+    def test_reopen_existing_sparse_translation_draft_tops_up_full_mushaf(self):
+        # Regression: an already-existing sparse draft (e.g. from an upload or a
+        # pre-fix open) must be topped up to the full mushaf when reopened, without
+        # losing its in-progress edits.
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        es_lang = self._publish_source_and_add_es()  # ar covers ayahs 1 & 2
+        # An existing es draft that only covers ayah 1 (sparse).
+        draft = baker.make(AssetVersion, asset=self.translation, asset_language=es_lang, state=VersionStateChoice.DRAFT)
+        baker.make(AssetVersionEntry, version=draft, ayah=self.ayahs[0], text="uno", order=1)
+
+        # Act — reopen the es draft
+        response = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/draft/",
+            data={"language": "es"},
+            content_type="application/json",
+        )
+
+        # Assert — same draft, now topped up to cover every source ayah
+        self.assertEqual(draft.id, response.json()["id"])
+        rows = self._entries(draft.id)
+        self.assertIn(self.ayahs[1].id, rows)
+        self.assertEqual("uno", rows[self.ayahs[0].id]["text"])  # edit preserved
+        self.assertEqual("", rows[self.ayahs[1].id]["text"])
+        self.assertEqual("source two", rows[self.ayahs[1].id]["source_text"])
+
 
 class PublishDraftTest(AssetContentBaseTest):
     def test_publish_draft_where_valid_should_become_latest_published(self):
@@ -705,6 +732,8 @@ class ExportVersionTest(AssetContentBaseTest):
         self.assertIn("au nom", body)  # the entry text
         self.assertIn("الفاتحة", body)  # surah name
         self.assertIn("ayah 1", body)  # the original ayah text
+        # Filename is {english name}-{language}-{version}.csv (whitespace → underscores)
+        self.assertIn("French_Rashid-ar-v1.csv", response["Content-Disposition"])
 
     def test_export_where_version_name_is_arabic_should_encode_content_disposition(self):
         # Arrange — a version name with non-ASCII (Arabic) characters

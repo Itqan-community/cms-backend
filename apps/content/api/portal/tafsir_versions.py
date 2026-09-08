@@ -22,11 +22,16 @@ router = ItqanRouter(tags=[NinjaTag.TAFSIRS])
 class TafsirVersionListOut(Schema):
     id: int
     asset_id: int
+    language: str
     name: str
     summary: str
     file_url: str | None = None
     size_bytes: int
     created_at: AwareDatetime
+
+    @staticmethod
+    def resolve_language(obj: AssetVersion) -> str:
+        return obj.asset_language.language if obj.asset_language_id else obj.asset.language
 
     @staticmethod
     def resolve_file_url(obj: AssetVersion) -> str | None:
@@ -39,6 +44,7 @@ class TafsirVersionCreateIn(Schema):
     asset_id: int
     name: str = Field(..., max_length=255)
     summary: str = ""
+    language: str | None = None
 
 
 class TafsirVersionPutIn(Schema):
@@ -63,7 +69,7 @@ class TafsirVersionPatchIn(Schema):
 @permission_required([permission_class(PermissionChoice.PORTAL_READ_TAFSIR)])
 @paginate
 @searching(search_fields=["name", "summary"])
-def list_tafsir_versions(request: Request, tafsir_slug: str):
+def list_tafsir_versions(request: Request, tafsir_slug: str, language: str | None = None):
     try:
         asset = Asset.objects.filter(request.publisher_q()).get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
     except Asset.DoesNotExist as exc:
@@ -72,7 +78,10 @@ def list_tafsir_versions(request: Request, tafsir_slug: str):
             message=_("Tafsir with slug {slug} not found.").format(slug=tafsir_slug),
             status_code=404,
         ) from exc
-    return AssetVersion.objects.filter(asset=asset, state=VersionStateChoice.PUBLISHED).order_by("-created_at")
+    versions = AssetVersion.objects.filter(asset=asset, state=VersionStateChoice.PUBLISHED)
+    if language:
+        versions = versions.filter(asset_language__language=language)
+    return versions.order_by("-created_at")
 
 
 @router.post(
@@ -113,6 +122,7 @@ def create_tafsir_version(
         name=data.name,
         summary=data.summary,
         file=file,
+        language=data.language,
         publisher_q=request.publisher_q(),
     )
     return 201, version

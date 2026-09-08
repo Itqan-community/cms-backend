@@ -2,7 +2,15 @@ from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetAccess, AssetAccessRequest, AssetVersion, CategoryChoice, StatusChoice
+from apps.content.models import (
+    Asset,
+    AssetAccess,
+    AssetAccessRequest,
+    AssetLanguage,
+    AssetVersion,
+    CategoryChoice,
+    StatusChoice,
+)
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
@@ -40,6 +48,25 @@ class TafsirVersionListTest(TafsirVersionBaseTest):
         body = response.json()
         self.assertEqual(2, len(body["results"]))
         self.assertEqual("V2", body["results"][0]["name"])  # Ordered by -created_at
+
+    def test_list_versions_filtered_by_language(self):
+        # Arrange — one source-language version and one French version
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
+        source = self.tafsir.get_or_create_source_language()
+        fr = AssetLanguage.objects.create(asset=self.tafsir, language="fr")
+        baker.make(AssetVersion, asset=self.tafsir, asset_language=source, name="SRC1")
+        baker.make(AssetVersion, asset=self.tafsir, asset_language=fr, name="FR1")
+
+        # Act
+        response = self.client.get(f"/portal/tafsirs/{self.tafsir.slug}/versions/?language=fr")
+
+        # Assert — only the French version, and each row exposes its language
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(1, len(body["results"]))
+        self.assertEqual("FR1", body["results"][0]["name"])
+        self.assertEqual("fr", body["results"][0]["language"])
 
     def test_list_versions_where_tafsir_not_found_should_return_404(self):
         # Arrange
@@ -101,6 +128,31 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         version = AssetVersion.objects.get(id=body["id"])
         self.assertEqual(self.tafsir, version.asset)
         self.assertEqual(len(b"content"), version.size_bytes)
+
+    def test_create_version_with_language_tags_the_version(self):
+        # Arrange — register a French language on the tafsir
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TAFSIR)
+        self.tafsir.get_or_create_source_language()
+        AssetLanguage.objects.create(asset=self.tafsir, language="fr")
+        file = SimpleUploadedFile("tafsir-fr.csv", b"surah,ayah,text\n1,1,au nom", content_type="text/csv")
+
+        # Act
+        response = self.client.post(
+            f"/portal/tafsirs/{self.tafsir.slug}/versions/",
+            data={
+                "asset_id": self.tafsir.id,
+                "name": "French v1",
+                "summary": "",
+                "language": "fr",
+                "file": file,
+            },
+        )
+
+        # Assert — the version is tagged with the chosen language
+        self.assertEqual(201, response.status_code, response.content)
+        version = AssetVersion.objects.get(id=response.json()["id"])
+        self.assertEqual("fr", version.asset_language.language)
 
     def test_create_version_where_asset_id_mismatch_should_return_400(self):
         # Arrange

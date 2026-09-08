@@ -22,11 +22,16 @@ router = ItqanRouter(tags=[NinjaTag.TRANSLATIONS])
 class TranslationVersionListOut(Schema):
     id: int
     asset_id: int
+    language: str
     name: str
     summary: str
     file_url: str | None = None
     size_bytes: int
     created_at: AwareDatetime
+
+    @staticmethod
+    def resolve_language(obj: AssetVersion) -> str:
+        return obj.asset_language.language if obj.asset_language_id else obj.asset.language
 
     @staticmethod
     def resolve_file_url(obj: AssetVersion) -> str | None:
@@ -39,6 +44,7 @@ class TranslationVersionCreateIn(Schema):
     asset_id: int
     name: str = Field(..., max_length=255)
     summary: str = ""
+    language: str | None = None
 
 
 class TranslationVersionPutIn(Schema):
@@ -63,7 +69,7 @@ class TranslationVersionPatchIn(Schema):
 @permission_required([permission_class(PermissionChoice.PORTAL_READ_TRANSLATION)])
 @paginate
 @searching(search_fields=["name", "summary"])
-def list_translation_versions(request: Request, translation_slug: str):
+def list_translation_versions(request: Request, translation_slug: str, language: str | None = None):
     try:
         asset = Asset.objects.filter(request.publisher_q()).get(
             slug=translation_slug, category=CategoryChoice.TRANSLATION, status=StatusChoice.READY
@@ -74,7 +80,10 @@ def list_translation_versions(request: Request, translation_slug: str):
             message=_("Translation with slug {slug} not found.").format(slug=translation_slug),
             status_code=404,
         ) from exc
-    return AssetVersion.objects.filter(asset=asset, state=VersionStateChoice.PUBLISHED).order_by("-created_at")
+    versions = AssetVersion.objects.filter(asset=asset, state=VersionStateChoice.PUBLISHED)
+    if language:
+        versions = versions.filter(asset_language__language=language)
+    return versions.order_by("-created_at")
 
 
 @router.post(
@@ -117,6 +126,7 @@ def create_translation_version(
         name=data.name,
         summary=data.summary,
         file=file,
+        language=data.language,
         publisher_q=request.publisher_q(),
     )
     return 201, version

@@ -255,7 +255,10 @@ def export_version(request: Request, category: str, slug: str, version_id: int):
         )
 
     content = service.repo.entries_to_csv_bytes(version, verbose=True)
-    filename = f"{slug}-{version.name}.csv"
+    # Name the file {english name}-{language}-{version} for easy identification.
+    language_code = version.asset_language.language if version.asset_language_id else version.asset.language
+    english_name = version.asset.name_en or slug
+    filename = "_".join(f"{english_name}-{language_code}-{version.name}.csv".split())
     response = HttpResponse(content, content_type="text/csv; charset=utf-8")
     # content_disposition_header safely handles non-ASCII (Arabic) and quoted names.
     response["Content-Disposition"] = content_disposition_header(as_attachment=True, filename=filename)
