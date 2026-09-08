@@ -160,10 +160,11 @@ class FontVersionCreateTest(FontVersionBaseTest):
         file = SimpleUploadedFile("font.pdf", b"content", content_type="application/pdf")
 
         # Act
-        response = self.client.post(
-            f"/portal/fonts/{self.font.slug}/versions/",
-            data={"asset_id": self.font.id, "name": "2.0.0", "summary": "New release", "file": file},
-        )
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                f"/portal/fonts/{self.font.slug}/versions/",
+                data={"asset_id": self.font.id, "name": "2.0.0", "summary": "New release", "file": file},
+            )
 
         # Assert
         self.assertEqual(201, response.status_code, response.content)

@@ -162,10 +162,11 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
         file = SimpleUploadedFile("translation.pdf", b"content", content_type="application/pdf")
 
         # Act
-        response = self.client.post(
-            f"/portal/translations/{self.translation.slug}/versions/",
-            data={"asset_id": self.translation.id, "name": "2.0.0", "summary": "New release", "file": file},
-        )
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                f"/portal/translations/{self.translation.slug}/versions/",
+                data={"asset_id": self.translation.id, "name": "2.0.0", "summary": "New release", "file": file},
+            )
 
         # Assert
         self.assertEqual(201, response.status_code, response.content)

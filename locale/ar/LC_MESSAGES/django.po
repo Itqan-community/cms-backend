@@ -31,6 +31,9 @@ msgstr "حدث خطأ غير متوقع"
 msgid "You do not have access to this asset"
 msgstr "ليس لديك صلاحية الوصول إلى هذا المورد"
 
+msgid "Language not available for this asset"
+msgstr "اللغة غير متاحة لهذا المورد"
+
 msgid "No versions found for this asset"
 msgstr "لا توجد إصدارات لهذا الأصل"
 
@@ -349,6 +352,14 @@ msgstr "تعذر تحليل ملف المحتوى المرفوع: {reason}"
 
 msgid "There are no changes to publish."
 msgstr "لا توجد تغييرات للنشر."
+
+#, python-brace-format
+msgid "Language {language} already exists for this asset."
+msgstr "اللغة {language} موجودة بالفعل لهذا المورد."
+
+#, python-brace-format
+msgid "Language {language} is not available for this asset."
+msgstr "اللغة {language} غير متاحة لهذا المورد."
 
 #, python-brace-format
 msgid "Publisher with id {id} not found."

@@ -250,7 +250,7 @@ class TranslationService:
         logger.info(
             f"Translation version created [version_id={version.pk}, asset_id={asset.pk}, slug={translation_slug}]"
         )
-        notify_asset_version_created.delay(version.pk)
+        transaction.on_commit(lambda: notify_asset_version_created.delay(version.pk))
         return version
 
     def update_translation_version(
