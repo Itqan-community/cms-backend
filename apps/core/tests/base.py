@@ -39,6 +39,8 @@ class BaseTestCase(TestCase):
         except Exception:
             pass
 
+        super().tearDownClass()
+
     @classmethod
     def mock_storage(cls):
         cls.mock_aws = mock_aws()
