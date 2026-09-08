@@ -227,6 +227,29 @@ def discard_draft(request: Request, category: str, slug: str, version_id: int) -
     return 204, None
 
 
+@router.post(
+    "content/{category}/{slug}/versions/{version_id}/restore/",
+    response={
+        200: DraftVersionOut,
+        400: NinjaErrorResponse[Literal["version_not_restorable"]],
+        404: NinjaErrorResponse[Literal["translation_not_found"]]
+        | NinjaErrorResponse[Literal["tafsir_not_found"]]
+        | NinjaErrorResponse[Literal["version_not_found"]]
+        | NinjaErrorResponse[Literal["unsupported_content_category"]],
+    },
+)
+def restore_version(request: Request, category: str, slug: str, version_id: int) -> AssetVersion:
+    resolved = _resolve(category, request, write=True)
+    service = AssetContentService()
+    return service.restore_version(
+        slug,
+        resolved,
+        version_id,
+        created_by_id=getattr(request.user, "id", None),
+        publisher_q=request.publisher_q(),
+    )
+
+
 @router.get(
     "content/{category}/{slug}/versions/{version_id}/export/",
     response={

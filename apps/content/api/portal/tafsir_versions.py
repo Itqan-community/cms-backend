@@ -23,6 +23,7 @@ class TafsirVersionListOut(Schema):
     id: int
     asset_id: int
     language: str
+    is_active: bool
     name: str
     summary: str
     file_url: str | None = None
@@ -32,6 +33,12 @@ class TafsirVersionListOut(Schema):
     @staticmethod
     def resolve_language(obj: AssetVersion) -> str:
         return obj.asset_language.language if obj.asset_language_id else obj.asset.language
+
+    @staticmethod
+    def resolve_is_active(obj: AssetVersion) -> bool:
+        language = obj.asset_language.language if obj.asset_language_id else obj.asset.language
+        latest = obj.asset.get_latest_version(language)
+        return latest is not None and latest.id == obj.id
 
     @staticmethod
     def resolve_file_url(obj: AssetVersion) -> str | None:
