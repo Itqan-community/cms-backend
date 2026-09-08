@@ -18,7 +18,6 @@ from config.settings.base import CLOUDFLARE_R2_PUBLIC_BASE_URL
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-
     from apps.content.models import Asset, RecitationSurahTrack
 
 
@@ -367,10 +366,15 @@ class RecitationService:
         slice_key = f"uploads/assets/{asset_id}/recitations/{folder_obj.id}/{surah_number:03}/ayah_{ayah_number:03}.mp3"
         audio_url = f"{base_url}/media/{slice_key}"
 
-        size_bytes: int | None = None
-        track = timing.track
-        if track and track.duration_ms and track.size_bytes:
-            size_bytes = int(track.size_bytes * timing.duration_ms // track.duration_ms)
+        # Prefer the exact size stored by the slicer on the timing row itself.
+        # Fall back to the proportional estimate (track_size × ayah_ratio) for
+        # timings that were created before the slicing pipeline ran or before
+        # ITQ-7 was deployed, so callers always receive a reasonable value.
+        size_bytes: int | None = timing.size_bytes if timing.size_bytes else None
+        if size_bytes is None:
+            track = timing.track
+            if track and track.duration_ms and track.size_bytes:
+                size_bytes = int(track.size_bytes * timing.duration_ms // track.duration_ms)
 
         return {
             "asset": asset,

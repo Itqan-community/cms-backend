@@ -15,6 +15,7 @@ from apps.core.uploads import (
     upload_to_asset_files,
     upload_to_asset_preview_images,
     upload_to_asset_thumbnails,
+    upload_to_recitation_ayah_audio,
     upload_to_recitation_surah_track_files,
     upload_to_reciter_image,
 )
@@ -833,8 +834,15 @@ class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
         super().save(*args, **kwargs)
 
 
-class RecitationAyahTiming(BaseModel):
-    """Timing information per-ayah within a RecitationSurahTrack"""
+class RecitationAyahTiming(DeleteFilesOnDeleteMixin, BaseModel):
+    """Timing information and sliced audio reference per-ayah within a RecitationSurahTrack.
+
+    ``audio_file`` and ``size_bytes`` are populated by the slicing pipeline task
+    (slice_recitation_track_task) after each successful per-ayah ffmpeg slice and
+    R2 upload. They remain null/0 for tracks that have not yet been sliced.
+    ``DeleteFilesOnDeleteMixin`` ensures the sliced MP3 is removed from storage
+    when this row is deleted.
+    """
 
     track = models.ForeignKey(RecitationSurahTrack, on_delete=models.CASCADE, related_name="ayah_timings")
     ayah_key = models.CharField(max_length=20, help_text='Format "surah_number:ayah_number" e.g. "2:255"')
@@ -842,6 +850,17 @@ class RecitationAyahTiming(BaseModel):
     end_ms = models.PositiveIntegerField(help_text="End offset in milliseconds")
     duration_ms = models.PositiveIntegerField(
         default=0, help_text="Duration in milliseconds (auto-calculated as end_ms - start_ms)"
+    )
+    audio_file = models.FileField(
+        upload_to=upload_to_recitation_ayah_audio,
+        null=True,
+        blank=True,
+        validators=[FileExtensionValidator(allowed_extensions=["mp3"])],
+        help_text="Sliced per-ayah audio file (MP3); populated by the slicing pipeline.",
+    )
+    size_bytes = models.PositiveBigIntegerField(
+        default=0,
+        help_text="Sliced audio file size in bytes (auto-calculated on save when audio_file is present).",
     )
 
     class Meta:
@@ -857,6 +876,18 @@ class RecitationAyahTiming(BaseModel):
         except Exception as e:
             logger.warning(f"Failed to compute ayah duration for {self.ayah_key}: {e}")
             self.duration_ms = 0
+
+        # Auto compute size_bytes from the sliced audio file when present.
+        # Mirrors the pattern used by RecitationSurahTrack.save(): only set when
+        # the value is not already known, so an explicit assignment by the slicer
+        # (which has the exact stat() byte count) is never overwritten.
+        if self.audio_file and not self.size_bytes:
+            try:
+                self.size_bytes = int(getattr(self.audio_file, "size", 0) or 0)
+            except Exception as e:
+                logger.warning(f"Failed to get file size for RecitationAyahTiming {self.ayah_key}: {e}")
+                self.size_bytes = 0
+
         super().save(*args, **kwargs)
 
 

@@ -165,6 +165,7 @@ class RecitationAudioSlicingService:
                 key = self._build_slice_key(track.asset_id, track.folder_id, track.surah_number, ayah_number)
                 output_path = temp_dir / f"{track.surah_number:03}_{ayah_number:03}.mp3"
                 self._run_ffmpeg(source_path, output_path, timing.start_ms, timing.end_ms, audio_params)
+                file_size = output_path.stat().st_size
                 try:
                     with open(output_path, "rb") as f:
                         s3.put_object(
@@ -180,6 +181,18 @@ class RecitationAudioSlicingService:
                         message=_("Failed to store sliced ayah audio for track {track_id}.").format(track_id=track.id),
                         status_code=503,
                     ) from exc
+
+                # Persist the sliced file reference on the timing row.
+                # update_or_create is safe here: the timing row already exists (created by
+                # the timings-upload step); re-running the slicer overwrites in place and
+                # converges to the full set without accumulating duplicates.
+                # size_bytes comes from the actual on-disk file, not from an approximation.
+                from apps.content.models import RecitationAyahTiming  # local import avoids circular
+
+                RecitationAyahTiming.objects.filter(pk=timing.pk).update(
+                    audio_file=key,
+                    size_bytes=file_size,
+                )
                 keys.append(key)
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
@@ -273,9 +286,7 @@ class RecitationAudioSlicingService:
         # fade duration unchanged.
         fade_duration_s = min(FADE_DURATION_SECONDS, duration_s / 2)
         fade_out_start_s = duration_s - fade_duration_s
-        fade_filter = (
-            f"afade=t=in:st=0:d={fade_duration_s}," f"afade=t=out:st={fade_out_start_s:.3f}:d={fade_duration_s}"
-        )
+        fade_filter = f"afade=t=in:st=0:d={fade_duration_s},afade=t=out:st={fade_out_start_s:.3f}:d={fade_duration_s}"
         cmd = [
             "ffmpeg",
             "-y",
