@@ -11,38 +11,45 @@ from oauth2_provider.contrib.rest_framework import OAuth2Authentication
 from apps.core.ninja_utils.errors import ItqanError
 from apps.users.models import User
 
-ITQAN_USER_ID_HEADER = "X-Itqan-User-Id"
-ITQAN_USER_ID_MAX_LENGTH = 64
-ITQAN_USER_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$")
+EXTERNAL_USER_ID_HEADER = "X-External-User-Id"
+EXTERNAL_USER_ID_MAX_LENGTH = 64
+EXTERNAL_USER_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$")
+EXTERNAL_USER_ID_PHONE_RE = re.compile(r"^[+0-9][0-9().\-\s]{5,}[0-9]$")
 
 
-def _validate_itqan_user_id(request):
-    value = request.headers.get("x-itqan-user-id")
+def _validate_external_user_id(request):
+    value = request.headers.get(EXTERNAL_USER_ID_HEADER)
     if value is None:
-        request.itqan_user_id = None
+        request.external_user_id = None
         return None
 
     candidate = value.strip()
     if not candidate:
         raise ItqanError(
-            "invalid_itqan_user_id",
-            _("The end-user identifier cannot be empty."),
+            "invalid_external_user_id",
+            _("The external user identifier cannot be empty."),
             status_code=422,
         )
-    if len(candidate) > ITQAN_USER_ID_MAX_LENGTH:
+    if len(candidate) > EXTERNAL_USER_ID_MAX_LENGTH:
         raise ItqanError(
-            "invalid_itqan_user_id",
-            _("The end-user identifier is too long."),
+            "invalid_external_user_id",
+            _("The external user identifier is too long."),
             status_code=422,
         )
-    if not ITQAN_USER_ID_RE.fullmatch(candidate):
+    if "@" in candidate or EXTERNAL_USER_ID_PHONE_RE.fullmatch(candidate):
         raise ItqanError(
-            "invalid_itqan_user_id",
-            _("The end-user identifier contains invalid characters."),
+            "invalid_external_user_id",
+            _("The external user identifier must not contain personal information."),
+            status_code=422,
+        )
+    if not EXTERNAL_USER_ID_RE.fullmatch(candidate):
+        raise ItqanError(
+            "invalid_external_user_id",
+            _("The external user identifier contains invalid characters."),
             status_code=422,
         )
 
-    request.itqan_user_id = candidate
+    request.external_user_id = candidate
     return candidate
 
 
@@ -101,7 +108,7 @@ class PublicAuth:
     }
 
     def __call__(self, request):
-        _validate_itqan_user_id(request)
+        _validate_external_user_id(request)
 
         methods = []
         if settings.ENABLE_API_KEY_AUTH:

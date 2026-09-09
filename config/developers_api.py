@@ -31,7 +31,7 @@ client-side code.
 Send the key in the `X-API-Key` header on each request.
 
 For per-end-user usage metrics, include an opaque identifier in the
-`X-Itqan-User-Id` header. This value is developer-chosen, never contains PII,
+`X-External-User-Id` header. This value is developer-chosen, never contains PII,
 and is treated as opaque metadata for usage accounting only.
 
 # Identifying your app
