@@ -470,3 +470,45 @@ def _constraint_range_desc(constraint: VersionConstraint) -> str:
             return f">={constraint.base.to_canonical_string()} <{constraint.upper_exclusive.to_canonical_string()}"
         return f">={constraint.base.to_canonical_string()}"
     return str(constraint.base)
+
+
+# ---------------------------------------------------------------------------
+# Shared SemVer grammar helpers (spec §3/§5)
+# ---------------------------------------------------------------------------
+# Public, dependency-free entry points over the same grammar the registry
+# resolves with. They exist so other #426/#422 consumers (manifest discovery,
+# lockfile freshness checks) classify version strings identically to the
+# registry without duplicating the grammar or touching the database.
+
+
+def parse_version_constraint(constraint_text: str) -> VersionConstraint:
+    """Parse a manifest ``version`` constraint per the §3 grammar.
+
+    Accepts exact pins, ``^`` and ``~`` ranges (with two-component
+    canonicalization). Raises ``ValueError`` describing why anything else is
+    rejected.
+    """
+    return _parse_constraint(constraint_text)
+
+
+def parse_canonical_version(version_text: str) -> SemVer | None:
+    """Parse a lockfile ``version``. Returns None unless it is canonical.
+
+    Canonical means three components (prerelease suffix allowed) with no
+    build metadata — exactly what §5 requires lockfiles to record. A
+    two-component string such as ``"3.0"`` parses as a *candidate* elsewhere
+    but is NOT canonical, so this returns None for it.
+    """
+    parsed = _parse_candidate_version(version_text)
+    if parsed is None or parsed.to_canonical_string() != version_text:
+        return None
+    return parsed
+
+
+def constraint_satisfied(version: SemVer, constraint: VersionConstraint) -> bool:
+    """Check a locked version against its recorded constraint (§5 STALE rule).
+
+    Applies prerelease isolation identically to resolution: ``^`` and ``~``
+    never match a prerelease; only an exact prerelease pin matches one.
+    """
+    return _matches_constraint(version, constraint)
