@@ -861,10 +861,20 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
 
 @admin.register(RecitationAyahTiming)
 class RecitationAyahTimingAdmin(admin.ModelAdmin):
-    list_display = ["id", "track", "surah_name", "ayah_key", "start_ms", "end_ms", "duration_ms"]
+    list_display = [
+        "id",
+        "track",
+        "surah_name",
+        "ayah_key",
+        "start_ms",
+        "end_ms",
+        "duration_ms",
+        "size_bytes",
+        "audio_file",
+    ]
     list_filter = ["track__asset", "track__surah_number"]
     search_fields = ["ayah_key", "track__surah_number"]
-    readonly_fields = ["created_at", "updated_at"]
+    readonly_fields = ["created_at", "updated_at", "audio_file", "size_bytes"]
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("track", "track__asset")
