@@ -1,5 +1,7 @@
 import logging
 
+from django.db import transaction
+
 from apps.content.models import AssetVersion
 from apps.content.tasks import notify_asset_version_created
 
@@ -23,5 +25,5 @@ class AssetService:
         """
         Notify users who have access to this asset.
         """
-        notify_asset_version_created.delay(asset_version.pk)
+        transaction.on_commit(lambda: notify_asset_version_created.delay(asset_version.pk))
         logger.info(f"Asset update email queued [asset_version_id={asset_version.pk}]")
