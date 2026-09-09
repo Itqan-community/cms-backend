@@ -23,20 +23,31 @@ class BaseTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls) -> None:
+        # Register the cleanup *before* starting the mock so that a partial
+        # failure in mock_storage() is still undone. Class cleanups run after
+        # TestCase.tearDownClass(), which restores Django's default class
+        # teardown: roll back the class-level transaction (cls_atomics) and
+        # close the DB connections between test classes (see issue #469).
+        cls.addClassCleanup(cls.teardown_storage)
         cls.mock_storage()
 
     @classmethod
-    def tearDownClass(cls) -> None:
-        # Disable storage override
-        try:
-            cls._storage_override.disable()
-        except Exception:
-            pass
-        # Stop moto mock to clean up between tests
-        try:
-            cls.mock_aws.stop()
-        except Exception:
-            pass
+    def teardown_storage(cls) -> None:
+        """Undo mock_storage().
+
+        Intentionally runs via addClassCleanup instead of an overridden
+        tearDownClass: Django's TestCase.tearDownClass() rolls back the
+        class-level transaction and closes the DB connections between test
+        classes. Overriding it without calling super() (the previous
+        behavior) leaked an open transaction and kept a single connection
+        alive for the entire test session.
+        """
+        storage_override = getattr(cls, "_storage_override", None)
+        if storage_override is not None:
+            storage_override.disable()
+        mock_aws = getattr(cls, "mock_aws", None)
+        if mock_aws is not None:
+            mock_aws.stop()
 
         super().tearDownClass()
 
