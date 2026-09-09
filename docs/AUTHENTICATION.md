@@ -371,6 +371,12 @@ Itqan CMS uses the existing **API Key system** (`X-API-Key` header) as the stand
 
 > 💡 **Key Decision:** OAuth2 Applications and custom app-identity headers are **NOT used** for application self-identification in this epic.
 
+> **Not a contradiction:** the public API also accepts optional `X-Client-Name` and
+> `X-Client-Version` headers (see [ARCHITECTURE.md](./ARCHITECTURE.md#client-release-identification)).
+> Those are **diagnostic only** — self-reported, unverified, and never consulted for
+> identity, authorization, or rate limiting. The API key remains the sole application
+> identity.
+
 ---
 
 ### Core Properties & Requirements

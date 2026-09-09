@@ -3,12 +3,16 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import AnonymousUser
+from django.http import HttpResponse
 from django.test import RequestFactory
 
+from apps.core.middlewares.client_version import ClientVersionMiddleware
+from apps.usage_tracking.decorators import track_usage as track_usage_module
 from apps.usage_tracking.decorators.track_usage import (
     _client_ip,
     _detect_auth_method,
     _distinct_id,
+    _get_tracking_redis,
     _parse_query_params,
     _resolve_application,
     track_extra,
@@ -367,6 +371,73 @@ class TestResolveApplication:
             auth=SimpleNamespace(prefix="app12345"),
         )
         assert _resolve_application(request) == (7, "oauth-app")
+
+
+class TestClientVersionProperties:
+    """The client identity captured by ClientVersionMiddleware must reach Mixpanel."""
+
+    def setup_method(self):
+        self.factory = RequestFactory()
+
+    def _request(self, **headers):
+        """Build a request already processed by the real client-version middleware."""
+        request = self.factory.get("/recitations/", headers=headers)
+        ClientVersionMiddleware(lambda req: HttpResponse("ok"))(request)
+        return request
+
+    def test_dispatch_where_client_headers_sent_should_record_name_and_version(self):
+        # Arrange
+        mock_r = MagicMock()
+        request = self._request(**{"x-client-name": "quran-companion", "x-client-version": "2.4.1"})
+
+        @track_usage()
+        def view(request):
+            return {"results": [], "count": 0}
+
+        # Act
+        with patch.object(track_usage_module, _get_tracking_redis.__name__, return_value=mock_r):
+            view(request)
+
+        # Assert
+        props = _dispatched_props(mock_r)
+        assert props["client_name"] == "quran-companion"
+        assert props["client_version"] == "2.4.1"
+
+    def test_dispatch_where_client_headers_absent_should_record_nulls(self):
+        # Arrange
+        mock_r = MagicMock()
+        request = self._request()
+
+        @track_usage()
+        def view(request):
+            return {"results": [], "count": 0}
+
+        # Act
+        with patch.object(track_usage_module, _get_tracking_redis.__name__, return_value=mock_r):
+            view(request)
+
+        # Assert
+        props = _dispatched_props(mock_r)
+        assert props["client_name"] is None
+        assert props["client_version"] is None
+
+    def test_dispatch_where_middleware_did_not_run_should_record_nulls(self):
+        # Arrange
+        mock_r = MagicMock()
+        request = self.factory.get("/recitations/")
+
+        @track_usage()
+        def view(request):
+            return {"results": [], "count": 0}
+
+        # Act
+        with patch.object(track_usage_module, _get_tracking_redis.__name__, return_value=mock_r):
+            view(request)
+
+        # Assert
+        props = _dispatched_props(mock_r)
+        assert props["client_name"] is None
+        assert props["client_version"] is None
 
 
 class TestClientIp:

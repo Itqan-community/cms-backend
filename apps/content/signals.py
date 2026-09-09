@@ -12,6 +12,13 @@ def clear_recitation_tracks_cache(sender, instance: RecitationSurahTrack, **kwar
 
 
 @receiver(post_save, sender=Asset)
+def clear_asset_recitation_cache_on_save(sender, instance: Asset, created: bool, **kwargs) -> None:
+    """Invalidate public recitation cache when an asset's metadata or visibility changes."""
+    if not created and instance.category == CategoryChoice.RECITATION:
+        invalidate_recitation_tracks_cache(instance.id)
+
+
+@receiver(post_save, sender=Asset)
 def create_default_recitation_folder(sender, instance: Asset, created: bool, **kwargs) -> None:
     """
     Give every new recitation Asset its default folder.
