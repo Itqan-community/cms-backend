@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 class RecitationRangeService:
     """Build (or reuse) one combined MP3 for a contiguous ayah range in a surah track.
 
-    The range is contiguous, so a single ffmpeg ``-ss start -to end`` cut off
+    The range is contiguous, so a single ffmpeg ``-ss start -t duration`` cut of
     the surah track covers it exactly (including small inter-ayah gaps); no
     N-way concat is needed. Fades apply only at the outer boundaries.
     Storage keys are deterministic (asset/folder/surah/from/to), so repeat
@@ -186,6 +186,11 @@ class RecitationRangeService:
     ) -> None:
         # Cut [start_ms, end_ms) with short fades only at the outer boundaries
         # (inner ayah joints stay untouched so memorization loops sound natural).
+        # -ss goes BEFORE -i (input seeking): the output timestamps restart at 0
+        # from the seek point, so -t (duration) then means the exact segment
+        # length. Output seeking (-ss after -i) with -to=end would instead
+        # produce stream length `end`, i.e. `start` seconds of trailing silence
+        # after the fade-out.
         duration_s = (end_ms - start_ms) / 1000
         fade_duration_s = min(FADE_DURATION_SECONDS, duration_s / 2)
         fade_out_start_s = duration_s - fade_duration_s
@@ -195,12 +200,12 @@ class RecitationRangeService:
         cmd = [
             "ffmpeg",
             "-y",
-            "-i",
-            str(source_path),
             "-ss",
             f"{start_ms / 1000:.3f}",
-            "-to",
-            f"{end_ms / 1000:.3f}",
+            "-i",
+            str(source_path),
+            "-t",
+            f"{duration_s:.3f}",
             "-af",
             fade_filter,
             "-c:a",
