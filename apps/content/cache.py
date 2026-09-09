@@ -53,9 +53,7 @@ def recitation_response_cache_key(asset_id: int, page: int, page_size: int, fold
     return f"public_recitation_resp:{asset_id}:{folder_slug}:{page}:{page_size}"
 
 
-def recitation_range_cache_key(
-    asset_id: int, surah_number: int, from_ayah: int, to_ayah: int, folder_slug: str
-) -> str:
+def recitation_range_cache_key(asset_id: int, surah_number: int, from_ayah: int, to_ayah: int, folder_slug: str) -> str:
     # Combined ayah-range clip for one surah/folder variant. Keyed on the full
     # range identity so repeat requests for the same passage hit Django cache
     # (and R2, see RecitationRangeService) instead of re-running ffmpeg.

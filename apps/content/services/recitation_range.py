@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 import shutil
 import subprocess
 import tempfile
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import boto3
@@ -51,9 +51,7 @@ class RecitationRangeService:
         media_prefix = "media/"
         return key if key.startswith(media_prefix) else f"{media_prefix}{key}"
 
-    def build_range_key(
-        self, asset_id: int, folder_id: int, surah_number: int, from_ayah: int, to_ayah: int
-    ) -> str:
+    def build_range_key(self, asset_id: int, folder_id: int, surah_number: int, from_ayah: int, to_ayah: int) -> str:
         # Deterministic key mirroring the slice grammar
         # (uploads/assets/{id}/recitations/...): folder segment keeps variants
         # apart, surah dir + range leaf never collides with the track file.
@@ -67,9 +65,7 @@ class RecitationRangeService:
         if not settings.CLOUDFLARE_R2_BUCKET:
             return None
         try:
-            head = self._get_s3_client().head_object(
-                Bucket=settings.CLOUDFLARE_R2_BUCKET, Key=self._to_r2_key(key)
-            )
+            head = self._get_s3_client().head_object(Bucket=settings.CLOUDFLARE_R2_BUCKET, Key=self._to_r2_key(key))
         except (ClientError, BotoCoreError):
             return None
         return head
@@ -107,9 +103,9 @@ class RecitationRangeService:
         try:
             source_path = temp_dir / "source.mp3"
             try:
-                body = s3.get_object(
-                    Bucket=settings.CLOUDFLARE_R2_BUCKET, Key=self._to_r2_key(track.audio_file.name)
-                )["Body"]
+                body = s3.get_object(Bucket=settings.CLOUDFLARE_R2_BUCKET, Key=self._to_r2_key(track.audio_file.name))[
+                    "Body"
+                ]
                 try:
                     with open(source_path, "wb") as f:
                         shutil.copyfileobj(body, f)
@@ -194,9 +190,7 @@ class RecitationRangeService:
         duration_s = (end_ms - start_ms) / 1000
         fade_duration_s = min(FADE_DURATION_SECONDS, duration_s / 2)
         fade_out_start_s = duration_s - fade_duration_s
-        fade_filter = (
-            f"afade=t=in:st=0:d={fade_duration_s},afade=t=out:st={fade_out_start_s:.3f}:d={fade_duration_s}"
-        )
+        fade_filter = f"afade=t=in:st=0:d={fade_duration_s},afade=t=out:st={fade_out_start_s:.3f}:d={fade_duration_s}"
         cmd = [
             "ffmpeg",
             "-y",

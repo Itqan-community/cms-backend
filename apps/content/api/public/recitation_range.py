@@ -75,9 +75,7 @@ def get_recitation_range(
     # Key on the *requested* folder (not the resolved one) so the warm path
     # needs no DB read; folder_cache_token keeps raw names safe in the key.
     # "from" is a Python keyword, hence the from_ayah alias above.
-    _resp_key = recitation_range_cache_key(
-        asset_id, surah_number, from_ayah, to_ayah, folder_cache_token(folder)
-    )
+    _resp_key = recitation_range_cache_key(asset_id, surah_number, from_ayah, to_ayah, folder_cache_token(folder))
     _meta_key = recitation_asset_meta_cache_key(asset_id)
 
     cached_resp: bytes | None = cache.get(_resp_key)

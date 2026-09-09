@@ -1,5 +1,5 @@
-import subprocess
 from pathlib import Path
+import subprocess
 from unittest.mock import patch
 
 import boto3
@@ -10,13 +10,7 @@ from model_bakery import baker
 from oauth2_provider.models import Application
 
 from apps.content.cache import recitation_range_cache_key
-from apps.content.models import (
-    Asset,
-    CategoryChoice,
-    RecitationAyahTiming,
-    RecitationSurahTrack,
-    StatusChoice,
-)
+from apps.content.models import Asset, CategoryChoice, RecitationAyahTiming, RecitationSurahTrack, StatusChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -58,7 +52,12 @@ class RecitationRangeTest(BaseTestCase):
         )
         for key, start, end in (("1:1", 0, 1000), ("1:2", 1000, 2000), ("1:3", 2000, 3000)):
             baker.make(
-                RecitationAyahTiming, track=self.track, ayah_key=key, start_ms=start, end_ms=end, duration_ms=end - start
+                RecitationAyahTiming,
+                track=self.track,
+                ayah_key=key,
+                start_ms=start,
+                end_ms=end,
+                duration_ms=end - start,
             )
         self.user = User.objects.create_user(email="rangeuser@example.com", name="Range User")
         self.app = Application.objects.create(
@@ -77,8 +76,9 @@ class RecitationRangeTest(BaseTestCase):
         range_client_patcher.start()
         self.addCleanup(range_client_patcher.stop)
         self.s3.put_object(Bucket=self.bucket_name, Key=f"media/{self.track.audio_file.name}", Body=b"source-mp3")
-        ffmpeg_patcher = patch("apps.content.services.recitation_range.subprocess.run",
-                               side_effect=_fake_ffmpeg(b"range-bytes"))
+        ffmpeg_patcher = patch(
+            "apps.content.services.recitation_range.subprocess.run", side_effect=_fake_ffmpeg(b"range-bytes")
+        )
         ffmpeg_patcher.start()
         self.addCleanup(ffmpeg_patcher.stop)
 
