@@ -268,6 +268,25 @@ class RecitationRepository(BaseRecitationRepository):
             .first()
         )
 
+    def get_single_track(
+        self, asset_id: int, surah_number: int, folder_id: int | None = None
+    ) -> RecitationSurahTrack | None:
+        # Single-surah track for the ayah-range endpoint, with timings prefetched
+        # in playback order. folder_id None serves the default variant (same
+        # convention as list_recitation_tracks_for_asset) so callers that omit
+        # ?folder keep working without resolving the folder first.
+        query = Q(asset_id=asset_id, surah_number=surah_number)
+        if folder_id is None:
+            query &= Q(folder__is_default=True)
+        else:
+            query &= Q(folder_id=folder_id)
+        return (
+            self.track_model.objects.select_related("folder")
+            .prefetch_related(Prefetch("ayah_timings", queryset=RecitationAyahTiming.objects.order_by("start_ms")))
+            .filter(query)
+            .first()
+        )
+
     def list_recitation_tracks_for_asset(
         self,
         asset_id: int,
