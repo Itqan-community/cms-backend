@@ -8,6 +8,7 @@ from apps.content.models import (
     Asset,
     AssetAccess,
     AssetAccessRequest,
+    AssetLanguage,
     AssetVersion,
     CategoryChoice,
     LicenseChoice,
@@ -349,3 +350,55 @@ class TestAssetDownload(BaseTestCase):
         # Assert
         self.assertEqual(404, response.status_code, response.content)
         self.assertEqual("not_found", response.json()["error_name"])
+
+
+class TestAssetDownloadLanguage(BaseTestCase):
+    """Per-language download resolution for multi-language assets."""
+
+    def setUp(self):
+        super().setUp()
+        self.publisher = baker.make(Publisher, name="ML Publisher")
+        self.asset = baker.make(
+            Asset,
+            publisher=self.publisher,
+            name="Multi Tafsir",
+            category=CategoryChoice.TAFSIR,
+            license=LicenseChoice.CC0,
+            status=StatusChoice.READY,
+            is_open_access=True,
+            language="ar",
+        )
+        self.user = baker.make(User, email="ml@example.com")
+        ar_lang = self.asset.get_or_create_source_language()
+        es_lang = AssetLanguage.objects.create(asset=self.asset, language="es")
+        baker.make(
+            AssetVersion,
+            asset=self.asset,
+            asset_language=ar_lang,
+            name="ar v1",
+            file_url=SimpleUploadedFile("ar_source.csv", b"ar", content_type="text/csv"),
+        )
+        baker.make(
+            AssetVersion,
+            asset=self.asset,
+            asset_language=es_lang,
+            name="es v1",
+            file_url=SimpleUploadedFile("es_trans.csv", b"es", content_type="text/csv"),
+        )
+
+    def test_download_with_language_serves_that_language_file(self):
+        self.authenticate_user(self.user)
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/download/?language=es")
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertIn("/es_trans", response.json()["download_url"])
+
+    def test_download_without_language_serves_source(self):
+        self.authenticate_user(self.user)
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/download/")
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertIn("/ar_source", response.json()["download_url"])
+
+    def test_download_unknown_language_returns_404(self):
+        self.authenticate_user(self.user)
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/download/?language=zz")
+        self.assertEqual(404, response.status_code, response.content)
