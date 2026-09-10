@@ -1,7 +1,6 @@
 import base64
 import secrets
 from typing import Literal
-from unittest.mock import patch
 
 import boto3
 from django.conf import settings
@@ -39,6 +38,8 @@ class BaseTestCase(TestCase):
         except Exception:
             pass
 
+        super().tearDownClass()
+
     @classmethod
     def mock_storage(cls):
         cls.mock_aws = mock_aws()
@@ -62,12 +63,6 @@ class BaseTestCase(TestCase):
             CLOUDFLARE_R2_SECRET_ACCESS_KEY="testing",
         )
         cls._storage_override.enable()
-
-    @classmethod
-    def patch_on_commit(cls):
-        patcher = patch("django.db.transaction.on_commit", side_effect=lambda f: f())
-        patcher.start()
-        cls.addClassCleanup(patcher.stop)
 
     def authenticate_user(
         self,

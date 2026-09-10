@@ -3,7 +3,15 @@ from datetime import timedelta
 from django.utils import timezone
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetVersion, AssetVersionEntry, CategoryChoice, StatusChoice, VersionStateChoice
+from apps.content.models import (
+    Asset,
+    AssetLanguage,
+    AssetVersion,
+    AssetVersionEntry,
+    CategoryChoice,
+    StatusChoice,
+    VersionStateChoice,
+)
 from apps.content.tasks import cleanup_abandoned_content_drafts_task
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
@@ -23,6 +31,7 @@ class AssetContentBaseTest(BaseTestCase):
             status=StatusChoice.READY,
             name="French Rashid",
             slug="french-rashid",
+            language="ar",
         )
         self.user = User.objects.create_user(email="editor@example.com", name="Editor", is_staff=True)
         # A tiny corpus: sura 1 with 3 ayahs.
@@ -37,7 +46,11 @@ class GetOrCreateDraftTest(AssetContentBaseTest):
         self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
 
         # Act
-        response = self.client.post(f"/portal/content/translations/{self.translation.slug}/draft/")
+        response = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/draft/",
+            data={"language": "ar"},
+            content_type="application/json",
+        )
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -55,7 +68,11 @@ class GetOrCreateDraftTest(AssetContentBaseTest):
         existing = baker.make(AssetVersion, asset=self.translation, state=VersionStateChoice.DRAFT)
 
         # Act
-        response = self.client.post(f"/portal/content/translations/{self.translation.slug}/draft/")
+        response = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/draft/",
+            data={"language": "ar"},
+            content_type="application/json",
+        )
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -74,7 +91,11 @@ class GetOrCreateDraftTest(AssetContentBaseTest):
         baker.make(AssetVersionEntry, version=published, ayah=self.ayahs[1], text="world")
 
         # Act
-        response = self.client.post(f"/portal/content/translations/{self.translation.slug}/draft/")
+        response = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/draft/",
+            data={"language": "ar"},
+            content_type="application/json",
+        )
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -93,7 +114,11 @@ class GetOrCreateDraftTest(AssetContentBaseTest):
         AssetVersion.objects.filter(pk=stale_draft.pk).update(created_at=timezone.now() - timedelta(hours=1))
 
         # Act
-        response = self.client.post(f"/portal/content/translations/{self.translation.slug}/draft/")
+        response = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/draft/",
+            data={"language": "ar"},
+            content_type="application/json",
+        )
 
         # Assert — stale draft rebuilt; its content now reflects the newer version
         self.assertEqual(200, response.status_code, response.content)
@@ -110,7 +135,11 @@ class GetOrCreateDraftTest(AssetContentBaseTest):
         draft = baker.make(AssetVersion, asset=self.translation, name="wip", state=VersionStateChoice.DRAFT)
 
         # Act
-        response = self.client.post(f"/portal/content/translations/{self.translation.slug}/draft/")
+        response = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/draft/",
+            data={"language": "ar"},
+            content_type="application/json",
+        )
 
         # Assert — the same (not-stale) draft is returned
         self.assertEqual(200, response.status_code, response.content)
@@ -123,7 +152,11 @@ class GetOrCreateDraftTest(AssetContentBaseTest):
         baker.make(AssetVersion, asset=self.translation, name="v1", state=VersionStateChoice.PUBLISHED)
 
         # Act
-        response = self.client.post(f"/portal/content/translations/{self.translation.slug}/draft/")
+        response = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/draft/",
+            data={"language": "ar"},
+            content_type="application/json",
+        )
 
         # Assert — draft is "v2", not "v1 (2)"
         self.assertEqual(200, response.status_code, response.content)
@@ -140,7 +173,11 @@ class GetOrCreateDraftTest(AssetContentBaseTest):
             AssetVersion.objects.filter(pk=v.pk).update(created_at=timezone.now() - timedelta(minutes=ago))
 
         # Act — latest is v3, so the draft should become v4
-        response = self.client.post(f"/portal/content/translations/{self.translation.slug}/draft/")
+        response = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/draft/",
+            data={"language": "ar"},
+            content_type="application/json",
+        )
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -158,7 +195,11 @@ class GetOrCreateDraftTest(AssetContentBaseTest):
         )
 
         # Act
-        response = self.client.post(f"/portal/content/translations/{self.translation.slug}/draft/")
+        response = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/draft/",
+            data={"language": "ar"},
+            content_type="application/json",
+        )
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -177,7 +218,11 @@ class GetOrCreateDraftTest(AssetContentBaseTest):
         )
 
         # Act
-        response = self.client.post(f"/portal/content/translations/{self.translation.slug}/draft/")
+        response = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/draft/",
+            data={"language": "ar"},
+            content_type="application/json",
+        )
 
         # Assert — draft created with a unique name kept within max_length
         self.assertEqual(200, response.status_code, response.content)
@@ -190,7 +235,11 @@ class GetOrCreateDraftTest(AssetContentBaseTest):
         self.authenticate_user(self.user)
 
         # Act
-        response = self.client.post(f"/portal/content/translations/{self.translation.slug}/draft/")
+        response = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/draft/",
+            data={"language": "ar"},
+            content_type="application/json",
+        )
 
         # Assert
         self.assertEqual(403, response.status_code)
@@ -212,7 +261,7 @@ class PatchEntriesTest(AssetContentBaseTest):
             f"/portal/content/translations/{self.translation.slug}/versions/{draft.id}/entries/",
             data={
                 "rows": [
-                    {"ayah_id": 1, "text": "au nom", "footnotes": "[note]"},
+                    {"ayah_id": 1, "text": "au nom"},
                     {"ayah_id": 2, "text": "louange"},
                 ]
             },
@@ -224,7 +273,6 @@ class PatchEntriesTest(AssetContentBaseTest):
         self.assertEqual(2, draft.entries.count())
         entry = draft.entries.get(ayah_id=1)
         self.assertEqual("au nom", entry.text)
-        self.assertEqual("[note]", entry.footnotes)
 
     def test_patch_entries_where_existing_row_should_update_text(self):
         # Arrange
@@ -261,6 +309,135 @@ class PatchEntriesTest(AssetContentBaseTest):
         # Assert
         self.assertEqual(400, response.status_code, response.content)
         self.assertEqual("version_not_editable", response.json()["error_name"])
+
+
+class SourceReferenceEntriesTest(AssetContentBaseTest):
+    def _publish_source_and_add_es(self):
+        """Publish an ar (source) version with entries, then add an 'es' language."""
+        ar_lang = self.translation.get_or_create_source_language()
+        ar_version = baker.make(
+            AssetVersion, asset=self.translation, asset_language=ar_lang, state=VersionStateChoice.PUBLISHED
+        )
+        baker.make(AssetVersionEntry, version=ar_version, ayah=self.ayahs[0], text="source one", order=1)
+        baker.make(AssetVersionEntry, version=ar_version, ayah=self.ayahs[1], text="source two", order=2)
+        return AssetLanguage.objects.create(asset=self.translation, language="es")
+
+    def _entries(self, version_id):
+        response = self.client.get(
+            f"/portal/content/translations/{self.translation.slug}/versions/{version_id}/entries/"
+        )
+        self.assertEqual(200, response.status_code, response.content)
+        return {row["ayah_id"]: row for row in response.json()["results"]}
+
+    def test_translation_draft_is_seeded_with_source_ayahs_and_source_text(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self._publish_source_and_add_es()
+
+        # Act — open the es draft
+        draft_resp = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/draft/",
+            data={"language": "es"},
+            content_type="application/json",
+        )
+        draft_id = draft_resp.json()["id"]
+        rows = self._entries(draft_id)
+
+        # Assert — every source ayah shows, target empty, source_text populated
+        self.assertEqual("source one", rows[self.ayahs[0].id]["source_text"])
+        self.assertEqual("", rows[self.ayahs[0].id]["text"])
+        self.assertEqual("source two", rows[self.ayahs[1].id]["source_text"])
+
+    def test_source_language_entries_have_no_source_text(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self._publish_source_and_add_es()
+
+        # Act — open the ar (source) draft
+        draft_resp = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/draft/",
+            data={"language": "ar"},
+            content_type="application/json",
+        )
+        rows = self._entries(draft_resp.json()["id"])
+
+        # Assert — editing the source shows no reference column data
+        self.assertIsNone(rows[self.ayahs[0].id]["source_text"])
+
+    def test_publish_translation_drops_untouched_empty_rows(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        self._publish_source_and_add_es()
+        draft_resp = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/draft/",
+            data={"language": "es"},
+            content_type="application/json",
+        )
+        draft_id = draft_resp.json()["id"]
+        # Translate only the first ayah, leaving the second empty.
+        self.client.patch(
+            f"/portal/content/translations/{self.translation.slug}/versions/{draft_id}/entries/",
+            data={"rows": [{"ayah_id": self.ayahs[0].id, "text": "traduccion uno"}]},
+            content_type="application/json",
+        )
+
+        # Act
+        publish = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/versions/{draft_id}/publish/",
+            data={},
+            content_type="application/json",
+        )
+
+        # Assert — only the filled ayah persists (sparse coverage)
+        self.assertEqual(200, publish.status_code, publish.content)
+        published = AssetVersion.objects.get(id=draft_id)
+        self.assertEqual(["traduccion uno"], list(published.entries.values_list("text", flat=True)))
+
+    def test_reopen_translation_after_sparse_publish_shows_full_mushaf(self):
+        # Regression: after a sparse translation publish (only ayah 1), re-opening
+        # the editor must still show EVERY source ayah, not just the published one.
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self._publish_source_and_add_es()  # ar source covers ayahs 1 & 2; es added
+
+        # Translate only ayah 1, then publish (ayah 2 dropped as empty).
+        first = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/draft/",
+            data={"language": "es"},
+            content_type="application/json",
+        )
+        first_id = first.json()["id"]
+        self.client.patch(
+            f"/portal/content/translations/{self.translation.slug}/versions/{first_id}/entries/",
+            data={"rows": [{"ayah_id": self.ayahs[0].id, "text": "uno"}]},
+            content_type="application/json",
+        )
+        self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/versions/{first_id}/publish/",
+            data={},
+            content_type="application/json",
+        )
+
+        # Re-open the es draft and read its rows.
+        second = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/draft/",
+            data={"language": "es"},
+            content_type="application/json",
+        )
+        rows = self._entries(second.json()["id"])
+
+        # Both source ayahs are present again (full mushaf), with source text.
+        self.assertIn(self.ayahs[0].id, rows)
+        self.assertIn(self.ayahs[1].id, rows)
+        self.assertEqual("uno", rows[self.ayahs[0].id]["text"])
+        self.assertEqual("", rows[self.ayahs[1].id]["text"])
+        self.assertEqual("source two", rows[self.ayahs[1].id]["source_text"])
 
 
 class PublishDraftTest(AssetContentBaseTest):
@@ -334,7 +511,7 @@ class PublishDraftTest(AssetContentBaseTest):
             file_url=None,
             content_edited=True,
         )
-        baker.make(AssetVersionEntry, version=draft, ayah=self.ayahs[0], text="au nom", footnotes="[n]")
+        baker.make(AssetVersionEntry, version=draft, ayah=self.ayahs[0], text="au nom")
 
         # Act
         response = self.client.post(
@@ -350,7 +527,7 @@ class PublishDraftTest(AssetContentBaseTest):
         draft.file_url.open("rb")
         content = draft.file_url.read().decode("utf-8")
         draft.file_url.close()
-        self.assertIn("sura,aya,text,footnotes", content)
+        self.assertIn("surah,ayah,text", content)
         self.assertIn("au nom", content)
 
     def test_publish_draft_where_not_a_draft_should_return_400(self):
@@ -425,6 +602,7 @@ class TafsirContentTest(AssetContentBaseTest):
             status=StatusChoice.READY,
             name="Tabari",
             slug="tabari",
+            language="ar",
         )
 
     def test_get_or_create_draft_where_tafsir_should_create_draft(self):
@@ -433,7 +611,11 @@ class TafsirContentTest(AssetContentBaseTest):
         self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
 
         # Act
-        response = self.client.post(f"/portal/content/tafsirs/{self.tafsir.slug}/draft/")
+        response = self.client.post(
+            f"/portal/content/tafsirs/{self.tafsir.slug}/draft/",
+            data={"language": "ar"},
+            content_type="application/json",
+        )
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -445,7 +627,11 @@ class TafsirContentTest(AssetContentBaseTest):
         self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
 
         # Act — translation permission must NOT grant tafsir editing
-        response = self.client.post(f"/portal/content/tafsirs/{self.tafsir.slug}/draft/")
+        response = self.client.post(
+            f"/portal/content/tafsirs/{self.tafsir.slug}/draft/",
+            data={"language": "ar"},
+            content_type="application/json",
+        )
 
         # Assert
         self.assertEqual(403, response.status_code, response.content)
@@ -457,7 +643,11 @@ class TafsirContentTest(AssetContentBaseTest):
         self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
 
         # Act
-        response = self.client.post(f"/portal/content/recitations/{self.tafsir.slug}/draft/")
+        response = self.client.post(
+            f"/portal/content/recitations/{self.tafsir.slug}/draft/",
+            data={"language": "ar"},
+            content_type="application/json",
+        )
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
@@ -480,7 +670,7 @@ class VersionUploadImportTest(AssetContentBaseTest):
             name="Tabari",
             slug="tabari-import",
         )
-        csv_bytes = b"sura,aya,text,footnotes\n" b"1,1,imported one,fn1\n" b"1,2,imported two,\n"
+        csv_bytes = b"sura,aya,text\n" b"1,1,imported one\n" b"1,2,imported two\n"
         upload = SimpleUploadedFile("t.csv", csv_bytes, content_type="text/csv")
 
         # Act
@@ -491,7 +681,6 @@ class VersionUploadImportTest(AssetContentBaseTest):
         # Assert — entries populated from the file content
         self.assertEqual(2, version.entries.count())
         self.assertEqual("imported one", version.entries.get(ayah_id=1).text)
-        self.assertEqual("fn1", version.entries.get(ayah_id=1).footnotes)
 
 
 class ExportVersionTest(AssetContentBaseTest):
@@ -500,20 +689,22 @@ class ExportVersionTest(AssetContentBaseTest):
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
         version = baker.make(AssetVersion, asset=self.translation, name="v1", state=VersionStateChoice.PUBLISHED)
-        baker.make(AssetVersionEntry, version=version, ayah=self.ayahs[0], text="au nom", footnotes="[n]")
+        baker.make(AssetVersionEntry, version=version, ayah=self.ayahs[0], text="au nom")
 
         # Act
         response = self.client.get(
             f"/portal/content/translations/{self.translation.slug}/versions/{version.id}/export/"
         )
 
-        # Assert
+        # Assert — verbose columns help reviewers verify against the original
         self.assertEqual(200, response.status_code, response.content)
         self.assertIn("text/csv", response["Content-Type"])
         self.assertIn("attachment", response["Content-Disposition"])
         body = response.content.decode("utf-8")
-        self.assertIn("sura,aya,text,footnotes", body)
-        self.assertIn("au nom", body)
+        self.assertIn("surah,ayah,surah_name,ayah_text,text", body)
+        self.assertIn("au nom", body)  # the entry text
+        self.assertIn("الفاتحة", body)  # surah name
+        self.assertIn("ayah 1", body)  # the original ayah text
 
     def test_export_where_version_name_is_arabic_should_encode_content_disposition(self):
         # Arrange — a version name with non-ASCII (Arabic) characters

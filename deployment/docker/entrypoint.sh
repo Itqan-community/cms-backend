@@ -23,8 +23,18 @@ fi
 #
 # For standalone/manual runs of this image, set RUN_PREP=1 to run them here.
 if [ "${RUN_PREP:-0}" = "1" ]; then
+    if [ -n "${AUDIT_DB_HOST}" ]; then
+        echo "Waiting for audit database at ${AUDIT_DB_HOST}:${AUDIT_DB_PORT:-5432}..."
+        until nc -z "${AUDIT_DB_HOST}" "${AUDIT_DB_PORT:-5432}"; do
+            echo "Audit database not ready, waiting..."
+            sleep 1
+        done
+        echo "Audit database is ready!"
+    fi
+
     echo "Running database migrations..."
     python manage.py migrate --noinput
+    python manage.py migrate --database=audit --noinput
 
     echo "Collecting static files..."
     python manage.py collectstatic --noinput
@@ -33,9 +43,12 @@ if [ "${RUN_PREP:-0}" = "1" ]; then
     python manage.py compilemessages --locale ar
 fi
 
-echo "Starting Gunicorn (ASGI, Uvicorn workers)..."
-exec gunicorn config.asgi:application \
+echo "Starting Gunicorn (WSGI, gthread workers)..."
+exec gunicorn config.wsgi:application \
     --bind 0.0.0.0:8000 \
     --workers "${GUNICORN_WORKERS:-10}" \
-    --worker-class config.workers.DjangoUvicornWorker \
-    --timeout 600
+    --worker-class gthread \
+    --threads "${GUNICORN_THREADS:-6}" \
+    --max-requests 1000 \
+    --max-requests-jitter 100 \
+    --timeout 60

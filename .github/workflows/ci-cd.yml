@@ -135,6 +135,12 @@ jobs:
                 echo "DB_HOST=${{ secrets.STAGING_DB_HOST }}";
                 echo "DB_PORT=25060";
                 echo "PGSSLMODE=require";
+                echo "AUDIT_DB_ENGINE=django.db.backends.postgresql";
+                echo "AUDIT_DB_NAME=${{ secrets.STAGING_AUDIT_DB_NAME }}";
+                echo "AUDIT_DB_USER=${{ secrets.STAGING_AUDIT_DB_USER }}";
+                echo "AUDIT_DB_PASSWORD=${{ secrets.STAGING_AUDIT_DB_PASSWORD }}";
+                echo "AUDIT_DB_HOST=${{ secrets.STAGING_AUDIT_DB_HOST }}";
+                echo "AUDIT_DB_PORT=${{ secrets.STAGING_AUDIT_DB_PORT }}";
                 echo "ALLOWED_HOSTS=staging.api.cms.itqan.dev";
                 echo "CORS_ALLOWED_ORIGINS=https://staging.cms.itqan.dev,http://localhost:3000";
                 echo "CLOUDFLARE_R2_BUCKET=${{ secrets.STAGING_CLOUDFLARE_R2_BUCKET }}";
@@ -197,6 +203,12 @@ jobs:
                 echo "DB_HOST=${{ secrets.PROD_DB_HOST }}";
                 echo "DB_PORT=25061";
                 echo "PGSSLMODE=require";
+                echo "AUDIT_DB_ENGINE=django.db.backends.postgresql";
+                echo "AUDIT_DB_NAME=${{ secrets.PROD_AUDIT_DB_NAME }}";
+                echo "AUDIT_DB_USER=${{ secrets.PROD_AUDIT_DB_USER }}";
+                echo "AUDIT_DB_PASSWORD=${{ secrets.PROD_AUDIT_DB_PASSWORD }}";
+                echo "AUDIT_DB_HOST=${{ secrets.PROD_AUDIT_DB_HOST }}";
+                echo "AUDIT_DB_PORT=${{ secrets.PROD_AUDIT_DB_PORT }}";
                 echo "ALLOWED_HOSTS=api.cms.itqan.dev";
                 echo "CORS_ALLOWED_ORIGINS=https://cms.itqan.dev";
                 echo "CLOUDFLARE_R2_BUCKET=${{ secrets.PROD_CLOUDFLARE_R2_BUCKET }}";
@@ -291,6 +303,7 @@ jobs:
             # migrations backward-compatible with the still-running old web container.
             echo "🗄️ Running database migrations (one-off)..."
             $COMPOSE run --rm --no-deps web python manage.py migrate --noinput
+            $COMPOSE run --rm --no-deps web python manage.py migrate --database=audit --noinput
 
             # Ensure staticfiles and media volumes are owned by appuser (UID 1001) for existing root-owned volumes
             echo "🔒 Ensuring volume permissions for appuser..."

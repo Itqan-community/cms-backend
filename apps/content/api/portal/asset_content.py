@@ -59,12 +59,17 @@ def _resolve(category: str, request: Request, *, write: bool) -> CategoryChoice:
 class DraftVersionOut(Schema):
     id: int
     asset_id: int
+    language: str
     name: str
     summary: str
     state: str
     entries_count: int
     has_changes: bool
     created_at: AwareDatetime
+
+    @staticmethod
+    def resolve_language(obj: AssetVersion) -> str:
+        return obj.asset_language.language if obj.asset_language_id else obj.asset.language
 
     @staticmethod
     def resolve_entries_count(obj: AssetVersion) -> int:
@@ -83,7 +88,7 @@ class EntryOut(Schema):
     surah_name: str
     uthmani: str
     text: str
-    footnotes: str
+    source_text: str | None = None
     order: int
 
     @staticmethod
@@ -106,7 +111,6 @@ class EntryOut(Schema):
 class EntryPatchRow(Schema):
     ayah_id: int
     text: str = ""
-    footnotes: str = ""
 
 
 class EntriesPatchIn(Schema):
@@ -118,21 +122,27 @@ class PublishIn(Schema):
     summary: str | None = None
 
 
+class DraftIn(Schema):
+    language: str
+
+
 @router.post(
     "content/{category}/{slug}/draft/",
     response={
         200: DraftVersionOut,
         404: NinjaErrorResponse[Literal["translation_not_found"]]
         | NinjaErrorResponse[Literal["tafsir_not_found"]]
+        | NinjaErrorResponse[Literal["language_not_available"]]
         | NinjaErrorResponse[Literal["unsupported_content_category"]],
     },
 )
-def get_or_create_draft(request: Request, category: str, slug: str) -> AssetVersion:
+def get_or_create_draft(request: Request, category: str, slug: str, data: DraftIn) -> AssetVersion:
     resolved = _resolve(category, request, write=True)
     service = AssetContentService()
     return service.get_or_create_draft(
         slug,
         resolved,
+        language=data.language,
         created_by_id=getattr(request.user, "id", None),
         publisher_q=request.publisher_q(),
     )
@@ -244,7 +254,7 @@ def export_version(request: Request, category: str, slug: str, version_id: int):
             status_code=404,
         )
 
-    content = service.repo.entries_to_csv_bytes(version)
+    content = service.repo.entries_to_csv_bytes(version, verbose=True)
     filename = f"{slug}-{version.name}.csv"
     response = HttpResponse(content, content_type="text/csv; charset=utf-8")
     # content_disposition_header safely handles non-ASCII (Arabic) and quoted names.

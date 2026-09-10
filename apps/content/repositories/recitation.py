@@ -30,6 +30,7 @@ class RecitationRepository(BaseRecitationRepository):
         self.track_model = RecitationSurahTrack
         self.riwayah_model = Riwayah
         self.qiraah_model = Qiraah
+        self.timing_model = RecitationAyahTiming
 
     def list_recitations_qs(
         self, publisher_q: Q | None, filters_dict: dict[str, Any], annotate_surahs_count: bool = False
@@ -438,3 +439,18 @@ class RecitationRepository(BaseRecitationRepository):
                 qs = qs.filter(slug__icontains=slug)
 
         return qs
+
+    def get_ayah_timing_for_asset(
+        self, asset_id: int, folder_id: int, surah_number: int, ayah_key: str
+    ) -> RecitationAyahTiming | None:
+        """Fetch the timing record for a specific ayah scoped by asset, folder, and surah."""
+        return (
+            self.timing_model.objects.select_related("track", "track__asset", "track__folder")
+            .filter(
+                track__asset_id=asset_id,
+                track__folder_id=folder_id,
+                track__surah_number=surah_number,
+                ayah_key=ayah_key,
+            )
+            .first()
+        )
