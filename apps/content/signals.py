@@ -12,6 +12,18 @@ def clear_recitation_tracks_cache(sender, instance: RecitationSurahTrack, **kwar
 
 
 @receiver(post_save, sender=Asset)
+def clear_public_recitation_cache_on_open_access_change(sender, instance: Asset, update_fields=None, **kwargs) -> None:
+    """
+    Bust the public recitation caches whenever ``is_open_access`` may have changed.
+    """
+    if instance.category != CategoryChoice.RECITATION:
+        return
+    if update_fields is not None and "is_open_access" not in set(update_fields):
+        return
+    invalidate_recitation_tracks_cache(instance.id)
+
+
+@receiver(post_save, sender=Asset)
 def create_default_recitation_folder(sender, instance: Asset, created: bool, **kwargs) -> None:
     """
     Give every new recitation Asset its default folder.

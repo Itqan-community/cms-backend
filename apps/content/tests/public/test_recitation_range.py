@@ -199,3 +199,20 @@ class RecitationRangeTest(BaseTestCase):
         # Assert
         self.assertEqual(401, response.status_code, response.content)
         self.assertEqual("authentication_required", response.json()["error_name"])
+
+    @override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=True)
+    def test_get_range_where_open_flips_to_restricted_should_drop_cached_meta(self):
+        # 1. Warm the range cache as an open-access asset (no credentials needed).
+        warm = self.client.get(self._url())
+        self.assertEqual(200, warm.status_code, warm.content)
+
+        # 2. Flip to restricted: the post_save signal must bust the cached asset
+        #    metadata, otherwise the warm path keeps trusting stale
+        #    is_open_access=True and serves restricted audio anonymously (CWE-863).
+        self.asset.is_open_access = False
+        self.asset.save(update_fields=["is_open_access", "updated_at"])
+
+        # 3. Anonymous request must be rebuilt from the DB and denied.
+        response = self.client.get(self._url())
+        self.assertEqual(401, response.status_code, response.content)
+        self.assertEqual("authentication_required", response.json()["error_name"])
