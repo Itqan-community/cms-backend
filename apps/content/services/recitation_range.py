@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 from pathlib import Path
 import shutil
@@ -21,9 +22,15 @@ from apps.core.ninja_utils.errors import ItqanError
 from config.settings.base import CLOUDFLARE_R2_PUBLIC_BASE_URL
 
 if TYPE_CHECKING:
-    from apps.content.models import RecitationFolder, RecitationSurahTrack
+    from apps.content.models import RecitationAyahTiming, RecitationFolder, RecitationSurahTrack
 
 logger = logging.getLogger(__name__)
+
+# Bump ONLY when the encoder/filter pipeline changes (e.g. the -ss/-t cut fix):
+# it retires every clip cut by older code so persisted audio can never reflect
+# a previous algorithm. Content changes (audio file, timing edits) rotate keys
+# on their own via _source_version().
+BUILD_VERSION = 2
 
 
 class RecitationRangeService:
@@ -32,8 +39,10 @@ class RecitationRangeService:
     The range is contiguous, so a single ffmpeg ``-ss start -t duration`` cut of
     the surah track covers it exactly (including small inter-ayah gaps); no
     N-way concat is needed. Fades apply only at the outer boundaries.
-    Storage keys are deterministic (asset/folder/surah/from/to), so repeat
-    requests HEAD the existing object instead of re-encoding.
+    Storage keys are deterministic per *content*: the leaf embeds a build-version
+    token and a content hash (source audio object + every timing boundary), so
+    any writer that changes clip bytes rotates the key instead of serving or
+    overwriting a stale object.
     """
 
     def _get_s3_client(self):
@@ -51,13 +60,85 @@ class RecitationRangeService:
         media_prefix = "media/"
         return key if key.startswith(media_prefix) else f"{media_prefix}{key}"
 
-    def build_range_key(self, asset_id: int, folder_id: int, surah_number: int, from_ayah: int, to_ayah: int) -> str:
+    def _prune_stale_range_clips(
+        self,
+        s3: Any,
+        *,
+        asset_id: int,
+        folder_id: int,
+        surah_number: int,
+        from_ayah: int,
+        to_ayah: int,
+        current_key: str,
+    ) -> None:
+        # Delete same-range clips at older build/content versions, including the
+        # pre-versioning unversioned format, so dead objects do not accumulate.
+        # A single LIST per build is cheap because builds are rare; hits never
+        # pay for it. Leaf tokens rotate, so pruning never races a valid hit on
+        # a different version: a concurrent miss simply rebuilds its own key.
+        bucket = settings.CLOUDFLARE_R2_BUCKET
+        dir_key = self._to_r2_key(f"uploads/assets/{asset_id}/recitations/{folder_id}/{surah_number:03}")
+        expected_leaf = f"range_{from_ayah:03}_{to_ayah:03}"
+        current_full = self._to_r2_key(current_key)
+        stale: list[str] = []
+        continuation: str | None = None
+        while True:
+            params: dict[str, Any] = {"Bucket": bucket, "Prefix": f"{dir_key}/"}
+            if continuation:
+                params["ContinuationToken"] = continuation
+            page = s3.list_objects_v2(**params)
+            for obj in page.get("Contents", []) or []:
+                full_key = obj["Key"]
+                if full_key == current_full:
+                    continue
+                leaf = full_key.rsplit("/", 1)[-1]
+                if leaf.startswith(expected_leaf) and leaf.endswith(".mp3"):
+                    stale.append(full_key)
+            if page.get("IsTruncated"):
+                continuation = page.get("NextContinuationToken")
+            else:
+                break
+        if stale:
+            s3.delete_objects(
+                Bucket=bucket,
+                Delete={"Objects": [{"Key": k} for k in stale], "Quiet": True},
+            )
+
+    @staticmethod
+    def _source_version(track: RecitationSurahTrack, subset: list[RecitationAyahTiming]) -> str:
+        # Content-derived token covering exactly what determines the clip's
+        # bytes: the source audio object + every timing boundary in the subset.
+        # Whichever writer changes inputs (timing upload, direct audio upload,
+        # track delete+recreate, raw SQL) rotates the token and thereby the
+        # persisted key, so a stale clip can never be served. Audio is keyed by
+        # its object name; byte-for-byte in-place overwrites under the same name
+        # are not produced by any writer in this codebase and are the only case
+        # left uncovered.
+        # Non-security key derivation (blake2b, like apps/content/cache.py):
+        # short digest keeps the persisted filename tidy.
+        digest = hashlib.blake2b(digest_size=6)
+        digest.update(f"{track.audio_file.name}\x00".encode())
+        for timing in subset:
+            digest.update(f"{timing.ayah_key}:{timing.start_ms}:{timing.end_ms}\x00".encode())
+        return digest.hexdigest()
+
+    def build_range_key(
+        self,
+        asset_id: int,
+        folder_id: int,
+        surah_number: int,
+        from_ayah: int,
+        to_ayah: int,
+        version: str,
+    ) -> str:
         # Deterministic key mirroring the slice grammar
         # (uploads/assets/{id}/recitations/...): folder segment keeps variants
         # apart, surah dir + range leaf never collides with the track file.
+        # The leaf version token (build + content hash) rotates on any input
+        # change so persisted clips can never go stale.
         return (
             f"uploads/assets/{asset_id}/recitations/{folder_id}/"
-            f"{surah_number:03}/range_{from_ayah:03}_{to_ayah:03}.mp3"
+            f"{surah_number:03}/range_{from_ayah:03}_{to_ayah:03}_b{BUILD_VERSION}_{version}.mp3"
         )
 
     def range_exists(self, key: str) -> dict[str, Any] | None:
@@ -79,16 +160,20 @@ class RecitationRangeService:
         to_ayah: int,
         start_ms: int,
         end_ms: int,
+        subset: list[RecitationAyahTiming],
     ) -> dict[str, Any]:
         # Serve the persisted combined clip when present; otherwise cut it from
-        # the surah track once, upload it, and return its URL + byte size.
+        # the surah track once, upload it, and return its URL + byte size. The
+        # key embeds a content version, so an R2 hit is only ever served for the
+        # exact audio+timing+encoder inputs that produced it.
         if not settings.CLOUDFLARE_R2_BUCKET:
             raise ItqanError(
                 error_name="storage_error",
                 message=_("Audio storage is not configured."),
                 status_code=503,
             )
-        key = self.build_range_key(track.asset_id, folder.id, surah_number, from_ayah, to_ayah)
+        version = self._source_version(track, subset)
+        key = self.build_range_key(track.asset_id, folder.id, surah_number, from_ayah, to_ayah, version)
         existing = self.range_exists(key)
         if existing is not None:
             return {
@@ -145,6 +230,23 @@ class RecitationRangeService:
                 ) from exc
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
+
+        # Retire any same-range clip from an older content/build version so the
+        # surah dir never accumulates dead objects. Runs only on a build (the
+        # rare path); hits never LIST. Best-effort: cleanup failures must never
+        # fail the request that just produced a valid clip.
+        try:
+            self._prune_stale_range_clips(
+                s3,
+                asset_id=track.asset_id,
+                folder_id=folder.id,
+                surah_number=surah_number,
+                from_ayah=from_ayah,
+                to_ayah=to_ayah,
+                current_key=key,
+            )
+        except Exception:
+            logger.warning("Failed to prune stale ayah-range clips for track %s", track.id, exc_info=True)
 
         logger.info(
             "Recitation range built [asset_id=%s, surah=%s, range=%s-%s]",

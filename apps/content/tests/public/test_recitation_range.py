@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 import subprocess
 from unittest.mock import patch
 
@@ -11,9 +12,12 @@ from oauth2_provider.models import Application
 
 from apps.content.cache import recitation_range_cache_key
 from apps.content.models import Asset, CategoryChoice, RecitationAyahTiming, RecitationSurahTrack, StatusChoice
+from apps.content.services.recitation_range import BUILD_VERSION, RecitationRangeService
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
+
+_RANGE_LEAF_RE = re.compile(r"^range_001_002_b\d+_[0-9a-f]{12}\.mp3$")
 
 
 def _fake_ffmpeg(output_body: bytes):
@@ -85,6 +89,17 @@ class RecitationRangeTest(BaseTestCase):
     def _url(self, surah=1, query="from=1&to=2"):
         return f"/recitations/{self.asset.id}/{surah}/range/?{query}"
 
+    def _leaf(self, audio_url: str) -> str:
+        return audio_url.rsplit("/", 1)[-1]
+
+    def _surah_dir_keys(self) -> list[str]:
+        prefix = f"media/uploads/assets/{self.asset.id}/recitations/{self.folder.id}/001"
+        keys: list[str] = []
+        for page in self.s3.get_paginator("list_objects_v2").paginate(Bucket=self.bucket_name, Prefix=f"{prefix}/"):
+            for obj in page.get("Contents", []) or []:
+                keys.append(obj["Key"])
+        return keys
+
     def test_get_range_where_valid_should_return_combined_clip(self):
         # Arrange
         self.authenticate_client(self.app)
@@ -99,7 +114,8 @@ class RecitationRangeTest(BaseTestCase):
         self.assertEqual(1, body["surah_number"])
         self.assertEqual(1, body["from_ayah"])
         self.assertEqual(2, body["to_ayah"])
-        self.assertIn("range_001_002.mp3", body["audio_url"])
+        leaf = self._leaf(body["audio_url"])
+        self.assertRegex(leaf, _RANGE_LEAF_RE)
         self.assertEqual(2000, body["duration_ms"])
         self.assertEqual(["1:1", "1:2"], [t["ayah_key"] for t in body["ayahs_timings"]])
         self.assertEqual([0, 1000], [t["offset_ms"] for t in body["ayahs_timings"]])
@@ -216,3 +232,79 @@ class RecitationRangeTest(BaseTestCase):
         response = self.client.get(self._url())
         self.assertEqual(401, response.status_code, response.content)
         self.assertEqual("authentication_required", response.json()["error_name"])
+
+    def test_source_version_is_deterministic_and_sensitive_to_inputs(self):
+        track = RecitationSurahTrack.objects.get(pk=self.track.pk)
+        subset = list(track.ayah_timings.filter(ayah_key__in=["1:1", "1:2"]).order_by("start_ms"))
+        service = RecitationRangeService()
+        first = service._source_version(track, subset)
+        second = service._source_version(track, subset)
+        self.assertEqual(first, second)
+        self.assertEqual(12, len(first))
+        # Changing a timing boundary changes the hash.
+        original = subset[0].start_ms
+        subset[0].start_ms = original + 10
+        self.assertNotEqual(first, service._source_version(track, subset))
+
+    def test_get_range_where_repeated_should_use_same_versioned_key(self):
+        self.authenticate_client(self.app)
+        first = self.client.get(self._url())
+        second = self.client.get(self._url())
+        self.assertEqual(200, first.status_code, first.content)
+        self.assertEqual(200, second.status_code, second.content)
+        self.assertEqual(first.json()["audio_url"], second.json()["audio_url"])
+
+    def test_get_range_where_timing_changes_should_rotate_persisted_key_and_prune(self):
+        self.authenticate_client(self.app)
+        first = self.client.get(self._url())
+        self.assertEqual(200, first.status_code, first.content)
+        first_leaf = self._leaf(first.json()["audio_url"])
+        first_full = f"media/uploads/assets/{self.asset.id}/recitations/{self.folder.id}/001/{first_leaf}"
+
+        # Edit a timing via raw .save() (mirrors the timing upload's direct-DB
+        # writes) and bust the response cache so the next request rebuilds.
+        timing = RecitationAyahTiming.objects.get(track=self.track, ayah_key="1:2")
+        timing.start_ms = 1050
+        timing.save(update_fields=["start_ms", "updated_at"])
+        django_cache.clear()
+
+        second = self.client.get(self._url())
+        self.assertEqual(200, second.status_code, second.content)
+        second_leaf = self._leaf(second.json()["audio_url"])
+        second_full = f"media/uploads/assets/{self.asset.id}/recitations/{self.folder.id}/001/{second_leaf}"
+
+        # Same logical range but different content hash → different key.
+        self.assertNotEqual(first_leaf, second_leaf)
+        self.assertRegex(second_leaf, _RANGE_LEAF_RE)
+        keys = self._surah_dir_keys()
+        self.assertNotIn(first_full, keys)
+        self.assertIn(second_full, keys)
+
+    def test_get_range_where_legacy_unversioned_clip_exists_should_prune_it(self):
+        # Seed a pre-versioning unversioned clip for the same range.
+        legacy_full = f"media/uploads/assets/{self.asset.id}/recitations/{self.folder.id}/001/range_001_002.mp3"
+        self.s3.put_object(Bucket=self.bucket_name, Key=legacy_full, Body=b"legacy")
+        self.assertIn(legacy_full, self._surah_dir_keys())
+
+        self.authenticate_client(self.app)
+        response = self.client.get(self._url())
+        self.assertEqual(200, response.status_code, response.content)
+
+        keys = self._surah_dir_keys()
+        self.assertNotIn(legacy_full, keys)
+        self.assertTrue(any("_b" in k for k in keys))
+
+    def test_get_range_where_build_version_bumps_should_rotate_key(self):
+        self.authenticate_client(self.app)
+        first = self.client.get(self._url())
+        first_leaf = self._leaf(first.json()["audio_url"])
+
+        # Simulate encoder change: bump BUILD_VERSION → new leaf token.
+        with patch("apps.content.services.recitation_range.BUILD_VERSION", BUILD_VERSION + 1):
+            django_cache.clear()
+            second = self.client.get(self._url())
+
+        second_leaf = self._leaf(second.json()["audio_url"])
+        self.assertNotEqual(first_leaf, second_leaf)
+        self.assertTrue(second_leaf.startswith(f"range_001_002_b{BUILD_VERSION + 1}_"))
+        self.assertTrue(second_leaf.endswith(".mp3"))

@@ -154,7 +154,7 @@ def get_recitation_range(
     # track (fades only at outer boundaries) and upload it under a
     # deterministic key so the next identical request is a cache/R2 hit.
     built = RecitationRangeService().get_or_build_range_audio(
-        track, resolved_folder, surah_number, from_ayah, to_ayah, start_ms, end_ms
+        track, resolved_folder, surah_number, from_ayah, to_ayah, start_ms, end_ms, subset
     )
 
     payload = {
