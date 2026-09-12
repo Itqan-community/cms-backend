@@ -12,13 +12,20 @@ def clear_recitation_tracks_cache(sender, instance: RecitationSurahTrack, **kwar
 
 
 @receiver(post_save, sender=Asset)
-def clear_public_recitation_cache_on_open_access_change(sender, instance: Asset, update_fields=None, **kwargs) -> None:
+def clear_public_recitation_cache_on_access_policy_change(
+    sender, instance: Asset, update_fields=None, **kwargs
+) -> None:
     """
-    Bust the public recitation caches whenever ``is_open_access`` may have changed.
+    Bust the public recitation caches whenever the access policy may have changed.
+
+    Both warm paths (track-list and range) authorize from the cached asset
+    metadata, so a flip of ``is_open_access`` or ``restricted_for_tenant``
+    must drop it -- otherwise the warm path keeps serving a stale allow/deny
+    decision for up to the meta TTL (CWE-862/863).
     """
     if instance.category != CategoryChoice.RECITATION:
         return
-    if update_fields is not None and "is_open_access" not in set(update_fields):
+    if update_fields is not None and not ({"is_open_access", "restricted_for_tenant"} & set(update_fields)):
         return
     invalidate_recitation_tracks_cache(instance.id)
 

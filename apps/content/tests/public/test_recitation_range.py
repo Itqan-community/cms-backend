@@ -208,10 +208,11 @@ class RecitationRangeTest(BaseTestCase):
 
     @override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=True)
     def test_get_range_where_private_and_anonymous_should_require_auth(self):
-        # Arrange: private asset + enforced access, no credentials.
+        # Arrange: private asset + enforced access, no credentials. Nothing is
+        # cached before this request, so no cache busting is needed -- the miss
+        # path enforces access straight from the DB.
         self.asset.is_open_access = False
         self.asset.save(update_fields=["is_open_access", "updated_at"])
-        django_cache.clear()
 
         # Act
         response = self.client.get(self._url())
@@ -236,6 +237,21 @@ class RecitationRangeTest(BaseTestCase):
         response = self.client.get(self._url())
         self.assertEqual(401, response.status_code, response.content)
         self.assertEqual("authentication_required", response.json()["error_name"])
+
+    def test_get_range_where_public_flips_to_tenant_restricted_should_drop_cached_response(self):
+        # 1. Warm the range cache while the asset is public (no credentials needed).
+        warm = self.client.get(self._url())
+        self.assertEqual(200, warm.status_code, warm.content)
+
+        # 2. Flip to tenant-restricted: the post_save signal must bust the cached
+        #    asset metadata, otherwise the warm path keeps serving the stale
+        #    cached response even though fresh requests 404 (CWE-862).
+        self.asset.restricted_for_tenant = True
+        self.asset.save(update_fields=["restricted_for_tenant", "updated_at"])
+
+        # 3. Anonymous request must be rebuilt from the DB and miss the tenant filter.
+        response = self.client.get(self._url())
+        self.assertEqual(404, response.status_code, response.content)
 
     def test_source_version_is_deterministic_and_sensitive_to_inputs(self):
         track = RecitationSurahTrack.objects.get(pk=self.track.pk)
