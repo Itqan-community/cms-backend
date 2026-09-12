@@ -31,6 +31,9 @@ msgstr "حدث خطأ غير متوقع"
 msgid "You do not have access to this asset"
 msgstr "ليس لديك صلاحية الوصول إلى هذا المورد"
 
+msgid "Language not available for this asset"
+msgstr "اللغة غير متاحة لهذا المورد"
+
 msgid "No versions found for this asset"
 msgstr "لا توجد إصدارات لهذا الأصل"
 
@@ -270,7 +273,7 @@ msgstr "توقيت غير صالح للآية {ayah_number}: النهاية قب
 
 #, python-brace-format
 msgid "Folder {folder_id} not found for asset {asset_id}."
-msgstr "لم يتم العثور على المجلد {folder_id} للأصل {asset_id}."
+msgstr ""
 
 #, python-brace-format
 msgid "Asset {asset_id} not found"
@@ -351,6 +354,14 @@ msgid "There are no changes to publish."
 msgstr "لا توجد تغييرات للنشر."
 
 #, python-brace-format
+msgid "Language {language} already exists for this asset."
+msgstr "اللغة {language} موجودة بالفعل لهذا المورد."
+
+#, python-brace-format
+msgid "Language {language} is not available for this asset."
+msgstr "اللغة {language} غير متاحة لهذا المورد."
+
+#, python-brace-format
 msgid "Publisher with id {id} not found."
 msgstr "لم يتم العثور على الناشر بالمعرّف {id}."
 
@@ -417,6 +428,18 @@ msgstr "لم يتم العثور على الرواية بالمعرّف {id}."
 
 msgid "Cannot delete Recitation because they are referenced through other objects"
 msgstr "لا يمكن حذف التلاوة لأن هناك بيانات أخرى مرتبطة بها"
+
+#, python-brace-format
+msgid "Ayah {ayah_key} not found."
+msgstr "لم يتم العثور على الآية {ayah_key}."
+
+#, python-brace-format
+msgid "Asset with id {id} not found."
+msgstr "لم يتم العثور على المورد ذو المعرف {id}."
+
+#, python-brace-format
+msgid "Default folder for asset {id} not found."
+msgstr "لم يتم العثور على المجلد الافتراضي للمورد {id}."
 
 #, python-brace-format
 msgid "Folder with slug {slug} not found."
@@ -628,6 +651,26 @@ msgstr "يجب أن ينتهي اسم الملف برقم السورة من 3 أ
 #, python-brace-format
 msgid "Surah number is out of range 1..114: {num}"
 msgstr "رقم السورة خارج النطاق 1..114: {num}"
+
+#, python-brace-format
+msgid "Asset {slug} has no eligible PACKAGE versions with valid SemVer names."
+msgstr "لا توجد إصدارات PACKAGE مؤهلة للمورد {slug} بأسماء SemVer صالحة."
+
+#, python-brace-format
+msgid "Canonical version collision detected for asset {slug}."
+msgstr "تم اكتشاف تعارض في الإصدار المكافئ للمورد {slug}."
+
+#, python-brace-format
+msgid "Invalid version constraint '{constraint}': {reason}."
+msgstr "قيد الإصدار '{constraint}' غير صالح: {reason}."
+
+#, python-brace-format
+msgid "Version {version} not found for asset {slug}."
+msgstr "الإصدار {version} غير موجود للمورد {slug}."
+
+#, python-brace-format
+msgid "No eligible PACKAGE version for asset {slug} satisfies constraint '{constraint}' ({range_desc})."
+msgstr "لا يوجد إصدار PACKAGE مؤهل للمورد {slug} يحقق القيد '{constraint}' ({range_desc})."
 
 msgid "You cannot change your own membership."
 msgstr "لا يمكنك تغيير عضويتك الخاصة."

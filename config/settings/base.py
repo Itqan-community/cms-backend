@@ -64,12 +64,15 @@ THIRD_PARTY_APPS = [
 
 COUNTRIES_OVERRIDE = {"IL": None}
 
-LOCAL_APPS = ["apps.core", "apps.content", "apps.users", "apps.publishers", "apps.quran"]
+LOCAL_APPS = ["apps.core", "apps.content", "apps.users", "apps.publishers", "apps.quran", "apps.package_manager"]
 
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    # Early, so the client identity is on the Sentry scope and the log context before
+    # any downstream middleware or view can fail.
+    "apps.core.middlewares.client_version.ClientVersionMiddleware",
     "ninja.compatibility.files.fix_request_files_middleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
@@ -117,8 +120,23 @@ DATABASES = {
         "OPTIONS": {
             "connect_timeout": 60,
         },
-    }
+    },
+    # Note: "audit" is backed up independently from "default".
+    # Retention is handled in #434.
+    "audit": {
+        "ENGINE": config("AUDIT_DB_ENGINE", default="django.db.backends.postgresql"),
+        "NAME": config("AUDIT_DB_NAME", default="itqan_audit"),
+        "USER": config("AUDIT_DB_USER", default="postgres"),
+        "PASSWORD": config("AUDIT_DB_PASSWORD", default="postgres"),
+        "HOST": config("AUDIT_DB_HOST", default="localhost"),
+        "PORT": config("AUDIT_DB_PORT", default="5432"),
+        "OPTIONS": {
+            "connect_timeout": 60,
+        },
+    },
 }
+
+DATABASE_ROUTERS = ["apps.core.db_routers.AuditRouter"]
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -270,7 +288,14 @@ CORS_ALLOW_HEADERS = [
     "x-session-token",
     "x-email-verification-key",
     "x-password-reset-key",
+    # Optional, self-reported by public API consumers; see apps.core.middlewares.client_version.
+    "x-client-name",
+    "x-client-version",
 ]
+
+# Browser clients cannot read a non-simple response header unless it is exposed, and the
+# advisory about a malformed X-Client-* header is useless if the developer cannot see it.
+CORS_EXPOSE_HEADERS = ["X-Itqan-Warning"]
 
 # Custom user model
 AUTH_USER_MODEL = "users.User"
@@ -496,18 +521,24 @@ X_FRAME_OPTIONS = "DENY"
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    # ``client`` is supplied by ClientContextFilter and is empty unless the caller sent
+    # X-Client-Name / X-Client-Version, so ordinary log lines are unchanged.
+    "filters": {
+        "client_context": {"()": "apps.core.logging_filters.ClientContextFilter"},
+    },
     "formatters": {
         "verbose": {
-            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}{client}",
             "style": "{",
         },
-        "simple": {"format": "{levelname} {message}", "style": "{"},
+        "simple": {"format": "{levelname} {message}{client}", "style": "{"},
     },
     "handlers": {
         "console": {
             "level": "INFO",
             "class": "logging.StreamHandler",
             "formatter": "simple",
+            "filters": ["client_context"],
         },
     },
     "root": {"handlers": ["console"], "level": "INFO"},

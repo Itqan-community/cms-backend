@@ -17,25 +17,23 @@ _TAFSIR_CSV = (
 
 
 class ParseContentFileTest(SimpleTestCase):
-    def test_parse_where_translation_format_should_map_text_and_footnotes(self):
-        # Arrange / Act
+    def test_parse_where_translation_format_should_map_text(self):
+        # Arrange / Act (the trailing footnotes column is ignored)
         entries = parse_content_file(_TRANSLATION_CSV)
 
         # Assert
         self.assertEqual(2, len(entries))
         self.assertEqual((1, 1), (entries[0].sura, entries[0].aya))
         self.assertEqual("In the name of Allah", entries[0].text)
-        self.assertEqual("[note]", entries[0].footnotes)
 
-    def test_parse_where_arabic_tafsir_format_should_map_content_and_margin(self):
-        # Arrange / Act
+    def test_parse_where_arabic_tafsir_format_should_map_content(self):
+        # Arrange / Act (the trailing margin column is ignored)
         entries = parse_content_file(_TAFSIR_CSV)
 
         # Assert
         self.assertEqual(1, len(entries))
         self.assertEqual((1, 1), (entries[0].sura, entries[0].aya))
         self.assertEqual("محتوى الآية", entries[0].text)
-        self.assertEqual("هامش", entries[0].footnotes)
 
     def test_parse_where_no_header_should_raise(self):
         # Arrange

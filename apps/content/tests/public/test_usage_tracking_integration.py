@@ -8,6 +8,7 @@ from django.core.cache import cache
 from django.test import override_settings
 from model_bakery import baker
 from oauth2_provider.models import Application
+import pytest
 
 from apps.content.models import Asset, CategoryChoice, StatusChoice
 from apps.core.tests.base import BaseTestCase
@@ -95,6 +96,9 @@ class UsageTrackingIntegrationTest(BaseTestCase):
         self.assertEqual(404, response.status_code, response.content)
         mock_get_redis.return_value.rpush.assert_not_called()
 
+    @pytest.mark.skip(
+        "We removed the tracking from this api because of Mixpanel costs, because of Ameen's excessive usage"
+    )
     @patch(_REDIS)
     def test_reciters_list_records_entities_with_no_publisher(self, mock_get_redis):
         response = self.client.get("/reciters/")

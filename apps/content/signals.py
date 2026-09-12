@@ -22,6 +22,11 @@ def clear_public_recitation_cache_on_access_policy_change(
     metadata, so a flip of ``is_open_access`` or ``restricted_for_tenant``
     must drop it -- otherwise the warm path keeps serving a stale allow/deny
     decision for up to the meta TTL (CWE-862/863).
+
+    This subsumes the staging-side "invalidate on any recitation asset save":
+    full saves (update_fields=None, e.g. admin/portal PUT) always invalidate,
+    while partial saves only do so for access-policy fields, so unrelated
+    edits don't churn the warm cache.
     """
     if instance.category != CategoryChoice.RECITATION:
         return
