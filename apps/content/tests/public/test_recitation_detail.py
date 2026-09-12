@@ -562,8 +562,10 @@ class RecitationTracksAccessControlTest(BaseTestCase):
         # 2. Flip back to restricted: the post_save signal must bust the cached
         #    metadata, otherwise the warm path would keep serving stale
         #    is_open_access=True and authorize an unauthenticated caller (CWE-863).
+        #    The bust is deferred to on_commit, so execute the callbacks.
         self.asset.is_open_access = False
-        self.asset.save(update_fields=["is_open_access"])
+        with self.captureOnCommitCallbacks(execute=True):
+            self.asset.save(update_fields=["is_open_access"])
 
         # 3. Anonymous request must hit the DB and be denied, not served from cache.
         response = self.client.get(f"/recitations/{self.asset.id}/")

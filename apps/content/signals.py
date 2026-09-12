@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
@@ -23,6 +24,13 @@ def clear_public_recitation_cache_on_access_policy_change(
     must drop it -- otherwise the warm path keeps serving a stale allow/deny
     decision for up to the meta TTL (CWE-862/863).
 
+    The deletion is deferred to ``transaction.on_commit``: writers like
+    ``RecitationRepository.update_recitation`` save inside ``atomic()``, and a
+    synchronous delete would run before the new policy commits -- letting a
+    concurrent request repopulate the metadata from the pre-commit row and
+    leaving stale authorization data after commit (CWE-863). Outside an
+    atomic block (autocommit saves) the callback runs immediately.
+
     This subsumes the staging-side "invalidate on any recitation asset save":
     full saves (update_fields=None, e.g. admin/portal PUT) always invalidate,
     while partial saves only do so for access-policy fields, so unrelated
@@ -32,7 +40,7 @@ def clear_public_recitation_cache_on_access_policy_change(
         return
     if update_fields is not None and not ({"is_open_access", "restricted_for_tenant"} & set(update_fields)):
         return
-    invalidate_recitation_tracks_cache(instance.id)
+    transaction.on_commit(lambda asset_id=instance.id: invalidate_recitation_tracks_cache(asset_id))
 
 
 @receiver(post_save, sender=Asset)

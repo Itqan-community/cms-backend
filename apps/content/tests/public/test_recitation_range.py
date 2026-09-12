@@ -9,11 +9,12 @@ import boto3
 from botocore.exceptions import BotoCoreError, ClientError
 from django.core.cache import cache as django_cache
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import transaction
 from django.test import override_settings
 from model_bakery import baker
 from oauth2_provider.models import Application
 
-from apps.content.cache import recitation_range_cache_key
+from apps.content.cache import recitation_asset_meta_cache_key, recitation_range_cache_key
 from apps.content.models import Asset, CategoryChoice, RecitationAyahTiming, RecitationSurahTrack, StatusChoice
 from apps.content.services.recitation_range import BUILD_VERSION, RecitationRangeService
 from apps.core.ninja_utils.errors import ItqanError
@@ -230,8 +231,10 @@ class RecitationRangeTest(BaseTestCase):
         # 2. Flip to restricted: the post_save signal must bust the cached asset
         #    metadata, otherwise the warm path keeps trusting stale
         #    is_open_access=True and serves restricted audio anonymously (CWE-863).
+        #    The bust is deferred to on_commit, so execute the callbacks.
         self.asset.is_open_access = False
-        self.asset.save(update_fields=["is_open_access", "updated_at"])
+        with self.captureOnCommitCallbacks(execute=True):
+            self.asset.save(update_fields=["is_open_access", "updated_at"])
 
         # 3. Anonymous request must be rebuilt from the DB and denied.
         response = self.client.get(self._url())
@@ -246,12 +249,45 @@ class RecitationRangeTest(BaseTestCase):
         # 2. Flip to tenant-restricted: the post_save signal must bust the cached
         #    asset metadata, otherwise the warm path keeps serving the stale
         #    cached response even though fresh requests 404 (CWE-862).
+        #    The bust is deferred to on_commit, so execute the callbacks.
         self.asset.restricted_for_tenant = True
-        self.asset.save(update_fields=["restricted_for_tenant", "updated_at"])
+        with self.captureOnCommitCallbacks(execute=True):
+            self.asset.save(update_fields=["restricted_for_tenant", "updated_at"])
 
         # 3. Anonymous request must be rebuilt from the DB and miss the tenant filter.
         response = self.client.get(self._url())
         self.assertEqual(404, response.status_code, response.content)
+
+    @override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=True)
+    def test_policy_flip_where_concurrent_request_repopulates_before_commit_should_not_leave_stale_meta(self):
+        # 1. Warm the range cache as an open-access asset (no credentials needed).
+        warm = self.client.get(self._url())
+        self.assertEqual(200, warm.status_code, warm.content)
+        meta_key = recitation_asset_meta_cache_key(self.asset.id)
+        self.assertTrue(django_cache.get(meta_key)["is_open_access"])
+
+        # 2. Flip inside a transaction (mirrors update_recitation's atomic save):
+        #    the bust is deferred to on_commit. Before commit, simulate the
+        #    concurrent miss-path request that read the pre-commit row and
+        #    repopulates the metadata with the stale open-access policy.
+        stale_meta = {
+            "name_ar": self.asset.name_ar,
+            "publisher_id": self.asset.publisher_id,
+            "publisher_name": self.asset.publisher.name if self.asset.publisher_id else None,
+            "is_open_access": True,
+        }
+        self.asset.is_open_access = False
+        with self.captureOnCommitCallbacks(execute=True):
+            with transaction.atomic():
+                self.asset.save(update_fields=["is_open_access", "updated_at"])
+                django_cache.set(meta_key, stale_meta)
+
+        # 3. The post-commit bust must have removed the repopulated stale entry,
+        #    so the next anonymous request rebuilds from the DB and is denied.
+        self.assertIsNone(django_cache.get(meta_key))
+        response = self.client.get(self._url())
+        self.assertEqual(401, response.status_code, response.content)
+        self.assertEqual("authentication_required", response.json()["error_name"])
 
     def test_source_version_is_deterministic_and_sensitive_to_inputs(self):
         track = RecitationSurahTrack.objects.get(pk=self.track.pk)
