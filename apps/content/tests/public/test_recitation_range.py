@@ -4,6 +4,7 @@ import subprocess
 from unittest.mock import patch
 
 import boto3
+from botocore.exceptions import BotoCoreError, ClientError
 from django.core.cache import cache as django_cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
@@ -308,3 +309,37 @@ class RecitationRangeTest(BaseTestCase):
         self.assertNotEqual(first_leaf, second_leaf)
         self.assertTrue(second_leaf.startswith(f"range_001_002_b{BUILD_VERSION + 1}_"))
         self.assertTrue(second_leaf.endswith(".mp3"))
+
+    def _head_error(self, code: str) -> ClientError:
+        return ClientError({"Error": {"Code": code, "Message": f"stubbed {code}"}}, "HeadObject")
+
+    def test_range_exists_where_head_404_should_return_none_silently(self):
+        service = RecitationRangeService()
+        with (
+            patch.object(service, "_get_s3_client") as mock_client,
+            self.assertNoLogs("apps.content.services.recitation_range", level="WARNING"),
+        ):
+            mock_client.return_value.head_object.side_effect = self._head_error("404")
+            self.assertIsNone(service.range_exists("uploads/assets/1/recitations/1/001/range_001_002_b2_deadbeef.mp3"))
+
+    def test_range_exists_where_head_forbidden_should_log_and_return_none(self):
+        service = RecitationRangeService()
+        with patch.object(service, "_get_s3_client") as mock_client:
+            mock_client.return_value.head_object.side_effect = self._head_error("403")
+            with self.assertLogs("apps.content.services.recitation_range", level="WARNING") as logs:
+                self.assertIsNone(
+                    service.range_exists("uploads/assets/1/recitations/1/001/range_001_002_b2_deadbeef.mp3")
+                )
+        self.assertEqual(1, len(logs.records))
+        self.assertIsNotNone(logs.records[0].exc_info)
+
+    def test_range_exists_where_connection_fails_should_log_and_return_none(self):
+        service = RecitationRangeService()
+        with patch.object(service, "_get_s3_client") as mock_client:
+            mock_client.return_value.head_object.side_effect = BotoCoreError()
+            with self.assertLogs("apps.content.services.recitation_range", level="WARNING") as logs:
+                self.assertIsNone(
+                    service.range_exists("uploads/assets/1/recitations/1/001/range_001_002_b2_deadbeef.mp3")
+                )
+        self.assertEqual(1, len(logs.records))
+        self.assertIsNotNone(logs.records[0].exc_info)

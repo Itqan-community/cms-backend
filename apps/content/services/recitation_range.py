@@ -143,11 +143,22 @@ class RecitationRangeService:
 
     def range_exists(self, key: str) -> dict[str, Any] | None:
         # Return object metadata when the combined clip already exists, else None.
+        # A 404/NoSuchKey is a clean miss (silently rebuild); anything else is a
+        # real storage fault and gets logged because the caller proceeds to
+        # download, re-encode and upload -- a successful rebuild would otherwise
+        # hide the original fault. Rebuild behavior is unchanged in both cases.
         if not settings.CLOUDFLARE_R2_BUCKET:
             return None
         try:
             head = self._get_s3_client().head_object(Bucket=settings.CLOUDFLARE_R2_BUCKET, Key=self._to_r2_key(key))
-        except (ClientError, BotoCoreError):
+        except ClientError as exc:
+            error_code = exc.response.get("Error", {}).get("Code", "")
+            if error_code in ("404", "NoSuchKey", "NotFound"):
+                return None
+            logger.warning("R2 HEAD failed for ayah-range clip [key=%s, code=%s]", key, error_code, exc_info=True)
+            return None
+        except BotoCoreError:
+            logger.warning("R2 HEAD connection failure for ayah-range clip [key=%s]", key, exc_info=True)
             return None
         return head
 
