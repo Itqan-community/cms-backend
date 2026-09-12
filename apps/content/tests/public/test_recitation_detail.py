@@ -551,3 +551,46 @@ class RecitationTracksAccessControlTest(BaseTestCase):
 
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual(1, len(response.json()["results"]))
+
+    def test_open_to_restricted_flip_invalidates_cached_meta_and_requires_auth(self):
+        # 1. Open the asset and warm the public cache anonymously.
+        self.asset.is_open_access = True
+        self.asset.save(update_fields=["is_open_access"])
+        warm = self.client.get(f"/recitations/{self.asset.id}/")
+        self.assertEqual(200, warm.status_code, warm.content)
+
+        # 2. Flip back to restricted: the post_save signal must bust the cached
+        #    metadata, otherwise the warm path would keep serving stale
+        #    is_open_access=True and authorize an unauthenticated caller (CWE-863).
+        #    The bust is deferred to on_commit, so execute the callbacks.
+        self.asset.is_open_access = False
+        with self.captureOnCommitCallbacks(execute=True):
+            self.asset.save(update_fields=["is_open_access"])
+
+        # 3. Anonymous request must hit the DB and be denied, not served from cache.
+        response = self.client.get(f"/recitations/{self.asset.id}/")
+        self.assertEqual(401, response.status_code, response.content)
+        self.assertEqual("authentication_required", response.json()["error_name"])
+
+    def test_unrelated_field_save_does_not_invalidate_warm_cache(self):
+        from django.core.cache import cache as django_cache
+
+        from apps.content.cache import recitation_asset_meta_cache_key
+
+        # Warm the cache as an open-access asset.
+        self.asset.is_open_access = True
+        self.asset.save(update_fields=["is_open_access"])
+        first = self.client.get(f"/recitations/{self.asset.id}/")
+        self.assertEqual(200, first.status_code, first.content)
+
+        meta_key = recitation_asset_meta_cache_key(self.asset.id)
+        self.assertIsNotNone(django_cache.get(meta_key))
+
+        # Saving an unrelated field must NOT invalidate the warm metadata.
+        self.asset.name_ar = "Renamed while cached"
+        self.asset.save(update_fields=["name_ar"])
+        self.assertIsNotNone(django_cache.get(meta_key))
+
+        second = self.client.get(f"/recitations/{self.asset.id}/")
+        self.assertEqual(200, second.status_code, second.content)
+        self.assertEqual(first.content, second.content)

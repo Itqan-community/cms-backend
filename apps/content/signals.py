@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
@@ -12,10 +13,34 @@ def clear_recitation_tracks_cache(sender, instance: RecitationSurahTrack, **kwar
 
 
 @receiver(post_save, sender=Asset)
-def clear_asset_recitation_cache_on_save(sender, instance: Asset, created: bool, **kwargs) -> None:
-    """Invalidate public recitation cache when an asset's metadata or visibility changes."""
-    if not created and instance.category == CategoryChoice.RECITATION:
-        invalidate_recitation_tracks_cache(instance.id)
+def clear_public_recitation_cache_on_access_policy_change(
+    sender, instance: Asset, update_fields=None, **kwargs
+) -> None:
+    """
+    Bust the public recitation caches whenever the access policy may have changed.
+
+    Both warm paths (track-list and range) authorize from the cached asset
+    metadata, so a flip of ``is_open_access`` or ``restricted_for_tenant``
+    must drop it -- otherwise the warm path keeps serving a stale allow/deny
+    decision for up to the meta TTL (CWE-862/863).
+
+    The deletion is deferred to ``transaction.on_commit``: writers like
+    ``RecitationRepository.update_recitation`` save inside ``atomic()``, and a
+    synchronous delete would run before the new policy commits -- letting a
+    concurrent request repopulate the metadata from the pre-commit row and
+    leaving stale authorization data after commit (CWE-863). Outside an
+    atomic block (autocommit saves) the callback runs immediately.
+
+    This subsumes the staging-side "invalidate on any recitation asset save":
+    full saves (update_fields=None, e.g. admin/portal PUT) always invalidate,
+    while partial saves only do so for access-policy fields, so unrelated
+    edits don't churn the warm cache.
+    """
+    if instance.category != CategoryChoice.RECITATION:
+        return
+    if update_fields is not None and not ({"is_open_access", "restricted_for_tenant"} & set(update_fields)):
+        return
+    transaction.on_commit(lambda asset_id=instance.id: invalidate_recitation_tracks_cache(asset_id))
 
 
 @receiver(post_save, sender=Asset)

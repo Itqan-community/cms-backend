@@ -271,6 +271,121 @@ class RecitationService:
         """
         return self.repo.get_default_track_for_surah(asset_id, surah_number)
 
+    def get_range_segment(
+        self,
+        asset_id: int,
+        surah_number: int,
+        from_ayah: int,
+        to_ayah: int,
+        folder: str | None = None,
+        require_visible_folder: bool = True,
+    ) -> tuple[RecitationSurahTrack, Any, list[Any], int, int]:
+        # Resolve and validate one contiguous ayah range within a single surah.
+        # Returns (track, folder, timings_subset, start_ms, end_ms) where the
+        # subset covers every ayah in [from_ayah, to_ayah] in playback order.
+        # Range problems (order, bounds, gaps) raise 422 validation_error so
+        # clients can tell bad input apart from a missing track (404).
+        from apps.core.mixins.constants import QURAN_SURAHS
+
+        if surah_number not in QURAN_SURAHS:
+            raise ItqanError(
+                error_name="validation_error",
+                message=_("Surah {surah} is out of range (1-114).").format(surah=surah_number),
+                status_code=422,
+            )
+
+        if from_ayah > to_ayah:
+            raise ItqanError(
+                error_name="validation_error",
+                message=_("Invalid ayah range: from ({from_ayah}) must not exceed to ({to_ayah}).").format(
+                    from_ayah=from_ayah, to_ayah=to_ayah
+                ),
+                status_code=422,
+            )
+
+        ayahs_count = QURAN_SURAHS[surah_number]["ayahs_count"]
+
+        if from_ayah < 1 or to_ayah > ayahs_count:
+            raise ItqanError(
+                error_name="validation_error",
+                message=_("Ayah range {from_ayah}-{to_ayah} is outside surah " "{surah} (1-{max}).").format(
+                    from_ayah=from_ayah,
+                    to_ayah=to_ayah,
+                    surah=surah_number,
+                    max=ayahs_count,
+                ),
+                status_code=422,
+            )
+
+        folder_id = None
+        matched_folder = None
+
+        if folder is not None:
+            matched_folder = find_folder_by_token(
+                asset_id,
+                folder,
+                require_visible=require_visible_folder,
+            )
+
+            if matched_folder is None:
+                raise ItqanError(
+                    error_name="folder_not_found",
+                    message=_("Folder {folder} not found.").format(folder=folder),
+                    status_code=404,
+                )
+
+            folder_id = matched_folder.id
+
+        track = self.repo.get_single_track(
+            asset_id,
+            surah_number,
+            folder_id=folder_id,
+        )
+
+        if track is None:
+            raise ItqanError(
+                error_name="not_found",
+                message=_("No track for surah {surah} on this recitation.").format(surah=surah_number),
+                status_code=404,
+            )
+
+        if matched_folder is None:
+            matched_folder = track.folder
+
+        by_ayah = {t.ayah_key: t for t in track.ayah_timings.all()}
+
+        subset = []
+
+        for ayah_number in range(from_ayah, to_ayah + 1):
+            timing = by_ayah.get(f"{surah_number}:{ayah_number}")
+
+            if timing is None:
+                raise ItqanError(
+                    error_name="validation_error",
+                    message=_("Ayah {surah}:{ayah} has no timing on this track.").format(
+                        surah=surah_number,
+                        ayah=ayah_number,
+                    ),
+                    status_code=422,
+                )
+
+            subset.append(timing)
+
+        start_ms = subset[0].start_ms
+        end_ms = subset[-1].end_ms
+
+        if end_ms <= start_ms:
+            raise ItqanError(
+                error_name="validation_error",
+                message=_("Ayah range {from_ayah}-{to_ayah} has invalid timings.").format(
+                    from_ayah=from_ayah,
+                    to_ayah=to_ayah,
+                ),
+                status_code=422,
+            )
+
+        return track, matched_folder, subset, start_ms, end_ms
+
     def get_ayah_audio_data(
         self,
         asset_id: int,
@@ -293,6 +408,7 @@ class RecitationService:
             Dict containing asset, folder, timing metadata, and Cloudflare R2 audio URL.
         """
         parts = ayah_key.strip().split(":")
+
         if len(parts) != 2:
             raise ItqanError(
                 error_name="ayah_not_found",
@@ -317,7 +433,11 @@ class RecitationService:
                 status_code=404,
             )
 
-        asset = self.repo.get_asset_object(asset_id, publisher_q=publisher_q)
+        asset = self.repo.get_asset_object(
+            asset_id,
+            publisher_q=publisher_q,
+        )
+
         if asset is None:
             raise ItqanError(
                 error_name="asset_not_found",
@@ -326,7 +446,12 @@ class RecitationService:
             )
 
         if folder is not None:
-            folder_obj = find_folder_by_token(asset_id, folder, require_visible=require_visible_folder)
+            folder_obj = find_folder_by_token(
+                asset_id,
+                folder,
+                require_visible=require_visible_folder,
+            )
+
             if folder_obj is None:
                 raise ItqanError(
                     error_name="folder_not_found",
@@ -335,9 +460,12 @@ class RecitationService:
                 )
         else:
             default_qs = asset.recitation_folders.filter(is_default=True)
+
             if require_visible_folder:
                 default_qs = default_qs.filter(is_visible=True)
+
             folder_obj = default_qs.first()
+
             if folder_obj is None:
                 raise ItqanError(
                     error_name="folder_not_found",
@@ -346,12 +474,14 @@ class RecitationService:
                 )
 
         normalized_ayah_key = f"{surah_number}:{ayah_number}"
+
         timing = self.repo.get_ayah_timing_for_asset(
             asset_id=asset_id,
             folder_id=folder_obj.id,
             surah_number=surah_number,
             ayah_key=normalized_ayah_key,
         )
+
         if timing is None:
             raise ItqanError(
                 error_name="ayah_not_found",
@@ -363,12 +493,21 @@ class RecitationService:
         # (MediaFileStorage / CLOUDFLARE_R2_PUBLIC_BASE_URL). Access control is enforced
         # at the API gateway layer via enforce_asset_access_on_public_api before this URL
         # is returned to consumers, matching recitation_track_list and samples endpoints.
-        base_url = getattr(settings, "CLOUDFLARE_R2_PUBLIC_BASE_URL", CLOUDFLARE_R2_PUBLIC_BASE_URL).rstrip("/")
-        slice_key = f"uploads/assets/{asset_id}/recitations/{folder_obj.id}/{surah_number:03}/ayah_{ayah_number:03}.mp3"
+        base_url = getattr(
+            settings,
+            "CLOUDFLARE_R2_PUBLIC_BASE_URL",
+            CLOUDFLARE_R2_PUBLIC_BASE_URL,
+        ).rstrip("/")
+
+        slice_key = (
+            f"uploads/assets/{asset_id}/recitations/" f"{folder_obj.id}/{surah_number:03}/" f"ayah_{ayah_number:03}.mp3"
+        )
+
         audio_url = f"{base_url}/media/{slice_key}"
 
         size_bytes: int | None = None
         track = timing.track
+
         if track and track.duration_ms and track.size_bytes:
             size_bytes = int(track.size_bytes * timing.duration_ms // track.duration_ms)
 
