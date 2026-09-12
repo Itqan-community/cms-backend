@@ -6,12 +6,14 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+import time
 from typing import TYPE_CHECKING, Any
 
 import boto3
 from botocore.config import Config
 from botocore.exceptions import BotoCoreError, ClientError
 from django.conf import settings
+from django.core.cache import cache as django_cache
 from django.utils.translation import gettext_lazy as _
 
 from apps.content.services.admin.recitation_audio_slicing_service import (
@@ -31,6 +33,19 @@ logger = logging.getLogger(__name__)
 # a previous algorithm. Content changes (audio file, timing edits) rotate keys
 # on their own via _source_version().
 BUILD_VERSION = 2
+
+# Single-flight guard for the build path: only one worker may download +
+# encode + upload a given range key at a time; losers idle-wait for the
+# winner's clip instead of burning CPU/disk on duplicate encodes.
+# - LOCK_TTL covers the worst case (full-surah download + FFMPEG_SLICE_TIMEOUT
+#   + upload + prune) and auto-releases on worker death (crash-safe).
+# - MAX_WAIT bounds a loser's idle wait; afterwards it tries to take over the
+#   build itself (winner-crash case) and only 503s when the lock is still held.
+# Redis (prod/staging) makes cache.add atomic across workers; LocMemCache
+# (dev/test) scopes the guard to the process.
+RANGE_BUILD_LOCK_TTL_SECONDS = 90
+RANGE_BUILD_MAX_WAIT_SECONDS = 25
+RANGE_BUILD_POLL_SECONDS = 1
 
 
 class RecitationRangeService:
@@ -105,6 +120,25 @@ class RecitationRangeService:
             )
 
     @staticmethod
+    def _build_lock_key(key: str) -> str:
+        # Lock scope is the content-addressed range key itself: identical inputs
+        # contend, different inputs never do. The value is content-free ("1") --
+        # identity comes from the key.
+        return f"ayah-range-build:{key}"
+
+    def _wait_for_build(self, key: str) -> dict[str, Any] | None:
+        # Loser path: poll for the winner's clip without spending CPU/disk. A
+        # fresh HEAD on success yields the real byte size. Returns None when the
+        # wait expires (caller then tries to take over the build).
+        deadline = time.monotonic() + RANGE_BUILD_MAX_WAIT_SECONDS
+        while time.monotonic() < deadline:
+            time.sleep(RANGE_BUILD_POLL_SECONDS)
+            landed = self.range_exists(key)
+            if landed is not None:
+                return landed
+        return None
+
+    @staticmethod
     def _source_version(track: RecitationSurahTrack, subset: list[RecitationAyahTiming]) -> str:
         # Content-derived token covering exactly what determines the clip's
         # bytes: the source audio object + every timing boundary in the subset.
@@ -173,10 +207,11 @@ class RecitationRangeService:
         end_ms: int,
         subset: list[RecitationAyahTiming],
     ) -> dict[str, Any]:
-        # Serve the persisted combined clip when present; otherwise cut it from
-        # the surah track once, upload it, and return its URL + byte size. The
-        # key embeds a content version, so an R2 hit is only ever served for the
-        # exact audio+timing+encoder inputs that produced it.
+        # Serve the persisted combined clip when present; otherwise build it
+        # once per range key (single-flight: concurrent misses for the same key
+        # wait for the winner instead of each encoding). The key embeds a
+        # content version, so an R2 hit is only ever served for the exact
+        # audio+timing+encoder inputs that produced it.
         if not settings.CLOUDFLARE_R2_BUCKET:
             raise ItqanError(
                 error_name="storage_error",
@@ -194,6 +229,46 @@ class RecitationRangeService:
                 "size_bytes": int(existing.get("ContentLength") or 0),
             }
 
+        # Single-flight: exactly one worker builds each range key. Losers
+        # idle-wait for the winner's clip; when the wait expires they try to
+        # take over (winner-crash case) and only 503 when the lock is still
+        # genuinely held. Lock deletion is best-effort: clearing a successor's
+        # fresh lock merely causes a bounded extra rebuild, never wrong bytes.
+        lock_key = self._build_lock_key(key)
+        if not django_cache.add(lock_key, "1", RANGE_BUILD_LOCK_TTL_SECONDS):
+            landed = self._wait_for_build(key)
+            if landed is not None:
+                return {
+                    "key": key,
+                    "audio_url": f"{CLOUDFLARE_R2_PUBLIC_BASE_URL}/media/{key}",
+                    "duration_ms": end_ms - start_ms,
+                    "size_bytes": int(landed.get("ContentLength") or 0),
+                }
+            if not django_cache.add(lock_key, "1", RANGE_BUILD_LOCK_TTL_SECONDS):
+                raise ItqanError(
+                    error_name="storage_error",
+                    message=_("Ayah-range audio is being built, please retry shortly."),
+                    status_code=503,
+                )
+        try:
+            return self._build_range_audio(track, folder, surah_number, from_ayah, to_ayah, start_ms, end_ms, key)
+        finally:
+            django_cache.delete(lock_key)
+
+    def _build_range_audio(
+        self,
+        track: RecitationSurahTrack,
+        folder: RecitationFolder,
+        surah_number: int,
+        from_ayah: int,
+        to_ayah: int,
+        start_ms: int,
+        end_ms: int,
+        key: str,
+    ) -> dict[str, Any]:
+        # Winner path: cut the clip from the surah track once, persist it under
+        # the content-addressed key, prune superseded versions, and return its
+        # URL + byte size. Runs under the per-key build lock.
         s3 = self._get_s3_client()
         temp_dir = Path(tempfile.mkdtemp(prefix="ayah-range-"))
         try:

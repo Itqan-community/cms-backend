@@ -1,6 +1,8 @@
 from pathlib import Path
 import re
 import subprocess
+import threading
+import time
 from unittest.mock import patch
 
 import boto3
@@ -14,6 +16,7 @@ from oauth2_provider.models import Application
 from apps.content.cache import recitation_range_cache_key
 from apps.content.models import Asset, CategoryChoice, RecitationAyahTiming, RecitationSurahTrack, StatusChoice
 from apps.content.services.recitation_range import BUILD_VERSION, RecitationRangeService
+from apps.core.ninja_utils.errors import ItqanError
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -309,6 +312,82 @@ class RecitationRangeTest(BaseTestCase):
         self.assertNotEqual(first_leaf, second_leaf)
         self.assertTrue(second_leaf.startswith(f"range_001_002_b{BUILD_VERSION + 1}_"))
         self.assertTrue(second_leaf.endswith(".mp3"))
+
+    def _service_args(self):
+        track = RecitationSurahTrack.objects.get(pk=self.track.pk)
+        subset = list(track.ayah_timings.filter(ayah_key__in=["1:1", "1:2"]).order_by("start_ms"))
+        service = RecitationRangeService()
+        version = service._source_version(track, subset)
+        key = service.build_range_key(track.asset_id, self.folder.id, 1, 1, 2, version)
+        return service, track, subset, key
+
+    def test_concurrent_miss_where_winner_builds_should_serve_without_reencoding(self):
+        # Arrange: hold this key's build lock, as if a concurrent request won
+        # the single-flight race.
+        service, track, subset, key = self._service_args()
+        lock_key = service._build_lock_key(key)
+        full_key = f"media/{key}"
+        self.assertTrue(django_cache.add(lock_key, "1", 90))
+        self.addCleanup(django_cache.delete, lock_key)
+
+        # A "winner" thread finishes the build mid-wait: uploads the clip the
+        # loser is polling for, then releases the lock.
+        def finish_build():
+            time.sleep(1.0)
+            self.s3.put_object(Bucket=self.bucket_name, Key=full_key, Body=b"range-bytes")
+            django_cache.delete(lock_key)
+
+        winner = threading.Thread(target=finish_build)
+        winner.start()
+        try:
+            with (
+                patch("apps.content.services.recitation_range.subprocess.run") as mock_run,
+                patch("apps.content.services.recitation_range.RANGE_BUILD_POLL_SECONDS", 0.2),
+            ):
+                mock_run.side_effect = AssertionError("duplicate encode on loser path")
+                # Act
+                result = service.get_or_build_range_audio(track, self.folder, 1, 1, 2, 0, 2000, subset)
+        finally:
+            winner.join()
+
+        # Assert: served the winner's clip; ffmpeg never ran on this path.
+        self.assertIn(key, result["audio_url"])
+        self.assertEqual(len(b"range-bytes"), result["size_bytes"])
+
+    def test_miss_where_lock_expired_should_take_over_and_build(self):
+        # Arrange: stale lock from a dead winner (expires in 1s, no clip lands).
+        service, track, subset, key = self._service_args()
+        lock_key = service._build_lock_key(key)
+        self.assertTrue(django_cache.add(lock_key, "1", 1))
+        self.addCleanup(django_cache.delete, lock_key)
+
+        # Act: the wait expires, the re-acquire succeeds, this request builds.
+        with (
+            patch("apps.content.services.recitation_range.RANGE_BUILD_MAX_WAIT_SECONDS", 3),
+            patch("apps.content.services.recitation_range.RANGE_BUILD_POLL_SECONDS", 0.2),
+        ):
+            result = service.get_or_build_range_audio(track, self.folder, 1, 1, 2, 0, 2000, subset)
+
+        # Assert
+        self.assertIn(key, result["audio_url"])
+        self.assertEqual(len(b"range-bytes"), result["size_bytes"])
+
+    def test_miss_where_lock_held_past_wait_should_return_503(self):
+        # Arrange: lock genuinely held (live winner), no clip lands in time.
+        service, track, subset, key = self._service_args()
+        lock_key = service._build_lock_key(key)
+        self.assertTrue(django_cache.add(lock_key, "1", 90))
+        self.addCleanup(django_cache.delete, lock_key)
+
+        # Act / Assert
+        with (
+            patch("apps.content.services.recitation_range.RANGE_BUILD_MAX_WAIT_SECONDS", 1),
+            patch("apps.content.services.recitation_range.RANGE_BUILD_POLL_SECONDS", 0.2),
+            self.assertRaises(ItqanError) as ctx,
+        ):
+            service.get_or_build_range_audio(track, self.folder, 1, 1, 2, 0, 2000, subset)
+        self.assertEqual("storage_error", ctx.exception.error_name)
+        self.assertEqual(503, ctx.exception.status_code)
 
     def _head_error(self, code: str) -> ClientError:
         return ClientError({"Error": {"Code": code, "Message": f"stubbed {code}"}}, "HeadObject")
