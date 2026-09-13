@@ -350,6 +350,17 @@ class RecitationService:
 
         if matched_folder is None:
             matched_folder = track.folder
+            if require_visible_folder and not matched_folder.is_visible:
+                # The omitted-folder path resolves the default variant without
+                # consulting visibility (the repo lookup filters is_default
+                # only). A hidden default must 404 like an explicitly requested
+                # hidden folder -- otherwise its audio stays publicly servable
+                # (CWE-862). track.folder is select_related, so this adds no query.
+                raise ItqanError(
+                    error_name="folder_not_found",
+                    message=_("Default folder for asset {id} not found.").format(id=asset_id),
+                    status_code=404,
+                )
 
         by_ayah = {t.ayah_key: t for t in track.ayah_timings.all()}
 

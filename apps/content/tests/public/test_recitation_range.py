@@ -207,6 +207,32 @@ class RecitationRangeTest(BaseTestCase):
         self.assertEqual(404, response.status_code, response.content)
         self.assertEqual("folder_not_found", response.json()["error_name"])
 
+    def test_get_range_where_default_folder_hidden_and_no_folder_param_should_return_404(self):
+        # Arrange: hide the default folder with a direct save -- the portal
+        # forbids hiding the default variant, but admin/imports/shell can, and
+        # the public endpoint must still refuse to serve it (CWE-862).
+        self.folder.is_visible = False
+        self.folder.save(update_fields=["is_visible", "updated_at"])
+
+        # Act: no ?folder, so the default variant would be resolved implicitly.
+        response = self.client.get(self._url())
+
+        # Assert
+        self.assertEqual(404, response.status_code, response.content)
+        self.assertEqual("folder_not_found", response.json()["error_name"])
+
+    def test_get_range_where_hidden_folder_requested_explicitly_should_return_404(self):
+        # Arrange: same hidden default, requested by slug this time.
+        self.folder.is_visible = False
+        self.folder.save(update_fields=["is_visible", "updated_at"])
+
+        # Act
+        response = self.client.get(self._url(query=f"from=1&to=2&folder={self.folder.slug}"))
+
+        # Assert
+        self.assertEqual(404, response.status_code, response.content)
+        self.assertEqual("folder_not_found", response.json()["error_name"])
+
     @override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=True)
     def test_get_range_where_private_and_anonymous_should_require_auth(self):
         # Arrange: private asset + enforced access, no credentials. Nothing is
