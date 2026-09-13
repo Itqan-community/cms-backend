@@ -430,16 +430,40 @@ msgid "Cannot delete Recitation because they are referenced through other object
 msgstr "لا يمكن حذف التلاوة لأن هناك بيانات أخرى مرتبطة بها"
 
 #, python-brace-format
+msgid "Surah {surah} is out of range (1-114)."
+msgstr "السورة {surah} خارج النطاق (1-114)."
+
+#, python-brace-format
+msgid "Invalid ayah range: from ({from_ayah}) must not exceed to ({to_ayah})."
+msgstr "نطاق الآيات غير صالح: من ({from_ayah}) يجب ألا تتجاوز إلى ({to_ayah})."
+
+#, python-brace-format
+msgid "Ayah range {from_ayah}-{to_ayah} is outside surah {surah} (1-{max})."
+msgstr "نطاق الآيات {from_ayah}-{to_ayah} خارج السورة {surah} (1-{max})."
+
+#, python-brace-format
+msgid "No track for surah {surah} on this recitation."
+msgstr "لا يوجد مقطع للسورة {surah} في هذه التلاوة."
+
+#, python-brace-format
+msgid "Default folder for asset {id} not found."
+msgstr "لم يتم العثور على المجلد الافتراضي للمورد {id}."
+
+#, python-brace-format
+msgid "Ayah {surah}:{ayah} has no timing on this track."
+msgstr "الآية {surah}:{ayah} ليس لها توقيت في هذا المقطع."
+
+#, python-brace-format
+msgid "Ayah range {from_ayah}-{to_ayah} has invalid timings."
+msgstr "نطاق الآيات {from_ayah}-{to_ayah} يحتوي على توقيتات غير صالحة."
+
+#, python-brace-format
 msgid "Ayah {ayah_key} not found."
 msgstr "لم يتم العثور على الآية {ayah_key}."
 
 #, python-brace-format
 msgid "Asset with id {id} not found."
 msgstr "لم يتم العثور على المورد ذو المعرف {id}."
-
-#, python-brace-format
-msgid "Default folder for asset {id} not found."
-msgstr "لم يتم العثور على المجلد الافتراضي للمورد {id}."
 
 #, python-brace-format
 msgid "Folder with slug {slug} not found."
@@ -466,6 +490,22 @@ msgstr "لا يمكن حذف المجلد الافتراضي."
 #, python-brace-format
 msgid "Folder {folder_id} does not belong to asset {asset_id}."
 msgstr "المجلد {folder_id} لا ينتمي إلى الأصل {asset_id}."
+
+msgid "Audio storage is not configured."
+msgstr "التخزين الصوتي غير مُعد."
+
+msgid "Ayah-range audio is being built, please retry shortly."
+msgstr "المقطع الصوتي لنطاق الآيات قيد التجهيز، يرجى إعادة المحاولة بعد قليل."
+
+#, python-brace-format
+msgid "Failed to store ayah-range audio for track {track_id}."
+msgstr "تعذر حفظ المقطع الصوتي لنطاق الآيات لمسار التلاوة {track_id}."
+
+msgid "Building ayah-range audio timed out."
+msgstr "انتهت مهلة تجهيز المقطع الصوتي لنطاق الآيات."
+
+msgid "Failed to build ayah-range audio with ffmpeg."
+msgstr "تعذر إنشاء المقطع الصوتي لنطاق الآيات باستخدام ffmpeg."
 
 msgid "Reciter name (Arabic or English) is required."
 msgstr "اسم القارئ (بالعربية أو الإنجليزية) مطلوب."
