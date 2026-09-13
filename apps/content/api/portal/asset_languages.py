@@ -7,10 +7,11 @@ permission enforcement stay in one place.
 
 from typing import Literal
 
+from django.db import transaction
 from ninja import File, Form, Schema, UploadedFile
 
 from apps.content.api.portal.asset_content import _resolve
-from apps.content.models import AssetLanguage, CategoryChoice
+from apps.content.models import AssetLanguage, CategoryChoice, StatusChoice
 from apps.content.services.asset_language import AssetLanguageService
 from apps.content.services.tafsir import TafsirService
 from apps.content.services.translation import TranslationService
@@ -25,10 +26,19 @@ router = ItqanRouter(tags=[NinjaTag.TRANSLATIONS])
 class LanguageOut(Schema):
     language: str
     is_source: bool
+    is_available: bool
+
+    @staticmethod
+    def resolve_is_available(obj: AssetLanguage) -> bool:
+        return obj.status == StatusChoice.READY
 
 
 class AddLanguageIn(Schema):
     language: str
+
+
+class LanguageAvailabilityIn(Schema):
+    available: bool
 
 
 @router.get(
@@ -69,17 +79,50 @@ def add_language(
     its content in one step.
     """
     resolved = _resolve(category, request, write=True)
-    asset_language = AssetLanguageService().add_language(
-        slug, resolved, language=data.language, publisher_q=request.publisher_q()
-    )
-    if file is not None:
-        publisher_q = request.publisher_q()
-        if resolved == CategoryChoice.TAFSIR:
-            TafsirService().create_tafsir_version(
-                slug, name="v1", file=file, language=data.language, publisher_q=publisher_q
-            )
-        else:
-            TranslationService().create_translation_version(
-                slug, name="v1", file=file, language=data.language, publisher_q=publisher_q
-            )
+    publisher_q = request.publisher_q()
+    # Register the language and seed its first version atomically: if the upload
+    # fails (storage error or an unparseable file), the language registration is
+    # rolled back too, so we never leave a language without its requested version.
+    with transaction.atomic():
+        asset_language = AssetLanguageService().add_language(
+            slug, resolved, language=data.language, publisher_q=publisher_q
+        )
+        if file is not None:
+            if resolved == CategoryChoice.TAFSIR:
+                TafsirService().create_tafsir_version(
+                    slug, name="v1", file=file, language=data.language, strict=True, publisher_q=publisher_q
+                )
+            else:
+                TranslationService().create_translation_version(
+                    slug, name="v1", file=file, language=data.language, strict=True, publisher_q=publisher_q
+                )
     return asset_language
+
+
+@router.patch(
+    "content/{category}/{slug}/languages/{language}/availability/",
+    response={
+        200: LanguageOut,
+        400: NinjaErrorResponse[Literal["language_has_no_published_version"]],
+        404: NinjaErrorResponse[Literal["translation_not_found"]]
+        | NinjaErrorResponse[Literal["tafsir_not_found"]]
+        | NinjaErrorResponse[Literal["language_not_available"]]
+        | NinjaErrorResponse[Literal["unsupported_content_category"]],
+    },
+)
+def set_language_availability(
+    request: Request,
+    category: str,
+    slug: str,
+    language: str,
+    data: LanguageAvailabilityIn,
+) -> AssetLanguage:
+    """Mark a language rendition available (READY) or pending (DRAFT) to consumers.
+
+    Making a language available requires at least one published version, so an
+    unfinished translation is never advertised to end users.
+    """
+    resolved = _resolve(category, request, write=True)
+    return AssetLanguageService().set_language_status(
+        slug, resolved, language=language, available=data.available, publisher_q=request.publisher_q()
+    )

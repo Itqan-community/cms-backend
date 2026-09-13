@@ -7,6 +7,7 @@ from apps.content.models import (
     Asset,
     AssetLanguage,
     AssetVersion,
+    AssetVersionChange,
     AssetVersionEntry,
     CategoryChoice,
     StatusChoice,
@@ -389,7 +390,7 @@ class SourceReferenceEntriesTest(AssetContentBaseTest):
         # Act
         publish = self.client.post(
             f"/portal/content/translations/{self.translation.slug}/versions/{draft_id}/publish/",
-            data={},
+            data={"message": "commit"},
             content_type="application/json",
         )
 
@@ -420,7 +421,7 @@ class SourceReferenceEntriesTest(AssetContentBaseTest):
         )
         self.client.post(
             f"/portal/content/translations/{self.translation.slug}/versions/{first_id}/publish/",
-            data={},
+            data={"message": "commit"},
             content_type="application/json",
         )
 
@@ -478,7 +479,7 @@ class PublishDraftTest(AssetContentBaseTest):
         # Act
         response = self.client.post(
             f"/portal/content/translations/{self.translation.slug}/versions/{draft.id}/publish/",
-            data={"name": "V2"},
+            data={"message": "first commit"},
             content_type="application/json",
         )
 
@@ -487,8 +488,68 @@ class PublishDraftTest(AssetContentBaseTest):
         draft.refresh_from_db()
         self.assertEqual(VersionStateChoice.PUBLISHED, draft.state)
         self.assertEqual(draft.id, self.translation.get_latest_version().id)
-        # publish name is persisted (not just held in memory)
-        self.assertEqual("V2", draft.name)
+        # the commit message is persisted as the version description
+        self.assertEqual("first commit", draft.summary)
+
+    def test_commit_records_delta_and_prunes_previous_head(self):
+        # Arrange — a head (with a stored delta so the prune rule applies) + a draft
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        ar = self.translation.get_or_create_source_language()
+        head = baker.make(
+            AssetVersion, asset=self.translation, asset_language=ar, name="v1", state=VersionStateChoice.PUBLISHED
+        )
+        baker.make(AssetVersionEntry, version=head, ayah=self.ayahs[0], text="old one", order=1)
+        baker.make(AssetVersionEntry, version=head, ayah=self.ayahs[1], text="two", order=2)
+        baker.make(
+            AssetVersionChange, version=head, ayah=self.ayahs[0], change_type="added", new_text="old one", order=1
+        )
+        draft = baker.make(
+            AssetVersion,
+            asset=self.translation,
+            asset_language=ar,
+            name="v2",
+            state=VersionStateChoice.DRAFT,
+            content_edited=True,
+        )
+        baker.make(AssetVersionEntry, version=draft, ayah=self.ayahs[0], text="new one", order=1)
+        baker.make(AssetVersionEntry, version=draft, ayah=self.ayahs[1], text="two", order=2)
+        baker.make(AssetVersionEntry, version=draft, ayah=self.ayahs[2], text="three", order=3)
+
+        # Act
+        response = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/versions/{draft.id}/publish/",
+            data={"message": "tweak ayah 1, add ayah 3"},
+            content_type="application/json",
+        )
+
+        # Assert — delta recorded (unchanged ayah excluded), previous head pruned
+        self.assertEqual(200, response.status_code, response.content)
+        draft.refresh_from_db()
+        self.assertEqual("tweak ayah 1, add ayah 3", draft.summary)
+        changes = {c.ayah_id: c.change_type for c in draft.changes.all()}
+        self.assertEqual("modified", changes[self.ayahs[0].id])
+        self.assertEqual("added", changes[self.ayahs[2].id])
+        self.assertNotIn(self.ayahs[1].id, changes)
+        self.assertEqual(0, head.entries.count())
+
+    def test_commit_requires_message(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        draft = baker.make(AssetVersion, asset=self.translation, state=VersionStateChoice.DRAFT, content_edited=True)
+        baker.make(AssetVersionEntry, version=draft, ayah=self.ayahs[0], text="x")
+
+        # Act — blank message
+        response = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/versions/{draft.id}/publish/",
+            data={"message": "   "},
+            content_type="application/json",
+        )
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("commit_message_required", response.json()["error_name"])
 
     def test_publish_draft_where_no_changes_should_return_400(self):
         # Arrange — a seeded, unedited draft (content_edited stays False)
@@ -500,13 +561,47 @@ class PublishDraftTest(AssetContentBaseTest):
         # Act
         response = self.client.post(
             f"/portal/content/translations/{self.translation.slug}/versions/{draft.id}/publish/",
-            data={},
+            data={"message": "commit"},
             content_type="application/json",
         )
 
         # Assert
         self.assertEqual(400, response.status_code, response.content)
         self.assertEqual("no_changes_to_publish", response.json()["error_name"])
+
+    def test_publish_draft_where_edited_but_matches_head_should_return_400(self):
+        # Arrange — an edited draft whose final content equals the head (edit then
+        # revert): content_edited is True, but the computed delta is empty.
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        ar = self.translation.get_or_create_source_language()
+        head = baker.make(
+            AssetVersion, asset=self.translation, asset_language=ar, name="v1", state=VersionStateChoice.PUBLISHED
+        )
+        baker.make(AssetVersionEntry, version=head, ayah=self.ayahs[0], text="same", order=1)
+        draft = baker.make(
+            AssetVersion,
+            asset=self.translation,
+            asset_language=ar,
+            name="v2",
+            state=VersionStateChoice.DRAFT,
+            content_edited=True,
+        )
+        baker.make(AssetVersionEntry, version=draft, ayah=self.ayahs[0], text="same", order=1)
+
+        # Act
+        response = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/versions/{draft.id}/publish/",
+            data={"message": "no-op"},
+            content_type="application/json",
+        )
+
+        # Assert — rejected, and the draft is preserved (transaction rolled back)
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("no_changes_to_publish", response.json()["error_name"])
+        draft.refresh_from_db()
+        self.assertEqual(VersionStateChoice.DRAFT, draft.state)
+        self.assertEqual(1, draft.entries.count())
 
     def test_patch_entries_should_mark_draft_as_edited(self):
         # Arrange — a fresh, unedited draft
@@ -573,7 +668,7 @@ class PublishDraftTest(AssetContentBaseTest):
         # Act
         response = self.client.post(
             f"/portal/content/translations/{self.translation.slug}/versions/{draft.id}/publish/",
-            data={},
+            data={"message": "commit"},
             content_type="application/json",
         )
 
@@ -596,13 +691,166 @@ class PublishDraftTest(AssetContentBaseTest):
         # Act
         response = self.client.post(
             f"/portal/content/translations/{self.translation.slug}/versions/{published.id}/publish/",
-            data={},
+            data={"message": "commit"},
             content_type="application/json",
         )
 
         # Assert
         self.assertEqual(400, response.status_code, response.content)
         self.assertEqual("version_not_editable", response.json()["error_name"])
+
+
+class VersionDiffTest(AssetContentBaseTest):
+    def test_diff_returns_stored_changes(self):
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        v = baker.make(AssetVersion, asset=self.translation, state=VersionStateChoice.PUBLISHED)
+        baker.make(
+            AssetVersionChange,
+            version=v,
+            ayah=self.ayahs[0],
+            change_type="modified",
+            old_text="a",
+            new_text="b",
+            order=1,
+        )
+
+        resp = self.client.get(f"/portal/content/translations/{self.translation.slug}/versions/{v.id}/diff/")
+
+        self.assertEqual(200, resp.status_code, resp.content)
+        row = resp.json()["results"][0]
+        self.assertEqual("modified", row["change_type"])
+        self.assertEqual("a", row["old_text"])
+        self.assertEqual("b", row["new_text"])
+        self.assertEqual(1, row["aya"])
+
+    def test_diff_computed_for_legacy_commit(self):
+        # Legacy: no stored changes, full entries on both versions.
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        ar = self.translation.get_or_create_source_language()
+        old = baker.make(AssetVersion, asset=self.translation, asset_language=ar, state=VersionStateChoice.PUBLISHED)
+        AssetVersion.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(hours=1))
+        baker.make(AssetVersionEntry, version=old, ayah=self.ayahs[0], text="a")
+        new = baker.make(AssetVersion, asset=self.translation, asset_language=ar, state=VersionStateChoice.PUBLISHED)
+        baker.make(AssetVersionEntry, version=new, ayah=self.ayahs[0], text="b")
+
+        resp = self.client.get(f"/portal/content/translations/{self.translation.slug}/versions/{new.id}/diff/")
+
+        self.assertEqual(200, resp.status_code, resp.content)
+        row = resp.json()["results"][0]
+        self.assertEqual("modified", row["change_type"])
+        self.assertEqual("a", row["old_text"])
+        self.assertEqual("b", row["new_text"])
+
+
+class PendingDiffTest(AssetContentBaseTest):
+    def test_pending_diff_shows_uncommitted_changes_vs_head(self):
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        ar = self.translation.get_or_create_source_language()
+        head = baker.make(AssetVersion, asset=self.translation, asset_language=ar, state=VersionStateChoice.PUBLISHED)
+        AssetVersion.objects.filter(pk=head.pk).update(created_at=timezone.now() - timedelta(hours=1))
+        baker.make(AssetVersionEntry, version=head, ayah=self.ayahs[0], text="old one")
+        # draft: modify ayah 1, add ayah 2, plus an empty seeded row (ignored)
+        draft = baker.make(
+            AssetVersion, asset=self.translation, asset_language=ar, state=VersionStateChoice.DRAFT, content_edited=True
+        )
+        baker.make(AssetVersionEntry, version=draft, ayah=self.ayahs[0], text="new one")
+        baker.make(AssetVersionEntry, version=draft, ayah=self.ayahs[1], text="two")
+        baker.make(AssetVersionEntry, version=draft, ayah=self.ayahs[2], text="")
+
+        resp = self.client.get(
+            f"/portal/content/translations/{self.translation.slug}/versions/{draft.id}/pending-diff/"
+        )
+
+        self.assertEqual(200, resp.status_code, resp.content)
+        changes = {r["ayah_id"]: r["change_type"] for r in resp.json()["results"]}
+        self.assertEqual("modified", changes[self.ayahs[0].id])
+        self.assertEqual("added", changes[self.ayahs[1].id])
+        self.assertNotIn(self.ayahs[2].id, changes)  # empty seeded row excluded
+
+
+class ReconstructAndRestoreTest(AssetContentBaseTest):
+    def test_reconstruct_folds_deltas(self):
+        ar = self.translation.get_or_create_source_language()
+        # c1: snapshot anchor (has entries)
+        c1 = baker.make(AssetVersion, asset=self.translation, asset_language=ar, state=VersionStateChoice.PUBLISHED)
+        AssetVersion.objects.filter(pk=c1.pk).update(created_at=timezone.now() - timedelta(hours=2))
+        baker.make(AssetVersionEntry, version=c1, ayah=self.ayahs[0], text="one")
+        # c2: delta-only (pruned form) — modify ayah1, add ayah2
+        c2 = baker.make(AssetVersion, asset=self.translation, asset_language=ar, state=VersionStateChoice.PUBLISHED)
+        AssetVersion.objects.filter(pk=c2.pk).update(created_at=timezone.now() - timedelta(hours=1))
+        baker.make(
+            AssetVersionChange,
+            version=c2,
+            ayah=self.ayahs[0],
+            change_type="modified",
+            old_text="one",
+            new_text="ONE",
+            order=1,
+        )
+        baker.make(AssetVersionChange, version=c2, ayah=self.ayahs[1], change_type="added", new_text="two", order=2)
+
+        from apps.content.repositories.asset_content import AssetContentRepository
+
+        state = AssetContentRepository().reconstruct_entries(c2)
+        self.assertEqual({self.ayahs[0].id: "ONE", self.ayahs[1].id: "two"}, state)
+
+    def test_restore_reconstructs_pruned_version(self):
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        ar = self.translation.get_or_create_source_language()
+        # pruned old commit represented only by deltas
+        old = baker.make(
+            AssetVersion, asset=self.translation, asset_language=ar, name="v1", state=VersionStateChoice.PUBLISHED
+        )
+        AssetVersion.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(hours=2))
+        baker.make(
+            AssetVersionChange, version=old, ayah=self.ayahs[0], change_type="added", new_text="old text", order=1
+        )
+        head = baker.make(
+            AssetVersion, asset=self.translation, asset_language=ar, name="v2", state=VersionStateChoice.PUBLISHED
+        )
+        baker.make(AssetVersionEntry, version=head, ayah=self.ayahs[0], text="head text")
+
+        resp = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/versions/{old.id}/restore/",
+            data={},
+            content_type="application/json",
+        )
+
+        self.assertEqual(200, resp.status_code, resp.content)
+        latest = self.translation.get_latest_version("ar")
+        self.assertEqual("old text", latest.entries.get(ayah_id=self.ayahs[0].id).text)
+
+    def test_restore_legacy_file_only_version_materializes_entries(self):
+        # A legacy commit that only has a stored file (no per-ayah entries and no
+        # stored deltas) must be parsed and materialized into entries on restore,
+        # not merely file-copied — otherwise the new head reads as empty.
+        from django.core.files.base import ContentFile
+
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        ar = self.translation.get_or_create_source_language()
+        legacy = baker.make(
+            AssetVersion, asset=self.translation, asset_language=ar, name="v1", state=VersionStateChoice.PUBLISHED
+        )
+        legacy.file_url.save("legacy.csv", ContentFile(b"surah,ayah,text\n1,1,from file\n1,2,second"), save=True)
+
+        resp = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/versions/{legacy.id}/restore/",
+            data={},
+            content_type="application/json",
+        )
+
+        self.assertEqual(200, resp.status_code, resp.content)
+        latest = self.translation.get_latest_version("ar")
+        self.assertNotEqual(legacy.id, latest.id)
+        self.assertEqual("from file", latest.entries.get(ayah_id=self.ayahs[0].id).text)
+        self.assertEqual("second", latest.entries.get(ayah_id=self.ayahs[1].id).text)
+        # The restore records a delta like any other commit (all added here).
+        self.assertTrue(latest.changes.exists())
 
 
 class DiscardDraftTest(AssetContentBaseTest):
@@ -727,7 +975,7 @@ class VersionUploadImportTest(AssetContentBaseTest):
             name="Tabari",
             slug="tabari-import",
         )
-        csv_bytes = b"sura,aya,text\n" b"1,1,imported one\n" b"1,2,imported two\n"
+        csv_bytes = b"sura,aya,text\n1,1,imported one\n1,2,imported two\n"
         upload = SimpleUploadedFile("t.csv", csv_bytes, content_type="text/csv")
 
         # Act

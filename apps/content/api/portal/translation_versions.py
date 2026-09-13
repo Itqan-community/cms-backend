@@ -1,5 +1,6 @@
 from typing import Literal
 
+from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from ninja import File, Form, Schema, UploadedFile
 from ninja.pagination import paginate
@@ -26,6 +27,8 @@ class TranslationVersionListOut(Schema):
     is_active: bool
     name: str
     summary: str
+    created_by: str | None
+    change_counts: dict | None
     file_url: str | None = None
     size_bytes: int
     created_at: AwareDatetime
@@ -39,6 +42,20 @@ class TranslationVersionListOut(Schema):
         language = obj.asset_language.language if obj.asset_language_id else obj.asset.language
         latest = obj.asset.get_latest_version(language)
         return latest is not None and latest.id == obj.id
+
+    @staticmethod
+    def resolve_created_by(obj: AssetVersion) -> str | None:
+        return obj.created_by.name if obj.created_by_id else None
+
+    @staticmethod
+    def resolve_change_counts(obj: AssetVersion) -> dict | None:
+        rows = list(obj.changes.all())
+        if not rows:
+            return None
+        counts = {"added": 0, "modified": 0, "removed": 0}
+        for change in rows:
+            counts[change.change_type] = counts.get(change.change_type, 0) + 1
+        return counts
 
     @staticmethod
     def resolve_file_url(obj: AssetVersion) -> str | None:
@@ -87,9 +104,18 @@ def list_translation_versions(request: Request, translation_slug: str, language:
             message=_("Translation with slug {slug} not found.").format(slug=translation_slug),
             status_code=404,
         ) from exc
-    versions = AssetVersion.objects.filter(asset=asset, state=VersionStateChoice.PUBLISHED)
+    versions = (
+        AssetVersion.objects.filter(asset=asset, state=VersionStateChoice.PUBLISHED)
+        .select_related("created_by", "asset_language", "asset")
+        .prefetch_related("changes")
+    )
     if language:
-        versions = versions.filter(asset_language__language=language)
+        # Legacy versions have no asset_language and belong to the source
+        # language; include them when the source language is requested.
+        language_q = Q(asset_language__language=language)
+        if language == asset.language:
+            language_q |= Q(asset_language__isnull=True)
+        versions = versions.filter(language_q)
     return versions.order_by("-created_at")
 
 

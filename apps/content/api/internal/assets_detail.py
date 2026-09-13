@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404
 from ninja import Schema
 from pydantic import Field
 
-from apps.content.models import Asset, LicenseChoice, UsageEvent, VersionStateChoice
+from apps.content.models import Asset, LicenseChoice, StatusChoice, UsageEvent, VersionStateChoice
 from apps.content.services.asset_access import AssetAccessStatus, get_access_status
 from apps.content.tasks import create_usage_event_task
 from apps.core.ninja_utils.request import Request
@@ -51,9 +51,16 @@ class DetailAssetOut(Schema):
 
     @staticmethod
     def resolve_available_languages(obj: Asset) -> list[str]:
-        """Language codes that have at least one published version (drafts hidden)."""
+        """Language codes consumable by end users: the asset must be READY and each
+        language rendition must be READY (marked available) with a published version.
+        A DRAFT translation stays hidden until it is marked available."""
+        if obj.status != StatusChoice.READY:
+            return []
         published = (
-            obj.versions.filter(state=VersionStateChoice.PUBLISHED)
+            obj.versions.filter(
+                state=VersionStateChoice.PUBLISHED,
+                asset_language__status=StatusChoice.READY,
+            )
             .values_list("asset_language__language", flat=True)
             .distinct()
         )

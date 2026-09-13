@@ -8,12 +8,14 @@ from apps.content.models import (
     AssetAccessRequest,
     AssetLanguage,
     AssetVersion,
+    AssetVersionChange,
     CategoryChoice,
     StatusChoice,
 )
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
+from apps.quran.models import Ayah, Sura
 from apps.users.models import User
 
 
@@ -67,6 +69,38 @@ class TafsirVersionListTest(TafsirVersionBaseTest):
         self.assertEqual(1, len(body["results"]))
         self.assertEqual("FR1", body["results"][0]["name"])
         self.assertEqual("fr", body["results"][0]["language"])
+
+    def test_list_versions_by_source_language_includes_legacy_null_language_versions(self):
+        # Legacy rows predate multi-language and can carry a null asset_language;
+        # they belong to the source language and must appear when it is filtered.
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
+        source = self.tafsir.get_or_create_source_language()
+        baker.make(AssetVersion, asset=self.tafsir, asset_language=source, name="SRC1")
+        legacy = baker.make(AssetVersion, asset=self.tafsir, name="LEGACY")
+        AssetVersion.objects.filter(pk=legacy.pk).update(asset_language=None)
+
+        response = self.client.get(f"/portal/tafsirs/{self.tafsir.slug}/versions/?language={self.tafsir.language}")
+
+        self.assertEqual(200, response.status_code, response.content)
+        names = {row["name"] for row in response.json()["results"]}
+        self.assertIn("SRC1", names)
+        self.assertIn("LEGACY", names)
+
+    def test_list_versions_exposes_author_and_change_counts(self):
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
+        sura = baker.make(Sura, id=1, name="الفاتحة", ayas_count=3)
+        ayah = baker.make(Ayah, id=1, sura=sura, number_in_sura=1, text="a")
+        version = baker.make(AssetVersion, asset=self.tafsir, name="v1", created_by=self.user)
+        baker.make(AssetVersionChange, version=version, ayah=ayah, change_type="added", new_text="x", order=1)
+
+        response = self.client.get(f"/portal/tafsirs/{self.tafsir.slug}/versions/")
+
+        self.assertEqual(200, response.status_code, response.content)
+        row = response.json()["results"][0]
+        self.assertEqual("Test User", row["created_by"])
+        self.assertEqual({"added": 1, "modified": 0, "removed": 0}, row["change_counts"])
 
     def test_list_versions_where_tafsir_not_found_should_return_404(self):
         # Arrange

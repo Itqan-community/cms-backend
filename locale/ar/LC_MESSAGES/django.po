@@ -207,6 +207,15 @@ msgstr "صلة"
 msgid "Skoun"
 msgstr "سكون"
 
+msgid "Added"
+msgstr "مضاف"
+
+msgid "Modified"
+msgstr "معدّل"
+
+msgid "Removed"
+msgstr "محذوف"
+
 msgid "Pending"
 msgstr "قيد الانتظار"
 
@@ -353,6 +362,9 @@ msgstr "تعذر تحليل ملف المحتوى المرفوع: {reason}"
 msgid "There are no changes to publish."
 msgstr "لا توجد تغييرات للنشر."
 
+msgid "A commit message is required."
+msgstr "رسالة التغيير مطلوبة."
+
 msgid "Only published versions can be restored."
 msgstr "لا يمكن استعادة سوى الإصدارات المنشورة."
 
@@ -363,6 +375,9 @@ msgstr "اللغة {language} موجودة بالفعل لهذا المورد."
 #, python-brace-format
 msgid "Language {language} is not available for this asset."
 msgstr "اللغة {language} غير متاحة لهذا المورد."
+
+msgid "A language needs at least one published version before it can be made available."
+msgstr "تحتاج اللغة إلى إصدار منشور واحد على الأقل قبل أن يمكن إتاحتها."
 
 #, python-brace-format
 msgid "Publisher with id {id} not found."

@@ -9,7 +9,7 @@ from django.utils.translation import gettext_lazy as _
 from ninja import Schema
 from rest_framework.exceptions import PermissionDenied
 
-from apps.content.models import Asset, AssetAccess, UsageEvent
+from apps.content.models import Asset, AssetAccess, StatusChoice, UsageEvent
 from apps.content.services.asset_access import user_has_access
 from apps.content.tasks import create_usage_event_task
 from apps.core.mixins.storage import generate_presigned_download_url
@@ -52,7 +52,15 @@ def download_asset(request: Request, id: int, language: str | None = None):
     if not user_has_access(request.user, asset):
         raise PermissionDenied(_("You do not have access to this asset"))
 
-    if language is not None and not asset.languages.filter(language=language).exists():
+    # Enforce consumer availability: the asset must be READY and the requested
+    # language rendition (or the source, when omitted) must be marked READY. A
+    # DRAFT asset or an in-progress (DRAFT) translation is not downloadable.
+    if language is not None:
+        rendition = asset.languages.filter(language=language).first()
+    else:
+        rendition = asset.languages.filter(is_source=True).first()
+    rendition_ready = rendition.status == StatusChoice.READY if rendition is not None else language is None
+    if asset.status != StatusChoice.READY or not rendition_ready:
         raise Http404(str(_("Language not available for this asset")))
 
     # Get latest asset version (of the requested language, or the source language)

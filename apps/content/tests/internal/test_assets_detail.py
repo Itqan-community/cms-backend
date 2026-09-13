@@ -482,12 +482,34 @@ class DetailAssetAvailableLanguagesTest(BaseTestCase):
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual(["ar"], response.json()["available_languages"])
 
-    def test_available_languages_lists_all_published(self):
+    def test_available_languages_lists_all_available(self):
         ar_lang = self.asset.get_or_create_source_language()
-        es_lang = AssetLanguage.objects.create(asset=self.asset, language="es")
+        es_lang = AssetLanguage.objects.create(asset=self.asset, language="es", status=StatusChoice.READY)
         baker.make(AssetVersion, asset=self.asset, asset_language=ar_lang, state=VersionStateChoice.PUBLISHED)
         baker.make(AssetVersion, asset=self.asset, asset_language=es_lang, state=VersionStateChoice.PUBLISHED)
 
         response = self.client.get(f"/cms-api/assets/{self.asset.id}/", format="json")
 
         self.assertEqual(["ar", "es"], response.json()["available_languages"])
+
+    def test_available_languages_excludes_published_but_pending_language(self):
+        # A translation with a published version is still hidden until it is
+        # marked available (its AssetLanguage.status stays DRAFT).
+        ar_lang = self.asset.get_or_create_source_language()
+        es_lang = AssetLanguage.objects.create(asset=self.asset, language="es", status=StatusChoice.DRAFT)
+        baker.make(AssetVersion, asset=self.asset, asset_language=ar_lang, state=VersionStateChoice.PUBLISHED)
+        baker.make(AssetVersion, asset=self.asset, asset_language=es_lang, state=VersionStateChoice.PUBLISHED)
+
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/", format="json")
+
+        self.assertEqual(["ar"], response.json()["available_languages"])
+
+    def test_available_languages_empty_when_asset_not_ready(self):
+        self.asset.status = StatusChoice.DRAFT
+        self.asset.save(update_fields=["status"])
+        ar_lang = self.asset.get_or_create_source_language()
+        baker.make(AssetVersion, asset=self.asset, asset_language=ar_lang, state=VersionStateChoice.PUBLISHED)
+
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/", format="json")
+
+        self.assertEqual([], response.json()["available_languages"])
