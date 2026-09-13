@@ -54,7 +54,6 @@ def recitation_response_cache_key(asset_id: int, page: int, page_size: int, fold
     return f"public_recitation_resp:{asset_id}:{folder_slug}:{page}:{page_size}"
 
 
-
 def recitation_range_cache_key(asset_id: int, surah_number: int, from_ayah: int, to_ayah: int, folder_slug: str) -> str:
     # Combined ayah-range clip for one surah/folder variant. Keyed on the full
     # range identity so repeat requests for the same passage hit Django cache
@@ -63,11 +62,9 @@ def recitation_range_cache_key(asset_id: int, surah_number: int, from_ayah: int,
     return f"public_recitation_range:{asset_id}:{surah_number}:{from_ayah}:{to_ayah}:{folder_slug}"
 
 
-
 def recitation_ayah_response_cache_key(asset_id: int, folder_token: str, ayah_key: str) -> str:
     """Build the Redis cache key for a single ayah audio public response."""
     return f"public_recitation_ayah_resp:{asset_id}:{folder_token}:{ayah_key}"
-
 
 
 def invalidate_recitation_tracks_cache(asset_id: int) -> None:
