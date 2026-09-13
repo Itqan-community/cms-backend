@@ -261,6 +261,9 @@ msgstr "يجب أن يكون الوصف 10 أحرف على الأقل."
 msgid "Description cannot exceed 2000 characters."
 msgstr "لا يمكن أن يتجاوز الوصف 2000 حرف."
 
+msgid "There are no changes to publish."
+msgstr "لا توجد تغييرات للنشر."
+
 #, python-brace-format
 msgid "You have {count} pending access request(s)"
 msgstr "لديك {count} طلب(ات) وصول معلقة"
@@ -282,7 +285,7 @@ msgstr "توقيت غير صالح للآية {ayah_number}: النهاية قب
 
 #, python-brace-format
 msgid "Folder {folder_id} not found for asset {asset_id}."
-msgstr ""
+msgstr "لم يتم العثور على المجلد {folder_id} للأصل {asset_id}."
 
 #, python-brace-format
 msgid "Asset {asset_id} not found"
@@ -344,6 +347,12 @@ msgstr "مطلوب مفتاح API للوصول إلى محتوى هذا الأص
 msgid "You don't have an approved access request for this asset."
 msgstr "ليس لديك طلب وصول مُوافَق عليه لهذا الأصل."
 
+msgid "The uploaded file could not be read."
+msgstr "تعذّرت قراءة الملف المرفوع."
+
+msgid "The uploaded file could not be parsed into ayah entries."
+msgstr "تعذّر تحليل الملف المرفوع إلى إدخالات الآيات."
+
 #, python-brace-format
 msgid "{category} with slug {slug} not found."
 msgstr "لم يتم العثور على {category} بالمعرّف {slug}."
@@ -358,9 +367,6 @@ msgstr "لا يمكن تعديل سوى إصدارات المسودة."
 #, python-brace-format
 msgid "Could not parse the uploaded content file: {reason}"
 msgstr "تعذر تحليل ملف المحتوى المرفوع: {reason}"
-
-msgid "There are no changes to publish."
-msgstr "لا توجد تغييرات للنشر."
 
 msgid "A commit message is required."
 msgstr "رسالة التغيير مطلوبة."
