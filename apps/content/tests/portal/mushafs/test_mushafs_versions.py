@@ -160,10 +160,11 @@ class MushafVersionCreateTest(MushafVersionBaseTest):
         file = SimpleUploadedFile("mushaf.pdf", b"content", content_type="application/pdf")
 
         # Act
-        response = self.client.post(
-            f"/portal/mushafs/{self.mushaf.slug}/versions/",
-            data={"asset_id": self.mushaf.id, "name": "2.0.0", "summary": "New release", "file": file},
-        )
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                f"/portal/mushafs/{self.mushaf.slug}/versions/",
+                data={"asset_id": self.mushaf.id, "name": "2.0.0", "summary": "New release", "file": file},
+            )
 
         # Assert
         self.assertEqual(201, response.status_code, response.content)

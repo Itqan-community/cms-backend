@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404
 from ninja import Schema
 from pydantic import Field
 
-from apps.content.models import Asset, LicenseChoice, UsageEvent
+from apps.content.models import Asset, LicenseChoice, UsageEvent, VersionStateChoice
 from apps.content.services.asset_access import AssetAccessStatus, get_access_status
 from apps.content.tasks import create_usage_event_task
 from apps.core.ninja_utils.request import Request
@@ -47,6 +47,17 @@ class DetailAssetOut(Schema):
     is_open_access: bool
     snapshots: list[DetailAssetSnapshotOut] = Field(default_factory=list, alias="previews")
     access_status: AssetAccessStatus | None
+    available_languages: list[str]
+
+    @staticmethod
+    def resolve_available_languages(obj: Asset) -> list[str]:
+        """Language codes that have at least one published version (drafts hidden)."""
+        published = (
+            obj.versions.filter(state=VersionStateChoice.PUBLISHED)
+            .values_list("asset_language__language", flat=True)
+            .distinct()
+        )
+        return sorted({lang for lang in published if lang})
 
 
 @router.get("assets/{id}/", response=DetailAssetOut, auth=None)

@@ -246,7 +246,7 @@ class TafsirService:
         if file:
             import_uploaded_file_into_entries(version)
         logger.info(f"Tafsir version created [version_id={version.pk}, asset_id={asset.pk}, slug={tafsir_slug}]")
-        notify_asset_version_created.delay(version.pk)
+        transaction.on_commit(lambda: notify_asset_version_created.delay(version.pk))
         return version
 
     def update_tafsir_version(

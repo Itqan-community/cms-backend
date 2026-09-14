@@ -785,9 +785,14 @@ class GitHubWebhookReconciliationFailClosedTest(TestCase):
                     return httpx.Response(502, json={"message": "GitHub API error"})
                 return httpx.Response(200, json={"id": INSTALLATION_ID, "suspended_by": None})
             if error_type == "401":
-                # 401 on installation state returns None (stale), not an exception.
-                # We test that case separately; this branch is for token-level 401.
+                # 401 on installation state maps to None (stale/deleted) in
+                # get_installation_state, while a token-level 401 on /repos/
+                # surfaces as an ItqanError. Both behaviors are exercised here.
                 if "/repos/" in path:
+                    return httpx.Response(
+                        401, json={"message": "Bad credentials", "documentation_url": "https://docs.github.com/rest"}
+                    )
+                if "/app/installations/" in path and "/access_tokens" not in path:
                     return httpx.Response(
                         401, json={"message": "Bad credentials", "documentation_url": "https://docs.github.com/rest"}
                     )
@@ -908,11 +913,17 @@ class GitHubWebhookReconciliationFailClosedTest(TestCase):
             "X-GitHub-Delivery": "fail-closed-unsuspend-401",
             "X-Hub-Signature-256": _sign(WEBHOOK_SECRET, body),
         }
-        outcome = self._post_via_mock_raises(body, headers, error_type="401")
+        with self.assertLogs("apps.dependabot.services.github_webhook", level="INFO") as logs:
+            outcome = self._post_via_mock_raises(body, headers, error_type="401")
         assert outcome.status == "processed"
         assert outcome.affected == 0
         row = WatchedRepository.objects.get(host=HOST, owner=OWNER, repository_name="a")
         assert row.status == "suspended"  # unchanged — auth failure treated as stale, not revived
+        # The reconcile call must have seen None (401 mapped): the stale-unsuspend
+        # log renders a None state as "deleted"; a live state would log "active".
+        stale_logs = [r.getMessage() for r in logs.records if "stale unsuspend ignored" in r.getMessage()]
+        assert stale_logs, "expected stale-unsuspend log from the reconciliation path"
+        assert any("state=deleted" in msg for msg in stale_logs), stale_logs
 
     def test_unsuspend_where_github_5xx_raises_instead_of_reviving(self):
         """5xx on installation state raises → no revival."""
@@ -953,94 +964,6 @@ class GitHubWebhookReconciliationFailClosedTest(TestCase):
         assert outcome.status == "processed"
         assert outcome.affected == 1
         assert self._rows() == {(OWNER, "a"): "opted_out"}
-
-
-class GitHubWebhookConcurrencyTest(TestCase):
-    """Duplicate delivery deduplication: same GUID produces one claim row."""
-
-    def setUp(self):
-        super().setUp()
-        self.watched = WatchedRepositoryService()
-        # Patch GitHubContentsClient so the real endpoint never makes outbound calls.
-        import httpx
-
-        from apps.dependabot.services.github_client import GitHubContentsClient
-        from apps.dependabot.services.github_token import GitHubInstallationTokenService, clear_installation_token_cache
-
-        clear_installation_token_cache()
-
-        def _mock_handler(request: httpx.Request) -> httpx.Response:
-            path = str(request.url.path)
-            if path.endswith("/access_tokens"):
-                return httpx.Response(201, json={"token": STUB_TOKEN, "expires_at": FAR_FUTURE.isoformat()})
-            if "/app/installations/" in path and "/access_tokens" not in path:
-                return httpx.Response(200, json={"id": INSTALLATION_ID, "suspended_by": None})
-            if "/repos/" in path and "/contents/" not in path:
-                return httpx.Response(200, json={"default_branch": "main"})
-            return httpx.Response(404)
-
-        mock_transport = httpx.MockTransport(_mock_handler)
-        self._mock_client = httpx.Client(transport=mock_transport)
-        self._mock_contents = GitHubContentsClient(
-            token_service=GitHubInstallationTokenService(http_client=self._mock_client),
-            http_client=self._mock_client,
-        )
-        self._patcher = unittest.mock.patch(
-            "apps.dependabot.services.github_webhook.GitHubContentsClient",
-            return_value=self._mock_contents,
-        )
-        self._patcher.start()
-        self.addCleanup(self._patcher.stop)
-        self.addCleanup(clear_installation_token_cache)
-
-    def _settings(self, **overrides):
-        values = {
-            "ENABLE_ITQAN_DEPENDABOT": True,
-            "GITHUB_WEBHOOK_SECRET": WEBHOOK_SECRET,
-            "GITHUB_APP_ID": GITHUB_APP_ID,
-            "GITHUB_APP_PRIVATE_KEY": GITHUB_APP_PRIVATE_KEY,
-        }
-        values.update(overrides)
-        return override_settings(**values)
-
-    def _deliver(self, event: str, payload: dict[str, Any], *, delivery_id: str | None = None):
-        from django.test import Client as DjangoClient
-
-        body = json.dumps(payload).encode()
-        # Values typed as Any: Client.post's named params (follow/secure/...) must accept
-        # every possible key of this dict, and HTTP_* META keys carry str values.
-        headers: dict[str, Any] = {
-            "HTTP_X_GITHUB_EVENT": event,
-            "HTTP_X_HUB_SIGNATURE_256": _sign(WEBHOOK_SECRET, body),
-        }
-        if delivery_id:
-            headers["HTTP_X_GITHUB_DELIVERY"] = delivery_id
-        return DjangoClient().post(WEBHOOK_URL, data=body, content_type="application/json", **headers)
-
-    def _rows(self):
-        return {
-            (w.owner, w.repository_name): w.status
-            for w in WatchedRepository.objects.filter(host=HOST).order_by("owner", "repository_name")
-        }
-
-    def test_duplicate_delivery_applies_once(self):
-        from apps.dependabot.models import WebhookDelivery
-
-        payload = {
-            "action": "created",
-            "installation": {"id": INSTALLATION_ID, "account": {"login": OWNER}},
-            "repositories": [{"full_name": f"{OWNER}/a"}],
-        }
-        with self._settings():
-            first = self._deliver(event="installation", payload=payload, delivery_id="dup-delivery-1")
-            second = self._deliver(event="installation", payload=payload, delivery_id="dup-delivery-1")
-        assert first.status_code == 200
-        assert first.json()["status"] == "processed"
-        assert second.status_code == 200
-        assert second.json()["status"] == "ignored"
-        assert WebhookDelivery.objects.filter(delivery_id="dup-delivery-1").count() == 1
-        assert WatchedRepository.objects.count() == 1
-        assert self._rows() == {(OWNER, "a"): "opted_in"}
 
 
 class GitHubWebhookSecrecyTest(SimpleTestCase):

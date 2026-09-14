@@ -34,7 +34,8 @@ class TestAssetService(BaseTestCase):
         )
 
         # Act
-        service.create_version(asset_version)
+        with self.captureOnCommitCallbacks(execute=True):
+            service.create_version(asset_version)
 
         # Assert
         self.assertIsNotNone(asset_version.pk)

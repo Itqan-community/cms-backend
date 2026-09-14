@@ -15,7 +15,7 @@ from django.core.files.base import ContentFile
 from django.db import transaction
 from django.db.models import QuerySet
 
-from apps.content.models import Asset, AssetVersion, AssetVersionEntry, VersionStateChoice
+from apps.content.models import Asset, AssetLanguage, AssetVersion, AssetVersionEntry, VersionStateChoice
 from apps.content.services.asset_content_import import ParsedEntry
 from apps.quran.models import Ayah
 
@@ -69,8 +69,10 @@ class AssetContentRepository:
                 return candidate
             counter += 1
 
-    def get_draft(self, asset: Asset) -> AssetVersion | None:
-        return self.asset_version_model.objects.filter(asset=asset, state=VersionStateChoice.DRAFT).first()
+    def get_draft(self, asset: Asset, asset_language: AssetLanguage) -> AssetVersion | None:
+        return self.asset_version_model.objects.filter(
+            asset=asset, asset_language=asset_language, state=VersionStateChoice.DRAFT
+        ).first()
 
     def get_version(self, asset: Asset, version_id: int) -> AssetVersion | None:
         return self.asset_version_model.objects.filter(asset=asset, id=version_id).first()
@@ -84,19 +86,62 @@ class AssetContentRepository:
         asset: Asset,
         source_version: AssetVersion | None,
         *,
+        asset_language: AssetLanguage,
         name: str,
         summary: str,
         created_by_id: int | None,
+        mushaf_version: AssetVersion | None = None,
     ) -> AssetVersion:
-        """Create a draft version, copying entries from ``source_version`` if given."""
+        """Create a draft version and seed its entries.
+
+        When ``mushaf_version`` is given (editing a translation), the draft gets
+        one row per ayah covered by the source-language mushaf — so the whole
+        original is always visible — with the same-language translation text (from
+        ``source_version``) overlaid where it exists and blank otherwise. Any
+        translation-only ayahs beyond the mushaf are preserved too.
+
+        When ``mushaf_version`` is ``None`` (editing the source), the version's own
+        ``source_version`` entries are copied verbatim.
+        """
         draft = self.asset_version_model.objects.create(
             asset=asset,
+            asset_language=asset_language,
             name=name,
             summary=summary,
             state=VersionStateChoice.DRAFT,
             created_by_id=created_by_id,
         )
-        if source_version is not None:
+        if mushaf_version is not None:
+            translation_text = (
+                {entry.ayah_id: entry.text for entry in source_version.entries.all().iterator()}
+                if source_version is not None
+                else {}
+            )
+            copies: list[AssetVersionEntry] = []
+            seen: set[int] = set()
+            # A row for every ayah of the original, translation overlaid or blank.
+            for entry in mushaf_version.entries.all().order_by("order", "ayah_id").iterator():
+                copies.append(
+                    AssetVersionEntry(
+                        version=draft,
+                        ayah_id=entry.ayah_id,
+                        text=translation_text.get(entry.ayah_id, ""),
+                        order=entry.order,
+                    )
+                )
+                seen.add(entry.ayah_id)
+            # Keep any translated ayahs the original mushaf doesn't cover.
+            if source_version is not None:
+                for entry in source_version.entries.exclude(ayah_id__in=seen).order_by("order", "ayah_id").iterator():
+                    copies.append(
+                        AssetVersionEntry(
+                            version=draft,
+                            ayah_id=entry.ayah_id,
+                            text=entry.text,
+                            order=entry.order,
+                        )
+                    )
+        elif source_version is not None:
             copies = [
                 AssetVersionEntry(
                     version=draft,
@@ -106,8 +151,10 @@ class AssetContentRepository:
                 )
                 for entry in source_version.entries.all().iterator()
             ]
-            if copies:
-                AssetVersionEntry.objects.bulk_create(copies, batch_size=1000)
+        else:
+            copies = []
+        if copies:
+            AssetVersionEntry.objects.bulk_create(copies, batch_size=1000)
         return draft
 
     @transaction.atomic
@@ -172,13 +219,34 @@ class AssetContentRepository:
             version.save(update_fields=["content_edited", "updated_at"])
         return changed
 
-    def entries_to_csv_bytes(self, version: AssetVersion) -> bytes:
-        """Serialize a version's per-ayah entries to CSV (sura,aya,text)."""
+    def entries_to_csv_bytes(self, version: AssetVersion, *, verbose: bool = False) -> bytes:
+        """Serialize a version's per-ayah entries to CSV.
+
+        Lean by default (``surah,ayah,text``) for the stored/consumer download.
+        When ``verbose`` is set, the surah name and the Arabic ayah text are added
+        (``surah,ayah,surah_name,ayah_text,text``) so a reviewer can verify a
+        translation/tafsir against the original at a glance. The extra columns are
+        ignored on re-import (the parser is header-driven and keys off ``text``).
+        """
         buffer = io.StringIO()
         writer = csv.writer(buffer)
-        writer.writerow(["sura", "aya", "text"])
-        for entry in version.entries.select_related("ayah").order_by("order", "ayah_id").iterator():
-            writer.writerow([entry.ayah.sura_id, entry.ayah.number_in_sura, entry.text])
+        entries = version.entries.order_by("order", "ayah_id")
+        if verbose:
+            writer.writerow(["surah", "ayah", "surah_name", "ayah_text", "text"])
+            for entry in entries.select_related("ayah", "ayah__sura").iterator():
+                writer.writerow(
+                    [
+                        entry.ayah.sura_id,
+                        entry.ayah.number_in_sura,
+                        entry.ayah.sura.name,
+                        entry.ayah.text,
+                        entry.text,
+                    ]
+                )
+        else:
+            writer.writerow(["surah", "ayah", "text"])
+            for entry in entries.select_related("ayah").iterator():
+                writer.writerow([entry.ayah.sura_id, entry.ayah.number_in_sura, entry.text])
         return buffer.getvalue().encode("utf-8")
 
     @transaction.atomic
@@ -189,6 +257,9 @@ class AssetContentRepository:
         the version has no uploaded file), so consumer download paths — the
         gallery, developers/tenant APIs — work for grid-edited versions.
         """
+        # Empty rows come from seeding a new translation with the source ayahs;
+        # drop the never-filled ones so the published version stays sparse.
+        draft.entries.filter(text="").delete()
         draft.state = VersionStateChoice.PUBLISHED
         # Persist name/summary too: the service may have set them from the publish
         # payload, and they must be written (not just held in memory).

@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 def create_usage_event(
     asset_access: AssetAccess,
-    usage_kind=Literal["file_download"],
+    usage_kind: Literal["file_download"] = "file_download",
     ip_address=None,
     user_agent: str = "",
 ):
@@ -22,6 +22,7 @@ def create_usage_event(
         asset_id=asset_access.asset.id,
         metadata={
             "asset_name": asset_access.asset.name,
+            "asset_title": asset_access.asset.name,
             "file_size": asset_access.asset.file_size,
             "format": asset_access.asset.format,
             "license": asset_access.effective_license,
@@ -38,7 +39,7 @@ def log_asset_view(user, asset, *, ip_address=None, user_agent=""):
         developer_user=user,
         usage_kind="view",
         asset_id=asset.id,
-        metadata={"asset_title": asset.title, "category": asset.category},
+        metadata={"asset_title": asset.name, "asset_name": asset.name, "category": asset.category},
         ip_address=ip_address,
         user_agent=user_agent,
     )
@@ -51,7 +52,7 @@ def log_api_access(user, *, api_endpoint="", ip_address=None, user_agent="", ass
             developer_user=user,
             usage_kind="api_access",
             asset_id=asset.id,
-            metadata={"api_endpoint": api_endpoint, "asset_title": asset.title},
+            metadata={"api_endpoint": api_endpoint, "asset_title": asset.name, "asset_name": asset.name},
             ip_address=ip_address,
             user_agent=user_agent,
         )
@@ -60,14 +61,15 @@ def log_api_access(user, *, api_endpoint="", ip_address=None, user_agent="", ass
 
 def log_asset_download(user, asset, ip_address=None, user_agent=""):
     """Track asset download event with async processing"""
-    from .tasks import create_usage_event_task
+    from apps.content.tasks import create_usage_event_task
 
     event_data = {
         "developer_user_id": user.id,
         "usage_kind": "file_download",
         "asset_id": asset.id,
         "metadata": {
-            "asset_title": asset.title,
+            "asset_title": asset.name,
+            "asset_name": asset.name,
             "file_size": asset.file_size,
             "format": asset.format,
             "category": asset.category,

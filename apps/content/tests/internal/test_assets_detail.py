@@ -1,7 +1,17 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, CategoryChoice, LicenseChoice, StatusChoice, UsageEvent
+from apps.content.models import (
+    Asset,
+    AssetLanguage,
+    AssetVersion,
+    CategoryChoice,
+    LicenseChoice,
+    StatusChoice,
+    UsageEvent,
+    VersionStateChoice,
+)
 from apps.core.tests.base import BaseTestCase
+from apps.publishers.models import Publisher
 from apps.users.models import User
 
 
@@ -442,3 +452,42 @@ class DetailAssetTest(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         self.assertIsNone(response.json()["reciter"])
+
+
+class DetailAssetAvailableLanguagesTest(BaseTestCase):
+    """`available_languages` lists only languages that have a published version."""
+
+    def setUp(self):
+        super().setUp()
+        self.publisher = baker.make(Publisher, name="ML Publisher")
+        self.asset = baker.make(
+            Asset,
+            publisher=self.publisher,
+            name="Multi Tafsir",
+            category=CategoryChoice.TAFSIR,
+            license=LicenseChoice.CC0,
+            status=StatusChoice.READY,
+            language="ar",
+        )
+
+    def test_available_languages_excludes_draft_only(self):
+        ar_lang = self.asset.get_or_create_source_language()
+        es_lang = AssetLanguage.objects.create(asset=self.asset, language="es")
+        # ar published, es only a draft
+        baker.make(AssetVersion, asset=self.asset, asset_language=ar_lang, state=VersionStateChoice.PUBLISHED)
+        baker.make(AssetVersion, asset=self.asset, asset_language=es_lang, state=VersionStateChoice.DRAFT)
+
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/", format="json")
+
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(["ar"], response.json()["available_languages"])
+
+    def test_available_languages_lists_all_published(self):
+        ar_lang = self.asset.get_or_create_source_language()
+        es_lang = AssetLanguage.objects.create(asset=self.asset, language="es")
+        baker.make(AssetVersion, asset=self.asset, asset_language=ar_lang, state=VersionStateChoice.PUBLISHED)
+        baker.make(AssetVersion, asset=self.asset, asset_language=es_lang, state=VersionStateChoice.PUBLISHED)
+
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/", format="json")
+
+        self.assertEqual(["ar", "es"], response.json()["available_languages"])

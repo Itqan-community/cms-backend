@@ -15,6 +15,7 @@ from apps.core.uploads import (
     upload_to_asset_files,
     upload_to_asset_preview_images,
     upload_to_asset_thumbnails,
+    upload_to_recitation_ayah_audio,
     upload_to_recitation_surah_track_files,
     upload_to_reciter_image,
 )
@@ -258,8 +259,33 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
 
         return int(size * units.get(unit, 1))
 
-    def get_latest_version(self):
-        return self.versions.filter(state=VersionStateChoice.PUBLISHED).order_by("-created_at").first()
+    def get_latest_version(self, language: str | None = None):
+        """Latest published version, optionally scoped to a language.
+
+        ``language=None`` falls back to the asset's source language, preserving
+        the original single-language behaviour for existing callers.
+        """
+        lang = language or self.language
+        return (
+            self.versions.filter(state=VersionStateChoice.PUBLISHED, asset_language__language=lang)
+            .order_by("-created_at")
+            .first()
+        )
+
+    def get_or_create_source_language(self) -> "AssetLanguage":
+        """Return the asset's source-language rendition, creating it if missing.
+
+        The source language matches ``self.language``. Any version created without
+        an explicit language belongs here (single-language flows), so this is the
+        default used by ``AssetVersion.save()``.
+        """
+        source, created = AssetLanguage.objects.get_or_create(
+            asset=self, language=self.language, defaults={"is_source": True}
+        )
+        if not created and not source.is_source:
+            source.is_source = True
+            source.save(update_fields=["is_source"])
+        return source
 
     @property
     def human_readable_size(self):
@@ -267,8 +293,48 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         return self._parse_file_size_to_bytes(self.file_size)
 
 
+class AssetLanguage(BaseModel):
+    """One language an asset provides content in (source + translations).
+
+    A text asset (translation / tafsir) has one source-language rendition plus
+    any number of translated renditions, each with its own version history.
+    """
+
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="languages")
+    language = models.CharField(max_length=10, help_text="Language code, e.g. 'ar', 'es'")
+    is_source = models.BooleanField(
+        default=False,
+        help_text="True for the asset's original/source language (at most one per asset).",
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["asset", "language"], name="unique_language_per_asset"),
+            models.UniqueConstraint(
+                fields=["asset"],
+                condition=models.Q(is_source=True),
+                name="unique_source_language_per_asset",
+            ),
+        ]
+
+    def __str__(self):
+        return f"AssetLanguage(asset_id={self.asset_id}, language={self.language}, source={self.is_source})"
+
+
 class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="versions")
+
+    asset_language = models.ForeignKey(
+        "AssetLanguage",
+        on_delete=models.PROTECT,
+        related_name="versions",
+        # Nullable at the DB level so tooling (model_bakery) doesn't fabricate a
+        # bogus rendition; save() always assigns the source language when unset,
+        # and AssetVersion is never bulk-created, so it is effectively required.
+        null=True,
+        blank=True,
+        help_text="Language rendition this version belongs to (defaults to the source language).",
+    )
 
     name = models.CharField(max_length=255, help_text="Asset version name")
 
@@ -327,13 +393,23 @@ class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
 
     class Meta:
         constraints = [
-            # At most one in-flight draft per asset (shared, get-or-create).
+            # At most one in-flight draft per (asset, language) (shared, get-or-create).
             models.UniqueConstraint(
-                fields=["asset"],
+                fields=["asset", "asset_language"],
                 condition=models.Q(state=VersionStateChoice.DRAFT),
-                name="unique_draft_version_per_asset",
+                name="unique_draft_version_per_asset_language",
             ),
         ]
+
+    def save(self, *args, **kwargs):
+        # A version with no explicit language belongs to the asset's source
+        # language (single-language flows: uploads, recitation, mushaf, fonts).
+        if self.asset_language_id is None and self.asset_id:
+            self.asset_language = self.asset.get_or_create_source_language()
+        # Invariant: a version's asset must match its language rendition's asset.
+        if self.asset_language_id and self.asset_id != self.asset_language.asset_id:
+            self.asset_id = self.asset_language.asset_id
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"AssetVersion(asset={self.asset.name}, name={self.name})"
@@ -833,8 +909,15 @@ class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
         super().save(*args, **kwargs)
 
 
-class RecitationAyahTiming(BaseModel):
-    """Timing information per-ayah within a RecitationSurahTrack"""
+class RecitationAyahTiming(DeleteFilesOnDeleteMixin, BaseModel):
+    """Timing information and sliced audio reference per-ayah within a RecitationSurahTrack.
+
+    ``audio_file`` and ``size_bytes`` are populated by the slicing pipeline task
+    (slice_recitation_track_task) after each successful per-ayah ffmpeg slice and
+    R2 upload. They remain null/0 for tracks that have not yet been sliced.
+    ``DeleteFilesOnDeleteMixin`` ensures the sliced MP3 is removed from storage
+    when this row is deleted.
+    """
 
     track = models.ForeignKey(RecitationSurahTrack, on_delete=models.CASCADE, related_name="ayah_timings")
     ayah_key = models.CharField(max_length=20, help_text='Format "surah_number:ayah_number" e.g. "2:255"')
@@ -842,6 +925,17 @@ class RecitationAyahTiming(BaseModel):
     end_ms = models.PositiveIntegerField(help_text="End offset in milliseconds")
     duration_ms = models.PositiveIntegerField(
         default=0, help_text="Duration in milliseconds (auto-calculated as end_ms - start_ms)"
+    )
+    audio_file = models.FileField(
+        upload_to=upload_to_recitation_ayah_audio,
+        null=True,
+        blank=True,
+        validators=[FileExtensionValidator(allowed_extensions=["mp3"])],
+        help_text="Sliced per-ayah audio file (MP3); populated by the slicing pipeline.",
+    )
+    size_bytes = models.PositiveBigIntegerField(
+        default=0,
+        help_text="Sliced audio file size in bytes (auto-calculated on save when audio_file is present).",
     )
 
     class Meta:
@@ -857,6 +951,18 @@ class RecitationAyahTiming(BaseModel):
         except Exception as e:
             logger.warning(f"Failed to compute ayah duration for {self.ayah_key}: {e}")
             self.duration_ms = 0
+
+        # Auto compute size_bytes from the sliced audio file when present.
+        # Mirrors the pattern used by RecitationSurahTrack.save(): only set when
+        # the value is not already known, so an explicit assignment by the slicer
+        # (which has the exact stat() byte count) is never overwritten.
+        if self.audio_file and not self.size_bytes:
+            try:
+                self.size_bytes = int(getattr(self.audio_file, "size", 0) or 0)
+            except Exception as e:
+                logger.warning(f"Failed to get file size for RecitationAyahTiming {self.ayah_key}: {e}")
+                self.size_bytes = 0
+
         super().save(*args, **kwargs)
 
 

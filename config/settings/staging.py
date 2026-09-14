@@ -52,7 +52,19 @@ settings.DATABASES.update(
                 # gunicorn's full --timeout 600.
                 "options": "-c statement_timeout=30000",
             },
-        }
+        },
+        "audit": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": config("AUDIT_DB_NAME"),
+            "USER": config("AUDIT_DB_USER"),
+            "PASSWORD": config("AUDIT_DB_PASSWORD"),
+            "HOST": config("AUDIT_DB_HOST"),
+            "PORT": config("AUDIT_DB_PORT"),
+            "OPTIONS": {
+                "sslmode": "require",
+                "connect_timeout": 10,
+            },
+        },
     }
 )
 
