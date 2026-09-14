@@ -370,7 +370,7 @@ class TestAssetDownloadLanguage(BaseTestCase):
         )
         self.user = baker.make(User, email="ml@example.com")
         ar_lang = self.asset.get_or_create_source_language()
-        es_lang = AssetLanguage.objects.create(asset=self.asset, language="es")
+        es_lang = AssetLanguage.objects.create(asset=self.asset, language="es", status=StatusChoice.READY)
         baker.make(
             AssetVersion,
             asset=self.asset,
@@ -401,4 +401,20 @@ class TestAssetDownloadLanguage(BaseTestCase):
     def test_download_unknown_language_returns_404(self):
         self.authenticate_user(self.user)
         response = self.client.get(f"/cms-api/assets/{self.asset.id}/download/?language=zz")
+        self.assertEqual(404, response.status_code, response.content)
+
+    def test_download_pending_language_returns_404(self):
+        # A translation that exists and has a published file but has NOT been marked
+        # available (status DRAFT) must not be downloadable by consumers.
+        AssetLanguage.objects.filter(asset=self.asset, language="es").update(status=StatusChoice.DRAFT)
+        self.authenticate_user(self.user)
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/download/?language=es")
+        self.assertEqual(404, response.status_code, response.content)
+
+    def test_download_source_of_draft_asset_returns_404(self):
+        # The source rendition's availability follows the asset: a DRAFT asset is
+        # not consumable even without a language filter.
+        Asset.objects.filter(pk=self.asset.pk).update(status=StatusChoice.DRAFT)
+        self.authenticate_user(self.user)
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/download/")
         self.assertEqual(404, response.status_code, response.content)

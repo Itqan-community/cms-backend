@@ -11,7 +11,7 @@ from __future__ import annotations
 from django.db.models import Q
 from django.utils.translation import gettext as _
 
-from apps.content.models import Asset, AssetLanguage, CategoryChoice
+from apps.content.models import Asset, AssetLanguage, CategoryChoice, StatusChoice, VersionStateChoice
 from apps.content.services.asset_content import AssetContentService
 from apps.core.ninja_utils.errors import ItqanError
 
@@ -54,3 +54,34 @@ class AssetLanguageService:
                 status_code=404,
             )
         return obj
+
+    def set_language_status(
+        self,
+        slug: str,
+        category: CategoryChoice,
+        *,
+        language: str,
+        available: bool,
+        publisher_q: Q | None = None,
+    ) -> AssetLanguage:
+        """Mark a language rendition available (READY) or pending (DRAFT) to consumers.
+
+        A language can only be marked available once it has at least one published
+        version, so an empty/unfinished translation is never advertised.
+        """
+        asset = self._asset(slug, category, publisher_q)
+        rendition = self.get_asset_language_or_404(asset, language)
+        new_status = StatusChoice.READY if available else StatusChoice.DRAFT
+        if (
+            new_status == StatusChoice.READY
+            and not asset.versions.filter(asset_language=rendition, state=VersionStateChoice.PUBLISHED).exists()
+        ):
+            raise ItqanError(
+                error_name="language_has_no_published_version",
+                message=_("A language needs at least one published version before it can be made available."),
+                status_code=400,
+            )
+        if rendition.status != new_status:
+            rendition.status = new_status
+            rendition.save(update_fields=["status", "updated_at"])
+        return rendition

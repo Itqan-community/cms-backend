@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: إصدار الحزمة\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-14 12:02+0300\n"
+"POT-Creation-Date: 2026-06-18 10:19+0300\n"
 "PO-Revision-Date: السنة-الشهر-اليوم الساعة:الدقيقة+المنطقة\n"
 "Last-Translator: الاسم الكامل <EMAIL@ADDRESS>\n"
 "Language-Team: اللغة <LL@li.org>\n"
@@ -19,1265 +19,897 @@ msgstr ""
 "Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 "
 "&& n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5;\n"
 
-#: apps/content/admin.py:348 apps/content/admin.py:364
-#: apps/content/admin.py:397 apps/content/admin.py:427
-#: apps/content/admin.py:459 apps/content/admin.py:483
 msgid "Staff only"
 msgstr "للموظفين فقط"
 
-#: apps/content/admin.py:366 apps/content/admin.py:399
-#: apps/content/admin.py:429 apps/content/admin.py:461
-#: apps/content/admin.py:485
 msgid "POST required"
 msgstr "طلب POST مطلوب"
 
-#: apps/content/admin.py:391 apps/content/admin.py:421
-#: apps/content/admin.py:453 apps/content/admin.py:477
 msgid "An unexpected error occurred"
 msgstr "حدث خطأ غير متوقع"
 
-#: apps/content/api/internal/assets_download.py:53
 msgid "You do not have access to this asset"
 msgstr "ليس لديك صلاحية الوصول إلى هذا المورد"
 
-#: apps/content/api/internal/assets_download.py:56
 msgid "Language not available for this asset"
 msgstr "اللغة غير متاحة لهذا المورد"
 
-#: apps/content/api/internal/assets_download.py:61
 msgid "No versions found for this asset"
 msgstr "لا توجد إصدارات لهذا الأصل"
 
-#: apps/content/api/internal/assets_download.py:64
 msgid "No file available for this asset"
 msgstr "لا يوجد ملف متاح لهذا الأصل"
 
-#: apps/content/api/internal/assets_download.py:69
 msgid "Download URL not available"
 msgstr "رابط التحميل غير متاح"
 
-#: apps/content/api/internal/recitation_track_list.py:64
-#: apps/content/api/public/recitation_track_list.py:108
-#: apps/content/api/public/recommendations.py:89
-#: apps/content/api/tenant/recitation_track_list.py:63
 msgid "No asset matches the given query."
 msgstr "لا يوجد أصل مطابق للاستعلام المُقدَّم."
 
-#: apps/content/api/internal/reciter_detail.py:60
-#: apps/content/api/portal/reciters.py:159 apps/content/services/reciter.py:32
 #, python-brace-format
 msgid "Reciter with slug {slug} not found."
 msgstr "لم يتم العثور على القارئ بالمعرّف {slug}."
 
-#: apps/content/api/portal/font_versions.py:72
-#: apps/content/api/portal/font_versions.py:99
-#: apps/content/api/portal/font_versions.py:143
-#: apps/content/api/portal/font_versions.py:185
-#: apps/content/api/portal/fonts.py:265 apps/content/services/font.py:37
 #, python-brace-format
 msgid "Font with slug {slug} not found."
 msgstr "لم يتم العثور على الخط بالمعرّف {slug}."
 
-#: apps/content/api/portal/font_versions.py:105
-#: apps/content/api/portal/font_versions.py:149
-#: apps/content/api/portal/font_versions.py:191
 #, python-brace-format
-msgid ""
-"Provided asset_id {asset_id} does not match font asset id {expected_id}."
-msgstr ""
-"المعرّف asset_id {asset_id} المُقدَّم لا يطابق معرّف أصل الخط {expected_id}."
+msgid "Provided asset_id {asset_id} does not match font asset id {expected_id}."
+msgstr "المعرّف asset_id {asset_id} المُقدَّم لا يطابق معرّف أصل الخط {expected_id}."
 
-#: apps/content/api/portal/issue_reports.py:85
-#: apps/content/api/tenant/issue_reports.py:79
 msgid "Issue report not found."
 msgstr "بلاغ المشكلة غير موجود."
 
-#: apps/content/api/portal/mushaf_versions.py:72
-#: apps/content/api/portal/mushaf_versions.py:99
-#: apps/content/api/portal/mushaf_versions.py:143
-#: apps/content/api/portal/mushaf_versions.py:185
-#: apps/content/api/portal/mushafs.py:265 apps/content/services/mushaf.py:37
 #, python-brace-format
 msgid "Mushaf with slug {slug} not found."
 msgstr "لم يتم العثور على المصحف بالمعرّف {slug}."
 
-#: apps/content/api/portal/mushaf_versions.py:105
-#: apps/content/api/portal/mushaf_versions.py:149
-#: apps/content/api/portal/mushaf_versions.py:191
 #, python-brace-format
-msgid ""
-"Provided asset_id {asset_id} does not match mushaf asset id {expected_id}."
-msgstr ""
-"المعرّف asset_id {asset_id} المُقدَّم لا يطابق معرّف أصل المصحف {expected_id}."
+msgid "Provided asset_id {asset_id} does not match mushaf asset id {expected_id}."
+msgstr "المعرّف asset_id {asset_id} المُقدَّم لا يطابق معرّف أصل المصحف {expected_id}."
 
-#: apps/content/api/portal/recitation_folders.py:64
-#: apps/content/api/portal/recitations.py:349
-#: apps/content/services/recitation.py:45
 #, python-brace-format
 msgid "Recitation with slug {slug} not found."
 msgstr "لم يتم العثور على التلاوة بالمعرّف {slug}."
 
-#: apps/content/api/portal/recitation_tracks.py:59
-#: apps/package_manager/services/package_registry.py:284
-#: apps/package_manager/services/package_registry.py:306
 #, python-brace-format
 msgid "Asset with slug {slug} not found."
 msgstr "المورد ذو المعرف {slug} غير موجود."
 
-#: apps/content/api/portal/recitation_tracks.py:71
-#: apps/content/services/recitation.py:240
-#: apps/content/services/recitation.py:332
 #, python-brace-format
 msgid "Folder {folder} not found."
 msgstr "لم يتم العثور على المجلد {folder}."
 
-#: apps/content/api/portal/recitation_tracks.py:105
 msgid "Some track IDs are invalid or do not exist."
 msgstr "بعض معرّفات المقاطع غير صالحة أو غير موجودة."
 
-#: apps/content/api/portal/tafsir_versions.py:72
-#: apps/content/api/portal/tafsir_versions.py:99
-#: apps/content/api/portal/tafsir_versions.py:143
-#: apps/content/api/portal/tafsir_versions.py:185
-#: apps/content/api/portal/tafsirs.py:265 apps/content/services/tafsir.py:38
 #, python-brace-format
 msgid "Tafsir with slug {slug} not found."
 msgstr "لم يتم العثور على التفسير بالمعرّف {slug}."
 
-#: apps/content/api/portal/tafsir_versions.py:105
-#: apps/content/api/portal/tafsir_versions.py:149
-#: apps/content/api/portal/tafsir_versions.py:191
 #, python-brace-format
-msgid ""
-"Provided asset_id {asset_id} does not match tafsir asset id {expected_id}."
-msgstr ""
-"المعرّف asset_id {asset_id} المُقدَّم لا يطابق معرّف أصل التفسير {expected_id}."
+msgid "Provided asset_id {asset_id} does not match tafsir asset id {expected_id}."
+msgstr "المعرّف asset_id {asset_id} المُقدَّم لا يطابق معرّف أصل التفسير {expected_id}."
 
-#: apps/content/api/portal/timing_upload.py:64
 #, python-format
 msgid "Asset with id %s does not exist."
 msgstr "المورد ذو المعرف %s غير موجود."
 
-#: apps/content/api/portal/timing_upload.py:76
 msgid "One or more timing files could not be processed."
 msgstr "تعذر معالجة ملف توقيت واحد أو أكثر."
 
-#: apps/content/api/portal/translation_versions.py:74
-#: apps/content/api/portal/translation_versions.py:103
-#: apps/content/api/portal/translation_versions.py:149
-#: apps/content/api/portal/translation_versions.py:195
-#: apps/content/api/portal/translations.py:251
-#: apps/content/services/translation.py:38
 #, python-brace-format
 msgid "Translation with slug {slug} not found."
 msgstr "لم يتم العثور على الترجمة بالمعرّف {slug}."
 
-#: apps/content/api/portal/translation_versions.py:109
-#: apps/content/api/portal/translation_versions.py:155
-#: apps/content/api/portal/translation_versions.py:201
 #, python-brace-format
-msgid ""
-"Provided asset_id {asset_id} does not match translation asset id "
-"{expected_id}."
-msgstr ""
-"المعرّف asset_id {asset_id} المُقدَّم لا يطابق معرّف أصل الترجمة {expected_id}."
+msgid "Provided asset_id {asset_id} does not match translation asset id {expected_id}."
+msgstr "المعرّف asset_id {asset_id} المُقدَّم لا يطابق معرّف أصل الترجمة {expected_id}."
 
-#: apps/content/api/public/recommendations.py:139
 msgid "You must be signed in to get personalized recommendations."
 msgstr "يجب تسجيل الدخول للحصول على التوصيات الشخصية."
 
-#: apps/content/api/public/samples.py:149
 msgid "No tafsir available"
 msgstr "لا يوجد تفسير متاح"
 
-#: apps/content/api/public/samples.py:157
 #, python-brace-format
 msgid "This tafsir does not provide text for surah {surah}, ayah {ayah}."
 msgstr "هذا التفسير لا يوفّر نصًّا للسورة {surah}، الآية {ayah}."
 
-#: apps/content/api/public/samples.py:184
 msgid "No translation available"
 msgstr "لا توجد ترجمة متاحة"
 
-#: apps/content/api/public/samples.py:192
 #, python-brace-format
 msgid "This translation does not provide text for surah {surah}, ayah {ayah}."
 msgstr "هذه الترجمة لا توفّر نصًّا للسورة {surah}، الآية {ayah}."
 
-#: apps/content/api/public/samples.py:215
-#: apps/content/api/public/samples.py:242
 msgid "No recitation available"
 msgstr "لا توجد تلاوة متاحة"
 
-#: apps/content/api/public/samples.py:223
 #, python-brace-format
 msgid "No recitation track available for surah {surah}."
 msgstr "لا يوجد مقطع تلاوة متاح للسورة {surah}."
 
-#: apps/content/forms/direct_upload_recitations_form.py:34
-#: apps/content/forms/recitation_ayah_timestamps_bulk_upload_form.py:32
 msgid "Please select at least one file."
 msgstr "يرجى اختيار ملف واحد على الأقل."
 
-#: apps/content/forms/recitation_ayah_timestamps_bulk_upload_form.py:36
 #, python-brace-format
 msgid "All files must have .json extension. Invalid: {invalid}"
 msgstr "يجب أن تكون جميع الملفات بامتداد ‎.json. غير صالحة: {invalid}"
 
-#: apps/content/models.py:30
 msgid "Creative Commons Zero"
 msgstr "المشاع الإبداعي - بدون حقوق (CC0)"
 
-#: apps/content/models.py:31
 msgid "Creative Commons Attribution"
 msgstr "المشاع الإبداعي - نسب المصنف"
 
-#: apps/content/models.py:32
 msgid "Creative Commons Attribution-ShareAlike"
 msgstr "المشاع الإبداعي - نسب المصنف - الترخيص بالمثل"
 
-#: apps/content/models.py:33
 msgid "Creative Commons Attribution-NoDerivs"
 msgstr "المشاع الإبداعي - نسب المصنف - بدون اشتقاق"
 
-#: apps/content/models.py:34
 msgid "Creative Commons Attribution-NonCommercial"
 msgstr "المشاع الإبداعي - نسب المصنف - غير تجاري"
 
-#: apps/content/models.py:37
 msgid "Creative Commons Attribution-NonCommercial-ShareAlike"
 msgstr "المشاع الإبداعي - نسب المصنف - غير تجاري - الترخيص بالمثل"
 
-#: apps/content/models.py:41
 msgid "Creative Commons Attribution-NonCommercial-NoDerivs"
 msgstr "المشاع الإبداعي - نسب المصنف - غير تجاري - بدون اشتقاق"
 
-#: apps/content/models.py:46
 msgid "Recitation"
 msgstr "تلاوة"
 
-#: apps/content/models.py:47
 msgid "Mushaf"
 msgstr "مصحف"
 
-#: apps/content/models.py:48
 msgid "Tafsir"
 msgstr "تفسير"
 
-#: apps/content/models.py:49
 msgid "Program"
 msgstr "برنامج"
 
-#: apps/content/models.py:50
 msgid "Linguistic"
 msgstr "لغوي"
 
-#: apps/content/models.py:51
 msgid "Translation"
 msgstr "ترجمة"
 
-#: apps/content/models.py:52
 msgid "Font"
 msgstr "خط"
 
-#: apps/content/models.py:53
 msgid "Search"
 msgstr "بحث"
 
-#: apps/content/models.py:54
 msgid "Tajweed"
 msgstr "تجويد"
 
-#: apps/content/models.py:58 apps/content/models.py:71
-#: apps/content/services/asset_content.py:150
 msgid "Draft"
 msgstr "مسودة"
 
-#: apps/content/models.py:59
 msgid "Ready"
 msgstr "جاهز"
 
-#: apps/content/models.py:72
 msgid "Published"
 msgstr "منشور"
 
-#: apps/content/models.py:77
 msgid "Twassut"
 msgstr "توسط"
 
-#: apps/content/models.py:78
 msgid "Qasr"
 msgstr "قصر"
 
-#: apps/content/models.py:81
 msgid "Silah"
 msgstr "صلة"
 
-#: apps/content/models.py:82
 msgid "Skoun"
 msgstr "سكون"
 
-#: apps/content/models.py:495 apps/content/models.py:973
-#: apps/publishers/models.py:65 apps/publishers/models.py:118
+msgid "Added"
+msgstr "مضاف"
+
+msgid "Modified"
+msgstr "معدّل"
+
+msgid "Removed"
+msgstr "محذوف"
+
 msgid "Pending"
 msgstr "قيد الانتظار"
 
-#: apps/content/models.py:496
 msgid "Approved"
 msgstr "معتمد"
 
-#: apps/content/models.py:497
 msgid "Rejected"
 msgstr "مرفوض"
 
-#: apps/content/models.py:500
 msgid "Commercial"
 msgstr "تجاري"
 
-#: apps/content/models.py:501
 msgid "Non-Commercial"
 msgstr "غير تجاري"
 
-#: apps/content/models.py:606 apps/content/models.py:661
 msgid "File Download"
 msgstr "تنزيل الملف"
 
-#: apps/content/models.py:607
 msgid "View"
 msgstr "عرض"
 
-#: apps/content/models.py:608
 msgid "API Access"
 msgstr "الوصول إلى واجهة البرمجة (API)"
 
-#: apps/content/models.py:662
 msgid "API"
 msgstr "واجهة برمجة التطبيقات"
 
-#: apps/content/models.py:663
 msgid "Package"
 msgstr "حزمة"
 
-#: apps/content/models.py:974
 msgid "Under Review"
 msgstr "قيد المراجعة"
 
-#: apps/content/models.py:975
 msgid "Resolved"
 msgstr "تم الحل"
 
-#: apps/content/models.py:976
 msgid "Dismissed"
 msgstr "تم التجاهل"
 
-#: apps/content/models.py:1028 apps/content/services/issue_report.py:37
-#: apps/content/services/issue_report.py:121
 msgid "Description must be at least 10 characters long."
 msgstr "يجب أن يكون الوصف 10 أحرف على الأقل."
 
-#: apps/content/models.py:1030 apps/content/services/issue_report.py:43
-#: apps/content/services/issue_report.py:127
 msgid "Description cannot exceed 2000 characters."
 msgstr "لا يمكن أن يتجاوز الوصف 2000 حرف."
 
-#: apps/content/services/access_request_notification_service.py:84
+msgid "There are no changes to publish."
+msgstr "لا توجد تغييرات للنشر."
+
 #, python-brace-format
 msgid "You have {count} pending access request(s)"
 msgstr "لديك {count} طلب(ات) وصول معلقة"
 
-#: apps/content/services/admin/asset_recitation_audio_tracks_direct_upload_service.py:73
 #, python-brace-format
 msgid "Failed to initiate upload (R2 error: {error_code})."
 msgstr "فشل بدء الرفع (خطأ R2: {error_code})."
 
-#: apps/content/services/admin/asset_recitation_audio_tracks_direct_upload_service.py:170
 #, python-brace-format
 msgid "A track for surah {surah_number} already exists in folder {folder_id}."
 msgstr "يوجد بالفعل مقطع للسورة {surah_number} في المجلد {folder_id}."
 
-#: apps/content/services/admin/asset_recitation_ayah_timestamps_upload_service.py:52
 msgid "Missing surah_id in uploaded JSON"
 msgstr "الحقل surah_id مفقود في ملف JSON المرفوع"
 
-#: apps/content/services/admin/asset_recitation_ayah_timestamps_upload_service.py:63
 #, python-brace-format
 msgid "Invalid timing for ayah {ayah_number}: end < start"
 msgstr "توقيت غير صالح للآية {ayah_number}: النهاية قبل البداية"
 
-#: apps/content/services/admin/asset_recitation_ayah_timestamps_upload_service.py:106
 #, python-brace-format
 msgid "Folder {folder_id} not found for asset {asset_id}."
-msgstr ""
+msgstr "لم يتم العثور على المجلد {folder_id} للأصل {asset_id}."
 
-#: apps/content/services/admin/asset_recitation_json_file_sync_service.py:84
 #, python-brace-format
 msgid "Asset {asset_id} not found"
 msgstr "الأصل {asset_id} غير موجود"
 
-#: apps/content/services/admin/asset_recitation_json_file_sync_service.py:93
 #, python-brace-format
 msgid "Folder {folder_id} not found for asset {asset_id}"
 msgstr "لم يتم العثور على المجلد {folder_id} للأصل {asset_id}"
 
-#: apps/content/services/admin/recitation_audio_slicing_service.py:118
 #, python-brace-format
 msgid "Recitation track {track_id} not found."
 msgstr "لم يتم العثور على مسار التلاوة {track_id}."
 
-#: apps/content/services/admin/recitation_audio_slicing_service.py:155
 #, python-brace-format
 msgid "Failed to read source audio from storage for track {track_id}."
 msgstr "تعذرت قراءة الصوت المصدر من التخزين لمسار التلاوة {track_id}."
 
-#: apps/content/services/admin/recitation_audio_slicing_service.py:181
 #, python-brace-format
 msgid "Failed to store sliced ayah audio for track {track_id}."
 msgstr "تعذر تخزين المقطع الصوتي للآية لمسار التلاوة {track_id}."
 
-#: apps/content/services/admin/recitation_audio_slicing_service.py:217
 #, python-brace-format
 msgid "Track {track_id} has invalid ayah timing for {ayah_key}: {reason}"
-msgstr ""
-"يحتوي مسار التلاوة {track_id} على توقيت غير صالح للآية {ayah_key}: {reason}"
+msgstr "يحتوي مسار التلاوة {track_id} على توقيت غير صالح للآية {ayah_key}: {reason}"
 
-#: apps/content/services/admin/recitation_audio_slicing_service.py:231
 #, python-brace-format
-msgid ""
-"Ayah key {ayah_key} has an invalid format; expected \"surah:ayah\" using "
-"decimal digits."
-msgstr ""
-"مفتاح الآية {ayah_key} بتنسيق غير صالح؛ التنسيق المتوقع هو \"surah:ayah\" "
-"باستخدام أرقام عشرية."
+msgid "Ayah key {ayah_key} has an invalid format; expected \"surah:ayah\" using decimal digits."
+msgstr "مفتاح الآية {ayah_key} بتنسيق غير صالح؛ التنسيق المتوقع هو \"surah:ayah\" باستخدام أرقام عشرية."
 
-#: apps/content/services/admin/recitation_audio_slicing_service.py:241
 #, python-brace-format
-msgid ""
-"Ayah key {ayah_key} must be canonical \"{surah}:{ayah}\" with no leading "
-"zeros."
-msgstr ""
-"يجب أن يكون مفتاح الآية {ayah_key} بالصيغة القياسية \"{surah}:{ayah}\" دون "
-"أصفار بادئة."
+msgid "Ayah key {ayah_key} must be canonical \"{surah}:{ayah}\" with no leading zeros."
+msgstr "يجب أن يكون مفتاح الآية {ayah_key} بالصيغة القياسية \"{surah}:{ayah}\" دون أصفار بادئة."
 
-#: apps/content/services/admin/recitation_audio_slicing_service.py:321
 msgid "ffmpeg binary not found; audio slicing is unavailable."
 msgstr "لم يتم العثور على ملف ffmpeg التنفيذي؛ تقطيع الصوت غير متاح."
 
-#: apps/content/services/admin/recitation_audio_slicing_service.py:328
 msgid "Slicing ayah audio timed out."
 msgstr "انتهت المهلة الزمنية لتقطيع صوت الآية."
 
-#: apps/content/services/admin/recitation_audio_slicing_service.py:336
 msgid "Failed to slice ayah audio with ffmpeg."
 msgstr "تعذر تقطيع صوت الآية باستخدام ffmpeg."
 
-#: apps/content/services/asset_access.py:39
 msgid "Not found."
 msgstr "غير موجود."
 
-#: apps/content/services/asset_access.py:47
 #, python-brace-format
 msgid "Cannot act on request with status '{status}'."
 msgstr "لا يمكن تنفيذ الإجراء على طلب بحالة '{status}'."
 
-#: apps/content/services/asset_access.py:62
 msgid "Rejection reason is required."
 msgstr "سبب الرفض مطلوب."
 
-#: apps/content/services/asset_access.py:156
-msgid ""
-"This asset has open or granted access requests from public consumers and "
-"cannot be restricted to your tenant. Please contact Itqan team."
-msgstr ""
-"يحتوي هذا الأصل على طلبات وصول مفتوحة أو ممنوحة من مستهلكين عموميين، ولا "
-"يمكن حصره على موقعك. يرجى التواصل مع فريق إتقان."
+msgid "This asset has open or granted access requests from public consumers and cannot be restricted to your tenant. Please contact Itqan team."
+msgstr "يحتوي هذا الأصل على طلبات وصول مفتوحة أو ممنوحة من مستهلكين عموميين، ولا يمكن حصره على موقعك. يرجى التواصل مع فريق إتقان."
 
-#: apps/content/services/asset_access.py:204
 msgid "An API key is required to access this asset's content."
 msgstr "مطلوب مفتاح API للوصول إلى محتوى هذا الأصل."
 
-#: apps/content/services/asset_access.py:212
 msgid "You don't have an approved access request for this asset."
 msgstr "ليس لديك طلب وصول مُوافَق عليه لهذا الأصل."
 
-#: apps/content/services/asset_content.py:82
+msgid "The uploaded file could not be read."
+msgstr "تعذّرت قراءة الملف المرفوع."
+
+msgid "The uploaded file could not be parsed into ayah entries."
+msgstr "تعذّر تحليل الملف المرفوع إلى إدخالات الآيات."
+
 #, python-brace-format
 msgid "{category} with slug {slug} not found."
 msgstr "لم يتم العثور على {category} بالمعرّف {slug}."
 
-#: apps/content/services/asset_content.py:91
-#: apps/content/services/asset_content.py:213
 #, python-brace-format
 msgid "Version with id {id} not found."
 msgstr "الإصدار ذو المعرف {id} غير موجود."
 
-#: apps/content/services/asset_content.py:97
 msgid "Only draft versions can be edited."
 msgstr "لا يمكن تعديل سوى إصدارات المسودة."
 
-#: apps/content/services/asset_content.py:244
 #, python-brace-format
 msgid "Could not parse the uploaded content file: {reason}"
 msgstr "تعذر تحليل ملف المحتوى المرفوع: {reason}"
 
-#: apps/content/services/asset_content.py:267
-msgid "There are no changes to publish."
-msgstr "لا توجد تغييرات للنشر."
+msgid "A commit message is required."
+msgstr "رسالة التغيير مطلوبة."
 
-#: apps/content/services/asset_language.py:43
+msgid "Only published versions can be restored."
+msgstr "لا يمكن استعادة سوى الإصدارات المنشورة."
+
 #, python-brace-format
 msgid "Language {language} already exists for this asset."
 msgstr "اللغة {language} موجودة بالفعل لهذا المورد."
 
-#: apps/content/services/asset_language.py:53
 #, python-brace-format
 msgid "Language {language} is not available for this asset."
 msgstr "اللغة {language} غير متاحة لهذا المورد."
 
-#: apps/content/services/font.py:67 apps/content/services/mushaf.py:67
-#: apps/content/services/recitation.py:177 apps/content/services/tafsir.py:68
-#: apps/content/services/translation.py:67
+msgid "A language needs at least one published version before it can be made available."
+msgstr "تحتاج اللغة إلى إصدار منشور واحد على الأقل قبل أن يمكن إتاحتها."
+
 #, python-brace-format
 msgid "Publisher with id {id} not found."
 msgstr "لم يتم العثور على الناشر بالمعرّف {id}."
 
-#: apps/content/services/font.py:78 apps/content/services/font.py:175
 msgid "Font name (Arabic or English) is required."
 msgstr "اسم الخط (بالعربية أو الإنجليزية) مطلوب."
 
-#: apps/content/services/font.py:87 apps/content/services/font.py:186
-#: apps/content/services/mushaf.py:87 apps/content/services/mushaf.py:186
-#: apps/content/services/tafsir.py:88 apps/content/services/tafsir.py:187
-#: apps/content/services/translation.py:87
-#: apps/content/services/translation.py:187
 msgid "External URL is required when is_external is True."
 msgstr "الرابط الخارجي مطلوب عندما يكون المصدري خارجي."
 
-#: apps/content/services/font.py:131 apps/content/services/mushaf.py:131
-#: apps/content/services/tafsir.py:132 apps/content/services/translation.py:132
 msgid "Version name is required when a file is provided."
 msgstr "اسم الإصدار مطلوب عند تقديم ملف."
 
-#: apps/content/services/font.py:209
 msgid "Cannot delete Font because they are referenced through other objects"
 msgstr "لا يمكن حذف الخط لأن هناك بيانات أخرى مرتبطة به"
 
-#: apps/content/services/font.py:219
 #, python-brace-format
 msgid "Version with id {id} not found for font {slug}."
 msgstr "الإصدار ذو المعرف {id} غير موجود للخط {slug}."
 
-#: apps/content/services/issue_report.py:51
 #, python-brace-format
 msgid "Asset with ID {asset_id} not found."
 msgstr "المورد ذو المعرف {asset_id} غير موجود."
 
-#: apps/content/services/issue_report.py:97
-#: apps/content/services/issue_report.py:148
 #, python-brace-format
 msgid "Issue report with ID {report_id} not found."
 msgstr "تقرير المشكلة ذو المعرف {report_id} غير موجود."
 
-#: apps/content/services/issue_report.py:105
 msgid "You can only update your own issue reports."
 msgstr "يمكنك فقط تعديل تقارير المشكلات الخاصة بك."
 
-#: apps/content/services/issue_report.py:111
 msgid "You can only update pending issue reports."
 msgstr "يمكنك فقط تعديل تقارير المشكلات المعلقة."
 
-#: apps/content/services/issue_report.py:156
 msgid "You can only delete your own issue reports."
 msgstr "يمكنك فقط حذف تقارير المشكلات الخاصة بك."
 
-#: apps/content/services/issue_report.py:162
 msgid "You can only delete pending issue reports."
 msgstr "يمكنك فقط حذف تقارير المشكلات المعلقة."
 
-#: apps/content/services/mushaf.py:78 apps/content/services/mushaf.py:175
 msgid "Mushaf name (Arabic or English) is required."
 msgstr "اسم المصحف (بالعربية أو الإنجليزية) مطلوب."
 
-#: apps/content/services/mushaf.py:209
 msgid "Cannot delete Mushaf because they are referenced through other objects"
 msgstr "لا يمكن حذف المصحف لأن هناك بيانات أخرى مرتبطة به"
 
-#: apps/content/services/mushaf.py:221
 #, python-brace-format
 msgid "Version with id {id} not found for mushaf {slug}."
 msgstr "الإصدار ذو المعرف {id} غير موجود للمصحف {slug}."
 
-#: apps/content/services/recitation.py:83
-#: apps/content/services/recitation.py:147
 msgid "Recitation name (Arabic or English) is required."
 msgstr "اسم التلاوة (بالعربية أو الإنجليزية) مطلوب."
 
-#: apps/content/services/recitation.py:184
 #, python-brace-format
 msgid "Reciter with id {id} not found."
 msgstr "لم يتم العثور على القارئ بالمعرّف {id}."
 
-#: apps/content/services/recitation.py:191
 #, python-brace-format
 msgid "Qiraah with id {id} not found."
 msgstr "لم يتم العثور على القراءة بالمعرّف {id}."
 
-#: apps/content/services/recitation.py:198
 #, python-brace-format
 msgid "Riwayah with id {id} not found."
 msgstr "لم يتم العثور على الرواية بالمعرّف {id}."
 
-#: apps/content/services/recitation.py:213
-msgid ""
-"Cannot delete Recitation because they are referenced through other objects"
+msgid "Cannot delete Recitation because they are referenced through other objects"
 msgstr "لا يمكن حذف التلاوة لأن هناك بيانات أخرى مرتبطة بها"
 
-#: apps/content/services/recitation.py:298
-#: apps/content/services/recitation.py:308
-#: apps/content/services/recitation.py:315
-#: apps/content/services/recitation.py:357
 #, python-brace-format
 msgid "Ayah {ayah_key} not found."
 msgstr "لم يتم العثور على الآية {ayah_key}."
 
-#: apps/content/services/recitation.py:323
 #, python-brace-format
 msgid "Asset with id {id} not found."
 msgstr "لم يتم العثور على المورد ذو المعرف {id}."
 
-#: apps/content/services/recitation.py:343
 #, python-brace-format
 msgid "Default folder for asset {id} not found."
 msgstr "لم يتم العثور على المجلد الافتراضي للمورد {id}."
 
-#: apps/content/services/recitation_folder.py:35
 #, python-brace-format
 msgid "Folder with slug {slug} not found."
 msgstr "لم يتم العثور على مجلد بالمعرف {slug}."
 
-#: apps/content/services/recitation_folder.py:58
-#: apps/content/services/recitation_folder_resolution.py:94
 msgid "This recitation has no default folder."
 msgstr "لا يحتوي هذا التسجيل على مجلد افتراضي."
 
-#: apps/content/services/recitation_folder.py:78
-#: apps/content/services/recitation_folder.py:144
 msgid "Folder name (Arabic or English) is required."
 msgstr "اسم المجلد (بالعربية أو الإنجليزية) مطلوب."
 
-#: apps/content/services/recitation_folder.py:113
-msgid ""
-"Use another folder's set-default action instead of clearing the default flag."
+msgid "Use another folder's set-default action instead of clearing the default flag."
 msgstr "استخدم إجراء تعيين الافتراضي لمجلد آخر بدلاً من إلغاء علامة الافتراضي."
 
-#: apps/content/services/recitation_folder.py:125
 msgid "The default folder cannot be hidden."
 msgstr "لا يمكن إخفاء المجلد الافتراضي."
 
-#: apps/content/services/recitation_folder.py:168
 msgid "A hidden folder cannot be set as the default."
 msgstr "لا يمكن تعيين مجلد مخفي كمجلد افتراضي."
 
-#: apps/content/services/recitation_folder.py:195
 msgid "The default folder cannot be deleted."
 msgstr "لا يمكن حذف المجلد الافتراضي."
 
-#: apps/content/services/recitation_folder_resolution.py:83
 #, python-brace-format
 msgid "Folder {folder_id} does not belong to asset {asset_id}."
 msgstr "المجلد {folder_id} لا ينتمي إلى الأصل {asset_id}."
 
-#: apps/content/services/reciter.py:58 apps/content/services/reciter.py:106
 msgid "Reciter name (Arabic or English) is required."
 msgstr "اسم القارئ (بالعربية أو الإنجليزية) مطلوب."
 
-#: apps/content/services/reciter.py:81 apps/content/services/reciter.py:119
 msgid "A reciter with this name already exists."
 msgstr "يوجد قارئ بهذا الاسم بالفعل."
 
-#: apps/content/services/reciter.py:134
 msgid "Cannot delete Reciter because they are referenced through other objects"
 msgstr "لا يمكن حذف القارئ لأن مرتبط به بيانات أخرى"
 
-#: apps/content/services/tafsir.py:79 apps/content/services/tafsir.py:176
 msgid "Tafsir name (Arabic or English) is required."
 msgstr "اسم التفسير (بالعربية أو الإنجليزية) مطلوب."
 
-#: apps/content/services/tafsir.py:210
 msgid "Cannot delete Tafsir because they are referenced through other objects"
 msgstr "لا يمكن حذف التفسير لأن مرتبط به بيانات أخرى"
 
-#: apps/content/services/tafsir.py:222
 #, python-brace-format
 msgid "Version with id {id} not found for tafsir {slug}."
 msgstr "الإصدار ذو المعرف {id} غير موجود للتفسير {slug}."
 
-#: apps/content/services/translation.py:78
-#: apps/content/services/translation.py:176
 msgid "Translation name (Arabic or English) is required."
 msgstr "اسم الترجمة (بالعربية أو الإنجليزية) مطلوب."
 
-#: apps/content/services/translation.py:210
-msgid ""
-"Cannot delete Translation because they are referenced through other objects"
+msgid "Cannot delete Translation because they are referenced through other objects"
 msgstr "لا يمكن حذف الترجمة لأن هناك بيانات أخرى مرتبطة بها"
 
-#: apps/content/services/translation.py:222
 #, python-brace-format
 msgid "Version with id {id} not found for translation {slug}."
 msgstr "الإصدار ذو المعرف {id} غير موجود للترجمة {slug}."
 
-#: apps/core/ninja_utils/auth.py:30
-msgid "The external user identifier cannot be empty."
-msgstr "لا يمكن أن يكون معرّف المستخدم الخارجي فارغًا."
-
-#: apps/core/ninja_utils/auth.py:36
-msgid "The external user identifier is too long."
-msgstr "معرّف المستخدم الخارجي طويل جدًا."
-
-#: apps/core/ninja_utils/auth.py:42
-msgid "The external user identifier must not contain personal information."
-msgstr "يجب ألا يحتوي معرّف المستخدم الخارجي على معلومات شخصية."
-
-#: apps/core/ninja_utils/auth.py:48
-msgid "The external user identifier contains invalid characters."
-msgstr "يحتوي معرّف المستخدم الخارجي على أحرف غير صالحة."
-
-#: apps/core/ninja_utils/auth.py:96
 msgid "API key has expired."
 msgstr "انتهت صلاحية مفتاح API."
 
-#: apps/core/ninja_utils/error_handling.py:43
-#: apps/core/ninja_utils/error_handling.py:54
 msgid "Invalid Input"
 msgstr "إدخال غير صالح"
 
-#: apps/core/ninja_utils/error_handling.py:74
 msgid "Authentication Error"
 msgstr "خطأ في المصادقة"
 
-#: apps/core/ninja_utils/error_handling.py:89
 msgid "Request was throttled. Too many requests."
 msgstr "تم تقييد الطلب. عدد كبير جدًا من الطلبات."
 
-#: apps/core/ninja_utils/error_handling.py:131
 msgid "Something went wrong - Internal Server Error"
 msgstr "حدث خطأ ما - خطأ داخلي في الخادم"
 
-#: apps/core/ninja_utils/router.py:31
 msgid "Path must end with /"
 msgstr "يجب أن ينتهي المسار بـ /"
 
-#: apps/core/ninja_utils/router.py:33
 msgid "Path must not start with /"
 msgstr "يجب ألا يبدأ المسار بـ /"
 
-#: apps/core/permissions.py:8
 msgid "Access Portal"
 msgstr "الوصول للوحة التحكم"
 
-#: apps/core/permissions.py:11
 msgid "Portal - View Reciters"
 msgstr "لوحة التحكم - عرض القراء"
 
-#: apps/core/permissions.py:12
 msgid "Portal - Create Reciters"
 msgstr "لوحة التحكم - إنشاء قراء"
 
-#: apps/core/permissions.py:13
 msgid "Portal - Update Reciters"
 msgstr "لوحة التحكم - تحديث القراء"
 
-#: apps/core/permissions.py:14
 msgid "Portal - Delete Reciters"
 msgstr "لوحة التحكم - حذف القراء"
 
-#: apps/core/permissions.py:17
 msgid "Portal - View Recitations"
 msgstr "لوحة التحكم - عرض التلاوات"
 
-#: apps/core/permissions.py:18
 msgid "Portal - Create Recitations"
 msgstr "لوحة التحكم - إنشاء تلاوات"
 
-#: apps/core/permissions.py:19
 msgid "Portal - Update Recitations"
 msgstr "لوحة التحكم - تحديث التلاوات"
 
-#: apps/core/permissions.py:20
 msgid "Portal - Delete Recitations"
 msgstr "لوحة التحكم - حذف التلاوات"
 
-#: apps/core/permissions.py:23
 msgid "Portal - Upload Recitation Timings"
 msgstr "لوحة التحكم - تحميل أوقات التلاوات"
 
-#: apps/core/permissions.py:26
 msgid "Portal - View Tafsirs"
 msgstr "لوحة التحكم - عرض التفاسير"
 
-#: apps/core/permissions.py:27
 msgid "Portal - Create Tafsirs"
 msgstr "لوحة التحكم - إنشاء تفاسير"
 
-#: apps/core/permissions.py:28
 msgid "Portal - Update Tafsirs"
 msgstr "لوحة التحكم - تحديث التفاسير"
 
-#: apps/core/permissions.py:29
 msgid "Portal - Delete Tafsirs"
 msgstr "لوحة التحكم - حذف التفاسير"
 
-#: apps/core/permissions.py:32
 msgid "Portal - View Translations"
 msgstr "لوحة التحكم - عرض الترجمات"
 
-#: apps/core/permissions.py:33
 msgid "Portal - Create Translations"
 msgstr "لوحة التحكم - إنشاء ترجمات"
 
-#: apps/core/permissions.py:34
 msgid "Portal - Update Translations"
 msgstr "لوحة التحكم - تحديث الترجمات"
 
-#: apps/core/permissions.py:35
 msgid "Portal - Delete Translations"
 msgstr "لوحة التحكم - حذف الترجمات"
 
-#: apps/core/permissions.py:38
 msgid "Portal - View Mushafs"
 msgstr "لوحة التحكم - عرض المصاحف"
 
-#: apps/core/permissions.py:39
 msgid "Portal - Create Mushafs"
 msgstr "لوحة التحكم - إنشاء المصاحف"
 
-#: apps/core/permissions.py:40
 msgid "Portal - Update Mushafs"
 msgstr "لوحة التحكم - تحديث المصاحف"
 
-#: apps/core/permissions.py:41
 msgid "Portal - Delete Mushafs"
 msgstr "لوحة التحكم - حذف المصاحف"
 
-#: apps/core/permissions.py:44
 msgid "Portal - View Fonts"
 msgstr "لوحة التحكم - عرض الخطوط"
 
-#: apps/core/permissions.py:45
 msgid "Portal - Create Fonts"
 msgstr "لوحة التحكم - إنشاء الخطوط"
 
-#: apps/core/permissions.py:46
 msgid "Portal - Update Fonts"
 msgstr "لوحة التحكم - تحديث الخطوط"
 
-#: apps/core/permissions.py:47
 msgid "Portal - Delete Fonts"
 msgstr "لوحة التحكم - حذف الخطوط"
 
-#: apps/core/permissions.py:50
 msgid "Portal - View Publishers"
 msgstr "البوابة - عرض الناشرين"
 
-#: apps/core/permissions.py:51
 msgid "Portal - Create Publishers"
 msgstr "البوابة - إنشاء الناشرين"
 
-#: apps/core/permissions.py:52
 msgid "Portal - Update Publishers"
 msgstr "البوابة - تعديل الناشرين"
 
-#: apps/core/permissions.py:53
 msgid "Portal - Delete Publishers"
 msgstr "البوابة - حذف الناشرين"
 
-#: apps/core/permissions.py:56
 msgid "Portal - View Groups"
 msgstr "البوابة - عرض المجموعات"
 
-#: apps/core/permissions.py:57
 msgid "Portal - Create Groups"
 msgstr "البوابة - إنشاء المجموعات"
 
-#: apps/core/permissions.py:58
 msgid "Portal - Update Groups"
 msgstr "البوابة - تعديل المجموعات"
 
-#: apps/core/permissions.py:59
 msgid "Portal - Delete Groups"
 msgstr "البوابة - حذف المجموعات"
 
-#: apps/core/permissions.py:62
 msgid "Portal - View Publisher Members"
 msgstr "البوابة - عرض أعضاء الناشر"
 
-#: apps/core/permissions.py:63
 msgid "Portal - Invite Publisher Members"
 msgstr "البوابة - دعوة أعضاء الناشر"
 
-#: apps/core/permissions.py:64
 msgid "Portal - Update Publisher Members"
 msgstr "البوابة - تعديل أعضاء الناشر"
 
-#: apps/core/permissions.py:65
 msgid "Portal - Delete Publisher Members"
 msgstr "البوابة - حذف أعضاء الناشر"
 
-#: apps/core/permissions.py:68
 msgid "Portal - View Access Requests"
 msgstr "البوابة - عرض طلبات الوصول"
 
-#: apps/core/permissions.py:71
 msgid "Portal - Accept or Reject Access Requests"
 msgstr "البوابة - قبول أو رفض طلبات الوصول"
 
-#: apps/core/permissions.py:75
 msgid "Portal - Manage Access Requests Settings"
 msgstr "البوابة - إدارة إعدادات طلبات الوصول"
 
-#: apps/core/services/permissions.py:148
 #, python-brace-format
-msgid ""
-"Permissions are not synced to the database: {missing}. Run `manage.py "
-"migrate`."
-msgstr ""
-"الصلاحيات غير متزامنة مع قاعدة البيانات: {missing}. نفّذ الأمر `manage.py "
-"migrate`."
+msgid "Permissions are not synced to the database: {missing}. Run `manage.py migrate`."
+msgstr "الصلاحيات غير متزامنة مع قاعدة البيانات: {missing}. نفّذ الأمر `manage.py migrate`."
 
-#: apps/mixins/recitations_helpers.py:38
 #, python-brace-format
 msgid "Filename must end with surah number as 3 digits .mp3: {filename}"
 msgstr "يجب أن ينتهي اسم الملف برقم السورة من 3 أرقام .mp3: {filename}"
 
-#: apps/mixins/recitations_helpers.py:42
 #, python-brace-format
 msgid "Surah number is out of range 1..114: {num}"
 msgstr "رقم السورة خارج النطاق 1..114: {num}"
 
-#: apps/package_manager/services/package_registry.py:325
 #, python-brace-format
 msgid "Asset {slug} has no eligible PACKAGE versions with valid SemVer names."
 msgstr "لا توجد إصدارات PACKAGE مؤهلة للمورد {slug} بأسماء SemVer صالحة."
 
-#: apps/package_manager/services/package_registry.py:336
 #, python-brace-format
 msgid "Canonical version collision detected for asset {slug}."
 msgstr "تم اكتشاف تعارض في الإصدار المكافئ للمورد {slug}."
 
-#: apps/package_manager/services/package_registry.py:347
 #, python-brace-format
 msgid "Invalid version constraint '{constraint}': {reason}."
 msgstr "قيد الإصدار '{constraint}' غير صالح: {reason}."
 
-#: apps/package_manager/services/package_registry.py:363
 #, python-brace-format
 msgid "Version {version} not found for asset {slug}."
 msgstr "الإصدار {version} غير موجود للمورد {slug}."
 
-#: apps/package_manager/services/package_registry.py:381
 #, python-brace-format
-msgid ""
-"No eligible PACKAGE version for asset {slug} satisfies constraint "
-"'{constraint}' ({range_desc})."
-msgstr ""
-"لا يوجد إصدار PACKAGE مؤهل للمورد {slug} يحقق القيد '{constraint}' "
-"({range_desc})."
+msgid "No eligible PACKAGE version for asset {slug} satisfies constraint '{constraint}' ({range_desc})."
+msgstr "لا يوجد إصدار PACKAGE مؤهل للمورد {slug} يحقق القيد '{constraint}' ({range_desc})."
 
-#: apps/publishers/api/portal/publisher_members.py:150
 msgid "You cannot change your own membership."
 msgstr "لا يمكنك تغيير عضويتك الخاصة."
 
-#: apps/publishers/api/portal/publisher_members.py:168
 msgid "You cannot delete your own membership."
 msgstr "لا يمكنك حذف عضويتك الخاصة."
 
-#: apps/publishers/api/portal/publisher_members.py:198
 msgid "Member is already active; nothing to resend."
 msgstr "العضو نشط بالفعل؛ لا يوجد ما يُعاد إرساله."
 
-#: apps/publishers/api/portal/publisher_members.py:207
 msgid "No pending invitation to resend."
 msgstr "لا توجد دعوة معلقة لإعادة إرسالها."
 
-#: apps/publishers/api/portal/publishers.py:184
-#: apps/publishers/services/publisher.py:87
 #, python-brace-format
 msgid "Publisher with id {id} not found"
 msgstr "لم يتم العثور على الناشر بالمعرّف {id}."
 
-#: apps/publishers/middlewares/publisher_middleware.py:26
 msgid "Publisher's page is closed for maintenance, please try again later"
 msgstr "صفحة الناشر مغلقة للصيانة، يرجى المحاولة لاحقًا"
 
-#: apps/publishers/models.py:66
 msgid "Active"
 msgstr "نشط"
 
-#: apps/publishers/models.py:119
 msgid "Accepted"
 msgstr "مقبول"
 
-#: apps/publishers/models.py:120
 msgid "Expired"
 msgstr "منتهي الصلاحية"
 
-#: apps/publishers/models.py:121
 msgid "Cancelled"
 msgstr "ملغي"
 
-#: apps/publishers/services/membership.py:19
 msgid "You do not have access to this publisher."
 msgstr "ليس لديك صلاحية الوصول لهذا الناشر"
 
-#: apps/publishers/services/membership.py:39
 msgid "You do not have access to this member."
 msgstr "ليس لديك صلاحية الوصول إلى هذا العضو."
 
-#: apps/publishers/services/publisher.py:34
-#: apps/publishers/services/publisher.py:109
 msgid "Publisher name (Arabic or English) is required"
 msgstr "اسم الناشر (بالعربية أو الإنجليزية) مطلوب"
 
-#: apps/publishers/services/publisher.py:43
-#: apps/publishers/services/publisher.py:74
-#: apps/publishers/services/publisher.py:119
 #, python-brace-format
 msgid "A publisher with slug '{slug}' already exists"
 msgstr "يوجد ناشر بالمعرّف '{slug}' بالفعل"
 
-#: apps/publishers/services/publisher.py:153
-msgid ""
-"Cannot delete Publisher because they are referenced through other objects"
+msgid "Cannot delete Publisher because they are referenced through other objects"
 msgstr "لا يمكن حذف الناشر لأن هناك بيانات أخري مرتبطة به"
 
-#: apps/publishers/services/publisher_member_invitation_service.py:60
 msgid "This user is already a member of this publisher."
 msgstr "هذا المستخدم عضو بالفعل لدى هذا الناشر."
 
-#: apps/publishers/services/publisher_member_invitation_service.py:95
 msgid "Only pending invitations can be resent."
 msgstr "يمكن إعادة إرسال الدعوات المعلقة فقط."
 
-#: apps/publishers/services/publisher_member_invitation_service.py:101
-#: apps/publishers/services/publisher_member_invitation_service.py:121
-#: apps/publishers/services/publisher_member_invitation_service.py:137
-#: apps/publishers/services/publisher_member_invitation_service.py:148
-#: apps/publishers/services/publisher_member_invitation_service.py:155
 msgid "This invitation is no longer valid."
 msgstr "هذه الدعوة لم تعد صالحة."
 
-#: apps/publishers/services/publisher_member_invitation_service.py:115
 msgid "Only pending invitations can be cancelled."
 msgstr "يمكن إلغاء الدعوات المعلقة فقط."
 
-#: apps/quran/services/quran.py:30
 msgid "Sura does not exist."
 msgstr "السورة غير موجودة."
 
-#: apps/quran/services/quran.py:43 apps/quran/services/quran.py:64
 msgid "Ayah does not exist."
 msgstr "الآية غير موجودة."
 
-#: apps/usage_tracking/services/audio_usage_sync.py:92
 #, python-brace-format
 msgid "window_hours must divide 24 evenly, got {window_hours}"
-msgstr ""
-"يجب أن يقسّم window_hours الرقم 24 دون باقٍ، القيمة المُعطاة {window_hours}"
+msgstr "يجب أن يقسّم window_hours الرقم 24 دون باقٍ، القيمة المُعطاة {window_hours}"
 
-#: apps/users/adapters.py:25
 msgid "Itqan Community"
 msgstr "مجتمع اتقان"
 
-#: apps/users/admin.py:39 apps/users/admin.py:84 apps/users/admin.py:148
 msgid "Permissions"
 msgstr "الصلاحيات"
 
-#: apps/users/admin.py:42
 msgid "User Permissions"
 msgstr "صلاحيات المستخدم"
 
-#: apps/users/admin.py:65
 msgid "This email has already been taken."
 msgstr "هذا البريد الإلكتروني مستخدم بالفعل."
 
-#: apps/users/admin.py:82
 msgid "Personal info"
 msgstr "المعلومات الشخصية"
 
-#: apps/users/admin.py:95
 msgid "Important dates"
 msgstr "تواريخ مهمة"
 
-#: apps/users/admin.py:151
 msgid "permissions"
 msgstr "الصلاحيات"
 
-#: apps/users/api/portal/groups.py:104 apps/users/services/group.py:125
 #, python-brace-format
 msgid "Group with id {id} not found."
 msgstr "لم يتم العثور على المجموعة بالمعرّف {id}."
 
-#: apps/users/managers.py:14
 msgid "The given email must be set"
 msgstr "يجب تحديد البريد الإلكتروني"
 
-#: apps/users/managers.py:32
 msgid "Superuser must have is_staff=True."
 msgstr "يجب أن يكون للمستخدم المتميز is_staff=True."
 
-#: apps/users/managers.py:35
 msgid "Superuser must have is_superuser=True."
 msgstr "يجب أن يكون للمستخدم المتميز is_superuser=True."
 
-#: apps/users/models.py:21
 msgid "Name of User"
 msgstr "اسم المستخدم"
 
-#: apps/users/models.py:22
 msgid "email address"
 msgstr "البريد الإلكتروني"
 
-#: apps/users/models.py:23
 msgid "Phone Number"
 msgstr "رقم الهاتف"
 
-#: apps/users/models.py:48
 msgid "A name for the API key. 50 characters max."
 msgstr "اسم لمفتاح API. 50 حرفاً كحد أقصى."
 
-#: apps/users/models.py:54
 msgid "User"
 msgstr "المستخدم"
 
-#: apps/users/models.py:58
 msgid "API Key"
 msgstr "مفتاح API"
 
-#: apps/users/models.py:59
 msgid "API Keys"
 msgstr "مفاتيح API"
 
-#: apps/users/models.py:70
 msgid "Bio"
 msgstr "نبذة"
 
-#: apps/users/models.py:71
 msgid "Project Summary"
 msgstr "ملخص المشروع"
 
-#: apps/users/models.py:73
 msgid "Project URL"
 msgstr "رابط المشروع"
 
-#: apps/users/models.py:77
 msgid "Job Title"
 msgstr "المسمى الوظيفي"
 
-#: apps/users/services/api_key.py:28
 msgid "API key not found."
 msgstr "مفتاح API غير موجود."
 
-#: apps/users/services/api_key.py:34 apps/users/services/api_key.py:42
 msgid "An API key with this name already exists."
 msgstr "يوجد مفتاح API بهذا الاسم بالفعل."
 
-#: apps/users/services/api_key.py:47
 msgid "A revoked API key cannot be un-revoked."
 msgstr "لا يمكن إلغاء إبطال مفتاح API الذي تم إبطاله."
 
-#: apps/users/services/api_key.py:58
 msgid "API key name must not be empty."
 msgstr "اسم مفتاح API لا يمكن أن يكون فارغاً."
 
-#: apps/users/services/api_key.py:62
 #, python-format
 msgid "API key name must not exceed %(max)d characters."
 msgstr "اسم مفتاح API يجب ألا يتجاوز %(max)d حرفاً."
 
-#: apps/users/services/group.py:48
 #, python-brace-format
 msgid "Group with id {id} is not available for assignment."
 msgstr "المجموعة ذات المعرّف {id} غير متاحة للتعيين."
 
-#: apps/users/services/group.py:58 apps/users/services/group.py:69
-#: apps/users/services/group.py:101
 msgid "A group with this name already exists."
 msgstr "توجد مجموعة بهذا الاسم بالفعل."
 
-#: apps/users/services/group.py:136
 msgid "Group name must not be empty."
 msgstr "اسم المجموعة لا يمكن أن يكون فارغاً."
 
-#: apps/users/services/group.py:142
 #, python-format
 msgid "Group name must not exceed %(max)d characters."
 msgstr "اسم المجموعة يجب ألا يتجاوز %(max)d حرفاً."
 
-#: apps/users/services/group.py:154
 #, python-brace-format
 msgid "Unknown permissions: {permissions}."
 msgstr "صلاحيات غير معروفة: {permissions}."
 
-#: apps/users/services/oauth_application.py:28
 msgid "Application not found."
 msgstr "التطبيق غير موجود."
 
-#: apps/users/services/oauth_application.py:34
-#: apps/users/services/oauth_application.py:41
 msgid "An application with this name already exists."
 msgstr "يوجد تطبيق بهذا الاسم بالفعل."
 
-#: apps/users/services/oauth_application.py:54
 msgid "Application name must not be empty."
 msgstr "اسم التطبيق لا يمكن أن يكون فارغاً."
 
-#: apps/users/services/oauth_application.py:58
 #, python-format
 msgid "Application name must not exceed %(max)d characters."
 msgstr "اسم التطبيق يجب ألا يتجاوز %(max)d حرفاً."
 
-#: templates/account/email/account_already_exists_message.html:5
 #, python-format
 msgid ""
-"You are receiving this email because you or someone else tried to signup for "
-"an\n"
+"You are receiving this email because you or someone else tried to signup for an\n"
 "account using email address:\n"
 "\n"
 "%(email)s\n"
 "\n"
-"However, an account using that email address already exists.  In case you "
-"have\n"
-"forgotten about this, please use the password forgotten procedure to "
-"recover\n"
+"However, an account using that email address already exists.  In case you have\n"
+"forgotten about this, please use the password forgotten procedure to recover\n"
 "your account:\n"
 "\n"
 "%(password_reset_url)s"
 msgstr ""
-"أنت تتلقى هذا البريد الإلكتروني لأنك أو شخص آخر حاول إنشاء حساب باستخدام "
-"عنوان بريد إلكتروني:\n"
+"أنت تتلقى هذا البريد الإلكتروني لأنك أو شخص آخر حاول إنشاء حساب باستخدام عنوان بريد إلكتروني:\n"
 "\n"
 "%(email)s\n"
 "\n"
-"ومع ذلك، يوجد حساب بهذا العنوان بالفعل. في حالة نسيانك لذلك، يرجى استخدام "
-"إجراء استعادة كلمة المرور لاستعادة حسابك:\n"
+"ومع ذلك، يوجد حساب بهذا العنوان بالفعل. في حالة نسيانك لذلك، يرجى استخدام إجراء استعادة كلمة المرور لاستعادة حسابك:\n"
 "\n"
 "%(password_reset_url)s"
 
-#: templates/account/email/account_already_exists_message.html:17
-#: templates/account/email/password_reset_key_message.html:9
 msgid "Reset password"
 msgstr "إعادة تعيين كلمة المرور"
 
-#: templates/account/email/account_already_exists_subject.html:3
 msgid "Account Already Exists"
 msgstr "الحساب موجود بالفعل"
 
-#: templates/account/email/base_message.html:27
 #, python-format
 msgid "Welcome to %(site_name)s!"
 msgstr "مرحباً بك في %(site_name)s!"
 
-#: templates/account/email/base_message.html:37
 #, python-format
 msgid ""
 "Thank you for using %(site_name)s!\n"
@@ -1286,251 +918,164 @@ msgstr ""
 "شكراً لاستخدامك %(site_name)s!\n"
 "%(site_domain)s"
 
-#: templates/account/email/base_notification.html:6
-msgid ""
-"You are receiving this mail because the following change was made to your "
-"account:"
+msgid "You are receiving this mail because the following change was made to your account:"
 msgstr "أنت تتلقى هذا البريد لأن التغيير التالي تم إجراؤه على حسابك:"
 
-#: templates/account/email/base_notification.html:10
-msgid ""
-"If you do not recognize this change then please take proper security "
-"precautions immediately. The change to your account originates from:"
+msgid "If you do not recognize this change then please take proper security precautions immediately. The change to your account originates from:"
 msgstr ""
-"إذا كنت لا تتعرف على هذا التغيير، يرجى اتخاذ الاحتياطات الأمنية المناسبة "
-"فوراً. التغيير على حسابك يأتي من:\n"
+"إذا كنت لا تتعرف على هذا التغيير، يرجى اتخاذ الاحتياطات الأمنية المناسبة فوراً. التغيير على حسابك يأتي من:\n"
 "\n"
 "- عنوان IP: %(ip)s\n"
 "- المتصفح: %(user_agent)s\n"
 "- التاريخ: %(timestamp)s"
 
-#: templates/account/email/base_notification.html:12
 msgid "IP address"
 msgstr "عنوان IP"
 
-#: templates/account/email/base_notification.html:13
 msgid "Browser"
 msgstr "المتصفح"
 
-#: templates/account/email/base_notification.html:14
 msgid "Date"
 msgstr "التاريخ"
 
-#: templates/account/email/email_changed_message.html:4
 #, python-format
 msgid "Your email has been changed from %(from_email)s to %(to_email)s."
 msgstr "تم تغيير بريدك الإلكتروني من %(from_email)s إلى %(to_email)s."
 
-#: templates/account/email/email_changed_subject.html:3
 msgid "Email Changed"
 msgstr "البريد الإلكتروني تم تغييره"
 
-#: templates/account/email/email_confirm_message.html:4
 msgid "Your email has been confirmed."
 msgstr "تم تأكيد بريدك الإلكتروني."
 
-#: templates/account/email/email_confirm_subject.html:3
 msgid "Email Confirmation"
 msgstr "تأكيد البريد الإلكتروني"
 
-#: templates/account/email/email_confirmation_message.html:6
 #, python-format
-msgid ""
-"You're receiving this email because user %(user_display)s has given your "
-"email address to register an account on %(site_domain)s."
-msgstr ""
-"أنت تتلقى هذا البريد الإلكتروني لأن المستخدم %(user_display)s أعطى عنوان "
-"بريدك الإلكتروني لإنشاء حساب على %(site_domain)s."
+msgid "You're receiving this email because user %(user_display)s has given your email address to register an account on %(site_domain)s."
+msgstr "أنت تتلقى هذا البريد الإلكتروني لأن المستخدم %(user_display)s أعطى عنوان بريدك الإلكتروني لإنشاء حساب على %(site_domain)s."
 
-#: templates/account/email/email_confirmation_message.html:9
-msgid ""
-"Your email verification code is listed below. Please enter it in your open "
-"browser window."
-msgstr ""
-"رمز التحقق من بريدك الإلكتروني مدرج أدناه. يرجى إدخاله في نافذة المتصفح "
-"المفتوحة."
+msgid "Your email verification code is listed below. Please enter it in your open browser window."
+msgstr "رمز التحقق من بريدك الإلكتروني مدرج أدناه. يرجى إدخاله في نافذة المتصفح المفتوحة."
 
-#: templates/account/email/email_confirmation_message.html:14
 #, python-format
 msgid "To confirm this is correct, go to %(activate_url)s"
 msgstr "للتأكيد، انتقل إلى %(activate_url)s"
 
-#: templates/account/email/email_confirmation_message.html:16
 msgid "Confirm email address"
 msgstr "تأكيد البريد الإلكتروني"
 
-#: templates/account/email/email_confirmation_subject.html:3
 msgid "Please Confirm Your Email Address"
 msgstr "يرجى تأكيد عنوان بريدك الإلكتروني"
 
-#: templates/account/email/email_deleted_message.html:4
 #, python-format
 msgid "Email address %(deleted_email)s has been removed from your account."
 msgstr "تم حذف عنوان البريد الإلكتروني %(deleted_email)s من حسابك."
 
-#: templates/account/email/email_deleted_subject.html:3
 msgid "Email Removed"
 msgstr "البريد الإلكتروني تم حذفه"
 
-#: templates/account/email/login_code_message.html:6
-msgid ""
-"Your sign-in code is listed below. Please enter it in your open browser "
-"window."
-msgstr ""
-"رمز تسجيل الدخول الخاص بك مدرج أدناه. يرجى إدخاله في نافذة المتصفح المفتوحة."
+msgid "Your sign-in code is listed below. Please enter it in your open browser window."
+msgstr "رمز تسجيل الدخول الخاص بك مدرج أدناه. يرجى إدخاله في نافذة المتصفح المفتوحة."
 
-#: templates/account/email/login_code_message.html:12
-#: templates/account/email/password_reset_code_message.html:12
-#: templates/account/email/unknown_account_message.html:7
 msgid "This mail can be safely ignored if you did not initiate this action."
 msgstr "يمكن تجاهل هذا البريد بأمان إذا لم تقم بهذا الإجراء."
 
-#: templates/account/email/login_code_subject.html:3
 msgid "Sign-In Code"
 msgstr "رمز تسجيل الدخول"
 
-#: templates/account/email/password_changed_message.html:4
 msgid "Your password has been changed."
 msgstr "تم تغيير كلمة المرور الخاصة بك."
 
-#: templates/account/email/password_changed_subject.html:3
 msgid "Password Changed"
 msgstr "كلمة المرور تم تغييرها"
 
-#: templates/account/email/password_reset_code_message.html:6
-msgid ""
-"Your password reset code is listed below. Please enter it in your open "
-"browser window."
-msgstr ""
-"رمز إعادة تعيين كلمة المرور الخاصة بك مدرج أدناه. يرجى إدخاله في نافذة "
-"المتصفح المفتوحة."
+msgid "Your password reset code is listed below. Please enter it in your open browser window."
+msgstr "رمز إعادة تعيين كلمة المرور الخاصة بك مدرج أدناه. يرجى إدخاله في نافذة المتصفح المفتوحة."
 
-#: templates/account/email/password_reset_code_subject.html:3
 msgid "Password Reset Code"
 msgstr "رمز إعادة تعيين كلمة المرور"
 
-#: templates/account/email/password_reset_key_message.html:5
 msgid ""
-"You're receiving this email because you or someone else has requested a "
-"password reset for your user account.\n"
-"It can be safely ignored if you did not request a password reset. Click the "
-"link below to reset your password."
+"You're receiving this email because you or someone else has requested a password reset for your user account.\n"
+"It can be safely ignored if you did not request a password reset. Click the link below to reset your password."
 msgstr ""
-"أنت تتلقى هذا البريد الإلكتروني لأنك أو شخص آخر طلب إعادة تعيين كلمة المرور "
-"لحسابك.\n"
-"يمكن تجاهله بأمان إذا لم تطلب إعادة تعيين كلمة المرور. انقر على الرابط أدناه "
-"لإعادة تعيين كلمة المرور."
+"أنت تتلقى هذا البريد الإلكتروني لأنك أو شخص آخر طلب إعادة تعيين كلمة المرور لحسابك.\n"
+"يمكن تجاهله بأمان إذا لم تطلب إعادة تعيين كلمة المرور. انقر على الرابط أدناه لإعادة تعيين كلمة المرور."
 
-#: templates/account/email/password_reset_key_message.html:13
 #, python-format
 msgid "In case you forgot, your username is %(username)s."
 msgstr "في حالة نسيانك، اسم المستخدم الخاص بك هو %(username)s."
 
-#: templates/account/email/password_reset_key_subject.html:3
 msgid "Password Reset Email"
 msgstr "بريد إعادة تعيين كلمة المرور"
 
-#: templates/account/email/password_reset_message.html:4
 msgid "Your password has been reset."
 msgstr "تم إعادة تعيين كلمة المرور الخاصة بك."
 
-#: templates/account/email/password_reset_subject.html:3
 msgid "Password Reset"
 msgstr "إعادة تعيين كلمة المرور"
 
-#: templates/account/email/password_set_message.html:4
 msgid "Your password has been set."
 msgstr "تم تعيين كلمة المرور الخاصة بك."
 
-#: templates/account/email/password_set_subject.html:3
 msgid "Password Set"
 msgstr "تم تعيين كلمة المرور"
 
-#: templates/account/email/unknown_account_message.html:5
 #, python-format
-msgid ""
-"You are receiving this email because you, or someone else, tried to access "
-"an account with email %(email)s. However, we do not have any record of such "
-"an account in our database."
-msgstr ""
-"أنت تتلقى هذا البريد الإلكتروني لأنك أو شخص آخر حاول الوصول إلى حساب بعنوان "
-"بريد %(email)s. ومع ذلك، ليس لدينا أي سجل لهذا الحساب في قاعدة البيانات."
+msgid "You are receiving this email because you, or someone else, tried to access an account with email %(email)s. However, we do not have any record of such an account in our database."
+msgstr "أنت تتلقى هذا البريد الإلكتروني لأنك أو شخص آخر حاول الوصول إلى حساب بعنوان بريد %(email)s. ومع ذلك، ليس لدينا أي سجل لهذا الحساب في قاعدة البيانات."
 
-#: templates/account/email/unknown_account_message.html:9
 msgid "If it was you, you can sign up for an account using the link below."
 msgstr "إذا كنت أنت، يمكنك إنشاء حساب باستخدام الرابط أدناه."
 
-#: templates/account/email/unknown_account_message.html:12
 msgid "Sign up"
 msgstr "إنشاء حساب"
 
-#: templates/account/email/unknown_account_subject.html:3
 msgid "Unknown Account"
 msgstr "حساب غير معروف"
 
-#: templates/account/login.html:5 templates/account/login.html:31
-#: templates/allauth/layouts/base.html:67
 msgid "Sign In"
 msgstr "تسجيل الدخول"
 
-#: templates/account/login.html:39
 #, python-format
 msgid "Don't have an account? %(link)sSign up%(end_link)s"
 msgstr "ليس لديك حساب؟ %(link)sإنشاء حساب%(end_link)s"
 
-#: templates/account/login.html:48
 msgid "Sign in with a passkey"
 msgstr "تسجيل الدخول باستخدام مفتاح مرور"
 
-#: templates/account/login.html:53
 msgid "Mail me a sign-in code"
 msgstr "أرسل لي رمز تسجيل الدخول عبر البريد الإلكتروني"
 
-#: templates/allauth/layouts/base.html:18
 msgid "Skip to main content"
 msgstr "تخطي إلى المحتوى الرئيسي"
 
-#: templates/allauth/layouts/base.html:45
-#: templates/allauth/layouts/base.html:47
 msgid "Select Language"
 msgstr "اختر اللغة"
 
-#: templates/allauth/layouts/base.html:65
 msgid "Sign Out"
 msgstr "تسجيل الخروج"
 
-#: templates/allauth/layouts/base.html:70
 msgid "Sign Up"
 msgstr "إنشاء حساب"
 
-#: templates/content/admin/asset_change_form.html:9
 msgid "Bulk Upload Recitation Audio Tracks (Direct to R2)"
 msgstr "رفع جماعي للتلاوة الصوتية (مباشرة إلى R2)"
 
-#: templates/content/admin/asset_change_form.html:14
 msgid "Bulk Upload Recitation Ayahs Timestamps"
 msgstr "رفع جماعي للتوقيتات الزمنية لآيات التلاوة"
 
-#: templates/content/admin/asset_change_form.html:19
-msgid ""
-"Constructs the recitation JSON from all linked RecitationSurahTrack and "
-"RecitationAyahTiming, then saves it into the latest Asset version as the "
-"file. Runs in a single atomic transaction."
-msgstr ""
-"يقوم بإنشاء ملف JSON للتلاوة من جميع سجلات RecitationSurahTrack "
-"وRecitationAyahTiming المرتبطة، ثم يحفظه كملف في أحدث إصدار من الأصل. يتم "
-"التنفيذ ضمن معاملة ذرّية واحدة."
+msgid "Constructs the recitation JSON from all linked RecitationSurahTrack and RecitationAyahTiming, then saves it into the latest Asset version as the file. Runs in a single atomic transaction."
+msgstr "يقوم بإنشاء ملف JSON للتلاوة من جميع سجلات RecitationSurahTrack وRecitationAyahTiming المرتبطة، ثم يحفظه كملف في أحدث إصدار من الأصل. يتم التنفيذ ضمن معاملة ذرّية واحدة."
 
-#: templates/content/admin/asset_change_form.html:20
 msgid "Sync Asset Recitation Json File"
 msgstr "مزامنة ملف JSON الخاص بتلاوة الأصل"
 
-#: templates/content/admin/asset_change_form.html:25
 msgid ""
 "\n"
 "This action will:\n"
-"1) Collect all related RecitationSurahTrack and RecitationAyahTiming records "
-"linked with this Asset\n"
+"1) Collect all related RecitationSurahTrack and RecitationAyahTiming records linked with this Asset\n"
 "2) Construct a fresh JSON from these records\n"
 "3) Overwrite the file of the latest Asset version with this JSON\n"
 "\n"
@@ -1539,142 +1084,100 @@ msgid ""
 msgstr ""
 "\n"
 "سيقوم هذا الإجراء بما يلي:\n"
-"1) جمع جميع سجلات RecitationSurahTrack وRecitationAyahTiming المرتبطة بهذا "
-"الأصل\n"
+"1) جمع جميع سجلات RecitationSurahTrack وRecitationAyahTiming المرتبطة بهذا الأصل\n"
 "2) إنشاء ملف JSON جديد من هذه السجلات\n"
 "3) استبدال ملف أحدث إصدار من الأصل بهذا الملف\n"
 "\n"
 "هل تريد المتابعة؟\n"
 "    "
 
-#: templates/emails/access_request_accepted.html:4
 msgid "Access Request Accepted"
 msgstr "تم قبول طلب الوصول"
 
-#: templates/emails/access_request_accepted.html:6
 msgid "Your access request was accepted"
 msgstr "تم قبول طلب الوصول الخاص بك"
 
-#: templates/emails/access_request_accepted.html:9
 #, python-format
-msgid ""
-"Your request to access <strong>%(asset_name)s</strong> has been accepted."
+msgid "Your request to access <strong>%(asset_name)s</strong> has been accepted."
 msgstr "تم قبول طلبك للوصول إلى <strong>%(asset_name)s</strong>."
 
-#: templates/emails/access_request_accepted.html:11
 msgid "You can now access this asset from the portal."
 msgstr "يمكنك الآن الوصول إلى هذا الأصل من لوحة التحكم."
 
-#: templates/emails/access_request_new.html:4
 msgid "New Access Request"
 msgstr "طلب وصول جديد"
 
-#: templates/emails/access_request_new.html:6
 msgid "New access request"
 msgstr "طلب وصول جديد"
 
-#: templates/emails/access_request_new.html:9
 #, python-format
-msgid ""
-"<strong>%(developer_name)s</strong> requested access to "
-"<strong>%(asset_name)s</strong>."
-msgstr ""
-"طلب <strong>%(developer_name)s</strong> الوصول إلى <strong>%(asset_name)s</"
-"strong>."
+msgid "<strong>%(developer_name)s</strong> requested access to <strong>%(asset_name)s</strong>."
+msgstr "طلب <strong>%(developer_name)s</strong> الوصول إلى <strong>%(asset_name)s</strong>."
 
-#: templates/emails/access_request_new.html:12
-msgid ""
-"This request was automatically accepted based on your publisher settings."
+msgid "This request was automatically accepted based on your publisher settings."
 msgstr "تم قبول هذا الطلب تلقائيًا بناءً على إعدادات الناشر الخاصة بك."
 
-#: templates/emails/access_request_new.html:14
 msgid "This request is pending your review."
 msgstr "هذا الطلب في انتظار مراجعتك."
 
-#: templates/emails/access_request_new.html:18
 msgid "View access requests"
 msgstr "عرض طلبات الوصول"
 
-#: templates/emails/access_request_rejected.html:4
 msgid "Access Request Rejected"
 msgstr "تم رفض طلب الوصول"
 
-#: templates/emails/access_request_rejected.html:6
 msgid "Your access request was rejected"
 msgstr "تم رفض طلب الوصول الخاص بك"
 
-#: templates/emails/access_request_rejected.html:9
 #, python-format
-msgid ""
-"Your request to access <strong>%(asset_name)s</strong> has been rejected."
+msgid "Your request to access <strong>%(asset_name)s</strong> has been rejected."
 msgstr "تم رفض طلبك للوصول إلى <strong>%(asset_name)s</strong>."
 
-#: templates/emails/access_request_rejected.html:12
-#: templates/emails/pending_access_requests_notification.html:23
 msgid "Reason:"
 msgstr "السبب:"
 
-#: templates/emails/asset_update.html:4
 msgid "New Asset Version Available"
 msgstr "إصدار جديد متاح من الأصل"
 
-#: templates/emails/asset_update.html:6
 #, python-format
 msgid "New version for %(asset_name)s"
 msgstr "إصدار جديد من %(asset_name)s"
 
-#: templates/emails/asset_update.html:9
 #, python-format
-msgid ""
-"A new version (%(version)s) of the asset \"%(asset_name)s\" is now available."
+msgid "A new version (%(version)s) of the asset \"%(asset_name)s\" is now available."
 msgstr "أصبح إصدار جديد (%(version)s) من الأصل \"%(asset_name)s\" متاحًا الآن."
 
-#: templates/emails/asset_update.html:12
 msgid "Summary of changes:"
 msgstr "ملخص التغييرات:"
 
-#: templates/emails/asset_update.html:16
 msgid "You are receiving this email because you have access to this asset."
 msgstr "تصلك هذه الرسالة لأن لديك صلاحية الوصول إلى هذا الأصل."
 
-#: templates/emails/base_message.html:48
 msgid "Thank you for using Itqan!"
 msgstr "شكرًا لاستخدامك إتقان!"
 
-#: templates/emails/issue_status_update.html:4
 msgid "Issue Status Updated"
 msgstr "تم تحديث حالة البلاغ"
 
-#: templates/emails/issue_status_update.html:6
 msgid "Your issue status has been updated"
 msgstr "تم تحديث حالة البلاغ الخاص بك"
 
-#: templates/emails/issue_status_update.html:9
 #, python-format
-msgid ""
-"The status of your issue report for <strong>%(asset_name)s</strong> (Issue "
-"#%(report_id)s) has changed."
-msgstr ""
-"تغيّرت حالة بلاغك بخصوص <strong>%(asset_name)s</strong> (البلاغ رقم "
-"%(report_id)s)."
+msgid "The status of your issue report for <strong>%(asset_name)s</strong> (Issue #%(report_id)s) has changed."
+msgstr "تغيّرت حالة بلاغك بخصوص <strong>%(asset_name)s</strong> (البلاغ رقم %(report_id)s)."
 
-#: templates/emails/issue_status_update.html:11
 msgid "Status change:"
 msgstr "تغيير الحالة:"
 
-#: templates/emails/issue_status_update.html:14
 msgid "View your issue"
 msgstr "عرض البلاغ"
 
-#: templates/emails/issue_status_update.html:17
 msgid "You are receiving this email because you opened this issue report."
 msgstr "تصلك هذه الرسالة لأنك من قام بفتح هذا البلاغ."
 
-#: templates/emails/pending_access_requests_notification.html:4
 msgid "Pending Access Requests"
 msgstr "طلبات الوصول المعلقة"
 
-#: templates/emails/pending_access_requests_notification.html:11
 #, python-format
 msgid "You have %(counter)s pending access request"
 msgid_plural "You have %(counter)s pending access requests"
@@ -1685,93 +1188,66 @@ msgstr[3] "لديك %(counter)s طلبات وصول معلقة"
 msgstr[4] "لديك %(counter)s طلب وصول معلق"
 msgstr[5] "لديك %(counter)s طلب وصول معلق"
 
-#: templates/emails/pending_access_requests_notification.html:14
 msgid "The following access requests are awaiting your review:"
 msgstr "طلبات الوصول التالية في انتظار مراجعتك:"
 
-#: templates/emails/pending_access_requests_notification.html:20
 #, python-format
-msgid ""
-"<strong>%(developer_name)s</strong> requested access to "
-"<strong>%(asset_name)s</strong>"
-msgstr ""
-"طلب <strong>%(developer_name)s</strong> الوصول إلى <strong>%(asset_name)s</"
-"strong>"
+msgid "<strong>%(developer_name)s</strong> requested access to <strong>%(asset_name)s</strong>"
+msgstr "طلب <strong>%(developer_name)s</strong> الوصول إلى <strong>%(asset_name)s</strong>"
 
-#: templates/emails/pending_access_requests_notification.html:22
 msgid "Intended use:"
 msgstr "الاستخدام المقصود:"
 
-#: templates/emails/pending_access_requests_notification.html:24
 msgid "Requested at:"
 msgstr "تاريخ الطلب:"
 
-#: templates/emails/pending_access_requests_notification.html:32
 msgid "Review requests"
 msgstr "مراجعة الطلبات"
 
-#: templates/emails/publisher_member_activated.html:4
 msgid "Account activated"
 msgstr "تم تفعيل الحساب"
 
-#: templates/emails/publisher_member_activated.html:6
 #, python-format
 msgid "Welcome to %(publisher_name)s"
 msgstr "مرحبًا بك في %(publisher_name)s"
 
-#: templates/emails/publisher_member_activated.html:9
 msgid "Your account is now active. You can sign in to the Itqan portal."
 msgstr "أصبح حسابك نشطًا الآن. يمكنك تسجيل الدخول إلى لوحة تحكم إتقان."
 
-#: templates/emails/publisher_member_activated.html:12
 #, python-format
 msgid "Your temporary password is: <strong>%(password)s</strong>"
 msgstr "كلمة المرور المؤقتة الخاصة بك هي: <strong>%(password)s</strong>"
 
-#: templates/emails/publisher_member_activated.html:13
 msgid "For your security, please sign in and change it as soon as you can."
 msgstr "لأمان حسابك، يرجى تسجيل الدخول وتغييرها في أقرب وقت ممكن."
 
-#: templates/emails/publisher_member_activated.html:17
 msgid "Sign in and access the portal"
 msgstr "تسجيل الدخول إلى لوحة التحكم"
 
-#: templates/emails/publisher_member_invitation.html:4
 msgid "You're invited"
 msgstr "لقد تمت دعوتك"
 
-#: templates/emails/publisher_member_invitation.html:6
 #, python-format
 msgid "You've been invited to %(publisher_name)s"
 msgstr "لقد تمت دعوتك للانضمام إلى %(publisher_name)s"
 
-#: templates/emails/publisher_member_invitation.html:9
 #, python-format
-msgid ""
-"%(invited_by_name)s invited you to join <strong>%(publisher_name)s</strong> "
-"on the Itqan portal as %(group_name)s."
-msgstr ""
-"دعاك %(invited_by_name)s للانضمام إلى <strong>%(publisher_name)s</strong> في "
-"لوحة تحكم إتقان بصفة %(group_name)s."
+msgid "%(invited_by_name)s invited you to join <strong>%(publisher_name)s</strong> on the Itqan portal as %(group_name)s."
+msgstr "دعاك %(invited_by_name)s للانضمام إلى <strong>%(publisher_name)s</strong> في لوحة تحكم إتقان بصفة %(group_name)s."
 
-#: templates/emails/publisher_member_invitation.html:12
 msgid "Accept your invitation"
 msgstr "اقبل الدعوة"
 
-#: templates/emails/publisher_member_invitation.html:15
 #, python-format
 msgid "This invitation expires on %(expires_at)s."
 msgstr "تنتهي صلاحية هذه الدعوة في %(expires_at)s."
 
-#: templates/emails/test.html:4
 msgid "Welcome"
 msgstr "مرحبًا"
 
-#: templates/emails/test.html:6
 msgid "Welcome to Itqan CMS!"
 msgstr "مرحبًا بك في نظام إتقان لإدارة المحتوى!"
 
-#: templates/emails/test.html:9
 msgid "This is a test email to verify the email service is working correctly."
 msgstr "هذه رسالة اختبارية للتأكد من عمل خدمة البريد الإلكتروني بشكل صحيح."
 

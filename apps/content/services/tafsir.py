@@ -10,7 +10,7 @@ from django.utils.translation import gettext as _
 from apps.content.models import Asset as AssetModel, AssetVersion, CategoryChoice, LicenseChoice
 from apps.content.repositories.tafsir import TafsirRepository
 from apps.content.services.asset_access import guard_restrict_for_tenant
-from apps.content.services.asset_content import import_uploaded_file_into_entries
+from apps.content.services.asset_content import import_uploaded_file_into_entries, set_version_language
 from apps.content.tasks import notify_asset_version_created
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
@@ -18,7 +18,6 @@ from apps.publishers.models import Publisher
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-
     from apps.content.models import Asset
 
 
@@ -231,20 +230,29 @@ class TafsirService:
         name: str,
         summary: str = "",
         file: Any = None,
+        language: str | None = None,
+        strict: bool = False,
         publisher_q: Q | None = None,
     ) -> AssetVersion:
         """
         Business Logic: Create a new version for a tafsir.
+
+        Version creation, language assignment and file import run in one
+        transaction so an unregistered language or (when ``strict``) an
+        unparseable file rolls the whole thing back instead of leaving an
+        orphaned version behind.
         """
         asset = self._get_tafsir_or_404(tafsir_slug, publisher_q=publisher_q)
-        version = self.repo.create_tafsir_version(
-            asset,
-            name=name,
-            summary=summary,
-            file=file,
-        )
-        if file:
-            import_uploaded_file_into_entries(version)
+        with transaction.atomic():
+            version = self.repo.create_tafsir_version(
+                asset,
+                name=name,
+                summary=summary,
+                file=file,
+            )
+            set_version_language(version, language)
+            if file:
+                import_uploaded_file_into_entries(version, strict=strict)
         logger.info(f"Tafsir version created [version_id={version.pk}, asset_id={asset.pk}, slug={tafsir_slug}]")
         transaction.on_commit(lambda: notify_asset_version_created.delay(version.pk))
         return version
