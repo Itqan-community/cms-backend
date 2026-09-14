@@ -66,11 +66,17 @@ erDiagram
     Asset ||--o{ AssetVersion : "has versions"
     AssetVersion }o--|| ResourceVersion : "linked to"
 
+    Asset ||--o{ AssetLanguage : "provides languages"
+    AssetVersion ||--o{ AssetVersionChange : "records per-ayah deltas"
+    AssetVersionChange ||--o| AssetVersionChangeReview : "reviewed as"
+    User ||--o{ ReviewerLanguage : "assigned to review"
+
     Asset ||--o{ AssetAccessRequest : "receives"
     Asset ||--o{ AssetAccess : "grants"
 
     User ||--o{ AssetAccessRequest : "submits"
     User ||--o{ AssetAccess : "holds"
+    User ||--o{ AssetVersionChangeReview : "reviews"
     User ||--o| Developer : "has profile"
 
     PUBLISHER {
@@ -110,6 +116,34 @@ erDiagram
     ASSETVERSION {
         file file_url
         int size_bytes
+    }
+
+    ASSETLANGUAGE {
+        int asset_id
+        string language
+        boolean is_source
+        string status
+    }
+
+    ASSETVERSIONCHANGE {
+        int version_id
+        int ayah_id
+        string change_type
+        text old_text
+        text new_text
+    }
+
+    ASSETVERSIONCHANGEREVIEW {
+        int change_id
+        string state
+        text comment
+        int reviewed_by_id
+        datetime reviewed_at
+    }
+
+    REVIEWERLANGUAGE {
+        int user_id
+        string language
     }
 ```
 
@@ -188,6 +222,21 @@ flowchart LR
         E -.->|"New version"| G["AssetVersion<br/>(linked to v1.1.0)"]
     end
 ```
+
+### Multi-language content, availability & review
+
+Text assets (translations & tafsirs) hold one source-language rendition plus any
+number of translation renditions (`AssetLanguage`), each with its own version
+history. Every publish records a per-ayah delta (`AssetVersionChange`).
+
+- **Availability** — a language is consumable only when the asset is `READY` and
+  the `AssetLanguage.status` is `READY`; translations start hidden until marked
+  available. Source availability follows the asset's own status.
+- **Review (audit-only)** — reviewers with `PORTAL_REVIEW_CONTENT`, assigned to
+  languages via `ReviewerLanguage`, approve or comment ("needs changes") each
+  `AssetVersionChange`. State is stored one-per-change as `AssetVersionChangeReview`
+  with `reviewed_by`/`reviewed_at` for auditing. Reviewing does **not** gate
+  publishing or availability, and reviewers cannot edit content.
 
 ---
 
