@@ -8,6 +8,7 @@ from typing import Literal
 
 from django.http import HttpResponse, HttpResponseRedirect
 from django.utils.http import content_disposition_header
+from django.utils.translation import gettext_lazy as _
 from ninja import Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
@@ -48,7 +49,7 @@ def _resolve(category: str, request: Request, *, write: bool) -> CategoryChoice:
     if config is None:
         raise ItqanError(
             error_name="unsupported_content_category",
-            message=f"Unsupported content category: {category}",
+            message=_("Unsupported content category: {category}").format(category=category),
             status_code=404,
         )
     resolved, read_perm, write_perm = config
@@ -323,7 +324,7 @@ def export_version(request: Request, category: str, slug: str, version_id: int):
         else:
             raise ItqanError(
                 error_name="version_not_found",
-                message="This version has no downloadable content.",
+                message=_("This version has no downloadable content."),
                 status_code=404,
             )
     else:

@@ -51,6 +51,13 @@ msgid "Reciter with slug {slug} not found."
 msgstr "لم يتم العثور على القارئ بالمعرّف {slug}."
 
 #, python-brace-format
+msgid "Unsupported content category: {category}"
+msgstr "فئة محتوى غير مدعومة: {category}"
+
+msgid "This version has no downloadable content."
+msgstr "لا يحتوي هذا الإصدار على محتوى قابل للتنزيل."
+
+#, python-brace-format
 msgid "Font with slug {slug} not found."
 msgstr "لم يتم العثور على الخط بالمعرّف {slug}."
 
@@ -519,6 +526,18 @@ msgstr "لا يمكن حذف الترجمة لأن هناك بيانات أخر�
 #, python-brace-format
 msgid "Version with id {id} not found for translation {slug}."
 msgstr "الإصدار ذو المعرف {id} غير موجود للترجمة {slug}."
+
+msgid "The external user identifier cannot be empty."
+msgstr "لا يمكن أن يكون معرّف المستخدم الخارجي فارغاً."
+
+msgid "The external user identifier is too long."
+msgstr "معرّف المستخدم الخارجي طويل جداً."
+
+msgid "The external user identifier must not contain personal information."
+msgstr "يجب ألا يحتوي معرّف المستخدم الخارجي على معلومات شخصية."
+
+msgid "The external user identifier contains invalid characters."
+msgstr "يحتوي معرّف المستخدم الخارجي على أحرف غير صالحة."
 
 msgid "API key has expired."
 msgstr "انتهت صلاحية مفتاح API."
