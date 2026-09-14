@@ -223,11 +223,14 @@ msgstr "معدّل"
 msgid "Removed"
 msgstr "محذوف"
 
-msgid "Pending"
-msgstr "قيد الانتظار"
-
 msgid "Approved"
 msgstr "معتمد"
+
+msgid "Commented"
+msgstr "يحتاج إلى تعديل"
+
+msgid "Pending"
+msgstr "قيد الانتظار"
 
 msgid "Rejected"
 msgstr "مرفوض"
@@ -391,6 +394,19 @@ msgstr "اللغة {language} غير متاحة لهذا المورد."
 
 msgid "A language needs at least one published version before it can be made available."
 msgstr "تحتاج اللغة إلى إصدار منشور واحد على الأقل قبل أن يمكن إتاحتها."
+
+msgid "You are not assigned to review this language."
+msgstr "لست مُكلَّفًا بمراجعة هذه اللغة."
+
+#, python-brace-format
+msgid "Change with id {id} not found."
+msgstr "لم يتم العثور على التغيير بالمعرّف {id}."
+
+msgid "Invalid review state."
+msgstr "حالة مراجعة غير صالحة."
+
+msgid "A comment is required when requesting changes."
+msgstr "التعليق مطلوب عند طلب إجراء تعديلات."
 
 #, python-brace-format
 msgid "Publisher with id {id} not found."
@@ -722,6 +738,9 @@ msgstr "البوابة - قبول أو رفض طلبات الوصول"
 
 msgid "Portal - Manage Access Requests Settings"
 msgstr "البوابة - إدارة إعدادات طلبات الوصول"
+
+msgid "Portal - Review Content"
+msgstr "لوحة التحكم - مراجعة المحتوى"
 
 #, python-brace-format
 msgid "Permissions are not synced to the database: {missing}. Run `manage.py migrate`."
