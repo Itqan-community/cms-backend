@@ -75,6 +75,9 @@ class PermissionChoice(TextChoices):
         _("Portal - Manage Access Requests Settings"),
     )
 
+    # Content review
+    PORTAL_REVIEW_CONTENT = "portal_review_content", _("Portal - Review Content")
+
 
 # Permission hierarchy: maps each permission to the set of permissions it directly implies.
 #
