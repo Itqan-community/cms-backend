@@ -29,13 +29,18 @@ _NOT_FOUND_ERROR = {
 }
 
 
-def import_uploaded_file_into_entries(version: AssetVersion) -> None:
-    """Best-effort: parse an uploaded version file into per-ayah entries.
+def import_uploaded_file_into_entries(version: AssetVersion, *, strict: bool = False) -> None:
+    """Parse an uploaded version file into per-ayah entries.
 
     Called from the translation/tafsir version create/update flow so that any
     uploaded content file also populates ``AssetVersionEntry`` rows (edits then
-    happen on rows, never on the file). A file that cannot be parsed is logged
-    and skipped so it never breaks the existing upload path.
+    happen on rows, never on the file).
+
+    Best-effort by default: a file that cannot be parsed is logged and skipped so
+    it never breaks the existing upload path. When ``strict`` is set (the
+    add-language flow, which declares a ``content_file_unparseable`` error), an
+    unparseable file instead raises ``ItqanError`` so the caller can reject the
+    upload and roll back — a malformed file must not create an empty version.
 
     Reads from the *saved* ``version.file_url`` rather than the passed-in upload
     object: by the time this runs the repository has already written the upload
@@ -45,6 +50,12 @@ def import_uploaded_file_into_entries(version: AssetVersion) -> None:
     """
     saved = getattr(version, "file_url", None)
     if not saved:
+        if strict:
+            raise ItqanError(
+                error_name="content_file_unparseable",
+                message=_("The uploaded file could not be read."),
+                status_code=400,
+            )
         return
     try:
         saved.open("rb")
@@ -52,16 +63,45 @@ def import_uploaded_file_into_entries(version: AssetVersion) -> None:
             raw = saved.read()
         finally:
             saved.close()
-    except Exception:
+    except Exception as exc:
         logger.warning(f"Could not read saved version file for entries [version_id={version.pk}]")
+        if strict:
+            raise ItqanError(
+                error_name="content_file_unparseable",
+                message=_("The uploaded file could not be read."),
+                status_code=400,
+            ) from exc
         return
     try:
         parsed = parse_content_file(raw)
     except AssetContentParseError as exc:
         logger.info(f"Uploaded file not parsed into entries [version_id={version.pk}, reason={exc}]")
+        if strict:
+            raise ItqanError(
+                error_name="content_file_unparseable",
+                message=_("The uploaded file could not be parsed into ayah entries."),
+                status_code=400,
+            ) from exc
         return
     entries_count = AssetContentRepository().replace_entries_from_parsed(version, parsed)
     logger.info(f"Uploaded file imported into entries [version_id={version.pk}, entries={entries_count}]")
+
+
+def set_version_language(version: AssetVersion, language: str | None) -> None:
+    """Tag an uploaded version with a specific (already-registered) language.
+
+    A no-op when ``language`` is falsy — the version keeps the source language
+    assigned by ``AssetVersion.save()``. Raises ``language_not_available`` (404)
+    if the language is not one of the asset's registered languages.
+    """
+    if not language:
+        return
+    from apps.content.services.asset_language import AssetLanguageService
+
+    asset_language = AssetLanguageService().get_asset_language_or_404(version.asset, language)
+    if version.asset_language_id != asset_language.id:
+        version.asset_language = asset_language
+        version.save(update_fields=["asset_language", "updated_at"])
 
 
 class AssetContentService:
@@ -137,6 +177,10 @@ class AssetContentService:
                 if existing is not None:
                     is_stale = source is not None and source.created_at > existing.created_at
                     if not is_stale:
+                        # Keep a translation draft covering the whole mushaf, even if
+                        # it was created sparse (e.g. before full-mushaf seeding).
+                        if mushaf is not None:
+                            self.repo.ensure_mushaf_coverage(existing, mushaf)
                         return existing
                     # A newer version exists than this draft — discard the stale
                     # draft and rebuild it below from the current latest version.
@@ -170,6 +214,34 @@ class AssetContentService:
             f"language={language}, seeded_from={source.pk if source else None}]"
         )
         return draft
+
+    def get_version_diff(
+        self,
+        slug: str,
+        category: CategoryChoice,
+        version_id: int,
+        publisher_q: Q | None = None,
+    ) -> list[dict]:
+        """Return a commit's per-ayah diff (stored delta, or computed for legacy)."""
+        version = self.get_version_or_404(slug, category, version_id, publisher_q=publisher_q)
+        return self.repo.version_diff(version)
+
+    def get_pending_changes(
+        self,
+        slug: str,
+        category: CategoryChoice,
+        version_id: int,
+        publisher_q: Q | None = None,
+    ) -> list[dict]:
+        """The uncommitted diff of a draft vs the current head — what a commit would
+        record. Empty draft rows are excluded (they are dropped on commit)."""
+        asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
+        draft = self._get_editable_draft_or_400(asset, version_id)
+        language = draft.asset_language.language if draft.asset_language_id else asset.language
+        head = draft.asset.get_latest_version(language)
+        old_map = self.repo.reconstruct_entries(head) if head is not None else {}
+        new_map = {ayah_id: text for ayah_id, text in self.repo._entries_map(draft).items() if text != ""}
+        return self.repo.diff_maps(old_map, new_map)
 
     def get_entries(
         self,
@@ -254,11 +326,11 @@ class AssetContentService:
         category: CategoryChoice,
         version_id: int,
         *,
-        name: str | None = None,
-        summary: str | None = None,
+        message: str,
         publisher_q: Q | None = None,
     ) -> AssetVersion:
-        """Publish a draft so it becomes the latest version, then notify."""
+        """Commit a draft: publish it as the latest version with a required message
+        (stored as the version's description), then notify."""
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
         draft = self._get_editable_draft_or_400(asset, version_id)
         if not draft.content_edited:
@@ -267,12 +339,15 @@ class AssetContentService:
                 message=_("There are no changes to publish."),
                 status_code=400,
             )
-        if name is not None:
-            draft.name = name
-        if summary is not None:
-            draft.summary = summary
+        if not (message or "").strip():
+            raise ItqanError(
+                error_name="commit_message_required",
+                message=_("A commit message is required."),
+                status_code=400,
+            )
+        draft.summary = message.strip()
         published = self.repo.publish_draft(draft)
-        logger.info(f"Draft published [version_id={published.pk}, asset_id={asset.pk}]")
+        logger.info(f"Draft committed [version_id={published.pk}, asset_id={asset.pk}]")
         transaction.on_commit(lambda: notify_asset_version_created.delay(published.pk))
         return published
 
@@ -288,3 +363,26 @@ class AssetContentService:
         draft = self._get_editable_draft_or_400(asset, version_id)
         self.repo.delete_version(draft)
         logger.info(f"Draft discarded [version_id={version_id}, asset_id={asset.pk}]")
+
+    def restore_version(
+        self,
+        slug: str,
+        category: CategoryChoice,
+        version_id: int,
+        *,
+        created_by_id: int | None = None,
+        publisher_q: Q | None = None,
+    ) -> AssetVersion:
+        """Restore a published version's content as a new version, making it the
+        latest (active) one for its language."""
+        version = self.get_version_or_404(slug, category, version_id, publisher_q=publisher_q)
+        if version.state != VersionStateChoice.PUBLISHED:
+            raise ItqanError(
+                error_name="version_not_restorable",
+                message=_("Only published versions can be restored."),
+                status_code=400,
+            )
+        restored = self.repo.restore_version(version, created_by_id=created_by_id)
+        logger.info(f"Version restored [source_version_id={version.pk}, new_version_id={restored.pk}]")
+        notify_asset_version_created.delay(restored.pk)
+        return restored

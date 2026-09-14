@@ -280,11 +280,22 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         default used by ``AssetVersion.save()``.
         """
         source, created = AssetLanguage.objects.get_or_create(
-            asset=self, language=self.language, defaults={"is_source": True}
+            asset=self,
+            language=self.language,
+            defaults={"is_source": True, "status": StatusChoice.READY},
         )
-        if not created and not source.is_source:
+        # The source rendition is the asset's own content: it is always READY (its
+        # consumer availability is governed by the asset's own status). Repair any
+        # source row that predates this or was created as a plain translation.
+        fields_to_fix = []
+        if not source.is_source:
             source.is_source = True
-            source.save(update_fields=["is_source"])
+            fields_to_fix.append("is_source")
+        if source.status != StatusChoice.READY:
+            source.status = StatusChoice.READY
+            fields_to_fix.append("status")
+        if fields_to_fix:
+            source.save(update_fields=fields_to_fix)
         return source
 
     @property
@@ -305,6 +316,17 @@ class AssetLanguage(BaseModel):
     is_source = models.BooleanField(
         default=False,
         help_text="True for the asset's original/source language (at most one per asset).",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=StatusChoice,
+        default=StatusChoice.DRAFT,
+        help_text=(
+            "Consumer availability of this language rendition. DRAFT hides it from "
+            "consumers (a translation in progress); READY makes it downloadable. The "
+            "source language is created READY (the asset's own Asset.status is the "
+            "overarching gate)."
+        ),
     )
 
     class Meta:
@@ -468,6 +490,39 @@ class AssetVersionEntry(BaseModel):
 
     def __str__(self):
         return f"AssetVersionEntry(version={self.version_id}, ayah={self.ayah_id})"
+
+
+class ChangeTypeChoice(models.TextChoices):
+    ADDED = "added", _("Added")
+    MODIFIED = "modified", _("Modified")
+    REMOVED = "removed", _("Removed")
+
+
+class AssetVersionChange(BaseModel):
+    """One changed ayah in a commit — the stored per-ayah diff vs the predecessor.
+
+    Each published commit (AssetVersion) records its delta here, so the history
+    view can show what changed without recomputing, and pruned commits (whose full
+    entries were dropped) can be reconstructed by replaying these deltas.
+    """
+
+    version = models.ForeignKey(AssetVersion, on_delete=models.CASCADE, related_name="changes")
+    ayah = models.ForeignKey("quran.Ayah", on_delete=models.PROTECT, related_name="+")
+    change_type = models.CharField(max_length=10, choices=ChangeTypeChoice)
+    old_text = models.TextField(blank=True, help_text="Previous text; empty for added")
+    new_text = models.TextField(blank=True, help_text="New text; empty for removed")
+    order = models.PositiveIntegerField(default=0, help_text="Ayah index, for display ordering")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["version", "ayah"], name="unique_change_per_version_ayah"),
+        ]
+        indexes = [
+            models.Index(fields=["version", "order"]),
+        ]
+
+    def __str__(self):
+        return f"AssetVersionChange(version_id={self.version_id}, ayah_id={self.ayah_id}, {self.change_type})"
 
 
 class AssetPreview(DeleteFilesOnDeleteMixin, BaseModel):

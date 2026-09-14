@@ -96,7 +96,7 @@ class UserAdmin(auth_admin.UserAdmin):
     )
     inlines = [PublisherMemberInline]
     list_display = ["email", "name", "is_superuser"]
-    search_fields = ["name"]
+    search_fields = ["name", "email", "phone"]
     ordering = ["id"]
     readonly_fields = ("created_at", "updated_at")
     add_fieldsets = (
