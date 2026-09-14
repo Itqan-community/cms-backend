@@ -727,22 +727,20 @@ msgid "Version with id {id} not found for translation {slug}."
 msgstr "الإصدار ذو المعرف {id} غير موجود للترجمة {slug}."
 
 #: apps/core/ninja_utils/auth.py:30
-#, fuzzy
-#| msgid "The default folder cannot be deleted."
 msgid "The external user identifier cannot be empty."
-msgstr "لا يمكن حذف المجلد الافتراضي."
+msgstr "لا يمكن أن يكون معرّف المستخدم الخارجي فارغًا."
 
 #: apps/core/ninja_utils/auth.py:36
 msgid "The external user identifier is too long."
-msgstr ""
+msgstr "معرّف المستخدم الخارجي طويل جدًا."
 
 #: apps/core/ninja_utils/auth.py:42
 msgid "The external user identifier must not contain personal information."
-msgstr ""
+msgstr "يجب ألا يحتوي معرّف المستخدم الخارجي على معلومات شخصية."
 
 #: apps/core/ninja_utils/auth.py:48
 msgid "The external user identifier contains invalid characters."
-msgstr ""
+msgstr "يحتوي معرّف المستخدم الخارجي على أحرف غير صالحة."
 
 #: apps/core/ninja_utils/auth.py:96
 msgid "API key has expired."
