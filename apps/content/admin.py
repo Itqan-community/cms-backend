@@ -37,6 +37,7 @@ from .models import (
     RecitationFolder,
     RecitationSurahTrack,
     Reciter,
+    ReviewerLanguage,
     Riwayah,
     UsageEvent,
 )
@@ -990,3 +991,11 @@ class EditorialRecommendationAdmin(admin.ModelAdmin):
     @admin.display(description="Assets")
     def assets_count(self, obj: EditorialRecommendation) -> int:
         return obj.recommendation_assets.count() if obj.pk else 0
+
+
+@admin.register(ReviewerLanguage)
+class ReviewerLanguageAdmin(admin.ModelAdmin):
+    list_display = ("user", "language")
+    list_filter = ("language",)
+    search_fields = ("user__email", "user__name", "language")
+    autocomplete_fields = ("user",)

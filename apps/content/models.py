@@ -525,6 +525,47 @@ class AssetVersionChange(BaseModel):
         return f"AssetVersionChange(version_id={self.version_id}, ayah_id={self.ayah_id}, {self.change_type})"
 
 
+class ReviewStateChoice(models.TextChoices):
+    APPROVED = "approved", _("Approved")
+    COMMENTED = "commented", _("Commented")
+
+
+class ReviewerLanguage(BaseModel):
+    """A language a reviewer is assigned to review (globally, across all assets).
+
+    A user with PORTAL_REVIEW_CONTENT but no ReviewerLanguage rows can review
+    nothing. Managed via Django admin.
+    """
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="reviewer_languages")
+    language = models.CharField(max_length=10, help_text="Language code the user may review, e.g. 'fr'")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["user", "language"], name="unique_reviewer_language"),
+        ]
+
+    def __str__(self):
+        return f"ReviewerLanguage(user_id={self.user_id}, language={self.language})"
+
+
+class AssetVersionChangeReview(BaseModel):
+    """A reviewer's outcome for a single AssetVersionChange (audit-only).
+
+    Absence of a row means the change is unreviewed. ``reviewed_by`` /
+    ``reviewed_at`` record who set the current state, for auditing.
+    """
+
+    change = models.OneToOneField(AssetVersionChange, on_delete=models.CASCADE, related_name="review")
+    state = models.CharField(max_length=20, choices=ReviewStateChoice)
+    comment = models.TextField(blank=True, help_text="Reviewer comment; required when state is commented")
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="+")
+    reviewed_at = models.DateTimeField()
+
+    def __str__(self):
+        return f"AssetVersionChangeReview(change_id={self.change_id}, state={self.state})"
+
+
 class AssetPreview(DeleteFilesOnDeleteMixin, BaseModel):
     """
     Visual images for an Asset
