@@ -60,6 +60,7 @@ THIRD_PARTY_APPS = [
     "plain_permissions",
     "ninja_keys",
     *(["djangosaml2idp"] if SAML_IDP_ENABLED else []),
+    "simple_history",
 ]
 
 COUNTRIES_OVERRIDE = {"IL": None}
@@ -88,6 +89,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "apps.publishers.middlewares.publisher_middleware.PublisherMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "simple_history.middleware.HistoryRequestMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
