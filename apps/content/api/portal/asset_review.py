@@ -48,6 +48,7 @@ class ReviewChangeOut(Schema):
     change_type: str
     old_text: str
     new_text: str
+    baseline_text: str
     commit_ref: str
     commit_id: int
     review_state: str
@@ -66,6 +67,12 @@ class ReviewChangeOut(Schema):
     @staticmethod
     def resolve_surah_name(obj: AssetVersionChange) -> str:
         return obj.ayah.sura.name
+
+    @staticmethod
+    def resolve_baseline_text(obj: AssetVersionChange) -> str:
+        # The last-approved text for this ayah (annotated by the repository);
+        # empty when the ayah has never been approved.
+        return getattr(obj, "baseline_text", None) or ""
 
     @staticmethod
     def resolve_commit_ref(obj: AssetVersionChange) -> str:

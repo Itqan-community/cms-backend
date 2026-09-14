@@ -1,3 +1,6 @@
+from datetime import timedelta
+
+from django.utils import timezone
 from model_bakery import baker
 
 from apps.content.models import (
@@ -127,3 +130,36 @@ class AssetReviewServiceTest(BaseTestCase):
                 "t1", CategoryChoice.TRANSLATION, language="ar", user=self.reviewer, state=None
             )
         self.assertEqual("language_not_assigned", ctx.exception.error_name)
+
+    def test_list_changes_shows_only_latest_change_per_ayah_with_last_approved_baseline(self):
+        # Arrange — the v1 change (added "au nom") is approved, establishing the
+        # last-approved text; a newer commit then modifies the same ayah.
+        AssetVersionChangeReview.objects.create(
+            change=self.change,
+            state=ReviewStateChoice.APPROVED,
+            reviewed_by=self.reviewer,
+            reviewed_at=timezone.now(),
+        )
+        v2 = baker.make(AssetVersion, asset=self.asset, asset_language=self.fr, name="v2")
+        AssetVersion.objects.filter(pk=v2.pk).update(created_at=timezone.now() + timedelta(hours=1))
+        change2 = baker.make(
+            AssetVersionChange,
+            version=v2,
+            ayah=self.ayah,
+            change_type="modified",
+            old_text="au nom",
+            new_text="révisé",
+            order=1,
+        )
+
+        # Act
+        qs = list(
+            AssetReviewService().list_changes(
+                "t1", CategoryChoice.TRANSLATION, language="fr", user=self.reviewer, state=None
+            )
+        )
+
+        # Assert — only the latest change is reviewable (the intermediate is not),
+        # and its baseline is the last-approved text ("au nom"), not the raw old_text.
+        self.assertEqual([change2.id], [c.id for c in qs])
+        self.assertEqual("au nom", qs[0].baseline_text)

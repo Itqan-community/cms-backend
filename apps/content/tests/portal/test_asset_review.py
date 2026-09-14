@@ -157,3 +157,4 @@ class ReviewActionTest(AssetReviewApiBaseTest):
         self.assertEqual(1, row["aya"])
         self.assertEqual("added", row["change_type"])
         self.assertEqual("unreviewed", row["review_state"])
+        self.assertIn("baseline_text", row)
