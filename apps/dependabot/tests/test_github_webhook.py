@@ -1007,7 +1007,9 @@ class GitHubWebhookConcurrencyTest(TestCase):
         from django.test import Client as DjangoClient
 
         body = json.dumps(payload).encode()
-        headers = {
+        # Values typed as Any: Client.post's named params (follow/secure/...) must accept
+        # every possible key of this dict, and HTTP_* META keys carry str values.
+        headers: dict[str, Any] = {
             "HTTP_X_GITHUB_EVENT": event,
             "HTTP_X_HUB_SIGNATURE_256": _sign(WEBHOOK_SECRET, body),
         }

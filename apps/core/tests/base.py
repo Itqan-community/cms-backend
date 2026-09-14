@@ -38,6 +38,10 @@ class BaseTestCase(TestCase):
             cls.mock_aws.stop()
         except Exception:
             pass
+        # Must run Django's teardown (rollback class atomics + close
+        # connections); skipping it leaves the default connection inside a
+        # leaked atomic block, wedging every later TestCase in the run.
+        super().tearDownClass()
 
     @classmethod
     def mock_storage(cls):
