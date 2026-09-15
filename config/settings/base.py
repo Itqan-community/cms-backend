@@ -60,6 +60,7 @@ THIRD_PARTY_APPS = [
     "plain_permissions",
     "ninja_keys",
     *(["djangosaml2idp"] if SAML_IDP_ENABLED else []),
+    "simple_history",
 ]
 
 COUNTRIES_OVERRIDE = {"IL": None}
@@ -80,6 +81,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "apps.publishers.middlewares.publisher_middleware.PublisherMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "simple_history.middleware.HistoryRequestMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -120,23 +122,27 @@ DATABASES = {
         "OPTIONS": {
             "connect_timeout": 60,
         },
-    },
-    # Note: "audit" is backed up independently from "default".
-    # Retention is handled in #434.
-    "audit": {
-        "ENGINE": config("AUDIT_DB_ENGINE", default="django.db.backends.postgresql"),
-        "NAME": config("AUDIT_DB_NAME", default="itqan_audit"),
-        "USER": config("AUDIT_DB_USER", default="postgres"),
-        "PASSWORD": config("AUDIT_DB_PASSWORD", default="postgres"),
-        "HOST": config("AUDIT_DB_HOST", default="localhost"),
-        "PORT": config("AUDIT_DB_PORT", default="5432"),
-        "OPTIONS": {
-            "connect_timeout": 60,
-        },
+    }
+}
+
+# Audit database — used exclusively by django-simple-history for change logs.
+# Separated from the primary DB so audit write volume does not contend with
+# application queries and history tables can have independent retention.
+_default_db = DATABASES["default"]
+
+DATABASES["audit"] = {
+    "ENGINE": "django.db.backends.postgresql",
+    "NAME": config("AUDIT_DB_NAME", default="itqan_audit"),
+    "USER": config("AUDIT_DB_USER", default=_default_db["USER"]),
+    "PASSWORD": config("AUDIT_DB_PASSWORD", default=_default_db["PASSWORD"]),
+    "HOST": config("AUDIT_DB_HOST", default=_default_db["HOST"]),
+    "PORT": config("AUDIT_DB_PORT", default=_default_db["PORT"]),
+    "OPTIONS": {
+        "connect_timeout": 60,
     },
 }
 
-DATABASE_ROUTERS = ["apps.core.db_routers.AuditRouter"]
+DATABASE_ROUTERS = ["config.routers.AuditRouter"]
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [

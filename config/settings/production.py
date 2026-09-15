@@ -64,6 +64,8 @@ settings.DATABASES["default"].update(
     }
 )
 
+# Audit database overlay — match production requirements.
+settings.DATABASES.setdefault("audit", {})
 settings.DATABASES["audit"].update(
     {
         "ENGINE": "django.db.backends.postgresql",
