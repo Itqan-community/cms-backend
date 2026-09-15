@@ -149,6 +149,7 @@ DATABASES["audit"] = {
         "connect_timeout": 60,
     },
 }
+
 DATABASE_ROUTERS = ["config.routers.AuditRouter"]
 
 # Password validation
