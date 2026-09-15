@@ -64,7 +64,15 @@ THIRD_PARTY_APPS = [
 
 COUNTRIES_OVERRIDE = {"IL": None}
 
-LOCAL_APPS = ["apps.core", "apps.content", "apps.users", "apps.publishers", "apps.quran", "apps.package_manager"]
+LOCAL_APPS = [
+    "apps.core",
+    "apps.content",
+    "apps.users",
+    "apps.publishers",
+    "apps.quran",
+    "apps.package_manager",
+    "apps.dependabot",
+]
 
 
 MIDDLEWARE = [
@@ -431,6 +439,21 @@ OAUTH2_PROVIDER: dict[str, Any] = {
     "OIDC_ENABLED": True,
 }
 OAUTH2_PROVIDER["OIDC_RSA_PRIVATE_KEY"] = HEADLESS_JWT_PRIVATE_KEY
+
+# ========================
+# Itqan Dependabot updater — GitHub App (#426)
+# ========================
+# Gated off by default until the fetch/registry path is proven. The private
+# key is loaded with read_file() (inline PEM or a path to a PEM file) and is
+# never validated or used at import time — misconfiguration surfaces lazily
+# as ItqanError when the installation-token service is actually invoked.
+ENABLE_ITQAN_DEPENDABOT = config("ENABLE_ITQAN_DEPENDABOT", cast=bool, default=False)
+GITHUB_APP_ID = config("GITHUB_APP_ID", cast=int, default=0)
+GITHUB_APP_PRIVATE_KEY = read_file("GITHUB_APP_PRIVATE_KEY")
+GITHUB_API_BASE_URL = config("GITHUB_API_BASE_URL", default="https://api.github.com")
+GITHUB_HTTP_TIMEOUT_SECONDS = config("GITHUB_HTTP_TIMEOUT_SECONDS", cast=float, default=10)
+GITHUB_TOKEN_CACHE_SKEW_SECONDS = config("GITHUB_TOKEN_CACHE_SKEW_SECONDS", cast=int, default=60)
+GITHUB_WEBHOOK_SECRET = config("GITHUB_WEBHOOK_SECRET", default="")
 
 # ========================
 # SAML IDP (djangosaml2idp)

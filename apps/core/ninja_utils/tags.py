@@ -24,3 +24,4 @@ class NinjaTag(models.TextChoices):
     QURAN = "Quran"
     SAMPLE_DATA = "Sample Data"
     PACKAGES = "Packages"
+    DEPENDABOT = "Dependabot"
