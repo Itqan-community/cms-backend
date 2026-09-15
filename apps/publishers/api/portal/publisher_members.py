@@ -39,10 +39,15 @@ class MemberOut(Schema):
     publisher_id: int
     expires_at: AwareDatetime | None = None
     created_at: AwareDatetime
+    reviewer_languages: list[str]
 
     @staticmethod
     def resolve_name(obj: PublisherMember) -> str:
         return obj.user.name
+
+    @staticmethod
+    def resolve_reviewer_languages(obj: PublisherMember) -> list[str]:
+        return sorted(rl.language for rl in obj.reviewer_languages.all())
 
     @staticmethod
     def resolve_email(obj: PublisherMember) -> str:
@@ -71,7 +76,7 @@ class MemberCreateIn(Schema):
 def _members_qs():
     return (
         PublisherMember.objects.select_related("user", "publisher", "group")
-        .prefetch_related("invitations")
+        .prefetch_related("invitations", "reviewer_languages")
         .order_by("-created_at")
     )
 
@@ -151,6 +156,33 @@ def update_member(request: Request, member_id: int, data: MemberPatchIn):
             status_code=403,
         )
     PublisherMemberService().update_member(member, fields=data.model_dump(exclude_unset=True))
+    return _members_qs().get(id=member.id)
+
+
+class ReviewerLanguagesIn(Schema):
+    languages: list[str]
+
+
+@router.put(
+    "members/{int:member_id}/reviewer-languages/",
+    response={200: MemberOut, 403: NinjaErrorResponse, 404: NinjaErrorResponse},
+)
+@permission_required([permission_class(PermissionChoice.PORTAL_UPDATE_PUBLISHER_MEMBERS)])
+def set_reviewer_languages(request: Request, member_id: int, data: ReviewerLanguagesIn):
+    """Replace the languages this member is assigned to review. Assignment is
+    per membership (scoped to this member's publisher), managed from the member
+    screen."""
+    from django.db import transaction
+
+    from apps.content.models import ReviewerLanguage
+
+    member = get_object_or_404(_members_qs(), id=member_id)
+    enforce_member_scope(request.user, member)
+    languages = sorted({code.strip() for code in data.languages if code.strip()})
+    with transaction.atomic():
+        ReviewerLanguage.objects.filter(member=member).delete()
+        ReviewerLanguage.objects.bulk_create([ReviewerLanguage(member=member, language=code) for code in languages])
+    logger.info(f"Reviewer languages set [member_id={member_id}, count={len(languages)}, user_id={request.user.id}]")
     return _members_qs().get(id=member.id)
 
 

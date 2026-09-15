@@ -15,6 +15,7 @@ from apps.content.models import (
 )
 from apps.content.repositories.asset_review import AssetReviewRepository, change_language
 from apps.core.ninja_utils.errors import ItqanError
+from apps.publishers.models import PublisherMember
 
 _NOT_FOUND_ERROR = {
     CategoryChoice.TRANSLATION: "translation_not_found",
@@ -39,11 +40,20 @@ class AssetReviewService:
                 status_code=404,
             ) from exc
 
-    def assigned_languages(self, user) -> set[str]:
-        return set(ReviewerLanguage.objects.filter(user=user).values_list("language", flat=True))
+    def assigned_languages(self, user, asset: Asset) -> set[str]:
+        """The languages this user may review for this asset — the ReviewerLanguage
+        rows on their *active membership in the asset's publisher*. Assignment is
+        per-membership, so a user can review different languages per publisher."""
+        return set(
+            ReviewerLanguage.objects.filter(
+                member__user=user,
+                member__publisher_id=asset.publisher_id,
+                member__status=PublisherMember.StatusChoice.ACTIVE,
+            ).values_list("language", flat=True)
+        )
 
-    def _require_assigned(self, user, language: str) -> None:
-        if language not in self.assigned_languages(user):
+    def _require_assigned(self, user, asset: Asset, language: str) -> None:
+        if language not in self.assigned_languages(user, asset):
             raise ItqanError(
                 error_name="language_not_assigned",
                 message=_("You are not assigned to review this language."),
@@ -56,7 +66,7 @@ class AssetReviewService:
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
         asset_languages = set(asset.languages.values_list("language", flat=True))
         asset_languages.add(asset.language)  # source, even when the row is created lazily
-        return sorted(asset_languages & self.assigned_languages(user))
+        return sorted(asset_languages & self.assigned_languages(user, asset))
 
     def list_changes(
         self,
@@ -69,7 +79,7 @@ class AssetReviewService:
         publisher_q: Q | None = None,
     ) -> QuerySet[AssetVersionChange]:
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
-        self._require_assigned(user, language)
+        self._require_assigned(user, asset, language)
         return self.repo.changes_for(asset, language, state=state)
 
     def set_review_state(
@@ -91,7 +101,7 @@ class AssetReviewService:
                 message=_("Change with id {id} not found.").format(id=change_id),
                 status_code=404,
             )
-        self._require_assigned(user, change_language(change))
+        self._require_assigned(user, asset, change_language(change))
 
         if state == "unreviewed":
             AssetVersionChangeReview.objects.filter(change=change).delete()

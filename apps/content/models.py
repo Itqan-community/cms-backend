@@ -531,22 +531,25 @@ class ReviewStateChoice(models.TextChoices):
 
 
 class ReviewerLanguage(BaseModel):
-    """A language a reviewer is assigned to review (globally, across all assets).
+    """A language a publisher member is assigned to review, scoped to that
+    membership (a user may review different languages for different publishers).
 
-    A user with PORTAL_REVIEW_CONTENT but no ReviewerLanguage rows can review
-    nothing. Managed via Django admin.
+    A member with PORTAL_REVIEW_CONTENT but no ReviewerLanguage rows can review
+    nothing. Managed via Django admin and the portal member screen.
     """
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="reviewer_languages")
-    language = models.CharField(max_length=10, help_text="Language code the user may review, e.g. 'fr'")
+    member = models.ForeignKey(
+        "publishers.PublisherMember", on_delete=models.CASCADE, related_name="reviewer_languages"
+    )
+    language = models.CharField(max_length=10, help_text="Language code the member may review, e.g. 'fr'")
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["user", "language"], name="unique_reviewer_language"),
+            models.UniqueConstraint(fields=["member", "language"], name="unique_reviewer_member_language"),
         ]
 
     def __str__(self):
-        return f"ReviewerLanguage(user_id={self.user_id}, language={self.language})"
+        return f"ReviewerLanguage(member_id={self.member_id}, language={self.language})"
 
 
 class AssetVersionChangeReview(BaseModel):

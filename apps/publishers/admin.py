@@ -3,6 +3,8 @@ from django.db.models import Count
 from django.urls import reverse
 from django.utils.html import format_html
 
+from apps.content.models import ReviewerLanguage
+
 from .models import Domain, Publisher, PublisherMember, PublisherMemberInvitation
 
 
@@ -11,6 +13,14 @@ class PublisherMemberInline(admin.TabularInline):
     extra = 0
     fields = ["user", "group"]
     raw_id_fields = ["user"]
+
+
+class ReviewerLanguageInline(admin.TabularInline):
+    """The languages this membership is assigned to review (content review phase)."""
+
+    model = ReviewerLanguage
+    extra = 0
+    fields = ["language"]
 
 
 @admin.register(Publisher)
@@ -106,6 +116,7 @@ class PublisherMemberAdmin(admin.ModelAdmin):
     list_filter = ["group", "created_at"]
     search_fields = ["user__email", "publisher__name"]
     raw_id_fields = ["user", "publisher"]
+    inlines = [ReviewerLanguageInline]
 
 
 @admin.register(PublisherMemberInvitation)

@@ -14,7 +14,7 @@ from apps.content.models import (
 )
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
-from apps.publishers.models import Publisher
+from apps.publishers.models import Publisher, PublisherMember
 from apps.quran.models import Ayah, Sura
 from apps.users.models import User
 
@@ -39,6 +39,12 @@ class AssetReviewApiBaseTest(BaseTestCase):
             AssetVersionChange, version=self.version, ayah=self.ayah, change_type="added", new_text="au nom", order=1
         )
         self.user = User.objects.create_user(email="rev@example.com", name="Rev", is_staff=True)
+        self.membership = baker.make(
+            PublisherMember,
+            user=self.user,
+            publisher=self.publisher,
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
 
     def _changes_url(self, query=""):
         return f"/portal/content/translations/{self.asset.slug}/review/changes/{query}"
@@ -48,7 +54,7 @@ class ReviewPermissionTest(AssetReviewApiBaseTest):
     def test_list_changes_where_no_review_permission_should_return_403(self):
         # Arrange — assigned the language but lacking the review permission
         self.authenticate_user(self.user)
-        ReviewerLanguage.objects.create(user=self.user, language="fr")
+        ReviewerLanguage.objects.create(member=self.membership, language="fr")
 
         # Act
         response = self.client.get(self._changes_url("?language=fr"))
@@ -62,7 +68,7 @@ class ReviewAssignmentTest(AssetReviewApiBaseTest):
         # Arrange — assigned 'es', not 'fr'
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_REVIEW_CONTENT)
-        ReviewerLanguage.objects.create(user=self.user, language="es")
+        ReviewerLanguage.objects.create(member=self.membership, language="es")
 
         # Act
         response = self.client.get(self._changes_url("?language=fr"))
@@ -75,7 +81,7 @@ class ReviewAssignmentTest(AssetReviewApiBaseTest):
         # Arrange
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_REVIEW_CONTENT)
-        ReviewerLanguage.objects.create(user=self.user, language="fr")
+        ReviewerLanguage.objects.create(member=self.membership, language="fr")
 
         # Act
         response = self.client.get(f"/portal/content/translations/{self.asset.slug}/review/languages/")
@@ -89,7 +95,7 @@ class ReviewActionTest(AssetReviewApiBaseTest):
     def _auth_reviewer(self):
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_REVIEW_CONTENT)
-        ReviewerLanguage.objects.create(user=self.user, language="fr")
+        ReviewerLanguage.objects.create(member=self.membership, language="fr")
 
     def _patch_url(self, change_id):
         return f"/portal/content/translations/{self.asset.slug}/review/changes/{change_id}/"

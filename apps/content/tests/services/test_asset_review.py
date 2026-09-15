@@ -17,6 +17,7 @@ from apps.content.models import (
 from apps.content.services.asset_review import AssetReviewService
 from apps.core.ninja_utils.errors import ItqanError
 from apps.core.tests.base import BaseTestCase
+from apps.publishers.models import Publisher, PublisherMember
 from apps.quran.models import Ayah, Sura
 from apps.users.models import User
 
@@ -24,8 +25,14 @@ from apps.users.models import User
 class AssetReviewServiceTest(BaseTestCase):
     def setUp(self):
         super().setUp()
+        self.publisher = baker.make(Publisher)
         self.asset = baker.make(
-            Asset, category=CategoryChoice.TRANSLATION, status=StatusChoice.READY, language="ar", slug="t1"
+            Asset,
+            category=CategoryChoice.TRANSLATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
+            language="ar",
+            slug="t1",
         )
         self.fr = AssetLanguage.objects.create(asset=self.asset, language="fr")
         self.version = baker.make(AssetVersion, asset=self.asset, asset_language=self.fr, name="v1")
@@ -35,7 +42,14 @@ class AssetReviewServiceTest(BaseTestCase):
             AssetVersionChange, version=self.version, ayah=self.ayah, change_type="added", new_text="au nom", order=1
         )
         self.reviewer = User.objects.create_user(email="rev@example.com", name="Rev")
-        ReviewerLanguage.objects.create(user=self.reviewer, language="fr")
+        # Assigned to review 'fr' via an active membership in the asset's publisher.
+        self.membership = baker.make(
+            PublisherMember,
+            user=self.reviewer,
+            publisher=self.publisher,
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
+        ReviewerLanguage.objects.create(member=self.membership, language="fr")
 
     def test_set_review_state_where_assigned_should_approve_and_record_auditing(self):
         # Act
@@ -128,6 +142,26 @@ class AssetReviewServiceTest(BaseTestCase):
         with self.assertRaises(ItqanError) as ctx:
             AssetReviewService().list_changes(
                 "t1", CategoryChoice.TRANSLATION, language="ar", user=self.reviewer, state=None
+            )
+        self.assertEqual("language_not_assigned", ctx.exception.error_name)
+
+    def test_list_changes_where_assignment_is_for_another_publisher_should_raise_403(self):
+        # Arrange — the reviewer is assigned 'fr', but on a DIFFERENT publisher's
+        # membership; it must not grant review over this asset's publisher.
+        other_publisher = baker.make(Publisher)
+        other_member = baker.make(
+            PublisherMember,
+            user=self.reviewer,
+            publisher=other_publisher,
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
+        ReviewerLanguage.objects.create(member=other_member, language="fr")
+        ReviewerLanguage.objects.filter(member=self.membership).delete()
+
+        # Act / Assert
+        with self.assertRaises(ItqanError) as ctx:
+            AssetReviewService().list_changes(
+                "t1", CategoryChoice.TRANSLATION, language="fr", user=self.reviewer, state=None
             )
         self.assertEqual("language_not_assigned", ctx.exception.error_name)
 

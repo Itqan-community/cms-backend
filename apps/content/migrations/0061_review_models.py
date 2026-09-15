@@ -9,6 +9,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('content', '0060_asset_language_status'),
+        ('publishers', '0001_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -35,11 +36,11 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(help_text='Unique identifier for this record', primary_key=True, serialize=False)),
                 ('created_at', models.DateTimeField(auto_now_add=True, help_text='Timestamp when this record was created')),
                 ('updated_at', models.DateTimeField(auto_now=True, help_text='Timestamp when this record was last updated')),
-                ('language', models.CharField(help_text="Language code the user may review, e.g. 'fr'", max_length=10)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='reviewer_languages', to=settings.AUTH_USER_MODEL)),
+                ('language', models.CharField(help_text="Language code the member may review, e.g. 'fr'", max_length=10)),
+                ('member', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='reviewer_languages', to='publishers.publishermember')),
             ],
             options={
-                'constraints': [models.UniqueConstraint(fields=('user', 'language'), name='unique_reviewer_language')],
+                'constraints': [models.UniqueConstraint(fields=('member', 'language'), name='unique_reviewer_member_language')],
             },
         ),
     ]
