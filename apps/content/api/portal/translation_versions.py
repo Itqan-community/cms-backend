@@ -7,6 +7,11 @@ from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
 from apps.content.models import Asset, AssetVersion, CategoryChoice, StatusChoice, VersionStateChoice
+from apps.content.services.asset_language_access import (
+    filter_versions_to_allowed,
+    require_language,
+    require_version_id,
+)
 from apps.content.services.translation import TranslationService
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.permission_required import permission_required
@@ -110,12 +115,15 @@ def list_translation_versions(request: Request, translation_slug: str, language:
         .prefetch_related("changes")
     )
     if language:
+        require_language(request.user, asset, language)
         # Legacy versions have no asset_language and belong to the source
         # language; include them when the source language is requested.
         language_q = Q(asset_language__language=language)
         if language == asset.language:
             language_q |= Q(asset_language__isnull=True)
         versions = versions.filter(language_q)
+    else:
+        versions = filter_versions_to_allowed(request.user, asset, versions)
     return versions.order_by("-created_at")
 
 
@@ -154,6 +162,8 @@ def create_translation_version(
             status_code=400,
         )
 
+    # language is optional; omitting it targets the asset's source language.
+    require_language(request.user, asset, data.language or asset.language)
     version = service.create_translation_version(
         translation_slug,
         name=data.name,
@@ -206,6 +216,7 @@ def update_translation_version_put(
     if file:
         fields["file_url"] = file
 
+    require_version_id(request.user, asset, version_id)
     return service.update_translation_version(
         translation_slug, version_id, fields=fields, publisher_q=request.publisher_q()
     )
@@ -252,6 +263,7 @@ def update_translation_version_patch(
     if file:
         fields["file_url"] = file
 
+    require_version_id(request.user, asset, version_id)
     return service.update_translation_version(
         translation_slug, version_id, fields=fields, publisher_q=request.publisher_q()
     )
@@ -267,5 +279,16 @@ def update_translation_version_patch(
 @permission_required([permission_class(PermissionChoice.PORTAL_DELETE_TRANSLATION)])
 def delete_translation_version(request: Request, translation_slug: str, version_id: int) -> tuple[int, None]:
     service = TranslationService()
+    try:
+        asset = Asset.objects.filter(request.publisher_q()).get(
+            slug=translation_slug, category=CategoryChoice.TRANSLATION, status=StatusChoice.READY
+        )
+    except Asset.DoesNotExist as exc:
+        raise ItqanError(
+            error_name="translation_not_found",
+            message=_("Translation with slug {slug} not found.").format(slug=translation_slug),
+            status_code=404,
+        ) from exc
+    require_version_id(request.user, asset, version_id)
     service.delete_translation_version(translation_slug, version_id, publisher_q=request.publisher_q())
     return 204, None

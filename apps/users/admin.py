@@ -92,13 +92,27 @@ class UserAdmin(auth_admin.UserAdmin):
                 ),
             },
         ),
+        (_("Language assignments"), {"fields": ("assigned_languages_summary",)}),
         (_("Important dates"), {"fields": ("last_login", "created_at", "updated_at")}),
     )
     inlines = [PublisherMemberInline]
     list_display = ["email", "name", "is_superuser"]
     search_fields = ["name", "email", "phone"]
     ordering = ["id"]
-    readonly_fields = ("created_at", "updated_at")
+    readonly_fields = ("created_at", "updated_at", "assigned_languages_summary")
+
+    @admin.display(description=_("Assigned languages (per publisher)"))
+    def assigned_languages_summary(self, obj: User) -> str:
+        if obj.pk is None:
+            return "—"
+        parts = []
+        memberships = obj.publisher_memberships.select_related("publisher").prefetch_related("languages")
+        for member in memberships:
+            langs = sorted(rl.language for rl in member.languages.all())
+            if langs:
+                parts.append(f"{member.publisher.name}: {', '.join(langs)}")
+        return "; ".join(parts) or "—"
+
     add_fieldsets = (
         (
             None,

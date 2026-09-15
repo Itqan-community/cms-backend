@@ -13,12 +13,20 @@ from ninja import File, Form, Schema, UploadedFile
 from apps.content.api.portal.asset_content import _resolve
 from apps.content.models import AssetLanguage, CategoryChoice, StatusChoice
 from apps.content.services.asset_language import AssetLanguageService
+from apps.content.services.asset_language_access import (
+    allowed_languages,
+    assign_language_to_member,
+    require_language,
+)
 from apps.content.services.tafsir import TafsirService
 from apps.content.services.translation import TranslationService
 from apps.core.ninja_utils.errors import NinjaErrorResponse
+from apps.core.ninja_utils.permission_required import permission_required
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.core.permission_utils import permission_class
+from apps.core.permissions import PermissionChoice
 
 router = ItqanRouter(tags=[NinjaTag.TRANSLATIONS])
 
@@ -51,8 +59,16 @@ class LanguageAvailabilityIn(Schema):
     },
 )
 def list_languages(request: Request, category: str, slug: str) -> list[AssetLanguage]:
+    """The asset's languages, narrowed to the ones this member works in.
+
+    Holders of ``PORTAL_ACCESS_ALL_LANGUAGES`` see them all.
+    """
     resolved = _resolve(category, request, write=False)
-    return AssetLanguageService().list_languages(slug, resolved, publisher_q=request.publisher_q())
+    languages = AssetLanguageService().list_languages(slug, resolved, publisher_q=request.publisher_q())
+    if not languages:
+        return languages
+    allowed = allowed_languages(request.user, languages[0].asset)
+    return [rendition for rendition in languages if rendition.language in allowed]
 
 
 @router.post(
@@ -65,6 +81,7 @@ def list_languages(request: Request, category: str, slug: str) -> list[AssetLang
         | NinjaErrorResponse[Literal["unsupported_content_category"]],
     },
 )
+@permission_required([permission_class(PermissionChoice.PORTAL_ADD_ASSET_LANGUAGE)])
 def add_language(
     request: Request,
     category: str,
@@ -77,8 +94,13 @@ def add_language(
     When a file is provided it becomes the language's first published version and
     is parsed into per-ayah entries — so a translator can add a language and upload
     its content in one step.
+
+    Gated by ``PORTAL_ADD_ASSET_LANGUAGE`` rather than the content-edit permission,
+    so who may start a new language is controlled separately from who may edit one.
+    The new language is assigned to the creator's membership, otherwise they would
+    immediately be unable to edit what they just created.
     """
-    resolved = _resolve(category, request, write=True)
+    resolved = _resolve(category, request, write=False)
     publisher_q = request.publisher_q()
     # Register the language and seed its first version atomically: if the upload
     # fails (storage error or an unparseable file), the language registration is
@@ -87,6 +109,7 @@ def add_language(
         asset_language = AssetLanguageService().add_language(
             slug, resolved, language=data.language, publisher_q=publisher_q
         )
+        assign_language_to_member(request.user, asset_language.asset, data.language)
         if file is not None:
             if resolved == CategoryChoice.TAFSIR:
                 TafsirService().create_tafsir_version(
@@ -123,6 +146,9 @@ def set_language_availability(
     unfinished translation is never advertised to end users.
     """
     resolved = _resolve(category, request, write=True)
-    return AssetLanguageService().set_language_status(
+    service = AssetLanguageService()
+    asset = service.get_asset(slug, resolved, publisher_q=request.publisher_q())
+    require_language(request.user, asset, language)
+    return service.set_language_status(
         slug, resolved, language=language, available=data.available, publisher_q=request.publisher_q()
     )

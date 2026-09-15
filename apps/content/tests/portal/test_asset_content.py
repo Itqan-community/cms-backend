@@ -35,6 +35,10 @@ class AssetContentBaseTest(BaseTestCase):
             language="ar",
         )
         self.user = User.objects.create_user(email="editor@example.com", name="Editor", is_staff=True)
+        # These suites exercise editing, not language assignment: give the user the
+        # assignment bypass so they behave like the existing editor groups that the
+        # rollout migration grants it to. Assignment itself is covered by its own tests.
+        self.give_permission(self.user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES)
         # A tiny corpus: sura 1 with 3 ayahs.
         self.sura = baker.make(Sura, id=1, name="الفاتحة", ayas_count=3)
         self.ayahs = [baker.make(Ayah, id=i, sura=self.sura, number_in_sura=i, text=f"ayah {i}") for i in (1, 2, 3)]
