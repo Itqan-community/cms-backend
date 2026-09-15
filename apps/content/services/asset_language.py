@@ -23,6 +23,11 @@ class AssetLanguageService:
     def _asset(self, slug: str, category: CategoryChoice, publisher_q: Q | None = None) -> Asset:
         return self._content._get_asset_or_404(slug, category, publisher_q=publisher_q)
 
+    def get_asset(self, slug: str, category: CategoryChoice, *, publisher_q: Q | None = None) -> Asset:
+        """The asset behind these renditions, or 404. Public so callers that must
+        authorize against the asset (per-language access) need not reach inside."""
+        return self._asset(slug, category, publisher_q)
+
     def list_languages(
         self, slug: str, category: CategoryChoice, *, publisher_q: Q | None = None
     ) -> list[AssetLanguage]:

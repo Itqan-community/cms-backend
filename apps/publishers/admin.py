@@ -3,7 +3,7 @@ from django.db.models import Count
 from django.urls import reverse
 from django.utils.html import format_html
 
-from .models import Domain, Publisher, PublisherMember, PublisherMemberInvitation
+from .models import Domain, MemberLanguage, Publisher, PublisherMember, PublisherMemberInvitation
 
 
 class PublisherMemberInline(admin.TabularInline):
@@ -11,6 +11,14 @@ class PublisherMemberInline(admin.TabularInline):
     extra = 0
     fields = ["user", "group"]
     raw_id_fields = ["user"]
+
+
+class MemberLanguageInline(admin.TabularInline):
+    """The languages this membership works in — both editing and reviewing."""
+
+    model = MemberLanguage
+    extra = 0
+    fields = ["language"]
 
 
 @admin.register(Publisher)
@@ -106,6 +114,7 @@ class PublisherMemberAdmin(admin.ModelAdmin):
     list_filter = ["group", "created_at"]
     search_fields = ["user__email", "publisher__name"]
     raw_id_fields = ["user", "publisher"]
+    inlines = [MemberLanguageInline]
 
 
 @admin.register(PublisherMemberInvitation)
@@ -142,6 +151,14 @@ class PublisherMemberInvitationAdmin(admin.ModelAdmin):
     @admin.display(description="Group")
     def group_name(self, obj):
         return obj.group_name
+
+
+@admin.register(MemberLanguage)
+class MemberLanguageAdmin(admin.ModelAdmin):
+    list_display = ("member", "language")
+    list_filter = ("language",)
+    search_fields = ("member__user__email", "member__user__name", "member__publisher__name", "language")
+    autocomplete_fields = ("member",)
 
 
 @admin.register(Domain)
