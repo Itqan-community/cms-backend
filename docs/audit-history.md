@@ -5,13 +5,15 @@
 1. Add the field:
 
    ```python
+   from django.db import models
    from simple_history.models import HistoricalRecords
 
    class MyModel(BaseModel):
        # ... fields ...
        history = HistoricalRecords(
+           app="simple_history",
            use_base_model_db=False,
-           user_db_constraint=False,
+           history_user_id_field=models.BigIntegerField(null=True),
        )
    ```
 
@@ -31,10 +33,11 @@
    uv run python manage.py migrate --database=audit
    ```
 
-> **Both parameters are mandatory:**
+> **All three parameters are mandatory:**
 >
+> - **`app="simple_history"`**: Sets the generated model's `app_label` to `simple_history`. This is required by `apps.core.db_routers.AuditRouter` to correctly route history tables to the `audit` database.
 > - **`use_base_model_db=False`**: Instructs `django-simple-history` to respect `DATABASE_ROUTERS` instead of writing to the tracked model's database. Omitting it silently routes history tables to `default`.
-> - **`user_db_constraint=False`**: Prevents Django from attempting to create a database-level foreign key constraint between `history_user_id` in the `audit` DB and `users_user` in the `default` DB. Cross-database foreign keys are invalid in PostgreSQL and would fail with `relation "users_user" does not exist` during migration.
+> - **`history_user_id_field=models.BigIntegerField(null=True)`**: Stores the authenticated user's ID as a plain scalar column instead of a Django `ForeignKey`. This avoids cross-database relational constraint errors between the `audit` database and the `default` database.
 
 ## How user attribution works
 
@@ -59,4 +62,4 @@ By the time `model.save()` triggers history, the user is already set.
 | `default` | Application tables (users, content, publishers, quran) |
 | `audit`   | `simple_history` tables, routed by `AuditRouter`       |
 
-`history_user_id` is a plain integer column (`user_db_constraint=False`) — no cross-database FK constraint.
+`history_user_id` is a plain big integer column (`history_user_id_field=models.BigIntegerField(null=True)`) — no cross-database foreign key or ORM relation constraint.

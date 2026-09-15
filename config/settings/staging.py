@@ -68,24 +68,6 @@ settings.DATABASES.update(
     }
 )
 
-# Audit database overlay — match staging security requirements.
-settings.DATABASES.setdefault("audit", {})
-settings.DATABASES["audit"].update(
-    {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("AUDIT_DB_NAME"),
-        "USER": config("AUDIT_DB_USER"),
-        "PASSWORD": config("AUDIT_DB_PASSWORD"),
-        "HOST": config("AUDIT_DB_HOST"),
-        "PORT": config("AUDIT_DB_PORT"),
-        "OPTIONS": {
-            "sslmode": "require",
-            "connect_timeout": 10,
-            "options": "-c statement_timeout=30000",
-        },
-    }
-)
-
 # ============================================================
 # CSRF
 # ============================================================

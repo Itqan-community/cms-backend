@@ -24,7 +24,6 @@ from simple_history.models import HistoricalRecords
 
 
 class MiddlewareReferenceSemanticTests(SimpleTestCase):
-
     def setUp(self):
         self.factory = RequestFactory()
 
@@ -82,7 +81,6 @@ class MiddlewareReferenceSemanticTests(SimpleTestCase):
 
 
 class NinjaAuthBehavioralTests(SimpleTestCase):
-
     def setUp(self):
         self.factory = RequestFactory()
 
