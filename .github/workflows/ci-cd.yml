@@ -97,7 +97,7 @@ jobs:
           cache-to: type=registry,ref=${{ steps.vars.outputs.image_repo }}:buildcache-${{ steps.vars.outputs.branch }},mode=max,compression=zstd
 
       - name: Deploy to ${{ env.ENV_NAME }}
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ env.HOST }}
           username: ${{ secrets.SSH_USER }}
