@@ -75,6 +75,17 @@ class PermissionChoice(TextChoices):
         _("Portal - Manage Access Requests Settings"),
     )
 
+    # Content review
+    PORTAL_REVIEW_CONTENT = "portal_review_content", _("Portal - Review Content")
+
+    # Asset languages
+    # ACCESS_ALL_LANGUAGES bypasses per-member language assignment: the holder is treated as
+    # assigned to every language on an asset. It grants no editing or reviewing rights of its
+    # own — what the holder may DO is still governed by PORTAL_UPDATE_* / PORTAL_REVIEW_CONTENT,
+    # which is why it appears in no implication entry below.
+    PORTAL_ACCESS_ALL_LANGUAGES = "portal_access_all_languages", _("Portal - Access All Languages")
+    PORTAL_ADD_ASSET_LANGUAGE = "portal_add_asset_language", _("Portal - Add Asset Language")
+
 
 # Permission hierarchy: maps each permission to the set of permissions it directly implies.
 #

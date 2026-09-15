@@ -1,11 +1,17 @@
 from typing import Literal
 
+from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from ninja import File, Form, Schema, UploadedFile
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
 from apps.content.models import Asset, AssetVersion, CategoryChoice, VersionStateChoice
+from apps.content.services.asset_language_access import (
+    filter_versions_to_allowed,
+    require_language,
+    require_version_id,
+)
 from apps.content.services.tafsir import TafsirService
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.permission_required import permission_required
@@ -22,11 +28,39 @@ router = ItqanRouter(tags=[NinjaTag.TAFSIRS])
 class TafsirVersionListOut(Schema):
     id: int
     asset_id: int
+    language: str
+    is_active: bool
     name: str
     summary: str
+    created_by: str | None
+    change_counts: dict | None
     file_url: str | None = None
     size_bytes: int
     created_at: AwareDatetime
+
+    @staticmethod
+    def resolve_language(obj: AssetVersion) -> str:
+        return obj.asset_language.language if obj.asset_language_id else obj.asset.language
+
+    @staticmethod
+    def resolve_is_active(obj: AssetVersion) -> bool:
+        language = obj.asset_language.language if obj.asset_language_id else obj.asset.language
+        latest = obj.asset.get_latest_version(language)
+        return latest is not None and latest.id == obj.id
+
+    @staticmethod
+    def resolve_created_by(obj: AssetVersion) -> str | None:
+        return obj.created_by.name if obj.created_by_id else None
+
+    @staticmethod
+    def resolve_change_counts(obj: AssetVersion) -> dict | None:
+        rows = list(obj.changes.all())
+        if not rows:
+            return None
+        counts = {"added": 0, "modified": 0, "removed": 0}
+        for change in rows:
+            counts[change.change_type] = counts.get(change.change_type, 0) + 1
+        return counts
 
     @staticmethod
     def resolve_file_url(obj: AssetVersion) -> str | None:
@@ -39,6 +73,7 @@ class TafsirVersionCreateIn(Schema):
     asset_id: int
     name: str = Field(..., max_length=255)
     summary: str = ""
+    language: str | None = None
 
 
 class TafsirVersionPutIn(Schema):
@@ -63,7 +98,7 @@ class TafsirVersionPatchIn(Schema):
 @permission_required([permission_class(PermissionChoice.PORTAL_READ_TAFSIR)])
 @paginate
 @searching(search_fields=["name", "summary"])
-def list_tafsir_versions(request: Request, tafsir_slug: str):
+def list_tafsir_versions(request: Request, tafsir_slug: str, language: str | None = None):
     try:
         asset = Asset.objects.filter(request.publisher_q()).get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
     except Asset.DoesNotExist as exc:
@@ -72,7 +107,22 @@ def list_tafsir_versions(request: Request, tafsir_slug: str):
             message=_("Tafsir with slug {slug} not found.").format(slug=tafsir_slug),
             status_code=404,
         ) from exc
-    return AssetVersion.objects.filter(asset=asset, state=VersionStateChoice.PUBLISHED).order_by("-created_at")
+    versions = (
+        AssetVersion.objects.filter(asset=asset, state=VersionStateChoice.PUBLISHED)
+        .select_related("created_by", "asset_language", "asset")
+        .prefetch_related("changes")
+    )
+    if language:
+        require_language(request.user, asset, language)
+        # Legacy versions have no asset_language and belong to the source
+        # language; include them when the source language is requested.
+        language_q = Q(asset_language__language=language)
+        if language == asset.language:
+            language_q |= Q(asset_language__isnull=True)
+        versions = versions.filter(language_q)
+    else:
+        versions = filter_versions_to_allowed(request.user, asset, versions)
+    return versions.order_by("-created_at")
 
 
 @router.post(
@@ -108,11 +158,14 @@ def create_tafsir_version(
             status_code=400,
         )
 
+    # language is optional; omitting it targets the asset's source language.
+    require_language(request.user, asset, data.language or asset.language)
     version = service.create_tafsir_version(
         tafsir_slug,
         name=data.name,
         summary=data.summary,
         file=file,
+        language=data.language,
         publisher_q=request.publisher_q(),
     )
     return 201, version
@@ -157,6 +210,7 @@ def update_tafsir_version_put(
     if file:
         fields["file_url"] = file
 
+    require_version_id(request.user, asset, version_id)
     return service.update_tafsir_version(tafsir_slug, version_id, fields=fields, publisher_q=request.publisher_q())
 
 
@@ -199,6 +253,7 @@ def update_tafsir_version_patch(
     if file:
         fields["file_url"] = file
 
+    require_version_id(request.user, asset, version_id)
     return service.update_tafsir_version(tafsir_slug, version_id, fields=fields, publisher_q=request.publisher_q())
 
 
@@ -212,5 +267,14 @@ def update_tafsir_version_patch(
 @permission_required([permission_class(PermissionChoice.PORTAL_DELETE_TAFSIR)])
 def delete_tafsir_version(request: Request, tafsir_slug: str, version_id: int) -> tuple[int, None]:
     service = TafsirService()
+    try:
+        asset = Asset.objects.filter(request.publisher_q()).get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
+    except Asset.DoesNotExist as exc:
+        raise ItqanError(
+            error_name="tafsir_not_found",
+            message=_("Tafsir with slug {slug} not found.").format(slug=tafsir_slug),
+            status_code=404,
+        ) from exc
+    require_version_id(request.user, asset, version_id)
     service.delete_tafsir_version(tafsir_slug, version_id, publisher_q=request.publisher_q())
     return 204, None

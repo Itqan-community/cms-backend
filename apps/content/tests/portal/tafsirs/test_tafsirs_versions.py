@@ -2,10 +2,20 @@ from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetAccess, AssetAccessRequest, AssetVersion, CategoryChoice, StatusChoice
+from apps.content.models import (
+    Asset,
+    AssetAccess,
+    AssetAccessRequest,
+    AssetLanguage,
+    AssetVersion,
+    AssetVersionChange,
+    CategoryChoice,
+    StatusChoice,
+)
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
+from apps.quran.models import Ayah, Sura
 from apps.users.models import User
 
 
@@ -22,6 +32,10 @@ class TafsirVersionBaseTest(BaseTestCase):
             slug="tafsir-al-tabari",
         )
         self.user = User.objects.create_user(email="testuser@example.com", name="Test User", is_staff=True)
+        # These suites exercise editing, not language assignment: give the user the
+        # assignment bypass so they behave like the existing editor groups that the
+        # rollout migration grants it to. Assignment itself is covered by its own tests.
+        self.give_permission(self.user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES)
 
 
 class TafsirVersionListTest(TafsirVersionBaseTest):
@@ -40,6 +54,57 @@ class TafsirVersionListTest(TafsirVersionBaseTest):
         body = response.json()
         self.assertEqual(2, len(body["results"]))
         self.assertEqual("V2", body["results"][0]["name"])  # Ordered by -created_at
+
+    def test_list_versions_filtered_by_language(self):
+        # Arrange — one source-language version and one French version
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
+        source = self.tafsir.get_or_create_source_language()
+        fr = AssetLanguage.objects.create(asset=self.tafsir, language="fr")
+        baker.make(AssetVersion, asset=self.tafsir, asset_language=source, name="SRC1")
+        baker.make(AssetVersion, asset=self.tafsir, asset_language=fr, name="FR1")
+
+        # Act
+        response = self.client.get(f"/portal/tafsirs/{self.tafsir.slug}/versions/?language=fr")
+
+        # Assert — only the French version, and each row exposes its language
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(1, len(body["results"]))
+        self.assertEqual("FR1", body["results"][0]["name"])
+        self.assertEqual("fr", body["results"][0]["language"])
+
+    def test_list_versions_by_source_language_includes_legacy_null_language_versions(self):
+        # Legacy rows predate multi-language and can carry a null asset_language;
+        # they belong to the source language and must appear when it is filtered.
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
+        source = self.tafsir.get_or_create_source_language()
+        baker.make(AssetVersion, asset=self.tafsir, asset_language=source, name="SRC1")
+        legacy = baker.make(AssetVersion, asset=self.tafsir, name="LEGACY")
+        AssetVersion.objects.filter(pk=legacy.pk).update(asset_language=None)
+
+        response = self.client.get(f"/portal/tafsirs/{self.tafsir.slug}/versions/?language={self.tafsir.language}")
+
+        self.assertEqual(200, response.status_code, response.content)
+        names = {row["name"] for row in response.json()["results"]}
+        self.assertIn("SRC1", names)
+        self.assertIn("LEGACY", names)
+
+    def test_list_versions_exposes_author_and_change_counts(self):
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
+        sura = baker.make(Sura, id=1, name="الفاتحة", ayas_count=3)
+        ayah = baker.make(Ayah, id=1, sura=sura, number_in_sura=1, text="a")
+        version = baker.make(AssetVersion, asset=self.tafsir, name="v1", created_by=self.user)
+        baker.make(AssetVersionChange, version=version, ayah=ayah, change_type="added", new_text="x", order=1)
+
+        response = self.client.get(f"/portal/tafsirs/{self.tafsir.slug}/versions/")
+
+        self.assertEqual(200, response.status_code, response.content)
+        row = response.json()["results"][0]
+        self.assertEqual("Test User", row["created_by"])
+        self.assertEqual({"added": 1, "modified": 0, "removed": 0}, row["change_counts"])
 
     def test_list_versions_where_tafsir_not_found_should_return_404(self):
         # Arrange
@@ -101,6 +166,31 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         version = AssetVersion.objects.get(id=body["id"])
         self.assertEqual(self.tafsir, version.asset)
         self.assertEqual(len(b"content"), version.size_bytes)
+
+    def test_create_version_with_language_tags_the_version(self):
+        # Arrange — register a French language on the tafsir
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TAFSIR)
+        self.tafsir.get_or_create_source_language()
+        AssetLanguage.objects.create(asset=self.tafsir, language="fr")
+        file = SimpleUploadedFile("tafsir-fr.csv", b"surah,ayah,text\n1,1,au nom", content_type="text/csv")
+
+        # Act
+        response = self.client.post(
+            f"/portal/tafsirs/{self.tafsir.slug}/versions/",
+            data={
+                "asset_id": self.tafsir.id,
+                "name": "French v1",
+                "summary": "",
+                "language": "fr",
+                "file": file,
+            },
+        )
+
+        # Assert — the version is tagged with the chosen language
+        self.assertEqual(201, response.status_code, response.content)
+        version = AssetVersion.objects.get(id=response.json()["id"])
+        self.assertEqual("fr", version.asset_language.language)
 
     def test_create_version_where_asset_id_mismatch_should_return_400(self):
         # Arrange

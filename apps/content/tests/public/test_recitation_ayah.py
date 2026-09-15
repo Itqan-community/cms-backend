@@ -302,9 +302,10 @@ class RecitationAyahAudioPublicApiTest(BaseTestCase):
         resp1 = self.client.get(f"/recitations/{self.asset.id}/ayah/2:255/")
         self.assertEqual(200, resp1.status_code, resp1.content)
 
-        # Act 2: Admin modifies asset to private
+        # Act 2: Admin modifies asset to private (bust deferred to on_commit).
         self.asset.is_open_access = False
-        self.asset.save()
+        with self.captureOnCommitCallbacks(execute=True):
+            self.asset.save()
 
         # Act 3: Subsequent unauthenticated request must be rejected (401), not served from stale cache
         resp2 = self.client.get(f"/recitations/{self.asset.id}/ayah/2:255/")

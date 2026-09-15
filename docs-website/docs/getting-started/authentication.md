@@ -61,6 +61,24 @@ console.log(`Total reciters: ${count}`);
 </TabItem>
 </Tabs>
 
+## Identify end users
+
+For per-end-user usage metrics, include an opaque, developer-chosen identifier in
+the `X-External-User-Id` header. Do not send names, email addresses, phone
+numbers, or other personally identifiable information. The value is treated as
+opaque metadata and is scoped to the application identified by your API key.
+
+```bash
+curl {{API_BASE}}/reciters/ \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "X-External-User-Id: user-123"
+```
+
+The identifier may contain letters, numbers, `.`, `_`, `:`, and `-`, must start
+with a letter or number, and may be up to 64 characters long. Values that are
+empty, contain an email address, resemble a phone number, or use other invalid
+characters are rejected with a `422` response.
+
 ## Errors
 
 A missing or invalid key returns an error in the [standard error format](/docs/guides/errors):

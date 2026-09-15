@@ -9,14 +9,25 @@ from __future__ import annotations
 import csv
 import io
 import logging
+import os
 import re
 
 from django.core.files.base import ContentFile
 from django.db import transaction
 from django.db.models import QuerySet
+from django.utils.translation import gettext as _
 
-from apps.content.models import Asset, AssetLanguage, AssetVersion, AssetVersionEntry, VersionStateChoice
-from apps.content.services.asset_content_import import ParsedEntry
+from apps.content.models import (
+    Asset,
+    AssetLanguage,
+    AssetVersion,
+    AssetVersionChange,
+    AssetVersionEntry,
+    ChangeTypeChoice,
+    VersionStateChoice,
+)
+from apps.content.services.asset_content_import import AssetContentParseError, ParsedEntry, parse_content_file
+from apps.core.ninja_utils.errors import ItqanError
 from apps.quran.models import Ayah
 
 logger = logging.getLogger(__name__)
@@ -79,6 +90,25 @@ class AssetContentRepository:
 
     def get_entries(self, version: AssetVersion) -> QuerySet[AssetVersionEntry]:
         return version.entries.select_related("ayah", "ayah__sura").order_by("order", "ayah_id")
+
+    @transaction.atomic
+    def ensure_mushaf_coverage(self, draft: AssetVersion, mushaf_version: AssetVersion) -> int:
+        """Add empty-text rows for any mushaf ayahs the draft doesn't cover yet.
+
+        Keeps a translation draft showing the whole original even if it was created
+        sparse (before full-mushaf seeding, via upload, or when the source had
+        fewer ayahs). Existing entries — including in-progress edits — are kept.
+        Returns the number of rows added.
+        """
+        existing_ayahs = set(draft.entries.values_list("ayah_id", flat=True))
+        to_create = [
+            AssetVersionEntry(version=draft, ayah_id=entry.ayah_id, text="", order=entry.order)
+            for entry in mushaf_version.entries.all().order_by("order", "ayah_id").iterator()
+            if entry.ayah_id not in existing_ayahs
+        ]
+        if to_create:
+            AssetVersionEntry.objects.bulk_create(to_create, batch_size=1000)
+        return len(to_create)
 
     @transaction.atomic
     def create_draft_seeded_from(
@@ -249,17 +279,145 @@ class AssetContentRepository:
                 writer.writerow([entry.ayah.sura_id, entry.ayah.number_in_sura, entry.text])
         return buffer.getvalue().encode("utf-8")
 
+    def snapshot_to_csv_bytes(self, snapshot: dict[int, str], *, verbose: bool = False) -> bytes:
+        """Serialize a reconstructed {ayah_id: text} snapshot to CSV (for historical
+        commit downloads). Same columns as entries_to_csv_bytes."""
+        ayah_by_id = {a.id: a for a in Ayah.objects.filter(id__in=list(snapshot)).select_related("sura")}
+        rows = sorted(snapshot.items(), key=lambda kv: kv[0])
+        buffer = io.StringIO()
+        writer = csv.writer(buffer)
+        if verbose:
+            writer.writerow(["surah", "ayah", "surah_name", "ayah_text", "text"])
+            for ayah_id, text in rows:
+                ayah = ayah_by_id.get(ayah_id)
+                if ayah is not None:
+                    writer.writerow([ayah.sura_id, ayah.number_in_sura, ayah.sura.name, ayah.text, text])
+        else:
+            writer.writerow(["surah", "ayah", "text"])
+            for ayah_id, text in rows:
+                ayah = ayah_by_id.get(ayah_id)
+                if ayah is not None:
+                    writer.writerow([ayah.sura_id, ayah.number_in_sura, text])
+        return buffer.getvalue().encode("utf-8")
+
+    def _snapshot_from_file(self, version: AssetVersion) -> dict[int, str]:
+        """Reconstruct a {ayah_id: text} snapshot from a legacy version's stored
+        file, used when a pre-entries commit (file only, no entries/deltas) is
+        restored. Returns {} when the file is missing or unparseable."""
+        saved = getattr(version, "file_url", None)
+        if not saved:
+            return {}
+        try:
+            saved.open("rb")
+            try:
+                raw = saved.read()
+            finally:
+                saved.close()
+        except Exception:
+            logger.warning(f"Could not read version file for snapshot [version_id={version.pk}]")
+            return {}
+        try:
+            parsed = parse_content_file(raw)
+        except AssetContentParseError:
+            logger.info(f"Version file not parseable for snapshot [version_id={version.pk}]")
+            return {}
+        ayah_index = self._ayah_id_by_sura_aya()
+        snapshot: dict[int, str] = {}
+        for entry in parsed:
+            ayah_id = ayah_index.get((entry.sura, entry.aya))
+            if ayah_id is not None:
+                snapshot[ayah_id] = entry.text
+        return snapshot
+
+    def _entries_map(self, version: AssetVersion) -> dict[int, str]:
+        """{ayah_id: text} for a version's full entries."""
+        return {entry.ayah_id: (entry.text or "") for entry in version.entries.all()}
+
+    def _order_map(self, version: AssetVersion) -> dict[int, int]:
+        """{ayah_id: order} for a version's full entries."""
+        return {entry.ayah_id: entry.order for entry in version.entries.all()}
+
+    def _record_changes(self, new_version: AssetVersion, previous_head: AssetVersion | None) -> dict[str, int]:
+        """Store AssetVersionChange rows for new_version's delta vs previous_head.
+
+        Returns counts keyed 'added' / 'modified' / 'removed'. The predecessor's
+        map is reconstructed so it works whether or not the head still has full
+        entries.
+        """
+        old = self.reconstruct_entries(previous_head) if previous_head is not None else {}
+        new = self._entries_map(new_version)
+        orders = self._order_map(new_version)
+        rows: list[AssetVersionChange] = []
+        counts = {"added": 0, "modified": 0, "removed": 0}
+        for ayah_id, new_text in new.items():
+            if ayah_id not in old:
+                change_type = ChangeTypeChoice.ADDED
+                counts["added"] += 1
+            elif old[ayah_id] != new_text:
+                change_type = ChangeTypeChoice.MODIFIED
+                counts["modified"] += 1
+            else:
+                continue
+            rows.append(
+                AssetVersionChange(
+                    version=new_version,
+                    ayah_id=ayah_id,
+                    change_type=change_type,
+                    old_text=old.get(ayah_id, ""),
+                    new_text=new_text,
+                    order=orders.get(ayah_id, ayah_id),
+                )
+            )
+        for ayah_id, old_text in old.items():
+            if ayah_id not in new:
+                rows.append(
+                    AssetVersionChange(
+                        version=new_version,
+                        ayah_id=ayah_id,
+                        change_type=ChangeTypeChoice.REMOVED,
+                        old_text=old_text,
+                        new_text="",
+                        order=ayah_id,
+                    )
+                )
+                counts["removed"] += 1
+        if rows:
+            AssetVersionChange.objects.bulk_create(rows, batch_size=1000)
+        return counts
+
+    def prune_version_snapshot(self, version: AssetVersion) -> None:
+        """Drop a superseded commit's full snapshot (entries + file), keeping its
+        stored deltas so it can still be diffed and reconstructed."""
+        version.entries.all().delete()
+        if version.file_url:
+            version.file_url.delete(save=False)
+            version.size_bytes = 0
+            version.save(update_fields=["file_url", "size_bytes", "updated_at"])
+
     @transaction.atomic
     def publish_draft(self, draft: AssetVersion) -> AssetVersion:
         """Flip a draft to published so newest-wins makes it the latest version.
 
-        Also materializes a downloadable CSV file from the per-ayah entries (when
-        the version has no uploaded file), so consumer download paths — the
-        gallery, developers/tenant APIs — work for grid-edited versions.
+        Records the commit's delta (AssetVersionChange) vs the previous head, then
+        prunes the previous head's full snapshot (only if it carries stored deltas,
+        so no content is ever lost). Also materializes a downloadable CSV from the
+        per-ayah entries, so consumer download paths keep working.
         """
+        language = draft.asset_language.language if draft.asset_language_id else draft.asset.language
+        previous_head = draft.asset.get_latest_version(language)  # current published head (not this draft)
         # Empty rows come from seeding a new translation with the source ayahs;
         # drop the never-filled ones so the published version stays sparse.
         draft.entries.filter(text="").delete()
+        # Record this commit's per-ayah delta before flipping/pruning. content_edited
+        # only proves an edit happened, not that the draft differs from the head
+        # (an editor can change text then restore it), so guard on the real delta.
+        counts = self._record_changes(draft, previous_head)
+        if not any(counts.values()):
+            raise ItqanError(
+                error_name="no_changes_to_publish",
+                message=_("There are no changes to publish."),
+                status_code=400,
+            )
         draft.state = VersionStateChoice.PUBLISHED
         # Persist name/summary too: the service may have set them from the publish
         # payload, and they must be written (not just held in memory).
@@ -278,7 +436,160 @@ class AssetContentRepository:
             draft.asset.format = "csv"
             asset_fields.append("format")
         draft.asset.save(update_fields=asset_fields)
+
+        # Prune the superseded head to deltas — but only if it carries stored
+        # changes (never drop a commit that has neither entries nor a delta).
+        if previous_head is not None and previous_head.changes.exists():
+            self.prune_version_snapshot(previous_head)
         return draft
+
+    def _predecessor(self, version: AssetVersion) -> AssetVersion | None:
+        """The published commit immediately before `version` in its language timeline."""
+        return (
+            self.asset_version_model.objects.filter(
+                asset=version.asset,
+                asset_language=version.asset_language,
+                state=VersionStateChoice.PUBLISHED,
+                created_at__lt=version.created_at,
+            )
+            .exclude(pk=version.pk)
+            .order_by("-created_at", "-id")
+            .first()
+        )
+
+    def _change_to_dict(self, ayah, change_type: str, old_text: str, new_text: str) -> dict:
+        return {
+            "ayah_id": ayah.id,
+            "sura": ayah.sura_id,
+            "aya": ayah.number_in_sura,
+            "surah_name": ayah.sura.name,
+            "change_type": str(change_type),
+            "old_text": old_text,
+            "new_text": new_text,
+        }
+
+    def diff_maps(self, old_map: dict[int, str], new_map: dict[int, str]) -> list[dict]:
+        """Diff two {ayah_id: text} snapshots into ordered change dicts."""
+        ayah_ids = sorted(set(old_map) | set(new_map))
+        ayah_by_id = {a.id: a for a in Ayah.objects.filter(id__in=ayah_ids).select_related("sura")}
+        out: list[dict] = []
+        for ayah_id in ayah_ids:
+            ayah = ayah_by_id.get(ayah_id)
+            if ayah is None:
+                continue
+            in_old, in_new = ayah_id in old_map, ayah_id in new_map
+            if in_new and not in_old:
+                out.append(self._change_to_dict(ayah, ChangeTypeChoice.ADDED, "", new_map[ayah_id]))
+            elif in_old and not in_new:
+                out.append(self._change_to_dict(ayah, ChangeTypeChoice.REMOVED, old_map[ayah_id], ""))
+            elif old_map.get(ayah_id) != new_map.get(ayah_id):
+                out.append(self._change_to_dict(ayah, ChangeTypeChoice.MODIFIED, old_map[ayah_id], new_map[ayah_id]))
+        return out
+
+    def version_diff(self, version: AssetVersion) -> list[dict]:
+        """A commit's diff: stored change rows if present, else computed from
+        this commit's snapshot vs its predecessor's (legacy commits)."""
+        stored = list(version.changes.select_related("ayah", "ayah__sura").order_by("order", "ayah_id"))
+        if stored:
+            return [self._change_to_dict(c.ayah, c.change_type, c.old_text, c.new_text) for c in stored]
+        predecessor = self._predecessor(version)
+        old_map = self.reconstruct_entries(predecessor) if predecessor is not None else {}
+        return self.diff_maps(old_map, self.reconstruct_entries(version))
+
+    def reconstruct_entries(self, version: AssetVersion) -> dict[int, str]:
+        """Full {ayah_id: text} at this commit.
+
+        Uses the version's own entries when present (head or a legacy commit);
+        otherwise folds snapshots + deltas up to this commit for its
+        (asset, language) timeline.
+        """
+        direct = self._entries_map(version)
+        if direct:
+            return direct
+        timeline = (
+            self.asset_version_model.objects.filter(
+                asset=version.asset,
+                asset_language=version.asset_language,
+                state=VersionStateChoice.PUBLISHED,
+                created_at__lte=version.created_at,
+            )
+            .order_by("created_at", "id")
+            .prefetch_related("entries", "changes")
+        )
+        state: dict[int, str] = {}
+        for commit in timeline:
+            entry_map = {entry.ayah_id: (entry.text or "") for entry in commit.entries.all()}
+            if entry_map:
+                state = entry_map  # snapshot anchor (legacy commit or head)
+                continue
+            for change in commit.changes.all():
+                if change.change_type == ChangeTypeChoice.REMOVED:
+                    state.pop(change.ayah_id, None)
+                else:
+                    state[change.ayah_id] = change.new_text
+        return state
+
+    @transaction.atomic
+    def restore_version(self, version: AssetVersion, *, created_by_id: int | None = None) -> AssetVersion:
+        """Restore a commit's content as a new published version (the active one).
+
+        Works whether `version` still has full entries or was pruned to deltas
+        (its snapshot is reconstructed). Records the restore's delta vs the current
+        head and prunes the superseded head, so a restore is a commit like any
+        other. The original is left intact, so history is preserved.
+        """
+        asset = version.asset
+        language = version.asset_language.language if version.asset_language_id else asset.language
+        previous_head = asset.get_latest_version(language)  # current head before restore
+        snapshot = self.reconstruct_entries(version)  # {ayah_id: text}
+        order_index = self._order_map(version)
+        if not snapshot and version.file_url:
+            # Legacy file-only commit (pre-entries): parse its stored file so the
+            # restore materializes real entries + a delta, like any other commit.
+            snapshot = self._snapshot_from_file(version)
+        name = self.unique_version_name(asset, version.name)
+        new_version = self.asset_version_model.objects.create(
+            asset=asset,
+            asset_language=version.asset_language,
+            name=name,
+            summary=version.summary,
+            state=VersionStateChoice.PUBLISHED,
+            created_by_id=created_by_id,
+        )
+        if not snapshot and version.file_url:
+            # Legacy file that could not be parsed into entries: copy it verbatim so
+            # the restore preserves downloadable content (no delta to record).
+            extension = os.path.splitext(version.file_url.name)[1]
+            filename = f"{asset.slug}-{name}{extension}".replace(" ", "_")
+            version.file_url.open("rb")
+            try:
+                new_version.file_url.save(filename, ContentFile(version.file_url.read()), save=False)
+            finally:
+                version.file_url.close()
+            new_version.size_bytes = version.size_bytes
+            new_version.save(update_fields=["file_url", "size_bytes"])
+            return new_version
+
+        copies = [
+            AssetVersionEntry(version=new_version, ayah_id=ayah_id, text=text, order=order_index.get(ayah_id, ayah_id))
+            for ayah_id, text in snapshot.items()
+            if text != ""
+        ]
+        if copies:
+            AssetVersionEntry.objects.bulk_create(copies, batch_size=1000)
+        # Record the delta vs the current head for every restore — including an
+        # empty one, whose removals must be stored so later reconstruction reflects
+        # the restored (empty) state instead of replaying the previous content.
+        self._record_changes(new_version, previous_head)
+        if copies:
+            content = self.entries_to_csv_bytes(new_version)
+            filename = f"{asset.slug}-{name}.csv".replace(" ", "_")
+            new_version.file_url.save(filename, ContentFile(content), save=False)
+            new_version.size_bytes = len(content)
+            new_version.save(update_fields=["file_url", "size_bytes"])
+        if previous_head is not None and previous_head.changes.exists():
+            self.prune_version_snapshot(previous_head)
+        return new_version
 
     def backfill_file_from_entries(self, version: AssetVersion) -> bool:
         """Generate a CSV file for a published version that has entries but no

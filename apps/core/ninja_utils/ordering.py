@@ -3,6 +3,7 @@ ordering class, influences heavily by django-ninja-extra
 """
 
 from _operator import attrgetter, itemgetter
+
 from django.db.models import QuerySet
 from ninja import P, Query, Schema
 from pydantic import BaseModel, Field
