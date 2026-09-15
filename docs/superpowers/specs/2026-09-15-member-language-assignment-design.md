@@ -133,14 +133,23 @@ Every row below resolves a language and calls `require_language` unless noted.
 | `POST .../versions/{version_id}/publish/` | version | `require_language` |
 | `POST .../versions/{version_id}/restore/` | version | `require_language` |
 | `DELETE .../versions/{version_id}/` | version | `require_language` |
-| `GET/POST translations\|tafsirs/{slug}/versions/` | `language` query / `data.language` | filter list to allowed; `require_language` on create |
+| `GET translations\|tafsirs/{slug}/versions/` | `language` query, else all | `require_language` when filtered; otherwise narrow the queryset to allowed languages |
+| `POST translations\|tafsirs/{slug}/versions/` | `data.language`, else source | `require_language` (the field is optional; omitting it targets the source) |
+| `PUT/PATCH/DELETE translations\|tafsirs/{slug}/versions/{version_id}/` | version | `require_version_id` — six routes, two per category |
 | review endpoints (`review/languages/`, `review/changes/`, PATCH) | existing | behaviour unchanged; now call the shared helper |
+
+Implementation note: the per-category version modules carry PUT, PATCH and DELETE
+routes that this table originally missed, taking the true count from 13 to 23.
+The list above is the maintained inventory.
 
 Resolving a version's language must handle **legacy versions with no `asset_language`**, which
 belong to the asset's source language — the same rule `tafsir_versions.py:113-115` already applies
 when filtering. The existing `change_language(change)` in `repositories/asset_review.py:8` already
-implements this fallback one level down. Extract `version_language(version)` from it and have
-`change_language` delegate, so the fallback has exactly one definition rather than three.
+implements this fallback one level down.
+
+Implemented as `AssetVersion.resolved_language` — a model property rather than a free function in
+the access service, so both services and repositories can use it without an off-layer import.
+`change_language` now delegates to it, giving the fallback exactly one definition instead of three.
 
 Error contract: `403 language_not_assigned`, reusing the code the review phase already returns.
 
@@ -203,7 +212,7 @@ Reversible by removing the permission from the same set. Groups holding only
   longer edit the Arabic source, including through the versions manager. The rollout migration
   protects *existing* editors; members assigned languages after deploy will feel it. Accepted
   deliberately (Decision 5); worth calling out in release notes.
-- **Broad enforcement surface.** The gate touches thirteen routes, including reads. A missed route
+- **Broad enforcement surface.** The gate touches twenty-three routes, including reads. A missed route
   is a silent authorization hole, which is why each one gets its own test rather than relying on
   the picker filter. If a new version-scoped endpoint is added later and forgets `require_language`,
   nothing will fail loudly — the enforcement list above is the checklist to extend.

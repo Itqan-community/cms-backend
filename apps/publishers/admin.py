@@ -3,9 +3,7 @@ from django.db.models import Count
 from django.urls import reverse
 from django.utils.html import format_html
 
-from apps.content.models import ReviewerLanguage
-
-from .models import Domain, Publisher, PublisherMember, PublisherMemberInvitation
+from .models import Domain, MemberLanguage, Publisher, PublisherMember, PublisherMemberInvitation
 
 
 class PublisherMemberInline(admin.TabularInline):
@@ -15,10 +13,10 @@ class PublisherMemberInline(admin.TabularInline):
     raw_id_fields = ["user"]
 
 
-class ReviewerLanguageInline(admin.TabularInline):
-    """The languages this membership is assigned to review (content review phase)."""
+class MemberLanguageInline(admin.TabularInline):
+    """The languages this membership works in — both editing and reviewing."""
 
-    model = ReviewerLanguage
+    model = MemberLanguage
     extra = 0
     fields = ["language"]
 
@@ -116,7 +114,7 @@ class PublisherMemberAdmin(admin.ModelAdmin):
     list_filter = ["group", "created_at"]
     search_fields = ["user__email", "publisher__name"]
     raw_id_fields = ["user", "publisher"]
-    inlines = [ReviewerLanguageInline]
+    inlines = [MemberLanguageInline]
 
 
 @admin.register(PublisherMemberInvitation)
@@ -153,6 +151,14 @@ class PublisherMemberInvitationAdmin(admin.ModelAdmin):
     @admin.display(description="Group")
     def group_name(self, obj):
         return obj.group_name
+
+
+@admin.register(MemberLanguage)
+class MemberLanguageAdmin(admin.ModelAdmin):
+    list_display = ("member", "language")
+    list_filter = ("language",)
+    search_fields = ("member__user__email", "member__user__name", "member__publisher__name", "language")
+    autocomplete_fields = ("member",)
 
 
 @admin.register(Domain)

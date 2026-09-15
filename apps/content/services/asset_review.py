@@ -9,13 +9,12 @@ from apps.content.models import (
     AssetVersionChange,
     AssetVersionChangeReview,
     CategoryChoice,
-    ReviewerLanguage,
     ReviewStateChoice,
     StatusChoice,
 )
 from apps.content.repositories.asset_review import AssetReviewRepository, change_language
+from apps.content.services.asset_language_access import allowed_languages, require_language
 from apps.core.ninja_utils.errors import ItqanError
-from apps.publishers.models import PublisherMember
 
 _NOT_FOUND_ERROR = {
     CategoryChoice.TRANSLATION: "translation_not_found",
@@ -40,25 +39,8 @@ class AssetReviewService:
                 status_code=404,
             ) from exc
 
-    def assigned_languages(self, user, asset: Asset) -> set[str]:
-        """The languages this user may review for this asset — the ReviewerLanguage
-        rows on their *active membership in the asset's publisher*. Assignment is
-        per-membership, so a user can review different languages per publisher."""
-        return set(
-            ReviewerLanguage.objects.filter(
-                member__user=user,
-                member__publisher_id=asset.publisher_id,
-                member__status=PublisherMember.StatusChoice.ACTIVE,
-            ).values_list("language", flat=True)
-        )
-
     def _require_assigned(self, user, asset: Asset, language: str) -> None:
-        if language not in self.assigned_languages(user, asset):
-            raise ItqanError(
-                error_name="language_not_assigned",
-                message=_("You are not assigned to review this language."),
-                status_code=403,
-            )
+        require_language(user, asset, language)
 
     def list_review_languages(
         self, slug: str, category: CategoryChoice, *, user, publisher_q: Q | None = None
@@ -66,7 +48,7 @@ class AssetReviewService:
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
         asset_languages = set(asset.languages.values_list("language", flat=True))
         asset_languages.add(asset.language)  # source, even when the row is created lazily
-        return sorted(asset_languages & self.assigned_languages(user, asset))
+        return sorted(asset_languages & allowed_languages(user, asset))
 
     def list_changes(
         self,

@@ -437,6 +437,19 @@ class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
         return f"AssetVersion(asset={self.asset.name}, name={self.name})"
 
     @property
+    def resolved_language(self) -> str:
+        """The language code this version belongs to.
+
+        Its ``asset_language`` when set, else the asset's source language — legacy
+        rows predate per-language renditions and belong to the source. Authorization
+        gates the version by this value, so the fallback must live in exactly one
+        place rather than being re-derived per call site.
+        """
+        if self.asset_language_id:
+            return self.asset_language.language
+        return self.asset.language
+
+    @property
     def human_readable_size(self):
         """Convert bytes to human readable format"""
         if self.size_bytes == 0:
@@ -528,28 +541,6 @@ class AssetVersionChange(BaseModel):
 class ReviewStateChoice(models.TextChoices):
     APPROVED = "approved", _("Approved")
     COMMENTED = "commented", _("Commented")
-
-
-class ReviewerLanguage(BaseModel):
-    """A language a publisher member is assigned to review, scoped to that
-    membership (a user may review different languages for different publishers).
-
-    A member with PORTAL_REVIEW_CONTENT but no ReviewerLanguage rows can review
-    nothing. Managed via Django admin and the portal member screen.
-    """
-
-    member = models.ForeignKey(
-        "publishers.PublisherMember", on_delete=models.CASCADE, related_name="reviewer_languages"
-    )
-    language = models.CharField(max_length=10, help_text="Language code the member may review, e.g. 'fr'")
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["member", "language"], name="unique_reviewer_member_language"),
-        ]
-
-    def __str__(self):
-        return f"ReviewerLanguage(member_id={self.member_id}, language={self.language})"
 
 
 class AssetVersionChangeReview(BaseModel):

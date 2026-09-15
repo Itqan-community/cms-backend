@@ -23,6 +23,10 @@ class AssetLanguagesApiTest(BaseTestCase):
             language="ar",
         )
         self.user = User.objects.create_user(email="editor@example.com", name="Editor", is_staff=True)
+        # These suites exercise editing, not language assignment: give the user the
+        # assignment bypass so they behave like the existing editor groups that the
+        # rollout migration grants it to. Assignment itself is covered by its own tests.
+        self.give_permission(self.user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES)
         self.sura = baker.make(Sura, id=1, name="الفاتحة", ayas_count=3)
         self.ayahs = [baker.make(Ayah, id=i, sura=self.sura, number_in_sura=i, text=f"ayah {i}") for i in (1, 2, 3)]
 
@@ -44,7 +48,8 @@ class AssetLanguagesApiTest(BaseTestCase):
 
     def test_add_language_creates_non_source_pending(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_ADD_ASSET_LANGUAGE)
 
         response = self.client.post(
             f"/portal/content/translations/{self.translation.slug}/languages/",
@@ -115,7 +120,8 @@ class AssetLanguagesApiTest(BaseTestCase):
 
     def test_add_duplicate_language_returns_400(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_ADD_ASSET_LANGUAGE)
         AssetLanguage.objects.create(asset=self.translation, language="es")
 
         response = self.client.post(
@@ -139,7 +145,8 @@ class AssetLanguagesApiTest(BaseTestCase):
 
     def test_add_language_with_file_creates_first_version_and_entries(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_ADD_ASSET_LANGUAGE)
         csv = SimpleUploadedFile("es.csv", b"surah,ayah,text\n1,1,en el nombre\n1,2,alabado", content_type="text/csv")
 
         response = self.client.post(
@@ -160,7 +167,8 @@ class AssetLanguagesApiTest(BaseTestCase):
         # content_file_unparseable) and must not leave the language registered
         # without its requested version.
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_ADD_ASSET_LANGUAGE)
         bad = SimpleUploadedFile("es.csv", b"not,a,valid\nheaderless garbage", content_type="text/csv")
 
         response = self.client.post(

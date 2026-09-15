@@ -6,12 +6,8 @@ from apps.content.models import Asset, AssetVersionChange, ReviewStateChoice
 
 
 def change_language(change: AssetVersionChange) -> str:
-    """The language a change belongs to: its version's asset_language, else the
-    asset's source language (legacy rows with no asset_language)."""
-    version = change.version
-    if version.asset_language_id:
-        return version.asset_language.language
-    return version.asset.language
+    """The language a change belongs to — its version's language."""
+    return change.version.resolved_language
 
 
 class AssetReviewRepository:

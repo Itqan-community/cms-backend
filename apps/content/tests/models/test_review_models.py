@@ -8,24 +8,23 @@ from apps.content.models import (
     AssetVersionChange,
     AssetVersionChangeReview,
     CategoryChoice,
-    ReviewerLanguage,
     ReviewStateChoice,
 )
 from apps.core.tests.base import BaseTestCase
-from apps.publishers.models import PublisherMember
+from apps.publishers.models import MemberLanguage, PublisherMember
 from apps.quran.models import Ayah, Sura
 from apps.users.models import User
 
 
-class ReviewerLanguageModelTest(BaseTestCase):
-    def test_reviewer_language_where_duplicate_on_member_should_raise_integrity_error(self):
+class MemberLanguageModelTest(BaseTestCase):
+    def test_member_language_where_duplicate_on_member_should_raise_integrity_error(self):
         # Arrange
         member = baker.make(PublisherMember)
-        ReviewerLanguage.objects.create(member=member, language="fr")
+        MemberLanguage.objects.create(member=member, language="fr")
 
         # Act / Assert
         with self.assertRaises(IntegrityError):
-            ReviewerLanguage.objects.create(member=member, language="fr")
+            MemberLanguage.objects.create(member=member, language="fr")
 
 
 class AssetVersionChangeReviewModelTest(BaseTestCase):

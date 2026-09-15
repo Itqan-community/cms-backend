@@ -49,36 +49,36 @@ class MemberDetailTest(BaseTestCase):
         resp = self.client.get(f"/portal/members/{self.p2_member.id}/")
         self.assertEqual(403, resp.status_code, resp.content)
 
-    def test_set_reviewer_languages_replaces_and_returns_them(self):
+    def test_set_member_languages_replaces_and_returns_them(self):
         # Arrange
         self.authenticate_user(self.admin)
         self.give_permission(self.admin, PermissionChoice.PORTAL_UPDATE_PUBLISHER_MEMBERS)
 
         # Act — de-duplicated and sorted on the way out
         resp = self.client.put(
-            f"/portal/members/{self.p1_other.id}/reviewer-languages/",
+            f"/portal/members/{self.p1_other.id}/languages/",
             data={"languages": ["fr", "es", "fr"]},
             content_type="application/json",
         )
 
         # Assert
         self.assertEqual(200, resp.status_code, resp.content)
-        self.assertEqual(["es", "fr"], resp.json()["reviewer_languages"])
-        from apps.content.models import ReviewerLanguage
+        self.assertEqual(["es", "fr"], resp.json()["languages"])
+        from apps.publishers.models import MemberLanguage
 
         self.assertEqual(
             {"es", "fr"},
-            set(ReviewerLanguage.objects.filter(member=self.p1_other).values_list("language", flat=True)),
+            set(MemberLanguage.objects.filter(member=self.p1_other).values_list("language", flat=True)),
         )
 
-    def test_set_reviewer_languages_for_other_publisher_member_403(self):
+    def test_set_member_languages_for_other_publisher_member_403(self):
         # Arrange
         self.authenticate_user(self.admin)
         self.give_permission(self.admin, PermissionChoice.PORTAL_UPDATE_PUBLISHER_MEMBERS)
 
         # Act — target belongs to another publisher
         resp = self.client.put(
-            f"/portal/members/{self.p2_member.id}/reviewer-languages/",
+            f"/portal/members/{self.p2_member.id}/languages/",
             data={"languages": ["fr"]},
             content_type="application/json",
         )

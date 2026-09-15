@@ -164,3 +164,28 @@ class PublisherMemberInvitation(BaseModel):
 
     def __str__(self):
         return f"PublisherMemberInvitation(member={self.member_id} publisher={self.publisher_id} status={self.status})"
+
+
+class MemberLanguage(BaseModel):
+    """A language this publisher member works in, scoped to that membership (a
+    user may work on different languages for different publishers).
+
+    Role-neutral: the assignment says *which* languages, while the member's
+    permissions say what they may do there — ``PORTAL_UPDATE_TRANSLATION`` /
+    ``PORTAL_UPDATE_TAFSIR`` to edit, ``PORTAL_REVIEW_CONTENT`` to review.
+
+    A member with no rows works in no languages; ``PORTAL_ACCESS_ALL_LANGUAGES``
+    — not an empty list — is how someone is granted every language. Managed via
+    Django admin and the portal member screen.
+    """
+
+    member = models.ForeignKey(PublisherMember, on_delete=models.CASCADE, related_name="languages")
+    language = models.CharField(max_length=10, help_text="Language code the member works in, e.g. 'fr'")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["member", "language"], name="unique_member_language"),
+        ]
+
+    def __str__(self):
+        return f"MemberLanguage(member_id={self.member_id}, language={self.language})"

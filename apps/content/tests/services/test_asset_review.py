@@ -10,14 +10,13 @@ from apps.content.models import (
     AssetVersionChange,
     AssetVersionChangeReview,
     CategoryChoice,
-    ReviewerLanguage,
     ReviewStateChoice,
     StatusChoice,
 )
 from apps.content.services.asset_review import AssetReviewService
 from apps.core.ninja_utils.errors import ItqanError
 from apps.core.tests.base import BaseTestCase
-from apps.publishers.models import Publisher, PublisherMember
+from apps.publishers.models import MemberLanguage, Publisher, PublisherMember
 from apps.quran.models import Ayah, Sura
 from apps.users.models import User
 
@@ -49,7 +48,7 @@ class AssetReviewServiceTest(BaseTestCase):
             publisher=self.publisher,
             status=PublisherMember.StatusChoice.ACTIVE,
         )
-        ReviewerLanguage.objects.create(member=self.membership, language="fr")
+        MemberLanguage.objects.create(member=self.membership, language="fr")
 
     def test_set_review_state_where_assigned_should_approve_and_record_auditing(self):
         # Act
@@ -155,8 +154,8 @@ class AssetReviewServiceTest(BaseTestCase):
             publisher=other_publisher,
             status=PublisherMember.StatusChoice.ACTIVE,
         )
-        ReviewerLanguage.objects.create(member=other_member, language="fr")
-        ReviewerLanguage.objects.filter(member=self.membership).delete()
+        MemberLanguage.objects.create(member=other_member, language="fr")
+        MemberLanguage.objects.filter(member=self.membership).delete()
 
         # Act / Assert
         with self.assertRaises(ItqanError) as ctx:

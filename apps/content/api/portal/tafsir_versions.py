@@ -7,6 +7,11 @@ from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
 from apps.content.models import Asset, AssetVersion, CategoryChoice, VersionStateChoice
+from apps.content.services.asset_language_access import (
+    filter_versions_to_allowed,
+    require_language,
+    require_version_id,
+)
 from apps.content.services.tafsir import TafsirService
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.permission_required import permission_required
@@ -108,12 +113,15 @@ def list_tafsir_versions(request: Request, tafsir_slug: str, language: str | Non
         .prefetch_related("changes")
     )
     if language:
+        require_language(request.user, asset, language)
         # Legacy versions have no asset_language and belong to the source
         # language; include them when the source language is requested.
         language_q = Q(asset_language__language=language)
         if language == asset.language:
             language_q |= Q(asset_language__isnull=True)
         versions = versions.filter(language_q)
+    else:
+        versions = filter_versions_to_allowed(request.user, asset, versions)
     return versions.order_by("-created_at")
 
 
@@ -150,6 +158,8 @@ def create_tafsir_version(
             status_code=400,
         )
 
+    # language is optional; omitting it targets the asset's source language.
+    require_language(request.user, asset, data.language or asset.language)
     version = service.create_tafsir_version(
         tafsir_slug,
         name=data.name,
@@ -200,6 +210,7 @@ def update_tafsir_version_put(
     if file:
         fields["file_url"] = file
 
+    require_version_id(request.user, asset, version_id)
     return service.update_tafsir_version(tafsir_slug, version_id, fields=fields, publisher_q=request.publisher_q())
 
 
@@ -242,6 +253,7 @@ def update_tafsir_version_patch(
     if file:
         fields["file_url"] = file
 
+    require_version_id(request.user, asset, version_id)
     return service.update_tafsir_version(tafsir_slug, version_id, fields=fields, publisher_q=request.publisher_q())
 
 
@@ -255,5 +267,14 @@ def update_tafsir_version_patch(
 @permission_required([permission_class(PermissionChoice.PORTAL_DELETE_TAFSIR)])
 def delete_tafsir_version(request: Request, tafsir_slug: str, version_id: int) -> tuple[int, None]:
     service = TafsirService()
+    try:
+        asset = Asset.objects.filter(request.publisher_q()).get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
+    except Asset.DoesNotExist as exc:
+        raise ItqanError(
+            error_name="tafsir_not_found",
+            message=_("Tafsir with slug {slug} not found.").format(slug=tafsir_slug),
+            status_code=404,
+        ) from exc
+    require_version_id(request.user, asset, version_id)
     service.delete_tafsir_version(tafsir_slug, version_id, publisher_q=request.publisher_q())
     return 204, None

@@ -395,8 +395,9 @@ msgstr "اللغة {language} غير متاحة لهذا المورد."
 msgid "A language needs at least one published version before it can be made available."
 msgstr "تحتاج اللغة إلى إصدار منشور واحد على الأقل قبل أن يمكن إتاحتها."
 
-msgid "You are not assigned to review this language."
-msgstr "لست مُكلَّفًا بمراجعة هذه اللغة."
+#, python-brace-format
+msgid "You are not assigned to the language {language}."
+msgstr "لم يتم تعيينك للغة {language}."
 
 #, python-brace-format
 msgid "Change with id {id} not found."
@@ -742,6 +743,12 @@ msgstr "البوابة - إدارة إعدادات طلبات الوصول"
 msgid "Portal - Review Content"
 msgstr "لوحة التحكم - مراجعة المحتوى"
 
+msgid "Portal - Access All Languages"
+msgstr "لوحة التحكم - الوصول إلى جميع اللغات"
+
+msgid "Portal - Add Asset Language"
+msgstr "لوحة التحكم - إضافة لغة إلى الأصل"
+
 #, python-brace-format
 msgid "Permissions are not synced to the database: {missing}. Run `manage.py migrate`."
 msgstr "الصلاحيات غير متزامنة مع قاعدة البيانات: {missing}. نفّذ الأمر `manage.py migrate`."
@@ -858,8 +865,14 @@ msgstr "هذا البريد الإلكتروني مستخدم بالفعل."
 msgid "Personal info"
 msgstr "المعلومات الشخصية"
 
+msgid "Language assignments"
+msgstr "تعيينات اللغات"
+
 msgid "Important dates"
 msgstr "تواريخ مهمة"
+
+msgid "Assigned languages (per publisher)"
+msgstr "اللغات المعيّنة (لكل ناشر)"
 
 msgid "permissions"
 msgstr "الصلاحيات"
@@ -1328,6 +1341,9 @@ msgstr "مرحبًا بك في نظام إتقان لإدارة المحتوى!"
 
 msgid "This is a test email to verify the email service is working correctly."
 msgstr "هذه رسالة اختبارية للتأكد من عمل خدمة البريد الإلكتروني بشكل صحيح."
+
+#~ msgid "You are not assigned to review this language."
+#~ msgstr "لست مُكلَّفًا بمراجعة هذه اللغة."
 
 #, python-brace-format
 #~ msgid "A track for asset {asset_id} surah {surah_number} already exists."

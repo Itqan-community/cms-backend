@@ -16,7 +16,7 @@ from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
 from apps.core.permission_utils import permission_class
 from apps.core.permissions import PermissionChoice
-from apps.publishers.models import Publisher, PublisherMember, PublisherMemberInvitation
+from apps.publishers.models import MemberLanguage, Publisher, PublisherMember, PublisherMemberInvitation
 from apps.publishers.services.membership import (
     enforce_member_scope,
     enforce_publisher_membership,
@@ -39,15 +39,15 @@ class MemberOut(Schema):
     publisher_id: int
     expires_at: AwareDatetime | None = None
     created_at: AwareDatetime
-    reviewer_languages: list[str]
+    languages: list[str]
 
     @staticmethod
     def resolve_name(obj: PublisherMember) -> str:
         return obj.user.name
 
     @staticmethod
-    def resolve_reviewer_languages(obj: PublisherMember) -> list[str]:
-        return sorted(rl.language for rl in obj.reviewer_languages.all())
+    def resolve_languages(obj: PublisherMember) -> list[str]:
+        return sorted(rl.language for rl in obj.languages.all())
 
     @staticmethod
     def resolve_email(obj: PublisherMember) -> str:
@@ -76,7 +76,7 @@ class MemberCreateIn(Schema):
 def _members_qs():
     return (
         PublisherMember.objects.select_related("user", "publisher", "group")
-        .prefetch_related("invitations", "reviewer_languages")
+        .prefetch_related("invitations", "languages")
         .order_by("-created_at")
     )
 
@@ -159,30 +159,30 @@ def update_member(request: Request, member_id: int, data: MemberPatchIn):
     return _members_qs().get(id=member.id)
 
 
-class ReviewerLanguagesIn(Schema):
+class MemberLanguagesIn(Schema):
     languages: list[str]
 
 
 @router.put(
-    "members/{int:member_id}/reviewer-languages/",
+    "members/{int:member_id}/languages/",
     response={200: MemberOut, 403: NinjaErrorResponse, 404: NinjaErrorResponse},
 )
 @permission_required([permission_class(PermissionChoice.PORTAL_UPDATE_PUBLISHER_MEMBERS)])
-def set_reviewer_languages(request: Request, member_id: int, data: ReviewerLanguagesIn):
-    """Replace the languages this member is assigned to review. Assignment is
-    per membership (scoped to this member's publisher), managed from the member
-    screen."""
-    from django.db import transaction
+def set_member_languages(request: Request, member_id: int, data: MemberLanguagesIn):
+    """Replace the languages this member works in, for editing and reviewing alike.
 
-    from apps.content.models import ReviewerLanguage
+    Assignment is per membership (scoped to this member's publisher), so the same
+    user can work in different languages for different publishers.
+    """
+    from django.db import transaction
 
     member = get_object_or_404(_members_qs(), id=member_id)
     enforce_member_scope(request.user, member)
     languages = sorted({code.strip() for code in data.languages if code.strip()})
     with transaction.atomic():
-        ReviewerLanguage.objects.filter(member=member).delete()
-        ReviewerLanguage.objects.bulk_create([ReviewerLanguage(member=member, language=code) for code in languages])
-    logger.info(f"Reviewer languages set [member_id={member_id}, count={len(languages)}, user_id={request.user.id}]")
+        MemberLanguage.objects.filter(member=member).delete()
+        MemberLanguage.objects.bulk_create([MemberLanguage(member=member, language=code) for code in languages])
+    logger.info(f"Member languages set [member_id={member_id}, count={len(languages)}, user_id={request.user.id}]")
     return _members_qs().get(id=member.id)
 
 
