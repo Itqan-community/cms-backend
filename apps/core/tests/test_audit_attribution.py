@@ -16,9 +16,7 @@ from unittest.mock import MagicMock, patch
 
 from django.http import HttpResponse
 from django.test import RequestFactory, SimpleTestCase
-
 from simple_history.models import HistoricalRecords
-
 
 # ---------------------------------------------------------------------------
 # Middleware reference semantics
@@ -109,7 +107,9 @@ class NinjaAuthBehavioralTests(SimpleTestCase):
         fake_user = MagicMock()
 
         with patch.object(
-            OAuth2Auth, "authenticate", return_value=(fake_user, "mock_token"),
+            OAuth2Auth,
+            "authenticate",
+            return_value=(fake_user, "mock_token"),
         ):
             OAuth2Auth()(request)
 
@@ -124,7 +124,9 @@ class NinjaAuthBehavioralTests(SimpleTestCase):
 
         auth = ApiKeyAuth()
         with patch.object(
-            auth.model.objects, "get_from_key", return_value=fake_api_key,
+            auth.model.objects,
+            "get_from_key",
+            return_value=fake_api_key,
         ):
             auth.authenticate(request, "test-key")
 

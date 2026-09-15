@@ -40,7 +40,9 @@ class AuditRouterAllowMigrateTests(SimpleTestCase):
     def test_historical_model_allowed_on_audit(self):
         self.assertTrue(
             self.router.allow_migrate(
-                "audit", "users", model_name="historicaluser",
+                "audit",
+                "users",
+                model_name="historicaluser",
                 model=_StubHistorical,
             )
         )
@@ -48,7 +50,9 @@ class AuditRouterAllowMigrateTests(SimpleTestCase):
     def test_historical_model_blocked_on_default(self):
         self.assertFalse(
             self.router.allow_migrate(
-                "default", "users", model_name="historicaluser",
+                "default",
+                "users",
+                model_name="historicaluser",
                 model=_StubHistorical,
             )
         )
@@ -56,7 +60,9 @@ class AuditRouterAllowMigrateTests(SimpleTestCase):
     def test_regular_model_blocked_on_audit(self):
         self.assertFalse(
             self.router.allow_migrate(
-                "audit", "users", model_name="user",
+                "audit",
+                "users",
+                model_name="user",
                 model=_StubRegular,
             )
         )
@@ -64,20 +70,18 @@ class AuditRouterAllowMigrateTests(SimpleTestCase):
     def test_regular_model_defers_on_default(self):
         self.assertIsNone(
             self.router.allow_migrate(
-                "default", "users", model_name="user",
+                "default",
+                "users",
+                model_name="user",
                 model=_StubRegular,
             )
         )
 
     def test_fallback_historical_name_routes_to_audit(self):
-        self.assertTrue(
-            self.router.allow_migrate("audit", "users", model_name="historicaluser")
-        )
+        self.assertTrue(self.router.allow_migrate("audit", "users", model_name="historicaluser"))
 
     def test_fallback_regular_name_blocked_on_audit(self):
-        self.assertFalse(
-            self.router.allow_migrate("audit", "users", model_name="user")
-        )
+        self.assertFalse(self.router.allow_migrate("audit", "users", model_name="user"))
 
 
 class AuditRouterAllowRelationTests(SimpleTestCase):
