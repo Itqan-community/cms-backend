@@ -111,7 +111,7 @@ def _validate_manifest_dict(data: dict[str, Any]) -> AssetManifest:
         raise UnsupportedSchemaVersionError(f"Unsupported schema_version {schema_version_val}. Expected 1.")
 
     if "assets" not in data:
-        raise UnknownFieldError("Missing required 'assets' field.")
+        raise MissingRequiredFieldError("Missing required top-level 'assets' field.")
 
     assets_raw = data["assets"]
     if not isinstance(assets_raw, dict):
@@ -195,6 +195,9 @@ def parse_manifest_content(content_bytes: bytes) -> AssetManifest:
         raise
     except Exception as exc:
         raise YamlProfileViolationError(f"Failed to parse YAML structure: {exc}") from exc
+
+    if not isinstance(data, dict):
+        raise YamlProfileViolationError(f"Manifest root must be a YAML mapping, got {type(data).__name__}.")
 
     return _validate_manifest_dict(data)
 

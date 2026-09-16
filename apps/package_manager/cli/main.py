@@ -1,7 +1,8 @@
-﻿"""Itqan CLI entrypoint implementing `itqan install` and `itqan sync`."""
+"""Itqan CLI entrypoint implementing `itqan install` and `itqan sync`."""
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 import sys
 
@@ -73,7 +74,10 @@ def _run_install(
 
         resolved_payloads = client.resolve_manifest(manifest.raw_constraints)
 
-        # Write or update lockfile atomically
+        # Build the new lockfile in memory — do NOT write it yet.
+        # We only commit the lockfile after every asset has been downloaded
+        # successfully. This ensures the lockfile always reflects reality:
+        # if a download fails halfway, the old lockfile is preserved.
         new_lock_entries: dict[str, LockfileEntry] = {}
         for item in resolved_payloads:
             declared_constraint = manifest.assets[item.slug].version
@@ -88,11 +92,10 @@ def _run_install(
             manifest_schema_version=manifest.schema_version,
             assets=new_lock_entries,
         )
+        pending_lockfile_bytes = serialize_lockfile(new_lockfile)
 
-        l_path.write_bytes(serialize_lockfile(new_lockfile))
-        click.echo(f"Updated lockfile at {l_path}")
-
-    # Materialize assets
+    # --- Materialize assets BEFORE writing the lockfile ---
+    # If any download fails, we raise immediately and the lockfile is untouched.
     click.echo(f"Materializing {len(resolved_payloads)} asset(s) into {a_dir}...")
     download_summary = []
 
@@ -101,6 +104,28 @@ def _run_install(
         status_str = "downloaded" if res.downloaded else "cached (up-to-date)"
         click.echo(f"  * {res.slug} [{res.version}]: {status_str} -> {res.target_path}")
         download_summary.append(res)
+
+    # --- All downloads succeeded: now atomically write the lockfile ---
+    if state != LockfileState.FRESH or force:
+        # Write to a sibling temp file then rename — prevents a partial write
+        # from leaving a corrupt lockfile if the process is interrupted.
+        tmp_fd, tmp_path_str = __import__("tempfile").mkstemp(
+            prefix=".itqan_assets_lock_",
+            suffix=".tmp",
+            dir=l_path.parent,
+        )
+        tmp_lock = Path(tmp_path_str)
+        try:
+            with open(tmp_fd, "wb") as f:
+                f.write(pending_lockfile_bytes)
+            os.replace(tmp_lock, l_path)
+            click.echo(f"Updated lockfile at {l_path}")
+        except Exception:
+            try:
+                tmp_lock.unlink()
+            except OSError:
+                pass
+            raise
 
     click.echo(f"Success! {len(download_summary)} asset(s) materialized successfully.")
     return 0

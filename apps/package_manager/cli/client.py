@@ -1,4 +1,4 @@
-﻿"""Package Registry HTTP client for resolving manifests and obtaining download URLs."""
+"""Package Registry HTTP client for resolving manifests and obtaining download URLs."""
 
 from __future__ import annotations
 
@@ -34,6 +34,17 @@ class RegistryClient:
         self.api_key = api_key
         self.timeout = timeout
         self.session = session or requests.Session()
+
+        # Security: reject HTTP for non-loopback URLs when an API key is provided.
+        # Sending an API key over plain HTTP exposes it to network eavesdroppers.
+        if api_key:
+            parsed = __import__("urllib.parse", fromlist=["urlparse"]).urlparse(self.base_url)
+            is_loopback = parsed.hostname in ("localhost", "127.0.0.1", "::1")
+            if parsed.scheme == "http" and not is_loopback:
+                raise RegistryApiError(
+                    "Refusing to send API key over an insecure HTTP connection. "
+                    "Use HTTPS or a loopback address for development."
+                )
 
     def _headers(self) -> dict[str, str]:
         headers = {
@@ -73,7 +84,24 @@ class RegistryClient:
         if response.status_code == 200:
             try:
                 data = response.json()
-                results_raw = data.get("results", [])
+                # Require "results" to be explicitly present as a list.
+                # A missing key means the response is malformed — do not silently
+                # continue with zero assets, as that would allow _run_install to
+                # report success while writing an empty lockfile.
+                if "results" not in data or not isinstance(data["results"], list):
+                    raise RegistryApiError(
+                        "Registry returned a 200 response but 'results' field is missing or not a list. "
+                        "Cannot proceed with installation."
+                    )
+                results_raw = data["results"]
+                requested_slugs = set(assets.keys())
+                returned_slugs = {item["slug"] for item in results_raw if isinstance(item, dict)}
+                missing = requested_slugs - returned_slugs
+                if missing:
+                    raise RegistryApiError(
+                        f"Registry resolved {len(returned_slugs)} of {len(requested_slugs)} requested assets. "
+                        f"Missing: {', '.join(sorted(missing))}"
+                    )
                 return [
                     ResolvedAssetPayload(
                         slug=item["slug"],
@@ -86,6 +114,8 @@ class RegistryClient:
                     )
                     for item in results_raw
                 ]
+            except RegistryApiError:
+                raise
             except Exception as exc:
                 raise RegistryApiError(f"Failed to parse registry API response: {exc}") from exc
 

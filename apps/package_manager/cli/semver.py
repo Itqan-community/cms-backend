@@ -1,4 +1,4 @@
-﻿"""Pure Python SemVer 2.0.0 primitives adhering to docs/ASSET_MANIFEST.md §3.
+"""Pure Python SemVer 2.0.0 primitives adhering to docs/ASSET_MANIFEST.md §3.
 
 Zero Django / ORM dependencies so it can run headlessly in any environment.
 """
@@ -54,7 +54,7 @@ class SemVer:
                 id_keys.append((0, int(ident), ""))
             else:
                 id_keys.append((1, 0, ident))
-        return (self.major, self.minor, self.patch, 0, id_keys)
+        return (self.major, self.minor, self.patch, 0, tuple(id_keys))
 
     def __lt__(self, other: SemVer) -> bool:
         return self._precedence_key() < other._precedence_key()

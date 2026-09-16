@@ -1,9 +1,9 @@
-﻿"""Lockfile parser, serializer, and state evaluator adhering to docs/ASSET_MANIFEST.md §5."""
+"""Lockfile parser, serializer, and state evaluator adhering to docs/ASSET_MANIFEST.md §5."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 from apps.package_manager.cli.exceptions import (
@@ -22,7 +22,7 @@ from apps.package_manager.cli.semver import (
 )
 
 
-class LockfileState(str, Enum):
+class LockfileState(StrEnum):
     ABSENT = "ABSENT"
     INVALID = "INVALID"
     ORPHAN = "ORPHAN"
