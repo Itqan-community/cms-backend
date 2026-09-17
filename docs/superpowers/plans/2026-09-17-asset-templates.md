@@ -26,6 +26,18 @@
 - **Errors:** `apps.core.ninja_utils.errors.ItqanError` for 4xx. Its `message` is **always** wrapped in `gettext_lazy as _`. Document every error in the endpoint's `response={}` with `NinjaErrorResponse[Literal["..."]]`.
 - **Architecture:** WRITE operations go Service → Repository → ORM. Portal READ operations (GET list/retrieve in `apps/*/api/portal/`) query the Model directly in the view — no Service, no Repository.
 - **Localization gate (hard):** after adding any `_(...)` string, run `uv run manage.py extendedmakemessages --no-location --no-wrap --locale=ar --no-fuzzy-matching --keep-header`, fill every new `msgstr` in `locale/ar/LC_MESSAGES/django.po`, and verify `msgfmt --check --statistics locale/ar/LC_MESSAGES/django.po -o /dev/null` reports **0 untranslated**. Then `compilemessages`.
+- **`authenticate_user` does NOT take a `permissions=` kwarg.** Its real signature is `authenticate_user(user, language="en", domain=None)`, and permissions are granted separately via `give_permission(user, codename)`. The working idiom, from `apps/content/tests/portal/test_asset_content_templates.py`:
+
+```python
+    def setUp(self):
+        super().setUp()
+        self.user = User.objects.create_user(email="editor@example.com", name="Editor", is_staff=True)
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES)
+```
+
+  Call `authenticate_user` inside the test body or `setUp`, never in `setUpClass`. Note `PORTAL_ACCESS_ALL_LANGUAGES` is often needed alongside the resource permission for content endpoints.
 - **The test database ships with NO Quran data** (`Sura`, `Ayah`, `Word` are all empty; `--reuse-db` is on). The codebase's established pattern is that each test bakes the rows it needs — see `apps/content/tests/portal/test_asset_content.py:43` and `apps/content/tests/models/test_asset_version_change.py:14`. **Never assert against the canonical counts 114 / 6236 / 77431, and never call `Sura.objects.first()` expecting a row.** Bake explicitly and assert relative to what you baked. **Task 3 creates `apps/content/tests/quran_data.py`**; every later task that needs Quran rows imports `QuranDataMixin` from it and mixes it into the test class (`class Foo(QuranDataMixin, BaseTestCase)`), then calls `self.bake_quran()` in `setUp`:
 
 ```python
@@ -1446,7 +1458,8 @@ class EntriesEnumerationTests(QuranDataMixin, BaseTestCase):
 
     def test_list_entries_where_surah_asset_is_empty_should_return_114_rows(self):
         # Arrange
-        self.authenticate_user(permissions=[PermissionChoice.PORTAL_READ_TRANSLATION])
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
         asset, version = self._draft_for(AssetTemplateChoice.SURAH)
 
         # Act
@@ -1464,7 +1477,8 @@ class EntriesEnumerationTests(QuranDataMixin, BaseTestCase):
 
     def test_list_entries_where_surah_asset_has_one_entry_should_overlay_its_text(self):
         # Arrange
-        self.authenticate_user(permissions=[PermissionChoice.PORTAL_READ_TRANSLATION])
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
         asset, version = self._draft_for(AssetTemplateChoice.SURAH)
         AssetVersionEntry.objects.create(version=version, sura_id=self.sura2.id, text="content", order=2)
 
@@ -1480,7 +1494,8 @@ class EntriesEnumerationTests(QuranDataMixin, BaseTestCase):
 
     def test_list_entries_where_page_asset_should_return_layout_page_count_rows(self):
         # Arrange
-        self.authenticate_user(permissions=[PermissionChoice.PORTAL_READ_TRANSLATION])
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
         layout = baker.make(MushafLayout, name="Madani 604", page_count=604)
         asset, version = self._draft_for(AssetTemplateChoice.PAGE, layout=layout)
 
@@ -1497,7 +1512,8 @@ class EntriesEnumerationTests(QuranDataMixin, BaseTestCase):
 
     def test_list_entries_where_word_asset_filtered_by_sura_should_narrow_the_count(self):
         # Arrange
-        self.authenticate_user(permissions=[PermissionChoice.PORTAL_READ_TRANSLATION])
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
         asset, version = self._draft_for(AssetTemplateChoice.WORD)
 
         # Act
@@ -1513,7 +1529,8 @@ class EntriesEnumerationTests(QuranDataMixin, BaseTestCase):
 
     def test_list_entries_where_ayah_asset_should_keep_returning_6236_rows(self):
         # Arrange
-        self.authenticate_user(permissions=[PermissionChoice.PORTAL_READ_TRANSLATION])
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
         asset, version = self._draft_for(AssetTemplateChoice.AYAH)
 
         # Act
@@ -1666,8 +1683,8 @@ def list_entries(
     category: str,
     slug: str,
     version_id: int,
-    page: int = 1,
-    page_size: int = DEFAULT_PAGE_SIZE,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(DEFAULT_PAGE_SIZE, ge=1),
     sura: int | None = None,
 ):
     resolved = _resolve_for_version(category, request, slug, version_id, write=False)
@@ -1685,7 +1702,9 @@ def list_entries(
     return {"results": rows, "count": count}
 ```
 
-Import `DEFAULT_PAGE_SIZE` and `MAX_PAGE_SIZE` from `apps.core.ninja_utils.paginations`.
+Import `DEFAULT_PAGE_SIZE` and `MAX_PAGE_SIZE` from `apps.core.ninja_utils.paginations`, and `Query` from `ninja`.
+
+The `ge=1` bounds are load-bearing: the `NinjaPagination.Input` this replaces declared them, and without them `?page=0` yields a negative offset, which Django's `QuerySet.__getitem__` rejects with `ValueError` — surfacing as a logged 500 instead of a 422.
 
 Import `AssetTemplateChoice` from `apps.content.models`.
 
@@ -1768,7 +1787,8 @@ class EntryWriteTests(QuranDataMixin, BaseTestCase):
     def test_patch_entries_where_surah_template_should_write_the_sura_column(self):
         # sura id 2 is baked by bake_quran; 999 below is deliberately absent
         # Arrange
-        self.authenticate_user(permissions=[PermissionChoice.PORTAL_UPDATE_TRANSLATION])
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
         asset, version = self._draft_for(AssetTemplateChoice.SURAH)
 
         # Act
@@ -1787,7 +1807,8 @@ class EntryWriteTests(QuranDataMixin, BaseTestCase):
 
     def test_patch_entries_where_page_template_should_write_the_page_no_column(self):
         # Arrange
-        self.authenticate_user(permissions=[PermissionChoice.PORTAL_UPDATE_TRANSLATION])
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
         layout = baker.make("content.MushafLayout", name="Madani 604", page_count=604)
         asset = baker.make(
             Asset,
@@ -1812,7 +1833,8 @@ class EntryWriteTests(QuranDataMixin, BaseTestCase):
 
     def test_patch_entries_where_unit_out_of_range_should_return_400(self):
         # Arrange
-        self.authenticate_user(permissions=[PermissionChoice.PORTAL_UPDATE_TRANSLATION])
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
         asset, version = self._draft_for(AssetTemplateChoice.SURAH)
 
         # Act
@@ -1828,7 +1850,8 @@ class EntryWriteTests(QuranDataMixin, BaseTestCase):
 
     def test_patch_entries_where_ayah_template_should_still_write_the_ayah_column(self):
         # Arrange
-        self.authenticate_user(permissions=[PermissionChoice.PORTAL_UPDATE_TRANSLATION])
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
         asset, version = self._draft_for(AssetTemplateChoice.AYAH)
 
         # Act
@@ -2024,7 +2047,8 @@ class ReviewTemplateTests(QuranDataMixin, BaseTestCase):
 
     def test_review_changes_where_surah_template_should_not_raise_and_should_label_the_unit(self):
         # Arrange
-        self.authenticate_user(permissions=[PermissionChoice.PORTAL_REVIEW_CONTENT])
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_REVIEW_CONTENT)
         asset = baker.make(
             Asset,
             category=CategoryChoice.TRANSLATION,
@@ -2053,7 +2077,8 @@ class ReviewTemplateTests(QuranDataMixin, BaseTestCase):
 
     def test_review_changes_where_ayah_template_should_keep_the_colon_label(self):
         # Arrange
-        self.authenticate_user(permissions=[PermissionChoice.PORTAL_REVIEW_CONTENT])
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_REVIEW_CONTENT)
         asset = baker.make(
             Asset,
             category=CategoryChoice.TRANSLATION,
@@ -2425,7 +2450,8 @@ from apps.core.tests.base import BaseTestCase
 class MushafLayoutsApiTests(BaseTestCase):
     def test_list_where_layouts_exist_should_return_them(self):
         # Arrange
-        self.authenticate_user(permissions=[PermissionChoice.PORTAL_READ_MUSHAF_LAYOUT])
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_MUSHAF_LAYOUT)
         baker.make(MushafLayout, name="Madani 604", page_count=604)
 
         # Act
@@ -2438,7 +2464,8 @@ class MushafLayoutsApiTests(BaseTestCase):
 
     def test_create_where_valid_should_return_201_and_persist(self):
         # Arrange
-        self.authenticate_user(permissions=[PermissionChoice.PORTAL_CREATE_MUSHAF_LAYOUT])
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_MUSHAF_LAYOUT)
 
         # Act
         response = self.client.post(
@@ -2453,7 +2480,8 @@ class MushafLayoutsApiTests(BaseTestCase):
 
     def test_retrieve_where_layout_missing_should_return_404_with_error_name(self):
         # Arrange
-        self.authenticate_user(permissions=[PermissionChoice.PORTAL_READ_MUSHAF_LAYOUT])
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_MUSHAF_LAYOUT)
 
         # Act
         response = self.client.get("/portal/mushaf-layouts/999999/")
@@ -2464,7 +2492,8 @@ class MushafLayoutsApiTests(BaseTestCase):
 
     def test_delete_where_layout_in_use_should_return_400_with_error_name(self):
         # Arrange
-        self.authenticate_user(permissions=[PermissionChoice.PORTAL_DELETE_MUSHAF_LAYOUT])
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_MUSHAF_LAYOUT)
         layout = baker.make(MushafLayout, name="Madani 604", page_count=604)
         baker.make(
             Asset,
@@ -2482,7 +2511,8 @@ class MushafLayoutsApiTests(BaseTestCase):
 
     def test_create_where_user_lacks_permission_should_return_403(self):
         # Arrange
-        self.authenticate_user(permissions=[PermissionChoice.PORTAL_READ_MUSHAF_LAYOUT])
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_MUSHAF_LAYOUT)
 
         # Act
         response = self.client.post(
@@ -2679,7 +2709,8 @@ class TranslationTemplateCreateTests(BaseTestCase):
 
     def test_create_where_template_is_page_and_no_layout_should_return_400(self):
         # Arrange
-        self.authenticate_user(permissions=[PermissionChoice.PORTAL_CREATE_TRANSLATION])
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
 
         # Act
         response = self.client.post(
@@ -2694,7 +2725,8 @@ class TranslationTemplateCreateTests(BaseTestCase):
 
     def test_create_where_template_is_ayah_and_layout_given_should_return_400(self):
         # Arrange
-        self.authenticate_user(permissions=[PermissionChoice.PORTAL_CREATE_TRANSLATION])
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
         layout = baker.make(MushafLayout, name="Madani 604", page_count=604)
 
         # Act
@@ -2710,7 +2742,8 @@ class TranslationTemplateCreateTests(BaseTestCase):
 
     def test_create_where_layout_does_not_exist_should_return_404(self):
         # Arrange
-        self.authenticate_user(permissions=[PermissionChoice.PORTAL_CREATE_TRANSLATION])
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
 
         # Act
         response = self.client.post(
@@ -2725,7 +2758,8 @@ class TranslationTemplateCreateTests(BaseTestCase):
 
     def test_create_where_valid_page_template_should_persist_template_and_layout(self):
         # Arrange
-        self.authenticate_user(permissions=[PermissionChoice.PORTAL_CREATE_TRANSLATION])
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
         layout = baker.make(MushafLayout, name="Madani 604", page_count=604)
 
         # Act
@@ -2745,7 +2779,8 @@ class TranslationTemplateCreateTests(BaseTestCase):
 
     def test_update_where_template_sent_should_be_ignored_by_the_schema(self):
         # Arrange
-        self.authenticate_user(permissions=[PermissionChoice.PORTAL_UPDATE_TRANSLATION])
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
         asset = baker.make(
             Asset,
             category="translation",
@@ -2766,7 +2801,8 @@ class TranslationTemplateCreateTests(BaseTestCase):
 
     def test_detail_where_asset_has_template_should_expose_it(self):
         # Arrange
-        self.authenticate_user(permissions=[PermissionChoice.PORTAL_READ_TRANSLATION])
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
         asset = baker.make(
             Asset,
             category="translation",
