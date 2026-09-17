@@ -97,7 +97,11 @@ Two check constraints:
 - `asset_template_required_for_text`:
   `category IN (translation, tafsir)` ⟺ `template IS NOT NULL`.
 - `asset_mushaf_layout_consistency`:
-  `template = 'page'` ⟺ `mushaf_layout IS NOT NULL`.
+  `template = 'page'` ⟺ `mushaf_layout IS NOT NULL`. This needs **three**
+  branches, not two: a two-branch form leaves `template IS NULL` with a layout
+  set evaluating to SQL NULL, which Postgres accepts, so a font or recitation
+  asset could carry a mushaf layout. The third branch pins
+  `template IS NULL ⟹ mushaf_layout IS NULL`.
 
 ### `AssetVersionEntry` and `AssetVersionChange`
 

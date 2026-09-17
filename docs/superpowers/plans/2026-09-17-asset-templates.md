@@ -389,8 +389,18 @@ Append to the existing `Asset.Meta.constraints` list (which already holds `asset
                 name="asset_template_required_for_text",
             ),
             models.CheckConstraint(
+                # Three branches, not two. With only the first two, a row with
+                # template IS NULL and a layout set evaluates to NULL (branch A
+                # is NULL AND TRUE; branch B is TRUE AND FALSE), and Postgres
+                # treats a NULL CHECK result as satisfied — so a font asset could
+                # carry a mushaf layout. The third branch closes that.
                 condition=models.Q(template=AssetTemplateChoice.PAGE, mushaf_layout__isnull=False)
-                | models.Q(~models.Q(template=AssetTemplateChoice.PAGE), mushaf_layout__isnull=True),
+                | models.Q(
+                    ~models.Q(template=AssetTemplateChoice.PAGE),
+                    template__isnull=False,
+                    mushaf_layout__isnull=True,
+                )
+                | models.Q(template__isnull=True, mushaf_layout__isnull=True),
                 name="asset_mushaf_layout_consistency",
             ),
 ```
