@@ -26,6 +26,31 @@
 - **Errors:** `apps.core.ninja_utils.errors.ItqanError` for 4xx. Its `message` is **always** wrapped in `gettext_lazy as _`. Document every error in the endpoint's `response={}` with `NinjaErrorResponse[Literal["..."]]`.
 - **Architecture:** WRITE operations go Service → Repository → ORM. Portal READ operations (GET list/retrieve in `apps/*/api/portal/`) query the Model directly in the view — no Service, no Repository.
 - **Localization gate (hard):** after adding any `_(...)` string, run `uv run manage.py extendedmakemessages --no-location --no-wrap --locale=ar --no-fuzzy-matching --keep-header`, fill every new `msgstr` in `locale/ar/LC_MESSAGES/django.po`, and verify `msgfmt --check --statistics locale/ar/LC_MESSAGES/django.po -o /dev/null` reports **0 untranslated**. Then `compilemessages`.
+- **The test database ships with NO Quran data** (`Sura`, `Ayah`, `Word` are all empty; `--reuse-db` is on). The codebase's established pattern is that each test bakes the rows it needs — see `apps/content/tests/portal/test_asset_content.py:43` and `apps/content/tests/models/test_asset_version_change.py:14`. **Never assert against the canonical counts 114 / 6236 / 77431, and never call `Sura.objects.first()` expecting a row.** Bake explicitly and assert relative to what you baked. **Task 3 creates `apps/content/tests/quran_data.py`**; every later task that needs Quran rows imports `QuranDataMixin` from it and mixes it into the test class (`class Foo(QuranDataMixin, BaseTestCase)`), then calls `self.bake_quran()` in `setUp`:
+
+```python
+"""Minimal Quran rows for tests. The test DB ships empty and there is no
+global fixture, so each test class bakes exactly what it asserts against."""
+
+from model_bakery import baker
+
+from apps.quran.models import Ayah, Sura, Word
+
+
+class QuranDataMixin:
+    def bake_quran(self):
+        """Minimal Quran rows: 2 suras, 3 ayahs, 2 words. Ids are explicit so
+        entries and assertions can reference them directly."""
+        self.sura1 = baker.make(Sura, id=1, name="الفاتحة", transliterated_name="Al-Fatiha", ayas_count=2)
+        self.sura2 = baker.make(Sura, id=2, name="البقرة", transliterated_name="Al-Baqara", ayas_count=1)
+        self.ayah1 = baker.make(Ayah, id=1, sura=self.sura1, number_in_sura=1, text="ayah 1")
+        self.ayah2 = baker.make(Ayah, id=2, sura=self.sura1, number_in_sura=2, text="ayah 2")
+        self.ayah3 = baker.make(Ayah, id=3, sura=self.sura2, number_in_sura=1, text="ayah 3")
+        self.word1 = baker.make(Word, id=1, sura=self.sura1, ayah=self.ayah1, position_in_ayah=1, text="w1")
+        self.word2 = baker.make(Word, id=2, sura=self.sura1, ayah=self.ayah1, position_in_ayah=2, text="w2")
+```
+
+  With those rows: `Sura.objects.count() == 2`, `Ayah.objects.count() == 3`, `Word.objects.count() == 2`. Assert those numbers, not the canonical ones. Page-template assertions are exempt — they derive from `layout.page_count`, not Quran data.
 - **Do not rename a pushed frontend branch** — it has previously closed an open PR rather than retargeting it.
 - **`sentry-sdk` is a prod-only extra.** It is absent in CI and dev, so never import it in test code; stub the binding instead.
 
@@ -510,11 +535,12 @@ git commit -m "feat: add Asset.template and mushaf_layout with ayah backfill"
 **Files:**
 - Modify: `apps/content/models.py`
 - Create: `apps/content/migrations/0066_entry_unit_columns.py` (generated, then hand-edited)
+- Create: `apps/content/tests/quran_data.py` (the `QuranDataMixin` from Global Constraints — every later Quran-dependent task imports it)
 - Test: `apps/content/tests/models/test_entry_units.py`
 
 **Interfaces:**
 - Consumes: Task 2's migration chain (this depends on `0065`).
-- Produces: on both `AssetVersionEntry` and `AssetVersionChange` — `sura: Sura | None`, `ayah: Ayah | None` (now nullable), `word: Word | None`, `page_no: int | None`; constraints `entry_exactly_one_unit` / `change_exactly_one_unit`; unique constraints `unique_entry_per_version_{sura,word,page}` and `unique_change_per_version_{sura,word,page}`.
+- Produces: on both `AssetVersionEntry` and `AssetVersionChange` — `sura: Sura | None`, `ayah: Ayah | None` (now nullable), `word: Word | None`, `page_no: int | None`; constraints `entry_exactly_one_unit` / `change_exactly_one_unit`; unique constraints `unique_entry_per_version_{sura,word,page}` and `unique_change_per_version_{sura,word,page}`; `apps/content/tests/quran_data.py::QuranDataMixin` with `bake_quran()`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -530,6 +556,8 @@ from apps.quran.models import Ayah, Sura
 
 
 class EntryUnitConstraintTests(BaseTestCase):
+    # Task 3 creates the mixin; these tests bake inline so the mixin's own
+    # first consumer is Task 5, after it has been reviewed.
     def test_entry_where_no_unit_is_set_should_raise_integrity_error(self):
         # Arrange
         version = baker.make(AssetVersion)
@@ -541,8 +569,8 @@ class EntryUnitConstraintTests(BaseTestCase):
     def test_entry_where_two_units_are_set_should_raise_integrity_error(self):
         # Arrange
         version = baker.make(AssetVersion)
-        sura = Sura.objects.first()
-        ayah = Ayah.objects.first()
+        sura = baker.make(Sura, id=1, name="الفاتحة", transliterated_name="Al-Fatiha", ayas_count=1)
+        ayah = baker.make(Ayah, id=1, sura=sura, number_in_sura=1, text="ayah 1")
 
         # Act / Assert
         with self.assertRaises(IntegrityError):
@@ -551,7 +579,7 @@ class EntryUnitConstraintTests(BaseTestCase):
     def test_entry_where_only_sura_is_set_should_save(self):
         # Arrange
         version = baker.make(AssetVersion)
-        sura = Sura.objects.first()
+        sura = baker.make(Sura, id=1, name="الفاتحة", transliterated_name="Al-Fatiha", ayas_count=1)
 
         # Act
         entry = AssetVersionEntry.objects.create(version=version, sura=sura, text="x", order=sura.id)
@@ -574,7 +602,7 @@ class EntryUnitConstraintTests(BaseTestCase):
     def test_entry_where_same_sura_twice_in_one_version_should_raise_integrity_error(self):
         # Arrange
         version = baker.make(AssetVersion)
-        sura = Sura.objects.first()
+        sura = baker.make(Sura, id=1, name="الفاتحة", transliterated_name="Al-Fatiha", ayas_count=1)
         AssetVersionEntry.objects.create(version=version, sura=sura, text="a", order=sura.id)
 
         # Act / Assert
@@ -582,7 +610,7 @@ class EntryUnitConstraintTests(BaseTestCase):
             AssetVersionEntry.objects.create(version=version, sura=sura, text="b", order=sura.id)
 ```
 
-The Quran tables are seeded fixtures; `Sura.objects.first()` and `Ayah.objects.first()` resolve against them. If the test database has no Quran data, load it first with the project's Quran seeding management command (see `apps/quran/management/`).
+The test DB has no Quran rows — every one of these tests bakes what it needs (see Global Constraints). Import `Sura` and `Ayah` from `apps.quran.models` and `baker` from `model_bakery`.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -952,7 +980,11 @@ from apps.content.services.asset_templates import unit_spec_for
 from apps.core.tests.base import BaseTestCase
 
 
-class UnitSpecTests(BaseTestCase):
+class UnitSpecTests(QuranDataMixin, BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.bake_quran()
+
     def test_total_where_template_is_surah_should_return_114(self):
         # Arrange
         asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.SURAH)
@@ -960,8 +992,8 @@ class UnitSpecTests(BaseTestCase):
         # Act
         total = unit_spec_for(asset).total(asset)
 
-        # Assert
-        self.assertEqual(total, 114)
+        # Assert — 2 suras baked by bake_quran, not the canonical 114
+        self.assertEqual(total, 2)
 
     def test_total_where_template_is_ayah_should_return_6236(self):
         # Arrange
@@ -970,8 +1002,8 @@ class UnitSpecTests(BaseTestCase):
         # Act
         total = unit_spec_for(asset).total(asset)
 
-        # Assert
-        self.assertEqual(total, 6236)
+        # Assert — 3 ayahs baked by bake_quran, not the canonical 6236
+        self.assertEqual(total, 3)
 
     def test_total_where_template_is_page_should_return_layout_page_count(self):
         # Arrange
@@ -1043,13 +1075,7 @@ class UnitSpecTests(BaseTestCase):
 
 Add `from apps.core.ninja_utils.errors import ItqanError` to the test's imports.
 
-The expected label `"1. Al-Fatiha"` uses `Sura.transliterated_name`. Confirm the seeded value before asserting it:
-
-```bash
-.venv/bin/python manage.py shell -c "from apps.quran.models import Sura; s=Sura.objects.get(pk=1); print(repr(s.transliterated_name), repr(s.name))"
-```
-
-Use whatever that prints. Do not change the fixture to match the test.
+Every test in this class calls `self.bake_quran()` (see Global Constraints) in its Arrange step before making an asset. The label `"1. Al-Fatiha"` matches the `transliterated_name` that helper bakes, so the assertion is self-contained — there is no fixture to consult.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -1247,11 +1273,11 @@ Append to `apps/content/tests/services/test_asset_templates.py`:
         asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH)
 
         # Act
-        rows, total = unit_spec_for(asset).units_page(asset, offset=10, limit=5)
+        rows, total = unit_spec_for(asset).units_page(asset, offset=1, limit=5)
 
-        # Assert
-        self.assertEqual(total, 6236)
-        self.assertEqual([row.unit_id for row in rows], [11, 12, 13, 14, 15])
+        # Assert — 3 ayahs baked; offset 1 limit 5 yields ids 2 and 3
+        self.assertEqual(total, 3)
+        self.assertEqual([row.unit_id for row in rows], [2, 3])
 
     def test_units_page_where_page_template_should_window_the_range(self):
         # Arrange
@@ -1332,7 +1358,11 @@ from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 
 
-class EntriesEnumerationTests(BaseTestCase):
+class EntriesEnumerationTests(QuranDataMixin, BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.bake_quran()  # see Global Constraints
+
     def _draft_for(self, template, layout=None):
         asset = baker.make(
             Asset,
@@ -1357,8 +1387,8 @@ class EntriesEnumerationTests(BaseTestCase):
         # Assert
         self.assertEqual(response.status_code, 200)
         body = response.json()
-        self.assertEqual(body["count"], 114)
-        self.assertEqual(len(body["results"]), 114)
+        self.assertEqual(body["count"], 2)
+        self.assertEqual(len(body["results"]), 2)
         self.assertTrue(all(item["text"] == "" for item in body["results"]))
         self.assertEqual(AssetVersionEntry.objects.filter(version=version).count(), 0)
 
@@ -1366,7 +1396,7 @@ class EntriesEnumerationTests(BaseTestCase):
         # Arrange
         self.authenticate_user(permissions=[PermissionChoice.PORTAL_READ_TRANSLATION])
         asset, version = self._draft_for(AssetTemplateChoice.SURAH)
-        AssetVersionEntry.objects.create(version=version, sura_id=2, text="content", order=2)
+        AssetVersionEntry.objects.create(version=version, sura_id=self.sura2.id, text="content", order=2)
 
         # Act
         response = self.client.get(
@@ -1375,8 +1405,8 @@ class EntriesEnumerationTests(BaseTestCase):
 
         # Assert
         items = {item["unit_id"]: item["text"] for item in response.json()["results"]}
-        self.assertEqual(items[2], "content")
-        self.assertEqual(items[1], "")
+        self.assertEqual(items[self.sura2.id], "content")
+        self.assertEqual(items[self.sura1.id], "")
 
     def test_list_entries_where_page_asset_should_return_layout_page_count_rows(self):
         # Arrange
@@ -1407,7 +1437,8 @@ class EntriesEnumerationTests(BaseTestCase):
 
         # Assert
         body = response.json()
-        self.assertLess(body["count"], 77431)
+        # 2 words baked, both in sura 1
+        self.assertEqual(body["count"], 2)
         self.assertTrue(all(item["sura"] == 1 for item in body["results"]))
 
     def test_list_entries_where_ayah_asset_should_keep_returning_6236_rows(self):
@@ -1420,9 +1451,9 @@ class EntriesEnumerationTests(BaseTestCase):
             f"/portal/content/translation/{asset.slug}/versions/{version.id}/entries/?page_size=1"
         )
 
-        # Assert
+        # Assert — 3 ayahs baked, not the canonical 6236
         body = response.json()
-        self.assertEqual(body["count"], 6236)
+        self.assertEqual(body["count"], 3)
         self.assertEqual(body["results"][0]["label"], "1:1")
 ```
 
@@ -1644,7 +1675,11 @@ from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 
 
-class EntryWriteTests(BaseTestCase):
+class EntryWriteTests(QuranDataMixin, BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.bake_quran()  # see Global Constraints
+
     def _draft_for(self, template):
         asset = baker.make(
             Asset,
@@ -1656,6 +1691,7 @@ class EntryWriteTests(BaseTestCase):
         return asset, version
 
     def test_patch_entries_where_surah_template_should_write_the_sura_column(self):
+        # sura id 2 is baked by bake_quran; 999 below is deliberately absent
         # Arrange
         self.authenticate_user(permissions=[PermissionChoice.PORTAL_UPDATE_TRANSLATION])
         asset, version = self._draft_for(AssetTemplateChoice.SURAH)
@@ -1663,16 +1699,16 @@ class EntryWriteTests(BaseTestCase):
         # Act
         response = self.client.patch(
             f"/portal/content/translation/{asset.slug}/versions/{version.id}/entries/",
-            data={"rows": [{"unit_id": 3, "text": "surah three"}]},
+            data={"rows": [{"unit_id": 2, "text": "surah two"}]},
             content_type="application/json",
         )
 
         # Assert
         self.assertEqual(response.status_code, 200)
         entry = AssetVersionEntry.objects.get(version=version)
-        self.assertEqual(entry.sura_id, 3)
+        self.assertEqual(entry.sura_id, 2)
         self.assertIsNone(entry.ayah_id)
-        self.assertEqual(entry.text, "surah three")
+        self.assertEqual(entry.text, "surah two")
 
     def test_patch_entries_where_page_template_should_write_the_page_no_column(self):
         # Arrange
@@ -1906,7 +1942,11 @@ from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 
 
-class ReviewTemplateTests(BaseTestCase):
+class ReviewTemplateTests(QuranDataMixin, BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.bake_quran()
+
     def test_review_changes_where_surah_template_should_not_raise_and_should_label_the_unit(self):
         # Arrange
         self.authenticate_user(permissions=[PermissionChoice.PORTAL_REVIEW_CONTENT])
@@ -1934,7 +1974,7 @@ class ReviewTemplateTests(BaseTestCase):
         row = response.json()["results"][0]
         self.assertEqual(row["unit_type"], "surah")
         self.assertEqual(row["unit_id"], 2)
-        self.assertEqual(row["label"], "2. Al-Baqara")
+        self.assertEqual(row["label"], "2. Al-Baqara")  # transliterated_name baked by bake_quran
 
     def test_review_changes_where_ayah_template_should_keep_the_colon_label(self):
         # Arrange
@@ -1964,14 +2004,13 @@ class ReviewTemplateTests(BaseTestCase):
         self.assertEqual(row["unit_id"], 1)
 ```
 
-Confirm the real review endpoint path and the transliterated sura name before asserting:
+`bake_quran()` bakes sura 2 with `transliterated_name="Al-Baqara"`, so `"2. Al-Baqara"` is self-contained. Confirm the real review endpoint path before asserting it:
 
 ```bash
 grep -n "@router" apps/content/api/portal/asset_review.py
-.venv/bin/python manage.py shell -c "from apps.quran.models import Sura; print(Sura.objects.get(pk=2).transliterated_name)"
 ```
 
-Use what those print. `"2. Al-Baqara"` above is a placeholder for whatever the fixture actually holds — the label format is `f"{id}. {transliterated_name}"`, matching `UnitSpec` (Task 5).
+Use the path that prints.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -2836,7 +2875,11 @@ from apps.content.services.asset_templates import unit_spec_for
 from apps.core.tests.base import BaseTestCase
 
 
-class TemplateImportTests(BaseTestCase):
+class TemplateImportTests(QuranDataMixin, BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.bake_quran()
+
     def _spec(self, template, layout=None):
         asset = baker.make(
             Asset, category=CategoryChoice.TRANSLATION, template=template, mushaf_layout=layout
@@ -2846,7 +2889,7 @@ class TemplateImportTests(BaseTestCase):
     def test_parse_where_surah_file_should_key_by_sura_number(self):
         # Arrange
         spec, asset = self._spec(AssetTemplateChoice.SURAH)
-        raw = b"sura,text\n1,opening\n2,cow\n"
+        raw = b"sura,text\n1,opening\n2,cow\n"  # suras 1 and 2 baked by bake_quran
 
         # Act
         parsed = parse_content_file(raw, spec, asset)
@@ -2869,13 +2912,15 @@ class TemplateImportTests(BaseTestCase):
     def test_parse_where_word_file_has_word_id_should_prefer_it(self):
         # Arrange
         spec, asset = self._spec(AssetTemplateChoice.WORD)
-        raw = b"word_id,sura,aya,word,text\n5,99,99,99,gloss\n"
+        # word id 2 is baked; the sura/aya/word triple is deliberately bogus so
+        # only word_id precedence can satisfy the assertion
+        raw = b"word_id,sura,aya,word,text\n2,99,99,99,gloss\n"
 
         # Act
         parsed = parse_content_file(raw, spec, asset)
 
         # Assert
-        self.assertEqual(parsed[0].unit_id, 5)
+        self.assertEqual(parsed[0].unit_id, 2)
 
     def test_parse_where_ayah_file_should_keep_working(self):
         # Arrange
@@ -3021,7 +3066,11 @@ from apps.content.services.asset_verse_text import extract_verse_text
 from apps.core.tests.base import BaseTestCase
 
 
-class ExportTemplateTests(BaseTestCase):
+class ExportTemplateTests(QuranDataMixin, BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.bake_quran()
+
     def test_entries_to_csv_where_surah_template_should_emit_a_sura_column(self):
         # Arrange
         asset = baker.make(
