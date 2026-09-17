@@ -537,7 +537,10 @@ class AssetContentRepository:
         """A commit's diff: stored change rows if present, else computed from
         this commit's snapshot vs its predecessor's (legacy commits)."""
         spec = unit_spec_for(version.asset)
-        stored = list(version.changes.select_related("sura", "ayah", "word__ayah").order_by("order"))
+        # `id` breaks ties within an `order` value: `order` is NULL-free but not
+        # unique per version, and this endpoint is paginated, so an unstable tie
+        # order would let rows repeat or vanish across page boundaries.
+        stored = list(version.changes.select_related("sura", "ayah", "word__ayah").order_by("order", "id"))
         if stored:
             return [
                 self._change_to_dict(spec, c.unit_id, getattr(c, spec.field), c.change_type, c.old_text, c.new_text)
@@ -599,6 +602,13 @@ class AssetContentRepository:
         if not snapshot and version.file_url:
             # Legacy file-only commit (pre-entries): parse its stored file so the
             # restore materializes real entries + a delta, like any other commit.
+            # `_snapshot_from_file` always returns ayah ids (the parser is
+            # ayah-only), which the `copies` list below then writes through
+            # `**{unit_field: unit_id}` keyed to *this asset's* template — the one
+            # place an ayah-keyed map meets a template-keyed write. Unreachable
+            # today: a non-ayah asset cannot have a pre-entries legacy file, since
+            # templates postdate the entries system. Generalizing the file-based
+            # import/export paths (Task 12) must account for this.
             snapshot = self._snapshot_from_file(version)
         name = self.unique_version_name(asset, version.name)
         new_version = self.asset_version_model.objects.create(
