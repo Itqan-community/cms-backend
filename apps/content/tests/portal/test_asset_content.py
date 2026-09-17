@@ -280,6 +280,10 @@ class PatchEntriesTest(AssetContentBaseTest):
         self.assertEqual(2, draft.entries.count())
         entry = draft.entries.get(ayah_id=1)
         self.assertEqual("au nom", entry.text)
+        # The response is shaped like list_entries' rows, not raw model fields.
+        rows = {row["unit_id"]: row for row in response.json()}
+        self.assertEqual("1:1", rows[1]["label"])
+        self.assertEqual("ayah 1", rows[1]["reference_text"])
 
     def test_patch_entries_where_existing_row_should_update_text(self):
         # Arrange
@@ -299,6 +303,9 @@ class PatchEntriesTest(AssetContentBaseTest):
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual(1, draft.entries.count())
         self.assertEqual("new", draft.entries.get(ayah_id=1).text)
+        row = response.json()[0]
+        self.assertEqual("1:1", row["label"])
+        self.assertEqual("ayah 1", row["reference_text"])
 
     def test_patch_entries_where_version_is_published_should_return_400(self):
         # Arrange
@@ -356,6 +363,34 @@ class SourceReferenceEntriesTest(AssetContentBaseTest):
         self.assertEqual("source one", rows[self.ayahs[0].id]["source_text"])
         self.assertEqual("", rows[self.ayahs[0].id]["text"])
         self.assertEqual("source two", rows[self.ayahs[1].id]["source_text"])
+
+    def test_patch_response_where_translation_should_include_source_text(self):
+        # Regression: the autosave (PATCH) response must show the same
+        # source_text reference column as the next GET, not go blank until
+        # the page is reloaded.
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self._publish_source_and_add_es()
+        draft_resp = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/draft/",
+            data={"language": "es"},
+            content_type="application/json",
+        )
+        draft_id = draft_resp.json()["id"]
+
+        # Act
+        response = self.client.patch(
+            f"/portal/content/translations/{self.translation.slug}/versions/{draft_id}/entries/",
+            data={"rows": [{"ayah_id": self.ayahs[0].id, "text": "uno"}]},
+            content_type="application/json",
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        row = response.json()[0]
+        self.assertEqual("uno", row["text"])
+        self.assertEqual("source one", row["source_text"])
 
     def test_source_language_entries_have_no_source_text(self):
         # Arrange

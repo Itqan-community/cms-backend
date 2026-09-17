@@ -110,3 +110,37 @@ class EntriesEnumerationTests(QuranDataMixin, BaseTestCase):
         body = response.json()
         self.assertEqual(body["count"], 3)
         self.assertEqual(body["results"][0]["label"], "1:1")
+
+    def test_list_entries_where_page_is_zero_should_return_400(self):
+        # Arrange — the hand-rolled page/page_size params must keep the same
+        # lower bound NinjaPagination.Input enforced (page: int = Field(1, ge=1)),
+        # otherwise offset goes negative and QuerySet slicing 500s instead. This
+        # project's global handler turns every ninja validation error into 400
+        # (apps.core.ninja_utils.error_handling.handle_ninja_validation_error),
+        # not django-ninja's library default of 422 — confirmed empirically
+        # against an existing @paginate endpoint (.../diff/?page=0) before
+        # writing this assertion.
+        asset, version = self._draft_for(AssetTemplateChoice.SURAH)
+
+        # Act
+        response = self.client.get(f"/portal/content/translations/{asset.slug}/versions/{version.id}/entries/?page=0")
+
+        # Assert
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["error_name"], "validation_error")
+
+    def test_list_entries_where_page_two_should_return_the_second_slice(self):
+        # Arrange — a 604-page layout gives enough rows to prove page 2 is not
+        # page 1 again (the classic off-by-one risk of a hand-rolled offset).
+        layout = baker.make(MushafLayout, name="Madani 604", page_count=604)
+        asset, version = self._draft_for(AssetTemplateChoice.PAGE, layout=layout)
+
+        # Act
+        response = self.client.get(
+            f"/portal/content/translations/{asset.slug}/versions/{version.id}/entries/?page=2&page_size=5"
+        )
+
+        # Assert
+        body = response.json()
+        self.assertEqual(body["count"], 604)
+        self.assertEqual([item["unit_id"] for item in body["results"]], [6, 7, 8, 9, 10])
