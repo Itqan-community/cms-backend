@@ -10,6 +10,7 @@ from model_bakery import baker
 
 from apps.content.models import (
     Asset,
+    AssetTemplateChoice,
     AssetVersion,
     CategoryChoice,
     Qiraah,
@@ -75,6 +76,7 @@ class ContentSamplesTest(BaseTestCase):
         asset = baker.make(
             Asset,
             category=category,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             name=name,
@@ -134,6 +136,7 @@ class ContentSamplesTest(BaseTestCase):
         tafsir_asset = baker.make(
             Asset,
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             name="Tafsir al-Tabari",
@@ -161,6 +164,7 @@ class ContentSamplesTest(BaseTestCase):
         tafsir_asset = baker.make(
             Asset,
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             name="تفسير الطبري",
@@ -181,6 +185,7 @@ class ContentSamplesTest(BaseTestCase):
         tafsir_asset = baker.make(
             Asset,
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             name="Partial Tafsir",
@@ -200,6 +205,7 @@ class ContentSamplesTest(BaseTestCase):
         baker.make(
             Asset,
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             name="Metadata-only Tafsir",
@@ -217,6 +223,7 @@ class ContentSamplesTest(BaseTestCase):
         baker.make(
             Asset,
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             restricted_for_tenant=True,
@@ -235,6 +242,7 @@ class ContentSamplesTest(BaseTestCase):
         baker.make(
             Asset,
             category=CategoryChoice.TRANSLATION,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             restricted_for_tenant=True,
@@ -253,6 +261,7 @@ class ContentSamplesTest(BaseTestCase):
         tafsir_asset = baker.make(
             Asset,
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             name="Corrupt Tafsir",
@@ -273,6 +282,7 @@ class ContentSamplesTest(BaseTestCase):
         tafsir_asset = baker.make(
             Asset,
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             name="Pdf Tafsir",
@@ -301,6 +311,7 @@ class ContentSamplesTest(BaseTestCase):
         translation_asset = baker.make(
             Asset,
             category=CategoryChoice.TRANSLATION,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             name="Saheeh International",
@@ -329,6 +340,7 @@ class ContentSamplesTest(BaseTestCase):
         baker.make(
             Asset,
             category=CategoryChoice.TRANSLATION,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             name="Metadata-only Translation",
@@ -574,6 +586,7 @@ class ContentSamplesTest(BaseTestCase):
         baker.make(
             Asset,
             category=CategoryChoice.TRANSLATION,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             name="Metadata-only Translation",

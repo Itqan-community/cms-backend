@@ -5,7 +5,7 @@ from typing import Any
 from django.db import transaction
 from django.db.models import Q
 
-from apps.content.models import Asset, AssetVersion, CategoryChoice, LicenseChoice, StatusChoice
+from apps.content.models import Asset, AssetTemplateChoice, AssetVersion, CategoryChoice, LicenseChoice, StatusChoice
 
 
 class TranslationRepository:
@@ -55,6 +55,7 @@ class TranslationRepository:
                 publisher_id=publisher_id,
                 status=StatusChoice.READY,
                 category=CategoryChoice.TRANSLATION,
+                template=AssetTemplateChoice.AYAH,
                 name=name,
                 name_ar=name_ar,
                 name_en=name_en,

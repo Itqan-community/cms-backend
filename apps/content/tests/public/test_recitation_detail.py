@@ -10,6 +10,7 @@ from apps.content.models import (
     Asset,
     AssetAccess,
     AssetAccessRequest,
+    AssetTemplateChoice,
     CategoryChoice,
     RecitationAyahTiming,
     RecitationSurahTrack,
@@ -122,6 +123,7 @@ class RecitationTracksTest(BaseTestCase):
         non_recitation_asset = baker.make(
             Asset,
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
         )

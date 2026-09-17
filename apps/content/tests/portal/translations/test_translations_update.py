@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, CategoryChoice, StatusChoice
+from apps.content.models import Asset, AssetTemplateChoice, CategoryChoice, StatusChoice
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
@@ -16,6 +16,7 @@ class TranslationUpdateTest(BaseTestCase):
         self.translation = baker.make(
             Asset,
             category=CategoryChoice.TRANSLATION,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher1,
             status=StatusChoice.READY,
             name="Original Translation",

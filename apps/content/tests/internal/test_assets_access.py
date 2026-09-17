@@ -1,6 +1,14 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetAccess, AssetAccessRequest, CategoryChoice, LicenseChoice, StatusChoice
+from apps.content.models import (
+    Asset,
+    AssetAccess,
+    AssetAccessRequest,
+    AssetTemplateChoice,
+    CategoryChoice,
+    LicenseChoice,
+    StatusChoice,
+)
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -16,6 +24,7 @@ class AssetAccessTest(BaseTestCase):
             name="Test Asset",
             description="Test asset description",
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC_BY_SA,
             status=StatusChoice.READY,
         )

@@ -129,6 +129,26 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         help_text="Asset category matching resource categories",
     )
 
+    template = models.CharField(
+        max_length=10,
+        choices=AssetTemplateChoice,
+        null=True,
+        blank=True,
+        help_text=(
+            "Content granularity for text assets (translation / tafsir). "
+            "Chosen at creation and immutable afterwards. NULL for every other category."
+        ),
+    )
+
+    mushaf_layout = models.ForeignKey(
+        "MushafLayout",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="assets",
+        help_text="Pagination this asset follows. Required when template is 'page', forbidden otherwise.",
+    )
+
     license = models.CharField(max_length=50, choices=LicenseChoice, help_text="Asset license")
 
     file_size = models.CharField(max_length=50, help_text="Human readable file size e.g. '2.5 MB'")
@@ -227,6 +247,22 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
                 condition=models.Q(is_external=False, external_url__isnull=True)
                 | models.Q(is_external=True, external_url__isnull=False),
                 name="asset_external_url_consistency",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    category__in=[CategoryChoice.TRANSLATION, CategoryChoice.TAFSIR],
+                    template__isnull=False,
+                )
+                | models.Q(
+                    ~models.Q(category__in=[CategoryChoice.TRANSLATION, CategoryChoice.TAFSIR]),
+                    template__isnull=True,
+                ),
+                name="asset_template_required_for_text",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(template=AssetTemplateChoice.PAGE, mushaf_layout__isnull=False)
+                | models.Q(~models.Q(template=AssetTemplateChoice.PAGE), mushaf_layout__isnull=True),
+                name="asset_mushaf_layout_consistency",
             ),
         ]
 

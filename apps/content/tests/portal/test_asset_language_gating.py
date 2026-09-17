@@ -10,6 +10,7 @@ from model_bakery import baker
 from apps.content.models import (
     Asset,
     AssetLanguage,
+    AssetTemplateChoice,
     AssetVersion,
     CategoryChoice,
     StatusChoice,
@@ -29,6 +30,7 @@ class AssetLanguageGatingTest(BaseTestCase):
         self.translation = baker.make(
             Asset,
             category=CategoryChoice.TRANSLATION,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             slug="t1",
@@ -256,6 +258,7 @@ class AddAssetLanguagePermissionTest(BaseTestCase):
         self.translation = baker.make(
             Asset,
             category=CategoryChoice.TRANSLATION,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             slug="t1",

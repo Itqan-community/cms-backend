@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetLanguage, AssetVersion, CategoryChoice, StatusChoice
+from apps.content.models import Asset, AssetLanguage, AssetTemplateChoice, AssetVersion, CategoryChoice, StatusChoice
 from apps.content.services.asset_language_access import (
     allowed_languages,
     assign_language_to_member,
@@ -21,6 +21,7 @@ class AssetLanguageAccessTest(BaseTestCase):
         self.asset = baker.make(
             Asset,
             category=CategoryChoice.TRANSLATION,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             language="ar",

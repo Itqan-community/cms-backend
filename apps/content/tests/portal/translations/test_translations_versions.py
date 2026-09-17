@@ -2,7 +2,15 @@ from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetAccess, AssetAccessRequest, AssetVersion, CategoryChoice, StatusChoice
+from apps.content.models import (
+    Asset,
+    AssetAccess,
+    AssetAccessRequest,
+    AssetTemplateChoice,
+    AssetVersion,
+    CategoryChoice,
+    StatusChoice,
+)
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
@@ -16,6 +24,7 @@ class TranslationVersionBaseTest(BaseTestCase):
         self.translation = baker.make(
             Asset,
             category=CategoryChoice.TRANSLATION,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             name="Translation Al-Tabari",

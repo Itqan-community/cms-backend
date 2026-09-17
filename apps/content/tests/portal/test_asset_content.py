@@ -6,6 +6,7 @@ from model_bakery import baker
 from apps.content.models import (
     Asset,
     AssetLanguage,
+    AssetTemplateChoice,
     AssetVersion,
     AssetVersionChange,
     AssetVersionEntry,
@@ -28,6 +29,7 @@ class AssetContentBaseTest(BaseTestCase):
         self.translation = baker.make(
             Asset,
             category=CategoryChoice.TRANSLATION,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             name="French Rashid",
@@ -907,6 +909,7 @@ class TafsirContentTest(AssetContentBaseTest):
         self.tafsir = baker.make(
             Asset,
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             name="Tabari",
@@ -974,6 +977,7 @@ class VersionUploadImportTest(AssetContentBaseTest):
         baker.make(
             Asset,
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             name="Tabari",
