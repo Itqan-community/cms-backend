@@ -725,7 +725,21 @@ Adding a `CheckConstraint` takes an `ACCESS EXCLUSIVE` lock and validates the wh
 
 If the count is under ~100,000, leave the generated migration as-is and skip to Step 6 — the scan is sub-second and the split adds risk for no gain. Record the count in the commit message either way.
 
-If it is larger, replace the two `AddConstraint` operations for `entry_exactly_one_unit` and `change_exactly_one_unit` with a `SeparateDatabaseAndState` that adds them `NOT VALID` and validates separately:
+If it is larger, split the work across **two** migrations. The `AddConstraint`
+operations for `entry_exactly_one_unit` and `change_exactly_one_unit` become a
+`SeparateDatabaseAndState` in `0066` that adds them `NOT VALID`, and the
+`VALIDATE CONSTRAINT` statements go in a separate `0067`.
+
+**The second migration is not optional.** A Django migration is atomic by
+default, and Postgres holds `ACCESS EXCLUSIVE` — taken by
+`ADD CONSTRAINT … NOT VALID` — until the transaction commits. Put `VALIDATE`
+in the same migration and it performs its full-table scan under that lock,
+giving exactly the lock profile the split exists to avoid. Only a separate
+migration, which is its own transaction, lets `0066` commit and release the
+lock so `VALIDATE` can run under the lighter `SHARE UPDATE EXCLUSIVE` that
+permits concurrent reads and writes. Do **not** reach for `atomic = False`
+instead — it would achieve the lock release at the cost of per-migration
+atomicity.
 
 ```python
 migrations.SeparateDatabaseAndState(
