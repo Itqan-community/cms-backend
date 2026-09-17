@@ -260,8 +260,31 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
                 name="asset_template_required_for_text",
             ),
             models.CheckConstraint(
-                condition=models.Q(template=AssetTemplateChoice.PAGE, mushaf_layout__isnull=False)
-                | models.Q(~models.Q(template=AssetTemplateChoice.PAGE), mushaf_layout__isnull=True),
+                # Three branches, not two. With only two, a row with template
+                # IS NULL and a layout set evaluates to SQL NULL (branch A is
+                # NULL AND TRUE; branch B is TRUE AND FALSE), and Postgres
+                # treats a NULL CHECK result as satisfied -- so a font asset
+                # could carry a mushaf layout. The third branch closes that.
+                #
+                # Branch A also needs its own explicit `template__isnull=False`:
+                # `template=PAGE` alone is a plain SQL equality, which is NULL
+                # (not FALSE) when template IS NULL. Without the explicit
+                # not-null check, `mushaf_layout__isnull=False AND template=PAGE`
+                # degrades to `TRUE AND NULL = NULL` for a non-page asset that
+                # carries a layout, and NULL OR ... OR ... is satisfied by
+                # Postgres exactly like the original two-branch hole -- the
+                # not-null check turns that into a definite FALSE instead.
+                condition=models.Q(
+                    template=AssetTemplateChoice.PAGE,
+                    template__isnull=False,
+                    mushaf_layout__isnull=False,
+                )
+                | models.Q(
+                    ~models.Q(template=AssetTemplateChoice.PAGE),
+                    template__isnull=False,
+                    mushaf_layout__isnull=True,
+                )
+                | models.Q(template__isnull=True, mushaf_layout__isnull=True),
                 name="asset_mushaf_layout_consistency",
             ),
         ]
