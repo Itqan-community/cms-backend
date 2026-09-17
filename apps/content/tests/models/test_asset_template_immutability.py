@@ -53,3 +53,49 @@ class AssetTemplateImmutabilityTests(BaseTestCase):
 
         # Assert
         self.assertEqual(asset.template, AssetTemplateChoice.WORD)
+
+    def test_from_db_where_only_defers_template_should_not_recurse(self):
+        # Arrange
+        baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH)
+
+        # Act
+        assets = list(Asset.objects.only("id", "name"))
+
+        # Assert
+        self.assertEqual(len(assets), 1)
+
+    def test_from_db_where_defer_excludes_template_should_not_recurse(self):
+        # Arrange
+        baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH)
+
+        # Act
+        assets = list(Asset.objects.defer("template"))
+
+        # Assert
+        self.assertEqual(len(assets), 1)
+
+    def test_save_where_deferred_instance_edits_unrelated_field_should_not_raise(self):
+        # Arrange
+        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH)
+        deferred = Asset.objects.only("id", "name", "description").get(pk=asset.pk)
+        deferred.description = "touched via deferred instance"
+
+        # Act
+        deferred.save(update_fields=["description"])
+
+        # Assert
+        self.assertEqual(Asset.objects.get(pk=asset.pk).description, "touched via deferred instance")
+
+    def test_save_where_refreshed_after_external_update_should_not_raise(self):
+        # Arrange
+        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH)
+        instance = Asset.objects.get(pk=asset.pk)
+        Asset.objects.filter(pk=asset.pk).update(template=AssetTemplateChoice.SURAH)
+        instance.refresh_from_db()
+        instance.description = "touched after refresh"
+
+        # Act
+        instance.save()
+
+        # Assert
+        self.assertEqual(Asset.objects.get(pk=asset.pk).description, "touched after refresh")
