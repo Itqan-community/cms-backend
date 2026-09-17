@@ -12,10 +12,18 @@ from __future__ import annotations
 import logging
 
 from django.db import IntegrityError, transaction
-from django.db.models import OuterRef, Q, Subquery
+from django.db.models import Q
 from django.utils.translation import gettext as _
 
-from apps.content.models import Asset, AssetVersion, AssetVersionEntry, CategoryChoice, StatusChoice, VersionStateChoice
+from apps.content.models import (
+    Asset,
+    AssetTemplateChoice,
+    AssetVersion,
+    AssetVersionEntry,
+    CategoryChoice,
+    StatusChoice,
+    VersionStateChoice,
+)
 from apps.content.repositories.asset_content import AssetContentRepository
 from apps.content.services.asset_content_import import AssetContentParseError, parse_content_file
 from apps.content.services.asset_templates import UnitSpec, unit_spec_for
@@ -170,9 +178,12 @@ class AssetContentService:
                 # When editing a translation, always seed from the full source
                 # mushaf so the editor shows every original ayah (overlaying any
                 # existing translation), even ayahs the translation hasn't reached
-                # yet or that a previous sparse publish dropped.
+                # yet or that a previous sparse publish dropped. Meaningful only for
+                # the ayah template — a surah/word/page translation has no mushaf
+                # ayah rows to cover, and Task 6's virtual enumeration already shows
+                # its full unit set without any seeded rows.
                 mushaf = None
-                if not asset_language.is_source:
+                if not asset_language.is_source and locked_asset.template == AssetTemplateChoice.AYAH:
                     mushaf = locked_asset.get_latest_version(locked_asset.language)
                 existing = self.repo.get_draft(locked_asset, asset_language)
                 if existing is not None:
@@ -238,37 +249,12 @@ class AssetContentService:
         record. Empty draft rows are excluded (they are dropped on commit)."""
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
         draft = self._get_editable_draft_or_400(asset, version_id)
+        spec = unit_spec_for(asset)
         language = draft.asset_language.language if draft.asset_language_id else asset.language
         head = draft.asset.get_latest_version(language)
         old_map = self.repo.reconstruct_entries(head) if head is not None else {}
-        new_map = {ayah_id: text for ayah_id, text in self.repo._entries_map(draft).items() if text != ""}
-        return self.repo.diff_maps(old_map, new_map)
-
-    def get_entries(
-        self,
-        slug: str,
-        category: CategoryChoice,
-        version_id: int,
-        publisher_q: Q | None = None,
-    ):
-        """Return a version's per-ayah entries (any state; used by the editor).
-
-        When the version is a translation (non-source language), each row is
-        annotated with ``source_text`` — the source language's latest published
-        text for the same ayah — so the editor can show it as a read-only
-        reference beside the editable target text.
-        """
-        version = self.get_version_or_404(slug, category, version_id, publisher_q=publisher_q)
-        qs = self.repo.get_entries(version)
-        lang = version.asset_language
-        if lang is not None and not lang.is_source:
-            source_version = version.asset.get_latest_version(version.asset.language)
-            if source_version is not None:
-                source_text = AssetVersionEntry.objects.filter(
-                    version=source_version, ayah_id=OuterRef("ayah_id")
-                ).values("text")[:1]
-                qs = qs.annotate(source_text=Subquery(source_text))
-        return qs
+        new_map = {unit_id: text for unit_id, text in self.repo._entries_map(draft).items() if text != ""}
+        return self.repo.diff_maps(spec, old_map, new_map)
 
     def get_entries_page(
         self,
@@ -395,10 +381,28 @@ class AssetContentService:
         rows: list[dict[str, object]],
         publisher_q: Q | None = None,
     ) -> list[AssetVersionEntry]:
-        """Bulk create/update draft entries (autosave). Draft-only."""
+        """Bulk create/update draft entries (autosave). Draft-only.
+
+        Validates each row's unit against the template before writing:
+        ``valid_unit_ids`` is bounded by the patched candidates, never the
+        template's full unit set (77,431 rows for word), so this check stays
+        cheap on every save regardless of template.
+        """
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
         draft = self._get_editable_draft_or_400(asset, version_id)
-        changed = self.repo.upsert_entries(draft, rows)
+        spec = unit_spec_for(asset)
+        candidates = [int(row["unit_id"]) for row in rows]
+        valid_ids = spec.valid_unit_ids(asset, candidates)
+        unknown = [unit_id for unit_id in candidates if unit_id not in valid_ids]
+        if unknown:
+            raise ItqanError(
+                error_name="unit_not_in_template",
+                message=_("Units {units} are not part of this asset's template.").format(
+                    units=", ".join(str(unit) for unit in unknown[:10])
+                ),
+                status_code=400,
+            )
+        changed = self.repo.upsert_entries(draft, spec, rows)
         logger.info(f"Draft entries upserted [version_id={draft.pk}, count={len(changed)}]")
         return changed
 

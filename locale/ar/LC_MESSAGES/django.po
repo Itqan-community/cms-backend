@@ -394,6 +394,10 @@ msgid "Only draft versions can be edited."
 msgstr "لا يمكن تعديل سوى إصدارات المسودة."
 
 #, python-brace-format
+msgid "Units {units} are not part of this asset's template."
+msgstr "الوحدات {units} ليست جزءًا من قالب هذه المادة."
+
+#, python-brace-format
 msgid "Could not parse the uploaded content file: {reason}"
 msgstr "تعذر تحليل ملف المحتوى المرفوع: {reason}"
 
