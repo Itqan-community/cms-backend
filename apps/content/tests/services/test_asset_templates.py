@@ -12,7 +12,7 @@ class UnitSpecTests(QuranDataMixin, BaseTestCase):
         super().setUp()
         self.bake_quran()
 
-    def test_total_where_template_is_surah_should_return_114(self):
+    def test_total_where_template_is_surah_should_return_baked_sura_count(self):
         # Arrange
         asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.SURAH)
 
@@ -22,7 +22,7 @@ class UnitSpecTests(QuranDataMixin, BaseTestCase):
         # Assert — 2 suras baked by bake_quran, not the canonical 114
         self.assertEqual(total, 2)
 
-    def test_total_where_template_is_ayah_should_return_6236(self):
+    def test_total_where_template_is_ayah_should_return_baked_ayah_count(self):
         # Arrange
         asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH)
 

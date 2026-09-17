@@ -50,7 +50,7 @@ class UnitSpec:
             return qs
 
         if self.template == AssetTemplateChoice.AYAH:
-            qs = Ayah.objects.select_related("sura").order_by("id")
+            qs = Ayah.objects.order_by("id")
             if sura is not None:
                 qs = qs.filter(sura_id=sura)
             return qs
@@ -110,6 +110,11 @@ class UnitSpec:
         )
 
     def total(self, asset: Asset) -> int:
+        """The template's full unit count, ignoring any ``sura`` filter.
+
+        Callers paginating a ``sura``-filtered set must use the total that
+        ``units_page`` returns, not this.
+        """
         if self.template == AssetTemplateChoice.SURAH:
             return Sura.objects.count()
         if self.template == AssetTemplateChoice.AYAH:
@@ -135,6 +140,14 @@ class UnitSpec:
         return [self._to_row(item) for item in window], total
 
     def units(self, asset: Asset, *, sura: int | None = None) -> Sequence[UnitRow]:
+        """Every canonical unit of this template, in order.
+
+        Materialises the entire set. That is fine for surah (114) and page
+        (a few hundred), and tolerable for ayah (6,236) — but the word
+        template has 77,431 units in production, so a request path must call
+        ``units_page`` with an explicit limit instead of reaching for this as
+        "the easy way to get everything".
+        """
         rows, _total = self.units_page(asset, offset=0, limit=self.total(asset), sura=sura)
         return rows
 
