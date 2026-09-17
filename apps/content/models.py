@@ -10,6 +10,7 @@ from django_countries.fields import CountryField
 
 from apps.core.mixins.storage import DeleteFilesOnDeleteMixin
 from apps.core.models import BaseModel
+from apps.core.ninja_utils.errors import ItqanError
 from apps.core.slugs import slugify_name
 from apps.core.uploads import (
     upload_to_asset_files,
@@ -289,10 +290,30 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
             ),
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Asset(name={self.name}, category={self.category})"
 
-    def save(self, *args, **kwargs):
+    @classmethod
+    def from_db(cls, db, field_names, values) -> "Asset":
+        """Remember the persisted template so ``save`` can detect a mutation.
+
+        Riding the original values on the instance avoids the extra query a
+        re-read would cost on every save.
+        """
+        instance = super().from_db(db, field_names, values)
+        instance._loaded_template = instance.template
+        instance._loaded_mushaf_layout_id = instance.mushaf_layout_id
+        return instance
+
+    def save(self, *args, **kwargs) -> None:
+        if self.pk is not None and hasattr(self, "_loaded_template"):
+            changed = self.template != self._loaded_template or self.mushaf_layout_id != self._loaded_mushaf_layout_id
+            if changed:
+                raise ItqanError(
+                    error_name="asset_template_immutable",
+                    message=_("An asset's template cannot be changed after creation."),
+                    status_code=400,
+                )
         if self.riwayah_id and not self.qiraah_id:
             self.qiraah_id = self.riwayah.qiraah_id
         if not self.slug:
