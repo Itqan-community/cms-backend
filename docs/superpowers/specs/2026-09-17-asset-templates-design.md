@@ -98,10 +98,13 @@ Two check constraints:
   `category IN (translation, tafsir)` ⟺ `template IS NOT NULL`.
 - `asset_mushaf_layout_consistency`:
   `template = 'page'` ⟺ `mushaf_layout IS NOT NULL`. This needs **three**
-  branches, not two: a two-branch form leaves `template IS NULL` with a layout
-  set evaluating to SQL NULL, which Postgres accepts, so a font or recitation
-  asset could carry a mushaf layout. The third branch pins
-  `template IS NULL ⟹ mushaf_layout IS NULL`.
+  branches, and every branch must be NULL-free. `template = 'page'` evaluates
+  to SQL NULL when `template IS NULL`, and Postgres accepts a CHECK whose
+  result is NULL — so any branch that can yield NULL for a
+  (`template IS NULL`, `mushaf_layout` SET) row leaves the hole open and lets a
+  font or recitation asset carry a mushaf layout. The `page` branch therefore
+  needs an explicit `template__isnull=False` guard alongside its equality test,
+  and a third branch pins `template IS NULL ⟹ mushaf_layout IS NULL`.
 
 ### `AssetVersionEntry` and `AssetVersionChange`
 
