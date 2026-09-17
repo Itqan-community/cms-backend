@@ -556,25 +556,65 @@ class AssetVersionEntry(BaseModel):
         related_name="entries",
         help_text="Asset version this entry belongs to",
     )
+    sura = models.ForeignKey(
+        "quran.Sura",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        help_text="Canonical sura (1-114) — set only for surah-template assets",
+    )
     ayah = models.ForeignKey(
         "quran.Ayah",
         on_delete=models.PROTECT,
+        null=True,
+        blank=True,
         related_name="+",
-        help_text="Canonical ayah (1-6236) this entry provides text for",
+        help_text="Canonical ayah (1-6236) — set only for ayah-template assets",
+    )
+    word = models.ForeignKey(
+        "quran.Word",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        help_text="Canonical word — set only for word-template assets",
+    )
+    page_no = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        help_text="Page within the asset's MushafLayout — set only for page-template assets",
     )
     text = models.TextField(blank=True, help_text="Translation / tafsir text for this ayah")
     order = models.PositiveIntegerField(default=0, help_text="Display order (defaults to the canonical ayah index)")
 
     class Meta:
         constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(sura__isnull=False, ayah__isnull=True, word__isnull=True, page_no__isnull=True)
+                    | models.Q(sura__isnull=True, ayah__isnull=False, word__isnull=True, page_no__isnull=True)
+                    | models.Q(sura__isnull=True, ayah__isnull=True, word__isnull=False, page_no__isnull=True)
+                    | models.Q(sura__isnull=True, ayah__isnull=True, word__isnull=True, page_no__isnull=False)
+                ),
+                name="entry_exactly_one_unit",
+            ),
             models.UniqueConstraint(fields=["version", "ayah"], name="unique_entry_per_version_ayah"),
+            models.UniqueConstraint(fields=["version", "sura"], name="unique_entry_per_version_sura"),
+            models.UniqueConstraint(fields=["version", "word"], name="unique_entry_per_version_word"),
+            models.UniqueConstraint(fields=["version", "page_no"], name="unique_entry_per_version_page"),
         ]
         indexes = [
             models.Index(fields=["version", "order"]),
         ]
 
-    def __str__(self):
-        return f"AssetVersionEntry(version={self.version_id}, ayah={self.ayah_id})"
+    def __str__(self) -> str:
+        return f"AssetVersionEntry(version={self.version_id}, unit={self.unit_id})"
+
+    @property
+    def unit_id(self) -> int:
+        """The canonical id of whichever unit this entry is keyed to."""
+        return self.sura_id or self.ayah_id or self.word_id or self.page_no
 
 
 class ChangeTypeChoice(models.TextChoices):
@@ -592,7 +632,35 @@ class AssetVersionChange(BaseModel):
     """
 
     version = models.ForeignKey(AssetVersion, on_delete=models.CASCADE, related_name="changes")
-    ayah = models.ForeignKey("quran.Ayah", on_delete=models.PROTECT, related_name="+")
+    sura = models.ForeignKey(
+        "quran.Sura",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        help_text="Canonical sura (1-114) — set only for surah-template assets",
+    )
+    ayah = models.ForeignKey(
+        "quran.Ayah",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        help_text="Canonical ayah (1-6236) — set only for ayah-template assets",
+    )
+    word = models.ForeignKey(
+        "quran.Word",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        help_text="Canonical word — set only for word-template assets",
+    )
+    page_no = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        help_text="Page within the asset's MushafLayout — set only for page-template assets",
+    )
     change_type = models.CharField(max_length=10, choices=ChangeTypeChoice)
     old_text = models.TextField(blank=True, help_text="Previous text; empty for added")
     new_text = models.TextField(blank=True, help_text="New text; empty for removed")
@@ -600,14 +668,31 @@ class AssetVersionChange(BaseModel):
 
     class Meta:
         constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(sura__isnull=False, ayah__isnull=True, word__isnull=True, page_no__isnull=True)
+                    | models.Q(sura__isnull=True, ayah__isnull=False, word__isnull=True, page_no__isnull=True)
+                    | models.Q(sura__isnull=True, ayah__isnull=True, word__isnull=False, page_no__isnull=True)
+                    | models.Q(sura__isnull=True, ayah__isnull=True, word__isnull=True, page_no__isnull=False)
+                ),
+                name="change_exactly_one_unit",
+            ),
             models.UniqueConstraint(fields=["version", "ayah"], name="unique_change_per_version_ayah"),
+            models.UniqueConstraint(fields=["version", "sura"], name="unique_change_per_version_sura"),
+            models.UniqueConstraint(fields=["version", "word"], name="unique_change_per_version_word"),
+            models.UniqueConstraint(fields=["version", "page_no"], name="unique_change_per_version_page"),
         ]
         indexes = [
             models.Index(fields=["version", "order"]),
         ]
 
-    def __str__(self):
-        return f"AssetVersionChange(version_id={self.version_id}, ayah_id={self.ayah_id}, {self.change_type})"
+    def __str__(self) -> str:
+        return f"AssetVersionChange(version_id={self.version_id}, unit={self.unit_id})"
+
+    @property
+    def unit_id(self) -> int:
+        """The canonical id of whichever unit this change is keyed to."""
+        return self.sura_id or self.ayah_id or self.word_id or self.page_no
 
 
 class ReviewStateChoice(models.TextChoices):
@@ -932,7 +1017,7 @@ class MushafLayout(BaseModel):
     class Meta:
         ordering = ["name"]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"MushafLayout(name={self.name}, pages={self.page_count})"
 
 
