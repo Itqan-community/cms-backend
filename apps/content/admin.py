@@ -32,6 +32,7 @@ from .models import (
     ContentIssueReport,
     EditorialRecommendation,
     EditorialRecommendationAsset,
+    MushafLayout,
     Qiraah,
     RecitationAyahTiming,
     RecitationFolder,
@@ -161,6 +162,12 @@ class AssetAdmin(admin.ModelAdmin):
         ),
     )
     readonly_fields = ["created_at", "updated_at"]
+
+    def get_readonly_fields(self, request: HttpRequest, obj: Asset | None = None) -> list[str]:
+        readonly = list(super().get_readonly_fields(request, obj))
+        if obj is not None:
+            readonly += ["template", "mushaf_layout"]
+        return readonly
 
     def get_queryset(self, request):
         """Optimize queryset with annotations"""
@@ -569,6 +576,12 @@ class AssetVersionAdmin(admin.ModelAdmin):
     list_filter = ["created_at"]
     search_fields = ["asset__name", "name"]
     readonly_fields = ["created_at", "updated_at"]
+
+
+@admin.register(MushafLayout)
+class MushafLayoutAdmin(admin.ModelAdmin):
+    list_display = ("name", "page_count")
+    search_fields = ("name",)
 
 
 @admin.register(AssetPreview)

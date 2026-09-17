@@ -226,6 +226,9 @@ msgstr "صلة"
 msgid "Skoun"
 msgstr "سكون"
 
+msgid "An asset's template cannot be changed after creation."
+msgstr "لا يمكن تغيير قالب المادة بعد إنشائها."
+
 msgid "Added"
 msgstr "مضاف"
 
