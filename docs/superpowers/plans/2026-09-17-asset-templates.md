@@ -1608,7 +1608,12 @@ In `apps/content/services/asset_content.py`, add to `AssetContentService`:
                 "sura": unit.sura,
                 "aya": unit.aya,
                 "text": text_by_unit.get(unit.unit_id, ""),
-                "source_text": None,
+                # NOT None. Translations show the source-language text beside the
+                # target as a read-only reference column, and SourceReferenceEntriesTest
+                # asserts real content here. Overlay it with a second
+                # `entry_text_map` lookup against the source-language version,
+                # reproducing the pre-existing subquery behaviour.
+                "source_text": source_text_by_unit.get(unit.unit_id),
                 "order": unit.order,
             }
             for unit in units
