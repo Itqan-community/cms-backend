@@ -9,7 +9,7 @@ from typing import Literal
 from django.http import HttpResponse, HttpResponseRedirect
 from django.utils.http import content_disposition_header
 from django.utils.translation import gettext_lazy as _
-from ninja import Schema
+from ninja import Query, Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
@@ -23,6 +23,7 @@ from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
 from apps.core.permission_utils import check_permission
 from apps.core.permissions import PermissionChoice
+from apps.quran.models import Ayah, Sura, Word
 
 router = ItqanRouter(tags=[NinjaTag.TRANSLATIONS])
 
@@ -109,42 +110,65 @@ class EntryOut(Schema):
     order: int
 
 
-def _entry_to_out(entry: AssetVersionEntry, template: str) -> dict:
-    """Build one ``EntryOut``-shaped dict for a persisted entry.
+def _entries_to_out(entries: list[AssetVersionEntry], template: str, source_text_by_unit: dict[int, str]) -> list[dict]:
+    """Build ``EntryOut``-shaped dicts for a batch of persisted entries.
 
-    Dispatches on whichever unit column is set, mirroring the four label /
-    reference-text formats ``UnitSpec._to_row`` builds for the canonical read
-    path (``apps.content.services.asset_templates``). Only the ayah branch is
-    reachable today — ``EntryPatchRow`` accepts only ``ayah_id`` — but the
-    others are written for when patching gains the other three templates.
+    Resolves each entry's related unit (ayah / sura / word) via one bulk
+    query per unit kind rather than lazily per row: ``bulk_create``'d
+    instances carry no cached FK, so per-row ``entry.ayah`` access would cost
+    one query per changed row. Dispatches on whichever unit column is set,
+    mirroring the four label / reference-text formats ``UnitSpec._to_row``
+    builds for the canonical read path (``apps.content.services.asset_templates``).
+    Only the ayah branch is reachable today — ``EntryPatchRow`` accepts only
+    ``ayah_id`` — but the others are written for when patching gains the
+    other three templates.
+
+    ``order`` is the unit's own id/number (matching ``UnitSpec._to_row``,
+    which the GET path uses), not the entry's stored ``order`` column, so a
+    row sorts the same whether it came back from GET or PATCH.
     """
-    if entry.sura_id is not None:
-        label = f"{entry.sura_id}. {entry.sura.transliterated_name}"
-        reference_text = entry.sura.name
-        sura, aya = entry.sura_id, None
-    elif entry.ayah_id is not None:
-        label = f"{entry.ayah.sura_id}:{entry.ayah.number_in_sura}"
-        reference_text = entry.ayah.text
-        sura, aya = entry.ayah.sura_id, entry.ayah.number_in_sura
-    elif entry.word_id is not None:
-        label = f"{entry.word.sura_id}:{entry.word.ayah.number_in_sura}:{entry.word.position_in_ayah}"
-        reference_text = entry.word.text
-        sura, aya = entry.word.sura_id, entry.word.ayah.number_in_sura
-    else:
-        label = _("Page {number}").format(number=entry.page_no)
-        reference_text = ""
-        sura, aya = None, None
-    return {
-        "unit_type": template,
-        "unit_id": entry.unit_id,
-        "label": label,
-        "reference_text": reference_text,
-        "sura": sura,
-        "aya": aya,
-        "text": entry.text,
-        "source_text": None,
-        "order": entry.order,
-    }
+    ayah_ids = [entry.ayah_id for entry in entries if entry.ayah_id is not None]
+    sura_ids = [entry.sura_id for entry in entries if entry.sura_id is not None]
+    word_ids = [entry.word_id for entry in entries if entry.word_id is not None]
+    ayahs = Ayah.objects.in_bulk(ayah_ids)
+    suras = Sura.objects.in_bulk(sura_ids)
+    words = Word.objects.select_related("ayah").in_bulk(word_ids)
+
+    rows = []
+    for entry in entries:
+        if entry.sura_id is not None:
+            sura = suras[entry.sura_id]
+            label = f"{entry.sura_id}. {sura.transliterated_name}"
+            reference_text = sura.name
+            sura_field, aya_field = entry.sura_id, None
+        elif entry.ayah_id is not None:
+            ayah = ayahs[entry.ayah_id]
+            label = f"{ayah.sura_id}:{ayah.number_in_sura}"
+            reference_text = ayah.text
+            sura_field, aya_field = ayah.sura_id, ayah.number_in_sura
+        elif entry.word_id is not None:
+            word = words[entry.word_id]
+            label = f"{word.sura_id}:{word.ayah.number_in_sura}:{word.position_in_ayah}"
+            reference_text = word.text
+            sura_field, aya_field = word.sura_id, word.ayah.number_in_sura
+        else:
+            label = _("Page {number}").format(number=entry.page_no)
+            reference_text = ""
+            sura_field, aya_field = None, None
+        rows.append(
+            {
+                "unit_type": template,
+                "unit_id": entry.unit_id,
+                "label": label,
+                "reference_text": reference_text,
+                "sura": sura_field,
+                "aya": aya_field,
+                "text": entry.text,
+                "source_text": source_text_by_unit.get(entry.unit_id),
+                "order": entry.unit_id,
+            }
+        )
+    return rows
 
 
 class EntryPatchRow(Schema):
@@ -221,8 +245,8 @@ def list_entries(
     category: str,
     slug: str,
     version_id: int,
-    page: int = 1,
-    page_size: int = DEFAULT_PAGE_SIZE,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(DEFAULT_PAGE_SIZE, ge=1),
     sura: int | None = None,
 ):
     resolved = _resolve_for_version(category, request, slug, version_id, write=False)
@@ -256,8 +280,10 @@ def patch_entries(request: Request, category: str, slug: str, version_id: int, d
     service = AssetContentService()
     rows = [row.model_dump() for row in data.rows]
     changed = service.upsert_entries(slug, resolved, version_id, rows, publisher_q=request.publisher_q())
-    asset = service._get_asset_or_404(slug, resolved, publisher_q=request.publisher_q())
-    return [_entry_to_out(entry, asset.template) for entry in changed]
+    template, source_text_by_unit = service.get_patch_response_context(
+        slug, resolved, version_id, changed, publisher_q=request.publisher_q()
+    )
+    return _entries_to_out(changed, template, source_text_by_unit)
 
 
 @router.get(

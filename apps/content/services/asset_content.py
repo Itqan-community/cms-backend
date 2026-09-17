@@ -18,7 +18,7 @@ from django.utils.translation import gettext as _
 from apps.content.models import Asset, AssetVersion, AssetVersionEntry, CategoryChoice, StatusChoice, VersionStateChoice
 from apps.content.repositories.asset_content import AssetContentRepository
 from apps.content.services.asset_content_import import AssetContentParseError, parse_content_file
-from apps.content.services.asset_templates import unit_spec_for
+from apps.content.services.asset_templates import UnitSpec, unit_spec_for
 from apps.content.tasks import notify_asset_version_created
 from apps.core.ninja_utils.errors import ItqanError
 
@@ -305,14 +305,7 @@ class AssetContentService:
         units, total = spec.units_page(asset, offset=offset, limit=limit, sura=sura)
         unit_ids = [unit.unit_id for unit in units]
         text_by_unit = self.repo.entry_text_map(version, spec, unit_ids)
-
-        lang = version.asset_language
-        include_source_text = lang is not None and not lang.is_source
-        source_text_by_unit: dict[int, str] = {}
-        if include_source_text:
-            source_version = asset.get_latest_version(asset.language)
-            if source_version is not None:
-                source_text_by_unit = self.repo.entry_text_map(source_version, spec, unit_ids)
+        source_text_by_unit = self._resolve_source_text(asset, version, spec, unit_ids)
 
         rows = [
             {
@@ -323,12 +316,58 @@ class AssetContentService:
                 "sura": unit.sura,
                 "aya": unit.aya,
                 "text": text_by_unit.get(unit.unit_id, ""),
-                "source_text": source_text_by_unit.get(unit.unit_id) if include_source_text else None,
+                "source_text": source_text_by_unit.get(unit.unit_id),
                 "order": unit.order,
             }
             for unit in units
         ]
         return rows, total
+
+    def _resolve_source_text(
+        self, asset: Asset, version: AssetVersion, spec: UnitSpec, unit_ids: list[int]
+    ) -> dict[int, str]:
+        """The source-language text map for a translation's units.
+
+        Empty when this version IS the source (nothing to overlay) or when no
+        source version has been published yet — in both cases every unit's
+        ``source_text`` should read ``None``, which an empty map already gives
+        via ``.get()``.
+        """
+        lang = version.asset_language
+        if lang is None or lang.is_source:
+            return {}
+        source_version = asset.get_latest_version(asset.language)
+        if source_version is None:
+            return {}
+        return self.repo.entry_text_map(source_version, spec, unit_ids)
+
+    def get_patch_response_context(
+        self,
+        slug: str,
+        category: CategoryChoice,
+        version_id: int,
+        changed: list[AssetVersionEntry],
+        publisher_q: Q | None = None,
+    ) -> tuple[str, dict[int, str]]:
+        """``(asset.template, source_text_by_unit)`` for shaping a patch response.
+
+        Uses the same source-text overlay rule as ``get_entries_page``, resolved
+        once for the whole patched batch rather than per row, so the autosave
+        response matches what the next GET would show instead of going blank
+        until the page is reloaded.
+        """
+        asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
+        version = self.repo.get_version(asset, version_id)
+        if version is None:
+            raise ItqanError(
+                error_name="version_not_found",
+                message=_("Version with id {id} not found.").format(id=version_id),
+                status_code=404,
+            )
+        spec = unit_spec_for(asset)
+        unit_ids = [entry.unit_id for entry in changed if entry.unit_id is not None]
+        source_text_by_unit = self._resolve_source_text(asset, version, spec, unit_ids)
+        return asset.template, source_text_by_unit
 
     def get_version_or_404(
         self,
