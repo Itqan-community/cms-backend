@@ -54,3 +54,16 @@ class AssetTemplateConstraintTests(BaseTestCase):
         # Assert
         self.assertEqual(asset.mushaf_layout_id, layout.id)
         self.assertEqual(asset.template, AssetTemplateChoice.PAGE)
+
+    def test_asset_where_non_text_category_has_a_layout_should_raise_integrity_error(self):
+        # Arrange
+        layout = baker.make(MushafLayout, name="Madani 604", page_count=604)
+
+        # Act / Assert
+        with self.assertRaises(IntegrityError):
+            baker.make(
+                Asset,
+                category=CategoryChoice.FONT,
+                template=None,
+                mushaf_layout=layout,
+            )

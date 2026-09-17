@@ -109,7 +109,17 @@ class AssetAdmin(admin.ModelAdmin):
         (
             "Basic Information",
             {
-                "fields": ("name_en", "name_ar", "publisher", "category", "status", "riwayah", "qiraah"),
+                "fields": (
+                    "name_en",
+                    "name_ar",
+                    "publisher",
+                    "category",
+                    "template",
+                    "mushaf_layout",
+                    "status",
+                    "riwayah",
+                    "qiraah",
+                ),
             },
         ),
         (
