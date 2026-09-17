@@ -204,7 +204,7 @@ class MushafLayout(BaseModel):
     class Meta:
         ordering = ["name"]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"MushafLayout(name={self.name}, pages={self.page_count})"
 ```
 
@@ -682,7 +682,7 @@ Postgres treats NULLs as distinct in a unique index, so each constraint only bin
 Update `__str__` to not assume ayah:
 
 ```python
-    def __str__(self):
+    def __str__(self) -> str:
         return f"AssetVersionEntry(version={self.version_id}, unit={self.unit_id})"
 
     @property
