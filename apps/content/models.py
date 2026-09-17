@@ -612,9 +612,21 @@ class AssetVersionEntry(BaseModel):
         return f"AssetVersionEntry(version={self.version_id}, unit={self.unit_id})"
 
     @property
-    def unit_id(self) -> int:
-        """The canonical id of whichever unit this entry is keyed to."""
-        return self.sura_id or self.ayah_id or self.word_id or self.page_no
+    def unit_id(self) -> int | None:
+        """The canonical id of whichever unit this entry is keyed to.
+
+        None only on an unsaved instance with no unit set — the
+        ``entry_exactly_one_unit`` constraint guarantees exactly one on any
+        persisted row. Tested explicitly rather than by truthiness, so a
+        legitimate zero would not fall through to the next unit.
+        """
+        if self.sura_id is not None:
+            return self.sura_id
+        if self.ayah_id is not None:
+            return self.ayah_id
+        if self.word_id is not None:
+            return self.word_id
+        return self.page_no
 
 
 class ChangeTypeChoice(models.TextChoices):
@@ -687,12 +699,24 @@ class AssetVersionChange(BaseModel):
         ]
 
     def __str__(self) -> str:
-        return f"AssetVersionChange(version_id={self.version_id}, unit={self.unit_id})"
+        return f"AssetVersionChange(version_id={self.version_id}, unit={self.unit_id}, {self.change_type})"
 
     @property
-    def unit_id(self) -> int:
-        """The canonical id of whichever unit this change is keyed to."""
-        return self.sura_id or self.ayah_id or self.word_id or self.page_no
+    def unit_id(self) -> int | None:
+        """The canonical id of whichever unit this change is keyed to.
+
+        None only on an unsaved instance with no unit set — the
+        ``change_exactly_one_unit`` constraint guarantees exactly one on any
+        persisted row. Tested explicitly rather than by truthiness, so a
+        legitimate zero would not fall through to the next unit.
+        """
+        if self.sura_id is not None:
+            return self.sura_id
+        if self.ayah_id is not None:
+            return self.ayah_id
+        if self.word_id is not None:
+            return self.word_id
+        return self.page_no
 
 
 class ReviewStateChoice(models.TextChoices):

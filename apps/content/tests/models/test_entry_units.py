@@ -1,7 +1,14 @@
 from django.db import IntegrityError
 from model_bakery import baker
 
-from apps.content.models import AssetTemplateChoice, AssetVersion, AssetVersionEntry, CategoryChoice
+from apps.content.models import (
+    AssetTemplateChoice,
+    AssetVersion,
+    AssetVersionChange,
+    AssetVersionEntry,
+    CategoryChoice,
+    ChangeTypeChoice,
+)
 from apps.core.tests.base import BaseTestCase
 from apps.quran.models import Ayah, Sura
 
@@ -66,3 +73,38 @@ class EntryUnitConstraintTests(BaseTestCase):
         # Act / Assert
         with self.assertRaises(IntegrityError):
             AssetVersionEntry.objects.create(version=version, sura=sura, text="b", order=sura.id)
+
+
+class ChangeUnitConstraintTests(BaseTestCase):
+    # Mirrors EntryUnitConstraintTests' first two cases against
+    # AssetVersionChange, whose change_exactly_one_unit constraint is
+    # otherwise only exercised incidentally.
+    def test_change_where_no_unit_is_set_should_raise_integrity_error(self):
+        # Arrange
+        version = baker.make(AssetVersion, **_VALID_ASSET_KWARGS)
+
+        # Act / Assert
+        with self.assertRaises(IntegrityError):
+            AssetVersionChange.objects.create(
+                version=version,
+                change_type=ChangeTypeChoice.ADDED,
+                old_text="",
+                new_text="x",
+            )
+
+    def test_change_where_two_units_are_set_should_raise_integrity_error(self):
+        # Arrange
+        version = baker.make(AssetVersion, **_VALID_ASSET_KWARGS)
+        sura = baker.make(Sura, id=1, name="الفاتحة", transliterated_name="Al-Fatiha", ayas_count=1)
+        ayah = baker.make(Ayah, id=1, sura=sura, number_in_sura=1, text="ayah 1")
+
+        # Act / Assert
+        with self.assertRaises(IntegrityError):
+            AssetVersionChange.objects.create(
+                version=version,
+                sura=sura,
+                ayah=ayah,
+                change_type=ChangeTypeChoice.ADDED,
+                old_text="",
+                new_text="x",
+            )
