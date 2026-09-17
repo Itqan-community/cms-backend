@@ -1031,7 +1031,7 @@ git commit -m "feat: enforce asset template immutability at the model layer"
   - `UnitSpec.field: str` — `"sura"` / `"ayah"` / `"word"` / `"page_no"`.
   - `UnitSpec.fk_field: str | None` — the same, but `None` for `page`, which is not an FK.
   - `UnitSpec.total(asset: Asset) -> int`
-  - `UnitSpec.units(asset: Asset, *, sura: int | None = None) -> Sequence[UnitRow]`
+  - `UnitSpec.units(asset: Asset, *, sura: int | None = None) -> Sequence[UnitRow]` — materialises the WHOLE set; never call it on the word template from a request path, use `units_page`
   - `UnitRow` — a dataclass with `unit_id: int`, `label: str`, `reference_text: str`, `sura: int | None`, `aya: int | None`, `order: int`.
 
 This module is the **only** place the four-way branch may live. Later tasks consult it rather than branching themselves.
@@ -1053,7 +1053,7 @@ class UnitSpecTests(QuranDataMixin, BaseTestCase):
         super().setUp()
         self.bake_quran()
 
-    def test_total_where_template_is_surah_should_return_114(self):
+    def test_total_where_template_is_surah_should_return_baked_sura_count(self):
         # Arrange
         asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.SURAH)
 
@@ -1063,7 +1063,7 @@ class UnitSpecTests(QuranDataMixin, BaseTestCase):
         # Assert — 2 suras baked by bake_quran, not the canonical 114
         self.assertEqual(total, 2)
 
-    def test_total_where_template_is_ayah_should_return_6236(self):
+    def test_total_where_template_is_ayah_should_return_baked_ayah_count(self):
         # Arrange
         asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH)
 
@@ -1220,7 +1220,9 @@ class UnitSpec:
             ]
 
         if self.template == AssetTemplateChoice.AYAH:
-            qs = Ayah.objects.select_related("sura")
+            # No select_related: _to_row reads only id/sura_id/number_in_sura/text,
+            # all local columns, so a join to Sura would be dead weight.
+            qs = Ayah.objects.all()
             if sura is not None:
                 qs = qs.filter(sura_id=sura)
             return [
