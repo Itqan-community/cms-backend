@@ -251,6 +251,22 @@ treatment as `EntryOut`.
 The entries endpoint accepts an optional `sura` query parameter, used by the
 word grid's server-side surah filter (see Editor below).
 
+### Review surface
+
+`apps/content/api/portal/asset_review.py` builds `ReviewChangeOut` from
+`obj.ayah.sura_id`, `obj.ayah.number_in_sura` and `obj.ayah.sura.name`. Once
+`ayah` is nullable, a surah, word or page change row makes each of those raise
+`AttributeError` — a 500 on the review page.
+
+`ReviewChangeOut` therefore replaces `sura` / `aya` / `surah_name` with
+`unit_type` / `unit_id` / `label`, resolving the label the same way `EntryOut`
+does so the review page and the editor name a unit identically. The review
+repository's `select_related` widens from `ayah__sura` to cover all four units,
+keeping the changes list a single query.
+
+The frontend `ReviewChange` model and `asset-review-grid` follow: one `label`
+column replaces the separate location columns.
+
 ### MushafLayout portal CRUD
 
 A small portal surface at `apps/content/api/portal/mushaf_layouts.py`,
