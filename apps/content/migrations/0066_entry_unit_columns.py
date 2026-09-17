@@ -64,10 +64,6 @@ class Migration(migrations.Migration):
                     ),
                     reverse_sql="ALTER TABLE content_assetversionchange DROP CONSTRAINT change_exactly_one_unit",
                 ),
-                migrations.RunSQL(
-                    sql="ALTER TABLE content_assetversionchange VALIDATE CONSTRAINT change_exactly_one_unit",
-                    reverse_sql=migrations.RunSQL.noop,
-                ),
             ],
             state_operations=[
                 migrations.AddConstraint(
@@ -99,10 +95,6 @@ class Migration(migrations.Migration):
                         ") NOT VALID"
                     ),
                     reverse_sql="ALTER TABLE content_assetversionentry DROP CONSTRAINT entry_exactly_one_unit",
-                ),
-                migrations.RunSQL(
-                    sql="ALTER TABLE content_assetversionentry VALIDATE CONSTRAINT entry_exactly_one_unit",
-                    reverse_sql=migrations.RunSQL.noop,
                 ),
             ],
             state_operations=[
