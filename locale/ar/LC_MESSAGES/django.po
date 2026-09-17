@@ -54,6 +54,10 @@ msgstr "لم يتم العثور على القارئ بالمعرّف {slug}."
 msgid "Unsupported content category: {category}"
 msgstr "فئة محتوى غير مدعومة: {category}"
 
+#, python-brace-format
+msgid "Page {number}"
+msgstr "صفحة {number}"
+
 msgid "This version has no downloadable content."
 msgstr "لا يحتوي هذا الإصدار على محتوى قابل للتنزيل."
 
@@ -423,10 +427,6 @@ msgstr "حالة مراجعة غير صالحة."
 
 msgid "A comment is required when requesting changes."
 msgstr "التعليق مطلوب عند طلب إجراء تعديلات."
-
-#, python-brace-format
-msgid "Page {number}"
-msgstr "صفحة {number}"
 
 msgid "This asset has no content template."
 msgstr "هذه المادة ليس لها قالب محتوى."

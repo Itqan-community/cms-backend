@@ -334,7 +334,7 @@ class SourceReferenceEntriesTest(AssetContentBaseTest):
             f"/portal/content/translations/{self.translation.slug}/versions/{version_id}/entries/"
         )
         self.assertEqual(200, response.status_code, response.content)
-        return {row["ayah_id"]: row for row in response.json()["results"]}
+        return {row["unit_id"]: row for row in response.json()["results"]}
 
     def test_translation_draft_is_seeded_with_source_ayahs_and_source_text(self):
         # Arrange

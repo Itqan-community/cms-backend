@@ -13,10 +13,11 @@ from ninja import Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
-from apps.content.models import AssetVersion, AssetVersionEntry, CategoryChoice
+from apps.content.models import AssetTemplateChoice, AssetVersion, AssetVersionEntry, CategoryChoice
 from apps.content.services.asset_content import AssetContentService
 from apps.content.services.asset_language_access import require_language, require_version_language
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
+from apps.core.ninja_utils.paginations import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
@@ -97,31 +98,53 @@ class DraftVersionOut(Schema):
 
 
 class EntryOut(Schema):
-    id: int
-    ayah_id: int
-    sura: int
-    aya: int
-    surah_name: str
-    uthmani: str
+    unit_type: AssetTemplateChoice
+    unit_id: int
+    label: str
+    reference_text: str
+    sura: int | None = None
+    aya: int | None = None
     text: str
     source_text: str | None = None
     order: int
 
-    @staticmethod
-    def resolve_sura(obj: AssetVersionEntry) -> int:
-        return obj.ayah.sura_id
 
-    @staticmethod
-    def resolve_aya(obj: AssetVersionEntry) -> int:
-        return obj.ayah.number_in_sura
+def _entry_to_out(entry: AssetVersionEntry, template: str) -> dict:
+    """Build one ``EntryOut``-shaped dict for a persisted entry.
 
-    @staticmethod
-    def resolve_surah_name(obj: AssetVersionEntry) -> str:
-        return obj.ayah.sura.name
-
-    @staticmethod
-    def resolve_uthmani(obj: AssetVersionEntry) -> str:
-        return obj.ayah.text
+    Dispatches on whichever unit column is set, mirroring the four label /
+    reference-text formats ``UnitSpec._to_row`` builds for the canonical read
+    path (``apps.content.services.asset_templates``). Only the ayah branch is
+    reachable today — ``EntryPatchRow`` accepts only ``ayah_id`` — but the
+    others are written for when patching gains the other three templates.
+    """
+    if entry.sura_id is not None:
+        label = f"{entry.sura_id}. {entry.sura.transliterated_name}"
+        reference_text = entry.sura.name
+        sura, aya = entry.sura_id, None
+    elif entry.ayah_id is not None:
+        label = f"{entry.ayah.sura_id}:{entry.ayah.number_in_sura}"
+        reference_text = entry.ayah.text
+        sura, aya = entry.ayah.sura_id, entry.ayah.number_in_sura
+    elif entry.word_id is not None:
+        label = f"{entry.word.sura_id}:{entry.word.ayah.number_in_sura}:{entry.word.position_in_ayah}"
+        reference_text = entry.word.text
+        sura, aya = entry.word.sura_id, entry.word.ayah.number_in_sura
+    else:
+        label = _("Page {number}").format(number=entry.page_no)
+        reference_text = ""
+        sura, aya = None, None
+    return {
+        "unit_type": template,
+        "unit_id": entry.unit_id,
+        "label": label,
+        "reference_text": reference_text,
+        "sura": sura,
+        "aya": aya,
+        "text": entry.text,
+        "source_text": None,
+        "order": entry.order,
+    }
 
 
 class EntryPatchRow(Schema):
@@ -175,21 +198,46 @@ def get_or_create_draft(request: Request, category: str, slug: str, data: DraftI
     )
 
 
+class EntriesPageOut(Schema):
+    """Mirrors NinjaPagination.Output so the envelope is unchanged."""
+
+    results: list[EntryOut]
+    count: int
+
+
 @router.get(
     "content/{category}/{slug}/versions/{version_id}/entries/",
     response={
-        200: list[EntryOut],
+        200: EntriesPageOut,
+        400: NinjaErrorResponse[Literal["asset_template_missing"]],
         404: NinjaErrorResponse[Literal["translation_not_found"]]
         | NinjaErrorResponse[Literal["tafsir_not_found"]]
         | NinjaErrorResponse[Literal["version_not_found"]]
         | NinjaErrorResponse[Literal["unsupported_content_category"]],
     },
 )
-@paginate
-def list_entries(request: Request, category: str, slug: str, version_id: int):
+def list_entries(
+    request: Request,
+    category: str,
+    slug: str,
+    version_id: int,
+    page: int = 1,
+    page_size: int = DEFAULT_PAGE_SIZE,
+    sura: int | None = None,
+):
     resolved = _resolve_for_version(category, request, slug, version_id, write=False)
     service = AssetContentService()
-    return service.get_entries(slug, resolved, version_id, publisher_q=request.publisher_q())
+    page_size = min(page_size, MAX_PAGE_SIZE)
+    rows, count = service.get_entries_page(
+        slug,
+        resolved,
+        version_id,
+        offset=(page - 1) * page_size,
+        limit=page_size,
+        sura=sura,
+        publisher_q=request.publisher_q(),
+    )
+    return {"results": rows, "count": count}
 
 
 @router.patch(
@@ -203,13 +251,13 @@ def list_entries(request: Request, category: str, slug: str, version_id: int):
         | NinjaErrorResponse[Literal["unsupported_content_category"]],
     },
 )
-def patch_entries(
-    request: Request, category: str, slug: str, version_id: int, data: EntriesPatchIn
-) -> list[AssetVersionEntry]:
+def patch_entries(request: Request, category: str, slug: str, version_id: int, data: EntriesPatchIn) -> list[dict]:
     resolved = _resolve_for_version(category, request, slug, version_id, write=True)
     service = AssetContentService()
     rows = [row.model_dump() for row in data.rows]
-    return service.upsert_entries(slug, resolved, version_id, rows, publisher_q=request.publisher_q())
+    changed = service.upsert_entries(slug, resolved, version_id, rows, publisher_q=request.publisher_q())
+    asset = service._get_asset_or_404(slug, resolved, publisher_q=request.publisher_q())
+    return [_entry_to_out(entry, asset.template) for entry in changed]
 
 
 @router.get(

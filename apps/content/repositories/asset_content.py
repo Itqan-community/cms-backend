@@ -27,6 +27,7 @@ from apps.content.models import (
     VersionStateChoice,
 )
 from apps.content.services.asset_content_import import AssetContentParseError, ParsedEntry, parse_content_file
+from apps.content.services.asset_templates import UnitSpec
 from apps.core.ninja_utils.errors import ItqanError
 from apps.quran.models import Ayah
 
@@ -90,6 +91,16 @@ class AssetContentRepository:
 
     def get_entries(self, version: AssetVersion) -> QuerySet[AssetVersionEntry]:
         return version.entries.select_related("ayah", "ayah__sura").order_by("order", "ayah_id")
+
+    def entry_text_map(self, version: AssetVersion, spec: UnitSpec, unit_ids: list[int]) -> dict[int, str]:
+        """Stored text for the given units of one version, keyed by unit id.
+
+        Only the units on the requested page are fetched, so a word-template
+        request reads at most ``limit`` rows rather than the whole version.
+        """
+        lookup = {f"{spec.field}__in": unit_ids}
+        rows = version.entries.filter(**lookup).values_list(spec.field, "text")
+        return dict(rows)
 
     @transaction.atomic
     def ensure_mushaf_coverage(self, draft: AssetVersion, mushaf_version: AssetVersion) -> int:
