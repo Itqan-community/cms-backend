@@ -199,6 +199,18 @@ msgstr "مسودة"
 msgid "Ready"
 msgstr "جاهز"
 
+msgid "Surah based"
+msgstr "حسب السورة"
+
+msgid "Ayah based"
+msgstr "حسب الآية"
+
+msgid "Word based"
+msgstr "حسب الكلمة"
+
+msgid "Page based"
+msgstr "حسب الصفحة"
+
 msgid "Published"
 msgstr "منشور"
 

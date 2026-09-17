@@ -59,6 +59,19 @@ class StatusChoice(models.TextChoices):
     READY = "ready", _("Ready")
 
 
+class AssetTemplateChoice(models.TextChoices):
+    """Granularity of a text asset's content rows.
+
+    Chosen when the asset is created and immutable afterwards: it determines
+    which unit column every ``AssetVersionEntry`` for the asset is keyed to.
+    """
+
+    SURAH = "surah", _("Surah based")
+    AYAH = "ayah", _("Ayah based")
+    WORD = "word", _("Word based")
+    PAGE = "page", _("Page based")
+
+
 class VersionStateChoice(models.TextChoices):
     """Lifecycle state of an AssetVersion.
 
@@ -841,6 +854,27 @@ class Riwayah(BaseModel):
 
     def __str__(self) -> str:
         return f"Riwayah(name={self.name})"
+
+
+class MushafLayout(BaseModel):
+    """A printed mushaf's pagination, referenced by page-based text assets.
+
+    Pages are opaque numbered slots (1..``page_count``). There is deliberately
+    no page-to-ayah mapping: an ayah can straddle a page boundary, so a
+    page-to-ayah-range map would be lossy.
+    """
+
+    name = models.CharField(max_length=128, unique=True, help_text="Layout name, e.g. 'Madani 604'")
+    page_count = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1)],
+        help_text="Number of pages in this mushaf printing",
+    )
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"MushafLayout(name={self.name}, pages={self.page_count})"
 
 
 class RecitationFolder(BaseModel):
