@@ -425,6 +425,13 @@ msgid "A comment is required when requesting changes."
 msgstr "التعليق مطلوب عند طلب إجراء تعديلات."
 
 #, python-brace-format
+msgid "Page {number}"
+msgstr "صفحة {number}"
+
+msgid "This asset has no content template."
+msgstr "هذه المادة ليس لها قالب محتوى."
+
+#, python-brace-format
 msgid "Publisher with id {id} not found."
 msgstr "لم يتم العثور على الناشر بالمعرّف {id}."
 
