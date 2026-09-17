@@ -144,10 +144,19 @@ Three layers, cheapest first:
 2. A guard in the asset update service raising
    `ItqanError(error_name="asset_template_immutable", status_code=400)`
    with a `gettext_lazy` message, covering any other write path.
-3. A guard in `Asset.save()` comparing against the value captured in
+3. A guard in `Asset.save()` comparing against a snapshot taken in
    `from_db`, so a stray `obj.template = ...; obj.save()` from a shell,
    the admin, or a future service raises rather than silently mutating.
-   No extra query — the original value rides along on the instance.
+   No extra query — the snapshot rides along on the instance.
+
+   Two mechanics are load-bearing here. The snapshot must be read from the
+   raw `(field_names, values)` row `from_db` receives, **never** off the
+   instance: on a deferred load (`.only()` / `.defer()`) those attributes are
+   unset, and touching one triggers a lazy refetch that re-enters `from_db`
+   and recurses until `RecursionError`. And `refresh_from_db` must be
+   overridden to re-take the snapshot, because `Model.refresh_from_db`
+   assigns values with `setattr` and never routes through `from_db` — leaving
+   a stale snapshot that rejects a later, unrelated save.
 
 Django admin renders both fields readonly once `obj.pk` exists.
 

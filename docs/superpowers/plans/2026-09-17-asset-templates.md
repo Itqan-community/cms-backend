@@ -888,33 +888,72 @@ In `apps/content/models.py`, add to `Asset` (above the existing `save`):
 
 ```python
     @classmethod
-    def from_db(cls, db, field_names, values):
-        """Remember the persisted template so ``save`` can detect a mutation.
-
-        Riding the original values on the instance avoids the extra query a
-        re-read would cost on every save.
-        """
+    def from_db(cls, db: str | None, field_names: Sequence[str], values: Sequence[Any]) -> "Asset":
         instance = super().from_db(db, field_names, values)
-        instance._loaded_template = instance.template
-        instance._loaded_mushaf_layout_id = instance.mushaf_layout_id
+        instance._snapshot_template_fields(field_names, values)
         return instance
+
+    def refresh_from_db(self, *args, **kwargs) -> None:
+        """Re-take the template snapshot after a refresh.
+
+        ``Model.refresh_from_db`` assigns values with ``setattr`` and never
+        routes through ``from_db``, so without this the guard would compare a
+        freshly-loaded template against a stale snapshot and reject an
+        unrelated save.
+        """
+        super().refresh_from_db(*args, **kwargs)
+        self._snapshot_template_fields()
+
+    def _snapshot_template_fields(
+        self,
+        field_names: Sequence[str] | None = None,
+        values: Sequence[Any] | None = None,
+    ) -> None:
+        """Record the persisted template so ``save`` can detect a mutation.
+
+        Read from the raw row rather than off the instance: on a deferred load
+        (``.only()`` / ``.defer()``) the attributes are unset, and touching one
+        triggers a refresh that re-enters ``from_db`` and recurses until
+        RecursionError. When the row did not carry both fields the snapshot is
+        marked unknown and ``save`` skips the comparison rather than guessing.
+        """
+        if field_names is None:
+            loaded = {"template": self.template, "mushaf_layout_id": self.mushaf_layout_id}
+        else:
+            loaded = dict(zip(field_names, values))
+        self._template_snapshot_loaded = "template" in loaded and "mushaf_layout_id" in loaded
+        self._loaded_template = loaded.get("template")
+        self._loaded_mushaf_layout_id = loaded.get("mushaf_layout_id")
 ```
+
+Requires `from collections.abc import Sequence` and `from typing import Any`.
+
+**Do not read the snapshot off the instance.** Touching `instance.template` inside
+`from_db` is what makes `Asset.objects.only("id", "name")` — and any `.defer()`
+omitting `template` or `mushaf_layout` — die with `RecursionError`: the deferred
+attribute lazily refetches, which re-enters `from_db`, which touches the other
+deferred attribute, forever.
 
 At the top of the existing `Asset.save`, before the riwayah/slug logic:
 
 ```python
-        if self.pk is not None and hasattr(self, "_loaded_template"):
-            changed = (
+        if (
+            self.pk is not None
+            and getattr(self, "_template_snapshot_loaded", False)
+            and (
                 self.template != self._loaded_template
                 or self.mushaf_layout_id != self._loaded_mushaf_layout_id
             )
-            if changed:
-                raise ItqanError(
-                    error_name="asset_template_immutable",
-                    message=_("An asset's template cannot be changed after creation."),
-                    status_code=400,
-                )
+        ):
+            raise ItqanError(
+                error_name="asset_template_immutable",
+                message=_("An asset's template cannot be changed after creation."),
+                status_code=400,
+            )
 ```
+
+The comparison runs only when both fields were actually loaded, so
+`self.template` here can never itself trigger a deferred fetch.
 
 Add the import at the top of `apps/content/models.py`:
 
