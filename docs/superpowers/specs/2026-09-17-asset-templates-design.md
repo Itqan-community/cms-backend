@@ -367,8 +367,15 @@ Dropping `NOT NULL` and adding nullable columns are metadata-only operations in
 Postgres. Adding a `CheckConstraint` is not: it takes an `ACCESS EXCLUSIVE`
 lock and validates the whole table. `assetversionentry` holds up to 6,236 rows
 per version per language, so migration 0066 adds its check constraint as
-`NOT VALID` and validates it in a following step, via
-`SeparateDatabaseAndState` with explicit `RunSQL`.
+`NOT VALID` via `SeparateDatabaseAndState`, and a separate migration 0067
+runs `VALIDATE CONSTRAINT`.
+
+The second migration is load-bearing, not tidiness: a Django migration is
+atomic by default and Postgres holds the `ACCESS EXCLUSIVE` taken by
+`ADD CONSTRAINT … NOT VALID` until commit, so validating in the same
+migration scans the whole table under that lock — the very thing the split
+avoids. Only a separate transaction releases it, letting `VALIDATE` run under
+`SHARE UPDATE EXCLUSIVE`, which permits concurrent reads and writes.
 
 Every existing entry row already has `ayah` set, so the exactly-one constraint
 is satisfied by construction and validation cannot fail.
