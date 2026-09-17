@@ -18,6 +18,7 @@ from django.utils.translation import gettext as _
 from apps.content.models import Asset, AssetVersion, AssetVersionEntry, CategoryChoice, StatusChoice, VersionStateChoice
 from apps.content.repositories.asset_content import AssetContentRepository
 from apps.content.services.asset_content_import import AssetContentParseError, parse_content_file
+from apps.content.services.asset_templates import unit_spec_for
 from apps.content.tasks import notify_asset_version_created
 from apps.core.ninja_utils.errors import ItqanError
 
@@ -268,6 +269,66 @@ class AssetContentService:
                 ).values("text")[:1]
                 qs = qs.annotate(source_text=Subquery(source_text))
         return qs
+
+    def get_entries_page(
+        self,
+        slug: str,
+        category: CategoryChoice,
+        version_id: int,
+        *,
+        offset: int,
+        limit: int,
+        sura: int | None = None,
+        publisher_q: Q | None = None,
+    ) -> tuple[list[dict], int]:
+        """One page of the template's canonical units with stored text overlaid.
+
+        Units the version has no row for come back with empty text. Nothing is
+        written: a freshly created asset shows its full unit set without any
+        entry rows existing.
+
+        When the version is a translation (non-source language), each row also
+        carries ``source_text`` — the source language's latest published text for
+        the same unit — as a read-only reference, same as the previous per-ayah
+        editor did (see the now-superseded ``get_entries``).
+        """
+        asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
+        version = self.repo.get_version(asset, version_id)
+        if version is None:
+            raise ItqanError(
+                error_name="version_not_found",
+                message=_("Version with id {id} not found.").format(id=version_id),
+                status_code=404,
+            )
+
+        spec = unit_spec_for(asset)
+        units, total = spec.units_page(asset, offset=offset, limit=limit, sura=sura)
+        unit_ids = [unit.unit_id for unit in units]
+        text_by_unit = self.repo.entry_text_map(version, spec, unit_ids)
+
+        lang = version.asset_language
+        include_source_text = lang is not None and not lang.is_source
+        source_text_by_unit: dict[int, str] = {}
+        if include_source_text:
+            source_version = asset.get_latest_version(asset.language)
+            if source_version is not None:
+                source_text_by_unit = self.repo.entry_text_map(source_version, spec, unit_ids)
+
+        rows = [
+            {
+                "unit_type": asset.template,
+                "unit_id": unit.unit_id,
+                "label": unit.label,
+                "reference_text": unit.reference_text,
+                "sura": unit.sura,
+                "aya": unit.aya,
+                "text": text_by_unit.get(unit.unit_id, ""),
+                "source_text": source_text_by_unit.get(unit.unit_id) if include_source_text else None,
+                "order": unit.order,
+            }
+            for unit in units
+        ]
+        return rows, total
 
     def get_version_or_404(
         self,
