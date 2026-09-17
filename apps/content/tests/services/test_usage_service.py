@@ -2,7 +2,15 @@ from unittest.mock import patch
 
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetAccess, AssetAccessRequest, CategoryChoice, LicenseChoice, UsageEvent
+from apps.content.models import (
+    Asset,
+    AssetAccess,
+    AssetAccessRequest,
+    AssetTemplateChoice,
+    CategoryChoice,
+    LicenseChoice,
+    UsageEvent,
+)
 from apps.content.services.usage import create_usage_event, log_api_access, log_asset_download, log_asset_view
 from apps.content.tasks import create_usage_event_task
 from apps.core.tests.base import BaseTestCase
@@ -20,6 +28,7 @@ class TestUsageService(BaseTestCase):
             publisher=self.publisher,
             name="Holy Quran Tafsir",
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             file_size="15.5 MB",
             format="mp3",
             license=LicenseChoice.CC_BY,

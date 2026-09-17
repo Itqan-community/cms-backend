@@ -4,6 +4,7 @@ from model_bakery import baker
 from apps.content.models import (
     Asset,
     AssetLanguage,
+    AssetTemplateChoice,
     AssetVersion,
     AssetVersionChange,
     AssetVersionChangeReview,
@@ -25,6 +26,7 @@ class AssetReviewApiBaseTest(BaseTestCase):
         self.asset = baker.make(
             Asset,
             category=CategoryChoice.TRANSLATION,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             language="ar",

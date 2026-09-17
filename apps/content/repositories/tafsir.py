@@ -5,7 +5,7 @@ from typing import Any
 from django.db import transaction
 from django.db.models import Q
 
-from apps.content.models import Asset, AssetVersion, CategoryChoice, LicenseChoice, StatusChoice
+from apps.content.models import Asset, AssetTemplateChoice, AssetVersion, CategoryChoice, LicenseChoice, StatusChoice
 
 
 class TafsirRepository:
@@ -56,6 +56,7 @@ class TafsirRepository:
                 publisher_id=publisher_id,
                 status=StatusChoice.READY,
                 category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
                 name=name,
                 name_ar=name_ar,
                 name_en=name_en,

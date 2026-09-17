@@ -7,6 +7,7 @@ from apps.content.models import (
     AssetAccess,
     AssetAccessRequest,
     AssetLanguage,
+    AssetTemplateChoice,
     AssetVersion,
     AssetVersionChange,
     CategoryChoice,
@@ -26,6 +27,7 @@ class TafsirVersionBaseTest(BaseTestCase):
         self.tafsir = baker.make(
             Asset,
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             name="Tafsir Al-Tabari",

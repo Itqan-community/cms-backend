@@ -2,7 +2,16 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 from oauth2_provider.models import Application
 
-from apps.content.models import Asset, CategoryChoice, Qiraah, RecitationSurahTrack, Reciter, Riwayah, StatusChoice
+from apps.content.models import (
+    Asset,
+    AssetTemplateChoice,
+    CategoryChoice,
+    Qiraah,
+    RecitationSurahTrack,
+    Reciter,
+    Riwayah,
+    StatusChoice,
+)
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -63,6 +72,7 @@ class RecitationsListTest(BaseTestCase):
         baker.make(
             Asset,
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher1,
             status=StatusChoice.READY,
         )
