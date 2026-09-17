@@ -268,8 +268,8 @@ class PatchEntriesTest(AssetContentBaseTest):
             f"/portal/content/translations/{self.translation.slug}/versions/{draft.id}/entries/",
             data={
                 "rows": [
-                    {"ayah_id": 1, "text": "au nom"},
-                    {"ayah_id": 2, "text": "louange"},
+                    {"unit_id": 1, "text": "au nom"},
+                    {"unit_id": 2, "text": "louange"},
                 ]
             },
             content_type="application/json",
@@ -295,7 +295,7 @@ class PatchEntriesTest(AssetContentBaseTest):
         # Act
         response = self.client.patch(
             f"/portal/content/translations/{self.translation.slug}/versions/{draft.id}/entries/",
-            data={"rows": [{"ayah_id": 1, "text": "new"}]},
+            data={"rows": [{"unit_id": 1, "text": "new"}]},
             content_type="application/json",
         )
 
@@ -316,7 +316,7 @@ class PatchEntriesTest(AssetContentBaseTest):
         # Act
         response = self.client.patch(
             f"/portal/content/translations/{self.translation.slug}/versions/{published.id}/entries/",
-            data={"rows": [{"ayah_id": 1, "text": "x"}]},
+            data={"rows": [{"unit_id": 1, "text": "x"}]},
             content_type="application/json",
         )
 
@@ -382,7 +382,7 @@ class SourceReferenceEntriesTest(AssetContentBaseTest):
         # Act
         response = self.client.patch(
             f"/portal/content/translations/{self.translation.slug}/versions/{draft_id}/entries/",
-            data={"rows": [{"ayah_id": self.ayahs[0].id, "text": "uno"}]},
+            data={"rows": [{"unit_id": self.ayahs[0].id, "text": "uno"}]},
             content_type="application/json",
         )
 
@@ -424,7 +424,7 @@ class SourceReferenceEntriesTest(AssetContentBaseTest):
         # Translate only the first ayah, leaving the second empty.
         self.client.patch(
             f"/portal/content/translations/{self.translation.slug}/versions/{draft_id}/entries/",
-            data={"rows": [{"ayah_id": self.ayahs[0].id, "text": "traduccion uno"}]},
+            data={"rows": [{"unit_id": self.ayahs[0].id, "text": "traduccion uno"}]},
             content_type="application/json",
         )
 
@@ -457,7 +457,7 @@ class SourceReferenceEntriesTest(AssetContentBaseTest):
         first_id = first.json()["id"]
         self.client.patch(
             f"/portal/content/translations/{self.translation.slug}/versions/{first_id}/entries/",
-            data={"rows": [{"ayah_id": self.ayahs[0].id, "text": "uno"}]},
+            data={"rows": [{"unit_id": self.ayahs[0].id, "text": "uno"}]},
             content_type="application/json",
         )
         self.client.post(
@@ -653,7 +653,7 @@ class PublishDraftTest(AssetContentBaseTest):
         # Act — edit an entry
         response = self.client.patch(
             f"/portal/content/translations/{self.translation.slug}/versions/{draft.id}/entries/",
-            data={"rows": [{"ayah_id": 1, "text": "edited"}]},
+            data={"rows": [{"unit_id": 1, "text": "edited"}]},
             content_type="application/json",
         )
 
@@ -763,7 +763,8 @@ class VersionDiffTest(AssetContentBaseTest):
         self.assertEqual("modified", row["change_type"])
         self.assertEqual("a", row["old_text"])
         self.assertEqual("b", row["new_text"])
-        self.assertEqual(1, row["aya"])
+        self.assertEqual(self.ayahs[0].id, row["unit_id"])
+        self.assertEqual(f"{self.sura.id}:1", row["label"])
 
     def test_diff_computed_for_legacy_commit(self):
         # Legacy: no stored changes, full entries on both versions.
@@ -806,7 +807,7 @@ class PendingDiffTest(AssetContentBaseTest):
         )
 
         self.assertEqual(200, resp.status_code, resp.content)
-        changes = {r["ayah_id"]: r["change_type"] for r in resp.json()["results"]}
+        changes = {r["unit_id"]: r["change_type"] for r in resp.json()["results"]}
         self.assertEqual("modified", changes[self.ayahs[0].id])
         self.assertEqual("added", changes[self.ayahs[1].id])
         self.assertNotIn(self.ayahs[2].id, changes)  # empty seeded row excluded

@@ -139,6 +139,18 @@ class UnitSpec:
         window = source[offset : offset + limit]
         return [self._to_row(item) for item in window], total
 
+    def valid_unit_ids(self, asset: Asset, candidates: list[int]) -> set[int]:
+        """Which of ``candidates`` are real units of this template.
+
+        Bounded by ``candidates`` rather than the template's full unit set —
+        for the word template ``units(asset)`` would materialise 77,431 rows
+        on every single save, which this deliberately avoids.
+        """
+        if self.template == AssetTemplateChoice.PAGE:
+            return {c for c in candidates if 1 <= c <= asset.mushaf_layout.page_count}
+        model = {"sura": Sura, "ayah": Ayah, "word": Word}[self.field]
+        return set(model.objects.filter(id__in=candidates).values_list("id", flat=True))
+
     def units(self, asset: Asset, *, sura: int | None = None) -> Sequence[UnitRow]:
         """Every canonical unit of this template, in order.
 

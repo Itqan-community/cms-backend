@@ -119,9 +119,6 @@ def _entries_to_out(entries: list[AssetVersionEntry], template: str, source_text
     one query per changed row. Dispatches on whichever unit column is set,
     mirroring the four label / reference-text formats ``UnitSpec._to_row``
     builds for the canonical read path (``apps.content.services.asset_templates``).
-    Only the ayah branch is reachable today — ``EntryPatchRow`` accepts only
-    ``ayah_id`` — but the others are written for when patching gains the
-    other three templates.
 
     ``order`` is the unit's own id/number (matching ``UnitSpec._to_row``,
     which the GET path uses), not the entry's stored ``order`` column, so a
@@ -172,7 +169,7 @@ def _entries_to_out(entries: list[AssetVersionEntry], template: str, source_text
 
 
 class EntryPatchRow(Schema):
-    ayah_id: int
+    unit_id: int
     text: str = ""
 
 
@@ -185,10 +182,9 @@ class PublishIn(Schema):
 
 
 class ChangeOut(Schema):
-    ayah_id: int
-    sura: int
-    aya: int
-    surah_name: str
+    unit_type: AssetTemplateChoice
+    unit_id: int
+    label: str
     change_type: str
     old_text: str
     new_text: str
@@ -268,7 +264,9 @@ def list_entries(
     "content/{category}/{slug}/versions/{version_id}/entries/",
     response={
         200: list[EntryOut],
-        400: NinjaErrorResponse[Literal["version_not_editable"]],
+        400: NinjaErrorResponse[Literal["version_not_editable"]]
+        | NinjaErrorResponse[Literal["unit_not_in_template"]]
+        | NinjaErrorResponse[Literal["asset_template_missing"]],
         404: NinjaErrorResponse[Literal["translation_not_found"]]
         | NinjaErrorResponse[Literal["tafsir_not_found"]]
         | NinjaErrorResponse[Literal["version_not_found"]]

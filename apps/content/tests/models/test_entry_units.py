@@ -17,7 +17,17 @@ from apps.quran.models import Ayah, Sura
 # `asset_template_required_for_text` or `asset_recitation_fields_consistency`
 # (both pre-existing, unrelated to this test). Pinning a valid combination
 # here keeps these tests about the *_exactly_one_unit constraint only.
-_VALID_ASSET_KWARGS = {"asset__category": CategoryChoice.TRANSLATION, "asset__template": AssetTemplateChoice.SURAH}
+#
+# These are direct ORM writes, not routed through AssetContentService, so the
+# service-layer "entry's unit type matches its asset's template" invariant
+# (Task 7) does not apply here — that invariant can't be a DB constraint
+# (`template` lives two tables away). Even so, each kwargs set below is pinned
+# to the template that matches the unit column its tests actually write, so
+# the fixture reads as a realistic asset rather than a mismatched one.
+_SURAH_ASSET_KWARGS = {"asset__category": CategoryChoice.TRANSLATION, "asset__template": AssetTemplateChoice.SURAH}
+# The "no unit" / "two units" constraint tests don't write a real unit column,
+# so any valid template kwargs works; surah is used arbitrarily for those.
+_VALID_ASSET_KWARGS = _SURAH_ASSET_KWARGS
 
 
 class EntryUnitConstraintTests(BaseTestCase):
@@ -54,8 +64,14 @@ class EntryUnitConstraintTests(BaseTestCase):
         self.assertIsNone(entry.ayah_id)
 
     def test_entry_where_only_page_no_is_set_should_save(self):
-        # Arrange
-        version = baker.make(AssetVersion, **_VALID_ASSET_KWARGS)
+        # Arrange — page template requires a mushaf_layout (asset_mushaf_layout_consistency)
+        layout = baker.make("content.MushafLayout", page_count=604)
+        version = baker.make(
+            AssetVersion,
+            asset__category=CategoryChoice.TRANSLATION,
+            asset__template=AssetTemplateChoice.PAGE,
+            asset__mushaf_layout=layout,
+        )
 
         # Act
         entry = AssetVersionEntry.objects.create(version=version, page_no=42, text="x", order=42)

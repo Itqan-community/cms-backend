@@ -178,7 +178,7 @@ class AssetLanguageGatingTest(BaseTestCase):
         # Act
         response = self.client.patch(
             f"/portal/content/translations/{self.translation.slug}/versions/{self.es_version.id}/entries/",
-            data={"rows": [{"ayah_id": self.ayah.id, "text": "x"}]},
+            data={"rows": [{"unit_id": self.ayah.id, "text": "x"}]},
             content_type="application/json",
         )
 
