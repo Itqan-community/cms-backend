@@ -18,7 +18,18 @@ class MushafLayoutRepository:
     def update(self, layout: MushafLayout, **fields) -> MushafLayout:
         for name, value in fields.items():
             setattr(layout, name, value)
-        layout.save(update_fields=[*fields.keys(), "updated_at"])
+
+        update_fields = list(fields.keys())
+        if "name_ar" in fields or "name_en" in fields:
+            # `name` is the original modeltranslation field: reading it always
+            # dynamically resolves from name_<active-language> with fallback
+            # (MODELTRANSLATION_FALLBACK_LANGUAGES), never from a raw value
+            # assigned to it. That resolved value only reaches the database if
+            # "name" is itself part of update_fields, so it must be added
+            # explicitly whenever a localized name changes.
+            update_fields.append("name")
+
+        layout.save(update_fields=[*update_fields, "updated_at"])
         return layout
 
     def delete(self, layout: MushafLayout) -> None:

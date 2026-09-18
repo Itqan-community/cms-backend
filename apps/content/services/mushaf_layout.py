@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from django.db import IntegrityError
 from django.utils.translation import gettext as _
 
 from apps.content.models import MushafLayout
@@ -24,11 +25,53 @@ class MushafLayoutService:
         return layout
 
     def create(self, *, name_ar: str | None, name_en: str | None, page_count: int) -> MushafLayout:
-        return self.repo.create(name_ar=name_ar, name_en=name_en, page_count=page_count)
+        normalized_name_ar = (name_ar or "").strip()
+        normalized_name_en = (name_en or "").strip()
+
+        if not normalized_name_ar and not normalized_name_en:
+            raise ItqanError(
+                error_name="mushaf_layout_name_required",
+                message=_("Mushaf layout name (Arabic or English) is required."),
+                status_code=400,
+            )
+
+        try:
+            return self.repo.create(name_ar=normalized_name_ar, name_en=normalized_name_en, page_count=page_count)
+        except IntegrityError as err:
+            raise ItqanError(
+                error_name="mushaf_layout_already_exists",
+                message=_("A mushaf layout with this name already exists."),
+                status_code=409,
+            ) from err
 
     def update(self, layout_id: int, **fields) -> MushafLayout:
         layout = self.get_or_404(layout_id)
-        return self.repo.update(layout, **fields)
+
+        if "name_ar" in fields or "name_en" in fields:
+            new_name_ar = fields.get("name_ar", getattr(layout, "name_ar", ""))
+            new_name_en = fields.get("name_en", getattr(layout, "name_en", ""))
+
+            final_name_ar = (new_name_ar or "").strip()
+            final_name_en = (new_name_en or "").strip()
+
+            if not final_name_ar and not final_name_en:
+                raise ItqanError(
+                    error_name="mushaf_layout_name_required",
+                    message=_("Mushaf layout name (Arabic or English) is required."),
+                    status_code=400,
+                )
+
+            fields["name_ar"] = final_name_ar
+            fields["name_en"] = final_name_en
+
+        try:
+            return self.repo.update(layout, **fields)
+        except IntegrityError as err:
+            raise ItqanError(
+                error_name="mushaf_layout_already_exists",
+                message=_("A mushaf layout with this name already exists."),
+                status_code=409,
+            ) from err
 
     def delete(self, layout_id: int) -> None:
         """Refuse to delete a layout any asset still points at.
