@@ -16,6 +16,7 @@ from pydantic import AwareDatetime, Field
 from apps.content.models import AssetTemplateChoice, AssetVersion, AssetVersionEntry, CategoryChoice
 from apps.content.services.asset_content import AssetContentService
 from apps.content.services.asset_language_access import require_language, require_version_language
+from apps.content.services.asset_templates import unit_spec_for
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.paginations import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 from apps.core.ninja_utils.request import Request
@@ -395,19 +396,20 @@ def restore_version(request: Request, category: str, slug: str, version_id: int)
     },
 )
 def export_version(request: Request, category: str, slug: str, version_id: int):
-    """Download a version's content as CSV (per-ayah entries).
+    """Download a version's content as CSV, in the asset's template columns.
 
-    Falls back to the version's uploaded file when it has no per-ayah entries.
+    Falls back to the version's uploaded file when it has no entries.
     """
     resolved = _resolve_for_version(category, request, slug, version_id, write=False)
     service = AssetContentService()
     version = service.get_version_or_404(slug, resolved, version_id, publisher_q=request.publisher_q())
 
+    spec = unit_spec_for(version.asset)
     if not version.entries.exists():
         # A pruned commit: reconstruct its snapshot from deltas for download.
         snapshot = service.repo.reconstruct_entries(version)
         if snapshot:
-            content = service.repo.snapshot_to_csv_bytes(snapshot, verbose=True)
+            content = service.repo.snapshot_to_csv_bytes(snapshot, spec, verbose=True)
         elif version.file_url:
             return HttpResponseRedirect(version.file_url.url)
         else:
@@ -417,7 +419,7 @@ def export_version(request: Request, category: str, slug: str, version_id: int):
                 status_code=404,
             )
     else:
-        content = service.repo.entries_to_csv_bytes(version, verbose=True)
+        content = service.repo.entries_to_csv_bytes(version, spec, verbose=True)
     # Name the file {english name}-{language}-{version} for easy identification.
     language_code = version.asset_language.language if version.asset_language_id else version.asset.language
     english_name = version.asset.name_en or slug

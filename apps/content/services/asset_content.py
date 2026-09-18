@@ -39,7 +39,7 @@ _NOT_FOUND_ERROR = {
 
 
 def import_uploaded_file_into_entries(version: AssetVersion, *, strict: bool = False) -> None:
-    """Parse an uploaded version file into per-ayah entries.
+    """Parse an uploaded version file into entries, keyed to the asset's template unit.
 
     Called from the translation/tafsir version create/update flow so that any
     uploaded content file also populates ``AssetVersionEntry`` rows (edits then
@@ -89,7 +89,7 @@ def import_uploaded_file_into_entries(version: AssetVersion, *, strict: bool = F
         if strict:
             raise ItqanError(
                 error_name="content_file_unparseable",
-                message=_("The uploaded file could not be parsed into ayah entries."),
+                message=_("The uploaded file could not be parsed into content entries."),
                 status_code=400,
             ) from exc
         return

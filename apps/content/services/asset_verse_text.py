@@ -3,7 +3,9 @@
 Tafsir and Translation assets keep their content as uploaded files on
 ``AssetVersion.file_url`` (``Asset`` rows hold metadata only), so this module is
 the retrieval path that turns the latest version file into the text for one
-``(surah, ayah)`` location.
+``(surah, ayah)`` location. This only makes sense for an ayah-template asset —
+surah/word/page templates have no per-verse text, so ``extract_verse_text``
+returns ``None`` for them immediately.
 
 Supported payloads are UTF-8 JSON objects in either shape:
 
@@ -22,6 +24,8 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from django.core.cache import cache
+
+from apps.content.models import AssetTemplateChoice
 
 if TYPE_CHECKING:
     from apps.content.models import Asset, AssetVersion
@@ -47,6 +51,11 @@ def extract_verse_text(asset: Asset, surah: int, ayah: int) -> str | None:
     and both keys embed the version identity + last-modified stamp so any
     change to that row rotates every cached entry at once.
     """
+    # Verse sampling reads a "surah:ayah"-keyed JSON payload, which only an
+    # ayah-template asset produces. Other templates have no per-verse text.
+    if asset.template != AssetTemplateChoice.AYAH:
+        return None
+
     latest = asset.get_latest_version()
     # The key carries BOTH the selected row's identity and its last-modified
     # stamp at FULL microsecond precision, so stale text can never outlive the
