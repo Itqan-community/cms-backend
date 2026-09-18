@@ -5,7 +5,15 @@ from typing import Any
 from django.db import transaction
 from django.db.models import Q
 
-from apps.content.models import Asset, AssetTemplateChoice, AssetVersion, CategoryChoice, LicenseChoice, StatusChoice
+from apps.content.models import (
+    Asset,
+    AssetTemplateChoice,
+    AssetVersion,
+    CategoryChoice,
+    LicenseChoice,
+    MushafLayout,
+    StatusChoice,
+)
 
 
 class TranslationRepository:
@@ -42,6 +50,8 @@ class TranslationRepository:
         long_description_en: str | None,
         license: LicenseChoice,
         language: str,
+        template: AssetTemplateChoice,
+        mushaf_layout: MushafLayout | None = None,
         is_external: bool = False,
         external_url: str | None = None,
         is_open_access: bool = False,
@@ -55,7 +65,8 @@ class TranslationRepository:
                 publisher_id=publisher_id,
                 status=StatusChoice.READY,
                 category=CategoryChoice.TRANSLATION,
-                template=AssetTemplateChoice.AYAH,
+                template=template,
+                mushaf_layout=mushaf_layout,
                 name=name,
                 name_ar=name_ar,
                 name_en=name_en,

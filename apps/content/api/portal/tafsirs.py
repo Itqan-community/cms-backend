@@ -6,7 +6,15 @@ from ninja import Field, File, FilterLookup, FilterSchema, Form, Query, Schema, 
 from ninja.pagination import paginate
 from pydantic import AwareDatetime
 
-from apps.content.models import Asset, AssetVersion, CategoryChoice, LicenseChoice, StatusChoice, VersionStateChoice
+from apps.content.models import (
+    Asset,
+    AssetTemplateChoice,
+    AssetVersion,
+    CategoryChoice,
+    LicenseChoice,
+    StatusChoice,
+    VersionStateChoice,
+)
 from apps.content.services.tafsir import TafsirService
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
@@ -31,6 +39,12 @@ class TafsirPublisherOut(Schema):
     name: str
 
 
+class MushafLayoutBriefOut(Schema):
+    id: int
+    name: str
+    page_count: int
+
+
 class TafsirListOut(Schema):
     id: int
     slug: str
@@ -43,6 +57,8 @@ class TafsirListOut(Schema):
     is_open_access: bool
     restricted_for_tenant: bool
     thumbnail_url: str | None = None
+    template: AssetTemplateChoice | None = None
+    mushaf_layout: MushafLayoutBriefOut | None = None
     created_at: AwareDatetime
 
     @staticmethod
@@ -83,6 +99,8 @@ class TafsirDetailOut(Schema):
     external_url: str | None = None
     is_open_access: bool
     restricted_for_tenant: bool
+    template: AssetTemplateChoice | None = None
+    mushaf_layout: MushafLayoutBriefOut | None = None
     versions: list[TafsirVersionOut]
     created_at: AwareDatetime
 
@@ -116,6 +134,8 @@ class TafsirCreateIn(Schema):
     restricted_for_tenant: bool = False
     version_name: str | None = Field(default=None, max_length=255)
     version_summary: str = ""
+    template: AssetTemplateChoice
+    mushaf_layout_id: int | None = None
 
 
 class TafsirPutIn(Schema):
@@ -158,6 +178,7 @@ class TafsirFilter(FilterSchema):
     license_code: Annotated[list[str] | None, FilterLookup(q="license__in")] = None
     language: Annotated[str | None, FilterLookup(q="language")] = None
     is_external: Annotated[bool | None, FilterLookup(q="is_external")] = None
+    template: AssetTemplateChoice | None = None
 
 
 # --- Endpoints ---
@@ -179,7 +200,7 @@ class TafsirFilter(FilterSchema):
     ]
 )
 def list_tafsirs(request: Request, filters: TafsirFilter = Query()):
-    qs = Asset.objects.select_related("publisher").filter(
+    qs = Asset.objects.select_related("publisher", "mushaf_layout").filter(
         request.publisher_q(),
         category=CategoryChoice.TAFSIR,
         status=StatusChoice.READY,
@@ -194,6 +215,8 @@ def list_tafsirs(request: Request, filters: TafsirFilter = Query()):
         qs = qs.filter(language=language)
     if "is_external" in filters_dict:
         qs = qs.filter(is_external=filters_dict["is_external"])
+    if template := filters_dict.get("template"):
+        qs = qs.filter(template=template)
 
     return qs.distinct()
 
@@ -204,8 +227,12 @@ def list_tafsirs(request: Request, filters: TafsirFilter = Query()):
         201: TafsirDetailOut,
         400: NinjaErrorResponse[Literal["tafsir_name_required"]]
         | NinjaErrorResponse[Literal["external_url_required"]]
-        | NinjaErrorResponse[Literal["version_name_required"]],
-        404: NinjaErrorResponse[Literal["publisher_not_found"]] | NinjaErrorResponse[Literal["tafsir_not_found"]],
+        | NinjaErrorResponse[Literal["version_name_required"]]
+        | NinjaErrorResponse[Literal["mushaf_layout_required"]]
+        | NinjaErrorResponse[Literal["mushaf_layout_not_allowed"]],
+        404: NinjaErrorResponse[Literal["publisher_not_found"]]
+        | NinjaErrorResponse[Literal["tafsir_not_found"]]
+        | NinjaErrorResponse[Literal["mushaf_layout_not_found"]],
     },
 )
 @permission_required([permission_class(PermissionChoice.PORTAL_CREATE_TAFSIR)])
@@ -238,6 +265,8 @@ def create_tafsir(
         thumbnail_url=thumbnail,
         is_open_access=data.is_open_access,
         restricted_for_tenant=data.restricted_for_tenant,
+        template=data.template,
+        mushaf_layout_id=data.mushaf_layout_id,
     )
     logger.info(f"Tafsir created [tafsir_id={tafsir.id}, user_id={request.user.id}]")
     return 201, tafsir
@@ -254,7 +283,7 @@ def create_tafsir(
 def retrieve_tafsir(request: Request, tafsir_slug: str) -> Asset:
     try:
         return (
-            Asset.objects.select_related("publisher")
+            Asset.objects.select_related("publisher", "mushaf_layout")
             .prefetch_related("versions")
             .filter(request.publisher_q())
             .get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
@@ -271,7 +300,9 @@ def retrieve_tafsir(request: Request, tafsir_slug: str) -> Asset:
     "tafsirs/{tafsir_slug}/",
     response={
         200: TafsirDetailOut,
-        400: NinjaErrorResponse[Literal["tafsir_name_required"]] | NinjaErrorResponse[Literal["external_url_required"]],
+        400: NinjaErrorResponse[Literal["tafsir_name_required"]]
+        | NinjaErrorResponse[Literal["external_url_required"]]
+        | NinjaErrorResponse[Literal["asset_template_immutable"]],
         404: NinjaErrorResponse[Literal["tafsir_not_found"]],
     },
 )
@@ -298,7 +329,9 @@ def update_tafsir_put(
     "tafsirs/{tafsir_slug}/",
     response={
         200: TafsirDetailOut,
-        400: NinjaErrorResponse[Literal["tafsir_name_required"]] | NinjaErrorResponse[Literal["external_url_required"]],
+        400: NinjaErrorResponse[Literal["tafsir_name_required"]]
+        | NinjaErrorResponse[Literal["external_url_required"]]
+        | NinjaErrorResponse[Literal["asset_template_immutable"]],
         404: NinjaErrorResponse[Literal["tafsir_not_found"]],
     },
 )
