@@ -160,8 +160,9 @@ class ReviewActionTest(AssetReviewApiBaseTest):
         self.assertEqual(200, response.status_code, response.content)
         row = response.json()["results"][0]
         self.assertEqual(self.change.id, row["id"])
-        self.assertEqual(1, row["sura"])
-        self.assertEqual(1, row["aya"])
+        self.assertEqual("ayah", row["unit_type"])
+        self.assertEqual(1, row["unit_id"])
+        self.assertEqual("1:1", row["label"])
         self.assertEqual("added", row["change_type"])
         self.assertEqual("unreviewed", row["review_state"])
         self.assertIn("baseline_text", row)

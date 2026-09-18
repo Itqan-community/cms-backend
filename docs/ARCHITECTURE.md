@@ -67,7 +67,7 @@ erDiagram
     AssetVersion }o--|| ResourceVersion : "linked to"
 
     Asset ||--o{ AssetLanguage : "provides languages"
-    AssetVersion ||--o{ AssetVersionChange : "records per-ayah deltas"
+    AssetVersion ||--o{ AssetVersionChange : "records per-unit deltas"
     AssetVersionChange ||--o| AssetVersionChangeReview : "reviewed as"
     User ||--o{ ReviewerLanguage : "assigned to review"
 
@@ -227,7 +227,8 @@ flowchart LR
 
 Text assets (translations & tafsirs) hold one source-language rendition plus any
 number of translation renditions (`AssetLanguage`), each with its own version
-history. Every publish records a per-ayah delta (`AssetVersionChange`).
+history. Every publish records a per-unit delta (`AssetVersionChange`), keyed to
+whichever unit the asset's template uses (surah, ayah, word or page).
 
 - **Availability** — a language is consumable only when the asset is `READY` and
   the `AssetLanguage.status` is `READY`; translations start hidden until marked
