@@ -45,7 +45,17 @@ class AssetReviewRepository:
         )
         qs = (
             AssetVersionChange.objects.filter(pk__in=Subquery(latest_pks))
-            .select_related("ayah", "ayah__sura", "version", "review", "review__reviewed_by")
+            .select_related(
+                "ayah",
+                "ayah__sura",
+                "sura",
+                "word__ayah",
+                "word__sura",
+                "version",
+                "version__asset",
+                "review",
+                "review__reviewed_by",
+            )
             .annotate(baseline_text=Subquery(last_approved_text))
         )
         if state == "unreviewed":

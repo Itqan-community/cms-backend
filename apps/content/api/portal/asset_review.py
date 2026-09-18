@@ -6,7 +6,12 @@ from ninja.pagination import paginate
 from pydantic import AwareDatetime
 
 from apps.content.api.portal.asset_content import _CATEGORY_CONFIG
-from apps.content.models import AssetVersionChange, AssetVersionChangeReview, CategoryChoice
+from apps.content.models import (
+    AssetTemplateChoice,
+    AssetVersionChange,
+    AssetVersionChangeReview,
+    CategoryChoice,
+)
 from apps.content.services.asset_review import AssetReviewService
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
@@ -42,9 +47,9 @@ def _resolve_review(category: str, request: Request) -> CategoryChoice:
 
 class ReviewChangeOut(Schema):
     id: int
-    sura: int
-    aya: int
-    surah_name: str
+    unit_type: AssetTemplateChoice
+    unit_id: int
+    label: str
     change_type: str
     old_text: str
     new_text: str
@@ -57,16 +62,23 @@ class ReviewChangeOut(Schema):
     reviewed_at: AwareDatetime | None
 
     @staticmethod
-    def resolve_sura(obj: AssetVersionChange) -> int:
-        return obj.ayah.sura_id
+    def resolve_unit_type(obj: AssetVersionChange) -> str:
+        return obj.version.asset.template
 
     @staticmethod
-    def resolve_aya(obj: AssetVersionChange) -> int:
-        return obj.ayah.number_in_sura
+    def resolve_unit_id(obj: AssetVersionChange) -> int:
+        return obj.unit_id
 
     @staticmethod
-    def resolve_surah_name(obj: AssetVersionChange) -> str:
-        return obj.ayah.sura.name
+    def resolve_label(obj: AssetVersionChange) -> str:
+        """The unit's display reference, matching the editor's EntryOut.label."""
+        if obj.sura_id is not None:
+            return f"{obj.sura_id}. {obj.sura.transliterated_name}"
+        if obj.ayah_id is not None:
+            return f"{obj.ayah.sura_id}:{obj.ayah.number_in_sura}"
+        if obj.word_id is not None:
+            return f"{obj.word.sura_id}:{obj.word.ayah.number_in_sura}:{obj.word.position_in_ayah}"
+        return _("Page {number}").format(number=obj.page_no)
 
     @staticmethod
     def resolve_baseline_text(obj: AssetVersionChange) -> str:
