@@ -537,12 +537,16 @@ class AssetContentRepository:
 
         Only the ids appearing in the diff are fetched — never the template's
         full unit set (77,431 rows for word). Page has no backing table, so its
-        "object" is just the bare page number.
+        "object" is just the bare page number. Ayah joins ``sura`` up front:
+        ``_change_to_dict`` only needs ``sura_id`` (already on the row, no
+        join required), but ``snapshot_to_csv_bytes``'s verbose branch reads
+        ``ayah.sura.name`` per row, which without this join would lazy-load
+        one ``Sura`` per row instead of one query for the whole batch.
         """
         if spec.template == AssetTemplateChoice.SURAH:
             return Sura.objects.in_bulk(unit_ids)
         if spec.template == AssetTemplateChoice.AYAH:
-            return Ayah.objects.in_bulk(unit_ids)
+            return Ayah.objects.select_related("sura").in_bulk(unit_ids)
         if spec.template == AssetTemplateChoice.WORD:
             return Word.objects.select_related("ayah").in_bulk(unit_ids)
         return {unit_id: unit_id for unit_id in unit_ids}

@@ -13,6 +13,8 @@ from apps.content.models import (
     VersionStateChoice,
 )
 from apps.content.repositories.asset_content import AssetContentRepository
+from apps.content.repositories.tafsir import TafsirRepository
+from apps.content.repositories.translation import TranslationRepository
 from apps.content.services.asset_content import AssetContentService
 from apps.content.services.asset_templates import unit_spec_for
 from apps.content.services.asset_verse_text import extract_verse_text
@@ -77,6 +79,29 @@ class EntriesToCsvTemplateTests(QuranDataMixin, BaseTestCase):
         lines = csv_bytes.decode("utf-8").splitlines()
         self.assertEqual("page,text", lines[0])
         self.assertEqual("3,third", lines[1])
+
+    def test_entries_to_csv_where_multiple_rows_should_come_back_in_order(self):
+        # Arrange — two page entries, deliberately created out of display order so
+        # the `order_by("order", "id")` tiebreak (not insertion/pk order) is what
+        # this actually proves.
+        layout = baker.make(MushafLayout, name="Madani 604", page_count=604)
+        asset = baker.make(
+            Asset,
+            category=CategoryChoice.TRANSLATION,
+            template=AssetTemplateChoice.PAGE,
+            mushaf_layout=layout,
+        )
+        version = baker.make(AssetVersion, asset=asset)
+        AssetVersionEntry.objects.create(version=version, page_no=5, text="fifth", order=5)
+        AssetVersionEntry.objects.create(version=version, page_no=1, text="first", order=1)
+        repo = AssetContentRepository()
+
+        # Act
+        csv_bytes = repo.entries_to_csv_bytes(version, unit_spec_for(asset))
+
+        # Assert
+        lines = csv_bytes.decode("utf-8").splitlines()
+        self.assertEqual(["page,text", "1,first", "5,fifth"], lines)
 
     def test_entries_to_csv_where_ayah_template_should_be_byte_identical_to_before_templates(self):
         # Arrange — the exact lean/verbose shape the ayah exporter produced before
@@ -157,6 +182,36 @@ class SnapshotToCsvTemplateTests(QuranDataMixin, BaseTestCase):
         # Assert
         text = csv_bytes.decode("utf-8")
         self.assertEqual(f"word_id,sura,aya,word,text\r\n{self.word1.id},1,1,1,the\r\n", text)
+
+    def test_snapshot_to_csv_where_ayah_template_verbose_should_not_scale_queries_with_row_count(self):
+        # Arrange — a published, pruned ayah-template commit spanning all 3 baked
+        # ayahs across 2 suras, so a per-row `.sura` lazy-load (the N+1 this
+        # regression-tests against) would show up as more than one query.
+        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH)
+        version = baker.make(AssetVersion, asset=asset, state=VersionStateChoice.PUBLISHED)
+        for ayah, text in ((self.ayah1, "one"), (self.ayah2, "two"), (self.ayah3, "three")):
+            baker.make(
+                AssetVersionChange,
+                version=version,
+                ayah=ayah,
+                change_type=ChangeTypeChoice.ADDED,
+                new_text=text,
+                order=ayah.id,
+            )
+        repo = AssetContentRepository()
+        spec = unit_spec_for(asset)
+        snapshot = repo.reconstruct_entries(version)
+
+        # Act — exactly one query (the bulk fetch with `select_related("sura")`),
+        # regardless of how many ayahs/suras are in the snapshot.
+        with self.assertNumQueries(1):
+            csv_bytes = repo.snapshot_to_csv_bytes(snapshot, spec, verbose=True)
+
+        # Assert
+        text = csv_bytes.decode("utf-8")
+        self.assertIn("one", text)
+        self.assertIn("two", text)
+        self.assertIn("three", text)
 
 
 class PublishNonAyahDraftTests(QuranDataMixin, BaseTestCase):
@@ -288,3 +343,43 @@ class ExtractVerseTextTemplateGuardTests(QuranDataMixin, BaseTestCase):
 
         # Assert
         self.assertIsNone(result)
+
+
+class SamplePickerTemplateFilterTests(QuranDataMixin, BaseTestCase):
+    """get_ready_asset must skip non-ayah assets: they can never satisfy
+    extract_verse_text's "surah:ayah"-keyed payload, so a surah/word/page asset
+    must not be handed to the sampler even when it is otherwise READY."""
+
+    def setUp(self):
+        super().setUp()
+        self.bake_quran()
+
+    def test_get_ready_translation_where_word_and_ayah_both_ready_should_return_the_ayah_one(self):
+        # Arrange — the word asset is created first (lower id); get_ready_asset
+        # orders by id, so returning the ayah one proves the template filter is
+        # doing the work, not id ordering happening to agree with it.
+        baker.make(
+            Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.WORD, status=StatusChoice.READY
+        )
+        ayah_asset = baker.make(
+            Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH, status=StatusChoice.READY
+        )
+
+        # Act
+        result = TranslationRepository().get_ready_asset()
+
+        # Assert
+        self.assertEqual(ayah_asset.id, result.id)
+
+    def test_get_ready_tafsir_where_word_and_ayah_both_ready_should_return_the_ayah_one(self):
+        # Arrange — same shape as the translation repository, for the tafsir one.
+        baker.make(Asset, category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.WORD, status=StatusChoice.READY)
+        ayah_asset = baker.make(
+            Asset, category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.AYAH, status=StatusChoice.READY
+        )
+
+        # Act
+        result = TafsirRepository().get_ready_asset()
+
+        # Assert
+        self.assertEqual(ayah_asset.id, result.id)
