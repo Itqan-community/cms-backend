@@ -489,6 +489,12 @@ msgstr "الإصدار ذو المعرف {id} غير موجود للمصحف {sl
 msgid "Mushaf layout with id {id} not found."
 msgstr "تخطيط المصحف بالمعرّف {id} غير موجود."
 
+msgid "Mushaf layout name (Arabic or English) is required."
+msgstr "اسم تخطيط المصحف (بالعربية أو الإنجليزية) مطلوب."
+
+msgid "A mushaf layout with this name already exists."
+msgstr "يوجد تخطيط مصحف بهذا الاسم بالفعل."
+
 msgid "This layout is used by one or more assets and cannot be deleted."
 msgstr "هذا التخطيط مستخدم في مادة أو أكثر ولا يمكن حذفه."
 
