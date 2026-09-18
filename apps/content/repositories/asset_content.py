@@ -46,6 +46,19 @@ class AssetContentRepository:
             for ayah_id, sura_id, number in Ayah.objects.values_list("id", "sura_id", "number_in_sura")
         }
 
+    def _word_id_by_sura_aya_position(self) -> dict[tuple[int, int, int], int]:
+        """Canonical word ids keyed by (sura, ayah-in-sura, position-in-ayah).
+
+        Builds a 77,431-entry dict in production. Used once per import — never
+        call this from a request path.
+        """
+        return {
+            (sura_id, number_in_sura, position): word_id
+            for word_id, sura_id, number_in_sura, position in Word.objects.values_list(
+                "id", "sura_id", "ayah__number_in_sura", "position_in_ayah"
+            )
+        }
+
     def unique_version_name(self, asset: Asset, base_name: str) -> str:
         """Return a version name unique within the asset (versions are distinct).
 
@@ -202,26 +215,21 @@ class AssetContentRepository:
         return draft
 
     @transaction.atomic
-    def replace_entries_from_parsed(self, version: AssetVersion, parsed: list[ParsedEntry]) -> int:
-        """Replace a version's entries with parsed per-ayah rows. Returns count."""
-        ayah_index = self._ayah_id_by_sura_aya()
-        logger.info(
-            f"replace_entries_from_parsed: deleting existing entries [version_id={version.pk}, ayah_index={ayah_index}]"
-        )
+    def replace_entries_from_parsed(self, version: AssetVersion, spec: UnitSpec, parsed: list[ParsedEntry]) -> int:
+        """Replace a version's entries with parsed rows, keyed to the template's
+        unit column. Returns count."""
+        unit_field = spec.field + ("_id" if spec.fk_field else "")
+        logger.info(f"replace_entries_from_parsed: deleting existing entries [version_id={version.pk}]")
         version.entries.all().delete()
-        rows: list[AssetVersionEntry] = []
-        for parsed_entry in parsed:
-            ayah_id = ayah_index.get((parsed_entry.sura, parsed_entry.aya))
-            if ayah_id is None:
-                continue
-            rows.append(
-                AssetVersionEntry(
-                    version=version,
-                    ayah_id=ayah_id,
-                    text=parsed_entry.text,
-                    order=ayah_id,
-                )
+        rows = [
+            AssetVersionEntry(
+                version=version,
+                text=parsed_entry.text,
+                order=parsed_entry.unit_id,
+                **{unit_field: parsed_entry.unit_id},
             )
+            for parsed_entry in parsed
+        ]
         logger.info(f"replace_entries_from_parsed: creating new entries [version_id={version.pk}, rows={len(rows)}]")
         if rows:
             AssetVersionEntry.objects.bulk_create(rows, batch_size=1000)
@@ -330,18 +338,13 @@ class AssetContentRepository:
         except Exception:
             logger.warning(f"Could not read version file for snapshot [version_id={version.pk}]")
             return {}
+        spec = unit_spec_for(version.asset)
         try:
-            parsed = parse_content_file(raw)
+            parsed = parse_content_file(raw, spec, version.asset)
         except AssetContentParseError:
             logger.info(f"Version file not parseable for snapshot [version_id={version.pk}]")
             return {}
-        ayah_index = self._ayah_id_by_sura_aya()
-        snapshot: dict[int, str] = {}
-        for entry in parsed:
-            ayah_id = ayah_index.get((entry.sura, entry.aya))
-            if ayah_id is not None:
-                snapshot[ayah_id] = entry.text
-        return snapshot
+        return {entry.unit_id: entry.text for entry in parsed}
 
     def _entries_map(self, version: AssetVersion) -> dict[int, str]:
         """{unit_id: text} for a version's full entries."""
@@ -602,13 +605,11 @@ class AssetContentRepository:
         if not snapshot and version.file_url:
             # Legacy file-only commit (pre-entries): parse its stored file so the
             # restore materializes real entries + a delta, like any other commit.
-            # `_snapshot_from_file` always returns ayah ids (the parser is
-            # ayah-only), which the `copies` list below then writes through
-            # `**{unit_field: unit_id}` keyed to *this asset's* template — the one
-            # place an ayah-keyed map meets a template-keyed write. Unreachable
-            # today: a non-ayah asset cannot have a pre-entries legacy file, since
-            # templates postdate the entries system. Generalizing the file-based
-            # import/export paths (Task 12) must account for this.
+            # `_snapshot_from_file` resolves through this asset's own template
+            # spec, so `unit_id` already matches what `copies` below writes via
+            # `**{unit_field: unit_id}`. In practice every pre-entries legacy
+            # file belongs to an ayah-template asset, since templates postdate
+            # the entries system, but the resolution itself is template-generic.
             snapshot = self._snapshot_from_file(version)
         name = self.unique_version_name(asset, version.name)
         new_version = self.asset_version_model.objects.create(

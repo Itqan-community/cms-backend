@@ -81,8 +81,9 @@ def import_uploaded_file_into_entries(version: AssetVersion, *, strict: bool = F
                 status_code=400,
             ) from exc
         return
+    spec = unit_spec_for(version.asset)
     try:
-        parsed = parse_content_file(raw)
+        parsed = parse_content_file(raw, spec, version.asset)
     except AssetContentParseError as exc:
         logger.info(f"Uploaded file not parsed into entries [version_id={version.pk}, reason={exc}]")
         if strict:
@@ -92,7 +93,7 @@ def import_uploaded_file_into_entries(version: AssetVersion, *, strict: bool = F
                 status_code=400,
             ) from exc
         return
-    entries_count = AssetContentRepository().replace_entries_from_parsed(version, parsed)
+    entries_count = AssetContentRepository().replace_entries_from_parsed(version, spec, parsed)
     logger.info(f"Uploaded file imported into entries [version_id={version.pk}, entries={entries_count}]")
 
 
@@ -412,15 +413,16 @@ class AssetContentService:
         Returns the number of entries created. Raises ``ItqanError`` (400) if the
         file cannot be parsed.
         """
+        spec = unit_spec_for(version.asset)
         try:
-            parsed = parse_content_file(raw)
+            parsed = parse_content_file(raw, spec, version.asset)
         except AssetContentParseError as exc:
             raise ItqanError(
                 error_name="content_file_unparseable",
                 message=_("Could not parse the uploaded content file: {reason}").format(reason=str(exc)),
                 status_code=400,
             ) from exc
-        count = self.repo.replace_entries_from_parsed(version, parsed)
+        count = self.repo.replace_entries_from_parsed(version, spec, parsed)
         logger.info(f"Imported content file into version [version_id={version.pk}, entries={count}]")
         return count
 
