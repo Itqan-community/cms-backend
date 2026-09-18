@@ -485,6 +485,13 @@ msgstr "لا يمكن حذف المصحف لأن هناك بيانات أخرى 
 msgid "Version with id {id} not found for mushaf {slug}."
 msgstr "الإصدار ذو المعرف {id} غير موجود للمصحف {slug}."
 
+#, python-brace-format
+msgid "Mushaf layout with id {id} not found."
+msgstr "تخطيط المصحف بالمعرّف {id} غير موجود."
+
+msgid "This layout is used by one or more assets and cannot be deleted."
+msgstr "هذا التخطيط مستخدم في مادة أو أكثر ولا يمكن حذفه."
+
 msgid "Recitation name (Arabic or English) is required."
 msgstr "اسم التلاوة (بالعربية أو الإنجليزية) مطلوب."
 
@@ -708,6 +715,18 @@ msgstr "لوحة التحكم - تحديث المصاحف"
 
 msgid "Portal - Delete Mushafs"
 msgstr "لوحة التحكم - حذف المصاحف"
+
+msgid "Portal - View Mushaf Layouts"
+msgstr "البوابة - عرض تخطيطات المصاحف"
+
+msgid "Portal - Create Mushaf Layouts"
+msgstr "البوابة - إنشاء تخطيطات المصاحف"
+
+msgid "Portal - Update Mushaf Layouts"
+msgstr "البوابة - تعديل تخطيطات المصاحف"
+
+msgid "Portal - Delete Mushaf Layouts"
+msgstr "البوابة - حذف تخطيطات المصاحف"
 
 msgid "Portal - View Fonts"
 msgstr "لوحة التحكم - عرض الخطوط"
