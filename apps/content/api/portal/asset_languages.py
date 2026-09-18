@@ -92,8 +92,8 @@ def add_language(
     """Register a language for the asset, optionally seeding it from an uploaded file.
 
     When a file is provided it becomes the language's first published version and
-    is parsed into per-ayah entries — so a translator can add a language and upload
-    its content in one step.
+    is parsed into entries keyed to the asset's template unit — so a translator can
+    add a language and upload its content in one step.
 
     Gated by ``PORTAL_ADD_ASSET_LANGUAGE`` rather than the content-edit permission,
     so who may start a new language is controlled separately from who may edit one.
