@@ -73,6 +73,10 @@ msgid "Issue report not found."
 msgstr "بلاغ المشكلة غير موجود."
 
 #, python-brace-format
+msgid "Mushaf layout with id {id} not found."
+msgstr "تخطيط المصحف بالمعرّف {id} غير موجود."
+
+#, python-brace-format
 msgid "Mushaf with slug {slug} not found."
 msgstr "لم يتم العثور على المصحف بالمعرّف {slug}."
 
@@ -485,10 +489,6 @@ msgstr "لا يمكن حذف المصحف لأن هناك بيانات أخرى 
 msgid "Version with id {id} not found for mushaf {slug}."
 msgstr "الإصدار ذو المعرف {id} غير موجود للمصحف {slug}."
 
-#, python-brace-format
-msgid "Mushaf layout with id {id} not found."
-msgstr "تخطيط المصحف بالمعرّف {id} غير موجود."
-
 msgid "Mushaf layout name (Arabic or English) is required."
 msgstr "اسم تخطيط المصحف (بالعربية أو الإنجليزية) مطلوب."
 
@@ -602,6 +602,12 @@ msgstr "يوجد قارئ بهذا الاسم بالفعل."
 
 msgid "Cannot delete Reciter because they are referenced through other objects"
 msgstr "لا يمكن حذف القارئ لأن مرتبط به بيانات أخرى"
+
+msgid "A page-based asset requires a mushaf layout."
+msgstr "المادة المبنية على الصفحات تتطلب تخطيط مصحف."
+
+msgid "Only page-based assets can have a mushaf layout."
+msgstr "تخطيط المصحف متاح فقط للمواد المبنية على الصفحات."
 
 msgid "Tafsir name (Arabic or English) is required."
 msgstr "اسم التفسير (بالعربية أو الإنجليزية) مطلوب."

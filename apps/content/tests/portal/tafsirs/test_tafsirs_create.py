@@ -32,6 +32,7 @@ class TafsirCreateTest(BaseTestCase):
                 "license": "CC-BY",
                 "language": "ar",
                 "publisher_id": self.publisher.id,
+                "template": "ayah",
                 "is_external": False,
             },
         )
@@ -71,6 +72,7 @@ class TafsirCreateTest(BaseTestCase):
                 "license": "CC-BY",
                 "language": "ar",
                 "publisher_id": 99999,  # Non-existent publisher
+                "template": "ayah",
                 "is_external": False,
             },
         )
@@ -98,6 +100,7 @@ class TafsirCreateTest(BaseTestCase):
                 "license": "CC-BY",
                 "language": "ar",
                 "publisher_id": self.publisher.id,
+                "template": "ayah",
                 "is_external": False,
             },
         )
@@ -123,6 +126,7 @@ class TafsirCreateTest(BaseTestCase):
                 "license": "CC-BY",
                 "language": "ar",
                 "publisher_id": self.publisher.id,
+                "template": "ayah",
                 "is_external": False,
             },
         )
@@ -150,6 +154,7 @@ class TafsirCreateTest(BaseTestCase):
                 "license": "CC-BY-SA",
                 "language": "en",
                 "publisher_id": self.publisher.id,
+                "template": "ayah",
                 "is_external": False,
             },
         )
@@ -176,6 +181,7 @@ class TafsirCreateTest(BaseTestCase):
                 "license": "CC-BY",
                 "language": "ar",
                 "publisher_id": self.publisher.id,
+                "template": "ayah",
                 "is_external": False,
                 "thumbnail": image,
             },
@@ -206,6 +212,7 @@ class TafsirCreateTest(BaseTestCase):
                 "license": "CC-BY",
                 "language": "ar",
                 "publisher_id": self.publisher.id,
+                "template": "ayah",
                 "is_external": True,
                 "external_url": "https://example.com/tafsir",
             },
@@ -231,6 +238,7 @@ class TafsirCreateTest(BaseTestCase):
                 "license": "CC-BY",
                 "language": "ar",
                 "publisher_id": self.publisher.id,
+                "template": "ayah",
                 "is_external": True,
                 "external_url": "",  # Or absent
             },
@@ -254,6 +262,7 @@ class TafsirCreateTest(BaseTestCase):
                 "license": "CC-BY",
                 "language": "ar",
                 "publisher_id": self.publisher.id,
+                "template": "ayah",
                 "is_external": False,
             },
         )
@@ -280,6 +289,7 @@ class TafsirCreateTest(BaseTestCase):
                 "license": "CC-BY",
                 "language": "ar",
                 "publisher_id": self.publisher.id,
+                "template": "ayah",
                 "is_external": False,
                 "is_open_access": True,
                 "restricted_for_tenant": True,
@@ -311,6 +321,7 @@ class TafsirCreateTest(BaseTestCase):
                 "license": "CC-BY",
                 "language": "ar",
                 "publisher_id": self.publisher.id,
+                "template": "ayah",
                 "is_external": False,
             },
         )

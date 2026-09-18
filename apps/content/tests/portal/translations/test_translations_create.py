@@ -28,6 +28,7 @@ class TranslationCreateTest(BaseTestCase):
                 "license": "CC-BY",
                 "language": "en",
                 "publisher_id": self.publisher.id,
+                "template": "ayah",
                 "is_external": False,
             },
         )
@@ -59,6 +60,7 @@ class TranslationCreateTest(BaseTestCase):
                 "license": "CC-BY",
                 "language": "en",
                 "publisher_id": self.publisher.id,
+                "template": "ayah",
                 "is_external": False,
             },
         )
@@ -81,6 +83,7 @@ class TranslationCreateTest(BaseTestCase):
                 "license": "CC-BY",
                 "language": "en",
                 "publisher_id": self.publisher.id,
+                "template": "ayah",
                 "is_external": False,
                 "is_open_access": True,
                 "restricted_for_tenant": True,
@@ -110,6 +113,7 @@ class TranslationCreateTest(BaseTestCase):
                 "license": "CC-BY",
                 "language": "en",
                 "publisher_id": 99999,  # Non-existent publisher
+                "template": "ayah",
                 "is_external": False,
             },
         )
@@ -133,6 +137,7 @@ class TranslationCreateTest(BaseTestCase):
                 "license": "CC-BY",
                 "language": "en",
                 "publisher_id": self.publisher.id,
+                "template": "ayah",
                 "is_external": False,
             },
         )
@@ -154,6 +159,7 @@ class TranslationCreateTest(BaseTestCase):
                 "license": "CC-BY",
                 "language": "en",
                 "publisher_id": self.publisher.id,
+                "template": "ayah",
                 "is_external": False,
             },
         )
@@ -175,6 +181,7 @@ class TranslationCreateTest(BaseTestCase):
                 "license": "CC-BY-SA",
                 "language": "en",
                 "publisher_id": self.publisher.id,
+                "template": "ayah",
                 "is_external": False,
             },
         )
@@ -194,6 +201,7 @@ class TranslationCreateTest(BaseTestCase):
                 "license": "CC-BY",
                 "language": "en",
                 "publisher_id": self.publisher.id,
+                "template": "ayah",
                 "is_external": True,
                 "external_url": "https://example.com/translation",
             },
@@ -215,6 +223,7 @@ class TranslationCreateTest(BaseTestCase):
                 "license": "CC-BY",
                 "language": "en",
                 "publisher_id": self.publisher.id,
+                "template": "ayah",
                 "is_external": True,
                 "external_url": "",  # explicitly empty/absent
             },
@@ -241,6 +250,7 @@ class TranslationCreateTest(BaseTestCase):
                 "license": "CC-BY",
                 "language": "en",
                 "publisher_id": self.publisher.id,
+                "template": "ayah",
                 "is_external": False,
             },
         )
