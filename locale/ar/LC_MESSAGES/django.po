@@ -383,8 +383,8 @@ msgstr "ليس لديك طلب وصول مُوافَق عليه لهذا الأ�
 msgid "The uploaded file could not be read."
 msgstr "تعذّرت قراءة الملف المرفوع."
 
-msgid "The uploaded file could not be parsed into ayah entries."
-msgstr "تعذّر تحليل الملف المرفوع إلى إدخالات الآيات."
+msgid "The uploaded file could not be parsed into content entries."
+msgstr "تعذّر تحليل الملف المرفوع إلى إدخالات محتوى."
 
 #, python-brace-format
 msgid "{category} with slug {slug} not found."
@@ -1410,6 +1410,9 @@ msgstr "مرحبًا بك في نظام إتقان لإدارة المحتوى!"
 
 msgid "This is a test email to verify the email service is working correctly."
 msgstr "هذه رسالة اختبارية للتأكد من عمل خدمة البريد الإلكتروني بشكل صحيح."
+
+#~ msgid "The uploaded file could not be parsed into ayah entries."
+#~ msgstr "تعذّر تحليل الملف المرفوع إلى إدخالات الآيات."
 
 #~ msgid "You are not assigned to review this language."
 #~ msgstr "لست مُكلَّفًا بمراجعة هذه اللغة."

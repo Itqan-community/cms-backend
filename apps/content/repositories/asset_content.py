@@ -271,59 +271,114 @@ class AssetContentRepository:
             version.save(update_fields=["content_edited", "updated_at"])
         return changed
 
-    def entries_to_csv_bytes(self, version: AssetVersion, *, verbose: bool = False) -> bytes:
-        """Serialize a version's per-ayah entries to CSV.
+    def entries_to_csv_bytes(self, version: AssetVersion, spec: UnitSpec, *, verbose: bool = False) -> bytes:
+        """Serialize a version's entries to CSV, in the template's own columns.
 
-        Lean by default (``surah,ayah,text``) for the stored/consumer download.
-        When ``verbose`` is set, the surah name and the Arabic ayah text are added
-        (``surah,ayah,surah_name,ayah_text,text``) so a reviewer can verify a
-        translation/tafsir against the original at a glance. The extra columns are
-        ignored on re-import (the parser is header-driven and keys off ``text``).
+        Lean by default: ``sura,text`` (surah), ``surah,ayah,text`` (ayah —
+        byte-identical to the columns this emitted before other templates
+        existed), ``word_id,sura,aya,word,text`` (word), or ``page,text``
+        (page). ``verbose`` only changes the ayah template's output — it adds
+        the surah name and the Arabic ayah text (``surah,ayah,surah_name,
+        ayah_text,text``) so a reviewer can check a translation/tafsir against
+        the original at a glance; the other templates have no analogous
+        "original text" to show, so they ignore the flag. Every lean header
+        matches a column the importer recognises, so a lean export round-trips.
         """
         buffer = io.StringIO()
         writer = csv.writer(buffer)
-        entries = version.entries.order_by("order", "ayah_id")
-        if verbose:
-            writer.writerow(["surah", "ayah", "surah_name", "ayah_text", "text"])
-            for entry in entries.select_related("ayah", "ayah__sura").iterator():
+        # `id` breaks ties within an `order` value, same as version_diff below:
+        # `order` is NULL-free but not unique per version, and `ayah_id` (the
+        # previous tiebreak) is NULL for three of the four templates, which
+        # would make a paginated non-ayah export non-deterministic.
+        entries = version.entries.order_by("order", "id")
+
+        if spec.template == AssetTemplateChoice.SURAH:
+            writer.writerow(["sura", "text"])
+            for entry in entries.iterator():
+                writer.writerow([entry.sura_id, entry.text])
+        elif spec.template == AssetTemplateChoice.WORD:
+            writer.writerow(["word_id", "sura", "aya", "word", "text"])
+            for entry in entries.select_related("word", "word__ayah").iterator():
                 writer.writerow(
                     [
-                        entry.ayah.sura_id,
-                        entry.ayah.number_in_sura,
-                        entry.ayah.sura.name,
-                        entry.ayah.text,
+                        entry.word_id,
+                        entry.word.sura_id,
+                        entry.word.ayah.number_in_sura,
+                        entry.word.position_in_ayah,
                         entry.text,
                     ]
                 )
-        else:
-            writer.writerow(["surah", "ayah", "text"])
-            for entry in entries.select_related("ayah").iterator():
-                writer.writerow([entry.ayah.sura_id, entry.ayah.number_in_sura, entry.text])
+        elif spec.template == AssetTemplateChoice.PAGE:
+            writer.writerow(["page", "text"])
+            for entry in entries.iterator():
+                writer.writerow([entry.page_no, entry.text])
+        else:  # ayah
+            if verbose:
+                writer.writerow(["surah", "ayah", "surah_name", "ayah_text", "text"])
+                for entry in entries.select_related("ayah", "ayah__sura").iterator():
+                    writer.writerow(
+                        [
+                            entry.ayah.sura_id,
+                            entry.ayah.number_in_sura,
+                            entry.ayah.sura.name,
+                            entry.ayah.text,
+                            entry.text,
+                        ]
+                    )
+            else:
+                writer.writerow(["surah", "ayah", "text"])
+                for entry in entries.select_related("ayah").iterator():
+                    writer.writerow([entry.ayah.sura_id, entry.ayah.number_in_sura, entry.text])
         return buffer.getvalue().encode("utf-8")
 
-    def snapshot_to_csv_bytes(self, snapshot: dict[int, str], *, verbose: bool = False) -> bytes:
-        """Serialize a reconstructed {ayah_id: text} snapshot to CSV (for historical
-        commit downloads). Same columns as entries_to_csv_bytes."""
-        ayah_by_id = {a.id: a for a in Ayah.objects.filter(id__in=list(snapshot)).select_related("sura")}
+    def snapshot_to_csv_bytes(self, snapshot: dict[int, str], spec: UnitSpec, *, verbose: bool = False) -> bytes:
+        """Serialize a reconstructed {unit_id: text} snapshot to CSV (for
+        historical commit downloads). Same columns as ``entries_to_csv_bytes``.
+
+        ``snapshot`` keys are canonical ids of whichever unit the asset's
+        template uses — a surah id, an ayah id, a word id, or a bare page
+        number — never assumed to be ayah ids, unlike the id-only lookup this
+        replaced. Resolved via ``spec`` through the same bulk fetch the diff
+        pipeline uses (``_units_by_id``), bounded by the snapshot's own ids
+        rather than the template's full unit set.
+        """
+        units_by_id = self._units_by_id(spec, list(snapshot))
         rows = sorted(snapshot.items(), key=lambda kv: kv[0])
         buffer = io.StringIO()
         writer = csv.writer(buffer)
-        if verbose:
-            writer.writerow(["surah", "ayah", "surah_name", "ayah_text", "text"])
-            for ayah_id, text in rows:
-                ayah = ayah_by_id.get(ayah_id)
-                if ayah is not None:
-                    writer.writerow([ayah.sura_id, ayah.number_in_sura, ayah.sura.name, ayah.text, text])
-        else:
-            writer.writerow(["surah", "ayah", "text"])
-            for ayah_id, text in rows:
-                ayah = ayah_by_id.get(ayah_id)
-                if ayah is not None:
-                    writer.writerow([ayah.sura_id, ayah.number_in_sura, text])
+
+        if spec.template == AssetTemplateChoice.SURAH:
+            writer.writerow(["sura", "text"])
+            for unit_id, text in rows:
+                if unit_id in units_by_id:
+                    writer.writerow([unit_id, text])
+        elif spec.template == AssetTemplateChoice.WORD:
+            writer.writerow(["word_id", "sura", "aya", "word", "text"])
+            for unit_id, text in rows:
+                word = units_by_id.get(unit_id)
+                if word is not None:
+                    writer.writerow([unit_id, word.sura_id, word.ayah.number_in_sura, word.position_in_ayah, text])
+        elif spec.template == AssetTemplateChoice.PAGE:
+            writer.writerow(["page", "text"])
+            for unit_id, text in rows:
+                writer.writerow([unit_id, text])
+        else:  # ayah
+            if verbose:
+                writer.writerow(["surah", "ayah", "surah_name", "ayah_text", "text"])
+                for unit_id, text in rows:
+                    ayah = units_by_id.get(unit_id)
+                    if ayah is not None:
+                        writer.writerow([ayah.sura_id, ayah.number_in_sura, ayah.sura.name, ayah.text, text])
+            else:
+                writer.writerow(["surah", "ayah", "text"])
+                for unit_id, text in rows:
+                    ayah = units_by_id.get(unit_id)
+                    if ayah is not None:
+                        writer.writerow([ayah.sura_id, ayah.number_in_sura, text])
         return buffer.getvalue().encode("utf-8")
 
     def _snapshot_from_file(self, version: AssetVersion) -> dict[int, str]:
-        """Reconstruct a {ayah_id: text} snapshot from a legacy version's stored
+        """Reconstruct a {unit_id: text} snapshot from a legacy version's stored
         file, used when a pre-entries commit (file only, no entries/deltas) is
         restored. Returns {} when the file is missing or unparseable."""
         saved = getattr(version, "file_url", None)
@@ -420,7 +475,8 @@ class AssetContentRepository:
         Records the commit's delta (AssetVersionChange) vs the previous head, then
         prunes the previous head's full snapshot (only if it carries stored deltas,
         so no content is ever lost). Also materializes a downloadable CSV from the
-        per-ayah entries, so consumer download paths keep working.
+        entries, in the asset's template columns, so consumer download paths keep
+        working.
         """
         language = draft.asset_language.language if draft.asset_language_id else draft.asset.language
         previous_head = draft.asset.get_latest_version(language)  # current published head (not this draft)
@@ -442,7 +498,7 @@ class AssetContentRepository:
         # payload, and they must be written (not just held in memory).
         update_fields = ["state", "name", "summary", "updated_at"]
         if not draft.file_url and draft.entries.exists():
-            content = self.entries_to_csv_bytes(draft)
+            content = self.entries_to_csv_bytes(draft, unit_spec_for(draft.asset))
             filename = f"{draft.asset.slug}-{draft.name}.csv".replace(" ", "_")
             draft.file_url.save(filename, ContentFile(content), save=False)
             draft.size_bytes = len(content)
@@ -648,7 +704,7 @@ class AssetContentRepository:
         # the restored (empty) state instead of replaying the previous content.
         self._record_changes(new_version, previous_head)
         if copies:
-            content = self.entries_to_csv_bytes(new_version)
+            content = self.entries_to_csv_bytes(new_version, spec)
             filename = f"{asset.slug}-{name}.csv".replace(" ", "_")
             new_version.file_url.save(filename, ContentFile(content), save=False)
             new_version.size_bytes = len(content)
@@ -662,7 +718,7 @@ class AssetContentRepository:
         file. Returns True if a file was written."""
         if version.file_url or not version.entries.exists():
             return False
-        content = self.entries_to_csv_bytes(version)
+        content = self.entries_to_csv_bytes(version, unit_spec_for(version.asset))
         filename = f"{version.asset.slug}-{version.name}.csv".replace(" ", "_")
         version.file_url.save(filename, ContentFile(content), save=False)
         version.size_bytes = len(content)

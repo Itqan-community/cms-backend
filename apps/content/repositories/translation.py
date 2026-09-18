@@ -25,11 +25,18 @@ class TranslationRepository:
 
     def get_ready_asset(self, publisher_q: Q | None = None) -> Asset | None:
         """
-        First READY translation asset (lowest id), optionally scoped by publisher membership.
+        First READY, ayah-template translation asset (lowest id), optionally
+        scoped by publisher membership.
+
+        Feeds the public verse sampler, which reads a "surah:ayah"-keyed payload
+        that only an ayah-template asset produces — a surah/word/page asset is
+        never a valid sample, so it is excluded here rather than relying on the
+        caller to filter it out downstream.
         """
         qs = self.asset_model.objects.select_related("publisher").filter(
             category=CategoryChoice.TRANSLATION,
             status=StatusChoice.READY,
+            template=AssetTemplateChoice.AYAH,
             restricted_for_tenant=False,
         )
         if publisher_q is not None:
