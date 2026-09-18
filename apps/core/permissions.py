@@ -40,6 +40,12 @@ class PermissionChoice(TextChoices):
     PORTAL_UPDATE_MUSHAF = "portal_update_mushaf", _("Portal - Update Mushafs")
     PORTAL_DELETE_MUSHAF = "portal_delete_mushaf", _("Portal - Delete Mushafs")
 
+    # Mushaf Layouts
+    PORTAL_READ_MUSHAF_LAYOUT = "portal_read_mushaf_layout", _("Portal - View Mushaf Layouts")
+    PORTAL_CREATE_MUSHAF_LAYOUT = "portal_create_mushaf_layout", _("Portal - Create Mushaf Layouts")
+    PORTAL_UPDATE_MUSHAF_LAYOUT = "portal_update_mushaf_layout", _("Portal - Update Mushaf Layouts")
+    PORTAL_DELETE_MUSHAF_LAYOUT = "portal_delete_mushaf_layout", _("Portal - Delete Mushaf Layouts")
+
     # Fonts
     PORTAL_READ_FONT = "portal_read_font", _("Portal - View Fonts")
     PORTAL_CREATE_FONT = "portal_create_font", _("Portal - Create Fonts")
@@ -171,6 +177,20 @@ PERMISSION_IMPLICATIONS: dict[PermissionChoice, frozenset[PermissionChoice]] = {
             PermissionChoice.PORTAL_READ_MUSHAF,
             PermissionChoice.PORTAL_UPDATE_MUSHAF,
             PermissionChoice.PORTAL_CREATE_MUSHAF,
+        }
+    ),
+    # Mushaf Layouts
+    PermissionChoice.PORTAL_CREATE_MUSHAF_LAYOUT: frozenset(
+        {PermissionChoice.PORTAL_READ_MUSHAF_LAYOUT, PermissionChoice.PORTAL_UPDATE_MUSHAF_LAYOUT}
+    ),
+    PermissionChoice.PORTAL_UPDATE_MUSHAF_LAYOUT: frozenset(
+        {PermissionChoice.PORTAL_READ_MUSHAF_LAYOUT, PermissionChoice.PORTAL_CREATE_MUSHAF_LAYOUT}
+    ),
+    PermissionChoice.PORTAL_DELETE_MUSHAF_LAYOUT: frozenset(
+        {
+            PermissionChoice.PORTAL_READ_MUSHAF_LAYOUT,
+            PermissionChoice.PORTAL_UPDATE_MUSHAF_LAYOUT,
+            PermissionChoice.PORTAL_CREATE_MUSHAF_LAYOUT,
         }
     ),
     # Fonts
