@@ -1,6 +1,13 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetTemplateChoice, CategoryChoice, LicenseChoice, StatusChoice
+from apps.content.models import (
+    Asset,
+    AssetTemplateChoice,
+    CategoryChoice,
+    LicenseChoice,
+    MushafLayout,
+    StatusChoice,
+)
 from apps.core.tests.base import BaseTestCase
 
 
@@ -499,3 +506,71 @@ class ListAssetTest(BaseTestCase):
         body = response.json()
         self.assertEqual(1, len(body["results"]))
         self.assertEqual("Target Recitation", body["results"][0]["name"])
+
+    # ── Template ──────────────────────────────────────────────
+
+    def test_list_asset_where_ayah_template_should_report_template_and_null_mushaf_layout(self):
+        # Arrange
+        baker.make(
+            Asset,
+            name="Ayah Tafsir",
+            category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
+            status=StatusChoice.READY,
+        )
+
+        # Act
+        response = self.client.get("/cms-api/assets/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(1, len(body["results"]))
+        self.assertEqual("ayah", body["results"][0]["template"])
+        self.assertIsNone(body["results"][0]["mushaf_layout"])
+
+    def test_list_asset_where_page_template_should_report_template_and_populated_mushaf_layout(self):
+        # Arrange
+        layout = baker.make(MushafLayout, name="Madani 604", page_count=604)
+        baker.make(
+            Asset,
+            name="Page Tafsir",
+            category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.PAGE,
+            mushaf_layout=layout,
+            status=StatusChoice.READY,
+        )
+
+        # Act
+        response = self.client.get("/cms-api/assets/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(1, len(body["results"]))
+        self.assertEqual("page", body["results"][0]["template"])
+        self.assertEqual(
+            {"id": layout.id, "name": "Madani 604", "page_count": 604},
+            body["results"][0]["mushaf_layout"],
+        )
+
+    def test_list_asset_where_non_text_category_should_report_null_template(self):
+        # Arrange
+        baker.make(
+            Asset,
+            name="Recitation Asset",
+            category=CategoryChoice.RECITATION,
+            reciter=baker.make("content.Reciter", name="Test Reciter"),
+            riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
+            status=StatusChoice.READY,
+        )
+
+        # Act
+        response = self.client.get("/cms-api/assets/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(1, len(body["results"]))
+        self.assertIsNone(body["results"][0]["template"])
+        self.assertIsNone(body["results"][0]["mushaf_layout"])

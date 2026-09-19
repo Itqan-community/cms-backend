@@ -5,7 +5,7 @@ from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import Field
 
-from apps.content.models import Asset, CategoryChoice, LicenseChoice, StatusChoice
+from apps.content.models import Asset, AssetTemplateChoice, CategoryChoice, LicenseChoice, StatusChoice
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -26,6 +26,12 @@ class ListAssetReciterOut(Schema):
     name: str
 
 
+class AssetMushafLayoutOut(Schema):
+    id: int
+    name: str
+    page_count: int
+
+
 class ListAssetOut(Schema):
     id: int
     category: str
@@ -35,6 +41,8 @@ class ListAssetOut(Schema):
     reciter: ListAssetReciterOut | None = None
     license: LicenseChoice
     is_open_access: bool
+    template: AssetTemplateChoice | None = None
+    mushaf_layout: AssetMushafLayoutOut | None = None
 
 
 class AssetFilter(FilterSchema):
@@ -56,7 +64,7 @@ def list_assets(request: Request, filters: AssetFilter = Query()):
     """
     logger.info("Assets list requested")
     assets = (
-        Asset.objects.select_related("publisher", "reciter")
+        Asset.objects.select_related("publisher", "reciter", "mushaf_layout")
         .filter(request.publisher_q("publisher"))
         .filter(restricted_for_tenant=False)
         .exclude(status=StatusChoice.DRAFT)
