@@ -4,7 +4,14 @@ from django.shortcuts import get_object_or_404
 from ninja import Schema
 from pydantic import Field
 
-from apps.content.models import Asset, LicenseChoice, StatusChoice, UsageEvent, VersionStateChoice
+from apps.content.models import (
+    Asset,
+    AssetTemplateChoice,
+    LicenseChoice,
+    StatusChoice,
+    UsageEvent,
+    VersionStateChoice,
+)
 from apps.content.services.asset_access import AssetAccessStatus, get_access_status
 from apps.content.tasks import create_usage_event_task
 from apps.core.ninja_utils.request import Request
@@ -34,6 +41,12 @@ class DetailAssetReciterOut(Schema):
     name: str
 
 
+class AssetMushafLayoutOut(Schema):
+    id: int
+    name: str
+    page_count: int
+
+
 class DetailAssetOut(Schema):
     id: int
     category: str
@@ -48,6 +61,8 @@ class DetailAssetOut(Schema):
     snapshots: list[DetailAssetSnapshotOut] = Field(default_factory=list, alias="previews")
     access_status: AssetAccessStatus | None
     available_languages: list[str]
+    template: AssetTemplateChoice | None = None
+    mushaf_layout: AssetMushafLayoutOut | None = None
 
     @staticmethod
     def resolve_available_languages(obj: Asset) -> list[str]:
@@ -75,7 +90,7 @@ def detail_assets(request: Request, id: int):
     """
     logger.info(f"Asset detail requested [asset_id={id}]")
     asset = get_object_or_404(
-        Asset.objects.select_related("publisher", "reciter").prefetch_related("previews"),
+        Asset.objects.select_related("publisher", "reciter", "mushaf_layout").prefetch_related("previews"),
         request.publisher_q("publisher"),
         restricted_for_tenant=False,
         id=id,
