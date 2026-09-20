@@ -1,3 +1,9 @@
+## v0.17.1 (2026-09-20)
+
+### Fix
+
+- **recitations**: add id filter support to RecitationFilter schemas (#506)
+
 ## v0.17.0 (2026-09-06)
 
 ### Feat
