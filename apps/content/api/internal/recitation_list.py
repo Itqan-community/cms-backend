@@ -58,6 +58,7 @@ class RecitationListOut(Schema):
 
 
 class RecitationFilter(FilterSchema):
+    id: Annotated[list[int] | None, FilterLookup(q="id__in")] = None
     publisher_id: Annotated[list[int] | None, FilterLookup(q="publisher_id__in")] = None
     reciter_id: Annotated[list[int] | None, FilterLookup(q="reciter_id__in")] = None
     riwayah_id: Annotated[list[int] | None, FilterLookup(q="riwayah_id__in")] = None

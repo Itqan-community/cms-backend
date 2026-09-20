@@ -127,6 +127,16 @@ class RecitationsListTest(BaseTestCase):
         self.assertEqual(1, len(items))
         self.assertEqual(self.asset1.id, items[0]["id"])
 
+    # ── Filter by ID ──────────────────────────────────────────
+
+    def test_list_recitations_where_filter_by_id_should_return_matching_recitation(self):
+        self.authenticate_user(self.user)
+        response = self.client.get(f"/cms-api/recitations/?id={self.asset1.id}")
+        self.assertEqual(200, response.status_code, response.content)
+        items = response.json()["results"]
+        self.assertEqual(1, len(items))
+        self.assertEqual(self.asset1.id, items[0]["id"])
+
     # ── Filter by Qiraah ──────────────────────────────────────
 
     def test_list_recitations_where_filter_by_qiraah_should_return_matching_recitation(self):
