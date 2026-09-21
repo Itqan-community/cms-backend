@@ -594,7 +594,11 @@ class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
 
 
 class AssetVersionEntry(BaseModel):
-    """Per-ayah content of a text-based asset version (translation / tafsir).
+    """Per-unit content of a text-based asset version (translation / tafsir).
+
+    The unit is whichever one the asset's template names — a sura, an ayah, a
+    word, or a mushaf page — and exactly one of the four unit columns is set
+    per row (enforced by ``entry_exactly_one_unit``).
 
     Editing happens row-by-row against these entries rather than the version's
     uploaded file, so a single edit never rewrites a file. Coverage is sparse:
@@ -687,7 +691,7 @@ class ChangeTypeChoice(models.TextChoices):
 
 
 class AssetVersionChange(BaseModel):
-    """One changed ayah in a commit — the stored per-ayah diff vs the predecessor.
+    """One changed unit in a commit — the stored per-unit diff vs the predecessor.
 
     Each published commit (AssetVersion) records its delta here, so the history
     view can show what changed without recomputing, and pruned commits (whose full
