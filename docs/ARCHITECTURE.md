@@ -232,6 +232,9 @@ A **MushafLayout** describes one printed mushaf's pagination (e.g. "Madani 604" 
 604 pages). Pages are opaque numbered slots with no stored page-to-ayah mapping (an
 ayah can straddle a page boundary, which would make such a map lossy). Referenced by
 `Asset.mushaf_layout` for `page`-template text assets, and by nothing else.
+Migration `0068_seed_mushaf_layouts` seeds the two standard printings — Madinah
+Mushaf (604 pages) and Shamarly Mushaf (522 pages) — so every environment has
+layouts to choose from; further layouts are added through the portal.
 
 ---
 
