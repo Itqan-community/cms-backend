@@ -18,6 +18,7 @@ from apps.content.models import (
 )
 from apps.content.services.recitation import RecitationService
 from apps.content.services.recitation_folder_resolution import sorted_asset_folders
+from apps.core.mixins.storage import absolute_file_url
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.permission_required import permission_required
@@ -129,7 +130,7 @@ class RecitationDetailOut(Schema):
         return sorted_asset_folders(obj)
 
     @staticmethod
-    def resolve_ayah_timings_url(obj: Asset) -> str | None:
+    def resolve_ayah_timings_url(obj: Asset, context: dict) -> str | None:
         # Each folder now has its own AssetVersion, named after the folder slug.
         # This top-level field keeps pointing at the default folder's export so the
         # existing contract is unchanged; per-folder URLs come from the folders list.
@@ -143,9 +144,7 @@ class RecitationDetailOut(Schema):
             # Recitations created before folders may still have a legacy version row.
             version = versions[0] if versions else None
 
-        if version and version.file_url:
-            return version.file_url.url
-        return None
+        return absolute_file_url(context["request"], version.file_url) if version else None
 
 
 # --- Input Schemas ---

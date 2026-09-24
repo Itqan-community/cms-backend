@@ -12,6 +12,7 @@ from apps.content.services.admin.asset_recitation_ayah_timestamps_upload_service
 )
 from apps.content.services.admin.asset_recitation_json_file_sync_service import sync_asset_recitations_json_file
 from apps.content.services.recitation_folder_resolution import resolve_folder_for_asset
+from apps.core.mixins.storage import absolute_file_url
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.permission_required import permission_required
 from apps.core.ninja_utils.request import Request
@@ -83,7 +84,7 @@ def upload_timing(
     # bulk_create/bulk_update bypass Django signals, so invalidate explicitly.
     invalidate_recitation_tracks_cache(asset.id)
 
-    synced_file_url = asset_version.file_url.url if asset_version.file_url else None
+    synced_file_url = absolute_file_url(request, asset_version.file_url)
 
     return TimingUploadOut(
         asset_id=asset.id,
