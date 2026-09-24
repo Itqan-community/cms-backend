@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, CategoryChoice, StatusChoice
+from apps.content.models import Asset, AssetTemplateChoice, CategoryChoice, StatusChoice
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
@@ -14,6 +14,7 @@ class TranslationDeleteTest(BaseTestCase):
         self.translation = baker.make(
             Asset,
             category=CategoryChoice.TRANSLATION,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             name="Translation to Delete",

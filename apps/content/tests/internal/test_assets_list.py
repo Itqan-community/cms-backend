@@ -1,6 +1,13 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, CategoryChoice, LicenseChoice, StatusChoice
+from apps.content.models import (
+    Asset,
+    AssetTemplateChoice,
+    CategoryChoice,
+    LicenseChoice,
+    MushafLayout,
+    StatusChoice,
+)
 from apps.core.tests.base import BaseTestCase
 
 
@@ -11,6 +18,7 @@ class ListAssetTest(BaseTestCase):
             Asset,
             name="Tafsir Ibn Katheer",
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             status=StatusChoice.READY,
         )
 
@@ -30,6 +38,7 @@ class ListAssetTest(BaseTestCase):
             name="Tafsir Al-Jalalayn",
             license=LicenseChoice.CC_BY_SA,
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             status=StatusChoice.READY,
         )
         baker.make(
@@ -37,6 +46,7 @@ class ListAssetTest(BaseTestCase):
             name="Tafsir Ibn Katheer",
             license=LicenseChoice.CC_BY_NC,
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             status=StatusChoice.READY,
         )
 
@@ -55,6 +65,7 @@ class ListAssetTest(BaseTestCase):
             Asset,
             name="Tafsir Al-Jalalayn",
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             status=StatusChoice.READY,
         )
         baker.make(
@@ -87,6 +98,7 @@ class ListAssetTest(BaseTestCase):
             Asset,
             name="Tafsir Al-Jalalayn",
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             status=StatusChoice.READY,
         )
         baker.make(
@@ -118,9 +130,27 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_order_by_name_descending_should_return_sorted_assets(self):
         # Arrange
-        baker.make(Asset, name="A", category=CategoryChoice.TAFSIR, status=StatusChoice.READY)
-        baker.make(Asset, name="C", category=CategoryChoice.TAFSIR, status=StatusChoice.READY)
-        baker.make(Asset, name="B", category=CategoryChoice.TAFSIR, status=StatusChoice.READY)
+        baker.make(
+            Asset,
+            name="A",
+            category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
+            status=StatusChoice.READY,
+        )
+        baker.make(
+            Asset,
+            name="C",
+            category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
+            status=StatusChoice.READY,
+        )
+        baker.make(
+            Asset,
+            name="B",
+            category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
+            status=StatusChoice.READY,
+        )
 
         # Act
         response = self.client.get("/cms-api/assets/", data={"ordering": "-name"}, format="json")
@@ -135,9 +165,27 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_order_by_name_ascending_should_return_sorted_assets(self):
         # Arrange
-        baker.make(Asset, name="A", category=CategoryChoice.TAFSIR, status=StatusChoice.READY)
-        baker.make(Asset, name="C", category=CategoryChoice.TAFSIR, status=StatusChoice.READY)
-        baker.make(Asset, name="B", category=CategoryChoice.TAFSIR, status=StatusChoice.READY)
+        baker.make(
+            Asset,
+            name="A",
+            category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
+            status=StatusChoice.READY,
+        )
+        baker.make(
+            Asset,
+            name="C",
+            category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
+            status=StatusChoice.READY,
+        )
+        baker.make(
+            Asset,
+            name="B",
+            category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
+            status=StatusChoice.READY,
+        )
 
         # Act
         response = self.client.get("/cms-api/assets/", data={"ordering": "name"}, format="json")
@@ -152,7 +200,13 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_assets_order_by_category_descending_should_return_sorted_assets(self):
         # Arrange
-        baker.make(Asset, name="A", category=CategoryChoice.TAFSIR, status=StatusChoice.READY)
+        baker.make(
+            Asset,
+            name="A",
+            category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
+            status=StatusChoice.READY,
+        )
         baker.make(
             Asset,
             name="C",
@@ -161,7 +215,13 @@ class ListAssetTest(BaseTestCase):
             riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
             status=StatusChoice.READY,
         )
-        baker.make(Asset, name="B", category=CategoryChoice.TAFSIR, status=StatusChoice.READY)
+        baker.make(
+            Asset,
+            name="B",
+            category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
+            status=StatusChoice.READY,
+        )
 
         # Act
         response = self.client.get("/cms-api/assets/", data={"ordering": "-category"}, format="json")
@@ -184,6 +244,7 @@ class ListAssetTest(BaseTestCase):
             name="Tafsir Al-Jalalayn",
             description="This is a tafsir book",
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             status=StatusChoice.READY,
         )
         baker.make(
@@ -223,6 +284,7 @@ class ListAssetTest(BaseTestCase):
             Asset,
             name="Open Access Tafsir",
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             status=StatusChoice.READY,
             is_open_access=True,
         )
@@ -242,6 +304,7 @@ class ListAssetTest(BaseTestCase):
             Asset,
             name="Open Access Tafsir",
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             status=StatusChoice.READY,
             is_open_access=True,
         )
@@ -249,6 +312,7 @@ class ListAssetTest(BaseTestCase):
             Asset,
             name="Restricted Tafsir",
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             status=StatusChoice.READY,
             is_open_access=False,
         )
@@ -269,6 +333,7 @@ class ListAssetTest(BaseTestCase):
             Asset,
             name="Public Asset",
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             status=StatusChoice.READY,
             restricted_for_tenant=False,
         )
@@ -276,6 +341,7 @@ class ListAssetTest(BaseTestCase):
             Asset,
             name="Tenant Only Asset",
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             status=StatusChoice.READY,
             restricted_for_tenant=True,
         )
@@ -293,7 +359,13 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_assets_default_page_size_should_return_20_items(self):
         # Arrange — 25 assets, default page_size is 20
-        baker.make(Asset, _quantity=25, category=CategoryChoice.TAFSIR, status=StatusChoice.READY)
+        baker.make(
+            Asset,
+            _quantity=25,
+            category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
+            status=StatusChoice.READY,
+        )
 
         # Act
         response = self.client.get("/cms-api/assets/", format="json")
@@ -307,7 +379,13 @@ class ListAssetTest(BaseTestCase):
     def test_list_assets_custom_page_size_should_return_requested_number_of_items(self):
         # Arrange — 25 assets; passing page_size=25 must return all 25 (regression for the bug
         # where page_size was silently reset to 20 by Pydantic re-initialisation in __init__)
-        baker.make(Asset, _quantity=25, category=CategoryChoice.TAFSIR, status=StatusChoice.READY)
+        baker.make(
+            Asset,
+            _quantity=25,
+            category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
+            status=StatusChoice.READY,
+        )
 
         # Act
         response = self.client.get("/cms-api/assets/", data={"page_size": 25}, format="json")
@@ -320,7 +398,13 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_assets_second_page_should_return_remaining_items(self):
         # Arrange — 25 assets, page_size=20 → page 2 has 5
-        baker.make(Asset, _quantity=25, category=CategoryChoice.TAFSIR, status=StatusChoice.READY)
+        baker.make(
+            Asset,
+            _quantity=25,
+            category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
+            status=StatusChoice.READY,
+        )
 
         # Act
         response = self.client.get("/cms-api/assets/", data={"page": 2, "page_size": 20}, format="json")
@@ -333,7 +417,13 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_assets_page_size_exceeding_max_should_be_capped_at_1000(self):
         # Arrange — 5 assets; page_size=2000 must be capped at MAX_PAGE_SIZE=1000
-        baker.make(Asset, _quantity=5, category=CategoryChoice.TAFSIR, status=StatusChoice.READY)
+        baker.make(
+            Asset,
+            _quantity=5,
+            category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
+            status=StatusChoice.READY,
+        )
 
         # Act
         response = self.client.get("/cms-api/assets/", data={"page_size": 2000}, format="json")
@@ -369,7 +459,13 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_asset_where_not_recitation_should_have_null_reciter(self):
         # Arrange
-        baker.make(Asset, name="Tafsir Asset", category=CategoryChoice.TAFSIR, status=StatusChoice.READY)
+        baker.make(
+            Asset,
+            name="Tafsir Asset",
+            category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
+            status=StatusChoice.READY,
+        )
 
         # Act
         response = self.client.get("/cms-api/assets/", format="json")
@@ -410,3 +506,71 @@ class ListAssetTest(BaseTestCase):
         body = response.json()
         self.assertEqual(1, len(body["results"]))
         self.assertEqual("Target Recitation", body["results"][0]["name"])
+
+    # ── Template ──────────────────────────────────────────────
+
+    def test_list_asset_where_ayah_template_should_report_template_and_null_mushaf_layout(self):
+        # Arrange
+        baker.make(
+            Asset,
+            name="Ayah Tafsir",
+            category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
+            status=StatusChoice.READY,
+        )
+
+        # Act
+        response = self.client.get("/cms-api/assets/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(1, len(body["results"]))
+        self.assertEqual("ayah", body["results"][0]["template"])
+        self.assertIsNone(body["results"][0]["mushaf_layout"])
+
+    def test_list_asset_where_page_template_should_report_template_and_populated_mushaf_layout(self):
+        # Arrange
+        layout = baker.make(MushafLayout, name="Madani 604", page_count=604)
+        baker.make(
+            Asset,
+            name="Page Tafsir",
+            category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.PAGE,
+            mushaf_layout=layout,
+            status=StatusChoice.READY,
+        )
+
+        # Act
+        response = self.client.get("/cms-api/assets/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(1, len(body["results"]))
+        self.assertEqual("page", body["results"][0]["template"])
+        self.assertEqual(
+            {"id": layout.id, "name": "Madani 604", "page_count": 604},
+            body["results"][0]["mushaf_layout"],
+        )
+
+    def test_list_asset_where_non_text_category_should_report_null_template(self):
+        # Arrange
+        baker.make(
+            Asset,
+            name="Recitation Asset",
+            category=CategoryChoice.RECITATION,
+            reciter=baker.make("content.Reciter", name="Test Reciter"),
+            riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
+            status=StatusChoice.READY,
+        )
+
+        # Act
+        response = self.client.get("/cms-api/assets/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(1, len(body["results"]))
+        self.assertIsNone(body["results"][0]["template"])
+        self.assertIsNone(body["results"][0]["mushaf_layout"])

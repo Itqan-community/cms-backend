@@ -1,7 +1,15 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetLanguage, AssetVersion, CategoryChoice, StatusChoice, VersionStateChoice
+from apps.content.models import (
+    Asset,
+    AssetLanguage,
+    AssetTemplateChoice,
+    AssetVersion,
+    CategoryChoice,
+    StatusChoice,
+    VersionStateChoice,
+)
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
@@ -16,6 +24,7 @@ class AssetLanguagesApiTest(BaseTestCase):
         self.translation = baker.make(
             Asset,
             category=CategoryChoice.TRANSLATION,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             name="French Rashid",

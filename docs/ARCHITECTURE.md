@@ -65,9 +65,11 @@ erDiagram
 
     Asset ||--o{ AssetVersion : "has versions"
     AssetVersion }o--|| ResourceVersion : "linked to"
+    Asset }o--o| MushafLayout : "paginated by (template=page)"
 
     Asset ||--o{ AssetLanguage : "provides languages"
-    AssetVersion ||--o{ AssetVersionChange : "records per-ayah deltas"
+    AssetVersion ||--o{ AssetVersionEntry : "holds entries"
+    AssetVersion ||--o{ AssetVersionChange : "records per-unit deltas"
     AssetVersionChange ||--o| AssetVersionChangeReview : "reviewed as"
     User ||--o{ ReviewerLanguage : "assigned to review"
 
@@ -111,6 +113,7 @@ erDiagram
         string category
         string license
         string format
+        string template
     }
 
     ASSETVERSION {
@@ -125,9 +128,22 @@ erDiagram
         string status
     }
 
+    ASSETVERSIONENTRY {
+        int version_id
+        int sura_id
+        int ayah_id
+        int word_id
+        int page_no
+        text text
+        int order
+    }
+
     ASSETVERSIONCHANGE {
         int version_id
+        int sura_id
         int ayah_id
+        int word_id
+        int page_no
         string change_type
         text old_text
         text new_text
@@ -144,6 +160,11 @@ erDiagram
     REVIEWERLANGUAGE {
         int user_id
         string language
+    }
+
+    MUSHAFLAYOUT {
+        string name
+        int page_count
     }
 ```
 
@@ -192,6 +213,10 @@ An **Asset** is a **derivation** of a Resource. It represents content that has b
 - Can have multiple preview images
 - For recitation assets: linked to a **Reciter** and **Riwayah**, and owns one or more
   **RecitationFolder** variants (see [Recitation-Specific Components](#recitation-specific-components))
+- For text assets (translations and tafsirs): carries a **template** (`surah` / `ayah` /
+  `word` / `page`) that fixes the granularity its entries are keyed to — chosen at
+  creation and **immutable afterwards**. A `page`-template asset additionally links to
+  a **MushafLayout** (its pagination), which every other template leaves unset.
 
 ### 5. AssetVersion
 
@@ -200,6 +225,16 @@ Similar to ResourceVersion, **AssetVersion** tracks each uploaded file version o
 - Linked to both an Asset and a ResourceVersion
 - Contains the actual downloadable file
 - Enables tracking of which Asset version corresponds to which Resource version
+
+### 6. MushafLayout
+
+A **MushafLayout** describes one printed mushaf's pagination (e.g. "Madani 604" at
+604 pages). Pages are opaque numbered slots with no stored page-to-ayah mapping (an
+ayah can straddle a page boundary, which would make such a map lossy). Referenced by
+`Asset.mushaf_layout` for `page`-template text assets, and by nothing else.
+Migration `0068_seed_mushaf_layouts` seeds the two standard printings — Madinah
+Mushaf (604 pages) and Shamarly Mushaf (522 pages) — so every environment has
+layouts to choose from; further layouts are added through the portal.
 
 ---
 
@@ -227,11 +262,17 @@ flowchart LR
 
 Text assets (translations & tafsirs) hold one source-language rendition plus any
 number of translation renditions (`AssetLanguage`), each with its own version
-history. Every publish records a per-ayah delta (`AssetVersionChange`).
+history. Every publish records a per-unit delta (`AssetVersionChange`), keyed to
+whichever unit the asset's template uses (surah, ayah, word or page).
 
 - **Availability** — a language is consumable only when the asset is `READY` and
   the `AssetLanguage.status` is `READY`; translations start hidden until marked
   available. Source availability follows the asset's own status.
+- **Editing** — changing a text asset's content (the content editor, uploading a
+  version file, restoring a version) needs the per-category
+  `PORTAL_EDIT_TRANSLATION_CONTENT` / `PORTAL_EDIT_TAFSIR_CONTENT`; `PORTAL_UPDATE_*`
+  covers metadata only (names, descriptions, license, version name/summary,
+  language availability). Both are limited to the member's assigned languages.
 - **Review (audit-only)** — reviewers with `PORTAL_REVIEW_CONTENT`, assigned to
   languages via `ReviewerLanguage`, approve or comment ("needs changes") each
   `AssetVersionChange`. State is stored one-per-change as `AssetVersionChangeReview`

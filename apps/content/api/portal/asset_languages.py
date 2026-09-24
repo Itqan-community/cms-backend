@@ -63,7 +63,7 @@ def list_languages(request: Request, category: str, slug: str) -> list[AssetLang
 
     Holders of ``PORTAL_ACCESS_ALL_LANGUAGES`` see them all.
     """
-    resolved = _resolve(category, request, write=False)
+    resolved = _resolve(category, request, access="read")
     languages = AssetLanguageService().list_languages(slug, resolved, publisher_q=request.publisher_q())
     if not languages:
         return languages
@@ -92,15 +92,15 @@ def add_language(
     """Register a language for the asset, optionally seeding it from an uploaded file.
 
     When a file is provided it becomes the language's first published version and
-    is parsed into per-ayah entries — so a translator can add a language and upload
-    its content in one step.
+    is parsed into entries keyed to the asset's template unit — so a translator can
+    add a language and upload its content in one step.
 
     Gated by ``PORTAL_ADD_ASSET_LANGUAGE`` rather than the content-edit permission,
     so who may start a new language is controlled separately from who may edit one.
     The new language is assigned to the creator's membership, otherwise they would
     immediately be unable to edit what they just created.
     """
-    resolved = _resolve(category, request, write=False)
+    resolved = _resolve(category, request, access="read")
     publisher_q = request.publisher_q()
     # Register the language and seed its first version atomically: if the upload
     # fails (storage error or an unparseable file), the language registration is
@@ -145,7 +145,7 @@ def set_language_availability(
     Making a language available requires at least one published version, so an
     unfinished translation is never advertised to end users.
     """
-    resolved = _resolve(category, request, write=True)
+    resolved = _resolve(category, request, access="metadata")
     service = AssetLanguageService()
     asset = service.get_asset(slug, resolved, publisher_q=request.publisher_q())
     require_language(request.user, asset, language)

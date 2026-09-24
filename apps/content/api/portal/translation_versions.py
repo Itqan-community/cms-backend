@@ -13,13 +13,14 @@ from apps.content.services.asset_language_access import (
     require_version_id,
 )
 from apps.content.services.translation import TranslationService
+from apps.core.mixins.storage import absolute_file_url
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.permission_required import permission_required
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
-from apps.core.permission_utils import permission_class
+from apps.core.permission_utils import check_permission, permission_class
 from apps.core.permissions import PermissionChoice
 
 router = ItqanRouter(tags=[NinjaTag.TRANSLATIONS])
@@ -34,6 +35,7 @@ class TranslationVersionListOut(Schema):
     summary: str
     created_by: str | None
     change_counts: dict | None
+    review_comments_count: int = 0
     file_url: str | None = None
     size_bytes: int
     created_at: AwareDatetime
@@ -53,6 +55,11 @@ class TranslationVersionListOut(Schema):
         return obj.created_by.name if obj.created_by_id else None
 
     @staticmethod
+    def resolve_review_comments_count(obj: AssetVersion) -> int:
+        """Changes in this version a reviewer left a comment on."""
+        return sum(1 for change in obj.changes.all() if getattr(change, "review", None) and change.review.comment)
+
+    @staticmethod
     def resolve_change_counts(obj: AssetVersion) -> dict | None:
         rows = list(obj.changes.all())
         if not rows:
@@ -63,10 +70,8 @@ class TranslationVersionListOut(Schema):
         return counts
 
     @staticmethod
-    def resolve_file_url(obj: AssetVersion) -> str | None:
-        if obj.file_url:
-            return obj.file_url.url
-        return None
+    def resolve_file_url(obj: AssetVersion, context: dict) -> str | None:
+        return absolute_file_url(context["request"], obj.file_url)
 
 
 class TranslationVersionCreateIn(Schema):
@@ -112,7 +117,7 @@ def list_translation_versions(request: Request, translation_slug: str, language:
     versions = (
         AssetVersion.objects.filter(asset=asset, state=VersionStateChoice.PUBLISHED)
         .select_related("created_by", "asset_language", "asset")
-        .prefetch_related("changes")
+        .prefetch_related("changes__review")
     )
     if language:
         require_language(request.user, asset, language)
@@ -135,7 +140,8 @@ def list_translation_versions(request: Request, translation_slug: str, language:
         404: NinjaErrorResponse[Literal["translation_not_found"]],
     },
 )
-@permission_required([permission_class(PermissionChoice.PORTAL_CREATE_TRANSLATION)])
+# Uploading a version changes the asset's text, so it needs the content permission.
+@permission_required([permission_class(PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)])
 def create_translation_version(
     request: Request,
     translation_slug: str,
@@ -214,6 +220,8 @@ def update_translation_version_put(
     fields = data.model_dump()
     fields.pop("asset_id", None)
     if file:
+        # Replacing the file changes the text; renaming or re-describing does not.
+        check_permission(request.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT, raise_exception=True)
         fields["file_url"] = file
 
     require_version_id(request.user, asset, version_id)
@@ -261,6 +269,8 @@ def update_translation_version_patch(
     fields = data.model_dump(exclude_unset=True)
     fields.pop("asset_id", None)
     if file:
+        # Replacing the file changes the text; renaming or re-describing does not.
+        check_permission(request.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT, raise_exception=True)
         fields["file_url"] = file
 
     require_version_id(request.user, asset, version_id)

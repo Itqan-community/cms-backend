@@ -7,6 +7,7 @@ import redis as redis_lib
 
 from apps.content.models import (
     Asset,
+    AssetTemplateChoice,
     CategoryChoice,
     EditorialRecommendation,
     EditorialRecommendationAsset,
@@ -108,6 +109,7 @@ class RecommendationsServiceTest(BaseTestCase):
         unrelated = baker.make(
             Asset,
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             status=StatusChoice.READY,
             restricted_for_tenant=False,
             reciter=None,
@@ -245,7 +247,7 @@ class TrendingRecommendationsServiceTest(BaseTestCase):
     def test_category_scoped_leaderboard_only_includes_that_category(self):
         mushaf = self._make_asset(category=CategoryChoice.MUSHAF)
         _make_usage_event(self.user, mushaf, UsageEvent.UsageKindChoice.VIEW)
-        tafsir = self._make_asset(category=CategoryChoice.TAFSIR)
+        tafsir = self._make_asset(category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.AYAH)
         _make_usage_event(self.user, tafsir, UsageEvent.UsageKindChoice.VIEW)
 
         compute_trending_recommendations()
@@ -297,7 +299,7 @@ class PersonalizedRecommendationsServiceTest(BaseTestCase):
         watched = self._make_recitation(reciter=self.reciter, riwayah=self.riwayah)
         _make_usage_event(self.user, watched, UsageEvent.UsageKindChoice.VIEW)
         matching = self._make_recitation(reciter=self.reciter, riwayah=self.riwayah)
-        unrelated = self._make_recitation(category=CategoryChoice.TAFSIR)
+        unrelated = self._make_recitation(category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.AYAH)
 
         compute_personalized_recommendations()
         result = get_personalized_asset_ids(self.user.id)

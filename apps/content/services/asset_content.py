@@ -12,12 +12,21 @@ from __future__ import annotations
 import logging
 
 from django.db import IntegrityError, transaction
-from django.db.models import OuterRef, Q, Subquery
+from django.db.models import Q
 from django.utils.translation import gettext as _
 
-from apps.content.models import Asset, AssetVersion, AssetVersionEntry, CategoryChoice, StatusChoice, VersionStateChoice
+from apps.content.models import (
+    Asset,
+    AssetTemplateChoice,
+    AssetVersion,
+    AssetVersionEntry,
+    CategoryChoice,
+    StatusChoice,
+    VersionStateChoice,
+)
 from apps.content.repositories.asset_content import AssetContentRepository
 from apps.content.services.asset_content_import import AssetContentParseError, parse_content_file
+from apps.content.services.asset_templates import UnitSpec, unit_spec_for
 from apps.content.tasks import notify_asset_version_created
 from apps.core.ninja_utils.errors import ItqanError
 
@@ -30,7 +39,7 @@ _NOT_FOUND_ERROR = {
 
 
 def import_uploaded_file_into_entries(version: AssetVersion, *, strict: bool = False) -> None:
-    """Parse an uploaded version file into per-ayah entries.
+    """Parse an uploaded version file into entries, keyed to the asset's template unit.
 
     Called from the translation/tafsir version create/update flow so that any
     uploaded content file also populates ``AssetVersionEntry`` rows (edits then
@@ -72,18 +81,19 @@ def import_uploaded_file_into_entries(version: AssetVersion, *, strict: bool = F
                 status_code=400,
             ) from exc
         return
+    spec = unit_spec_for(version.asset)
     try:
-        parsed = parse_content_file(raw)
+        parsed = parse_content_file(raw, spec, version.asset)
     except AssetContentParseError as exc:
         logger.info(f"Uploaded file not parsed into entries [version_id={version.pk}, reason={exc}]")
         if strict:
             raise ItqanError(
                 error_name="content_file_unparseable",
-                message=_("The uploaded file could not be parsed into ayah entries."),
+                message=_("The uploaded file could not be parsed into content entries."),
                 status_code=400,
             ) from exc
         return
-    entries_count = AssetContentRepository().replace_entries_from_parsed(version, parsed)
+    entries_count = AssetContentRepository().replace_entries_from_parsed(version, spec, parsed)
     logger.info(f"Uploaded file imported into entries [version_id={version.pk}, entries={entries_count}]")
 
 
@@ -169,9 +179,12 @@ class AssetContentService:
                 # When editing a translation, always seed from the full source
                 # mushaf so the editor shows every original ayah (overlaying any
                 # existing translation), even ayahs the translation hasn't reached
-                # yet or that a previous sparse publish dropped.
+                # yet or that a previous sparse publish dropped. Meaningful only for
+                # the ayah template — a surah/word/page translation has no mushaf
+                # ayah rows to cover, and Task 6's virtual enumeration already shows
+                # its full unit set without any seeded rows.
                 mushaf = None
-                if not asset_language.is_source:
+                if not asset_language.is_source and locked_asset.template == AssetTemplateChoice.AYAH:
                     mushaf = locked_asset.get_latest_version(locked_asset.language)
                 existing = self.repo.get_draft(locked_asset, asset_language)
                 if existing is not None:
@@ -237,37 +250,111 @@ class AssetContentService:
         record. Empty draft rows are excluded (they are dropped on commit)."""
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
         draft = self._get_editable_draft_or_400(asset, version_id)
+        spec = unit_spec_for(asset)
         language = draft.asset_language.language if draft.asset_language_id else asset.language
         head = draft.asset.get_latest_version(language)
         old_map = self.repo.reconstruct_entries(head) if head is not None else {}
-        new_map = {ayah_id: text for ayah_id, text in self.repo._entries_map(draft).items() if text != ""}
-        return self.repo.diff_maps(old_map, new_map)
+        new_map = {unit_id: text for unit_id, text in self.repo._entries_map(draft).items() if text != ""}
+        return self.repo.diff_maps(spec, old_map, new_map)
 
-    def get_entries(
+    def get_entries_page(
         self,
         slug: str,
         category: CategoryChoice,
         version_id: int,
+        *,
+        offset: int,
+        limit: int,
+        sura: int | None = None,
         publisher_q: Q | None = None,
-    ):
-        """Return a version's per-ayah entries (any state; used by the editor).
+    ) -> tuple[list[dict], int]:
+        """One page of the template's canonical units with stored text overlaid.
 
-        When the version is a translation (non-source language), each row is
-        annotated with ``source_text`` — the source language's latest published
-        text for the same ayah — so the editor can show it as a read-only
-        reference beside the editable target text.
+        Units the version has no row for come back with empty text. Nothing is
+        written: a freshly created asset shows its full unit set without any
+        entry rows existing.
+
+        When the version is a translation (non-source language), each row also
+        carries ``source_text`` — the source language's latest published text for
+        the same unit — as a read-only reference, same as the previous per-ayah
+        editor did (see the now-superseded ``get_entries``).
         """
-        version = self.get_version_or_404(slug, category, version_id, publisher_q=publisher_q)
-        qs = self.repo.get_entries(version)
+        asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
+        version = self.repo.get_version(asset, version_id)
+        if version is None:
+            raise ItqanError(
+                error_name="version_not_found",
+                message=_("Version with id {id} not found.").format(id=version_id),
+                status_code=404,
+            )
+
+        spec = unit_spec_for(asset)
+        units, total = spec.units_page(asset, offset=offset, limit=limit, sura=sura)
+        unit_ids = [unit.unit_id for unit in units]
+        text_by_unit = self.repo.entry_text_map(version, spec, unit_ids)
+        source_text_by_unit = self._resolve_source_text(asset, version, spec, unit_ids)
+
+        rows = [
+            {
+                "unit_type": asset.template,
+                "unit_id": unit.unit_id,
+                "label": unit.label,
+                "reference_text": unit.reference_text,
+                "sura": unit.sura,
+                "aya": unit.aya,
+                "text": text_by_unit.get(unit.unit_id, ""),
+                "source_text": source_text_by_unit.get(unit.unit_id),
+                "order": unit.order,
+            }
+            for unit in units
+        ]
+        return rows, total
+
+    def _resolve_source_text(
+        self, asset: Asset, version: AssetVersion, spec: UnitSpec, unit_ids: list[int]
+    ) -> dict[int, str]:
+        """The source-language text map for a translation's units.
+
+        Empty when this version IS the source (nothing to overlay) or when no
+        source version has been published yet — in both cases every unit's
+        ``source_text`` should read ``None``, which an empty map already gives
+        via ``.get()``.
+        """
         lang = version.asset_language
-        if lang is not None and not lang.is_source:
-            source_version = version.asset.get_latest_version(version.asset.language)
-            if source_version is not None:
-                source_text = AssetVersionEntry.objects.filter(
-                    version=source_version, ayah_id=OuterRef("ayah_id")
-                ).values("text")[:1]
-                qs = qs.annotate(source_text=Subquery(source_text))
-        return qs
+        if lang is None or lang.is_source:
+            return {}
+        source_version = asset.get_latest_version(asset.language)
+        if source_version is None:
+            return {}
+        return self.repo.entry_text_map(source_version, spec, unit_ids)
+
+    def get_patch_response_context(
+        self,
+        slug: str,
+        category: CategoryChoice,
+        version_id: int,
+        changed: list[AssetVersionEntry],
+        publisher_q: Q | None = None,
+    ) -> tuple[str, dict[int, str]]:
+        """``(asset.template, source_text_by_unit)`` for shaping a patch response.
+
+        Uses the same source-text overlay rule as ``get_entries_page``, resolved
+        once for the whole patched batch rather than per row, so the autosave
+        response matches what the next GET would show instead of going blank
+        until the page is reloaded.
+        """
+        asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
+        version = self.repo.get_version(asset, version_id)
+        if version is None:
+            raise ItqanError(
+                error_name="version_not_found",
+                message=_("Version with id {id} not found.").format(id=version_id),
+                status_code=404,
+            )
+        spec = unit_spec_for(asset)
+        unit_ids = [entry.unit_id for entry in changed if entry.unit_id is not None]
+        source_text_by_unit = self._resolve_source_text(asset, version, spec, unit_ids)
+        return asset.template, source_text_by_unit
 
     def get_version_or_404(
         self,
@@ -295,10 +382,28 @@ class AssetContentService:
         rows: list[dict[str, object]],
         publisher_q: Q | None = None,
     ) -> list[AssetVersionEntry]:
-        """Bulk create/update draft entries (autosave). Draft-only."""
+        """Bulk create/update draft entries (autosave). Draft-only.
+
+        Validates each row's unit against the template before writing:
+        ``valid_unit_ids`` is bounded by the patched candidates, never the
+        template's full unit set (77,431 rows for word), so this check stays
+        cheap on every save regardless of template.
+        """
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
         draft = self._get_editable_draft_or_400(asset, version_id)
-        changed = self.repo.upsert_entries(draft, rows)
+        spec = unit_spec_for(asset)
+        candidates = [int(row["unit_id"]) for row in rows]
+        valid_ids = spec.valid_unit_ids(asset, candidates)
+        unknown = [unit_id for unit_id in candidates if unit_id not in valid_ids]
+        if unknown:
+            raise ItqanError(
+                error_name="unit_not_in_template",
+                message=_("Units {units} are not part of this asset's template.").format(
+                    units=", ".join(str(unit) for unit in unknown[:10])
+                ),
+                status_code=400,
+            )
+        changed = self.repo.upsert_entries(draft, spec, rows)
         logger.info(f"Draft entries upserted [version_id={draft.pk}, count={len(changed)}]")
         return changed
 
@@ -308,15 +413,16 @@ class AssetContentService:
         Returns the number of entries created. Raises ``ItqanError`` (400) if the
         file cannot be parsed.
         """
+        spec = unit_spec_for(version.asset)
         try:
-            parsed = parse_content_file(raw)
+            parsed = parse_content_file(raw, spec, version.asset)
         except AssetContentParseError as exc:
             raise ItqanError(
                 error_name="content_file_unparseable",
                 message=_("Could not parse the uploaded content file: {reason}").format(reason=str(exc)),
                 status_code=400,
             ) from exc
-        count = self.repo.replace_entries_from_parsed(version, parsed)
+        count = self.repo.replace_entries_from_parsed(version, spec, parsed)
         logger.info(f"Imported content file into version [version_id={version.pk}, entries={count}]")
         return count
 

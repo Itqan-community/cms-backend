@@ -10,6 +10,7 @@ from model_bakery import baker
 from apps.content.models import (
     Asset,
     AssetLanguage,
+    AssetTemplateChoice,
     AssetVersion,
     CategoryChoice,
     StatusChoice,
@@ -29,6 +30,7 @@ class AssetLanguageGatingTest(BaseTestCase):
         self.translation = baker.make(
             Asset,
             category=CategoryChoice.TRANSLATION,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             slug="t1",
@@ -61,6 +63,7 @@ class AssetLanguageGatingTest(BaseTestCase):
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
         self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
         self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TRANSLATION)
 
     def _assert_language_not_assigned(self, response):
@@ -176,7 +179,7 @@ class AssetLanguageGatingTest(BaseTestCase):
         # Act
         response = self.client.patch(
             f"/portal/content/translations/{self.translation.slug}/versions/{self.es_version.id}/entries/",
-            data={"rows": [{"ayah_id": self.ayah.id, "text": "x"}]},
+            data={"rows": [{"unit_id": self.ayah.id, "text": "x"}]},
             content_type="application/json",
         )
 
@@ -256,6 +259,7 @@ class AddAssetLanguagePermissionTest(BaseTestCase):
         self.translation = baker.make(
             Asset,
             category=CategoryChoice.TRANSLATION,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             slug="t1",

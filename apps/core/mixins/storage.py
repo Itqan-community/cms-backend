@@ -8,8 +8,11 @@ import os
 import boto3
 from django.conf import settings
 from django.db import models
+from django.db.models.fields.files import FieldFile
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
+from django.http import HttpRequest
+from django.utils.http import content_disposition_header
 
 logger = logging.getLogger(__name__)
 
@@ -68,17 +71,31 @@ def _get_s3_client():
     )
 
 
+def absolute_file_url(request: HttpRequest, file: FieldFile | None) -> str | None:
+    """A file's URL that a browser can fetch from any origin.
+
+    Local storage returns a relative ``/media/...`` path, which a client on
+    another origin (the portal frontend) would resolve against itself; build it
+    against the API's own origin instead. Object-storage URLs are already
+    absolute and come back unchanged.
+    """
+    if not file:
+        return None
+    return request.build_absolute_uri(file.url)
+
+
 def generate_presigned_download_url(key: str, filename: str, expires_in: int = 3600) -> str:
     """
     Generate a presigned GET URL for Cloudflare R2 with forced download.
     - key: object key within the bucket
-    - filename: suggested filename for download (simple ascii acceptable)
+    - filename: suggested filename for download (any characters)
     - expires_in: seconds until URL expiry
     """
     filename = os.path.basename(filename) if filename else "download"
     params = {
         "Bucket": settings.CLOUDFLARE_R2_BUCKET,
         "Key": key,
-        "ResponseContentDisposition": f'attachment; filename="{filename}"',
+        # Non-ASCII names (e.g. an Arabic version name) are encoded per RFC 5987.
+        "ResponseContentDisposition": content_disposition_header(as_attachment=True, filename=filename),
     }
     return _get_s3_client().generate_presigned_url("get_object", Params=params, ExpiresIn=expires_in)

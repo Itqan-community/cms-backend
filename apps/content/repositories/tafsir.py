@@ -5,7 +5,15 @@ from typing import Any
 from django.db import transaction
 from django.db.models import Q
 
-from apps.content.models import Asset, AssetVersion, CategoryChoice, LicenseChoice, StatusChoice
+from apps.content.models import (
+    Asset,
+    AssetTemplateChoice,
+    AssetVersion,
+    CategoryChoice,
+    LicenseChoice,
+    MushafLayout,
+    StatusChoice,
+)
 
 
 class TafsirRepository:
@@ -17,11 +25,18 @@ class TafsirRepository:
 
     def get_ready_asset(self, publisher_q: Q | None = None) -> Asset | None:
         """
-        First READY tafsir asset (lowest id), optionally scoped by publisher membership.
+        First READY, ayah-template tafsir asset (lowest id), optionally scoped by
+        publisher membership.
+
+        Feeds the public verse sampler, which reads a "surah:ayah"-keyed payload
+        that only an ayah-template asset produces — a surah/word/page asset is
+        never a valid sample, so it is excluded here rather than relying on the
+        caller to filter it out downstream.
         """
         qs = self.asset_model.objects.select_related("publisher").filter(
             category=CategoryChoice.TAFSIR,
             status=StatusChoice.READY,
+            template=AssetTemplateChoice.AYAH,
             restricted_for_tenant=False,
         )
         if publisher_q is not None:
@@ -42,6 +57,8 @@ class TafsirRepository:
         long_description_en: str | None,
         license: LicenseChoice,
         language: str,
+        template: AssetTemplateChoice,
+        mushaf_layout: MushafLayout | None = None,
         is_external: bool = False,
         external_url: str | None = None,
         thumbnail_url: Any | None = None,
@@ -56,6 +73,8 @@ class TafsirRepository:
                 publisher_id=publisher_id,
                 status=StatusChoice.READY,
                 category=CategoryChoice.TAFSIR,
+                template=template,
+                mushaf_layout=mushaf_layout,
                 name=name,
                 name_ar=name_ar,
                 name_en=name_en,

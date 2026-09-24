@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, CategoryChoice, Reciter, StatusChoice
+from apps.content.models import Asset, AssetTemplateChoice, CategoryChoice, Reciter, StatusChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Domain, Publisher
 from apps.users.models import User
@@ -40,6 +40,7 @@ class RecitersListTest(BaseTestCase):
         self.other_category_asset = baker.make(
             Asset,
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
         )

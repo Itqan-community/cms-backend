@@ -40,6 +40,12 @@ class PermissionChoice(TextChoices):
     PORTAL_UPDATE_MUSHAF = "portal_update_mushaf", _("Portal - Update Mushafs")
     PORTAL_DELETE_MUSHAF = "portal_delete_mushaf", _("Portal - Delete Mushafs")
 
+    # Mushaf Layouts
+    PORTAL_READ_MUSHAF_LAYOUT = "portal_read_mushaf_layout", _("Portal - View Mushaf Layouts")
+    PORTAL_CREATE_MUSHAF_LAYOUT = "portal_create_mushaf_layout", _("Portal - Create Mushaf Layouts")
+    PORTAL_UPDATE_MUSHAF_LAYOUT = "portal_update_mushaf_layout", _("Portal - Update Mushaf Layouts")
+    PORTAL_DELETE_MUSHAF_LAYOUT = "portal_delete_mushaf_layout", _("Portal - Delete Mushaf Layouts")
+
     # Fonts
     PORTAL_READ_FONT = "portal_read_font", _("Portal - View Fonts")
     PORTAL_CREATE_FONT = "portal_create_font", _("Portal - Create Fonts")
@@ -78,10 +84,15 @@ class PermissionChoice(TextChoices):
     # Content review
     PORTAL_REVIEW_CONTENT = "portal_review_content", _("Portal - Review Content")
 
+    # Content editing: changing an asset's text (the content editor, uploading or
+    # restoring a version). Separate from PORTAL_UPDATE_*, which covers metadata only.
+    PORTAL_EDIT_TRANSLATION_CONTENT = "portal_edit_translation_content", _("Portal - Edit Translation Content")
+    PORTAL_EDIT_TAFSIR_CONTENT = "portal_edit_tafsir_content", _("Portal - Edit Tafsir Content")
+
     # Asset languages
     # ACCESS_ALL_LANGUAGES bypasses per-member language assignment: the holder is treated as
     # assigned to every language on an asset. It grants no editing or reviewing rights of its
-    # own — what the holder may DO is still governed by PORTAL_UPDATE_* / PORTAL_REVIEW_CONTENT,
+    # own — what the holder may DO is still governed by PORTAL_EDIT_*_CONTENT / PORTAL_REVIEW_CONTENT,
     # which is why it appears in no implication entry below.
     PORTAL_ACCESS_ALL_LANGUAGES = "portal_access_all_languages", _("Portal - Access All Languages")
     PORTAL_ADD_ASSET_LANGUAGE = "portal_add_asset_language", _("Portal - Add Asset Language")
@@ -145,6 +156,9 @@ PERMISSION_IMPLICATIONS: dict[PermissionChoice, frozenset[PermissionChoice]] = {
             PermissionChoice.PORTAL_CREATE_TAFSIR,
         }
     ),
+    # Editing an asset's text requires reading the asset, not editing its metadata.
+    PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT: frozenset({PermissionChoice.PORTAL_READ_TAFSIR}),
+    PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT: frozenset({PermissionChoice.PORTAL_READ_TRANSLATION}),
     # Translations
     PermissionChoice.PORTAL_CREATE_TRANSLATION: frozenset(
         {PermissionChoice.PORTAL_READ_TRANSLATION, PermissionChoice.PORTAL_UPDATE_TRANSLATION}
@@ -171,6 +185,20 @@ PERMISSION_IMPLICATIONS: dict[PermissionChoice, frozenset[PermissionChoice]] = {
             PermissionChoice.PORTAL_READ_MUSHAF,
             PermissionChoice.PORTAL_UPDATE_MUSHAF,
             PermissionChoice.PORTAL_CREATE_MUSHAF,
+        }
+    ),
+    # Mushaf Layouts
+    PermissionChoice.PORTAL_CREATE_MUSHAF_LAYOUT: frozenset(
+        {PermissionChoice.PORTAL_READ_MUSHAF_LAYOUT, PermissionChoice.PORTAL_UPDATE_MUSHAF_LAYOUT}
+    ),
+    PermissionChoice.PORTAL_UPDATE_MUSHAF_LAYOUT: frozenset(
+        {PermissionChoice.PORTAL_READ_MUSHAF_LAYOUT, PermissionChoice.PORTAL_CREATE_MUSHAF_LAYOUT}
+    ),
+    PermissionChoice.PORTAL_DELETE_MUSHAF_LAYOUT: frozenset(
+        {
+            PermissionChoice.PORTAL_READ_MUSHAF_LAYOUT,
+            PermissionChoice.PORTAL_UPDATE_MUSHAF_LAYOUT,
+            PermissionChoice.PORTAL_CREATE_MUSHAF_LAYOUT,
         }
     ),
     # Fonts
