@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from typing import Literal
 
 from django.conf import settings
@@ -9,7 +10,7 @@ from django.utils.translation import gettext_lazy as _
 from ninja import Schema
 from rest_framework.exceptions import PermissionDenied
 
-from apps.content.models import Asset, AssetAccess, StatusChoice, UsageEvent
+from apps.content.models import Asset, AssetAccess, AssetVersion, StatusChoice, UsageEvent
 from apps.content.services.asset_access import user_has_access
 from apps.content.tasks import create_usage_event_task
 from apps.core.mixins.storage import generate_presigned_download_url
@@ -22,8 +23,19 @@ router = ItqanRouter(tags=[NinjaTag.ASSETS])
 logger = logging.getLogger(__name__)
 
 
+def download_filename(asset: Asset, version: AssetVersion) -> str:
+    """Name a downloaded file like the portal's version export does:
+    ``{english name}-{language}-{version name}{extension}``, falling back to the
+    slug when there is no English name and joining words with underscores."""
+    language = version.asset_language.language if version.asset_language_id else asset.language
+    parts = [(asset.name_en or "").strip() or asset.slug, language, version.name]
+    extension = os.path.splitext(version.file_url.name)[1]
+    return re.sub(r"\s+", "_", "-".join(part for part in parts if part)) + extension
+
+
 class DownloadAssetOut(Schema):
     download_url: str
+    filename: str
 
 
 @router.get(
@@ -76,10 +88,10 @@ def download_asset(request: Request, id: int, language: str | None = None):
         if not download_url:
             raise Http404(str(_("Download URL not available")))
 
+    filename = download_filename(asset, asset_latest_version)
     if settings.CLOUDFLARE_R2_ENDPOINT:
         # Object storage (staging/prod): hand out a short-lived pre-signed URL.
         key = f"media/{asset_latest_version.file_url.name}"  # object key within the bucket
-        filename = os.path.basename(key)
         download_url = generate_presigned_download_url(key=key, filename=filename, expires_in=3600)
     else:
         # Local/dev without object storage: serve the file via its media URL so
@@ -104,4 +116,4 @@ def download_asset(request: Request, id: int, language: str | None = None):
     )
 
     logger.info(f"Asset download initiated [asset_id={id}, user_id={request.user.id}]")
-    return 200, DownloadAssetOut(download_url=download_url)
+    return 200, DownloadAssetOut(download_url=download_url, filename=filename)
