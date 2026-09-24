@@ -426,7 +426,7 @@ def export_version(request: Request, category: str, slug: str, version_id: int):
         # A pruned commit: reconstruct its snapshot from deltas for download.
         snapshot = service.repo.reconstruct_entries(version)
         if snapshot:
-            content = service.repo.snapshot_to_csv_bytes(snapshot, spec, verbose=True)
+            content = service.repo.snapshot_to_csv_bytes(snapshot, spec, asset=version.asset, verbose=True)
         elif version.file_url:
             return HttpResponseRedirect(version.file_url.url)
         else:
