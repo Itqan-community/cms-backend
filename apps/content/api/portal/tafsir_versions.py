@@ -35,6 +35,7 @@ class TafsirVersionListOut(Schema):
     summary: str
     created_by: str | None
     change_counts: dict | None
+    review_comments_count: int = 0
     file_url: str | None = None
     size_bytes: int
     created_at: AwareDatetime
@@ -52,6 +53,11 @@ class TafsirVersionListOut(Schema):
     @staticmethod
     def resolve_created_by(obj: AssetVersion) -> str | None:
         return obj.created_by.name if obj.created_by_id else None
+
+    @staticmethod
+    def resolve_review_comments_count(obj: AssetVersion) -> int:
+        """Changes in this version a reviewer left a comment on."""
+        return sum(1 for change in obj.changes.all() if getattr(change, "review", None) and change.review.comment)
 
     @staticmethod
     def resolve_change_counts(obj: AssetVersion) -> dict | None:
@@ -109,7 +115,7 @@ def list_tafsir_versions(request: Request, tafsir_slug: str, language: str | Non
     versions = (
         AssetVersion.objects.filter(asset=asset, state=VersionStateChoice.PUBLISHED)
         .select_related("created_by", "asset_language", "asset")
-        .prefetch_related("changes")
+        .prefetch_related("changes__review")
     )
     if language:
         require_language(request.user, asset, language)

@@ -201,6 +201,11 @@ class ChangeOut(Schema):
     change_type: str
     old_text: str
     new_text: str
+    # A reviewer's outcome for this change (committed versions only).
+    review_state: str = "unreviewed"
+    review_comment: str = ""
+    reviewed_by: str | None = None
+    reviewed_at: AwareDatetime | None = None
 
 
 class DraftIn(Schema):
