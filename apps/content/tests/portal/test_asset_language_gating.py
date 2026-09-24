@@ -63,6 +63,7 @@ class AssetLanguageGatingTest(BaseTestCase):
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
         self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
         self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TRANSLATION)
 
     def _assert_language_not_assigned(self, response):

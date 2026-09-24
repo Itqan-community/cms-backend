@@ -33,7 +33,7 @@ class EntryWriteTests(QuranDataMixin, BaseTestCase):
         super().setUp()
         self.bake_quran()
         self.user = User.objects.create_user(email="editor@example.com", name="Editor", is_staff=True)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
         self.give_permission(self.user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES)
 
     def _draft_for(self, template):

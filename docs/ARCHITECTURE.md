@@ -268,6 +268,11 @@ whichever unit the asset's template uses (surah, ayah, word or page).
 - **Availability** — a language is consumable only when the asset is `READY` and
   the `AssetLanguage.status` is `READY`; translations start hidden until marked
   available. Source availability follows the asset's own status.
+- **Editing** — changing a text asset's content (the content editor, uploading a
+  version file, restoring a version) needs the per-category
+  `PORTAL_EDIT_TRANSLATION_CONTENT` / `PORTAL_EDIT_TAFSIR_CONTENT`; `PORTAL_UPDATE_*`
+  covers metadata only (names, descriptions, license, version name/summary,
+  language availability). Both are limited to the member's assigned languages.
 - **Review (audit-only)** — reviewers with `PORTAL_REVIEW_CONTENT`, assigned to
   languages via `ReviewerLanguage`, approve or comment ("needs changes") each
   `AssetVersionChange`. State is stored one-per-change as `AssetVersionChangeReview`

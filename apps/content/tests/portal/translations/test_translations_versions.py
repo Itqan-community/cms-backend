@@ -83,7 +83,7 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
     def test_create_version_where_valid_data_should_return_201(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
         file = SimpleUploadedFile("translation.pdf", b"content", content_type="application/pdf")
 
         # Act
@@ -113,7 +113,7 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
     def test_create_version_where_asset_id_mismatch_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
 
         # Act
         response = self.client.post(
@@ -159,7 +159,7 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
     def test_create_version_with_subscribers_should_send_email(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
         baker.make(AssetVersion, asset=self.translation, name="1.0.0")
         subscriber = baker.make(User, email="translation-subscriber@example.com")
         access_request = baker.make(
@@ -189,7 +189,7 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
     def test_create_version_without_subscribers_should_not_send_email(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
         baker.make(AssetVersion, asset=self.translation, name="1.0.0")  # prior version so this is an update
         file = SimpleUploadedFile("translation.pdf", b"content", content_type="application/pdf")
 

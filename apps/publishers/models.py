@@ -171,8 +171,8 @@ class MemberLanguage(BaseModel):
     user may work on different languages for different publishers).
 
     Role-neutral: the assignment says *which* languages, while the member's
-    permissions say what they may do there — ``PORTAL_UPDATE_TRANSLATION`` /
-    ``PORTAL_UPDATE_TAFSIR`` to edit, ``PORTAL_REVIEW_CONTENT`` to review.
+    permissions say what they may do there — ``PORTAL_EDIT_TRANSLATION_CONTENT`` /
+    ``PORTAL_EDIT_TAFSIR_CONTENT`` to edit content, ``PORTAL_REVIEW_CONTENT`` to review.
 
     A member with no rows works in no languages; ``PORTAL_ACCESS_ALL_LANGUAGES``
     — not an empty list — is how someone is granted every language. Managed via

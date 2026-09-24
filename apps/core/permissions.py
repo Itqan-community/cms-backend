@@ -84,10 +84,15 @@ class PermissionChoice(TextChoices):
     # Content review
     PORTAL_REVIEW_CONTENT = "portal_review_content", _("Portal - Review Content")
 
+    # Content editing: changing an asset's text (the content editor, uploading or
+    # restoring a version). Separate from PORTAL_UPDATE_*, which covers metadata only.
+    PORTAL_EDIT_TRANSLATION_CONTENT = "portal_edit_translation_content", _("Portal - Edit Translation Content")
+    PORTAL_EDIT_TAFSIR_CONTENT = "portal_edit_tafsir_content", _("Portal - Edit Tafsir Content")
+
     # Asset languages
     # ACCESS_ALL_LANGUAGES bypasses per-member language assignment: the holder is treated as
     # assigned to every language on an asset. It grants no editing or reviewing rights of its
-    # own — what the holder may DO is still governed by PORTAL_UPDATE_* / PORTAL_REVIEW_CONTENT,
+    # own — what the holder may DO is still governed by PORTAL_EDIT_*_CONTENT / PORTAL_REVIEW_CONTENT,
     # which is why it appears in no implication entry below.
     PORTAL_ACCESS_ALL_LANGUAGES = "portal_access_all_languages", _("Portal - Access All Languages")
     PORTAL_ADD_ASSET_LANGUAGE = "portal_add_asset_language", _("Portal - Add Asset Language")
@@ -151,6 +156,9 @@ PERMISSION_IMPLICATIONS: dict[PermissionChoice, frozenset[PermissionChoice]] = {
             PermissionChoice.PORTAL_CREATE_TAFSIR,
         }
     ),
+    # Editing an asset's text requires reading the asset, not editing its metadata.
+    PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT: frozenset({PermissionChoice.PORTAL_READ_TAFSIR}),
+    PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT: frozenset({PermissionChoice.PORTAL_READ_TRANSLATION}),
     # Translations
     PermissionChoice.PORTAL_CREATE_TRANSLATION: frozenset(
         {PermissionChoice.PORTAL_READ_TRANSLATION, PermissionChoice.PORTAL_UPDATE_TRANSLATION}
