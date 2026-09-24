@@ -9,7 +9,7 @@ versions, and how those declarations resolve to concrete `AssetVersion` records.
 It is a **contract, not an implementation**. Nothing in this document ships code. The
 registry API ([#417](https://github.com/Itqan-community/cms-backend/issues/417)), the CLI
 installer ([#422](https://github.com/Itqan-community/cms-backend/issues/422)), artifact
-packaging ([#425](https://github.com/Itqan-community/cms-backend/issues/425)) and the
+packaging ([#425](https://github.com/Itqan-community/cms-backend/issues/425) / [`PACKAGE_ARTIFACT.md`](./PACKAGE_ARTIFACT.md)) and the
 Dependabot-style updater ([#427](https://github.com/Itqan-community/cms-backend/issues/427))
 each implement against it.
 
@@ -385,8 +385,8 @@ Version Match error identifying the asset and requested version rather than fabr
 selecting a different record.
 
 Two things are deliberately absent. `package` never reaches the lockfile. And there is no
-`checksum` or `integrity` field in V1 — artifact identity is owned by #425 and is not yet
-defined; adding one later requires a `lockfile_version` bump.
+`checksum` or `integrity` field in V1 — artifact identity and checksums are specified in
+[`PACKAGE_ARTIFACT.md`](./PACKAGE_ARTIFACT.md) ([#425](https://github.com/Itqan-community/cms-backend/issues/425)); incorporating them into the lockfile requires a `lockfile_version: 2` bump.
 
 The two version numbers are **decoupled** on purpose: the lockfile format can gain a field
 without disturbing the manifest schema, and vice versa.
@@ -773,7 +773,7 @@ deliberately says nothing about:
 |---|---|
 | Registry HTTP API — endpoints, auth, payload shapes | [#417](https://github.com/Itqan-community/cms-backend/issues/417) |
 | `itqan install` — CLI behavior, unpacking, writing files to disk | [#422](https://github.com/Itqan-community/cms-backend/issues/422) |
-| Archive packaging, checksums, artifact identity | [#425](https://github.com/Itqan-community/cms-backend/issues/425) |
+| Archive packaging, checksums, artifact identity | [#425](https://github.com/Itqan-community/cms-backend/issues/425) / [`PACKAGE_ARTIFACT.md`](./PACKAGE_ARTIFACT.md) |
 | GitHub App discovery of repositories | [#426](https://github.com/Itqan-community/cms-backend/issues/426) |
 | Opening and refreshing update PRs | [#427](https://github.com/Itqan-community/cms-backend/issues/427) |
 
