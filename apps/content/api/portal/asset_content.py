@@ -28,22 +28,32 @@ from apps.quran.models import Ayah, Sura, Word
 
 router = ItqanRouter(tags=[NinjaTag.TRANSLATIONS])
 
-# Path segment -> (category, read perm, write perm).
-_CATEGORY_CONFIG = {
+# What a caller needs to do with the asset: read it, change its metadata, or
+# change its text. Text edits have their own per-category permission.
+Access = Literal["read", "metadata", "content"]
+
+# Path segment -> (category, {access: permission}).
+_CATEGORY_CONFIG: dict[str, tuple[CategoryChoice, dict[str, PermissionChoice]]] = {
     "translations": (
         CategoryChoice.TRANSLATION,
-        PermissionChoice.PORTAL_READ_TRANSLATION,
-        PermissionChoice.PORTAL_UPDATE_TRANSLATION,
+        {
+            "read": PermissionChoice.PORTAL_READ_TRANSLATION,
+            "metadata": PermissionChoice.PORTAL_UPDATE_TRANSLATION,
+            "content": PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT,
+        },
     ),
     "tafsirs": (
         CategoryChoice.TAFSIR,
-        PermissionChoice.PORTAL_READ_TAFSIR,
-        PermissionChoice.PORTAL_UPDATE_TAFSIR,
+        {
+            "read": PermissionChoice.PORTAL_READ_TAFSIR,
+            "metadata": PermissionChoice.PORTAL_UPDATE_TAFSIR,
+            "content": PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT,
+        },
     ),
 }
 
 
-def _resolve(category: str, request: Request, *, write: bool) -> CategoryChoice:
+def _resolve(category: str, request: Request, *, access: Access) -> CategoryChoice:
     """Resolve the category path segment and enforce the matching permission.
 
     One endpoint serves both translations and tafsirs, so the correct
@@ -56,12 +66,14 @@ def _resolve(category: str, request: Request, *, write: bool) -> CategoryChoice:
             message=_("Unsupported content category: {category}").format(category=category),
             status_code=404,
         )
-    resolved, read_perm, write_perm = config
-    check_permission(request.user, write_perm if write else read_perm, raise_exception=True)
+    resolved, permissions = config
+    check_permission(request.user, permissions[access], raise_exception=True)
     return resolved
 
 
-def _resolve_for_version(category: str, request: Request, slug: str, version_id: int, *, write: bool) -> CategoryChoice:
+def _resolve_for_version(
+    category: str, request: Request, slug: str, version_id: int, *, access: Access
+) -> CategoryChoice:
     """``_resolve`` plus the per-language gate for a version-scoped operation.
 
     These endpoints address content by version id rather than by language, so the
@@ -69,7 +81,7 @@ def _resolve_for_version(category: str, request: Request, slug: str, version_id:
     an unassigned language's content would be reachable by id alone. Reads are
     gated as well as writes, for that reason.
     """
-    resolved = _resolve(category, request, write=write)
+    resolved = _resolve(category, request, access=access)
     version = AssetContentService().get_version_or_404(slug, resolved, version_id, publisher_q=request.publisher_q())
     require_version_language(request.user, version.asset, version)
     return resolved
@@ -206,7 +218,7 @@ class DraftIn(Schema):
     },
 )
 def get_or_create_draft(request: Request, category: str, slug: str, data: DraftIn) -> AssetVersion:
-    resolved = _resolve(category, request, write=True)
+    resolved = _resolve(category, request, access="content")
     service = AssetContentService()
     asset = service._get_asset_or_404(slug, resolved, publisher_q=request.publisher_q())
     require_language(request.user, asset, data.language)
@@ -246,7 +258,7 @@ def list_entries(
     page_size: int = Query(DEFAULT_PAGE_SIZE, ge=1),
     sura: int | None = None,
 ):
-    resolved = _resolve_for_version(category, request, slug, version_id, write=False)
+    resolved = _resolve_for_version(category, request, slug, version_id, access="read")
     service = AssetContentService()
     page_size = min(page_size, MAX_PAGE_SIZE)
     rows, count = service.get_entries_page(
@@ -275,7 +287,7 @@ def list_entries(
     },
 )
 def patch_entries(request: Request, category: str, slug: str, version_id: int, data: EntriesPatchIn) -> list[dict]:
-    resolved = _resolve_for_version(category, request, slug, version_id, write=True)
+    resolved = _resolve_for_version(category, request, slug, version_id, access="content")
     service = AssetContentService()
     rows = [row.model_dump() for row in data.rows]
     changed = service.upsert_entries(slug, resolved, version_id, rows, publisher_q=request.publisher_q())
@@ -297,7 +309,7 @@ def patch_entries(request: Request, category: str, slug: str, version_id: int, d
 )
 @paginate
 def version_diff(request: Request, category: str, slug: str, version_id: int):
-    resolved = _resolve_for_version(category, request, slug, version_id, write=False)
+    resolved = _resolve_for_version(category, request, slug, version_id, access="read")
     service = AssetContentService()
     return service.get_version_diff(slug, resolved, version_id, publisher_q=request.publisher_q())
 
@@ -315,7 +327,7 @@ def version_diff(request: Request, category: str, slug: str, version_id: int):
 )
 @paginate
 def pending_diff(request: Request, category: str, slug: str, version_id: int):
-    resolved = _resolve_for_version(category, request, slug, version_id, write=True)
+    resolved = _resolve_for_version(category, request, slug, version_id, access="content")
     service = AssetContentService()
     return service.get_pending_changes(slug, resolved, version_id, publisher_q=request.publisher_q())
 
@@ -334,7 +346,7 @@ def pending_diff(request: Request, category: str, slug: str, version_id: int):
     },
 )
 def publish_draft(request: Request, category: str, slug: str, version_id: int, data: PublishIn) -> AssetVersion:
-    resolved = _resolve_for_version(category, request, slug, version_id, write=True)
+    resolved = _resolve_for_version(category, request, slug, version_id, access="content")
     service = AssetContentService()
     return service.publish_draft(
         slug,
@@ -357,7 +369,7 @@ def publish_draft(request: Request, category: str, slug: str, version_id: int, d
     },
 )
 def discard_draft(request: Request, category: str, slug: str, version_id: int) -> tuple[int, None]:
-    resolved = _resolve_for_version(category, request, slug, version_id, write=True)
+    resolved = _resolve_for_version(category, request, slug, version_id, access="content")
     service = AssetContentService()
     service.discard_draft(slug, resolved, version_id, publisher_q=request.publisher_q())
     return 204, None
@@ -375,7 +387,7 @@ def discard_draft(request: Request, category: str, slug: str, version_id: int) -
     },
 )
 def restore_version(request: Request, category: str, slug: str, version_id: int) -> AssetVersion:
-    resolved = _resolve_for_version(category, request, slug, version_id, write=True)
+    resolved = _resolve_for_version(category, request, slug, version_id, access="content")
     service = AssetContentService()
     return service.restore_version(
         slug,
@@ -400,7 +412,7 @@ def export_version(request: Request, category: str, slug: str, version_id: int):
 
     Falls back to the version's uploaded file when it has no entries.
     """
-    resolved = _resolve_for_version(category, request, slug, version_id, write=False)
+    resolved = _resolve_for_version(category, request, slug, version_id, access="read")
     service = AssetContentService()
     version = service.get_version_or_404(slug, resolved, version_id, publisher_q=request.publisher_q())
 

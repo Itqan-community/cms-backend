@@ -800,6 +800,12 @@ msgstr "البوابة - إدارة إعدادات طلبات الوصول"
 msgid "Portal - Review Content"
 msgstr "لوحة التحكم - مراجعة المحتوى"
 
+msgid "Portal - Edit Translation Content"
+msgstr "لوحة التحكم - تحرير محتوى الترجمات"
+
+msgid "Portal - Edit Tafsir Content"
+msgstr "لوحة التحكم - تحرير محتوى التفاسير"
+
 msgid "Portal - Access All Languages"
 msgstr "لوحة التحكم - الوصول إلى جميع اللغات"
 

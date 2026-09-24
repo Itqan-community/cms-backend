@@ -63,7 +63,7 @@ def list_languages(request: Request, category: str, slug: str) -> list[AssetLang
 
     Holders of ``PORTAL_ACCESS_ALL_LANGUAGES`` see them all.
     """
-    resolved = _resolve(category, request, write=False)
+    resolved = _resolve(category, request, access="read")
     languages = AssetLanguageService().list_languages(slug, resolved, publisher_q=request.publisher_q())
     if not languages:
         return languages
@@ -100,7 +100,7 @@ def add_language(
     The new language is assigned to the creator's membership, otherwise they would
     immediately be unable to edit what they just created.
     """
-    resolved = _resolve(category, request, write=False)
+    resolved = _resolve(category, request, access="read")
     publisher_q = request.publisher_q()
     # Register the language and seed its first version atomically: if the upload
     # fails (storage error or an unparseable file), the language registration is
@@ -145,7 +145,7 @@ def set_language_availability(
     Making a language available requires at least one published version, so an
     unfinished translation is never advertised to end users.
     """
-    resolved = _resolve(category, request, write=True)
+    resolved = _resolve(category, request, access="metadata")
     service = AssetLanguageService()
     asset = service.get_asset(slug, resolved, publisher_q=request.publisher_q())
     require_language(request.user, asset, language)

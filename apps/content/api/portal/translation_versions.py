@@ -19,7 +19,7 @@ from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
-from apps.core.permission_utils import permission_class
+from apps.core.permission_utils import check_permission, permission_class
 from apps.core.permissions import PermissionChoice
 
 router = ItqanRouter(tags=[NinjaTag.TRANSLATIONS])
@@ -135,7 +135,8 @@ def list_translation_versions(request: Request, translation_slug: str, language:
         404: NinjaErrorResponse[Literal["translation_not_found"]],
     },
 )
-@permission_required([permission_class(PermissionChoice.PORTAL_CREATE_TRANSLATION)])
+# Uploading a version changes the asset's text, so it needs the content permission.
+@permission_required([permission_class(PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)])
 def create_translation_version(
     request: Request,
     translation_slug: str,
@@ -214,6 +215,8 @@ def update_translation_version_put(
     fields = data.model_dump()
     fields.pop("asset_id", None)
     if file:
+        # Replacing the file changes the text; renaming or re-describing does not.
+        check_permission(request.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT, raise_exception=True)
         fields["file_url"] = file
 
     require_version_id(request.user, asset, version_id)
@@ -261,6 +264,8 @@ def update_translation_version_patch(
     fields = data.model_dump(exclude_unset=True)
     fields.pop("asset_id", None)
     if file:
+        # Replacing the file changes the text; renaming or re-describing does not.
+        check_permission(request.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT, raise_exception=True)
         fields["file_url"] = file
 
     require_version_id(request.user, asset, version_id)
