@@ -272,109 +272,59 @@ class AssetContentRepository:
         return changed
 
     def entries_to_csv_bytes(self, version: AssetVersion, spec: UnitSpec, *, verbose: bool = False) -> bytes:
-        """Serialize a version's entries to CSV, in the template's own columns.
+        """Serialize a version's entries to CSV in its template's columns.
 
-        Lean by default: ``sura,text`` (surah), ``surah,ayah,text`` (ayah —
-        byte-identical to the columns this emitted before other templates
-        existed), ``word_id,sura,aya,word,text`` (word), or ``page,text``
-        (page). ``verbose`` only changes the ayah template's output — it adds
-        the surah name and the Arabic ayah text (``surah,ayah,surah_name,
-        ayah_text,text``) so a reviewer can check a translation/tafsir against
-        the original at a glance; the other templates have no analogous
-        "original text" to show, so they ignore the flag. Every lean header
-        matches a column the importer recognises, so a lean export round-trips.
+        Lists every canonical unit of the template (every surah / ayah / word /
+        page, in order), with an empty ``text`` where the version has none, so a
+        download is a complete sheet to fill in. Headers: ``sura,text`` (surah),
+        ``surah,ayah,text`` (ayah), ``word_id,sura,aya,word,text`` (word),
+        ``page,text`` (page). ``verbose`` only changes the ayah template's
+        output — it adds the surah name and the Arabic ayah text
+        (``surah,ayah,surah_name,ayah_text,text``) so a reviewer can check a
+        translation/tafsir against the original at a glance. Every lean header
+        matches a column the importer recognises, and the importer skips blank
+        rows, so a lean export round-trips.
         """
-        buffer = io.StringIO()
-        writer = csv.writer(buffer)
-        # `id` breaks ties within an `order` value, same as version_diff below:
-        # `order` is NULL-free but not unique per version, and `ayah_id` (the
-        # previous tiebreak) is NULL for three of the four templates, which
-        # would make a paginated non-ayah export non-deterministic.
-        entries = version.entries.order_by("order", "id")
+        return self._units_to_csv_bytes(version.asset, spec, self._entries_map(version), verbose=verbose)
 
-        if spec.template == AssetTemplateChoice.SURAH:
-            writer.writerow(["sura", "text"])
-            for entry in entries.iterator():
-                writer.writerow([entry.sura_id, entry.text])
-        elif spec.template == AssetTemplateChoice.WORD:
-            writer.writerow(["word_id", "sura", "aya", "word", "text"])
-            for entry in entries.select_related("word", "word__ayah").iterator():
-                writer.writerow(
-                    [
-                        entry.word_id,
-                        entry.word.sura_id,
-                        entry.word.ayah.number_in_sura,
-                        entry.word.position_in_ayah,
-                        entry.text,
-                    ]
-                )
-        elif spec.template == AssetTemplateChoice.PAGE:
-            writer.writerow(["page", "text"])
-            for entry in entries.iterator():
-                writer.writerow([entry.page_no, entry.text])
-        else:  # ayah
-            if verbose:
-                writer.writerow(["surah", "ayah", "surah_name", "ayah_text", "text"])
-                for entry in entries.select_related("ayah", "ayah__sura").iterator():
-                    writer.writerow(
-                        [
-                            entry.ayah.sura_id,
-                            entry.ayah.number_in_sura,
-                            entry.ayah.sura.name,
-                            entry.ayah.text,
-                            entry.text,
-                        ]
-                    )
-            else:
-                writer.writerow(["surah", "ayah", "text"])
-                for entry in entries.select_related("ayah").iterator():
-                    writer.writerow([entry.ayah.sura_id, entry.ayah.number_in_sura, entry.text])
-        return buffer.getvalue().encode("utf-8")
-
-    def snapshot_to_csv_bytes(self, snapshot: dict[int, str], spec: UnitSpec, *, verbose: bool = False) -> bytes:
+    def snapshot_to_csv_bytes(
+        self, snapshot: dict[int, str], spec: UnitSpec, *, asset: Asset, verbose: bool = False
+    ) -> bytes:
         """Serialize a reconstructed {unit_id: text} snapshot to CSV (for
-        historical commit downloads). Same columns as ``entries_to_csv_bytes``.
+        historical commit downloads). Same rows and columns as
+        ``entries_to_csv_bytes``; ``snapshot`` keys are canonical ids of whichever
+        unit the asset's template uses."""
+        return self._units_to_csv_bytes(asset, spec, snapshot, verbose=verbose)
 
-        ``snapshot`` keys are canonical ids of whichever unit the asset's
-        template uses — a surah id, an ayah id, a word id, or a bare page
-        number — never assumed to be ayah ids, unlike the id-only lookup this
-        replaced. Resolved via ``spec`` through the same bulk fetch the diff
-        pipeline uses (``_units_by_id``), bounded by the snapshot's own ids
-        rather than the template's full unit set.
-        """
-        units_by_id = self._units_by_id(spec, list(snapshot))
-        rows = sorted(snapshot.items(), key=lambda kv: kv[0])
+    def _units_to_csv_bytes(self, asset: Asset, spec: UnitSpec, texts: dict[int, str], *, verbose: bool) -> bytes:
+        """One CSV row per canonical unit of ``spec``'s template, text from ``texts``
+        (blank when absent). Streams the word template's ~77k units with
+        ``iterator()`` rather than materialising them."""
         buffer = io.StringIO()
         writer = csv.writer(buffer)
 
         if spec.template == AssetTemplateChoice.SURAH:
             writer.writerow(["sura", "text"])
-            for unit_id, text in rows:
-                if unit_id in units_by_id:
-                    writer.writerow([unit_id, text])
+            for sura_id in Sura.objects.order_by("id").values_list("id", flat=True).iterator():
+                writer.writerow([sura_id, texts.get(sura_id, "")])
         elif spec.template == AssetTemplateChoice.WORD:
             writer.writerow(["word_id", "sura", "aya", "word", "text"])
-            for unit_id, text in rows:
-                word = units_by_id.get(unit_id)
-                if word is not None:
-                    writer.writerow([unit_id, word.sura_id, word.ayah.number_in_sura, word.position_in_ayah, text])
+            words = Word.objects.order_by("id").values_list("id", "sura_id", "ayah__number_in_sura", "position_in_ayah")
+            for word_id, sura_id, aya, position in words.iterator():
+                writer.writerow([word_id, sura_id, aya, position, texts.get(word_id, "")])
         elif spec.template == AssetTemplateChoice.PAGE:
             writer.writerow(["page", "text"])
-            for unit_id, text in rows:
-                writer.writerow([unit_id, text])
+            for page in range(1, asset.mushaf_layout.page_count + 1):
+                writer.writerow([page, texts.get(page, "")])
+        elif verbose:  # ayah
+            writer.writerow(["surah", "ayah", "surah_name", "ayah_text", "text"])
+            for ayah in Ayah.objects.select_related("sura").order_by("id").iterator():
+                writer.writerow([ayah.sura_id, ayah.number_in_sura, ayah.sura.name, ayah.text, texts.get(ayah.id, "")])
         else:  # ayah
-            if verbose:
-                writer.writerow(["surah", "ayah", "surah_name", "ayah_text", "text"])
-                for unit_id, text in rows:
-                    ayah = units_by_id.get(unit_id)
-                    if ayah is not None:
-                        writer.writerow([ayah.sura_id, ayah.number_in_sura, ayah.sura.name, ayah.text, text])
-            else:
-                writer.writerow(["surah", "ayah", "text"])
-                for unit_id, text in rows:
-                    ayah = units_by_id.get(unit_id)
-                    if ayah is not None:
-                        writer.writerow([ayah.sura_id, ayah.number_in_sura, text])
+            writer.writerow(["surah", "ayah", "text"])
+            ayahs = Ayah.objects.order_by("id").values_list("id", "sura_id", "number_in_sura")
+            for ayah_id, sura_id, aya in ayahs.iterator():
+                writer.writerow([sura_id, aya, texts.get(ayah_id, "")])
         return buffer.getvalue().encode("utf-8")
 
     def _snapshot_from_file(self, version: AssetVersion) -> dict[int, str]:

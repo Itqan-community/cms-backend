@@ -364,8 +364,12 @@ def parse_content_file(raw: bytes, spec: UnitSpec, asset: Asset) -> list[ParsedE
         raise AssetContentParseError(f"No {spec.template} rows found after the header.")
 
     valid_ids = spec.valid_unit_ids(asset, list(resolved.values()))
+    # A blank cell means "no content for this unit" — downloads list every unit
+    # with blanks, so re-uploading one must not create an empty entry per row.
     parsed = [
-        ParsedEntry(unit_id=unit_id, text=texts[key]) for key, unit_id in resolved.items() if unit_id in valid_ids
+        ParsedEntry(unit_id=unit_id, text=texts[key])
+        for key, unit_id in resolved.items()
+        if unit_id in valid_ids and texts[key]
     ]
 
     if not parsed:

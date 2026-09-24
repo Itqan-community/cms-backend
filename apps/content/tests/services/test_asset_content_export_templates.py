@@ -78,7 +78,7 @@ class EntriesToCsvTemplateTests(QuranDataMixin, BaseTestCase):
         # Assert
         lines = csv_bytes.decode("utf-8").splitlines()
         self.assertEqual("page,text", lines[0])
-        self.assertEqual("3,third", lines[1])
+        self.assertEqual("3,third", lines[3])  # every page is listed, so page 3 is row 3
 
     def test_entries_to_csv_where_multiple_rows_should_come_back_in_order(self):
         # Arrange — two page entries, deliberately created out of display order so
@@ -99,13 +99,14 @@ class EntriesToCsvTemplateTests(QuranDataMixin, BaseTestCase):
         # Act
         csv_bytes = repo.entries_to_csv_bytes(version, unit_spec_for(asset))
 
-        # Assert
+        # Assert — every page of the layout, in page order, blanks where empty
         lines = csv_bytes.decode("utf-8").splitlines()
-        self.assertEqual(["page,text", "1,first", "5,fifth"], lines)
+        self.assertEqual(1 + 604, len(lines))
+        self.assertEqual(["page,text", "1,first", "2,", "3,", "4,", "5,fifth"], lines[:6])
 
-    def test_entries_to_csv_where_ayah_template_should_be_byte_identical_to_before_templates(self):
-        # Arrange — the exact lean/verbose shape the ayah exporter produced before
-        # other templates existed: this asset's export must not change one byte.
+    def test_entries_to_csv_where_ayah_template_should_keep_its_columns_and_list_every_ayah(self):
+        # Arrange — the ayah exporter's lean/verbose columns are unchanged since
+        # before other templates existed; every ayah is listed, blank where empty.
         asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH)
         version = baker.make(AssetVersion, asset=asset)
         AssetVersionEntry.objects.create(version=version, ayah=self.ayah1, text="in the name of...", order=1)
@@ -117,9 +118,12 @@ class EntriesToCsvTemplateTests(QuranDataMixin, BaseTestCase):
         verbose = repo.entries_to_csv_bytes(version, spec, verbose=True).decode("utf-8")
 
         # Assert
-        self.assertEqual("surah,ayah,text\r\n1,1,in the name of...\r\n", lean)
+        self.assertEqual("surah,ayah,text\r\n1,1,in the name of...\r\n1,2,\r\n2,1,\r\n", lean)
         self.assertEqual(
-            "surah,ayah,surah_name,ayah_text,text\r\n1,1,الفاتحة,ayah 1,in the name of...\r\n",
+            "surah,ayah,surah_name,ayah_text,text\r\n"
+            "1,1,الفاتحة,ayah 1,in the name of...\r\n"
+            "1,2,الفاتحة,ayah 2,\r\n"
+            "2,1,البقرة,ayah 3,\r\n",
             verbose,
         )
 
@@ -153,11 +157,11 @@ class SnapshotToCsvTemplateTests(QuranDataMixin, BaseTestCase):
         snapshot = repo.reconstruct_entries(version)
 
         # Act
-        csv_bytes = repo.snapshot_to_csv_bytes(snapshot, spec)
+        csv_bytes = repo.snapshot_to_csv_bytes(snapshot, spec, asset=asset)
 
         # Assert — the surah's own row, not ayah 1's text under a "surah,text" header
         text = csv_bytes.decode("utf-8")
-        self.assertEqual("sura,text\r\n1,opening surah\r\n", text)
+        self.assertEqual("sura,text\r\n1,opening surah\r\n2,\r\n", text)
         self.assertNotIn(self.ayah1.text, text)
 
     def test_snapshot_to_csv_where_word_template_should_resolve_via_word_model(self):
@@ -177,11 +181,11 @@ class SnapshotToCsvTemplateTests(QuranDataMixin, BaseTestCase):
         snapshot = repo.reconstruct_entries(version)
 
         # Act
-        csv_bytes = repo.snapshot_to_csv_bytes(snapshot, spec)
+        csv_bytes = repo.snapshot_to_csv_bytes(snapshot, spec, asset=asset)
 
         # Assert
         text = csv_bytes.decode("utf-8")
-        self.assertEqual(f"word_id,sura,aya,word,text\r\n{self.word1.id},1,1,1,the\r\n", text)
+        self.assertEqual(f"word_id,sura,aya,word,text\r\n{self.word1.id},1,1,1,the\r\n2,1,1,2,\r\n", text)
 
     def test_snapshot_to_csv_where_ayah_template_verbose_should_not_scale_queries_with_row_count(self):
         # Arrange — a published, pruned ayah-template commit spanning all 3 baked
@@ -205,7 +209,7 @@ class SnapshotToCsvTemplateTests(QuranDataMixin, BaseTestCase):
         # Act — exactly one query (the bulk fetch with `select_related("sura")`),
         # regardless of how many ayahs/suras are in the snapshot.
         with self.assertNumQueries(1):
-            csv_bytes = repo.snapshot_to_csv_bytes(snapshot, spec, verbose=True)
+            csv_bytes = repo.snapshot_to_csv_bytes(snapshot, spec, asset=asset, verbose=True)
 
         # Assert
         text = csv_bytes.decode("utf-8")
@@ -249,7 +253,7 @@ class PublishNonAyahDraftTests(QuranDataMixin, BaseTestCase):
             content = published.file_url.read().decode("utf-8")
         finally:
             published.file_url.close()
-        self.assertEqual("sura,text\r\n1,opening\r\n", content)
+        self.assertEqual("sura,text\r\n1,opening\r\n2,\r\n", content)
 
     def test_publish_draft_where_word_template_should_publish_and_generate_csv(self):
         # Arrange
@@ -275,7 +279,7 @@ class PublishNonAyahDraftTests(QuranDataMixin, BaseTestCase):
             content = published.file_url.read().decode("utf-8")
         finally:
             published.file_url.close()
-        self.assertEqual(f"word_id,sura,aya,word,text\r\n{self.word1.id},1,1,1,the\r\n", content)
+        self.assertEqual(f"word_id,sura,aya,word,text\r\n{self.word1.id},1,1,1,the\r\n2,1,1,2,\r\n", content)
 
     def test_publish_draft_where_page_template_should_publish_and_generate_csv(self):
         # Arrange
@@ -303,7 +307,8 @@ class PublishNonAyahDraftTests(QuranDataMixin, BaseTestCase):
             content = published.file_url.read().decode("utf-8")
         finally:
             published.file_url.close()
-        self.assertEqual("page,text\r\n1,first page\r\n", content)
+        self.assertTrue(content.startswith("page,text\r\n1,first page\r\n2,\r\n"))
+        self.assertEqual(1 + 604, len(content.splitlines()))
 
 
 class ExtractVerseTextTemplateGuardTests(QuranDataMixin, BaseTestCase):
