@@ -572,6 +572,19 @@ class AssetContentRepository:
             "new_text": new_text,
         }
 
+    @staticmethod
+    def _review_fields(change: AssetVersionChange) -> dict:
+        """The reviewer's outcome for a stored change; absent review = unreviewed."""
+        review = getattr(change, "review", None)
+        if review is None:
+            return {}
+        return {
+            "review_state": review.state,
+            "review_comment": review.comment,
+            "reviewed_by": review.reviewed_by.name if review.reviewed_by_id else None,
+            "reviewed_at": review.reviewed_at,
+        }
+
     def diff_maps(self, spec: UnitSpec, old_map: dict[int, str], new_map: dict[int, str]) -> list[dict]:
         """Diff two {unit_id: text} snapshots into ordered change dicts."""
         unit_ids = sorted(set(old_map) | set(new_map))
@@ -603,10 +616,17 @@ class AssetContentRepository:
         # `id` breaks ties within an `order` value: `order` is NULL-free but not
         # unique per version, and this endpoint is paginated, so an unstable tie
         # order would let rows repeat or vanish across page boundaries.
-        stored = list(version.changes.select_related("sura", "ayah", "word__ayah").order_by("order", "id"))
+        stored = list(
+            version.changes.select_related("sura", "ayah", "word__ayah", "review__reviewed_by").order_by("order", "id")
+        )
         if stored:
             return [
-                self._change_to_dict(spec, c.unit_id, getattr(c, spec.field), c.change_type, c.old_text, c.new_text)
+                {
+                    **self._change_to_dict(
+                        spec, c.unit_id, getattr(c, spec.field), c.change_type, c.old_text, c.new_text
+                    ),
+                    **self._review_fields(c),
+                }
                 for c in stored
             ]
         predecessor = self._predecessor(version)
