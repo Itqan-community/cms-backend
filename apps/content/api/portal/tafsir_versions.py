@@ -13,6 +13,7 @@ from apps.content.services.asset_language_access import (
     require_version_id,
 )
 from apps.content.services.tafsir import TafsirService
+from apps.core.mixins.storage import absolute_file_url
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.permission_required import permission_required
 from apps.core.ninja_utils.request import Request
@@ -63,10 +64,8 @@ class TafsirVersionListOut(Schema):
         return counts
 
     @staticmethod
-    def resolve_file_url(obj: AssetVersion) -> str | None:
-        if obj.file_url:
-            return obj.file_url.url
-        return None
+    def resolve_file_url(obj: AssetVersion, context: dict) -> str | None:
+        return absolute_file_url(context["request"], obj.file_url)
 
 
 class TafsirVersionCreateIn(Schema):

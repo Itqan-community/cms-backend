@@ -1,9 +1,9 @@
 from unittest.mock import MagicMock, patch
 
-from django.test import override_settings
+from django.test import RequestFactory, override_settings
 
 from apps.core.mixins import storage
-from apps.core.mixins.storage import _get_s3_client, generate_presigned_download_url
+from apps.core.mixins.storage import _get_s3_client, absolute_file_url, generate_presigned_download_url
 from apps.core.tests.base import BaseTestCase
 
 
@@ -29,3 +29,41 @@ class GeneratePresignedDownloadUrlTests(BaseTestCase):
 
         # Assert
         self.assertEqual(header, "attachment; filename*=utf-8''Tafsir-ar-%D9%85%D8%B3%D9%88%D8%AF%D8%A9_2.csv")
+
+
+class AbsoluteFileUrlTests(BaseTestCase):
+    def _request(self):
+        return RequestFactory().get("/portal/anything/")
+
+    def test_absolute_file_url_where_storage_returns_relative_path_should_prefix_the_request_origin(self):
+        # Arrange
+        file = MagicMock(url="/media/uploads/v1.csv")
+        file.__bool__.return_value = True
+
+        # Act
+        url = absolute_file_url(self._request(), file)
+
+        # Assert
+        self.assertEqual(url, "http://testserver/media/uploads/v1.csv")
+
+    def test_absolute_file_url_where_storage_returns_absolute_url_should_keep_it(self):
+        # Arrange
+        file = MagicMock(url="https://cdn.example.com/uploads/v1.csv?sig=1")
+        file.__bool__.return_value = True
+
+        # Act
+        url = absolute_file_url(self._request(), file)
+
+        # Assert
+        self.assertEqual(url, "https://cdn.example.com/uploads/v1.csv?sig=1")
+
+    def test_absolute_file_url_where_no_file_should_return_none(self):
+        # Arrange
+        file = MagicMock()
+        file.__bool__.return_value = False
+
+        # Act
+        url = absolute_file_url(self._request(), file)
+
+        # Assert
+        self.assertIsNone(url)

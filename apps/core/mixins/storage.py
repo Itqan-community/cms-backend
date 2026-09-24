@@ -8,8 +8,10 @@ import os
 import boto3
 from django.conf import settings
 from django.db import models
+from django.db.models.fields.files import FieldFile
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
+from django.http import HttpRequest
 from django.utils.http import content_disposition_header
 
 logger = logging.getLogger(__name__)
@@ -67,6 +69,19 @@ def _get_s3_client():
         aws_secret_access_key=settings.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
         region_name="auto",
     )
+
+
+def absolute_file_url(request: HttpRequest, file: FieldFile | None) -> str | None:
+    """A file's URL that a browser can fetch from any origin.
+
+    Local storage returns a relative ``/media/...`` path, which a client on
+    another origin (the portal frontend) would resolve against itself; build it
+    against the API's own origin instead. Object-storage URLs are already
+    absolute and come back unchanged.
+    """
+    if not file:
+        return None
+    return request.build_absolute_uri(file.url)
 
 
 def generate_presigned_download_url(key: str, filename: str, expires_in: int = 3600) -> str:
