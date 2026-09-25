@@ -305,3 +305,233 @@ class GitHubClientSecrecyTest(SimpleTestCase):
         for record in cm.records:
             assert STUB_TOKEN not in record.getMessage()
             assert "Bearer " not in record.getMessage()
+
+
+# --- Git References, Commits, and Pull Requests ---
+
+
+def test_get_ref_returns_commit_sha():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert str(request.url) == f"https://api.github.com/repos/{OWNER}/{REPO}/git/ref/heads/main"
+        assert request.method == "GET"
+        return httpx.Response(200, json={"object": {"sha": "commit_sha_123", "type": "commit"}})
+
+    client = _client(handler)
+    sha = client.get_ref(owner=OWNER, repository_name=REPO, installation_id=INSTALLATION_ID, ref="heads/main")
+    assert sha == "commit_sha_123"
+
+
+def test_get_commit_returns_tree_sha():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert str(request.url) == f"https://api.github.com/repos/{OWNER}/{REPO}/git/commits/commit_123"
+        return httpx.Response(200, json={"sha": "commit_123", "tree": {"sha": "tree_abc"}})
+
+    client = _client(handler)
+    commit = client.get_commit(
+        owner=OWNER, repository_name=REPO, installation_id=INSTALLATION_ID, commit_sha="commit_123"
+    )
+    assert commit["tree"]["sha"] == "tree_abc"
+
+
+def test_create_tree_returns_new_tree_sha():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert str(request.url) == f"https://api.github.com/repos/{OWNER}/{REPO}/git/trees"
+        assert request.method == "POST"
+        body = request.read().decode("utf-8")
+        assert "itqan-assets.lock" in body
+        return httpx.Response(201, json={"sha": "new_tree_456"})
+
+    client = _client(handler)
+    tree_sha = client.create_tree(
+        owner=OWNER,
+        repository_name=REPO,
+        installation_id=INSTALLATION_ID,
+        base_tree="base_tree_123",
+        tree=[{"path": "itqan-assets.lock", "mode": "100644", "type": "blob", "content": "hello"}],
+    )
+    assert tree_sha == "new_tree_456"
+
+
+def test_create_commit_returns_new_commit_sha():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert str(request.url) == f"https://api.github.com/repos/{OWNER}/{REPO}/git/commits"
+        assert request.method == "POST"
+        return httpx.Response(201, json={"sha": "new_commit_789"})
+
+    client = _client(handler)
+    commit_sha = client.create_commit(
+        owner=OWNER,
+        repository_name=REPO,
+        installation_id=INSTALLATION_ID,
+        message="chore(deps): bump asset",
+        tree="tree_456",
+        parents=["parent_123"],
+    )
+    assert commit_sha == "new_commit_789"
+
+
+def test_create_or_update_ref_creates_when_not_exists():
+    calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append((request.method, str(request.url)))
+        return httpx.Response(201, json={"ref": "refs/heads/feature"})
+
+    client = _client(handler)
+    client.create_or_update_ref(
+        owner=OWNER,
+        repository_name=REPO,
+        installation_id=INSTALLATION_ID,
+        ref="heads/feature",
+        sha="sha_123",
+    )
+    assert len(calls) == 1
+    assert calls[0] == ("POST", f"https://api.github.com/repos/{OWNER}/{REPO}/git/refs")
+
+
+def test_create_or_update_ref_updates_when_already_exists():
+    calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append((request.method, str(request.url)))
+        if request.method == "POST":
+            return httpx.Response(422, json={"message": "Reference already exists"})
+        return httpx.Response(200, json={"ref": "refs/heads/feature"})
+
+    client = _client(handler)
+    client.create_or_update_ref(
+        owner=OWNER,
+        repository_name=REPO,
+        installation_id=INSTALLATION_ID,
+        ref="heads/feature",
+        sha="sha_123",
+    )
+    assert len(calls) == 2
+    assert calls[0] == ("POST", f"https://api.github.com/repos/{OWNER}/{REPO}/git/refs")
+    assert calls[1] == ("PATCH", f"https://api.github.com/repos/{OWNER}/{REPO}/git/refs/heads/feature")
+
+
+def test_commit_files_orchestrates_entire_flow():
+    requests = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append((request.method, request.url.path))
+        if request.url.path.endswith("/git/ref/heads/main"):
+            return httpx.Response(200, json={"object": {"sha": "base_commit"}})
+        if request.url.path.endswith("/git/commits/base_commit"):
+            return httpx.Response(200, json={"sha": "base_commit", "tree": {"sha": "base_tree"}})
+        if request.url.path.endswith("/git/trees"):
+            return httpx.Response(201, json={"sha": "new_tree"})
+        if request.url.path.endswith("/git/commits"):
+            return httpx.Response(201, json={"sha": "new_commit"})
+        if request.url.path.endswith("/git/refs"):
+            return httpx.Response(201, json={"ref": "refs/heads/bump-branch"})
+        return httpx.Response(404)
+
+    client = _client(handler)
+    commit_sha = client.commit_files(
+        owner=OWNER,
+        repository_name=REPO,
+        installation_id=INSTALLATION_ID,
+        branch="bump-branch",
+        base_branch="main",
+        message="chore: update",
+        files={"itqan-assets.lock": b"test content"},
+    )
+    assert commit_sha == "new_commit"
+    assert len(requests) == 5
+
+
+def test_list_pull_requests_parses_summaries():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert "state=open" in str(request.url)
+        assert f"head={OWNER}%3Abump-branch" in str(request.url) or f"head={OWNER}:bump-branch" in str(request.url)
+        return httpx.Response(
+            200,
+            json=[
+                {
+                    "number": 42,
+                    "title": "chore: bump asset",
+                    "body": "PR description",
+                    "head": {"ref": "bump-branch"},
+                    "base": {"ref": "main"},
+                    "state": "open",
+                    "html_url": "https://github.com/itqan-community/sample-app/pull/42",
+                }
+            ],
+        )
+
+    client = _client(handler)
+    prs = client.list_pull_requests(
+        owner=OWNER,
+        repository_name=REPO,
+        installation_id=INSTALLATION_ID,
+        head="bump-branch",
+        state="open",
+    )
+    assert len(prs) == 1
+    assert prs[0].number == 42
+    assert prs[0].title == "chore: bump asset"
+    assert prs[0].head_ref == "bump-branch"
+    assert prs[0].base_ref == "main"
+
+
+def test_create_pull_request_returns_summary():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        assert str(request.url).endswith("/pulls")
+        return httpx.Response(
+            201,
+            json={
+                "number": 43,
+                "title": "chore: new pr",
+                "body": "body",
+                "head": {"ref": "bump-branch"},
+                "base": {"ref": "main"},
+                "state": "open",
+                "html_url": "https://github.com/itqan-community/sample-app/pull/43",
+            },
+        )
+
+    client = _client(handler)
+    pr = client.create_pull_request(
+        owner=OWNER,
+        repository_name=REPO,
+        installation_id=INSTALLATION_ID,
+        title="chore: new pr",
+        body="body",
+        head="bump-branch",
+        base="main",
+    )
+    assert pr.number == 43
+    assert pr.title == "chore: new pr"
+
+
+def test_update_pull_request_returns_summary():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "PATCH"
+        assert str(request.url).endswith("/pulls/43")
+        return httpx.Response(
+            200,
+            json={
+                "number": 43,
+                "title": "chore: updated title",
+                "body": "updated body",
+                "head": {"ref": "bump-branch"},
+                "base": {"ref": "main"},
+                "state": "open",
+                "html_url": "https://github.com/itqan-community/sample-app/pull/43",
+            },
+        )
+
+    client = _client(handler)
+    pr = client.update_pull_request(
+        owner=OWNER,
+        repository_name=REPO,
+        installation_id=INSTALLATION_ID,
+        pull_number=43,
+        title="chore: updated title",
+        body="updated body",
+    )
+    assert pr.number == 43
+    assert pr.title == "chore: updated title"
