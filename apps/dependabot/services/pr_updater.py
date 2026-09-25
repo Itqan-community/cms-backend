@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
+import re
 
 from apps.content.models import AssetVersion
 from apps.dependabot.models import WatchedRepository
@@ -234,7 +235,40 @@ class PrUpdaterService:
         branch_name = f"itqan-dependabot/assets/{slug}"
         commit_msg = f"chore(deps): bump {slug} to {new_version_str}"
 
-        # 6. Commit changes to branch
+        # 6. Check for existing open PRs to prevent downgrading (Race conditions)
+        existing_prs = self._github_client.list_pull_requests(
+            owner=watched_repo.owner,
+            repository_name=watched_repo.repository_name,
+            installation_id=watched_repo.installation_id,
+            head=branch_name,
+            state="open",
+        )
+        existing_pr = existing_prs[0] if existing_prs else None
+
+        if existing_pr is not None:
+            # Extract target version from existing PR title (e.g. "... to 1.4.0")
+            target_match = re.search(r"\bto\s+([0-9A-Za-z\.\-\+]+)$", existing_pr.title)
+            if target_match:
+                existing_pr_version = _parse_candidate_version(target_match.group(1))
+                if existing_pr_version is not None and new_semver <= existing_pr_version:
+                    logger.info(
+                        "pr_updater: skipping version older/equal to existing open PR [owner=%s, repo=%s, pr_number=%d, existing=%s, new=%s]",
+                        watched_repo.owner,
+                        watched_repo.repository_name,
+                        existing_pr.number,
+                        existing_pr_version.to_canonical_string(),
+                        new_version_str,
+                    )
+                    return UpdateResult(
+                        action="skipped",
+                        reason="older_or_equal_to_open_pr",
+                        pr=existing_pr,
+                        old_version=current_entry.version,
+                        new_version=new_version_str,
+                        is_in_range=is_in_range,
+                    )
+
+        # 7. Commit changes to branch
         self._github_client.commit_files(
             owner=watched_repo.owner,
             repository_name=watched_repo.repository_name,
@@ -245,17 +279,8 @@ class PrUpdaterService:
             files=files,
         )
 
-        # 7. Open or refresh PR (Supersede)
-        existing_prs = self._github_client.list_pull_requests(
-            owner=watched_repo.owner,
-            repository_name=watched_repo.repository_name,
-            installation_id=watched_repo.installation_id,
-            head=branch_name,
-            state="open",
-        )
-
-        if existing_prs:
-            existing_pr = existing_prs[0]
+        # 8. Open or refresh PR (Supersede)
+        if existing_pr is not None:
             pr = self._github_client.update_pull_request(
                 owner=watched_repo.owner,
                 repository_name=watched_repo.repository_name,

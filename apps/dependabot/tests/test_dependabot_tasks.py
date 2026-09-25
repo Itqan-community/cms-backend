@@ -181,3 +181,19 @@ class DependabotTasksTest(TestCase):
                         created=False,
                     )
                 mock_delay.assert_called_once_with(self.published_version.id)
+
+    def test_signal_skips_when_no_relevant_fields_changed(self):
+        with self._settings():
+            with patch("apps.dependabot.tasks.dispatch_dependabot_updates_for_version.delay") as mock_delay:
+                with self.captureOnCommitCallbacks(execute=True):
+                    # Save existing instance with no changes to state, name, or summary
+                    self.published_version.save()
+                mock_delay.assert_not_called()
+
+    def test_signal_triggers_when_name_or_summary_changed(self):
+        with self._settings():
+            with patch("apps.dependabot.tasks.dispatch_dependabot_updates_for_version.delay") as mock_delay:
+                with self.captureOnCommitCallbacks(execute=True):
+                    self.published_version.summary = "Updated release notes summary"
+                    self.published_version.save()
+                mock_delay.assert_called_once_with(self.published_version.id)

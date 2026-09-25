@@ -588,3 +588,73 @@ def test_skips_prerelease_on_ranged_constraint():
     result = updater.process_repository(watched, version)
     assert result.action == "skipped"
     assert result.reason == "prerelease_ignored_by_range"
+
+
+def test_process_repository_skips_when_newer_pr_already_open():
+    commit_calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        url = str(request.url)
+        if "/git/commits" in url:
+            commit_calls.append(request)
+        if url.endswith(f"/repos/{OWNER}/{REPO}"):
+            return httpx.Response(200, json={"default_branch": "main"})
+        if f"/contents/{MANIFEST_PATH}" in url:
+            encoded = base64.b64encode(SAMPLE_MANIFEST.encode("utf-8")).decode("ascii")
+            return httpx.Response(
+                200,
+                json={
+                    "type": "file",
+                    "path": MANIFEST_PATH,
+                    "sha": "a" * 40,
+                    "content": encoded,
+                    "size": len(SAMPLE_MANIFEST),
+                    "encoding": "base64",
+                },
+            )
+        if f"/contents/{LOCKFILE_PATH}" in url:
+            encoded = base64.b64encode(SAMPLE_LOCKFILE.encode("utf-8")).decode("ascii")
+            return httpx.Response(
+                200,
+                json={
+                    "type": "file",
+                    "path": LOCKFILE_PATH,
+                    "sha": "b" * 40,
+                    "content": encoded,
+                    "size": len(SAMPLE_LOCKFILE),
+                    "encoding": "base64",
+                },
+            )
+        if "/pulls" in url and request.method == "GET":
+            # Existing open PR already bumped to 1.4.0
+            return httpx.Response(
+                200,
+                json=[
+                    {
+                        "number": 99,
+                        "title": "chore(deps): bump quran-uthmani-hafs to 1.4.0",
+                        "body": "Existing PR",
+                        "head": {"ref": "itqan-dependabot/assets/quran-uthmani-hafs"},
+                        "base": {"ref": "main"},
+                        "state": "open",
+                        "html_url": "https://github.com/itqan-community/sample-app/pull/99",
+                    }
+                ],
+            )
+        return httpx.Response(404)
+
+    client = GitHubContentsClient(
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+        token_service=StubTokenService(),
+    )
+    updater = _make_updater(client)
+    watched = _make_watched_repo()
+    # Attempting to process older version 1.3.0
+    version = _make_asset_and_version(name="1.3.0")
+
+    result = updater.process_repository(watched, version)
+    assert result.action == "skipped"
+    assert result.reason == "older_or_equal_to_open_pr"
+    assert result.pr.number == 99
+    # Ensure commit_files was NOT called
+    assert len(commit_calls) == 0

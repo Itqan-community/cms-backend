@@ -38,6 +38,8 @@ def update_manifest_content(raw_manifest: bytes, slug: str, new_constraint: str)
     new_lines: list[str] = []
 
     slug_re = re.compile(r"^(\s*)(?:\"([^\"]+)\"|'([^']+)'|([^\s:]+))\s*:\s*(?:#.*)?$")
+    flow_slug_re = re.compile(r"^(\s*)(?:\"([^\"]+)\"|'([^']+)'|([^\s:]+))\s*:\s*\{([^}]*)\}(.*)$")
+    flow_ver_re = re.compile(r"""(\bversion\s*:\s*)(?:\"[^\"]*\"|'[^']*'|[^\s,}]+)""")
     version_re = re.compile(r"^(\s*)version\s*:\s*(?:\"[^\"]*\"|'[^']*'|[^\s#]+)(.*)$")
 
     for line in lines:
@@ -52,7 +54,21 @@ def update_manifest_content(raw_manifest: bytes, slug: str, new_constraint: str)
 
         # If we are in assets block, check indentation of keys
         if not in_target_slug:
-            # Check if this line is an asset key under assets:
+            # Check if this line is an inline flow mapping
+            m_flow = flow_slug_re.match(line)
+            if m_flow:
+                key = m_flow.group(2) or m_flow.group(3) or m_flow.group(4)
+                if key == slug:
+                    flow_content = m_flow.group(5)
+                    if flow_ver_re.search(flow_content):
+                        line = flow_ver_re.sub(rf'\g<1>"{new_constraint}"', line, count=1)
+                        updated = True
+                    else:
+                        raise ManifestDocumentError("slug_not_found", f"Asset slug '{slug}' has no version field.")
+                new_lines.append(line)
+                continue
+
+            # Check if this line is a block asset key under assets:
             m = slug_re.match(line)
             if m:
                 indent = len(m.group(1))

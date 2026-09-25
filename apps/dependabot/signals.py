@@ -5,12 +5,35 @@ from __future__ import annotations
 import logging
 
 from django.db import transaction
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
 from apps.content.models import AssetVersion, VersionStateChoice
 
 logger = logging.getLogger(__name__)
+
+
+@receiver(pre_save, sender=AssetVersion)
+def mark_dependabot_relevant_change(
+    sender,
+    instance: AssetVersion,
+    update_fields=None,
+    **kwargs,
+) -> None:
+    """Track changes to state, name, or summary prior to save."""
+    if instance._state.adding or not instance.pk:
+        instance._dependabot_relevant_change = True
+        return
+
+    previous = sender.objects.filter(pk=instance.pk).values("state", "name", "summary").first()
+    if previous is None:
+        instance._dependabot_relevant_change = False
+        return
+
+    fields = {"state", "name", "summary"} if update_fields is None else set(update_fields)
+    instance._dependabot_relevant_change = any(
+        field in fields and getattr(instance, field) != previous[field] for field in ("state", "name", "summary")
+    )
 
 
 @receiver(post_save, sender=AssetVersion)
@@ -25,8 +48,7 @@ def on_asset_version_published(
     if instance.state != VersionStateChoice.PUBLISHED:
         return
 
-    # Check update_fields to avoid triggering on unrelated field saves
-    if update_fields is not None and not ({"state", "name", "summary"} & set(update_fields)):
+    if not created and not getattr(instance, "_dependabot_relevant_change", True):
         return
 
     from apps.dependabot.services.github_token import load_github_app_config

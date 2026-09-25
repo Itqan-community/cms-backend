@@ -701,7 +701,14 @@ class GitHubContentsClient:
             installation_id=installation_id,
             commit_sha=base_commit_sha,
         )
-        base_tree_sha = commit_data["tree"]["sha"]
+        try:
+            base_tree_sha = commit_data["tree"]["sha"]
+        except (KeyError, TypeError) as exc:
+            raise ItqanError(
+                "github_malformed_response",
+                "GitHub returned a commit without a tree SHA.",
+                502,
+            ) from exc
 
         # 2. Build tree items
         tree_items = []

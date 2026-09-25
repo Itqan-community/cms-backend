@@ -59,6 +59,25 @@ def test_update_manifest_content_slug_not_found_raises():
     assert exc_info.value.code == "slug_not_found"
 
 
+def test_update_manifest_content_supports_inline_flow_mapping():
+    manifest = b"""# Inline test
+schema_version: 1
+
+assets:
+  quran-uthmani-hafs: {version: "^1.2.0", package: "itqan/quran"} # flow style
+  tafsir-muyassar: { version: '1.0.0' }
+"""
+    updated_bytes = update_manifest_content(manifest, "quran-uthmani-hafs", "^2.0.0")
+    text = updated_bytes.decode("utf-8")
+
+    assert "# flow style" in text
+    assert 'version: "^2.0.0"' in text
+
+    parsed = parse_manifest_document(updated_bytes)
+    assert parsed.assets["quran-uthmani-hafs"].version == "^2.0.0"
+    assert parsed.assets["tafsir-muyassar"].version == "1.0.0"
+
+
 def test_serialize_updated_lockfile_updates_target_and_preserves_others():
     parsed_lock = parse_lockfile_document(SAMPLE_LOCKFILE)
     updated_bytes = serialize_updated_lockfile(

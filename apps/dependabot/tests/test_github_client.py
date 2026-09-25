@@ -535,3 +535,28 @@ def test_update_pull_request_returns_summary():
     )
     assert pr.number == 43
     assert pr.title == "chore: updated title"
+
+
+def test_commit_files_raises_itqan_error_when_commit_has_no_tree_sha():
+    def handler(request: httpx.Request) -> httpx.Response:
+        url = str(request.url)
+        if "/git/ref/heads/main" in url:
+            return httpx.Response(200, json={"object": {"sha": "main_sha"}})
+        if "/git/commits/main_sha" in url:
+            # Commit payload missing "tree" or "tree.sha"
+            return httpx.Response(200, json={"sha": "main_sha"})
+        return httpx.Response(404)
+
+    client = _client(handler)
+    with pytest.raises(ItqanError) as exc_info:
+        client.commit_files(
+            owner=OWNER,
+            repository_name=REPO,
+            installation_id=INSTALLATION_ID,
+            branch="bump-branch",
+            base_branch="main",
+            message="chore: update",
+            files={"itqan-assets.lock": b"test content"},
+        )
+    assert exc_info.value.error_name == "github_malformed_response"
+    assert exc_info.value.status_code == 502
