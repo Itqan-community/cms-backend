@@ -65,19 +65,20 @@ class ManifestDiscoveryService:
         self._watched = watched_service or WatchedRepositoryService()
         self._clock: Callable[[], datetime] = clock or (lambda: datetime.now(tz=UTC))
 
-    def discover(self, *, host: str, owner: str, repository_name: str) -> DiscoveryResult:
-        """Run discovery for one repository and persist the observation.
-
-        Gate order is deliberate: feature flag, then opt-in consent, then
-        network. Anything failing before classification persists nothing.
-        """
+    def discover_watched(self, watched: WatchedRepository) -> DiscoveryResult:
+        """Run discovery for an already resolved watched repository and persist the observation."""
         if not load_github_app_config().enabled:
             raise ItqanError(
                 "github_dependabot_disabled",
                 "Itqan Dependabot updater is disabled.",
                 503,
             )
-        watched = self._watched.require_opted_in(host=host, owner=owner, repository_name=repository_name)
+        if not watched.is_opted_in:
+            raise ItqanError(
+                "watched_repository_not_opted_in",
+                "Repository is not opted in to Itqan Dependabot updates.",
+                403,
+            )
 
         metadata = self._contents.get_repository(
             owner=watched.owner,
@@ -111,6 +112,15 @@ class ManifestDiscoveryService:
             manifest=classification.manifest,
             lockfile=classification.lockfile,
         )
+
+    def discover(self, *, host: str, owner: str, repository_name: str) -> DiscoveryResult:
+        """Run discovery for one repository and persist the observation.
+
+        Gate order is deliberate: feature flag, then opt-in consent, then
+        network. Anything failing before classification persists nothing.
+        """
+        watched = self._watched.require_opted_in(host=host, owner=owner, repository_name=repository_name)
+        return self.discover_watched(watched)
 
     def classify_pair(self, *, manifest: DiscoveredFile, lockfile: DiscoveredFile) -> DiscoveryClassification:
         """Classify a manifest/lockfile pair without network or persistence.

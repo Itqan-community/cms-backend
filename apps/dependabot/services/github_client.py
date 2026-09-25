@@ -19,6 +19,7 @@ import binascii
 from dataclasses import dataclass
 import logging
 import re
+from typing import Any
 
 import httpx
 
@@ -73,6 +74,19 @@ class DiscoveredFile:
     present: bool
     sha: str | None
     content: bytes | None
+
+
+@dataclass(frozen=True)
+class PullRequestSummary:
+    """Summary of a GitHub Pull Request for version bump automation."""
+
+    number: int
+    title: str
+    body: str
+    head_ref: str
+    base_ref: str
+    state: str
+    html_url: str
 
 
 def _base_headers(installation_token: str) -> dict[str, str]:
@@ -329,13 +343,15 @@ class GitHubContentsClient:
             ) from None
         return _decode_contents_payload(payload, owner=owner, repository_name=repository_name, path=path)
 
-    def _get(
+    def _request(
         self,
+        method: str,
         url: str,
         *,
         token: str,
         timeout: float,
         params: dict[str, str] | None = None,
+        json: Any = None,
     ) -> httpx.Response:
         headers = {
             "Authorization": f"Bearer {token}",
@@ -345,9 +361,11 @@ class GitHubContentsClient:
         }
         try:
             if self._http_client is not None:
-                return self._http_client.get(url, headers=headers, params=params, timeout=timeout)
+                return self._http_client.request(
+                    method, url, headers=headers, params=params, json=json, timeout=timeout
+                )
             with httpx.Client(timeout=timeout) as client:
-                return client.get(url, headers=headers, params=params)
+                return client.request(method, url, headers=headers, params=params, json=json)
         except httpx.TimeoutException:
             raise ItqanError(
                 "github_upstream_error",
@@ -355,12 +373,42 @@ class GitHubContentsClient:
                 502,
             ) from None
         except httpx.HTTPError as exc:
-            logger.warning("github_client: network error [error_type=%s]", type(exc).__name__)
+            logger.warning("github_client: network error [error_type=%s, method=%s]", type(exc).__name__, method)
             raise ItqanError(
                 "github_upstream_error",
                 "GitHub request failed due to a network error.",
                 502,
             ) from None
+
+    def _get(
+        self,
+        url: str,
+        *,
+        token: str,
+        timeout: float,
+        params: dict[str, str] | None = None,
+    ) -> httpx.Response:
+        return self._request("GET", url, token=token, timeout=timeout, params=params)
+
+    def _post(
+        self,
+        url: str,
+        *,
+        token: str,
+        timeout: float,
+        json: Any = None,
+    ) -> httpx.Response:
+        return self._request("POST", url, token=token, timeout=timeout, json=json)
+
+    def _patch(
+        self,
+        url: str,
+        *,
+        token: str,
+        timeout: float,
+        json: Any = None,
+    ) -> httpx.Response:
+        return self._request("PATCH", url, token=token, timeout=timeout, json=json)
 
     def get_installation_state(self, *, installation_id: int) -> str | None:
         """Check current installation state via App JWT.
@@ -475,3 +523,360 @@ class GitHubContentsClient:
                 502,
             )
         return True
+
+    def get_ref(
+        self,
+        *,
+        owner: str,
+        repository_name: str,
+        installation_id: int,
+        ref: str,
+    ) -> str:
+        """Fetch the commit SHA of a git reference (e.g. 'heads/main')."""
+        config = load_github_app_config()
+        token = self._token_service.get_installation_token(installation_id)
+        clean_ref = ref.removeprefix("refs/")
+        url = f"{config.api_base_url.rstrip('/')}/repos/{owner}/{repository_name}/git/ref/{clean_ref}"
+        response = self._get(url, token=token, timeout=config.timeout_seconds)
+        _raise_for_status(response, owner=owner, repository_name=repository_name, what=f"git:ref:{ref}")
+        try:
+            payload = response.json()
+            return payload["object"]["sha"]
+        except (KeyError, ValueError, TypeError) as exc:
+            logger.warning("github_client: unreadable git ref [owner=%s, repo=%s, ref=%s]", owner, repository_name, ref)
+            raise ItqanError(
+                "github_malformed_response",
+                "GitHub returned an unreadable git ref response.",
+                502,
+            ) from exc
+
+    def get_commit(
+        self,
+        *,
+        owner: str,
+        repository_name: str,
+        installation_id: int,
+        commit_sha: str,
+    ) -> dict[str, Any]:
+        """Fetch commit data, specifically resolving its root tree SHA."""
+        config = load_github_app_config()
+        token = self._token_service.get_installation_token(installation_id)
+        url = f"{config.api_base_url.rstrip('/')}/repos/{owner}/{repository_name}/git/commits/{commit_sha}"
+        response = self._get(url, token=token, timeout=config.timeout_seconds)
+        _raise_for_status(response, owner=owner, repository_name=repository_name, what=f"git:commit:{commit_sha}")
+        try:
+            return response.json()
+        except ValueError as exc:
+            raise ItqanError(
+                "github_malformed_response",
+                "GitHub returned an unreadable git commit response.",
+                502,
+            ) from exc
+
+    def create_tree(
+        self,
+        *,
+        owner: str,
+        repository_name: str,
+        installation_id: int,
+        base_tree: str,
+        tree: list[dict[str, Any]],
+    ) -> str:
+        """Create a new git tree based on base_tree with modified/added files."""
+        config = load_github_app_config()
+        token = self._token_service.get_installation_token(installation_id)
+        url = f"{config.api_base_url.rstrip('/')}/repos/{owner}/{repository_name}/git/trees"
+        response = self._post(
+            url,
+            token=token,
+            timeout=config.timeout_seconds,
+            json={"base_tree": base_tree, "tree": tree},
+        )
+        _raise_for_status(response, owner=owner, repository_name=repository_name, what="git:create_tree")
+        try:
+            return response.json()["sha"]
+        except (KeyError, ValueError, TypeError) as exc:
+            raise ItqanError(
+                "github_malformed_response",
+                "GitHub returned an unreadable git tree response.",
+                502,
+            ) from exc
+
+    def create_commit(
+        self,
+        *,
+        owner: str,
+        repository_name: str,
+        installation_id: int,
+        message: str,
+        tree: str,
+        parents: list[str],
+    ) -> str:
+        """Create a new git commit pointing to a tree and parent commits."""
+        config = load_github_app_config()
+        token = self._token_service.get_installation_token(installation_id)
+        url = f"{config.api_base_url.rstrip('/')}/repos/{owner}/{repository_name}/git/commits"
+        response = self._post(
+            url,
+            token=token,
+            timeout=config.timeout_seconds,
+            json={"message": message, "tree": tree, "parents": parents},
+        )
+        _raise_for_status(response, owner=owner, repository_name=repository_name, what="git:create_commit")
+        try:
+            return response.json()["sha"]
+        except (KeyError, ValueError, TypeError) as exc:
+            raise ItqanError(
+                "github_malformed_response",
+                "GitHub returned an unreadable git commit response.",
+                502,
+            ) from exc
+
+    def create_or_update_ref(
+        self,
+        *,
+        owner: str,
+        repository_name: str,
+        installation_id: int,
+        ref: str,
+        sha: str,
+        force: bool = True,
+    ) -> None:
+        """Create a git ref, or update it (force-push/advance) if it already exists."""
+        config = load_github_app_config()
+        token = self._token_service.get_installation_token(installation_id)
+        clean_ref = ref.removeprefix("refs/")
+        post_url = f"{config.api_base_url.rstrip('/')}/repos/{owner}/{repository_name}/git/refs"
+        response = self._post(
+            post_url,
+            token=token,
+            timeout=config.timeout_seconds,
+            json={"ref": f"refs/{clean_ref}", "sha": sha},
+        )
+        if response.status_code == 201:
+            return
+        if response.status_code == 422:
+            # Ref already exists, update it.
+            patch_url = f"{config.api_base_url.rstrip('/')}/repos/{owner}/{repository_name}/git/refs/{clean_ref}"
+            patch_resp = self._patch(
+                patch_url,
+                token=token,
+                timeout=config.timeout_seconds,
+                json={"sha": sha, "force": force},
+            )
+            _raise_for_status(
+                patch_resp,
+                owner=owner,
+                repository_name=repository_name,
+                what=f"git:update_ref:{clean_ref}",
+            )
+            return
+        _raise_for_status(response, owner=owner, repository_name=repository_name, what=f"git:create_ref:{clean_ref}")
+
+    def commit_files(
+        self,
+        *,
+        owner: str,
+        repository_name: str,
+        installation_id: int,
+        branch: str,
+        base_branch: str,
+        message: str,
+        files: dict[str, str | bytes],
+    ) -> str:
+        """Atomically commit file changes to a branch, creating or updating it from base_branch.
+
+        Returns the new commit SHA.
+        """
+        # 1. Resolve base branch commit SHA and root tree SHA
+        base_commit_sha = self.get_ref(
+            owner=owner,
+            repository_name=repository_name,
+            installation_id=installation_id,
+            ref=f"heads/{base_branch}",
+        )
+        commit_data = self.get_commit(
+            owner=owner,
+            repository_name=repository_name,
+            installation_id=installation_id,
+            commit_sha=base_commit_sha,
+        )
+        try:
+            base_tree_sha = commit_data["tree"]["sha"]
+        except (KeyError, TypeError) as exc:
+            raise ItqanError(
+                "github_malformed_response",
+                "GitHub returned a commit without a tree SHA.",
+                502,
+            ) from exc
+
+        # 2. Build tree items
+        tree_items = []
+        for path, content in files.items():
+            content_str = content.decode("utf-8") if isinstance(content, bytes) else content
+            tree_items.append(
+                {
+                    "path": path,
+                    "mode": "100644",
+                    "type": "blob",
+                    "content": content_str,
+                }
+            )
+
+        new_tree_sha = self.create_tree(
+            owner=owner,
+            repository_name=repository_name,
+            installation_id=installation_id,
+            base_tree=base_tree_sha,
+            tree=tree_items,
+        )
+
+        # 3. Create commit with parent = base_commit_sha
+        new_commit_sha = self.create_commit(
+            owner=owner,
+            repository_name=repository_name,
+            installation_id=installation_id,
+            message=message,
+            tree=new_tree_sha,
+            parents=[base_commit_sha],
+        )
+
+        # 4. Point branch to new commit (creates branch or updates it)
+        self.create_or_update_ref(
+            owner=owner,
+            repository_name=repository_name,
+            installation_id=installation_id,
+            ref=f"heads/{branch}",
+            sha=new_commit_sha,
+            force=True,
+        )
+        return new_commit_sha
+
+    def list_pull_requests(
+        self,
+        *,
+        owner: str,
+        repository_name: str,
+        installation_id: int,
+        head: str | None = None,
+        state: str = "open",
+    ) -> list[PullRequestSummary]:
+        """List pull requests for a repository, optionally filtered by head branch."""
+        config = load_github_app_config()
+        token = self._token_service.get_installation_token(installation_id)
+        url = f"{config.api_base_url.rstrip('/')}/repos/{owner}/{repository_name}/pulls"
+        params: dict[str, str] = {"state": state}
+        if head:
+            # GitHub head filter is formatted as 'user:branch' or 'branch'
+            params["head"] = f"{owner}:{head}" if ":" not in head else head
+        response = self._get(url, token=token, timeout=config.timeout_seconds, params=params)
+        _raise_for_status(response, owner=owner, repository_name=repository_name, what="list_prs")
+        try:
+            payload = response.json()
+        except ValueError as exc:
+            raise ItqanError(
+                "github_malformed_response",
+                "GitHub returned an unreadable pull request list response.",
+                502,
+            ) from exc
+        if not isinstance(payload, list):
+            raise ItqanError(
+                "github_malformed_response",
+                "GitHub returned an unexpected pull request list response.",
+                502,
+            )
+        summaries: list[PullRequestSummary] = []
+        for item in payload:
+            if not isinstance(item, dict):
+                continue
+            summaries.append(
+                PullRequestSummary(
+                    number=item.get("number", 0),
+                    title=item.get("title", ""),
+                    body=item.get("body") or "",
+                    head_ref=item.get("head", {}).get("ref", ""),
+                    base_ref=item.get("base", {}).get("ref", ""),
+                    state=item.get("state", ""),
+                    html_url=item.get("html_url", ""),
+                )
+            )
+        return summaries
+
+    def create_pull_request(
+        self,
+        *,
+        owner: str,
+        repository_name: str,
+        installation_id: int,
+        title: str,
+        body: str,
+        head: str,
+        base: str,
+    ) -> PullRequestSummary:
+        """Open a new Pull Request."""
+        config = load_github_app_config()
+        token = self._token_service.get_installation_token(installation_id)
+        url = f"{config.api_base_url.rstrip('/')}/repos/{owner}/{repository_name}/pulls"
+        response = self._post(
+            url,
+            token=token,
+            timeout=config.timeout_seconds,
+            json={"title": title, "body": body, "head": head, "base": base},
+        )
+        _raise_for_status(response, owner=owner, repository_name=repository_name, what="create_pr")
+        try:
+            item = response.json()
+            return PullRequestSummary(
+                number=item.get("number", 0),
+                title=item.get("title", ""),
+                body=item.get("body") or "",
+                head_ref=item.get("head", {}).get("ref", ""),
+                base_ref=item.get("base", {}).get("ref", ""),
+                state=item.get("state", ""),
+                html_url=item.get("html_url", ""),
+            )
+        except (ValueError, TypeError) as exc:
+            raise ItqanError(
+                "github_malformed_response",
+                "GitHub returned an unreadable pull request response.",
+                502,
+            ) from exc
+
+    def update_pull_request(
+        self,
+        *,
+        owner: str,
+        repository_name: str,
+        installation_id: int,
+        pull_number: int,
+        title: str,
+        body: str,
+    ) -> PullRequestSummary:
+        """Update an existing Pull Request's title and body (refresh/supersede)."""
+        config = load_github_app_config()
+        token = self._token_service.get_installation_token(installation_id)
+        url = f"{config.api_base_url.rstrip('/')}/repos/{owner}/{repository_name}/pulls/{pull_number}"
+        response = self._patch(
+            url,
+            token=token,
+            timeout=config.timeout_seconds,
+            json={"title": title, "body": body},
+        )
+        _raise_for_status(response, owner=owner, repository_name=repository_name, what=f"update_pr:#{pull_number}")
+        try:
+            item = response.json()
+            return PullRequestSummary(
+                number=item.get("number", 0),
+                title=item.get("title", ""),
+                body=item.get("body") or "",
+                head_ref=item.get("head", {}).get("ref", ""),
+                base_ref=item.get("base", {}).get("ref", ""),
+                state=item.get("state", ""),
+                html_url=item.get("html_url", ""),
+            )
+        except (ValueError, TypeError) as exc:
+            raise ItqanError(
+                "github_malformed_response",
+                "GitHub returned an unreadable pull request response.",
+                502,
+            ) from exc
