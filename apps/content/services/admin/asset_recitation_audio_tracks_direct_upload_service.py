@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from io import BytesIO
 import logging
+import re
 from typing import Any
 
 import boto3
@@ -9,10 +11,12 @@ from botocore.config import Config
 from botocore.exceptions import ClientError
 from django.conf import settings
 from django.db import IntegrityError, transaction
+from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from apps.content.repositories.recitation_track import RecitationTrackRepository
+from apps.content.services.recitation import RecitationService
 from apps.content.services.recitation_folder_resolution import resolve_folder_for_asset
 from apps.core.ninja_utils.errors import ItqanError
 from apps.mixins.recitations_helpers import extract_surah_number_from_mp3_filename, get_mp3_duration_ms
@@ -20,7 +24,18 @@ from apps.mixins.recitations_helpers import extract_surah_number_from_mp3_filena
 logger = logging.getLogger(__name__)
 
 
+@dataclass(frozen=True)
+class RecitationUploadKeyParts:
+    asset_id: int
+    folder_id: int
+    surah_number: int
+
+
 class AssetRecitationAudioTracksDirectUploadService:
+    _UPLOAD_KEY_RE = re.compile(
+        r"^uploads/assets/(?P<asset_id>[1-9]\d*)/recitations/" r"(?P<folder_id>[1-9]\d*)/(?P<surah_number>\d{3})\.mp3$"
+    )
+
     def _get_s3_client(self):
         return boto3.client(
             "s3",
@@ -41,6 +56,46 @@ class AssetRecitationAudioTracksDirectUploadService:
         moved, and each row stores its own full key, so both layouts coexist.
         """
         return f"uploads/assets/{asset_id}/recitations/{folder_id}/{surah_number:03}.mp3"
+
+    def parse_key(self, key: str) -> RecitationUploadKeyParts | None:
+        """Parse a canonical key, rejecting anything that does not round-trip through _build_key."""
+        match = self._UPLOAD_KEY_RE.fullmatch(key)
+        if match is None:
+            return None
+
+        parts = RecitationUploadKeyParts(
+            asset_id=int(match.group("asset_id")),
+            folder_id=int(match.group("folder_id")),
+            surah_number=int(match.group("surah_number")),
+        )
+        expected_key = self._build_key(
+            asset_id=parts.asset_id,
+            folder_id=parts.folder_id,
+            surah_number=parts.surah_number,
+        )
+        if key != expected_key:
+            return None
+        return parts
+
+    def authorize_upload_key(
+        self,
+        key: str,
+        publisher_q: Q,
+        expected_asset_id: int | None = None,
+    ) -> RecitationUploadKeyParts:
+        """Authorize a canonical multipart key against its asset and folder."""
+        parts = self.parse_key(key)
+        if parts is None or (expected_asset_id is not None and parts.asset_id != expected_asset_id):
+            missing_asset_id = expected_asset_id or (parts.asset_id if parts is not None else 0)
+            raise ItqanError(
+                error_name="asset_not_found",
+                message=_("Asset with id {id} not found.").format(id=missing_asset_id),
+                status_code=404,
+            )
+
+        RecitationService().get_recitation_for_upload(parts.asset_id, publisher_q=publisher_q)
+        resolve_folder_for_asset(parts.asset_id, parts.folder_id)
+        return parts
 
     def _to_r2_key(self, key: str) -> str:
         """R2 object keys must be prefixed with "media/" to work with our bucket configuration"""

@@ -28,6 +28,50 @@ class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
         folder = RecitationFolder.objects.get(asset=asset, is_default=True)
         return asset, folder
 
+    def test_parse_key_where_key_was_built_by_service_should_return_parts(self):
+        # Arrange
+        service = AssetRecitationAudioTracksDirectUploadService()
+        key = service._build_key(asset_id=12, folder_id=34, surah_number=5)
+
+        # Act
+        parts = service.parse_key(key)
+
+        # Assert
+        self.assertIsNotNone(parts)
+        self.assertEqual(12, parts.asset_id)
+        self.assertEqual(34, parts.folder_id)
+        self.assertEqual(5, parts.surah_number)
+
+    def test_parse_key_where_key_is_not_canonical_should_return_none(self):
+        # Arrange
+        service = AssetRecitationAudioTracksDirectUploadService()
+        invalid_keys = [
+            "media/uploads/assets/12/recitations/34/005.mp3",
+            "uploads/assets/012/recitations/34/005.mp3",
+            "uploads/assets/12/recitations/034/005.mp3",
+            "uploads/assets/12/recitations/34/5.mp3",
+            "uploads/assets/12/recitations/005.mp3",
+            "uploads/assets/12/recitations/34/005.wav",
+            "uploads/assets/12/recitations/34/005.mp3/extra",
+        ]
+
+        # Act & Assert
+        for key in invalid_keys:
+            with self.subTest(key=key):
+                self.assertIsNone(service.parse_key(key))
+
+    def test_parse_key_where_key_is_canonical_should_round_trip_through_build_key(self):
+        # Arrange
+        service = AssetRecitationAudioTracksDirectUploadService()
+        key = service._build_key(asset_id=987, folder_id=654, surah_number=114)
+
+        # Act
+        parts = service.parse_key(key)
+        rebuilt_key = service._build_key(parts.asset_id, parts.folder_id, parts.surah_number)
+
+        # Assert
+        self.assertEqual(key, rebuilt_key)
+
     def test_start_upload_where_valid_input_should_create_multipart_and_return_payload(self):
         # Arrange
         asset, folder = self._make_asset_with_default_folder()

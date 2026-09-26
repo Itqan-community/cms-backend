@@ -110,6 +110,16 @@ class RecitationRepository(BaseRecitationRepository):
         except Asset.DoesNotExist:
             return None
 
+    def get_recitation_by_id(self, asset_id: int, publisher_q: Q | None = None) -> Asset | None:
+        """Get a recitation asset by ID, optionally scoped by publisher membership."""
+        qs = self.asset_model.objects.filter(
+            id=asset_id,
+            category=CategoryChoice.RECITATION,
+        )
+        if publisher_q is not None:
+            qs = qs.filter(publisher_q)
+        return qs.first()
+
     def create_recitation(
         self,
         *,

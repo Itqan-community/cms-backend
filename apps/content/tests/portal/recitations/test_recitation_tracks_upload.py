@@ -11,7 +11,7 @@ from apps.content.models import Asset, CategoryChoice, Qiraah, RecitationSurahTr
 from apps.core.ninja_utils.errors import ItqanError
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
-from apps.publishers.models import Publisher
+from apps.publishers.models import Publisher, PublisherMember
 from apps.users.models import User
 
 
@@ -30,6 +30,14 @@ class RecitationTracksUploadAPITest(BaseTestCase):
         )
 
         self.publisher = baker.make(Publisher, name="Portal Publisher")
+        self.member_publisher = baker.make(Publisher, name="Member Publisher")
+        self.publisher_member = baker.make(
+            PublisherMember,
+            publisher=self.member_publisher,
+            user=self.non_staff_user,
+            group=baker.make("auth.Group", name="Recitation uploader"),
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
         self.reciter = baker.make(Reciter, name="Portal Reciter")
         self.qiraah = baker.make(Qiraah, name="Portal Qiraah")
         self.riwayah = baker.make(Riwayah, name="Portal Riwayah", qiraah=self.qiraah)
@@ -44,6 +52,8 @@ class RecitationTracksUploadAPITest(BaseTestCase):
             riwayah=self.riwayah,
             name="Portal Recitation",
         )
+        self.upload_folder = self.recitation_asset.recitation_folders.get(is_default=True)
+        self.upload_key = f"uploads/assets/{self.recitation_asset.id}/recitations/{self.upload_folder.id}/002.mp3"
 
         self.non_recitation_asset = baker.make(
             Asset,
@@ -201,7 +211,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
-        self.assertEqual("not_found", response.json()["error_name"])
+        self.assertEqual("asset_not_found", response.json()["error_name"])
 
     def test_validate_upload_where_unauthenticated_should_return_401(self):
         # Act
@@ -229,6 +239,75 @@ class RecitationTracksUploadAPITest(BaseTestCase):
         # Assert
         self.assertEqual(403, response.status_code, response.content)
         self.assertEqual("permission_denied", response.json()["error_name"])
+
+    def test_upload_endpoints_where_asset_belongs_to_another_publisher_should_return_asset_not_found(self):
+        # Arrange
+        # The user has the global permission but belongs only to member_publisher;
+        # recitation_asset belongs to a different publisher.
+        self.authenticate_user(self.non_staff_user)
+        self.give_permission(self.non_staff_user, PermissionChoice.PORTAL_UPDATE_RECITATION)
+
+        requests = [
+            (
+                "/portal/recitation-tracks/validate-upload/",
+                {"asset_id": self.recitation_asset.id, "filenames": ["002.mp3"]},
+            ),
+            (
+                "/portal/recitation-tracks/uploads/start/",
+                {"asset_id": self.recitation_asset.id, "filename": "002.mp3"},
+            ),
+            (
+                "/portal/recitation-tracks/uploads/sign-part/",
+                {"key": self.upload_key, "upload_id": "foreign-upload", "part_number": 1},
+            ),
+            (
+                "/portal/recitation-tracks/uploads/finish/",
+                {
+                    "asset_id": self.recitation_asset.id,
+                    "filename": "002.mp3",
+                    "key": self.upload_key,
+                    "upload_id": "foreign-upload",
+                    "parts": [{"ETag": '"etag-1"', "PartNumber": 1}],
+                },
+            ),
+            (
+                "/portal/recitation-tracks/uploads/abort/",
+                {"key": self.upload_key, "upload_id": "foreign-upload"},
+            ),
+        ]
+
+        # Act
+        with (
+            patch.object(
+                AssetRecitationAudioTracksDirectUploadService,
+                AssetRecitationAudioTracksDirectUploadService.start_upload.__name__,
+            ) as start_upload,
+            patch.object(
+                AssetRecitationAudioTracksDirectUploadService,
+                AssetRecitationAudioTracksDirectUploadService.sign_part.__name__,
+            ) as sign_part,
+            patch.object(
+                AssetRecitationAudioTracksDirectUploadService,
+                AssetRecitationAudioTracksDirectUploadService.finish_upload.__name__,
+            ) as finish_upload,
+            patch.object(
+                AssetRecitationAudioTracksDirectUploadService,
+                AssetRecitationAudioTracksDirectUploadService.abort_upload.__name__,
+            ) as abort_upload,
+        ):
+            for url, payload in requests:
+                with self.subTest(url=url):
+                    response = self.client.post(url, payload, format="json")
+
+                    # Assert
+                    self.assertEqual(404, response.status_code, response.content)
+                    self.assertEqual("asset_not_found", response.json()["error_name"])
+
+        # Assert
+        start_upload.assert_not_called()
+        sign_part.assert_not_called()
+        finish_upload.assert_not_called()
+        abort_upload.assert_not_called()
 
     def test_start_upload_should_delegate_to_service(self):
         # Arrange
@@ -303,7 +382,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
             # Act
             response = self.client.post(
                 "/portal/recitation-tracks/uploads/sign-part/",
-                {"key": "uploads/assets/1/recitations/002.mp3", "upload_id": "upload-123", "part_number": 1},
+                {"key": self.upload_key, "upload_id": "upload-123", "part_number": 1},
                 format="json",
             )
 
@@ -311,7 +390,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual({"url": "https://example.test/presigned"}, response.json())
         sign_part.assert_called_once_with(
-            key="uploads/assets/1/recitations/002.mp3",
+            key=self.upload_key,
             upload_id="upload-123",
             part_number=1,
         )
@@ -339,7 +418,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
                 {
                     "asset_id": self.recitation_asset.id,
                     "filename": "002.mp3",
-                    "key": "uploads/assets/1/recitations/002.mp3",
+                    "key": self.upload_key,
                     "upload_id": "upload-123",
                     "parts": [{"ETag": '"etag-1"', "PartNumber": 1}],
                     "duration_ms": 2000,
@@ -355,7 +434,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
         self.assertEqual(2, response.json()["surah_number"])
         self.assertEqual(777, response.json()["size_bytes"])
         finish_upload.assert_called_once_with(
-            key="uploads/assets/1/recitations/002.mp3",
+            key=self.upload_key,
             upload_id="upload-123",
             parts=[{"ETag": '"etag-1"', "PartNumber": 1}],
             asset_id=self.recitation_asset.id,
@@ -395,7 +474,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
                 {
                     "asset_id": self.recitation_asset.id,
                     "filename": "002.mp3",
-                    "key": "uploads/assets/1/recitations/002.mp3",
+                    "key": self.upload_key,
                     "upload_id": "upload-123",
                     "parts": [{"ETag": '"etag-1"', "PartNumber": 1}],
                     "duration_ms": 2000,
@@ -423,18 +502,18 @@ class RecitationTracksUploadAPITest(BaseTestCase):
             # Act
             response = self.client.post(
                 "/portal/recitation-tracks/uploads/abort/",
-                {"key": "uploads/assets/1/recitations/002.mp3", "upload_id": "upload-123"},
+                {"key": self.upload_key, "upload_id": "upload-123"},
                 format="json",
             )
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual(
-            {"key": "uploads/assets/1/recitations/002.mp3", "upload_id": "upload-123", "aborted": True},
+            {"key": self.upload_key, "upload_id": "upload-123", "aborted": True},
             response.json(),
         )
         abort_upload.assert_called_once_with(
-            key="uploads/assets/1/recitations/002.mp3",
+            key=self.upload_key,
             upload_id="upload-123",
         )
 

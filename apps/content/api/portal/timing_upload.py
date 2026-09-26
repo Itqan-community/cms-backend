@@ -5,12 +5,12 @@ from django.utils.translation import gettext_lazy as _
 from ninja import File, Form, Schema, UploadedFile
 
 from apps.content.cache import invalidate_recitation_tracks_cache
-from apps.content.models import Asset
 from apps.content.services.admin.asset_recitation_ayah_timestamps_upload_service import (
     ResultDict,
     bulk_upload_recitation_ayah_timestamps,
 )
 from apps.content.services.admin.asset_recitation_json_file_sync_service import sync_asset_recitations_json_file
+from apps.content.services.recitation import RecitationService
 from apps.content.services.recitation_folder_resolution import resolve_folder_for_asset
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.permission_required import permission_required
@@ -47,7 +47,7 @@ class TimingUploadOut(Schema):
         400: NinjaErrorResponse[Literal["upload_failed"], ResultDict],
         401: NinjaErrorResponse[Literal["authentication_error"]],
         403: NinjaErrorResponse[Literal["permission_denied"]],
-        404: NinjaErrorResponse[Literal["asset_not_found"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]] | NinjaErrorResponse[Literal["folder_not_found"]],
     },
 )
 @permission_required([permission_class(PermissionChoice.PORTAL_UPLOAD_TIMING)])
@@ -56,15 +56,7 @@ def upload_timing(
     data: Form[TimingUploadIn],
     files: list[UploadedFile] = File(...),
 ):
-    try:
-        asset = Asset.objects.get(pk=data.asset_id)
-    except Asset.DoesNotExist:
-        raise ItqanError(
-            error_name="asset_not_found",
-            message=_("Asset with id %s does not exist.") % data.asset_id,
-            status_code=404,
-        ) from None
-
+    asset = RecitationService().get_recitation_for_upload(data.asset_id, publisher_q=request.publisher_q())
     folder = resolve_folder_for_asset(asset.id, data.folder_id)
 
     with transaction.atomic():
