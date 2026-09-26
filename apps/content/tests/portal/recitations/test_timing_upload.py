@@ -16,7 +16,7 @@ from apps.content.models import (
 )
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
-from apps.publishers.models import Publisher
+from apps.publishers.models import Publisher, PublisherMember
 from apps.users.models import User
 
 URL = "/portal/timing/upload/"
@@ -52,6 +52,14 @@ class TimingUploadBaseTest(BaseTestCase):
         )
 
         self.publisher = baker.make(Publisher, name="Test Publisher")
+        self.member_publisher = baker.make(Publisher, name="Timing Member Publisher")
+        self.publisher_member = baker.make(
+            PublisherMember,
+            publisher=self.member_publisher,
+            user=self.non_staff_user,
+            group=baker.make("auth.Group", name="Timing uploader"),
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
         self.reciter = baker.make(Reciter, name="Test Reciter", slug="test-reciter")
         self.qiraah = baker.make(Qiraah, name="Test Qiraah")
         self.riwayah = baker.make(Riwayah, name="Test Riwayah", qiraah=self.qiraah)
@@ -237,6 +245,27 @@ class TimingUploadAuthTest(TimingUploadBaseTest):
         # Assert
         self.assertEqual(403, response.status_code, response.content)
         self.assertEqual("permission_denied", response.json()["error_name"])
+
+    def test_upload_timing_where_asset_belongs_to_another_publisher_should_return_404(self):
+        # Arrange
+        # The permission is global, but the user belongs only to member_publisher.
+        self.authenticate_user(self.non_staff_user)
+        self.give_permission(self.non_staff_user, PermissionChoice.PORTAL_UPLOAD_TIMING)
+        timing_file = make_timing_file(surah_number=1)
+
+        # Act
+        response = self.client.post(
+            URL,
+            data={
+                "asset_id": self.asset.id,
+                "files": [timing_file],
+            },
+        )
+
+        # Assert
+        self.assertEqual(404, response.status_code, response.content)
+        self.assertEqual("asset_not_found", response.json()["error_name"])
+        self.assertFalse(RecitationAyahTiming.objects.filter(track=self.track).exists())
 
 
 class TimingUploadErrorTest(TimingUploadBaseTest):

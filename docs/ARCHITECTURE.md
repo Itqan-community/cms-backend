@@ -508,6 +508,11 @@ single page.
 before folders existed keep their original flat keys — nothing in R2 was moved, and each
 row stores its own full key, so both layouts coexist permanently.
 
+Portal audio and ayah-timing uploads resolve the target recitation through the caller's
+publisher scope. Multipart sign, completion, and abort operations also parse the supplied
+storage key, require it to round-trip through the canonical key builder, and verify that
+both its asset and folder belong to that scope before mutating object storage.
+
 **Ayah-timing exports.** `sync_asset_recitations_json_file` writes one `AssetVersion`
 per folder, named after the folder slug, so variants do not overwrite each other's JSON.
 

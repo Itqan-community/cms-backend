@@ -99,10 +99,6 @@ msgstr "لم يتم العثور على التفسير بالمعرّف {slug}."
 msgid "Provided asset_id {asset_id} does not match tafsir asset id {expected_id}."
 msgstr "المعرّف asset_id {asset_id} المُقدَّم لا يطابق معرّف أصل التفسير {expected_id}."
 
-#, python-format
-msgid "Asset with id %s does not exist."
-msgstr "المورد ذو المعرف %s غير موجود."
-
 msgid "One or more timing files could not be processed."
 msgstr "تعذر معالجة ملف توقيت واحد أو أكثر."
 
@@ -277,6 +273,10 @@ msgstr "لا توجد تغييرات للنشر."
 #, python-brace-format
 msgid "You have {count} pending access request(s)"
 msgstr "لديك {count} طلب(ات) وصول معلقة"
+
+#, python-brace-format
+msgid "Asset with id {id} not found."
+msgstr "لم يتم العثور على المورد ذو المعرف {id}."
 
 #, python-brace-format
 msgid "Failed to initiate upload (R2 error: {error_code})."
@@ -508,10 +508,6 @@ msgstr "نطاق الآيات {from_ayah}-{to_ayah} يحتوي على توقيت
 #, python-brace-format
 msgid "Ayah {ayah_key} not found."
 msgstr "لم يتم العثور على الآية {ayah_key}."
-
-#, python-brace-format
-msgid "Asset with id {id} not found."
-msgstr "لم يتم العثور على المورد ذو المعرف {id}."
 
 #, python-brace-format
 msgid "Folder with slug {slug} not found."
@@ -1353,6 +1349,10 @@ msgstr "مرحبًا بك في نظام إتقان لإدارة المحتوى!"
 
 msgid "This is a test email to verify the email service is working correctly."
 msgstr "هذه رسالة اختبارية للتأكد من عمل خدمة البريد الإلكتروني بشكل صحيح."
+
+#, python-format
+#~ msgid "Asset with id %s does not exist."
+#~ msgstr "المورد ذو المعرف %s غير موجود."
 
 #~ msgid "You are not assigned to review this language."
 #~ msgstr "لست مُكلَّفًا بمراجعة هذه اللغة."
