@@ -32,8 +32,10 @@ class RecitationUploadKeyParts:
 
 
 class AssetRecitationAudioTracksDirectUploadService:
+    _MAX_BIGINT_ID = 2**63 - 1
     _UPLOAD_KEY_RE = re.compile(
-        r"^uploads/assets/(?P<asset_id>[1-9]\d*)/recitations/" r"(?P<folder_id>[1-9]\d*)/(?P<surah_number>\d{3})\.mp3$"
+        r"^uploads/assets/(?P<asset_id>[1-9]\d{0,18})/recitations/"
+        r"(?P<folder_id>[1-9]\d{0,18})/(?P<surah_number>\d{3})\.mp3$"
     )
 
     def _get_s3_client(self):
@@ -68,6 +70,9 @@ class AssetRecitationAudioTracksDirectUploadService:
             folder_id=int(match.group("folder_id")),
             surah_number=int(match.group("surah_number")),
         )
+        if parts.asset_id > self._MAX_BIGINT_ID or parts.folder_id > self._MAX_BIGINT_ID:
+            return None
+
         expected_key = self._build_key(
             asset_id=parts.asset_id,
             folder_id=parts.folder_id,
