@@ -33,6 +33,8 @@ if [ "${RUN_PREP:-0}" = "1" ]; then
     fi
 
     echo "Running database migrations..."
+    python manage.py reconcile_migration_names
+    python manage.py reconcile_migration_names --database=audit
     python manage.py migrate --noinput
     python manage.py migrate --database=audit --noinput
 
