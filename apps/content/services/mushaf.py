@@ -243,7 +243,7 @@ class MushafService:
             file=file,
         )
         logger.info(f"Mushaf version created [version_id={version.pk}, asset_id={asset.pk}, slug={mushaf_slug}]")
-        notify_asset_version_created.delay(version.pk)
+        transaction.on_commit(lambda: notify_asset_version_created.delay(version.pk))
         return version
 
     def update_mushaf_version(

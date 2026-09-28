@@ -260,11 +260,6 @@ _OUTCOME_TASK = "apps.content.tasks.send_access_request_outcome_email"
 
 
 class AssetAccessRequestServiceNotificationsTests(BaseTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.patch_on_commit()
-
     def setUp(self):
         super().setUp()
         self.service = AssetAccessRequestService(AssetAccessRequestRepository())
@@ -290,7 +285,7 @@ class AssetAccessRequestServiceNotificationsTests(BaseTestCase):
         asset = _make_asset(self.publisher, auto_accept=False)
         req = self._make_request(asset)
 
-        with patch(_OUTCOME_TASK) as mock_task:
+        with patch(_OUTCOME_TASK) as mock_task, self.captureOnCommitCallbacks(execute=True):
             self.service.accept(self.member, req.id)
 
         mock_task.delay.assert_called_once_with(req.id)
@@ -299,7 +294,7 @@ class AssetAccessRequestServiceNotificationsTests(BaseTestCase):
         asset = _make_asset(self.publisher, auto_accept=False)
         req = self._make_request(asset)
 
-        with patch(_OUTCOME_TASK) as mock_task:
+        with patch(_OUTCOME_TASK) as mock_task, self.captureOnCommitCallbacks(execute=True):
             self.service.reject(self.member, req.id, "no")
 
         mock_task.delay.assert_called_once_with(req.id)
@@ -317,7 +312,7 @@ class AssetAccessRequestServiceNotificationsTests(BaseTestCase):
     def test_request_access_auto_accept_enqueues_outcome_email(self):
         asset = _make_asset(self.publisher, auto_accept=True)
 
-        with patch(_OUTCOME_TASK) as mock_outcome:
+        with patch(_OUTCOME_TASK) as mock_outcome, self.captureOnCommitCallbacks(execute=True):
             request, _access = self.service.request_access(
                 user=self.developer, asset=asset, purpose="purpose", intended_use="non-commercial"
             )
@@ -328,7 +323,7 @@ class AssetAccessRequestServiceNotificationsTests(BaseTestCase):
         asset = _make_asset(self.publisher, auto_accept=False)
         existing = self._make_request(asset)
 
-        with patch(_OUTCOME_TASK) as mock_outcome:
+        with patch(_OUTCOME_TASK) as mock_outcome, self.captureOnCommitCallbacks(execute=True):
             request, _access = self.service.request_access(
                 user=self.developer, asset=asset, purpose="purpose", intended_use="non-commercial"
             )
@@ -342,7 +337,7 @@ class AssetAccessRequestServiceNotificationsTests(BaseTestCase):
         self.publisher.auto_accept_access_requests = True
         self.publisher.save(update_fields=["auto_accept_access_requests"])
 
-        with patch(_OUTCOME_TASK) as mock_outcome:
+        with patch(_OUTCOME_TASK) as mock_outcome, self.captureOnCommitCallbacks(execute=True):
             request, _access = self.service.request_access(
                 user=self.developer, asset=asset, purpose="purpose", intended_use="non-commercial"
             )

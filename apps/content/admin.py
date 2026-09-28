@@ -32,6 +32,7 @@ from .models import (
     ContentIssueReport,
     EditorialRecommendation,
     EditorialRecommendationAsset,
+    MushafLayout,
     Qiraah,
     RecitationAyahTiming,
     RecitationFolder,
@@ -109,7 +110,17 @@ class AssetAdmin(admin.ModelAdmin):
         (
             "Basic Information",
             {
-                "fields": ("name_en", "name_ar", "publisher", "category", "status", "riwayah", "qiraah"),
+                "fields": (
+                    "name_en",
+                    "name_ar",
+                    "publisher",
+                    "category",
+                    "template",
+                    "mushaf_layout",
+                    "status",
+                    "riwayah",
+                    "qiraah",
+                ),
             },
         ),
         (
@@ -151,6 +162,12 @@ class AssetAdmin(admin.ModelAdmin):
         ),
     )
     readonly_fields = ["created_at", "updated_at"]
+
+    def get_readonly_fields(self, request: HttpRequest, obj: Asset | None = None) -> list[str]:
+        readonly = list(super().get_readonly_fields(request, obj))
+        if obj is not None:
+            readonly += ["template", "mushaf_layout"]
+        return readonly
 
     def get_queryset(self, request):
         """Optimize queryset with annotations"""
@@ -561,6 +578,12 @@ class AssetVersionAdmin(admin.ModelAdmin):
     readonly_fields = ["created_at", "updated_at"]
 
 
+@admin.register(MushafLayout)
+class MushafLayoutAdmin(admin.ModelAdmin):
+    list_display = ("name", "page_count")
+    search_fields = ("name",)
+
+
 @admin.register(AssetPreview)
 class AssetPreviewAdmin(admin.ModelAdmin):
     list_display = ["asset", "image_url", "title", "description", "order", "created_at"]
@@ -861,10 +884,20 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
 
 @admin.register(RecitationAyahTiming)
 class RecitationAyahTimingAdmin(admin.ModelAdmin):
-    list_display = ["id", "track", "surah_name", "ayah_key", "start_ms", "end_ms", "duration_ms"]
+    list_display = [
+        "id",
+        "track",
+        "surah_name",
+        "ayah_key",
+        "start_ms",
+        "end_ms",
+        "duration_ms",
+        "size_bytes",
+        "audio_file",
+    ]
     list_filter = ["track__asset", "track__surah_number"]
     search_fields = ["ayah_key", "track__surah_number"]
-    readonly_fields = ["created_at", "updated_at"]
+    readonly_fields = ["created_at", "updated_at", "audio_file", "size_bytes"]
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("track", "track__asset")

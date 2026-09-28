@@ -241,7 +241,7 @@ class FontService:
             file=file,
         )
         logger.info(f"Font version created [version_id={version.pk}, asset_id={asset.pk}, slug={font_slug}]")
-        notify_asset_version_created.delay(version.pk)
+        transaction.on_commit(lambda: notify_asset_version_created.delay(version.pk))
         return version
 
     def update_font_version(

@@ -101,7 +101,7 @@ jobs:
           cache-to: type=gha,scope=django-dev,mode=max,compression=zstd
 
       - name: Start services
-        run: docker compose -f docker-compose.local.yml up -d --no-build postgres redis
+        run: docker compose -f docker-compose.local.yml up -d --no-build postgres audit-postgres redis
 
       - name: Check DB Migrations
         run: docker compose -f docker-compose.local.yml run --rm django uv run python manage.py makemigrations --check
@@ -109,6 +109,8 @@ jobs:
         run: docker compose -f docker-compose.local.yml run --rm django uv run manage.py extendedmakemessages --no-location --no-wrap --locale=ar --no-fuzzy-matching --keep-header --check
       - name: Run DB Migrations
         run: docker compose -f docker-compose.local.yml run --rm django uv run python manage.py migrate
+      - name: Run Audit DB Migrations
+        run: docker compose -f docker-compose.local.yml run --rm django uv run python manage.py migrate --database=audit
 
       # .mo files are gitignored, so the checkout has none. Tests that assert on
       # translated output need the catalog compiled first, same as the deploy does.

@@ -65,12 +65,20 @@ erDiagram
 
     Asset ||--o{ AssetVersion : "has versions"
     AssetVersion }o--|| ResourceVersion : "linked to"
+    Asset }o--o| MushafLayout : "paginated by (template=page)"
+
+    Asset ||--o{ AssetLanguage : "provides languages"
+    AssetVersion ||--o{ AssetVersionEntry : "holds entries"
+    AssetVersion ||--o{ AssetVersionChange : "records per-unit deltas"
+    AssetVersionChange ||--o| AssetVersionChangeReview : "reviewed as"
+    User ||--o{ ReviewerLanguage : "assigned to review"
 
     Asset ||--o{ AssetAccessRequest : "receives"
     Asset ||--o{ AssetAccess : "grants"
 
     User ||--o{ AssetAccessRequest : "submits"
     User ||--o{ AssetAccess : "holds"
+    User ||--o{ AssetVersionChangeReview : "reviews"
     User ||--o| Developer : "has profile"
 
     PUBLISHER {
@@ -105,11 +113,58 @@ erDiagram
         string category
         string license
         string format
+        string template
     }
 
     ASSETVERSION {
         file file_url
         int size_bytes
+    }
+
+    ASSETLANGUAGE {
+        int asset_id
+        string language
+        boolean is_source
+        string status
+    }
+
+    ASSETVERSIONENTRY {
+        int version_id
+        int sura_id
+        int ayah_id
+        int word_id
+        int page_no
+        text text
+        int order
+    }
+
+    ASSETVERSIONCHANGE {
+        int version_id
+        int sura_id
+        int ayah_id
+        int word_id
+        int page_no
+        string change_type
+        text old_text
+        text new_text
+    }
+
+    ASSETVERSIONCHANGEREVIEW {
+        int change_id
+        string state
+        text comment
+        int reviewed_by_id
+        datetime reviewed_at
+    }
+
+    REVIEWERLANGUAGE {
+        int user_id
+        string language
+    }
+
+    MUSHAFLAYOUT {
+        string name
+        int page_count
     }
 ```
 
@@ -158,6 +213,10 @@ An **Asset** is a **derivation** of a Resource. It represents content that has b
 - Can have multiple preview images
 - For recitation assets: linked to a **Reciter** and **Riwayah**, and owns one or more
   **RecitationFolder** variants (see [Recitation-Specific Components](#recitation-specific-components))
+- For text assets (translations and tafsirs): carries a **template** (`surah` / `ayah` /
+  `word` / `page`) that fixes the granularity its entries are keyed to — chosen at
+  creation and **immutable afterwards**. A `page`-template asset additionally links to
+  a **MushafLayout** (its pagination), which every other template leaves unset.
 
 ### 5. AssetVersion
 
@@ -166,6 +225,16 @@ Similar to ResourceVersion, **AssetVersion** tracks each uploaded file version o
 - Linked to both an Asset and a ResourceVersion
 - Contains the actual downloadable file
 - Enables tracking of which Asset version corresponds to which Resource version
+
+### 6. MushafLayout
+
+A **MushafLayout** describes one printed mushaf's pagination (e.g. "Madani 604" at
+604 pages). Pages are opaque numbered slots with no stored page-to-ayah mapping (an
+ayah can straddle a page boundary, which would make such a map lossy). Referenced by
+`Asset.mushaf_layout` for `page`-template text assets, and by nothing else.
+Migration `0068_seed_mushaf_layouts` seeds the two standard printings — Madinah
+Mushaf (604 pages) and Shamarly Mushaf (522 pages) — so every environment has
+layouts to choose from; further layouts are added through the portal.
 
 ---
 
@@ -188,6 +257,27 @@ flowchart LR
         E -.->|"New version"| G["AssetVersion<br/>(linked to v1.1.0)"]
     end
 ```
+
+### Multi-language content, availability & review
+
+Text assets (translations & tafsirs) hold one source-language rendition plus any
+number of translation renditions (`AssetLanguage`), each with its own version
+history. Every publish records a per-unit delta (`AssetVersionChange`), keyed to
+whichever unit the asset's template uses (surah, ayah, word or page).
+
+- **Availability** — a language is consumable only when the asset is `READY` and
+  the `AssetLanguage.status` is `READY`; translations start hidden until marked
+  available. Source availability follows the asset's own status.
+- **Editing** — changing a text asset's content (the content editor, uploading a
+  version file, restoring a version) needs the per-category
+  `PORTAL_EDIT_TRANSLATION_CONTENT` / `PORTAL_EDIT_TAFSIR_CONTENT`; `PORTAL_UPDATE_*`
+  covers metadata only (names, descriptions, license, version name/summary,
+  language availability). Both are limited to the member's assigned languages.
+- **Review (audit-only)** — reviewers with `PORTAL_REVIEW_CONTENT`, assigned to
+  languages via `ReviewerLanguage`, approve or comment ("needs changes") each
+  `AssetVersionChange`. State is stored one-per-change as `AssetVersionChangeReview`
+  with `reviewed_by`/`reviewed_at` for auditing. Reviewing does **not** gate
+  publishing or availability, and reviewers cannot edit content.
 
 ---
 
@@ -402,6 +492,9 @@ erDiagram
         string ayah_key
         int start_ms
         int end_ms
+        int duration_ms
+        file audio_file
+        int size_bytes
     }
 ```
 
@@ -459,10 +552,15 @@ row stores its own full key, so both layouts coexist permanently.
 **Ayah-timing exports.** `sync_asset_recitations_json_file` writes one `AssetVersion`
 per folder, named after the folder slug, so variants do not overwrite each other's JSON.
 
-> **Note:** `RecitationAyahTiming` already has the offsets needed to serve individual
-> ayah audio, but recitations are currently only distributed as full-surah files.
-> Preprocessing surah tracks into servable per-ayah clips is planned — see
-> [ROADMAP.md — §2](./ROADMAP.md#2-ayah-by-ayah-recitation-delivery).
+**Ayah-by-ayah sliced audio.** Per-ayah audio files are generated by the audio slicing
+pipeline (`RecitationAudioSlicingService`) and stored deterministically under
+`uploads/assets/{asset_id}/recitations/{folder_id}/{surah_number:03}/ayah_{ayah_number:03}.mp3`.
+The resulting storage key and exact byte size are recorded directly on `RecitationAyahTiming`
+(`audio_file` and `size_bytes`). The model uses `DeleteFilesOnDeleteMixin` to ensure that
+associated per-ayah audio files in storage are deleted when a timing record is removed.
+The public API serves these sliced files directly, falling back to proportional size estimates
+only for un-sliced records.
+
 
 ---
 

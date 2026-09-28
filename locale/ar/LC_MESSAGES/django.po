@@ -31,6 +31,9 @@ msgstr "حدث خطأ غير متوقع"
 msgid "You do not have access to this asset"
 msgstr "ليس لديك صلاحية الوصول إلى هذا المورد"
 
+msgid "Language not available for this asset"
+msgstr "اللغة غير متاحة لهذا المورد"
+
 msgid "No versions found for this asset"
 msgstr "لا توجد إصدارات لهذا الأصل"
 
@@ -48,6 +51,17 @@ msgid "Reciter with slug {slug} not found."
 msgstr "لم يتم العثور على القارئ بالمعرّف {slug}."
 
 #, python-brace-format
+msgid "Unsupported content category: {category}"
+msgstr "فئة محتوى غير مدعومة: {category}"
+
+#, python-brace-format
+msgid "Page {number}"
+msgstr "صفحة {number}"
+
+msgid "This version has no downloadable content."
+msgstr "لا يحتوي هذا الإصدار على محتوى قابل للتنزيل."
+
+#, python-brace-format
 msgid "Font with slug {slug} not found."
 msgstr "لم يتم العثور على الخط بالمعرّف {slug}."
 
@@ -57,6 +71,10 @@ msgstr "المعرّف asset_id {asset_id} المُقدَّم لا يطابق م
 
 msgid "Issue report not found."
 msgstr "بلاغ المشكلة غير موجود."
+
+#, python-brace-format
+msgid "Mushaf layout with id {id} not found."
+msgstr "تخطيط المصحف بالمعرّف {id} غير موجود."
 
 #, python-brace-format
 msgid "Mushaf with slug {slug} not found."
@@ -189,6 +207,18 @@ msgstr "مسودة"
 msgid "Ready"
 msgstr "جاهز"
 
+msgid "Surah based"
+msgstr "حسب السورة"
+
+msgid "Ayah based"
+msgstr "حسب الآية"
+
+msgid "Word based"
+msgstr "حسب الكلمة"
+
+msgid "Page based"
+msgstr "حسب الصفحة"
+
 msgid "Published"
 msgstr "منشور"
 
@@ -204,11 +234,26 @@ msgstr "صلة"
 msgid "Skoun"
 msgstr "سكون"
 
-msgid "Pending"
-msgstr "قيد الانتظار"
+msgid "An asset's template cannot be changed after creation."
+msgstr "لا يمكن تغيير قالب المادة بعد إنشائها."
+
+msgid "Added"
+msgstr "مضاف"
+
+msgid "Modified"
+msgstr "معدّل"
+
+msgid "Removed"
+msgstr "محذوف"
 
 msgid "Approved"
 msgstr "معتمد"
+
+msgid "Commented"
+msgstr "يحتاج إلى تعديل"
+
+msgid "Pending"
+msgstr "قيد الانتظار"
 
 msgid "Rejected"
 msgstr "مرفوض"
@@ -249,6 +294,9 @@ msgstr "يجب أن يكون الوصف 10 أحرف على الأقل."
 msgid "Description cannot exceed 2000 characters."
 msgstr "لا يمكن أن يتجاوز الوصف 2000 حرف."
 
+msgid "There are no changes to publish."
+msgstr "لا توجد تغييرات للنشر."
+
 #, python-brace-format
 msgid "You have {count} pending access request(s)"
 msgstr "لديك {count} طلب(ات) وصول معلقة"
@@ -270,7 +318,7 @@ msgstr "توقيت غير صالح للآية {ayah_number}: النهاية قب
 
 #, python-brace-format
 msgid "Folder {folder_id} not found for asset {asset_id}."
-msgstr ""
+msgstr "لم يتم العثور على المجلد {folder_id} للأصل {asset_id}."
 
 #, python-brace-format
 msgid "Asset {asset_id} not found"
@@ -332,6 +380,12 @@ msgstr "مطلوب مفتاح API للوصول إلى محتوى هذا الأص
 msgid "You don't have an approved access request for this asset."
 msgstr "ليس لديك طلب وصول مُوافَق عليه لهذا الأصل."
 
+msgid "The uploaded file could not be read."
+msgstr "تعذّرت قراءة الملف المرفوع."
+
+msgid "The uploaded file could not be parsed into content entries."
+msgstr "تعذّر تحليل الملف المرفوع إلى إدخالات محتوى."
+
 #, python-brace-format
 msgid "{category} with slug {slug} not found."
 msgstr "لم يتم العثور على {category} بالمعرّف {slug}."
@@ -344,11 +398,46 @@ msgid "Only draft versions can be edited."
 msgstr "لا يمكن تعديل سوى إصدارات المسودة."
 
 #, python-brace-format
+msgid "Units {units} are not part of this asset's template."
+msgstr "الوحدات {units} ليست جزءًا من قالب هذه المادة."
+
+#, python-brace-format
 msgid "Could not parse the uploaded content file: {reason}"
 msgstr "تعذر تحليل ملف المحتوى المرفوع: {reason}"
 
-msgid "There are no changes to publish."
-msgstr "لا توجد تغييرات للنشر."
+msgid "A commit message is required."
+msgstr "رسالة التغيير مطلوبة."
+
+msgid "Only published versions can be restored."
+msgstr "لا يمكن استعادة سوى الإصدارات المنشورة."
+
+#, python-brace-format
+msgid "Language {language} already exists for this asset."
+msgstr "اللغة {language} موجودة بالفعل لهذا المورد."
+
+#, python-brace-format
+msgid "Language {language} is not available for this asset."
+msgstr "اللغة {language} غير متاحة لهذا المورد."
+
+msgid "A language needs at least one published version before it can be made available."
+msgstr "تحتاج اللغة إلى إصدار منشور واحد على الأقل قبل أن يمكن إتاحتها."
+
+#, python-brace-format
+msgid "You are not assigned to the language {language}."
+msgstr "لم يتم تعيينك للغة {language}."
+
+#, python-brace-format
+msgid "Change with id {id} not found."
+msgstr "لم يتم العثور على التغيير بالمعرّف {id}."
+
+msgid "Invalid review state."
+msgstr "حالة مراجعة غير صالحة."
+
+msgid "A comment is required when requesting changes."
+msgstr "التعليق مطلوب عند طلب إجراء تعديلات."
+
+msgid "This asset has no content template."
+msgstr "هذه المادة ليس لها قالب محتوى."
 
 #, python-brace-format
 msgid "Publisher with id {id} not found."
@@ -400,6 +489,15 @@ msgstr "لا يمكن حذف المصحف لأن هناك بيانات أخرى 
 msgid "Version with id {id} not found for mushaf {slug}."
 msgstr "الإصدار ذو المعرف {id} غير موجود للمصحف {slug}."
 
+msgid "Mushaf layout name (Arabic or English) is required."
+msgstr "اسم تخطيط المصحف (بالعربية أو الإنجليزية) مطلوب."
+
+msgid "A mushaf layout with this name already exists."
+msgstr "يوجد تخطيط مصحف بهذا الاسم بالفعل."
+
+msgid "This layout is used by one or more assets and cannot be deleted."
+msgstr "هذا التخطيط مستخدم في مادة أو أكثر ولا يمكن حذفه."
+
 msgid "Recitation name (Arabic or English) is required."
 msgstr "اسم التلاوة (بالعربية أو الإنجليزية) مطلوب."
 
@@ -417,6 +515,42 @@ msgstr "لم يتم العثور على الرواية بالمعرّف {id}."
 
 msgid "Cannot delete Recitation because they are referenced through other objects"
 msgstr "لا يمكن حذف التلاوة لأن هناك بيانات أخرى مرتبطة بها"
+
+#, python-brace-format
+msgid "Surah {surah} is out of range (1-114)."
+msgstr "السورة {surah} خارج النطاق (1-114)."
+
+#, python-brace-format
+msgid "Invalid ayah range: from ({from_ayah}) must not exceed to ({to_ayah})."
+msgstr "نطاق الآيات غير صالح: من ({from_ayah}) يجب ألا تتجاوز إلى ({to_ayah})."
+
+#, python-brace-format
+msgid "Ayah range {from_ayah}-{to_ayah} is outside surah {surah} (1-{max})."
+msgstr "نطاق الآيات {from_ayah}-{to_ayah} خارج السورة {surah} (1-{max})."
+
+#, python-brace-format
+msgid "No track for surah {surah} on this recitation."
+msgstr "لا يوجد مقطع للسورة {surah} في هذه التلاوة."
+
+#, python-brace-format
+msgid "Default folder for asset {id} not found."
+msgstr "لم يتم العثور على المجلد الافتراضي للمورد {id}."
+
+#, python-brace-format
+msgid "Ayah {surah}:{ayah} has no timing on this track."
+msgstr "الآية {surah}:{ayah} ليس لها توقيت في هذا المقطع."
+
+#, python-brace-format
+msgid "Ayah range {from_ayah}-{to_ayah} has invalid timings."
+msgstr "نطاق الآيات {from_ayah}-{to_ayah} يحتوي على توقيتات غير صالحة."
+
+#, python-brace-format
+msgid "Ayah {ayah_key} not found."
+msgstr "لم يتم العثور على الآية {ayah_key}."
+
+#, python-brace-format
+msgid "Asset with id {id} not found."
+msgstr "لم يتم العثور على المورد ذو المعرف {id}."
 
 #, python-brace-format
 msgid "Folder with slug {slug} not found."
@@ -444,6 +578,22 @@ msgstr "لا يمكن حذف المجلد الافتراضي."
 msgid "Folder {folder_id} does not belong to asset {asset_id}."
 msgstr "المجلد {folder_id} لا ينتمي إلى الأصل {asset_id}."
 
+msgid "Audio storage is not configured."
+msgstr "التخزين الصوتي غير مُعد."
+
+msgid "Ayah-range audio is being built, please retry shortly."
+msgstr "المقطع الصوتي لنطاق الآيات قيد التجهيز، يرجى إعادة المحاولة بعد قليل."
+
+#, python-brace-format
+msgid "Failed to store ayah-range audio for track {track_id}."
+msgstr "تعذر حفظ المقطع الصوتي لنطاق الآيات لمسار التلاوة {track_id}."
+
+msgid "Building ayah-range audio timed out."
+msgstr "انتهت مهلة تجهيز المقطع الصوتي لنطاق الآيات."
+
+msgid "Failed to build ayah-range audio with ffmpeg."
+msgstr "تعذر إنشاء المقطع الصوتي لنطاق الآيات باستخدام ffmpeg."
+
 msgid "Reciter name (Arabic or English) is required."
 msgstr "اسم القارئ (بالعربية أو الإنجليزية) مطلوب."
 
@@ -452,6 +602,12 @@ msgstr "يوجد قارئ بهذا الاسم بالفعل."
 
 msgid "Cannot delete Reciter because they are referenced through other objects"
 msgstr "لا يمكن حذف القارئ لأن مرتبط به بيانات أخرى"
+
+msgid "A page-based asset requires a mushaf layout."
+msgstr "المادة المبنية على الصفحات تتطلب تخطيط مصحف."
+
+msgid "Only page-based assets can have a mushaf layout."
+msgstr "تخطيط المصحف متاح فقط للمواد المبنية على الصفحات."
 
 msgid "Tafsir name (Arabic or English) is required."
 msgstr "اسم التفسير (بالعربية أو الإنجليزية) مطلوب."
@@ -472,6 +628,18 @@ msgstr "لا يمكن حذف الترجمة لأن هناك بيانات أخر�
 #, python-brace-format
 msgid "Version with id {id} not found for translation {slug}."
 msgstr "الإصدار ذو المعرف {id} غير موجود للترجمة {slug}."
+
+msgid "The external user identifier cannot be empty."
+msgstr "لا يمكن أن يكون معرّف المستخدم الخارجي فارغاً."
+
+msgid "The external user identifier is too long."
+msgstr "معرّف المستخدم الخارجي طويل جداً."
+
+msgid "The external user identifier must not contain personal information."
+msgstr "يجب ألا يحتوي معرّف المستخدم الخارجي على معلومات شخصية."
+
+msgid "The external user identifier contains invalid characters."
+msgstr "يحتوي معرّف المستخدم الخارجي على أحرف غير صالحة."
 
 msgid "API key has expired."
 msgstr "انتهت صلاحية مفتاح API."
@@ -560,6 +728,18 @@ msgstr "لوحة التحكم - تحديث المصاحف"
 msgid "Portal - Delete Mushafs"
 msgstr "لوحة التحكم - حذف المصاحف"
 
+msgid "Portal - View Mushaf Layouts"
+msgstr "البوابة - عرض تخطيطات المصاحف"
+
+msgid "Portal - Create Mushaf Layouts"
+msgstr "البوابة - إنشاء تخطيطات المصاحف"
+
+msgid "Portal - Update Mushaf Layouts"
+msgstr "البوابة - تعديل تخطيطات المصاحف"
+
+msgid "Portal - Delete Mushaf Layouts"
+msgstr "البوابة - حذف تخطيطات المصاحف"
+
 msgid "Portal - View Fonts"
 msgstr "لوحة التحكم - عرض الخطوط"
 
@@ -617,9 +797,36 @@ msgstr "البوابة - قبول أو رفض طلبات الوصول"
 msgid "Portal - Manage Access Requests Settings"
 msgstr "البوابة - إدارة إعدادات طلبات الوصول"
 
+msgid "Portal - Review Content"
+msgstr "لوحة التحكم - مراجعة المحتوى"
+
+msgid "Portal - Edit Translation Content"
+msgstr "لوحة التحكم - تحرير محتوى الترجمات"
+
+msgid "Portal - Edit Tafsir Content"
+msgstr "لوحة التحكم - تحرير محتوى التفاسير"
+
+msgid "Portal - Access All Languages"
+msgstr "لوحة التحكم - الوصول إلى جميع اللغات"
+
+msgid "Portal - Add Asset Language"
+msgstr "لوحة التحكم - إضافة لغة إلى الأصل"
+
 #, python-brace-format
 msgid "Permissions are not synced to the database: {missing}. Run `manage.py migrate`."
 msgstr "الصلاحيات غير متزامنة مع قاعدة البيانات: {missing}. نفّذ الأمر `manage.py migrate`."
+
+msgid "GitHub"
+msgstr "GitHub"
+
+msgid "Opted in"
+msgstr "مشترك"
+
+msgid "Opted out"
+msgstr "غير مشترك"
+
+msgid "Suspended"
+msgstr "موقوف"
 
 #, python-brace-format
 msgid "Filename must end with surah number as 3 digits .mp3: {filename}"
@@ -628,6 +835,26 @@ msgstr "يجب أن ينتهي اسم الملف برقم السورة من 3 أ
 #, python-brace-format
 msgid "Surah number is out of range 1..114: {num}"
 msgstr "رقم السورة خارج النطاق 1..114: {num}"
+
+#, python-brace-format
+msgid "Asset {slug} has no eligible PACKAGE versions with valid SemVer names."
+msgstr "لا توجد إصدارات PACKAGE مؤهلة للمورد {slug} بأسماء SemVer صالحة."
+
+#, python-brace-format
+msgid "Canonical version collision detected for asset {slug}."
+msgstr "تم اكتشاف تعارض في الإصدار المكافئ للمورد {slug}."
+
+#, python-brace-format
+msgid "Invalid version constraint '{constraint}': {reason}."
+msgstr "قيد الإصدار '{constraint}' غير صالح: {reason}."
+
+#, python-brace-format
+msgid "Version {version} not found for asset {slug}."
+msgstr "الإصدار {version} غير موجود للمورد {slug}."
+
+#, python-brace-format
+msgid "No eligible PACKAGE version for asset {slug} satisfies constraint '{constraint}' ({range_desc})."
+msgstr "لا يوجد إصدار PACKAGE مؤهل للمورد {slug} يحقق القيد '{constraint}' ({range_desc})."
 
 msgid "You cannot change your own membership."
 msgstr "لا يمكنك تغيير عضويتك الخاصة."
@@ -713,8 +940,14 @@ msgstr "هذا البريد الإلكتروني مستخدم بالفعل."
 msgid "Personal info"
 msgstr "المعلومات الشخصية"
 
+msgid "Language assignments"
+msgstr "تعيينات اللغات"
+
 msgid "Important dates"
 msgstr "تواريخ مهمة"
+
+msgid "Assigned languages (per publisher)"
+msgstr "اللغات المعيّنة (لكل ناشر)"
 
 msgid "permissions"
 msgstr "الصلاحيات"
@@ -1183,6 +1416,12 @@ msgstr "مرحبًا بك في نظام إتقان لإدارة المحتوى!"
 
 msgid "This is a test email to verify the email service is working correctly."
 msgstr "هذه رسالة اختبارية للتأكد من عمل خدمة البريد الإلكتروني بشكل صحيح."
+
+#~ msgid "The uploaded file could not be parsed into ayah entries."
+#~ msgstr "تعذّر تحليل الملف المرفوع إلى إدخالات الآيات."
+
+#~ msgid "You are not assigned to review this language."
+#~ msgstr "لست مُكلَّفًا بمراجعة هذه اللغة."
 
 #, python-brace-format
 #~ msgid "A track for asset {asset_id} surah {surah_number} already exists."

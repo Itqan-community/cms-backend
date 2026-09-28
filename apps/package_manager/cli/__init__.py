@@ -1,0 +1,1 @@
+﻿"""Itqan Package Manager CLI."""

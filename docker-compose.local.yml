@@ -9,6 +9,12 @@ x-common-env: &common-env
   DB_PASSWORD: postgres
   DB_HOST: postgres
   DB_PORT: 5432
+  AUDIT_DB_ENGINE: django.db.backends.postgresql
+  AUDIT_DB_NAME: itqan_audit
+  AUDIT_DB_USER: postgres
+  AUDIT_DB_PASSWORD: postgres
+  AUDIT_DB_HOST: audit-postgres
+  AUDIT_DB_PORT: 5432
   REDIS_URL: redis://redis:6379/1
   CELERY_BROKER_URL: amqp://guest:guest@rabbitmq:5672//
   CELERY_RESULT_BACKEND: redis://redis:6379/0
@@ -31,6 +37,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      audit-postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
       rabbitmq:
@@ -52,6 +60,20 @@ services:
       retries: 5
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  audit-postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: itqan_audit
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - audit_postgres_data:/var/lib/postgresql/data
 
   redis:
     image: redis:7-alpine
@@ -93,6 +115,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      audit-postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
       rabbitmq:
@@ -114,6 +138,8 @@ services:
       - /app/.venv
     depends_on:
       postgres:
+        condition: service_healthy
+      audit-postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -140,4 +166,5 @@ services:
 
 volumes:
   postgres_data:
+  audit_postgres_data:
   rabbitmq_data:

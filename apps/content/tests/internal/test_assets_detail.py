@@ -1,7 +1,19 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, CategoryChoice, LicenseChoice, StatusChoice, UsageEvent
+from apps.content.models import (
+    Asset,
+    AssetLanguage,
+    AssetTemplateChoice,
+    AssetVersion,
+    CategoryChoice,
+    LicenseChoice,
+    MushafLayout,
+    StatusChoice,
+    UsageEvent,
+    VersionStateChoice,
+)
 from apps.core.tests.base import BaseTestCase
+from apps.publishers.models import Publisher
 from apps.users.models import User
 
 
@@ -17,6 +29,7 @@ class DetailAssetTest(BaseTestCase):
                 "Islamic interpretation."
             ),
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC_BY_SA,
             thumbnail_url="thumbnails/tafseer.png",
             status=StatusChoice.READY,
@@ -87,6 +100,7 @@ class DetailAssetTest(BaseTestCase):
                 name="Tafsir Asset",
                 description="desc",
                 category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
                 license=LicenseChoice.CC0,
                 thumbnail_url="thumbs/tafsir.png",
                 status=StatusChoice.READY,
@@ -137,6 +151,7 @@ class DetailAssetTest(BaseTestCase):
             description="وصف عربي",
             long_description="وصف عربي مطول",
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC0,
             thumbnail_url="thumbs/localized.png",
             status=StatusChoice.READY,
@@ -218,6 +233,7 @@ class DetailAssetTest(BaseTestCase):
             name="Usage Event Test Asset",
             description="Test asset for usage event tracking",
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC_BY,
             thumbnail_url="thumbnails/test.png",
             status=StatusChoice.READY,
@@ -322,6 +338,7 @@ class DetailAssetTest(BaseTestCase):
             name="Open Access Asset",
             description="An open access asset",
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC0,
             status=StatusChoice.READY,
             is_open_access=True,
@@ -343,6 +360,7 @@ class DetailAssetTest(BaseTestCase):
             name="Tenant Only Asset",
             description="A tenant-only asset",
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC0,
             status=StatusChoice.READY,
             restricted_for_tenant=True,
@@ -366,6 +384,7 @@ class DetailAssetTest(BaseTestCase):
             description="Test asset without thumbnail",
             long_description="This asset has no thumbnail URL to test optional field",
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC0,
             thumbnail_url=None,  # Test the optional field
             status=StatusChoice.READY,
@@ -392,6 +411,7 @@ class DetailAssetTest(BaseTestCase):
             name="Access Status Asset",
             description="desc",
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC_BY_SA,
             status=StatusChoice.READY,
         )
@@ -432,6 +452,7 @@ class DetailAssetTest(BaseTestCase):
             name="Tafsir Asset",
             description="desc",
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC0,
             status=StatusChoice.READY,
         )
@@ -442,3 +463,135 @@ class DetailAssetTest(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         self.assertIsNone(response.json()["reciter"])
+
+    def test_detail_assets_where_ayah_template_should_report_template_and_null_mushaf_layout(self):
+        # Arrange
+        asset = baker.make(
+            Asset,
+            name="Ayah Tafsir",
+            description="desc",
+            category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
+            license=LicenseChoice.CC0,
+            status=StatusChoice.READY,
+        )
+
+        # Act
+        response = self.client.get(f"/cms-api/assets/{asset.id}/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("ayah", body["template"])
+        self.assertIsNone(body["mushaf_layout"])
+
+    def test_detail_assets_where_page_template_should_report_template_and_populated_mushaf_layout(self):
+        # Arrange
+        layout = baker.make(MushafLayout, name="Madani 604", page_count=604)
+        asset = baker.make(
+            Asset,
+            name="Page Tafsir",
+            description="desc",
+            category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.PAGE,
+            mushaf_layout=layout,
+            license=LicenseChoice.CC0,
+            status=StatusChoice.READY,
+        )
+
+        # Act
+        response = self.client.get(f"/cms-api/assets/{asset.id}/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("page", body["template"])
+        self.assertEqual(
+            {"id": layout.id, "name": "Madani 604", "page_count": 604},
+            body["mushaf_layout"],
+        )
+
+    def test_detail_assets_where_non_text_category_should_report_null_template(self):
+        # Arrange
+        reciter = baker.make("content.Reciter", name="Test Reciter")
+        asset = baker.make(
+            Asset,
+            name="Recitation Asset",
+            description="desc",
+            category=CategoryChoice.RECITATION,
+            license=LicenseChoice.CC0,
+            reciter=reciter,
+            riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
+            status=StatusChoice.READY,
+        )
+
+        # Act
+        response = self.client.get(f"/cms-api/assets/{asset.id}/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertIsNone(body["template"])
+        self.assertIsNone(body["mushaf_layout"])
+
+
+class DetailAssetAvailableLanguagesTest(BaseTestCase):
+    """`available_languages` lists only languages that have a published version."""
+
+    def setUp(self):
+        super().setUp()
+        self.publisher = baker.make(Publisher, name="ML Publisher")
+        self.asset = baker.make(
+            Asset,
+            publisher=self.publisher,
+            name="Multi Tafsir",
+            category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
+            license=LicenseChoice.CC0,
+            status=StatusChoice.READY,
+            language="ar",
+        )
+
+    def test_available_languages_excludes_draft_only(self):
+        ar_lang = self.asset.get_or_create_source_language()
+        es_lang = AssetLanguage.objects.create(asset=self.asset, language="es")
+        # ar published, es only a draft
+        baker.make(AssetVersion, asset=self.asset, asset_language=ar_lang, state=VersionStateChoice.PUBLISHED)
+        baker.make(AssetVersion, asset=self.asset, asset_language=es_lang, state=VersionStateChoice.DRAFT)
+
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/", format="json")
+
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(["ar"], response.json()["available_languages"])
+
+    def test_available_languages_lists_all_available(self):
+        ar_lang = self.asset.get_or_create_source_language()
+        es_lang = AssetLanguage.objects.create(asset=self.asset, language="es", status=StatusChoice.READY)
+        baker.make(AssetVersion, asset=self.asset, asset_language=ar_lang, state=VersionStateChoice.PUBLISHED)
+        baker.make(AssetVersion, asset=self.asset, asset_language=es_lang, state=VersionStateChoice.PUBLISHED)
+
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/", format="json")
+
+        self.assertEqual(["ar", "es"], response.json()["available_languages"])
+
+    def test_available_languages_excludes_published_but_pending_language(self):
+        # A translation with a published version is still hidden until it is
+        # marked available (its AssetLanguage.status stays DRAFT).
+        ar_lang = self.asset.get_or_create_source_language()
+        es_lang = AssetLanguage.objects.create(asset=self.asset, language="es", status=StatusChoice.DRAFT)
+        baker.make(AssetVersion, asset=self.asset, asset_language=ar_lang, state=VersionStateChoice.PUBLISHED)
+        baker.make(AssetVersion, asset=self.asset, asset_language=es_lang, state=VersionStateChoice.PUBLISHED)
+
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/", format="json")
+
+        self.assertEqual(["ar"], response.json()["available_languages"])
+
+    def test_available_languages_empty_when_asset_not_ready(self):
+        self.asset.status = StatusChoice.DRAFT
+        self.asset.save(update_fields=["status"])
+        ar_lang = self.asset.get_or_create_source_language()
+        baker.make(AssetVersion, asset=self.asset, asset_language=ar_lang, state=VersionStateChoice.PUBLISHED)
+
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/", format="json")
+
+        self.assertEqual([], response.json()["available_languages"])

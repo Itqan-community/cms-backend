@@ -7,10 +7,19 @@ from django.db import transaction
 from django.db.models import ProtectedError, Q
 from django.utils.translation import gettext as _
 
-from apps.content.models import Asset as AssetModel, AssetVersion, CategoryChoice, LicenseChoice, StatusChoice
+from apps.content.models import (
+    Asset as AssetModel,
+    AssetTemplateChoice,
+    AssetVersion,
+    CategoryChoice,
+    LicenseChoice,
+    MushafLayout,
+    StatusChoice,
+)
 from apps.content.repositories.translation import TranslationRepository
 from apps.content.services.asset_access import guard_restrict_for_tenant
-from apps.content.services.asset_content import import_uploaded_file_into_entries
+from apps.content.services.asset_content import import_uploaded_file_into_entries, set_version_language
+from apps.content.services.mushaf_layout import MushafLayoutService
 from apps.content.tasks import notify_asset_version_created
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
@@ -18,7 +27,6 @@ from apps.publishers.models import Publisher
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-
     from apps.content.models import Asset
 
 
@@ -39,6 +47,24 @@ class TranslationService:
                 status_code=404,
             ) from exc
 
+    def _resolve_layout(self, template: str, mushaf_layout_id: int | None) -> MushafLayout | None:
+        """Validate the template/layout pairing and resolve the layout."""
+        if template == AssetTemplateChoice.PAGE:
+            if mushaf_layout_id is None:
+                raise ItqanError(
+                    error_name="mushaf_layout_required",
+                    message=_("A page-based asset requires a mushaf layout."),
+                    status_code=400,
+                )
+            return MushafLayoutService().get_or_404(mushaf_layout_id)
+        if mushaf_layout_id is not None:
+            raise ItqanError(
+                error_name="mushaf_layout_not_allowed",
+                message=_("Only page-based assets can have a mushaf layout."),
+                status_code=400,
+            )
+        return None
+
     def create_translation(
         self,
         *,
@@ -51,6 +77,8 @@ class TranslationService:
         long_description_en: str | None,
         license: LicenseChoice,
         language: str,
+        template: AssetTemplateChoice,
+        mushaf_layout_id: int | None = None,
         is_external: bool = False,
         external_url: str | None = None,
         is_open_access: bool = False,
@@ -90,6 +118,8 @@ class TranslationService:
         if not is_external:
             external_url = None
 
+        layout = self._resolve_layout(template, mushaf_layout_id)
+
         translation = self.repo.create_translation(
             publisher_id=publisher_id,
             name=name,
@@ -102,6 +132,8 @@ class TranslationService:
             long_description_en=long_description_en,
             license=license,
             language=language,
+            template=template,
+            mushaf_layout=layout,
             is_external=is_external,
             external_url=external_url,
             is_open_access=is_open_access,
@@ -156,6 +188,13 @@ class TranslationService:
         Validates name requirement, lets repository handle field setting and syncing.
         """
         asset = self._get_translation_or_404(translation_slug, publisher_q=publisher_q)
+
+        if "template" in fields or "mushaf_layout_id" in fields:
+            raise ItqanError(
+                error_name="asset_template_immutable",
+                message=_("An asset's template cannot be changed after creation."),
+                status_code=400,
+            )
 
         if fields.get("restricted_for_tenant") and not asset.restricted_for_tenant:
             guard_restrict_for_tenant(asset)
@@ -233,24 +272,33 @@ class TranslationService:
         name: str,
         summary: str = "",
         file: Any = None,
+        language: str | None = None,
+        strict: bool = False,
         publisher_q: Q | None = None,
     ) -> AssetVersion:
         """
         Business Logic: Create a new version for a translation.
+
+        Version creation, language assignment and file import run in one
+        transaction so an unregistered language or (when ``strict``) an
+        unparseable file rolls the whole thing back instead of leaving an
+        orphaned version behind.
         """
         asset = self._get_translation_or_404(translation_slug, publisher_q=publisher_q)
-        version = self.repo.create_translation_version(
-            asset,
-            name=name,
-            summary=summary,
-            file=file,
-        )
-        if file:
-            import_uploaded_file_into_entries(version)
+        with transaction.atomic():
+            version = self.repo.create_translation_version(
+                asset,
+                name=name,
+                summary=summary,
+                file=file,
+            )
+            set_version_language(version, language)
+            if file:
+                import_uploaded_file_into_entries(version, strict=strict)
         logger.info(
             f"Translation version created [version_id={version.pk}, asset_id={asset.pk}, slug={translation_slug}]"
         )
-        notify_asset_version_created.delay(version.pk)
+        transaction.on_commit(lambda: notify_asset_version_created.delay(version.pk))
         return version
 
     def update_translation_version(

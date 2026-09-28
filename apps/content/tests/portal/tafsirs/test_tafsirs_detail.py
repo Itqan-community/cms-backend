@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetVersion, CategoryChoice, StatusChoice
+from apps.content.models import Asset, AssetTemplateChoice, AssetVersion, CategoryChoice, StatusChoice
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
@@ -14,6 +14,7 @@ class TafsirDetailTest(BaseTestCase):
         self.tafsir = baker.make(
             Asset,
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             name="Tafsir Al-Tabari",

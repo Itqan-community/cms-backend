@@ -1,7 +1,7 @@
 from modeltranslation.decorators import register
 from modeltranslation.translator import TranslationOptions
 
-from .models import Asset, EditorialRecommendation, Qiraah, RecitationFolder, Reciter, Riwayah
+from .models import Asset, EditorialRecommendation, MushafLayout, Qiraah, RecitationFolder, Reciter, Riwayah
 
 
 @register(Asset)
@@ -36,3 +36,8 @@ class RecitationFolderTranslationOptions(TranslationOptions):
 @register(EditorialRecommendation)
 class EditorialRecommendationTranslationOptions(TranslationOptions):
     fields = ("title", "description")
+
+
+@register(MushafLayout)
+class MushafLayoutTranslationOptions(TranslationOptions):
+    fields = ("name",)

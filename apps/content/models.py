@@ -1,5 +1,7 @@
+from collections.abc import Sequence
 import logging
 import re
+from typing import Any
 
 from django.conf import settings
 from django.core.validators import FileExtensionValidator, MaxValueValidator, MinValueValidator
@@ -10,11 +12,13 @@ from django_countries.fields import CountryField
 
 from apps.core.mixins.storage import DeleteFilesOnDeleteMixin
 from apps.core.models import BaseModel
+from apps.core.ninja_utils.errors import ItqanError
 from apps.core.slugs import slugify_name
 from apps.core.uploads import (
     upload_to_asset_files,
     upload_to_asset_preview_images,
     upload_to_asset_thumbnails,
+    upload_to_recitation_ayah_audio,
     upload_to_recitation_surah_track_files,
     upload_to_reciter_image,
 )
@@ -56,6 +60,19 @@ class CategoryChoice(models.TextChoices):
 class StatusChoice(models.TextChoices):
     DRAFT = "draft", _("Draft")
     READY = "ready", _("Ready")
+
+
+class AssetTemplateChoice(models.TextChoices):
+    """Granularity of a text asset's content rows.
+
+    Chosen when the asset is created and immutable afterwards: it determines
+    which unit column every ``AssetVersionEntry`` for the asset is keyed to.
+    """
+
+    SURAH = "surah", _("Surah based")
+    AYAH = "ayah", _("Ayah based")
+    WORD = "word", _("Word based")
+    PAGE = "page", _("Page based")
 
 
 class VersionStateChoice(models.TextChoices):
@@ -113,6 +130,26 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         max_length=20,
         choices=CategoryChoice,
         help_text="Asset category matching resource categories",
+    )
+
+    template = models.CharField(
+        max_length=10,
+        choices=AssetTemplateChoice,
+        null=True,
+        blank=True,
+        help_text=(
+            "Content granularity for text assets (translation / tafsir). "
+            "Chosen at creation and immutable afterwards. NULL for every other category."
+        ),
+    )
+
+    mushaf_layout = models.ForeignKey(
+        "MushafLayout",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="assets",
+        help_text="Pagination this asset follows. Required when template is 'page', forbidden otherwise.",
     )
 
     license = models.CharField(max_length=50, choices=LicenseChoice, help_text="Asset license")
@@ -214,12 +251,99 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
                 | models.Q(is_external=True, external_url__isnull=False),
                 name="asset_external_url_consistency",
             ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    category__in=[CategoryChoice.TRANSLATION, CategoryChoice.TAFSIR],
+                    template__isnull=False,
+                )
+                | models.Q(
+                    ~models.Q(category__in=[CategoryChoice.TRANSLATION, CategoryChoice.TAFSIR]),
+                    template__isnull=True,
+                ),
+                name="asset_template_required_for_text",
+            ),
+            models.CheckConstraint(
+                # Three branches, not two. With only two, a row with template
+                # IS NULL and a layout set evaluates to SQL NULL (branch A is
+                # NULL AND TRUE; branch B is TRUE AND FALSE), and Postgres
+                # treats a NULL CHECK result as satisfied -- so a font asset
+                # could carry a mushaf layout. The third branch closes that.
+                #
+                # Branch A also needs its own explicit `template__isnull=False`:
+                # `template=PAGE` alone is a plain SQL equality, which is NULL
+                # (not FALSE) when template IS NULL. Without the explicit
+                # not-null check, `mushaf_layout__isnull=False AND template=PAGE`
+                # degrades to `TRUE AND NULL = NULL` for a non-page asset that
+                # carries a layout, and NULL OR ... OR ... is satisfied by
+                # Postgres exactly like the original two-branch hole -- the
+                # not-null check turns that into a definite FALSE instead.
+                condition=models.Q(
+                    template=AssetTemplateChoice.PAGE,
+                    template__isnull=False,
+                    mushaf_layout__isnull=False,
+                )
+                | models.Q(
+                    ~models.Q(template=AssetTemplateChoice.PAGE),
+                    template__isnull=False,
+                    mushaf_layout__isnull=True,
+                )
+                | models.Q(template__isnull=True, mushaf_layout__isnull=True),
+                name="asset_mushaf_layout_consistency",
+            ),
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Asset(name={self.name}, category={self.category})"
 
-    def save(self, *args, **kwargs):
+    @classmethod
+    def from_db(cls, db: str | None, field_names: Sequence[str], values: Sequence[Any]) -> "Asset":
+        instance = super().from_db(db, field_names, values)
+        instance._snapshot_template_fields(field_names, values)
+        return instance
+
+    def refresh_from_db(self, *args, **kwargs) -> None:
+        """Re-take the template snapshot after a refresh.
+
+        ``Model.refresh_from_db`` assigns values with ``setattr`` and never
+        routes through ``from_db``, so without this the guard would compare a
+        freshly-loaded template against a stale snapshot and reject an
+        unrelated save.
+        """
+        super().refresh_from_db(*args, **kwargs)
+        self._snapshot_template_fields()
+
+    def _snapshot_template_fields(
+        self,
+        field_names: Sequence[str] | None = None,
+        values: Sequence[Any] | None = None,
+    ) -> None:
+        """Record the persisted template so ``save`` can detect a mutation.
+
+        Read from the raw row rather than off the instance: on a deferred load
+        (``.only()`` / ``.defer()``) the attributes are unset, and touching one
+        triggers a refresh that re-enters ``from_db`` and recurses until
+        RecursionError. When the row did not carry both fields the snapshot is
+        marked unknown and ``save`` skips the comparison rather than guessing.
+        """
+        if field_names is None:
+            loaded = {"template": self.template, "mushaf_layout_id": self.mushaf_layout_id}
+        else:
+            loaded = dict(zip(field_names, values, strict=False))
+        self._template_snapshot_loaded = "template" in loaded and "mushaf_layout_id" in loaded
+        self._loaded_template = loaded.get("template")
+        self._loaded_mushaf_layout_id = loaded.get("mushaf_layout_id")
+
+    def save(self, *args, **kwargs) -> None:
+        if (
+            self.pk is not None
+            and getattr(self, "_template_snapshot_loaded", False)
+            and (self.template != self._loaded_template or self.mushaf_layout_id != self._loaded_mushaf_layout_id)
+        ):
+            raise ItqanError(
+                error_name="asset_template_immutable",
+                message=_("An asset's template cannot be changed after creation."),
+                status_code=400,
+            )
         if self.riwayah_id and not self.qiraah_id:
             self.qiraah_id = self.riwayah.qiraah_id
         if not self.slug:
@@ -258,8 +382,44 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
 
         return int(size * units.get(unit, 1))
 
-    def get_latest_version(self):
-        return self.versions.filter(state=VersionStateChoice.PUBLISHED).order_by("-created_at").first()
+    def get_latest_version(self, language: str | None = None):
+        """Latest published version, optionally scoped to a language.
+
+        ``language=None`` falls back to the asset's source language, preserving
+        the original single-language behaviour for existing callers.
+        """
+        lang = language or self.language
+        return (
+            self.versions.filter(state=VersionStateChoice.PUBLISHED, asset_language__language=lang)
+            .order_by("-created_at")
+            .first()
+        )
+
+    def get_or_create_source_language(self) -> "AssetLanguage":
+        """Return the asset's source-language rendition, creating it if missing.
+
+        The source language matches ``self.language``. Any version created without
+        an explicit language belongs here (single-language flows), so this is the
+        default used by ``AssetVersion.save()``.
+        """
+        source, created = AssetLanguage.objects.get_or_create(
+            asset=self,
+            language=self.language,
+            defaults={"is_source": True, "status": StatusChoice.READY},
+        )
+        # The source rendition is the asset's own content: it is always READY (its
+        # consumer availability is governed by the asset's own status). Repair any
+        # source row that predates this or was created as a plain translation.
+        fields_to_fix = []
+        if not source.is_source:
+            source.is_source = True
+            fields_to_fix.append("is_source")
+        if source.status != StatusChoice.READY:
+            source.status = StatusChoice.READY
+            fields_to_fix.append("status")
+        if fields_to_fix:
+            source.save(update_fields=fields_to_fix)
+        return source
 
     @property
     def human_readable_size(self):
@@ -267,8 +427,59 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         return self._parse_file_size_to_bytes(self.file_size)
 
 
+class AssetLanguage(BaseModel):
+    """One language an asset provides content in (source + translations).
+
+    A text asset (translation / tafsir) has one source-language rendition plus
+    any number of translated renditions, each with its own version history.
+    """
+
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="languages")
+    language = models.CharField(max_length=10, help_text="Language code, e.g. 'ar', 'es'")
+    is_source = models.BooleanField(
+        default=False,
+        help_text="True for the asset's original/source language (at most one per asset).",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=StatusChoice,
+        default=StatusChoice.DRAFT,
+        help_text=(
+            "Consumer availability of this language rendition. DRAFT hides it from "
+            "consumers (a translation in progress); READY makes it downloadable. The "
+            "source language is created READY (the asset's own Asset.status is the "
+            "overarching gate)."
+        ),
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["asset", "language"], name="unique_language_per_asset"),
+            models.UniqueConstraint(
+                fields=["asset"],
+                condition=models.Q(is_source=True),
+                name="unique_source_language_per_asset",
+            ),
+        ]
+
+    def __str__(self):
+        return f"AssetLanguage(asset_id={self.asset_id}, language={self.language}, source={self.is_source})"
+
+
 class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="versions")
+
+    asset_language = models.ForeignKey(
+        "AssetLanguage",
+        on_delete=models.PROTECT,
+        related_name="versions",
+        # Nullable at the DB level so tooling (model_bakery) doesn't fabricate a
+        # bogus rendition; save() always assigns the source language when unset,
+        # and AssetVersion is never bulk-created, so it is effectively required.
+        null=True,
+        blank=True,
+        help_text="Language rendition this version belongs to (defaults to the source language).",
+    )
 
     name = models.CharField(max_length=255, help_text="Asset version name")
 
@@ -327,16 +538,39 @@ class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
 
     class Meta:
         constraints = [
-            # At most one in-flight draft per asset (shared, get-or-create).
+            # At most one in-flight draft per (asset, language) (shared, get-or-create).
             models.UniqueConstraint(
-                fields=["asset"],
+                fields=["asset", "asset_language"],
                 condition=models.Q(state=VersionStateChoice.DRAFT),
-                name="unique_draft_version_per_asset",
+                name="unique_draft_version_per_asset_language",
             ),
         ]
 
+    def save(self, *args, **kwargs):
+        # A version with no explicit language belongs to the asset's source
+        # language (single-language flows: uploads, recitation, mushaf, fonts).
+        if self.asset_language_id is None and self.asset_id:
+            self.asset_language = self.asset.get_or_create_source_language()
+        # Invariant: a version's asset must match its language rendition's asset.
+        if self.asset_language_id and self.asset_id != self.asset_language.asset_id:
+            self.asset_id = self.asset_language.asset_id
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"AssetVersion(asset={self.asset.name}, name={self.name})"
+
+    @property
+    def resolved_language(self) -> str:
+        """The language code this version belongs to.
+
+        Its ``asset_language`` when set, else the asset's source language — legacy
+        rows predate per-language renditions and belong to the source. Authorization
+        gates the version by this value, so the fallback must live in exactly one
+        place rather than being re-derived per call site.
+        """
+        if self.asset_language_id:
+            return self.asset_language.language
+        return self.asset.language
 
     @property
     def human_readable_size(self):
@@ -360,7 +594,11 @@ class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
 
 
 class AssetVersionEntry(BaseModel):
-    """Per-ayah content of a text-based asset version (translation / tafsir).
+    """Per-unit content of a text-based asset version (translation / tafsir).
+
+    The unit is whichever one the asset's template names — a sura, an ayah, a
+    word, or a mushaf page — and exactly one of the four unit columns is set
+    per row (enforced by ``entry_exactly_one_unit``).
 
     Editing happens row-by-row against these entries rather than the version's
     uploaded file, so a single edit never rewrites a file. Coverage is sparse:
@@ -373,26 +611,189 @@ class AssetVersionEntry(BaseModel):
         related_name="entries",
         help_text="Asset version this entry belongs to",
     )
+    sura = models.ForeignKey(
+        "quran.Sura",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        help_text="Canonical sura (1-114) — set only for surah-template assets",
+    )
     ayah = models.ForeignKey(
         "quran.Ayah",
         on_delete=models.PROTECT,
+        null=True,
+        blank=True,
         related_name="+",
-        help_text="Canonical ayah (1-6236) this entry provides text for",
+        help_text="Canonical ayah (1-6236) — set only for ayah-template assets",
+    )
+    word = models.ForeignKey(
+        "quran.Word",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        help_text="Canonical word — set only for word-template assets",
+    )
+    page_no = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        help_text="Page within the asset's MushafLayout — set only for page-template assets",
     )
     text = models.TextField(blank=True, help_text="Translation / tafsir text for this ayah")
-    footnotes = models.TextField(blank=True, help_text="Footnotes or margin content for this ayah")
     order = models.PositiveIntegerField(default=0, help_text="Display order (defaults to the canonical ayah index)")
 
     class Meta:
         constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(sura__isnull=False, ayah__isnull=True, word__isnull=True, page_no__isnull=True)
+                    | models.Q(sura__isnull=True, ayah__isnull=False, word__isnull=True, page_no__isnull=True)
+                    | models.Q(sura__isnull=True, ayah__isnull=True, word__isnull=False, page_no__isnull=True)
+                    | models.Q(sura__isnull=True, ayah__isnull=True, word__isnull=True, page_no__isnull=False)
+                ),
+                name="entry_exactly_one_unit",
+            ),
             models.UniqueConstraint(fields=["version", "ayah"], name="unique_entry_per_version_ayah"),
+            models.UniqueConstraint(fields=["version", "sura"], name="unique_entry_per_version_sura"),
+            models.UniqueConstraint(fields=["version", "word"], name="unique_entry_per_version_word"),
+            models.UniqueConstraint(fields=["version", "page_no"], name="unique_entry_per_version_page"),
         ]
         indexes = [
             models.Index(fields=["version", "order"]),
         ]
 
+    def __str__(self) -> str:
+        return f"AssetVersionEntry(version={self.version_id}, unit={self.unit_id})"
+
+    @property
+    def unit_id(self) -> int | None:
+        """The canonical id of whichever unit this entry is keyed to.
+
+        None only on an unsaved instance with no unit set — the
+        ``entry_exactly_one_unit`` constraint guarantees exactly one on any
+        persisted row. Tested explicitly rather than by truthiness, so a
+        legitimate zero would not fall through to the next unit.
+        """
+        if self.sura_id is not None:
+            return self.sura_id
+        if self.ayah_id is not None:
+            return self.ayah_id
+        if self.word_id is not None:
+            return self.word_id
+        return self.page_no
+
+
+class ChangeTypeChoice(models.TextChoices):
+    ADDED = "added", _("Added")
+    MODIFIED = "modified", _("Modified")
+    REMOVED = "removed", _("Removed")
+
+
+class AssetVersionChange(BaseModel):
+    """One changed unit in a commit — the stored per-unit diff vs the predecessor.
+
+    Each published commit (AssetVersion) records its delta here, so the history
+    view can show what changed without recomputing, and pruned commits (whose full
+    entries were dropped) can be reconstructed by replaying these deltas.
+    """
+
+    version = models.ForeignKey(AssetVersion, on_delete=models.CASCADE, related_name="changes")
+    sura = models.ForeignKey(
+        "quran.Sura",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        help_text="Canonical sura (1-114) — set only for surah-template assets",
+    )
+    ayah = models.ForeignKey(
+        "quran.Ayah",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        help_text="Canonical ayah (1-6236) — set only for ayah-template assets",
+    )
+    word = models.ForeignKey(
+        "quran.Word",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        help_text="Canonical word — set only for word-template assets",
+    )
+    page_no = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        help_text="Page within the asset's MushafLayout — set only for page-template assets",
+    )
+    change_type = models.CharField(max_length=10, choices=ChangeTypeChoice)
+    old_text = models.TextField(blank=True, help_text="Previous text; empty for added")
+    new_text = models.TextField(blank=True, help_text="New text; empty for removed")
+    order = models.PositiveIntegerField(default=0, help_text="Ayah index, for display ordering")
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(sura__isnull=False, ayah__isnull=True, word__isnull=True, page_no__isnull=True)
+                    | models.Q(sura__isnull=True, ayah__isnull=False, word__isnull=True, page_no__isnull=True)
+                    | models.Q(sura__isnull=True, ayah__isnull=True, word__isnull=False, page_no__isnull=True)
+                    | models.Q(sura__isnull=True, ayah__isnull=True, word__isnull=True, page_no__isnull=False)
+                ),
+                name="change_exactly_one_unit",
+            ),
+            models.UniqueConstraint(fields=["version", "ayah"], name="unique_change_per_version_ayah"),
+            models.UniqueConstraint(fields=["version", "sura"], name="unique_change_per_version_sura"),
+            models.UniqueConstraint(fields=["version", "word"], name="unique_change_per_version_word"),
+            models.UniqueConstraint(fields=["version", "page_no"], name="unique_change_per_version_page"),
+        ]
+        indexes = [
+            models.Index(fields=["version", "order"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"AssetVersionChange(version_id={self.version_id}, unit={self.unit_id}, {self.change_type})"
+
+    @property
+    def unit_id(self) -> int | None:
+        """The canonical id of whichever unit this change is keyed to.
+
+        None only on an unsaved instance with no unit set — the
+        ``change_exactly_one_unit`` constraint guarantees exactly one on any
+        persisted row. Tested explicitly rather than by truthiness, so a
+        legitimate zero would not fall through to the next unit.
+        """
+        if self.sura_id is not None:
+            return self.sura_id
+        if self.ayah_id is not None:
+            return self.ayah_id
+        if self.word_id is not None:
+            return self.word_id
+        return self.page_no
+
+
+class ReviewStateChoice(models.TextChoices):
+    APPROVED = "approved", _("Approved")
+    COMMENTED = "commented", _("Commented")
+
+
+class AssetVersionChangeReview(BaseModel):
+    """A reviewer's outcome for a single AssetVersionChange (audit-only).
+
+    Absence of a row means the change is unreviewed. ``reviewed_by`` /
+    ``reviewed_at`` record who set the current state, for auditing.
+    """
+
+    change = models.OneToOneField(AssetVersionChange, on_delete=models.CASCADE, related_name="review")
+    state = models.CharField(max_length=20, choices=ReviewStateChoice)
+    comment = models.TextField(blank=True, help_text="Reviewer comment; required when state is commented")
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="+")
+    reviewed_at = models.DateTimeField()
+
     def __str__(self):
-        return f"AssetVersionEntry(version={self.version_id}, ayah={self.ayah_id})"
+        return f"AssetVersionChangeReview(change_id={self.change_id}, state={self.state})"
 
 
 class AssetPreview(DeleteFilesOnDeleteMixin, BaseModel):
@@ -678,6 +1079,27 @@ class Riwayah(BaseModel):
         return f"Riwayah(name={self.name})"
 
 
+class MushafLayout(BaseModel):
+    """A printed mushaf's pagination, referenced by page-based text assets.
+
+    Pages are opaque numbered slots (1..``page_count``). There is deliberately
+    no page-to-ayah mapping: an ayah can straddle a page boundary, so a
+    page-to-ayah-range map would be lossy.
+    """
+
+    name = models.CharField(max_length=128, unique=True, help_text="Layout name, e.g. 'Madani 604'")
+    page_count = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1)],
+        help_text="Number of pages in this mushaf printing",
+    )
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return f"MushafLayout(name={self.name}, pages={self.page_count})"
+
+
 class RecitationFolder(BaseModel):
     """
     A variant of a recitation Asset holding its own full set of surah tracks.
@@ -834,8 +1256,15 @@ class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
         super().save(*args, **kwargs)
 
 
-class RecitationAyahTiming(BaseModel):
-    """Timing information per-ayah within a RecitationSurahTrack"""
+class RecitationAyahTiming(DeleteFilesOnDeleteMixin, BaseModel):
+    """Timing information and sliced audio reference per-ayah within a RecitationSurahTrack.
+
+    ``audio_file`` and ``size_bytes`` are populated by the slicing pipeline task
+    (slice_recitation_track_task) after each successful per-ayah ffmpeg slice and
+    R2 upload. They remain null/0 for tracks that have not yet been sliced.
+    ``DeleteFilesOnDeleteMixin`` ensures the sliced MP3 is removed from storage
+    when this row is deleted.
+    """
 
     track = models.ForeignKey(RecitationSurahTrack, on_delete=models.CASCADE, related_name="ayah_timings")
     ayah_key = models.CharField(max_length=20, help_text='Format "surah_number:ayah_number" e.g. "2:255"')
@@ -843,6 +1272,17 @@ class RecitationAyahTiming(BaseModel):
     end_ms = models.PositiveIntegerField(help_text="End offset in milliseconds")
     duration_ms = models.PositiveIntegerField(
         default=0, help_text="Duration in milliseconds (auto-calculated as end_ms - start_ms)"
+    )
+    audio_file = models.FileField(
+        upload_to=upload_to_recitation_ayah_audio,
+        null=True,
+        blank=True,
+        validators=[FileExtensionValidator(allowed_extensions=["mp3"])],
+        help_text="Sliced per-ayah audio file (MP3); populated by the slicing pipeline.",
+    )
+    size_bytes = models.PositiveBigIntegerField(
+        default=0,
+        help_text="Sliced audio file size in bytes (auto-calculated on save when audio_file is present).",
     )
 
     class Meta:
@@ -858,6 +1298,18 @@ class RecitationAyahTiming(BaseModel):
         except Exception as e:
             logger.warning(f"Failed to compute ayah duration for {self.ayah_key}: {e}")
             self.duration_ms = 0
+
+        # Auto compute size_bytes from the sliced audio file when present.
+        # Mirrors the pattern used by RecitationSurahTrack.save(): only set when
+        # the value is not already known, so an explicit assignment by the slicer
+        # (which has the exact stat() byte count) is never overwritten.
+        if self.audio_file and not self.size_bytes:
+            try:
+                self.size_bytes = int(getattr(self.audio_file, "size", 0) or 0)
+            except Exception as e:
+                logger.warning(f"Failed to get file size for RecitationAyahTiming {self.ayah_key}: {e}")
+                self.size_bytes = 0
+
         super().save(*args, **kwargs)
 
 

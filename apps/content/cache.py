@@ -15,6 +15,7 @@ _SAFE_CACHE_TOKEN_RE = re.compile(r"^[a-z0-9_.-]{1,64}$")
 RECITATION_TRACKS_CACHE_TTL = 60 * 5  # 5 minutes
 RECITATION_ASSET_META_CACHE_TTL = 60 * 60  # 1 hour - asset name/publisher rarely changes
 RECITATION_RESPONSE_CACHE_TTL = 60 * 5  # 5 minutes
+RECITATION_AYAH_RESPONSE_CACHE_TTL = 60 * 5  # 5 minutes
 
 
 def recitation_tracks_cache_key(asset_id: int) -> str:
@@ -53,11 +54,29 @@ def recitation_response_cache_key(asset_id: int, page: int, page_size: int, fold
     return f"public_recitation_resp:{asset_id}:{folder_slug}:{page}:{page_size}"
 
 
+def recitation_range_cache_key(asset_id: int, surah_number: int, from_ayah: int, to_ayah: int, folder_slug: str) -> str:
+    # Combined ayah-range clip for one surah/folder variant. Keyed on the full
+    # range identity so repeat requests for the same passage hit Django cache
+    # (and R2, see RecitationRangeService) instead of re-running ffmpeg.
+    # Shares RECITATION_RESPONSE_CACHE_TTL with the track-list responses.
+    return f"public_recitation_range:{asset_id}:{surah_number}:{from_ayah}:{to_ayah}:{folder_slug}"
+
+
+def recitation_ayah_response_cache_key(asset_id: int, folder_token: str, ayah_key: str) -> str:
+    """Build the Redis cache key for a single ayah audio public response."""
+    return f"public_recitation_ayah_resp:{asset_id}:{folder_token}:{ayah_key}"
+
+
 def invalidate_recitation_tracks_cache(asset_id: int) -> None:
     # Deleting meta is sufficient: the view requires both resp AND meta for a cache hit,
     # so clearing meta forces a full DB rebuild on the next request. Stale resp bytes
     # for any (page, page_size) variant are overwritten on that rebuild and expire
     # naturally within RECITATION_RESPONSE_CACHE_TTL (5 min) for untouched variants.
+    # The same holds for ayah-range clips: the range view also requires its range
+    # resp key AND this meta key, so clearing meta busts range responses too while
+    # per-range bytes expire naturally. The persisted R2 range objects are
+    # deterministic (asset/folder/surah/from/to) and safe to keep: rebuilt timings
+    # produce the same key only when the underlying audio offsets are unchanged.
     cache.delete_many(
         [
             recitation_tracks_cache_key(asset_id),

@@ -30,6 +30,7 @@ class RecitationRepository(BaseRecitationRepository):
         self.track_model = RecitationSurahTrack
         self.riwayah_model = Riwayah
         self.qiraah_model = Qiraah
+        self.timing_model = RecitationAyahTiming
 
     def list_recitations_qs(
         self, publisher_q: Q | None, filters_dict: dict[str, Any], annotate_surahs_count: bool = False
@@ -268,6 +269,25 @@ class RecitationRepository(BaseRecitationRepository):
             .first()
         )
 
+    def get_single_track(
+        self, asset_id: int, surah_number: int, folder_id: int | None = None
+    ) -> RecitationSurahTrack | None:
+        # Single-surah track for the ayah-range endpoint, with timings prefetched
+        # in playback order. folder_id None serves the default variant (same
+        # convention as list_recitation_tracks_for_asset) so callers that omit
+        # ?folder keep working without resolving the folder first.
+        query = Q(asset_id=asset_id, surah_number=surah_number)
+        if folder_id is None:
+            query &= Q(folder__is_default=True)
+        else:
+            query &= Q(folder_id=folder_id)
+        return (
+            self.track_model.objects.select_related("folder")
+            .prefetch_related(Prefetch("ayah_timings", queryset=RecitationAyahTiming.objects.order_by("start_ms")))
+            .filter(query)
+            .first()
+        )
+
     def list_recitation_tracks_for_asset(
         self,
         asset_id: int,
@@ -419,3 +439,18 @@ class RecitationRepository(BaseRecitationRepository):
                 qs = qs.filter(slug__icontains=slug)
 
         return qs
+
+    def get_ayah_timing_for_asset(
+        self, asset_id: int, folder_id: int, surah_number: int, ayah_key: str
+    ) -> RecitationAyahTiming | None:
+        """Fetch the timing record for a specific ayah scoped by asset, folder, and surah."""
+        return (
+            self.timing_model.objects.select_related("track", "track__asset", "track__folder")
+            .filter(
+                track__asset_id=asset_id,
+                track__folder_id=folder_id,
+                track__surah_number=surah_number,
+                ayah_key=ayah_key,
+            )
+            .first()
+        )

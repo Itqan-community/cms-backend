@@ -64,6 +64,18 @@ settings.DATABASES["default"].update(
     }
 )
 
+settings.DATABASES["audit"].update(
+    {
+        "ENGINE": "django.db.backends.postgresql",
+        "CONN_MAX_AGE": 0,
+        "DISABLE_SERVER_SIDE_CURSORS": True,
+        "OPTIONS": {
+            "sslmode": "require",
+            "connect_timeout": 10,
+        },
+    }
+)
+
 # ============================================================
 # Cache
 # ============================================================

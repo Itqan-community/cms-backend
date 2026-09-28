@@ -1,7 +1,7 @@
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import PermissionDenied
 
-from apps.publishers.models import PublisherMember
+from apps.publishers.models import MemberLanguage, PublisherMember
 from apps.users.models import User
 
 
@@ -17,6 +17,23 @@ def enforce_publisher_membership(user: User, publisher_id: int) -> None:
     ).exists()
     if not is_active_member:
         raise PermissionDenied(_("You do not have access to this publisher."))
+
+
+def member_languages(user: User, publisher_id: int) -> set[str]:
+    """The languages this user is assigned to work in for this publisher.
+
+    Scoped to the user's ACTIVE membership in *that* publisher, so an assignment
+    made for one publisher never grants access to another publisher's content.
+    An empty set means the user works in no languages there; the bypass permission,
+    not an empty assignment, is how someone is granted every language.
+    """
+    return set(
+        MemberLanguage.objects.filter(
+            member__user=user,
+            member__publisher_id=publisher_id,
+            member__status=PublisherMember.StatusChoice.ACTIVE,
+        ).values_list("language", flat=True)
+    )
 
 
 def get_user_member_publisher_ids(user: User) -> list[int]:

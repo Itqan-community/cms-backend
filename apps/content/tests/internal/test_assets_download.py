@@ -1,13 +1,18 @@
 from unittest.mock import patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
 from django.utils import timezone
 from model_bakery import baker
 
+from apps.content.api.internal import assets_download
+from apps.content.api.internal.assets_download import generate_presigned_download_url
 from apps.content.models import (
     Asset,
     AssetAccess,
     AssetAccessRequest,
+    AssetLanguage,
+    AssetTemplateChoice,
     AssetVersion,
     CategoryChoice,
     LicenseChoice,
@@ -29,6 +34,7 @@ class TestAssetDownload(BaseTestCase):
             name="Test Asset",
             description="Test asset description",
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC_BY_SA,
             status=StatusChoice.READY,
         )
@@ -249,6 +255,7 @@ class TestAssetDownload(BaseTestCase):
             publisher=self.publisher,
             name="Open Access Asset",
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC0,
             status=StatusChoice.READY,
             is_open_access=True,
@@ -274,6 +281,7 @@ class TestAssetDownload(BaseTestCase):
             publisher=self.publisher,
             name="Open Access Asset Usage",
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC0,
             status=StatusChoice.READY,
             is_open_access=True,
@@ -337,6 +345,7 @@ class TestAssetDownload(BaseTestCase):
             publisher=self.publisher,
             name="Tenant Only Asset",
             category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC0,
             status=StatusChoice.READY,
             restricted_for_tenant=True,
@@ -349,3 +358,148 @@ class TestAssetDownload(BaseTestCase):
         # Assert
         self.assertEqual(404, response.status_code, response.content)
         self.assertEqual("not_found", response.json()["error_name"])
+
+
+class TestAssetDownloadLanguage(BaseTestCase):
+    """Per-language download resolution for multi-language assets."""
+
+    def setUp(self):
+        super().setUp()
+        self.publisher = baker.make(Publisher, name="ML Publisher")
+        self.asset = baker.make(
+            Asset,
+            publisher=self.publisher,
+            name="Multi Tafsir",
+            category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
+            license=LicenseChoice.CC0,
+            status=StatusChoice.READY,
+            is_open_access=True,
+            language="ar",
+        )
+        self.user = baker.make(User, email="ml@example.com")
+        ar_lang = self.asset.get_or_create_source_language()
+        es_lang = AssetLanguage.objects.create(asset=self.asset, language="es", status=StatusChoice.READY)
+        baker.make(
+            AssetVersion,
+            asset=self.asset,
+            asset_language=ar_lang,
+            name="ar v1",
+            file_url=SimpleUploadedFile("ar_source.csv", b"ar", content_type="text/csv"),
+        )
+        baker.make(
+            AssetVersion,
+            asset=self.asset,
+            asset_language=es_lang,
+            name="es v1",
+            file_url=SimpleUploadedFile("es_trans.csv", b"es", content_type="text/csv"),
+        )
+
+    def test_download_with_language_serves_that_language_file(self):
+        self.authenticate_user(self.user)
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/download/?language=es")
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertIn("/es_trans", response.json()["download_url"])
+
+    def test_download_without_language_serves_source(self):
+        self.authenticate_user(self.user)
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/download/")
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertIn("/ar_source", response.json()["download_url"])
+
+    def test_download_unknown_language_returns_404(self):
+        self.authenticate_user(self.user)
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/download/?language=zz")
+        self.assertEqual(404, response.status_code, response.content)
+
+    def test_download_pending_language_returns_404(self):
+        # A translation that exists and has a published file but has NOT been marked
+        # available (status DRAFT) must not be downloadable by consumers.
+        AssetLanguage.objects.filter(asset=self.asset, language="es").update(status=StatusChoice.DRAFT)
+        self.authenticate_user(self.user)
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/download/?language=es")
+        self.assertEqual(404, response.status_code, response.content)
+
+    def test_download_source_of_draft_asset_returns_404(self):
+        # The source rendition's availability follows the asset: a DRAFT asset is
+        # not consumable even without a language filter.
+        Asset.objects.filter(pk=self.asset.pk).update(status=StatusChoice.DRAFT)
+        self.authenticate_user(self.user)
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/download/")
+        self.assertEqual(404, response.status_code, response.content)
+
+
+@override_settings(CLOUDFLARE_R2_ENDPOINT="https://r2.example.com")
+class TestAssetDownloadFilename(BaseTestCase):
+    """The downloaded file is named like the portal's version export:
+    {english name}-{language}-{version name}{extension}."""
+
+    def setUp(self):
+        super().setUp()
+        self.publisher = baker.make(Publisher, name="Name Publisher")
+        self.user = baker.make(User, email="names@example.com")
+
+    def _asset(self, **kwargs) -> Asset:
+        asset = baker.make(
+            Asset,
+            publisher=self.publisher,
+            category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
+            license=LicenseChoice.CC0,
+            status=StatusChoice.READY,
+            is_open_access=True,
+            language="ar",
+            **kwargs,
+        )
+        baker.make(
+            AssetVersion,
+            asset=asset,
+            asset_language=asset.get_or_create_source_language(),
+            name="v 1",
+            file_url=SimpleUploadedFile("upload_8f3a.csv", b"1,1,text", content_type="text/csv"),
+        )
+        return asset
+
+    def _download_filename(self, asset: Asset) -> str:
+        with patch.object(
+            assets_download,
+            generate_presigned_download_url.__name__,
+            return_value="https://signed.example.com/file",
+        ) as presign:
+            self.authenticate_user(self.user)
+            response = self.client.get(f"/cms-api/assets/{asset.id}/download/")
+        self.assertEqual(200, response.status_code, response.content)
+        return presign.call_args.kwargs["filename"]
+
+    def test_download_asset_where_object_storage_should_name_file_with_name_language_and_version(self):
+        # Arrange
+        asset = self._asset(name="تفسير حسان", name_en="Hassaan Tafsir", name_ar="تفسير حسان")
+
+        # Act
+        filename = self._download_filename(asset)
+
+        # Assert
+        self.assertEqual(filename, "Hassaan_Tafsir-ar-v_1.csv")
+
+    def test_download_asset_where_no_english_name_should_fall_back_to_slug(self):
+        # Arrange
+        asset = self._asset(name="تفسير", name_en="", name_ar="تفسير", slug="tafsir-slug")
+
+        # Act
+        filename = self._download_filename(asset)
+
+        # Assert
+        self.assertEqual(filename, "tafsir-slug-ar-v_1.csv")
+
+    def test_download_asset_where_downloaded_should_return_the_file_name_for_the_client(self):
+        # Arrange
+        asset = self._asset(name="تفسير حسان", name_en="Hassaan Tafsir", name_ar="تفسير حسان")
+
+        # Act
+        with patch.object(assets_download, generate_presigned_download_url.__name__, return_value="https://signed"):
+            self.authenticate_user(self.user)
+            response = self.client.get(f"/cms-api/assets/{asset.id}/download/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(response.json()["filename"], "Hassaan_Tafsir-ar-v_1.csv")

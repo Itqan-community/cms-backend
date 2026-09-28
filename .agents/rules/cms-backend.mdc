@@ -120,6 +120,15 @@ raise ItqanError(
 ```
 - After adding any new translatable string (any call to `_(...)`), you **must** run `makemessages` as specified in the Actions section, then add the Arabic translation in `locale/ar/LC_MESSAGES/django.po`.
 
+### Localization check before commit (REQUIRED)
+Localization is **not done** until every translatable string has an Arabic translation. Before you tell the user the work is ready to commit, you **must** verify all of the following — this is a hard gate, not optional:
+- **No untranslated entries.** Every `msgid` in `locale/ar/LC_MESSAGES/django.po` has a non-empty `msgstr`. Verify with `msgfmt --check --statistics locale/ar/LC_MESSAGES/django.po -o /dev/null` and confirm it reports **0 untranslated messages** (and no errors). An empty `msgstr` silently falls back to English — that is the failure this check exists to catch.
+- **Catalog is complete.** Run `makemessages` (see Actions) so any newly added `_(...)` string is captured in the `.po`, then fill in its Arabic `msgstr`. Never leave a new string out of the catalog.
+- **No stray `fuzzy` flags** on real entries (a `#, fuzzy` marker makes the compiler skip that translation → English). A `fuzzy` flag on the header entry (`msgid ""`) is normal and fine.
+- **It compiles.** Run `compilemessages` (see Actions) and confirm it succeeds.
+- State the result of this check in your final summary (e.g. "localization: 363 translated, 0 untranslated"). If you added no translatable strings, say so explicitly.
+- Operational note: `runserver` caches the compiled catalog per process and does **not** reload it when the `.mo` changes — the server must be restarted to pick up new translations. Mention this when the user is testing translations.
+
 ## Documentation
 As the **last step of every task**, check whether the change made any documentation stale and update it in the same change set. Do not defer this to a follow-up task.
 

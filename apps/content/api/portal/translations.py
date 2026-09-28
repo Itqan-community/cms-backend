@@ -6,7 +6,15 @@ from ninja import File, FilterLookup, FilterSchema, Form, Query, Schema, Uploade
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
-from apps.content.models import Asset, AssetVersion, CategoryChoice, LicenseChoice, StatusChoice, VersionStateChoice
+from apps.content.models import (
+    Asset,
+    AssetTemplateChoice,
+    AssetVersion,
+    CategoryChoice,
+    LicenseChoice,
+    StatusChoice,
+    VersionStateChoice,
+)
 from apps.content.services.translation import TranslationService
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
@@ -31,6 +39,12 @@ class TranslationPublisherOut(Schema):
     name: str
 
 
+class MushafLayoutBriefOut(Schema):
+    id: int
+    name: str
+    page_count: int
+
+
 class TranslationListOut(Schema):
     id: int
     slug: str
@@ -43,6 +57,8 @@ class TranslationListOut(Schema):
     is_open_access: bool
     restricted_for_tenant: bool
     thumbnail_url: str | None = None
+    template: AssetTemplateChoice | None = None
+    mushaf_layout: MushafLayoutBriefOut | None = None
     created_at: AwareDatetime
 
     @staticmethod
@@ -77,6 +93,8 @@ class TranslationDetailOut(Schema):
     external_url: str | None = None
     is_open_access: bool
     restricted_for_tenant: bool
+    template: AssetTemplateChoice | None = None
+    mushaf_layout: MushafLayoutBriefOut | None = None
     versions: list[TranslationVersionOut]
     created_at: AwareDatetime
 
@@ -110,6 +128,8 @@ class TranslationCreateIn(Schema):
     restricted_for_tenant: bool = False
     version_name: str | None = Field(default=None, max_length=255)
     version_summary: str = ""
+    template: AssetTemplateChoice
+    mushaf_layout_id: int | None = None
 
 
 class TranslationPutIn(Schema):
@@ -152,6 +172,7 @@ class TranslationFilter(FilterSchema):
     license_code: Annotated[list[str] | None, FilterLookup(q="license__in")] = None
     language: Annotated[str | None, FilterLookup(q="language")] = None
     is_external: Annotated[bool | None, FilterLookup(q="is_external")] = None
+    template: AssetTemplateChoice | None = None
 
 
 # --- Endpoints ---
@@ -163,7 +184,7 @@ class TranslationFilter(FilterSchema):
 @ordering(ordering_fields=["id", "name", "created_at", "updated_at"])
 @searching(search_fields=["name", "name_ar", "description", "description_ar", "publisher__name"])
 def list_translations(request: Request, filters: TranslationFilter = Query()):
-    qs = Asset.objects.select_related("publisher").filter(
+    qs = Asset.objects.select_related("publisher", "mushaf_layout").filter(
         request.publisher_q(),
         category=CategoryChoice.TRANSLATION,
         status=StatusChoice.READY,
@@ -178,6 +199,8 @@ def list_translations(request: Request, filters: TranslationFilter = Query()):
         qs = qs.filter(language=language)
     if "is_external" in filters_dict:
         qs = qs.filter(is_external=filters_dict["is_external"])
+    if template := filters_dict.get("template"):
+        qs = qs.filter(template=template)
 
     return qs.distinct()
 
@@ -188,8 +211,11 @@ def list_translations(request: Request, filters: TranslationFilter = Query()):
         201: TranslationDetailOut,
         400: NinjaErrorResponse[Literal["translation_name_required"]]
         | NinjaErrorResponse[Literal["external_url_required"]]
-        | NinjaErrorResponse[Literal["version_name_required"]],
-        404: NinjaErrorResponse[Literal["publisher_not_found"]],
+        | NinjaErrorResponse[Literal["version_name_required"]]
+        | NinjaErrorResponse[Literal["mushaf_layout_required"]]
+        | NinjaErrorResponse[Literal["mushaf_layout_not_allowed"]],
+        404: NinjaErrorResponse[Literal["publisher_not_found"]]
+        | NinjaErrorResponse[Literal["mushaf_layout_not_found"]],
     },
 )
 @permission_required([permission_class(PermissionChoice.PORTAL_CREATE_TRANSLATION)])
@@ -220,6 +246,8 @@ def create_translation(
         external_url=data.external_url,
         is_open_access=data.is_open_access,
         restricted_for_tenant=data.restricted_for_tenant,
+        template=data.template,
+        mushaf_layout_id=data.mushaf_layout_id,
     )
     logger.info(f"Translation created [translation_id={translation.id}, user_id={request.user.id}]")
     return 201, translation
@@ -236,7 +264,7 @@ def create_translation(
 def retrieve_translation(request: Request, translation_slug: str) -> Asset:
     try:
         return (
-            Asset.objects.select_related("publisher")
+            Asset.objects.select_related("publisher", "mushaf_layout")
             .prefetch_related("versions")
             .filter(request.publisher_q())
             .get(
@@ -258,7 +286,8 @@ def retrieve_translation(request: Request, translation_slug: str) -> Asset:
     response={
         200: TranslationDetailOut,
         400: NinjaErrorResponse[Literal["translation_name_required"]]
-        | NinjaErrorResponse[Literal["external_url_required"]],
+        | NinjaErrorResponse[Literal["external_url_required"]]
+        | NinjaErrorResponse[Literal["asset_template_immutable"]],
         404: NinjaErrorResponse[Literal["translation_not_found"]],
     },
 )
@@ -283,7 +312,8 @@ def update_translation_put(
     response={
         200: TranslationDetailOut,
         400: NinjaErrorResponse[Literal["translation_name_required"]]
-        | NinjaErrorResponse[Literal["external_url_required"]],
+        | NinjaErrorResponse[Literal["external_url_required"]]
+        | NinjaErrorResponse[Literal["asset_template_immutable"]],
         404: NinjaErrorResponse[Literal["translation_not_found"]],
     },
 )

@@ -16,6 +16,7 @@ class NinjaTag(models.TextChoices):
     TAFSIRS = "Tafsirs"
     TRANSLATIONS = "Translations"
     MUSHAFS = "Mushafs"
+    MUSHAF_LAYOUTS = "Mushaf Layouts"
     FONTS = "Fonts"
     FILTERS = "Filters"
     USAGE = "Usage"
@@ -23,3 +24,5 @@ class NinjaTag(models.TextChoices):
     GROUPS = "Groups"
     QURAN = "Quran"
     SAMPLE_DATA = "Sample Data"
+    PACKAGES = "Packages"
+    DEPENDABOT = "Dependabot"

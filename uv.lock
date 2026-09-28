@@ -742,6 +742,18 @@ wheels = [
 ]
 
 [[package]]
+name = "django-simple-history"
+version = "3.13.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6b/1c/0689c13c0aa36df828947692f4e309f93c58e075219735c423edbbf6227d/django_simple_history-3.13.0.tar.gz", hash = "sha256:ca3c1e4ccd5f16f45fbbef6015ee2a246465fd9bd924100df8e9dfb368c4f26c", size = 236759, upload-time = "2026-07-22T13:41:29.588Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/65/60/41b2055db523b18a7ef67d0ce7c7c3204bf1b01e388628c8ce578daca7ec/django_simple_history-3.13.0-py3-none-any.whl", hash = "sha256:1cf1d83054479f64aee022023afc1671843aa0a99888799c5c4c3966b0252521", size = 82040, upload-time = "2026-07-22T13:41:28.083Z" },
+]
+
+[[package]]
 name = "django-storages"
 version = "1.14.6"
 source = { registry = "https://pypi.org/simple" }
@@ -1147,16 +1159,20 @@ dependencies = [
     { name = "django-phonenumber-field", extra = ["phonenumbers"] },
     { name = "django-plain-permissions" },
     { name = "django-redis" },
+    { name = "django-simple-history" },
     { name = "django-storages", extra = ["s3"] },
     { name = "djangorestframework" },
     { name = "djangosaml2idp" },
     { name = "flower" },
+    { name = "httpx" },
     { name = "mixpanel" },
     { name = "mutagen" },
     { name = "ninja-keys" },
     { name = "pillow" },
     { name = "psycopg2-binary" },
+    { name = "pyjwt" },
     { name = "python-decouple" },
+    { name = "pyyaml" },
     { name = "redis" },
     { name = "scalar-ninja" },
     { name = "unidecode" },
@@ -1214,17 +1230,21 @@ requires-dist = [
     { name = "django-phonenumber-field", extras = ["phonenumbers"], specifier = "==8.4.0" },
     { name = "django-plain-permissions", specifier = "==0.0.2" },
     { name = "django-redis", specifier = "==6.0.*" },
+    { name = "django-simple-history", specifier = ">=3.13.0" },
     { name = "django-storages", extras = ["s3"], specifier = "==1.14.*" },
     { name = "djangorestframework", specifier = ">=3.16.1" },
     { name = "djangosaml2idp", specifier = ">=0.7.2" },
     { name = "flower", specifier = "==2.0.*" },
     { name = "gunicorn", marker = "extra == 'prod'", specifier = "==21.2.*" },
+    { name = "httpx", specifier = "==0.28.*" },
     { name = "mixpanel", specifier = ">=4.10.1" },
     { name = "mutagen", specifier = ">=1.47.0" },
     { name = "ninja-keys", git = "https://github.com/hassaanalansary/ninja-keys.git" },
     { name = "pillow", specifier = ">=10.3.0" },
     { name = "psycopg2-binary", specifier = "==2.9.11" },
+    { name = "pyjwt", specifier = "==2.12.*" },
     { name = "python-decouple", specifier = "==3.8" },
+    { name = "pyyaml", specifier = "==6.0.*" },
     { name = "redis", specifier = "==6.4.0" },
     { name = "scalar-ninja", specifier = "==0.3.0" },
     { name = "sentry-sdk", extras = ["django"], marker = "extra == 'prod'", specifier = "==2.53.0" },
