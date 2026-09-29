@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetLanguage, AssetVersion, CategoryChoice
+from apps.content.models import Asset, AssetLanguage, AssetTemplateChoice, AssetVersion, CategoryChoice
 from apps.content.services.asset_language_backfill import backfill_source_languages
 from apps.core.tests.base import BaseTestCase
 
@@ -15,7 +15,7 @@ class BackfillSourceLanguagesTest(BaseTestCase):
     """
 
     def test_creates_source_language_when_missing(self):
-        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, language="ar")
+        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH, language="ar")
 
         backfill_source_languages(Asset, AssetLanguage, AssetVersion)
 
@@ -23,7 +23,7 @@ class BackfillSourceLanguagesTest(BaseTestCase):
         self.assertEqual("ar", source.language)
 
     def test_promotes_existing_language_to_source(self):
-        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, language="ar")
+        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH, language="ar")
         AssetLanguage.objects.create(asset=asset, language="ar", is_source=False)
 
         backfill_source_languages(Asset, AssetLanguage, AssetVersion)
@@ -32,7 +32,7 @@ class BackfillSourceLanguagesTest(BaseTestCase):
         self.assertTrue(source.is_source)
 
     def test_is_idempotent(self):
-        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, language="ar")
+        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH, language="ar")
 
         backfill_source_languages(Asset, AssetLanguage, AssetVersion)
         backfill_source_languages(Asset, AssetLanguage, AssetVersion)

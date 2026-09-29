@@ -54,6 +54,10 @@ msgstr "لم يتم العثور على القارئ بالمعرّف {slug}."
 msgid "Unsupported content category: {category}"
 msgstr "فئة محتوى غير مدعومة: {category}"
 
+#, python-brace-format
+msgid "Page {number}"
+msgstr "صفحة {number}"
+
 msgid "This version has no downloadable content."
 msgstr "لا يحتوي هذا الإصدار على محتوى قابل للتنزيل."
 
@@ -67,6 +71,10 @@ msgstr "المعرّف asset_id {asset_id} المُقدَّم لا يطابق م
 
 msgid "Issue report not found."
 msgstr "بلاغ المشكلة غير موجود."
+
+#, python-brace-format
+msgid "Mushaf layout with id {id} not found."
+msgstr "تخطيط المصحف بالمعرّف {id} غير موجود."
 
 #, python-brace-format
 msgid "Mushaf with slug {slug} not found."
@@ -199,6 +207,18 @@ msgstr "مسودة"
 msgid "Ready"
 msgstr "جاهز"
 
+msgid "Surah based"
+msgstr "حسب السورة"
+
+msgid "Ayah based"
+msgstr "حسب الآية"
+
+msgid "Word based"
+msgstr "حسب الكلمة"
+
+msgid "Page based"
+msgstr "حسب الصفحة"
+
 msgid "Published"
 msgstr "منشور"
 
@@ -213,6 +233,9 @@ msgstr "صلة"
 
 msgid "Skoun"
 msgstr "سكون"
+
+msgid "An asset's template cannot be changed after creation."
+msgstr "لا يمكن تغيير قالب المادة بعد إنشائها."
 
 msgid "Added"
 msgstr "مضاف"
@@ -360,8 +383,8 @@ msgstr "ليس لديك طلب وصول مُوافَق عليه لهذا الأ�
 msgid "The uploaded file could not be read."
 msgstr "تعذّرت قراءة الملف المرفوع."
 
-msgid "The uploaded file could not be parsed into ayah entries."
-msgstr "تعذّر تحليل الملف المرفوع إلى إدخالات الآيات."
+msgid "The uploaded file could not be parsed into content entries."
+msgstr "تعذّر تحليل الملف المرفوع إلى إدخالات محتوى."
 
 #, python-brace-format
 msgid "{category} with slug {slug} not found."
@@ -373,6 +396,10 @@ msgstr "الإصدار ذو المعرف {id} غير موجود."
 
 msgid "Only draft versions can be edited."
 msgstr "لا يمكن تعديل سوى إصدارات المسودة."
+
+#, python-brace-format
+msgid "Units {units} are not part of this asset's template."
+msgstr "الوحدات {units} ليست جزءًا من قالب هذه المادة."
 
 #, python-brace-format
 msgid "Could not parse the uploaded content file: {reason}"
@@ -408,6 +435,9 @@ msgstr "حالة مراجعة غير صالحة."
 
 msgid "A comment is required when requesting changes."
 msgstr "التعليق مطلوب عند طلب إجراء تعديلات."
+
+msgid "This asset has no content template."
+msgstr "هذه المادة ليس لها قالب محتوى."
 
 #, python-brace-format
 msgid "Publisher with id {id} not found."
@@ -458,6 +488,15 @@ msgstr "لا يمكن حذف المصحف لأن هناك بيانات أخرى 
 #, python-brace-format
 msgid "Version with id {id} not found for mushaf {slug}."
 msgstr "الإصدار ذو المعرف {id} غير موجود للمصحف {slug}."
+
+msgid "Mushaf layout name (Arabic or English) is required."
+msgstr "اسم تخطيط المصحف (بالعربية أو الإنجليزية) مطلوب."
+
+msgid "A mushaf layout with this name already exists."
+msgstr "يوجد تخطيط مصحف بهذا الاسم بالفعل."
+
+msgid "This layout is used by one or more assets and cannot be deleted."
+msgstr "هذا التخطيط مستخدم في مادة أو أكثر ولا يمكن حذفه."
 
 msgid "Recitation name (Arabic or English) is required."
 msgstr "اسم التلاوة (بالعربية أو الإنجليزية) مطلوب."
@@ -563,6 +602,12 @@ msgstr "يوجد قارئ بهذا الاسم بالفعل."
 
 msgid "Cannot delete Reciter because they are referenced through other objects"
 msgstr "لا يمكن حذف القارئ لأن مرتبط به بيانات أخرى"
+
+msgid "A page-based asset requires a mushaf layout."
+msgstr "المادة المبنية على الصفحات تتطلب تخطيط مصحف."
+
+msgid "Only page-based assets can have a mushaf layout."
+msgstr "تخطيط المصحف متاح فقط للمواد المبنية على الصفحات."
 
 msgid "Tafsir name (Arabic or English) is required."
 msgstr "اسم التفسير (بالعربية أو الإنجليزية) مطلوب."
@@ -683,6 +728,18 @@ msgstr "لوحة التحكم - تحديث المصاحف"
 msgid "Portal - Delete Mushafs"
 msgstr "لوحة التحكم - حذف المصاحف"
 
+msgid "Portal - View Mushaf Layouts"
+msgstr "البوابة - عرض تخطيطات المصاحف"
+
+msgid "Portal - Create Mushaf Layouts"
+msgstr "البوابة - إنشاء تخطيطات المصاحف"
+
+msgid "Portal - Update Mushaf Layouts"
+msgstr "البوابة - تعديل تخطيطات المصاحف"
+
+msgid "Portal - Delete Mushaf Layouts"
+msgstr "البوابة - حذف تخطيطات المصاحف"
+
 msgid "Portal - View Fonts"
 msgstr "لوحة التحكم - عرض الخطوط"
 
@@ -742,6 +799,12 @@ msgstr "البوابة - إدارة إعدادات طلبات الوصول"
 
 msgid "Portal - Review Content"
 msgstr "لوحة التحكم - مراجعة المحتوى"
+
+msgid "Portal - Edit Translation Content"
+msgstr "لوحة التحكم - تحرير محتوى الترجمات"
+
+msgid "Portal - Edit Tafsir Content"
+msgstr "لوحة التحكم - تحرير محتوى التفاسير"
 
 msgid "Portal - Access All Languages"
 msgstr "لوحة التحكم - الوصول إلى جميع اللغات"
@@ -1353,6 +1416,9 @@ msgstr "مرحبًا بك في نظام إتقان لإدارة المحتوى!"
 
 msgid "This is a test email to verify the email service is working correctly."
 msgstr "هذه رسالة اختبارية للتأكد من عمل خدمة البريد الإلكتروني بشكل صحيح."
+
+#~ msgid "The uploaded file could not be parsed into ayah entries."
+#~ msgstr "تعذّر تحليل الملف المرفوع إلى إدخالات الآيات."
 
 #~ msgid "You are not assigned to review this language."
 #~ msgstr "لست مُكلَّفًا بمراجعة هذه اللغة."

@@ -16,6 +16,7 @@ class NinjaTag(models.TextChoices):
     TAFSIRS = "Tafsirs"
     TRANSLATIONS = "Translations"
     MUSHAFS = "Mushafs"
+    MUSHAF_LAYOUTS = "Mushaf Layouts"
     FONTS = "Fonts"
     FILTERS = "Filters"
     USAGE = "Usage"
