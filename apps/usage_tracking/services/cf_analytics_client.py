@@ -121,6 +121,8 @@ class CloudflareAnalyticsClient:
         response.raise_for_status()
         payload: dict[str, Any] = response.json()
 
+        logger.info("CloudflareAnalyticsClient: received response payload from CF =%)s", list(payload))
+
         if payload.get("errors"):
             logger.error("CloudflareAnalyticsClient: GraphQL errors: %s", payload["errors"])
             raise CloudflareGraphQLError(str(payload["errors"]))
