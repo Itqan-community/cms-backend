@@ -47,6 +47,17 @@ class RecitationService:
             )
         return recitation
 
+    def get_recitation_for_upload(self, asset_id: int, publisher_q: Q | None = None) -> Asset:
+        """Resolve an upload target inside the caller's publisher scope."""
+        recitation = self.repo.get_recitation_by_id(asset_id, publisher_q=publisher_q)
+        if recitation is None:
+            raise ItqanError(
+                error_name="asset_not_found",
+                message=_("Asset with id {id} not found.").format(id=asset_id),
+                status_code=404,
+            )
+        return recitation
+
     def create_recitation(
         self,
         *,
@@ -307,7 +318,7 @@ class RecitationService:
         if from_ayah < 1 or to_ayah > ayahs_count:
             raise ItqanError(
                 error_name="validation_error",
-                message=_("Ayah range {from_ayah}-{to_ayah} is outside surah " "{surah} (1-{max}).").format(
+                message=_("Ayah range {from_ayah}-{to_ayah} is outside surah {surah} (1-{max}).").format(
                     from_ayah=from_ayah,
                     to_ayah=to_ayah,
                     surah=surah_number,
@@ -509,9 +520,7 @@ class RecitationService:
             CLOUDFLARE_R2_PUBLIC_BASE_URL,
         ).rstrip("/")
 
-        slice_key = (
-            f"uploads/assets/{asset_id}/recitations/" f"{folder_obj.id}/{surah_number:03}/" f"ayah_{ayah_number:03}.mp3"
-        )
+        slice_key = f"uploads/assets/{asset_id}/recitations/{folder_obj.id}/{surah_number:03}/ayah_{ayah_number:03}.mp3"
 
         audio_url = f"{base_url}/media/{slice_key}"
 

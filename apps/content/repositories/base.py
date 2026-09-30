@@ -27,6 +27,11 @@ class BaseRecitationRepository(ABC):
         pass
 
     @abstractmethod
+    def get_recitation_by_id(self, asset_id: int, publisher_q: Q | None = None) -> Asset | None:
+        """Retrieve a recitation asset by ID, optionally scoped by publisher."""
+        pass
+
+    @abstractmethod
     def list_recitation_tracks_for_asset(
         self,
         asset_id: int,
