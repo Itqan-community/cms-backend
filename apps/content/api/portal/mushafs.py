@@ -8,6 +8,7 @@ from pydantic import AwareDatetime
 
 from apps.content.models import Asset, AssetVersion, CategoryChoice, LicenseChoice, StatusChoice
 from apps.content.services.mushaf import MushafService
+from apps.core.mixins.storage import absolute_file_url
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.permission_required import permission_required
@@ -60,10 +61,8 @@ class MushafVersionOut(Schema):
     created_at: AwareDatetime
 
     @staticmethod
-    def resolve_file_url(obj: AssetVersion) -> str | None:
-        if obj.file_url:
-            return obj.file_url.url
-        return None
+    def resolve_file_url(obj: AssetVersion, context: dict) -> str | None:
+        return absolute_file_url(context["request"], obj.file_url)
 
 
 class MushafDetailOut(Schema):

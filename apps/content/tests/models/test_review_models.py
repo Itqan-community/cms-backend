@@ -4,6 +4,7 @@ from model_bakery import baker
 
 from apps.content.models import (
     Asset,
+    AssetTemplateChoice,
     AssetVersion,
     AssetVersionChange,
     AssetVersionChangeReview,
@@ -30,7 +31,9 @@ class MemberLanguageModelTest(BaseTestCase):
 class AssetVersionChangeReviewModelTest(BaseTestCase):
     def setUp(self):
         super().setUp()
-        self.asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, language="ar")
+        self.asset = baker.make(
+            Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH, language="ar"
+        )
         self.version = baker.make(AssetVersion, asset=self.asset)
         self.sura = baker.make(Sura, id=1, name="الفاتحة", ayas_count=3)
         self.ayah = baker.make(Ayah, id=1, sura=self.sura, number_in_sura=1, text="a")

@@ -16,6 +16,7 @@ from apps.core.tests.base import BaseTestCase
 
 
 class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
+
     def _make_asset_with_default_folder(self) -> tuple[Asset, RecitationFolder]:
         """Build a recitation asset plus the default folder every recitation now has."""
         asset = baker.make(

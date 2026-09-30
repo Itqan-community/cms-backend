@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetLanguage, CategoryChoice, StatusChoice
+from apps.content.models import Asset, AssetLanguage, AssetTemplateChoice, CategoryChoice, StatusChoice
 from apps.content.services.asset_content import AssetContentService
 from apps.content.services.asset_language import AssetLanguageService
 from apps.core.ninja_utils.errors import ItqanError
@@ -17,6 +17,7 @@ class AssetLanguageServiceTest(BaseTestCase):
         self.translation = baker.make(
             Asset,
             category=CategoryChoice.TRANSLATION,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
             name="French Rashid",

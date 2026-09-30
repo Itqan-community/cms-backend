@@ -87,16 +87,23 @@ class Command(BaseCommand):
         ]
         Ayah.objects.bulk_create(ayahs, batch_size=WORD_BATCH_SIZE)
 
-        words = [
-            Word(
-                id=int(row["id"]),
-                sura_id=int(row["sura_id"]),
-                ayah_id=int(row["aya_id"]),
-                position_in_ayah=int(row["aya_index"]),
-                text=row["word"],
+        # The CSV has no word-position column (its aya_index is the ayah's number
+        # within its sura), so number each ayah's words 1..n in word-id order.
+        words = []
+        next_position: dict[int, int] = {}
+        for row in sorted(word_rows, key=lambda r: int(r["id"])):
+            ayah_id = int(row["aya_id"])
+            position = next_position.get(ayah_id, 1)
+            next_position[ayah_id] = position + 1
+            words.append(
+                Word(
+                    id=int(row["id"]),
+                    sura_id=int(row["sura_id"]),
+                    ayah_id=ayah_id,
+                    position_in_ayah=position,
+                    text=row["word"],
+                )
             )
-            for row in word_rows
-        ]
         Word.objects.bulk_create(words, batch_size=WORD_BATCH_SIZE)
 
         sura_count = Sura.objects.count()

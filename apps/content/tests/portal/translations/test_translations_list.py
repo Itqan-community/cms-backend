@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, CategoryChoice, StatusChoice
+from apps.content.models import Asset, AssetTemplateChoice, CategoryChoice, StatusChoice
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
@@ -17,6 +17,7 @@ class TranslationListTest(BaseTestCase):
         self.translation1 = baker.make(
             Asset,
             category=CategoryChoice.TRANSLATION,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher1,
             status=StatusChoice.READY,
             name="Sahih International",
@@ -31,6 +32,7 @@ class TranslationListTest(BaseTestCase):
         self.translation2 = baker.make(
             Asset,
             category=CategoryChoice.TRANSLATION,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher2,
             status=StatusChoice.READY,
             name="Pickthall Translation",
@@ -47,6 +49,7 @@ class TranslationListTest(BaseTestCase):
         baker.make(
             Asset,
             category=CategoryChoice.TRANSLATION,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher1,
             status=StatusChoice.DRAFT,
             name="Draft Translation",
@@ -139,6 +142,7 @@ class TranslationListTest(BaseTestCase):
         external_translation = baker.make(
             Asset,
             category=CategoryChoice.TRANSLATION,
+            template=AssetTemplateChoice.AYAH,
             publisher=self.publisher1,
             status=StatusChoice.READY,
             is_external=True,
