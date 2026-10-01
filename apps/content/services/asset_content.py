@@ -308,6 +308,7 @@ class AssetContentService:
         source_text_by_unit = (
             self.repo.entry_text_map(source_version, spec, unit_ids) if source_version is not None else {}
         )
+        changed_units = self._changed_units(asset, version, spec, text_by_unit, unit_ids)
 
         rows = [
             {
@@ -320,10 +321,33 @@ class AssetContentService:
                 "text": text_by_unit.get(unit.unit_id, ""),
                 "source_text": source_text_by_unit.get(unit.unit_id),
                 "order": unit.order,
+                "changed": unit.unit_id in changed_units,
             }
             for unit in units
         ]
         return rows, total
+
+    def _changed_units(
+        self,
+        asset: Asset,
+        version: AssetVersion,
+        spec: UnitSpec,
+        text_by_unit: dict[int, str],
+        unit_ids: list[int],
+    ) -> set[int]:
+        """Units whose draft text differs from the language's latest published
+        version — what a commit would record (added, modified or removed).
+
+        A unit missing from either side reads as empty text, so an empty draft row
+        with nothing published is unchanged, and clearing published text is a
+        change. Only drafts are compared; any other version reports no changes.
+        """
+        if version.state != VersionStateChoice.DRAFT:
+            return set()
+        language = version.asset_language.language if version.asset_language_id else asset.language
+        head = asset.get_latest_version(language)
+        published = self.repo.published_text_map(head, spec, unit_ids) if head is not None else {}
+        return {unit_id for unit_id in unit_ids if (text_by_unit.get(unit_id) or "") != (published.get(unit_id) or "")}
 
     def _resolve_source_text(
         self, asset: Asset, version: AssetVersion, spec: UnitSpec, unit_ids: list[int]
@@ -355,13 +379,14 @@ class AssetContentService:
         version_id: int,
         changed: list[AssetVersionEntry],
         publisher_q: Q | None = None,
-    ) -> tuple[str, dict[int, str]]:
-        """``(asset.template, source_text_by_unit)`` for shaping a patch response.
+    ) -> tuple[str, dict[int, str], set[int]]:
+        """``(asset.template, source_text_by_unit, changed_units)`` for shaping a
+        patch response.
 
-        Uses the same source-text overlay rule as ``get_entries_page``, resolved
-        once for the whole patched batch rather than per row, so the autosave
-        response matches what the next GET would show instead of going blank
-        until the page is reloaded.
+        Uses the same source-text overlay and changed rules as
+        ``get_entries_page``, resolved once for the whole patched batch rather
+        than per row, so the autosave response matches what the next GET would
+        show instead of going blank until the page is reloaded.
         """
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
         version = self.repo.get_version(asset, version_id)
@@ -374,7 +399,9 @@ class AssetContentService:
         spec = unit_spec_for(asset)
         unit_ids = [entry.unit_id for entry in changed if entry.unit_id is not None]
         source_text_by_unit = self._resolve_source_text(asset, version, spec, unit_ids)
-        return asset.template, source_text_by_unit
+        text_by_unit = {entry.unit_id: entry.text for entry in changed if entry.unit_id is not None}
+        changed_units = self._changed_units(asset, version, spec, text_by_unit, unit_ids)
+        return asset.template, source_text_by_unit, changed_units
 
     def get_version_or_404(
         self,

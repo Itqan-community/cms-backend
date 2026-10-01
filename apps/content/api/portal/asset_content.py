@@ -130,9 +130,17 @@ class EntryOut(Schema):
     text: str
     source_text: str | None = None
     order: int
+    # Draft text differs from the latest published version (always False
+    # outside drafts).
+    changed: bool = False
 
 
-def _entries_to_out(entries: list[AssetVersionEntry], template: str, source_text_by_unit: dict[int, str]) -> list[dict]:
+def _entries_to_out(
+    entries: list[AssetVersionEntry],
+    template: str,
+    source_text_by_unit: dict[int, str],
+    changed_units: set[int],
+) -> list[dict]:
     """Build ``EntryOut``-shaped dicts for a batch of persisted entries.
 
     Resolves each entry's related unit (ayah / sura / word) via one bulk
@@ -185,6 +193,7 @@ def _entries_to_out(entries: list[AssetVersionEntry], template: str, source_text
                 "text": entry.text,
                 "source_text": source_text_by_unit.get(entry.unit_id),
                 "order": entry.unit_id,
+                "changed": entry.unit_id in changed_units,
             }
         )
     return rows
@@ -400,10 +409,10 @@ def patch_entries(request: Request, category: str, slug: str, version_id: int, d
     service = AssetContentService()
     rows = [row.model_dump() for row in data.rows]
     changed = service.upsert_entries(slug, resolved, version_id, rows, publisher_q=request.publisher_q())
-    template, source_text_by_unit = service.get_patch_response_context(
+    template, source_text_by_unit, changed_units = service.get_patch_response_context(
         slug, resolved, version_id, changed, publisher_q=request.publisher_q()
     )
-    return _entries_to_out(changed, template, source_text_by_unit)
+    return _entries_to_out(changed, template, source_text_by_unit, changed_units)
 
 
 @router.get(

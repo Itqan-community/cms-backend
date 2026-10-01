@@ -112,6 +112,18 @@ class AssetContentRepository:
         rows = version.entries.filter(**lookup).values_list(spec.field, "text")
         return dict(rows)
 
+    def published_text_map(self, head: AssetVersion, spec: UnitSpec, unit_ids: list[int]) -> dict[int, str]:
+        """The latest published version's text for the given units.
+
+        The head keeps its full entries (only superseded commits are pruned), so
+        this is normally one page-sized query; a head stored only as a legacy
+        file is reconstructed in full and narrowed to the requested units.
+        """
+        if head.entries.exists():
+            return self.entry_text_map(head, spec, unit_ids)
+        snapshot = self.reconstruct_entries(head)
+        return {unit_id: snapshot[unit_id] for unit_id in unit_ids if unit_id in snapshot}
+
     @transaction.atomic
     def ensure_mushaf_coverage(self, draft: AssetVersion, mushaf_version: AssetVersion) -> int:
         """Add empty-text rows for any mushaf ayahs the draft doesn't cover yet.
