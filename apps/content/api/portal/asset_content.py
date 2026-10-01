@@ -13,10 +13,10 @@ from ninja import Query, Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
-from apps.content.models import AssetTemplateChoice, AssetVersion, AssetVersionEntry, CategoryChoice
+from apps.content.models import AssetTemplateChoice, AssetVersion, AssetVersionEntry, CategoryChoice, MushafLayout
 from apps.content.services.asset_content import AssetContentService
 from apps.content.services.asset_language_access import require_language, require_version_language
-from apps.content.services.asset_templates import unit_spec_for
+from apps.content.services.asset_templates import unit_spec_for, unit_spec_for_template
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.paginations import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 from apps.core.ninja_utils.request import Request
@@ -445,3 +445,69 @@ def export_version(request: Request, category: str, slug: str, version_id: int):
     # content_disposition_header safely handles non-ASCII (Arabic) and quoted names.
     response["Content-Disposition"] = content_disposition_header(as_attachment=True, filename=filename)
     return response
+
+
+def _csv_template_response(content: bytes, filename: str) -> HttpResponse:
+    response = HttpResponse(content, content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = content_disposition_header(as_attachment=True, filename=filename)
+    return response
+
+
+@router.get(
+    "content/{category}/csv-template/",
+    response={
+        400: NinjaErrorResponse[Literal["mushaf_layout_required"]],
+        404: NinjaErrorResponse[Literal["mushaf_layout_not_found"]]
+        | NinjaErrorResponse[Literal["unsupported_content_category"]],
+    },
+)
+def download_csv_template(
+    request: Request, category: str, template: AssetTemplateChoice, mushaf_layout_id: int | None = None
+):
+    """An empty CSV to fill in for a template, before the asset exists (asset
+    creation): one row per surah / ayah / word / page, blank ``text``. A page
+    template needs the mushaf layout, which sets the number of pages."""
+    _resolve(category, request, access="read")
+    page_count = None
+    filename = f"{template}-template.csv"
+    if template == AssetTemplateChoice.PAGE:
+        if mushaf_layout_id is None:
+            raise ItqanError(
+                error_name="mushaf_layout_required",
+                message=_("Choose a mushaf layout to download the page template."),
+                status_code=400,
+            )
+        try:
+            layout = MushafLayout.objects.get(pk=mushaf_layout_id)
+        except MushafLayout.DoesNotExist as exc:
+            raise ItqanError(
+                error_name="mushaf_layout_not_found",
+                message=_("Mushaf layout with id {id} not found.").format(id=mushaf_layout_id),
+                status_code=404,
+            ) from exc
+        page_count = layout.page_count
+        filename = "_".join(f"page-{layout.name}-template.csv".split())
+    content = AssetContentService().repo.blank_template_csv_bytes(
+        unit_spec_for_template(template), page_count=page_count
+    )
+    return _csv_template_response(content, filename)
+
+
+@router.get(
+    "content/{category}/{slug}/csv-template/",
+    response={
+        400: NinjaErrorResponse[Literal["asset_template_missing"]],
+        404: NinjaErrorResponse[Literal["translation_not_found"]]
+        | NinjaErrorResponse[Literal["tafsir_not_found"]]
+        | NinjaErrorResponse[Literal["unsupported_content_category"]],
+    },
+)
+def download_asset_csv_template(request: Request, category: str, slug: str):
+    """An empty CSV to fill in for an existing asset's template (version upload
+    and replace): one row per unit of its template, blank ``text``."""
+    resolved = _resolve(category, request, access="read")
+    service = AssetContentService()
+    asset = service._get_asset_or_404(slug, resolved, publisher_q=request.publisher_q())
+    content = service.repo.blank_template_csv_bytes(unit_spec_for(asset), page_count=service.repo.page_count(asset))
+    filename = "_".join(f"{asset.name_en or slug}-{asset.template}-template.csv".split())
+    return _csv_template_response(content, filename)
