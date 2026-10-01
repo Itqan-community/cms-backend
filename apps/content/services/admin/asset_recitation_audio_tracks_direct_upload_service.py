@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from contextlib import closing
 from dataclasses import dataclass
-from io import BytesIO
 import logging
 import re
+from tempfile import TemporaryFile
 from typing import Any
 
 import boto3
@@ -33,6 +34,7 @@ class RecitationUploadKeyParts:
 
 class AssetRecitationAudioTracksDirectUploadService:
     _MAX_BIGINT_ID = 2**63 - 1
+    _DOWNLOAD_CHUNK_SIZE = 1024 * 1024
     _UPLOAD_KEY_RE = re.compile(
         r"^uploads/assets/(?P<asset_id>[1-9]\d{0,18})/recitations/"
         r"(?P<folder_id>[1-9]\d{0,18})/(?P<surah_number>\d{3})\.mp3$"
@@ -198,8 +200,12 @@ class AssetRecitationAudioTracksDirectUploadService:
             try:
                 logger.info("backend server are computing duration_ms instead of parsing it directly from frontend!")
                 obj = s3.get_object(Bucket=settings.CLOUDFLARE_R2_BUCKET, Key=r2_key)
-                data = obj["Body"].read()
-                duration_ms = get_mp3_duration_ms(BytesIO(data))
+                with closing(obj["Body"]) as body, TemporaryFile(mode="w+b") as audio_file:
+                    for chunk in body.iter_chunks(chunk_size=self._DOWNLOAD_CHUNK_SIZE):
+                        audio_file.write(chunk)
+
+                    audio_file.seek(0)
+                    duration_ms = get_mp3_duration_ms(audio_file)
             except Exception as e:
                 logger.warning(f"Failed to compute MP3 duration for {r2_key}: {e}")
                 duration_ms = 0
