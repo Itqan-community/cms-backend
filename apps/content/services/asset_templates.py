@@ -182,3 +182,8 @@ def unit_spec_for(asset: Asset) -> UnitSpec:
             status_code=400,
         )
     return spec
+
+
+def unit_spec_for_template(template: AssetTemplateChoice) -> UnitSpec:
+    """The descriptor for a template, before any asset exists (e.g. on create)."""
+    return _SPECS[template]

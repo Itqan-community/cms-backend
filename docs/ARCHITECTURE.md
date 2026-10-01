@@ -225,6 +225,13 @@ Similar to ResourceVersion, **AssetVersion** tracks each uploaded file version o
 - Linked to both an Asset and a ResourceVersion
 - Contains the actual downloadable file
 - Enables tracking of which Asset version corresponds to which Resource version
+- For translations and tafsirs, an uploaded CSV is imported into per-unit entries. To
+  guide uploaders the portal serves an empty fill-in CSV per template — one row per
+  surah / ayah / word / page with a blank `text` column, in the same columns as a
+  version export, so a filled-in sheet imports as is:
+  `GET /portal/content/{category}/csv-template/?template=&mushaf_layout_id=` (asset
+  creation; `page` needs the layout) and `GET /portal/content/{category}/{slug}/csv-template/`
+  (an existing asset's template).
 
 ### 6. MushafLayout
 

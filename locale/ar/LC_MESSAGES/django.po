@@ -61,6 +61,13 @@ msgstr "صفحة {number}"
 msgid "This version has no downloadable content."
 msgstr "لا يحتوي هذا الإصدار على محتوى قابل للتنزيل."
 
+msgid "Choose a mushaf layout to download the page template."
+msgstr "اختر تخطيط المصحف لتنزيل قالب الصفحات."
+
+#, python-brace-format
+msgid "Mushaf layout with id {id} not found."
+msgstr "تخطيط المصحف بالمعرّف {id} غير موجود."
+
 #, python-brace-format
 msgid "Font with slug {slug} not found."
 msgstr "لم يتم العثور على الخط بالمعرّف {slug}."
@@ -71,10 +78,6 @@ msgstr "المعرّف asset_id {asset_id} المُقدَّم لا يطابق م
 
 msgid "Issue report not found."
 msgstr "بلاغ المشكلة غير موجود."
-
-#, python-brace-format
-msgid "Mushaf layout with id {id} not found."
-msgstr "تخطيط المصحف بالمعرّف {id} غير موجود."
 
 #, python-brace-format
 msgid "Mushaf with slug {slug} not found."
