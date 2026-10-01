@@ -26,7 +26,7 @@ from apps.content.models import (
 )
 from apps.content.repositories.asset_content import AssetContentRepository
 from apps.content.services.asset_content_import import AssetContentParseError, parse_content_file
-from apps.content.services.asset_templates import UnitSpec, unit_spec_for
+from apps.content.services.asset_templates import EntryFilters, UnitSpec, unit_spec_for
 from apps.content.tasks import notify_asset_version_created
 from apps.core.ninja_utils.errors import ItqanError
 
@@ -266,6 +266,7 @@ class AssetContentService:
         offset: int,
         limit: int,
         sura: int | None = None,
+        filters: EntryFilters | None = None,
         publisher_q: Q | None = None,
     ) -> tuple[list[dict], int]:
         """One page of the template's canonical units with stored text overlaid.
@@ -278,6 +279,9 @@ class AssetContentService:
         carries ``source_text`` — the source language's latest published text for
         the same unit — as a read-only reference, same as the previous per-ayah
         editor did (see the now-superseded ``get_entries``).
+
+        ``filters`` (the grid's column filters) narrow the whole unit set before
+        the page is cut, so the returned count is the filtered total.
         """
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
         version = self.repo.get_version(asset, version_id)
@@ -289,10 +293,21 @@ class AssetContentService:
             )
 
         spec = unit_spec_for(asset)
-        units, total = spec.units_page(asset, offset=offset, limit=limit, sura=sura)
+        source_version = self._source_version(asset, version)
+        units, total = spec.units_page(
+            asset,
+            offset=offset,
+            limit=limit,
+            sura=sura,
+            filters=filters,
+            version=version,
+            source_version=source_version,
+        )
         unit_ids = [unit.unit_id for unit in units]
         text_by_unit = self.repo.entry_text_map(version, spec, unit_ids)
-        source_text_by_unit = self._resolve_source_text(asset, version, spec, unit_ids)
+        source_text_by_unit = (
+            self.repo.entry_text_map(source_version, spec, unit_ids) if source_version is not None else {}
+        )
 
         rows = [
             {
@@ -320,13 +335,18 @@ class AssetContentService:
         ``source_text`` should read ``None``, which an empty map already gives
         via ``.get()``.
         """
-        lang = version.asset_language
-        if lang is None or lang.is_source:
-            return {}
-        source_version = asset.get_latest_version(asset.language)
+        source_version = self._source_version(asset, version)
         if source_version is None:
             return {}
         return self.repo.entry_text_map(source_version, spec, unit_ids)
+
+    def _source_version(self, asset: Asset, version: AssetVersion) -> AssetVersion | None:
+        """The source language's latest published version a translation reads its
+        reference text from; None when ``version`` is the source or none is published."""
+        lang = version.asset_language
+        if lang is None or lang.is_source:
+            return None
+        return asset.get_latest_version(asset.language)
 
     def get_patch_response_context(
         self,

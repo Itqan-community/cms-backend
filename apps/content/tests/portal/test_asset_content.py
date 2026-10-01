@@ -1,4 +1,6 @@
 from datetime import timedelta
+import json
+from urllib.parse import quote
 
 from django.utils import timezone
 from model_bakery import baker
@@ -20,6 +22,11 @@ from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.quran.models import Ayah, Sura
 from apps.users.models import User
+
+
+def _filters(model: dict) -> str:
+    """The `filters` query param carrying an AG Grid filter model."""
+    return "filters=" + quote(json.dumps(model))
 
 
 class AssetContentBaseTest(BaseTestCase):
@@ -391,6 +398,30 @@ class SourceReferenceEntriesTest(AssetContentBaseTest):
         row = response.json()[0]
         self.assertEqual("uno", row["text"])
         self.assertEqual("source one", row["source_text"])
+
+    def test_list_entries_where_source_text_contains_should_filter_by_the_source_language(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self._publish_source_and_add_es()
+        draft_resp = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/draft/",
+            data={"language": "es"},
+            content_type="application/json",
+        )
+
+        # Act
+        response = self.client.get(
+            f"/portal/content/translations/{self.translation.slug}/versions/{draft_resp.json()['id']}/entries/"
+            "?" + _filters({"source_text": {"filterType": "text", "type": "contains", "filter": "TWO"}})
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(1, body["count"])
+        self.assertEqual([self.ayahs[1].id], [row["unit_id"] for row in body["results"]])
 
     def test_source_language_entries_have_no_source_text(self):
         # Arrange

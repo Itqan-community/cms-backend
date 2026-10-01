@@ -280,6 +280,16 @@ whichever unit the asset's template uses (surah, ayah, word or page).
   `PORTAL_EDIT_TRANSLATION_CONTENT` / `PORTAL_EDIT_TAFSIR_CONTENT`; `PORTAL_UPDATE_*`
   covers metadata only (names, descriptions, license, version name/summary,
   language availability). Both are limited to the member's assigned languages.
+- **Reading entries** — the editor pages through
+  `GET /portal/content/{category}/{slug}/versions/{id}/entries/` (`page`, `page_size`,
+  optional `sura`). Its optional `filters` param is the grid's AG Grid filter model as
+  JSON, keyed by `text`, `reference_text`, `source_text` (text filters, case-insensitive and
+  ignoring Arabic vocalization — harakat, Quranic marks, alef forms, and Uthmani dagger alefs —
+  so plain typing matches Uthmani text; a unit with no stored entry counts as empty) and `surah`, `sura`, `aya` (number filters,
+  `inRange` inclusive; `surah` is the unit column's surah-name dropdown and `sura` the
+  surah-number column, both applied), each a single condition or two joined by `AND`/`OR`. Filters
+  narrow the whole unit set before paging, so `count` is the filtered total; unknown
+  columns or malformed conditions return 400 `validation_error`.
 - **Review (audit-only)** — reviewers with `PORTAL_REVIEW_CONTENT`, assigned to
   languages via `ReviewerLanguage`, approve or comment ("needs changes") each
   `AssetVersionChange`. State is stored one-per-change as `AssetVersionChangeReview`
