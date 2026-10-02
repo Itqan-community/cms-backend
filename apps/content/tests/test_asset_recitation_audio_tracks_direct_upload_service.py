@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from typing import BinaryIO
 from unittest.mock import Mock, patch
 
 from django.conf import settings
@@ -8,6 +9,7 @@ from django.utils import timezone
 from model_bakery import baker
 
 from apps.content.models import Asset, CategoryChoice, RecitationFolder, RecitationSurahTrack, Reciter, Riwayah
+from apps.content.services.admin import asset_recitation_audio_tracks_direct_upload_service
 from apps.content.services.admin.asset_recitation_audio_tracks_direct_upload_service import (
     AssetRecitationAudioTracksDirectUploadService,
 )
@@ -149,8 +151,9 @@ class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
         # Act
         with (
             patch.object(service, "_get_s3_client", return_value=s3),
-            patch(
-                "apps.content.services.admin.asset_recitation_audio_tracks_direct_upload_service.get_mp3_duration_ms",
+            patch.object(
+                asset_recitation_audio_tracks_direct_upload_service,
+                asset_recitation_audio_tracks_direct_upload_service.get_mp3_duration_ms.__name__,
                 mock_get_duration,
             ),
         ):
@@ -190,16 +193,23 @@ class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
         s3 = Mock()
         s3.complete_multipart_upload.return_value = {}
         s3.head_object.return_value = {"ContentLength": 123}
-        s3.get_object.return_value = {"Body": Mock(read=Mock(return_value=b"mp3-bytes"))}
+        body = Mock()
+        body.iter_chunks.return_value = iter([b"mp3-", b"bytes"])
+        s3.get_object.return_value = {"Body": body}
+
+        def get_duration(audio_file: BinaryIO) -> int:
+            self.assertEqual(b"mp3-bytes", audio_file.read())
+            return 9876
 
         service = AssetRecitationAudioTracksDirectUploadService()
 
         # Act
         with (
             patch.object(service, "_get_s3_client", return_value=s3),
-            patch(
-                "apps.content.services.admin.asset_recitation_audio_tracks_direct_upload_service.get_mp3_duration_ms",
-                return_value=9876,
+            patch.object(
+                asset_recitation_audio_tracks_direct_upload_service,
+                asset_recitation_audio_tracks_direct_upload_service.get_mp3_duration_ms.__name__,
+                side_effect=get_duration,
             ),
         ):
             result = service.finish_upload(
@@ -220,6 +230,8 @@ class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
         self.assertEqual(123, result["sizeBytes"])
         s3.head_object.assert_called_once()
         s3.get_object.assert_called_once()
+        body.iter_chunks.assert_called_once_with(chunk_size=service._DOWNLOAD_CHUNK_SIZE)
+        body.close.assert_called_once_with()
 
     def test_finish_upload_where_track_already_exists_should_delete_r2_object_and_raise_itqan_error(self):
         # A duplicate finish_upload for the same asset+surah must delete the newly uploaded R2
