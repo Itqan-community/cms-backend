@@ -305,21 +305,27 @@ whichever unit the asset's template uses (surah, ayah, word or page).
 
 Publishers control how developers access their content through a **request-approval** workflow.
 
+Developers submit requests through the CMS API at
+`/cms-api/assets/{asset_id}/request-access/`. Repeated submissions reuse the latest
+pending or approved request. A rejected request remains in the history and allows
+a new submission.
+
 ```mermaid
 sequenceDiagram
     participant Dev as Developer
+    participant CMS as CMS API
     participant API as Developers API
     participant System as Itqan CMS
     participant Pub as Publisher
 
-    Dev->>API: Request access to Asset
-    API->>System: Create AssetAccessRequest
+    Dev->>CMS: Request access to Asset
+    CMS->>System: Find or create AssetAccessRequest
 
     alt Auto-Approve Enabled
         System->>System: Auto-approve request
         System->>Dev: Grant AssetAccess
     else Manual Approval Required
-        System->>Pub: Notify: New access request
+        System->>Pub: Notify pending access requests (scheduled)
         Pub->>System: Review & Approve/Reject
         alt Approved
             System->>Dev: Grant AssetAccess
@@ -340,6 +346,16 @@ sequenceDiagram
 | `pending` | Request submitted, awaiting review |
 | `approved` | Access granted |
 | `rejected` | Access denied by publisher |
+
+Accept and reject act only on pending requests. The service locks the request
+inside a transaction before checking its status, so one competing decision wins
+and the other receives `409 invalid_status`.
+
+Submissions lock the asset and, when present, the latest request to prevent
+concurrent submissions from creating duplicate requests. Approval and grant
+creation commit together. A grant is unique per developer and asset; retries
+reuse it without resetting its license or expiry. Outcome emails are queued
+after the transaction commits.
 
 ---
 
