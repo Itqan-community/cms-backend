@@ -18,6 +18,7 @@ from apps.users.models import User
 
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 class BaseTestCase(TestCase):
+    databases = "__all__"
     client_class = APIClient
     client: APIClient
 
