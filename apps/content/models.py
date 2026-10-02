@@ -9,6 +9,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_countries.fields import CountryField
+from simple_history.models import HistoricalRecords
 
 from apps.core.mixins.storage import DeleteFilesOnDeleteMixin
 from apps.core.models import BaseModel
@@ -90,6 +91,7 @@ class VersionStateChoice(models.TextChoices):
 
 class Asset(DeleteFilesOnDeleteMixin, BaseModel):
     class MaddLevelChoice(models.TextChoices):
+
         TWASSUT = "twassut", _("Twassut")
         QASR = "qasr", _("Qasr")
 
@@ -144,7 +146,7 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
     )
 
     mushaf_layout = models.ForeignKey(
-        "MushafLayout",
+        "content.MushafLayout",
         on_delete=models.PROTECT,
         null=True,
         blank=True,
@@ -164,7 +166,7 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
 
     # Recitation-specific fields (maybe needs normalizations later)
     reciter = models.ForeignKey(
-        "Reciter",
+        "content.Reciter",
         on_delete=models.PROTECT,
         null=True,
         blank=True,
@@ -172,7 +174,7 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         help_text="Reciter for recitation assets",
     )
     riwayah = models.ForeignKey(
-        "Riwayah",
+        "content.Riwayah",
         on_delete=models.PROTECT,
         null=True,
         blank=True,
@@ -180,13 +182,14 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         help_text="Riwayah for recitation assets",
     )
     qiraah = models.ForeignKey(
-        "Qiraah",
+        "content.Qiraah",
         on_delete=models.PROTECT,
         null=True,
         blank=True,
         related_name="assets",
         help_text="Qiraah for recitation assets",
     )
+
     madd_level = models.CharField(
         max_length=50,
         null=True,
@@ -434,7 +437,14 @@ class AssetLanguage(BaseModel):
     any number of translated renditions, each with its own version history.
     """
 
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="languages")
+
     language = models.CharField(max_length=10, help_text="Language code, e.g. 'ar', 'es'")
     is_source = models.BooleanField(
         default=False,
@@ -467,10 +477,16 @@ class AssetLanguage(BaseModel):
 
 
 class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="versions")
 
     asset_language = models.ForeignKey(
-        "AssetLanguage",
+        "content.AssetLanguage",
         on_delete=models.PROTECT,
         related_name="versions",
         # Nullable at the DB level so tooling (model_bakery) doesn't fabricate a
@@ -605,6 +621,12 @@ class AssetVersionEntry(BaseModel):
     a version may have entries for only a subset of ayahs.
     """
 
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     version = models.ForeignKey(
         AssetVersion,
         on_delete=models.CASCADE,
@@ -698,7 +720,14 @@ class AssetVersionChange(BaseModel):
     entries were dropped) can be reconstructed by replaying these deltas.
     """
 
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     version = models.ForeignKey(AssetVersion, on_delete=models.CASCADE, related_name="changes")
+
     sura = models.ForeignKey(
         "quran.Sura",
         on_delete=models.PROTECT,
@@ -786,6 +815,12 @@ class AssetVersionChangeReview(BaseModel):
     ``reviewed_at`` record who set the current state, for auditing.
     """
 
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     change = models.OneToOneField(AssetVersionChange, on_delete=models.CASCADE, related_name="review")
     state = models.CharField(max_length=20, choices=ReviewStateChoice)
     comment = models.TextField(blank=True, help_text="Reviewer comment; required when state is commented")
@@ -801,7 +836,14 @@ class AssetPreview(DeleteFilesOnDeleteMixin, BaseModel):
     Visual images for an Asset
     """
 
-    asset = models.ForeignKey("Asset", on_delete=models.CASCADE, related_name="previews")
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
+    asset = models.ForeignKey("content.Asset", on_delete=models.CASCADE, related_name="previews")
+
     image_url = models.ImageField(
         upload_to=upload_to_asset_preview_images,
         blank=True,
@@ -817,7 +859,14 @@ class AssetPreview(DeleteFilesOnDeleteMixin, BaseModel):
 
 
 class AssetAccessRequest(BaseModel):
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     class StatusChoice(models.TextChoices):
+
         PENDING = "pending", _("Pending")
         APPROVED = "approved", _("Approved")
         REJECTED = "rejected", _("Rejected")
@@ -878,6 +927,12 @@ class AssetAccessRequest(BaseModel):
 
 
 class AssetAccess(BaseModel):
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     asset_access_request = models.OneToOneField(
         AssetAccessRequest, on_delete=models.CASCADE, related_name="access_grant"
     )
@@ -983,6 +1038,12 @@ class UsageEvent(BaseModel):
 
 
 class Distribution(BaseModel):
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     class ChannelChoice(models.TextChoices):
         FILE_DOWNLOAD = "FILE_DOWNLOAD", _("File Download")
         API = "API", _("API")
@@ -1012,6 +1073,7 @@ class Reciter(BaseModel):
     """Quran reciter/qari (e.g. Mshari Al-Afasi, Saad Al-Ghamidi, etc)"""
 
     name = models.CharField(max_length=255, unique=True)
+
     slug = models.SlugField(unique=True, allow_unicode=True, db_index=True)
     image_url = models.ImageField(
         upload_to=upload_to_reciter_image,
@@ -1114,6 +1176,7 @@ class RecitationFolder(BaseModel):
     """
 
     DEFAULT_NAME_AR = "افتراضي"
+
     DEFAULT_NAME_EN = "Default"
     DEFAULT_SLUG = "default"
 
@@ -1171,12 +1234,19 @@ class RecitationFolder(BaseModel):
 class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
     """Audio track per-surah for a recitation Asset"""
 
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     asset = models.ForeignKey(
         Asset,
         on_delete=models.CASCADE,
         related_name="recitation_tracks",
         help_text="Parent Asset representing the recitation set",
     )
+
     folder = models.ForeignKey(
         RecitationFolder,
         on_delete=models.CASCADE,
@@ -1266,7 +1336,14 @@ class RecitationAyahTiming(DeleteFilesOnDeleteMixin, BaseModel):
     when this row is deleted.
     """
 
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     track = models.ForeignKey(RecitationSurahTrack, on_delete=models.CASCADE, related_name="ayah_timings")
+
     ayah_key = models.CharField(max_length=20, help_text='Format "surah_number:ayah_number" e.g. "2:255"')
     start_ms = models.PositiveIntegerField(help_text="Start offset in milliseconds")
     end_ms = models.PositiveIntegerField(help_text="End offset in milliseconds")
@@ -1316,7 +1393,14 @@ class RecitationAyahTiming(DeleteFilesOnDeleteMixin, BaseModel):
 class ContentIssueReport(BaseModel):
     """Issue reports for Assets."""
 
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     class StatusChoice(models.TextChoices):
+
         PENDING = "pending", _("Pending")
         UNDER_REVIEW = "under_review", _("Under Review")
         RESOLVED = "resolved", _("Resolved")
@@ -1410,6 +1494,12 @@ class EditorialRecommendation(BaseModel):
 
 class EditorialRecommendationAsset(BaseModel):
     """One asset's position within an EditorialRecommendation collection."""
+
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
 
     recommendation = models.ForeignKey(
         EditorialRecommendation,
