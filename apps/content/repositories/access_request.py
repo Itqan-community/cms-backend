@@ -26,8 +26,18 @@ class AssetAccessRequestRepository:
             qs = qs.filter(q_filter)
         return qs
 
-    def get_by_id(self, request_id: int) -> AssetAccessRequest | None:
-        return self.list_qs().filter(id=request_id).first()
+    def get_by_id(self, request_id: int, *, for_update: bool = False) -> AssetAccessRequest | None:
+        qs = self.list_qs()
+        if for_update:
+            # Nullable reviewer joins cannot be locked by PostgreSQL.
+            qs = qs.select_for_update(of=("self",))
+        return qs.filter(id=request_id).first()
+
+    def get_asset_for_update(self, asset_id: int) -> Asset:
+        # A stable parent row serializes submissions even before a request exists.
+        # NO KEY UPDATE permits FK inserts by a reviewer holding a request lock,
+        # avoiding an asset/request lock inversion during concurrent approval.
+        return Asset.objects.select_related("publisher").select_for_update(of=("self",), no_key=True).get(pk=asset_id)
 
     def list_pending_for_publisher_notification(self) -> QuerySet[AssetAccessRequest]:
         return (
@@ -36,12 +46,18 @@ class AssetAccessRequestRepository:
             .order_by("asset__publisher_id", "-created_at")
         )
 
-    def get_existing(self, *, developer_user: User, asset: Asset) -> AssetAccessRequest | None:
-        return (
-            AssetAccessRequest.objects.filter(developer_user=developer_user, asset=asset)
-            .order_by("-created_at")
-            .first()
+    def get_existing(
+        self, *, developer_user: User, asset: Asset, for_update: bool = False
+    ) -> AssetAccessRequest | None:
+        qs = AssetAccessRequest.objects.filter(developer_user=developer_user, asset=asset).order_by(
+            "-created_at", "-id"
         )
+        if for_update:
+            qs = qs.select_for_update(of=("self",))
+        return qs.first()
+
+    def get_access(self, *, developer_user: User, asset: Asset) -> AssetAccess | None:
+        return AssetAccess.objects.filter(user=developer_user, asset=asset).first()
 
     def create_request(
         self, *, developer_user: User, asset: Asset, developer_access_reason: str, intended_use: str
@@ -58,13 +74,16 @@ class AssetAccessRequestRepository:
         request.approved_at = timezone.now()
         request.approved_by = approved_by
         request.save(update_fields=["status", "approved_at", "approved_by", "updated_at"])
-        return AssetAccess.objects.create(
-            asset_access_request=request,
+        access, _created = AssetAccess.objects.get_or_create(
             user=request.developer_user,
             asset=request.asset,
-            effective_license=request.asset.license,
-            expires_at=None,
+            defaults={
+                "asset_access_request": request,
+                "effective_license": request.asset.license,
+                "expires_at": None,
+            },
         )
+        return access
 
     def mark_rejected(self, request: AssetAccessRequest, *, rejected_by: User, reason: str) -> AssetAccessRequest:
         request.status = AssetAccessRequest.StatusChoice.REJECTED

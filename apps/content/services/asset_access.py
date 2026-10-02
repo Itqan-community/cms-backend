@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext_lazy as _
 
 from apps.content.models import Asset, AssetAccess, AssetAccessRequest
 from apps.content.repositories.access_request import AssetAccessRequestRepository
@@ -33,8 +33,8 @@ class AssetAccessRequestService:
         q_filter = None if user.is_staff else Q(asset__publisher_id__in=get_user_member_publisher_ids(user))
         return self.repo.list_qs(q_filter=q_filter)
 
-    def get_for_user(self, user: User, request_id: int) -> AssetAccessRequest:
-        req = self.repo.get_by_id(request_id)
+    def get_for_user(self, user: User, request_id: int, *, for_update: bool = False) -> AssetAccessRequest:
+        req = self.repo.get_by_id(request_id, for_update=for_update)
         if req is None or (not user.is_staff and req.asset.publisher_id not in get_user_member_publisher_ids(user)):
             raise ItqanError("not_found", _("Not found."), status_code=404)
         return req
@@ -49,18 +49,20 @@ class AssetAccessRequestService:
             )
 
     # --- publisher actions ---
+    @transaction.atomic
     def accept(self, user: User, request_id: int) -> AssetAccessRequest:
-        req = self.get_for_user(user, request_id)
+        req = self.get_for_user(user, request_id, for_update=True)
         self._guard_pending(req)
         self.repo.mark_approved(req, approved_by=user)
         self._enqueue_outcome_email(req.id)
         logger.info(f"Asset access request accepted [request_id={req.pk}, approved_by={user.pk}]")
         return req
 
+    @transaction.atomic
     def reject(self, user: User, request_id: int, reason: str) -> AssetAccessRequest:
         if not (reason or "").strip():
             raise ItqanError("validation_error", _("Rejection reason is required."), status_code=422)
-        req = self.get_for_user(user, request_id)
+        req = self.get_for_user(user, request_id, for_update=True)
         self._guard_pending(req)
         self.repo.mark_rejected(req, rejected_by=user, reason=reason.strip())
         self._enqueue_outcome_email(req.id)
@@ -74,11 +76,13 @@ class AssetAccessRequestService:
         transaction.on_commit(lambda: send_access_request_outcome_email.delay(request_id))
 
     # --- developer flow ---
+    @transaction.atomic
     def request_access(
         self, *, user: User, asset: Asset, purpose: str, intended_use: str
     ) -> tuple[AssetAccessRequest, AssetAccess | None]:
+        asset = self.repo.get_asset_for_update(asset.pk)
         auto_approve = asset.publisher.auto_accept_access_requests
-        existing_request = self.repo.get_existing(developer_user=user, asset=asset)
+        existing_request = self.repo.get_existing(developer_user=user, asset=asset, for_update=True)
 
         if existing_request:
             if existing_request.status == AssetAccessRequest.StatusChoice.APPROVED:
@@ -86,7 +90,8 @@ class AssetAccessRequestService:
                     f"Access request already approved — returning existing grant "
                     f"[user_id={user.pk}, asset_id={asset.pk}, request_id={existing_request.pk}]"
                 )
-                access = getattr(existing_request, "access_grant", None)
+                # Older duplicate requests may share one user/asset grant.
+                access = self.repo.get_access(developer_user=user, asset=asset)
                 return existing_request, access
             elif existing_request.status == AssetAccessRequest.StatusChoice.PENDING:
                 if auto_approve:
