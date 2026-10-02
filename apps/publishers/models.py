@@ -1,6 +1,7 @@
 from django.core.validators import FileExtensionValidator
 from django.db import models, transaction
 from django.utils.translation import gettext_lazy as _
+from simple_history.models import HistoricalRecords
 
 from apps.core.models import BaseModel
 from apps.core.slugs import slugify_name
@@ -61,7 +62,14 @@ class PublisherMember(BaseModel):
     A user may belong to more than one publisher (many-to-many).
     """
 
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     class StatusChoice(models.TextChoices):
+
         PENDING = "pending", _("Pending")
         ACTIVE = "active", _("Active")
 
@@ -88,7 +96,14 @@ class PublisherMember(BaseModel):
 
 
 class Domain(BaseModel):
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     domain = models.CharField(max_length=100, unique=True, help_text="www.domain.com")
+
     publisher = models.ForeignKey(Publisher, on_delete=models.CASCADE, related_name="domains")
     is_primary = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
@@ -114,7 +129,14 @@ class PublisherMemberInvitation(BaseModel):
     Carries a single-use hashed token and audit trail.
     """
 
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     class StatusChoice(models.TextChoices):
+
         PENDING = "pending", _("Pending")
         ACCEPTED = "accepted", _("Accepted")
         EXPIRED = "expired", _("Expired")
@@ -179,7 +201,14 @@ class MemberLanguage(BaseModel):
     Django admin and the portal member screen.
     """
 
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     member = models.ForeignKey(PublisherMember, on_delete=models.CASCADE, related_name="languages")
+
     language = models.CharField(max_length=10, help_text="Language code the member works in, e.g. 'fr'")
 
     class Meta:

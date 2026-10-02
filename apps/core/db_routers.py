@@ -6,11 +6,10 @@ class AuditRouter:
     Routes django-simple-history models to the "audit" database,
     other models are routed to the "default" database.
 
-    NOTE: Every `HistoricalRecords()` call MUST be instantiated with
-    `app="simple_history"` (matching AUDIT_APP_LABEL above).
-
-    TODO: Configure HistoricalRecords so `history_user`is stored as a plain user id
-    (no FK/constraint) instead
+    NOTE: Every `HistoricalRecords()` call MUST be instantiated with:
+    - `app="simple_history"` (matching AUDIT_APP_LABEL above)
+    - `use_base_model_db=False`
+    - `history_user_id_field=models.BigIntegerField(null=True)` (plain scalar id, no cross-DB FK)
     """
 
     def db_for_read(self, model, **hints):
