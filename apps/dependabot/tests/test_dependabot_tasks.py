@@ -27,6 +27,8 @@ from apps.publishers.models import Publisher
 
 
 class DependabotTasksTest(TestCase):
+    databases = {"default", "audit"}
+
     def setUp(self):
         super().setUp()
         self.publisher = Publisher.objects.create(name="Test Publisher", slug="test-publisher")
