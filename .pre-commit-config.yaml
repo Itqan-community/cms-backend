@@ -1,4 +1,4 @@
-exclude: '^docs/|/migrations/|devcontainer.json'
+exclude: '^docs/|/(audit_)?migrations/|devcontainer.json'
 default_stages: [pre-commit]
 default_install_hook_types: [pre-commit, commit-msg]
 minimum_pre_commit_version: "3.2.0"

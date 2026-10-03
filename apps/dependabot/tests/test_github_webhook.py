@@ -140,6 +140,8 @@ def test_parse_where_missing_event_rejected():
 
 
 class GitHubWebhookEndpointTest(TestCase):
+    databases = {"default", "audit"}
+
     def setUp(self):
         super().setUp()
         self.watched = WatchedRepositoryService()
@@ -512,6 +514,8 @@ class GitHubWebhookEndpointTest(TestCase):
 class GitHubWebhookReconciliationTest(TestCase):
     """State-granting transitions reconcile with GitHub's current state."""
 
+    databases = {"default", "audit"}
+
     def setUp(self):
         super().setUp()
         self.watched = WatchedRepositoryService()
@@ -738,6 +742,8 @@ class GitHubWebhookReconciliationTest(TestCase):
 
 class GitHubWebhookReconciliationFailClosedTest(TestCase):
     """State-granting transitions raise on reconciliation failure — never trust payload."""
+
+    databases = {"default", "audit"}
 
     def setUp(self):
         super().setUp()
