@@ -1,4 +1,6 @@
 from datetime import timedelta
+import json
+from urllib.parse import quote
 
 from django.utils import timezone
 from model_bakery import baker
@@ -20,6 +22,11 @@ from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.quran.models import Ayah, Sura
 from apps.users.models import User
+
+
+def _filters(model: dict) -> str:
+    """The `filters` query param carrying an AG Grid filter model."""
+    return "filters=" + quote(json.dumps(model))
 
 
 class AssetContentBaseTest(BaseTestCase):
@@ -392,6 +399,30 @@ class SourceReferenceEntriesTest(AssetContentBaseTest):
         self.assertEqual("uno", row["text"])
         self.assertEqual("source one", row["source_text"])
 
+    def test_list_entries_where_source_text_contains_should_filter_by_the_source_language(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self._publish_source_and_add_es()
+        draft_resp = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/draft/",
+            data={"language": "es"},
+            content_type="application/json",
+        )
+
+        # Act
+        response = self.client.get(
+            f"/portal/content/translations/{self.translation.slug}/versions/{draft_resp.json()['id']}/entries/"
+            "?" + _filters({"source_text": {"filterType": "text", "type": "contains", "filter": "TWO"}})
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(1, body["count"])
+        self.assertEqual([self.ayahs[1].id], [row["unit_id"] for row in body["results"]])
+
     def test_source_language_entries_have_no_source_text(self):
         # Arrange
         self.authenticate_user(self.user)
@@ -507,6 +538,105 @@ class SourceReferenceEntriesTest(AssetContentBaseTest):
         self.assertEqual("uno", rows[self.ayahs[0].id]["text"])  # edit preserved
         self.assertEqual("", rows[self.ayahs[1].id]["text"])
         self.assertEqual("source two", rows[self.ayahs[1].id]["source_text"])
+
+
+class EntryChangedFlagTest(AssetContentBaseTest):
+    """``changed`` marks rows whose draft text differs from the latest published
+    version of the same language — what a commit would record for that unit."""
+
+    def _published(self, texts: dict[int, str]) -> AssetVersion:
+        lang = self.translation.get_or_create_source_language()
+        version = baker.make(
+            AssetVersion, asset=self.translation, asset_language=lang, state=VersionStateChoice.PUBLISHED
+        )
+        for ayah_id, text in texts.items():
+            baker.make(AssetVersionEntry, version=version, ayah=self.ayahs[ayah_id - 1], text=text, order=ayah_id)
+        return version
+
+    def _draft(self, texts: dict[int, str]) -> AssetVersion:
+        lang = self.translation.get_or_create_source_language()
+        draft = baker.make(AssetVersion, asset=self.translation, asset_language=lang, state=VersionStateChoice.DRAFT)
+        for ayah_id, text in texts.items():
+            baker.make(AssetVersionEntry, version=draft, ayah=self.ayahs[ayah_id - 1], text=text, order=ayah_id)
+        return draft
+
+    def _changed(self, version_id: int) -> dict[int, bool]:
+        response = self.client.get(
+            f"/portal/content/translations/{self.translation.slug}/versions/{version_id}/entries/"
+        )
+        self.assertEqual(200, response.status_code, response.content)
+        return {row["unit_id"]: row["changed"] for row in response.json()["results"]}
+
+    def test_list_entries_where_draft_text_differs_from_published_should_flag_changed(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self._published({1: "same", 2: "old"})
+        draft = self._draft({1: "same", 2: "new", 3: "added"})
+
+        # Act
+        changed = self._changed(draft.id)
+
+        # Assert
+        self.assertEqual({1: False, 2: True, 3: True}, changed)
+
+    def test_list_entries_where_draft_clears_published_text_should_flag_changed(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self._published({1: "kept", 2: "cleared"})
+        draft = self._draft({1: "kept", 2: ""})
+
+        # Act
+        changed = self._changed(draft.id)
+
+        # Assert — clearing a published row removes it on commit; an empty unit
+        # that was never published is not a change
+        self.assertEqual({1: False, 2: True, 3: False}, changed)
+
+    def test_list_entries_where_nothing_published_should_flag_only_rows_with_text(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        draft = self._draft({1: "first", 2: ""})
+
+        # Act
+        changed = self._changed(draft.id)
+
+        # Assert
+        self.assertEqual({1: True, 2: False, 3: False}, changed)
+
+    def test_list_entries_where_version_is_published_should_not_flag_changed(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self._published({1: "a"})
+        newer = self._published({1: "b"})
+
+        # Act
+        changed = self._changed(newer.id)
+
+        # Assert — only drafts are compared against the published head
+        self.assertEqual({1: False, 2: False, 3: False}, changed)
+
+    def test_patch_entries_where_text_returns_to_published_should_clear_changed(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
+        self._published({1: "published"})
+        draft = self._draft({1: "edited"})
+
+        # Act
+        response = self.client.patch(
+            f"/portal/content/translations/{self.translation.slug}/versions/{draft.id}/entries/",
+            data={"rows": [{"unit_id": 1, "text": "published"}, {"unit_id": 2, "text": "new"}]},
+            content_type="application/json",
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        changed = {row["unit_id"]: row["changed"] for row in response.json()}
+        self.assertEqual({1: False, 2: True}, changed)
 
 
 class PublishDraftTest(AssetContentBaseTest):

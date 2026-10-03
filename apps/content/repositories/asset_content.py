@@ -112,6 +112,18 @@ class AssetContentRepository:
         rows = version.entries.filter(**lookup).values_list(spec.field, "text")
         return dict(rows)
 
+    def published_text_map(self, head: AssetVersion, spec: UnitSpec, unit_ids: list[int]) -> dict[int, str]:
+        """The latest published version's text for the given units.
+
+        The head keeps its full entries (only superseded commits are pruned), so
+        this is normally one page-sized query; a head stored only as a legacy
+        file is reconstructed in full and narrowed to the requested units.
+        """
+        if head.entries.exists():
+            return self.entry_text_map(head, spec, unit_ids)
+        snapshot = self.reconstruct_entries(head)
+        return {unit_id: snapshot[unit_id] for unit_id in unit_ids if unit_id in snapshot}
+
     @transaction.atomic
     def ensure_mushaf_coverage(self, draft: AssetVersion, mushaf_version: AssetVersion) -> int:
         """Add empty-text rows for any mushaf ayahs the draft doesn't cover yet.
@@ -285,7 +297,9 @@ class AssetContentRepository:
         matches a column the importer recognises, and the importer skips blank
         rows, so a lean export round-trips.
         """
-        return self._units_to_csv_bytes(version.asset, spec, self._entries_map(version), verbose=verbose)
+        return self._units_to_csv_bytes(
+            spec, self._entries_map(version), verbose=verbose, page_count=self.page_count(version.asset)
+        )
 
     def snapshot_to_csv_bytes(
         self, snapshot: dict[int, str], spec: UnitSpec, *, asset: Asset, verbose: bool = False
@@ -294,9 +308,23 @@ class AssetContentRepository:
         historical commit downloads). Same rows and columns as
         ``entries_to_csv_bytes``; ``snapshot`` keys are canonical ids of whichever
         unit the asset's template uses."""
-        return self._units_to_csv_bytes(asset, spec, snapshot, verbose=verbose)
+        return self._units_to_csv_bytes(spec, snapshot, verbose=verbose, page_count=self.page_count(asset))
 
-    def _units_to_csv_bytes(self, asset: Asset, spec: UnitSpec, texts: dict[int, str], *, verbose: bool) -> bytes:
+    def blank_template_csv_bytes(self, spec: UnitSpec, *, page_count: int | None) -> bytes:
+        """An empty fill-in sheet for ``spec``'s template: every unit, blank text.
+
+        Same rows and columns as a verbose export, so a filled-in sheet imports
+        as is. ``page_count`` is required for the page template only.
+        """
+        return self._units_to_csv_bytes(spec, {}, verbose=True, page_count=page_count)
+
+    @staticmethod
+    def page_count(asset: Asset) -> int | None:
+        return asset.mushaf_layout.page_count if asset.mushaf_layout_id else None
+
+    def _units_to_csv_bytes(
+        self, spec: UnitSpec, texts: dict[int, str], *, verbose: bool, page_count: int | None
+    ) -> bytes:
         """One CSV row per canonical unit of ``spec``'s template, text from ``texts``
         (blank when absent). Streams the word template's ~77k units with
         ``iterator()`` rather than materialising them."""
@@ -314,7 +342,7 @@ class AssetContentRepository:
                 writer.writerow([word_id, sura_id, aya, position, texts.get(word_id, "")])
         elif spec.template == AssetTemplateChoice.PAGE:
             writer.writerow(["page", "text"])
-            for page in range(1, asset.mushaf_layout.page_count + 1):
+            for page in range(1, (page_count or 0) + 1):
                 writer.writerow([page, texts.get(page, "")])
         elif verbose:  # ayah
             writer.writerow(["surah", "ayah", "surah_name", "ayah_text", "text"])

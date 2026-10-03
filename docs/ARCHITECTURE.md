@@ -225,6 +225,13 @@ Similar to ResourceVersion, **AssetVersion** tracks each uploaded file version o
 - Linked to both an Asset and a ResourceVersion
 - Contains the actual downloadable file
 - Enables tracking of which Asset version corresponds to which Resource version
+- For translations and tafsirs, an uploaded CSV is imported into per-unit entries. To
+  guide uploaders the portal serves an empty fill-in CSV per template — one row per
+  surah / ayah / word / page with a blank `text` column, in the same columns as a
+  version export, so a filled-in sheet imports as is:
+  `GET /portal/content/{category}/csv-template/?template=&mushaf_layout_id=` (asset
+  creation; `page` needs the layout) and `GET /portal/content/{category}/{slug}/csv-template/`
+  (an existing asset's template).
 
 ### 6. MushafLayout
 
@@ -273,6 +280,19 @@ whichever unit the asset's template uses (surah, ayah, word or page).
   `PORTAL_EDIT_TRANSLATION_CONTENT` / `PORTAL_EDIT_TAFSIR_CONTENT`; `PORTAL_UPDATE_*`
   covers metadata only (names, descriptions, license, version name/summary,
   language availability). Both are limited to the member's assigned languages.
+- **Reading entries** — the editor pages through
+  `GET /portal/content/{category}/{slug}/versions/{id}/entries/` (`page`, `page_size`,
+  optional `sura`). Its optional `filters` param is the grid's AG Grid filter model as
+  JSON, keyed by `text`, `reference_text`, `source_text` (text filters, case-insensitive and
+  ignoring Arabic vocalization — harakat, Quranic marks, alef forms, and Uthmani dagger alefs —
+  so plain typing matches Uthmani text; a unit with no stored entry counts as empty) and `surah`, `sura`, `aya` (number filters,
+  `inRange` inclusive; `surah` is the unit column's surah-name dropdown and `sura` the
+  surah-number column, both applied), each a single condition or two joined by `AND`/`OR`. Filters
+  narrow the whole unit set before paging, so `count` is the filtered total; unknown
+  columns or malformed conditions return 400 `validation_error`. On a draft, each row's
+  `changed` is true when its text differs from the language's latest published version
+  (what a commit would record; missing rows count as empty) — the editor highlights those
+  cells. The autosave `PATCH` response carries the same flag for the rows it wrote.
 - **Review (audit-only)** — reviewers with `PORTAL_REVIEW_CONTENT`, assigned to
   languages via `ReviewerLanguage`, approve or comment ("needs changes") each
   `AssetVersionChange`. State is stored one-per-change as `AssetVersionChangeReview`
