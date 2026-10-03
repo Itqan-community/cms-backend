@@ -25,6 +25,8 @@ REPO = "sample-app"
 
 
 class WatchedRepositoryOptInTest(TestCase):
+    databases = {"default", "audit"}
+
     def setUp(self):
         super().setUp()
         self.repo = WatchedRepositoryRepository()
