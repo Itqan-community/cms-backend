@@ -1,5 +1,8 @@
 from modeltranslation.decorators import register
 from modeltranslation.translator import TranslationOptions
+import simple_history
+
+from apps.core.audit import AuditHistoricalRecords
 
 from .models import Publisher
 
@@ -12,3 +15,6 @@ class PublisherTranslationOptions(TranslationOptions):
         "name",
         "description",
     )
+
+
+simple_history.register(Publisher, records_class=AuditHistoricalRecords)

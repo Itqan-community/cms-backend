@@ -446,7 +446,8 @@ flowchart TB
         end
 
         subgraph Storage
-            DB[(PostgreSQL)]
+            DB[(PostgreSQL - Default DB)]
+            AuditDB[(PostgreSQL - Audit DB)]
             Files[(Cloudflare R2 /<br/>Local Storage)]
         end
 
@@ -466,6 +467,7 @@ flowchart TB
     PORTAL --> Models
     Models --> Services
     Services --> DB
+    Services --> AuditDB
     Services --> Files
     Services --> Celery
     Celery --> Redis
@@ -607,6 +609,7 @@ only for un-sliced records.
 
 **See also:**
 - [Authentication Guide](./AUTHENTICATION.md) — Complete OAuth flows and security practices
+- [Audit History Guide](./audit-history.md) — Comprehensive guide on django-simple-history, dual-database routing, and tracked models
 - [Roadmap](./ROADMAP.md) — Planned features: app/user self-identification auth,
   ayah-by-ayah recitation delivery, developer-ready data views, Itqan Dependabot &
   asset package manager
