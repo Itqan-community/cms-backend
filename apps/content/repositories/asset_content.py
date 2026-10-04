@@ -446,18 +446,52 @@ class AssetContentRepository:
             version.size_bytes = 0
             version.save(update_fields=["file_url", "size_bytes", "updated_at"])
 
-    def _prune_superseded_head(self, previous_head: AssetVersion | None) -> None:
-        """Prune the head a new commit just superseded down to its deltas.
+    def _prune_superseded(self, head: AssetVersion) -> None:
+        """Prune every older commit of ``head``'s language that still holds a full
+        snapshot down to its deltas: the head this commit superseded, and any
+        historical version whose entries were rebuilt to be viewed (``ensure_entries``).
 
-        Only when it carries stored changes (never drop a commit that has neither
-        entries nor a delta), and never while it is a published version: its file
-        is what consumers download.
+        Only commits that carry stored changes (never drop a commit that has
+        neither entries nor a delta — legacy versions are the anchors history is
+        rebuilt from), and never a published version: its file is what consumers
+        download.
         """
-        if previous_head is None or not previous_head.changes.exists():
-            return
-        if AssetLanguage.objects.filter(published_version=previous_head).exists():
-            return
-        self.prune_version_snapshot(previous_head)
+        superseded = (
+            self.asset_version_model.objects.filter(
+                asset=head.asset,
+                asset_language=head.asset_language,
+                state=VersionStateChoice.PUBLISHED,
+                changes__isnull=False,
+                entries__isnull=False,
+            )
+            .exclude(pk=head.pk)
+            .exclude(pk__in=AssetLanguage.objects.filter(published_version__isnull=False).values("published_version"))
+            .distinct()
+        )
+        for version in superseded:
+            self.prune_version_snapshot(version)
+
+    @transaction.atomic
+    def ensure_entries(self, version: AssetVersion) -> bool:
+        """Rebuild a pruned commit's full entries from its deltas so it can be
+        browsed and filtered like any other version. Returns True if rows were
+        written. The rebuilt snapshot is pruned again by the next commit."""
+        locked = self.asset_version_model.objects.select_for_update().get(pk=version.pk)
+        if locked.entries.exists():
+            return False
+        snapshot = self.reconstruct_entries(locked)
+        if not snapshot and locked.file_url:
+            snapshot = self._snapshot_from_file(locked)  # legacy file-only commit
+        spec = unit_spec_for(locked.asset)
+        unit_field = spec.field + ("_id" if spec.fk_field else "")
+        rows = [
+            AssetVersionEntry(version=locked, text=text, order=unit_id, **{unit_field: unit_id})
+            for unit_id, text in snapshot.items()
+            if text != ""
+        ]
+        AssetVersionEntry.objects.bulk_create(rows, batch_size=1000)
+        logger.info(f"Version entries rebuilt for viewing [version_id={locked.pk}, entries={len(rows)}]")
+        return bool(rows)
 
     @transaction.atomic
     def record_upload_changes(self, version: AssetVersion) -> None:
@@ -536,7 +570,7 @@ class AssetContentRepository:
             asset_fields.append("format")
         draft.asset.save(update_fields=asset_fields)
 
-        self._prune_superseded_head(previous_head)
+        self._prune_superseded(draft)
         return draft
 
     def _predecessor(self, version: AssetVersion) -> AssetVersion | None:
@@ -754,7 +788,7 @@ class AssetContentRepository:
             new_version.file_url.save(filename, ContentFile(content), save=False)
             new_version.size_bytes = len(content)
             new_version.save(update_fields=["file_url", "size_bytes"])
-        self._prune_superseded_head(previous_head)
+        self._prune_superseded(new_version)
         return new_version
 
     def backfill_file_from_entries(self, version: AssetVersion) -> bool:

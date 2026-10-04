@@ -346,3 +346,68 @@ class CommitDoesNotPrunePublishedVersionTest(VersionPublishingBaseTest):
         self.assertTrue(v1.file_url)
         self.assertTrue(v1.entries.exists())
         self.assertEqual(v1, self.asset.get_published_version("fr"))
+
+
+class VersionViewerTest(VersionPublishingBaseTest):
+    """The read-only version viewer: any committed version, pruned or not."""
+
+    def _authorize_read(self) -> None:
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        MemberLanguage.objects.create(member=self.membership, language="fr")
+
+    def _entries(self, version: AssetVersion) -> dict[str, str]:
+        response = self.client.get(
+            f"/portal/content/translations/{self.asset.slug}/versions/{version.id}/entries/?page_size=50"
+        )
+        self.assertEqual(200, response.status_code, response.content)
+        return {row["label"]: row["text"] for row in response.json()["results"]}
+
+    def test_get_version_should_return_its_name_and_language(self):
+        # Arrange
+        v1 = self._commit("v1", {self.ayah1: ("added", "x")})
+        self._authorize_read()
+        self.authenticate_user(self.user)
+
+        # Act
+        response = self.client.get(f"/portal/content/translations/{self.asset.slug}/versions/{v1.id}/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(("v1", "fr"), (response.json()["name"], response.json()["language"]))
+
+    def test_list_entries_where_version_was_pruned_should_show_its_content_at_that_point(self):
+        # Arrange — v2 was pruned to its delta (no entries, no file)
+        self._commit("v1", {self.ayah1: ("added", "x")})
+        v2 = self._commit("v2", {self.ayah2: ("added", "y")}, entries=False)
+        self._authorize_read()
+        self.authenticate_user(self.user)
+
+        # Act
+        texts = self._entries(v2)
+
+        # Assert — rebuilt from v1 + v2's delta
+        self.assertEqual({"1:1": "x", "1:2": "y"}, texts)
+
+    def test_commit_where_a_version_was_viewed_should_prune_it_again(self):
+        # Arrange — v2 viewed (entries rebuilt); v3 is the published head
+        self._commit("v1", {self.ayah1: ("added", "x")})
+        v2 = self._commit("v2", {self.ayah2: ("added", "y")}, entries=False)
+        v3 = self._commit("v3", {self.ayah2: ("modified", "y2")})
+        baker.make(AssetVersionEntry, version=v3, ayah=self.ayah1, text="x", order=1)
+        AssetLanguage.objects.filter(pk=self.fr.pk).update(published_version=v3)
+        self._authorize_read()
+        self.authenticate_user(self.user)
+        self._entries(v2)
+        self.assertTrue(v2.entries.exists())
+        draft = baker.make(
+            AssetVersion, asset=self.asset, asset_language=self.fr, name="v4", state=VersionStateChoice.DRAFT
+        )
+        baker.make(AssetVersionEntry, version=draft, ayah=self.ayah1, text="x4", order=1)
+
+        # Act
+        AssetContentRepository().publish_draft(draft)
+
+        # Assert — the rebuilt snapshot is dropped again; the published version keeps its own
+        self.assertFalse(v2.entries.exists())
+        self.assertTrue(v3.entries.exists())
+        self.assertEqual({1: "x", 2: "y"}, AssetContentRepository().reconstruct_entries(v2))

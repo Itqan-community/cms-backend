@@ -298,6 +298,10 @@ class AssetContentService:
 
         ``filters`` (the grid's column filters) narrow the whole unit set before
         the page is cut, so the returned count is the filtered total.
+
+        A committed version that was pruned to deltas has its entries rebuilt on
+        first view (see ``AssetContentRepository.ensure_entries``), so history is
+        browsed and filtered exactly like the current version.
         """
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
         version = self.repo.get_version(asset, version_id)
@@ -307,6 +311,8 @@ class AssetContentService:
                 message=_("Version with id {id} not found.").format(id=version_id),
                 status_code=404,
             )
+        if version.state == VersionStateChoice.PUBLISHED and not version.entries.exists():
+            self.repo.ensure_entries(version)
 
         spec = unit_spec_for(asset)
         source_version = self._source_version(asset, version)

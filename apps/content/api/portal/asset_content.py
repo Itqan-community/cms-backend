@@ -453,6 +453,22 @@ def pending_diff(request: Request, category: str, slug: str, version_id: int):
     return service.get_pending_changes(slug, resolved, version_id, publisher_q=request.publisher_q())
 
 
+@router.get(
+    "content/{category}/{slug}/versions/{version_id}/",
+    response={
+        200: DraftVersionOut,
+        404: NinjaErrorResponse[Literal["translation_not_found"]]
+        | NinjaErrorResponse[Literal["tafsir_not_found"]]
+        | NinjaErrorResponse[Literal["version_not_found"]]
+        | NinjaErrorResponse[Literal["unsupported_content_category"]],
+    },
+)
+def get_version(request: Request, category: str, slug: str, version_id: int) -> AssetVersion:
+    """One version's name and language — e.g. for the read-only version viewer."""
+    resolved = _resolve_for_version(category, request, slug, version_id, access="read")
+    return AssetContentService().get_version_or_404(slug, resolved, version_id, publisher_q=request.publisher_q())
+
+
 @router.post(
     "content/{category}/{slug}/versions/{version_id}/publish/",
     response={

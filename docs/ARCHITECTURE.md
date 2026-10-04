@@ -298,6 +298,10 @@ identical to the previous version records no changes.
   `pending_review_count`. The published version cannot be deleted or have its file
   replaced (`version_is_published`), and is never pruned when a newer commit lands;
   publishing a pruned version rebuilds its file. Other categories keep newest-wins.
+- **Viewing history** — any committed version is browsable read-only through the
+  same entries endpoint the editor uses (`GET .../versions/{id}/` gives its name and
+  language). A version pruned to deltas has its entries rebuilt on first view; the
+  next commit prunes it again, along with the head it supersedes.
 - **Editing** — changing a text asset's content (the content editor, uploading a
   version file, restoring a version) needs the per-category
   `PORTAL_EDIT_TRANSLATION_CONTENT` / `PORTAL_EDIT_TAFSIR_CONTENT`; `PORTAL_UPDATE_*`
