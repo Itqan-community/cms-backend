@@ -324,6 +324,8 @@ class VersionListApprovalFieldsTest(VersionPublishingBaseTest):
             (False, False, 1, True),
             tuple(rows[v2.id][k] for k in ("is_published", "is_approved", "pending_review_count", "is_active")),
         )
+        self.assertTrue(rows[v1.id]["is_first"])
+        self.assertFalse(rows[v2.id]["is_first"])
 
 
 class CommitDoesNotPrunePublishedVersionTest(VersionPublishingBaseTest):
