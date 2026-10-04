@@ -39,6 +39,9 @@ class TafsirVersionListOut(Schema):
     is_approved: bool
     # Units awaiting approval as of this version (0 when approved).
     pending_review_count: int
+    # The first committed version of its language: there is nothing before it to
+    # compare with, so its whole content is listed as added.
+    is_first: bool
     name: str
     summary: str
     created_by: str | None
@@ -63,6 +66,15 @@ class TafsirVersionListOut(Schema):
         if obj.asset_language_id:
             return obj.asset_language.published_version_id == obj.id
         return AssetLanguage.objects.filter(published_version_id=obj.id).exists()
+
+    @staticmethod
+    def resolve_is_first(obj: AssetVersion) -> bool:
+        return not AssetVersion.objects.filter(
+            asset_id=obj.asset_id,
+            asset_language_id=obj.asset_language_id,
+            state=VersionStateChoice.PUBLISHED,
+            created_at__lt=obj.created_at,
+        ).exists()
 
     @staticmethod
     def resolve_is_approved(obj: AssetVersion, context: dict) -> bool:
