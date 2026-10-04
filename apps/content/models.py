@@ -62,6 +62,11 @@ class StatusChoice(models.TextChoices):
     READY = "ready", _("Ready")
 
 
+# Categories whose content changes are reviewed: a version is visible to
+# consumers only once fully approved and explicitly published.
+REVIEWED_CATEGORIES = frozenset({CategoryChoice.TRANSLATION, CategoryChoice.TAFSIR})
+
+
 class AssetTemplateChoice(models.TextChoices):
     """Granularity of a text asset's content rows.
 
@@ -80,8 +85,10 @@ class VersionStateChoice(models.TextChoices):
 
     A ``draft`` version holds in-progress per-ayah edits and MUST be excluded
     from every "latest / published versions" query so it never surfaces on the
-    public, tenant or developers surfaces. Publishing flips it to ``published``,
-    at which point newest-wins makes it the latest version.
+    public, tenant or developers surfaces. Committing flips it to ``published``,
+    at which point newest-wins makes it the latest version (the head). For
+    reviewed categories the head is not what consumers see: that is
+    ``AssetLanguage.published_version`` (see ``Asset.get_published_version``).
     """
 
     DRAFT = "draft", _("Draft")
@@ -395,6 +402,19 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
             .first()
         )
 
+    def get_published_version(self, language: str | None = None) -> "AssetVersion | None":
+        """The version consumers are served for a language.
+
+        Reviewed categories (translations / tafsirs) serve whichever version was
+        explicitly published (``AssetLanguage.published_version``) — committing a
+        version does not make it visible. Every other category keeps newest-wins.
+        """
+        if self.category not in REVIEWED_CATEGORIES:
+            return self.get_latest_version(language)
+        lang = language or self.language
+        rendition = self.languages.filter(language=lang).select_related("published_version").first()
+        return rendition.published_version if rendition is not None else None
+
     def get_or_create_source_language(self) -> "AssetLanguage":
         """Return the asset's source-language rendition, creating it if missing.
 
@@ -449,6 +469,17 @@ class AssetLanguage(BaseModel):
             "consumers (a translation in progress); READY makes it downloadable. The "
             "source language is created READY (the asset's own Asset.status is the "
             "overarching gate)."
+        ),
+    )
+    published_version = models.ForeignKey(
+        "AssetVersion",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        help_text=(
+            "The version consumers are served for this language (translations / tafsirs). "
+            "Set only by publishing a fully approved version; empty means nothing is visible."
         ),
     )
 
@@ -923,8 +954,8 @@ class AssetAccess(BaseModel):
         """Get the download URL for this access"""
         if self.download_url:
             return self.download_url
-        latest_version = self.asset.get_latest_version()
-        return latest_version.file_url.url if latest_version and latest_version.file_url else None
+        published = self.asset.get_published_version()
+        return published.file_url.url if published and published.file_url else None
 
 
 class UsageEvent(BaseModel):

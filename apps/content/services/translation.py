@@ -16,11 +16,15 @@ from apps.content.models import (
     MushafLayout,
     StatusChoice,
 )
+from apps.content.repositories.asset_content import AssetContentRepository
 from apps.content.repositories.translation import TranslationRepository
 from apps.content.services.asset_access import guard_restrict_for_tenant
-from apps.content.services.asset_content import import_uploaded_file_into_entries, set_version_language
+from apps.content.services.asset_content import (
+    forbid_published_version_change,
+    import_uploaded_file_into_entries,
+    set_version_language,
+)
 from apps.content.services.mushaf_layout import MushafLayoutService
-from apps.content.tasks import notify_asset_version_created
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
 
@@ -273,16 +277,16 @@ class TranslationService:
         summary: str = "",
         file: Any = None,
         language: str | None = None,
-        strict: bool = False,
         publisher_q: Q | None = None,
     ) -> AssetVersion:
         """
         Business Logic: Create a new version for a translation.
 
         Version creation, language assignment and file import run in one
-        transaction so an unregistered language or (when ``strict``) an
-        unparseable file rolls the whole thing back instead of leaving an
-        orphaned version behind.
+        transaction so an unregistered language or an unparseable file rolls the
+        whole thing back instead of leaving an orphaned version behind. The file
+        must parse: its content is recorded as changes vs the previous version and
+        has to be reviewed before it can be published, so nobody is notified here.
         """
         asset = self._get_translation_or_404(translation_slug, publisher_q=publisher_q)
         with transaction.atomic():
@@ -294,11 +298,11 @@ class TranslationService:
             )
             set_version_language(version, language)
             if file:
-                import_uploaded_file_into_entries(version, strict=strict)
+                import_uploaded_file_into_entries(version, strict=True)
+                AssetContentRepository().record_upload_changes(version)
         logger.info(
             f"Translation version created [version_id={version.pk}, asset_id={asset.pk}, slug={translation_slug}]"
         )
-        transaction.on_commit(lambda: notify_asset_version_created.delay(version.pk))
         return version
 
     def update_translation_version(
@@ -312,9 +316,14 @@ class TranslationService:
         Business Logic: Update an existing translation version.
         """
         version = self._get_translation_version_or_404(translation_slug, version_id, publisher_q=publisher_q)
-        updated = self.repo.update_translation_version(version, fields=fields)
         if fields.get("file_url"):
-            import_uploaded_file_into_entries(updated)
+            forbid_published_version_change(version)
+        with transaction.atomic():
+            updated = self.repo.update_translation_version(version, fields=fields)
+            if fields.get("file_url"):
+                # New content: re-recorded as changes, so it is reviewed again.
+                import_uploaded_file_into_entries(updated, strict=True)
+                AssetContentRepository().record_upload_changes(updated)
         logger.info(f"Translation version updated [version_id={version_id}, asset_slug={translation_slug}]")
         return updated
 
@@ -323,5 +332,6 @@ class TranslationService:
         Business Logic: Delete a translation version.
         """
         version = self._get_translation_version_or_404(translation_slug, version_id, publisher_q=publisher_q)
+        forbid_published_version_change(version)
         self.repo.delete_translation_version(version)
         logger.info(f"Translation version deleted [version_id={version_id}, asset_slug={translation_slug}]")

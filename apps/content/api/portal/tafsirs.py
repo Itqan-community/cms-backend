@@ -227,6 +227,7 @@ def list_tafsirs(request: Request, filters: TafsirFilter = Query()):
         400: NinjaErrorResponse[Literal["tafsir_name_required"]]
         | NinjaErrorResponse[Literal["external_url_required"]]
         | NinjaErrorResponse[Literal["version_name_required"]]
+        | NinjaErrorResponse[Literal["content_file_unparseable"]]
         | NinjaErrorResponse[Literal["mushaf_layout_required"]]
         | NinjaErrorResponse[Literal["mushaf_layout_not_allowed"]],
         404: NinjaErrorResponse[Literal["publisher_not_found"]]

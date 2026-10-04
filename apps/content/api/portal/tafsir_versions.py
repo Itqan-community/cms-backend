@@ -6,7 +6,8 @@ from ninja import File, Form, Schema, UploadedFile
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
-from apps.content.models import Asset, AssetVersion, CategoryChoice, VersionStateChoice
+from apps.content.api.portal.asset_review import pending_review_count
+from apps.content.models import Asset, AssetLanguage, AssetVersion, CategoryChoice, VersionStateChoice
 from apps.content.services.asset_language_access import (
     filter_versions_to_allowed,
     require_language,
@@ -30,7 +31,14 @@ class TafsirVersionListOut(Schema):
     id: int
     asset_id: int
     language: str
+    # The latest commit (head) of its language — what the editor builds on.
     is_active: bool
+    # The version consumers are served for its language.
+    is_published: bool
+    # Every change in it is approved, so it may be published.
+    is_approved: bool
+    # Units awaiting approval as of this version (0 when approved).
+    pending_review_count: int
     name: str
     summary: str
     created_by: str | None
@@ -49,6 +57,20 @@ class TafsirVersionListOut(Schema):
         language = obj.asset_language.language if obj.asset_language_id else obj.asset.language
         latest = obj.asset.get_latest_version(language)
         return latest is not None and latest.id == obj.id
+
+    @staticmethod
+    def resolve_is_published(obj: AssetVersion) -> bool:
+        if obj.asset_language_id:
+            return obj.asset_language.published_version_id == obj.id
+        return AssetLanguage.objects.filter(published_version_id=obj.id).exists()
+
+    @staticmethod
+    def resolve_is_approved(obj: AssetVersion, context: dict) -> bool:
+        return pending_review_count(obj, context) == 0
+
+    @staticmethod
+    def resolve_pending_review_count(obj: AssetVersion, context: dict) -> int:
+        return pending_review_count(obj, context)
 
     @staticmethod
     def resolve_created_by(obj: AssetVersion) -> str | None:
@@ -134,7 +156,7 @@ def list_tafsir_versions(request: Request, tafsir_slug: str, language: str | Non
     "tafsirs/{tafsir_slug}/versions/",
     response={
         201: TafsirVersionListOut,
-        400: NinjaErrorResponse[Literal["asset_id_mismatch"]],
+        400: NinjaErrorResponse[Literal["asset_id_mismatch"]] | NinjaErrorResponse[Literal["content_file_unparseable"]],
         404: NinjaErrorResponse[Literal["tafsir_not_found"]],
     },
 )
@@ -181,7 +203,9 @@ def create_tafsir_version(
     "tafsirs/{tafsir_slug}/versions/{version_id}/",
     response={
         200: TafsirVersionListOut,
-        400: NinjaErrorResponse[Literal["asset_id_mismatch"]],
+        400: NinjaErrorResponse[Literal["asset_id_mismatch"]]
+        | NinjaErrorResponse[Literal["version_is_published"]]
+        | NinjaErrorResponse[Literal["content_file_unparseable"]],
         404: NinjaErrorResponse[Literal["tafsir_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
 )
@@ -226,7 +250,9 @@ def update_tafsir_version_put(
     "tafsirs/{tafsir_slug}/versions/{version_id}/",
     response={
         200: TafsirVersionListOut,
-        400: NinjaErrorResponse[Literal["asset_id_mismatch"]],
+        400: NinjaErrorResponse[Literal["asset_id_mismatch"]]
+        | NinjaErrorResponse[Literal["version_is_published"]]
+        | NinjaErrorResponse[Literal["content_file_unparseable"]],
         404: NinjaErrorResponse[Literal["tafsir_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
 )
@@ -271,6 +297,7 @@ def update_tafsir_version_patch(
     "tafsirs/{tafsir_slug}/versions/{version_id}/",
     response={
         204: None,
+        400: NinjaErrorResponse[Literal["version_is_published"]],
         404: NinjaErrorResponse[Literal["tafsir_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
 )

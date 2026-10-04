@@ -11,7 +11,7 @@ from __future__ import annotations
 from django.db.models import Q
 from django.utils.translation import gettext as _
 
-from apps.content.models import Asset, AssetLanguage, CategoryChoice, StatusChoice, VersionStateChoice
+from apps.content.models import Asset, AssetLanguage, CategoryChoice, StatusChoice
 from apps.content.services.asset_content import AssetContentService
 from apps.core.ninja_utils.errors import ItqanError
 
@@ -77,10 +77,7 @@ class AssetLanguageService:
         asset = self._asset(slug, category, publisher_q)
         rendition = self.get_asset_language_or_404(asset, language)
         new_status = StatusChoice.READY if available else StatusChoice.DRAFT
-        if (
-            new_status == StatusChoice.READY
-            and not asset.versions.filter(asset_language=rendition, state=VersionStateChoice.PUBLISHED).exists()
-        ):
+        if new_status == StatusChoice.READY and asset.get_published_version(language) is None:
             raise ItqanError(
                 error_name="language_has_no_published_version",
                 message=_("A language needs at least one published version before it can be made available."),

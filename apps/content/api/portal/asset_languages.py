@@ -113,11 +113,11 @@ def add_language(
         if file is not None:
             if resolved == CategoryChoice.TAFSIR:
                 TafsirService().create_tafsir_version(
-                    slug, name="v1", file=file, language=data.language, strict=True, publisher_q=publisher_q
+                    slug, name="v1", file=file, language=data.language, publisher_q=publisher_q
                 )
             else:
                 TranslationService().create_translation_version(
-                    slug, name="v1", file=file, language=data.language, strict=True, publisher_q=publisher_q
+                    slug, name="v1", file=file, language=data.language, publisher_q=publisher_q
                 )
     return asset_language
 

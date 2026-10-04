@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from collections import defaultdict
+
 from django.db.models import F, IntegerField, OuterRef, Q, QuerySet, Subquery, Window
 from django.db.models.functions import Coalesce, RowNumber
 
-from apps.content.models import Asset, AssetVersionChange, ReviewStateChoice
+from apps.content.models import Asset, AssetVersion, AssetVersionChange, ReviewStateChoice, VersionStateChoice
 
 
 def change_language(change: AssetVersionChange) -> str:
@@ -17,6 +19,50 @@ class AssetReviewRepository:
         if language == asset.language:
             language_q |= Q(version__asset_language__isnull=True)
         return language_q
+
+    @staticmethod
+    def _unit_key() -> Coalesce:
+        """The per-asset unit key of a change row (see ``changes_for``)."""
+        return Coalesce("sura_id", "ayah_id", "word_id", "page_no", output_field=IntegerField())
+
+    def pending_units_by_version(self, asset: Asset, language: str) -> dict[int, int]:
+        """``{version_id: units awaiting approval}`` for every committed version of
+        (asset, language). A version is fully approved when its count is 0.
+
+        A unit awaits approval at version V when its most recent change at or
+        before V is not approved (unreviewed or commented) — the same "latest
+        change per unit" the review page shows, evaluated as of V. Units with no
+        change rows (content that predates change tracking) never await approval.
+        One pass over the language's change rows, oldest commit first.
+        """
+        version_language_q = Q(asset_language__language=language)
+        if language == asset.language:
+            version_language_q |= Q(asset_language__isnull=True)
+        version_ids = list(
+            AssetVersion.objects.filter(asset=asset, state=VersionStateChoice.PUBLISHED)
+            .filter(version_language_q)
+            .order_by("created_at", "id")
+            .values_list("id", flat=True)
+        )
+        changes_by_version: dict[int, list[tuple[int, str | None]]] = defaultdict(list)
+        rows = (
+            AssetVersionChange.objects.filter(version_id__in=version_ids)
+            .annotate(unit_key=self._unit_key())
+            .values_list("version_id", "unit_key", "review__state")
+        )
+        for version_id, unit_key, review_state in rows.iterator():
+            changes_by_version[version_id].append((unit_key, review_state))
+
+        pending: set[int] = set()
+        result: dict[int, int] = {}
+        for version_id in version_ids:
+            for unit_key, review_state in changes_by_version.get(version_id, ()):
+                if review_state == ReviewStateChoice.APPROVED:
+                    pending.discard(unit_key)
+                else:
+                    pending.add(unit_key)
+            result[version_id] = len(pending)
+        return result
 
     def changes_for(self, asset: Asset, language: str, *, state: str | None = None) -> QuerySet[AssetVersionChange]:
         """The reviewable changes for one (asset, language): the **latest change per
@@ -37,7 +83,7 @@ class AssetReviewRepository:
         four templates.
         """
         language_q = self._language_q(asset, language)
-        unit_key = Coalesce("sura_id", "ayah_id", "word_id", "page_no", output_field=IntegerField())
+        unit_key = self._unit_key()
         # The latest change row per unit (its new_text is the current head text).
         # Postgres DISTINCT ON only accepts real field paths, not an annotated
         # expression like `unit_key` (Django's compiler resolves distinct()

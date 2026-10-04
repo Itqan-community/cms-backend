@@ -37,9 +37,10 @@ from apps.quran.models import Ayah, Sura, Word
 
 router = ItqanRouter(tags=[NinjaTag.TRANSLATIONS])
 
-# What a caller needs to do with the asset: read it, change its metadata, or
-# change its text. Text edits have their own per-category permission.
-Access = Literal["read", "metadata", "content"]
+# What a caller needs to do with the asset: read it, change its metadata, change
+# its text, or choose which approved version consumers see. Text edits have their
+# own per-category permission; publishing is one permission for both categories.
+Access = Literal["read", "metadata", "content", "publish"]
 
 # Path segment -> (category, {access: permission}).
 _CATEGORY_CONFIG: dict[str, tuple[CategoryChoice, dict[str, PermissionChoice]]] = {
@@ -49,6 +50,7 @@ _CATEGORY_CONFIG: dict[str, tuple[CategoryChoice, dict[str, PermissionChoice]]] 
             "read": PermissionChoice.PORTAL_READ_TRANSLATION,
             "metadata": PermissionChoice.PORTAL_UPDATE_TRANSLATION,
             "content": PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT,
+            "publish": PermissionChoice.PORTAL_PUBLISH_CONTENT,
         },
     ),
     "tafsirs": (
@@ -57,6 +59,7 @@ _CATEGORY_CONFIG: dict[str, tuple[CategoryChoice, dict[str, PermissionChoice]]] 
             "read": PermissionChoice.PORTAL_READ_TAFSIR,
             "metadata": PermissionChoice.PORTAL_UPDATE_TAFSIR,
             "content": PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT,
+            "publish": PermissionChoice.PORTAL_PUBLISH_CONTENT,
         },
     ),
 }
@@ -514,6 +517,24 @@ def restore_version(request: Request, category: str, slug: str, version_id: int)
         created_by_id=getattr(request.user, "id", None),
         publisher_q=request.publisher_q(),
     )
+
+
+@router.post(
+    "content/{category}/{slug}/versions/{version_id}/set-published/",
+    response={
+        200: DraftVersionOut,
+        400: NinjaErrorResponse[Literal["version_not_publishable"]]
+        | NinjaErrorResponse[Literal["version_not_approved"]],
+        404: NinjaErrorResponse[Literal["translation_not_found"]]
+        | NinjaErrorResponse[Literal["tafsir_not_found"]]
+        | NinjaErrorResponse[Literal["version_not_found"]]
+        | NinjaErrorResponse[Literal["unsupported_content_category"]],
+    },
+)
+def set_published_version(request: Request, category: str, slug: str, version_id: int) -> AssetVersion:
+    """Make a fully approved version the one consumers see for its language."""
+    resolved = _resolve_for_version(category, request, slug, version_id, access="publish")
+    return AssetContentService().set_published_version(slug, resolved, version_id, publisher_q=request.publisher_q())
 
 
 @router.get(
