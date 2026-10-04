@@ -411,3 +411,66 @@ class VersionViewerTest(VersionPublishingBaseTest):
         self.assertFalse(v2.entries.exists())
         self.assertTrue(v3.entries.exists())
         self.assertEqual({1: "x", 2: "y"}, AssetContentRepository().reconstruct_entries(v2))
+
+
+class SourceLanguageVisibilityTest(VersionPublishingBaseTest):
+    def test_hidden_source_language_should_stay_hidden_when_a_version_is_saved(self):
+        # Arrange
+        source = self.asset.get_or_create_source_language()
+        AssetLanguage.objects.filter(pk=source.pk).update(status=StatusChoice.DRAFT)
+
+        # Act — saving any version used to force the source back to available
+        baker.make(AssetVersion, asset=self.asset, name="src v1")
+
+        # Assert
+        source.refresh_from_db()
+        self.assertEqual(StatusChoice.DRAFT, source.status)
+
+    def test_set_availability_where_source_language_should_hide_it(self):
+        # Arrange
+        source = self.asset.get_or_create_source_language()
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        MemberLanguage.objects.create(member=self.membership, language="ar")
+        self.authenticate_user(self.user)
+
+        # Act
+        response = self.client.patch(
+            f"/portal/content/translations/{self.asset.slug}/languages/ar/availability/",
+            data={"available": False},
+            content_type="application/json",
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertFalse(response.json()["is_available"])
+        source.refresh_from_db()
+        self.assertEqual(StatusChoice.DRAFT, source.status)
+
+
+class GalleryVisibilityTest(VersionPublishingBaseTest):
+    def _gallery_ids(self) -> list[int]:
+        response = self.client.get("/cms-api/assets/", format="json")
+        self.assertEqual(200, response.status_code, response.content)
+        return [row["id"] for row in response.json()["results"]]
+
+    def test_list_assets_where_every_language_is_hidden_should_exclude_the_asset(self):
+        # Arrange — fr published but hidden; the source has nothing published
+        v1 = self._commit("v1", {self.ayah1: ("added", "x")})
+        AssetLanguage.objects.filter(pk=self.fr.pk).update(published_version=v1, status=StatusChoice.DRAFT)
+
+        # Act / Assert
+        self.assertNotIn(self.asset.id, self._gallery_ids())
+
+    def test_list_assets_where_a_language_is_published_and_available_should_include_the_asset(self):
+        # Arrange
+        v1 = self._commit("v1", {self.ayah1: ("added", "x")})
+        AssetLanguage.objects.filter(pk=self.fr.pk).update(published_version=v1, status=StatusChoice.READY)
+
+        # Act / Assert
+        self.assertIn(self.asset.id, self._gallery_ids())
+
+    def test_list_assets_where_language_available_but_nothing_published_should_exclude_the_asset(self):
+        # Arrange — fr is READY (set up that way) but no version was ever published
+
+        # Act / Assert
+        self.assertNotIn(self.asset.id, self._gallery_ids())

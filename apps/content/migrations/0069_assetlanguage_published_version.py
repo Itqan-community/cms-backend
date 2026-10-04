@@ -49,5 +49,10 @@ class Migration(migrations.Migration):
                 to="content.assetversion",
             ),
         ),
+        migrations.AlterField(
+            model_name='assetlanguage',
+            name='status',
+            field=models.CharField(choices=[('draft', 'Draft'), ('ready', 'Ready')], default='draft', help_text="Consumer availability of this language rendition. DRAFT hides it from consumers (a translation in progress, or a source the publisher hid); READY makes it downloadable. The source language is created READY. The asset's own Asset.status remains the overarching gate.", max_length=20),
+        ),
         migrations.RunPython(backfill_published_version, migrations.RunPython.noop),
     ]

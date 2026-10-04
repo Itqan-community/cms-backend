@@ -8,18 +8,21 @@ from apps.content.models import (
     MushafLayout,
     StatusChoice,
 )
+from apps.content.tests.publishing import make_visible
 from apps.core.tests.base import BaseTestCase
 
 
 class ListAssetTest(BaseTestCase):
     def test_list_asset_should_return_all_available_assets(self):
         # Arrange
-        baker.make(
-            Asset,
-            name="Tafsir Ibn Katheer",
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="Tafsir Ibn Katheer",
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+            )
         )
 
         # Act
@@ -33,21 +36,25 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_asset_filter_by_license_code_should_return_filtered_assets(self):
         # Arrange
-        baker.make(
-            Asset,
-            name="Tafsir Al-Jalalayn",
-            license=LicenseChoice.CC_BY_SA,
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="Tafsir Al-Jalalayn",
+                license=LicenseChoice.CC_BY_SA,
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+            )
         )
-        baker.make(
-            Asset,
-            name="Tafsir Ibn Katheer",
-            license=LicenseChoice.CC_BY_NC,
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="Tafsir Ibn Katheer",
+                license=LicenseChoice.CC_BY_NC,
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+            )
         )
 
         # Act
@@ -61,20 +68,24 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_asset_filter_by_category_should_return_filtered_assets(self):
         # Arrange
-        baker.make(
-            Asset,
-            name="Tafsir Al-Jalalayn",
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="Tafsir Al-Jalalayn",
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+            )
         )
-        baker.make(
-            Asset,
-            name="Muhammad Refaat",
-            category=CategoryChoice.RECITATION,
-            reciter=baker.make("content.Reciter", name="Test Reciter"),
-            riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="Muhammad Refaat",
+                category=CategoryChoice.RECITATION,
+                reciter=baker.make("content.Reciter", name="Test Reciter"),
+                riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
+                status=StatusChoice.READY,
+            )
         )
 
         # Act
@@ -94,26 +105,32 @@ class ListAssetTest(BaseTestCase):
         self,
     ):
         # Arrange
-        baker.make(
-            Asset,
-            name="Tafsir Al-Jalalayn",
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="Tafsir Al-Jalalayn",
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+            )
         )
-        baker.make(
-            Asset,
-            name="Muhammad Refaat",
-            category=CategoryChoice.RECITATION,
-            reciter=baker.make("content.Reciter", name="Test Reciter"),
-            riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="Muhammad Refaat",
+                category=CategoryChoice.RECITATION,
+                reciter=baker.make("content.Reciter", name="Test Reciter"),
+                riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
+                status=StatusChoice.READY,
+            )
         )
-        baker.make(
-            Asset,
-            name="King Fahd",
-            category=CategoryChoice.MUSHAF,
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="King Fahd",
+                category=CategoryChoice.MUSHAF,
+                status=StatusChoice.READY,
+            )
         )
 
         # Act
@@ -130,26 +147,32 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_order_by_name_descending_should_return_sorted_assets(self):
         # Arrange
-        baker.make(
-            Asset,
-            name="A",
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="A",
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+            )
         )
-        baker.make(
-            Asset,
-            name="C",
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="C",
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+            )
         )
-        baker.make(
-            Asset,
-            name="B",
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="B",
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+            )
         )
 
         # Act
@@ -165,26 +188,32 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_order_by_name_ascending_should_return_sorted_assets(self):
         # Arrange
-        baker.make(
-            Asset,
-            name="A",
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="A",
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+            )
         )
-        baker.make(
-            Asset,
-            name="C",
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="C",
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+            )
         )
-        baker.make(
-            Asset,
-            name="B",
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="B",
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+            )
         )
 
         # Act
@@ -200,27 +229,33 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_assets_order_by_category_descending_should_return_sorted_assets(self):
         # Arrange
-        baker.make(
-            Asset,
-            name="A",
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="A",
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+            )
         )
-        baker.make(
-            Asset,
-            name="C",
-            category=CategoryChoice.RECITATION,
-            reciter=baker.make("content.Reciter", name="Test Reciter"),
-            riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="C",
+                category=CategoryChoice.RECITATION,
+                reciter=baker.make("content.Reciter", name="Test Reciter"),
+                riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
+                status=StatusChoice.READY,
+            )
         )
-        baker.make(
-            Asset,
-            name="B",
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="B",
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+            )
         )
 
         # Act
@@ -239,29 +274,35 @@ class ListAssetTest(BaseTestCase):
     ):
         """Test search functionality across name, description, category, and publisher fields."""
         # Arrange
-        baker.make(
-            Asset,
-            name="Tafsir Al-Jalalayn",
-            description="This is a tafsir book",
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="Tafsir Al-Jalalayn",
+                description="This is a tafsir book",
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+            )
         )
-        baker.make(
-            Asset,
-            name="Muhammad Refaat",
-            description="This is a recitation book",
-            category=CategoryChoice.RECITATION,
-            reciter=baker.make("content.Reciter", name="Test Reciter"),
-            riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="Muhammad Refaat",
+                description="This is a recitation book",
+                category=CategoryChoice.RECITATION,
+                reciter=baker.make("content.Reciter", name="Test Reciter"),
+                riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
+                status=StatusChoice.READY,
+            )
         )
-        baker.make(
-            Asset,
-            name="King Fahd",
-            description="This is a mushaf book",
-            category=CategoryChoice.MUSHAF,
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="King Fahd",
+                description="This is a mushaf book",
+                category=CategoryChoice.MUSHAF,
+                status=StatusChoice.READY,
+            )
         )
 
         # Test search by name/category
@@ -280,13 +321,15 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_asset_should_include_is_open_access_field(self):
         # Arrange
-        baker.make(
-            Asset,
-            name="Open Access Tafsir",
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            status=StatusChoice.READY,
-            is_open_access=True,
+        make_visible(
+            baker.make(
+                Asset,
+                name="Open Access Tafsir",
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+                is_open_access=True,
+            )
         )
 
         # Act
@@ -300,21 +343,25 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_asset_filter_by_is_open_access_true_should_return_only_open_access_assets(self):
         # Arrange
-        baker.make(
-            Asset,
-            name="Open Access Tafsir",
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            status=StatusChoice.READY,
-            is_open_access=True,
+        make_visible(
+            baker.make(
+                Asset,
+                name="Open Access Tafsir",
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+                is_open_access=True,
+            )
         )
-        baker.make(
-            Asset,
-            name="Restricted Tafsir",
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            status=StatusChoice.READY,
-            is_open_access=False,
+        make_visible(
+            baker.make(
+                Asset,
+                name="Restricted Tafsir",
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+                is_open_access=False,
+            )
         )
 
         # Act
@@ -329,21 +376,25 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_assets_where_restricted_for_tenant_should_be_excluded(self):
         # Arrange
-        baker.make(
-            Asset,
-            name="Public Asset",
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            status=StatusChoice.READY,
-            restricted_for_tenant=False,
+        make_visible(
+            baker.make(
+                Asset,
+                name="Public Asset",
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+                restricted_for_tenant=False,
+            )
         )
-        baker.make(
-            Asset,
-            name="Tenant Only Asset",
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            status=StatusChoice.READY,
-            restricted_for_tenant=True,
+        make_visible(
+            baker.make(
+                Asset,
+                name="Tenant Only Asset",
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+                restricted_for_tenant=True,
+            )
         )
 
         # Act
@@ -359,12 +410,14 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_assets_default_page_size_should_return_20_items(self):
         # Arrange — 25 assets, default page_size is 20
-        baker.make(
-            Asset,
-            _quantity=25,
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                _quantity=25,
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+            )
         )
 
         # Act
@@ -379,12 +432,14 @@ class ListAssetTest(BaseTestCase):
     def test_list_assets_custom_page_size_should_return_requested_number_of_items(self):
         # Arrange — 25 assets; passing page_size=25 must return all 25 (regression for the bug
         # where page_size was silently reset to 20 by Pydantic re-initialisation in __init__)
-        baker.make(
-            Asset,
-            _quantity=25,
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                _quantity=25,
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+            )
         )
 
         # Act
@@ -398,12 +453,14 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_assets_second_page_should_return_remaining_items(self):
         # Arrange — 25 assets, page_size=20 → page 2 has 5
-        baker.make(
-            Asset,
-            _quantity=25,
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                _quantity=25,
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+            )
         )
 
         # Act
@@ -417,12 +474,14 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_assets_page_size_exceeding_max_should_be_capped_at_1000(self):
         # Arrange — 5 assets; page_size=2000 must be capped at MAX_PAGE_SIZE=1000
-        baker.make(
-            Asset,
-            _quantity=5,
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                _quantity=5,
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+            )
         )
 
         # Act
@@ -439,13 +498,15 @@ class ListAssetTest(BaseTestCase):
     def test_list_asset_where_recitation_should_include_reciter_field(self):
         # Arrange
         reciter = baker.make("content.Reciter", name="Muhammad Refaat")
-        baker.make(
-            Asset,
-            name="Recitation Asset",
-            category=CategoryChoice.RECITATION,
-            reciter=reciter,
-            riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="Recitation Asset",
+                category=CategoryChoice.RECITATION,
+                reciter=reciter,
+                riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
+                status=StatusChoice.READY,
+            )
         )
 
         # Act
@@ -459,12 +520,14 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_asset_where_not_recitation_should_have_null_reciter(self):
         # Arrange
-        baker.make(
-            Asset,
-            name="Tafsir Asset",
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="Tafsir Asset",
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+            )
         )
 
         # Act
@@ -481,21 +544,25 @@ class ListAssetTest(BaseTestCase):
         target_reciter = baker.make("content.Reciter", name="Target Reciter")
         other_reciter = baker.make("content.Reciter", name="Other Reciter")
         riwayah = baker.make("content.Riwayah", name="Test Riwayah")
-        baker.make(
-            Asset,
-            name="Target Recitation",
-            category=CategoryChoice.RECITATION,
-            reciter=target_reciter,
-            riwayah=riwayah,
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="Target Recitation",
+                category=CategoryChoice.RECITATION,
+                reciter=target_reciter,
+                riwayah=riwayah,
+                status=StatusChoice.READY,
+            )
         )
-        baker.make(
-            Asset,
-            name="Other Recitation",
-            category=CategoryChoice.RECITATION,
-            reciter=other_reciter,
-            riwayah=riwayah,
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="Other Recitation",
+                category=CategoryChoice.RECITATION,
+                reciter=other_reciter,
+                riwayah=riwayah,
+                status=StatusChoice.READY,
+            )
         )
 
         # Act
@@ -511,12 +578,14 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_asset_where_ayah_template_should_report_template_and_null_mushaf_layout(self):
         # Arrange
-        baker.make(
-            Asset,
-            name="Ayah Tafsir",
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="Ayah Tafsir",
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+            )
         )
 
         # Act
@@ -532,13 +601,15 @@ class ListAssetTest(BaseTestCase):
     def test_list_asset_where_page_template_should_report_template_and_populated_mushaf_layout(self):
         # Arrange
         layout = baker.make(MushafLayout, name="Madani 604", page_count=604)
-        baker.make(
-            Asset,
-            name="Page Tafsir",
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.PAGE,
-            mushaf_layout=layout,
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="Page Tafsir",
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.PAGE,
+                mushaf_layout=layout,
+                status=StatusChoice.READY,
+            )
         )
 
         # Act
@@ -556,13 +627,15 @@ class ListAssetTest(BaseTestCase):
 
     def test_list_asset_where_non_text_category_should_report_null_template(self):
         # Arrange
-        baker.make(
-            Asset,
-            name="Recitation Asset",
-            category=CategoryChoice.RECITATION,
-            reciter=baker.make("content.Reciter", name="Test Reciter"),
-            riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
-            status=StatusChoice.READY,
+        make_visible(
+            baker.make(
+                Asset,
+                name="Recitation Asset",
+                category=CategoryChoice.RECITATION,
+                reciter=baker.make("content.Reciter", name="Test Reciter"),
+                riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
+                status=StatusChoice.READY,
+            )
         )
 
         # Act

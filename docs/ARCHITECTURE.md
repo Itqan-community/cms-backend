@@ -281,8 +281,10 @@ identical to the previous version records no changes.
 - **Availability** — a language is consumable only when the asset is `READY`, the
   `AssetLanguage.status` is `READY` and it has a published version; translations
   start hidden until marked available, which needs a published version
-  (`language_has_no_published_version`). Source availability follows the asset's
-  own status.
+  (`language_has_no_published_version`). The source language starts available and
+  is toggled the same way (`PATCH .../languages/{language}/availability/`). A
+  translation / tafsir with no available, published language is left out of the
+  gallery (`assets/`) and recommendations (`consumer_visible_q`).
 - **Commit vs publish** — committing makes a version the *head* (newest wins; what
   the editor builds on, `is_active` in the version list) but does **not** make it
   visible. Consumers (downloads, samples, `available_languages`, subscriber emails,
