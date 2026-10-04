@@ -26,6 +26,7 @@ from apps.content.services.recommendations import (
     list_active_editorial_recommendations,
 )
 from apps.content.services.recommendations_redis import similar_key
+from apps.content.tests.publishing import make_visible
 from apps.core.tests.base import BaseTestCase
 from apps.users.models import User
 
@@ -247,7 +248,8 @@ class TrendingRecommendationsServiceTest(BaseTestCase):
     def test_category_scoped_leaderboard_only_includes_that_category(self):
         mushaf = self._make_asset(category=CategoryChoice.MUSHAF)
         _make_usage_event(self.user, mushaf, UsageEvent.UsageKindChoice.VIEW)
-        tafsir = self._make_asset(category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.AYAH)
+        # A tafsir is listed only once it has a published, available language.
+        tafsir = make_visible(self._make_asset(category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.AYAH))
         _make_usage_event(self.user, tafsir, UsageEvent.UsageKindChoice.VIEW)
 
         compute_trending_recommendations()
@@ -266,6 +268,17 @@ class TrendingRecommendationsServiceTest(BaseTestCase):
         compute_trending_recommendations()
 
         self.assertEqual([], get_trending_asset_ids())
+
+    def test_tafsir_without_a_visible_language_should_not_be_recommended(self):
+        # Arrange — a tafsir whose only language has nothing published
+        tafsir = self._make_asset(category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.AYAH)
+        _make_usage_event(self.user, tafsir, UsageEvent.UsageKindChoice.VIEW)
+
+        # Act
+        compute_trending_recommendations()
+
+        # Assert
+        self.assertEqual([], get_trending_asset_ids(category=CategoryChoice.TAFSIR))
 
 
 class PersonalizedRecommendationsServiceTest(BaseTestCase):

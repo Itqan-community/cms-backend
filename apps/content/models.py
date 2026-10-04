@@ -427,18 +427,12 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
             language=self.language,
             defaults={"is_source": True, "status": StatusChoice.READY},
         )
-        # The source rendition is the asset's own content: it is always READY (its
-        # consumer availability is governed by the asset's own status). Repair any
-        # source row that predates this or was created as a plain translation.
-        fields_to_fix = []
+        # The source rendition starts available (READY); after that its availability
+        # is the publisher's to toggle, like any other language. Repair a source row
+        # that was created as a plain translation.
         if not source.is_source:
             source.is_source = True
-            fields_to_fix.append("is_source")
-        if source.status != StatusChoice.READY:
-            source.status = StatusChoice.READY
-            fields_to_fix.append("status")
-        if fields_to_fix:
-            source.save(update_fields=fields_to_fix)
+            source.save(update_fields=["is_source"])
         return source
 
     @property
@@ -466,9 +460,9 @@ class AssetLanguage(BaseModel):
         default=StatusChoice.DRAFT,
         help_text=(
             "Consumer availability of this language rendition. DRAFT hides it from "
-            "consumers (a translation in progress); READY makes it downloadable. The "
-            "source language is created READY (the asset's own Asset.status is the "
-            "overarching gate)."
+            "consumers (a translation in progress, or a source the publisher hid); "
+            "READY makes it downloadable. The source language is created READY. The "
+            "asset's own Asset.status remains the overarching gate."
         ),
     )
     published_version = models.ForeignKey(
@@ -495,6 +489,21 @@ class AssetLanguage(BaseModel):
 
     def __str__(self):
         return f"AssetLanguage(asset_id={self.asset_id}, language={self.language}, source={self.is_source})"
+
+
+def consumer_visible_q() -> models.Q:
+    """Assets that may be listed to consumers (gallery, recommendations).
+
+    A reviewed category (translation / tafsir) is listed only while at least one of
+    its languages is available (READY) and has a published version — hiding every
+    language takes the asset out of the gallery. Other categories are unaffected.
+    """
+    visible_language = AssetLanguage.objects.filter(
+        asset=models.OuterRef("pk"),
+        status=StatusChoice.READY,
+        published_version__isnull=False,
+    )
+    return ~models.Q(category__in=REVIEWED_CATEGORIES) | models.Q(models.Exists(visible_language))
 
 
 class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
