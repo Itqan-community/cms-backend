@@ -234,6 +234,7 @@ def create_translation(
         version_name=data.version_name,
         version_summary=data.version_summary,
         file=file,
+        created_by_id=request.user.id,
         publisher_id=data.publisher_id,
         name_ar=data.name_ar,
         name_en=data.name_en,

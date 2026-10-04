@@ -198,6 +198,7 @@ def create_translation_version(
         summary=data.summary,
         file=file,
         language=data.language,
+        created_by_id=request.user.id,
         publisher_q=request.publisher_q(),
     )
     return 201, version

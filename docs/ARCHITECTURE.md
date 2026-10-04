@@ -319,8 +319,10 @@ identical to the previous version records no changes.
 - **Review** — reviewers with `PORTAL_REVIEW_CONTENT`, assigned to languages via
   `MemberLanguage`, approve or comment ("needs changes") each `AssetVersionChange`.
   State is stored one-per-change as `AssetVersionChangeReview` with
-  `reviewed_by`/`reviewed_at` for auditing. Approval gates publishing (see above);
-  reviewers cannot edit content.
+  `reviewed_by`/`reviewed_at` for auditing. Each listed change carries `edited_by`,
+  the author (`created_by`) of the commit that made it — editor commits, uploads and
+  restores all record theirs. Approval gates publishing (see above); reviewers
+  cannot edit content.
 
 ---
 

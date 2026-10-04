@@ -153,6 +153,7 @@ class TafsirService:
         version_name: str | None = None,
         version_summary: str = "",
         file: Any = None,
+        created_by_id: int | None = None,
         **tafsir_kwargs: Any,
     ) -> Asset:
         """
@@ -176,6 +177,7 @@ class TafsirService:
                     name=version_name or "",
                     summary=version_summary,
                     file=file,
+                    created_by_id=created_by_id,
                 )
         tafsir.refresh_from_db()
         return tafsir
@@ -274,6 +276,7 @@ class TafsirService:
         summary: str = "",
         file: Any = None,
         language: str | None = None,
+        created_by_id: int | None = None,
         publisher_q: Q | None = None,
     ) -> AssetVersion:
         """
@@ -292,6 +295,7 @@ class TafsirService:
                 name=name,
                 summary=summary,
                 file=file,
+                created_by_id=created_by_id,
             )
             set_version_language(version, language)
             if file:

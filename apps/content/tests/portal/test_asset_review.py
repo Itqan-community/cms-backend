@@ -166,3 +166,27 @@ class ReviewActionTest(AssetReviewApiBaseTest):
         self.assertEqual("added", row["change_type"])
         self.assertEqual("unreviewed", row["review_state"])
         self.assertIn("baseline_text", row)
+
+    def test_list_changes_should_name_the_editor_who_made_the_change(self):
+        # Arrange
+        self._auth_reviewer()
+        editor = User.objects.create_user(email="editor@example.com", name="Editor Name", is_staff=True)
+        AssetVersion.objects.filter(pk=self.version.pk).update(created_by=editor)
+
+        # Act
+        response = self.client.get(self._changes_url("?language=fr"))
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual("Editor Name", response.json()["results"][0]["edited_by"])
+
+    def test_list_changes_where_version_has_no_author_should_return_null_editor(self):
+        # Arrange
+        self._auth_reviewer()
+
+        # Act
+        response = self.client.get(self._changes_url("?language=fr"))
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertIsNone(response.json()["results"][0]["edited_by"])
