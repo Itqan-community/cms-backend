@@ -446,13 +446,59 @@ class AssetContentRepository:
             version.size_bytes = 0
             version.save(update_fields=["file_url", "size_bytes", "updated_at"])
 
+    def _prune_superseded_head(self, previous_head: AssetVersion | None) -> None:
+        """Prune the head a new commit just superseded down to its deltas.
+
+        Only when it carries stored changes (never drop a commit that has neither
+        entries nor a delta), and never while it is a published version: its file
+        is what consumers download.
+        """
+        if previous_head is None or not previous_head.changes.exists():
+            return
+        if AssetLanguage.objects.filter(published_version=previous_head).exists():
+            return
+        self.prune_version_snapshot(previous_head)
+
+    @transaction.atomic
+    def record_upload_changes(self, version: AssetVersion) -> None:
+        """(Re)record an uploaded version's delta vs its predecessor, so its content
+        is reviewed like an editor commit. Replacing the file re-records it, which
+        drops the reviews of the replaced content along with its change rows. An
+        upload identical to its predecessor records no changes."""
+        version.changes.all().delete()
+        self._record_changes(version, self._predecessor(version))
+
+    @transaction.atomic
+    def set_published_version(self, rendition: AssetLanguage, version: AssetVersion) -> AssetLanguage:
+        """Make ``version`` the one consumers are served for ``rendition``'s language.
+
+        A superseded commit may have been pruned to deltas (entries and file
+        dropped); consumers download the file, so it is materialized again from
+        the reconstructed snapshot first.
+        """
+        if not version.file_url:
+            snapshot = self.reconstruct_entries(version)
+            content = self.snapshot_to_csv_bytes(snapshot, unit_spec_for(version.asset), asset=version.asset)
+            filename = f"{version.asset.slug}-{version.name}.csv".replace(" ", "_")
+            version.file_url.save(filename, ContentFile(content), save=False)
+            version.size_bytes = len(content)
+            version.save(update_fields=["file_url", "size_bytes", "updated_at"])
+        rendition.published_version = version
+        rendition.save(update_fields=["published_version", "updated_at"])
+        version.asset.file_size = version.human_readable_size
+        version.asset.save(update_fields=["file_size", "updated_at"])
+        return rendition
+
     @transaction.atomic
     def publish_draft(self, draft: AssetVersion) -> AssetVersion:
-        """Flip a draft to published so newest-wins makes it the latest version.
+        """Commit a draft: flip it to published so newest-wins makes it the head.
+
+        For reviewed categories this does not make it visible to consumers — that
+        takes ``set_published_version`` once its changes are approved.
 
         Records the commit's delta (AssetVersionChange) vs the previous head, then
         prunes the previous head's full snapshot (only if it carries stored deltas,
-        so no content is ever lost). Also materializes a downloadable CSV from the
+        so no content is ever lost, and never the published version). Also materializes a downloadable CSV from the
         entries, in the asset's template columns, so consumer download paths keep
         working.
         """
@@ -490,10 +536,7 @@ class AssetContentRepository:
             asset_fields.append("format")
         draft.asset.save(update_fields=asset_fields)
 
-        # Prune the superseded head to deltas — but only if it carries stored
-        # changes (never drop a commit that has neither entries nor a delta).
-        if previous_head is not None and previous_head.changes.exists():
-            self.prune_version_snapshot(previous_head)
+        self._prune_superseded_head(previous_head)
         return draft
 
     def _predecessor(self, version: AssetVersion) -> AssetVersion | None:
@@ -711,8 +754,7 @@ class AssetContentRepository:
             new_version.file_url.save(filename, ContentFile(content), save=False)
             new_version.size_bytes = len(content)
             new_version.save(update_fields=["file_url", "size_bytes"])
-        if previous_head is not None and previous_head.changes.exists():
-            self.prune_version_snapshot(previous_head)
+        self._prune_superseded_head(previous_head)
         return new_version
 
     def backfill_file_from_entries(self, version: AssetVersion) -> bool:

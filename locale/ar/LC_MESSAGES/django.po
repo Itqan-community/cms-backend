@@ -389,6 +389,9 @@ msgstr "تعذّرت قراءة الملف المرفوع."
 msgid "The uploaded file could not be parsed into content entries."
 msgstr "تعذّر تحليل الملف المرفوع إلى إدخالات محتوى."
 
+msgid "This version is published. Publish another version first."
+msgstr "هذا الإصدار منشور. انشر إصدارًا آخر أولًا."
+
 #, python-brace-format
 msgid "{category} with slug {slug} not found."
 msgstr "لم يتم العثور على {category} بالمعرّف {slug}."
@@ -413,6 +416,13 @@ msgstr "رسالة التغيير مطلوبة."
 
 msgid "Only published versions can be restored."
 msgstr "لا يمكن استعادة سوى الإصدارات المنشورة."
+
+msgid "Only committed versions can be published."
+msgstr "لا يمكن نشر المسودات، بل الإصدارات المحفوظة فقط."
+
+#, python-brace-format
+msgid "This version has {count} change(s) that are not approved yet."
+msgstr "يحتوي هذا الإصدار على {count} من التغييرات غير المعتمدة بعد."
 
 #, python-brace-format
 msgid "Language {language} already exists for this asset."
@@ -798,6 +808,9 @@ msgstr "البوابة - إدارة إعدادات طلبات الوصول"
 
 msgid "Portal - Review Content"
 msgstr "لوحة التحكم - مراجعة المحتوى"
+
+msgid "Portal - Publish Content"
+msgstr "لوحة التحكم - نشر المحتوى"
 
 msgid "Portal - Edit Translation Content"
 msgstr "لوحة التحكم - تحرير محتوى الترجمات"

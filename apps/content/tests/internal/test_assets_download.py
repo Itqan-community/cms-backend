@@ -19,6 +19,7 @@ from apps.content.models import (
     StatusChoice,
     UsageEvent,
 )
+from apps.content.tests.publishing import publish
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -103,7 +104,7 @@ class TestAssetDownload(BaseTestCase):
     def test_download_asset_with_no_file_should_return_404(self, mock_user_has_access):
         # Arrange
         mock_user_has_access.return_value = True
-        baker.make(AssetVersion, asset=self.asset, file_url=None)  # No file
+        publish(baker.make(AssetVersion, asset=self.asset, file_url=None))  # No file
 
         # Act
         self.authenticate_user(self.user)
@@ -119,7 +120,7 @@ class TestAssetDownload(BaseTestCase):
 
         # Create a mock file
         mock_file = SimpleUploadedFile("test_123abc.pdf", b"fake pdf content", content_type="application/pdf")
-        baker.make(AssetVersion, asset=self.asset, name="Version 1", file_url=mock_file)
+        publish(baker.make(AssetVersion, asset=self.asset, name="Version 1", file_url=mock_file))
 
         # Act
         self.authenticate_user(self.user)
@@ -138,7 +139,7 @@ class TestAssetDownload(BaseTestCase):
 
         # Create a CSV file
         mock_file = SimpleUploadedFile("test_123abc.csv", b"fake csv content", content_type="text/csv")
-        baker.make(AssetVersion, asset=self.asset, name="CSV Version", file_url=mock_file)
+        publish(baker.make(AssetVersion, asset=self.asset, name="CSV Version", file_url=mock_file))
 
         # Act
         self.authenticate_user(self.user)
@@ -151,7 +152,7 @@ class TestAssetDownload(BaseTestCase):
         self.assertIn("/test_123abc", body["download_url"])
 
     @patch("apps.content.api.internal.assets_download.user_has_access")
-    def test_download_asset_should_return_latest_version(self, mock_user_has_access):
+    def test_download_asset_where_newer_version_unpublished_should_return_published_version(self, mock_user_has_access):
         # Arrange
         mock_user_has_access.return_value = True
 
@@ -159,7 +160,8 @@ class TestAssetDownload(BaseTestCase):
         older_file = SimpleUploadedFile("old.pdf", b"old content", content_type="application/pdf")
         newer_file = SimpleUploadedFile("new_123abc.pdf", b"new content", content_type="application/pdf")
 
-        older_version = baker.make(AssetVersion, asset=self.asset, name="Old Version", file_url=older_file)
+        older_version = publish(baker.make(AssetVersion, asset=self.asset, name="Old Version", file_url=older_file))
+        # A newer commit that has not been published (e.g. still under review)
         newer_version = baker.make(AssetVersion, asset=self.asset, name="New Version", file_url=newer_file)
 
         # Make newer version actually newer by setting created_at
@@ -174,7 +176,8 @@ class TestAssetDownload(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         self.assertIn("download_url", body)
-        self.assertIn("/new_123abc", body["download_url"])
+        self.assertIn("/old", body["download_url"])
+        self.assertNotIn("/new_123abc", body["download_url"])
 
     def test_download_asset_with_invalid_id_format_should_return_400(self):
         # Arrange
@@ -204,7 +207,7 @@ class TestAssetDownload(BaseTestCase):
 
         # Create a mock file
         mock_file = SimpleUploadedFile("test.pdf", b"fake pdf content", content_type="application/pdf")
-        baker.make(AssetVersion, asset=self.asset, name="Download Test", file_url=mock_file)
+        publish(baker.make(AssetVersion, asset=self.asset, name="Download Test", file_url=mock_file))
 
         # Act
         self.authenticate_user(self.user)
@@ -261,7 +264,7 @@ class TestAssetDownload(BaseTestCase):
             is_open_access=True,
         )
         mock_file = SimpleUploadedFile("public_123abc.pdf", b"fake pdf content", content_type="application/pdf")
-        baker.make(AssetVersion, asset=public_asset, name="Version 1", file_url=mock_file)
+        publish(baker.make(AssetVersion, asset=public_asset, name="Version 1", file_url=mock_file))
         user_without_access = baker.make(User, email="noaccess@example.com")
 
         # Act — real user_has_access runs and short-circuits on is_open_access
@@ -287,7 +290,7 @@ class TestAssetDownload(BaseTestCase):
             is_open_access=True,
         )
         mock_file = SimpleUploadedFile("public.pdf", b"fake pdf content", content_type="application/pdf")
-        baker.make(AssetVersion, asset=public_asset, name="Version 1", file_url=mock_file)
+        publish(baker.make(AssetVersion, asset=public_asset, name="Version 1", file_url=mock_file))
         user_without_access = baker.make(User, email="publicusage@example.com")
 
         # Act
@@ -310,7 +313,7 @@ class TestAssetDownload(BaseTestCase):
 
         # Create a mock file
         mock_file = SimpleUploadedFile("test.csv", b"fake csv content", content_type="text/csv")
-        baker.make(AssetVersion, asset=self.asset, name="Metadata Test", file_url=mock_file)
+        publish(baker.make(AssetVersion, asset=self.asset, name="Metadata Test", file_url=mock_file))
 
         # Act - Include custom headers
         self.authenticate_user(self.user)
@@ -380,19 +383,23 @@ class TestAssetDownloadLanguage(BaseTestCase):
         self.user = baker.make(User, email="ml@example.com")
         ar_lang = self.asset.get_or_create_source_language()
         es_lang = AssetLanguage.objects.create(asset=self.asset, language="es", status=StatusChoice.READY)
-        baker.make(
-            AssetVersion,
-            asset=self.asset,
-            asset_language=ar_lang,
-            name="ar v1",
-            file_url=SimpleUploadedFile("ar_source.csv", b"ar", content_type="text/csv"),
+        publish(
+            baker.make(
+                AssetVersion,
+                asset=self.asset,
+                asset_language=ar_lang,
+                name="ar v1",
+                file_url=SimpleUploadedFile("ar_source.csv", b"ar", content_type="text/csv"),
+            )
         )
-        baker.make(
-            AssetVersion,
-            asset=self.asset,
-            asset_language=es_lang,
-            name="es v1",
-            file_url=SimpleUploadedFile("es_trans.csv", b"es", content_type="text/csv"),
+        publish(
+            baker.make(
+                AssetVersion,
+                asset=self.asset,
+                asset_language=es_lang,
+                name="es v1",
+                file_url=SimpleUploadedFile("es_trans.csv", b"es", content_type="text/csv"),
+            )
         )
 
     def test_download_with_language_serves_that_language_file(self):
@@ -451,12 +458,14 @@ class TestAssetDownloadFilename(BaseTestCase):
             language="ar",
             **kwargs,
         )
-        baker.make(
-            AssetVersion,
-            asset=asset,
-            asset_language=asset.get_or_create_source_language(),
-            name="v 1",
-            file_url=SimpleUploadedFile("upload_8f3a.csv", b"1,1,text", content_type="text/csv"),
+        publish(
+            baker.make(
+                AssetVersion,
+                asset=asset,
+                asset_language=asset.get_or_create_source_language(),
+                name="v 1",
+                file_url=SimpleUploadedFile("upload_8f3a.csv", b"1,1,text", content_type="text/csv"),
+            )
         )
         return asset
 

@@ -14,7 +14,7 @@ from unittest.mock import MagicMock, patch
 from django.test import TestCase, override_settings
 import pytest
 
-from apps.content.models import Asset, AssetVersion, CategoryChoice, VersionStateChoice
+from apps.content.models import Asset, AssetTemplateChoice, AssetVersion, CategoryChoice, VersionStateChoice
 from apps.core.ninja_utils.errors import ItqanError
 from apps.dependabot.models import WatchedRepository
 from apps.dependabot.services.pr_updater import UpdateResult
@@ -181,6 +181,23 @@ class DependabotTasksTest(TestCase):
                         created=False,
                     )
                 mock_delay.assert_called_once_with(self.published_version.id)
+
+    def test_signal_skips_reviewed_category_commit_until_published(self):
+        # A translation commit is not visible to consumers until it is published;
+        # its update is dispatched by the publish action instead.
+        translation = Asset.objects.create(
+            publisher=self.publisher,
+            name="Translation",
+            category=CategoryChoice.TRANSLATION,
+            template=AssetTemplateChoice.AYAH,
+            slug="translation-en",
+        )
+        committed = AssetVersion.objects.create(asset=translation, name="2.0.0", state=VersionStateChoice.PUBLISHED)
+        with self._settings():
+            with patch("apps.dependabot.tasks.dispatch_dependabot_updates_for_version.delay") as mock_delay:
+                with self.captureOnCommitCallbacks(execute=True):
+                    on_asset_version_published(sender=AssetVersion, instance=committed, created=True)
+                mock_delay.assert_not_called()
 
     def test_signal_skips_when_no_relevant_fields_changed(self):
         with self._settings():

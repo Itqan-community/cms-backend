@@ -1,10 +1,12 @@
 """Business logic for per-ayah asset content editing (translations & tafsirs).
 
 Flow: open editor -> get-or-create a shared server-side *draft* version (seeded
-from the latest published version) -> edit its entries -> either *publish* the
-draft (newest-wins makes it the latest version) or *discard* it. Drafts are
-excluded from every "latest / published" query (see model + Phase 0 guards), so
-in-progress edits never leak to public/tenant/developers surfaces.
+from the latest committed version) -> edit its entries -> either *commit* the
+draft (newest-wins makes it the head) or *discard* it. Drafts are excluded from
+every "latest / published" query (see model + Phase 0 guards), so in-progress
+edits never leak to public/tenant/developers surfaces. A committed version
+reaches consumers only once its changes are approved and it is explicitly
+*published* (``set_published_version``).
 """
 
 from __future__ import annotations
@@ -17,6 +19,7 @@ from django.utils.translation import gettext as _
 
 from apps.content.models import (
     Asset,
+    AssetLanguage,
     AssetTemplateChoice,
     AssetVersion,
     AssetVersionEntry,
@@ -25,10 +28,12 @@ from apps.content.models import (
     VersionStateChoice,
 )
 from apps.content.repositories.asset_content import AssetContentRepository
+from apps.content.repositories.asset_review import AssetReviewRepository
 from apps.content.services.asset_content_import import AssetContentParseError, parse_content_file
 from apps.content.services.asset_templates import EntryFilters, UnitSpec, unit_spec_for
 from apps.content.tasks import notify_asset_version_created
 from apps.core.ninja_utils.errors import ItqanError
+from apps.dependabot.tasks import dispatch_dependabot_updates_for_version
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +100,17 @@ def import_uploaded_file_into_entries(version: AssetVersion, *, strict: bool = F
         return
     entries_count = AssetContentRepository().replace_entries_from_parsed(version, spec, parsed)
     logger.info(f"Uploaded file imported into entries [version_id={version.pk}, entries={entries_count}]")
+
+
+def forbid_published_version_change(version: AssetVersion) -> None:
+    """Consumers are served the published version, so its content cannot be
+    replaced and it cannot be deleted — publish another version first."""
+    if AssetLanguage.objects.filter(published_version=version).exists():
+        raise ItqanError(
+            error_name="version_is_published",
+            message=_("This version is published. Publish another version first."),
+            status_code=400,
+        )
 
 
 def set_version_language(version: AssetVersion, language: str | None) -> None:
@@ -482,8 +498,9 @@ class AssetContentService:
         message: str,
         publisher_q: Q | None = None,
     ) -> AssetVersion:
-        """Commit a draft: publish it as the latest version with a required message
-        (stored as the version's description), then notify."""
+        """Commit a draft as the latest version with a required message (stored as
+        the version's description). Consumers do not see it until it is approved
+        and published (``set_published_version``), so nobody is notified here."""
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
         draft = self._get_editable_draft_or_400(asset, version_id)
         if not draft.content_edited:
@@ -501,7 +518,6 @@ class AssetContentService:
         draft.summary = message.strip()
         published = self.repo.publish_draft(draft)
         logger.info(f"Draft committed [version_id={published.pk}, asset_id={asset.pk}]")
-        transaction.on_commit(lambda: notify_asset_version_created.delay(published.pk))
         return published
 
     def discard_draft(
@@ -526,8 +542,9 @@ class AssetContentService:
         created_by_id: int | None = None,
         publisher_q: Q | None = None,
     ) -> AssetVersion:
-        """Restore a published version's content as a new version, making it the
-        latest (active) one for its language."""
+        """Restore a committed version's content as a new version, making it the
+        latest one (the head) for its language. Like any commit, it is reviewed
+        and published separately."""
         version = self.get_version_or_404(slug, category, version_id, publisher_q=publisher_q)
         if version.state != VersionStateChoice.PUBLISHED:
             raise ItqanError(
@@ -537,5 +554,45 @@ class AssetContentService:
             )
         restored = self.repo.restore_version(version, created_by_id=created_by_id)
         logger.info(f"Version restored [source_version_id={version.pk}, new_version_id={restored.pk}]")
-        notify_asset_version_created.delay(restored.pk)
         return restored
+
+    def set_published_version(
+        self,
+        slug: str,
+        category: CategoryChoice,
+        version_id: int,
+        *,
+        publisher_q: Q | None = None,
+    ) -> AssetVersion:
+        """Make a fully approved committed version the one consumers see for its
+        language. Any approved version may be published, including an older one
+        (a rollback). Re-publishing the current version is a no-op."""
+        asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
+        version = self.get_version_or_404(slug, category, version_id, publisher_q=publisher_q)
+        if version.state != VersionStateChoice.PUBLISHED:
+            raise ItqanError(
+                error_name="version_not_publishable",
+                message=_("Only committed versions can be published."),
+                status_code=400,
+            )
+        language = version.resolved_language
+        pending = AssetReviewRepository().pending_units_by_version(asset, language).get(version.pk, 0)
+        if pending:
+            raise ItqanError(
+                error_name="version_not_approved",
+                message=_("This version has {count} change(s) that are not approved yet.").format(count=pending),
+                status_code=400,
+            )
+        rendition = version.asset_language or asset.get_or_create_source_language()
+        if rendition.published_version_id == version.pk:
+            return version
+        previously_published_id = rendition.published_version_id
+        self.repo.set_published_version(rendition, version)
+        logger.info(
+            f"Version published [version_id={version.pk}, asset_id={asset.pk}, language={language}, "
+            f"previous_version_id={previously_published_id}]"
+        )
+        if previously_published_id is not None:
+            transaction.on_commit(lambda: notify_asset_version_created.delay(version.pk))
+        transaction.on_commit(lambda: dispatch_dependabot_updates_for_version.delay(version.pk))
+        return version

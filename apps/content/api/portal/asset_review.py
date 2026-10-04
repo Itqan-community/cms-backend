@@ -8,10 +8,12 @@ from pydantic import AwareDatetime
 from apps.content.api.portal.asset_content import _CATEGORY_CONFIG
 from apps.content.models import (
     AssetTemplateChoice,
+    AssetVersion,
     AssetVersionChange,
     AssetVersionChangeReview,
     CategoryChoice,
 )
+from apps.content.repositories.asset_review import AssetReviewRepository
 from apps.content.services.asset_review import AssetReviewService
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
@@ -29,6 +31,20 @@ def _review_of(obj: AssetVersionChange) -> AssetVersionChangeReview | None:
         return obj.review
     except AssetVersionChangeReview.DoesNotExist:
         return None
+
+
+def pending_review_count(obj: AssetVersion, context: dict) -> int:
+    """Units of ``obj`` awaiting approval (0 = fully approved, publishable).
+
+    Memoized on the request per (asset, language), so a version list runs the
+    approval pass once rather than once per row.
+    """
+    cache = context["request"].__dict__.setdefault("_pending_units_by_version", {})
+    language = obj.resolved_language
+    key = (obj.asset_id, language)
+    if key not in cache:
+        cache[key] = AssetReviewRepository().pending_units_by_version(obj.asset, language)
+    return cache[key].get(obj.id, 0)
 
 
 def _resolve_review(category: str, request: Request) -> CategoryChoice:

@@ -12,6 +12,7 @@ from apps.content.models import (
     UsageEvent,
     VersionStateChoice,
 )
+from apps.content.tests.publishing import publish
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -552,11 +553,24 @@ class DetailAssetAvailableLanguagesTest(BaseTestCase):
             language="ar",
         )
 
+    def test_available_languages_excludes_committed_but_unpublished_language(self):
+        # Arrange — es has a committed version that was never published (e.g. under review)
+        ar_lang = self.asset.get_or_create_source_language()
+        es_lang = AssetLanguage.objects.create(asset=self.asset, language="es", status=StatusChoice.READY)
+        publish(baker.make(AssetVersion, asset=self.asset, asset_language=ar_lang, state=VersionStateChoice.PUBLISHED))
+        baker.make(AssetVersion, asset=self.asset, asset_language=es_lang, state=VersionStateChoice.PUBLISHED)
+
+        # Act
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/", format="json")
+
+        # Assert
+        self.assertEqual(["ar"], response.json()["available_languages"])
+
     def test_available_languages_excludes_draft_only(self):
         ar_lang = self.asset.get_or_create_source_language()
         es_lang = AssetLanguage.objects.create(asset=self.asset, language="es")
         # ar published, es only a draft
-        baker.make(AssetVersion, asset=self.asset, asset_language=ar_lang, state=VersionStateChoice.PUBLISHED)
+        publish(baker.make(AssetVersion, asset=self.asset, asset_language=ar_lang, state=VersionStateChoice.PUBLISHED))
         baker.make(AssetVersion, asset=self.asset, asset_language=es_lang, state=VersionStateChoice.DRAFT)
 
         response = self.client.get(f"/cms-api/assets/{self.asset.id}/", format="json")
@@ -567,8 +581,8 @@ class DetailAssetAvailableLanguagesTest(BaseTestCase):
     def test_available_languages_lists_all_available(self):
         ar_lang = self.asset.get_or_create_source_language()
         es_lang = AssetLanguage.objects.create(asset=self.asset, language="es", status=StatusChoice.READY)
-        baker.make(AssetVersion, asset=self.asset, asset_language=ar_lang, state=VersionStateChoice.PUBLISHED)
-        baker.make(AssetVersion, asset=self.asset, asset_language=es_lang, state=VersionStateChoice.PUBLISHED)
+        publish(baker.make(AssetVersion, asset=self.asset, asset_language=ar_lang, state=VersionStateChoice.PUBLISHED))
+        publish(baker.make(AssetVersion, asset=self.asset, asset_language=es_lang, state=VersionStateChoice.PUBLISHED))
 
         response = self.client.get(f"/cms-api/assets/{self.asset.id}/", format="json")
 
@@ -579,8 +593,8 @@ class DetailAssetAvailableLanguagesTest(BaseTestCase):
         # marked available (its AssetLanguage.status stays DRAFT).
         ar_lang = self.asset.get_or_create_source_language()
         es_lang = AssetLanguage.objects.create(asset=self.asset, language="es", status=StatusChoice.DRAFT)
-        baker.make(AssetVersion, asset=self.asset, asset_language=ar_lang, state=VersionStateChoice.PUBLISHED)
-        baker.make(AssetVersion, asset=self.asset, asset_language=es_lang, state=VersionStateChoice.PUBLISHED)
+        publish(baker.make(AssetVersion, asset=self.asset, asset_language=ar_lang, state=VersionStateChoice.PUBLISHED))
+        publish(baker.make(AssetVersion, asset=self.asset, asset_language=es_lang, state=VersionStateChoice.PUBLISHED))
 
         response = self.client.get(f"/cms-api/assets/{self.asset.id}/", format="json")
 
@@ -590,7 +604,7 @@ class DetailAssetAvailableLanguagesTest(BaseTestCase):
         self.asset.status = StatusChoice.DRAFT
         self.asset.save(update_fields=["status"])
         ar_lang = self.asset.get_or_create_source_language()
-        baker.make(AssetVersion, asset=self.asset, asset_language=ar_lang, state=VersionStateChoice.PUBLISHED)
+        publish(baker.make(AssetVersion, asset=self.asset, asset_language=ar_lang, state=VersionStateChoice.PUBLISHED))
 
         response = self.client.get(f"/cms-api/assets/{self.asset.id}/", format="json")
 
