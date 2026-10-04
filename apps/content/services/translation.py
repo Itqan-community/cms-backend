@@ -154,6 +154,7 @@ class TranslationService:
         version_name: str | None = None,
         version_summary: str = "",
         file: Any = None,
+        created_by_id: int | None = None,
         **translation_kwargs: Any,
     ) -> Asset:
         """
@@ -177,6 +178,7 @@ class TranslationService:
                     name=version_name or "",
                     summary=version_summary,
                     file=file,
+                    created_by_id=created_by_id,
                 )
         translation.refresh_from_db()
         return translation
@@ -277,6 +279,7 @@ class TranslationService:
         summary: str = "",
         file: Any = None,
         language: str | None = None,
+        created_by_id: int | None = None,
         publisher_q: Q | None = None,
     ) -> AssetVersion:
         """
@@ -295,6 +298,7 @@ class TranslationService:
                 name=name,
                 summary=summary,
                 file=file,
+                created_by_id=created_by_id,
             )
             set_version_language(version, language)
             if file:

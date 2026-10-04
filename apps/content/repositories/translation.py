@@ -147,6 +147,7 @@ class TranslationRepository:
         name: str,
         summary: str = "",
         file: Any = None,
+        created_by_id: int | None = None,
     ) -> AssetVersion:
         """
         Create an AssetVersion and sync derived fields back to Asset.
@@ -165,6 +166,7 @@ class TranslationRepository:
                 summary=summary,
                 file_url=file,
                 size_bytes=size_bytes,
+                created_by_id=created_by_id,
             )
 
             asset.file_size = asset_version.human_readable_size

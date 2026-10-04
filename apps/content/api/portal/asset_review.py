@@ -72,6 +72,8 @@ class ReviewChangeOut(Schema):
     baseline_text: str
     commit_ref: str
     commit_id: int
+    # Who made the change: the author of the commit that recorded it.
+    edited_by: str | None
     review_state: str
     comment: str
     reviewed_by: str | None
@@ -105,6 +107,10 @@ class ReviewChangeOut(Schema):
     @staticmethod
     def resolve_commit_ref(obj: AssetVersionChange) -> str:
         return obj.version.name
+
+    @staticmethod
+    def resolve_edited_by(obj: AssetVersionChange) -> str | None:
+        return obj.version.created_by.name if obj.version.created_by_id else None
 
     @staticmethod
     def resolve_commit_id(obj: AssetVersionChange) -> int:

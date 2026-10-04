@@ -118,6 +118,8 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
         version = AssetVersion.objects.get(id=body["id"])
         self.assertEqual(self.translation, version.asset)
         self.assertEqual(len(CSV), version.size_bytes)
+        self.assertEqual(self.user, version.created_by)
+        self.assertEqual("Test User", body["created_by"])
 
     def test_create_version_where_asset_id_mismatch_should_return_400(self):
         # Arrange

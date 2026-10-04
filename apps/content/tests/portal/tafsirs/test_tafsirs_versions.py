@@ -172,6 +172,8 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         version = AssetVersion.objects.get(id=body["id"])
         self.assertEqual(self.tafsir, version.asset)
         self.assertEqual(len(CSV), version.size_bytes)
+        self.assertEqual(self.user, version.created_by)
+        self.assertEqual("Test User", body["created_by"])
 
     def test_create_version_with_language_tags_the_version(self):
         # Arrange — register a French language on the tafsir

@@ -125,6 +125,7 @@ class AssetReviewRepository:
                 "word__sura",
                 "version",
                 "version__asset",
+                "version__created_by",
                 "review",
                 "review__reviewed_by",
             )
@@ -139,6 +140,6 @@ class AssetReviewRepository:
     def get_change(self, asset: Asset, change_id: int) -> AssetVersionChange | None:
         return (
             AssetVersionChange.objects.filter(version__asset=asset, pk=change_id)
-            .select_related("version", "version__asset_language", "version__asset", "review")
+            .select_related("version", "version__asset_language", "version__asset", "version__created_by", "review")
             .first()
         )
