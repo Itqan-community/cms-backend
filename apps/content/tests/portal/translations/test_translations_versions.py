@@ -112,12 +112,17 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
         self.assertEqual("New Version", body["name"])
         self.assertEqual("This is a new version", body["summary"])
         self.assertIsNotNone(body["file_url"])
-        self.assertEqual(len(CSV), body["size_bytes"])
 
         # Verify DB
         version = AssetVersion.objects.get(id=body["id"])
         self.assertEqual(self.translation, version.asset)
-        self.assertEqual(len(CSV), version.size_bytes)
+        # The stored file is generated from the parsed entries (what gets reviewed).
+        with version.file_url.open("rb") as handle:
+            stored = handle.read().decode("utf-8")
+        self.assertTrue(version.file_url.name.endswith(".csv"))
+        self.assertIn("1,1,in the name", stored)
+        self.assertEqual(len(stored.encode("utf-8")), version.size_bytes)
+        self.assertEqual(version.size_bytes, body["size_bytes"])
         self.assertEqual(self.user, version.created_by)
         self.assertEqual("Test User", body["created_by"])
 
@@ -251,6 +256,27 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
         self.assertEqual("content_file_invalid_rows", body["error_name"])
         self.assertEqual({"3": "duplicate", "4": "unknown_unit"}, body["extra"]["rows"])
         self.assertFalse(AssetVersion.objects.filter(asset=self.translation, name="v2").exists())
+
+    def test_create_version_where_extra_columns_should_store_only_the_reviewed_content(self):
+        # Arrange — an extra column the parser ignores, so reviewers never see it
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
+        content = b"surah,ayah,text,notes\n1,1,in the name,secret note\n"
+        file = SimpleUploadedFile("translation.csv", content, content_type="text/csv")
+
+        # Act
+        response = self.client.post(
+            f"/portal/translations/{self.translation.slug}/versions/",
+            data={"asset_id": self.translation.id, "name": "v2", "file": file},
+        )
+
+        # Assert — consumers download a file generated from the reviewed entries
+        self.assertEqual(201, response.status_code, response.content)
+        version = AssetVersion.objects.get(id=response.json()["id"])
+        with version.file_url.open("rb") as handle:
+            stored = handle.read().decode("utf-8")
+        self.assertIn("in the name", stored)
+        self.assertNotIn("secret note", stored)
 
     def test_create_version_where_content_differs_should_record_changes_for_review(self):
         # Arrange

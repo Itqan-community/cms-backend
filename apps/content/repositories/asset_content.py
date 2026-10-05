@@ -493,6 +493,28 @@ class AssetContentRepository:
         logger.info(f"Version entries rebuilt for viewing [version_id={locked.pk}, entries={len(rows)}]")
         return bool(rows)
 
+    def store_canonical_file(self, version: AssetVersion) -> None:
+        """Replace an uploaded version's file with a CSV generated from its entries.
+
+        Reviewers approve the parsed entries; consumers download the file. Serving
+        a file built from exactly those entries means nothing the parser left out
+        of the review (formatting, extra columns, stray rows) can reach consumers.
+        The original upload is deleted once the transaction commits, so a rolled
+        back upload never leaves the version pointing at a missing file.
+        """
+        uploaded = version.file_url.name if version.file_url else None
+        content = self.entries_to_csv_bytes(version, unit_spec_for(version.asset))
+        filename = f"{version.asset.slug}-{version.name}.csv".replace(" ", "_")
+        version.file_url.save(filename, ContentFile(content), save=False)
+        version.size_bytes = len(content)
+        version.save(update_fields=["file_url", "size_bytes", "updated_at"])
+        version.asset.file_size = version.human_readable_size
+        version.asset.format = "csv"
+        version.asset.save(update_fields=["file_size", "format", "updated_at"])
+        if uploaded and uploaded != version.file_url.name:
+            storage = version.file_url.storage
+            transaction.on_commit(lambda: storage.delete(uploaded))
+
     @transaction.atomic
     def record_upload_changes(self, version: AssetVersion) -> None:
         """(Re)record an uploaded version's delta vs its predecessor, so its content
