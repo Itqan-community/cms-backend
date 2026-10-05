@@ -279,7 +279,8 @@ language's previous version, keyed to whichever unit the asset's template uses
 not contain rows whose text would be dropped — a unit repeated with different text,
 a unit that doesn't exist, or an unreadable row (`content_file_invalid_rows`, with
 the row numbers in `extra.rows`); an upload identical to the previous version
-records no changes.
+records no changes. The stored file is then replaced by a CSV generated
+from the parsed entries, so consumers download exactly what was reviewed.
 
 - **Availability** — a language is consumable only when the asset is `READY`, the
   `AssetLanguage.status` is `READY` and it has a published version; translations

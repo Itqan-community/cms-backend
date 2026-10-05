@@ -301,6 +301,8 @@ class TafsirService:
             if file:
                 import_uploaded_file_into_entries(version, strict=True)
                 AssetContentRepository().record_upload_changes(version)
+                # Consumers download exactly what reviewers approve: the parsed entries.
+                AssetContentRepository().store_canonical_file(version)
         logger.info(f"Tafsir version created [version_id={version.pk}, asset_id={asset.pk}, slug={tafsir_slug}]")
         return version
 
@@ -323,6 +325,7 @@ class TafsirService:
                 # New content: re-recorded as changes, so it is reviewed again.
                 import_uploaded_file_into_entries(updated, strict=True)
                 AssetContentRepository().record_upload_changes(updated)
+                AssetContentRepository().store_canonical_file(updated)
         logger.info(f"Tafsir version updated [version_id={version_id}, asset_slug={tafsir_slug}]")
         return updated
 
