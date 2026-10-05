@@ -232,6 +232,26 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
         self.assertEqual("content_file_unparseable", response.json()["error_name"])
         self.assertFalse(AssetVersion.objects.filter(asset=self.translation, name="v2").exists())
 
+    def test_create_version_where_rows_would_be_dropped_should_return_400_naming_them(self):
+        # Arrange — row 3 repeats 1:1 with different text, row 4 names a missing ayah
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
+        content = b"surah,ayah,text\n1,1,in the name\n1,1,hidden text\n1,99,more hidden\n"
+        file = SimpleUploadedFile("translation.csv", content, content_type="text/csv")
+
+        # Act
+        response = self.client.post(
+            f"/portal/translations/{self.translation.slug}/versions/",
+            data={"asset_id": self.translation.id, "name": "v2", "file": file},
+        )
+
+        # Assert — nothing whose text would be dropped (and so never reviewed) is accepted
+        self.assertEqual(400, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("content_file_invalid_rows", body["error_name"])
+        self.assertEqual({"3": "duplicate", "4": "unknown_unit"}, body["extra"]["rows"])
+        self.assertFalse(AssetVersion.objects.filter(asset=self.translation, name="v2").exists())
+
     def test_create_version_where_content_differs_should_record_changes_for_review(self):
         # Arrange
         self.authenticate_user(self.user)

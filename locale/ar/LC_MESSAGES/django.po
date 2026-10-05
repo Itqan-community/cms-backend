@@ -386,6 +386,10 @@ msgstr "ليس لديك طلب وصول مُوافَق عليه لهذا الأ�
 msgid "The uploaded file could not be read."
 msgstr "تعذّرت قراءة الملف المرفوع."
 
+#, python-brace-format
+msgid "Some rows can't be used: they repeat a unit with different text, name a unit that doesn't exist, or can't be read. Fix row(s) {rows} and upload again."
+msgstr "بعض الصفوف غير صالحة للاستخدام: إمّا أنها تكرّر وحدة بنص مختلف، أو تشير إلى وحدة غير موجودة، أو تتعذّر قراءتها. صحّح الصف/الصفوف {rows} ثم ارفع الملف مجددًا."
+
 msgid "The uploaded file could not be parsed into content entries."
 msgstr "تعذّر تحليل الملف المرفوع إلى إدخالات محتوى."
 

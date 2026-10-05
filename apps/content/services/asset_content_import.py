@@ -31,7 +31,7 @@ layout never reaches the database.
 from __future__ import annotations
 
 import csv
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import io
 import logging
 import sys
@@ -63,6 +63,47 @@ class ParsedEntry:
 
 class AssetContentParseError(Exception):
     """Raised when an uploaded content file cannot be parsed into template rows."""
+
+
+class AssetContentInvalidRowsError(AssetContentParseError):
+    """Strict parsing found rows whose text would be silently dropped.
+
+    ``rows`` maps a 1-based file row number to why it was rejected, so the
+    uploader can fix exactly those rows.
+    """
+
+    def __init__(self, rows: dict[int, str]) -> None:
+        self.rows = dict(sorted(rows.items()))
+        super().__init__(f"{len(self.rows)} invalid row(s): {self.rows}")
+
+
+# Why a row's text would be dropped (see ``_RowLog``).
+UNREADABLE = "unreadable"
+DUPLICATE = "duplicate"
+UNKNOWN_UNIT = "unknown_unit"
+
+
+@dataclass
+class _RowLog:
+    """Where each key was read from, and the rows a lenient parse silently drops.
+
+    Only rows that carry text are recorded as problems: a blank row hides nothing
+    (downloaded templates list every unit with a blank cell).
+    """
+
+    row_of: dict[object, int] = field(default_factory=dict)
+    problems: dict[int, str] = field(default_factory=dict)
+
+    def read(self, entries: dict, key: object, text: str, row_number: int) -> None:
+        """Record ``key = text`` from ``row_number``, flagging a conflicting duplicate."""
+        if key in entries and entries[key] != text and (entries[key] or text):
+            self.problems[row_number] = DUPLICATE
+        entries[key] = text
+        self.row_of[key] = row_number
+
+    def unreadable(self, row: list[str], row_number: int) -> None:
+        if any((cell or "").strip() for cell in row):
+            self.problems[row_number] = UNREADABLE
 
 
 def _decode(raw: bytes) -> str:
@@ -200,7 +241,7 @@ def _read_rows(raw: bytes) -> list[list[str]]:
     return rows
 
 
-def _parse_ayah_entries(rows: list[list[str]]) -> dict[tuple[int, int], str]:
+def _parse_ayah_entries(rows: list[list[str]], log: _RowLog) -> dict[tuple[int, int], str]:
     """Parse an ayah-shaped file into {(sura, aya): text}. Unchanged from the
     original ayah-only parser: rows with a non-integer sura/aya are skipped
     (almost always stray preamble lines), and duplicate (sura, aya) pairs keep
@@ -209,60 +250,68 @@ def _parse_ayah_entries(rows: list[list[str]]) -> dict[tuple[int, int], str]:
     columns = _column_map(rows[header_index])
 
     entries: dict[tuple[int, int], str] = {}
-    for row in rows[header_index + 1 :]:
+    for row_number, row in enumerate(rows[header_index + 1 :], start=header_index + 2):
         max_needed = max(columns.values())
         if len(row) <= max_needed:
+            log.unreadable(row, row_number)
             continue
         try:
             sura = int(row[columns["sura"]].strip())
             aya = int(row[columns["aya"]].strip())
         except (ValueError, AttributeError):
+            log.unreadable(row, row_number)
             continue
 
         content = (row[columns["text"]] or "").strip()
-        entries[(sura, aya)] = content
+        log.read(entries, (sura, aya), content, row_number)
     return entries
 
 
-def _parse_surah_entries(rows: list[list[str]]) -> dict[int, str]:
+def _parse_surah_entries(rows: list[list[str]], log: _RowLog) -> dict[int, str]:
     header_index = _find_surah_header_row(rows)
     columns = _surah_column_map(rows[header_index])
 
     entries: dict[int, str] = {}
-    for row in rows[header_index + 1 :]:
+    for row_number, row in enumerate(rows[header_index + 1 :], start=header_index + 2):
         max_needed = max(columns.values())
         if len(row) <= max_needed:
+            log.unreadable(row, row_number)
             continue
         try:
             sura = int(row[columns["sura"]].strip())
         except (ValueError, AttributeError):
+            log.unreadable(row, row_number)
             continue
 
         content = (row[columns["text"]] or "").strip()
-        entries[sura] = content
+        log.read(entries, sura, content, row_number)
     return entries
 
 
-def _parse_page_entries(rows: list[list[str]]) -> dict[int, str]:
+def _parse_page_entries(rows: list[list[str]], log: _RowLog) -> dict[int, str]:
     header_index = _find_page_header_row(rows)
     columns = _page_column_map(rows[header_index])
 
     entries: dict[int, str] = {}
-    for row in rows[header_index + 1 :]:
+    for row_number, row in enumerate(rows[header_index + 1 :], start=header_index + 2):
         max_needed = max(columns.values())
         if len(row) <= max_needed:
+            log.unreadable(row, row_number)
             continue
         try:
             page = int(row[columns["page"]].strip())
         except (ValueError, AttributeError):
+            log.unreadable(row, row_number)
             continue
 
         content = (row[columns["text"]] or "").strip()
-        entries[page] = content
+        log.read(entries, page, content, row_number)
     return entries
 
 
-def _parse_word_entries(rows: list[list[str]]) -> tuple[dict[int, str] | dict[tuple[int, int, int], str], bool]:
+def _parse_word_entries(
+    rows: list[list[str]], log: _RowLog
+) -> tuple[dict[int, str] | dict[tuple[int, int, int], str], bool]:
     """Parse a word-shaped file. Returns (entries, used_word_id).
 
     When the header carries a ``word_id`` column it takes precedence and
@@ -275,55 +324,65 @@ def _parse_word_entries(rows: list[list[str]]) -> tuple[dict[int, str] | dict[tu
 
     if used_word_id:
         by_word_id: dict[int, str] = {}
-        for row in rows[header_index + 1 :]:
+        for row_number, row in enumerate(rows[header_index + 1 :], start=header_index + 2):
             max_needed = max(columns.values())
             if len(row) <= max_needed:
+                log.unreadable(row, row_number)
                 continue
             try:
                 word_id = int(row[columns["word_id"]].strip())
             except (ValueError, AttributeError):
+                log.unreadable(row, row_number)
                 continue
             content = (row[columns["text"]] or "").strip()
-            by_word_id[word_id] = content
+            log.read(by_word_id, word_id, content, row_number)
         return by_word_id, True
 
     by_triple: dict[tuple[int, int, int], str] = {}
-    for row in rows[header_index + 1 :]:
+    for row_number, row in enumerate(rows[header_index + 1 :], start=header_index + 2):
         max_needed = max(columns.values())
         if len(row) <= max_needed:
+            log.unreadable(row, row_number)
             continue
         try:
             sura = int(row[columns["sura"]].strip())
             aya = int(row[columns["aya"]].strip())
             word = int(row[columns["word"]].strip())
         except (ValueError, AttributeError):
+            log.unreadable(row, row_number)
             continue
         content = (row[columns["text"]] or "").strip()
-        by_triple[(sura, aya, word)] = content
+        log.read(by_triple, (sura, aya, word), content, row_number)
     return by_triple, False
 
 
-def parse_content_file(raw: bytes, spec: UnitSpec, asset: Asset) -> list[ParsedEntry]:
+def parse_content_file(raw: bytes, spec: UnitSpec, asset: Asset, *, strict: bool = False) -> list[ParsedEntry]:
     """Parse raw file bytes into rows keyed to the asset's template unit.
 
     Returns entries in file order. Raises ``AssetContentParseError`` when the
     file's columns do not match the template (a surah file uploaded to a
     page-based asset is a user error, not something to guess at) or when no
     row resolves to a real, in-range unit of the template.
+
+    Lenient by default: unreadable rows, conflicting duplicates (the last one
+    wins) and rows for units that do not exist are skipped. ``strict`` (uploads,
+    whose content must be exactly what gets reviewed) instead raises
+    ``AssetContentInvalidRowsError`` naming every such row that carries text.
     """
     rows = _read_rows(raw)
+    log = _RowLog()
 
     resolved: dict[object, int] = {}  # raw key -> candidate unit_id
     texts: dict[object, str] = {}  # raw key -> text
 
     if spec.template == AssetTemplateChoice.SURAH:
-        entries = _parse_surah_entries(rows)
+        entries = _parse_surah_entries(rows, log)
         for sura, text in entries.items():
             resolved[sura] = sura
             texts[sura] = text
 
     elif spec.template == AssetTemplateChoice.AYAH:
-        entries = _parse_ayah_entries(rows)
+        entries = _parse_ayah_entries(rows, log)
         # Local import: the repository module imports this module at load
         # time, so importing it back at module scope here would be circular.
         # By call time both modules are fully loaded.
@@ -333,12 +392,14 @@ def parse_content_file(raw: bytes, spec: UnitSpec, asset: Asset) -> list[ParsedE
         for (sura, aya), text in entries.items():
             ayah_id = ayah_index.get((sura, aya))
             if ayah_id is None:
+                if text:
+                    log.problems[log.row_of[(sura, aya)]] = UNKNOWN_UNIT
                 continue
             resolved[(sura, aya)] = ayah_id
             texts[(sura, aya)] = text
 
     elif spec.template == AssetTemplateChoice.WORD:
-        entries, used_word_id = _parse_word_entries(rows)
+        entries, used_word_id = _parse_word_entries(rows, log)
         if used_word_id:
             for word_id, text in entries.items():
                 resolved[word_id] = word_id
@@ -350,12 +411,14 @@ def parse_content_file(raw: bytes, spec: UnitSpec, asset: Asset) -> list[ParsedE
             for triple, text in entries.items():
                 word_id = word_index.get(triple)
                 if word_id is None:
+                    if text:
+                        log.problems[log.row_of[triple]] = UNKNOWN_UNIT
                     continue
                 resolved[triple] = word_id
                 texts[triple] = text
 
     else:  # page
-        entries = _parse_page_entries(rows)
+        entries = _parse_page_entries(rows, log)
         for page, text in entries.items():
             resolved[page] = page
             texts[page] = text
@@ -364,6 +427,11 @@ def parse_content_file(raw: bytes, spec: UnitSpec, asset: Asset) -> list[ParsedE
         raise AssetContentParseError(f"No {spec.template} rows found after the header.")
 
     valid_ids = spec.valid_unit_ids(asset, list(resolved.values()))
+    for key, unit_id in resolved.items():
+        if unit_id not in valid_ids and texts[key]:
+            log.problems[log.row_of[key]] = UNKNOWN_UNIT
+    if strict and log.problems:
+        raise AssetContentInvalidRowsError(log.problems)
     # A blank cell means "no content for this unit" — downloads list every unit
     # with blanks, so re-uploading one must not create an empty entry per row.
     parsed = [

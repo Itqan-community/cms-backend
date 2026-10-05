@@ -275,8 +275,11 @@ history. Every commit — an editor draft committed, an uploaded or replaced ver
 file, a restore — records a per-unit delta (`AssetVersionChange`) against the
 language's previous version, keyed to whichever unit the asset's template uses
 (surah, ayah, word or page). Uploaded files must parse into entries
-(`content_file_unparseable` otherwise), so their content can be reviewed; an upload
-identical to the previous version records no changes.
+(`content_file_unparseable` otherwise), so their content can be reviewed, and must
+not contain rows whose text would be dropped — a unit repeated with different text,
+a unit that doesn't exist, or an unreadable row (`content_file_invalid_rows`, with
+the row numbers in `extra.rows`); an upload identical to the previous version
+records no changes.
 
 - **Availability** — a language is consumable only when the asset is `READY`, the
   `AssetLanguage.status` is `READY` and it has a published version; translations
