@@ -131,6 +131,30 @@ def forbid_published_version_change(version: AssetVersion) -> None:
         )
 
 
+def forbid_history_rewrite(version: AssetVersion) -> None:
+    """Only the newest committed version of a language may be replaced or deleted.
+
+    History is append-only: each commit's stored changes are a delta against its
+    predecessor, which is what approval (``pending_units_by_version``) and the
+    reconstruction of pruned versions replay. Rewriting or removing a version
+    that later versions build on would silently change what those versions
+    contain — and could make unreviewed text look approved in them.
+    """
+    if version.state != VersionStateChoice.PUBLISHED:
+        return  # drafts are not part of the history
+    later = AssetVersion.objects.filter(
+        asset_id=version.asset_id,
+        asset_language_id=version.asset_language_id,
+        state=VersionStateChoice.PUBLISHED,
+    ).filter(Q(created_at__gt=version.created_at) | Q(created_at=version.created_at, id__gt=version.id))
+    if later.exists():
+        raise ItqanError(
+            error_name="version_not_latest",
+            message=_("Only the newest version can be changed or deleted, because later versions are built on it."),
+            status_code=400,
+        )
+
+
 def set_version_language(version: AssetVersion, language: str | None) -> None:
     """Tag an uploaded version with a specific (already-registered) language.
 

@@ -1,5 +1,6 @@
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.utils import timezone
 from model_bakery import baker
 
 from apps.content.models import (
@@ -567,3 +568,58 @@ class TafsirVersionFileReplaceTest(TafsirVersionBaseTest):
         self.assertEqual(200, response.status_code, response.content)
         change = AssetVersionChange.objects.get(version=version)
         self.assertEqual("in the name", change.new_text)
+
+
+class TafsirVersionHistoryIsAppendOnlyTest(TafsirVersionBaseTest):
+    """Later versions build on earlier ones, so only the newest may change."""
+
+    def _two_versions(self) -> tuple[AssetVersion, AssetVersion]:
+        older = baker.make(AssetVersion, asset=self.tafsir, name="v1")
+        newer = baker.make(AssetVersion, asset=self.tafsir, name="v2")
+        AssetVersion.objects.filter(pk=newer.pk).update(created_at=older.created_at + timezone.timedelta(hours=1))
+        return older, newer
+
+    def test_patch_version_where_file_replaced_on_older_version_should_return_400(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
+        older, _newer = self._two_versions()
+        file = SimpleUploadedFile("tafsir.csv", CSV, content_type="text/csv")
+
+        # Act
+        response = self.client.patch(
+            f"/portal/tafsirs/{self.tafsir.slug}/versions/{older.id}/",
+            data={"file": file},
+        )
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("version_not_latest", response.json()["error_name"])
+
+    def test_delete_version_where_older_version_should_return_400(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TAFSIR)
+        older, _newer = self._two_versions()
+
+        # Act
+        response = self.client.delete(f"/portal/tafsirs/{self.tafsir.slug}/versions/{older.id}/")
+
+        # Assert — kept: the newer version's changes are relative to it
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("version_not_latest", response.json()["error_name"])
+        self.assertTrue(AssetVersion.objects.filter(id=older.id).exists())
+
+    def test_delete_version_where_newest_version_should_return_204(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TAFSIR)
+        _older, newer = self._two_versions()
+
+        # Act
+        response = self.client.delete(f"/portal/tafsirs/{self.tafsir.slug}/versions/{newer.id}/")
+
+        # Assert
+        self.assertEqual(204, response.status_code, response.content)
+        self.assertFalse(AssetVersion.objects.filter(id=newer.id).exists())

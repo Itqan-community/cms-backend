@@ -303,7 +303,9 @@ from the parsed entries, so consumers download exactly what was reviewed.
   approved); the version list exposes `is_published`, `is_approved` and
   `pending_review_count`. The published version cannot be deleted or have its file
   replaced (`version_is_published`), and is never pruned when a newer commit lands;
-  publishing a pruned version rebuilds its file. Other categories keep newest-wins.
+  publishing a pruned version rebuilds its file. History is append-only: only the
+  newest committed version of a language can be deleted or have its file replaced
+  (`version_not_latest`), since later versions are stored as changes against it. Other categories keep newest-wins.
 - **Viewing history** — any committed version is browsable read-only through the
   same entries endpoint the editor uses (`GET .../versions/{id}/` gives its name and
   language). A version pruned to deltas has its entries rebuilt on first view; the

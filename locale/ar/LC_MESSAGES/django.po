@@ -396,6 +396,9 @@ msgstr "تعذّر تحليل الملف المرفوع إلى إدخالات م
 msgid "This version is published. Publish another version first."
 msgstr "هذا الإصدار منشور. انشر إصدارًا آخر أولًا."
 
+msgid "Only the newest version can be changed or deleted, because later versions are built on it."
+msgstr "لا يمكن تعديل أو حذف إلا أحدث إصدار، لأن الإصدارات اللاحقة مبنية عليه."
+
 #, python-brace-format
 msgid "{category} with slug {slug} not found."
 msgstr "لم يتم العثور على {category} بالمعرّف {slug}."
