@@ -155,6 +155,21 @@ def forbid_history_rewrite(version: AssetVersion) -> None:
         )
 
 
+def lock_version_for_content_change(version: AssetVersion) -> AssetVersion:
+    """Lock ``version``'s row and check its content may still change.
+
+    Must run inside a transaction. Publishing takes the same lock, so a file
+    replacement or deletion and a publish of the same version are serialized and
+    the later one re-checks against the other's outcome — a version can't be
+    published and then changed underneath consumers, or changed after its
+    approval was checked.
+    """
+    locked = AssetVersion.objects.select_for_update().get(pk=version.pk)
+    forbid_published_version_change(locked)
+    forbid_history_rewrite(locked)
+    return locked
+
+
 def set_version_language(version: AssetVersion, language: str | None) -> None:
     """Tag an uploaded version with a specific (already-registered) language.
 
@@ -617,6 +632,18 @@ class AssetContentService:
         (a rollback). Re-publishing the current version is a no-op."""
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
         version = self.get_version_or_404(slug, category, version_id, publisher_q=publisher_q)
+        with transaction.atomic():
+            # Same lock as a file replacement or deletion (lock_version_for_content_change):
+            # the approval checked here is the content that gets published.
+            version = (
+                AssetVersion.objects.select_related("asset_language", "asset")
+                .select_for_update(of=("self",))
+                .get(pk=version.pk)
+            )
+            return self._publish_locked(asset, version)
+
+    def _publish_locked(self, asset: Asset, version: AssetVersion) -> AssetVersion:
+        """``set_published_version`` once ``version``'s row is locked."""
         if version.state != VersionStateChoice.PUBLISHED:
             raise ItqanError(
                 error_name="version_not_publishable",
