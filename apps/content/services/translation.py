@@ -20,6 +20,7 @@ from apps.content.repositories.asset_content import AssetContentRepository
 from apps.content.repositories.translation import TranslationRepository
 from apps.content.services.asset_access import guard_restrict_for_tenant
 from apps.content.services.asset_content import (
+    forbid_history_rewrite,
     forbid_published_version_change,
     import_uploaded_file_into_entries,
     set_version_language,
@@ -324,6 +325,7 @@ class TranslationService:
         version = self._get_translation_version_or_404(translation_slug, version_id, publisher_q=publisher_q)
         if fields.get("file_url"):
             forbid_published_version_change(version)
+            forbid_history_rewrite(version)
         with transaction.atomic():
             updated = self.repo.update_translation_version(version, fields=fields)
             if fields.get("file_url"):
@@ -340,5 +342,6 @@ class TranslationService:
         """
         version = self._get_translation_version_or_404(translation_slug, version_id, publisher_q=publisher_q)
         forbid_published_version_change(version)
+        forbid_history_rewrite(version)
         self.repo.delete_translation_version(version)
         logger.info(f"Translation version deleted [version_id={version_id}, asset_slug={translation_slug}]")
