@@ -20,9 +20,8 @@ from apps.content.repositories.asset_content import AssetContentRepository
 from apps.content.repositories.translation import TranslationRepository
 from apps.content.services.asset_access import guard_restrict_for_tenant
 from apps.content.services.asset_content import (
-    forbid_history_rewrite,
-    forbid_published_version_change,
     import_uploaded_file_into_entries,
+    lock_version_for_content_change,
     set_version_language,
 )
 from apps.content.services.mushaf_layout import MushafLayoutService
@@ -323,10 +322,9 @@ class TranslationService:
         Business Logic: Update an existing translation version.
         """
         version = self._get_translation_version_or_404(translation_slug, version_id, publisher_q=publisher_q)
-        if fields.get("file_url"):
-            forbid_published_version_change(version)
-            forbid_history_rewrite(version)
         with transaction.atomic():
+            if fields.get("file_url"):
+                version = lock_version_for_content_change(version)
             updated = self.repo.update_translation_version(version, fields=fields)
             if fields.get("file_url"):
                 # New content: re-recorded as changes, so it is reviewed again.
@@ -341,7 +339,7 @@ class TranslationService:
         Business Logic: Delete a translation version.
         """
         version = self._get_translation_version_or_404(translation_slug, version_id, publisher_q=publisher_q)
-        forbid_published_version_change(version)
-        forbid_history_rewrite(version)
-        self.repo.delete_translation_version(version)
+        with transaction.atomic():
+            version = lock_version_for_content_change(version)
+            self.repo.delete_translation_version(version)
         logger.info(f"Translation version deleted [version_id={version_id}, asset_slug={translation_slug}]")

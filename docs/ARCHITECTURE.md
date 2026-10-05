@@ -305,7 +305,9 @@ from the parsed entries, so consumers download exactly what was reviewed.
   replaced (`version_is_published`), and is never pruned when a newer commit lands;
   publishing a pruned version rebuilds its file. History is append-only: only the
   newest committed version of a language can be deleted or have its file replaced
-  (`version_not_latest`), since later versions are stored as changes against it. Other categories keep newest-wins.
+  (`version_not_latest`), since later versions are stored as changes against it.
+  Publishing and those changes lock the version row, so neither can slip in after
+  the other's checks. Other categories keep newest-wins.
 - **Viewing history** — any committed version is browsable read-only through the
   same entries endpoint the editor uses (`GET .../versions/{id}/` gives its name and
   language). A version pruned to deltas has its entries rebuilt on first view; the
