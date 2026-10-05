@@ -166,9 +166,8 @@ class AssetReviewServiceTest(BaseTestCase):
             )
         self.assertEqual("language_not_assigned", ctx.exception.error_name)
 
-    def test_list_changes_shows_only_latest_change_per_ayah_with_last_approved_baseline(self):
-        # Arrange — the v1 change (added "au nom") is approved, establishing the
-        # last-approved text; a newer commit then modifies the same ayah.
+    def _approve_then_revise(self) -> tuple[AssetVersion, AssetVersionChange]:
+        """v1's change ("au nom") is approved; a newer v2 modifies the same ayah."""
         AssetVersionChangeReview.objects.create(
             change=self.change,
             state=ReviewStateChoice.APPROVED,
@@ -186,6 +185,11 @@ class AssetReviewServiceTest(BaseTestCase):
             new_text="révisé",
             order=1,
         )
+        return v2, change2
+
+    def test_list_changes_where_no_version_should_list_every_change_with_earlier_approved_baseline(self):
+        # Arrange
+        _v2, change2 = self._approve_then_revise()
 
         # Act
         qs = list(
@@ -194,7 +198,43 @@ class AssetReviewServiceTest(BaseTestCase):
             )
         )
 
-        # Assert — only the latest change is reviewable (the intermediate is not),
-        # and its baseline is the last-approved text ("au nom"), not the raw old_text.
-        self.assertEqual([change2.id], [c.id for c in qs])
-        self.assertEqual("au nom", qs[0].baseline_text)
+        # Assert — the replaced change stays listed (so its version can be approved);
+        # each row compares with the last text approved before its own commit.
+        self.assertEqual([change2.id, self.change.id], [c.id for c in qs])
+        self.assertEqual(["au nom", None], [c.baseline_text for c in qs])
+
+    def test_list_changes_where_version_given_should_list_the_changes_that_make_it_up(self):
+        # Arrange
+        v2, change2 = self._approve_then_revise()
+
+        # Act
+        as_of_v1 = list(
+            AssetReviewService().list_changes(
+                "t1",
+                CategoryChoice.TRANSLATION,
+                language="fr",
+                user=self.reviewer,
+                state=None,
+                version_id=self.version.id,
+            )
+        )
+        as_of_v2 = list(
+            AssetReviewService().list_changes(
+                "t1", CategoryChoice.TRANSLATION, language="fr", user=self.reviewer, state=None, version_id=v2.id
+            )
+        )
+
+        # Assert — the latest change per unit up to each version
+        self.assertEqual([self.change.id], [c.id for c in as_of_v1])
+        self.assertEqual([change2.id], [c.id for c in as_of_v2])
+
+    def test_list_changes_where_version_not_in_language_should_raise_404(self):
+        # Arrange
+        other = baker.make(AssetVersion, asset=self.asset, name="ar v1")  # source language, not fr
+
+        # Act / Assert
+        with self.assertRaises(ItqanError) as ctx:
+            AssetReviewService().list_changes(
+                "t1", CategoryChoice.TRANSLATION, language="fr", user=self.reviewer, state=None, version_id=other.id
+            )
+        self.assertEqual("version_not_found", ctx.exception.error_name)

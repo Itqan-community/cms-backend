@@ -261,15 +261,14 @@ class ReviewDedupAndBaselineTests(QuranDataMixin, BaseTestCase):
         # Act
         response = self.client.get(self._changes_url(asset))
 
-        # Assert — only the latest change is reviewable, and its baseline is the
-        # last-approved text, not empty
+        # Assert — both changes are listed (newest first), and the newer one's
+        # baseline is the earlier approved text, not empty
         self.assertEqual(response.status_code, 200, response.content)
         results = response.json()["results"]
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0]["new_text"], "revised cow")
+        self.assertEqual([row["new_text"] for row in results], ["revised cow", "approved cow"])
         self.assertEqual(results[0]["baseline_text"], "approved cow")
 
-    def test_review_changes_where_ayah_template_has_multiple_versions_should_dedup_and_baseline_like_before(self):
+    def test_review_changes_where_ayah_template_has_multiple_versions_should_dedup_as_of_a_version(self):
         # Arrange — the long-standing ayah behaviour (mirrors
         # apps/content/tests/services/test_asset_review.py::
         # AssetReviewServiceTest.test_list_changes_shows_only_latest_change_per_ayah_with_last_approved_baseline)
@@ -299,10 +298,10 @@ class ReviewDedupAndBaselineTests(QuranDataMixin, BaseTestCase):
             order=self.ayah1.id,
         )
 
-        # Act
-        response = self.client.get(self._changes_url(asset))
+        # Act — the changes that make up v2
+        response = self.client.get(self._changes_url(asset) + f"&version={v2.id}")
 
-        # Assert — only the newer change (change2) is reviewable, with baseline
+        # Assert — only the newer change (change2) makes up v2, with baseline
         # equal to the approved text of change1
         self.assertEqual(response.status_code, 200, response.content)
         results = response.json()["results"]
