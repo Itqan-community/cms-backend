@@ -629,10 +629,11 @@ class AssetContentRepository:
 
     @staticmethod
     def _review_fields(change: AssetVersionChange) -> dict:
-        """The reviewer's outcome for a stored change; absent review = unreviewed."""
+        """The reviewer's outcome for a stored change; absent review = unreviewed.
+        (Diffs computed on the fly — legacy commits, drafts — carry no review state.)"""
         review = getattr(change, "review", None)
         if review is None:
-            return {}
+            return {"review_state": "unreviewed"}
         return {
             "review_state": review.state,
             "review_comment": review.comment,
