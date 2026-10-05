@@ -476,7 +476,7 @@ class AssetLanguage(BaseModel):
         ),
     )
     published_version = models.ForeignKey(
-        "AssetVersion",
+        "content.AssetVersion",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
