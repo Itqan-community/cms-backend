@@ -161,15 +161,48 @@ def list_review_languages(request: Request, category: str, slug: str) -> list[st
     )
 
 
+class ReviewVersionOut(Schema):
+    id: int
+    name: str
+    created_at: AwareDatetime
+
+
+@router.get(
+    "content/{category}/{slug}/review/versions/",
+    response={200: list[ReviewVersionOut], 404: _REVIEW_ERRORS},
+)
+def list_review_versions(request: Request, category: str, slug: str, language: str):
+    """The language's committed versions, newest first (the review page's version filter)."""
+    resolved = _resolve_review(category, request)
+    return AssetReviewService().list_review_versions(
+        slug, resolved, language=language, user=request.user, publisher_q=request.publisher_q()
+    )
+
+
 @router.get(
     "content/{category}/{slug}/review/changes/",
-    response={200: list[ReviewChangeOut], 404: _REVIEW_ERRORS},
+    response={200: list[ReviewChangeOut], 404: _REVIEW_ERRORS | NinjaErrorResponse[Literal["version_not_found"]]},
 )
 @paginate
-def list_review_changes(request: Request, category: str, slug: str, language: str, state: str | None = None):
+def list_review_changes(
+    request: Request,
+    category: str,
+    slug: str,
+    language: str,
+    state: str | None = None,
+    version: int | None = None,
+):
+    """Every change of the language, newest commit first — or, with ``version``,
+    the changes that make up that version (what decides whether it is approved)."""
     resolved = _resolve_review(category, request)
     return AssetReviewService().list_changes(
-        slug, resolved, language=language, user=request.user, state=state, publisher_q=request.publisher_q()
+        slug,
+        resolved,
+        language=language,
+        user=request.user,
+        state=state,
+        version_id=version,
+        publisher_q=request.publisher_q(),
     )
 
 

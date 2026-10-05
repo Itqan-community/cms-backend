@@ -6,6 +6,7 @@ from django.utils.translation import gettext as _
 
 from apps.content.models import (
     Asset,
+    AssetVersion,
     AssetVersionChange,
     AssetVersionChangeReview,
     CategoryChoice,
@@ -58,11 +59,31 @@ class AssetReviewService:
         language: str,
         user,
         state: str | None,
+        version_id: int | None = None,
         publisher_q: Q | None = None,
     ) -> QuerySet[AssetVersionChange]:
+        """Every change of the language, or — with ``version_id`` — the changes
+        that make up that committed version (see ``AssetReviewRepository.changes_for``)."""
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
         self._require_assigned(user, asset, language)
-        return self.repo.changes_for(asset, language, state=state)
+        as_of = None
+        if version_id is not None:
+            as_of = self.repo.committed_versions(asset, language).filter(pk=version_id).first()
+            if as_of is None:
+                raise ItqanError(
+                    error_name="version_not_found",
+                    message=_("Version with id {id} not found.").format(id=version_id),
+                    status_code=404,
+                )
+        return self.repo.changes_for(asset, language, state=state, as_of=as_of)
+
+    def list_review_versions(
+        self, slug: str, category: CategoryChoice, *, language: str, user, publisher_q: Q | None = None
+    ) -> QuerySet[AssetVersion]:
+        """The language's committed versions, newest first, for the version filter."""
+        asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
+        self._require_assigned(user, asset, language)
+        return self.repo.committed_versions(asset, language)
 
     def set_review_state(
         self,

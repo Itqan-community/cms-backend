@@ -327,8 +327,13 @@ identical to the previous version records no changes.
   State is stored one-per-change as `AssetVersionChangeReview` with
   `reviewed_by`/`reviewed_at` for auditing. Each listed change carries `edited_by`,
   the author (`created_by`) of the commit that made it — editor commits, uploads and
-  restores all record theirs. Approval gates publishing (see above); reviewers
-  cannot edit content.
+  restores all record theirs. `GET .../review/changes/` lists every change of a
+  language, including ones a later commit replaced (so every version can be
+  approved), each with `baseline_text` — the last text approved before its commit.
+  With `version=<id>` it lists the changes that make up that version (the latest
+  change per unit up to it), which is exactly what decides its approval;
+  `GET .../review/versions/` lists the versions to pick from. Approval gates
+  publishing (see above); reviewers cannot edit content.
 
 ---
 
