@@ -179,14 +179,17 @@ class AssetLanguagesApiTest(BaseTestCase):
 
         response = self.client.post(
             f"/portal/content/translations/{self.translation.slug}/languages/",
-            data={"language": "es", "file": csv},
+            data={"language": "es", "file": csv, "version_label": "Primera", "version_number": "3.0"},
         )
 
         self.assertEqual(200, response.status_code, response.content)
-        # The language now has a published version seeded from the uploaded file.
+        # The language now has a published version seeded from the uploaded file,
+        # starting its own number sequence at the chosen number.
         version = AssetVersion.objects.get(
             asset=self.translation, asset_language__language="es", state=VersionStateChoice.PUBLISHED
         )
+        self.assertEqual("3.0", version.name)
+        self.assertEqual("Primera", version.label)
         self.assertEqual(2, version.entries.count())
         self.assertEqual("en el nombre", version.entries.get(ayah_id=self.ayahs[0].id).text)
 

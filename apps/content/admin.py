@@ -572,9 +572,9 @@ class AssetAdmin(admin.ModelAdmin):
 
 @admin.register(AssetVersion)
 class AssetVersionAdmin(admin.ModelAdmin):
-    list_display = ["asset", "name", "size_bytes", "created_at"]
+    list_display = ["asset", "name", "label", "size_bytes", "created_at"]
     list_filter = ["created_at"]
-    search_fields = ["asset__name", "name"]
+    search_fields = ["asset__name", "name", "label"]
     readonly_fields = ["created_at", "updated_at"]
 
 

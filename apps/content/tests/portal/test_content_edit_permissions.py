@@ -107,7 +107,8 @@ class ContentEditPermissionTests(BaseTestCase):
             f"/portal/translations/{self.translation.slug}/versions/",
             data={
                 "asset_id": self.translation.id,
-                "name": "v2",
+                "label": "v2",
+                "version_number": "7.0",
                 "summary": "upload",
                 "file": SimpleUploadedFile("v2.pdf", b"content", content_type="application/pdf"),
             },
@@ -129,7 +130,8 @@ class ContentEditPermissionTests(BaseTestCase):
             f"/portal/translations/{self.translation.slug}/versions/",
             data={
                 "asset_id": self.translation.id,
-                "name": "v2",
+                "label": "v2",
+                "version_number": "7.0",
                 "summary": "upload",
                 "file": SimpleUploadedFile("v2.csv", b"surah,ayah,text\n1,1,in the name", content_type="text/csv"),
             },
@@ -154,7 +156,7 @@ class ContentEditPermissionTests(BaseTestCase):
         self.assertEqual(403, response.status_code, response.content)
         self.assertEqual("permission_denied", response.json()["error_name"])
 
-    def test_patch_version_where_only_name_changes_should_need_metadata_update_only(self):
+    def test_patch_version_where_only_label_changes_should_need_metadata_update_only(self):
         # Arrange
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
@@ -163,13 +165,13 @@ class ContentEditPermissionTests(BaseTestCase):
         # Act
         response = self.client.patch(
             f"/portal/tafsirs/{self.tafsir.slug}/versions/{version.id}/",
-            data=urlencode({"name": "Renamed"}),
+            data=urlencode({"label": "Renamed"}),
             content_type="application/x-www-form-urlencoded",
         )
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
-        self.assertEqual("Renamed", response.json()["name"])
+        self.assertEqual("Renamed", response.json()["label"])
 
     def test_with_implied_where_content_permission_granted_should_include_category_read(self):
         # Arrange

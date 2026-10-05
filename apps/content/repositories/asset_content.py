@@ -10,10 +10,10 @@ import csv
 import io
 import logging
 import os
-import re
 
 from django.core.files.base import ContentFile
 from django.db import transaction
+from django.db.models import Q
 from django.utils.translation import gettext as _
 
 from apps.content.models import (
@@ -59,40 +59,23 @@ class AssetContentRepository:
             )
         }
 
-    def unique_version_name(self, asset: Asset, base_name: str) -> str:
-        """Return a version name unique within the asset (versions are distinct).
+    def lock_asset(self, asset: Asset) -> Asset:
+        """Row-lock the asset for the rest of the transaction (serializes numbering)."""
+        return Asset.objects.select_for_update().get(pk=asset.pk)
 
-        Naming is "smart": if the base name ends with a number, that number is
-        incremented (``v1`` → ``v2`` → ``v3``, ``الإصدار 1`` → ``الإصدار 2``),
-        continuing until the name is free. If there is no trailing number, a
-        numeric suffix is appended (``Draft`` → ``Draft 2``). Stays within the
-        model's ``name`` max_length.
+    def sequence_version_names(self, asset: Asset, language: str) -> list[str]:
+        """Names of the committed versions in the asset's number sequence for ``language``.
+
+        Legacy versions with no ``asset_language`` belong to the source language.
         """
-        max_length = self.asset_version_model._meta.get_field("name").max_length or 255
-        existing = set(self.asset_version_model.objects.filter(asset=asset).values_list("name", flat=True))
-
-        # The last run of digits in the name (e.g. the "1" in "v1", the "2" in "v1 (2)").
-        match = re.search(r"\d+(?=\D*$)", base_name)
-        if match:
-            start, end = match.span()
-            prefix, suffix = base_name[:start], base_name[end:]
-            number = int(match.group())
-            candidate = base_name
-            while candidate in existing:
-                number += 1
-                candidate = f"{prefix}{number}{suffix}"
-            return candidate[:max_length]
-
-        # No number to bump — append " 2", " 3", …
-        if base_name not in existing:
-            return base_name[:max_length]
-        counter = 2
-        while True:
-            tail = f" {counter}"
-            candidate = f"{base_name[: max_length - len(tail)]}{tail}"
-            if candidate not in existing:
-                return candidate
-            counter += 1
+        language_q = Q(asset_language__language=language)
+        if language == asset.language:
+            language_q |= Q(asset_language__isnull=True)
+        return list(
+            self.asset_version_model.objects.filter(
+                language_q, asset=asset, state=VersionStateChoice.PUBLISHED
+            ).values_list("name", flat=True)
+        )
 
     def get_draft(self, asset: Asset, asset_language: AssetLanguage) -> AssetVersion | None:
         return self.asset_version_model.objects.filter(
@@ -151,6 +134,7 @@ class AssetContentRepository:
         *,
         asset_language: AssetLanguage,
         name: str,
+        label: str = "",
         summary: str,
         created_by_id: int | None,
         mushaf_version: AssetVersion | None = None,
@@ -174,6 +158,7 @@ class AssetContentRepository:
             asset=asset,
             asset_language=asset_language,
             name=name,
+            label=label,
             summary=summary,
             state=VersionStateChoice.DRAFT,
             created_by_id=created_by_id,
@@ -574,9 +559,9 @@ class AssetContentRepository:
                 status_code=400,
             )
         draft.state = VersionStateChoice.PUBLISHED
-        # Persist name/summary too: the service may have set them from the publish
+        # Persist name/label/summary too: the service may have set them from the publish
         # payload, and they must be written (not just held in memory).
-        update_fields = ["state", "name", "summary", "updated_at"]
+        update_fields = ["state", "name", "label", "summary", "updated_at"]
         if not draft.file_url and draft.entries.exists():
             content = self.entries_to_csv_bytes(draft, unit_spec_for(draft.asset))
             filename = f"{draft.asset.slug}-{draft.name}.csv".replace(" ", "_")
@@ -745,7 +730,7 @@ class AssetContentRepository:
         return state
 
     @transaction.atomic
-    def restore_version(self, version: AssetVersion, *, created_by_id: int | None = None) -> AssetVersion:
+    def restore_version(self, version: AssetVersion, *, name: str, created_by_id: int | None = None) -> AssetVersion:
         """Restore a commit's content as a new published version (the active one).
 
         Works whether `version` still has full entries or was pruned to deltas
@@ -769,11 +754,11 @@ class AssetContentRepository:
             # file belongs to an ayah-template asset, since templates postdate
             # the entries system, but the resolution itself is template-generic.
             snapshot = self._snapshot_from_file(version)
-        name = self.unique_version_name(asset, version.name)
         new_version = self.asset_version_model.objects.create(
             asset=asset,
             asset_language=version.asset_language,
             name=name,
+            label=version.label,
             summary=version.summary,
             state=VersionStateChoice.PUBLISHED,
             created_by_id=created_by_id,

@@ -122,7 +122,7 @@ class GetOrCreateDraftTest(AssetContentBaseTest):
         self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
         stale_draft = baker.make(AssetVersion, asset=self.translation, name="wip", state=VersionStateChoice.DRAFT)
         baker.make(AssetVersionEntry, version=stale_draft, ayah=self.ayahs[0], text="old draft text")
-        newer = baker.make(AssetVersion, asset=self.translation, name="v2", state=VersionStateChoice.PUBLISHED)
+        newer = baker.make(AssetVersion, asset=self.translation, name="1.1", state=VersionStateChoice.PUBLISHED)
         baker.make(AssetVersionEntry, version=newer, ayah=self.ayahs[0], text="new uploaded text")
         # make the published version newer than the draft
         AssetVersion.objects.filter(pk=stale_draft.pk).update(created_at=timezone.now() - timedelta(hours=1))
@@ -144,7 +144,7 @@ class GetOrCreateDraftTest(AssetContentBaseTest):
         # Arrange — a draft created AFTER the latest published version
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
-        published = baker.make(AssetVersion, asset=self.translation, name="v1", state=VersionStateChoice.PUBLISHED)
+        published = baker.make(AssetVersion, asset=self.translation, name="1.0", state=VersionStateChoice.PUBLISHED)
         AssetVersion.objects.filter(pk=published.pk).update(created_at=timezone.now() - timedelta(hours=1))
         draft = baker.make(AssetVersion, asset=self.translation, name="wip", state=VersionStateChoice.DRAFT)
 
@@ -159,52 +159,15 @@ class GetOrCreateDraftTest(AssetContentBaseTest):
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual(draft.id, response.json()["id"])
 
-    def test_get_or_create_draft_where_name_ends_with_number_should_increment_it(self):
-        # Arrange — latest published version named "v1"
-        self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
-        baker.make(AssetVersion, asset=self.translation, name="v1", state=VersionStateChoice.PUBLISHED)
-
-        # Act
-        response = self.client.post(
-            f"/portal/content/translations/{self.translation.slug}/draft/",
-            data={"language": "ar"},
-            content_type="application/json",
-        )
-
-        # Assert — draft is "v2", not "v1 (2)"
-        self.assertEqual(200, response.status_code, response.content)
-        self.assertEqual("v2", response.json()["name"])
-
-    def test_get_or_create_draft_where_v2_and_v3_exist_should_pick_next_free_number(self):
-        # Arrange — v1 (latest), and v2/v3 already taken
-        self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
-        older = baker.make(AssetVersion, asset=self.translation, name="v1", state=VersionStateChoice.PUBLISHED)
-        AssetVersion.objects.filter(pk=older.pk).update(created_at=timezone.now() - timedelta(hours=2))
-        for nm, ago in (("v2", 90), ("v3", 30)):
-            v = baker.make(AssetVersion, asset=self.translation, name=nm, state=VersionStateChoice.PUBLISHED)
-            AssetVersion.objects.filter(pk=v.pk).update(created_at=timezone.now() - timedelta(minutes=ago))
-
-        # Act — latest is v3, so the draft should become v4
-        response = self.client.post(
-            f"/portal/content/translations/{self.translation.slug}/draft/",
-            data={"language": "ar"},
-            content_type="application/json",
-        )
-
-        # Assert
-        self.assertEqual(200, response.status_code, response.content)
-        self.assertEqual("v4", response.json()["name"])
-
-    def test_get_or_create_draft_where_name_has_no_number_should_append_counter(self):
-        # Arrange — latest published named without any digits
+    def test_get_or_create_draft_where_published_exists_should_be_unnumbered_with_source_label(self):
+        # Arrange — latest published version 1.0, named "First edition"
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
         baker.make(
             AssetVersion,
             asset=self.translation,
-            name="First edition",
+            name="1.0",
+            label="First edition",
             state=VersionStateChoice.PUBLISHED,
         )
 
@@ -215,34 +178,10 @@ class GetOrCreateDraftTest(AssetContentBaseTest):
             content_type="application/json",
         )
 
-        # Assert
+        # Assert — the number is issued on commit; the name carries over
         self.assertEqual(200, response.status_code, response.content)
-        self.assertEqual("First edition 2", response.json()["name"])
-
-    def test_get_or_create_draft_where_published_name_is_max_length_should_not_overflow(self):
-        # Arrange — a published version whose name is exactly at the 255 limit
-        self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
-        long_name = "n" * 255
-        baker.make(
-            AssetVersion,
-            asset=self.translation,
-            name=long_name,
-            state=VersionStateChoice.PUBLISHED,
-        )
-
-        # Act
-        response = self.client.post(
-            f"/portal/content/translations/{self.translation.slug}/draft/",
-            data={"language": "ar"},
-            content_type="application/json",
-        )
-
-        # Assert — draft created with a unique name kept within max_length
-        self.assertEqual(200, response.status_code, response.content)
-        draft = AssetVersion.objects.get(asset=self.translation, state=VersionStateChoice.DRAFT)
-        self.assertLessEqual(len(draft.name), 255)
-        self.assertNotEqual(long_name, draft.name)
+        self.assertEqual("", response.json()["name"])
+        self.assertEqual("First edition", response.json()["label"])
 
     def test_get_or_create_draft_where_user_lacks_permission_should_return_403(self):
         # Arrange
@@ -462,7 +401,7 @@ class SourceReferenceEntriesTest(AssetContentBaseTest):
         # Act
         publish = self.client.post(
             f"/portal/content/translations/{self.translation.slug}/versions/{draft_id}/publish/",
-            data={"message": "commit"},
+            data={"version_number": "1.0", "message": "commit"},
             content_type="application/json",
         )
 
@@ -493,7 +432,7 @@ class SourceReferenceEntriesTest(AssetContentBaseTest):
         )
         self.client.post(
             f"/portal/content/translations/{self.translation.slug}/versions/{first_id}/publish/",
-            data={"message": "commit"},
+            data={"version_number": "1.0", "message": "commit"},
             content_type="application/json",
         )
 
@@ -650,7 +589,7 @@ class PublishDraftTest(AssetContentBaseTest):
         # Act
         response = self.client.post(
             f"/portal/content/translations/{self.translation.slug}/versions/{draft.id}/publish/",
-            data={"message": "first commit"},
+            data={"version_number": "1.0", "message": "first commit"},
             content_type="application/json",
         )
 
@@ -668,7 +607,7 @@ class PublishDraftTest(AssetContentBaseTest):
         self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
         ar = self.translation.get_or_create_source_language()
         head = baker.make(
-            AssetVersion, asset=self.translation, asset_language=ar, name="v1", state=VersionStateChoice.PUBLISHED
+            AssetVersion, asset=self.translation, asset_language=ar, name="1.0", state=VersionStateChoice.PUBLISHED
         )
         baker.make(AssetVersionEntry, version=head, ayah=self.ayahs[0], text="old one", order=1)
         baker.make(AssetVersionEntry, version=head, ayah=self.ayahs[1], text="two", order=2)
@@ -679,7 +618,7 @@ class PublishDraftTest(AssetContentBaseTest):
             AssetVersion,
             asset=self.translation,
             asset_language=ar,
-            name="v2",
+            name="1.1",
             state=VersionStateChoice.DRAFT,
             content_edited=True,
         )
@@ -690,7 +629,7 @@ class PublishDraftTest(AssetContentBaseTest):
         # Act
         response = self.client.post(
             f"/portal/content/translations/{self.translation.slug}/versions/{draft.id}/publish/",
-            data={"message": "tweak ayah 1, add ayah 3"},
+            data={"version_number": "1.0", "message": "tweak ayah 1, add ayah 3"},
             content_type="application/json",
         )
 
@@ -714,7 +653,7 @@ class PublishDraftTest(AssetContentBaseTest):
         # Act — blank message
         response = self.client.post(
             f"/portal/content/translations/{self.translation.slug}/versions/{draft.id}/publish/",
-            data={"message": "   "},
+            data={"version_number": "1.0", "message": "   "},
             content_type="application/json",
         )
 
@@ -732,7 +671,7 @@ class PublishDraftTest(AssetContentBaseTest):
         # Act
         response = self.client.post(
             f"/portal/content/translations/{self.translation.slug}/versions/{draft.id}/publish/",
-            data={"message": "commit"},
+            data={"version_number": "1.0", "message": "commit"},
             content_type="application/json",
         )
 
@@ -747,14 +686,14 @@ class PublishDraftTest(AssetContentBaseTest):
         self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
         ar = self.translation.get_or_create_source_language()
         head = baker.make(
-            AssetVersion, asset=self.translation, asset_language=ar, name="v1", state=VersionStateChoice.PUBLISHED
+            AssetVersion, asset=self.translation, asset_language=ar, name="1.0", state=VersionStateChoice.PUBLISHED
         )
         baker.make(AssetVersionEntry, version=head, ayah=self.ayahs[0], text="same", order=1)
         draft = baker.make(
             AssetVersion,
             asset=self.translation,
             asset_language=ar,
-            name="v2",
+            name="1.1",
             state=VersionStateChoice.DRAFT,
             content_edited=True,
         )
@@ -763,7 +702,7 @@ class PublishDraftTest(AssetContentBaseTest):
         # Act
         response = self.client.post(
             f"/portal/content/translations/{self.translation.slug}/versions/{draft.id}/publish/",
-            data={"message": "no-op"},
+            data={"version_number": "1.0", "message": "no-op"},
             content_type="application/json",
         )
 
@@ -798,11 +737,11 @@ class PublishDraftTest(AssetContentBaseTest):
         self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
         ar = self.translation.get_or_create_source_language()
         old = baker.make(
-            AssetVersion, asset=self.translation, asset_language=ar, name="v1", state=VersionStateChoice.PUBLISHED
+            AssetVersion, asset=self.translation, asset_language=ar, name="1.0", state=VersionStateChoice.PUBLISHED
         )
         baker.make(AssetVersionEntry, version=old, ayah=self.ayahs[0], text="old text")
         baker.make(
-            AssetVersion, asset=self.translation, asset_language=ar, name="v2", state=VersionStateChoice.PUBLISHED
+            AssetVersion, asset=self.translation, asset_language=ar, name="1.1", state=VersionStateChoice.PUBLISHED
         )
         AssetVersion.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(hours=1))
 
@@ -829,7 +768,7 @@ class PublishDraftTest(AssetContentBaseTest):
         draft = baker.make(
             AssetVersion,
             asset=self.translation,
-            name="v1",
+            name="1.0",
             state=VersionStateChoice.DRAFT,
             file_url=None,
             content_edited=True,
@@ -839,7 +778,7 @@ class PublishDraftTest(AssetContentBaseTest):
         # Act
         response = self.client.post(
             f"/portal/content/translations/{self.translation.slug}/versions/{draft.id}/publish/",
-            data={"message": "commit"},
+            data={"version_number": "1.0", "message": "commit"},
             content_type="application/json",
         )
 
@@ -862,7 +801,7 @@ class PublishDraftTest(AssetContentBaseTest):
         # Act
         response = self.client.post(
             f"/portal/content/translations/{self.translation.slug}/versions/{published.id}/publish/",
-            data={"message": "commit"},
+            data={"version_number": "1.0", "message": "commit"},
             content_type="application/json",
         )
 
@@ -975,14 +914,14 @@ class ReconstructAndRestoreTest(AssetContentBaseTest):
         ar = self.translation.get_or_create_source_language()
         # pruned old commit represented only by deltas
         old = baker.make(
-            AssetVersion, asset=self.translation, asset_language=ar, name="v1", state=VersionStateChoice.PUBLISHED
+            AssetVersion, asset=self.translation, asset_language=ar, name="1.0", state=VersionStateChoice.PUBLISHED
         )
         AssetVersion.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(hours=2))
         baker.make(
             AssetVersionChange, version=old, ayah=self.ayahs[0], change_type="added", new_text="old text", order=1
         )
         head = baker.make(
-            AssetVersion, asset=self.translation, asset_language=ar, name="v2", state=VersionStateChoice.PUBLISHED
+            AssetVersion, asset=self.translation, asset_language=ar, name="1.1", state=VersionStateChoice.PUBLISHED
         )
         baker.make(AssetVersionEntry, version=head, ayah=self.ayahs[0], text="head text")
 
@@ -1006,7 +945,7 @@ class ReconstructAndRestoreTest(AssetContentBaseTest):
         self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
         ar = self.translation.get_or_create_source_language()
         legacy = baker.make(
-            AssetVersion, asset=self.translation, asset_language=ar, name="v1", state=VersionStateChoice.PUBLISHED
+            AssetVersion, asset=self.translation, asset_language=ar, name="1.0", state=VersionStateChoice.PUBLISHED
         )
         legacy.file_url.save("legacy.csv", ContentFile(b"surah,ayah,text\n1,1,from file\n1,2,second"), save=True)
 
@@ -1154,7 +1093,7 @@ class VersionUploadImportTest(AssetContentBaseTest):
 
         # Act
         version = TafsirService().create_tafsir_version(
-            "tabari-import", name="v1", summary="", file=upload, publisher_q=None
+            "tabari-import", version_number="1.0", summary="", file=upload, publisher_q=None
         )
 
         # Assert — entries populated from the file content
@@ -1167,7 +1106,7 @@ class ExportVersionTest(AssetContentBaseTest):
         # Arrange
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
-        version = baker.make(AssetVersion, asset=self.translation, name="v1", state=VersionStateChoice.PUBLISHED)
+        version = baker.make(AssetVersion, asset=self.translation, name="1.0", state=VersionStateChoice.PUBLISHED)
         baker.make(AssetVersionEntry, version=version, ayah=self.ayahs[0], text="au nom")
 
         # Act
@@ -1185,7 +1124,7 @@ class ExportVersionTest(AssetContentBaseTest):
         self.assertIn("الفاتحة", body)  # surah name
         self.assertIn("ayah 1", body)  # the original ayah text
         # Filename is {english name}-{language}-{version}.csv (whitespace → underscores)
-        self.assertIn("French_Rashid-ar-v1.csv", response["Content-Disposition"])
+        self.assertIn("French_Rashid-ar-1.0.csv", response["Content-Disposition"])
 
     def test_export_where_version_name_is_arabic_should_encode_content_disposition(self):
         # Arrange — a version name with non-ASCII (Arabic) characters
@@ -1224,7 +1163,7 @@ class ExportVersionTest(AssetContentBaseTest):
     def test_export_where_user_lacks_permission_should_return_403(self):
         # Arrange
         self.authenticate_user(self.user)
-        version = baker.make(AssetVersion, asset=self.translation, name="v1", state=VersionStateChoice.PUBLISHED)
+        version = baker.make(AssetVersion, asset=self.translation, name="1.0", state=VersionStateChoice.PUBLISHED)
 
         # Act
         response = self.client.get(

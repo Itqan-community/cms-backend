@@ -126,7 +126,9 @@ class TranslationCreateIn(Schema):
     external_url: str | None = None
     is_open_access: bool = False
     restricted_for_tenant: bool = False
-    version_name: str | None = Field(default=None, max_length=255)
+    version_label: str = Field(default="", max_length=255)
+    # Starting version number ("major.minor") — required when a file is uploaded.
+    version_number: str | None = Field(default=None, max_length=20)
     version_summary: str = ""
     template: AssetTemplateChoice
     mushaf_layout_id: int | None = None
@@ -211,7 +213,8 @@ def list_translations(request: Request, filters: TranslationFilter = Query()):
         201: TranslationDetailOut,
         400: NinjaErrorResponse[Literal["translation_name_required"]]
         | NinjaErrorResponse[Literal["external_url_required"]]
-        | NinjaErrorResponse[Literal["version_name_required"]]
+        | NinjaErrorResponse[Literal["version_number_required"]]
+        | NinjaErrorResponse[Literal["version_number_invalid"]]
         | NinjaErrorResponse[Literal["content_file_unparseable"]]
         | NinjaErrorResponse[Literal["content_file_invalid_rows"]]
         | NinjaErrorResponse[Literal["mushaf_layout_required"]]
@@ -232,7 +235,8 @@ def create_translation(
     enforce_publisher_membership(request.user, data.publisher_id)
     service = TranslationService()
     translation = service.create_translation_with_optional_version(
-        version_name=data.version_name,
+        version_label=data.version_label,
+        version_number=data.version_number,
         version_summary=data.version_summary,
         file=file,
         created_by_id=request.user.id,
