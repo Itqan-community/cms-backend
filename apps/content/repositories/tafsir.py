@@ -147,6 +147,7 @@ class TafsirRepository:
         asset: Asset,
         *,
         name: str,
+        label: str = "",
         summary: str = "",
         file: Any = None,
         created_by_id: int | None = None,
@@ -165,6 +166,7 @@ class TafsirRepository:
             asset_version = self.asset_version_model.objects.create(
                 asset=asset,
                 name=name,
+                label=label,
                 summary=summary,
                 file_url=file,
                 size_bytes=size_bytes,

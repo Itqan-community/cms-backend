@@ -537,7 +537,20 @@ class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
         help_text="Language rendition this version belongs to (defaults to the source language).",
     )
 
-    name = models.CharField(max_length=255, help_text="Asset version name")
+    name = models.CharField(
+        max_length=255,
+        help_text=(
+            "Asset version name. For tafsirs and translations this is the version number "
+            "('major.minor'), issued by the server and immutable; blank on drafts."
+        ),
+    )
+
+    label = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="Human-readable version name (tafsirs and translations).",
+    )
 
     summary = models.TextField(blank=True, help_text="Asset version summary")
 

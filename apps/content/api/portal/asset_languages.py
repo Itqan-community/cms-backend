@@ -9,6 +9,7 @@ from typing import Literal
 
 from django.db import transaction
 from ninja import File, Form, Schema, UploadedFile
+from pydantic import Field
 
 from apps.content.api.portal.asset_content import _resolve
 from apps.content.models import AssetLanguage, CategoryChoice, StatusChoice
@@ -43,6 +44,9 @@ class LanguageOut(Schema):
 
 class AddLanguageIn(Schema):
     language: str
+    # The uploaded file's version: its name and the number the language's sequence starts at.
+    version_label: str = Field(default="", max_length=255)
+    version_number: str | None = Field(default=None, max_length=20)
 
 
 class LanguageAvailabilityIn(Schema):
@@ -77,7 +81,9 @@ def list_languages(request: Request, category: str, slug: str) -> list[AssetLang
         200: LanguageOut,
         400: NinjaErrorResponse[Literal["language_exists"]]
         | NinjaErrorResponse[Literal["content_file_unparseable"]]
-        | NinjaErrorResponse[Literal["content_file_invalid_rows"]],
+        | NinjaErrorResponse[Literal["content_file_invalid_rows"]]
+        | NinjaErrorResponse[Literal["version_number_required"]]
+        | NinjaErrorResponse[Literal["version_number_invalid"]],
         404: NinjaErrorResponse[Literal["translation_not_found"]]
         | NinjaErrorResponse[Literal["tafsir_not_found"]]
         | NinjaErrorResponse[Literal["unsupported_content_category"]],
@@ -116,7 +122,8 @@ def add_language(
             if resolved == CategoryChoice.TAFSIR:
                 TafsirService().create_tafsir_version(
                     slug,
-                    name="v1",
+                    label=data.version_label,
+                    version_number=data.version_number,
                     file=file,
                     language=data.language,
                     created_by_id=request.user.id,
@@ -125,7 +132,8 @@ def add_language(
             else:
                 TranslationService().create_translation_version(
                     slug,
-                    name="v1",
+                    label=data.version_label,
+                    version_number=data.version_number,
                     file=file,
                     language=data.language,
                     created_by_id=request.user.id,

@@ -14,7 +14,7 @@ from ninja.pagination import paginate
 from pydantic import AwareDatetime, ConfigDict, Field, Json, model_validator
 
 from apps.content.models import AssetTemplateChoice, AssetVersion, AssetVersionEntry, CategoryChoice, MushafLayout
-from apps.content.services.asset_content import AssetContentService
+from apps.content.services.asset_content import AssetContentService, VersionBump
 from apps.content.services.asset_language_access import require_language, require_version_language
 from apps.content.services.asset_templates import (
     ColumnFilter,
@@ -103,7 +103,9 @@ class DraftVersionOut(Schema):
     id: int
     asset_id: int
     language: str
+    # Version number ("major.minor"); blank while the version is a draft.
     name: str
+    label: str
     summary: str
     state: str
     entries_count: int
@@ -213,6 +215,15 @@ class EntriesPatchIn(Schema):
 
 class PublishIn(Schema):
     message: str
+    # Version name; omitted keeps the draft's.
+    label: str | None = Field(default=None, max_length=255)
+    # Starts the language's number sequence; ignored once it has a version.
+    version_number: str | None = Field(default=None, max_length=20)
+    bump: VersionBump = "minor"
+
+
+class RestoreIn(Schema):
+    bump: VersionBump = "minor"
 
 
 class ChangeOut(Schema):
@@ -477,7 +488,9 @@ def get_version(request: Request, category: str, slug: str, version_id: int) -> 
         200: DraftVersionOut,
         400: NinjaErrorResponse[Literal["version_not_editable"]]
         | NinjaErrorResponse[Literal["no_changes_to_publish"]]
-        | NinjaErrorResponse[Literal["commit_message_required"]],
+        | NinjaErrorResponse[Literal["commit_message_required"]]
+        | NinjaErrorResponse[Literal["version_number_required"]]
+        | NinjaErrorResponse[Literal["version_number_invalid"]],
         404: NinjaErrorResponse[Literal["translation_not_found"]]
         | NinjaErrorResponse[Literal["tafsir_not_found"]]
         | NinjaErrorResponse[Literal["version_not_found"]]
@@ -492,6 +505,9 @@ def publish_draft(request: Request, category: str, slug: str, version_id: int, d
         resolved,
         version_id,
         message=data.message,
+        label=data.label,
+        version_number=data.version_number,
+        bump=data.bump,
         publisher_q=request.publisher_q(),
     )
 
@@ -525,13 +541,14 @@ def discard_draft(request: Request, category: str, slug: str, version_id: int) -
         | NinjaErrorResponse[Literal["unsupported_content_category"]],
     },
 )
-def restore_version(request: Request, category: str, slug: str, version_id: int) -> AssetVersion:
+def restore_version(request: Request, category: str, slug: str, version_id: int, data: RestoreIn) -> AssetVersion:
     resolved = _resolve_for_version(category, request, slug, version_id, access="content")
     service = AssetContentService()
     return service.restore_version(
         slug,
         resolved,
         version_id,
+        bump=data.bump,
         created_by_id=getattr(request.user, "id", None),
         publisher_q=request.publisher_q(),
     )

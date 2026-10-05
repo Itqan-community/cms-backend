@@ -155,7 +155,8 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
             f"/portal/tafsirs/{self.tafsir.slug}/versions/",
             data={
                 "asset_id": self.tafsir.id,
-                "name": "New Version",
+                "label": "New Version",
+                "version_number": "7.0",
                 "summary": "This is a new version",
                 "file": file,
             },
@@ -164,7 +165,8 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         # Assert
         self.assertEqual(201, response.status_code, response.content)
         body = response.json()
-        self.assertEqual("New Version", body["name"])
+        self.assertEqual("7.0", body["name"])
+        self.assertEqual("New Version", body["label"])
         self.assertEqual("This is a new version", body["summary"])
         self.assertIsNotNone(body["file_url"])
 
@@ -194,7 +196,8 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
             f"/portal/tafsirs/{self.tafsir.slug}/versions/",
             data={
                 "asset_id": self.tafsir.id,
-                "name": "French v1",
+                "label": "French v1",
+                "version_number": "7.0",
                 "summary": "",
                 "language": "fr",
                 "file": file,
@@ -216,7 +219,8 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
             f"/portal/tafsirs/{self.tafsir.slug}/versions/",
             data={
                 "asset_id": 99999,
-                "name": "New Version",
+                "label": "New Version",
+                "version_number": "7.0",
                 "file": SimpleUploadedFile("t.pdf", b"c"),
             },
         )
@@ -240,7 +244,7 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         # Act
         response = self.client.post(
             f"/portal/tafsirs/{self.tafsir.slug}/versions/",
-            data={"asset_id": self.tafsir.id, "name": "V1", "file": file},
+            data={"asset_id": self.tafsir.id, "label": "V1", "version_number": "1.0", "file": file},
         )
 
         # Assert
@@ -267,7 +271,13 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         with self.captureOnCommitCallbacks(execute=True):
             response = self.client.post(
                 f"/portal/tafsirs/{self.tafsir.slug}/versions/",
-                data={"asset_id": self.tafsir.id, "name": "2.0.0", "summary": "New release", "file": file},
+                data={
+                    "asset_id": self.tafsir.id,
+                    "label": "2.0.0",
+                    "version_number": "1.0",
+                    "summary": "New release",
+                    "file": file,
+                },
             )
 
         # Assert
@@ -286,7 +296,7 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         # Act
         response = self.client.post(
             f"/portal/tafsirs/{self.tafsir.slug}/versions/",
-            data={"asset_id": self.tafsir.id, "name": "2.0.0", "file": file},
+            data={"asset_id": self.tafsir.id, "label": "2.0.0", "version_number": "1.0", "file": file},
         )
 
         # Assert
@@ -302,7 +312,7 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         # Act
         response = self.client.post(
             f"/portal/tafsirs/{self.tafsir.slug}/versions/",
-            data={"asset_id": self.tafsir.id, "name": "v2", "file": file},
+            data={"asset_id": self.tafsir.id, "label": "v2", "version_number": "1.0", "file": file},
         )
 
         # Assert — content that cannot be split into units cannot be reviewed
@@ -320,7 +330,7 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         # Act
         response = self.client.post(
             f"/portal/tafsirs/{self.tafsir.slug}/versions/",
-            data={"asset_id": self.tafsir.id, "name": "v2", "file": file},
+            data={"asset_id": self.tafsir.id, "label": "v2", "version_number": "1.0", "file": file},
         )
 
         # Assert — nothing whose text would be dropped (and so never reviewed) is accepted
@@ -340,7 +350,7 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         # Act
         response = self.client.post(
             f"/portal/tafsirs/{self.tafsir.slug}/versions/",
-            data={"asset_id": self.tafsir.id, "name": "v2", "file": file},
+            data={"asset_id": self.tafsir.id, "label": "v2", "version_number": "1.0", "file": file},
         )
 
         # Assert — consumers download a file generated from the reviewed entries
@@ -362,7 +372,7 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         # Act
         response = self.client.post(
             f"/portal/tafsirs/{self.tafsir.slug}/versions/",
-            data={"asset_id": self.tafsir.id, "name": "v2", "file": file},
+            data={"asset_id": self.tafsir.id, "label": "v2", "version_number": "1.0", "file": file},
         )
 
         # Assert
@@ -387,7 +397,7 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         # Act
         response = self.client.post(
             f"/portal/tafsirs/{self.tafsir.slug}/versions/",
-            data={"asset_id": self.tafsir.id, "name": "v2", "file": file},
+            data={"asset_id": self.tafsir.id, "label": "v2", "version_number": "1.0", "file": file},
         )
 
         # Assert — nothing new to review
@@ -409,7 +419,7 @@ class TafsirVersionUpdateTest(TafsirVersionBaseTest):
         self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
         payload = {
             "asset_id": self.tafsir.id,
-            "name": "Updated Name",
+            "label": "Updated Name",
             "summary": "Updated Summary",
         }
 
@@ -423,11 +433,11 @@ class TafsirVersionUpdateTest(TafsirVersionBaseTest):
         # Arrange
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
-        self.assertEqual("Updated Name", body["name"])
+        self.assertEqual("Updated Name", body["label"])
         self.assertEqual("Updated Summary", body["summary"])
 
         self.version.refresh_from_db()
-        self.assertEqual("Updated Name", self.version.name)
+        self.assertEqual("Updated Name", self.version.label)
 
     def test_patch_version_where_partial_data_should_return_200(self):
         # Arrange
@@ -436,7 +446,7 @@ class TafsirVersionUpdateTest(TafsirVersionBaseTest):
         from urllib.parse import urlencode
 
         payload = {
-            "name": "Patched Name",
+            "label": "Patched Name",
         }
 
         # Act
@@ -449,8 +459,28 @@ class TafsirVersionUpdateTest(TafsirVersionBaseTest):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
-        self.assertEqual("Patched Name", body["name"])
+        self.assertEqual("Patched Name", body["label"])
         self.assertEqual(self.version.summary, body["summary"])
+
+    def test_patch_version_where_name_sent_should_keep_version_number(self):
+        from urllib.parse import urlencode
+
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
+
+        # Act
+        response = self.client.patch(
+            f"/portal/tafsirs/{self.tafsir.slug}/versions/{self.version.id}/",
+            data=urlencode({"name": "9.9", "label": "Renamed"}),
+            content_type="application/x-www-form-urlencoded",
+        )
+
+        # Assert — the label changes, the issued number does not
+        self.assertEqual(200, response.status_code, response.content)
+        self.version.refresh_from_db()
+        self.assertEqual("Old Name", self.version.name)
+        self.assertEqual("Renamed", self.version.label)
 
     def test_update_version_where_unauthenticated_should_return_401(self):
         response = self.client.patch(f"/portal/tafsirs/{self.tafsir.slug}/versions/{self.version.id}/", data={})
@@ -468,7 +498,7 @@ class TafsirVersionUpdateTest(TafsirVersionBaseTest):
         # Act
         response = self.client.patch(
             f"/portal/tafsirs/{self.tafsir.slug}/versions/{self.version.id}/",
-            data=urlencode({"name": "X"}),
+            data=urlencode({"label": "X"}),
             content_type="application/x-www-form-urlencoded",
         )
 

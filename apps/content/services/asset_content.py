@@ -12,6 +12,8 @@ reaches consumers only once its changes are approved and it is explicitly
 from __future__ import annotations
 
 import logging
+import re
+from typing import Literal
 
 from django.db import IntegrityError, transaction
 from django.db.models import Q
@@ -187,6 +189,62 @@ def set_version_language(version: AssetVersion, language: str | None) -> None:
         version.save(update_fields=["asset_language", "updated_at"])
 
 
+VersionBump = Literal["minor", "major"]
+
+# A tafsir / translation version number: "major.minor", e.g. "7.0".
+_VERSION_NUMBER_RE = re.compile(r"^(\d{1,9})\.(\d{1,9})$")
+
+
+def parse_version_number(value: str) -> tuple[int, int] | None:
+    """``"7.10"`` -> ``(7, 10)``; ``None`` when ``value`` is not a version number."""
+    match = _VERSION_NUMBER_RE.match(value.strip())
+    if match is None:
+        return None
+    return int(match.group(1)), int(match.group(2))
+
+
+def next_version_number(existing_names: list[str], *, start: str | None, bump: VersionBump) -> str:
+    """The number the next version in a sequence gets.
+
+    An empty sequence starts at the caller-chosen ``start``; otherwise the highest
+    existing number is bumped (minor: 7.1 -> 7.2, major: 7.1 -> 8.0) and ``start``
+    is ignored.
+    """
+    numbers = [number for number in map(parse_version_number, existing_names) if number is not None]
+    if numbers:
+        major, minor = max(numbers)
+        return f"{major + 1}.0" if bump == "major" else f"{major}.{minor + 1}"
+    if not (start or "").strip():
+        raise ItqanError(
+            error_name="version_number_required",
+            message=_("A starting version number is required for the first version."),
+            status_code=400,
+        )
+    parsed = parse_version_number(start)
+    if parsed is None:
+        raise ItqanError(
+            error_name="version_number_invalid",
+            message=_("Version number must be in the form major.minor, e.g. 7.0."),
+            status_code=400,
+        )
+    return f"{parsed[0]}.{parsed[1]}"
+
+
+def issue_version_number(
+    asset: Asset, language: str | None, *, start: str | None = None, bump: VersionBump = "minor"
+) -> str:
+    """Issue the next version number in ``asset``'s sequence for ``language``.
+
+    Each (asset, language) has its own sequence; ``language=None`` means the
+    source language. Must run inside a transaction: the asset row stays locked
+    until it commits, so concurrent commits/uploads can't issue the same number.
+    """
+    repo = AssetContentRepository()
+    repo.lock_asset(asset)
+    names = repo.sequence_version_names(asset, language or asset.language)
+    return next_version_number(names, start=start, bump=bump)
+
+
 class AssetContentService:
     """Shared per-ayah content editing for text-based assets."""
 
@@ -275,17 +333,15 @@ class AssetContentService:
                         f"language={language}, newer_version_id={source.pk}]"
                     )
                     self.repo.delete_version(existing)
-                # Versions carry distinct names, so a draft must not reuse the source
-                # version's name verbatim (it would collide with it on save).
-                base_name = source.name if source else _("Draft")
-                name = self.repo.unique_version_name(locked_asset, base_name)
-                summary = source.summary if source else ""
+                # A draft has no version number yet — one is issued when it is
+                # committed. It inherits the source's name so the commit prefills it.
                 draft = self.repo.create_draft_seeded_from(
                     locked_asset,
                     source,
                     asset_language=asset_language,
-                    name=name,
-                    summary=summary,
+                    name="",
+                    label=source.label if source else "",
+                    summary=source.summary if source else "",
                     created_by_id=created_by_id,
                     mushaf_version=mushaf,
                 )
@@ -559,11 +615,18 @@ class AssetContentService:
         version_id: int,
         *,
         message: str,
+        label: str | None = None,
+        version_number: str | None = None,
+        bump: VersionBump = "minor",
         publisher_q: Q | None = None,
     ) -> AssetVersion:
         """Commit a draft as the latest version with a required message (stored as
         the version's description). Consumers do not see it until it is approved
-        and published (``set_published_version``), so nobody is notified here."""
+        and published (``set_published_version``), so nobody is notified here.
+
+        Committing issues the draft's version number: ``version_number`` starts the
+        language's sequence when it has no versions yet, otherwise the latest number
+        is bumped by ``bump``. ``label`` (when given) replaces the draft's name."""
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
         draft = self._get_editable_draft_or_400(asset, version_id)
         if not draft.content_edited:
@@ -579,8 +642,12 @@ class AssetContentService:
                 status_code=400,
             )
         draft.summary = message.strip()
-        published = self.repo.publish_draft(draft)
-        logger.info(f"Draft committed [version_id={published.pk}, asset_id={asset.pk}]")
+        if label is not None:
+            draft.label = label.strip()
+        with transaction.atomic():
+            draft.name = issue_version_number(asset, draft.asset_language.language, start=version_number, bump=bump)
+            published = self.repo.publish_draft(draft)
+        logger.info(f"Draft committed [version_id={published.pk}, asset_id={asset.pk}, name={published.name}]")
         return published
 
     def discard_draft(
@@ -602,12 +669,13 @@ class AssetContentService:
         category: CategoryChoice,
         version_id: int,
         *,
+        bump: VersionBump = "minor",
         created_by_id: int | None = None,
         publisher_q: Q | None = None,
     ) -> AssetVersion:
         """Restore a committed version's content as a new version, making it the
         latest one (the head) for its language. Like any commit, it is reviewed
-        and published separately."""
+        and published separately, and gets the next version number (by ``bump``)."""
         version = self.get_version_or_404(slug, category, version_id, publisher_q=publisher_q)
         if version.state != VersionStateChoice.PUBLISHED:
             raise ItqanError(
@@ -615,7 +683,10 @@ class AssetContentService:
                 message=_("Only published versions can be restored."),
                 status_code=400,
             )
-        restored = self.repo.restore_version(version, created_by_id=created_by_id)
+        language = version.asset_language.language if version.asset_language_id else version.asset.language
+        with transaction.atomic():
+            name = issue_version_number(version.asset, language, bump=bump)
+            restored = self.repo.restore_version(version, name=name, created_by_id=created_by_id)
         logger.info(f"Version restored [source_version_id={version.pk}, new_version_id={restored.pk}]")
         return restored
 

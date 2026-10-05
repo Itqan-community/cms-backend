@@ -20,7 +20,9 @@ from apps.content.repositories.asset_content import AssetContentRepository
 from apps.content.repositories.translation import TranslationRepository
 from apps.content.services.asset_access import guard_restrict_for_tenant
 from apps.content.services.asset_content import (
+    VersionBump,
     import_uploaded_file_into_entries,
+    issue_version_number,
     lock_version_for_content_change,
     set_version_language,
 )
@@ -151,7 +153,8 @@ class TranslationService:
     def create_translation_with_optional_version(
         self,
         *,
-        version_name: str | None = None,
+        version_label: str = "",
+        version_number: str | None = None,
         version_summary: str = "",
         file: Any = None,
         created_by_id: int | None = None,
@@ -163,19 +166,13 @@ class TranslationService:
 
         ``translation_kwargs`` are forwarded verbatim to :meth:`create_translation`.
         """
-        if file is not None and not (version_name or "").strip():
-            raise ItqanError(
-                error_name="version_name_required",
-                message=_("Version name is required when a file is provided."),
-                status_code=400,
-            )
-
         with transaction.atomic():
             translation = self.create_translation(**translation_kwargs)
             if file is not None:
                 self.create_translation_version(
                     translation.slug,
-                    name=version_name or "",
+                    label=version_label,
+                    version_number=version_number,
                     summary=version_summary,
                     file=file,
                     created_by_id=created_by_id,
@@ -275,7 +272,9 @@ class TranslationService:
         self,
         translation_slug: str,
         *,
-        name: str,
+        label: str = "",
+        version_number: str | None = None,
+        bump: VersionBump = "minor",
         summary: str = "",
         file: Any = None,
         language: str | None = None,
@@ -290,12 +289,16 @@ class TranslationService:
         whole thing back instead of leaving an orphaned version behind. The file
         must parse: its content is recorded as changes vs the previous version and
         has to be reviewed before it can be published, so nobody is notified here.
+
+        The version is issued the next number in its language's sequence:
+        ``version_number`` starts the sequence, otherwise the latest is bumped by ``bump``.
         """
         asset = self._get_translation_or_404(translation_slug, publisher_q=publisher_q)
         with transaction.atomic():
             version = self.repo.create_translation_version(
                 asset,
-                name=name,
+                name="",
+                label=label.strip(),
                 summary=summary,
                 file=file,
                 created_by_id=created_by_id,
@@ -304,6 +307,11 @@ class TranslationService:
             if file:
                 import_uploaded_file_into_entries(version, strict=True)
                 AssetContentRepository().record_upload_changes(version)
+            # Numbered after the import, so a bad file is reported before a missing
+            # number, and before the canonical file, which is named after it.
+            name = issue_version_number(asset, language, start=version_number, bump=bump)
+            version = self.repo.update_translation_version(version, fields={"name": name})
+            if file:
                 # Consumers download exactly what reviewers approve: the parsed entries.
                 AssetContentRepository().store_canonical_file(version)
         logger.info(
@@ -322,6 +330,8 @@ class TranslationService:
         Business Logic: Update an existing translation version.
         """
         version = self._get_translation_version_or_404(translation_slug, version_id, publisher_q=publisher_q)
+        # The version number is fixed once issued.
+        fields = {key: value for key, value in fields.items() if key != "name"}
         with transaction.atomic():
             if fields.get("file_url"):
                 version = lock_version_for_content_change(version)

@@ -118,6 +118,8 @@ erDiagram
     }
 
     ASSETVERSION {
+        string name
+        string label
         file file_url
         int size_bytes
     }
@@ -234,6 +236,17 @@ Similar to ResourceVersion, **AssetVersion** tracks each uploaded file version o
   `GET /portal/content/{category}/csv-template/?template=&mushaf_layout_id=` (asset
   creation; `page` needs the layout) and `GET /portal/content/{category}/{slug}/csv-template/`
   (an existing asset's template).
+- For translations and tafsirs, `name` is the **version number** (`major.minor`, e.g.
+  `7.0`) and `label` the human-readable version name. Each language has its own
+  number sequence. The server issues the number when a version is committed,
+  uploaded or restored, and it can't be edited afterwards (`PUT`/`PATCH` change only
+  `label` and `summary`). The first version in a sequence takes the caller's
+  `version_number` as its start (`version_number_required` /
+  `version_number_invalid`); later ones bump the highest existing number by `bump`:
+  `minor` (`7.1` → `7.2`, the default) or `major` (`7.1` → `8.0`). Drafts stay
+  unnumbered (`name` is blank) until they are committed. Migration
+  `0071_number_tafsir_translation_versions` renumbered existing versions from `1.0`
+  in creation order and moved their old names to `label`.
 
 ### 6. MushafLayout
 
@@ -315,7 +328,7 @@ from the parsed entries, so consumers download exactly what was reviewed.
 - **Editing** — changing a text asset's content (the content editor, uploading a
   version file, restoring a version) needs the per-category
   `PORTAL_EDIT_TRANSLATION_CONTENT` / `PORTAL_EDIT_TAFSIR_CONTENT`; `PORTAL_UPDATE_*`
-  covers metadata only (names, descriptions, license, version name/summary,
+  covers metadata only (names, descriptions, license, version label/summary,
   language availability). Both are limited to the member's assigned languages.
 - **Reading entries** — the editor pages through
   `GET /portal/content/{category}/{slug}/versions/{id}/entries/` (`page`, `page_size`,

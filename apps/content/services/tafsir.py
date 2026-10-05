@@ -19,7 +19,9 @@ from apps.content.repositories.asset_content import AssetContentRepository
 from apps.content.repositories.tafsir import TafsirRepository
 from apps.content.services.asset_access import guard_restrict_for_tenant
 from apps.content.services.asset_content import (
+    VersionBump,
     import_uploaded_file_into_entries,
+    issue_version_number,
     lock_version_for_content_change,
     set_version_language,
 )
@@ -150,7 +152,8 @@ class TafsirService:
     def create_tafsir_with_optional_version(
         self,
         *,
-        version_name: str | None = None,
+        version_label: str = "",
+        version_number: str | None = None,
         version_summary: str = "",
         file: Any = None,
         created_by_id: int | None = None,
@@ -162,19 +165,13 @@ class TafsirService:
 
         ``tafsir_kwargs`` are forwarded verbatim to :meth:`create_tafsir`.
         """
-        if file is not None and not (version_name or "").strip():
-            raise ItqanError(
-                error_name="version_name_required",
-                message=_("Version name is required when a file is provided."),
-                status_code=400,
-            )
-
         with transaction.atomic():
             tafsir = self.create_tafsir(**tafsir_kwargs)
             if file is not None:
                 self.create_tafsir_version(
                     tafsir.slug,
-                    name=version_name or "",
+                    label=version_label,
+                    version_number=version_number,
                     summary=version_summary,
                     file=file,
                     created_by_id=created_by_id,
@@ -272,7 +269,9 @@ class TafsirService:
         self,
         tafsir_slug: str,
         *,
-        name: str,
+        label: str = "",
+        version_number: str | None = None,
+        bump: VersionBump = "minor",
         summary: str = "",
         file: Any = None,
         language: str | None = None,
@@ -287,12 +286,16 @@ class TafsirService:
         whole thing back instead of leaving an orphaned version behind. The file
         must parse: its content is recorded as changes vs the previous version and
         has to be reviewed before it can be published, so nobody is notified here.
+
+        The version is issued the next number in its language's sequence:
+        ``version_number`` starts the sequence, otherwise the latest is bumped by ``bump``.
         """
         asset = self._get_tafsir_or_404(tafsir_slug, publisher_q=publisher_q)
         with transaction.atomic():
             version = self.repo.create_tafsir_version(
                 asset,
-                name=name,
+                name="",
+                label=label.strip(),
                 summary=summary,
                 file=file,
                 created_by_id=created_by_id,
@@ -301,6 +304,11 @@ class TafsirService:
             if file:
                 import_uploaded_file_into_entries(version, strict=True)
                 AssetContentRepository().record_upload_changes(version)
+            # Numbered after the import, so a bad file is reported before a missing
+            # number, and before the canonical file, which is named after it.
+            name = issue_version_number(asset, language, start=version_number, bump=bump)
+            version = self.repo.update_tafsir_version(version, fields={"name": name})
+            if file:
                 # Consumers download exactly what reviewers approve: the parsed entries.
                 AssetContentRepository().store_canonical_file(version)
         logger.info(f"Tafsir version created [version_id={version.pk}, asset_id={asset.pk}, slug={tafsir_slug}]")
@@ -317,6 +325,8 @@ class TafsirService:
         Business Logic: Update an existing tafsir version.
         """
         version = self._get_tafsir_version_or_404(tafsir_slug, version_id, publisher_q=publisher_q)
+        # The version number is fixed once issued.
+        fields = {key: value for key, value in fields.items() if key != "name"}
         with transaction.atomic():
             if fields.get("file_url"):
                 version = lock_version_for_content_change(version)

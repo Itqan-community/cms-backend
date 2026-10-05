@@ -399,6 +399,12 @@ msgstr "هذا الإصدار منشور. انشر إصدارًا آخر أول�
 msgid "Only the newest version can be changed or deleted, because later versions are built on it."
 msgstr "لا يمكن تعديل أو حذف إلا أحدث إصدار، لأن الإصدارات اللاحقة مبنية عليه."
 
+msgid "A starting version number is required for the first version."
+msgstr "رقم الإصدار الابتدائي مطلوب للإصدار الأول."
+
+msgid "Version number must be in the form major.minor, e.g. 7.0."
+msgstr "يجب أن يكون رقم الإصدار بالصيغة رئيسي.فرعي، مثل 7.0."
+
 #, python-brace-format
 msgid "{category} with slug {slug} not found."
 msgstr "لم يتم العثور على {category} بالمعرّف {slug}."

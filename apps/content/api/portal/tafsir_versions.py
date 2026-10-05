@@ -42,7 +42,10 @@ class TafsirVersionListOut(Schema):
     # The first committed version of its language: there is nothing before it to
     # compare with, so its whole content is listed as added.
     is_first: bool
+    # Version number ("major.minor"), issued by the server; never editable.
     name: str
+    # Human-readable version name.
+    label: str
     summary: str
     created_by: str | None
     change_counts: dict | None
@@ -110,20 +113,24 @@ class TafsirVersionListOut(Schema):
 
 class TafsirVersionCreateIn(Schema):
     asset_id: int
-    name: str = Field(..., max_length=255)
+    label: str = Field(default="", max_length=255)
+    # Starts the language's number sequence; ignored once it has a version.
+    version_number: str | None = Field(default=None, max_length=20)
+    bump: Literal["minor", "major"] = "minor"
     summary: str = ""
     language: str | None = None
 
 
+# The version number (``name``) is fixed once issued, so updates can't change it.
 class TafsirVersionPutIn(Schema):
     asset_id: int
-    name: str = Field(..., max_length=255)
+    label: str = Field(default="", max_length=255)
     summary: str = ""
 
 
 class TafsirVersionPatchIn(Schema):
     asset_id: int | None = None
-    name: str | None = Field(default=None, max_length=255)
+    label: str | None = Field(default=None, max_length=255)
     summary: str | None = None
 
 
@@ -136,7 +143,7 @@ class TafsirVersionPatchIn(Schema):
 )
 @permission_required([permission_class(PermissionChoice.PORTAL_READ_TAFSIR)])
 @paginate
-@searching(search_fields=["name", "summary"])
+@searching(search_fields=["name", "label", "summary"])
 def list_tafsir_versions(request: Request, tafsir_slug: str, language: str | None = None):
     try:
         asset = Asset.objects.filter(request.publisher_q()).get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
@@ -170,7 +177,9 @@ def list_tafsir_versions(request: Request, tafsir_slug: str, language: str | Non
         201: TafsirVersionListOut,
         400: NinjaErrorResponse[Literal["asset_id_mismatch"]]
         | NinjaErrorResponse[Literal["content_file_unparseable"]]
-        | NinjaErrorResponse[Literal["content_file_invalid_rows"]],
+        | NinjaErrorResponse[Literal["content_file_invalid_rows"]]
+        | NinjaErrorResponse[Literal["version_number_required"]]
+        | NinjaErrorResponse[Literal["version_number_invalid"]],
         404: NinjaErrorResponse[Literal["tafsir_not_found"]],
     },
 )
@@ -204,7 +213,9 @@ def create_tafsir_version(
     require_language(request.user, asset, data.language or asset.language)
     version = service.create_tafsir_version(
         tafsir_slug,
-        name=data.name,
+        label=data.label,
+        version_number=data.version_number,
+        bump=data.bump,
         summary=data.summary,
         file=file,
         language=data.language,
