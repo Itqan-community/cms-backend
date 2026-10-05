@@ -168,7 +168,9 @@ def list_tafsir_versions(request: Request, tafsir_slug: str, language: str | Non
     "tafsirs/{tafsir_slug}/versions/",
     response={
         201: TafsirVersionListOut,
-        400: NinjaErrorResponse[Literal["asset_id_mismatch"]] | NinjaErrorResponse[Literal["content_file_unparseable"]],
+        400: NinjaErrorResponse[Literal["asset_id_mismatch"]]
+        | NinjaErrorResponse[Literal["content_file_unparseable"]]
+        | NinjaErrorResponse[Literal["content_file_invalid_rows"]],
         404: NinjaErrorResponse[Literal["tafsir_not_found"]],
     },
 )
@@ -218,7 +220,8 @@ def create_tafsir_version(
         200: TafsirVersionListOut,
         400: NinjaErrorResponse[Literal["asset_id_mismatch"]]
         | NinjaErrorResponse[Literal["version_is_published"]]
-        | NinjaErrorResponse[Literal["content_file_unparseable"]],
+        | NinjaErrorResponse[Literal["content_file_unparseable"]]
+        | NinjaErrorResponse[Literal["content_file_invalid_rows"]],
         404: NinjaErrorResponse[Literal["tafsir_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
 )
@@ -265,7 +268,8 @@ def update_tafsir_version_put(
         200: TafsirVersionListOut,
         400: NinjaErrorResponse[Literal["asset_id_mismatch"]]
         | NinjaErrorResponse[Literal["version_is_published"]]
-        | NinjaErrorResponse[Literal["content_file_unparseable"]],
+        | NinjaErrorResponse[Literal["content_file_unparseable"]]
+        | NinjaErrorResponse[Literal["content_file_invalid_rows"]],
         404: NinjaErrorResponse[Literal["tafsir_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
 )

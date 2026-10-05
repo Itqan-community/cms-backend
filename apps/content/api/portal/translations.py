@@ -213,6 +213,7 @@ def list_translations(request: Request, filters: TranslationFilter = Query()):
         | NinjaErrorResponse[Literal["external_url_required"]]
         | NinjaErrorResponse[Literal["version_name_required"]]
         | NinjaErrorResponse[Literal["content_file_unparseable"]]
+        | NinjaErrorResponse[Literal["content_file_invalid_rows"]]
         | NinjaErrorResponse[Literal["mushaf_layout_required"]]
         | NinjaErrorResponse[Literal["mushaf_layout_not_allowed"]],
         404: NinjaErrorResponse[Literal["publisher_not_found"]]

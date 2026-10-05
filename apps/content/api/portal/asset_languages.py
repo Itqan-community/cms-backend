@@ -75,7 +75,9 @@ def list_languages(request: Request, category: str, slug: str) -> list[AssetLang
     "content/{category}/{slug}/languages/",
     response={
         200: LanguageOut,
-        400: NinjaErrorResponse[Literal["language_exists"]] | NinjaErrorResponse[Literal["content_file_unparseable"]],
+        400: NinjaErrorResponse[Literal["language_exists"]]
+        | NinjaErrorResponse[Literal["content_file_unparseable"]]
+        | NinjaErrorResponse[Literal["content_file_invalid_rows"]],
         404: NinjaErrorResponse[Literal["translation_not_found"]]
         | NinjaErrorResponse[Literal["tafsir_not_found"]]
         | NinjaErrorResponse[Literal["unsupported_content_category"]],
