@@ -33,9 +33,11 @@ def number_versions(apps: Apps, schema_editor: BaseDatabaseSchemaEditor | None) 
 
 
 def restore_names(apps: Apps, schema_editor: BaseDatabaseSchemaEditor | None) -> None:
+    """Move each label back into ``name``. A version without one (created after this
+    migration with no name given) keeps its number rather than going blank."""
     AssetVersion = apps.get_model("content", "AssetVersion")
     for version in AssetVersion.objects.filter(asset__category__in=["translation", "tafsir"]).iterator():
-        version.name = version.label
+        version.name = version.label or version.name
         version.save(update_fields=["name"])
 
 
