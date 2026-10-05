@@ -290,3 +290,17 @@ class NumberVersionsMigrationTest(VersionNumberingBaseTest):
         self.assertEqual(("1.1", "Second edition"), (second.name, second.label))
         self.assertEqual(("1.0", "fr v1"), (french.name, french.label))
         self.assertEqual(("", "wip"), (draft.name, draft.label))
+
+    def test_restore_names_where_reversed_should_restore_labels_and_keep_unlabelled_numbers(self):
+        # Arrange — a migrated version (old name in its label) and one created after, unnamed
+        migrated = self.make_version("1.0", label="v1")
+        unnamed = self.make_version("1.1", label="")
+
+        # Act
+        numbering_migration.restore_names(django_apps, None)
+
+        # Assert
+        migrated.refresh_from_db()
+        unnamed.refresh_from_db()
+        self.assertEqual("v1", migrated.name)
+        self.assertEqual("1.1", unnamed.name)
