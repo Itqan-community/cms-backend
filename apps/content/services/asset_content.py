@@ -29,7 +29,11 @@ from apps.content.models import (
 )
 from apps.content.repositories.asset_content import AssetContentRepository
 from apps.content.repositories.asset_review import AssetReviewRepository
-from apps.content.services.asset_content_import import AssetContentParseError, parse_content_file
+from apps.content.services.asset_content_import import (
+    AssetContentInvalidRowsError,
+    AssetContentParseError,
+    parse_content_file,
+)
 from apps.content.services.asset_templates import EntryFilters, UnitSpec, unit_spec_for
 from apps.content.tasks import notify_asset_version_created
 from apps.core.ninja_utils.errors import ItqanError
@@ -88,7 +92,21 @@ def import_uploaded_file_into_entries(version: AssetVersion, *, strict: bool = F
         return
     spec = unit_spec_for(version.asset)
     try:
-        parsed = parse_content_file(raw, spec, version.asset)
+        parsed = parse_content_file(raw, spec, version.asset, strict=strict)
+    except AssetContentInvalidRowsError as exc:
+        # Only raised in strict mode: rows whose text a lenient parse would drop
+        # could reach consumers without ever being reviewed.
+        logger.info(f"Uploaded file has invalid rows [version_id={version.pk}, rows={list(exc.rows)}]")
+        shown = ", ".join(str(row) for row in list(exc.rows)[:10])
+        raise ItqanError(
+            error_name="content_file_invalid_rows",
+            message=_(
+                "Some rows can't be used: they repeat a unit with different text, name a unit that doesn't "
+                "exist, or can't be read. Fix row(s) {rows} and upload again."
+            ).format(rows=shown + (" …" if len(exc.rows) > 10 else "")),
+            status_code=400,
+            extra={"rows": {str(row): reason for row, reason in exc.rows.items()}},
+        ) from exc
     except AssetContentParseError as exc:
         logger.info(f"Uploaded file not parsed into entries [version_id={version.pk}, reason={exc}]")
         if strict:
