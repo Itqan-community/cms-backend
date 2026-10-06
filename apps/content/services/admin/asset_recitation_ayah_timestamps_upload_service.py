@@ -8,6 +8,7 @@ from typing import TypedDict
 
 from django.db import transaction
 from django.utils.translation import gettext_lazy as _
+from simple_history.utils import bulk_create_with_history, bulk_update_with_history
 
 from apps.content.models import Asset, RecitationAyahTiming, RecitationFolder, RecitationSurahTrack
 from apps.core.ninja_utils.errors import ItqanError
@@ -174,10 +175,10 @@ def bulk_upload_recitation_ayah_timestamps(asset_id: int, files: Iterable, folde
                         skipped_total += 1
 
                 if to_create:
-                    RecitationAyahTiming.objects.bulk_create(to_create, batch_size=2000)
+                    bulk_create_with_history(to_create, RecitationAyahTiming, batch_size=2000)
                 if to_update:
-                    RecitationAyahTiming.objects.bulk_update(
-                        to_update, fields=["start_ms", "end_ms", "duration_ms"], batch_size=2000
+                    bulk_update_with_history(
+                        to_update, RecitationAyahTiming, fields=["start_ms", "end_ms", "duration_ms"], batch_size=2000
                     )
 
                 created_total += len(to_create)

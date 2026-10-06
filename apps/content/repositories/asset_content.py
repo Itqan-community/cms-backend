@@ -15,6 +15,7 @@ from django.core.files.base import ContentFile
 from django.db import transaction
 from django.db.models import Q
 from django.utils.translation import gettext as _
+from simple_history.utils import bulk_create_with_history, bulk_update_with_history
 
 from apps.content.models import (
     Asset,
@@ -123,7 +124,7 @@ class AssetContentRepository:
             if entry.ayah_id not in existing_ayahs
         ]
         if to_create:
-            AssetVersionEntry.objects.bulk_create(to_create, batch_size=1000)
+            bulk_create_with_history(to_create, AssetVersionEntry, batch_size=1000)
         return len(to_create)
 
     @transaction.atomic
@@ -208,7 +209,7 @@ class AssetContentRepository:
         else:
             copies = []
         if copies:
-            AssetVersionEntry.objects.bulk_create(copies, batch_size=1000)
+            bulk_create_with_history(copies, AssetVersionEntry, batch_size=1000)
         return draft
 
     @transaction.atomic
@@ -229,7 +230,7 @@ class AssetContentRepository:
         ]
         logger.info(f"replace_entries_from_parsed: creating new entries [version_id={version.pk}, rows={len(rows)}]")
         if rows:
-            AssetVersionEntry.objects.bulk_create(rows, batch_size=1000)
+            bulk_create_with_history(rows, AssetVersionEntry, batch_size=1000)
         return len(rows)
 
     @transaction.atomic
@@ -259,9 +260,9 @@ class AssetContentRepository:
             changed.append(entry)
 
         if to_create:
-            AssetVersionEntry.objects.bulk_create(to_create, batch_size=1000)
+            bulk_create_with_history(to_create, AssetVersionEntry, batch_size=1000)
         if to_update:
-            AssetVersionEntry.objects.bulk_update(to_update, ["text"], batch_size=1000)
+            bulk_update_with_history(to_update, AssetVersionEntry, ["text"], batch_size=1000)
         # Mark the draft as edited so an unchanged draft can't be published.
         if changed and not version.content_edited:
             version.content_edited = True
@@ -419,7 +420,7 @@ class AssetContentRepository:
                 )
                 counts["removed"] += 1
         if rows:
-            AssetVersionChange.objects.bulk_create(rows, batch_size=1000)
+            bulk_create_with_history(rows, AssetVersionChange, batch_size=1000)
         return counts
 
     def prune_version_snapshot(self, version: AssetVersion) -> None:
@@ -474,7 +475,8 @@ class AssetContentRepository:
             for unit_id, text in snapshot.items()
             if text != ""
         ]
-        AssetVersionEntry.objects.bulk_create(rows, batch_size=1000)
+        if rows:
+            bulk_create_with_history(rows, AssetVersionEntry, batch_size=1000)
         logger.info(f"Version entries rebuilt for viewing [version_id={locked.pk}, entries={len(rows)}]")
         return bool(rows)
 
@@ -785,7 +787,7 @@ class AssetContentRepository:
             if text != ""
         ]
         if copies:
-            AssetVersionEntry.objects.bulk_create(copies, batch_size=1000)
+            bulk_create_with_history(copies, AssetVersionEntry, batch_size=1000)
         # Record the delta vs the current head for every restore — including an
         # empty one, whose removals must be stored so later reconstruction reflects
         # the restored (empty) state instead of replaying the previous content.

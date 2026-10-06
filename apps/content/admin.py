@@ -17,6 +17,7 @@ from apps.content.services.admin.asset_recitation_audio_tracks_direct_upload_ser
 )
 from apps.content.services.admin.asset_recitation_json_file_sync_service import sync_asset_recitations_json_file
 from apps.content.services.asset_access import AssetAccessRequestService
+from apps.core.audit import update_with_history
 from apps.core.ninja_utils.errors import ItqanError
 
 from ..core.mixins.constants import QURAN_SURAHS
@@ -974,7 +975,7 @@ class ContentIssueReportAdmin(admin.ModelAdmin):
         from apps.content.tasks import send_issue_status_update_email
 
         changing = list(queryset.exclude(status=new_status).values("id", "status"))
-        count = queryset.update(status=new_status)
+        count = update_with_history(queryset, default_user=request.user, status=new_status)
         for item in changing:
             send_issue_status_update_email.delay(item["id"], item["status"], new_status)
         self.message_user(request, f"Marked {count} reports as {label}.")

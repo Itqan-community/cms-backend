@@ -187,12 +187,10 @@ class RecitationAudioSlicingService:
                 # the timings-upload step); re-running the slicer overwrites in place and
                 # converges to the full set without accumulating duplicates.
                 # size_bytes comes from the actual on-disk file, not from an approximation.
-                from apps.content.models import RecitationAyahTiming  # local import avoids circular
 
-                RecitationAyahTiming.objects.filter(pk=timing.pk).update(
-                    audio_file=key,
-                    size_bytes=file_size,
-                )
+                timing.audio_file = key
+                timing.size_bytes = file_size
+                timing.save(update_fields=["audio_file", "size_bytes"])
                 keys.append(key)
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)

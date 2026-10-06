@@ -163,3 +163,67 @@ This ensures `manage.py makemigrations` and `manage.py makemigrations --check` a
 - **Write Amplification**: Every create, update, or soft/hard delete on a tracked model generates a corresponding row in the historical table on the `audit` database. This results in approximately ~2x write queries for tracked model mutations.
 - **Zero Read Overhead**: Normal application read queries (`SELECT`) only target the `default` database and never touch the historical tables.
 - **Cross-Database Integrity**: Because `history_user_id` is a scalar `BigIntegerField` rather than a Django `ForeignKey`, no cross-database foreign key constraints or integrity errors occur between PostgreSQL instances.
+
+---
+
+## Bulk Operations & History Preservation (ITQ-34 / #432)
+
+By default, Django's bulk operations (`bulk_create`, `bulk_update`, and `QuerySet.update()`) bypass model `post_save` signals. On tracked models, invoking these raw methods causes state changes to be silently omitted from the audit trail in the `audit` database.
+
+To maintain an unbroken audit trail, **all bulk mutations on tracked models must use simple-history bulk helpers**.
+
+### 1. `bulk_create_with_history`
+Used when batch inserting multiple model instances:
+
+```python
+from simple_history.utils import bulk_create_with_history
+
+# Writes instances to default DB and '+' historical records to audit DB
+bulk_create_with_history(instances, ModelClass, batch_size=1000)
+```
+
+### 2. `bulk_update_with_history`
+Used when batch updating a list of in-memory model instances:
+
+```python
+from simple_history.utils import bulk_update_with_history
+
+# Writes field updates to default DB and '~' historical records to audit DB
+bulk_update_with_history(
+    instances,
+    ModelClass,
+    fields=["status", "updated_at"],
+    batch_size=1000,
+    default_user=request.user,
+)
+```
+
+### 3. `update_with_history` (Drop-in for `QuerySet.update`)
+When updating records directly from a `QuerySet`, use `update_with_history` from `apps.core.audit`:
+
+```python
+from apps.core.audit import update_with_history
+
+# Replaces: queryset.update(status="resolved", updated_at=now)
+updated_count = update_with_history(
+    queryset,
+    default_user=request.user,
+    default_change_reason="Bulk status update via admin action",
+    status="resolved",
+    updated_at=now,
+)
+```
+
+This helper fetches matching instances into memory, assigns the updated attributes, and delegates to `bulk_update_with_history`, ensuring both the base table and audit database receive matching changes.
+
+### 4. Bulk Deletions
+Django's `QuerySet.delete()` executes model deletion signals (`pre_delete` and `post_delete`) by default. As a result, `django-simple-history` naturally captures deletions as `'-'` records in the historical table without custom overrides.
+
+### 5. Dual-Database Transactional Considerations
+Because `default` and `audit` reside on separate PostgreSQL databases (or schemas with distinct aliases), distributed transactions across both databases cannot be atomic without Two-Phase Commit (2PC):
+- Django's `transaction.atomic()` operates on a single connection alias (e.g., `using="default"`).
+- In `bulk_*_with_history`, base table mutations and audit writes occur sequentially. In the rare event of an unrecoverable failure during the audit table insert, an exception will bubble up, rolling back the outer primary transaction if wrapped in `transaction.atomic`.
+
+### 6. Automated Regression Guard
+To prevent regressions from entering the codebase, `apps.core.tests.test_bulk_history_guard.BulkHistoryASTGuardTest` scans all production Python files using Python's `ast` parser. It automatically flags and fails the CI suite if any tracked model calls raw `.bulk_create()`, `.bulk_update()`, or `queryset.update()`.
+
