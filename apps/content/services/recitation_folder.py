@@ -10,6 +10,7 @@ from django.utils.translation import gettext_lazy as _
 from apps.content.cache import invalidate_recitation_folder_cache
 from apps.content.models import RecitationFolder
 from apps.content.repositories.recitation_folder import RecitationFolderRepository
+from apps.core.audit import update_with_history
 from apps.core.ninja_utils.errors import ItqanError
 
 if TYPE_CHECKING:
@@ -170,7 +171,10 @@ class RecitationFolderService:
             )
 
         with transaction.atomic():
-            RecitationFolder.objects.filter(asset_id=folder.asset_id, is_default=True).update(is_default=False)
+            update_with_history(
+                RecitationFolder.objects.filter(asset_id=folder.asset_id, is_default=True),
+                is_default=False,
+            )
             folder.is_default = True
             folder.save(update_fields=["is_default", "updated_at"])
 

@@ -6,6 +6,7 @@ from django.utils.translation import gettext_lazy as _
 from ninja import FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime
+from simple_history.utils import bulk_create_with_history
 
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
@@ -181,7 +182,7 @@ def set_member_languages(request: Request, member_id: int, data: MemberLanguages
     languages = sorted({code.strip() for code in data.languages if code.strip()})
     with transaction.atomic():
         MemberLanguage.objects.filter(member=member).delete()
-        MemberLanguage.objects.bulk_create([MemberLanguage(member=member, language=code) for code in languages])
+        bulk_create_with_history([MemberLanguage(member=member, language=code) for code in languages], MemberLanguage)
     logger.info(f"Member languages set [member_id={member_id}, count={len(languages)}, user_id={request.user.id}]")
     return _members_qs().get(id=member.id)
 

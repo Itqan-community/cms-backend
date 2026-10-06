@@ -119,7 +119,9 @@ class Domain(BaseModel):
         self.is_primary = self.is_primary or (not domain_list.exists())
         if self.is_primary:
             # Remove primary status of existing domains for tenant
-            domain_list.update(is_primary=False)
+            from apps.core.audit import update_with_history
+
+            update_with_history(domain_list, is_primary=False)
         super().save(*args, **kwargs)
 
 

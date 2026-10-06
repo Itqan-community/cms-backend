@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from django.utils import timezone
+from simple_history.utils import bulk_update_with_history
 
+from apps.core.audit import update_with_history
 from apps.publishers.models import Publisher, PublisherMember, PublisherMemberInvitation
 from apps.users.models import User
 
@@ -28,7 +30,8 @@ class PublisherMemberInvitationRepository:
         )
 
     def cancel_pending_invitations(self, *, member: PublisherMember, cancelled_by: User, now) -> None:
-        self.model.objects.filter(member=member, status=PublisherMemberInvitation.StatusChoice.PENDING).update(
+        update_with_history(
+            self.model.objects.filter(member=member, status=PublisherMemberInvitation.StatusChoice.PENDING),
             status=PublisherMemberInvitation.StatusChoice.CANCELLED,
             cancelled_at=now,
             cancelled_by=cancelled_by,
@@ -68,7 +71,7 @@ class PublisherMemberInvitationRepository:
             invitation.status = PublisherMemberInvitation.StatusChoice.EXPIRED
             invitation.updated_at = now
         if invitations:
-            self.model.objects.bulk_update(invitations, ["status", "updated_at"])
+            bulk_update_with_history(invitations, self.model, ["status", "updated_at"])
         return len(invitations)
 
     def mark_accepted(self, invitation: PublisherMemberInvitation, *, now) -> None:
