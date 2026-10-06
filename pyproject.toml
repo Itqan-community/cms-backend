@@ -51,7 +51,7 @@ itqan = "apps.package_manager.cli.main:cli"
 dev = [
     "commitizen==4.10.*",
     "boto3-stubs>=1.42.91",
-    "coverage==7.10.6",
+    "coverage==7.16.2",
     "django-coverage-plugin==3.1.1",
     "django-debug-toolbar==6.0.0",
     "django-extensions==4.1",
