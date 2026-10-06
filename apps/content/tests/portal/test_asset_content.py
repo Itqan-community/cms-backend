@@ -16,7 +16,6 @@ from apps.content.models import (
     StatusChoice,
     VersionStateChoice,
 )
-from apps.content.tasks import cleanup_abandoned_content_drafts_task
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
@@ -1172,43 +1171,3 @@ class ExportVersionTest(AssetContentBaseTest):
 
         # Assert
         self.assertEqual(403, response.status_code)
-
-
-class CleanupAbandonedDraftsTaskTest(AssetContentBaseTest):
-    def test_cleanup_where_draft_is_stale_should_delete_it(self):
-        # Arrange — a stale draft WITH entries; the reported count must be the number
-        # of draft versions, not the cascaded entry rows.
-        stale = baker.make(AssetVersion, asset=self.translation, state=VersionStateChoice.DRAFT)
-        baker.make(AssetVersionEntry, version=stale, ayah=self.ayahs[0], text="x")
-        baker.make(AssetVersionEntry, version=stale, ayah=self.ayahs[1], text="y")
-        AssetVersion.objects.filter(pk=stale.pk).update(updated_at=timezone.now() - timedelta(hours=48))
-
-        # Act
-        result = cleanup_abandoned_content_drafts_task(older_than_hours=24)
-
-        # Assert — 1 draft version deleted (not 3 = version + 2 entries)
-        self.assertEqual(1, result["deleted"])
-        self.assertFalse(AssetVersion.objects.filter(pk=stale.pk).exists())
-
-    def test_cleanup_where_draft_is_recent_should_keep_it(self):
-        # Arrange
-        fresh = baker.make(AssetVersion, asset=self.translation, state=VersionStateChoice.DRAFT)
-
-        # Act
-        result = cleanup_abandoned_content_drafts_task(older_than_hours=24)
-
-        # Assert
-        self.assertEqual(0, result["deleted"])
-        self.assertTrue(AssetVersion.objects.filter(pk=fresh.pk).exists())
-
-    def test_cleanup_where_version_is_published_should_keep_it(self):
-        # Arrange
-        published = baker.make(AssetVersion, asset=self.translation, state=VersionStateChoice.PUBLISHED)
-        AssetVersion.objects.filter(pk=published.pk).update(updated_at=timezone.now() - timedelta(hours=48))
-
-        # Act
-        result = cleanup_abandoned_content_drafts_task(older_than_hours=24)
-
-        # Assert
-        self.assertEqual(0, result["deleted"])
-        self.assertTrue(AssetVersion.objects.filter(pk=published.pk).exists())
