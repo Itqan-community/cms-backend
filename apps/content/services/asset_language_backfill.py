@@ -21,5 +21,12 @@ def backfill_source_languages(Asset, AssetLanguage, AssetVersion) -> None:
         )
         if not created and not source.is_source:
             source.is_source = True
+            # Persist promotion to the DB so callers/tests that reload the record see it
             source.save(update_fields=["is_source"])
-        AssetVersion.objects.filter(asset=asset, asset_language__isnull=True).update(asset_language=source)
+        matching_versions = AssetVersion.objects.filter(asset=asset, asset_language__isnull=True)
+        if hasattr(AssetVersion, "history"):
+            from apps.core.audit import update_with_history
+
+            update_with_history(matching_versions, asset_language=source)
+        else:
+            matching_versions.update(asset_language=source)
