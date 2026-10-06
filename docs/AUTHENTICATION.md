@@ -378,6 +378,12 @@ Itqan CMS uses the existing **API Key system** (`X-API-Key` header) as the stand
 > identity.
 
 ---
+**Phase 1 decisions:** it does **not** replace OAuth2 or any existing auth method.
+App identifiers are open (not secret-backed) — spoofing is technically possible and
+accepted for now; a stricter scheme will follow only if abuse becomes a real problem.
+Since the per-user identifier is fully anonymised (no PII), its usage history can be
+retained indefinitely.
+---
 
 ### Core Properties & Requirements
 

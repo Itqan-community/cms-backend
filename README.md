@@ -152,6 +152,10 @@ python manage.py runserver
 > **Note**: `pre-commit install` sets up Git hooks that run linting checks before each commit.
 > All PRs must pass linting to be merged.
 
+> **Note**: If `migrate` fails with `InconsistentMigrationHistory`, your database recorded a
+> migration under a name that was later renamed. Run `python manage.py reconcile_migration_names`
+> first (deploys do this automatically); it only renames rows listed in the command's map.
+
 ### 4) Access
 
 - API Docs: http://localhost:8000/docs/

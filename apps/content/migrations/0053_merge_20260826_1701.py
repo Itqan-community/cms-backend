@@ -7,7 +7,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('content', '0050_editorialrecommendation_editorialrecommendationasset_and_more'),
-        ('content', '0051_assetversion_content_edited'),
+        ('content', '0052_assetversion_content_edited'),
     ]
 
     operations = [

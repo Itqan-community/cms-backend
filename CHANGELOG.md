@@ -1,3 +1,172 @@
+## v0.18.0 (2026-09-28)
+
+### Feat
+
+- **content**: list every unit in content downloads
+- **content**: expose review comments on version history
+- **content**: add per-category permissions for editing content
+- **content**: seed the Madinah and Shamarly mushaf layouts
+- expose asset template and mushaf layout on internal assets API
+- template-aware export and ayah-only verse sampling
+- make the content importer template-aware
+- accept and expose asset template on create
+- add mushaf layout portal CRUD endpoints
+- add mushaf layout permissions, repository and service
+- make the review surface template-aware
+- make entry writes and diffs template-aware
+- enumerate entries from the template unit set
+- add UnitSpec template descriptor
+- enforce asset template immutability at the model layer
+- add unit columns to asset version entries and changes
+- add Asset.template and mushaf_layout with ayah backfill
+- add MushafLayout model and AssetTemplateChoice
+- **package-manager**: add itqan install CLI (ITQ-22) (#503)
+- **audit**: configure django-simple-history and audit database router (#430) (#500)
+- **content**: implement commit-style history with stored diffs and pruning
+- **content**: add version restore functionality and seeded-language support
+- **content**: enable language tagging and support for sparse draft translations
+- **api**: add ayah-range combined audio endpoint
+- **audit-db**: run audit migrations in CI/deploy and configure staging/production
+- **audit-db**: add audit database to settings and add database router
+- **content**: add verbose export option with surah name and original ayah text
+- **content**: implement multi-language support for assets
+- **content**: store per-ayah audio reference on RecitationAyahTiming
+- **dependabot**: add GitHub installation webhook and docs
+- **dependabot**: add GitHub manifest discovery
+- **dependabot**: add repository opt-in persistence
+- **dependabot**: add GitHub installation token exchange
+- **dependabot**: add GitHub App JWT foundation
+- remove footnotes from asset version entries and related processing
+- **content**: public api to serve single-ayah recitation audio (#414)
+- **content**: add package registry resolution API (#417)
+- **client-version**: add middleware and logging for client identification via headers
+
+### Fix
+
+- **content**: return absolute file URLs from the portal API
+- **content**: name gallery downloads {name}-{language}-{version}
+- **quran**: store each word's position within its ayah
+- eliminate N+1 on verbose ayah history downloads, add review-flagged tests
+- guard mushaf layout name uniqueness and persist renamed physical name column
+- generalize review dedup and baseline correlation to all unit templates
+- correct authenticate_user idiom throughout the plan
+- bound entries pagination and fix patch-response gaps from review
+- overlay source_text in the entries plan instead of nulling it
+- drop unused select_related and clarify UnitSpec contracts
+- prevent RecursionError and stale-snapshot false positive in Asset template guard
+- take the template snapshot from the raw row, not the instance
+- split constraint validation into its own migration, tighten unit_id
+- conform QuranDataMixin shape to downstream task assertions
+- guard branch A of mushaf layout constraint against SQL NULL
+- close NULL hole in asset_mushaf_layout_consistency and wire up create paths
+- close NULL hole in asset_mushaf_layout_consistency constraint
+- **recommendations**: reuse cache connection class for Redis pool creation
+- **i18n**: refresh Arabic catalog for new range strings
+- **api**: reject hidden default folders on the range path
+- **api**: defer recitation cache bust until after commit
+- **api**: invalidate recitation cache on tenant-restriction flips
+- **api**: single-flight ayah-range builds on the range key
+- **api**: log non-miss R2 HEAD failures in ayah-range check
+- **api**: version ayah-range clip keys by content
+- **api**: invalidate recitation cache when is_open_access changes
+- **api**: precommit for ayah range
+- **api**: ayah-range get silence audio in the end
+- **content**: resolve AttributeError in usage analytics and fix task import
+- **audit-db**: pass AUDIT_DB_* secrets to staging/production deploy env
+- **audit-db**: document AUDIT_DB_* env vars and wait for audit DB readiness in the .sh
+- **migrations**: sequence recitation ayah timing migration after 0057
+- **content**: defer version notification dispatch
+- **tests**: call superclass tearDownClass in base test class
+- **tests**: restore Django test transaction cleanup
+- **dependabot**: resolve CI validation issues
+- **dependabot**: harden webhook reconciliation
+- **dependabot**: satisfy CI ruff checks
+- **dependabot**: address review feedback
+- **migrations**: rename migration files and update dependencies
+- **content**: invalidate recitation cache on asset visibility update
+- **i18n**: add Arabic translations for single-ayah error messages
+- **core**: stop permission_class() from polluting DRF metaclass __repr__
+- **package-manager**: enforce asset access before version resolution
+- **package-manager**: tighten SemVer validation and remove collision info disclosure
+- **content**: address CodeRabbit review findings on #417
+- **content**: satisfy mypy type checks for package registry
+
+### Refactor
+
+- **package-manager**: move package registry into dedicated app
+
+## v0.17.1 (2026-09-20)
+
+### Fix
+
+- **recitations**: add id filter support to RecitationFilter schemas (#506)
+
+## v0.17.0 (2026-09-06)
+
+### Feat
+
+- **client-version**: add middleware and logging for client identification via headers (#491)
+- **client-version**: add middleware and logging for client identification via headers
+
+## v0.16.0 (2026-09-06)
+
+### Feat
+
+- **api**: implement real sample data endpoints (#464)
+- **recitations**: add folder visibility and set-default portal support
+- log entry replacement details and return count from entry processing
+- enforce draft edit tracking and restrict publishing unedited drafts
+- extend version handling with draft rebuilding, export, and file processing
+- editing part 1
+- add support for file upload with versioning in asset creation APIs
+- **content**: add similar-content recommendations (step 1 of #226)
+- **recitations**: add ayah slicing storage sizing
+- **recitations**: add ayah audio slicing
+- **usage-tracking**: track API key prefix as application identity
+- introduce folder management for recitations
+- **quran**: add surah to ayah to word hierarchy tree api
+- ensure Arabic catalog is compiled during tests and runtime
+- implement assignable group logic and update translations
+
+### Fix
+
+- **migrations**: rename migration files and update dependencies
+- **i18n**: update Arabic translations and remove unused entries
+- **publishers**: handle invitations with missing member (#470)
+- **migrations**: renumber is_visible migration to 0053 on staging
+- **i18n**: remove trailing whitespace from django.po header
+- **i18n**: add Arabic translations for folder visibility errors
+- **recitations**: soft-unpublish folder timings without deleting JSON file
+- **ci**: align migration 0050 with model and pass pre-commit
+- **content**: resolve redis test client host from REDIS_URL, not django-redis
+- **content**: resolve redis test client host from django-redis instead of hardcoding localhost
+- **content**: restore missing closing brace in celery beat schedule
+- **content**: correct import ordering in recommendation tests
+- **content**: enforce access control and private caching on public recitation tracks
+- **recitations**: add Arabic slicing error translations
+- **recitations**: satisfy lint and localization checks
+- **recitations**: clamp fades for short ayah slices
+- **recitations**: address ayah slicing review feedback
+- **recitations**: address ayah slicing review feedback
+- **recitations**: preserve source audio parameters when slicing
+- **recitations**: address audio slicing review feedback
+- **core**: prevent race condition and data leak in throttle logging
+- **users**: prevent data loss on partial developer profile updates
+- **quran**: address hierarchy pr review feedback
+- adjust translation and publisher permission labels and hierarchy logic
+- refine logging format and update static markup nosec flag
+
+### Perf
+
+- **content**: resolve N+1 queries in internal asset endpoints
+- **docker**: optimize Dockerfile.backend and compose setups
+
+## v0.15.0 (2026-09-06)
+
+### Feat
+
+- **client-version**: add middleware and logging for client identification via headers
+
 ## v0.14.0 (2026-08-30)
 
 ### Feat

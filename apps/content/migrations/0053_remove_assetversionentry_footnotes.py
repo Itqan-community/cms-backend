@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('content', '0052_merge_20260826_1701'),
+        ('content', '0054_recitationfolder_is_visible'),
     ]
 
     operations = [
