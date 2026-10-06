@@ -74,7 +74,7 @@ jobs:
         run: uv run manage.py export_public_openapi --out docs-website/openapi/public.json
 
       # ---------- Frontend build ----------
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: docs-website/.nvmrc
           cache: npm
