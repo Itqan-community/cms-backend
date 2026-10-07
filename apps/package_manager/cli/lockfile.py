@@ -33,9 +33,14 @@ class LockfileState(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class LockfileEntry:
+    """``slug`` is the manifest entry name. ``asset`` is recorded only when the
+    entry installs a different slug; ``language`` only when the entry declares one."""
+
     slug: str
     constraint: str
     version: str
+    asset: str | None = None
+    language: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,7 +106,7 @@ def parse_lockfile_content(content_bytes: bytes) -> AssetLockfile:
         if not isinstance(entry_data, dict):
             raise LockfileError(f"Entry for asset '{slug}' must be a mapping.")
 
-        allowed_entry_keys = {"constraint", "version"}
+        allowed_entry_keys = {"constraint", "version", "asset", "language"}
         for ek in entry_data.keys():
             if ek not in allowed_entry_keys:
                 raise LockfileError(f"Unknown key '{ek}' in lockfile entry for '{slug}'.")
@@ -129,10 +134,19 @@ def parse_lockfile_content(content_bytes: bytes) -> AssetLockfile:
                 f"Version '{version_val}' for '{slug}' is not in canonical three-component SemVer form."
             )
 
+        optional: dict[str, str | None] = {}
+        for field in ("asset", "language"):
+            value = entry_data.get(field)
+            if value is not None and (not isinstance(value, str) or not value):
+                raise LockfileError(f"'{field}' for '{slug}' must be a non-empty string.")
+            optional[field] = value
+
         entries[slug] = LockfileEntry(
             slug=slug,
             constraint=constraint_val,
             version=version_val,
+            asset=optional["asset"],
+            language=optional["language"],
         )
 
     return AssetLockfile(
@@ -171,6 +185,11 @@ def serialize_lockfile(lockfile: AssetLockfile) -> bytes:
             escaped_version = entry.version.replace("\\", "\\\\").replace('"', '\\"')
 
             lines.append(f'  "{escaped_slug}":')
+            for field in ("asset", "language"):
+                value = getattr(entry, field)
+                if value is not None:
+                    escaped_value = value.replace("\\", "\\\\").replace('"', '\\"')
+                    lines.append(f'    {field}: "{escaped_value}"')
             lines.append(f'    constraint: "{escaped_constraint}"')
             lines.append(f'    version: "{escaped_version}"')
 
@@ -247,6 +266,10 @@ def evaluate_lockfile_state(
 
         # Literal constraint text must match verbatim
         if m_entry.version != l_entry.constraint:
+            return LockfileState.STALE, parsed_manifest, parsed_lockfile
+
+        # The entry must still name the same asset and language rendition
+        if (l_entry.asset or slug) != m_entry.asset or l_entry.language != m_entry.language:
             return LockfileState.STALE, parsed_manifest, parsed_lockfile
 
         # Locked version must satisfy the constraint

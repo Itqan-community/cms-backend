@@ -1,3 +1,4 @@
+from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
 from apps.content.models import Asset, AssetVersion, VersionStateChoice
@@ -6,6 +7,7 @@ from apps.core.tests.base import BaseTestCase
 from apps.package_manager.repositories.package_registry import PackageRegistryRepository
 from apps.package_manager.services.package_registry import (
     PackageRegistryService,
+    PackageRequest,
     _canonicalize_version,
     _constraint_range_desc,
     _matches_constraint,
@@ -46,12 +48,19 @@ def _make_version(
     name: str,
     state: str = VersionStateChoice.PUBLISHED,
 ) -> AssetVersion:
-    return baker.make(
+    version = baker.make(
         AssetVersion,
         asset=asset,
         name=name,
         state=state,
     )
+    version.file_url = SimpleUploadedFile(name=f"{asset.slug}-{name}.pdf", content=b"dummy")
+    version.save()
+    return version
+
+
+def _requests(constraints: dict[str, str]) -> dict[str, PackageRequest]:
+    return {slug: PackageRequest(slug=slug, version=version) for slug, version in constraints.items()}
 
 
 def _create_asset_with_versions(
@@ -108,21 +117,16 @@ class PackageRegistryRepositoryTests(BaseTestCase):
             name="1.0.0",
             state=VersionStateChoice.DRAFT,
         )
-        result = list(self.repo.get_eligible_package_versions(asset))
+        result = list(self.repo.get_eligible_package_versions(asset.get_or_create_source_language()))
         self.assertEqual([], result)
 
     def test_get_eligible_package_versions_where_published_with_no_opt_in_should_include(self):
         # Arrange
         asset = _make_asset(self.publisher, slug="plain-published")
-        version = baker.make(
-            AssetVersion,
-            asset=asset,
-            name="1.0.0",
-            state=VersionStateChoice.PUBLISHED,
-        )
+        version = _make_version(asset, name="1.0.0")
 
         # Act
-        result = list(self.repo.get_eligible_package_versions(asset))
+        result = list(self.repo.get_eligible_package_versions(asset.get_or_create_source_language()))
 
         # Assert
         self.assertEqual([version], result)
@@ -131,7 +135,7 @@ class PackageRegistryRepositoryTests(BaseTestCase):
         asset = _make_asset(self.publisher, slug="multi-asset")
         v1 = _make_version(asset, name="1.0.0")
         v2 = _make_version(asset, name="2.0.0")
-        result = list(self.repo.get_eligible_package_versions(asset))
+        result = list(self.repo.get_eligible_package_versions(asset.get_or_create_source_language()))
         self.assertEqual({v1.pk, v2.pk}, {r.pk for r in result})
 
 
@@ -351,12 +355,7 @@ class ResolveSingleTests(BaseTestCase):
     def test_resolve_single_where_published_semver_version_should_resolve_with_no_opt_in(self):
         # Arrange
         asset = _make_asset(self.publisher, slug="plain-published")
-        baker.make(
-            AssetVersion,
-            asset=asset,
-            name="1.0.0",
-            state=VersionStateChoice.PUBLISHED,
-        )
+        _make_version(asset, name="1.0.0")
 
         # Act
         result = self.service.resolve_single("plain-published", "1.0.0")
@@ -671,7 +670,7 @@ class ResolveManifestTests(BaseTestCase):
     def test_resolve_manifest_where_all_entries_valid_returns_all(self):
         _create_asset_with_versions(self.publisher, "asset-alpha", ["1.0.0", "1.1.0"])
         _create_asset_with_versions(self.publisher, "asset-beta", ["2.0.0"])
-        results = self.service.resolve_manifest({"asset-alpha": "^1.0.0", "asset-beta": "~2.0"})
+        results = self.service.resolve_manifest(_requests({"asset-alpha": "^1.0.0", "asset-beta": "~2.0"}))
         self.assertEqual(2, len(results))
         self.assertEqual("1.1.0", results[0].canonical_version)
         self.assertEqual("2.0.0", results[1].canonical_version)
@@ -679,7 +678,7 @@ class ResolveManifestTests(BaseTestCase):
     def test_resolve_manifest_where_second_asset_unknown_raises_asset_not_found(self):
         _create_asset_with_versions(self.publisher, "known-asset", ["1.0.0"])
         with self.assertRaises(ItqanError) as ctx:
-            self.service.resolve_manifest({"known-asset": "1.0.0", "unknown-asset": "1.0.0"})
+            self.service.resolve_manifest(_requests({"known-asset": "1.0.0", "unknown-asset": "1.0.0"}))
         self.assertEqual("asset_not_found", ctx.exception.error_name)
         self.assertEqual(404, ctx.exception.status_code)
 
@@ -687,7 +686,7 @@ class ResolveManifestTests(BaseTestCase):
         _create_asset_with_versions(self.publisher, "aaa-known", ["1.0.0"])
         _create_asset_with_versions(self.publisher, "zzz-other", ["1.0.0"])
         with self.assertRaises(ItqanError) as ctx:
-            self.service.resolve_manifest({"aaa-known": "1.0.0", "zzz-other": "^9.0.0"})
+            self.service.resolve_manifest(_requests({"aaa-known": "1.0.0", "zzz-other": "^9.0.0"}))
         self.assertEqual("unsatisfiable_version_constraint", ctx.exception.error_name)
         self.assertEqual(422, ctx.exception.status_code)
 
@@ -695,13 +694,13 @@ class ResolveManifestTests(BaseTestCase):
         """If any entry fails, no results should be returned."""
         _create_asset_with_versions(self.publisher, "first", ["1.0.0"])
         with self.assertRaises(ItqanError):
-            self.service.resolve_manifest({"first": "1.0.0", "missing": "1.0.0"})
+            self.service.resolve_manifest(_requests({"first": "1.0.0", "missing": "1.0.0"}))
         # The partial result list should not leak out — the exception propagates.
 
     def test_resolve_manifest_reuses_exact_pin_404_semantics(self):
         _create_asset_with_versions(self.publisher, "x", ["1.0.0"])
         with self.assertRaises(ItqanError) as ctx:
-            self.service.resolve_manifest({"x": "2.0.0", "y": "1.0.0"})
+            self.service.resolve_manifest(_requests({"x": "2.0.0", "y": "1.0.0"}))
         self.assertEqual("version_not_found", ctx.exception.error_name)
         self.assertEqual(404, ctx.exception.status_code)
 
@@ -712,7 +711,7 @@ class ResolveManifestTests(BaseTestCase):
         _make_version(asset, name="1.2.0")
         _make_version(asset, name="2.0.0")
         with self.assertRaises(ItqanError) as ctx:
-            self.service.resolve_manifest({"colliding": "~2.0", "safe-asset": "1.0.0"})
+            self.service.resolve_manifest(_requests({"colliding": "~2.0", "safe-asset": "1.0.0"}))
         self.assertEqual("canonical_version_collision", ctx.exception.error_name)
         self.assertEqual(422, ctx.exception.status_code)
 
@@ -721,11 +720,13 @@ class ResolveManifestTests(BaseTestCase):
         _create_asset_with_versions(self.publisher, "caret-pkg", ["1.0.0", "1.5.0"])
         _create_asset_with_versions(self.publisher, "tilde-pkg", ["2.1.0", "2.2.0"])
         results = self.service.resolve_manifest(
-            {
-                "exact-pkg": "3.0.0",
-                "caret-pkg": "^1.0.0",
-                "tilde-pkg": "~2.1",
-            }
+            _requests(
+                {
+                    "exact-pkg": "3.0.0",
+                    "caret-pkg": "^1.0.0",
+                    "tilde-pkg": "~2.1",
+                }
+            )
         )
         self.assertEqual(3, len(results))
         names = {r.canonical_version for r in results}
@@ -733,7 +734,7 @@ class ResolveManifestTests(BaseTestCase):
 
     def test_resolve_manifest_with_empty_dependency_set_returns_empty_list(self):
         """An empty manifest has no dependencies and resolves cleanly."""
-        results = self.service.resolve_manifest({})
+        results = self.service.resolve_manifest(_requests({}))
         self.assertEqual([], results)
 
     def test_resolve_manifest_ordering_is_deterministic_by_slug(self):
@@ -742,11 +743,13 @@ class ResolveManifestTests(BaseTestCase):
         _create_asset_with_versions(self.publisher, "alpha", ["1.0.0"])
         _create_asset_with_versions(self.publisher, "middle", ["1.0.0"])
         results = self.service.resolve_manifest(
-            {
-                "zebra": "1.0.0",
-                "alpha": "1.0.0",
-                "middle": "1.0.0",
-            }
+            _requests(
+                {
+                    "zebra": "1.0.0",
+                    "alpha": "1.0.0",
+                    "middle": "1.0.0",
+                }
+            )
         )
         self.assertEqual(["alpha", "middle", "zebra"], [r.asset.slug for r in results])
 
@@ -754,14 +757,14 @@ class ResolveManifestTests(BaseTestCase):
         """Slugs are matched exactly — no trimming or case folding."""
         _create_asset_with_versions(self.publisher, "Exact-Slug", ["1.0.0"])
         with self.assertRaises(ItqanError) as ctx:
-            self.service.resolve_manifest({"exact-slug": "1.0.0"})
+            self.service.resolve_manifest(_requests({"exact-slug": "1.0.0"}))
         self.assertEqual("asset_not_found", ctx.exception.error_name)
 
     def test_resolve_manifest_restricted_for_tenant_entry_returns_404(self):
         asset = _make_asset(self.publisher, slug="tenant-only", restricted_for_tenant=True)
         _make_version(asset, name="1.0.0")
         with self.assertRaises(ItqanError) as ctx:
-            self.service.resolve_manifest({"tenant-only": "1.0.0", "other": "1.0.0"})
+            self.service.resolve_manifest(_requests({"tenant-only": "1.0.0", "other": "1.0.0"}))
         self.assertEqual("asset_not_found", ctx.exception.error_name)
         self.assertEqual(404, ctx.exception.status_code)
 
@@ -769,7 +772,7 @@ class ResolveManifestTests(BaseTestCase):
         _create_asset_with_versions(self.publisher, "aaa-good", ["1.0.0"])
         _create_asset_with_versions(self.publisher, "zzz-bad", ["1.0.0"])
         with self.assertRaises(ItqanError) as ctx:
-            self.service.resolve_manifest({"aaa-good": "1.0.0", "zzz-bad": ">=2.0.0"})
+            self.service.resolve_manifest(_requests({"aaa-good": "1.0.0", "zzz-bad": ">=2.0.0"}))
         self.assertEqual("invalid_version_constraint", ctx.exception.error_name)
         self.assertEqual(422, ctx.exception.status_code)
 
@@ -791,7 +794,7 @@ class ResolveManifestEdgeCasesTests(BaseTestCase):
         _make_version(asset, name="draft-2")
         _make_version(asset, name="1.0.0+build1")
         with self.assertRaises(ItqanError) as ctx:
-            self.service.resolve_manifest({"all-invalid": "1.0.0"})
+            self.service.resolve_manifest(_requests({"all-invalid": "1.0.0"}))
         self.assertEqual("no_eligible_package_versions", ctx.exception.error_name)
         self.assertEqual(422, ctx.exception.status_code)
 

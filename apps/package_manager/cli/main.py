@@ -62,8 +62,10 @@ def _run_install(
         assert manifest is not None
         click.echo("Lockfile is FRESH. Installing locked versions...")
         # In FRESH mode, we query the registry with the locked exact pins
-        locked_constraints = {slug: entry.version for slug, entry in lockfile.assets.items()}
-        resolved_payloads = client.resolve_manifest(locked_constraints)
+        locked_requests = {
+            slug: manifest.assets[slug].to_request(version=entry.version) for slug, entry in lockfile.assets.items()
+        }
+        resolved_payloads = client.resolve_manifest(locked_requests)
     else:
         # MISSING or STALE or force: Resolve against declared constraints
         assert manifest is not None
@@ -72,7 +74,7 @@ def _run_install(
         else:
             click.echo("Resolving declared assets against package registry...")
 
-        resolved_payloads = client.resolve_manifest(manifest.raw_constraints)
+        resolved_payloads = client.resolve_manifest(manifest.registry_requests)
 
         # Build the new lockfile in memory — do NOT write it yet.
         # We only commit the lockfile after every asset has been downloaded
@@ -80,11 +82,13 @@ def _run_install(
         # if a download fails halfway, the old lockfile is preserved.
         new_lock_entries: dict[str, LockfileEntry] = {}
         for item in resolved_payloads:
-            declared_constraint = manifest.assets[item.slug].version
-            new_lock_entries[item.slug] = LockfileEntry(
-                slug=item.slug,
-                constraint=declared_constraint,
+            declared = manifest.assets[item.entry_name]
+            new_lock_entries[item.entry_name] = LockfileEntry(
+                slug=item.entry_name,
+                constraint=declared.version,
                 version=item.resolved_version,
+                asset=declared.asset if declared.asset != item.entry_name else None,
+                language=declared.language,
             )
 
         new_lockfile = AssetLockfile(
