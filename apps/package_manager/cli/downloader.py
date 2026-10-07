@@ -109,7 +109,10 @@ class AssetDownloader:
         *,
         force: bool = False,
     ) -> DownloadResult:
-        """Materialize a single resolved asset into assets/<slug>/ folder.
+        """Materialize a single resolved asset into the assets/<entry name>/ folder.
+
+        The folder is named after the manifest entry, so two languages of one
+        asset (two entries) install side by side.
 
         Ensures:
         - Safety: slug is validated against path traversal before any I/O.
@@ -120,9 +123,9 @@ class AssetDownloader:
           so a power loss between the two writes cannot leave a stale marker.
         """
         # --- Safety: validate slug before any path join ---
-        _validate_slug(asset.slug)
+        _validate_slug(asset.entry_name)
 
-        slug_dir = self.assets_dir / asset.slug
+        slug_dir = self.assets_dir / asset.entry_name
         slug_dir.mkdir(parents=True, exist_ok=True)
 
         target_file = self._determine_target_file(asset, slug_dir)
@@ -137,7 +140,7 @@ class AssetDownloader:
                 and version_marker.read_text(encoding="utf-8").strip() == asset.resolved_version
             ):
                 return DownloadResult(
-                    slug=asset.slug,
+                    slug=asset.entry_name,
                     version=asset.resolved_version,
                     target_path=target_file,
                     downloaded=False,
@@ -197,7 +200,7 @@ class AssetDownloader:
             os.replace(temp_file, target_file)
 
             return DownloadResult(
-                slug=asset.slug,
+                slug=asset.entry_name,
                 version=asset.resolved_version,
                 target_path=target_file,
                 downloaded=True,

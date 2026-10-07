@@ -15,6 +15,7 @@ from yaml.resolver import Resolver
 from yaml.scanner import Scanner
 
 from apps.package_manager.cli.exceptions import (
+    DuplicateAssetEntryError,
     InvalidConstraintSyntaxError,
     MissingRequiredFieldError,
     NonStringAssetKeyError,
@@ -28,9 +29,24 @@ from apps.package_manager.cli.semver import parse_constraint
 
 @dataclass(frozen=True, slots=True)
 class AssetManifestEntry:
+    """One manifest entry. ``slug`` is the entry's key (its name); ``asset`` is
+    the CMS slug it installs, which defaults to the key. ``language`` picks the
+    language rendition; None means the asset's source language."""
+
     slug: str
     version: str
     package: str | None = None
+    asset: str = ""
+    language: str | None = None
+
+    def to_request(self, version: str | None = None) -> dict[str, str]:
+        """Registry request for this entry, optionally pinned to ``version``."""
+        request = {"version": version or self.version}
+        if self.asset != self.slug:
+            request["asset"] = self.asset
+        if self.language is not None:
+            request["language"] = self.language
+        return request
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,8 +56,13 @@ class AssetManifest:
 
     @property
     def raw_constraints(self) -> dict[str, str]:
-        """Mapping of slug -> version constraint string as declared in manifest."""
+        """Mapping of entry name -> version constraint string as declared in manifest."""
         return {slug: entry.version for slug, entry in self.assets.items()}
+
+    @property
+    def registry_requests(self) -> dict[str, dict[str, str]]:
+        """Mapping of entry name -> registry request object."""
+        return {slug: entry.to_request() for slug, entry in self.assets.items()}
 
 
 class _StrictYamlLoader(Reader, Scanner, Parser, Composer, SafeConstructor, Resolver):
@@ -118,6 +139,7 @@ def _validate_manifest_dict(data: dict[str, Any]) -> AssetManifest:
         raise YamlProfileViolationError(f"'assets' must be a mapping, got {type(assets_raw).__name__}.")
 
     parsed_assets: dict[str, AssetManifestEntry] = {}
+    seen_targets: dict[tuple[str, str | None], str] = {}
 
     for slug, entry_raw in assets_raw.items():
         if not isinstance(slug, str):
@@ -131,7 +153,7 @@ def _validate_manifest_dict(data: dict[str, Any]) -> AssetManifest:
                 f"Asset '{slug}' entry must be a mapping with a 'version' key, not a scalar."
             )
 
-        allowed_entry_keys = {"version", "package"}
+        allowed_entry_keys = {"version", "package", "asset", "language"}
         for entry_k in entry_raw.keys():
             if entry_k not in allowed_entry_keys:
                 raise UnknownFieldError(f"Unknown field '{entry_k}' in entry for asset '{slug}'.")
@@ -157,13 +179,35 @@ def _validate_manifest_dict(data: dict[str, Any]) -> AssetManifest:
                 raise UnknownFieldError(f"Reserved field 'package' for asset '{slug}' must be a non-empty string.")
             package_val = package_raw
 
+        asset_val = _optional_string_field(entry_raw, "asset", slug) or slug
+        language_val = _optional_string_field(entry_raw, "language", slug)
+
+        target = (asset_val, language_val)
+        if target in seen_targets:
+            raise DuplicateAssetEntryError(
+                f"Entries '{seen_targets[target]}' and '{slug}' both name asset '{asset_val}'"
+                f" in {f'language {language_val!r}' if language_val else 'its source language'}."
+            )
+        seen_targets[target] = slug
+
         parsed_assets[slug] = AssetManifestEntry(
             slug=slug,
             version=version_val,
             package=package_val,
+            asset=asset_val,
+            language=language_val,
         )
 
     return AssetManifest(schema_version=schema_version_val, assets=parsed_assets)
+
+
+def _optional_string_field(entry_raw: dict[str, Any], field: str, slug: str) -> str | None:
+    if field not in entry_raw:
+        return None
+    value = entry_raw[field]
+    if not isinstance(value, str) or not value.strip():
+        raise UnknownFieldError(f"Field '{field}' for asset '{slug}' must be a non-empty string.")
+    return value
 
 
 def parse_manifest_content(content_bytes: bytes) -> AssetManifest:

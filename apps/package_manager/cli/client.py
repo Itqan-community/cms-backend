@@ -18,6 +18,13 @@ class ResolvedAssetPayload:
     download_url: str | None
     publisher_id: int | None = None
     publisher_name: str | None = None
+    name: str = ""
+    language: str | None = None
+
+    @property
+    def entry_name(self) -> str:
+        """The manifest entry this result answers (the slug unless the entry set `asset`)."""
+        return self.name or self.slug
 
 
 class RegistryClient:
@@ -56,11 +63,12 @@ class RegistryClient:
             headers["X-API-Key"] = self.api_key
         return headers
 
-    def resolve_manifest(self, assets: dict[str, str]) -> list[ResolvedAssetPayload]:
+    def resolve_manifest(self, assets: dict[str, str | dict[str, str]]) -> list[ResolvedAssetPayload]:
         """Call POST /packages/resolve/manifest/ to resolve manifest constraints.
 
         Args:
-            assets: dict of slug -> constraint string (e.g. {"quran": "^2.1.0"})
+            assets: dict of entry name -> constraint string (e.g. {"quran": "^2.1.0"}),
+                or -> request object ({"version": ..., "asset": ..., "language": ...})
 
         Returns:
             list of ResolvedAssetPayload
@@ -95,7 +103,7 @@ class RegistryClient:
                     )
                 results_raw = data["results"]
                 requested_slugs = set(assets.keys())
-                returned_slugs = {item["slug"] for item in results_raw if isinstance(item, dict)}
+                returned_slugs = {item.get("name") or item["slug"] for item in results_raw if isinstance(item, dict)}
                 missing = requested_slugs - returned_slugs
                 if missing:
                     raise RegistryApiError(
@@ -111,6 +119,8 @@ class RegistryClient:
                         download_url=item.get("download_url"),
                         publisher_id=item.get("publisher_id"),
                         publisher_name=item.get("publisher_name"),
+                        name=item.get("name") or item["slug"],
+                        language=item.get("language"),
                     )
                     for item in results_raw
                 ]

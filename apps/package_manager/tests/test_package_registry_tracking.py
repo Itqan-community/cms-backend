@@ -9,6 +9,7 @@ import json
 from unittest import skipUnless
 from unittest.mock import patch
 
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from model_bakery import baker
 
@@ -42,6 +43,8 @@ def _make_package_version(asset: Asset, *, name: str) -> AssetVersion:
         name=name,
         state=VersionStateChoice.PUBLISHED,
     )
+    version.file_url = SimpleUploadedFile(name=f"{asset.slug}-{name}.pdf", content=b"dummy")
+    version.save()
     return version
 
 

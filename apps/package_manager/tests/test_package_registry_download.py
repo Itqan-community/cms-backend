@@ -1,8 +1,8 @@
 """Download reference tests for the package registry endpoints (Checkpoint 5).
 
 Verifies that the `download_url` field on PackageVersionOut correctly exposes
-the existing AssetVersion.file_url after access checks pass, and returns null
-when no file is present.
+the existing AssetVersion.file_url after access checks pass. Versions without a
+file are covered in test_package_registry_file_generation.py.
 """
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -64,40 +64,14 @@ class PackageDownloadUrlTests(BaseTestCase):
         self.assertIsNotNone(body["result"]["download_url"])
         self.assertEqual(version.pk, body["result"]["asset_version_id"])
 
-    def test_single_asset_without_file_url_returns_null(self):
-        asset, version = self._create_asset_with_version("pkg-no-file", "1.0.0", has_file=False)
-        response = self.client.get("/packages/resolve/pkg-no-file/?version=1.0.0")
-        self.assertEqual(200, response.status_code, response.content)
-        body = response.json()
-        self.assertIsNone(body["result"]["download_url"])
-        self.assertEqual(version.pk, body["result"]["asset_version_id"])
-
     def test_single_asset_download_url_uses_project_storage_behavior(self):
-        """The download_url must be the actual FileField URL, not a fabricated path."""
+        """The download_url must be the actual FileField URL, made absolute so a
+        client can fetch it even when storage returns a relative path."""
         asset, version = self._create_asset_with_version("pkg-verify-url", "1.0.0", has_file=True)
         response = self.client.get("/packages/resolve/pkg-verify-url/?version=1.0.0")
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
-        # Must be the real FileField URL — matches what Django/storage produces,
-        # not a made-up "/packages/..." prefix.
-        url = body["result"]["download_url"]
-        self.assertTrue(url.startswith("/media/"), f"unexpected URL format: {url}")
-
-    def test_manifest_mixed_file_and_no_file_returns_correct_references(self):
-        asset_a, version_a = self._create_asset_with_version("pkg-has-file", "1.0.0", has_file=True)
-        asset_b, version_b = self._create_asset_with_version("pkg-no-file", "1.0.0", has_file=False)
-
-        response = self.client.post(
-            "/packages/resolve/manifest/",
-            data={"assets": {"pkg-has-file": "1.0.0", "pkg-no-file": "1.0.0"}},
-            content_type="application/json",
-        )
-        self.assertEqual(200, response.status_code, response.content)
-        body = response.json()
-        self.assertEqual(2, len(body["results"]))
-        by_slug = {r["slug"]: r for r in body["results"]}
-        self.assertIsNotNone(by_slug["pkg-has-file"]["download_url"])
-        self.assertIsNone(by_slug["pkg-no-file"]["download_url"])
+        self.assertEqual(f"http://testserver{version.file_url.url}", body["result"]["download_url"])
 
     @override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=True)
     def test_restricted_asset_returns_no_download_url_in_response(self):

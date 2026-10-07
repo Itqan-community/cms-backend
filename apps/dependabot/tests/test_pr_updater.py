@@ -15,7 +15,7 @@ from unittest.mock import MagicMock
 import httpx
 import pytest
 
-from apps.content.models import Asset, AssetVersion, CategoryChoice, VersionStateChoice
+from apps.content.models import Asset, AssetLanguage, AssetVersion, CategoryChoice, VersionStateChoice
 from apps.dependabot.models import WatchedRepository
 from apps.dependabot.services.github_client import (
     LOCKFILE_PATH,
@@ -67,14 +67,21 @@ def _make_asset_and_version(
     name: str = "1.3.0",
     summary: str = "Fixed verse 5 text",
     state: str = VersionStateChoice.PUBLISHED,
+    language: str = "ar",
+    is_source: bool = True,
 ) -> AssetVersion:
     asset = MagicMock(spec=Asset)
     asset.slug = slug
     asset.name = "Quran Uthmani Hafs"
     asset.category = CategoryChoice.MUSHAF
 
+    asset_language = MagicMock(spec=AssetLanguage)
+    asset_language.language = language
+    asset_language.is_source = is_source
+
     version = MagicMock(spec=AssetVersion)
     version.asset = asset
+    version.asset_language = asset_language
     version.name = name
     version.summary = summary
     version.state = state

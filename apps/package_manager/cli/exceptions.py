@@ -1,4 +1,4 @@
-﻿"""CLI exceptions adhering to docs/ASSET_MANIFEST.md error taxonomy."""
+"""CLI exceptions adhering to docs/ASSET_MANIFEST.md error taxonomy."""
 
 from __future__ import annotations
 
@@ -42,6 +42,10 @@ class MissingRequiredFieldError(ManifestError):
 
 class InvalidConstraintSyntaxError(ManifestError):
     """Constraint string violates the SemVer grammar."""
+
+
+class DuplicateAssetEntryError(ManifestError):
+    """Two entries name the same asset and language."""
 
 
 class LockfileError(ItqanCliError):

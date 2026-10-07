@@ -5,7 +5,7 @@ import re
 
 from django.utils.translation import gettext as _
 
-from apps.content.models import Asset, AssetVersion
+from apps.content.models import Asset, AssetLanguage, AssetVersion
 from apps.core.ninja_utils.errors import ItqanError
 from apps.package_manager.repositories.package_registry import PackageRegistryRepository
 
@@ -261,14 +261,26 @@ def _matches_constraint(version: SemVer, constraint: VersionConstraint) -> bool:
 # ---------------------------------------------------------------------------
 
 
+@dataclass(frozen=True, slots=True)
+class PackageRequest:
+    """One manifest entry: an asset slug, a version constraint and, optionally,
+    the language rendition (None means the asset's source language)."""
+
+    slug: str
+    version: str
+    language: str | None = None
+
+
 @dataclass
 class ResolvedPackage:
     """Internal resolution result. Fields are intentionally minimal."""
 
     asset: Asset
+    asset_language: AssetLanguage
     asset_version: AssetVersion
     canonical_version: str
     requested_constraint: str
+    name: str = ""
 
 
 class PackageRegistryService:
@@ -291,9 +303,13 @@ class PackageRegistryService:
         slug: str,
         version_constraint: str,
         *,
+        language: str | None = None,
         asset: Asset | None = None,
     ) -> ResolvedPackage:
         """Resolve a single asset slug + constraint to a concrete AssetVersion.
+
+        Each language rendition has its own version timeline, so resolution is
+        scoped to ``language`` (or the asset's source language when None).
 
         Raises ItqanError on failure with the appropriate error_name and status_code.
         """
@@ -307,11 +323,22 @@ class PackageRegistryService:
                     status_code=404,
                 )
 
-        # 2. Obtain eligible PACKAGE versions.
-        eligible_qs = self.repo.get_eligible_package_versions(asset)
+        # 2. Pick the language rendition whose timeline is resolved.
+        asset_language = self.repo.get_available_language(asset, language)
+        if asset_language is None:
+            raise ItqanError(
+                error_name="language_not_found",
+                message=_("Language {language} is not available for asset {slug}.").format(
+                    language=language or asset.language, slug=slug
+                ),
+                status_code=404,
+            )
+
+        # 3. Obtain eligible versions of that rendition.
+        eligible_qs = self.repo.get_eligible_package_versions(asset_language)
         eligible_versions: list[AssetVersion] = list(eligible_qs)
 
-        # 3. Parse/canonicalize candidate versions and filter invalid names.
+        # 4. Parse/canonicalize candidate versions and filter invalid names.
         valid_candidates: list[tuple[AssetVersion, SemVer]] = []
         for av in eligible_versions:
             semver = _parse_candidate_version(av.name)
@@ -326,7 +353,7 @@ class PackageRegistryService:
                 status_code=422,
             )
 
-        # 4. Canonical collision detection over the WHOLE eligible pool.
+        # 5. Canonical collision detection over the WHOLE eligible pool.
         seen_canonicals: dict[str, AssetVersion] = {}
         for av, semver in valid_candidates:
             canon = semver.to_canonical_string()
@@ -338,7 +365,7 @@ class PackageRegistryService:
                 )
             seen_canonicals[canon] = av
 
-        # 5. Parse the requested constraint.
+        # 6. Parse the requested constraint.
         try:
             constraint = _parse_constraint(version_constraint)
         except ValueError as exc:
@@ -350,12 +377,12 @@ class PackageRegistryService:
                 status_code=422,
             ) from exc
 
-        # 6. Filter candidates by constraint.
+        # 7. Filter candidates by constraint.
         matching: list[tuple[AssetVersion, SemVer]] = [
             (av, sv) for av, sv in valid_candidates if _matches_constraint(sv, constraint)
         ]
 
-        # 7. Exact pin: missing version -> 404.
+        # 8. Exact pin: missing version -> 404.
         if constraint.kind == "exact":
             if not matching:
                 raise ItqanError(
@@ -368,12 +395,13 @@ class PackageRegistryService:
             best_av, _best_sv = matching[0]
             return ResolvedPackage(
                 asset=asset,
+                asset_language=asset_language,
                 asset_version=best_av,
                 canonical_version=constraint.base.to_canonical_string(),
                 requested_constraint=version_constraint,
             )
 
-        # 8. Range constraint: no match -> 422.
+        # 9. Range constraint: no match -> 422.
         if not matching:
             raise ItqanError(
                 error_name="unsatisfiable_version_constraint",
@@ -387,10 +415,11 @@ class PackageRegistryService:
                 status_code=422,
             )
 
-        # 9. Select highest matching by SemVer precedence.
+        # 10. Select highest matching by SemVer precedence.
         best_av, _best_sv = max(matching, key=lambda x: x[1]._precedence_key())
         return ResolvedPackage(
             asset=asset,
+            asset_language=asset_language,
             asset_version=best_av,
             canonical_version=_best_sv.to_canonical_string(),
             requested_constraint=version_constraint,
@@ -398,20 +427,21 @@ class PackageRegistryService:
 
     def resolve_manifest(
         self,
-        entries: dict[str, str],
+        entries: dict[str, PackageRequest],
         *,
         assets: dict[str, Asset] | None = None,
     ) -> list[ResolvedPackage]:
         """Resolve a full manifest dependency set atomically.
 
-        Accepts a mapping of asset slug → version constraint and resolves each
-        entry via :meth:`resolve_single`.  Resolution is **all-or-nothing**: if any
-        entry fails the first :class:`ItqanError` is raised immediately and no
-        partial result is returned.
+        Accepts a mapping of entry name → :class:`PackageRequest`. The name is
+        the manifest key; it defaults to the slug, and differs when one manifest
+        lists several languages of the same asset. Resolution is
+        **all-or-nothing**: if any entry fails the first :class:`ItqanError` is
+        raised immediately and no partial result is returned.
 
-        Results are sorted by slug in ascending UTF-8 byte order so that callers
-        (e.g. the lockfile writer) always see a deterministic sequence regardless
-        of input dictionary ordering.
+        Results are sorted by entry name in ascending UTF-8 byte order so that
+        callers (e.g. the lockfile writer) always see a deterministic sequence
+        regardless of input dictionary ordering.
 
         Raises:
             ItqanError: the same error that :meth:`resolve_single` would raise for
@@ -419,15 +449,44 @@ class PackageRegistryService:
         """
         # Sort by UTF-8 byte sequence to match the lockfile ordering rule in
         # docs/ASSET_MANIFEST.md §5.
-        ordered_slugs = sorted(entries.keys(), key=lambda s: s.encode("utf-8"))
+        ordered_names = sorted(entries.keys(), key=lambda s: s.encode("utf-8"))
 
         results: list[ResolvedPackage] = []
-        for slug in ordered_slugs:
-            constraint = entries[slug]
-            pre_fetched = assets.get(slug) if assets is not None else None
-            results.append(self.resolve_single(slug, constraint, asset=pre_fetched))
+        for name in ordered_names:
+            request = entries[name]
+            pre_fetched = assets.get(request.slug) if assets is not None else None
+            result = self.resolve_single(request.slug, request.version, language=request.language, asset=pre_fetched)
+            result.name = name
+            results.append(result)
 
         return results
+
+    def get_downloadable_version(self, asset_version_id: int) -> AssetVersion:
+        """A version the registry serves, or 404."""
+        version = self.repo.get_downloadable_version(asset_version_id)
+        if version is None:
+            raise ItqanError(
+                error_name="version_not_found",
+                message=_("Package version not found."),
+                status_code=404,
+            )
+        return version
+
+    def ensure_package_file(self, version: AssetVersion) -> AssetVersion:
+        """Return ``version`` with a downloadable file, generating it on first request."""
+        if version.file_url:
+            return version
+        try:
+            stored = self.repo.store_generated_package_file(version)
+        except ItqanError:
+            stored = None  # no content template to build the file with
+        if stored is None:
+            raise ItqanError(
+                error_name="package_content_unavailable",
+                message=_("This package version has no downloadable content."),
+                status_code=404,
+            )
+        return stored
 
 
 def _parse_candidate_version(name: str) -> SemVer | None:

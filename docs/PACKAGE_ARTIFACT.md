@@ -46,7 +46,7 @@ Without a defined artifact format:
 ### The Solution: The Packaged Artifact
 A published `AssetVersion` with a valid SemVer name is compiled into a single, immutable, deterministically compressed archive:
 ```
-<asset-slug>-<canonical-version>.tar.gz
+<asset-slug>-<language>-<canonical-version>.tar.gz
 ```
 This archive contains machine-readable metadata (`itqan-package.json`) and structured content payloads under `data/`.
 
@@ -201,13 +201,17 @@ data/
 
 When a developer runs `itqan install` via the CLI, the package is verified and unpacked into the project's local directory structure.
 
+Each **manifest entry** installs into its own folder named after the entry's key (`<entry-name>`, which is the asset slug unless the entry sets `asset`). Two languages of one asset are two entries, so they install side by side — e.g. `assets/tafsir-jalalayn/` and `assets/tafsir-jalalayn-en/` (see [`ASSET_MANIFEST.md`](./ASSET_MANIFEST.md) §2, Languages).
+
+> **Today, before packaged artifacts exist**, the CLI downloads the version's file as-is (typically a CSV) into `assets/<entry-name>/<file>` next to an `.itqan_version` marker. The layout below is the target once artifacts ship.
+
 ### 5.1. Directory Structure
 ```text
 <project-root>/
 ├── itqan-assets.yaml
 ├── itqan-assets.lock
 └── assets/
-    └── <asset-slug>/
+    └── <entry-name>/
         └── <version>/
             ├── itqan-package.json
             └── data/
@@ -217,13 +221,13 @@ When a developer runs `itqan install` via the CLI, the package is verified and u
 
 ### 5.2. Installation Rules
 1. **Versioned Subdirectory Isolation**:
-   Every installed version is unpacked into `assets/<asset-slug>/<version>/`. 
+   Every installed version is unpacked into `assets/<entry-name>/<version>/`. 
    * Installing version `2.4.1` writes into `assets/quran-uthmani-hafs/2.4.1/`.
    * Multiple versions can co-exist if needed during migrations, and updates never execute in-place overwrites of active files.
 2. **Current Version Pointer**:
    To simplify application asset loading, the installer maintains a lightweight JSON pointer file:
    ```text
-   assets/<asset-slug>/.current
+   assets/<entry-name>/.current
    ```
    Containing:
    ```json
@@ -236,9 +240,9 @@ When a developer runs `itqan install` via the CLI, the package is verified and u
 3. **Atomic Unpacking**:
    Extraction proceeds into a temporary staging folder in the same filesystem:
    ```text
-   assets/<asset-slug>/.tmp_<version>_<random>/
+   assets/<entry-name>/.tmp_<version>_<random>/
    ```
-   Once fully written and verified, it is atomically renamed via `os.replace` to `assets/<asset-slug>/<version>/`. Partial extracts never linger upon download or extraction failure.
+   Once fully written and verified, it is atomically renamed via `os.replace` to `assets/<entry-name>/<version>/`. Partial extracts never linger upon download or extraction failure.
 
 ---
 
@@ -287,7 +291,7 @@ There is no per-version opt-in. Every `AssetVersion` that is **published** and w
 
 ### Artifact metadata
 The package artifact metadata is stored on the `AssetVersion` itself:
-* **`package_artifact_file`**: Path to the built `.tar.gz` in Django Storage (e.g. `packages/<slug>/<slug>-<version>.tar.gz`).
+* **`package_artifact_file`**: Path to the built `.tar.gz` in Django Storage (e.g. `packages/<slug>/<slug>-<language>-<version>.tar.gz`).
 * **`package_checksum`**: `sha256:<hex>` string computed upon build.
 * **`package_size_bytes`**: Integer byte length of the `.tar.gz` archive.
 * **`package_status`**: State machine (`PENDING`, `BUILDING`, `READY`, `FAILED`).
@@ -324,22 +328,33 @@ We explicitly adopt the **Asynchronous On-Publish** strategy over on-demand buil
 3. **Immutability Invariant**:
    Once published and packaged, an artifact is **strictly immutable**. If content edits are required, they must be published under a new SemVer version (`AssetVersion`). An existing artifact file is never modified or overwritten in place.
 
+### Interim: Generating a Missing File on First Download
+Until artifacts are built, the registry serves each version's stored file (`AssetVersion.file_url`). Publishing prunes superseded versions down to their stored changes, deleting their file. Such a version stays installable:
+
+1. The Registry API returns, as its `download_url`, the download endpoint `GET /packages/download/<asset_version_id>/<slug>-<language>-<version>.csv/` in place of a file URL.
+2. The first request rebuilds the version's content from its stored changes, writes it as CSV (the same columns publishing stores), saves it as the version's `file_url`, and redirects to it. The version row is locked while this happens, so concurrent first downloads build the file once.
+3. Later requests — and later resolutions, which now see a stored file — go straight to the file.
+
+A version with no file, no entries and no stored changes has nothing to rebuild and is never resolved.
+
 ---
 
 ## 9. Registry API Contract & Lockfile Evolution
 
 ### 9.1. Registry API Payload (`PackageVersionOut`)
-The Registry API (`GET /api/public/packages/resolve/` and `POST /api/public/packages/resolve/manifest/`) updates its response schema to return artifact identity and integrity metadata:
+The Registry API (`GET /packages/resolve/<slug>/?version=…&language=…` and `POST /packages/resolve/manifest/`) updates its response schema to return artifact identity and integrity metadata. The manifest endpoint takes each entry either as a constraint string (`"quran-uthmani-hafs": "^2.1.0"`) or as an object (`"tafsir-en": {"asset": "tafsir", "language": "en", "version": "^1.0.0"}`); each result echoes the entry's `name` and the resolved `language`:
 
 ```json
 {
+  "name": "quran-uthmani-hafs",
   "slug": "quran-uthmani-hafs",
+  "language": "ar",
   "asset_name": "القرآن الكريم برواية حفص عن عاصم بالرسم العثماني",
   "asset_version_id": 42,
   "resolved_version": "2.4.1",
   "publisher_id": 1,
   "publisher_name": "مجمع الملك فهد لطباعة المصحف الشريف",
-  "download_url": "https://cdn.itqan.dev/packages/quran-uthmani-hafs/quran-uthmani-hafs-2.4.1.tar.gz",
+  "download_url": "https://cdn.itqan.dev/packages/quran-uthmani-hafs/quran-uthmani-hafs-ar-2.4.1.tar.gz",
   "checksum": "sha256:4a355938f22691d4e32537299214ad5f413044b604b49e45d5676019a0a2ad9f",
   "size_bytes": 1420850
 }

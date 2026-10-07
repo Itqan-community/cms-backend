@@ -168,13 +168,25 @@ def _require_version_one(value: object, *, field: str, what: str) -> int:
     return 1
 
 
+def _optional_string(entry_raw: dict, field: str, *, what: str) -> str | None:
+    value = entry_raw.get(field)
+    if value is not None and (not isinstance(value, str) or not value):
+        raise ManifestDocumentError(field, f"{what} {field} must be a non-empty string.")
+    return value
+
+
 # --- Parsed documents ---
 
 
 @dataclass(frozen=True)
 class ManifestEntry:
+    """``asset`` (the CMS slug, when it differs from the entry key) and
+    ``language`` (None = the asset's source language) are as declared."""
+
     version: str
     package: str | None
+    asset: str | None = None
+    language: str | None = None
 
 
 @dataclass(frozen=True)
@@ -188,6 +200,8 @@ class ParsedManifest:
 class LockfileEntry:
     constraint: str
     version: str
+    asset: str | None = None
+    language: str | None = None
 
 
 @dataclass(frozen=True)
@@ -218,7 +232,7 @@ def parse_manifest_document(raw: bytes) -> ParsedManifest:
     for slug, entry_raw in assets_raw.items():
         if not isinstance(entry_raw, dict):
             raise ManifestDocumentError("entry", "Manifest entries must be mappings, not scalar shorthand.")
-        unknown = set(entry_raw.keys()) - {"version", "package"}
+        unknown = set(entry_raw.keys()) - {"version", "package", "asset", "language"}
         if unknown:
             raise ManifestDocumentError("unknown_field", "Manifest entries contain unknown fields.")
         if "version" not in entry_raw:
@@ -229,11 +243,13 @@ def parse_manifest_document(raw: bytes) -> ParsedManifest:
         package = entry_raw.get("package")
         if package is not None and (not isinstance(package, str) or not package):
             raise ManifestDocumentError("package", "Reserved package field must be a non-empty string.")
+        asset = _optional_string(entry_raw, "asset", what="Manifest")
+        language = _optional_string(entry_raw, "language", what="Manifest")
         try:
             constraints[slug] = parse_version_constraint(version)
         except ValueError:
             raise ManifestDocumentError("version", "Manifest version constraint is not in the §3 grammar.") from None
-        assets[slug] = ManifestEntry(version=version, package=package)
+        assets[slug] = ManifestEntry(version=version, package=package, asset=asset, language=language)
     return ParsedManifest(schema_version=schema_version, assets=assets, constraints=constraints)
 
 
@@ -257,7 +273,11 @@ def parse_lockfile_document(raw: bytes) -> ParsedLockfile:
     for slug, entry_raw in assets_raw.items():
         if not isinstance(entry_raw, dict):
             raise ManifestDocumentError("entry", "Lockfile entries must be mappings.")
-        _require_keys(entry_raw, required={"constraint", "version"}, what="entry")
+        _require_keys(
+            {k: v for k, v in entry_raw.items() if k not in ("asset", "language")},
+            required={"constraint", "version"},
+            what="entry",
+        )
         constraint = entry_raw["constraint"]
         version = entry_raw["version"]
         if not isinstance(constraint, str):
@@ -273,7 +293,12 @@ def parse_lockfile_document(raw: bytes) -> ParsedLockfile:
             raise ManifestDocumentError(
                 "version", "Lockfile versions must be canonical three-component SemVer without build metadata."
             )
-        assets[slug] = LockfileEntry(constraint=constraint, version=version)
+        assets[slug] = LockfileEntry(
+            constraint=constraint,
+            version=version,
+            asset=_optional_string(entry_raw, "asset", what="Lockfile"),
+            language=_optional_string(entry_raw, "language", what="Lockfile"),
+        )
         versions[slug] = parsed_version
     return ParsedLockfile(
         lockfile_version=lockfile_version,
@@ -322,6 +347,8 @@ def classify_discovery(*, manifest: DiscoveredFile, lockfile: DiscoveredFile) ->
     for slug, entry in parsed_manifest.assets.items():
         locked = parsed_lockfile.assets[slug]
         if locked.constraint != entry.version:
+            return DiscoveryClassification(state=STALE, manifest=parsed_manifest, lockfile=parsed_lockfile)
+        if (locked.asset or slug) != (entry.asset or slug) or locked.language != entry.language:
             return DiscoveryClassification(state=STALE, manifest=parsed_manifest, lockfile=parsed_lockfile)
         if not constraint_satisfied(parsed_lockfile.versions[slug], parsed_manifest.constraints[slug]):
             return DiscoveryClassification(state=STALE, manifest=parsed_manifest, lockfile=parsed_lockfile)
