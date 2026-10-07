@@ -1,5 +1,6 @@
 from unittest import skipUnless
 
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from model_bakery import baker
 
@@ -38,6 +39,8 @@ def _make_version(asset: Asset, *, name: str, state: str = VersionStateChoice.PU
         name=name,
         state=state,
     )
+    version.file_url = SimpleUploadedFile(name=f"{asset.slug}-{name}.pdf", content=b"dummy")
+    version.save()
     return version
 
 

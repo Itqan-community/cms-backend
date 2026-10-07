@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 
 from apps.dependabot.services.manifest_parse import (
+    LockfileEntry,
     ManifestDocumentError,
     ParsedLockfile,
     parse_lockfile_document,
@@ -117,6 +118,10 @@ def update_manifest_content(raw_manifest: bytes, slug: str, new_constraint: str)
     return result_bytes
 
 
+def _escape(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
 def serialize_updated_lockfile(lockfile: ParsedLockfile, slug: str, new_constraint: str, new_version: str) -> bytes:
     """Generate byte-exact deterministic lockfile UTF-8 bytes adhering to §5.
 
@@ -128,27 +133,26 @@ def serialize_updated_lockfile(lockfile: ParsedLockfile, slug: str, new_constrai
         f"manifest_schema_version: {lockfile.manifest_schema_version}",
         "",
     ]
-    assets: dict[str, tuple[str, str]] = {}
-    for s, entry in lockfile.assets.items():
-        if s == slug:
-            assets[s] = (new_constraint, new_version)
-        else:
-            assets[s] = (entry.constraint, entry.version)
-
-    # If slug wasn't in lockfile, add it
-    if slug not in assets:
-        assets[slug] = (new_constraint, new_version)
+    assets: dict[str, LockfileEntry] = dict(lockfile.assets)
+    current = assets.get(slug)
+    assets[slug] = LockfileEntry(
+        constraint=new_constraint,
+        version=new_version,
+        asset=current.asset if current else None,
+        language=current.language if current else None,
+    )
 
     lines.append("assets:")
     sorted_slugs = sorted(assets.keys(), key=lambda s: s.encode("utf-8"))
     for s in sorted_slugs:
-        constraint, version = assets[s]
-        escaped_slug = s.replace("\\", "\\\\").replace('"', '\\"')
-        escaped_constraint = constraint.replace("\\", "\\\\").replace('"', '\\"')
-        escaped_version = version.replace("\\", "\\\\").replace('"', '\\"')
-        lines.append(f'  "{escaped_slug}":')
-        lines.append(f'    constraint: "{escaped_constraint}"')
-        lines.append(f'    version: "{escaped_version}"')
+        entry = assets[s]
+        lines.append(f'  "{_escape(s)}":')
+        for field in ("asset", "language"):
+            value = getattr(entry, field)
+            if value is not None:
+                lines.append(f'    {field}: "{_escape(value)}"')
+        lines.append(f'    constraint: "{_escape(entry.constraint)}"')
+        lines.append(f'    version: "{_escape(entry.version)}"')
 
     lines.append("")
     serialized = "\n".join(lines).encode("utf-8")

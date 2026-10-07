@@ -79,6 +79,13 @@ assets:
   tajweed-rules:
     version: "^0.4.0"
     package: "itqan/tajweed-rules"
+
+  # A second language of an asset already listed above: give the entry its
+  # own key and name the asset with `asset`. See "Languages" below.
+  mushaf-madinah-en:
+    asset: mushaf-madinah
+    language: en
+    version: "^1.0.0"
 ```
 
 ### Fields
@@ -86,20 +93,24 @@ assets:
 | Field | Type | Required | Meaning |
 |---|---|---|---|
 | `schema_version` | integer | yes | Must be `1`. Identifies the manifest format. |
-| `assets` | mapping | yes | Asset slug → entry. May be empty (`assets: {}`). |
+| `assets` | mapping | yes | Entry name → entry. May be empty (`assets: {}`). |
 
 Each entry under `assets`:
 
 | Field | Type | Required | Meaning |
 |---|---|---|---|
 | `version` | string | **yes** | A version constraint — see §3. |
+| `asset` | string | no | The asset's CMS slug. Defaults to the entry's key. Non-empty string if present. |
+| `language` | string | no | The language rendition to install, as a language code (`ar`, `en`, `az`, …). Defaults to the asset's **source language**. Non-empty string if present. |
 | `package` | string | no | **Reserved.** Non-empty string if present. Inert in V1. |
 
 No other keys are accepted anywhere in the file.
 
 ### Asset identity
 
-The key is the asset's `slug` as it exists in the CMS, and it must be a **string**. `SlugField`
+The key names the entry. Unless the entry sets `asset`, the key **is** the asset's `slug` as it
+exists in the CMS — the common case, and the only one before languages existed. The key is also
+the name of the folder the entry installs into (`assets/<key>/`). It must be a **string**. `SlugField`
 permits slugs such as `true` or `123`, which as bare YAML keys resolve to a bool or an integer
 even under the YAML 1.2 Core Schema. Such slugs must be quoted (`"true"`, `"123"`); a key that
 resolves to any non-string type is rejected with a Non-String Asset Key error rather than
@@ -117,6 +128,44 @@ whitespace trimming. Arabic and other non-ASCII slugs work and are compared byte
 > than retyping it. Deliberately normalizing on either side was rejected: it would make the
 > identifier's meaning depend on which normalization library each implementation happened to
 > use.
+
+### Languages
+
+Text assets (translations, tafsirs) come in several **language renditions**: the source
+language plus any translations. Each rendition has its **own version history** — the Arabic
+`1.0` and the Azerbaijani `1.0` of one tafsir are different versions with different content. So
+an entry always resolves within exactly one rendition:
+
+- `language` omitted — the asset's source language;
+- `language: az` — the Azerbaijani rendition.
+
+A rendition the publisher has not made available to consumers (a translation still in
+progress, or one the publisher hid) cannot be installed: resolving it fails with Language Not
+Found, exactly as if it did not exist.
+
+To use **several languages of the same asset**, list one entry per language. The keys must
+differ, so every entry after the first names its asset with `asset`:
+
+```yaml
+assets:
+  tafsir-jalalayn:            # source language (Arabic)
+    version: "^2.0.0"
+  tafsir-jalalayn-en:         # English rendition of the same asset
+    asset: tafsir-jalalayn
+    language: en
+    version: "^1.3.0"
+  tafsir-jalalayn-az:         # Azerbaijani rendition
+    asset: tafsir-jalalayn
+    language: az
+    version: "~1.0"
+```
+
+Each entry has its own constraint, because each language moves on its own timeline; each is
+locked separately (§5) and installed into its own folder (`assets/tafsir-jalalayn-en/`, …).
+Two entries naming the same asset **and** language are rejected with a Duplicate Asset Entry
+error — they would always resolve to the same thing. (An entry without `language` and one with
+the source language's code spelled out are not detected as duplicates by the manifest parser;
+they are harmless, just redundant.)
 
 ### An entry must be a mapping
 
@@ -249,16 +298,20 @@ no "best effort" fallback.
 
 ### Which versions are eligible
 
-A version of an asset can be selected **only if all three** hold:
+A version of an asset can be selected **only if all four** hold:
 
-1. it belongs to the requested slug;
+1. it belongs to the requested slug **and the requested language rendition** (§2, Languages);
 2. it is **published** — a `draft` version is never selected;
-3. its name, after canonicalization, is a valid SemVer 2.0.0 version **carrying no build
+3. it has **content to serve**: an uploaded file, or entries or stored changes the file can be
+   built from. A version with none of these is skipped;
+4. its name, after canonicalization, is a valid SemVer 2.0.0 version **carrying no build
    metadata** — a version named `draft-2`, `v1.0` or `1.2.3+build1` is skipped, not repaired.
 
-There is no separate opt-in: every published version with a valid name is installable.
+There is no separate opt-in: every published version with content and a valid name is
+installable. A superseded version whose stored file was pruned still qualifies — its file is
+rebuilt from the stored changes the first time it is downloaded.
 
-Two details about condition 3, since `AssetVersion.name` is a free-text field and anything can
+Two details about condition 4, since `AssetVersion.name` is a free-text field and anything can
 end up in it:
 
 - **Build metadata excludes a version entirely.** SemVer 2.0.0 permits `1.2.3+build1`, but
@@ -280,7 +333,8 @@ and artifact packaging (#425).
 
 1. Parse and validate the manifest. Any error stops everything.
 2. Build the eligible pool for the slug.
-3. If multiple eligible `AssetVersion` records canonicalize to the same version
+3. If multiple eligible `AssetVersion` records **of the same language rendition** canonicalize
+   to the same version
    (e.g., records named `1.2` and `1.2.0`), **fail** with a named Canonical Version Collision
    error identifying the asset and requested version. This is reachable because
    `AssetVersion.name` in the backend is an unvalidated `CharField` (see Appendix). There is
@@ -324,10 +378,12 @@ reproducible state it already had.
 | Missing Required Field | an entry has no `version` |
 | Invalid Constraint Syntax | `version` is not in the §3 grammar |
 | Invalid Reserved Field | `package` present but not a non-empty string |
+| Duplicate Asset Entry | two entries name the same asset and language |
 | Unknown Asset | the slug matches no asset |
-| No Eligible Package Versions | the asset exists but has no published, SemVer-valid version |
+| Language Not Found | the asset has no consumer-available rendition in the requested language (or, with `language` omitted, no available source rendition) |
+| No Eligible Package Versions | the rendition exists but has no published, SemVer-valid version with content |
 | Unsatisfiable Version Constraint | eligible versions exist, none match |
-| Canonical Version Collision | multiple eligible `AssetVersion` records canonicalize to the same version; identifies the asset and requested version |
+| Canonical Version Collision | multiple eligible `AssetVersion` records of one language rendition canonicalize to the same version; identifies the asset and requested version. The same version name in **different** languages is normal and never collides. |
 
 Each is a distinct, named error. An error includes the asset slug, requested constraint, and
 observed candidate versions **only when that context is applicable and available**; root-level
@@ -354,6 +410,11 @@ assets:
   "tajweed-rules":
     constraint: "^0.4.0"
     version: "0.4.7"
+  "mushaf-madinah-en":
+    asset: "mushaf-madinah"
+    language: "en"
+    constraint: "^1.0.0"
+    version: "1.0.2"
   "تفسير-الجلالين":
     constraint: "3.0"
     version: "3.0.0"
@@ -367,12 +428,14 @@ because its UTF-8 bytes are all above the ASCII range.
 |---|---|---|
 | `lockfile_version` | integer | Format version of the lockfile itself. Must be `1`. |
 | `manifest_schema_version` | integer | The manifest schema this lockfile was generated against. Must be `1`. |
-| `assets` | mapping | Slug → entry. May be empty (`assets: {}`). |
+| `assets` | mapping | Entry name → entry, keyed exactly like the manifest. May be empty (`assets: {}`). |
 
-Each entry has exactly two fields:
+Each entry has two required fields and two optional ones:
 
 | Field | Type | Meaning |
 |---|---|---|
+| `asset` | string | Present only when the manifest entry sets `asset` to something other than its key; copied verbatim. |
+| `language` | string | Present only when the manifest entry sets `language`; copied verbatim. An entry that follows the source language records no `language`. |
 | `constraint` | string | The manifest's `version` value copied **verbatim** — `~1.2` stays `~1.2`. |
 | `version` | string | The resolved version, recorded in **canonical three-component** form and **never carrying build metadata** — a version published as `3.0` is recorded as `3.0.0`. Two-component values and any `+build` suffix make the lockfile `INVALID`, mirroring the eligibility rule in §4. |
 
@@ -407,8 +470,8 @@ for. So the serialization is fixed:
 | Indentation | 2 spaces, never tabs |
 | Trailing whitespace | none |
 | Top-level key order | `lockfile_version`, `manifest_schema_version`, `assets` |
-| Asset order | ascending by the slug's UTF-8 **byte** sequence |
-| Entry field order | `constraint`, then `version` |
+| Asset order | ascending by the entry name's UTF-8 **byte** sequence |
+| Entry field order | `asset`, `language` (each only when present), `constraint`, `version` |
 | Collection style | block mappings; `{}` only for an empty `assets` |
 | Blank lines | exactly one after `manifest_schema_version`; none between asset entries |
 | Quoting | asset keys and all string values use the canonical double-quoted escaping policy below; the four fixed schema keys plain |
@@ -458,8 +521,9 @@ A lockfile becomes `STALE` when:
 | Sub-state | Condition |
 |---|---|
 | Schema Version Mismatch | `manifest_schema_version` ≠ the manifest's `schema_version` |
-| Asset Key-Set Mismatch | an asset was added to or removed from the manifest |
+| Asset Key-Set Mismatch | an entry was added to or removed from the manifest |
 | Constraint Mismatch | some `constraint` no longer matches the manifest's `version` **text** |
+| Target Mismatch | some entry's `asset` or `language` no longer matches the manifest's |
 | Constraint Not Satisfied | a locked `version` no longer satisfies its recorded constraint, or violates prerelease isolation |
 
 ### What does and does not make a lockfile stale
@@ -839,7 +903,8 @@ Verified against `apps/content/models.py`. **This specification changes none of 
 |---|---|
 | Asset identity | `Asset.slug` — `SlugField(allow_unicode=True, unique=True, db_index=True)`, auto-generated in `Asset.save()` from the asset's names, with a numeric suffix on collision. |
 | Version string | `AssetVersion.name` — `CharField(max_length=255)`. |
-| Package eligibility | `AssetVersion.state == "published"`. There is no per-channel opt-in; the former `Distribution` model was removed. |
+| Package eligibility | `AssetVersion.state == "published"` with an uploaded `file_url`, entries, or stored changes. There is no per-channel opt-in; the former `Distribution` model was removed. |
+| Language rendition | `AssetVersion.asset_language` → `AssetLanguage(language, is_source, status)`. Version names are sequenced per rendition; only `status = "ready"` renditions are installable. |
 | Publisher-chosen name | Does not exist. |
 
 **One correction worth stating plainly.** Issue #416 describes `AssetVersion` as already using
