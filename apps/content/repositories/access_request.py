@@ -74,7 +74,10 @@ class AssetAccessRequestRepository:
         request.approved_at = timezone.now()
         request.approved_by = approved_by
         request.save(update_fields=["status", "approved_at", "approved_by", "updated_at"])
-        access, _created = AssetAccess.objects.get_or_create(
+        # A grant is unique per user/asset, so a re-approval after a rejected or
+        # duplicate request takes over the existing grant: it is re-linked to the
+        # approving request and refreshed to the asset's current license, unexpired.
+        access, _created = AssetAccess.objects.update_or_create(
             user=request.developer_user,
             asset=request.asset,
             defaults={

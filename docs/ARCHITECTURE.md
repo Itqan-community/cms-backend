@@ -410,8 +410,10 @@ and the other receives `409 invalid_status`.
 
 Submissions lock the asset and, when present, the latest request to prevent
 concurrent submissions from creating duplicate requests. Approval and grant
-creation commit together. A grant is unique per developer and asset; retries
-reuse it without resetting its license or expiry. Outcome emails are queued
+creation commit together. A grant is unique per developer and asset; approving a
+later request (after a rejection or a duplicate) reuses that grant, re-links it to
+the approving request, and refreshes it to the asset's current license with no
+expiry. Outcome emails are queued
 after the transaction commits.
 
 ---
