@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 import yaml
@@ -53,6 +53,7 @@ class AssetManifestEntry:
 class AssetManifest:
     schema_version: int
     assets: dict[str, AssetManifestEntry]
+    assets_dir: str | None = None
 
     @property
     def raw_constraints(self) -> dict[str, str]:
@@ -114,7 +115,7 @@ class _StrictYamlLoader(Reader, Scanner, Parser, Composer, SafeConstructor, Reso
 
 def _validate_manifest_dict(data: dict[str, Any]) -> AssetManifest:
     """Validate parsed manifest mapping against the V1 specification."""
-    allowed_top_keys = {"schema_version", "assets"}
+    allowed_top_keys = {"schema_version", "assets", "assets_dir"}
     for key in data.keys():
         if key not in allowed_top_keys:
             raise UnknownFieldError(f"Unknown top-level field: '{key}'. Allowed: {allowed_top_keys}")
@@ -135,6 +136,9 @@ def _validate_manifest_dict(data: dict[str, Any]) -> AssetManifest:
         raise MissingRequiredFieldError("Missing required top-level 'assets' field.")
 
     assets_raw = data["assets"]
+    if assets_raw is None:
+        # `assets:` with only comments under it (e.g. a fresh `itqan init` file)
+        assets_raw = {}
     if not isinstance(assets_raw, dict):
         raise YamlProfileViolationError(f"'assets' must be a mapping, got {type(assets_raw).__name__}.")
 
@@ -198,7 +202,23 @@ def _validate_manifest_dict(data: dict[str, Any]) -> AssetManifest:
             language=language_val,
         )
 
-    return AssetManifest(schema_version=schema_version_val, assets=parsed_assets)
+    return AssetManifest(
+        schema_version=schema_version_val,
+        assets=parsed_assets,
+        assets_dir=_validate_assets_dir(data["assets_dir"]) if "assets_dir" in data else None,
+    )
+
+
+def _validate_assets_dir(value: Any) -> str:
+    """``assets_dir`` must be a relative path that stays inside the project."""
+    if not isinstance(value, str) or not value.strip():
+        raise UnknownFieldError("'assets_dir' must be a non-empty string.")
+    posix, windows = PurePosixPath(value), PureWindowsPath(value)
+    if posix.is_absolute() or windows.is_absolute() or windows.drive:
+        raise UnknownFieldError(f"'assets_dir' must be relative to the manifest, got '{value}'.")
+    if ".." in posix.parts or ".." in windows.parts:
+        raise UnknownFieldError(f"'assets_dir' must stay inside the project, got '{value}'.")
+    return value
 
 
 def _optional_string_field(entry_raw: dict[str, Any], field: str, slug: str) -> str | None:

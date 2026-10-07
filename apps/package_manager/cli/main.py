@@ -19,6 +19,8 @@ from apps.package_manager.cli.lockfile import (
     serialize_lockfile,
 )
 
+DEFAULT_ASSETS_DIR = "assets"
+
 
 @click.group()
 def cli() -> None:
@@ -28,14 +30,13 @@ def cli() -> None:
 def _run_install(
     manifest_path: str,
     lockfile_path: str,
-    assets_dir: str,
+    assets_dir: str | None,
     registry_url: str,
     api_key: str | None,
     force: bool,
 ) -> int:
     m_path = Path(manifest_path)
     l_path = Path(lockfile_path)
-    a_dir = Path(assets_dir)
 
     click.echo(f"Evaluating asset declarations in {m_path}...")
     state, manifest, lockfile = evaluate_lockfile_state(m_path, l_path)
@@ -51,6 +52,11 @@ def _run_install(
     if state == LockfileState.ORPHAN:
         click.echo(f"Error: Lockfile exists at {l_path} but manifest {m_path} is missing.", err=True)
         return 1
+
+    # --assets-dir wins; otherwise the manifest's assets_dir, else "assets",
+    # both relative to the manifest's folder.
+    assert manifest is not None
+    a_dir = Path(assets_dir) if assets_dir else m_path.parent / (manifest.assets_dir or DEFAULT_ASSETS_DIR)
 
     client = RegistryClient(base_url=registry_url, api_key=api_key)
     downloader = AssetDownloader(assets_dir=a_dir)
@@ -156,9 +162,9 @@ def _run_install(
     "--assets-dir",
     "-d",
     "assets_dir",
-    default="assets",
-    show_default=True,
-    help="Target directory for downloaded assets.",
+    default=None,
+    help="Target directory for downloaded assets. Overrides the manifest's assets_dir "
+    f"(default: '{DEFAULT_ASSETS_DIR}' next to the manifest).",
 )
 @click.option(
     "--registry-url",
@@ -183,7 +189,7 @@ def _run_install(
 def install_command(
     manifest_path: str,
     lockfile_path: str,
-    assets_dir: str,
+    assets_dir: str | None,
     registry_url: str,
     api_key: str | None,
     force: bool,

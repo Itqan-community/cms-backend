@@ -61,6 +61,10 @@ exactly one manifest per repository.
 ```yaml
 schema_version: 1
 
+# Where `itqan install` puts downloaded files, relative to this file.
+# Optional; defaults to "assets".
+assets_dir: "src/assets/quran"
+
 assets:
   quran-uthmani-hafs:
     version: "^2.1.0"
@@ -93,7 +97,8 @@ assets:
 | Field | Type | Required | Meaning |
 |---|---|---|---|
 | `schema_version` | integer | yes | Must be `1`. Identifies the manifest format. |
-| `assets` | mapping | yes | Entry name → entry. May be empty (`assets: {}`). |
+| `assets_dir` | string | no | Folder the installer writes into, **relative to the manifest's folder**. Defaults to `assets`. Must not be absolute or climb out of the project with `..`. The CLI's `--assets-dir` flag overrides it for one run. It does not affect resolution or the lockfile. |
+| `assets` | mapping | yes | Entry name → entry. May be empty: `assets: {}`, or `assets:` followed only by comments (as a freshly generated file has). |
 
 Each entry under `assets`:
 

@@ -222,9 +222,17 @@ class DiscoveryClassification:
 def parse_manifest_document(raw: bytes) -> ParsedManifest:
     """Parse and validate ``itqan-assets.yaml`` (§2/§3). Raises ManifestDocumentError."""
     data = _load_single_mapping(raw, what="manifest")
-    _require_keys(data, required={"schema_version", "assets"}, what="manifest")
+    # ``assets_dir`` only says where the installer writes files; it doesn't
+    # affect resolution, so it is validated for type and otherwise ignored.
+    _optional_string(data, "assets_dir", what="Manifest")
+    _require_keys(
+        {k: v for k, v in data.items() if k != "assets_dir"},
+        required={"schema_version", "assets"},
+        what="manifest",
+    )
     schema_version = _require_version_one(data["schema_version"], field="schema_version", what="manifest")
-    assets_raw = data["assets"]
+    # ``assets:`` with only comments under it (a fresh ``itqan init`` file) is empty.
+    assets_raw = data["assets"] if data["assets"] is not None else {}
     if not isinstance(assets_raw, dict):
         raise ManifestDocumentError("assets", "Manifest assets must be a mapping.")
     assets: dict[str, ManifestEntry] = {}
