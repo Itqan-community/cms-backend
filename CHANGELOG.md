@@ -1,3 +1,37 @@
+## v0.19.0 (2026-10-07)
+
+### Feat
+
+- **content**: number tafsir and translation versions as major.minor
+- **audit**: enable history on tracked models (ITQ-33) (#431)
+- **content**: review every change, with a filter by version
+- **content**: let the source language be hidden; drop unseen assets from the gallery
+- **content**: browse any committed version read-only
+- **content**: flag the first version of each language in version lists
+- **content**: name the editor of each change on the review page
+- **content**: publish translations/tafsirs only once every change is approved
+- **content**: flag draft entries differing from published versions as "changed"
+- **content**: implement comprehensive filters for entries endpoint
+- **content**: add CSV export for templates and assets across all categories
+- **dependabot**: implement PR updater automation on AssetVersion pub… (#510)
+
+### Fix
+
+- **core**: add missing migration in audit_migrations
+- **content**: keep the version number when reversing 0071 without a label
+- **audit**: qualify AssetVersion fk reference in AssetLanguage
+- **audit**: format migrations and allow audit db in dependabot tests
+- **content**: lock a version while publishing it or changing its content
+- **content**: only the newest version of a language can be replaced or deleted
+- **content**: serve an uploaded version's file generated from its reviewed entries
+- **content**: reject uploads whose rows would be dropped unreviewed
+- **content**: give no review state to diffs computed on the fly
+- **content**: prevent cross-tenant recitation upload mutations (#511)
+
+### Refactor
+
+- **content**: stop auto-deleting idle content drafts
+
 ## v0.18.0 (2026-09-28)
 
 ### Feat
