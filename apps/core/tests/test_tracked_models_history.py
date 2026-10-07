@@ -1,7 +1,7 @@
 """Tests for django-simple-history configuration on tracked models (ITQ-33 / Issue #431).
 
 Verifies:
-1. All 28 mutable domain models across users, publishers, and content have
+1. All 27 mutable domain models across users, publishers, and content have
    HistoricalRecords configured.
 2. Historical models are registered under app_label="simple_history" to allow
    AuditRouter to route them to the audit database.
@@ -28,7 +28,6 @@ from apps.content.models import (
     AssetVersionChangeReview,
     AssetVersionEntry,
     ContentIssueReport,
-    Distribution,
     EditorialRecommendation,
     EditorialRecommendationAsset,
     MushafLayout,
@@ -62,7 +61,7 @@ TRACKED_MODELS = [
     Domain,
     PublisherMemberInvitation,
     MemberLanguage,
-    # apps.content (20 models)
+    # apps.content (19 models)
     Asset,
     AssetLanguage,
     AssetVersion,
@@ -72,7 +71,6 @@ TRACKED_MODELS = [
     AssetPreview,
     AssetAccessRequest,
     AssetAccess,
-    Distribution,
     Reciter,
     Qiraah,
     Riwayah,
@@ -95,9 +93,9 @@ EXCLUDED_MODELS = [
 
 class TrackedModelsHistoryConfigurationTests(SimpleTestCase):
     def test_tracked_models_count_where_inspected_should_equal_twenty_eight(self):
-        """Verify that exactly 28 models are included in the tracked models list."""
+        """Verify that exactly 27 models are included in the tracked models list."""
         # Arrange
-        expected_count = 28
+        expected_count = 27
 
         # Act
         actual_count = len(TRACKED_MODELS)

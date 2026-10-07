@@ -1,6 +1,6 @@
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetVersion, Distribution, VersionStateChoice
+from apps.content.models import Asset, AssetVersion, VersionStateChoice
 from apps.core.ninja_utils.errors import ItqanError
 from apps.core.tests.base import BaseTestCase
 from apps.package_manager.repositories.package_registry import PackageRegistryRepository
@@ -45,20 +45,13 @@ def _make_version(
     *,
     name: str,
     state: str = VersionStateChoice.PUBLISHED,
-    with_package_dist: bool = True,
 ) -> AssetVersion:
-    version = baker.make(
+    return baker.make(
         AssetVersion,
         asset=asset,
         name=name,
         state=state,
     )
-    if with_package_dist:
-        Distribution.objects.create(
-            asset_version=version,
-            channel=Distribution.ChannelChoice.PACKAGE,
-        )
-    return version
 
 
 def _create_asset_with_versions(
@@ -107,12 +100,6 @@ class PackageRegistryRepositoryTests(BaseTestCase):
 
     # --- get_eligible_package_versions ---
 
-    def test_get_eligible_package_versions_where_published_with_package_should_include(self):
-        asset = _make_asset(self.publisher, slug="pkg-asset")
-        version = _make_version(asset, name="1.0.0", with_package_dist=True)
-        result = list(self.repo.get_eligible_package_versions(asset))
-        self.assertEqual([version], result)
-
     def test_get_eligible_package_versions_where_draft_state_should_be_excluded(self):
         asset = _make_asset(self.publisher, slug="draft-asset")
         baker.make(
@@ -121,24 +108,24 @@ class PackageRegistryRepositoryTests(BaseTestCase):
             name="1.0.0",
             state=VersionStateChoice.DRAFT,
         )
-        Distribution.objects.create(
-            asset_version=AssetVersion.objects.get(asset=asset, state=VersionStateChoice.DRAFT),
-            channel=Distribution.ChannelChoice.PACKAGE,
-        )
         result = list(self.repo.get_eligible_package_versions(asset))
         self.assertEqual([], result)
 
-    def test_get_eligible_package_versions_where_no_package_distribution_should_be_excluded(self):
-        asset = _make_asset(self.publisher, slug="no-pkg-asset")
-        baker.make(
+    def test_get_eligible_package_versions_where_published_with_no_opt_in_should_include(self):
+        # Arrange
+        asset = _make_asset(self.publisher, slug="plain-published")
+        version = baker.make(
             AssetVersion,
             asset=asset,
             name="1.0.0",
             state=VersionStateChoice.PUBLISHED,
         )
-        # No Distribution record
+
+        # Act
         result = list(self.repo.get_eligible_package_versions(asset))
-        self.assertEqual([], result)
+
+        # Assert
+        self.assertEqual([version], result)
 
     def test_get_eligible_package_versions_where_multiple_versions_returns_all_package(self):
         asset = _make_asset(self.publisher, slug="multi-asset")
@@ -361,17 +348,37 @@ class ResolveSingleTests(BaseTestCase):
 
     # --- no eligible package versions ---
 
-    def test_resolve_where_no_package_distribution_should_return_422(self):
-        asset = _make_asset(self.publisher, slug="no-pkg")
+    def test_resolve_single_where_published_semver_version_should_resolve_with_no_opt_in(self):
+        # Arrange
+        asset = _make_asset(self.publisher, slug="plain-published")
         baker.make(
             AssetVersion,
             asset=asset,
             name="1.0.0",
             state=VersionStateChoice.PUBLISHED,
         )
-        # No Distribution record
+
+        # Act
+        result = self.service.resolve_single("plain-published", "1.0.0")
+
+        # Assert
+        self.assertEqual("1.0.0", result.canonical_version)
+
+    def test_resolve_single_where_only_draft_versions_should_return_422(self):
+        # Arrange
+        asset = _make_asset(self.publisher, slug="drafts-only")
+        baker.make(
+            AssetVersion,
+            asset=asset,
+            name="1.0.0",
+            state=VersionStateChoice.DRAFT,
+        )
+
+        # Act
         with self.assertRaises(ItqanError) as ctx:
-            self.service.resolve_single("no-pkg", "1.0.0")
+            self.service.resolve_single("drafts-only", "1.0.0")
+
+        # Assert
         self.assertEqual("no_eligible_package_versions", ctx.exception.error_name)
         self.assertEqual(422, ctx.exception.status_code)
 
@@ -481,10 +488,6 @@ class ResolveSingleTests(BaseTestCase):
             name="draft-2",
             state=VersionStateChoice.PUBLISHED,
         )
-        Distribution.objects.create(
-            asset_version=AssetVersion.objects.get(asset=asset, name="draft-2"),
-            channel=Distribution.ChannelChoice.PACKAGE,
-        )
         _make_version(asset, name="1.0.0")
         result = self.service.resolve_single("invalid-names", "1.0.0")
         self.assertEqual("1.0.0", result.canonical_version)
@@ -499,10 +502,6 @@ class ResolveSingleTests(BaseTestCase):
             name="1.0.0+build1",
             state=VersionStateChoice.PUBLISHED,
         )
-        Distribution.objects.create(
-            asset_version=AssetVersion.objects.get(asset=asset, name="1.0.0+build1"),
-            channel=Distribution.ChannelChoice.PACKAGE,
-        )
         _make_version(asset, name="1.0.0")
         result = self.service.resolve_single("build-meta", "1.0.0")
         self.assertEqual("1.0.0", result.canonical_version)
@@ -516,10 +515,6 @@ class ResolveSingleTests(BaseTestCase):
             asset=asset,
             name="1.2-beta.1",
             state=VersionStateChoice.PUBLISHED,
-        )
-        Distribution.objects.create(
-            asset_version=AssetVersion.objects.get(asset=asset, name="1.2-beta.1"),
-            channel=Distribution.ChannelChoice.PACKAGE,
         )
         _make_version(asset, name="1.0.0")
         result = self.service.resolve_single("two-cmp-pre", "1.0.0")

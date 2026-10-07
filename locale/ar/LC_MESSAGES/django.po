@@ -272,12 +272,6 @@ msgstr "عرض"
 msgid "API Access"
 msgstr "الوصول إلى واجهة البرمجة (API)"
 
-msgid "API"
-msgstr "واجهة برمجة التطبيقات"
-
-msgid "Package"
-msgstr "حزمة"
-
 msgid "Under Review"
 msgstr "قيد المراجعة"
 
@@ -1441,6 +1435,12 @@ msgstr "مرحبًا بك في نظام إتقان لإدارة المحتوى!"
 
 msgid "This is a test email to verify the email service is working correctly."
 msgstr "هذه رسالة اختبارية للتأكد من عمل خدمة البريد الإلكتروني بشكل صحيح."
+
+#~ msgid "API"
+#~ msgstr "واجهة برمجة التطبيقات"
+
+#~ msgid "Package"
+#~ msgstr "حزمة"
 
 #, python-format
 #~ msgid "Asset with id %s does not exist."

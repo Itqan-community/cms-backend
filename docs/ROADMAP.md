@@ -201,7 +201,7 @@ The dependency-management experience developers already know from `pip` / pub.de
 
 ### Notes
 
-- Builds on the existing `PACKAGE` distribution channel
+- Every published version with a SemVer name is installable; there is no separate opt-in
   ([ARCHITECTURE.md](./ARCHITECTURE.md#distribution-channels)).
 - **The packaged artifact format is a prerequisite**, not an afterthought: assets are
   versioned DB entries plus files, not bundles. Registry and installer both need that

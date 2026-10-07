@@ -12,7 +12,7 @@ from unittest.mock import patch
 from django.test import override_settings
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetVersion, CategoryChoice, Distribution, VersionStateChoice
+from apps.content.models import Asset, AssetVersion, CategoryChoice, VersionStateChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import APIKey, User
@@ -41,10 +41,6 @@ def _make_package_version(asset: Asset, *, name: str) -> AssetVersion:
         asset=asset,
         name=name,
         state=VersionStateChoice.PUBLISHED,
-    )
-    Distribution.objects.create(
-        asset_version=version,
-        channel=Distribution.ChannelChoice.PACKAGE,
     )
     return version
 

@@ -22,7 +22,7 @@ It serves as the formal contract between:
 4. [Category Payload Layouts](#4-category-payload-layouts)
 5. [Client Installation Layout under `assets/`](#5-client-installation-layout-under-assets)
 6. [Integrity Metadata, Verification & Idempotency](#6-integrity-metadata-verification--idempotency)
-7. [Mapping to `Distribution` Model & `PACKAGE` Channel](#7-mapping-to-distribution-model--package-channel)
+7. [Mapping to `AssetVersion`](#7-mapping-to-assetversion)
 8. [Artifact Build Lifecycle (On Publish vs. On Demand)](#8-artifact-build-lifecycle-on-publish-vs-on-demand)
 9. [Registry API Contract & Lockfile Evolution](#9-registry-api-contract--lockfile-evolution)
 10. [Security and Extraction Invariants](#10-security-and-extraction-invariants)
@@ -44,7 +44,7 @@ Without a defined artifact format:
 3. The **Updater (Dependabot)** cannot verify lockfile freshness against stable binary identities.
 
 ### The Solution: The Packaged Artifact
-A published `AssetVersion` distributed on the `PACKAGE` channel is compiled into a single, immutable, deterministically compressed archive:
+A published `AssetVersion` with a valid SemVer name is compiled into a single, immutable, deterministically compressed archive:
 ```
 <asset-slug>-<canonical-version>.tar.gz
 ```
@@ -280,30 +280,19 @@ flowchart TD
 
 ---
 
-## 7. Mapping to `Distribution` Model & `PACKAGE` Channel
+## 7. Mapping to `AssetVersion`
 
-### Existing Backend Model
-The CMS content app defines:
-```python
-class Distribution(BaseModel):
-    class ChannelChoice(models.TextChoices):
-        FILE_DOWNLOAD = "FILE_DOWNLOAD", _("File Download")
-        API = "API", _("API")
-        PACKAGE = "PACKAGE", _("Package")
+### Which versions are packaged
+There is no per-version opt-in. Every `AssetVersion` that is **published** and whose name is a valid SemVer version (see [`ASSET_MANIFEST.md`](./ASSET_MANIFEST.md) §4) is served by the package manager ecosystem. (An earlier `Distribution` model with a `PACKAGE` channel acted as an opt-in; it was never settable from any UI and has been removed.)
 
-    asset_version = models.ForeignKey(AssetVersion, related_name="distributions")
-    channel = models.CharField(max_length=20, choices=ChannelChoice.choices)
-```
+### Artifact metadata
+The package artifact metadata is stored on the `AssetVersion` itself:
+* **`package_artifact_file`**: Path to the built `.tar.gz` in Django Storage (e.g. `packages/<slug>/<slug>-<version>.tar.gz`).
+* **`package_checksum`**: `sha256:<hex>` string computed upon build.
+* **`package_size_bytes`**: Integer byte length of the `.tar.gz` archive.
+* **`package_status`**: State machine (`PENDING`, `BUILDING`, `READY`, `FAILED`).
 
-### Extending Package Channel Representation
-For a version to be served by the package manager ecosystem:
-1. It must have a `Distribution` record where `channel = ChannelChoice.PACKAGE`.
-2. The package artifact metadata is associated with this distribution:
-   * **`artifact_file`**: Path to the built `.tar.gz` in Django Storage (e.g. `packages/<slug>/<slug>-<version>.tar.gz`).
-   * **`checksum`**: `sha256:<hex>` string computed upon build.
-   * **`size_bytes`**: Integer byte length of the `.tar.gz` archive.
-   * **`status`**: State machine (`PENDING`, `BUILDING`, `READY`, `FAILED`).
-3. Only records with `status = READY` are served with valid `download_url` references in the Registry API.
+Only versions with `package_status = READY` are served with valid `download_url` references in the Registry API.
 
 ---
 
@@ -322,7 +311,7 @@ We explicitly adopt the **Asynchronous On-Publish** strategy over on-demand buil
 
 ### The Build Workflow
 1. **Trigger**:
-   When an admin or editor transitions an `AssetVersion.state` to `PUBLISHED` (and a `Distribution(channel=PACKAGE)` exists or is created).
+   When an admin or editor transitions an `AssetVersion.state` to `PUBLISHED`.
 2. **Background Task Execution**:
    A Celery background task (`build_package_artifact(asset_version_id)`) is queued:
    * Fetches the `AssetVersion` and all corresponding `AssetVersionEntry` records ordered by canonical Ayah sequence.
@@ -331,7 +320,7 @@ We explicitly adopt the **Asynchronous On-Publish** strategy over on-demand buil
    * Compresses the directory deterministically into `.tar.gz` (normalized timestamps and permissions).
    * Computes the SHA-256 checksum and measures the file size.
    * Saves the `.tar.gz` to Django's default storage backend (S3 / Cloud Storage / MinIO).
-   * Updates the `Distribution` record with `checksum`, `size_bytes`, `artifact_file`, and marks `status = READY`.
+   * Updates the `AssetVersion` with `package_checksum`, `package_size_bytes`, `package_artifact_file`, and marks `package_status = READY`.
 3. **Immutability Invariant**:
    Once published and packaged, an artifact is **strictly immutable**. If content edits are required, they must be published under a new SemVer version (`AssetVersion`). An existing artifact file is never modified or overwritten in place.
 
