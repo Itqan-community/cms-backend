@@ -1,7 +1,7 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetVersion, VersionStateChoice
+from apps.content.models import Asset, AssetVersion, StatusChoice, VersionStateChoice
 from apps.core.ninja_utils.errors import ItqanError
 from apps.core.tests.base import BaseTestCase
 from apps.package_manager.repositories.package_registry import PackageRegistryRepository
@@ -29,6 +29,7 @@ def _make_asset(
     restricted_for_tenant: bool = False,
 ) -> Asset:
     return Asset.objects.create(
+        status=StatusChoice.READY,
         name="Test Asset",
         slug=slug,
         publisher=publisher,

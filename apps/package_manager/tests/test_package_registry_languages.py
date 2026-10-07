@@ -28,6 +28,7 @@ from apps.quran.models import Ayah, Sura
 
 def _make_asset(publisher: Publisher, *, slug: str) -> Asset:
     return Asset.objects.create(
+        status=StatusChoice.READY,
         name="Test Asset",
         slug=slug,
         publisher=publisher,

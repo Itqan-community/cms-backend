@@ -300,7 +300,7 @@ no "best effort" fallback.
 
 A version of an asset can be selected **only if all four** hold:
 
-1. it belongs to the requested slug **and the requested language rendition** (§2, Languages);
+1. it belongs to the requested slug — an asset in `ready` status — **and the requested language rendition** (§2, Languages);
 2. it is **published** — a `draft` version is never selected;
 3. it has **content to serve**: an uploaded file, or entries or stored changes the file can be
    built from. A version with none of these is skipped;
@@ -379,7 +379,7 @@ reproducible state it already had.
 | Invalid Constraint Syntax | `version` is not in the §3 grammar |
 | Invalid Reserved Field | `package` present but not a non-empty string |
 | Duplicate Asset Entry | two entries name the same asset and language |
-| Unknown Asset | the slug matches no asset |
+| Unknown Asset | the slug matches no asset available to consumers — an asset the publisher keeps in `draft` status is reported exactly like a missing one |
 | Language Not Found | the asset has no consumer-available rendition in the requested language (or, with `language` omitted, no available source rendition) |
 | No Eligible Package Versions | the rendition exists but has no published, SemVer-valid version with content |
 | Unsatisfiable Version Constraint | eligible versions exist, none match |
