@@ -349,3 +349,34 @@ def test_classify_where_empty_manifest_and_empty_lockfile_is_fresh():
         b"schema_version: 1\nassets: {}\n", b"lockfile_version: 1\nmanifest_schema_version: 1\nassets: {}\n"
     )
     assert result.state == "FRESH"
+
+
+def test_parse_manifest_where_assets_dir_given_should_accept_it():
+    # Arrange
+    text = 'schema_version: 1\nassets_dir: "public/quran"\nassets:\n  tafsir:\n    version: "^1.0.0"\n'
+
+    # Act
+    manifest = parse_manifest_document(text.encode())
+
+    # Assert
+    assert set(manifest.assets) == {"tafsir"}
+
+
+def test_parse_manifest_where_assets_dir_not_string_should_reject():
+    # Arrange
+    text = "schema_version: 1\nassets_dir: 5\nassets: {}\n"
+
+    # Act / Assert
+    with pytest.raises(ManifestDocumentError):
+        parse_manifest_document(text.encode())
+
+
+def test_parse_manifest_where_assets_block_only_has_comments_should_be_empty():
+    # Arrange
+    text = 'schema_version: 1\nassets:\n  # tafsir:\n  #   version: "^1.0.0"\n'
+
+    # Act
+    manifest = parse_manifest_document(text.encode())
+
+    # Assert
+    assert manifest.assets == {}
