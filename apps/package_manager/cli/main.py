@@ -10,7 +10,8 @@ import click
 
 from apps.package_manager.cli.client import RegistryClient, ResolvedAssetPayload
 from apps.package_manager.cli.downloader import AssetDownloader
-from apps.package_manager.cli.exceptions import ItqanCliError
+from apps.package_manager.cli.exceptions import ItqanCliError, RegistryApiError
+from apps.package_manager.cli.init_template import pick_samples, render_fallback, render_from_catalog
 from apps.package_manager.cli.lockfile import (
     AssetLockfile,
     LockfileEntry,
@@ -18,6 +19,7 @@ from apps.package_manager.cli.lockfile import (
     evaluate_lockfile_state,
     serialize_lockfile,
 )
+from apps.package_manager.cli.manifest import parse_manifest_content, validate_assets_dir
 
 DEFAULT_ASSETS_DIR = "assets"
 
@@ -215,6 +217,72 @@ def install_command(
 
 # Alias: `itqan sync` runs `install`
 cli.add_command(install_command, name="sync")
+
+
+@cli.command("init")
+@click.option(
+    "--manifest",
+    "-m",
+    "manifest_path",
+    default="itqan-assets.yaml",
+    show_default=True,
+    help="Path of the manifest to create.",
+)
+@click.option(
+    "--assets-dir",
+    "-d",
+    "assets_dir",
+    default=DEFAULT_ASSETS_DIR,
+    show_default=True,
+    help="Folder, relative to the manifest, that `itqan install` downloads into.",
+)
+@click.option(
+    "--registry-url",
+    envvar="ITQAN_REGISTRY_URL",
+    default="https://cms.itqan.dev",
+    show_default=True,
+    help="URL of the Itqan Package Registry API.",
+)
+@click.option(
+    "--api-key",
+    envvar="ITQAN_API_KEY",
+    default=None,
+    help="API key; without one, only open-access assets are suggested.",
+)
+@click.option("--force", "-f", is_flag=True, default=False, help="Overwrite an existing manifest.")
+def init_command(manifest_path: str, assets_dir: str, registry_url: str, api_key: str | None, force: bool) -> None:
+    """Create itqan-assets.yaml with a few real assets from the registry.
+
+    If the registry can't be reached, writes the same file with commented-out
+    example entries instead.
+    """
+    m_path = Path(manifest_path)
+    if m_path.exists() and not force:
+        click.echo(f"Error: {m_path} already exists. Use --force to overwrite it.", err=True)
+        sys.exit(1)
+
+    try:
+        validate_assets_dir(assets_dir)
+        client = RegistryClient(base_url=registry_url, api_key=api_key)
+        samples = pick_samples(client.list_packages(open_access=None if api_key else True))
+        if samples:
+            content = render_from_catalog(samples, assets_dir)
+        else:
+            click.echo("Warning: the registry has no installable assets yet; writing commented examples.", err=True)
+            content = render_fallback(assets_dir, reason="The registry had no installable assets,")
+    except RegistryApiError as exc:
+        click.echo(f"Warning: Could not reach the registry ({exc.message}); writing commented examples.", err=True)
+        samples = []
+        content = render_fallback(assets_dir, reason="Could not reach the registry,")
+    except ItqanCliError as exc:
+        click.echo(f"Error: {exc.message}", err=True)
+        sys.exit(exc.exit_code)
+
+    parse_manifest_content(content.encode("utf-8"))  # never write a manifest `install` would reject
+    m_path.parent.mkdir(parents=True, exist_ok=True)
+    m_path.write_text(content, encoding="utf-8")
+    click.echo(f"Created {m_path} with {len(samples)} sample asset(s).")
+    click.echo("Edit it as needed, then run `itqan install` to download the assets.")
 
 
 if __name__ == "__main__":

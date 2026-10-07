@@ -27,6 +27,25 @@ class ResolvedAssetPayload:
         return self.name or self.slug
 
 
+@dataclass(frozen=True, slots=True)
+class CatalogLanguage:
+    language: str
+    is_source: bool
+    latest_version: str
+
+
+@dataclass(frozen=True, slots=True)
+class CatalogPackage:
+    """One installable asset from GET /packages/."""
+
+    slug: str
+    name: str
+    category: str
+    is_open_access: bool
+    languages: tuple[CatalogLanguage, ...]
+    publisher_name: str | None = None
+
+
 class RegistryClient:
     """HTTP Client for Itqan Package Registry API."""
 
@@ -62,6 +81,48 @@ class RegistryClient:
         if self.api_key:
             headers["X-API-Key"] = self.api_key
         return headers
+
+    def list_packages(self, *, open_access: bool | None = None, page_size: int = 50) -> list[CatalogPackage]:
+        """Call GET /packages/ for the first page of installable assets.
+
+        Raises:
+            RegistryApiError when the registry can't be reached or answers badly.
+        """
+        params: dict[str, str] = {"page_size": str(page_size)}
+        if open_access is not None:
+            params["open_access"] = "true" if open_access else "false"
+        try:
+            response = self.session.get(
+                f"{self.base_url}/packages/", params=params, headers=self._headers(), timeout=self.timeout
+            )
+        except requests.RequestException as exc:
+            raise RegistryApiError(f"Failed to connect to package registry at {self.base_url}: {exc}") from exc
+        if response.status_code != 200:
+            raise RegistryApiError(
+                f"Registry catalog request failed with status {response.status_code}",
+                status_code=response.status_code,
+            )
+        try:
+            return [
+                CatalogPackage(
+                    slug=item["slug"],
+                    name=item["name"],
+                    category=item["category"],
+                    is_open_access=item["is_open_access"],
+                    publisher_name=item.get("publisher_name"),
+                    languages=tuple(
+                        CatalogLanguage(
+                            language=lang["language"],
+                            is_source=lang["is_source"],
+                            latest_version=lang["latest_version"],
+                        )
+                        for lang in item["languages"]
+                    ),
+                )
+                for item in response.json()["results"]
+            ]
+        except (ValueError, KeyError, TypeError) as exc:
+            raise RegistryApiError(f"Failed to parse registry catalog response: {exc}") from exc
 
     def resolve_manifest(self, assets: dict[str, str | dict[str, str]]) -> list[ResolvedAssetPayload]:
         """Call POST /packages/resolve/manifest/ to resolve manifest constraints.
