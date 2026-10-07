@@ -163,7 +163,7 @@ def _run_install(
 @click.option(
     "--registry-url",
     envvar="ITQAN_REGISTRY_URL",
-    default="http://localhost:8000/api",
+    default="https://cms.itqan.dev",
     show_default=True,
     help="URL of the Itqan Package Registry API.",
 )
