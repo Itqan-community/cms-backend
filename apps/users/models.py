@@ -6,6 +6,7 @@ from django.db.models import CharField, EmailField
 from django.utils.translation import gettext_lazy as _
 from ninja_keys.models import AbstractAPIKey, APIKeyManager as BaseAPIKeyManager
 from phonenumber_field.modelfields import PhoneNumberField
+from simple_history.models import HistoricalRecords
 
 from apps.core.models import BaseModel
 
@@ -13,6 +14,12 @@ from .managers import UserManager
 
 
 class User(BaseModel, AbstractUser):
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     # The First and last name do not cover name patterns around the globe
     first_name = None  # type: ignore[assignment]
     last_name = None  # type: ignore[assignment]
@@ -41,6 +48,12 @@ class APIKeyManager(BaseAPIKeyManager):
 
 
 class APIKey(AbstractAPIKey):
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     objects: ClassVar[APIKeyManager] = APIKeyManager()
     name = models.CharField(
         max_length=50,
@@ -66,7 +79,14 @@ class APIKey(AbstractAPIKey):
 
 
 class Developer(BaseModel):
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="developer_profile")
+
     bio = models.TextField(_("Bio"), blank=True, help_text="Tell us more about you and your team")
     project_summary = models.TextField(_("Project Summary"), blank=True, help_text="Tell us about your project")
     project_url = models.URLField(

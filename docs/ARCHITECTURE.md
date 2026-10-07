@@ -68,10 +68,11 @@ erDiagram
     Asset }o--o| MushafLayout : "paginated by (template=page)"
 
     Asset ||--o{ AssetLanguage : "provides languages"
+    AssetLanguage }o--o| AssetVersion : "publishes (published_version)"
     AssetVersion ||--o{ AssetVersionEntry : "holds entries"
     AssetVersion ||--o{ AssetVersionChange : "records per-unit deltas"
     AssetVersionChange ||--o| AssetVersionChangeReview : "reviewed as"
-    User ||--o{ ReviewerLanguage : "assigned to review"
+    PublisherMember ||--o{ MemberLanguage : "works in languages"
 
     Asset ||--o{ AssetAccessRequest : "receives"
     Asset ||--o{ AssetAccess : "grants"
@@ -117,6 +118,8 @@ erDiagram
     }
 
     ASSETVERSION {
+        string name
+        string label
         file file_url
         int size_bytes
     }
@@ -126,6 +129,7 @@ erDiagram
         string language
         boolean is_source
         string status
+        int published_version_id
     }
 
     ASSETVERSIONENTRY {
@@ -157,8 +161,8 @@ erDiagram
         datetime reviewed_at
     }
 
-    REVIEWERLANGUAGE {
-        int user_id
+    MEMBERLANGUAGE {
+        int member_id
         string language
     }
 
@@ -225,6 +229,24 @@ Similar to ResourceVersion, **AssetVersion** tracks each uploaded file version o
 - Linked to both an Asset and a ResourceVersion
 - Contains the actual downloadable file
 - Enables tracking of which Asset version corresponds to which Resource version
+- For translations and tafsirs, an uploaded CSV is imported into per-unit entries. To
+  guide uploaders the portal serves an empty fill-in CSV per template — one row per
+  surah / ayah / word / page with a blank `text` column, in the same columns as a
+  version export, so a filled-in sheet imports as is:
+  `GET /portal/content/{category}/csv-template/?template=&mushaf_layout_id=` (asset
+  creation; `page` needs the layout) and `GET /portal/content/{category}/{slug}/csv-template/`
+  (an existing asset's template).
+- For translations and tafsirs, `name` is the **version number** (`major.minor`, e.g.
+  `7.0`) and `label` the human-readable version name. Each language has its own
+  number sequence. The server issues the number when a version is committed,
+  uploaded or restored, and it can't be edited afterwards (`PUT`/`PATCH` change only
+  `label` and `summary`). The first version in a sequence takes the caller's
+  `version_number` as its start (`version_number_required` /
+  `version_number_invalid`); later ones bump the highest existing number by `bump`:
+  `minor` (`7.1` → `7.2`, the default) or `major` (`7.1` → `8.0`). Drafts stay
+  unnumbered (`name` is blank) until they are committed. Migration
+  `0071_number_tafsir_translation_versions` renumbered existing versions from `1.0`
+  in creation order and moved their old names to `label`.
 
 ### 6. MushafLayout
 
@@ -262,22 +284,77 @@ flowchart LR
 
 Text assets (translations & tafsirs) hold one source-language rendition plus any
 number of translation renditions (`AssetLanguage`), each with its own version
-history. Every publish records a per-unit delta (`AssetVersionChange`), keyed to
-whichever unit the asset's template uses (surah, ayah, word or page).
+history. Every commit — an editor draft committed, an uploaded or replaced version
+file, a restore — records a per-unit delta (`AssetVersionChange`) against the
+language's previous version, keyed to whichever unit the asset's template uses
+(surah, ayah, word or page). Uploaded files must parse into entries
+(`content_file_unparseable` otherwise), so their content can be reviewed, and must
+not contain rows whose text would be dropped — a unit repeated with different text,
+a unit that doesn't exist, or an unreadable row (`content_file_invalid_rows`, with
+the row numbers in `extra.rows`); an upload identical to the previous version
+records no changes. The stored file is then replaced by a CSV generated
+from the parsed entries, so consumers download exactly what was reviewed.
 
-- **Availability** — a language is consumable only when the asset is `READY` and
-  the `AssetLanguage.status` is `READY`; translations start hidden until marked
-  available. Source availability follows the asset's own status.
+- **Availability** — a language is consumable only when the asset is `READY`, the
+  `AssetLanguage.status` is `READY` and it has a published version; translations
+  start hidden until marked available, which needs a published version
+  (`language_has_no_published_version`). The source language starts available and
+  is toggled the same way (`PATCH .../languages/{language}/availability/`). A
+  translation / tafsir with no available, published language is left out of the
+  gallery (`assets/`) and recommendations (`consumer_visible_q`).
+- **Commit vs publish** — committing makes a version the *head* (newest wins; what
+  the editor builds on, `is_active` in the version list) but does **not** make it
+  visible. Consumers (downloads, samples, `available_languages`, subscriber emails,
+  Dependabot) are served `AssetLanguage.published_version`, read through
+  `Asset.get_published_version()`. A holder of `PORTAL_PUBLISH_CONTENT`, assigned to
+  the language, sets it with
+  `POST /portal/content/{category}/{slug}/versions/{id}/set-published/` — only for a
+  committed (`version_not_publishable`), fully approved (`version_not_approved`)
+  version; any approved version may be published, so an older one is a rollback. A
+  version is *approved* when, for every unit, its latest change at or before that
+  version is approved (units with no change rows predate tracking and count as
+  approved); the version list exposes `is_published`, `is_approved` and
+  `pending_review_count`. The published version cannot be deleted or have its file
+  replaced (`version_is_published`), and is never pruned when a newer commit lands;
+  publishing a pruned version rebuilds its file. History is append-only: only the
+  newest committed version of a language can be deleted or have its file replaced
+  (`version_not_latest`), since later versions are stored as changes against it.
+  Publishing and those changes lock the version row, so neither can slip in after
+  the other's checks. Other categories keep newest-wins.
+- **Viewing history** — any committed version is browsable read-only through the
+  same entries endpoint the editor uses (`GET .../versions/{id}/` gives its name and
+  language). A version pruned to deltas has its entries rebuilt on first view; the
+  next commit prunes it again, along with the head it supersedes.
 - **Editing** — changing a text asset's content (the content editor, uploading a
   version file, restoring a version) needs the per-category
   `PORTAL_EDIT_TRANSLATION_CONTENT` / `PORTAL_EDIT_TAFSIR_CONTENT`; `PORTAL_UPDATE_*`
-  covers metadata only (names, descriptions, license, version name/summary,
+  covers metadata only (names, descriptions, license, version label/summary,
   language availability). Both are limited to the member's assigned languages.
-- **Review (audit-only)** — reviewers with `PORTAL_REVIEW_CONTENT`, assigned to
-  languages via `ReviewerLanguage`, approve or comment ("needs changes") each
-  `AssetVersionChange`. State is stored one-per-change as `AssetVersionChangeReview`
-  with `reviewed_by`/`reviewed_at` for auditing. Reviewing does **not** gate
-  publishing or availability, and reviewers cannot edit content.
+- **Reading entries** — the editor pages through
+  `GET /portal/content/{category}/{slug}/versions/{id}/entries/` (`page`, `page_size`,
+  optional `sura`). Its optional `filters` param is the grid's AG Grid filter model as
+  JSON, keyed by `text`, `reference_text`, `source_text` (text filters, case-insensitive and
+  ignoring Arabic vocalization — harakat, Quranic marks, alef forms, and Uthmani dagger alefs —
+  so plain typing matches Uthmani text; a unit with no stored entry counts as empty) and `surah`, `sura`, `aya` (number filters,
+  `inRange` inclusive; `surah` is the unit column's surah-name dropdown and `sura` the
+  surah-number column, both applied), each a single condition or two joined by `AND`/`OR`. Filters
+  narrow the whole unit set before paging, so `count` is the filtered total; unknown
+  columns or malformed conditions return 400 `validation_error`. On a draft, each row's
+  `changed` is true when its text differs from the language's latest committed version
+  (what a commit would record; missing rows count as empty) — the editor highlights those
+  cells. The autosave `PATCH` response carries the same flag for the rows it wrote.
+- **Review** — reviewers with `PORTAL_REVIEW_CONTENT`, assigned to languages via
+  `MemberLanguage`, approve or comment ("needs changes") each `AssetVersionChange`.
+  State is stored one-per-change as `AssetVersionChangeReview` with
+  `reviewed_by`/`reviewed_at` for auditing. Each listed change carries `edited_by`,
+  the author (`created_by`) of the commit that made it — editor commits, uploads and
+  restores all record theirs. `GET .../review/changes/` lists every change of a
+  language, including ones a later commit replaced (so every version can be
+  approved), each with `baseline_text` — the last text approved before its commit.
+  With `version=<id>` it lists the changes that make up that version (the latest
+  change per unit up to it), which is exactly what decides its approval;
+  `GET .../review/versions/` lists the versions to pick from. Approval gates
+  publishing (see above); reviewers cannot edit content.
 
 ---
 
@@ -426,7 +503,8 @@ flowchart TB
         end
 
         subgraph Storage
-            DB[(PostgreSQL)]
+            DB[(PostgreSQL - Default DB)]
+            AuditDB[(PostgreSQL - Audit DB)]
             Files[(Cloudflare R2 /<br/>Local Storage)]
         end
 
@@ -446,6 +524,7 @@ flowchart TB
     PORTAL --> Models
     Models --> Services
     Services --> DB
+    Services --> AuditDB
     Services --> Files
     Services --> Celery
     Celery --> Redis
@@ -549,6 +628,11 @@ single page.
 before folders existed keep their original flat keys — nothing in R2 was moved, and each
 row stores its own full key, so both layouts coexist permanently.
 
+Portal audio and ayah-timing uploads resolve the target recitation through the caller's
+publisher scope. Multipart sign, completion, and abort operations also parse the supplied
+storage key, require it to round-trip through the canonical key builder, and verify that
+both its asset and folder belong to that scope before mutating object storage.
+
 **Ayah-timing exports.** `sync_asset_recitations_json_file` writes one `AssetVersion`
 per folder, named after the folder slug, so variants do not overwrite each other's JSON.
 
@@ -582,6 +666,7 @@ only for un-sliced records.
 
 **See also:**
 - [Authentication Guide](./AUTHENTICATION.md) — Complete OAuth flows and security practices
+- [Audit History Guide](./audit-history.md) — Comprehensive guide on django-simple-history, dual-database routing, and tracked models
 - [Roadmap](./ROADMAP.md) — Planned features: app/user self-identification auth,
   ayah-by-ayah recitation delivery, developer-ready data views, Itqan Dependabot &
   asset package manager

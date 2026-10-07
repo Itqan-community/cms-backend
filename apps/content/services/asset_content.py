@@ -1,15 +1,19 @@
 """Business logic for per-ayah asset content editing (translations & tafsirs).
 
 Flow: open editor -> get-or-create a shared server-side *draft* version (seeded
-from the latest published version) -> edit its entries -> either *publish* the
-draft (newest-wins makes it the latest version) or *discard* it. Drafts are
-excluded from every "latest / published" query (see model + Phase 0 guards), so
-in-progress edits never leak to public/tenant/developers surfaces.
+from the latest committed version) -> edit its entries -> either *commit* the
+draft (newest-wins makes it the head) or *discard* it. Drafts are excluded from
+every "latest / published" query (see model + Phase 0 guards), so in-progress
+edits never leak to public/tenant/developers surfaces. A committed version
+reaches consumers only once its changes are approved and it is explicitly
+*published* (``set_published_version``).
 """
 
 from __future__ import annotations
 
 import logging
+import re
+from typing import Literal
 
 from django.db import IntegrityError, transaction
 from django.db.models import Q
@@ -17,6 +21,7 @@ from django.utils.translation import gettext as _
 
 from apps.content.models import (
     Asset,
+    AssetLanguage,
     AssetTemplateChoice,
     AssetVersion,
     AssetVersionEntry,
@@ -25,10 +30,16 @@ from apps.content.models import (
     VersionStateChoice,
 )
 from apps.content.repositories.asset_content import AssetContentRepository
-from apps.content.services.asset_content_import import AssetContentParseError, parse_content_file
-from apps.content.services.asset_templates import UnitSpec, unit_spec_for
+from apps.content.repositories.asset_review import AssetReviewRepository
+from apps.content.services.asset_content_import import (
+    AssetContentInvalidRowsError,
+    AssetContentParseError,
+    parse_content_file,
+)
+from apps.content.services.asset_templates import EntryFilters, UnitSpec, unit_spec_for
 from apps.content.tasks import notify_asset_version_created
 from apps.core.ninja_utils.errors import ItqanError
+from apps.dependabot.tasks import dispatch_dependabot_updates_for_version
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +94,21 @@ def import_uploaded_file_into_entries(version: AssetVersion, *, strict: bool = F
         return
     spec = unit_spec_for(version.asset)
     try:
-        parsed = parse_content_file(raw, spec, version.asset)
+        parsed = parse_content_file(raw, spec, version.asset, strict=strict)
+    except AssetContentInvalidRowsError as exc:
+        # Only raised in strict mode: rows whose text a lenient parse would drop
+        # could reach consumers without ever being reviewed.
+        logger.info(f"Uploaded file has invalid rows [version_id={version.pk}, rows={list(exc.rows)}]")
+        shown = ", ".join(str(row) for row in list(exc.rows)[:10])
+        raise ItqanError(
+            error_name="content_file_invalid_rows",
+            message=_(
+                "Some rows can't be used: they repeat a unit with different text, name a unit that doesn't "
+                "exist, or can't be read. Fix row(s) {rows} and upload again."
+            ).format(rows=shown + (" …" if len(exc.rows) > 10 else "")),
+            status_code=400,
+            extra={"rows": {str(row): reason for row, reason in exc.rows.items()}},
+        ) from exc
     except AssetContentParseError as exc:
         logger.info(f"Uploaded file not parsed into entries [version_id={version.pk}, reason={exc}]")
         if strict:
@@ -95,6 +120,56 @@ def import_uploaded_file_into_entries(version: AssetVersion, *, strict: bool = F
         return
     entries_count = AssetContentRepository().replace_entries_from_parsed(version, spec, parsed)
     logger.info(f"Uploaded file imported into entries [version_id={version.pk}, entries={entries_count}]")
+
+
+def forbid_published_version_change(version: AssetVersion) -> None:
+    """Consumers are served the published version, so its content cannot be
+    replaced and it cannot be deleted — publish another version first."""
+    if AssetLanguage.objects.filter(published_version=version).exists():
+        raise ItqanError(
+            error_name="version_is_published",
+            message=_("This version is published. Publish another version first."),
+            status_code=400,
+        )
+
+
+def forbid_history_rewrite(version: AssetVersion) -> None:
+    """Only the newest committed version of a language may be replaced or deleted.
+
+    History is append-only: each commit's stored changes are a delta against its
+    predecessor, which is what approval (``pending_units_by_version``) and the
+    reconstruction of pruned versions replay. Rewriting or removing a version
+    that later versions build on would silently change what those versions
+    contain — and could make unreviewed text look approved in them.
+    """
+    if version.state != VersionStateChoice.PUBLISHED:
+        return  # drafts are not part of the history
+    later = AssetVersion.objects.filter(
+        asset_id=version.asset_id,
+        asset_language_id=version.asset_language_id,
+        state=VersionStateChoice.PUBLISHED,
+    ).filter(Q(created_at__gt=version.created_at) | Q(created_at=version.created_at, id__gt=version.id))
+    if later.exists():
+        raise ItqanError(
+            error_name="version_not_latest",
+            message=_("Only the newest version can be changed or deleted, because later versions are built on it."),
+            status_code=400,
+        )
+
+
+def lock_version_for_content_change(version: AssetVersion) -> AssetVersion:
+    """Lock ``version``'s row and check its content may still change.
+
+    Must run inside a transaction. Publishing takes the same lock, so a file
+    replacement or deletion and a publish of the same version are serialized and
+    the later one re-checks against the other's outcome — a version can't be
+    published and then changed underneath consumers, or changed after its
+    approval was checked.
+    """
+    locked = AssetVersion.objects.select_for_update().get(pk=version.pk)
+    forbid_published_version_change(locked)
+    forbid_history_rewrite(locked)
+    return locked
 
 
 def set_version_language(version: AssetVersion, language: str | None) -> None:
@@ -112,6 +187,62 @@ def set_version_language(version: AssetVersion, language: str | None) -> None:
     if version.asset_language_id != asset_language.id:
         version.asset_language = asset_language
         version.save(update_fields=["asset_language", "updated_at"])
+
+
+VersionBump = Literal["minor", "major"]
+
+# A tafsir / translation version number: "major.minor", e.g. "7.0".
+_VERSION_NUMBER_RE = re.compile(r"^(\d{1,9})\.(\d{1,9})$")
+
+
+def parse_version_number(value: str) -> tuple[int, int] | None:
+    """``"7.10"`` -> ``(7, 10)``; ``None`` when ``value`` is not a version number."""
+    match = _VERSION_NUMBER_RE.match(value.strip())
+    if match is None:
+        return None
+    return int(match.group(1)), int(match.group(2))
+
+
+def next_version_number(existing_names: list[str], *, start: str | None, bump: VersionBump) -> str:
+    """The number the next version in a sequence gets.
+
+    An empty sequence starts at the caller-chosen ``start``; otherwise the highest
+    existing number is bumped (minor: 7.1 -> 7.2, major: 7.1 -> 8.0) and ``start``
+    is ignored.
+    """
+    numbers = [number for number in map(parse_version_number, existing_names) if number is not None]
+    if numbers:
+        major, minor = max(numbers)
+        return f"{major + 1}.0" if bump == "major" else f"{major}.{minor + 1}"
+    if not (start or "").strip():
+        raise ItqanError(
+            error_name="version_number_required",
+            message=_("A starting version number is required for the first version."),
+            status_code=400,
+        )
+    parsed = parse_version_number(start)
+    if parsed is None:
+        raise ItqanError(
+            error_name="version_number_invalid",
+            message=_("Version number must be in the form major.minor, e.g. 7.0."),
+            status_code=400,
+        )
+    return f"{parsed[0]}.{parsed[1]}"
+
+
+def issue_version_number(
+    asset: Asset, language: str | None, *, start: str | None = None, bump: VersionBump = "minor"
+) -> str:
+    """Issue the next version number in ``asset``'s sequence for ``language``.
+
+    Each (asset, language) has its own sequence; ``language=None`` means the
+    source language. Must run inside a transaction: the asset row stays locked
+    until it commits, so concurrent commits/uploads can't issue the same number.
+    """
+    repo = AssetContentRepository()
+    repo.lock_asset(asset)
+    names = repo.sequence_version_names(asset, language or asset.language)
+    return next_version_number(names, start=start, bump=bump)
 
 
 class AssetContentService:
@@ -202,17 +333,15 @@ class AssetContentService:
                         f"language={language}, newer_version_id={source.pk}]"
                     )
                     self.repo.delete_version(existing)
-                # Versions carry distinct names, so a draft must not reuse the source
-                # version's name verbatim (it would collide with it on save).
-                base_name = source.name if source else _("Draft")
-                name = self.repo.unique_version_name(locked_asset, base_name)
-                summary = source.summary if source else ""
+                # A draft has no version number yet — one is issued when it is
+                # committed. It inherits the source's name so the commit prefills it.
                 draft = self.repo.create_draft_seeded_from(
                     locked_asset,
                     source,
                     asset_language=asset_language,
-                    name=name,
-                    summary=summary,
+                    name="",
+                    label=source.label if source else "",
+                    summary=source.summary if source else "",
                     created_by_id=created_by_id,
                     mushaf_version=mushaf,
                 )
@@ -266,6 +395,7 @@ class AssetContentService:
         offset: int,
         limit: int,
         sura: int | None = None,
+        filters: EntryFilters | None = None,
         publisher_q: Q | None = None,
     ) -> tuple[list[dict], int]:
         """One page of the template's canonical units with stored text overlaid.
@@ -278,6 +408,13 @@ class AssetContentService:
         carries ``source_text`` — the source language's latest published text for
         the same unit — as a read-only reference, same as the previous per-ayah
         editor did (see the now-superseded ``get_entries``).
+
+        ``filters`` (the grid's column filters) narrow the whole unit set before
+        the page is cut, so the returned count is the filtered total.
+
+        A committed version that was pruned to deltas has its entries rebuilt on
+        first view (see ``AssetContentRepository.ensure_entries``), so history is
+        browsed and filtered exactly like the current version.
         """
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
         version = self.repo.get_version(asset, version_id)
@@ -287,12 +424,26 @@ class AssetContentService:
                 message=_("Version with id {id} not found.").format(id=version_id),
                 status_code=404,
             )
+        if version.state == VersionStateChoice.PUBLISHED and not version.entries.exists():
+            self.repo.ensure_entries(version)
 
         spec = unit_spec_for(asset)
-        units, total = spec.units_page(asset, offset=offset, limit=limit, sura=sura)
+        source_version = self._source_version(asset, version)
+        units, total = spec.units_page(
+            asset,
+            offset=offset,
+            limit=limit,
+            sura=sura,
+            filters=filters,
+            version=version,
+            source_version=source_version,
+        )
         unit_ids = [unit.unit_id for unit in units]
         text_by_unit = self.repo.entry_text_map(version, spec, unit_ids)
-        source_text_by_unit = self._resolve_source_text(asset, version, spec, unit_ids)
+        source_text_by_unit = (
+            self.repo.entry_text_map(source_version, spec, unit_ids) if source_version is not None else {}
+        )
+        changed_units = self._changed_units(asset, version, spec, text_by_unit, unit_ids)
 
         rows = [
             {
@@ -305,10 +456,33 @@ class AssetContentService:
                 "text": text_by_unit.get(unit.unit_id, ""),
                 "source_text": source_text_by_unit.get(unit.unit_id),
                 "order": unit.order,
+                "changed": unit.unit_id in changed_units,
             }
             for unit in units
         ]
         return rows, total
+
+    def _changed_units(
+        self,
+        asset: Asset,
+        version: AssetVersion,
+        spec: UnitSpec,
+        text_by_unit: dict[int, str],
+        unit_ids: list[int],
+    ) -> set[int]:
+        """Units whose draft text differs from the language's latest published
+        version — what a commit would record (added, modified or removed).
+
+        A unit missing from either side reads as empty text, so an empty draft row
+        with nothing published is unchanged, and clearing published text is a
+        change. Only drafts are compared; any other version reports no changes.
+        """
+        if version.state != VersionStateChoice.DRAFT:
+            return set()
+        language = version.asset_language.language if version.asset_language_id else asset.language
+        head = asset.get_latest_version(language)
+        published = self.repo.published_text_map(head, spec, unit_ids) if head is not None else {}
+        return {unit_id for unit_id in unit_ids if (text_by_unit.get(unit_id) or "") != (published.get(unit_id) or "")}
 
     def _resolve_source_text(
         self, asset: Asset, version: AssetVersion, spec: UnitSpec, unit_ids: list[int]
@@ -320,13 +494,18 @@ class AssetContentService:
         ``source_text`` should read ``None``, which an empty map already gives
         via ``.get()``.
         """
-        lang = version.asset_language
-        if lang is None or lang.is_source:
-            return {}
-        source_version = asset.get_latest_version(asset.language)
+        source_version = self._source_version(asset, version)
         if source_version is None:
             return {}
         return self.repo.entry_text_map(source_version, spec, unit_ids)
+
+    def _source_version(self, asset: Asset, version: AssetVersion) -> AssetVersion | None:
+        """The source language's latest published version a translation reads its
+        reference text from; None when ``version`` is the source or none is published."""
+        lang = version.asset_language
+        if lang is None or lang.is_source:
+            return None
+        return asset.get_latest_version(asset.language)
 
     def get_patch_response_context(
         self,
@@ -335,13 +514,14 @@ class AssetContentService:
         version_id: int,
         changed: list[AssetVersionEntry],
         publisher_q: Q | None = None,
-    ) -> tuple[str, dict[int, str]]:
-        """``(asset.template, source_text_by_unit)`` for shaping a patch response.
+    ) -> tuple[str, dict[int, str], set[int]]:
+        """``(asset.template, source_text_by_unit, changed_units)`` for shaping a
+        patch response.
 
-        Uses the same source-text overlay rule as ``get_entries_page``, resolved
-        once for the whole patched batch rather than per row, so the autosave
-        response matches what the next GET would show instead of going blank
-        until the page is reloaded.
+        Uses the same source-text overlay and changed rules as
+        ``get_entries_page``, resolved once for the whole patched batch rather
+        than per row, so the autosave response matches what the next GET would
+        show instead of going blank until the page is reloaded.
         """
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
         version = self.repo.get_version(asset, version_id)
@@ -354,7 +534,9 @@ class AssetContentService:
         spec = unit_spec_for(asset)
         unit_ids = [entry.unit_id for entry in changed if entry.unit_id is not None]
         source_text_by_unit = self._resolve_source_text(asset, version, spec, unit_ids)
-        return asset.template, source_text_by_unit
+        text_by_unit = {entry.unit_id: entry.text for entry in changed if entry.unit_id is not None}
+        changed_units = self._changed_units(asset, version, spec, text_by_unit, unit_ids)
+        return asset.template, source_text_by_unit, changed_units
 
     def get_version_or_404(
         self,
@@ -433,10 +615,18 @@ class AssetContentService:
         version_id: int,
         *,
         message: str,
+        label: str | None = None,
+        version_number: str | None = None,
+        bump: VersionBump = "minor",
         publisher_q: Q | None = None,
     ) -> AssetVersion:
-        """Commit a draft: publish it as the latest version with a required message
-        (stored as the version's description), then notify."""
+        """Commit a draft as the latest version with a required message (stored as
+        the version's description). Consumers do not see it until it is approved
+        and published (``set_published_version``), so nobody is notified here.
+
+        Committing issues the draft's version number: ``version_number`` starts the
+        language's sequence when it has no versions yet, otherwise the latest number
+        is bumped by ``bump``. ``label`` (when given) replaces the draft's name."""
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
         draft = self._get_editable_draft_or_400(asset, version_id)
         if not draft.content_edited:
@@ -452,9 +642,12 @@ class AssetContentService:
                 status_code=400,
             )
         draft.summary = message.strip()
-        published = self.repo.publish_draft(draft)
-        logger.info(f"Draft committed [version_id={published.pk}, asset_id={asset.pk}]")
-        transaction.on_commit(lambda: notify_asset_version_created.delay(published.pk))
+        if label is not None:
+            draft.label = label.strip()
+        with transaction.atomic():
+            draft.name = issue_version_number(asset, draft.asset_language.language, start=version_number, bump=bump)
+            published = self.repo.publish_draft(draft)
+        logger.info(f"Draft committed [version_id={published.pk}, asset_id={asset.pk}, name={published.name}]")
         return published
 
     def discard_draft(
@@ -476,11 +669,13 @@ class AssetContentService:
         category: CategoryChoice,
         version_id: int,
         *,
+        bump: VersionBump = "minor",
         created_by_id: int | None = None,
         publisher_q: Q | None = None,
     ) -> AssetVersion:
-        """Restore a published version's content as a new version, making it the
-        latest (active) one for its language."""
+        """Restore a committed version's content as a new version, making it the
+        latest one (the head) for its language. Like any commit, it is reviewed
+        and published separately, and gets the next version number (by ``bump``)."""
         version = self.get_version_or_404(slug, category, version_id, publisher_q=publisher_q)
         if version.state != VersionStateChoice.PUBLISHED:
             raise ItqanError(
@@ -488,7 +683,62 @@ class AssetContentService:
                 message=_("Only published versions can be restored."),
                 status_code=400,
             )
-        restored = self.repo.restore_version(version, created_by_id=created_by_id)
+        language = version.asset_language.language if version.asset_language_id else version.asset.language
+        with transaction.atomic():
+            name = issue_version_number(version.asset, language, bump=bump)
+            restored = self.repo.restore_version(version, name=name, created_by_id=created_by_id)
         logger.info(f"Version restored [source_version_id={version.pk}, new_version_id={restored.pk}]")
-        notify_asset_version_created.delay(restored.pk)
         return restored
+
+    def set_published_version(
+        self,
+        slug: str,
+        category: CategoryChoice,
+        version_id: int,
+        *,
+        publisher_q: Q | None = None,
+    ) -> AssetVersion:
+        """Make a fully approved committed version the one consumers see for its
+        language. Any approved version may be published, including an older one
+        (a rollback). Re-publishing the current version is a no-op."""
+        asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
+        version = self.get_version_or_404(slug, category, version_id, publisher_q=publisher_q)
+        with transaction.atomic():
+            # Same lock as a file replacement or deletion (lock_version_for_content_change):
+            # the approval checked here is the content that gets published.
+            version = (
+                AssetVersion.objects.select_related("asset_language", "asset")
+                .select_for_update(of=("self",))
+                .get(pk=version.pk)
+            )
+            return self._publish_locked(asset, version)
+
+    def _publish_locked(self, asset: Asset, version: AssetVersion) -> AssetVersion:
+        """``set_published_version`` once ``version``'s row is locked."""
+        if version.state != VersionStateChoice.PUBLISHED:
+            raise ItqanError(
+                error_name="version_not_publishable",
+                message=_("Only committed versions can be published."),
+                status_code=400,
+            )
+        language = version.resolved_language
+        pending = AssetReviewRepository().pending_units_by_version(asset, language).get(version.pk, 0)
+        if pending:
+            raise ItqanError(
+                error_name="version_not_approved",
+                message=_("This version has {count} change(s) that are not approved yet.").format(count=pending),
+                status_code=400,
+            )
+        rendition = version.asset_language or asset.get_or_create_source_language()
+        if rendition.published_version_id == version.pk:
+            return version
+        previously_published_id = rendition.published_version_id
+        self.repo.set_published_version(rendition, version)
+        logger.info(
+            f"Version published [version_id={version.pk}, asset_id={asset.pk}, language={language}, "
+            f"previous_version_id={previously_published_id}]"
+        )
+        if previously_published_id is not None:
+            transaction.on_commit(lambda: notify_asset_version_created.delay(version.pk))
+        transaction.on_commit(lambda: dispatch_dependabot_updates_for_version.delay(version.pk))
+        return version

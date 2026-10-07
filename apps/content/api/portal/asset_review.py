@@ -8,10 +8,12 @@ from pydantic import AwareDatetime
 from apps.content.api.portal.asset_content import _CATEGORY_CONFIG
 from apps.content.models import (
     AssetTemplateChoice,
+    AssetVersion,
     AssetVersionChange,
     AssetVersionChangeReview,
     CategoryChoice,
 )
+from apps.content.repositories.asset_review import AssetReviewRepository
 from apps.content.services.asset_review import AssetReviewService
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
@@ -29,6 +31,20 @@ def _review_of(obj: AssetVersionChange) -> AssetVersionChangeReview | None:
         return obj.review
     except AssetVersionChangeReview.DoesNotExist:
         return None
+
+
+def pending_review_count(obj: AssetVersion, context: dict) -> int:
+    """Units of ``obj`` awaiting approval (0 = fully approved, publishable).
+
+    Memoized on the request per (asset, language), so a version list runs the
+    approval pass once rather than once per row.
+    """
+    cache = context["request"].__dict__.setdefault("_pending_units_by_version", {})
+    language = obj.resolved_language
+    key = (obj.asset_id, language)
+    if key not in cache:
+        cache[key] = AssetReviewRepository().pending_units_by_version(obj.asset, language)
+    return cache[key].get(obj.id, 0)
 
 
 def _resolve_review(category: str, request: Request) -> CategoryChoice:
@@ -56,6 +72,8 @@ class ReviewChangeOut(Schema):
     baseline_text: str
     commit_ref: str
     commit_id: int
+    # Who made the change: the author of the commit that recorded it.
+    edited_by: str | None
     review_state: str
     comment: str
     reviewed_by: str | None
@@ -89,6 +107,10 @@ class ReviewChangeOut(Schema):
     @staticmethod
     def resolve_commit_ref(obj: AssetVersionChange) -> str:
         return obj.version.name
+
+    @staticmethod
+    def resolve_edited_by(obj: AssetVersionChange) -> str | None:
+        return obj.version.created_by.name if obj.version.created_by_id else None
 
     @staticmethod
     def resolve_commit_id(obj: AssetVersionChange) -> int:
@@ -139,15 +161,48 @@ def list_review_languages(request: Request, category: str, slug: str) -> list[st
     )
 
 
+class ReviewVersionOut(Schema):
+    id: int
+    name: str
+    created_at: AwareDatetime
+
+
+@router.get(
+    "content/{category}/{slug}/review/versions/",
+    response={200: list[ReviewVersionOut], 404: _REVIEW_ERRORS},
+)
+def list_review_versions(request: Request, category: str, slug: str, language: str):
+    """The language's committed versions, newest first (the review page's version filter)."""
+    resolved = _resolve_review(category, request)
+    return AssetReviewService().list_review_versions(
+        slug, resolved, language=language, user=request.user, publisher_q=request.publisher_q()
+    )
+
+
 @router.get(
     "content/{category}/{slug}/review/changes/",
-    response={200: list[ReviewChangeOut], 404: _REVIEW_ERRORS},
+    response={200: list[ReviewChangeOut], 404: _REVIEW_ERRORS | NinjaErrorResponse[Literal["version_not_found"]]},
 )
 @paginate
-def list_review_changes(request: Request, category: str, slug: str, language: str, state: str | None = None):
+def list_review_changes(
+    request: Request,
+    category: str,
+    slug: str,
+    language: str,
+    state: str | None = None,
+    version: int | None = None,
+):
+    """Every change of the language, newest commit first — or, with ``version``,
+    the changes that make up that version (what decides whether it is approved)."""
     resolved = _resolve_review(category, request)
     return AssetReviewService().list_changes(
-        slug, resolved, language=language, user=request.user, state=state, publisher_q=request.publisher_q()
+        slug,
+        resolved,
+        language=language,
+        user=request.user,
+        state=state,
+        version_id=version,
+        publisher_q=request.publisher_q(),
     )
 
 

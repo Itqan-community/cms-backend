@@ -33,7 +33,14 @@ import logging
 from django.db.models import Count, Q
 from django.utils import timezone
 
-from apps.content.models import Asset, CategoryChoice, EditorialRecommendation, StatusChoice, UsageEvent
+from apps.content.models import (
+    Asset,
+    CategoryChoice,
+    EditorialRecommendation,
+    StatusChoice,
+    UsageEvent,
+    consumer_visible_q,
+)
 from apps.content.services.recommendations_redis import (
     get_recommendations_redis,
     personalized_key,
@@ -88,7 +95,9 @@ def _visible_asset_values() -> list[dict]:
         Asset.objects.filter(
             status=StatusChoice.READY,
             restricted_for_tenant=False,
-        ).values("id", "category", "reciter_id", "riwayah_id", "qiraah_id")
+        )
+        .filter(consumer_visible_q())
+        .values("id", "category", "reciter_id", "riwayah_id", "qiraah_id")
     )
 
 
@@ -251,11 +260,15 @@ def hydrate_visible_assets_in_order(asset_ids: list[int]) -> list[Asset]:
     if not asset_ids:
         return []
 
-    qs = Asset.objects.filter(
-        id__in=asset_ids,
-        status=StatusChoice.READY,
-        restricted_for_tenant=False,
-    ).select_related("publisher", "reciter", "riwayah", "qiraah")
+    qs = (
+        Asset.objects.filter(
+            id__in=asset_ids,
+            status=StatusChoice.READY,
+            restricted_for_tenant=False,
+        )
+        .filter(consumer_visible_q())
+        .select_related("publisher", "reciter", "riwayah", "qiraah")
+    )
 
     by_id = {a.id: a for a in qs}
     return [by_id[aid] for aid in asset_ids if aid in by_id]

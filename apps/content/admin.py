@@ -222,11 +222,11 @@ class AssetAdmin(admin.ModelAdmin):
     @admin.display(description="Download")
     def download_url_display(self, obj):
         """Display download URL with link"""
-        latest_version = obj.get_latest_version()
-        if latest_version and latest_version.file_url:
+        published = obj.get_published_version()
+        if published and published.file_url:
             return format_html(
                 '<a href="{}" target="_blank">Download</a>',
-                latest_version.file_url.url,
+                published.file_url.url,
             )
         return "No download URL"
 
@@ -572,9 +572,9 @@ class AssetAdmin(admin.ModelAdmin):
 
 @admin.register(AssetVersion)
 class AssetVersionAdmin(admin.ModelAdmin):
-    list_display = ["asset", "name", "size_bytes", "created_at"]
+    list_display = ["asset", "name", "label", "size_bytes", "created_at"]
     list_filter = ["created_at"]
-    search_fields = ["asset__name", "name"]
+    search_fields = ["asset__name", "name", "label"]
     readonly_fields = ["created_at", "updated_at"]
 
 

@@ -10,10 +10,10 @@ import csv
 import io
 import logging
 import os
-import re
 
 from django.core.files.base import ContentFile
 from django.db import transaction
+from django.db.models import Q
 from django.utils.translation import gettext as _
 
 from apps.content.models import (
@@ -59,40 +59,23 @@ class AssetContentRepository:
             )
         }
 
-    def unique_version_name(self, asset: Asset, base_name: str) -> str:
-        """Return a version name unique within the asset (versions are distinct).
+    def lock_asset(self, asset: Asset) -> Asset:
+        """Row-lock the asset for the rest of the transaction (serializes numbering)."""
+        return Asset.objects.select_for_update().get(pk=asset.pk)
 
-        Naming is "smart": if the base name ends with a number, that number is
-        incremented (``v1`` → ``v2`` → ``v3``, ``الإصدار 1`` → ``الإصدار 2``),
-        continuing until the name is free. If there is no trailing number, a
-        numeric suffix is appended (``Draft`` → ``Draft 2``). Stays within the
-        model's ``name`` max_length.
+    def sequence_version_names(self, asset: Asset, language: str) -> list[str]:
+        """Names of the committed versions in the asset's number sequence for ``language``.
+
+        Legacy versions with no ``asset_language`` belong to the source language.
         """
-        max_length = self.asset_version_model._meta.get_field("name").max_length or 255
-        existing = set(self.asset_version_model.objects.filter(asset=asset).values_list("name", flat=True))
-
-        # The last run of digits in the name (e.g. the "1" in "v1", the "2" in "v1 (2)").
-        match = re.search(r"\d+(?=\D*$)", base_name)
-        if match:
-            start, end = match.span()
-            prefix, suffix = base_name[:start], base_name[end:]
-            number = int(match.group())
-            candidate = base_name
-            while candidate in existing:
-                number += 1
-                candidate = f"{prefix}{number}{suffix}"
-            return candidate[:max_length]
-
-        # No number to bump — append " 2", " 3", …
-        if base_name not in existing:
-            return base_name[:max_length]
-        counter = 2
-        while True:
-            tail = f" {counter}"
-            candidate = f"{base_name[: max_length - len(tail)]}{tail}"
-            if candidate not in existing:
-                return candidate
-            counter += 1
+        language_q = Q(asset_language__language=language)
+        if language == asset.language:
+            language_q |= Q(asset_language__isnull=True)
+        return list(
+            self.asset_version_model.objects.filter(
+                language_q, asset=asset, state=VersionStateChoice.PUBLISHED
+            ).values_list("name", flat=True)
+        )
 
     def get_draft(self, asset: Asset, asset_language: AssetLanguage) -> AssetVersion | None:
         return self.asset_version_model.objects.filter(
@@ -111,6 +94,18 @@ class AssetContentRepository:
         lookup = {f"{spec.field}__in": unit_ids}
         rows = version.entries.filter(**lookup).values_list(spec.field, "text")
         return dict(rows)
+
+    def published_text_map(self, head: AssetVersion, spec: UnitSpec, unit_ids: list[int]) -> dict[int, str]:
+        """The latest published version's text for the given units.
+
+        The head keeps its full entries (only superseded commits are pruned), so
+        this is normally one page-sized query; a head stored only as a legacy
+        file is reconstructed in full and narrowed to the requested units.
+        """
+        if head.entries.exists():
+            return self.entry_text_map(head, spec, unit_ids)
+        snapshot = self.reconstruct_entries(head)
+        return {unit_id: snapshot[unit_id] for unit_id in unit_ids if unit_id in snapshot}
 
     @transaction.atomic
     def ensure_mushaf_coverage(self, draft: AssetVersion, mushaf_version: AssetVersion) -> int:
@@ -139,6 +134,7 @@ class AssetContentRepository:
         *,
         asset_language: AssetLanguage,
         name: str,
+        label: str = "",
         summary: str,
         created_by_id: int | None,
         mushaf_version: AssetVersion | None = None,
@@ -162,6 +158,7 @@ class AssetContentRepository:
             asset=asset,
             asset_language=asset_language,
             name=name,
+            label=label,
             summary=summary,
             state=VersionStateChoice.DRAFT,
             created_by_id=created_by_id,
@@ -285,7 +282,9 @@ class AssetContentRepository:
         matches a column the importer recognises, and the importer skips blank
         rows, so a lean export round-trips.
         """
-        return self._units_to_csv_bytes(version.asset, spec, self._entries_map(version), verbose=verbose)
+        return self._units_to_csv_bytes(
+            spec, self._entries_map(version), verbose=verbose, page_count=self.page_count(version.asset)
+        )
 
     def snapshot_to_csv_bytes(
         self, snapshot: dict[int, str], spec: UnitSpec, *, asset: Asset, verbose: bool = False
@@ -294,9 +293,23 @@ class AssetContentRepository:
         historical commit downloads). Same rows and columns as
         ``entries_to_csv_bytes``; ``snapshot`` keys are canonical ids of whichever
         unit the asset's template uses."""
-        return self._units_to_csv_bytes(asset, spec, snapshot, verbose=verbose)
+        return self._units_to_csv_bytes(spec, snapshot, verbose=verbose, page_count=self.page_count(asset))
 
-    def _units_to_csv_bytes(self, asset: Asset, spec: UnitSpec, texts: dict[int, str], *, verbose: bool) -> bytes:
+    def blank_template_csv_bytes(self, spec: UnitSpec, *, page_count: int | None) -> bytes:
+        """An empty fill-in sheet for ``spec``'s template: every unit, blank text.
+
+        Same rows and columns as a verbose export, so a filled-in sheet imports
+        as is. ``page_count`` is required for the page template only.
+        """
+        return self._units_to_csv_bytes(spec, {}, verbose=True, page_count=page_count)
+
+    @staticmethod
+    def page_count(asset: Asset) -> int | None:
+        return asset.mushaf_layout.page_count if asset.mushaf_layout_id else None
+
+    def _units_to_csv_bytes(
+        self, spec: UnitSpec, texts: dict[int, str], *, verbose: bool, page_count: int | None
+    ) -> bytes:
         """One CSV row per canonical unit of ``spec``'s template, text from ``texts``
         (blank when absent). Streams the word template's ~77k units with
         ``iterator()`` rather than materialising them."""
@@ -314,7 +327,7 @@ class AssetContentRepository:
                 writer.writerow([word_id, sura_id, aya, position, texts.get(word_id, "")])
         elif spec.template == AssetTemplateChoice.PAGE:
             writer.writerow(["page", "text"])
-            for page in range(1, asset.mushaf_layout.page_count + 1):
+            for page in range(1, (page_count or 0) + 1):
                 writer.writerow([page, texts.get(page, "")])
         elif verbose:  # ayah
             writer.writerow(["surah", "ayah", "surah_name", "ayah_text", "text"])
@@ -418,13 +431,115 @@ class AssetContentRepository:
             version.size_bytes = 0
             version.save(update_fields=["file_url", "size_bytes", "updated_at"])
 
+    def _prune_superseded(self, head: AssetVersion) -> None:
+        """Prune every older commit of ``head``'s language that still holds a full
+        snapshot down to its deltas: the head this commit superseded, and any
+        historical version whose entries were rebuilt to be viewed (``ensure_entries``).
+
+        Only commits that carry stored changes (never drop a commit that has
+        neither entries nor a delta — legacy versions are the anchors history is
+        rebuilt from), and never a published version: its file is what consumers
+        download.
+        """
+        superseded = (
+            self.asset_version_model.objects.filter(
+                asset=head.asset,
+                asset_language=head.asset_language,
+                state=VersionStateChoice.PUBLISHED,
+                changes__isnull=False,
+                entries__isnull=False,
+            )
+            .exclude(pk=head.pk)
+            .exclude(pk__in=AssetLanguage.objects.filter(published_version__isnull=False).values("published_version"))
+            .distinct()
+        )
+        for version in superseded:
+            self.prune_version_snapshot(version)
+
+    @transaction.atomic
+    def ensure_entries(self, version: AssetVersion) -> bool:
+        """Rebuild a pruned commit's full entries from its deltas so it can be
+        browsed and filtered like any other version. Returns True if rows were
+        written. The rebuilt snapshot is pruned again by the next commit."""
+        locked = self.asset_version_model.objects.select_for_update().get(pk=version.pk)
+        if locked.entries.exists():
+            return False
+        snapshot = self.reconstruct_entries(locked)
+        if not snapshot and locked.file_url:
+            snapshot = self._snapshot_from_file(locked)  # legacy file-only commit
+        spec = unit_spec_for(locked.asset)
+        unit_field = spec.field + ("_id" if spec.fk_field else "")
+        rows = [
+            AssetVersionEntry(version=locked, text=text, order=unit_id, **{unit_field: unit_id})
+            for unit_id, text in snapshot.items()
+            if text != ""
+        ]
+        AssetVersionEntry.objects.bulk_create(rows, batch_size=1000)
+        logger.info(f"Version entries rebuilt for viewing [version_id={locked.pk}, entries={len(rows)}]")
+        return bool(rows)
+
+    def store_canonical_file(self, version: AssetVersion) -> None:
+        """Replace an uploaded version's file with a CSV generated from its entries.
+
+        Reviewers approve the parsed entries; consumers download the file. Serving
+        a file built from exactly those entries means nothing the parser left out
+        of the review (formatting, extra columns, stray rows) can reach consumers.
+        The original upload is deleted once the transaction commits, so a rolled
+        back upload never leaves the version pointing at a missing file.
+        """
+        uploaded = version.file_url.name if version.file_url else None
+        content = self.entries_to_csv_bytes(version, unit_spec_for(version.asset))
+        filename = f"{version.asset.slug}-{version.name}.csv".replace(" ", "_")
+        version.file_url.save(filename, ContentFile(content), save=False)
+        version.size_bytes = len(content)
+        version.save(update_fields=["file_url", "size_bytes", "updated_at"])
+        version.asset.file_size = version.human_readable_size
+        version.asset.format = "csv"
+        version.asset.save(update_fields=["file_size", "format", "updated_at"])
+        if uploaded and uploaded != version.file_url.name:
+            storage = version.file_url.storage
+            transaction.on_commit(lambda: storage.delete(uploaded))
+
+    @transaction.atomic
+    def record_upload_changes(self, version: AssetVersion) -> None:
+        """(Re)record an uploaded version's delta vs its predecessor, so its content
+        is reviewed like an editor commit. Replacing the file re-records it, which
+        drops the reviews of the replaced content along with its change rows. An
+        upload identical to its predecessor records no changes."""
+        version.changes.all().delete()
+        self._record_changes(version, self._predecessor(version))
+
+    @transaction.atomic
+    def set_published_version(self, rendition: AssetLanguage, version: AssetVersion) -> AssetLanguage:
+        """Make ``version`` the one consumers are served for ``rendition``'s language.
+
+        A superseded commit may have been pruned to deltas (entries and file
+        dropped); consumers download the file, so it is materialized again from
+        the reconstructed snapshot first.
+        """
+        if not version.file_url:
+            snapshot = self.reconstruct_entries(version)
+            content = self.snapshot_to_csv_bytes(snapshot, unit_spec_for(version.asset), asset=version.asset)
+            filename = f"{version.asset.slug}-{version.name}.csv".replace(" ", "_")
+            version.file_url.save(filename, ContentFile(content), save=False)
+            version.size_bytes = len(content)
+            version.save(update_fields=["file_url", "size_bytes", "updated_at"])
+        rendition.published_version = version
+        rendition.save(update_fields=["published_version", "updated_at"])
+        version.asset.file_size = version.human_readable_size
+        version.asset.save(update_fields=["file_size", "updated_at"])
+        return rendition
+
     @transaction.atomic
     def publish_draft(self, draft: AssetVersion) -> AssetVersion:
-        """Flip a draft to published so newest-wins makes it the latest version.
+        """Commit a draft: flip it to published so newest-wins makes it the head.
+
+        For reviewed categories this does not make it visible to consumers — that
+        takes ``set_published_version`` once its changes are approved.
 
         Records the commit's delta (AssetVersionChange) vs the previous head, then
         prunes the previous head's full snapshot (only if it carries stored deltas,
-        so no content is ever lost). Also materializes a downloadable CSV from the
+        so no content is ever lost, and never the published version). Also materializes a downloadable CSV from the
         entries, in the asset's template columns, so consumer download paths keep
         working.
         """
@@ -444,9 +559,9 @@ class AssetContentRepository:
                 status_code=400,
             )
         draft.state = VersionStateChoice.PUBLISHED
-        # Persist name/summary too: the service may have set them from the publish
+        # Persist name/label/summary too: the service may have set them from the publish
         # payload, and they must be written (not just held in memory).
-        update_fields = ["state", "name", "summary", "updated_at"]
+        update_fields = ["state", "name", "label", "summary", "updated_at"]
         if not draft.file_url and draft.entries.exists():
             content = self.entries_to_csv_bytes(draft, unit_spec_for(draft.asset))
             filename = f"{draft.asset.slug}-{draft.name}.csv".replace(" ", "_")
@@ -462,10 +577,7 @@ class AssetContentRepository:
             asset_fields.append("format")
         draft.asset.save(update_fields=asset_fields)
 
-        # Prune the superseded head to deltas — but only if it carries stored
-        # changes (never drop a commit that has neither entries nor a delta).
-        if previous_head is not None and previous_head.changes.exists():
-            self.prune_version_snapshot(previous_head)
+        self._prune_superseded(draft)
         return draft
 
     def _predecessor(self, version: AssetVersion) -> AssetVersion | None:
@@ -524,10 +636,11 @@ class AssetContentRepository:
 
     @staticmethod
     def _review_fields(change: AssetVersionChange) -> dict:
-        """The reviewer's outcome for a stored change; absent review = unreviewed."""
+        """The reviewer's outcome for a stored change; absent review = unreviewed.
+        (Diffs computed on the fly — legacy commits, drafts — carry no review state.)"""
         review = getattr(change, "review", None)
         if review is None:
-            return {}
+            return {"review_state": "unreviewed"}
         return {
             "review_state": review.state,
             "review_comment": review.comment,
@@ -617,7 +730,7 @@ class AssetContentRepository:
         return state
 
     @transaction.atomic
-    def restore_version(self, version: AssetVersion, *, created_by_id: int | None = None) -> AssetVersion:
+    def restore_version(self, version: AssetVersion, *, name: str, created_by_id: int | None = None) -> AssetVersion:
         """Restore a commit's content as a new published version (the active one).
 
         Works whether `version` still has full entries or was pruned to deltas
@@ -641,11 +754,11 @@ class AssetContentRepository:
             # file belongs to an ayah-template asset, since templates postdate
             # the entries system, but the resolution itself is template-generic.
             snapshot = self._snapshot_from_file(version)
-        name = self.unique_version_name(asset, version.name)
         new_version = self.asset_version_model.objects.create(
             asset=asset,
             asset_language=version.asset_language,
             name=name,
+            label=version.label,
             summary=version.summary,
             state=VersionStateChoice.PUBLISHED,
             created_by_id=created_by_id,
@@ -683,8 +796,7 @@ class AssetContentRepository:
             new_version.file_url.save(filename, ContentFile(content), save=False)
             new_version.size_bytes = len(content)
             new_version.save(update_fields=["file_url", "size_bytes"])
-        if previous_head is not None and previous_head.changes.exists():
-            self.prune_version_snapshot(previous_head)
+        self._prune_superseded(new_version)
         return new_version
 
     def backfill_file_from_entries(self, version: AssetVersion) -> bool:

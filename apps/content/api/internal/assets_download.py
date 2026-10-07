@@ -75,8 +75,8 @@ def download_asset(request: Request, id: int, language: str | None = None):
     if asset.status != StatusChoice.READY or not rendition_ready:
         raise Http404(str(_("Language not available for this asset")))
 
-    # Get latest asset version (of the requested language, or the source language)
-    asset_latest_version = asset.get_latest_version(language)
+    # Get the version consumers are served (of the requested language, or the source language)
+    asset_latest_version = asset.get_published_version(language)
     if not asset_latest_version:
         raise Http404(str(_("No versions found for this asset")))
 

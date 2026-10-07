@@ -104,6 +104,7 @@ class GitHubDouble:
 
 
 class ManifestDiscoveryTest(TestCase):
+    databases = {"default", "audit"}
     private_pem: str
 
     @classmethod

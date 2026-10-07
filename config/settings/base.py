@@ -136,8 +136,8 @@ DATABASES = {
     "audit": {
         "ENGINE": config("AUDIT_DB_ENGINE", default="django.db.backends.postgresql"),
         "NAME": config("AUDIT_DB_NAME", default="itqan_audit"),
-        "USER": config("AUDIT_DB_USER", default="postgres"),
-        "PASSWORD": config("AUDIT_DB_PASSWORD", default="postgres"),
+        "USER": config("AUDIT_DB_USER", default=config("DB_USER", default="postgres")),
+        "PASSWORD": config("AUDIT_DB_PASSWORD", default=config("DB_PASSWORD", default="postgres")),
         "HOST": config("AUDIT_DB_HOST", default="localhost"),
         "PORT": config("AUDIT_DB_PORT", default="5432"),
         "OPTIONS": {
@@ -147,6 +147,11 @@ DATABASES = {
 }
 
 DATABASE_ROUTERS = ["apps.core.db_routers.AuditRouter"]
+
+MIGRATION_MODULES = {
+    "simple_history": "apps.core.audit_migrations",
+}
+
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [

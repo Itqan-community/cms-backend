@@ -1,20 +1,28 @@
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.utils import timezone
 from model_bakery import baker
 
 from apps.content.models import (
     Asset,
     AssetAccess,
     AssetAccessRequest,
+    AssetLanguage,
     AssetTemplateChoice,
     AssetVersion,
+    AssetVersionChange,
+    AssetVersionEntry,
     CategoryChoice,
     StatusChoice,
 )
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
+from apps.quran.models import Ayah, Sura
 from apps.users.models import User
+
+# A file that parses into entries: uploads must, so their content can be reviewed.
+CSV = b"surah,ayah,text\n1,1,in the name"
 
 
 class TranslationVersionBaseTest(BaseTestCase):
@@ -35,6 +43,8 @@ class TranslationVersionBaseTest(BaseTestCase):
         # assignment bypass so they behave like the existing editor groups that the
         # rollout migration grants it to. Assignment itself is covered by its own tests.
         self.give_permission(self.user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES)
+        sura = baker.make(Sura, id=1, name="الفاتحة", ayas_count=7)
+        self.ayah = baker.make(Ayah, id=1, sura=sura, number_in_sura=1, text="a")
 
 
 class TranslationVersionListTest(TranslationVersionBaseTest):
@@ -84,14 +94,15 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
         # Arrange
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
-        file = SimpleUploadedFile("translation.pdf", b"content", content_type="application/pdf")
+        file = SimpleUploadedFile("translation.csv", CSV, content_type="text/csv")
 
         # Act
         response = self.client.post(
             f"/portal/translations/{self.translation.slug}/versions/",
             data={
                 "asset_id": self.translation.id,
-                "name": "New Version",
+                "label": "New Version",
+                "version_number": "7.0",
                 "summary": "This is a new version",
                 "file": file,
             },
@@ -100,15 +111,23 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
         # Assert
         self.assertEqual(201, response.status_code, response.content)
         body = response.json()
-        self.assertEqual("New Version", body["name"])
+        self.assertEqual("7.0", body["name"])
+        self.assertEqual("New Version", body["label"])
         self.assertEqual("This is a new version", body["summary"])
         self.assertIsNotNone(body["file_url"])
-        self.assertEqual(len(b"content"), body["size_bytes"])
 
         # Verify DB
         version = AssetVersion.objects.get(id=body["id"])
         self.assertEqual(self.translation, version.asset)
-        self.assertEqual(len(b"content"), version.size_bytes)
+        # The stored file is generated from the parsed entries (what gets reviewed).
+        with version.file_url.open("rb") as handle:
+            stored = handle.read().decode("utf-8")
+        self.assertTrue(version.file_url.name.endswith(".csv"))
+        self.assertIn("1,1,in the name", stored)
+        self.assertEqual(len(stored.encode("utf-8")), version.size_bytes)
+        self.assertEqual(version.size_bytes, body["size_bytes"])
+        self.assertEqual(self.user, version.created_by)
+        self.assertEqual("Test User", body["created_by"])
 
     def test_create_version_where_asset_id_mismatch_should_return_400(self):
         # Arrange
@@ -120,7 +139,8 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
             f"/portal/translations/{self.translation.slug}/versions/",
             data={
                 "asset_id": 99999,
-                "name": "New Version",
+                "label": "New Version",
+                "version_number": "7.0",
                 "file": SimpleUploadedFile("t.pdf", b"c"),
             },
         )
@@ -134,7 +154,8 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
             f"/portal/translations/{self.translation.slug}/versions/",
             data={
                 "asset_id": self.translation.id,
-                "name": "New Version",
+                "label": "New Version",
+                "version_number": "7.0",
                 "file": SimpleUploadedFile("t.pdf", b"c"),
             },
         )
@@ -149,14 +170,15 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
             f"/portal/translations/{self.translation.slug}/versions/",
             data={
                 "asset_id": self.translation.id,
-                "name": "New Version",
+                "label": "New Version",
+                "version_number": "7.0",
                 "file": SimpleUploadedFile("t.pdf", b"c"),
             },
         )
         self.assertEqual(403, response.status_code)
         self.assertEqual("permission_denied", response.json()["error_name"])
 
-    def test_create_version_with_subscribers_should_send_email(self):
+    def test_create_version_with_subscribers_should_not_send_email_before_publishing(self):
         # Arrange
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
@@ -172,36 +194,145 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
             asset=self.translation,
             effective_license="CC0",
         )
-        file = SimpleUploadedFile("translation.pdf", b"content", content_type="application/pdf")
+        file = SimpleUploadedFile("translation.csv", CSV, content_type="text/csv")
 
         # Act
         with self.captureOnCommitCallbacks(execute=True):
             response = self.client.post(
                 f"/portal/translations/{self.translation.slug}/versions/",
-                data={"asset_id": self.translation.id, "name": "2.0.0", "summary": "New release", "file": file},
+                data={
+                    "asset_id": self.translation.id,
+                    "label": "2.0.0",
+                    "version_number": "1.0",
+                    "summary": "New release",
+                    "file": file,
+                },
             )
 
         # Assert
         self.assertEqual(201, response.status_code, response.content)
+        # Assert — an upload is not visible to consumers until it is published
         recipients = [email for m in mail.outbox for email in m.to]
-        self.assertIn("translation-subscriber@example.com", recipients)
+        self.assertNotIn("translation-subscriber@example.com", recipients)
 
     def test_create_version_without_subscribers_should_not_send_email(self):
         # Arrange
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
         baker.make(AssetVersion, asset=self.translation, name="1.0.0")  # prior version so this is an update
-        file = SimpleUploadedFile("translation.pdf", b"content", content_type="application/pdf")
+        file = SimpleUploadedFile("translation.csv", CSV, content_type="text/csv")
 
         # Act
         response = self.client.post(
             f"/portal/translations/{self.translation.slug}/versions/",
-            data={"asset_id": self.translation.id, "name": "2.0.0", "file": file},
+            data={"asset_id": self.translation.id, "label": "2.0.0", "version_number": "1.0", "file": file},
         )
 
         # Assert
         self.assertEqual(201, response.status_code, response.content)
         self.assertEqual(len(mail.outbox), 0)
+
+    def test_create_version_where_file_unparseable_should_return_400(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
+        file = SimpleUploadedFile("translation.pdf", b"content", content_type="application/pdf")
+
+        # Act
+        response = self.client.post(
+            f"/portal/translations/{self.translation.slug}/versions/",
+            data={"asset_id": self.translation.id, "label": "v2", "version_number": "1.0", "file": file},
+        )
+
+        # Assert — content that cannot be split into units cannot be reviewed
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("content_file_unparseable", response.json()["error_name"])
+        self.assertFalse(AssetVersion.objects.filter(asset=self.translation, name="v2").exists())
+
+    def test_create_version_where_rows_would_be_dropped_should_return_400_naming_them(self):
+        # Arrange — row 3 repeats 1:1 with different text, row 4 names a missing ayah
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
+        content = b"surah,ayah,text\n1,1,in the name\n1,1,hidden text\n1,99,more hidden\n"
+        file = SimpleUploadedFile("translation.csv", content, content_type="text/csv")
+
+        # Act
+        response = self.client.post(
+            f"/portal/translations/{self.translation.slug}/versions/",
+            data={"asset_id": self.translation.id, "label": "v2", "version_number": "1.0", "file": file},
+        )
+
+        # Assert — nothing whose text would be dropped (and so never reviewed) is accepted
+        self.assertEqual(400, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("content_file_invalid_rows", body["error_name"])
+        self.assertEqual({"3": "duplicate", "4": "unknown_unit"}, body["extra"]["rows"])
+        self.assertFalse(AssetVersion.objects.filter(asset=self.translation, name="v2").exists())
+
+    def test_create_version_where_extra_columns_should_store_only_the_reviewed_content(self):
+        # Arrange — an extra column the parser ignores, so reviewers never see it
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
+        content = b"surah,ayah,text,notes\n1,1,in the name,secret note\n"
+        file = SimpleUploadedFile("translation.csv", content, content_type="text/csv")
+
+        # Act
+        response = self.client.post(
+            f"/portal/translations/{self.translation.slug}/versions/",
+            data={"asset_id": self.translation.id, "label": "v2", "version_number": "1.0", "file": file},
+        )
+
+        # Assert — consumers download a file generated from the reviewed entries
+        self.assertEqual(201, response.status_code, response.content)
+        version = AssetVersion.objects.get(id=response.json()["id"])
+        with version.file_url.open("rb") as handle:
+            stored = handle.read().decode("utf-8")
+        self.assertIn("in the name", stored)
+        self.assertNotIn("secret note", stored)
+
+    def test_create_version_where_content_differs_should_record_changes_for_review(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
+        previous = baker.make(AssetVersion, asset=self.translation, name="v1")
+        baker.make(AssetVersionEntry, version=previous, ayah=self.ayah, text="old text", order=1)
+        file = SimpleUploadedFile("translation.csv", CSV, content_type="text/csv")
+
+        # Act
+        response = self.client.post(
+            f"/portal/translations/{self.translation.slug}/versions/",
+            data={"asset_id": self.translation.id, "label": "v2", "version_number": "1.0", "file": file},
+        )
+
+        # Assert
+        self.assertEqual(201, response.status_code, response.content)
+        body = response.json()
+        changes = list(AssetVersionChange.objects.filter(version_id=body["id"]))
+        self.assertEqual(1, len(changes))
+        self.assertEqual(
+            ("modified", "old text", "in the name"), (changes[0].change_type, changes[0].old_text, changes[0].new_text)
+        )
+        self.assertFalse(body["is_approved"])
+        self.assertEqual(1, body["pending_review_count"])
+
+    def test_create_version_where_identical_to_previous_should_record_no_changes(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
+        previous = baker.make(AssetVersion, asset=self.translation, name="v1")
+        baker.make(AssetVersionEntry, version=previous, ayah=self.ayah, text="in the name", order=1)
+        file = SimpleUploadedFile("translation.csv", CSV, content_type="text/csv")
+
+        # Act
+        response = self.client.post(
+            f"/portal/translations/{self.translation.slug}/versions/",
+            data={"asset_id": self.translation.id, "label": "v2", "version_number": "1.0", "file": file},
+        )
+
+        # Assert — nothing new to review
+        self.assertEqual(201, response.status_code, response.content)
+        self.assertFalse(AssetVersionChange.objects.filter(version_id=response.json()["id"]).exists())
+        self.assertTrue(response.json()["is_approved"])
 
 
 class TranslationVersionUpdateTest(TranslationVersionBaseTest):
@@ -217,7 +348,7 @@ class TranslationVersionUpdateTest(TranslationVersionBaseTest):
         self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
         payload = {
             "asset_id": self.translation.id,
-            "name": "Updated Name",
+            "label": "Updated Name",
             "summary": "Updated Summary",
         }
 
@@ -231,11 +362,11 @@ class TranslationVersionUpdateTest(TranslationVersionBaseTest):
         # Arrange
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
-        self.assertEqual("Updated Name", body["name"])
+        self.assertEqual("Updated Name", body["label"])
         self.assertEqual("Updated Summary", body["summary"])
 
         self.version.refresh_from_db()
-        self.assertEqual("Updated Name", self.version.name)
+        self.assertEqual("Updated Name", self.version.label)
 
     def test_patch_version_where_partial_data_should_return_200(self):
         # Arrange
@@ -244,7 +375,7 @@ class TranslationVersionUpdateTest(TranslationVersionBaseTest):
         from urllib.parse import urlencode
 
         payload = {
-            "name": "Patched Name",
+            "label": "Patched Name",
         }
 
         # Act
@@ -257,15 +388,35 @@ class TranslationVersionUpdateTest(TranslationVersionBaseTest):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
-        self.assertEqual("Patched Name", body["name"])
+        self.assertEqual("Patched Name", body["label"])
         self.assertEqual(self.version.summary, body["summary"])
+
+    def test_patch_version_where_name_sent_should_keep_version_number(self):
+        from urllib.parse import urlencode
+
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+
+        # Act
+        response = self.client.patch(
+            f"/portal/translations/{self.translation.slug}/versions/{self.version.id}/",
+            data=urlencode({"name": "9.9", "label": "Renamed"}),
+            content_type="application/x-www-form-urlencoded",
+        )
+
+        # Assert — the label changes, the issued number does not
+        self.assertEqual(200, response.status_code, response.content)
+        self.version.refresh_from_db()
+        self.assertEqual("Old Name", self.version.name)
+        self.assertEqual("Renamed", self.version.label)
 
     def test_update_version_where_unauthenticated_should_return_401(self):
         from urllib.parse import urlencode
 
         response = self.client.patch(
             f"/portal/translations/{self.translation.slug}/versions/{self.version.id}/",
-            data=urlencode({"name": "Updated"}),
+            data=urlencode({"label": "Updated"}),
             content_type="application/x-www-form-urlencoded",
         )
         self.assertEqual(401, response.status_code)
@@ -279,7 +430,7 @@ class TranslationVersionUpdateTest(TranslationVersionBaseTest):
         self.authenticate_user(user_without_permission)
         response = self.client.patch(
             f"/portal/translations/{self.translation.slug}/versions/{self.version.id}/",
-            data=urlencode({"name": "Updated"}),
+            data=urlencode({"label": "Updated"}),
             content_type="application/x-www-form-urlencoded",
         )
         self.assertEqual(403, response.status_code)
@@ -314,3 +465,116 @@ class TranslationVersionDeleteTest(TranslationVersionBaseTest):
         response = self.client.delete(f"/portal/translations/{self.translation.slug}/versions/{version.id}/")
         self.assertEqual(403, response.status_code)
         self.assertEqual("permission_denied", response.json()["error_name"])
+
+    def test_delete_version_where_published_should_return_400(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TRANSLATION)
+        version = baker.make(AssetVersion, asset=self.translation)
+        AssetLanguage.objects.filter(asset=self.translation).update(published_version=version)
+
+        # Act
+        response = self.client.delete(f"/portal/translations/{self.translation.slug}/versions/{version.id}/")
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("version_is_published", response.json()["error_name"])
+        self.assertTrue(AssetVersion.objects.filter(id=version.id).exists())
+
+
+class TranslationVersionFileReplaceTest(TranslationVersionBaseTest):
+    def test_patch_version_where_file_replaced_on_published_version_should_return_400(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
+        version = baker.make(AssetVersion, asset=self.translation, name="v1")
+        AssetLanguage.objects.filter(asset=self.translation).update(published_version=version)
+        file = SimpleUploadedFile("translation.csv", CSV, content_type="text/csv")
+
+        # Act
+        response = self.client.patch(
+            f"/portal/translations/{self.translation.slug}/versions/{version.id}/",
+            data={"file": file},
+        )
+
+        # Assert — the published content cannot change underneath consumers
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("version_is_published", response.json()["error_name"])
+
+    def test_patch_version_where_file_replaced_should_rerecord_changes_for_review(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
+        previous = baker.make(AssetVersion, asset=self.translation, name="v1")
+        baker.make(AssetVersionEntry, version=previous, ayah=self.ayah, text="old text", order=1)
+        version = baker.make(AssetVersion, asset=self.translation, name="v2")
+        baker.make(AssetVersionEntry, version=version, ayah=self.ayah, text="old text", order=1)
+        file = SimpleUploadedFile("translation.csv", CSV, content_type="text/csv")
+
+        # Act
+        response = self.client.patch(
+            f"/portal/translations/{self.translation.slug}/versions/{version.id}/",
+            data={"file": file},
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        change = AssetVersionChange.objects.get(version=version)
+        self.assertEqual("in the name", change.new_text)
+
+
+class TranslationVersionHistoryIsAppendOnlyTest(TranslationVersionBaseTest):
+    """Later versions build on earlier ones, so only the newest may change."""
+
+    def _two_versions(self) -> tuple[AssetVersion, AssetVersion]:
+        older = baker.make(AssetVersion, asset=self.translation, name="v1")
+        newer = baker.make(AssetVersion, asset=self.translation, name="v2")
+        AssetVersion.objects.filter(pk=newer.pk).update(created_at=older.created_at + timezone.timedelta(hours=1))
+        return older, newer
+
+    def test_patch_version_where_file_replaced_on_older_version_should_return_400(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
+        older, _newer = self._two_versions()
+        file = SimpleUploadedFile("translation.csv", CSV, content_type="text/csv")
+
+        # Act
+        response = self.client.patch(
+            f"/portal/translations/{self.translation.slug}/versions/{older.id}/",
+            data={"file": file},
+        )
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("version_not_latest", response.json()["error_name"])
+
+    def test_delete_version_where_older_version_should_return_400(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TRANSLATION)
+        older, _newer = self._two_versions()
+
+        # Act
+        response = self.client.delete(f"/portal/translations/{self.translation.slug}/versions/{older.id}/")
+
+        # Assert — kept: the newer version's changes are relative to it
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("version_not_latest", response.json()["error_name"])
+        self.assertTrue(AssetVersion.objects.filter(id=older.id).exists())
+
+    def test_delete_version_where_newest_version_should_return_204(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TRANSLATION)
+        _older, newer = self._two_versions()
+
+        # Act
+        response = self.client.delete(f"/portal/translations/{self.translation.slug}/versions/{newer.id}/")
+
+        # Assert
+        self.assertEqual(204, response.status_code, response.content)
+        self.assertFalse(AssetVersion.objects.filter(id=newer.id).exists())

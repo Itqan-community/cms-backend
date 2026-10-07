@@ -83,6 +83,8 @@ class PermissionChoice(TextChoices):
 
     # Content review
     PORTAL_REVIEW_CONTENT = "portal_review_content", _("Portal - Review Content")
+    # Choosing which fully approved version of a translation / tafsir consumers see.
+    PORTAL_PUBLISH_CONTENT = "portal_publish_content", _("Portal - Publish Content")
 
     # Content editing: changing an asset's text (the content editor, uploading or
     # restoring a version). Separate from PORTAL_UPDATE_*, which covers metadata only.

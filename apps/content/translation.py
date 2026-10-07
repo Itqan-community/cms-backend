@@ -1,5 +1,8 @@
 from modeltranslation.decorators import register
 from modeltranslation.translator import TranslationOptions
+import simple_history
+
+from apps.core.audit import AuditHistoricalRecords
 
 from .models import Asset, EditorialRecommendation, MushafLayout, Qiraah, RecitationFolder, Reciter, Riwayah
 
@@ -41,3 +44,17 @@ class EditorialRecommendationTranslationOptions(TranslationOptions):
 @register(MushafLayout)
 class MushafLayoutTranslationOptions(TranslationOptions):
     fields = ("name",)
+
+
+# Register translated models with django-simple-history using AuditHistoricalRecords
+# after modeltranslation has attached the translated fields (name_ar, name_en, etc.).
+for _translated_model in (
+    Asset,
+    Reciter,
+    Riwayah,
+    Qiraah,
+    RecitationFolder,
+    EditorialRecommendation,
+    MushafLayout,
+):
+    simple_history.register(_translated_model, records_class=AuditHistoricalRecords)

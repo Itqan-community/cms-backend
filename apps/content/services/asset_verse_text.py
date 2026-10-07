@@ -38,7 +38,7 @@ _TEXT_SENTINEL = ""  # negative-caching marker so absent verses skip storage rea
 
 def extract_verse_text(asset: Asset, surah: int, ayah: int) -> str | None:
     """
-    Text for one ayah from the asset's latest version file, with a two-tier cache.
+    Text for one ayah from the asset's published version file, with a two-tier cache.
 
     Tier 1 (payload): the parsed JSON of the selected ``AssetVersion`` file,
     keyed per asset/version -- so iterating different ayahs of the same version
@@ -56,7 +56,7 @@ def extract_verse_text(asset: Asset, surah: int, ayah: int) -> str | None:
     if asset.template != AssetTemplateChoice.AYAH:
         return None
 
-    latest = asset.get_latest_version()
+    latest = asset.get_published_version()
     # The key carries BOTH the selected row's identity and its last-modified
     # stamp at FULL microsecond precision, so stale text can never outlive the
     # version row that produced it:

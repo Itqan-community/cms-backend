@@ -166,3 +166,81 @@ class ReviewActionTest(AssetReviewApiBaseTest):
         self.assertEqual("added", row["change_type"])
         self.assertEqual("unreviewed", row["review_state"])
         self.assertIn("baseline_text", row)
+
+    def test_list_changes_should_name_the_editor_who_made_the_change(self):
+        # Arrange
+        self._auth_reviewer()
+        editor = User.objects.create_user(email="editor@example.com", name="Editor Name", is_staff=True)
+        AssetVersion.objects.filter(pk=self.version.pk).update(created_by=editor)
+
+        # Act
+        response = self.client.get(self._changes_url("?language=fr"))
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual("Editor Name", response.json()["results"][0]["edited_by"])
+
+    def test_list_changes_where_version_has_no_author_should_return_null_editor(self):
+        # Arrange
+        self._auth_reviewer()
+
+        # Act
+        response = self.client.get(self._changes_url("?language=fr"))
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertIsNone(response.json()["results"][0]["edited_by"])
+
+
+class ReviewVersionFilterTest(AssetReviewApiBaseTest):
+    def _auth_reviewer(self):
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_REVIEW_CONTENT)
+        MemberLanguage.objects.create(member=self.membership, language="fr")
+
+    def test_list_review_versions_should_return_the_languages_committed_versions_newest_first(self):
+        # Arrange
+        self._auth_reviewer()
+        v2 = baker.make(AssetVersion, asset=self.asset, asset_language=self.fr, name="v2")
+        AssetVersion.objects.filter(pk=v2.pk).update(created_at=timezone.now() + timezone.timedelta(hours=1))
+
+        # Act
+        response = self.client.get(f"/portal/content/translations/{self.asset.slug}/review/versions/?language=fr")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(["v2", "v1"], [row["name"] for row in response.json()])
+
+    def test_list_review_versions_where_language_not_assigned_should_return_403(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_REVIEW_CONTENT)
+
+        # Act
+        response = self.client.get(f"/portal/content/translations/{self.asset.slug}/review/versions/?language=fr")
+
+        # Assert
+        self.assertEqual(403, response.status_code, response.content)
+        self.assertEqual("language_not_assigned", response.json()["error_name"])
+
+    def test_list_changes_where_version_unknown_should_return_404(self):
+        # Arrange
+        self._auth_reviewer()
+
+        # Act
+        response = self.client.get(self._changes_url("?language=fr&version=999999"))
+
+        # Assert
+        self.assertEqual(404, response.status_code, response.content)
+        self.assertEqual("version_not_found", response.json()["error_name"])
+
+    def test_list_changes_where_version_given_should_return_the_changes_that_make_it_up(self):
+        # Arrange
+        self._auth_reviewer()
+
+        # Act
+        response = self.client.get(self._changes_url(f"?language=fr&version={self.version.id}"))
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual([self.change.id], [row["id"] for row in response.json()["results"]])

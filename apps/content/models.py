@@ -9,6 +9,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_countries.fields import CountryField
+from simple_history.models import HistoricalRecords
 
 from apps.core.mixins.storage import DeleteFilesOnDeleteMixin
 from apps.core.models import BaseModel
@@ -62,6 +63,11 @@ class StatusChoice(models.TextChoices):
     READY = "ready", _("Ready")
 
 
+# Categories whose content changes are reviewed: a version is visible to
+# consumers only once fully approved and explicitly published.
+REVIEWED_CATEGORIES = frozenset({CategoryChoice.TRANSLATION, CategoryChoice.TAFSIR})
+
+
 class AssetTemplateChoice(models.TextChoices):
     """Granularity of a text asset's content rows.
 
@@ -80,8 +86,10 @@ class VersionStateChoice(models.TextChoices):
 
     A ``draft`` version holds in-progress per-ayah edits and MUST be excluded
     from every "latest / published versions" query so it never surfaces on the
-    public, tenant or developers surfaces. Publishing flips it to ``published``,
-    at which point newest-wins makes it the latest version.
+    public, tenant or developers surfaces. Committing flips it to ``published``,
+    at which point newest-wins makes it the latest version (the head). For
+    reviewed categories the head is not what consumers see: that is
+    ``AssetLanguage.published_version`` (see ``Asset.get_published_version``).
     """
 
     DRAFT = "draft", _("Draft")
@@ -90,6 +98,7 @@ class VersionStateChoice(models.TextChoices):
 
 class Asset(DeleteFilesOnDeleteMixin, BaseModel):
     class MaddLevelChoice(models.TextChoices):
+
         TWASSUT = "twassut", _("Twassut")
         QASR = "qasr", _("Qasr")
 
@@ -144,7 +153,7 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
     )
 
     mushaf_layout = models.ForeignKey(
-        "MushafLayout",
+        "content.MushafLayout",
         on_delete=models.PROTECT,
         null=True,
         blank=True,
@@ -164,7 +173,7 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
 
     # Recitation-specific fields (maybe needs normalizations later)
     reciter = models.ForeignKey(
-        "Reciter",
+        "content.Reciter",
         on_delete=models.PROTECT,
         null=True,
         blank=True,
@@ -172,7 +181,7 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         help_text="Reciter for recitation assets",
     )
     riwayah = models.ForeignKey(
-        "Riwayah",
+        "content.Riwayah",
         on_delete=models.PROTECT,
         null=True,
         blank=True,
@@ -180,13 +189,14 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         help_text="Riwayah for recitation assets",
     )
     qiraah = models.ForeignKey(
-        "Qiraah",
+        "content.Qiraah",
         on_delete=models.PROTECT,
         null=True,
         blank=True,
         related_name="assets",
         help_text="Qiraah for recitation assets",
     )
+
     madd_level = models.CharField(
         max_length=50,
         null=True,
@@ -395,6 +405,19 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
             .first()
         )
 
+    def get_published_version(self, language: str | None = None) -> "AssetVersion | None":
+        """The version consumers are served for a language.
+
+        Reviewed categories (translations / tafsirs) serve whichever version was
+        explicitly published (``AssetLanguage.published_version``) — committing a
+        version does not make it visible. Every other category keeps newest-wins.
+        """
+        if self.category not in REVIEWED_CATEGORIES:
+            return self.get_latest_version(language)
+        lang = language or self.language
+        rendition = self.languages.filter(language=lang).select_related("published_version").first()
+        return rendition.published_version if rendition is not None else None
+
     def get_or_create_source_language(self) -> "AssetLanguage":
         """Return the asset's source-language rendition, creating it if missing.
 
@@ -407,18 +430,12 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
             language=self.language,
             defaults={"is_source": True, "status": StatusChoice.READY},
         )
-        # The source rendition is the asset's own content: it is always READY (its
-        # consumer availability is governed by the asset's own status). Repair any
-        # source row that predates this or was created as a plain translation.
-        fields_to_fix = []
+        # The source rendition starts available (READY); after that its availability
+        # is the publisher's to toggle, like any other language. Repair a source row
+        # that was created as a plain translation.
         if not source.is_source:
             source.is_source = True
-            fields_to_fix.append("is_source")
-        if source.status != StatusChoice.READY:
-            source.status = StatusChoice.READY
-            fields_to_fix.append("status")
-        if fields_to_fix:
-            source.save(update_fields=fields_to_fix)
+            source.save(update_fields=["is_source"])
         return source
 
     @property
@@ -434,7 +451,14 @@ class AssetLanguage(BaseModel):
     any number of translated renditions, each with its own version history.
     """
 
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="languages")
+
     language = models.CharField(max_length=10, help_text="Language code, e.g. 'ar', 'es'")
     is_source = models.BooleanField(
         default=False,
@@ -446,9 +470,20 @@ class AssetLanguage(BaseModel):
         default=StatusChoice.DRAFT,
         help_text=(
             "Consumer availability of this language rendition. DRAFT hides it from "
-            "consumers (a translation in progress); READY makes it downloadable. The "
-            "source language is created READY (the asset's own Asset.status is the "
-            "overarching gate)."
+            "consumers (a translation in progress, or a source the publisher hid); "
+            "READY makes it downloadable. The source language is created READY. The "
+            "asset's own Asset.status remains the overarching gate."
+        ),
+    )
+    published_version = models.ForeignKey(
+        "content.AssetVersion",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        help_text=(
+            "The version consumers are served for this language (translations / tafsirs). "
+            "Set only by publishing a fully approved version; empty means nothing is visible."
         ),
     )
 
@@ -466,11 +501,32 @@ class AssetLanguage(BaseModel):
         return f"AssetLanguage(asset_id={self.asset_id}, language={self.language}, source={self.is_source})"
 
 
+def consumer_visible_q() -> models.Q:
+    """Assets that may be listed to consumers (gallery, recommendations).
+
+    A reviewed category (translation / tafsir) is listed only while at least one of
+    its languages is available (READY) and has a published version — hiding every
+    language takes the asset out of the gallery. Other categories are unaffected.
+    """
+    visible_language = AssetLanguage.objects.filter(
+        asset=models.OuterRef("pk"),
+        status=StatusChoice.READY,
+        published_version__isnull=False,
+    )
+    return ~models.Q(category__in=REVIEWED_CATEGORIES) | models.Q(models.Exists(visible_language))
+
+
 class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="versions")
 
     asset_language = models.ForeignKey(
-        "AssetLanguage",
+        "content.AssetLanguage",
         on_delete=models.PROTECT,
         related_name="versions",
         # Nullable at the DB level so tooling (model_bakery) doesn't fabricate a
@@ -481,7 +537,20 @@ class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
         help_text="Language rendition this version belongs to (defaults to the source language).",
     )
 
-    name = models.CharField(max_length=255, help_text="Asset version name")
+    name = models.CharField(
+        max_length=255,
+        help_text=(
+            "Asset version name. For tafsirs and translations this is the version number "
+            "('major.minor'), issued by the server and immutable; blank on drafts."
+        ),
+    )
+
+    label = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="Human-readable version name (tafsirs and translations).",
+    )
 
     summary = models.TextField(blank=True, help_text="Asset version summary")
 
@@ -605,6 +674,12 @@ class AssetVersionEntry(BaseModel):
     a version may have entries for only a subset of ayahs.
     """
 
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     version = models.ForeignKey(
         AssetVersion,
         on_delete=models.CASCADE,
@@ -698,7 +773,14 @@ class AssetVersionChange(BaseModel):
     entries were dropped) can be reconstructed by replaying these deltas.
     """
 
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     version = models.ForeignKey(AssetVersion, on_delete=models.CASCADE, related_name="changes")
+
     sura = models.ForeignKey(
         "quran.Sura",
         on_delete=models.PROTECT,
@@ -786,6 +868,12 @@ class AssetVersionChangeReview(BaseModel):
     ``reviewed_at`` record who set the current state, for auditing.
     """
 
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     change = models.OneToOneField(AssetVersionChange, on_delete=models.CASCADE, related_name="review")
     state = models.CharField(max_length=20, choices=ReviewStateChoice)
     comment = models.TextField(blank=True, help_text="Reviewer comment; required when state is commented")
@@ -801,7 +889,14 @@ class AssetPreview(DeleteFilesOnDeleteMixin, BaseModel):
     Visual images for an Asset
     """
 
-    asset = models.ForeignKey("Asset", on_delete=models.CASCADE, related_name="previews")
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
+    asset = models.ForeignKey("content.Asset", on_delete=models.CASCADE, related_name="previews")
+
     image_url = models.ImageField(
         upload_to=upload_to_asset_preview_images,
         blank=True,
@@ -817,7 +912,14 @@ class AssetPreview(DeleteFilesOnDeleteMixin, BaseModel):
 
 
 class AssetAccessRequest(BaseModel):
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     class StatusChoice(models.TextChoices):
+
         PENDING = "pending", _("Pending")
         APPROVED = "approved", _("Approved")
         REJECTED = "rejected", _("Rejected")
@@ -878,6 +980,12 @@ class AssetAccessRequest(BaseModel):
 
 
 class AssetAccess(BaseModel):
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     asset_access_request = models.OneToOneField(
         AssetAccessRequest, on_delete=models.CASCADE, related_name="access_grant"
     )
@@ -923,8 +1031,8 @@ class AssetAccess(BaseModel):
         """Get the download URL for this access"""
         if self.download_url:
             return self.download_url
-        latest_version = self.asset.get_latest_version()
-        return latest_version.file_url.url if latest_version and latest_version.file_url else None
+        published = self.asset.get_published_version()
+        return published.file_url.url if published and published.file_url else None
 
 
 class UsageEvent(BaseModel):
@@ -983,6 +1091,12 @@ class UsageEvent(BaseModel):
 
 
 class Distribution(BaseModel):
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     class ChannelChoice(models.TextChoices):
         FILE_DOWNLOAD = "FILE_DOWNLOAD", _("File Download")
         API = "API", _("API")
@@ -1012,6 +1126,7 @@ class Reciter(BaseModel):
     """Quran reciter/qari (e.g. Mshari Al-Afasi, Saad Al-Ghamidi, etc)"""
 
     name = models.CharField(max_length=255, unique=True)
+
     slug = models.SlugField(unique=True, allow_unicode=True, db_index=True)
     image_url = models.ImageField(
         upload_to=upload_to_reciter_image,
@@ -1114,6 +1229,7 @@ class RecitationFolder(BaseModel):
     """
 
     DEFAULT_NAME_AR = "افتراضي"
+
     DEFAULT_NAME_EN = "Default"
     DEFAULT_SLUG = "default"
 
@@ -1171,12 +1287,19 @@ class RecitationFolder(BaseModel):
 class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
     """Audio track per-surah for a recitation Asset"""
 
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     asset = models.ForeignKey(
         Asset,
         on_delete=models.CASCADE,
         related_name="recitation_tracks",
         help_text="Parent Asset representing the recitation set",
     )
+
     folder = models.ForeignKey(
         RecitationFolder,
         on_delete=models.CASCADE,
@@ -1266,7 +1389,14 @@ class RecitationAyahTiming(DeleteFilesOnDeleteMixin, BaseModel):
     when this row is deleted.
     """
 
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     track = models.ForeignKey(RecitationSurahTrack, on_delete=models.CASCADE, related_name="ayah_timings")
+
     ayah_key = models.CharField(max_length=20, help_text='Format "surah_number:ayah_number" e.g. "2:255"')
     start_ms = models.PositiveIntegerField(help_text="Start offset in milliseconds")
     end_ms = models.PositiveIntegerField(help_text="End offset in milliseconds")
@@ -1316,7 +1446,14 @@ class RecitationAyahTiming(DeleteFilesOnDeleteMixin, BaseModel):
 class ContentIssueReport(BaseModel):
     """Issue reports for Assets."""
 
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
+
     class StatusChoice(models.TextChoices):
+
         PENDING = "pending", _("Pending")
         UNDER_REVIEW = "under_review", _("Under Review")
         RESOLVED = "resolved", _("Resolved")
@@ -1410,6 +1547,12 @@ class EditorialRecommendation(BaseModel):
 
 class EditorialRecommendationAsset(BaseModel):
     """One asset's position within an EditorialRecommendation collection."""
+
+    history = HistoricalRecords(
+        app="simple_history",
+        use_base_model_db=False,
+        history_user_id_field=models.BigIntegerField(null=True),
+    )
 
     recommendation = models.ForeignKey(
         EditorialRecommendation,

@@ -3,13 +3,12 @@ from typing import Literal
 
 from ninja import Schema
 from pydantic import Field
-from rest_framework.generics import get_object_or_404
 
-from apps.content.models import Asset
 from apps.content.services.admin.asset_recitation_audio_tracks_direct_upload_service import (
     AssetRecitationAudioTracksDirectUploadService,
 )
 from apps.content.services.admin.asset_recitation_json_file_sync_service import sync_asset_recitations_json_file
+from apps.content.services.recitation import RecitationService
 from apps.content.services.recitation_folder_resolution import resolve_folder_for_asset
 from apps.content.services.validate_recitation_tracks_upload_service import ValidateRecitationTracksUploadService
 from apps.core.ninja_utils.errors import NinjaErrorResponse
@@ -49,7 +48,7 @@ class ValidateUploadOut(Schema):
         400: NinjaErrorResponse[Literal["validation_error"]],
         401: NinjaErrorResponse[Literal["authentication_error"]],
         403: NinjaErrorResponse[Literal["permission_denied"]],
-        404: NinjaErrorResponse[Literal["asset_not_found"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]] | NinjaErrorResponse[Literal["folder_not_found"]],
     },
 )
 @permission_required(
@@ -59,8 +58,7 @@ class ValidateUploadOut(Schema):
     ]
 )
 def validate_upload(request: Request, data: ValidateUploadIn):
-
-    asset = get_object_or_404(Asset, id=data.asset_id)
+    asset = RecitationService().get_recitation_for_upload(data.asset_id, publisher_q=request.publisher_q())
     folder = resolve_folder_for_asset(asset.id, data.folder_id)
 
     service = ValidateRecitationTracksUploadService()
@@ -100,7 +98,7 @@ class UploadStartOut(Schema):
         | NinjaErrorResponse[Literal["invalid_surah_number"]],
         401: NinjaErrorResponse[Literal["authentication_error"]],
         403: NinjaErrorResponse[Literal["permission_denied"]],
-        404: NinjaErrorResponse[Literal["asset_not_found"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]] | NinjaErrorResponse[Literal["folder_not_found"]],
         409: NinjaErrorResponse[Literal["duplicate_track"]],
     },
 )
@@ -111,8 +109,7 @@ class UploadStartOut(Schema):
     ]
 )
 def start_upload(request: Request, data: UploadStartIn):
-
-    asset = get_object_or_404(Asset, id=data.asset_id)
+    asset = RecitationService().get_recitation_for_upload(data.asset_id, publisher_q=request.publisher_q())
 
     service = AssetRecitationAudioTracksDirectUploadService()
     result = service.start_upload(asset_id=asset.id, filename=data.filename, folder_id=data.folder_id)
@@ -142,6 +139,7 @@ class UploadSignPartOut(Schema):
         200: UploadSignPartOut,
         401: NinjaErrorResponse[Literal["authentication_error"]],
         403: NinjaErrorResponse[Literal["permission_denied"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]] | NinjaErrorResponse[Literal["folder_not_found"]],
     },
 )
 @permission_required(
@@ -151,8 +149,9 @@ class UploadSignPartOut(Schema):
     ]
 )
 def sign_part(request: Request, data: UploadSignPartIn):
-
     service = AssetRecitationAudioTracksDirectUploadService()
+    service.authorize_upload_key(data.key, publisher_q=request.publisher_q())
+
     result = service.sign_part(key=data.key, upload_id=data.upload_id, part_number=data.part_number)
 
     return UploadSignPartOut(url=result["url"])
@@ -193,7 +192,7 @@ class UploadFinishOut(Schema):
         | NinjaErrorResponse[Literal["invalid_surah_number"]],
         401: NinjaErrorResponse[Literal["authentication_error"]],
         403: NinjaErrorResponse[Literal["permission_denied"]],
-        404: NinjaErrorResponse[Literal["asset_not_found"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]] | NinjaErrorResponse[Literal["folder_not_found"]],
         409: NinjaErrorResponse[Literal["duplicate_track"]],
     },
 )
@@ -204,10 +203,15 @@ class UploadFinishOut(Schema):
     ]
 )
 def finish_upload(request: Request, data: UploadFinishIn):
-
-    asset = get_object_or_404(Asset, id=data.asset_id)
+    asset = RecitationService().get_recitation_for_upload(data.asset_id, publisher_q=request.publisher_q())
 
     service = AssetRecitationAudioTracksDirectUploadService()
+    service.authorize_upload_key(
+        data.key,
+        publisher_q=request.publisher_q(),
+        expected_asset_id=asset.id,
+    )
+
     result = service.finish_upload(
         key=data.key,
         upload_id=data.upload_id,
@@ -249,6 +253,7 @@ class UploadAbortOut(Schema):
         200: UploadAbortOut,
         401: NinjaErrorResponse[Literal["authentication_error"]],
         403: NinjaErrorResponse[Literal["permission_denied"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]] | NinjaErrorResponse[Literal["folder_not_found"]],
     },
 )
 @permission_required(
@@ -258,8 +263,9 @@ class UploadAbortOut(Schema):
     ]
 )
 def abort_upload(request: Request, data: UploadAbortIn):
-
     service = AssetRecitationAudioTracksDirectUploadService()
+    service.authorize_upload_key(data.key, publisher_q=request.publisher_q())
+
     result = service.abort_upload(key=data.key, upload_id=data.upload_id)
 
     return UploadAbortOut(key=data.key, upload_id=data.upload_id, aborted=result["aborted"])

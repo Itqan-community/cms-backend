@@ -131,7 +131,9 @@ class TafsirCreateIn(Schema):
     external_url: str | None = None
     is_open_access: bool = False
     restricted_for_tenant: bool = False
-    version_name: str | None = Field(default=None, max_length=255)
+    version_label: str = Field(default="", max_length=255)
+    # Starting version number ("major.minor") — required when a file is uploaded.
+    version_number: str | None = Field(default=None, max_length=20)
     version_summary: str = ""
     template: AssetTemplateChoice
     mushaf_layout_id: int | None = None
@@ -226,7 +228,10 @@ def list_tafsirs(request: Request, filters: TafsirFilter = Query()):
         201: TafsirDetailOut,
         400: NinjaErrorResponse[Literal["tafsir_name_required"]]
         | NinjaErrorResponse[Literal["external_url_required"]]
-        | NinjaErrorResponse[Literal["version_name_required"]]
+        | NinjaErrorResponse[Literal["version_number_required"]]
+        | NinjaErrorResponse[Literal["version_number_invalid"]]
+        | NinjaErrorResponse[Literal["content_file_unparseable"]]
+        | NinjaErrorResponse[Literal["content_file_invalid_rows"]]
         | NinjaErrorResponse[Literal["mushaf_layout_required"]]
         | NinjaErrorResponse[Literal["mushaf_layout_not_allowed"]],
         404: NinjaErrorResponse[Literal["publisher_not_found"]]
@@ -247,9 +252,11 @@ def create_tafsir(
     enforce_publisher_membership(request.user, data.publisher_id)
     service = TafsirService()
     tafsir = service.create_tafsir_with_optional_version(
-        version_name=data.version_name,
+        version_label=data.version_label,
+        version_number=data.version_number,
         version_summary=data.version_summary,
         file=file,
+        created_by_id=request.user.id,
         publisher_id=data.publisher_id,
         name_ar=data.name_ar,
         name_en=data.name_en,

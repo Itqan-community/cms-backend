@@ -5,7 +5,6 @@ Handles usage event tracking and analytics computations
 
 from __future__ import annotations
 
-from datetime import timedelta
 import logging
 from typing import TYPE_CHECKING, TypedDict
 
@@ -329,33 +328,3 @@ def slice_all_recitation_tracks_task() -> dict:
         slice_recitation_track_task.delay(track_id)
     logger.info(f"Task completed [task=slice_all_recitation_tracks_task, scheduled={len(track_ids)}]")
     return {"scheduled_count": len(track_ids)}
-
-
-@shared_task
-def cleanup_abandoned_content_drafts_task(older_than_hours: int = 24) -> dict[str, int]:
-    """
-    Periodic task to delete abandoned per-ayah content draft versions.
-
-    A draft is abandoned when it has not been touched (``updated_at``) for
-    longer than the threshold and was never published. Active editing bumps
-    ``updated_at`` via autosave, so in-progress drafts are preserved.
-
-    Args:
-        older_than_hours: Delete drafts not updated within this many hours.
-
-    Returns:
-        Dictionary with the number of drafts deleted.
-    """
-    logger.info(f"Task started [task=cleanup_abandoned_content_drafts_task, older_than_hours={older_than_hours}]")
-    from django.utils import timezone
-
-    from apps.content.models import AssetVersion, VersionStateChoice
-
-    cutoff = timezone.now() - timedelta(hours=older_than_hours)
-    stale = AssetVersion.objects.filter(state=VersionStateChoice.DRAFT, updated_at__lt=cutoff)
-    _, deleted_by_model = stale.delete()
-    # delete() returns the total incl. cascaded AssetVersionEntry rows; report the
-    # number of draft versions only.
-    deleted = deleted_by_model.get(AssetVersion._meta.label, 0)
-    logger.info(f"Task completed [task=cleanup_abandoned_content_drafts_task, deleted={deleted}]")
-    return {"deleted": deleted}

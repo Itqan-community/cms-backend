@@ -22,6 +22,7 @@ from apps.content.models import (
     StatusChoice,
 )
 from apps.content.services import asset_verse_text
+from apps.content.tests.publishing import publish
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.quran.models import Ayah, Sura
@@ -82,11 +83,13 @@ class ContentSamplesTest(BaseTestCase):
             name=name,
             language="ar",
         )
-        baker.make(
-            AssetVersion,
-            asset=asset,
-            name="v1",
-            file_url=ContentFile(json.dumps(payload, ensure_ascii=False).encode("utf-8"), name=f"{category}.json"),
+        publish(
+            baker.make(
+                AssetVersion,
+                asset=asset,
+                name="v1",
+                file_url=ContentFile(json.dumps(payload, ensure_ascii=False).encode("utf-8"), name=f"{category}.json"),
+            )
         )
         return asset
 
@@ -145,7 +148,9 @@ class ContentSamplesTest(BaseTestCase):
         )
         verse_text = "نص التفسير الحقيقي للآية"
         payload = json.dumps({"1:1": verse_text}, ensure_ascii=False).encode("utf-8")
-        baker.make(AssetVersion, asset=tafsir_asset, name="v1", file_url=ContentFile(payload, name="tafsir.json"))
+        publish(
+            baker.make(AssetVersion, asset=tafsir_asset, name="v1", file_url=ContentFile(payload, name="tafsir.json"))
+        )
         # Act
         response = self.client.get("/sample-data/tafsir/")
         # Assert
@@ -172,7 +177,9 @@ class ContentSamplesTest(BaseTestCase):
         )
         verse_text = "تفسير آية البقرة"
         payload = json.dumps({"2": {"255": verse_text}}, ensure_ascii=False).encode("utf-8")
-        baker.make(AssetVersion, asset=tafsir_asset, name="v1", file_url=ContentFile(payload, name="tafsir.json"))
+        publish(
+            baker.make(AssetVersion, asset=tafsir_asset, name="v1", file_url=ContentFile(payload, name="tafsir.json"))
+        )
         # Act
         response = self.client.get("/sample-data/tafsir/", {"surah": 2, "ayah": 255})
         # Assert
@@ -192,7 +199,9 @@ class ContentSamplesTest(BaseTestCase):
             language="ar",
         )
         payload = json.dumps({"2:255": "غير موجودة هنا"}).encode("utf-8")
-        baker.make(AssetVersion, asset=tafsir_asset, name="v1", file_url=ContentFile(payload, name="tafsir.json"))
+        publish(
+            baker.make(AssetVersion, asset=tafsir_asset, name="v1", file_url=ContentFile(payload, name="tafsir.json"))
+        )
         # Act
         response = self.client.get("/sample-data/tafsir/")
         # Assert
@@ -267,8 +276,13 @@ class ContentSamplesTest(BaseTestCase):
             name="Corrupt Tafsir",
             language="ar",
         )
-        baker.make(
-            AssetVersion, asset=tafsir_asset, name="v1", file_url=ContentFile(b"{not valid json", name="broken.json")
+        publish(
+            baker.make(
+                AssetVersion,
+                asset=tafsir_asset,
+                name="v1",
+                file_url=ContentFile(b"{not valid json", name="broken.json"),
+            )
         )
         # Act
         response = self.client.get("/sample-data/tafsir/")
@@ -288,7 +302,11 @@ class ContentSamplesTest(BaseTestCase):
             name="Pdf Tafsir",
             language="ar",
         )
-        baker.make(AssetVersion, asset=tafsir_asset, name="v1", file_url=ContentFile(b"%PDF-1.4 fake", name="book.pdf"))
+        publish(
+            baker.make(
+                AssetVersion, asset=tafsir_asset, name="v1", file_url=ContentFile(b"%PDF-1.4 fake", name="book.pdf")
+            )
+        )
         # Act
         response = self.client.get("/sample-data/tafsir/")
         # Assert
@@ -320,8 +338,10 @@ class ContentSamplesTest(BaseTestCase):
         )
         verse_text = "In the name of Allah, the Entirely Merciful, the Especially Merciful."
         payload = json.dumps({"1:1": verse_text}).encode("utf-8")
-        baker.make(
-            AssetVersion, asset=translation_asset, name="v1", file_url=ContentFile(payload, name="translation.json")
+        publish(
+            baker.make(
+                AssetVersion, asset=translation_asset, name="v1", file_url=ContentFile(payload, name="translation.json")
+            )
         )
         # Act
         response = self.client.get("/sample-data/translation/")
@@ -673,19 +693,21 @@ class ContentSamplesTest(BaseTestCase):
         self.assertEqual(200, refreshed.status_code)
         self.assertEqual("النص المحدَّث", refreshed.json()["sample_verse"]["text"])
 
-    def test_get_tafsir_sample_where_newer_version_becomes_latest_should_serve_its_text(self):
-        """Scenario A: adding a new AssetVersion row rotates the key via its pk."""
+    def test_get_tafsir_sample_where_newer_version_is_published_should_serve_its_text(self):
+        """Scenario A: publishing a new AssetVersion row rotates the key via its pk."""
         # Arrange - v1 text read and cached
         tafsir_asset = self._seed_versioned_asset(CategoryChoice.TAFSIR, "Versioned Tafsir", {"1:1": "الإصدار الأول"})
         before = self.client.get("/sample-data/tafsir/")
-        # Act - a NEW row becomes latest (get_latest_version orders by -created_at)
-        baker.make(
-            AssetVersion,
-            asset=tafsir_asset,
-            name="v2",
-            file_url=ContentFile(
-                json.dumps({"1:1": "الإصدار الثاني"}, ensure_ascii=False).encode("utf-8"), name="v2.json"
-            ),
+        # Act - a NEW row is published (get_published_version follows the pointer)
+        publish(
+            baker.make(
+                AssetVersion,
+                asset=tafsir_asset,
+                name="v2",
+                file_url=ContentFile(
+                    json.dumps({"1:1": "الإصدار الثاني"}, ensure_ascii=False).encode("utf-8"), name="v2.json"
+                ),
+            )
         )
         after = self.client.get("/sample-data/tafsir/")
         # Assert - response comes from v2, not stale v1
@@ -717,11 +739,15 @@ class ContentSamplesTest(BaseTestCase):
         tafsir_asset = self._seed_versioned_asset(CategoryChoice.TAFSIR, "Late Tafsir", {"2:255": "غير ذات صلة"})
         before = self.client.get("/sample-data/tafsir/")
         # Act - a NEW version row carries the verse (different pk -> different key)
-        baker.make(
-            AssetVersion,
-            asset=tafsir_asset,
-            name="v2",
-            file_url=ContentFile(json.dumps({"1:1": "نص متأخر"}, ensure_ascii=False).encode("utf-8"), name="v2.json"),
+        publish(
+            baker.make(
+                AssetVersion,
+                asset=tafsir_asset,
+                name="v2",
+                file_url=ContentFile(
+                    json.dumps({"1:1": "نص متأخر"}, ensure_ascii=False).encode("utf-8"), name="v2.json"
+                ),
+            )
         )
         after = self.client.get("/sample-data/tafsir/")  # no manual cache.clear()
         # Assert - real verse served from the new version, old negative entry ignored

@@ -686,17 +686,18 @@ wheels = [
 
 [[package]]
 name = "django-oauth-toolkit"
-version = "3.2.0"
+version = "3.4.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
     { name = "jwcrypto" },
     { name = "oauthlib" },
     { name = "requests" },
+    { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a7/95/efd83b35c34b86eb2249d2b54c5eaf383c48f3f19034aa6f3807e37471b6/django_oauth_toolkit-3.2.0.tar.gz", hash = "sha256:c36761ae6810083d95a652e9c820046cde0d45a2e2a5574bbe7202656ec20bb6", size = 114211, upload-time = "2026-01-08T22:03:13.311Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/66/42/b3c6a5d7e204011a702cc02ababb756d10538645dfd188ea441e4c65a082/django_oauth_toolkit-3.4.1.tar.gz", hash = "sha256:c4de73c0765eed55a99ea0fa8433b20664dcc1f43930149cff569abed166c5c2", size = 256139, upload-time = "2026-08-21T03:45:36.538Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ae/cc/f27a784c0ecd13335abd9ef85ebb80dbc04945f919da5f496f56e3562751/django_oauth_toolkit-3.2.0-py3-none-any.whl", hash = "sha256:bd2cd2719b010231a2f370f927dbcc740454fb1d0dd7e7f4138f36227363dc26", size = 87077, upload-time = "2026-01-08T22:03:12.123Z" },
+    { url = "https://files.pythonhosted.org/packages/c4/16/11cf2eacd7ac1c32908288b6d56fadef5676071a4ac0af7e626fd1abd3ef/django_oauth_toolkit-3.4.1-py3-none-any.whl", hash = "sha256:c47f2a70e83bade0a47a5e9b20e86030d8ed9c0a8f10ec4ed30446cad7291f2d", size = 163957, upload-time = "2026-08-21T03:45:34.904Z" },
 ]
 
 [[package]]
@@ -1226,7 +1227,7 @@ requires-dist = [
     { name = "django-filter", specifier = "==25.2" },
     { name = "django-modeltranslation", specifier = "==0.20.3" },
     { name = "django-ninja", specifier = "==1.5.1" },
-    { name = "django-oauth-toolkit", specifier = "==3.2.0" },
+    { name = "django-oauth-toolkit", specifier = "==3.4.1" },
     { name = "django-phonenumber-field", extras = ["phonenumbers"], specifier = "==8.4.0" },
     { name = "django-plain-permissions", specifier = "==0.0.2" },
     { name = "django-redis", specifier = "==6.0.*" },
@@ -1235,7 +1236,7 @@ requires-dist = [
     { name = "djangorestframework", specifier = ">=3.16.1" },
     { name = "djangosaml2idp", specifier = ">=0.7.2" },
     { name = "flower", specifier = "==2.0.*" },
-    { name = "gunicorn", marker = "extra == 'prod'", specifier = "==21.2.*" },
+    { name = "gunicorn", marker = "extra == 'prod'", specifier = ">=21.2,<26.3" },
     { name = "httpx", specifier = "==0.28.*" },
     { name = "mixpanel", specifier = ">=4.10.1" },
     { name = "mutagen", specifier = ">=1.47.0" },

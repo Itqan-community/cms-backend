@@ -10,6 +10,7 @@ from apps.content.models import (
     StatusChoice,
     VersionStateChoice,
 )
+from apps.content.tests.publishing import publish
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
@@ -90,7 +91,7 @@ class AssetLanguagesApiTest(BaseTestCase):
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
         es = AssetLanguage.objects.create(asset=self.translation, language="es")
-        baker.make(AssetVersion, asset=self.translation, asset_language=es, state=VersionStateChoice.PUBLISHED)
+        publish(baker.make(AssetVersion, asset=self.translation, asset_language=es, state=VersionStateChoice.PUBLISHED))
 
         # Mark available
         response = self.client.patch(
@@ -113,6 +114,24 @@ class AssetLanguagesApiTest(BaseTestCase):
         self.assertFalse(response.json()["is_available"])
         es.refresh_from_db()
         self.assertEqual(StatusChoice.DRAFT, es.status)
+
+    def test_mark_language_available_where_version_committed_but_not_published_should_return_400(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        es = AssetLanguage.objects.create(asset=self.translation, language="es")
+        baker.make(AssetVersion, asset=self.translation, asset_language=es, state=VersionStateChoice.PUBLISHED)
+
+        # Act
+        response = self.client.patch(
+            f"/portal/content/translations/{self.translation.slug}/languages/es/availability/",
+            data={"available": True},
+            content_type="application/json",
+        )
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("language_has_no_published_version", response.json()["error_name"])
 
     def test_mark_language_available_without_permission_returns_403(self):
         self.authenticate_user(self.user)
@@ -160,14 +179,17 @@ class AssetLanguagesApiTest(BaseTestCase):
 
         response = self.client.post(
             f"/portal/content/translations/{self.translation.slug}/languages/",
-            data={"language": "es", "file": csv},
+            data={"language": "es", "file": csv, "version_label": "Primera", "version_number": "3.0"},
         )
 
         self.assertEqual(200, response.status_code, response.content)
-        # The language now has a published version seeded from the uploaded file.
+        # The language now has a published version seeded from the uploaded file,
+        # starting its own number sequence at the chosen number.
         version = AssetVersion.objects.get(
             asset=self.translation, asset_language__language="es", state=VersionStateChoice.PUBLISHED
         )
+        self.assertEqual("3.0", version.name)
+        self.assertEqual("Primera", version.label)
         self.assertEqual(2, version.entries.count())
         self.assertEqual("en el nombre", version.entries.get(ayah_id=self.ayahs[0].id).text)
 

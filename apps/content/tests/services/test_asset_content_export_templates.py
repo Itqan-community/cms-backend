@@ -242,7 +242,7 @@ class PublishNonAyahDraftTests(QuranDataMixin, BaseTestCase):
 
         # Act
         published = service.publish_draft(
-            asset.slug, CategoryChoice.TRANSLATION, draft.id, message="first surah commit"
+            asset.slug, CategoryChoice.TRANSLATION, draft.id, message="first surah commit", version_number="1.0"
         )
 
         # Assert
@@ -270,7 +270,9 @@ class PublishNonAyahDraftTests(QuranDataMixin, BaseTestCase):
         service = AssetContentService()
 
         # Act
-        published = service.publish_draft(asset.slug, CategoryChoice.TRANSLATION, draft.id, message="first word commit")
+        published = service.publish_draft(
+            asset.slug, CategoryChoice.TRANSLATION, draft.id, message="first word commit", version_number="1.0"
+        )
 
         # Assert
         self.assertEqual(VersionStateChoice.PUBLISHED, published.state)
@@ -298,7 +300,9 @@ class PublishNonAyahDraftTests(QuranDataMixin, BaseTestCase):
         service = AssetContentService()
 
         # Act
-        published = service.publish_draft(asset.slug, CategoryChoice.TAFSIR, draft.id, message="first page commit")
+        published = service.publish_draft(
+            asset.slug, CategoryChoice.TAFSIR, draft.id, message="first page commit", version_number="1.0"
+        )
 
         # Assert
         self.assertEqual(VersionStateChoice.PUBLISHED, published.state)

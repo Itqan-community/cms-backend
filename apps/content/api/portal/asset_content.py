@@ -11,12 +11,21 @@ from django.utils.http import content_disposition_header
 from django.utils.translation import gettext_lazy as _
 from ninja import Query, Schema
 from ninja.pagination import paginate
-from pydantic import AwareDatetime, Field
+from pydantic import AwareDatetime, ConfigDict, Field, Json, model_validator
 
-from apps.content.models import AssetTemplateChoice, AssetVersion, AssetVersionEntry, CategoryChoice
-from apps.content.services.asset_content import AssetContentService
+from apps.content.models import AssetTemplateChoice, AssetVersion, AssetVersionEntry, CategoryChoice, MushafLayout
+from apps.content.services.asset_content import AssetContentService, VersionBump
 from apps.content.services.asset_language_access import require_language, require_version_language
-from apps.content.services.asset_templates import unit_spec_for
+from apps.content.services.asset_templates import (
+    ColumnFilter,
+    EntryFilters,
+    NumberCondition,
+    NumberFilterType,
+    TextCondition,
+    TextFilterType,
+    unit_spec_for,
+    unit_spec_for_template,
+)
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.paginations import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 from apps.core.ninja_utils.request import Request
@@ -28,9 +37,10 @@ from apps.quran.models import Ayah, Sura, Word
 
 router = ItqanRouter(tags=[NinjaTag.TRANSLATIONS])
 
-# What a caller needs to do with the asset: read it, change its metadata, or
-# change its text. Text edits have their own per-category permission.
-Access = Literal["read", "metadata", "content"]
+# What a caller needs to do with the asset: read it, change its metadata, change
+# its text, or choose which approved version consumers see. Text edits have their
+# own per-category permission; publishing is one permission for both categories.
+Access = Literal["read", "metadata", "content", "publish"]
 
 # Path segment -> (category, {access: permission}).
 _CATEGORY_CONFIG: dict[str, tuple[CategoryChoice, dict[str, PermissionChoice]]] = {
@@ -40,6 +50,7 @@ _CATEGORY_CONFIG: dict[str, tuple[CategoryChoice, dict[str, PermissionChoice]]] 
             "read": PermissionChoice.PORTAL_READ_TRANSLATION,
             "metadata": PermissionChoice.PORTAL_UPDATE_TRANSLATION,
             "content": PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT,
+            "publish": PermissionChoice.PORTAL_PUBLISH_CONTENT,
         },
     ),
     "tafsirs": (
@@ -48,6 +59,7 @@ _CATEGORY_CONFIG: dict[str, tuple[CategoryChoice, dict[str, PermissionChoice]]] 
             "read": PermissionChoice.PORTAL_READ_TAFSIR,
             "metadata": PermissionChoice.PORTAL_UPDATE_TAFSIR,
             "content": PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT,
+            "publish": PermissionChoice.PORTAL_PUBLISH_CONTENT,
         },
     ),
 }
@@ -91,7 +103,9 @@ class DraftVersionOut(Schema):
     id: int
     asset_id: int
     language: str
+    # Version number ("major.minor"); blank while the version is a draft.
     name: str
+    label: str
     summary: str
     state: str
     entries_count: int
@@ -121,9 +135,17 @@ class EntryOut(Schema):
     text: str
     source_text: str | None = None
     order: int
+    # Draft text differs from the latest published version (always False
+    # outside drafts).
+    changed: bool = False
 
 
-def _entries_to_out(entries: list[AssetVersionEntry], template: str, source_text_by_unit: dict[int, str]) -> list[dict]:
+def _entries_to_out(
+    entries: list[AssetVersionEntry],
+    template: str,
+    source_text_by_unit: dict[int, str],
+    changed_units: set[int],
+) -> list[dict]:
     """Build ``EntryOut``-shaped dicts for a batch of persisted entries.
 
     Resolves each entry's related unit (ayah / sura / word) via one bulk
@@ -176,6 +198,7 @@ def _entries_to_out(entries: list[AssetVersionEntry], template: str, source_text
                 "text": entry.text,
                 "source_text": source_text_by_unit.get(entry.unit_id),
                 "order": entry.unit_id,
+                "changed": entry.unit_id in changed_units,
             }
         )
     return rows
@@ -192,6 +215,15 @@ class EntriesPatchIn(Schema):
 
 class PublishIn(Schema):
     message: str
+    # Version name; omitted keeps the draft's.
+    label: str | None = Field(default=None, max_length=255)
+    # Starts the language's number sequence; ignored once it has a version.
+    version_number: str | None = Field(default=None, max_length=20)
+    bump: VersionBump = "minor"
+
+
+class RestoreIn(Schema):
+    bump: VersionBump = "minor"
 
 
 class ChangeOut(Schema):
@@ -201,8 +233,10 @@ class ChangeOut(Schema):
     change_type: str
     old_text: str
     new_text: str
-    # A reviewer's outcome for this change (committed versions only).
-    review_state: str = "unreviewed"
+    # A reviewer's outcome for a stored change: approved / commented / unreviewed.
+    # None for diffs computed on the fly (drafts, commits that predate change
+    # tracking), which have nothing to review.
+    review_state: str | None = None
     review_comment: str = ""
     reviewed_by: str | None = None
     reviewed_at: AwareDatetime | None = None
@@ -236,6 +270,99 @@ def get_or_create_draft(request: Request, category: str, slug: str, data: DraftI
     )
 
 
+class GridTextConditionIn(Schema):
+    """One AG Grid text-filter condition, as the grid's filter model sends it."""
+
+    filter_type: Literal["text"] = Field("text", alias="filterType")
+    kind: TextFilterType = Field(alias="type")
+    value: str = Field("", alias="filter")
+
+    def to_condition(self) -> TextCondition:
+        return TextCondition(type=self.kind, value=self.value)
+
+
+class GridNumberConditionIn(Schema):
+    """One AG Grid number-filter condition, as the grid's filter model sends it."""
+
+    filter_type: Literal["number"] = Field("number", alias="filterType")
+    kind: NumberFilterType = Field(alias="type")
+    value: int | None = Field(None, alias="filter")
+    value_to: int | None = Field(None, alias="filterTo")
+
+    @model_validator(mode="after")
+    def _require_operands(self) -> "GridNumberConditionIn":
+        if self.kind not in ("blank", "notBlank") and self.value is None:
+            raise ValueError("`filter` is required for this number filter type.")
+        if self.kind == "inRange" and self.value_to is None:
+            raise ValueError("`filterTo` is required for an inRange number filter.")
+        return self
+
+    def to_condition(self) -> NumberCondition:
+        return NumberCondition(type=self.kind, value=self.value, value_to=self.value_to)
+
+
+class GridTextCombinedIn(Schema):
+    """Two text conditions joined by AND / OR (AG Grid's combined model)."""
+
+    filter_type: Literal["text"] = Field("text", alias="filterType")
+    operator: Literal["AND", "OR"]
+    conditions: list[GridTextConditionIn] = Field(min_length=1, max_length=2)
+
+
+class GridNumberCombinedIn(Schema):
+    """Two number conditions joined by AND / OR (AG Grid's combined model)."""
+
+    filter_type: Literal["number"] = Field("number", alias="filterType")
+    operator: Literal["AND", "OR"]
+    conditions: list[GridNumberConditionIn] = Field(min_length=1, max_length=2)
+
+
+GridTextFilterIn = GridTextConditionIn | GridTextCombinedIn
+GridNumberFilterIn = GridNumberConditionIn | GridNumberCombinedIn
+
+
+def _column_filter(
+    model: GridTextFilterIn | GridNumberFilterIn | None,
+) -> ColumnFilter | None:
+    if model is None:
+        return None
+    if isinstance(model, GridTextCombinedIn | GridNumberCombinedIn):
+        return ColumnFilter(
+            conditions=tuple(condition.to_condition() for condition in model.conditions),
+            operator=model.operator,
+        )
+    return ColumnFilter(conditions=(model.to_condition(),))
+
+
+class EntriesFilterModelIn(Schema):
+    """The entries grid's AG Grid filter model, keyed by column id.
+
+    ``surah`` is the unit column's surah-name dropdown and ``sura`` the
+    surah-number column; both filter the surah number. Unknown columns are
+    rejected so a typo surfaces as a 400 instead of silently returning
+    unfiltered rows.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    text: GridTextFilterIn | None = None
+    reference_text: GridTextFilterIn | None = None
+    source_text: GridTextFilterIn | None = None
+    surah: GridNumberFilterIn | None = None
+    sura: GridNumberFilterIn | None = None
+    aya: GridNumberFilterIn | None = None
+
+    def to_filters(self) -> EntryFilters:
+        return EntryFilters(
+            text=_column_filter(self.text),
+            reference_text=_column_filter(self.reference_text),
+            source_text=_column_filter(self.source_text),
+            surah=_column_filter(self.surah),
+            sura=_column_filter(self.sura),
+            aya=_column_filter(self.aya),
+        )
+
+
 class EntriesPageOut(Schema):
     """Mirrors NinjaPagination.Output so the envelope is unchanged."""
 
@@ -262,6 +389,7 @@ def list_entries(
     page: int = Query(1, ge=1),
     page_size: int = Query(DEFAULT_PAGE_SIZE, ge=1),
     sura: int | None = None,
+    filters: Json[EntriesFilterModelIn] | None = Query(None),
 ):
     resolved = _resolve_for_version(category, request, slug, version_id, access="read")
     service = AssetContentService()
@@ -273,6 +401,7 @@ def list_entries(
         offset=(page - 1) * page_size,
         limit=page_size,
         sura=sura,
+        filters=filters.to_filters() if filters is not None else None,
         publisher_q=request.publisher_q(),
     )
     return {"results": rows, "count": count}
@@ -296,10 +425,10 @@ def patch_entries(request: Request, category: str, slug: str, version_id: int, d
     service = AssetContentService()
     rows = [row.model_dump() for row in data.rows]
     changed = service.upsert_entries(slug, resolved, version_id, rows, publisher_q=request.publisher_q())
-    template, source_text_by_unit = service.get_patch_response_context(
+    template, source_text_by_unit, changed_units = service.get_patch_response_context(
         slug, resolved, version_id, changed, publisher_q=request.publisher_q()
     )
-    return _entries_to_out(changed, template, source_text_by_unit)
+    return _entries_to_out(changed, template, source_text_by_unit, changed_units)
 
 
 @router.get(
@@ -337,13 +466,31 @@ def pending_diff(request: Request, category: str, slug: str, version_id: int):
     return service.get_pending_changes(slug, resolved, version_id, publisher_q=request.publisher_q())
 
 
+@router.get(
+    "content/{category}/{slug}/versions/{version_id}/",
+    response={
+        200: DraftVersionOut,
+        404: NinjaErrorResponse[Literal["translation_not_found"]]
+        | NinjaErrorResponse[Literal["tafsir_not_found"]]
+        | NinjaErrorResponse[Literal["version_not_found"]]
+        | NinjaErrorResponse[Literal["unsupported_content_category"]],
+    },
+)
+def get_version(request: Request, category: str, slug: str, version_id: int) -> AssetVersion:
+    """One version's name and language — e.g. for the read-only version viewer."""
+    resolved = _resolve_for_version(category, request, slug, version_id, access="read")
+    return AssetContentService().get_version_or_404(slug, resolved, version_id, publisher_q=request.publisher_q())
+
+
 @router.post(
     "content/{category}/{slug}/versions/{version_id}/publish/",
     response={
         200: DraftVersionOut,
         400: NinjaErrorResponse[Literal["version_not_editable"]]
         | NinjaErrorResponse[Literal["no_changes_to_publish"]]
-        | NinjaErrorResponse[Literal["commit_message_required"]],
+        | NinjaErrorResponse[Literal["commit_message_required"]]
+        | NinjaErrorResponse[Literal["version_number_required"]]
+        | NinjaErrorResponse[Literal["version_number_invalid"]],
         404: NinjaErrorResponse[Literal["translation_not_found"]]
         | NinjaErrorResponse[Literal["tafsir_not_found"]]
         | NinjaErrorResponse[Literal["version_not_found"]]
@@ -358,6 +505,9 @@ def publish_draft(request: Request, category: str, slug: str, version_id: int, d
         resolved,
         version_id,
         message=data.message,
+        label=data.label,
+        version_number=data.version_number,
+        bump=data.bump,
         publisher_q=request.publisher_q(),
     )
 
@@ -391,16 +541,35 @@ def discard_draft(request: Request, category: str, slug: str, version_id: int) -
         | NinjaErrorResponse[Literal["unsupported_content_category"]],
     },
 )
-def restore_version(request: Request, category: str, slug: str, version_id: int) -> AssetVersion:
+def restore_version(request: Request, category: str, slug: str, version_id: int, data: RestoreIn) -> AssetVersion:
     resolved = _resolve_for_version(category, request, slug, version_id, access="content")
     service = AssetContentService()
     return service.restore_version(
         slug,
         resolved,
         version_id,
+        bump=data.bump,
         created_by_id=getattr(request.user, "id", None),
         publisher_q=request.publisher_q(),
     )
+
+
+@router.post(
+    "content/{category}/{slug}/versions/{version_id}/set-published/",
+    response={
+        200: DraftVersionOut,
+        400: NinjaErrorResponse[Literal["version_not_publishable"]]
+        | NinjaErrorResponse[Literal["version_not_approved"]],
+        404: NinjaErrorResponse[Literal["translation_not_found"]]
+        | NinjaErrorResponse[Literal["tafsir_not_found"]]
+        | NinjaErrorResponse[Literal["version_not_found"]]
+        | NinjaErrorResponse[Literal["unsupported_content_category"]],
+    },
+)
+def set_published_version(request: Request, category: str, slug: str, version_id: int) -> AssetVersion:
+    """Make a fully approved version the one consumers see for its language."""
+    resolved = _resolve_for_version(category, request, slug, version_id, access="publish")
+    return AssetContentService().set_published_version(slug, resolved, version_id, publisher_q=request.publisher_q())
 
 
 @router.get(
@@ -445,3 +614,69 @@ def export_version(request: Request, category: str, slug: str, version_id: int):
     # content_disposition_header safely handles non-ASCII (Arabic) and quoted names.
     response["Content-Disposition"] = content_disposition_header(as_attachment=True, filename=filename)
     return response
+
+
+def _csv_template_response(content: bytes, filename: str) -> HttpResponse:
+    response = HttpResponse(content, content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = content_disposition_header(as_attachment=True, filename=filename)
+    return response
+
+
+@router.get(
+    "content/{category}/csv-template/",
+    response={
+        400: NinjaErrorResponse[Literal["mushaf_layout_required"]],
+        404: NinjaErrorResponse[Literal["mushaf_layout_not_found"]]
+        | NinjaErrorResponse[Literal["unsupported_content_category"]],
+    },
+)
+def download_csv_template(
+    request: Request, category: str, template: AssetTemplateChoice, mushaf_layout_id: int | None = None
+):
+    """An empty CSV to fill in for a template, before the asset exists (asset
+    creation): one row per surah / ayah / word / page, blank ``text``. A page
+    template needs the mushaf layout, which sets the number of pages."""
+    _resolve(category, request, access="read")
+    page_count = None
+    filename = f"{template}-template.csv"
+    if template == AssetTemplateChoice.PAGE:
+        if mushaf_layout_id is None:
+            raise ItqanError(
+                error_name="mushaf_layout_required",
+                message=_("Choose a mushaf layout to download the page template."),
+                status_code=400,
+            )
+        try:
+            layout = MushafLayout.objects.get(pk=mushaf_layout_id)
+        except MushafLayout.DoesNotExist as exc:
+            raise ItqanError(
+                error_name="mushaf_layout_not_found",
+                message=_("Mushaf layout with id {id} not found.").format(id=mushaf_layout_id),
+                status_code=404,
+            ) from exc
+        page_count = layout.page_count
+        filename = "_".join(f"page-{layout.name}-template.csv".split())
+    content = AssetContentService().repo.blank_template_csv_bytes(
+        unit_spec_for_template(template), page_count=page_count
+    )
+    return _csv_template_response(content, filename)
+
+
+@router.get(
+    "content/{category}/{slug}/csv-template/",
+    response={
+        400: NinjaErrorResponse[Literal["asset_template_missing"]],
+        404: NinjaErrorResponse[Literal["translation_not_found"]]
+        | NinjaErrorResponse[Literal["tafsir_not_found"]]
+        | NinjaErrorResponse[Literal["unsupported_content_category"]],
+    },
+)
+def download_asset_csv_template(request: Request, category: str, slug: str):
+    """An empty CSV to fill in for an existing asset's template (version upload
+    and replace): one row per unit of its template, blank ``text``."""
+    resolved = _resolve(category, request, access="read")
+    service = AssetContentService()
+    asset = service._get_asset_or_404(slug, resolved, publisher_q=request.publisher_q())
+    content = service.repo.blank_template_csv_bytes(unit_spec_for(asset), page_count=service.repo.page_count(asset))
+    filename = "_".join(f"{asset.name_en or slug}-{asset.template}-template.csv".split())
+    return _csv_template_response(content, filename)
