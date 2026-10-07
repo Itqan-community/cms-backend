@@ -5,6 +5,7 @@ import responses
 
 from apps.package_manager.cli.client import RegistryClient
 from apps.package_manager.cli.exceptions import RegistryApiError
+from apps.package_manager.cli.main import install_command
 
 
 @responses.activate
@@ -90,3 +91,19 @@ def test_resolve_manifest_where_no_version_satisfies_constraint_should_raise_reg
 
     assert exc_info.value.status_code == 422
     assert "Cannot satisfy version constraints" in exc_info.value.message
+
+
+def test_registry_client_where_no_base_url_given_should_default_to_production():
+    # Arrange / Act
+    client = RegistryClient()
+
+    # Assert
+    assert client.base_url == "https://cms.itqan.dev"
+
+
+def test_install_command_where_no_registry_url_given_should_default_to_production():
+    # Arrange / Act
+    option = next(param for param in install_command.params if param.name == "registry_url")
+
+    # Assert
+    assert option.default == "https://cms.itqan.dev"

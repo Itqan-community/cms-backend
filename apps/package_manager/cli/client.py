@@ -32,7 +32,7 @@ class RegistryClient:
 
     def __init__(
         self,
-        base_url: str = "http://localhost:8000/api",
+        base_url: str = "https://cms.itqan.dev",
         api_key: str | None = None,
         timeout: float = 30.0,
         session: requests.Session | None = None,
