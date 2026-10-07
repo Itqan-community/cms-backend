@@ -360,6 +360,25 @@ The Registry API (`GET /packages/resolve/<slug>/?version=…&language=…` and `
 }
 ```
 
+### 9.1a. Catalog (`GET /packages/`)
+Lists what can be installed: READY, unrestricted assets that have at least one resolvable version, ordered by slug and paginated like the other public lists (`?page=`, `?page_size=`; response `{"results": [...], "count": N}`). `?open_access=true` limits it to assets that need no API key. Each result lists the asset's installable languages, source first, with the newest stable version in each:
+
+```json
+{
+  "slug": "tafsir-jalalayn",
+  "name": "تفسير الجلالين",
+  "category": "tafsir",
+  "is_open_access": true,
+  "publisher_name": "…",
+  "languages": [
+    {"language": "ar", "is_source": true, "latest_version": "2.4.0"},
+    {"language": "en", "is_source": false, "latest_version": "1.3.0"}
+  ]
+}
+```
+
+`itqan init` reads it to write a starter manifest.
+
 ### 9.2. Evolution of `itqan-assets.lock` (Lockfile V2 Path)
 In `docs/ASSET_MANIFEST.md` §5, `itqan-assets.lock` was defined with `lockfile_version: 1` without checksums because artifact identity was deferred to this specification.
 

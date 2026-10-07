@@ -3,6 +3,7 @@ from typing import Literal
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from ninja import Field, Query, Schema
+from ninja.pagination import paginate
 
 from apps.content.models import Asset
 from apps.content.services.asset_access import enforce_asset_access_on_public_api
@@ -26,6 +27,32 @@ class PackageVersionOut(Schema):
     publisher_id: int | None = None
     publisher_name: str | None = None
     download_url: str | None = None
+
+
+class PackageLanguageOut(Schema):
+    language: str
+    is_source: bool
+    latest_version: str = Field(..., description="Newest stable version; what a `^` constraint on it resolves to.")
+
+
+class PackageCatalogOut(Schema):
+    slug: str
+    name: str
+    category: str
+    is_open_access: bool
+    publisher_name: str | None = None
+    languages: list[PackageLanguageOut]
+
+    @staticmethod
+    def resolve_publisher_name(obj: Asset) -> str | None:
+        return obj.publisher.name if obj.publisher_id else None
+
+    @staticmethod
+    def resolve_languages(obj: Asset) -> list[PackageLanguageOut]:
+        return [
+            PackageLanguageOut(language=lang.language, is_source=lang.is_source, latest_version=lang.latest_version)
+            for lang in PackageRegistryService().catalog_languages(obj)
+        ]
 
 
 class PackageSingleOut(Schema):
@@ -87,6 +114,23 @@ def _resolve_package_to_schema(request: Request, result: ResolvedPackage) -> Pac
         publisher_name=result.asset.publisher.name if result.asset.publisher_id else None,
         download_url=_download_url(request, result),
     )
+
+
+@router.get("packages/", response=list[PackageCatalogOut])
+@paginate
+def list_packages(
+    request: Request,
+    open_access: bool | None = Query(
+        None, description="Only assets that need no API key (true) or only gated ones (false)."
+    ),
+):
+    """Installable assets and their language renditions.
+
+    Lists READY assets that have at least one version the registry can resolve,
+    each with its available languages (source first) and their newest version.
+    `itqan init` uses it to write a starter manifest.
+    """
+    return PackageRegistryService().list_installable_assets(open_access=open_access)
 
 
 @router.post(
