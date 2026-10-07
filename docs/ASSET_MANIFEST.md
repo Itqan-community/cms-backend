@@ -58,6 +58,14 @@ exactly one manifest per repository.
 
 ## 2. The manifest: `itqan-assets.yaml`
 
+`itqan init` creates a starter manifest in the current folder. It asks the registry's catalog
+(`GET /packages/`) for a few installable assets — only open-access ones unless an API key is
+given — and writes an entry for each, with a comment listing the asset's available languages
+and their latest versions; for an asset with several languages it also writes a second entry
+showing how to install another language. `--assets-dir` sets `assets_dir`, and `--force`
+overwrites an existing file. If the registry can't be reached, it writes the same file with the
+example entries commented out, which installs nothing until they are filled in.
+
 ```yaml
 schema_version: 1
 

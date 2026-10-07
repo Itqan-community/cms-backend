@@ -205,11 +205,11 @@ def _validate_manifest_dict(data: dict[str, Any]) -> AssetManifest:
     return AssetManifest(
         schema_version=schema_version_val,
         assets=parsed_assets,
-        assets_dir=_validate_assets_dir(data["assets_dir"]) if "assets_dir" in data else None,
+        assets_dir=validate_assets_dir(data["assets_dir"]) if "assets_dir" in data else None,
     )
 
 
-def _validate_assets_dir(value: Any) -> str:
+def validate_assets_dir(value: Any) -> str:
     """``assets_dir`` must be a relative path that stays inside the project."""
     if not isinstance(value, str) or not value.strip():
         raise UnknownFieldError("'assets_dir' must be a non-empty string.")
