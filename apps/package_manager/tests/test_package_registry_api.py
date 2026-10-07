@@ -9,7 +9,6 @@ from apps.content.models import (
     AssetAccessRequest,
     AssetVersion,
     CategoryChoice,
-    Distribution,
     VersionStateChoice,
 )
 from apps.core.tests.base import BaseTestCase
@@ -38,10 +37,6 @@ def _make_version(asset: Asset, *, name: str, state: str = VersionStateChoice.PU
         asset=asset,
         name=name,
         state=state,
-    )
-    Distribution.objects.create(
-        asset_version=version,
-        channel=Distribution.ChannelChoice.PACKAGE,
     )
     return version
 

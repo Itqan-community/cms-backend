@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from django.db.models import QuerySet
 
-from apps.content.models import Asset, AssetVersion, Distribution, VersionStateChoice
+from apps.content.models import Asset, AssetVersion, VersionStateChoice
 
 
 class PackageRegistryRepository:
@@ -28,7 +28,6 @@ class PackageRegistryRepository:
                 asset=asset,
                 state=VersionStateChoice.PUBLISHED,
             )
-            .filter(distributions__channel=Distribution.ChannelChoice.PACKAGE)
             .select_related("asset")
             .order_by("-created_at")
         )
