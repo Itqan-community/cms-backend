@@ -35,6 +35,27 @@ class PackageRegistryRepository:
             .first()
         )
 
+    def list_installable_assets(self, *, open_access: bool | None = None) -> QuerySet[Asset]:
+        """READY, unrestricted assets with at least one installable version in a
+        READY language rendition, ordered by slug."""
+        installable_version = AssetVersion.objects.filter(
+            asset=OuterRef("pk"),
+            state=VersionStateChoice.PUBLISHED,
+            asset_language__status=StatusChoice.READY,
+        ).filter(_has_content_q())
+        qs = Asset.objects.select_related("publisher").filter(
+            Exists(installable_version),
+            status=StatusChoice.READY,
+            restricted_for_tenant=False,
+        )
+        if open_access is not None:
+            qs = qs.filter(is_open_access=open_access)
+        return qs.order_by("slug")
+
+    def list_available_languages(self, asset: Asset) -> QuerySet[AssetLanguage]:
+        """The asset's READY renditions, source language first."""
+        return AssetLanguage.objects.filter(asset=asset, status=StatusChoice.READY).order_by("-is_source", "language")
+
     def get_available_language(self, asset: Asset, language: str | None) -> AssetLanguage | None:
         """The consumer-available (READY) rendition for ``language``, or the
         source rendition when ``language`` is None."""

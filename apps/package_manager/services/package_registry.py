@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import re
 
+from django.db.models import QuerySet
 from django.utils.translation import gettext as _
 
 from apps.content.models import Asset, AssetLanguage, AssetVersion
@@ -271,6 +272,15 @@ class PackageRequest:
     language: str | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class CatalogLanguage:
+    """A language rendition the registry can install, with its newest version."""
+
+    language: str
+    is_source: bool
+    latest_version: str
+
+
 @dataclass
 class ResolvedPackage:
     """Internal resolution result. Fields are intentionally minimal."""
@@ -460,6 +470,35 @@ class PackageRegistryService:
             results.append(result)
 
         return results
+
+    def list_installable_assets(self, *, open_access: bool | None = None) -> QuerySet[Asset]:
+        return self.repo.list_installable_assets(open_access=open_access)
+
+    def catalog_languages(self, asset: Asset) -> list[CatalogLanguage]:
+        """The asset's installable languages (source first), each with the newest
+        stable version a ``^`` constraint would pick. Languages with no valid
+        SemVer version are left out."""
+        languages: list[CatalogLanguage] = []
+        for rendition in self.repo.list_available_languages(asset):
+            versions = [
+                semver
+                for semver in (
+                    _parse_candidate_version(av.name) for av in self.repo.get_eligible_package_versions(rendition)
+                )
+                if semver is not None
+            ]
+            stable = [semver for semver in versions if not semver.is_prerelease] or versions
+            if not stable:
+                continue
+            latest = max(stable, key=lambda semver: semver._precedence_key())
+            languages.append(
+                CatalogLanguage(
+                    language=rendition.language,
+                    is_source=rendition.is_source,
+                    latest_version=latest.to_canonical_string(),
+                )
+            )
+        return languages
 
     def get_downloadable_version(self, asset_version_id: int) -> AssetVersion:
         """A version the registry serves, or 404."""
