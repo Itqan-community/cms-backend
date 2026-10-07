@@ -1,5 +1,7 @@
+from datetime import timedelta
 from unittest.mock import patch
 
+from django.utils import timezone
 from model_bakery import baker
 
 from apps.content.models import Asset, AssetAccess, AssetAccessRequest, CategoryChoice, LicenseChoice, StatusChoice
@@ -128,6 +130,105 @@ class AssetAccessRequestServiceTests(BaseTestCase):
 
         self.assertEqual(AssetAccessRequest.StatusChoice.PENDING, request.status)
         self.assertIsNone(access)
+
+    def test_accept_where_grant_creation_fails_should_roll_back_approval(self) -> None:
+        # Arrange
+        asset = _make_asset(self.publisher, auto_accept=False)
+        request = self._make_request(asset)
+
+        # Act
+        with patch.object(
+            AssetAccess.objects,
+            AssetAccess.objects.update_or_create.__name__,
+            side_effect=RuntimeError("grant failure"),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "grant failure"):
+                self.service.accept(self.member, request.pk)
+
+        # Assert
+        request.refresh_from_db()
+        self.assertEqual(AssetAccessRequest.StatusChoice.PENDING, request.status)
+        self.assertIsNone(request.approved_at)
+        self.assertIsNone(request.approved_by)
+        self.assertFalse(AssetAccess.objects.filter(asset=asset).exists())
+
+    def test_request_access_where_grant_creation_fails_should_roll_back_new_request(self) -> None:
+        # Arrange
+        asset = _make_asset(self.publisher, auto_accept=True)
+
+        # Act
+        with patch.object(
+            AssetAccess.objects,
+            AssetAccess.objects.update_or_create.__name__,
+            side_effect=RuntimeError("grant failure"),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "grant failure"):
+                self.service.request_access(
+                    user=self.developer, asset=asset, purpose="purpose", intended_use="non-commercial"
+                )
+
+        # Assert
+        self.assertFalse(AssetAccessRequest.objects.filter(asset=asset).exists())
+        self.assertFalse(AssetAccess.objects.filter(asset=asset).exists())
+
+    def test_accept_where_existing_grant_is_stale_should_refresh_it_for_new_request(self) -> None:
+        # Arrange
+        asset = _make_asset(self.publisher, auto_accept=False)
+        original = self.service.accept(self.member, self._make_request(asset).pk)
+        grant = original.access_grant
+        grant.expires_at = timezone.now() - timedelta(days=1)
+        grant.save(update_fields=["expires_at"])
+        asset.license = LicenseChoice.CC_BY
+        asset.save(update_fields=["license"])
+        resubmitted = self._make_request(asset)
+
+        # Act
+        self.service.accept(self.member, resubmitted.pk)
+
+        # Assert
+        grant.refresh_from_db()
+        self.assertEqual(resubmitted.pk, grant.asset_access_request_id)
+        self.assertEqual(LicenseChoice.CC_BY, grant.effective_license)
+        self.assertIsNone(grant.expires_at)
+        self.assertTrue(user_has_access(self.developer, asset))
+        self.assertEqual(1, AssetAccess.objects.filter(asset=asset).count())
+
+    def test_accept_where_legacy_duplicate_exists_should_reuse_grant_on_resubmission(self) -> None:
+        # Arrange
+        asset = _make_asset(self.publisher, auto_accept=False)
+        original = self.service.accept(self.member, self._make_request(asset).pk)
+        original_grant = original.access_grant
+        duplicate = self._make_request(asset)
+
+        # Act
+        self.service.accept(self.member, duplicate.pk)
+        request, grant = self.service.request_access(
+            user=self.developer, asset=asset, purpose="purpose", intended_use="non-commercial"
+        )
+
+        # Assert
+        self.assertEqual(duplicate.pk, request.pk)
+        self.assertEqual(original_grant.pk, grant.pk)
+        self.assertEqual(duplicate.pk, grant.asset_access_request_id)
+        self.assertEqual(1, AssetAccess.objects.filter(asset=asset).count())
+
+    def test_request_access_where_rejected_should_allow_a_new_request(self) -> None:
+        # Arrange
+        asset = _make_asset(self.publisher, auto_accept=False)
+        rejected = self._make_request(asset)
+        self.service.reject(self.member, rejected.pk, "Try again with more detail")
+
+        # Act
+        request, grant = self.service.request_access(
+            user=self.developer, asset=asset, purpose="new purpose", intended_use="non-commercial"
+        )
+
+        # Assert
+        self.assertNotEqual(rejected.pk, request.pk)
+        self.assertEqual(AssetAccessRequest.StatusChoice.PENDING, request.status)
+        self.assertIsNone(grant)
+        rejected.refresh_from_db()
+        self.assertEqual(AssetAccessRequest.StatusChoice.REJECTED, rejected.status)
 
     def test_get_existing_returns_newest_request(self):
         asset = _make_asset(self.publisher, auto_accept=False)
