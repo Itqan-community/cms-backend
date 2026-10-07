@@ -457,16 +457,18 @@ response carries an advisory `X-Itqan-Warning` header; a missing header is silen
 
 ## Distribution Channels
 
-Assets can be distributed through multiple channels:
+Every published `AssetVersion` is delivered through all channels; there is no per-channel opt-in:
 
 ```mermaid
 flowchart TB
-    AV["AssetVersion"]
+    AV["AssetVersion (published)"]
 
-    AV --> D1["FILE_DOWNLOAD<br/>Direct file download"]
+    AV --> D1["File download<br/>Direct file download"]
     AV --> D2["API<br/>Programmatic access"]
-    AV --> D3["PACKAGE<br/>SDK/Library distribution"]
+    AV --> D3["Package manager<br/>itqan install (requires a SemVer version name)"]
 ```
+
+See [`ASSET_MANIFEST.md`](./ASSET_MANIFEST.md) for how the package manager selects versions.
 
 ---
 
@@ -677,7 +679,6 @@ only for un-sliced records.
 | **AssetVersion** | Version tracking for assets |
 | **AssetAccessRequest** | Developer access request workflow |
 | **AssetAccess** | Granted access records |
-| **Distribution** | Defines how assets are delivered |
 | **UsageEvent** | Tracks all content interactions |
 
 ---

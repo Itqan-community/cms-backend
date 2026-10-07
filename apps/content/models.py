@@ -1090,38 +1090,6 @@ class UsageEvent(BaseModel):
         }
 
 
-class Distribution(BaseModel):
-    history = HistoricalRecords(
-        app="simple_history",
-        use_base_model_db=False,
-        history_user_id_field=models.BigIntegerField(null=True),
-    )
-
-    class ChannelChoice(models.TextChoices):
-        FILE_DOWNLOAD = "FILE_DOWNLOAD", _("File Download")
-        API = "API", _("API")
-        PACKAGE = "PACKAGE", _("Package")
-
-    asset_version = models.ForeignKey(
-        AssetVersion,
-        on_delete=models.CASCADE,
-        related_name="distributions",
-        help_text="Asset version that this distribution provides access to",
-    )
-
-    channel = models.CharField(
-        max_length=20,
-        choices=ChannelChoice.choices,
-        help_text="Channel for accessing the asset",
-    )
-
-    class Meta:
-        unique_together = [["asset_version", "channel"]]
-
-    def __str__(self):
-        return f"Distribution(asset={self.asset_version.asset.name}, channel={self.channel})"
-
-
 class Reciter(BaseModel):
     """Quran reciter/qari (e.g. Mshari Al-Afasi, Saad Al-Ghamidi, etc)"""
 

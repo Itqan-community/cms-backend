@@ -83,7 +83,7 @@ flowchart TD
 
 ---
 
-## Tracked Models (28 Models)
+## Tracked Models (27 Models)
 
 All mutable business and content entities are tracked in the audit trail:
 
@@ -103,10 +103,10 @@ All mutable business and content entities are tracked in the audit trail:
 | `PublisherMemberInvitation` | Invitations to join publisher organizations |
 | `MemberLanguage` | Language specializations for publisher members |
 
-### `apps.content` (20 models)
+### `apps.content` (19 models)
 | Category | Models |
 |----------|--------|
-| **Core Assets & Versions** | `Asset`, `AssetLanguage`, `AssetVersion`, `AssetVersionEntry`, `AssetVersionChange`, `AssetVersionChangeReview`, `AssetPreview`, `AssetAccessRequest`, `AssetAccess`, `Distribution` |
+| **Core Assets & Versions** | `Asset`, `AssetLanguage`, `AssetVersion`, `AssetVersionEntry`, `AssetVersionChange`, `AssetVersionChangeReview`, `AssetPreview`, `AssetAccessRequest`, `AssetAccess` |
 | **Recitation & Metadata** | `Reciter`, `Qiraah`, `Riwayah`, `MushafLayout`, `RecitationFolder`, `RecitationSurahTrack`, `RecitationAyahTiming` |
 | **Editorial & Reports** | `ContentIssueReport`, `EditorialRecommendation`, `EditorialRecommendationAsset` |
 

@@ -252,11 +252,13 @@ no "best effort" fallback.
 A version of an asset can be selected **only if all three** hold:
 
 1. it belongs to the requested slug;
-2. its name, after canonicalization, is a valid SemVer 2.0.0 version **carrying no build
-   metadata** — a version named `draft-2`, `v1.0` or `1.2.3+build1` is skipped, not repaired;
-3. it has a `Distribution` record on the `PACKAGE` channel.
+2. it is **published** — a `draft` version is never selected;
+3. its name, after canonicalization, is a valid SemVer 2.0.0 version **carrying no build
+   metadata** — a version named `draft-2`, `v1.0` or `1.2.3+build1` is skipped, not repaired.
 
-Two details about condition 2, since `AssetVersion.name` is a free-text field and anything can
+There is no separate opt-in: every published version with a valid name is installable.
+
+Two details about condition 3, since `AssetVersion.name` is a free-text field and anything can
 end up in it:
 
 - **Build metadata excludes a version entirely.** SemVer 2.0.0 permits `1.2.3+build1`, but
@@ -270,8 +272,7 @@ end up in it:
   `1.2.0-beta.1`; it is not a valid version name and is skipped. Prereleases need all three
   numbers on both sides — the same rule §3 applies to constraints.
 
-The `PACKAGE` channel is the existing content-model concept for "this version is distributed
-as a package". It is a **necessary** condition, not a promise: it does not mean the archive is
+Eligibility is a **necessary** condition, not a promise: it does not mean the archive is
 built, cached, authorized for you, or downloadable. Those checks belong to the registry (#417)
 and artifact packaging (#425).
 
@@ -279,7 +280,7 @@ and artifact packaging (#425).
 
 1. Parse and validate the manifest. Any error stops everything.
 2. Build the eligible pool for the slug.
-3. If multiple eligible `PACKAGE` or `AssetVersion` records canonicalize to the same version
+3. If multiple eligible `AssetVersion` records canonicalize to the same version
    (e.g., records named `1.2` and `1.2.0`), **fail** with a named Canonical Version Collision
    error identifying the asset and requested version. This is reachable because
    `AssetVersion.name` in the backend is an unvalidated `CharField` (see Appendix). There is
@@ -324,9 +325,9 @@ reproducible state it already had.
 | Invalid Constraint Syntax | `version` is not in the §3 grammar |
 | Invalid Reserved Field | `package` present but not a non-empty string |
 | Unknown Asset | the slug matches no asset |
-| No Eligible Package Versions | the asset exists but has no SemVer-valid `PACKAGE` version |
+| No Eligible Package Versions | the asset exists but has no published, SemVer-valid version |
 | Unsatisfiable Version Constraint | eligible versions exist, none match |
-| Canonical Version Collision | multiple eligible `PACKAGE` or `AssetVersion` records canonicalize to the same version; identifies the asset and requested version |
+| Canonical Version Collision | multiple eligible `AssetVersion` records canonicalize to the same version; identifies the asset and requested version |
 
 Each is a distinct, named error. An error includes the asset slug, requested constraint, and
 observed candidate versions **only when that context is applicable and available**; root-level
@@ -378,9 +379,9 @@ Each entry has exactly two fields:
 No other keys are accepted anywhere in the lockfile (the schema is closed).
 
 When the registry and installer resolve this field, they canonicalize the requested version and
-compare it with the canonical form of eligible `PACKAGE` versions. Equivalent forms such as
-`1.2` and `1.2.0` therefore match. Resolution must return the unique matching `AssetVersion` /
-`PACKAGE` record; if no canonical-equivalent record exists, it fails with a named No Canonical
+compare it with the canonical form of eligible versions. Equivalent forms such as
+`1.2` and `1.2.0` therefore match. Resolution must return the unique matching `AssetVersion`
+record; if no canonical-equivalent record exists, it fails with a named No Canonical
 Version Match error identifying the asset and requested version rather than fabricating or
 selecting a different record.
 
@@ -493,7 +494,7 @@ downloaded. `FRESH` is a statement about your *dependency declaration*, not abou
 ### When a locked version is no longer there
 
 A `FRESH` lockfile names an exact version. If that version has since stopped being eligible —
-the `PACKAGE` distribution was removed, the record was deleted, the name was edited into
+the record was deleted, the name was edited into
 something that is no longer valid SemVer — installation **fails, naming the asset and the
 missing version**.
 
@@ -506,7 +507,7 @@ change the constraint in the manifest and re-resolve.
 ### Published versions do not change underneath you
 
 Everything above rests on one assumption, so it is stated as a rule: once a version of an asset
-is distributed on the `PACKAGE` channel, the pair `(slug, version)` is **immutable** — it keeps
+is published, the pair `(slug, version)` is **immutable** — it keeps
 identifying the same content forever.
 
 A correction to a published version ships as a **new** version. Replacing the content behind
@@ -523,26 +524,25 @@ the backend enforces it today. Enforcing it belongs with artifact identity in #4
 
 ### The catalog
 
-Versions available in the CMS for four assets. `PACKAGE` marks whether a `PACKAGE`
-distribution exists:
+Versions available in the CMS for four assets, with each version's state:
 
-| Asset slug | Version name | `PACKAGE`? |
+| Asset slug | Version name | State |
 |---|---|---|
-| `quran-uthmani-hafs` | `2.0.0` | yes |
-| `quran-uthmani-hafs` | `2.1.0` | yes |
-| `quran-uthmani-hafs` | `2.4.1` | yes |
-| `quran-uthmani-hafs` | `2.5.0-rc.1` | yes |
-| `quran-uthmani-hafs` | `3.0.0` | **no** |
-| `mushaf-madinah` | `1.1.0` | yes |
-| `mushaf-madinah` | `1.2.0` | yes |
-| `mushaf-madinah` | `1.2.4` | yes |
-| `mushaf-madinah` | `1.3.0` | yes |
-| `تفسير-الجلالين` | `2.9` | yes |
-| `تفسير-الجلالين` | `3.0` | yes |
-| `tajweed-rules` | `0.4.0` | yes |
-| `tajweed-rules` | `0.4.7` | yes |
-| `tajweed-rules` | `0.5.0` | yes |
-| `tajweed-rules` | `draft-2` | yes |
+| `quran-uthmani-hafs` | `2.0.0` | published |
+| `quran-uthmani-hafs` | `2.1.0` | published |
+| `quran-uthmani-hafs` | `2.4.1` | published |
+| `quran-uthmani-hafs` | `2.5.0-rc.1` | published |
+| `quran-uthmani-hafs` | `3.0.0` | **draft** |
+| `mushaf-madinah` | `1.1.0` | published |
+| `mushaf-madinah` | `1.2.0` | published |
+| `mushaf-madinah` | `1.2.4` | published |
+| `mushaf-madinah` | `1.3.0` | published |
+| `تفسير-الجلالين` | `2.9` | published |
+| `تفسير-الجلالين` | `3.0` | published |
+| `tajweed-rules` | `0.4.0` | published |
+| `tajweed-rules` | `0.4.7` | published |
+| `tajweed-rules` | `0.5.0` | published |
+| `tajweed-rules` | `draft-2` | published |
 
 ### The manifest
 
@@ -558,7 +558,7 @@ Constraint is already three-component: `^2.1.0` → `>=2.1.0 <3.0.0`.
 | `2.1.0` | **matches** |
 | `2.4.1` | **matches** |
 | `2.5.0-rc.1` | eligible, in range numerically, but excluded — a stable range never selects a prerelease (§7) |
-| `3.0.0` | **not eligible**: no `PACKAGE` distribution. (Even if it were, `<3.0.0` excludes it.) |
+| `3.0.0` | **not eligible**: still a draft. (Even if it were published, `<3.0.0` excludes it.) |
 
 Matching: `2.1.0`, `2.4.1`. Highest precedence → **`2.4.1`**.
 
@@ -623,7 +623,7 @@ Add a fifth entry to the same manifest:
     version: "^3.0.0"
 ```
 
-with only `2.5.0` available on the `PACKAGE` channel:
+with only `2.5.0` published:
 
 ```
 error: unsatisfiable version constraint
@@ -719,7 +719,7 @@ construction, since an exact pin matches exactly one version. Visibility decides
 
 Both classifications compare against "the currently locked version", which presumes there is
 one. **Update classification requires a `FRESH` lockfile, and a `FRESH` lockfile must first be
-checked against the current `PACKAGE` catalog.** The locked version must still be eligible for
+checked against the current catalog of eligible versions.** The locked version must still be eligible for
 that asset. If it is unavailable, update checking fails with a named Locked Version Unavailable
 error that identifies the asset and locked version; it must not be reported as Up to date,
 In-Range Update, or Out-of-Range Update. In the other five states there is no authoritative
@@ -792,8 +792,8 @@ to own their package's name.
 
 ### A published slug is frozen
 
-Until that day, one rule keeps the identifier usable: **once an asset has been distributed on
-the `PACKAGE` channel, its slug must not change.**
+Until that day, one rule keeps the identifier usable: **once an asset has a published
+version, its slug must not change.**
 
 The slug is generated only when it is empty (`Asset.save()`), so renaming an asset does not
 regenerate it — but nothing stops the field being edited directly. Doing so is invisible from
@@ -839,7 +839,7 @@ Verified against `apps/content/models.py`. **This specification changes none of 
 |---|---|
 | Asset identity | `Asset.slug` — `SlugField(allow_unicode=True, unique=True, db_index=True)`, auto-generated in `Asset.save()` from the asset's names, with a numeric suffix on collision. |
 | Version string | `AssetVersion.name` — `CharField(max_length=255)`. |
-| Package eligibility | `Distribution.channel`, which includes `PACKAGE`; `unique_together = [["asset_version", "channel"]]`, so a version has at most one `PACKAGE` record. |
+| Package eligibility | `AssetVersion.state == "published"`. There is no per-channel opt-in; the former `Distribution` model was removed. |
 | Publisher-chosen name | Does not exist. |
 
 **One correction worth stating plainly.** Issue #416 describes `AssetVersion` as already using
