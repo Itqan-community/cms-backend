@@ -10,6 +10,7 @@ from apps.content.models import (
     AssetAccessRequest,
     AssetVersion,
     CategoryChoice,
+    StatusChoice,
     VersionStateChoice,
 )
 from apps.core.tests.base import BaseTestCase
@@ -19,6 +20,7 @@ from apps.users.models import APIKey, User
 
 def _make_asset(publisher: Publisher, *, slug: str, **kwargs) -> Asset:
     return Asset.objects.create(
+        status=StatusChoice.READY,
         name="Test Asset",
         slug=slug,
         publisher=publisher,

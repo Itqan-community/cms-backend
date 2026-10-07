@@ -29,6 +29,7 @@ class PackageApiTestCase(BaseTestCase):
         self.ayah1 = baker.make(Ayah, id=1, sura=sura, number_in_sura=1, text="a1")
         self.ayah2 = baker.make(Ayah, id=2, sura=sura, number_in_sura=2, text="a2")
         self.asset = Asset.objects.create(
+            status=StatusChoice.READY,
             name="Tafsir",
             slug="tafsir",
             publisher=self.publisher,
@@ -139,6 +140,49 @@ class PackageLanguageApiTests(PackageApiTestCase):
         # Assert
         self.assertEqual(404, response.status_code, response.content)
         self.assertEqual("language_not_found", response.json()["error_name"])
+
+
+class PackageAssetStatusApiTests(PackageApiTestCase):
+    def test_resolve_package_single_where_asset_is_draft_should_return_404(self):
+        # Arrange
+        self._version("1.0")
+        self.asset.status = StatusChoice.DRAFT
+        self.asset.save()
+
+        # Act
+        response = self.client.get("/packages/resolve/tafsir/?version=1.0")
+
+        # Assert
+        self.assertEqual(404, response.status_code, response.content)
+        self.assertEqual("asset_not_found", response.json()["error_name"])
+
+    def test_resolve_package_manifest_where_asset_is_draft_should_return_404(self):
+        # Arrange
+        self._version("1.0")
+        self.asset.status = StatusChoice.DRAFT
+        self.asset.save()
+
+        # Act
+        response = self.client.post(
+            "/packages/resolve/manifest/", data={"assets": {"tafsir": "1.0"}}, content_type="application/json"
+        )
+
+        # Assert
+        self.assertEqual(404, response.status_code, response.content)
+        self.assertEqual("asset_not_found", response.json()["error_name"])
+
+    def test_download_package_file_where_asset_is_draft_should_return_404(self):
+        # Arrange
+        version = self._version("1.0")
+        self.asset.status = StatusChoice.DRAFT
+        self.asset.save()
+
+        # Act
+        response = self.client.get(f"/packages/download/{version.pk}/tafsir-ar-1.0.csv/")
+
+        # Assert
+        self.assertEqual(404, response.status_code, response.content)
+        self.assertEqual("version_not_found", response.json()["error_name"])
 
 
 class PackageDownloadUrlApiTests(PackageApiTestCase):

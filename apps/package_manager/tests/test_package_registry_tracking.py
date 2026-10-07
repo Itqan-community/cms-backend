@@ -13,7 +13,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetVersion, CategoryChoice, VersionStateChoice
+from apps.content.models import Asset, AssetVersion, CategoryChoice, StatusChoice, VersionStateChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import APIKey, User
@@ -23,6 +23,7 @@ _REDIS = "apps.usage_tracking.decorators.track_usage._get_tracking_redis"
 
 def _make_package_asset(publisher: Publisher, *, slug: str, **kwargs) -> Asset:
     return Asset.objects.create(
+        status=StatusChoice.READY,
         name="Test Asset",
         slug=slug,
         publisher=publisher,

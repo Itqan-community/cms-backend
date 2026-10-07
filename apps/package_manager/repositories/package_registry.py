@@ -29,6 +29,7 @@ class PackageRegistryRepository:
             Asset.objects.select_related("publisher")
             .filter(
                 slug=slug,
+                status=StatusChoice.READY,
                 restricted_for_tenant=False,
             )
             .first()
@@ -56,12 +57,13 @@ class PackageRegistryRepository:
         )
 
     def get_downloadable_version(self, asset_version_id: int) -> AssetVersion | None:
-        """A version the registry could have resolved: published, in an
+        """A version the registry could have resolved: published, in a READY,
         unrestricted asset and a READY language, with content to serve."""
         return (
             AssetVersion.objects.filter(
                 pk=asset_version_id,
                 state=VersionStateChoice.PUBLISHED,
+                asset__status=StatusChoice.READY,
                 asset__restricted_for_tenant=False,
                 asset_language__status=StatusChoice.READY,
             )
