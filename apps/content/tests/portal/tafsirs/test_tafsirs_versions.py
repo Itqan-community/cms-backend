@@ -11,8 +11,10 @@ from apps.content.models import (
     AssetTemplateChoice,
     AssetVersion,
     AssetVersionChange,
+    AssetVersionChangeReview,
     AssetVersionEntry,
     CategoryChoice,
+    ReviewStateChoice,
     StatusChoice,
 )
 from apps.core.permissions import PermissionChoice
@@ -385,6 +387,44 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         )
         self.assertFalse(body["is_approved"])
         self.assertEqual(1, body["pending_review_count"])
+
+    def test_create_version_where_pre_approved_by_reviewer_should_approve_its_changes(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_REVIEW_CONTENT)
+        file = SimpleUploadedFile("tafsir.csv", CSV, content_type="text/csv")
+
+        # Act
+        response = self.client.post(
+            f"/portal/tafsirs/{self.tafsir.slug}/versions/",
+            data={"asset_id": self.tafsir.id, "version_number": "1.0", "pre_approved": True, "file": file},
+        )
+
+        # Assert
+        self.assertEqual(201, response.status_code, response.content)
+        body = response.json()
+        reviews = list(AssetVersionChangeReview.objects.filter(change__version_id=body["id"]))
+        self.assertEqual(1, len(reviews))
+        self.assertEqual((ReviewStateChoice.APPROVED, self.user), (reviews[0].state, reviews[0].reviewed_by))
+        self.assertTrue(body["is_approved"])
+        self.assertEqual(0, body["pending_review_count"])
+
+    def test_create_version_where_pre_approved_without_review_permission_should_return_403(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
+        file = SimpleUploadedFile("tafsir.csv", CSV, content_type="text/csv")
+
+        # Act
+        response = self.client.post(
+            f"/portal/tafsirs/{self.tafsir.slug}/versions/",
+            data={"asset_id": self.tafsir.id, "version_number": "1.0", "pre_approved": True, "file": file},
+        )
+
+        # Assert — no version is created
+        self.assertEqual(403, response.status_code, response.content)
+        self.assertFalse(AssetVersion.objects.filter(asset=self.tafsir).exists())
 
     def test_create_version_where_identical_to_previous_should_record_no_changes(self):
         # Arrange
