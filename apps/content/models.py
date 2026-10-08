@@ -517,11 +517,8 @@ def consumer_visible_q() -> models.Q:
 
 
 class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
-    history = HistoricalRecords(
-        app="simple_history",
-        use_base_model_db=False,
-        history_user_id_field=models.BigIntegerField(null=True),
-    )
+    # History is registered in translation.py, after modeltranslation adds
+    # label_en/label_ar/summary_en/summary_ar, so the audit table records them.
 
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="versions")
 
@@ -549,10 +546,10 @@ class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
         max_length=255,
         blank=True,
         default="",
-        help_text="Human-readable version name (tafsirs and translations).",
+        help_text="Human-readable version name (tafsirs and translations); translated to en/ar.",
     )
 
-    summary = models.TextField(blank=True, help_text="Asset version summary")
+    summary = models.TextField(blank=True, help_text="Asset version summary; translated to en/ar.")
 
     file_url = models.FileField(
         upload_to=upload_to_asset_files,

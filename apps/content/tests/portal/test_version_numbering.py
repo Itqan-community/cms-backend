@@ -76,7 +76,7 @@ class UploadNumberingTest(VersionNumberingBaseTest):
         self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
 
         # Act
-        response = self.upload(label="First")
+        response = self.upload(label_en="First")
 
         # Assert
         self.assertEqual(400, response.status_code, response.content)
@@ -101,12 +101,12 @@ class UploadNumberingTest(VersionNumberingBaseTest):
         self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
 
         # Act
-        response = self.upload(version_number="07.00", label="First edition")
+        response = self.upload(version_number="07.00", label_en="First edition")
 
         # Assert — normalized, and the name is kept separately
         self.assertEqual(201, response.status_code, response.content)
         self.assertEqual("7.0", response.json()["name"])
-        self.assertEqual("First edition", response.json()["label"])
+        self.assertEqual("First edition", response.json()["label_en"])
 
     def test_create_version_where_sequence_exists_should_bump_minor_and_ignore_start(self):
         # Arrange
@@ -165,7 +165,7 @@ class UploadNumberingTest(VersionNumberingBaseTest):
                 "language": "ar",
                 "publisher_id": self.publisher.id,
                 "template": "ayah",
-                "version_label": "Original",
+                "version_label_en": "Original",
                 "version_number": "3.0",
                 "file": SimpleUploadedFile("t.csv", CSV, content_type="text/csv"),
             },
@@ -187,7 +187,7 @@ class CommitNumberingTest(VersionNumberingBaseTest):
     def commit(self, draft: AssetVersion, **data):
         return self.client.post(
             f"/portal/content/tafsirs/{self.tafsir.slug}/versions/{draft.id}/publish/",
-            data={"message": "commit", **data},
+            data={"summary_en": "commit", **data},
             content_type="application/json",
         )
 
@@ -199,7 +199,7 @@ class CommitNumberingTest(VersionNumberingBaseTest):
         draft = self.make_draft()
 
         # Act
-        response = self.commit(draft, label="Revised")
+        response = self.commit(draft, label_en="Revised")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -268,7 +268,7 @@ class CommitNumberingTest(VersionNumberingBaseTest):
         # Assert — a new number, the restored version's name
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual("8.0", response.json()["name"])
-        self.assertEqual("Original", response.json()["label"])
+        self.assertEqual("Original", response.json()["label_en"])
 
 
 class NumberVersionsMigrationTest(VersionNumberingBaseTest):

@@ -157,9 +157,9 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
             f"/portal/tafsirs/{self.tafsir.slug}/versions/",
             data={
                 "asset_id": self.tafsir.id,
-                "label": "New Version",
+                "label_en": "New Version",
                 "version_number": "7.0",
-                "summary": "This is a new version",
+                "summary_en": "This is a new version",
                 "file": file,
             },
         )
@@ -168,8 +168,8 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         self.assertEqual(201, response.status_code, response.content)
         body = response.json()
         self.assertEqual("7.0", body["name"])
-        self.assertEqual("New Version", body["label"])
-        self.assertEqual("This is a new version", body["summary"])
+        self.assertEqual("New Version", body["label_en"])
+        self.assertEqual("This is a new version", body["summary_en"])
         self.assertIsNotNone(body["file_url"])
 
         # Verify DB
@@ -198,9 +198,9 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
             f"/portal/tafsirs/{self.tafsir.slug}/versions/",
             data={
                 "asset_id": self.tafsir.id,
-                "label": "French v1",
+                "label_en": "French v1",
                 "version_number": "7.0",
-                "summary": "",
+                "summary_en": "",
                 "language": "fr",
                 "file": file,
             },
@@ -221,7 +221,7 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
             f"/portal/tafsirs/{self.tafsir.slug}/versions/",
             data={
                 "asset_id": 99999,
-                "label": "New Version",
+                "label_en": "New Version",
                 "version_number": "7.0",
                 "file": SimpleUploadedFile("t.pdf", b"c"),
             },
@@ -246,7 +246,7 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         # Act
         response = self.client.post(
             f"/portal/tafsirs/{self.tafsir.slug}/versions/",
-            data={"asset_id": self.tafsir.id, "label": "V1", "version_number": "1.0", "file": file},
+            data={"asset_id": self.tafsir.id, "label_en": "V1", "version_number": "1.0", "file": file},
         )
 
         # Assert
@@ -275,9 +275,9 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
                 f"/portal/tafsirs/{self.tafsir.slug}/versions/",
                 data={
                     "asset_id": self.tafsir.id,
-                    "label": "2.0.0",
+                    "label_en": "2.0.0",
                     "version_number": "1.0",
-                    "summary": "New release",
+                    "summary_en": "New release",
                     "file": file,
                 },
             )
@@ -298,7 +298,7 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         # Act
         response = self.client.post(
             f"/portal/tafsirs/{self.tafsir.slug}/versions/",
-            data={"asset_id": self.tafsir.id, "label": "2.0.0", "version_number": "1.0", "file": file},
+            data={"asset_id": self.tafsir.id, "label_en": "2.0.0", "version_number": "1.0", "file": file},
         )
 
         # Assert
@@ -314,7 +314,7 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         # Act
         response = self.client.post(
             f"/portal/tafsirs/{self.tafsir.slug}/versions/",
-            data={"asset_id": self.tafsir.id, "label": "v2", "version_number": "1.0", "file": file},
+            data={"asset_id": self.tafsir.id, "label_en": "v2", "version_number": "1.0", "file": file},
         )
 
         # Assert — content that cannot be split into units cannot be reviewed
@@ -332,7 +332,7 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         # Act
         response = self.client.post(
             f"/portal/tafsirs/{self.tafsir.slug}/versions/",
-            data={"asset_id": self.tafsir.id, "label": "v2", "version_number": "1.0", "file": file},
+            data={"asset_id": self.tafsir.id, "label_en": "v2", "version_number": "1.0", "file": file},
         )
 
         # Assert — nothing whose text would be dropped (and so never reviewed) is accepted
@@ -352,7 +352,7 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         # Act
         response = self.client.post(
             f"/portal/tafsirs/{self.tafsir.slug}/versions/",
-            data={"asset_id": self.tafsir.id, "label": "v2", "version_number": "1.0", "file": file},
+            data={"asset_id": self.tafsir.id, "label_en": "v2", "version_number": "1.0", "file": file},
         )
 
         # Assert — consumers download a file generated from the reviewed entries
@@ -374,7 +374,7 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         # Act
         response = self.client.post(
             f"/portal/tafsirs/{self.tafsir.slug}/versions/",
-            data={"asset_id": self.tafsir.id, "label": "v2", "version_number": "1.0", "file": file},
+            data={"asset_id": self.tafsir.id, "label_en": "v2", "version_number": "1.0", "file": file},
         )
 
         # Assert
@@ -437,7 +437,7 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         # Act
         response = self.client.post(
             f"/portal/tafsirs/{self.tafsir.slug}/versions/",
-            data={"asset_id": self.tafsir.id, "label": "v2", "version_number": "1.0", "file": file},
+            data={"asset_id": self.tafsir.id, "label_en": "v2", "version_number": "1.0", "file": file},
         )
 
         # Assert — nothing new to review
@@ -459,8 +459,8 @@ class TafsirVersionUpdateTest(TafsirVersionBaseTest):
         self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
         payload = {
             "asset_id": self.tafsir.id,
-            "label": "Updated Name",
-            "summary": "Updated Summary",
+            "label_en": "Updated Name",
+            "summary_en": "Updated Summary",
         }
 
         # Act
@@ -473,8 +473,8 @@ class TafsirVersionUpdateTest(TafsirVersionBaseTest):
         # Arrange
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
-        self.assertEqual("Updated Name", body["label"])
-        self.assertEqual("Updated Summary", body["summary"])
+        self.assertEqual("Updated Name", body["label_en"])
+        self.assertEqual("Updated Summary", body["summary_en"])
 
         self.version.refresh_from_db()
         self.assertEqual("Updated Name", self.version.label)
@@ -486,7 +486,7 @@ class TafsirVersionUpdateTest(TafsirVersionBaseTest):
         from urllib.parse import urlencode
 
         payload = {
-            "label": "Patched Name",
+            "label_en": "Patched Name",
         }
 
         # Act
@@ -499,8 +499,8 @@ class TafsirVersionUpdateTest(TafsirVersionBaseTest):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
-        self.assertEqual("Patched Name", body["label"])
-        self.assertEqual(self.version.summary, body["summary"])
+        self.assertEqual("Patched Name", body["label_en"])
+        self.assertEqual(self.version.summary, body["summary_en"])
 
     def test_patch_version_where_name_sent_should_keep_version_number(self):
         from urllib.parse import urlencode
@@ -512,7 +512,7 @@ class TafsirVersionUpdateTest(TafsirVersionBaseTest):
         # Act
         response = self.client.patch(
             f"/portal/tafsirs/{self.tafsir.slug}/versions/{self.version.id}/",
-            data=urlencode({"name": "9.9", "label": "Renamed"}),
+            data=urlencode({"name": "9.9", "label_en": "Renamed"}),
             content_type="application/x-www-form-urlencoded",
         )
 
@@ -538,7 +538,7 @@ class TafsirVersionUpdateTest(TafsirVersionBaseTest):
         # Act
         response = self.client.patch(
             f"/portal/tafsirs/{self.tafsir.slug}/versions/{self.version.id}/",
-            data=urlencode({"label": "X"}),
+            data=urlencode({"label_en": "X"}),
             content_type="application/x-www-form-urlencoded",
         )
 

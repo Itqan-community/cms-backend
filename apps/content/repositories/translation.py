@@ -14,6 +14,7 @@ from apps.content.models import (
     MushafLayout,
     StatusChoice,
 )
+from apps.content.version_text import VersionText
 
 
 class TranslationRepository:
@@ -145,8 +146,7 @@ class TranslationRepository:
         asset: Asset,
         *,
         name: str,
-        label: str = "",
-        summary: str = "",
+        text: VersionText | None = None,
         file: Any = None,
         created_by_id: int | None = None,
     ) -> AssetVersion:
@@ -164,8 +164,7 @@ class TranslationRepository:
             asset_version = self.asset_version_model.objects.create(
                 asset=asset,
                 name=name,
-                label=label,
-                summary=summary,
+                **(text or VersionText()).as_fields(),
                 file_url=file,
                 size_bytes=size_bytes,
                 created_by_id=created_by_id,

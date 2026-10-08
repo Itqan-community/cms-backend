@@ -180,7 +180,7 @@ class GetOrCreateDraftTest(AssetContentBaseTest):
         # Assert — the number is issued on commit; the name carries over
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual("", response.json()["name"])
-        self.assertEqual("First edition", response.json()["label"])
+        self.assertEqual("First edition", response.json()["label_en"])
 
     def test_get_or_create_draft_where_user_lacks_permission_should_return_403(self):
         # Arrange
@@ -400,7 +400,7 @@ class SourceReferenceEntriesTest(AssetContentBaseTest):
         # Act
         publish = self.client.post(
             f"/portal/content/translations/{self.translation.slug}/versions/{draft_id}/publish/",
-            data={"version_number": "1.0", "message": "commit"},
+            data={"version_number": "1.0", "summary_en": "commit"},
             content_type="application/json",
         )
 
@@ -431,7 +431,7 @@ class SourceReferenceEntriesTest(AssetContentBaseTest):
         )
         self.client.post(
             f"/portal/content/translations/{self.translation.slug}/versions/{first_id}/publish/",
-            data={"version_number": "1.0", "message": "commit"},
+            data={"version_number": "1.0", "summary_en": "commit"},
             content_type="application/json",
         )
 
@@ -588,7 +588,7 @@ class PublishDraftTest(AssetContentBaseTest):
         # Act
         response = self.client.post(
             f"/portal/content/translations/{self.translation.slug}/versions/{draft.id}/publish/",
-            data={"version_number": "1.0", "message": "first commit"},
+            data={"version_number": "1.0", "summary_en": "first commit"},
             content_type="application/json",
         )
 
@@ -628,7 +628,7 @@ class PublishDraftTest(AssetContentBaseTest):
         # Act
         response = self.client.post(
             f"/portal/content/translations/{self.translation.slug}/versions/{draft.id}/publish/",
-            data={"version_number": "1.0", "message": "tweak ayah 1, add ayah 3"},
+            data={"version_number": "1.0", "summary_en": "tweak ayah 1, add ayah 3"},
             content_type="application/json",
         )
 
@@ -652,7 +652,7 @@ class PublishDraftTest(AssetContentBaseTest):
         # Act — blank message
         response = self.client.post(
             f"/portal/content/translations/{self.translation.slug}/versions/{draft.id}/publish/",
-            data={"version_number": "1.0", "message": "   "},
+            data={"version_number": "1.0", "summary_en": "   "},
             content_type="application/json",
         )
 
@@ -670,7 +670,7 @@ class PublishDraftTest(AssetContentBaseTest):
         # Act
         response = self.client.post(
             f"/portal/content/translations/{self.translation.slug}/versions/{draft.id}/publish/",
-            data={"version_number": "1.0", "message": "commit"},
+            data={"version_number": "1.0", "summary_en": "commit"},
             content_type="application/json",
         )
 
@@ -701,7 +701,7 @@ class PublishDraftTest(AssetContentBaseTest):
         # Act
         response = self.client.post(
             f"/portal/content/translations/{self.translation.slug}/versions/{draft.id}/publish/",
-            data={"version_number": "1.0", "message": "no-op"},
+            data={"version_number": "1.0", "summary_en": "no-op"},
             content_type="application/json",
         )
 
@@ -777,7 +777,7 @@ class PublishDraftTest(AssetContentBaseTest):
         # Act
         response = self.client.post(
             f"/portal/content/translations/{self.translation.slug}/versions/{draft.id}/publish/",
-            data={"version_number": "1.0", "message": "commit"},
+            data={"version_number": "1.0", "summary_en": "commit"},
             content_type="application/json",
         )
 
@@ -800,7 +800,7 @@ class PublishDraftTest(AssetContentBaseTest):
         # Act
         response = self.client.post(
             f"/portal/content/translations/{self.translation.slug}/versions/{published.id}/publish/",
-            data={"version_number": "1.0", "message": "commit"},
+            data={"version_number": "1.0", "summary_en": "commit"},
             content_type="application/json",
         )
 
@@ -1092,7 +1092,7 @@ class VersionUploadImportTest(AssetContentBaseTest):
 
         # Act
         version = TafsirService().create_tafsir_version(
-            "tabari-import", version_number="1.0", summary="", file=upload, publisher_q=None
+            "tabari-import", version_number="1.0", file=upload, publisher_q=None
         )
 
         # Assert — entries populated from the file content

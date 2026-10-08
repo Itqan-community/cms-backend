@@ -21,6 +21,7 @@ from apps.content.services.asset_language_access import (
 )
 from apps.content.services.tafsir import TafsirService
 from apps.content.services.translation import TranslationService
+from apps.content.version_text import VersionText
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.permission_required import permission_required
 from apps.core.ninja_utils.request import Request
@@ -45,7 +46,8 @@ class LanguageOut(Schema):
 class AddLanguageIn(Schema):
     language: str
     # The uploaded file's version: its name and the number the language's sequence starts at.
-    version_label: str = Field(default="", max_length=255)
+    version_label_en: str = Field(default="", max_length=255)
+    version_label_ar: str = Field(default="", max_length=255)
     version_number: str | None = Field(default=None, max_length=20)
 
 
@@ -122,7 +124,7 @@ def add_language(
             if resolved == CategoryChoice.TAFSIR:
                 TafsirService().create_tafsir_version(
                     slug,
-                    label=data.version_label,
+                    text=VersionText.from_data(data, prefix="version_"),
                     version_number=data.version_number,
                     file=file,
                     language=data.language,
@@ -132,7 +134,7 @@ def add_language(
             else:
                 TranslationService().create_translation_version(
                     slug,
-                    label=data.version_label,
+                    text=VersionText.from_data(data, prefix="version_"),
                     version_number=data.version_number,
                     file=file,
                     language=data.language,
