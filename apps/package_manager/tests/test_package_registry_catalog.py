@@ -77,6 +77,8 @@ class PackageCatalogApiTests(BaseTestCase):
                 "name": "Tafsir",
                 "category": "tafsir",
                 "is_open_access": True,
+                "access": "open",
+                "access_request_url": None,
                 "publisher_name": "Publisher",
                 "languages": [
                     {"language": "ar", "is_source": True, "latest_version": "1.2.0"},

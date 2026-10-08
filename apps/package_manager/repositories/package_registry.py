@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 from collections.abc import Collection
+from typing import TYPE_CHECKING
 
 from django.core.files.base import ContentFile
 from django.db import transaction
-from django.db.models import Exists, OuterRef, Q, QuerySet
+from django.db.models import BooleanField, CharField, Exists, OuterRef, Q, QuerySet, Subquery, Value
+from django.utils import timezone
 
 from apps.content.models import (
     Asset,
+    AssetAccess,
+    AssetAccessRequest,
     AssetLanguage,
     AssetVersion,
     AssetVersionChange,
@@ -17,6 +21,11 @@ from apps.content.models import (
 )
 from apps.content.repositories.asset_content import AssetContentRepository
 from apps.content.services.asset_templates import unit_spec_for
+
+if TYPE_CHECKING:
+    from django.contrib.auth.models import AnonymousUser
+
+    from apps.users.models import User
 
 
 class PackageRegistryRepository:
@@ -43,9 +52,14 @@ class PackageRegistryRepository:
         open_access: bool | None = None,
         category: str | None = None,
         exclude_categories: Collection[str] = (),
+        user: User | AnonymousUser | None = None,
     ) -> QuerySet[Asset]:
         """READY, unrestricted assets with at least one installable version in a
-        READY language rendition, ordered by slug."""
+        READY language rendition, ordered by slug.
+
+        Each asset is annotated for ``user`` with ``caller_has_grant`` (an active
+        access grant) and ``caller_request_status`` (their latest access request's
+        status, or None)."""
         installable_version = AssetVersion.objects.filter(
             asset=OuterRef("pk"),
             state=VersionStateChoice.PUBLISHED,
@@ -62,7 +76,24 @@ class PackageRegistryRepository:
             qs = qs.filter(category=category)
         if exclude_categories:
             qs = qs.exclude(category__in=exclude_categories)
-        return qs.order_by("slug")
+        return self._annotate_caller_access(qs, user).order_by("slug")
+
+    def _annotate_caller_access(self, qs: QuerySet[Asset], user: User | AnonymousUser | None) -> QuerySet[Asset]:
+        if user is None or not user.is_authenticated:
+            return qs.annotate(
+                caller_has_grant=Value(False, output_field=BooleanField()),
+                caller_request_status=Value(None, output_field=CharField()),
+            )
+        active_grant = AssetAccess.objects.filter(asset=OuterRef("pk"), user=user).filter(
+            Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
+        )
+        latest_request = AssetAccessRequest.objects.filter(asset=OuterRef("pk"), developer_user=user).order_by(
+            "-created_at"
+        )
+        return qs.annotate(
+            caller_has_grant=Exists(active_grant),
+            caller_request_status=Subquery(latest_request.values("status")[:1]),
+        )
 
     def list_available_languages(self, asset: Asset) -> QuerySet[AssetLanguage]:
         """The asset's READY renditions, source language first."""
