@@ -242,7 +242,7 @@ class PublishNonAyahDraftTests(QuranDataMixin, BaseTestCase):
 
         # Act
         published = service.publish_draft(
-            asset.slug, CategoryChoice.TRANSLATION, draft.id, message="first surah commit", version_number="1.0"
+            asset.slug, CategoryChoice.TRANSLATION, draft.id, summary_en="first surah commit", version_number="1.0"
         )
 
         # Assert
@@ -271,7 +271,7 @@ class PublishNonAyahDraftTests(QuranDataMixin, BaseTestCase):
 
         # Act
         published = service.publish_draft(
-            asset.slug, CategoryChoice.TRANSLATION, draft.id, message="first word commit", version_number="1.0"
+            asset.slug, CategoryChoice.TRANSLATION, draft.id, summary_en="first word commit", version_number="1.0"
         )
 
         # Assert
@@ -301,7 +301,7 @@ class PublishNonAyahDraftTests(QuranDataMixin, BaseTestCase):
 
         # Act
         published = service.publish_draft(
-            asset.slug, CategoryChoice.TAFSIR, draft.id, message="first page commit", version_number="1.0"
+            asset.slug, CategoryChoice.TAFSIR, draft.id, summary_en="first page commit", version_number="1.0"
         )
 
         # Assert

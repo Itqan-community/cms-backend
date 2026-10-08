@@ -179,7 +179,7 @@ class AssetLanguagesApiTest(BaseTestCase):
 
         response = self.client.post(
             f"/portal/content/translations/{self.translation.slug}/languages/",
-            data={"language": "es", "file": csv, "version_label": "Primera", "version_number": "3.0"},
+            data={"language": "es", "file": csv, "version_label_en": "Primera", "version_number": "3.0"},
         )
 
         self.assertEqual(200, response.status_code, response.content)

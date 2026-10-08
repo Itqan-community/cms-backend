@@ -61,7 +61,7 @@ class FontVersionPatchIn(Schema):
 )
 @permission_required([permission_class(PermissionChoice.PORTAL_READ_FONT)])
 @paginate
-@searching(search_fields=["name", "summary"])
+@searching(search_fields=["name", "summary_en", "summary_ar"])
 def list_font_versions(request: Request, font_slug: str):
     try:
         asset = Asset.objects.filter(request.publisher_q()).get(slug=font_slug, category=CategoryChoice.FONT)

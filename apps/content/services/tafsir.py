@@ -27,6 +27,7 @@ from apps.content.services.asset_content import (
     set_version_language,
 )
 from apps.content.services.mushaf_layout import MushafLayoutService
+from apps.content.version_text import VersionText
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
 
@@ -154,9 +155,8 @@ class TafsirService:
     def create_tafsir_with_optional_version(
         self,
         *,
-        version_label: str = "",
+        version_text: VersionText | None = None,
         version_number: str | None = None,
-        version_summary: str = "",
         file: Any = None,
         created_by_id: int | None = None,
         **tafsir_kwargs: Any,
@@ -172,9 +172,8 @@ class TafsirService:
             if file is not None:
                 self.create_tafsir_version(
                     tafsir.slug,
-                    label=version_label,
+                    text=version_text,
                     version_number=version_number,
-                    summary=version_summary,
                     file=file,
                     created_by_id=created_by_id,
                 )
@@ -271,10 +270,9 @@ class TafsirService:
         self,
         tafsir_slug: str,
         *,
-        label: str = "",
+        text: VersionText | None = None,
         version_number: str | None = None,
         bump: VersionBump = "minor",
-        summary: str = "",
         file: Any = None,
         language: str | None = None,
         created_by_id: int | None = None,
@@ -301,8 +299,7 @@ class TafsirService:
             version = self.repo.create_tafsir_version(
                 asset,
                 name="",
-                label=label.strip(),
-                summary=summary,
+                text=text,
                 file=file,
                 created_by_id=created_by_id,
             )

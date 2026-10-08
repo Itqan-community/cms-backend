@@ -107,9 +107,9 @@ class ContentEditPermissionTests(BaseTestCase):
             f"/portal/translations/{self.translation.slug}/versions/",
             data={
                 "asset_id": self.translation.id,
-                "label": "v2",
+                "label_en": "v2",
                 "version_number": "7.0",
-                "summary": "upload",
+                "summary_en": "upload",
                 "file": SimpleUploadedFile("v2.pdf", b"content", content_type="application/pdf"),
             },
         )
@@ -130,9 +130,9 @@ class ContentEditPermissionTests(BaseTestCase):
             f"/portal/translations/{self.translation.slug}/versions/",
             data={
                 "asset_id": self.translation.id,
-                "label": "v2",
+                "label_en": "v2",
                 "version_number": "7.0",
-                "summary": "upload",
+                "summary_en": "upload",
                 "file": SimpleUploadedFile("v2.csv", b"surah,ayah,text\n1,1,in the name", content_type="text/csv"),
             },
         )
@@ -165,13 +165,13 @@ class ContentEditPermissionTests(BaseTestCase):
         # Act
         response = self.client.patch(
             f"/portal/tafsirs/{self.tafsir.slug}/versions/{version.id}/",
-            data=urlencode({"label": "Renamed"}),
+            data=urlencode({"label_en": "Renamed"}),
             content_type="application/x-www-form-urlencoded",
         )
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
-        self.assertEqual("Renamed", response.json()["label"])
+        self.assertEqual("Renamed", response.json()["label_en"])
 
     def test_with_implied_where_content_permission_granted_should_include_category_read(self):
         # Arrange
