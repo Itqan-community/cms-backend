@@ -369,14 +369,28 @@ Lists what can be installed: READY, unrestricted assets that have at least one r
 
 * `?search=` — case-insensitive match on the asset's name, slug, description or publisher name.
 * `?category=` — only assets of one category (`mushaf`, `tafsir`, `translation`, …); an unknown value is a `400 validation_error`.
-* `?open_access=true` — only assets that need no API key (`false`: only gated ones). Each result lists the asset's installable languages, source first, with the newest stable version in each:
+* `?open_access=true` — only assets that need no API key (`false`: only gated ones).
+
+Each result lists the asset's installable languages, source first, with the newest stable version in each, and what the caller can do with it. The catalog lists gated assets to everyone so they can be discovered; `access` is computed for the API key sent with the request (`X-API-Key`):
+
+| `access` | Meaning | Installable |
+|---|---|---|
+| `open` | open-access asset (or access is not enforced) | yes |
+| `granted` | the key's owner has an active access grant | yes |
+| `pending` | their latest access request awaits the publisher | no |
+| `rejected` | their latest access request was rejected | no |
+| `none` | no request, an expired grant, or no API key | no |
+
+`access_request_url` is the asset's page in the CMS, where access is requested; it is `null` for open assets.
 
 ```json
 {
   "slug": "tafsir-jalalayn",
   "name": "تفسير الجلالين",
   "category": "tafsir",
-  "is_open_access": true,
+  "is_open_access": false,
+  "access": "pending",
+  "access_request_url": "https://cms.itqan.dev/gallery/asset/42",
   "publisher_name": "…",
   "languages": [
     {"language": "ar", "is_source": true, "latest_version": "2.4.0"},

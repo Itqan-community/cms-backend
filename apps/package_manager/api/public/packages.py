@@ -12,7 +12,12 @@ from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
-from apps.package_manager.services.package_registry import PackageRegistryService, PackageRequest, ResolvedPackage
+from apps.package_manager.services.package_registry import (
+    CatalogAccess,
+    PackageRegistryService,
+    PackageRequest,
+    ResolvedPackage,
+)
 from apps.usage_tracking.decorators.track_usage import track_extra, track_usage
 
 router = ItqanRouter(tags=[NinjaTag.PACKAGES])
@@ -41,8 +46,24 @@ class PackageCatalogOut(Schema):
     name: str
     category: str
     is_open_access: bool
+    access: CatalogAccess = Field(
+        ...,
+        description="The caller's access: `open` and `granted` can be installed; "
+        "`pending`, `rejected` and `none` need an approved access request first.",
+    )
+    access_request_url: str | None = Field(
+        None, description="CMS page where access to a gated asset is requested; null for open assets."
+    )
     publisher_name: str | None = None
     languages: list[PackageLanguageOut]
+
+    @staticmethod
+    def resolve_access(obj: Asset) -> CatalogAccess:
+        return PackageRegistryService.catalog_access(obj)
+
+    @staticmethod
+    def resolve_access_request_url(obj: Asset) -> str | None:
+        return PackageRegistryService.access_request_url(obj)
 
     @staticmethod
     def resolve_publisher_name(obj: Asset) -> str | None:
@@ -134,7 +155,9 @@ def list_packages(
     Recitations are not served by the package manager and never appear.
     `itqan init` and `itqan browse` use it.
     """
-    return PackageRegistryService().list_installable_assets(open_access=open_access, category=category)
+    return PackageRegistryService().list_installable_assets(
+        open_access=open_access, category=category, user=request.user
+    )
 
 
 @router.post(
