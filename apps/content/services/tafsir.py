@@ -16,6 +16,7 @@ from apps.content.models import (
     MushafLayout,
 )
 from apps.content.repositories.asset_content import AssetContentRepository
+from apps.content.repositories.asset_review import AssetReviewRepository
 from apps.content.repositories.tafsir import TafsirRepository
 from apps.content.services.asset_access import guard_restrict_for_tenant
 from apps.content.services.asset_content import (
@@ -33,6 +34,7 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from apps.content.models import Asset
+    from apps.users.models import User
 
 
 class TafsirService:
@@ -276,6 +278,7 @@ class TafsirService:
         file: Any = None,
         language: str | None = None,
         created_by_id: int | None = None,
+        approved_by: User | None = None,
         publisher_q: Q | None = None,
     ) -> AssetVersion:
         """
@@ -289,6 +292,9 @@ class TafsirService:
 
         The version is issued the next number in its language's sequence:
         ``version_number`` starts the sequence, otherwise the latest is bumped by ``bump``.
+
+        With ``approved_by`` (a reviewer), the recorded changes are approved on
+        upload under their name, so the version is publishable straight away.
         """
         asset = self._get_tafsir_or_404(tafsir_slug, publisher_q=publisher_q)
         with transaction.atomic():
@@ -304,6 +310,8 @@ class TafsirService:
             if file:
                 import_uploaded_file_into_entries(version, strict=True)
                 AssetContentRepository().record_upload_changes(version)
+                if approved_by is not None:
+                    AssetReviewRepository().approve_changes(version.changes.all(), approved_by)
             # Numbered after the import, so a bad file is reported before a missing
             # number, and before the canonical file, which is named after it.
             name = issue_version_number(asset, language, start=version_number, bump=bump)

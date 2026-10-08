@@ -119,6 +119,8 @@ class TranslationVersionCreateIn(Schema):
     bump: Literal["minor", "major"] = "minor"
     summary: str = ""
     language: str | None = None
+    # Approve the uploaded changes on upload; needs the review permission.
+    pre_approved: bool = False
 
 
 # The version number (``name``) is fixed once issued, so updates can't change it.
@@ -215,6 +217,8 @@ def create_translation_version(
 
     # language is optional; omitting it targets the asset's source language.
     require_language(request.user, asset, data.language or asset.language)
+    if data.pre_approved:
+        check_permission(request.user, PermissionChoice.PORTAL_REVIEW_CONTENT, raise_exception=True)
     version = service.create_translation_version(
         translation_slug,
         label=data.label,
@@ -224,6 +228,7 @@ def create_translation_version(
         file=file,
         language=data.language,
         created_by_id=request.user.id,
+        approved_by=request.user if data.pre_approved else None,
         publisher_q=request.publisher_q(),
     )
     return 201, version

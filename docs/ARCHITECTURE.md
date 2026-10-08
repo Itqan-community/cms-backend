@@ -357,7 +357,10 @@ from the parsed entries, so consumers download exactly what was reviewed.
   `POST .../review/changes/bulk-approve/` approves many at once: the given
   `change_ids` (all must belong to the language, `change_not_found` otherwise), or
   without them every change matching the same `state`/`version` filter across all
-  pages; already-approved changes keep their auditing. Approval gates
+  pages; already-approved changes keep their auditing. An upload can also be
+  approved as it lands: `pre_approved=true` on the version upload approves its
+  recorded changes under the uploader, who must also hold `PORTAL_REVIEW_CONTENT`
+  (403 otherwise; replacing a file always goes back to review). Approval gates
   publishing (see above); reviewers cannot edit content.
 
 ---
