@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import logging
+
+from django.db import transaction
 from django.db.models import Q, QuerySet
 from django.utils import timezone
 from django.utils.translation import gettext as _
@@ -16,6 +19,8 @@ from apps.content.models import (
 from apps.content.repositories.asset_review import AssetReviewRepository, change_language
 from apps.content.services.asset_language_access import allowed_languages, require_language
 from apps.core.ninja_utils.errors import ItqanError
+
+logger = logging.getLogger(__name__)
 
 _NOT_FOUND_ERROR = {
     CategoryChoice.TRANSLATION: "translation_not_found",
@@ -66,16 +71,58 @@ class AssetReviewService:
         that make up that committed version (see ``AssetReviewRepository.changes_for``)."""
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
         self._require_assigned(user, asset, language)
-        as_of = None
-        if version_id is not None:
-            as_of = self.repo.committed_versions(asset, language).filter(pk=version_id).first()
-            if as_of is None:
+        as_of = self._committed_version_or_404(asset, language, version_id)
+        return self.repo.changes_for(asset, language, state=state, as_of=as_of)
+
+    def _committed_version_or_404(self, asset: Asset, language: str, version_id: int | None) -> AssetVersion | None:
+        if version_id is None:
+            return None
+        as_of = self.repo.committed_versions(asset, language).filter(pk=version_id).first()
+        if as_of is None:
+            raise ItqanError(
+                error_name="version_not_found",
+                message=_("Version with id {id} not found.").format(id=version_id),
+                status_code=404,
+            )
+        return as_of
+
+    def bulk_approve(
+        self,
+        slug: str,
+        category: CategoryChoice,
+        *,
+        language: str,
+        user,
+        change_ids: list[int] | None,
+        state: str | None = None,
+        version_id: int | None = None,
+        publisher_q: Q | None = None,
+    ) -> int:
+        """Approve many of the language's changes at once; returns how many were approved.
+
+        With ``change_ids``: exactly those changes, all of which must belong to the
+        language. Without: every change ``list_changes`` returns for the same
+        ``state`` / ``version_id`` filter, across all pages.
+        """
+        asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
+        self._require_assigned(user, asset, language)
+        if change_ids is not None:
+            changes = self.repo.changes_for(asset, language).filter(pk__in=change_ids)
+            if changes.count() != len(set(change_ids)):
                 raise ItqanError(
-                    error_name="version_not_found",
-                    message=_("Version with id {id} not found.").format(id=version_id),
+                    error_name="change_not_found",
+                    message=_("One or more changes were not found."),
                     status_code=404,
                 )
-        return self.repo.changes_for(asset, language, state=state, as_of=as_of)
+        else:
+            as_of = self._committed_version_or_404(asset, language, version_id)
+            changes = self.repo.changes_for(asset, language, state=state, as_of=as_of)
+        with transaction.atomic():
+            approved = self.repo.approve_changes(changes, user)
+        logger.info(
+            f"Changes bulk-approved [asset_id={asset.pk}, language={language}, approved={approved}, user_id={user.pk}]"
+        )
+        return approved
 
     def list_review_versions(
         self, slug: str, category: CategoryChoice, *, language: str, user, publisher_q: Q | None = None

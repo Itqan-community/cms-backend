@@ -244,3 +244,167 @@ class ReviewVersionFilterTest(AssetReviewApiBaseTest):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual([self.change.id], [row["id"] for row in response.json()["results"]])
+
+
+class ReviewBulkApproveTest(AssetReviewApiBaseTest):
+    def setUp(self):
+        super().setUp()
+        self.ayah2 = baker.make(Ayah, id=2, sura=self.sura, number_in_sura=2, text="b")
+        self.change2 = baker.make(
+            AssetVersionChange, version=self.version, ayah=self.ayah2, change_type="added", new_text="louange", order=2
+        )
+
+    def _auth_reviewer(self):
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_REVIEW_CONTENT)
+        MemberLanguage.objects.create(member=self.membership, language="fr")
+
+    def _bulk_url(self):
+        return f"/portal/content/translations/{self.asset.slug}/review/changes/bulk-approve/"
+
+    def test_bulk_approve_where_change_ids_given_should_approve_only_those(self):
+        # Arrange
+        self._auth_reviewer()
+
+        # Act
+        response = self.client.post(
+            self._bulk_url(), data={"language": "fr", "change_ids": [self.change.id]}, content_type="application/json"
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual({"approved": 1}, response.json())
+        review = AssetVersionChangeReview.objects.get(change=self.change)
+        self.assertEqual((ReviewStateChoice.APPROVED, self.user), (review.state, review.reviewed_by))
+        self.assertFalse(AssetVersionChangeReview.objects.filter(change=self.change2).exists())
+
+    def test_bulk_approve_where_no_change_ids_should_approve_every_matching_change(self):
+        # Arrange
+        self._auth_reviewer()
+
+        # Act
+        response = self.client.post(self._bulk_url(), data={"language": "fr"}, content_type="application/json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual({"approved": 2}, response.json())
+        self.assertEqual(
+            2, AssetVersionChangeReview.objects.filter(state=ReviewStateChoice.APPROVED, reviewed_by=self.user).count()
+        )
+
+    def test_bulk_approve_where_already_approved_should_skip_it(self):
+        # Arrange
+        self._auth_reviewer()
+        other = User.objects.create_user(email="other@example.com", name="Other", is_staff=True)
+        reviewed_at = timezone.now() - timezone.timedelta(days=1)
+        AssetVersionChangeReview.objects.create(
+            change=self.change, state=ReviewStateChoice.APPROVED, reviewed_by=other, reviewed_at=reviewed_at
+        )
+
+        # Act
+        response = self.client.post(self._bulk_url(), data={"language": "fr"}, content_type="application/json")
+
+        # Assert — the earlier approval keeps its auditing
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual({"approved": 1}, response.json())
+        review = AssetVersionChangeReview.objects.get(change=self.change)
+        self.assertEqual((other, reviewed_at), (review.reviewed_by, review.reviewed_at))
+
+    def test_bulk_approve_where_commented_should_approve_and_clear_comment(self):
+        # Arrange
+        self._auth_reviewer()
+        AssetVersionChangeReview.objects.create(
+            change=self.change,
+            state=ReviewStateChoice.COMMENTED,
+            comment="typo",
+            reviewed_by=self.user,
+            reviewed_at=timezone.now(),
+        )
+
+        # Act
+        response = self.client.post(
+            self._bulk_url(), data={"language": "fr", "state": "commented"}, content_type="application/json"
+        )
+
+        # Assert — the state filter scopes it to the commented change
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual({"approved": 1}, response.json())
+        review = AssetVersionChangeReview.objects.get(change=self.change)
+        self.assertEqual((ReviewStateChoice.APPROVED, ""), (review.state, review.comment))
+        self.assertFalse(AssetVersionChangeReview.objects.filter(change=self.change2).exists())
+
+    def test_bulk_approve_where_version_given_should_approve_only_the_changes_that_make_it_up(self):
+        # Arrange
+        self._auth_reviewer()
+        v2 = baker.make(AssetVersion, asset=self.asset, asset_language=self.fr, name="v2")
+        AssetVersion.objects.filter(pk=v2.pk).update(created_at=timezone.now() + timezone.timedelta(hours=1))
+        later = baker.make(
+            AssetVersionChange, version=v2, ayah=self.ayah, change_type="modified", new_text="x", order=1
+        )
+
+        # Act
+        response = self.client.post(
+            self._bulk_url(), data={"language": "fr", "version": self.version.id}, content_type="application/json"
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual({"approved": 2}, response.json())
+        self.assertFalse(AssetVersionChangeReview.objects.filter(change=later).exists())
+
+    def test_bulk_approve_where_change_of_another_language_should_return_404(self):
+        # Arrange
+        self._auth_reviewer()
+        es = AssetLanguage.objects.create(asset=self.asset, language="es")
+        es_version = baker.make(AssetVersion, asset=self.asset, asset_language=es, name="v1")
+        es_change = baker.make(AssetVersionChange, version=es_version, ayah=self.ayah, change_type="added", order=1)
+
+        # Act
+        response = self.client.post(
+            self._bulk_url(),
+            data={"language": "fr", "change_ids": [self.change.id, es_change.id]},
+            content_type="application/json",
+        )
+
+        # Assert — nothing is approved
+        self.assertEqual(404, response.status_code, response.content)
+        self.assertEqual("change_not_found", response.json()["error_name"])
+        self.assertFalse(AssetVersionChangeReview.objects.exists())
+
+    def test_bulk_approve_where_version_unknown_should_return_404(self):
+        # Arrange
+        self._auth_reviewer()
+
+        # Act
+        response = self.client.post(
+            self._bulk_url(), data={"language": "fr", "version": 999999}, content_type="application/json"
+        )
+
+        # Assert
+        self.assertEqual(404, response.status_code, response.content)
+        self.assertEqual("version_not_found", response.json()["error_name"])
+
+    def test_bulk_approve_where_language_not_assigned_should_return_403(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_REVIEW_CONTENT)
+
+        # Act
+        response = self.client.post(self._bulk_url(), data={"language": "fr"}, content_type="application/json")
+
+        # Assert
+        self.assertEqual(403, response.status_code, response.content)
+        self.assertEqual("language_not_assigned", response.json()["error_name"])
+        self.assertFalse(AssetVersionChangeReview.objects.exists())
+
+    def test_bulk_approve_where_no_review_permission_should_return_403(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        MemberLanguage.objects.create(member=self.membership, language="fr")
+
+        # Act
+        response = self.client.post(self._bulk_url(), data={"language": "fr"}, content_type="application/json")
+
+        # Assert
+        self.assertEqual(403, response.status_code, response.content)
+        self.assertFalse(AssetVersionChangeReview.objects.exists())
