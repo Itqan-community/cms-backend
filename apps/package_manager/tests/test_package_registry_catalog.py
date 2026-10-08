@@ -140,3 +140,43 @@ class PackageCatalogApiTests(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual("1.0.0", response.json()["results"][0]["languages"][0]["latest_version"])
+
+    def test_list_packages_where_search_given_should_match_name_slug_and_publisher(self):
+        # Arrange
+        self._version(self._asset("tafsir-jalalayn", name="Jalalayn"), "1.0")
+        self._version(self._asset("mushaf-madinah", name="Madinah Mushaf"), "1.0")
+        other_publisher = baker.make(Publisher, name="King Fahd Complex")
+        self._version(self._asset("font-hafs", name="Hafs Font", publisher=other_publisher), "1.0")
+
+        # Act
+        by_name = self.client.get("/packages/", {"search": "jalal"})
+        by_slug = self.client.get("/packages/", {"search": "mushaf-mad"})
+        by_publisher = self.client.get("/packages/", {"search": "fahd"})
+
+        # Assert
+        self.assertEqual(["tafsir-jalalayn"], [r["slug"] for r in by_name.json()["results"]])
+        self.assertEqual(["mushaf-madinah"], [r["slug"] for r in by_slug.json()["results"]])
+        self.assertEqual(["font-hafs"], [r["slug"] for r in by_publisher.json()["results"]])
+
+    def test_list_packages_where_category_given_should_list_only_that_category(self):
+        # Arrange
+        self._version(self._asset("tafsir-a", category="tafsir"), "1.0")
+        self._version(self._asset("mushaf-a", category="mushaf", template=None), "1.0")
+
+        # Act
+        response = self.client.get("/packages/", {"category": "mushaf"})
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(["mushaf-a"], [r["slug"] for r in response.json()["results"]])
+
+    def test_list_packages_where_category_is_unknown_should_return_400(self):
+        # Arrange
+        self._version(self._asset("tafsir-a"), "1.0")
+
+        # Act
+        response = self.client.get("/packages/", {"category": "not-a-category"})
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("validation_error", response.json()["error_name"])

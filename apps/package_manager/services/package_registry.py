@@ -471,8 +471,13 @@ class PackageRegistryService:
 
         return results
 
-    def list_installable_assets(self, *, open_access: bool | None = None) -> QuerySet[Asset]:
-        return self.repo.list_installable_assets(open_access=open_access)
+    def list_installable_assets(
+        self,
+        *,
+        open_access: bool | None = None,
+        category: str | None = None,
+    ) -> QuerySet[Asset]:
+        return self.repo.list_installable_assets(open_access=open_access, category=category)
 
     def catalog_languages(self, asset: Asset) -> list[CatalogLanguage]:
         """The asset's installable languages (source first), each with the newest
