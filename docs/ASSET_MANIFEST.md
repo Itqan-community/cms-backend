@@ -8,7 +8,7 @@ versions, and how those declarations resolve to concrete `AssetVersion` records.
 
 It is a **contract, not an implementation**. Nothing in this document ships code. The
 registry API ([#417](https://github.com/Itqan-community/cms-backend/issues/417)), the CLI
-installer ([#422](https://github.com/Itqan-community/cms-backend/issues/422)), artifact
+installer ([#422](https://github.com/Itqan-community/cms-backend/issues/422), now [itqan-cli](https://github.com/Itqan-community/itqan-cli)), artifact
 packaging ([#425](https://github.com/Itqan-community/cms-backend/issues/425) / [`PACKAGE_ARTIFACT.md`](./PACKAGE_ARTIFACT.md)) and the
 Dependabot-style updater ([#427](https://github.com/Itqan-community/cms-backend/issues/427))
 each implement against it.
@@ -58,6 +58,7 @@ exactly one manifest per repository.
 
 ## 2. The manifest: `itqan-assets.yaml`
 
+The `itqan` command comes from [itqan-cli](https://github.com/Itqan-community/itqan-cli); see its README to install it.
 `itqan init` creates a starter manifest in the current folder. It asks the registry's catalog
 (`GET /packages/`) for a few installable assets — only open-access ones unless an API key is
 given — and writes an entry for each, with a comment listing the asset's available languages
