@@ -8,6 +8,8 @@ from apps.content.models import (
     AssetLanguage,
     AssetTemplateChoice,
     AssetVersion,
+    Qiraah,
+    Reciter,
     StatusChoice,
     VersionStateChoice,
 )
@@ -180,3 +182,24 @@ class PackageCatalogApiTests(BaseTestCase):
         # Assert
         self.assertEqual(400, response.status_code, response.content)
         self.assertEqual("validation_error", response.json()["error_name"])
+
+    def test_list_packages_where_asset_is_recitation_should_leave_it_out(self):
+        # Arrange
+        self._version(self._asset("tafsir-a"), "1.0")
+        recitation = self._asset(
+            "recitation-a",
+            category="recitation",
+            template=None,
+            reciter=baker.make(Reciter),
+            qiraah=baker.make(Qiraah),
+        )
+        self._version(recitation, "1.0")
+
+        # Act
+        all_assets = self.client.get("/packages/")
+        recitations = self.client.get("/packages/", {"category": "recitation"})
+
+        # Assert
+        self.assertEqual(["tafsir-a"], [r["slug"] for r in all_assets.json()["results"]])
+        self.assertEqual(200, recitations.status_code, recitations.content)
+        self.assertEqual([], recitations.json()["results"])

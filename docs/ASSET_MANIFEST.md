@@ -395,6 +395,7 @@ reproducible state it already had.
 | Invalid Reserved Field | `package` present but not a non-empty string |
 | Duplicate Asset Entry | two entries name the same asset and language |
 | Unknown Asset | the slug matches no asset available to consumers — an asset the publisher keeps in `draft` status is reported exactly like a missing one |
+| Category Not Installable | the asset belongs to a category the package manager does not serve (recitations) |
 | Language Not Found | the asset has no consumer-available rendition in the requested language (or, with `language` omitted, no available source rendition) |
 | No Eligible Package Versions | the rendition exists but has no published, SemVer-valid version with content |
 | Unsatisfiable Version Constraint | eligible versions exist, none match |

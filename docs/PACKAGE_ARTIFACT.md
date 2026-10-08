@@ -183,6 +183,8 @@ data/
 ```
 
 ### 4.4. Audio Recitations (`recitation`)
+> **Not served by the registry yet.** The package manager does not install recitations: they are left out of the catalog, `resolve` rejects them with `422 category_not_installable`, and their download links return `404 version_not_found`. The layout below is kept for when they are added.
+
 Recitation packages provide standardized track metadata, timing markers (`RecitationAyahTiming`), and manifest references:
 ```
 data/
@@ -360,8 +362,10 @@ The Registry API (`GET /packages/resolve/<slug>/?version=…&language=…` and `
 }
 ```
 
+Both endpoints reject an asset whose category the package manager does not serve (recitations, §4.4) with `422 category_not_installable`, after the access check.
+
 ### 9.1a. Catalog (`GET /packages/`)
-Lists what can be installed: READY, unrestricted assets that have at least one resolvable version, ordered by slug and paginated like the other public lists (`?page=`, `?page_size=`; response `{"results": [...], "count": N}`). Filters, which can be combined:
+Lists what can be installed: READY, unrestricted assets that have at least one resolvable version, ordered by slug and paginated like the other public lists (`?page=`, `?page_size=`; response `{"results": [...], "count": N}`). Recitations are never listed (see §4.4). Filters, which can be combined:
 
 * `?search=` — case-insensitive match on the asset's name, slug, description or publisher name.
 * `?category=` — only assets of one category (`mushaf`, `tafsir`, `translation`, …); an unknown value is a `400 validation_error`.

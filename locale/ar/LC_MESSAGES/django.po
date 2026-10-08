@@ -882,6 +882,10 @@ msgstr "الإصدار {version} غير موجود للمورد {slug}."
 msgid "No eligible PACKAGE version for asset {slug} satisfies constraint '{constraint}' ({range_desc})."
 msgstr "لا يوجد إصدار PACKAGE مؤهل للمورد {slug} يحقق القيد '{constraint}' ({range_desc})."
 
+#, python-brace-format
+msgid "{category} assets can't be installed with the package manager."
+msgstr "لا يمكن تثبيت موارد فئة {category} باستخدام مدير الحزم."
+
 msgid "Package version not found."
 msgstr "إصدار الحزمة غير موجود."
 

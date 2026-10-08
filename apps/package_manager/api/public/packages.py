@@ -131,6 +131,7 @@ def list_packages(
 
     Lists READY assets that have at least one version the registry can resolve,
     each with its available languages (source first) and their newest version.
+    Recitations are not served by the package manager and never appear.
     `itqan init` and `itqan browse` use it.
     """
     return PackageRegistryService().list_installable_assets(open_access=open_access, category=category)
@@ -148,7 +149,8 @@ def list_packages(
         422: NinjaErrorResponse[Literal["invalid_version_constraint"]]
         | NinjaErrorResponse[Literal["no_eligible_package_versions"]]
         | NinjaErrorResponse[Literal["unsatisfiable_version_constraint"]]
-        | NinjaErrorResponse[Literal["canonical_version_collision"]],
+        | NinjaErrorResponse[Literal["canonical_version_collision"]]
+        | NinjaErrorResponse[Literal["category_not_installable"]],
     },
 )
 @track_usage(entity_type="package")
@@ -210,7 +212,8 @@ def resolve_package_manifest(request: Request, body: PackageManifestEntryIn):
         422: NinjaErrorResponse[Literal["invalid_version_constraint"]]
         | NinjaErrorResponse[Literal["no_eligible_package_versions"]]
         | NinjaErrorResponse[Literal["unsatisfiable_version_constraint"]]
-        | NinjaErrorResponse[Literal["canonical_version_collision"]],
+        | NinjaErrorResponse[Literal["canonical_version_collision"]]
+        | NinjaErrorResponse[Literal["category_not_installable"]],
     },
 )
 @track_usage(entity_type="package")
