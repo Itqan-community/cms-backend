@@ -193,7 +193,7 @@ The dependency-management experience developers already know from `pip` / pub.de
 - **Manifest file** — a project declares its Itqan assets with pinned versions
   (à la `requirements.txt` / `pubspec.yaml`). `AssetVersion` already uses semver.
 - **Registry API** — resolve a manifest to concrete `AssetVersion`s and fetch artifacts.
-- **CLI installer** — `itqan install` / `itqan sync`, the `pip install -r` / `uv sync` /
+- **CLI installer** ([itqan-cli](https://github.com/Itqan-community/itqan-cli)) — `itqan install` / `itqan sync`, the `pip install -r` / `uv sync` /
   `npm install` equivalent: reads the manifest, resolves pins, and materializes assets
   into an `assets/` folder. Idempotent, lockfile-driven, CI-friendly.
 - **Dependabot-style updater** — a new `AssetVersion` opens a PR bumping the pin in

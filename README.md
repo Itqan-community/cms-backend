@@ -229,7 +229,7 @@ Planned work for Hijri 1448 Q1–Q2 is tracked in [docs/ROADMAP.md](./docs/ROADM
 - **Self-identifying authentication** — API keys as a public, non-secret app identifier, plus an opaque per-end-user identifier, so client-only apps can integrate without a backend
 - **Ayah-by-ayah recitation delivery** — serve individual ayahs instead of whole-surah downloads
 - **Recitation folders** — multiple variants (clear, echo, bitrates) under one asset, each with its own ayah timings
-- **Itqan Dependabot & package manager** — manifest, registry, the `itqan` CLI (its own `itqan-cli` repository), and automated version-bump PRs so published corrections reach the field
+- **Itqan Dependabot & package manager** — manifest, registry, the `itqan` CLI ([itqan-cli](https://github.com/Itqan-community/itqan-cli), the Itqan Quranic Asset Manager), and automated version-bump PRs so published corrections reach the field
 - **Audit log** — full-snapshot history in a separate database, with reversal on demand
 - **Developer-ready data views** and **usage insight dashboards**
 

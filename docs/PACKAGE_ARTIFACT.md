@@ -9,7 +9,7 @@ This document defines the physical packaging, internal structure, checksum integ
 It serves as the formal contract between:
 - The **Content CMS** (`apps/content`): where versioned asset entities and entries are authored and published.
 - The **Package Registry API** (`apps/package_manager/api/public` / [#417](https://github.com/Itqan-community/cms-backend/issues/417)): which serves download references and integrity metadata for resolved artifacts.
-- The **CLI Installer** (the `itqan` command, maintained in its own `itqan-cli` repository / [#422](https://github.com/Itqan-community/cms-backend/issues/422)): which downloads, verifies, and unpacks artifacts into a consumer project's `assets/` directory.
+- The **CLI Installer** (the `itqan` command, maintained in [itqan-cli](https://github.com/Itqan-community/itqan-cli) / [#422](https://github.com/Itqan-community/cms-backend/issues/422)): which downloads, verifies, and unpacks artifacts into a consumer project's `assets/` directory.
 - The **Asset Manifest & Lockfile** ([`docs/ASSET_MANIFEST.md`](./ASSET_MANIFEST.md)): which pins resolved versions and coordinates ecosystem dependency resolution.
 
 ---
