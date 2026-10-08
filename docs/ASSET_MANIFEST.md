@@ -59,7 +59,8 @@ exactly one manifest per repository.
 ## 2. The manifest: `itqan-assets.yaml`
 
 The `itqan` command comes from [itqan-cli](https://github.com/Itqan-community/itqan-cli); see its README to install it.
-`itqan init` creates a starter manifest in the current folder. It asks the registry's catalog
+`itqan init` creates a starter manifest in the current folder, and `itqan browse` lets you search
+the catalog and add assets to it. `init` asks the registry's catalog
 (`GET /packages/`) for a few installable assets — only open-access ones unless an API key is
 given — and writes an entry for each, with a comment listing the asset's available languages
 and their latest versions; for an asset with several languages it also writes a second entry

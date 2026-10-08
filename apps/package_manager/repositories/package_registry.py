@@ -35,7 +35,12 @@ class PackageRegistryRepository:
             .first()
         )
 
-    def list_installable_assets(self, *, open_access: bool | None = None) -> QuerySet[Asset]:
+    def list_installable_assets(
+        self,
+        *,
+        open_access: bool | None = None,
+        category: str | None = None,
+    ) -> QuerySet[Asset]:
         """READY, unrestricted assets with at least one installable version in a
         READY language rendition, ordered by slug."""
         installable_version = AssetVersion.objects.filter(
@@ -50,6 +55,8 @@ class PackageRegistryRepository:
         )
         if open_access is not None:
             qs = qs.filter(is_open_access=open_access)
+        if category is not None:
+            qs = qs.filter(category=category)
         return qs.order_by("slug")
 
     def list_available_languages(self, asset: Asset) -> QuerySet[AssetLanguage]:

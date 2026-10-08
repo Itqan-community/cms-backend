@@ -361,7 +361,11 @@ The Registry API (`GET /packages/resolve/<slug>/?version=…&language=…` and `
 ```
 
 ### 9.1a. Catalog (`GET /packages/`)
-Lists what can be installed: READY, unrestricted assets that have at least one resolvable version, ordered by slug and paginated like the other public lists (`?page=`, `?page_size=`; response `{"results": [...], "count": N}`). `?open_access=true` limits it to assets that need no API key. Each result lists the asset's installable languages, source first, with the newest stable version in each:
+Lists what can be installed: READY, unrestricted assets that have at least one resolvable version, ordered by slug and paginated like the other public lists (`?page=`, `?page_size=`; response `{"results": [...], "count": N}`). Filters, which can be combined:
+
+* `?search=` — case-insensitive match on the asset's name, slug, description or publisher name.
+* `?category=` — only assets of one category (`mushaf`, `tafsir`, `translation`, …); an unknown value is a `400 validation_error`.
+* `?open_access=true` — only assets that need no API key (`false`: only gated ones). Each result lists the asset's installable languages, source first, with the newest stable version in each:
 
 ```json
 {
@@ -377,7 +381,7 @@ Lists what can be installed: READY, unrestricted assets that have at least one r
 }
 ```
 
-`itqan init` reads it to write a starter manifest.
+`itqan init` reads it to write a starter manifest; `itqan browse` reads it to search the catalog and add entries to a manifest.
 
 ### 9.2. Evolution of `itqan-assets.lock` (Lockfile V2 Path)
 In `docs/ASSET_MANIFEST.md` §5, `itqan-assets.lock` was defined with `lockfile_version: 1` without checksums because artifact identity was deferred to this specification.
