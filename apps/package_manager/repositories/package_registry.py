@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Collection
+
 from django.core.files.base import ContentFile
 from django.db import transaction
 from django.db.models import Exists, OuterRef, Q, QuerySet
@@ -40,6 +42,7 @@ class PackageRegistryRepository:
         *,
         open_access: bool | None = None,
         category: str | None = None,
+        exclude_categories: Collection[str] = (),
     ) -> QuerySet[Asset]:
         """READY, unrestricted assets with at least one installable version in a
         READY language rendition, ordered by slug."""
@@ -57,6 +60,8 @@ class PackageRegistryRepository:
             qs = qs.filter(is_open_access=open_access)
         if category is not None:
             qs = qs.filter(category=category)
+        if exclude_categories:
+            qs = qs.exclude(category__in=exclude_categories)
         return qs.order_by("slug")
 
     def list_available_languages(self, asset: Asset) -> QuerySet[AssetLanguage]:
