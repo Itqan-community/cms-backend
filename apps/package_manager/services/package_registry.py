@@ -1,14 +1,22 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 import re
+from typing import TYPE_CHECKING
 
-from django.db.models import QuerySet
+from django.conf import settings
 from django.utils.translation import gettext as _
 
-from apps.content.models import Asset, AssetLanguage, AssetVersion, CategoryChoice
+from apps.content.models import Asset, AssetAccessRequest, AssetLanguage, AssetVersion, CategoryChoice
 from apps.core.ninja_utils.errors import ItqanError
 from apps.package_manager.repositories.package_registry import PackageRegistryRepository
+
+if TYPE_CHECKING:
+    from django.contrib.auth.models import AnonymousUser
+    from django.db.models import QuerySet
+
+    from apps.users.models import User
 
 # ---------------------------------------------------------------------------
 # SemVer primitives (stdlib-only, no external dependency)
@@ -276,6 +284,16 @@ class PackageRequest:
     language: str | None = None
 
 
+class CatalogAccess(StrEnum):
+    """The caller's access to a catalog asset."""
+
+    OPEN = "open"
+    GRANTED = "granted"
+    PENDING = "pending"
+    REJECTED = "rejected"
+    NONE = "none"
+
+
 @dataclass(frozen=True, slots=True)
 class CatalogLanguage:
     """A language rendition the registry can install, with its newest version."""
@@ -481,12 +499,40 @@ class PackageRegistryService:
         *,
         open_access: bool | None = None,
         category: str | None = None,
+        user: User | AnonymousUser | None = None,
     ) -> QuerySet[Asset]:
+        """Installable assets, annotated with ``user``'s access to each (see
+        :meth:`catalog_access`)."""
         return self.repo.list_installable_assets(
             open_access=open_access,
             category=category,
             exclude_categories=NON_INSTALLABLE_CATEGORIES,
+            user=user,
         )
+
+    @staticmethod
+    def catalog_access(asset: Asset) -> CatalogAccess:
+        """What the caller can do with a catalog asset from
+        :meth:`list_installable_assets`: ``open`` and ``granted`` can be
+        installed; ``pending``, ``rejected`` and ``none`` need an approved
+        access request first."""
+        if asset.is_open_access or not settings.ENFORCE_ASSET_ACCESS_ON_PUBLIC_API:
+            return CatalogAccess.OPEN
+        if getattr(asset, "caller_has_grant", False):
+            return CatalogAccess.GRANTED
+        status = getattr(asset, "caller_request_status", None)
+        if status == AssetAccessRequest.StatusChoice.PENDING:
+            return CatalogAccess.PENDING
+        if status == AssetAccessRequest.StatusChoice.REJECTED:
+            return CatalogAccess.REJECTED
+        return CatalogAccess.NONE  # never requested, or an approved grant that has expired
+
+    @staticmethod
+    def access_request_url(asset: Asset) -> str | None:
+        """The asset's page in the CMS, where access is requested; None for open assets."""
+        if asset.is_open_access:
+            return None
+        return f"{settings.FRONTEND_BASE_URL}/gallery/asset/{asset.pk}"
 
     def _ensure_installable(self, asset: Asset) -> None:
         """Reject an asset whose category the package manager does not serve."""
