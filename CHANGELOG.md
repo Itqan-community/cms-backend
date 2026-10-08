@@ -1,3 +1,28 @@
+## v0.20.0 (2026-10-08)
+
+### Feat
+
+- **content**: bilingual version name and summary
+- **content**: let reviewers upload a pre-approved version
+- **content**: bulk-approve review changes
+- **package-manager**: add `itqan init` to create a starter manifest
+- **package-manager**: add a catalog of installable packages
+- **package-manager**: let the manifest choose the assets folder
+- **package-manager**: resolve per language and generate missing files on download
+- **audit**: preserve history in bulk operations and bulk updates (ITQ-34) (#432)
+
+### Fix
+
+- **package-manager**: default the CLI to the production registry
+- **package-manager**: hide draft assets from the package registry
+- **content**: prevent asset access request races (#517)
+- stream R2 audio fallback in bounded chunks
+
+### Refactor
+
+- **package-manager**: move the itqan CLI to its own repository
+- **package-manager**: remove the Distribution model
+
 ## v0.19.0 (2026-10-07)
 
 ### Feat
