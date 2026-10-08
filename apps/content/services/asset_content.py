@@ -38,6 +38,7 @@ from apps.content.services.asset_content_import import (
 )
 from apps.content.services.asset_templates import EntryFilters, UnitSpec, unit_spec_for
 from apps.content.tasks import notify_asset_version_created
+from apps.content.version_text import VersionText
 from apps.core.ninja_utils.errors import ItqanError
 from apps.dependabot.tasks import dispatch_dependabot_updates_for_version
 
@@ -340,8 +341,7 @@ class AssetContentService:
                     source,
                     asset_language=asset_language,
                     name="",
-                    label=source.label if source else "",
-                    summary=source.summary if source else "",
+                    text=VersionText.of(source),
                     created_by_id=created_by_id,
                     mushaf_version=mushaf,
                 )
@@ -614,19 +614,22 @@ class AssetContentService:
         category: CategoryChoice,
         version_id: int,
         *,
-        message: str,
-        label: str | None = None,
+        summary_en: str = "",
+        summary_ar: str = "",
+        label_en: str | None = None,
+        label_ar: str | None = None,
         version_number: str | None = None,
         bump: VersionBump = "minor",
         publisher_q: Q | None = None,
     ) -> AssetVersion:
-        """Commit a draft as the latest version with a required message (stored as
-        the version's description). Consumers do not see it until it is approved
+        """Commit a draft as the latest version with a required message — its
+        summary, in English and/or Arabic (at least one). Consumers do not see it until it is approved
         and published (``set_published_version``), so nobody is notified here.
 
         Committing issues the draft's version number: ``version_number`` starts the
         language's sequence when it has no versions yet, otherwise the latest number
-        is bumped by ``bump``. ``label`` (when given) replaces the draft's name."""
+        is bumped by ``bump``. ``label_en`` / ``label_ar`` (when given) replace the
+        draft's name in that language."""
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
         draft = self._get_editable_draft_or_400(asset, version_id)
         if not draft.content_edited:
@@ -635,15 +638,18 @@ class AssetContentService:
                 message=_("There are no changes to publish."),
                 status_code=400,
             )
-        if not (message or "").strip():
+        if not (summary_en.strip() or summary_ar.strip()):
             raise ItqanError(
                 error_name="commit_message_required",
                 message=_("A commit message is required."),
                 status_code=400,
             )
-        draft.summary = message.strip()
-        if label is not None:
-            draft.label = label.strip()
+        draft.summary_en = summary_en.strip()
+        draft.summary_ar = summary_ar.strip()
+        if label_en is not None:
+            draft.label_en = label_en.strip()
+        if label_ar is not None:
+            draft.label_ar = label_ar.strip()
         with transaction.atomic():
             draft.name = issue_version_number(asset, draft.asset_language.language, start=version_number, bump=bump)
             published = self.repo.publish_draft(draft)

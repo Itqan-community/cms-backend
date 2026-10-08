@@ -119,7 +119,10 @@ erDiagram
 
     ASSETVERSION {
         string name
-        string label
+        string label_en
+        string label_ar
+        text summary_en
+        text summary_ar
         file file_url
         int size_bytes
     }
@@ -237,10 +240,17 @@ Similar to ResourceVersion, **AssetVersion** tracks each uploaded file version o
   creation; `page` needs the layout) and `GET /portal/content/{category}/{slug}/csv-template/`
   (an existing asset's template).
 - For translations and tafsirs, `name` is the **version number** (`major.minor`, e.g.
-  `7.0`) and `label` the human-readable version name. Each language has its own
+  `7.0`) and `label` the human-readable version name. `label` and `summary` are
+  bilingual (django-modeltranslation): the portal reads and writes
+  `label_en`/`label_ar`/`summary_en`/`summary_ar` (asset create and add-language
+  take them as `version_label_en`, …), and a commit's message is its summary — at
+  least one language is required (`commit_message_required`). Other categories
+  keep a single `summary`, read with a fallback to the other language. Migration
+  `0074_split_version_label_summary_by_script` moved existing text into `_ar` when
+  it is mostly Arabic script, otherwise into `_en`. Each language has its own
   number sequence. The server issues the number when a version is committed,
   uploaded or restored, and it can't be edited afterwards (`PUT`/`PATCH` change only
-  `label` and `summary`). The first version in a sequence takes the caller's
+  the name and summary). The first version in a sequence takes the caller's
   `version_number` as its start (`version_number_required` /
   `version_number_invalid`); later ones bump the highest existing number by `bump`:
   `minor` (`7.1` → `7.2`, the default) or `major` (`7.1` → `8.0`). Drafts stay

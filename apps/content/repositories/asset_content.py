@@ -29,6 +29,7 @@ from apps.content.models import (
 )
 from apps.content.services.asset_content_import import AssetContentParseError, ParsedEntry, parse_content_file
 from apps.content.services.asset_templates import UnitSpec, unit_spec_for
+from apps.content.version_text import VersionText
 from apps.core.ninja_utils.errors import ItqanError
 from apps.quran.models import Ayah, Sura, Word
 
@@ -135,8 +136,7 @@ class AssetContentRepository:
         *,
         asset_language: AssetLanguage,
         name: str,
-        label: str = "",
-        summary: str,
+        text: VersionText,
         created_by_id: int | None,
         mushaf_version: AssetVersion | None = None,
     ) -> AssetVersion:
@@ -159,8 +159,7 @@ class AssetContentRepository:
             asset=asset,
             asset_language=asset_language,
             name=name,
-            label=label,
-            summary=summary,
+            **text.as_fields(),
             state=VersionStateChoice.DRAFT,
             created_by_id=created_by_id,
         )
@@ -563,7 +562,7 @@ class AssetContentRepository:
         draft.state = VersionStateChoice.PUBLISHED
         # Persist name/label/summary too: the service may have set them from the publish
         # payload, and they must be written (not just held in memory).
-        update_fields = ["state", "name", "label", "summary", "updated_at"]
+        update_fields = ["state", "name", *VersionText.field_names(), "updated_at"]
         if not draft.file_url and draft.entries.exists():
             content = self.entries_to_csv_bytes(draft, unit_spec_for(draft.asset))
             filename = f"{draft.asset.slug}-{draft.name}.csv".replace(" ", "_")
@@ -760,8 +759,7 @@ class AssetContentRepository:
             asset=asset,
             asset_language=version.asset_language,
             name=name,
-            label=version.label,
-            summary=version.summary,
+            **VersionText.of(version).as_fields(),
             state=VersionStateChoice.PUBLISHED,
             created_by_id=created_by_id,
         )

@@ -61,7 +61,7 @@ class MushafVersionPatchIn(Schema):
 )
 @permission_required([permission_class(PermissionChoice.PORTAL_READ_MUSHAF)])
 @paginate
-@searching(search_fields=["name", "summary"])
+@searching(search_fields=["name", "summary_en", "summary_ar"])
 def list_mushaf_versions(request: Request, mushaf_slug: str):
     try:
         asset = Asset.objects.filter(request.publisher_q()).get(slug=mushaf_slug, category=CategoryChoice.MUSHAF)

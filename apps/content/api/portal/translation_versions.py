@@ -6,6 +6,7 @@ from ninja import File, Form, Schema, UploadedFile
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
+from apps.content.api.portal.asset_content import VersionTextIn, VersionTextOut
 from apps.content.api.portal.asset_review import pending_review_count
 from apps.content.models import Asset, AssetLanguage, AssetVersion, CategoryChoice, StatusChoice, VersionStateChoice
 from apps.content.services.asset_language_access import (
@@ -14,6 +15,7 @@ from apps.content.services.asset_language_access import (
     require_version_id,
 )
 from apps.content.services.translation import TranslationService
+from apps.content.version_text import VersionText
 from apps.core.mixins.storage import absolute_file_url
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.permission_required import permission_required
@@ -27,7 +29,7 @@ from apps.core.permissions import PermissionChoice
 router = ItqanRouter(tags=[NinjaTag.TRANSLATIONS])
 
 
-class TranslationVersionListOut(Schema):
+class TranslationVersionListOut(VersionTextOut):
     id: int
     asset_id: int
     language: str
@@ -44,9 +46,6 @@ class TranslationVersionListOut(Schema):
     is_first: bool
     # Version number ("major.minor"), issued by the server; never editable.
     name: str
-    # Human-readable version name.
-    label: str
-    summary: str
     created_by: str | None
     change_counts: dict | None
     review_comments_count: int = 0
@@ -111,29 +110,27 @@ class TranslationVersionListOut(Schema):
         return absolute_file_url(context["request"], obj.file_url)
 
 
-class TranslationVersionCreateIn(Schema):
+class TranslationVersionCreateIn(VersionTextIn):
     asset_id: int
-    label: str = Field(default="", max_length=255)
     # Starts the language's number sequence; ignored once it has a version.
     version_number: str | None = Field(default=None, max_length=20)
     bump: Literal["minor", "major"] = "minor"
-    summary: str = ""
     language: str | None = None
     # Approve the uploaded changes on upload; needs the review permission.
     pre_approved: bool = False
 
 
 # The version number (``name``) is fixed once issued, so updates can't change it.
-class TranslationVersionPutIn(Schema):
+class TranslationVersionPutIn(VersionTextIn):
     asset_id: int
-    label: str = Field(default="", max_length=255)
-    summary: str = ""
 
 
 class TranslationVersionPatchIn(Schema):
     asset_id: int | None = None
-    label: str | None = Field(default=None, max_length=255)
-    summary: str | None = None
+    label_en: str | None = Field(default=None, max_length=255)
+    label_ar: str | None = Field(default=None, max_length=255)
+    summary_en: str | None = None
+    summary_ar: str | None = None
 
 
 @router.get(
@@ -145,7 +142,7 @@ class TranslationVersionPatchIn(Schema):
 )
 @permission_required([permission_class(PermissionChoice.PORTAL_READ_TRANSLATION)])
 @paginate
-@searching(search_fields=["name", "label", "summary"])
+@searching(search_fields=["name", "label_en", "label_ar", "summary_en", "summary_ar"])
 def list_translation_versions(request: Request, translation_slug: str, language: str | None = None):
     try:
         asset = Asset.objects.filter(request.publisher_q()).get(
@@ -221,10 +218,9 @@ def create_translation_version(
         check_permission(request.user, PermissionChoice.PORTAL_REVIEW_CONTENT, raise_exception=True)
     version = service.create_translation_version(
         translation_slug,
-        label=data.label,
+        text=VersionText.from_data(data),
         version_number=data.version_number,
         bump=data.bump,
-        summary=data.summary,
         file=file,
         language=data.language,
         created_by_id=request.user.id,

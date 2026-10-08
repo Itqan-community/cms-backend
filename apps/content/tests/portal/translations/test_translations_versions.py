@@ -103,9 +103,9 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
             f"/portal/translations/{self.translation.slug}/versions/",
             data={
                 "asset_id": self.translation.id,
-                "label": "New Version",
+                "label_en": "New Version",
                 "version_number": "7.0",
-                "summary": "This is a new version",
+                "summary_en": "This is a new version",
                 "file": file,
             },
         )
@@ -114,8 +114,8 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
         self.assertEqual(201, response.status_code, response.content)
         body = response.json()
         self.assertEqual("7.0", body["name"])
-        self.assertEqual("New Version", body["label"])
-        self.assertEqual("This is a new version", body["summary"])
+        self.assertEqual("New Version", body["label_en"])
+        self.assertEqual("This is a new version", body["summary_en"])
         self.assertIsNotNone(body["file_url"])
 
         # Verify DB
@@ -141,7 +141,7 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
             f"/portal/translations/{self.translation.slug}/versions/",
             data={
                 "asset_id": 99999,
-                "label": "New Version",
+                "label_en": "New Version",
                 "version_number": "7.0",
                 "file": SimpleUploadedFile("t.pdf", b"c"),
             },
@@ -156,7 +156,7 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
             f"/portal/translations/{self.translation.slug}/versions/",
             data={
                 "asset_id": self.translation.id,
-                "label": "New Version",
+                "label_en": "New Version",
                 "version_number": "7.0",
                 "file": SimpleUploadedFile("t.pdf", b"c"),
             },
@@ -172,7 +172,7 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
             f"/portal/translations/{self.translation.slug}/versions/",
             data={
                 "asset_id": self.translation.id,
-                "label": "New Version",
+                "label_en": "New Version",
                 "version_number": "7.0",
                 "file": SimpleUploadedFile("t.pdf", b"c"),
             },
@@ -204,9 +204,9 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
                 f"/portal/translations/{self.translation.slug}/versions/",
                 data={
                     "asset_id": self.translation.id,
-                    "label": "2.0.0",
+                    "label_en": "2.0.0",
                     "version_number": "1.0",
-                    "summary": "New release",
+                    "summary_en": "New release",
                     "file": file,
                 },
             )
@@ -227,7 +227,7 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
         # Act
         response = self.client.post(
             f"/portal/translations/{self.translation.slug}/versions/",
-            data={"asset_id": self.translation.id, "label": "2.0.0", "version_number": "1.0", "file": file},
+            data={"asset_id": self.translation.id, "label_en": "2.0.0", "version_number": "1.0", "file": file},
         )
 
         # Assert
@@ -243,7 +243,7 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
         # Act
         response = self.client.post(
             f"/portal/translations/{self.translation.slug}/versions/",
-            data={"asset_id": self.translation.id, "label": "v2", "version_number": "1.0", "file": file},
+            data={"asset_id": self.translation.id, "label_en": "v2", "version_number": "1.0", "file": file},
         )
 
         # Assert — content that cannot be split into units cannot be reviewed
@@ -261,7 +261,7 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
         # Act
         response = self.client.post(
             f"/portal/translations/{self.translation.slug}/versions/",
-            data={"asset_id": self.translation.id, "label": "v2", "version_number": "1.0", "file": file},
+            data={"asset_id": self.translation.id, "label_en": "v2", "version_number": "1.0", "file": file},
         )
 
         # Assert — nothing whose text would be dropped (and so never reviewed) is accepted
@@ -281,7 +281,7 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
         # Act
         response = self.client.post(
             f"/portal/translations/{self.translation.slug}/versions/",
-            data={"asset_id": self.translation.id, "label": "v2", "version_number": "1.0", "file": file},
+            data={"asset_id": self.translation.id, "label_en": "v2", "version_number": "1.0", "file": file},
         )
 
         # Assert — consumers download a file generated from the reviewed entries
@@ -303,7 +303,7 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
         # Act
         response = self.client.post(
             f"/portal/translations/{self.translation.slug}/versions/",
-            data={"asset_id": self.translation.id, "label": "v2", "version_number": "1.0", "file": file},
+            data={"asset_id": self.translation.id, "label_en": "v2", "version_number": "1.0", "file": file},
         )
 
         # Assert
@@ -366,7 +366,7 @@ class TranslationVersionCreateTest(TranslationVersionBaseTest):
         # Act
         response = self.client.post(
             f"/portal/translations/{self.translation.slug}/versions/",
-            data={"asset_id": self.translation.id, "label": "v2", "version_number": "1.0", "file": file},
+            data={"asset_id": self.translation.id, "label_en": "v2", "version_number": "1.0", "file": file},
         )
 
         # Assert — nothing new to review
@@ -388,8 +388,8 @@ class TranslationVersionUpdateTest(TranslationVersionBaseTest):
         self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
         payload = {
             "asset_id": self.translation.id,
-            "label": "Updated Name",
-            "summary": "Updated Summary",
+            "label_en": "Updated Name",
+            "summary_en": "Updated Summary",
         }
 
         # Act
@@ -402,8 +402,8 @@ class TranslationVersionUpdateTest(TranslationVersionBaseTest):
         # Arrange
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
-        self.assertEqual("Updated Name", body["label"])
-        self.assertEqual("Updated Summary", body["summary"])
+        self.assertEqual("Updated Name", body["label_en"])
+        self.assertEqual("Updated Summary", body["summary_en"])
 
         self.version.refresh_from_db()
         self.assertEqual("Updated Name", self.version.label)
@@ -415,7 +415,7 @@ class TranslationVersionUpdateTest(TranslationVersionBaseTest):
         from urllib.parse import urlencode
 
         payload = {
-            "label": "Patched Name",
+            "label_en": "Patched Name",
         }
 
         # Act
@@ -428,8 +428,8 @@ class TranslationVersionUpdateTest(TranslationVersionBaseTest):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
-        self.assertEqual("Patched Name", body["label"])
-        self.assertEqual(self.version.summary, body["summary"])
+        self.assertEqual("Patched Name", body["label_en"])
+        self.assertEqual(self.version.summary, body["summary_en"])
 
     def test_patch_version_where_name_sent_should_keep_version_number(self):
         from urllib.parse import urlencode
@@ -441,7 +441,7 @@ class TranslationVersionUpdateTest(TranslationVersionBaseTest):
         # Act
         response = self.client.patch(
             f"/portal/translations/{self.translation.slug}/versions/{self.version.id}/",
-            data=urlencode({"name": "9.9", "label": "Renamed"}),
+            data=urlencode({"name": "9.9", "label_en": "Renamed"}),
             content_type="application/x-www-form-urlencoded",
         )
 
@@ -456,7 +456,7 @@ class TranslationVersionUpdateTest(TranslationVersionBaseTest):
 
         response = self.client.patch(
             f"/portal/translations/{self.translation.slug}/versions/{self.version.id}/",
-            data=urlencode({"label": "Updated"}),
+            data=urlencode({"label_en": "Updated"}),
             content_type="application/x-www-form-urlencoded",
         )
         self.assertEqual(401, response.status_code)
@@ -470,7 +470,7 @@ class TranslationVersionUpdateTest(TranslationVersionBaseTest):
         self.authenticate_user(user_without_permission)
         response = self.client.patch(
             f"/portal/translations/{self.translation.slug}/versions/{self.version.id}/",
-            data=urlencode({"label": "Updated"}),
+            data=urlencode({"label_en": "Updated"}),
             content_type="application/x-www-form-urlencoded",
         )
         self.assertEqual(403, response.status_code)

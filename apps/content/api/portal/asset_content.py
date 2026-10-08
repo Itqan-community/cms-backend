@@ -99,14 +99,45 @@ def _resolve_for_version(
     return resolved
 
 
-class DraftVersionOut(Schema):
+class VersionTextOut(Schema):
+    """A tafsir/translation version's name (label) and summary, in English and Arabic."""
+
+    label_en: str
+    label_ar: str
+    summary_en: str
+    summary_ar: str
+
+    # The translated columns are nullable; an unset language reads as empty.
+    @staticmethod
+    def resolve_label_en(obj: AssetVersion) -> str:
+        return obj.label_en or ""
+
+    @staticmethod
+    def resolve_label_ar(obj: AssetVersion) -> str:
+        return obj.label_ar or ""
+
+    @staticmethod
+    def resolve_summary_en(obj: AssetVersion) -> str:
+        return obj.summary_en or ""
+
+    @staticmethod
+    def resolve_summary_ar(obj: AssetVersion) -> str:
+        return obj.summary_ar or ""
+
+
+class VersionTextIn(Schema):
+    label_en: str = Field(default="", max_length=255)
+    label_ar: str = Field(default="", max_length=255)
+    summary_en: str = ""
+    summary_ar: str = ""
+
+
+class DraftVersionOut(VersionTextOut):
     id: int
     asset_id: int
     language: str
     # Version number ("major.minor"); blank while the version is a draft.
     name: str
-    label: str
-    summary: str
     state: str
     entries_count: int
     has_changes: bool
@@ -214,9 +245,12 @@ class EntriesPatchIn(Schema):
 
 
 class PublishIn(Schema):
-    message: str
-    # Version name; omitted keeps the draft's.
-    label: str | None = Field(default=None, max_length=255)
+    # The commit message is the version's summary: at least one language is required.
+    summary_en: str = ""
+    summary_ar: str = ""
+    # Version name per language; omitted keeps the draft's.
+    label_en: str | None = Field(default=None, max_length=255)
+    label_ar: str | None = Field(default=None, max_length=255)
     # Starts the language's number sequence; ignored once it has a version.
     version_number: str | None = Field(default=None, max_length=20)
     bump: VersionBump = "minor"
@@ -504,8 +538,10 @@ def publish_draft(request: Request, category: str, slug: str, version_id: int, d
         slug,
         resolved,
         version_id,
-        message=data.message,
-        label=data.label,
+        summary_en=data.summary_en,
+        summary_ar=data.summary_ar,
+        label_en=data.label_en,
+        label_ar=data.label_ar,
         version_number=data.version_number,
         bump=data.bump,
         publisher_q=request.publisher_q(),

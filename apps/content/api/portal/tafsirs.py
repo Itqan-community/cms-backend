@@ -16,6 +16,7 @@ from apps.content.models import (
     VersionStateChoice,
 )
 from apps.content.services.tafsir import TafsirService
+from apps.content.version_text import VersionText
 from apps.core.mixins.storage import absolute_file_url
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
@@ -131,10 +132,12 @@ class TafsirCreateIn(Schema):
     external_url: str | None = None
     is_open_access: bool = False
     restricted_for_tenant: bool = False
-    version_label: str = Field(default="", max_length=255)
+    version_label_en: str = Field(default="", max_length=255)
+    version_label_ar: str = Field(default="", max_length=255)
     # Starting version number ("major.minor") — required when a file is uploaded.
     version_number: str | None = Field(default=None, max_length=20)
-    version_summary: str = ""
+    version_summary_en: str = ""
+    version_summary_ar: str = ""
     template: AssetTemplateChoice
     mushaf_layout_id: int | None = None
 
@@ -252,9 +255,8 @@ def create_tafsir(
     enforce_publisher_membership(request.user, data.publisher_id)
     service = TafsirService()
     tafsir = service.create_tafsir_with_optional_version(
-        version_label=data.version_label,
+        version_text=VersionText.from_data(data, prefix="version_"),
         version_number=data.version_number,
-        version_summary=data.version_summary,
         file=file,
         created_by_id=request.user.id,
         publisher_id=data.publisher_id,

@@ -4,7 +4,16 @@ import simple_history
 
 from apps.core.audit import AuditHistoricalRecords
 
-from .models import Asset, EditorialRecommendation, MushafLayout, Qiraah, RecitationFolder, Reciter, Riwayah
+from .models import (
+    Asset,
+    AssetVersion,
+    EditorialRecommendation,
+    MushafLayout,
+    Qiraah,
+    RecitationFolder,
+    Reciter,
+    Riwayah,
+)
 
 
 @register(Asset)
@@ -14,6 +23,13 @@ class AssetTranslationOptions(TranslationOptions):
         "description",
         "long_description",
     )
+
+
+@register(AssetVersion)
+class AssetVersionTranslationOptions(TranslationOptions):
+    # Bilingual for tafsir/translation versions; other kinds read `summary`,
+    # which falls back across languages.
+    fields = ("label", "summary")
 
 
 @register(Reciter)
@@ -50,6 +66,7 @@ class MushafLayoutTranslationOptions(TranslationOptions):
 # after modeltranslation has attached the translated fields (name_ar, name_en, etc.).
 for _translated_model in (
     Asset,
+    AssetVersion,
     Reciter,
     Riwayah,
     Qiraah,
