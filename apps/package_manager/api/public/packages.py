@@ -5,11 +5,12 @@ from django.urls import reverse
 from ninja import Field, Query, Schema
 from ninja.pagination import paginate
 
-from apps.content.models import Asset
+from apps.content.models import Asset, CategoryChoice
 from apps.content.services.asset_access import enforce_asset_access_on_public_api
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
+from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
 from apps.package_manager.services.package_registry import PackageRegistryService, PackageRequest, ResolvedPackage
 from apps.usage_tracking.decorators.track_usage import track_extra, track_usage
@@ -118,19 +119,21 @@ def _resolve_package_to_schema(request: Request, result: ResolvedPackage) -> Pac
 
 @router.get("packages/", response=list[PackageCatalogOut])
 @paginate
+@searching(search_fields=["name", "slug", "description", "publisher__name"])
 def list_packages(
     request: Request,
     open_access: bool | None = Query(
         None, description="Only assets that need no API key (true) or only gated ones (false)."
     ),
+    category: CategoryChoice | None = Query(None, description="Only assets of this category."),
 ):
     """Installable assets and their language renditions.
 
     Lists READY assets that have at least one version the registry can resolve,
     each with its available languages (source first) and their newest version.
-    `itqan init` uses it to write a starter manifest.
+    `itqan init` and `itqan browse` use it.
     """
-    return PackageRegistryService().list_installable_assets(open_access=open_access)
+    return PackageRegistryService().list_installable_assets(open_access=open_access, category=category)
 
 
 @router.post(
