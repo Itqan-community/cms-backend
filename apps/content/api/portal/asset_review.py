@@ -206,6 +206,44 @@ def list_review_changes(
     )
 
 
+class BulkApproveIn(Schema):
+    language: str
+    # The changes to approve; omitted → every change matching the filters below.
+    change_ids: list[int] | None = None
+    state: Literal["unreviewed", "commented"] | None = None
+    version: int | None = None
+
+
+class BulkApproveOut(Schema):
+    approved: int
+
+
+@router.post(
+    "content/{category}/{slug}/review/changes/bulk-approve/",
+    response={
+        200: BulkApproveOut,
+        404: _REVIEW_ERRORS
+        | NinjaErrorResponse[Literal["change_not_found"]]
+        | NinjaErrorResponse[Literal["version_not_found"]],
+    },
+)
+def bulk_approve_changes(request: Request, category: str, slug: str, data: BulkApproveIn) -> dict:
+    """Approve the given changes, or — without ``change_ids`` — every change the
+    review list shows for the same language/state/version filter, across all pages."""
+    resolved = _resolve_review(category, request)
+    approved = AssetReviewService().bulk_approve(
+        slug,
+        resolved,
+        language=data.language,
+        user=request.user,
+        change_ids=data.change_ids,
+        state=data.state,
+        version_id=data.version,
+        publisher_q=request.publisher_q(),
+    )
+    return {"approved": approved}
+
+
 @router.patch(
     "content/{category}/{slug}/review/changes/{change_id}/",
     response={

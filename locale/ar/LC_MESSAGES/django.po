@@ -446,6 +446,9 @@ msgstr "تحتاج اللغة إلى إصدار منشور واحد على ال�
 msgid "You are not assigned to the language {language}."
 msgstr "لم يتم تعيينك للغة {language}."
 
+msgid "One or more changes were not found."
+msgstr "لم يتم العثور على تغيير واحد أو أكثر."
+
 #, python-brace-format
 msgid "Change with id {id} not found."
 msgstr "لم يتم العثور على التغيير بالمعرّف {id}."

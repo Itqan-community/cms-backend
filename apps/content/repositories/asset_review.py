@@ -1,11 +1,24 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from typing import TYPE_CHECKING
 
 from django.db.models import F, IntegerField, OuterRef, Q, QuerySet, Subquery, Window
 from django.db.models.functions import Coalesce, RowNumber
+from django.utils import timezone
+from simple_history.utils import bulk_create_with_history, bulk_update_with_history
 
-from apps.content.models import Asset, AssetVersion, AssetVersionChange, ReviewStateChoice, VersionStateChoice
+from apps.content.models import (
+    Asset,
+    AssetVersion,
+    AssetVersionChange,
+    AssetVersionChangeReview,
+    ReviewStateChoice,
+    VersionStateChoice,
+)
+
+if TYPE_CHECKING:
+    from apps.users.models import User
 
 
 def change_language(change: AssetVersionChange) -> str:
@@ -177,3 +190,40 @@ class AssetReviewRepository:
             .select_related("version", "version__asset_language", "version__asset", "version__created_by", "review")
             .first()
         )
+
+    def approve_changes(self, changes: QuerySet[AssetVersionChange], user: User) -> int:
+        """Approve ``changes`` as ``user`` and return how many were approved.
+
+        Unreviewed changes get a review row and commented ones are flipped to
+        approved (their comment cleared). Already-approved changes are skipped so
+        they keep the auditing of whoever approved them.
+        """
+        rows = list(changes.exclude(review__state=ReviewStateChoice.APPROVED).values_list("pk", "review__pk"))
+        if not rows:
+            return 0
+        now = timezone.now()
+        commented = list(AssetVersionChangeReview.objects.filter(pk__in=[review for _, review in rows if review]))
+        for review in commented:
+            review.state = ReviewStateChoice.APPROVED
+            review.comment = ""
+            review.reviewed_by = user
+            review.reviewed_at = now
+            review.updated_at = now
+        if commented:
+            bulk_update_with_history(
+                commented,
+                AssetVersionChangeReview,
+                ["state", "comment", "reviewed_by", "reviewed_at", "updated_at"],
+                batch_size=1000,
+                default_user=user,
+            )
+        unreviewed = [
+            AssetVersionChangeReview(
+                change_id=change, state=ReviewStateChoice.APPROVED, reviewed_by=user, reviewed_at=now
+            )
+            for change, review in rows
+            if review is None
+        ]
+        if unreviewed:
+            bulk_create_with_history(unreviewed, AssetVersionChangeReview, batch_size=1000, default_user=user)
+        return len(rows)

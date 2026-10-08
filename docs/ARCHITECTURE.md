@@ -353,7 +353,11 @@ from the parsed entries, so consumers download exactly what was reviewed.
   approved), each with `baseline_text` — the last text approved before its commit.
   With `version=<id>` it lists the changes that make up that version (the latest
   change per unit up to it), which is exactly what decides its approval;
-  `GET .../review/versions/` lists the versions to pick from. Approval gates
+  `GET .../review/versions/` lists the versions to pick from.
+  `POST .../review/changes/bulk-approve/` approves many at once: the given
+  `change_ids` (all must belong to the language, `change_not_found` otherwise), or
+  without them every change matching the same `state`/`version` filter across all
+  pages; already-approved changes keep their auditing. Approval gates
   publishing (see above); reviewers cannot edit content.
 
 ---
