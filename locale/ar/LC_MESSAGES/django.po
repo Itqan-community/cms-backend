@@ -858,6 +858,9 @@ msgstr "يجب أن ينتهي اسم الملف برقم السورة من 3 أ
 msgid "Surah number is out of range 1..114: {num}"
 msgstr "رقم السورة خارج النطاق 1..114: {num}"
 
+msgid "A valid API key is required."
+msgstr "يلزم مفتاح API صالح."
+
 #, python-brace-format
 msgid "Language {language} is not available for asset {slug}."
 msgstr "اللغة {language} غير متاحة للمورد {slug}."

@@ -2,12 +2,13 @@ from typing import Literal
 
 from django.http import HttpResponseRedirect
 from django.urls import reverse
+from django.utils.translation import gettext_lazy as _
 from ninja import Field, Query, Schema
 from ninja.pagination import paginate
 
 from apps.content.models import Asset, CategoryChoice
 from apps.content.services.asset_access import enforce_asset_access_on_public_api
-from apps.core.ninja_utils.errors import NinjaErrorResponse
+from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
@@ -75,6 +76,11 @@ class PackageCatalogOut(Schema):
             PackageLanguageOut(language=lang.language, is_source=lang.is_source, latest_version=lang.latest_version)
             for lang in PackageRegistryService().catalog_languages(obj)
         ]
+
+
+class PackageAccountOut(Schema):
+    name: str
+    email: str
 
 
 class PackageSingleOut(Schema):
@@ -158,6 +164,23 @@ def list_packages(
     return PackageRegistryService().list_installable_assets(
         open_access=open_access, category=category, user=request.user
     )
+
+
+@router.get(
+    "packages/me/",
+    response={200: PackageAccountOut, 401: NinjaErrorResponse[Literal["authentication_required"]]},
+)
+def get_package_account(request: Request):
+    """The account the API key belongs to; 401 without a valid key.
+    `itqan login` uses it to check a key before saving it."""
+    user = request.user
+    if not user.is_authenticated:
+        raise ItqanError(
+            error_name="authentication_required",
+            message=_("A valid API key is required."),
+            status_code=401,
+        )
+    return 200, PackageAccountOut(name=user.name, email=user.email)
 
 
 @router.post(
