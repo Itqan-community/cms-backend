@@ -1,4 +1,4 @@
-"""The caller's access in GET /packages/."""
+"""The caller's access in GET /packages/ and the key check at GET /packages/me/."""
 
 from datetime import timedelta
 
@@ -148,3 +148,33 @@ class PackageCatalogAccessTests(BaseTestCase):
 
         # Assert
         self.assertEqual("open", item["access"])
+
+
+class PackageAccountTests(BaseTestCase):
+    def test_get_package_account_where_valid_key_should_return_owner(self):
+        # Arrange
+        user = User.objects.create_user(email="dev@example.com", name="Dev")
+        _, raw_key = APIKey.objects.create_key(name="cli", user=user)
+
+        # Act
+        response = self.client.get("/packages/me/", headers={"x-api-key": raw_key})
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual({"name": "Dev", "email": "dev@example.com"}, response.json())
+
+    def test_get_package_account_where_no_key_should_return_401(self):
+        # Arrange / Act
+        response = self.client.get("/packages/me/")
+
+        # Assert
+        self.assertEqual(401, response.status_code, response.content)
+        self.assertEqual("authentication_required", response.json()["error_name"])
+
+    def test_get_package_account_where_key_is_invalid_should_return_401(self):
+        # Arrange / Act
+        response = self.client.get("/packages/me/", headers={"x-api-key": "not-a-key"})
+
+        # Assert
+        self.assertEqual(401, response.status_code, response.content)
+        self.assertEqual("authentication_required", response.json()["error_name"])

@@ -401,6 +401,9 @@ Each result lists the asset's installable languages, source first, with the newe
 
 `itqan init` reads it to write a starter manifest; `itqan browse` reads it to search the catalog and add entries to a manifest.
 
+### 9.1b. API key check (`GET /packages/me/`)
+Returns the owner of the API key sent in `X-API-Key` (`{"name": "…", "email": "…"}`), or `401 authentication_required` when the key is missing, unknown or revoked. `itqan login` calls it to check a key before saving it.
+
 ### 9.2. Evolution of `itqan-assets.lock` (Lockfile V2 Path)
 In `docs/ASSET_MANIFEST.md` §5, `itqan-assets.lock` was defined with `lockfile_version: 1` without checksums because artifact identity was deferred to this specification.
 
