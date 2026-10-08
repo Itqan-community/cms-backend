@@ -6,7 +6,7 @@ import re
 from django.db.models import QuerySet
 from django.utils.translation import gettext as _
 
-from apps.content.models import Asset, AssetLanguage, AssetVersion
+from apps.content.models import Asset, AssetLanguage, AssetVersion, CategoryChoice
 from apps.core.ninja_utils.errors import ItqanError
 from apps.package_manager.repositories.package_registry import PackageRegistryRepository
 
@@ -261,6 +261,10 @@ def _matches_constraint(version: SemVer, constraint: VersionConstraint) -> bool:
 # Service
 # ---------------------------------------------------------------------------
 
+# Categories the package manager does not serve: hidden from the catalog,
+# rejected by resolve and not downloadable.
+NON_INSTALLABLE_CATEGORIES: frozenset[str] = frozenset({CategoryChoice.RECITATION})
+
 
 @dataclass(frozen=True, slots=True)
 class PackageRequest:
@@ -332,6 +336,7 @@ class PackageRegistryService:
                     message=_("Asset with slug {slug} not found.").format(slug=slug),
                     status_code=404,
                 )
+        self._ensure_installable(asset)
 
         # 2. Pick the language rendition whose timeline is resolved.
         asset_language = self.repo.get_available_language(asset, language)
@@ -477,7 +482,22 @@ class PackageRegistryService:
         open_access: bool | None = None,
         category: str | None = None,
     ) -> QuerySet[Asset]:
-        return self.repo.list_installable_assets(open_access=open_access, category=category)
+        return self.repo.list_installable_assets(
+            open_access=open_access,
+            category=category,
+            exclude_categories=NON_INSTALLABLE_CATEGORIES,
+        )
+
+    def _ensure_installable(self, asset: Asset) -> None:
+        """Reject an asset whose category the package manager does not serve."""
+        if asset.category in NON_INSTALLABLE_CATEGORIES:
+            raise ItqanError(
+                error_name="category_not_installable",
+                message=_("{category} assets can't be installed with the package manager.").format(
+                    category=CategoryChoice(asset.category).label
+                ),
+                status_code=422,
+            )
 
     def catalog_languages(self, asset: Asset) -> list[CatalogLanguage]:
         """The asset's installable languages (source first), each with the newest
@@ -508,7 +528,7 @@ class PackageRegistryService:
     def get_downloadable_version(self, asset_version_id: int) -> AssetVersion:
         """A version the registry serves, or 404."""
         version = self.repo.get_downloadable_version(asset_version_id)
-        if version is None:
+        if version is None or version.asset.category in NON_INSTALLABLE_CATEGORIES:
             raise ItqanError(
                 error_name="version_not_found",
                 message=_("Package version not found."),
