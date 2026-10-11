@@ -1,3 +1,12 @@
+## v0.21.0 (2026-10-11)
+
+### Feat
+
+- **packages**: add GET /packages/me/ to check an API key
+- **packages**: report the caller's access to each asset in the catalog
+- **packages**: exclude recitations from the package registry
+- **packages**: add search and category filters to the package catalog
+
 ## v0.20.0 (2026-10-08)
 
 ### Feat
