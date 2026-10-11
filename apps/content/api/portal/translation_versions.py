@@ -7,8 +7,16 @@ from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
 from apps.content.api.portal.asset_content import VersionTextIn, VersionTextOut
-from apps.content.api.portal.asset_review import pending_review_count
-from apps.content.models import Asset, AssetLanguage, AssetVersion, CategoryChoice, StatusChoice, VersionStateChoice
+from apps.content.api.portal.asset_review import change_counts, pending_review_count, with_change_counts
+from apps.content.models import (
+    Asset,
+    AssetLanguage,
+    AssetVersion,
+    CategoryChoice,
+    ChangeTypeChoice,
+    StatusChoice,
+    VersionStateChoice,
+)
 from apps.content.services.asset_language_access import (
     filter_versions_to_allowed,
     require_language,
@@ -93,17 +101,12 @@ class TranslationVersionListOut(VersionTextOut):
     @staticmethod
     def resolve_review_comments_count(obj: AssetVersion) -> int:
         """Changes in this version a reviewer left a comment on."""
-        return sum(1 for change in obj.changes.all() if getattr(change, "review", None) and change.review.comment)
+        return change_counts(obj)["commented_changes"]
 
     @staticmethod
     def resolve_change_counts(obj: AssetVersion) -> dict | None:
-        rows = list(obj.changes.all())
-        if not rows:
-            return None
-        counts = {"added": 0, "modified": 0, "removed": 0}
-        for change in rows:
-            counts[change.change_type] = counts.get(change.change_type, 0) + 1
-        return counts
+        counts = {change_type: change_counts(obj)[f"{change_type}_changes"] for change_type in ChangeTypeChoice.values}
+        return counts if any(counts.values()) else None
 
     @staticmethod
     def resolve_file_url(obj: AssetVersion, context: dict) -> str | None:
@@ -154,10 +157,8 @@ def list_translation_versions(request: Request, translation_slug: str, language:
             message=_("Translation with slug {slug} not found.").format(slug=translation_slug),
             status_code=404,
         ) from exc
-    versions = (
-        AssetVersion.objects.filter(asset=asset, state=VersionStateChoice.PUBLISHED)
-        .select_related("created_by", "asset_language", "asset")
-        .prefetch_related("changes__review")
+    versions = AssetVersion.objects.filter(asset=asset, state=VersionStateChoice.PUBLISHED).select_related(
+        "created_by", "asset_language", "asset"
     )
     if language:
         require_language(request.user, asset, language)
@@ -169,7 +170,7 @@ def list_translation_versions(request: Request, translation_slug: str, language:
         versions = versions.filter(language_q)
     else:
         versions = filter_versions_to_allowed(request.user, asset, versions)
-    return versions.order_by("-created_at")
+    return with_change_counts(versions).order_by("-created_at")
 
 
 @router.post(

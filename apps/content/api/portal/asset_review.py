@@ -1,5 +1,7 @@
 from typing import Literal
 
+from django.db.models import Count, IntegerField, OuterRef, Q, QuerySet, Subquery
+from django.db.models.functions import Coalesce
 from django.utils.translation import gettext_lazy as _
 from ninja import Schema
 from ninja.pagination import paginate
@@ -12,6 +14,7 @@ from apps.content.models import (
     AssetVersionChange,
     AssetVersionChangeReview,
     CategoryChoice,
+    ChangeTypeChoice,
 )
 from apps.content.repositories.asset_review import AssetReviewRepository
 from apps.content.services.asset_review import AssetReviewService
@@ -45,6 +48,51 @@ def pending_review_count(obj: AssetVersion, context: dict) -> int:
     if key not in cache:
         cache[key] = AssetReviewRepository().pending_units_by_version(obj.asset, language)
     return cache[key].get(obj.id, 0)
+
+
+# A version's change rows, counted by type, and those a reviewer commented on.
+_COMMENTED_Q = Q(review__isnull=False) & ~Q(review__comment="")
+_CHANGE_COUNT_FILTERS = {
+    **{f"{change_type}_changes": Q(change_type=change_type) for change_type in ChangeTypeChoice.values},
+    "commented_changes": _COMMENTED_Q,
+}
+
+
+def with_change_counts(versions: QuerySet[AssetVersion]) -> QuerySet[AssetVersion]:
+    """Annotate each version with its change counts (see :func:`change_counts`).
+
+    Counted in the database, one indexed count per listed version: a version can hold
+    tens of thousands of changes (a word-by-word tafsir), far too many to load just to
+    count them.
+    """
+    return versions.annotate(
+        **{
+            name: Coalesce(
+                Subquery(
+                    AssetVersionChange.objects.filter(condition, version=OuterRef("pk"))
+                    .order_by()
+                    .values("version")
+                    .annotate(count=Count("pk"))
+                    .values("count"),
+                    output_field=IntegerField(),
+                ),
+                0,
+            )
+            for name, condition in _CHANGE_COUNT_FILTERS.items()
+        }
+    )
+
+
+def change_counts(obj: AssetVersion) -> dict[str, int]:
+    """``{"added_changes": n, "modified_changes": n, "removed_changes": n, "commented_changes": n}``
+    for ``obj``: the :func:`with_change_counts` annotations, or one query when it wasn't annotated."""
+    if not all(hasattr(obj, name) for name in _CHANGE_COUNT_FILTERS):
+        counts = AssetVersionChange.objects.filter(version=obj).aggregate(
+            **{name: Count("pk", filter=condition) for name, condition in _CHANGE_COUNT_FILTERS.items()}
+        )
+        for name, count in counts.items():
+            setattr(obj, name, count)
+    return {name: getattr(obj, name) for name in _CHANGE_COUNT_FILTERS}
 
 
 def _resolve_review(category: str, request: Request) -> CategoryChoice:
