@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: إصدار الحزمة\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-18 10:19+0300\n"
+"POT-Creation-Date: 2026-10-16 23:44+0300\n"
 "PO-Revision-Date: السنة-الشهر-اليوم الساعة:الدقيقة+المنطقة\n"
 "Last-Translator: الاسم الكامل <EMAIL@ADDRESS>\n"
 "Language-Team: اللغة <LL@li.org>\n"
@@ -16,8 +16,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 "
-"&& n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5;\n"
+"Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5;\n"
 
 msgid "Staff only"
 msgstr "للموظفين فقط"
@@ -857,6 +856,33 @@ msgstr "لوحة التحكم - الوصول إلى جميع اللغات"
 
 msgid "Portal - Add Asset Language"
 msgstr "لوحة التحكم - إضافة لغة إلى الأصل"
+
+msgid "Created"
+msgstr "تم الإنشاء"
+
+msgid "Updated"
+msgstr "تم التحديث"
+
+msgid "Deleted"
+msgstr "تم الحذف"
+
+#, python-brace-format
+msgid "Historical version with ID '{version_id}' not found for this object."
+msgstr "الإصدار التاريخي ذو المعرّف '{version_id}' غير موجود لهذا الكائن."
+
+#, python-brace-format
+msgid "No historical snapshot found on or before '{date}'."
+msgstr "لم يتم العثور على لقطة تاريخية في تاريخ '{date}' أو قبله."
+
+#, python-brace-format
+msgid "No historical records found for object ID '{object_id}'."
+msgstr "لم يتم العثور على سجلات تاريخية للكائن ذي المعرّف '{object_id}'."
+
+msgid "You must specify either 'version_id' or 'as_of' to revert an existing object."
+msgstr "يجب تحديد إما 'version_id' أو 'as_of' لاسترجاع كائن موجود."
+
+msgid "Cannot restore object due to a database integrity constraint (such as a missing foreign key)."
+msgstr "لا يمكن استعادة الكائن بسبب قيد في تكامل قاعدة البيانات (مثل مفتاح خارجي مفقود)."
 
 #, python-brace-format
 msgid "Permissions are not synced to the database: {missing}. Run `manage.py migrate`."

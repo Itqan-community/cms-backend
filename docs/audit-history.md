@@ -227,3 +227,106 @@ Because `default` and `audit` reside on separate PostgreSQL databases (or schema
 ### 6. Automated Regression Guard
 To prevent regressions from entering the codebase, `apps.core.tests.test_bulk_history_guard.BulkHistoryASTGuardTest` scans all production Python files using Python's `ast` parser. It automatically flags and fails the CI suite if any tracked model calls raw `.bulk_create()`, `.bulk_update()`, or `queryset.update()`.
 
+---
+
+## Reversibility & Snapshot Recovery (ITQ-35 / #433)
+
+Auditing in Itqan CMS goes beyond passive observation: operators can reverse actions and restore tracked models to any previous snapshot on demand.
+
+```mermaid
+flowchart LR
+    subgraph AdminUI["Django Admin UI"]
+        History["History View<br/>/admin/.../id/history/"]
+        Revert["Snapshot Revert Form<br/>(One-click Revert)"]
+    end
+
+    subgraph CoreEngine["Core Reversal Engine"]
+        Service["AuditHistoryService<br/>(apps.core.services.audit_history)"]
+        Repo["AuditHistoryRepository<br/>(apps.core.repositories.audit_history)"]
+    end
+
+    subgraph Databases["Dual Databases"]
+        DefaultDB[("Default DB<br/>(Operational Rows)")]
+        AuditDB[("Audit DB<br/>(Historical Trail)")]
+    end
+
+    History --> Revert
+    Revert --> Service
+    Service --> Repo
+    Repo -->|"INSERT (resurrection) / UPDATE (revert)"| DefaultDB
+    DefaultDB -->|"post_save trigger (writes auditable record)"| AuditDB
+```
+
+### 1. Core Mechanics
+
+Reversion handles two fundamental operational scenarios:
+1. **Modified Objects (`Edit → Revert`)**:
+   - Fetches the historical record snapshot (`version.instance`).
+   - Applies the historical state to the operational database row via `UPDATE` (`_state.adding = False`).
+   - Preserves user attribution (`_history_user = request.user`) and sets change reason.
+   - Triggers `post_save`, generating a new `~` historical record in the `audit` database documenting the reversion.
+2. **Deleted Objects (`Delete → Restore`)**:
+   - When a row is deleted from the `default` database, its historical trail and final deletion snapshot (`-`) remain in the `audit` database.
+   - The restoration engine resurrects the deleted object with its **original primary key** via `INSERT` (`_state.adding = True`, `force_insert=True`).
+   - Triggers `post_save`, generating a new `+` historical record in the `audit` database documenting the resurrection.
+
+### 2. Service & Repository Architecture
+
+Following repository architecture standards (`Service → Repository`), the core reversal logic is decoupled from UI presentation:
+
+* **`AuditHistoryRepository` (`apps.core.repositories.audit_history`)**:
+  - Handles database operations against the `audit` database (`get_history_records`, `get_historical_record_by_id`, `get_historical_record_as_of`).
+  - Checks object existence in the `default` database (`object_exists`).
+  - Performs the physical persistence (`save_restored_instance`), correctly switching between `force_insert` (for resurrecting deleted rows) and `force_update` (for modified rows).
+
+* **`AuditHistoryService` (`apps.core.services.audit_history`)**:
+  - Validates that the target model is tracked by `simple-history`.
+  - Reconstructs the model instance from the historical snapshot.
+  - Handles user attribution (`_history_user = user`) and automatic change reasons.
+  - Handles relational integrity errors cleanly (e.g. if foreign keys prevent resurrection).
+
+```python
+from apps.core.services.audit_history import AuditHistoryService
+from apps.publishers.models import Publisher
+
+service = AuditHistoryService()
+
+# 1. Revert modified object to specific history_id
+restored_obj, audit_record = service.restore_object_version(
+    Publisher,
+    object_id=10,
+    version_id=45,
+    user=request.user,
+    change_reason="Reverted accidental name change",
+)
+
+# 2. Resurrect deleted object to last known state
+restored_obj, audit_record = service.restore_object_version(
+    Publisher,
+    object_id=10,
+    user=request.user,
+)
+```
+
+### 3. Operator Interface: Django Admin UI
+
+Per project design, **Django Admin UI is the primary operator affordance** for staff to view history and revert objects:
+
+- Tracked models inherit from **`AuditedModelAdmin`** (in `apps.core.admin`), which extends `simple_history.admin.SimpleHistoryAdmin`.
+- **Viewing History**: Staff can navigate to `/admin/<app>/<model>/<id>/history/` to view an elided timeline of all changes, timestamps, users, and field deltas.
+- **Reverting**: Clicking any historical record displays the read-only snapshot form with a "Revert" button. Submitting the form restores the snapshot.
+- **Resurrecting Deleted Rows in Admin**: In standard `SimpleHistoryAdmin`, submitting a revert form on a deleted object raises a `DatabaseError` (because Django attempts an `UPDATE` on non-existent rows). `AuditedModelAdmin.save_model` intercepts this condition and forces an `INSERT` (`force_insert=True`), enabling operators to restore deleted objects directly from Django Admin.
+
+### 4. Multi-Row "Action" Caveat & Design Decision
+
+In complex systems, a single operator action can touch multiple rows (e.g. bulk updating 50 recitations or surahs):
+
+* **Architectural Difference**:
+  - `django-reversion` provides unified transaction envelopes (`Revision`) tying multiple tables and rows to a single atomic revision ID.
+  - `django-simple-history` is strictly decentralized per table. Each table maintains its own historical record table (`historicalasset`, `historicalpublisher`, etc.) without a shared global transaction key.
+* **Decision for Itqan CMS**:
+  - **Single-Object Reversibility as the Atomic Foundation**: All revert actions are scoped strictly to individual objects (`singular revert action`).
+  - **Rationale**: Single-object reversibility provides absolute atomicity and avoids the severe hazards of bulk multi-row rollback (such as rolling back rows that underwent subsequent independent edits, or violating foreign key constraints across tables that lack Two-Phase Commit in a dual-database environment).
+  - If a group/bulk reversion need arises in future milestones, a timestamp-window grouping strategy can be considered on top of this single-object foundation.
+
+
