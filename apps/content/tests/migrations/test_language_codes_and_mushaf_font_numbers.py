@@ -5,6 +5,7 @@ from model_bakery import baker
 
 from apps.content.models import (
     Asset,
+    AssetLanguage,
     AssetTemplateChoice,
     AssetVersion,
     CategoryChoice,
@@ -13,6 +14,7 @@ from apps.content.models import (
 )
 from apps.core.tests.base import BaseTestCase
 from apps.package_manager.services.package_registry import PackageRegistryService
+from apps.publishers.models import MemberLanguage
 
 # The module name starts with a digit, so a plain `from ... import` is illegal.
 migration = importlib.import_module("apps.content.migrations.0005_language_codes_and_mushaf_font_numbers")
@@ -121,3 +123,88 @@ class NumberMushafFontVersionsTests(BaseTestCase):
         self.assertEqual(["ar"], [language.language for language in languages])
         self.assertEqual("1.0.0", languages[0].latest_version)
 
+
+class NormalizeLanguageCodesTests(BaseTestCase):
+    def _mushaf(self, language: str) -> Asset:
+        return baker.make(Asset, category=CategoryChoice.MUSHAF, status=StatusChoice.READY, language=language)
+
+    def test_normalize_language_codes_where_language_is_a_name_should_store_the_code(self):
+        # Arrange
+        asset = self._mushaf("Arabic")
+        rendition = baker.make(
+            AssetLanguage, asset=asset, language="Arabic", is_source=True, status=StatusChoice.READY
+        )
+        english = baker.make(AssetLanguage, asset=asset, language="English", status=StatusChoice.READY)
+
+        # Act
+        migration.normalize_language_codes(django_apps, None)
+
+        # Assert
+        asset.refresh_from_db()
+        rendition.refresh_from_db()
+        english.refresh_from_db()
+        self.assertEqual("ar", asset.language)
+        self.assertEqual("ar", rendition.language)
+        self.assertEqual("en", english.language)
+
+    def test_normalize_language_codes_where_native_or_cased_name_should_store_the_code(self):
+        # Arrange
+        native = self._mushaf("العربية")
+        cased = self._mushaf(" FRENCH ")
+
+        # Act
+        migration.normalize_language_codes(django_apps, None)
+
+        # Assert
+        native.refresh_from_db()
+        cased.refresh_from_db()
+        self.assertEqual("ar", native.language)
+        self.assertEqual("fr", cased.language)
+
+    def test_normalize_language_codes_where_value_unknown_should_leave_it(self):
+        # Arrange
+        asset = self._mushaf("Klingon")
+
+        # Act
+        migration.normalize_language_codes(django_apps, None)
+
+        # Assert
+        asset.refresh_from_db()
+        self.assertEqual("Klingon", asset.language)
+
+    def test_normalize_language_codes_where_code_already_used_by_asset_should_skip_rename(self):
+        # Arrange
+        asset = self._mushaf("ar")
+        baker.make(AssetLanguage, asset=asset, language="ar", is_source=True)
+        duplicate = baker.make(AssetLanguage, asset=asset, language="Arabic")
+
+        # Act
+        migration.normalize_language_codes(django_apps, None)
+
+        # Assert
+        duplicate.refresh_from_db()
+        self.assertEqual("Arabic", duplicate.language)
+        self.assertEqual(1, AssetLanguage.objects.filter(asset=asset, language="ar").count())
+
+    def test_normalize_language_codes_where_member_language_is_a_name_should_store_the_code(self):
+        # Arrange
+        member_language = baker.make(MemberLanguage, language="French")
+
+        # Act
+        migration.normalize_language_codes(django_apps, None)
+
+        # Assert
+        member_language.refresh_from_db()
+        self.assertEqual("fr", member_language.language)
+
+    def test_normalize_language_codes_where_catalog_lists_asset_should_report_the_code(self):
+        # Arrange
+        asset = self._mushaf("Arabic")
+        baker.make(AssetVersion, asset=asset, name="1.0", file_url="uploads/mushaf.zip")
+
+        # Act
+        migration.normalize_language_codes(django_apps, None)
+
+        # Assert
+        languages = PackageRegistryService().catalog_languages(asset)
+        self.assertEqual(["ar"], [language.language for language in languages])
