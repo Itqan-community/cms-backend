@@ -8,6 +8,7 @@ from pydantic import AwareDatetime
 
 from apps.content.models import Asset, AssetVersion, CategoryChoice, LicenseChoice, StatusChoice
 from apps.content.services.mushaf import MushafService
+from apps.content.version_text import VersionText
 from apps.core.mixins.storage import absolute_file_url
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
@@ -113,8 +114,12 @@ class MushafCreateIn(Schema):
     external_url: str | None = None
     is_open_access: bool = False
     restricted_for_tenant: bool = False
-    version_name: str | None = Field(default=None, max_length=255)
-    version_summary: str = ""
+    version_label_en: str = Field(default="", max_length=255)
+    version_label_ar: str = Field(default="", max_length=255)
+    # Starting version number ("major.minor") — required when a file is uploaded.
+    version_number: str | None = Field(default=None, max_length=20)
+    version_summary_en: str = ""
+    version_summary_ar: str = ""
 
 
 class MushafPutIn(Schema):
@@ -203,7 +208,8 @@ def list_mushafs(request: Request, filters: MushafFilter = Query()):
         201: MushafDetailOut,
         400: NinjaErrorResponse[Literal["mushaf_name_required"]]
         | NinjaErrorResponse[Literal["external_url_required"]]
-        | NinjaErrorResponse[Literal["version_name_required"]],
+        | NinjaErrorResponse[Literal["version_number_required"]]
+        | NinjaErrorResponse[Literal["version_number_invalid"]],
         404: NinjaErrorResponse[Literal["publisher_not_found"]] | NinjaErrorResponse[Literal["mushaf_not_found"]],
     },
 )
@@ -220,8 +226,8 @@ def create_mushaf(
     enforce_publisher_membership(request.user, data.publisher_id)
     service = MushafService()
     mushaf = service.create_mushaf_with_optional_version(
-        version_name=data.version_name,
-        version_summary=data.version_summary,
+        version_text=VersionText.from_data(data, prefix="version_"),
+        version_number=data.version_number,
         file=file,
         publisher_id=data.publisher_id,
         name_ar=data.name_ar,
