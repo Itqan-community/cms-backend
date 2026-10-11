@@ -10,7 +10,9 @@ from django.utils.translation import gettext as _
 from apps.content.models import Asset as AssetModel, AssetVersion, CategoryChoice, LicenseChoice
 from apps.content.repositories.mushaf import MushafRepository
 from apps.content.services.asset_access import guard_restrict_for_tenant
+from apps.content.services.asset_content import VersionBump, issue_version_number
 from apps.content.tasks import notify_asset_version_created
+from apps.content.version_text import VersionText
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
 
@@ -114,31 +116,25 @@ class MushafService:
     def create_mushaf_with_optional_version(
         self,
         *,
-        version_name: str | None = None,
-        version_summary: str = "",
+        version_text: VersionText | None = None,
+        version_number: str | None = None,
         file: Any = None,
         **mushaf_kwargs: Any,
     ) -> Asset:
         """
         Business Logic: Create a mushaf and, when a file is provided, its first
-        version in a single atomic transaction.
+        version in a single atomic transaction. ``version_number`` is required
+        then: it starts the mushaf's version sequence.
 
         ``mushaf_kwargs`` are forwarded verbatim to :meth:`create_mushaf`.
         """
-        if file is not None and not (version_name or "").strip():
-            raise ItqanError(
-                error_name="version_name_required",
-                message=_("Version name is required when a file is provided."),
-                status_code=400,
-            )
-
         with transaction.atomic():
             mushaf = self.create_mushaf(**mushaf_kwargs)
             if file is not None:
                 self.create_mushaf_version(
                     mushaf.slug,
-                    name=version_name or "",
-                    summary=version_summary,
+                    text=version_text,
+                    version_number=version_number,
                     file=file,
                 )
         mushaf.refresh_from_db()
@@ -227,21 +223,29 @@ class MushafService:
         self,
         mushaf_slug: str,
         *,
-        name: str,
-        summary: str = "",
+        text: VersionText | None = None,
+        version_number: str | None = None,
+        bump: VersionBump = "minor",
         file: Any = None,
         publisher_q: Q | None = None,
     ) -> AssetVersion:
         """
         Business Logic: Create a new version for a mushaf.
+
+        The version is issued the next number in the mushaf's sequence (it has one
+        language): ``version_number`` starts the sequence, otherwise the latest is
+        bumped by ``bump``. The package registry only serves versions whose name is
+        a version number, so it is never left to the publisher to type.
         """
         asset = self._get_mushaf_or_404(mushaf_slug, publisher_q=publisher_q)
-        version = self.repo.create_mushaf_version(
-            asset,
-            name=name,
-            summary=summary,
-            file=file,
-        )
+        with transaction.atomic():
+            name = issue_version_number(asset, None, start=version_number, bump=bump)
+            version = self.repo.create_mushaf_version(
+                asset,
+                name=name,
+                text=text,
+                file=file,
+            )
         logger.info(f"Mushaf version created [version_id={version.pk}, asset_id={asset.pk}, slug={mushaf_slug}]")
         transaction.on_commit(lambda: notify_asset_version_created.delay(version.pk))
         return version
@@ -257,6 +261,8 @@ class MushafService:
         Business Logic: Update an existing mushaf version.
         """
         version = self._get_mushaf_version_or_404(mushaf_slug, version_id, publisher_q=publisher_q)
+        # The version number is fixed once issued.
+        fields = {key: value for key, value in fields.items() if key != "name"}
         updated = self.repo.update_mushaf_version(version, fields=fields)
         logger.info(f"Mushaf version updated [version_id={version_id}, asset_slug={mushaf_slug}]")
         return updated

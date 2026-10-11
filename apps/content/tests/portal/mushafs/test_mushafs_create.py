@@ -1,7 +1,7 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
-from apps.content.models import Asset, CategoryChoice, StatusChoice
+from apps.content.models import Asset, AssetVersion, CategoryChoice, StatusChoice
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
@@ -318,3 +318,59 @@ class MushafCreateTest(BaseTestCase):
         # Assert
         self.assertEqual(403, response.status_code)
         self.assertEqual("permission_denied", response.json()["error_name"])
+
+    def test_create_mushaf_where_file_and_version_number_provided_should_create_asset_and_version(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_MUSHAF)
+        file = SimpleUploadedFile("mushaf.pdf", b"mushaf_bytes", content_type="application/pdf")
+
+        # Act
+        response = self.client.post(
+            "/portal/mushafs/",
+            data={
+                "name_en": "Mushaf With Version",
+                "license": "CC-BY",
+                "language": "ar",
+                "publisher_id": self.publisher.id,
+                "is_external": False,
+                "version_number": "1.0",
+                "version_label_ar": "الطبعة الأولى",
+                "version_summary_ar": "الإصدار الأول",
+                "file": file,
+            },
+        )
+
+        # Assert
+        self.assertEqual(201, response.status_code, response.content)
+        version = AssetVersion.objects.get(asset_id=response.json()["id"])
+        self.assertEqual("1.0", version.name)
+        self.assertEqual("الطبعة الأولى", version.label_ar)
+        self.assertEqual("الإصدار الأول", version.summary_ar)
+        self.assertEqual(len(b"mushaf_bytes"), version.size_bytes)
+
+    def test_create_mushaf_where_file_with_invalid_version_number_should_return_400(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_MUSHAF)
+        file = SimpleUploadedFile("mushaf.pdf", b"mushaf_bytes", content_type="application/pdf")
+
+        # Act
+        response = self.client.post(
+            "/portal/mushafs/",
+            data={
+                "name_en": "Mushaf Bad Version",
+                "license": "CC-BY",
+                "language": "ar",
+                "publisher_id": self.publisher.id,
+                "is_external": False,
+                "version_number": "Madinah 1441",
+                "file": file,
+            },
+        )
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("version_number_invalid", response.json()["error_name"])
+        # Asset must not be persisted (atomic rollback)
+        self.assertFalse(Asset.objects.filter(name="Mushaf Bad Version").exists())

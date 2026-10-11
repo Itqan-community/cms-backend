@@ -5,8 +5,10 @@ from ninja import File, Form, Schema, UploadedFile
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
+from apps.content.api.portal.asset_content import VersionTextIn, VersionTextOut
 from apps.content.models import Asset, AssetVersion, CategoryChoice
 from apps.content.services.font import FontService
+from apps.content.version_text import VersionText
 from apps.core.mixins.storage import absolute_file_url
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.permission_required import permission_required
@@ -20,9 +22,10 @@ from apps.core.permissions import PermissionChoice
 router = ItqanRouter(tags=[NinjaTag.FONTS])
 
 
-class FontVersionListOut(Schema):
+class FontVersionListOut(VersionTextOut):
     id: int
     asset_id: int
+    # Version number ("major.minor"), issued by the server; ``label_*`` is the version name.
     name: str
     summary: str
     file_url: str | None = None
@@ -34,22 +37,24 @@ class FontVersionListOut(Schema):
         return absolute_file_url(context["request"], obj.file_url)
 
 
-class FontVersionCreateIn(Schema):
+class FontVersionCreateIn(VersionTextIn):
     asset_id: int
-    name: str = Field(..., max_length=255)
-    summary: str = ""
+    # Starts the font's number sequence; ignored once it has a version.
+    version_number: str | None = Field(default=None, max_length=20)
+    bump: Literal["minor", "major"] = "minor"
 
 
-class FontVersionPutIn(Schema):
+# The version number (``name``) is fixed once issued, so updates can't change it.
+class FontVersionPutIn(VersionTextIn):
     asset_id: int
-    name: str = Field(..., max_length=255)
-    summary: str = ""
 
 
 class FontVersionPatchIn(Schema):
     asset_id: int | None = None
-    name: str | None = Field(default=None, max_length=255)
-    summary: str | None = None
+    label_en: str | None = Field(default=None, max_length=255)
+    label_ar: str | None = Field(default=None, max_length=255)
+    summary_en: str | None = None
+    summary_ar: str | None = None
 
 
 @router.get(
@@ -61,7 +66,7 @@ class FontVersionPatchIn(Schema):
 )
 @permission_required([permission_class(PermissionChoice.PORTAL_READ_FONT)])
 @paginate
-@searching(search_fields=["name", "summary_en", "summary_ar"])
+@searching(search_fields=["name", "label_en", "label_ar", "summary_en", "summary_ar"])
 def list_font_versions(request: Request, font_slug: str):
     try:
         asset = Asset.objects.filter(request.publisher_q()).get(slug=font_slug, category=CategoryChoice.FONT)
@@ -78,7 +83,9 @@ def list_font_versions(request: Request, font_slug: str):
     "fonts/{font_slug}/versions/",
     response={
         201: FontVersionListOut,
-        400: NinjaErrorResponse[Literal["asset_id_mismatch"]],
+        400: NinjaErrorResponse[Literal["asset_id_mismatch"]]
+        | NinjaErrorResponse[Literal["version_number_required"]]
+        | NinjaErrorResponse[Literal["version_number_invalid"]],
         404: NinjaErrorResponse[Literal["font_not_found"]],
     },
 )
@@ -109,8 +116,9 @@ def create_font_version(
 
     version = service.create_font_version(
         font_slug,
-        name=data.name,
-        summary=data.summary,
+        text=VersionText.from_data(data),
+        version_number=data.version_number,
+        bump=data.bump,
         file=file,
         publisher_q=request.publisher_q(),
     )

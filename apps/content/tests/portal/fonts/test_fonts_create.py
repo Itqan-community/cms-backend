@@ -295,7 +295,7 @@ class FontCreateTest(BaseTestCase):
         self.assertTrue(asset.is_open_access)
         self.assertTrue(asset.restricted_for_tenant)
 
-    def test_create_font_where_file_and_version_name_provided_should_create_asset_and_version(self):
+    def test_create_font_where_file_and_version_number_provided_should_create_asset_and_version(self):
         # Arrange
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_FONT)
@@ -310,8 +310,9 @@ class FontCreateTest(BaseTestCase):
                 "language": "ar",
                 "publisher_id": self.publisher.id,
                 "is_external": False,
-                "version_name": "1.0.0",
-                "version_summary": "Initial release",
+                "version_number": "1.0",
+                "version_label_en": "First edition",
+                "version_summary_en": "Initial release",
                 "file": file,
             },
         )
@@ -320,15 +321,17 @@ class FontCreateTest(BaseTestCase):
         self.assertEqual(201, response.status_code, response.content)
         body = response.json()
         self.assertEqual(1, len(body["versions"]))
-        self.assertEqual("1.0.0", body["versions"][0]["name"])
+        self.assertEqual("1.0", body["versions"][0]["name"])
         self.assertIsNotNone(body["versions"][0]["file_url"])
 
         asset = Asset.objects.get(id=body["id"])
         version = AssetVersion.objects.get(asset=asset)
-        self.assertEqual("1.0.0", version.name)
+        self.assertEqual("1.0", version.name)
+        self.assertEqual("First edition", version.label_en)
+        self.assertEqual("Initial release", version.summary_en)
         self.assertEqual(len(b"font_bytes"), version.size_bytes)
 
-    def test_create_font_where_file_without_version_name_should_return_400(self):
+    def test_create_font_where_file_without_version_number_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_FONT)
@@ -349,7 +352,7 @@ class FontCreateTest(BaseTestCase):
 
         # Assert
         self.assertEqual(400, response.status_code, response.content)
-        self.assertEqual("version_name_required", response.json()["error_name"])
+        self.assertEqual("version_number_required", response.json()["error_name"])
         # Asset must not be persisted (atomic rollback)
         self.assertFalse(Asset.objects.filter(name="Font Missing Version Name").exists())
 
@@ -367,7 +370,7 @@ class FontCreateTest(BaseTestCase):
                 "language": "ar",
                 "publisher_id": self.publisher.id,
                 "is_external": False,
-                "version_name": "ignored-without-file",
+                "version_number": "1.0",
             },
         )
 
