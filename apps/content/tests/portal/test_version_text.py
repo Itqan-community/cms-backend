@@ -1,8 +1,4 @@
-import importlib
-
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.db import connection
-from django.db.migrations.executor import MigrationExecutor
 from model_bakery import baker
 
 from apps.content.models import (
@@ -20,9 +16,6 @@ from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.quran.models import Ayah, Sura
 from apps.users.models import User
-
-# The module name starts with a digit, so a plain `from ... import` is illegal.
-split_migration = importlib.import_module("apps.content.migrations.0074_split_version_label_summary_by_script")
 
 CSV = b"surah,ayah,text\n1,1,in the name"
 TEXT = {
@@ -285,34 +278,3 @@ class VersionTextHistoryTest(VersionTextBaseTest):
         # Assert
         latest = version.history.order_by("-history_date").first()
         self.assertEqual(("ملخص معدل", "Initial release"), (latest.summary_ar, latest.summary_en))
-
-
-class SplitByScriptMigrationTest(VersionTextBaseTest):
-    def test_split_by_script_should_move_text_into_the_language_it_is_written_in(self):
-        # Arrange — models as of the migration before the split, which see the single
-        # label/summary columns as plain fields (no modeltranslation rewriting).
-        state_apps = (
-            MigrationExecutor(connection)
-            .loader.project_state(("content", "0073_assetversion_bilingual_label_summary"))
-            .apps
-        )
-        HistoricVersion = state_apps.get_model("content", "AssetVersion")
-        arabic = self._make_version("1.0")
-        english = self._make_version("1.1")
-        HistoricVersion.objects.filter(pk=arabic.pk).update(label="الطبعة الأولى", summary="Fixes in سورة")
-        HistoricVersion.objects.filter(pk=english.pk).update(label="v2", summary="تصحيح الأخطاء typo")
-
-        # Act
-        split_migration.split_by_script(state_apps, None)
-
-        # Assert — mostly Arabic letters → _ar; anything else → _en
-        arabic.refresh_from_db()
-        english.refresh_from_db()
-        self.assertEqual(
-            ("", "الطبعة الأولى", "Fixes in سورة", ""),
-            (arabic.label_en, arabic.label_ar, arabic.summary_en, arabic.summary_ar),
-        )
-        self.assertEqual(
-            ("v2", "", "", "تصحيح الأخطاء typo"),
-            (english.label_en, english.label_ar, english.summary_en, english.summary_ar),
-        )

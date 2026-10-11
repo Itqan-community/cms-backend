@@ -1,6 +1,3 @@
-import importlib
-
-from django.apps import apps as django_apps
 from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
@@ -19,9 +16,6 @@ from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.quran.models import Ayah, Sura
 from apps.users.models import User
-
-# The module name starts with a digit, so a plain `from ... import` is illegal.
-numbering_migration = importlib.import_module("apps.content.migrations.0071_number_tafsir_translation_versions")
 
 CSV = b"surah,ayah,text\n1,1,in the name"
 
@@ -269,38 +263,3 @@ class CommitNumberingTest(VersionNumberingBaseTest):
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual("8.0", response.json()["name"])
         self.assertEqual("Original", response.json()["label_en"])
-
-
-class NumberVersionsMigrationTest(VersionNumberingBaseTest):
-    def test_number_versions_where_run_should_number_per_language_and_keep_old_names_as_labels(self):
-        # Arrange — two Arabic commits, one French commit, one draft; old free-text names
-        first = self.make_version("v1")
-        second = self.make_version("Second edition")
-        french = self.make_version("fr v1", language="fr")
-        draft = self.make_version("wip", state=VersionStateChoice.DRAFT)
-        AssetVersion.objects.filter(pk=second.pk).update(created_at=first.created_at.replace(year=2100))
-
-        # Act
-        numbering_migration.number_versions(django_apps, None)
-
-        # Assert
-        for version in (first, second, french, draft):
-            version.refresh_from_db()
-        self.assertEqual(("1.0", "v1"), (first.name, first.label))
-        self.assertEqual(("1.1", "Second edition"), (second.name, second.label))
-        self.assertEqual(("1.0", "fr v1"), (french.name, french.label))
-        self.assertEqual(("", "wip"), (draft.name, draft.label))
-
-    def test_restore_names_where_reversed_should_restore_labels_and_keep_unlabelled_numbers(self):
-        # Arrange — a migrated version (old name in its label) and one created after, unnamed
-        migrated = self.make_version("1.0", label="v1")
-        unnamed = self.make_version("1.1", label="")
-
-        # Act
-        numbering_migration.restore_names(django_apps, None)
-
-        # Assert
-        migrated.refresh_from_db()
-        unnamed.refresh_from_db()
-        self.assertEqual("v1", migrated.name)
-        self.assertEqual("1.1", unnamed.name)

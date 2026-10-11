@@ -6,7 +6,7 @@ from apps.content.models import MushafLayout
 from apps.core.tests.base import BaseTestCase
 
 # The module name starts with a digit, so a plain `from ... import` is illegal.
-seed = importlib.import_module("apps.content.migrations.0068_seed_mushaf_layouts")
+seed = importlib.import_module("apps.content.migrations.0004_seed_mushaf_layouts")
 
 
 class SeedMushafLayoutsTests(BaseTestCase):
