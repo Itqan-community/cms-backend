@@ -304,9 +304,9 @@ jobs:
             # This avoids two app containers racing on migrate, and keeps the new image's
             # migrations backward-compatible with the still-running old web container.
             echo "🗄️ Running database migrations (one-off)..."
-            # Rename applied-migration rows recorded under pre-rename file names (no-op when already current).
-            $COMPOSE run --rm --no-deps web python manage.py reconcile_migration_names
-            $COMPOSE run --rm --no-deps web python manage.py reconcile_migration_names --database=audit
+            # Rewrite history left by the pre-reset migration chains (no-op on fresh or already-reset DBs).
+            $COMPOSE run --rm --no-deps web python manage.py reset_migration_history
+            $COMPOSE run --rm --no-deps web python manage.py reset_migration_history --database=audit
             $COMPOSE run --rm --no-deps web python manage.py migrate --noinput
             $COMPOSE run --rm --no-deps web python manage.py migrate --database=audit --noinput
 

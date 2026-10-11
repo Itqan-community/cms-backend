@@ -24,7 +24,6 @@ from apps.content.services.admin.asset_recitation_ayah_timestamps_upload_service
     bulk_upload_recitation_ayah_timestamps,
 )
 from apps.content.services.asset_content_import import ParsedEntry
-from apps.content.services.asset_language_backfill import backfill_source_languages
 from apps.content.services.asset_templates import unit_spec_for
 from apps.content.services.recitation_folder import RecitationFolderService
 from apps.core.tests.base import BaseTestCase
@@ -303,30 +302,6 @@ class ContentBulkHistoryTest(BaseTestCase):
         assert latest_h1.history_type == "~"
         assert latest_h1.is_default is False
         assert folder1.history.count() == initial_h1_count + 1
-
-    def test_backfill_source_languages_where_versions_unlinked_should_write_history(self):
-        # Arrange: version lacking asset_language (clear via update since save auto-assigns)
-        v = AssetVersion.objects.create(
-            asset=self.asset,
-            name="1.0.0",
-            state=VersionStateChoice.PUBLISHED,
-        )
-        AssetVersion.objects.filter(id=v.id).update(asset_language=None)
-        v.refresh_from_db()
-        assert v.asset_language_id is None
-
-        # Act: run backfill
-        backfill_source_languages(Asset, AssetLanguage, AssetVersion)
-
-        # Assert: version is linked in default DB
-        v.refresh_from_db()
-        assert v.asset_language_id == self.lang.id
-
-        # Assert: history record generated for the update
-        latest_h = v.history.order_by("-history_date").first()
-        assert latest_h is not None
-        assert latest_h.history_type == "~"
-        assert latest_h.asset_language_id == self.lang.id
 
     def test_bulk_upload_recitation_ayah_timestamps_where_new_and_existing_should_preserve_history(self):
         # Arrange: create recitation asset, track, and timing payload
