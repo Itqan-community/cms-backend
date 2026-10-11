@@ -239,13 +239,17 @@ Similar to ResourceVersion, **AssetVersion** tracks each uploaded file version o
   `GET /portal/content/{category}/csv-template/?template=&mushaf_layout_id=` (asset
   creation; `page` needs the layout) and `GET /portal/content/{category}/{slug}/csv-template/`
   (an existing asset's template).
-- For translations and tafsirs, `name` is the **version number** (`major.minor`, e.g.
-  `7.0`) and `label` the human-readable version name. `label` and `summary` are
+- For translations, tafsirs, mushafs and fonts, `name` is the **version number**
+  (`major.minor`, e.g. `7.0`) and `label` the human-readable version name. The
+  package registry only serves versions whose name is a version number, which is why
+  publishers never type it. `label` and `summary` are
   bilingual (django-modeltranslation): the portal reads and writes
   `label_en`/`label_ar`/`summary_en`/`summary_ar` (asset create and add-language
   take them as `version_label_en`, …), and a commit's message is its summary — at
   least one language is required (`commit_message_required`). Other categories
-  keep a single `summary`, read with a fallback to the other language. When the
+  keep a single `summary`, read with a fallback to the other language. Mushafs and
+  fonts have one language and no per-ayah content, so they have no drafts or commits:
+  a version is numbered when it is uploaded. When the
   fields were split, existing text went into `_ar` when it was mostly Arabic
   script, otherwise into `_en`. Each language has its own
   number sequence. The server issues the number when a version is committed,
@@ -256,7 +260,8 @@ Similar to ResourceVersion, **AssetVersion** tracks each uploaded file version o
   `minor` (`7.1` → `7.2`, the default) or `major` (`7.1` → `8.0`). Drafts stay
   unnumbered (`name` is blank) until they are committed. Versions that predate
   numbering were renumbered from `1.0` in creation order, with their old names
-  moved to `label`.
+  moved to `label` (mushafs and fonts in migration
+  `content.0005_language_codes_and_mushaf_font_numbers`, into `label_ar` or `label_en` by script).
 
 ### 6. MushafLayout
 

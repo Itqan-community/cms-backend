@@ -72,7 +72,7 @@ class FontVersionListTest(FontVersionBaseTest):
 
 
 class FontVersionCreateTest(FontVersionBaseTest):
-    def test_create_version_where_valid_data_should_return_201(self):
+    def test_create_version_where_first_version_should_issue_starting_number(self):
         # Arrange
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_FONT)
@@ -83,8 +83,10 @@ class FontVersionCreateTest(FontVersionBaseTest):
             f"/portal/fonts/{self.font.slug}/versions/",
             data={
                 "asset_id": self.font.id,
-                "name": "New Version",
-                "summary": "This is a new version",
+                "version_number": "1.0",
+                "label_en": "New Version",
+                "label_ar": "إصدار جديد",
+                "summary_en": "This is a new version",
                 "file": file,
             },
         )
@@ -92,15 +94,99 @@ class FontVersionCreateTest(FontVersionBaseTest):
         # Assert
         self.assertEqual(201, response.status_code, response.content)
         body = response.json()
-        self.assertEqual("New Version", body["name"])
-        self.assertEqual("This is a new version", body["summary"])
+        self.assertEqual("1.0", body["name"])
+        self.assertEqual("New Version", body["label_en"])
+        self.assertEqual("إصدار جديد", body["label_ar"])
+        self.assertEqual("This is a new version", body["summary_en"])
         self.assertIsNotNone(body["file_url"])
         self.assertEqual(len(b"content"), body["size_bytes"])
-
-        # Verify DB
         version = AssetVersion.objects.get(id=body["id"])
         self.assertEqual(self.font, version.asset)
         self.assertEqual(len(b"content"), version.size_bytes)
+
+    def test_create_version_where_previous_version_exists_should_bump_minor(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_FONT)
+        baker.make(AssetVersion, asset=self.font, name="1.0")
+
+        # Act
+        response = self.client.post(
+            f"/portal/fonts/{self.font.slug}/versions/",
+            data={"asset_id": self.font.id, "version_number": "5.0", "file": SimpleUploadedFile("t.pdf", b"c")},
+        )
+
+        # Assert
+        self.assertEqual(201, response.status_code, response.content)
+        self.assertEqual("1.1", response.json()["name"])
+
+    def test_create_version_where_bump_major_should_issue_next_major(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_FONT)
+        baker.make(AssetVersion, asset=self.font, name="1.3")
+
+        # Act
+        response = self.client.post(
+            f"/portal/fonts/{self.font.slug}/versions/",
+            data={"asset_id": self.font.id, "bump": "major", "file": SimpleUploadedFile("t.pdf", b"c")},
+        )
+
+        # Assert
+        self.assertEqual(201, response.status_code, response.content)
+        self.assertEqual("2.0", response.json()["name"])
+
+    def test_create_version_where_name_sent_should_ignore_it_and_issue_number(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_FONT)
+
+        # Act
+        response = self.client.post(
+            f"/portal/fonts/{self.font.slug}/versions/",
+            data={
+                "asset_id": self.font.id,
+                "name": "Font Al-Tabari",
+                "version_number": "1.0",
+                "file": SimpleUploadedFile("t.pdf", b"c"),
+            },
+        )
+
+        # Assert
+        self.assertEqual(201, response.status_code, response.content)
+        self.assertEqual("1.0", response.json()["name"])
+
+    def test_create_version_where_first_version_without_number_should_return_400(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_FONT)
+
+        # Act
+        response = self.client.post(
+            f"/portal/fonts/{self.font.slug}/versions/",
+            data={"asset_id": self.font.id, "file": SimpleUploadedFile("t.pdf", b"c")},
+        )
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("version_number_required", response.json()["error_name"])
+        self.assertFalse(AssetVersion.objects.filter(asset=self.font).exists())
+
+    def test_create_version_where_number_invalid_should_return_400(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_FONT)
+
+        # Act
+        response = self.client.post(
+            f"/portal/fonts/{self.font.slug}/versions/",
+            data={"asset_id": self.font.id, "version_number": "v1", "file": SimpleUploadedFile("t.pdf", b"c")},
+        )
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("version_number_invalid", response.json()["error_name"])
+        self.assertFalse(AssetVersion.objects.filter(asset=self.font).exists())
 
     def test_create_version_where_asset_id_mismatch_should_return_400(self):
         # Arrange
@@ -147,7 +233,7 @@ class FontVersionCreateTest(FontVersionBaseTest):
         # Arrange
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_FONT)
-        baker.make(AssetVersion, asset=self.font, name="1.0.0")
+        baker.make(AssetVersion, asset=self.font, name="1.0")
         subscriber = baker.make(User, email="font-subscriber@example.com")
         access_request = baker.make(AssetAccessRequest, developer_user=subscriber, asset=self.font, status="approved")
         baker.make(
@@ -163,7 +249,7 @@ class FontVersionCreateTest(FontVersionBaseTest):
         with self.captureOnCommitCallbacks(execute=True):
             response = self.client.post(
                 f"/portal/fonts/{self.font.slug}/versions/",
-                data={"asset_id": self.font.id, "name": "2.0.0", "summary": "New release", "file": file},
+                data={"asset_id": self.font.id, "summary_en": "New release", "file": file},
             )
 
         # Assert
@@ -175,13 +261,13 @@ class FontVersionCreateTest(FontVersionBaseTest):
         # Arrange
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_FONT)
-        baker.make(AssetVersion, asset=self.font, name="1.0.0")  # prior version so this is an update
+        baker.make(AssetVersion, asset=self.font, name="1.0")  # prior version so this is an update
         file = SimpleUploadedFile("font.pdf", b"content", content_type="application/pdf")
 
         # Act
         response = self.client.post(
             f"/portal/fonts/{self.font.slug}/versions/",
-            data={"asset_id": self.font.id, "name": "2.0.0", "file": file},
+            data={"asset_id": self.font.id, "file": file},
         )
 
         # Assert
@@ -192,9 +278,9 @@ class FontVersionCreateTest(FontVersionBaseTest):
 class FontVersionUpdateTest(FontVersionBaseTest):
     def setUp(self):
         super().setUp()
-        self.version = baker.make(AssetVersion, asset=self.font, name="Old Name")
+        self.version = baker.make(AssetVersion, asset=self.font, name="1.0")
 
-    def test_put_version_where_valid_data_should_return_200(self):
+    def test_put_version_where_valid_data_should_update_text_and_keep_number(self):
         from urllib.parse import urlencode
 
         # Arrange
@@ -202,8 +288,9 @@ class FontVersionUpdateTest(FontVersionBaseTest):
         self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_FONT)
         payload = {
             "asset_id": self.font.id,
-            "name": "Updated Name",
-            "summary": "Updated Summary",
+            "name": "9.9",
+            "label_en": "Updated Name",
+            "summary_en": "Updated Summary",
         }
 
         # Act
@@ -213,23 +300,24 @@ class FontVersionUpdateTest(FontVersionBaseTest):
             content_type="application/x-www-form-urlencoded",
         )
 
-        # Arrange
+        # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
-        self.assertEqual("Updated Name", body["name"])
-        self.assertEqual("Updated Summary", body["summary"])
-
+        self.assertEqual("1.0", body["name"])
+        self.assertEqual("Updated Name", body["label_en"])
+        self.assertEqual("Updated Summary", body["summary_en"])
         self.version.refresh_from_db()
-        self.assertEqual("Updated Name", self.version.name)
+        self.assertEqual("1.0", self.version.name)
 
-    def test_patch_version_where_partial_data_should_return_200(self):
+    def test_patch_version_where_partial_data_should_update_it_and_keep_number(self):
         # Arrange
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_FONT)
         from urllib.parse import urlencode
 
         payload = {
-            "name": "Patched Name",
+            "name": "9.9",
+            "label_ar": "اسم معدل",
         }
 
         # Act
@@ -242,8 +330,9 @@ class FontVersionUpdateTest(FontVersionBaseTest):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
-        self.assertEqual("Patched Name", body["name"])
-        self.assertEqual(self.version.summary, body["summary"])
+        self.assertEqual("1.0", body["name"])
+        self.assertEqual("اسم معدل", body["label_ar"])
+        self.assertEqual(self.version.summary_en or "", body["summary_en"])
 
     def test_update_version_where_unauthenticated_should_return_401(self):
         response = self.client.patch(f"/portal/fonts/{self.font.slug}/versions/{self.version.id}/", data={})
