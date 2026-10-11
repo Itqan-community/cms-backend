@@ -1,5 +1,7 @@
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from model_bakery import baker
 
@@ -114,6 +116,55 @@ class TafsirVersionListTest(TafsirVersionBaseTest):
         row = response.json()["results"][0]
         self.assertEqual("Test User", row["created_by"])
         self.assertEqual({"added": 1, "modified": 0, "removed": 0}, row["change_counts"])
+
+    def test_list_versions_where_changes_reviewed_should_count_types_and_comments(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
+        version = baker.make(AssetVersion, asset=self.tafsir, name="1.0")
+        ayahs = [self.ayah] + [baker.make(Ayah, id=i, sura=self.ayah.sura, number_in_sura=i) for i in (2, 3)]
+        added, modified, _ = (
+            baker.make(AssetVersionChange, version=version, ayah=ayah, change_type=change_type, order=ayah.id)
+            for ayah, change_type in zip(ayahs, ["added", "modified", "removed"], strict=False)
+        )
+        baker.make(AssetVersionChangeReview, change=added, state=ReviewStateChoice.COMMENTED, comment="typo")
+        baker.make(AssetVersionChangeReview, change=modified, state=ReviewStateChoice.APPROVED, comment="")
+
+        # Act
+        response = self.client.get(f"/portal/tafsirs/{self.tafsir.slug}/versions/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        row = response.json()["results"][0]
+        self.assertEqual({"added": 1, "modified": 1, "removed": 1}, row["change_counts"])
+        self.assertEqual(1, row["review_comments_count"])
+
+    def test_list_versions_where_version_has_more_changes_should_count_them_in_the_database(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
+        version = baker.make(AssetVersion, asset=self.tafsir, name="1.0")
+        baker.make(AssetVersionChange, version=version, ayah=self.ayah, change_type="added", order=1)
+        url = f"/portal/tafsirs/{self.tafsir.slug}/versions/"
+        with CaptureQueriesContext(connection) as few_changes:
+            self.client.get(url)
+        for i in range(2, 22):
+            ayah = baker.make(Ayah, id=i, sura=self.ayah.sura, number_in_sura=i)
+            baker.make(AssetVersionChange, version=version, ayah=ayah, change_type="added", order=i)
+
+        # Act
+        with CaptureQueriesContext(connection) as many_changes:
+            response = self.client.get(url)
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual({"added": 21, "modified": 0, "removed": 0}, response.json()["results"][0]["change_counts"])
+        self.assertEqual(len(few_changes), len(many_changes))
+        # The changes are counted in the database, never loaded row by row.
+        loaded_rows = [
+            q for q in many_changes.captured_queries if q["sql"].startswith('SELECT "content_assetversionchange"."id"')
+        ]
+        self.assertEqual([], loaded_rows)
 
     def test_list_versions_where_tafsir_not_found_should_return_404(self):
         # Arrange
@@ -501,6 +552,26 @@ class TafsirVersionUpdateTest(TafsirVersionBaseTest):
         body = response.json()
         self.assertEqual("Patched Name", body["label_en"])
         self.assertEqual(self.version.summary, body["summary_en"])
+
+    def test_patch_version_where_version_has_changes_should_return_their_counts(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
+        from urllib.parse import urlencode
+
+        baker.make(AssetVersionChange, version=self.version, ayah=self.ayah, change_type="modified", order=1)
+
+        # Act
+        response = self.client.patch(
+            f"/portal/tafsirs/{self.tafsir.slug}/versions/{self.version.id}/",
+            data=urlencode({"label_en": "Patched Name"}),
+            content_type="application/x-www-form-urlencoded",
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual({"added": 0, "modified": 1, "removed": 0}, response.json()["change_counts"])
+        self.assertEqual(0, response.json()["review_comments_count"])
 
     def test_patch_version_where_name_sent_should_keep_version_number(self):
         from urllib.parse import urlencode
