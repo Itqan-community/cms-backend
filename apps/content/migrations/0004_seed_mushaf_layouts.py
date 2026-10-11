@@ -28,7 +28,7 @@ def seed_mushaf_layouts(apps: Apps, schema_editor: BaseDatabaseSchemaEditor | No
 
 
 class Migration(migrations.Migration):
-    dependencies = [("content", "0067_validate_entry_unit_constraints")]
+    dependencies = [("content", "0003_initial")]
 
     # Reversing is a no-op: page-based assets may already reference these layouts.
     operations = [migrations.RunPython(seed_mushaf_layouts, migrations.RunPython.noop)]

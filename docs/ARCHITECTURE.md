@@ -245,18 +245,18 @@ Similar to ResourceVersion, **AssetVersion** tracks each uploaded file version o
   `label_en`/`label_ar`/`summary_en`/`summary_ar` (asset create and add-language
   take them as `version_label_en`, …), and a commit's message is its summary — at
   least one language is required (`commit_message_required`). Other categories
-  keep a single `summary`, read with a fallback to the other language. Migration
-  `0074_split_version_label_summary_by_script` moved existing text into `_ar` when
-  it is mostly Arabic script, otherwise into `_en`. Each language has its own
+  keep a single `summary`, read with a fallback to the other language. When the
+  fields were split, existing text went into `_ar` when it was mostly Arabic
+  script, otherwise into `_en`. Each language has its own
   number sequence. The server issues the number when a version is committed,
   uploaded or restored, and it can't be edited afterwards (`PUT`/`PATCH` change only
   the name and summary). The first version in a sequence takes the caller's
   `version_number` as its start (`version_number_required` /
   `version_number_invalid`); later ones bump the highest existing number by `bump`:
   `minor` (`7.1` → `7.2`, the default) or `major` (`7.1` → `8.0`). Drafts stay
-  unnumbered (`name` is blank) until they are committed. Migration
-  `0071_number_tafsir_translation_versions` renumbered existing versions from `1.0`
-  in creation order and moved their old names to `label`.
+  unnumbered (`name` is blank) until they are committed. Versions that predate
+  numbering were renumbered from `1.0` in creation order, with their old names
+  moved to `label`.
 
 ### 6. MushafLayout
 
@@ -264,7 +264,7 @@ A **MushafLayout** describes one printed mushaf's pagination (e.g. "Madani 604" 
 604 pages). Pages are opaque numbered slots with no stored page-to-ayah mapping (an
 ayah can straddle a page boundary, which would make such a map lossy). Referenced by
 `Asset.mushaf_layout` for `page`-template text assets, and by nothing else.
-Migration `0068_seed_mushaf_layouts` seeds the two standard printings — Madinah
+Migration `content.0004_seed_mushaf_layouts` seeds the two standard printings — Madinah
 Mushaf (604 pages) and Shamarly Mushaf (522 pages) — so every environment has
 layouts to choose from; further layouts are added through the portal.
 
