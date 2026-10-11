@@ -3,6 +3,8 @@ from django.db.models import Count
 from django.urls import reverse
 from django.utils.html import format_html
 
+from apps.core.admin import AuditedModelAdmin
+
 from .models import Domain, MemberLanguage, Publisher, PublisherMember, PublisherMemberInvitation
 
 
@@ -22,7 +24,7 @@ class MemberLanguageInline(admin.TabularInline):
 
 
 @admin.register(Publisher)
-class PublisherAdmin(admin.ModelAdmin):
+class PublisherAdmin(AuditedModelAdmin):
     list_display = [
         "name",
         "slug",
@@ -109,7 +111,7 @@ class PublisherAdmin(admin.ModelAdmin):
 
 
 @admin.register(PublisherMember)
-class PublisherMemberAdmin(admin.ModelAdmin):
+class PublisherMemberAdmin(AuditedModelAdmin):
     list_display = ["user", "publisher", "group", "created_at"]
     list_filter = ["group", "created_at"]
     search_fields = ["user__email", "publisher__name"]
@@ -118,7 +120,7 @@ class PublisherMemberAdmin(admin.ModelAdmin):
 
 
 @admin.register(PublisherMemberInvitation)
-class PublisherMemberInvitationAdmin(admin.ModelAdmin):
+class PublisherMemberInvitationAdmin(AuditedModelAdmin):
     list_display = [
         "email",
         "publisher",
@@ -154,7 +156,7 @@ class PublisherMemberInvitationAdmin(admin.ModelAdmin):
 
 
 @admin.register(MemberLanguage)
-class MemberLanguageAdmin(admin.ModelAdmin):
+class MemberLanguageAdmin(AuditedModelAdmin):
     list_display = ("member", "language")
     list_filter = ("language",)
     search_fields = ("member__user__email", "member__user__name", "member__publisher__name", "language")
@@ -162,7 +164,7 @@ class MemberLanguageAdmin(admin.ModelAdmin):
 
 
 @admin.register(Domain)
-class DomainAdmin(admin.ModelAdmin):
+class DomainAdmin(AuditedModelAdmin):
     list_display = ["domain", "publisher", "is_active", "created_at"]
     list_filter = ["is_active", "created_at"]
     search_fields = ["domain", "publisher__name"]

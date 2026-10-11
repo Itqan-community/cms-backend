@@ -13,6 +13,7 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from plain_permissions.utils import get_permissions_queryset
 
+from apps.core.admin import AuditedModelAdmin
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import PublisherMember
 from apps.users.services.group import GroupService
@@ -74,7 +75,7 @@ if getattr(settings, "DJANGO_ADMIN_FORCE_ALLAUTH", False):
 
 
 @admin.register(User)
-class UserAdmin(auth_admin.UserAdmin):
+class UserAdmin(AuditedModelAdmin, auth_admin.UserAdmin):
     form = UserAdminChangeForm
     add_form = UserAdminCreationForm
     fieldsets = (
