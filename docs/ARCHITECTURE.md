@@ -299,7 +299,10 @@ flowchart LR
 
 Text assets (translations & tafsirs) hold one source-language rendition plus any
 number of translation renditions (`AssetLanguage`), each with its own version
-history. Every commit — an editor draft committed, an uploaded or replaced version
+history. Languages are stored as codes (`ar`, `en`) on `Asset.language`,
+`AssetLanguage.language` and `MemberLanguage.language`, which are compared with each
+other; older rows that held names (`Arabic`) were rewritten to codes by migration
+`content.0005_language_codes_and_mushaf_font_numbers`. Every commit — an editor draft committed, an uploaded or replaced version
 file, a restore — records a per-unit delta (`AssetVersionChange`) against the
 language's previous version, keyed to whichever unit the asset's template uses
 (surah, ayah, word or page). Uploaded files must parse into entries
