@@ -5,6 +5,7 @@ from typing import Any
 from django.db import transaction
 
 from apps.content.models import Asset, AssetVersion, CategoryChoice, LicenseChoice, StatusChoice
+from apps.content.version_text import VersionText
 
 
 class FontRepository:
@@ -112,7 +113,7 @@ class FontRepository:
         asset: Asset,
         *,
         name: str,
-        summary: str = "",
+        text: VersionText | None = None,
         file: Any = None,
     ) -> AssetVersion:
         """
@@ -129,7 +130,7 @@ class FontRepository:
             asset_version = self.asset_version_model.objects.create(
                 asset=asset,
                 name=name,
-                summary=summary,
+                **(text or VersionText()).as_fields(),
                 file_url=file,
                 size_bytes=size_bytes,
             )

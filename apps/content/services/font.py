@@ -10,7 +10,9 @@ from django.utils.translation import gettext as _
 from apps.content.models import Asset as AssetModel, AssetVersion, CategoryChoice, LicenseChoice
 from apps.content.repositories.font import FontRepository
 from apps.content.services.asset_access import guard_restrict_for_tenant
+from apps.content.services.asset_content import VersionBump, issue_version_number
 from apps.content.tasks import notify_asset_version_created
+from apps.content.version_text import VersionText
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
 
@@ -114,31 +116,25 @@ class FontService:
     def create_font_with_optional_version(
         self,
         *,
-        version_name: str | None = None,
-        version_summary: str = "",
+        version_text: VersionText | None = None,
+        version_number: str | None = None,
         file: Any = None,
         **font_kwargs: Any,
     ) -> Asset:
         """
         Business Logic: Create a font and, when a file is provided, its first
-        version in a single atomic transaction.
+        version in a single atomic transaction. ``version_number`` is required
+        then: it starts the font's version sequence.
 
         ``font_kwargs`` are forwarded verbatim to :meth:`create_font`.
         """
-        if file is not None and not (version_name or "").strip():
-            raise ItqanError(
-                error_name="version_name_required",
-                message=_("Version name is required when a file is provided."),
-                status_code=400,
-            )
-
         with transaction.atomic():
             font = self.create_font(**font_kwargs)
             if file is not None:
                 self.create_font_version(
                     font.slug,
-                    name=version_name or "",
-                    summary=version_summary,
+                    text=version_text,
+                    version_number=version_number,
                     file=file,
                 )
         font.refresh_from_db()
@@ -225,21 +221,29 @@ class FontService:
         self,
         font_slug: str,
         *,
-        name: str,
-        summary: str = "",
+        text: VersionText | None = None,
+        version_number: str | None = None,
+        bump: VersionBump = "minor",
         file: Any = None,
         publisher_q: Q | None = None,
     ) -> AssetVersion:
         """
         Business Logic: Create a new version for a font.
+
+        The version is issued the next number in the font's sequence (it has one
+        language): ``version_number`` starts the sequence, otherwise the latest is
+        bumped by ``bump``. The package registry only serves versions whose name is
+        a version number, so it is never left to the publisher to type.
         """
         asset = self._get_font_or_404(font_slug, publisher_q=publisher_q)
-        version = self.repo.create_font_version(
-            asset,
-            name=name,
-            summary=summary,
-            file=file,
-        )
+        with transaction.atomic():
+            name = issue_version_number(asset, None, start=version_number, bump=bump)
+            version = self.repo.create_font_version(
+                asset,
+                name=name,
+                text=text,
+                file=file,
+            )
         logger.info(f"Font version created [version_id={version.pk}, asset_id={asset.pk}, slug={font_slug}]")
         transaction.on_commit(lambda: notify_asset_version_created.delay(version.pk))
         return version
@@ -255,6 +259,8 @@ class FontService:
         Business Logic: Update an existing font version.
         """
         version = self._get_font_version_or_404(font_slug, version_id, publisher_q=publisher_q)
+        # The version number is fixed once issued.
+        fields = {key: value for key, value in fields.items() if key != "name"}
         updated = self.repo.update_font_version(version, fields=fields)
         logger.info(f"Font version updated [version_id={version_id}, asset_slug={font_slug}]")
         return updated
