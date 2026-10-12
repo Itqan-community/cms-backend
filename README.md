@@ -152,13 +152,6 @@ python manage.py runserver
 > **Note**: `pre-commit install` sets up Git hooks that run linting checks before each commit.
 > All PRs must pass linting to be merged.
 
-> **Note**: The project apps' migrations were reset to fresh initial migrations. A database
-> migrated before the reset fails `migrate` with `InconsistentMigrationHistory`; run
-> `python manage.py reset_migration_history` and `python manage.py reset_migration_history --database=audit`
-> first (deploys do this automatically). It only rewrites history for a database that had reached
-> the last pre-reset migration of each app; otherwise it refuses, and the database must first be
-> migrated on the last release before the reset (or recreated).
-
 ### 4) Access
 
 - API Docs: http://localhost:8000/docs/
