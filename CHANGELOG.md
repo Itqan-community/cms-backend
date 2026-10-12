@@ -1,3 +1,17 @@
+## v0.22.0 (2026-10-12)
+
+### Feat
+
+- **content**: issue version numbers for mushaf and font versions
+
+### Fix
+
+- **content**: store asset and member languages as codes
+
+### Perf
+
+- **content**: count version changes in the database when listing versions
+
 ## v0.21.0 (2026-10-11)
 
 ### Feat
