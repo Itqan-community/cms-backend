@@ -40,6 +40,14 @@ class PackageVersionOut(Schema):
         "(lockfile) pin resolves to it. The client should warn and suggest updating.",
     )
     withdrawal_reason: str | None = Field(None, description="The publisher's reason for the rollback.")
+    latest_version: str | None = Field(
+        None, description="Newest released version of this language, whatever the request's constraint allows."
+    )
+    latest_in_range: str | None = Field(
+        None,
+        description="Newest released version the request's range allows: the range in `version`, or "
+        "`constraint` when `version` is an exact (lockfile) pin. Null when the request has no range.",
+    )
 
 
 class PackageLanguageOut(Schema):
@@ -97,6 +105,11 @@ class PackageRequestIn(Schema):
     version: str
     asset: str | None = Field(None, description="Asset slug; defaults to the entry name.")
     language: str | None = Field(None, description="Language rendition; defaults to the asset's source language.")
+    constraint: str | None = Field(
+        None,
+        description="The manifest's range when `version` is a lockfile pin. It doesn't change what is "
+        "resolved; it only sets `latest_in_range`.",
+    )
 
 
 class PackageManifestEntryIn(Schema):
@@ -113,7 +126,10 @@ class PackageManifestEntryIn(Schema):
                 requests[name] = PackageRequest(slug=name, version=entry)
             else:
                 requests[name] = PackageRequest(
-                    slug=entry.asset or name, version=entry.version, language=entry.language
+                    slug=entry.asset or name,
+                    version=entry.version,
+                    language=entry.language,
+                    constraint=entry.constraint,
                 )
         return requests
 
@@ -149,6 +165,8 @@ def _resolve_package_to_schema(request: Request, result: ResolvedPackage) -> Pac
         download_url=_download_url(request, result),
         withdrawn=result.withdrawn,
         withdrawal_reason=(result.asset_version.withdrawal_reason or None) if result.withdrawn else None,
+        latest_version=result.latest_version,
+        latest_in_range=result.latest_in_range,
     )
 
 

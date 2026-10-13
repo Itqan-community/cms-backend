@@ -619,6 +619,14 @@ you get, which makes it worse than not having one: a lockfile that lies is disco
 production, and one that fails is discovered in CI. Recovering is a deliberate act — broaden or
 change the constraint in the manifest and re-resolve.
 
+### Newer versions of locked assets
+
+A `FRESH` install keeps the locked versions even when newer ones exist. To let the client say so,
+it sends each entry's manifest range as `constraint` next to the locked `version`, and the resolve
+response reports `latest_in_range` and `latest_version` (see PACKAGE_ARTIFACT.md §9.1). The client
+only reports them; it never installs them without a re-resolve (`itqan install --force`, or a
+manifest change).
+
 ### Published versions do not change underneath you
 
 Everything above rests on one assumption, so it is stated as a rule: once a version of an asset
