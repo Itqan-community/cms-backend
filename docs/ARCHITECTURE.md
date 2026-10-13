@@ -324,7 +324,9 @@ from the parsed entries, so consumers download exactly what was reviewed.
   the editor builds on, `is_active` in the version list) but does **not** make it
   visible. Consumers (downloads, samples, `available_languages`, subscriber emails,
   Dependabot) are served `AssetLanguage.published_version`, read through
-  `Asset.get_published_version()`. A holder of `PORTAL_PUBLISH_CONTENT`, assigned to
+  `Asset.get_published_version()`. The package manager installs the published
+  version and older fully approved versions (for exact lockfile pins), never a newer
+  commit. A holder of `PORTAL_PUBLISH_CONTENT`, assigned to
   the language, sets it with
   `POST /portal/content/{category}/{slug}/versions/{id}/set-published/` — only for a
   committed (`version_not_publishable`), fully approved (`version_not_approved`)

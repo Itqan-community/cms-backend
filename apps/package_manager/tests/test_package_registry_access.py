@@ -16,6 +16,7 @@ from apps.content.models import (
     StatusChoice,
     VersionStateChoice,
 )
+from apps.content.tests.publishing import publish
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import APIKey, User
@@ -52,6 +53,7 @@ class PackageCatalogAccessTests(BaseTestCase):
         )
         version.file_url = SimpleUploadedFile(name=f"{slug}.csv", content=b"x")
         version.save()
+        publish(version)
         return asset
 
     def _request(self, asset: Asset, status: str) -> AssetAccessRequest:

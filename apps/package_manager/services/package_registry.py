@@ -8,7 +8,14 @@ from typing import TYPE_CHECKING
 from django.conf import settings
 from django.utils.translation import gettext as _
 
-from apps.content.models import Asset, AssetAccessRequest, AssetLanguage, AssetVersion, CategoryChoice
+from apps.content.models import (
+    REVIEWED_CATEGORIES,
+    Asset,
+    AssetAccessRequest,
+    AssetLanguage,
+    AssetVersion,
+    CategoryChoice,
+)
 from apps.core.ninja_utils.errors import ItqanError
 from apps.package_manager.repositories.package_registry import PackageRegistryRepository
 
@@ -368,8 +375,7 @@ class PackageRegistryService:
             )
 
         # 3. Obtain eligible versions of that rendition.
-        eligible_qs = self.repo.get_eligible_package_versions(asset_language)
-        eligible_versions: list[AssetVersion] = list(eligible_qs)
+        eligible_versions = self.installable_versions(asset, asset_language)
 
         # 4. Parse/canonicalize candidate versions and filter invalid names.
         valid_candidates: list[tuple[AssetVersion, SemVer]] = []
@@ -553,9 +559,7 @@ class PackageRegistryService:
         for rendition in self.repo.list_available_languages(asset):
             versions = [
                 semver
-                for semver in (
-                    _parse_candidate_version(av.name) for av in self.repo.get_eligible_package_versions(rendition)
-                )
+                for semver in (_parse_candidate_version(av.name) for av in self.installable_versions(asset, rendition))
                 if semver is not None
             ]
             stable = [semver for semver in versions if not semver.is_prerelease] or versions
@@ -571,10 +575,39 @@ class PackageRegistryService:
             )
         return languages
 
+    def installable_versions(self, asset: Asset, rendition: AssetLanguage) -> list[AssetVersion]:
+        """The versions of one language rendition the registry may serve, newest first.
+
+        Reviewed categories (translations / tafsirs) serve what the publisher
+        published, as every other consumer surface does: the published version,
+        plus older committed versions that are fully approved, so exact pins on
+        them keep working. A newer commit is never served, so a rollback reaches
+        the registry too, and a language with no published version serves
+        nothing. Other categories serve every eligible committed version.
+        """
+        versions = list(self.repo.get_eligible_package_versions(rendition))
+        if asset.category not in REVIEWED_CATEGORIES:
+            return versions
+        published = rendition.published_version
+        if published is None:
+            return []
+        pending = self.repo.pending_review_units_by_version(asset, rendition.language)
+        cutoff = (published.created_at, published.pk)
+        return [
+            version
+            for version in versions
+            if version.pk == published.pk
+            or ((version.created_at, version.pk) < cutoff and pending.get(version.pk) == 0)
+        ]
+
     def get_downloadable_version(self, asset_version_id: int) -> AssetVersion:
         """A version the registry serves, or 404."""
         version = self.repo.get_downloadable_version(asset_version_id)
-        if version is None or version.asset.category in NON_INSTALLABLE_CATEGORIES:
+        if (
+            version is None
+            or version.asset.category in NON_INSTALLABLE_CATEGORIES
+            or version not in self.installable_versions(version.asset, version.asset_language)
+        ):
             raise ItqanError(
                 error_name="version_not_found",
                 message=_("Package version not found."),

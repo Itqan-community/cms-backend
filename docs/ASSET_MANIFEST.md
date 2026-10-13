@@ -320,10 +320,16 @@ A version of an asset can be selected **only if all four** hold:
 3. it has **content to serve**: an uploaded file, or entries or stored changes the file can be
    built from. A version with none of these is skipped;
 4. its name, after canonicalization, is a valid SemVer 2.0.0 version **carrying no build
-   metadata** — a version named `draft-2`, `v1.0` or `1.2.3+build1` is skipped, not repaired.
+   metadata** — a version named `draft-2`, `v1.0` or `1.2.3+build1` is skipped, not repaired;
+5. for a **reviewed category** (translation, tafsir), the publisher has released it: it is the
+   language's published version (`AssetLanguage.published_version`), or an older committed
+   version whose changes are all approved. A commit newer than the published version is never
+   selected, so a rollback (publishing an older version) reaches the registry too, and a
+   language with no published version has no eligible versions. The catalog leaves out an
+   asset with no such language, as the gallery does.
 
-There is no separate opt-in: every published version with content and a valid name is
-installable. A superseded version whose stored file was pruned still qualifies — its file is
+Other categories have no separate opt-in: every published version with content and a valid
+name is installable. A superseded version whose stored file was pruned still qualifies — its file is
 rebuilt from the stored changes the first time it is downloaded.
 
 Two details about condition 4, since `AssetVersion.name` is a free-text field and anything can
@@ -397,7 +403,7 @@ reproducible state it already had.
 | Unknown Asset | the slug matches no asset available to consumers — an asset the publisher keeps in `draft` status is reported exactly like a missing one |
 | Category Not Installable | the asset belongs to a category the package manager does not serve (recitations) |
 | Language Not Found | the asset has no consumer-available rendition in the requested language (or, with `language` omitted, no available source rendition) |
-| No Eligible Package Versions | the rendition exists but has no published, SemVer-valid version with content |
+| No Eligible Package Versions | the rendition exists but has no eligible version (§4): none published, SemVer-valid and with content — or, for a translation or tafsir, none released by the publisher |
 | Unsatisfiable Version Constraint | eligible versions exist, none match |
 | Canonical Version Collision | multiple eligible `AssetVersion` records of one language rendition canonicalize to the same version; identifies the asset and requested version. The same version name in **different** languages is normal and never collides. |
 
