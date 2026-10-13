@@ -217,6 +217,17 @@ Each app has its own `api/` directory with subdirectories per API surface (`inte
 - All code should be Python 3.13 compatible and Django 5.2 compatible
 - Always use `AwareDateTime` instead of `datetime` in `Schema`
 
+## Publishing and asset availability (REQUIRED)
+Rules that decide what consumers can see or download — asset `status`, `restricted_for_tenant`, `is_open_access`, `AssetLanguage.status`, `AssetVersion.state`, `AssetLanguage.published_version` (reviewed categories), access grants — must hold on **every** consumer surface, not only the one being changed.
+- When you add or change such a rule, find every API and service that serves assets, versions or files and apply it there too. At minimum check:
+  - gallery and detail: `apps/content/api/internal/` (`consumer_visible_q`, `assets_detail`, `assets_download`)
+  - recommendations: `apps/content/services/recommendations.py`
+  - package registry used by the `itqan` CLI: `apps/package_manager/` (catalog, resolve, download)
+  - tenant and public APIs: `apps/content/api/tenant/`, `apps/content/api/public/`, `apps/quran/api/public/`
+  - side effects: new-version emails (`notify_asset_version_created`), Dependabot dispatch (`apps/dependabot/`)
+- Reuse the shared definition (`Asset.get_published_version`, `consumer_visible_q`, …) instead of re-deriving the rule with a new query; if a surface needs a different shape, add it next to the shared one.
+- Add a test per affected surface showing the rule is enforced there, and say in the task summary which surfaces were checked and which needed changes.
+
 ## Architecture
 - **WRITE operations** (POST/PUT/PATCH/DELETE): always go through Service → Repository → ORM. Services own validation, business rules, and transactions; Repositories own ORM access.
 - **READ operations in `portal_api`** (GET list / GET retrieve in `apps/*/api/portal/`): query the Model directly inside the view function. Do **not** introduce a Service or Repository for portal reads. For retrieve endpoints, use `try/except Model.DoesNotExist` and raise `ItqanError(error_name="<resource>_not_found", status_code=404)` so the typed `404: NinjaErrorResponse[Literal["..._not_found"]]` OpenAPI contract is preserved. Filters from `FilterSchema` should be applied inline. The rationale: portal read paths have no business logic — keeping the queryset visible at the call site removes pass-through indirection.
