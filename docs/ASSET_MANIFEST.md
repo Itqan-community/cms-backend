@@ -321,9 +321,9 @@ A version of an asset can be selected **only if all five** hold:
    built from. A version with none of these is skipped;
 4. its name, after canonicalization, is a valid SemVer 2.0.0 version **carrying no build
    metadata** — a version named `draft-2`, `v1.0` or `1.2.3+build1` is skipped, not repaired;
-5. for a **reviewed category** (translation, tafsir), the publisher has released it: it is the
+5. for a translation, tafsir, mushaf or font, the publisher has released it: it is the
    language's published version (`AssetLanguage.published_version`), or an older committed
-   version whose changes are all approved. A commit newer than the published version is never
+   version (for translations and tafsirs, one whose changes are all approved). A commit newer than the published version is never
    selected, so a rollback (publishing an older version) reaches the registry too, and a
    language with no published version has no eligible versions. The catalog leaves out an
    asset with no such language, as the gallery does.
@@ -342,7 +342,7 @@ On top of the conditions above, each eligible version has a package status
 | `released` | selectable | installs |
 | `withdrawn` | skipped | installs, with `withdrawn: true` and the publisher's rollback `withdrawal_reason` in the resolve response; clients warn |
 | `removed` | skipped | fails with `410 version_removed`; download returns 404 |
-| `not_released` | skipped | fails with `404 version_not_found` (a translation / tafsir version never published) |
+| `not_released` | skipped | fails with `404 version_not_found` (a translation, tafsir, mushaf or font version never published) |
 
 - **Withdrawn** — the publisher rolled back past it: it was published once
   (`AssetVersion.first_published_at`) but an earlier version is published now, so it no longer satisfies

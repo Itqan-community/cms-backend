@@ -203,7 +203,7 @@ class TrendingRecommendationsServiceTest(BaseTestCase):
         self._redis_patcher.stop()
         super().tearDown()
 
-    def _make_asset(self, **kwargs):
+    def _make_asset(self, *, visible: bool = True, **kwargs):
         # MUSHAF (not RECITATION) by default: RECITATION assets require reciter+qiraah
         # per the asset_recitation_fields_consistency DB constraint, which these
         # trending tests don't care about (they only care about visibility/usage).
@@ -213,7 +213,9 @@ class TrendingRecommendationsServiceTest(BaseTestCase):
             "restricted_for_tenant": False,
         }
         defaults.update(kwargs)
-        return baker.make(Asset, **defaults)
+        asset = baker.make(Asset, **defaults)
+        # Consumers only see a mushaf (or tafsir) with a published version.
+        return make_visible(asset) if visible else asset
 
     def test_downloads_outrank_more_numerous_views(self):
         downloaded = self._make_asset()
@@ -249,7 +251,7 @@ class TrendingRecommendationsServiceTest(BaseTestCase):
         mushaf = self._make_asset(category=CategoryChoice.MUSHAF)
         _make_usage_event(self.user, mushaf, UsageEvent.UsageKindChoice.VIEW)
         # A tafsir is listed only once it has a published, available language.
-        tafsir = make_visible(self._make_asset(category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.AYAH))
+        tafsir = self._make_asset(category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.AYAH)
         _make_usage_event(self.user, tafsir, UsageEvent.UsageKindChoice.VIEW)
 
         compute_trending_recommendations()
@@ -271,7 +273,7 @@ class TrendingRecommendationsServiceTest(BaseTestCase):
 
     def test_tafsir_without_a_visible_language_should_not_be_recommended(self):
         # Arrange — a tafsir whose only language has nothing published
-        tafsir = self._make_asset(category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.AYAH)
+        tafsir = self._make_asset(category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.AYAH, visible=False)
         _make_usage_event(self.user, tafsir, UsageEvent.UsageKindChoice.VIEW)
 
         # Act

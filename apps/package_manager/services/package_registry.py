@@ -9,6 +9,7 @@ from django.conf import settings
 from django.utils.translation import gettext as _
 
 from apps.content.models import (
+    PUBLISHED_VERSION_CATEGORIES,
     REVIEWED_CATEGORIES,
     Asset,
     AssetAccessRequest,
@@ -317,7 +318,7 @@ class PackageVersionStatus(StrEnum):
     once, then the publisher rolled back past it; ranges skip it, but an exact
     (lockfile) pin still installs it, with a warning showing the rollback reason.
     ``removed``: an Itqan admin removed it; never installed. ``not_released``:
-    a translation / tafsir version that was never published.
+    a translation, tafsir, mushaf or font version that was never published.
     """
 
     RELEASED = "released"
@@ -602,9 +603,10 @@ class PackageRegistryService:
         """Each committed version of one language rendition that has content to
         serve, newest first, with its :class:`PackageVersionStatus`.
 
-        Reviewed categories (translations / tafsirs) release what the publisher
-        published, as every other consumer surface does: the published version,
-        plus older committed versions that are fully approved. A version that was
+        Published-version categories (translations, tafsirs, mushafs, fonts)
+        release what the publisher published, as every other consumer surface
+        does: the published version, plus older committed versions (for
+        translations / tafsirs, only fully approved ones). A version that was
         published once but no longer qualifies (the publisher rolled back past
         it) is withdrawn, so lockfiles pinned to it keep installing; one never
         published is not released. Other categories release every committed
@@ -634,18 +636,19 @@ class PackageRegistryService:
         ]
 
     def _released_version_ids(self, asset: Asset, rendition: AssetLanguage, versions: list[AssetVersion]) -> set[int]:
-        if asset.category not in REVIEWED_CATEGORIES:
+        if asset.category not in PUBLISHED_VERSION_CATEGORIES:
             return {version.pk for version in versions}
         published = rendition.published_version
         if published is None:
             return set()
-        pending = self.repo.pending_review_units_by_version(asset, rendition.language)
+        reviewed = asset.category in REVIEWED_CATEGORIES
+        pending = self.repo.pending_review_units_by_version(asset, rendition.language) if reviewed else {}
         cutoff = (published.created_at, published.pk)
         return {
             version.pk
             for version in versions
             if version.pk == published.pk
-            or ((version.created_at, version.pk) < cutoff and pending.get(version.pk) == 0)
+            or ((version.created_at, version.pk) < cutoff and (not reviewed or pending.get(version.pk) == 0))
         }
 
     @staticmethod
