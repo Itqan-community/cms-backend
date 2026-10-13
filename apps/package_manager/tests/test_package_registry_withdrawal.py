@@ -449,3 +449,129 @@ class PortalRemovePackageVersionTests(WithdrawalBaseTest):
         # Assert
         self.assertEqual(400, response.status_code, response.content)
         self.assertEqual("validation_error", response.json()["error_name"])
+
+
+class PortalReinstatePackageVersionTests(WithdrawalBaseTest):
+    def setUp(self):
+        super().setUp()
+        self.admin = User.objects.create_user(email="admin@itqan.dev", name="Admin", is_staff=True)
+
+    def _reinstate(self, version: AssetVersion, reason: str = "Licence confirmed"):
+        return self.client.post(
+            f"/portal/packages/versions/{version.pk}/reinstate/",
+            data={"reason": reason},
+            content_type="application/json",
+        )
+
+    def _authorize_admin(self) -> None:
+        self.give_permission(self.admin, PermissionChoice.PORTAL_REMOVE_PACKAGE_VERSION)
+        self.authenticate_user(self.admin)
+
+    def test_reinstate_package_version_where_admin_and_version_removed_should_clear_removal(self):
+        # Arrange
+        old = self._commit("1.0", asset=self.mushaf)
+        self._commit("1.1", asset=self.mushaf)
+        self._remove(old, reason="Licence revoked")
+        self._authorize_admin()
+
+        # Act
+        response = self._reinstate(old)
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual("released", response.json()["package_status"])
+        old.refresh_from_db()
+        self.assertIsNone(old.removed_at)
+        self.assertIsNone(old.removed_by)
+        self.assertEqual("", old.removal_reason)
+
+    def test_reinstate_package_version_where_admin_gives_reason_should_record_it_in_history(self):
+        # Arrange
+        old = self._commit("1.0", asset=self.mushaf)
+        self._commit("1.1", asset=self.mushaf)
+        self._remove(old, reason="Licence revoked")
+        self._authorize_admin()
+
+        # Act
+        self._reinstate(old, reason="Licence confirmed")
+
+        # Assert
+        latest = old.history.order_by("-history_date").first()
+        self.assertEqual("Licence confirmed", latest.history_change_reason)
+        self.assertEqual(self.admin.pk, latest.history_user_id)
+
+    def test_reinstate_package_version_where_publisher_rolled_back_past_it_should_be_withdrawn(self):
+        # Arrange
+        v1 = publish(self._commit("1.0"))
+        v2 = self._commit("1.1")
+        publish(v2)
+        self.assertEqual(200, self._roll_back(v1, reason="Errors in 1.1").status_code)
+        self._remove(v2, reason="Wrong content")
+        self._authorize_admin()
+
+        # Act
+        response = self._reinstate(v2)
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual("withdrawn", response.json()["package_status"])
+        resolved = self._resolve("t1", "1.1.0", language="fr")
+        self.assertEqual(200, resolved.status_code, resolved.content)
+        self.assertEqual("Errors in 1.1", resolved.json()["result"]["withdrawal_reason"])
+
+    def test_resolve_package_single_where_pinned_version_reinstated_should_resolve_it(self):
+        # Arrange
+        old = self._commit("1.0", asset=self.mushaf)
+        self._commit("1.1", asset=self.mushaf)
+        self._remove(old, reason="Licence revoked")
+        self._authorize_admin()
+        self._reinstate(old)
+
+        # Act
+        response = self._resolve("m1", "1.0.0")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual("1.0.0", response.json()["result"]["resolved_version"])
+
+    def test_reinstate_package_version_where_version_not_removed_should_return_400(self):
+        # Arrange
+        old = self._commit("1.0", asset=self.mushaf)
+        self._authorize_admin()
+
+        # Act
+        response = self._reinstate(old)
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("version_not_removed", response.json()["error_name"])
+
+    def test_reinstate_package_version_where_publisher_without_permission_should_return_403(self):
+        # Arrange
+        old = self._commit("1.0", asset=self.mushaf)
+        self._commit("1.1", asset=self.mushaf)
+        self._remove(old)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_MUSHAF)
+        self.give_permission(self.user, PermissionChoice.PORTAL_PUBLISH_CONTENT)
+        self.authenticate_user(self.user)
+
+        # Act
+        response = self._reinstate(old)
+
+        # Assert
+        self.assertEqual(403, response.status_code, response.content)
+        self.assertEqual("permission_denied", response.json()["error_name"])
+
+    def test_reinstate_package_version_where_reason_missing_should_return_400(self):
+        # Arrange
+        old = self._commit("1.0", asset=self.mushaf)
+        self._commit("1.1", asset=self.mushaf)
+        self._remove(old)
+        self._authorize_admin()
+
+        # Act
+        response = self._reinstate(old, reason="")
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("validation_error", response.json()["error_name"])

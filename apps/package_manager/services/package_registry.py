@@ -710,6 +710,18 @@ class PackageRegistryService:
             )
         return self.repo.set_removed(version, user=user, reason=reason)
 
+    def reinstate_version(self, version: AssetVersion, *, reason: str) -> PackageVersionStatus:
+        """Undo an admin removal. The version gets back the status the publishing
+        rules give it (released, withdrawn or not released), never more."""
+        if version.removed_at is None:
+            raise ItqanError(
+                error_name="version_not_removed",
+                message=_("This version is not removed."),
+                status_code=400,
+            )
+        version = self.repo.clear_removed(version, reason=reason)
+        return self.status_of(version) or PackageVersionStatus.NOT_RELEASED
+
     def cached_status(self, version: AssetVersion, cache: dict) -> PackageVersionStatus:
         """``version``'s status, computing its whole language's statuses once per
         ``cache`` (one per request), so a version list does not redo it per row."""
