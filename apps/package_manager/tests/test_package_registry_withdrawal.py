@@ -72,7 +72,8 @@ class WithdrawalBaseTest(BaseTestCase):
 
     def _commit(self, name: str, *, asset: Asset | None = None) -> AssetVersion:
         """A committed version created after the previous one. Translation
-        versions change ayah 1 and are approved; mushaf versions just carry a file."""
+        versions change ayah 1 and are approved; mushaf versions carry a file and
+        are published, as an upload with "publish now" is."""
         asset = asset or self.asset
         self._clock += timedelta(hours=1)
         version = baker.make(
@@ -92,6 +93,8 @@ class WithdrawalBaseTest(BaseTestCase):
             AssetVersionChangeReview.objects.create(
                 change=change, state=ReviewStateChoice.APPROVED, reviewed_by=self.user, reviewed_at=timezone.now()
             )
+        else:
+            publish(version)
         return version
 
     def _roll_back(self, version: AssetVersion, reason: str = "Errors in the newer version"):
@@ -327,17 +330,6 @@ class RollbackTests(WithdrawalBaseTest):
 
 
 class RemovedVersionServingTests(WithdrawalBaseTest):
-    def test_get_published_version_where_newest_mushaf_version_removed_should_serve_previous(self):
-        # Arrange
-        v1 = self._commit("1.0", asset=self.mushaf)
-        self._remove(self._commit("1.1", asset=self.mushaf))
-
-        # Act
-        served = self.mushaf.get_published_version()
-
-        # Assert
-        self.assertEqual(v1, served)
-
     def test_set_published_version_where_version_removed_should_return_400(self):
         # Arrange
         publish(self._commit("1.0"))

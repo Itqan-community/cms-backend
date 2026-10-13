@@ -321,8 +321,8 @@ from the parsed entries, so consumers download exactly what was reviewed.
   start hidden until marked available, which needs a published version
   (`language_has_no_published_version`). The source language starts available and
   is toggled the same way (`PATCH .../languages/{language}/availability/`). A
-  translation / tafsir with no available, published language is left out of the
-  gallery (`assets/`) and recommendations (`consumer_visible_q`).
+  translation / tafsir / mushaf / font with no available, published language is left
+  out of the gallery (`assets/`) and recommendations (`consumer_visible_q`).
 - **Commit vs publish** — committing makes a version the *head* (newest wins; what
   the editor builds on, `is_active` in the version list) but does **not** make it
   visible. Consumers (downloads, samples, `available_languages`, subscriber emails,
@@ -346,7 +346,17 @@ from the parsed entries, so consumers download exactly what was reviewed.
   newest committed version of a language can be deleted or have its file replaced
   (`version_not_latest`), since later versions are stored as changes against it.
   Publishing and those changes lock the version row, so neither can slip in after
-  the other's checks. Other categories keep newest-wins.
+  the other's checks. Mushafs and fonts are published too (below); other categories
+  keep newest-wins.
+- **Mushaf and font publishing** — mushafs and fonts serve `AssetLanguage.published_version`
+  as well (`PUBLISHED_VERSION_CATEGORIES`), without the review step: any committed
+  version can be published with `POST /portal/{mushafs|fonts}/{slug}/versions/{id}/set-published/`
+  (`PORTAL_PUBLISH_CONTENT`; going back needs a `reason`). An upload is published right
+  away with `publish=true` (also needs `PORTAL_PUBLISH_CONTENT`), otherwise it is staged
+  until published; the first version created with the asset is published with it.
+  Subscribers are emailed and Dependabot runs on publish, not on upload, and the
+  published version can't be deleted or have its file replaced (`version_is_published`).
+  Migration `0007` pinned each mushaf / font language to its newest version.
 - **Package removal** — an Itqan admin (`PORTAL_REMOVE_PACKAGE_VERSION`) may *remove* a
   version (`POST /portal/packages/versions/{id}/remove/`, reason required): it is then never
   installed or served (`Asset.get_published_version()` skips it, set-published rejects it),

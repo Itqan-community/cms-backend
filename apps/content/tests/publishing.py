@@ -1,7 +1,7 @@
 from django.utils import timezone
 from model_bakery import baker
 
-from apps.content.models import REVIEWED_CATEGORIES, Asset, AssetLanguage, AssetVersion
+from apps.content.models import PUBLISHED_VERSION_CATEGORIES, Asset, AssetLanguage, AssetVersion
 
 
 def publish(version: AssetVersion) -> AssetVersion:
@@ -16,11 +16,11 @@ def publish(version: AssetVersion) -> AssetVersion:
 
 
 def make_visible(assets: Asset | list[Asset]) -> Asset | list[Asset]:
-    """Give each translation / tafsir an available language with a published
+    """Give each translation / tafsir / mushaf / font an available language with a published
     version, so it is listed to consumers (``consumer_visible_q``). Other
     categories need nothing. Accepts one asset or a ``_quantity`` bake's list and
     returns what it was given."""
     for asset in assets if isinstance(assets, list) else [assets]:
-        if asset.category in REVIEWED_CATEGORIES:
+        if asset.category in PUBLISHED_VERSION_CATEGORIES:
             publish(baker.make(AssetVersion, asset=asset))
     return assets

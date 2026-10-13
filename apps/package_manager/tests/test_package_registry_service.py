@@ -2,6 +2,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
 from apps.content.models import Asset, AssetVersion, StatusChoice, VersionStateChoice
+from apps.content.tests.publishing import publish
 from apps.core.ninja_utils.errors import ItqanError
 from apps.core.tests.base import BaseTestCase
 from apps.package_manager.repositories.package_registry import PackageRegistryRepository
@@ -57,6 +58,9 @@ def _make_version(
     )
     version.file_url = SimpleUploadedFile(name=f"{asset.slug}-{name}.pdf", content=b"dummy")
     version.save()
+    if state == VersionStateChoice.PUBLISHED:
+        # Published as committed, so the newest commit is what consumers get.
+        publish(version)
     return version
 
 

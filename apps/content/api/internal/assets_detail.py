@@ -5,7 +5,7 @@ from ninja import Schema
 from pydantic import Field
 
 from apps.content.models import (
-    REVIEWED_CATEGORIES,
+    PUBLISHED_VERSION_CATEGORIES,
     Asset,
     AssetTemplateChoice,
     LicenseChoice,
@@ -72,7 +72,7 @@ class DetailAssetOut(Schema):
         A DRAFT translation stays hidden until it is marked available."""
         if obj.status != StatusChoice.READY:
             return []
-        if obj.category in REVIEWED_CATEGORIES:
+        if obj.category in PUBLISHED_VERSION_CATEGORIES:
             published = obj.languages.filter(status=StatusChoice.READY, published_version__isnull=False).values_list(
                 "language", flat=True
             )
