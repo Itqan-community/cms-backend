@@ -3,6 +3,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
 
 from apps.content.models import Asset, AssetAccess, AssetAccessRequest, AssetVersion, CategoryChoice, StatusChoice
+from apps.content.tests.publishing import publish
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
@@ -229,11 +230,40 @@ class MushafVersionCreateTest(MushafVersionBaseTest):
         self.assertEqual(403, response.status_code)
         self.assertEqual("permission_denied", response.json()["error_name"])
 
-    def test_create_version_with_subscribers_should_send_email(self):
+    def test_create_version_where_published_with_subscribers_should_send_email(self):
         # Arrange
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_MUSHAF)
-        baker.make(AssetVersion, asset=self.mushaf, name="1.0")
+        self.give_permission(self.user, PermissionChoice.PORTAL_PUBLISH_CONTENT)
+        publish(baker.make(AssetVersion, asset=self.mushaf, name="1.0"))
+        subscriber = baker.make(User, email="mushaf-subscriber@example.com")
+        access_request = baker.make(AssetAccessRequest, developer_user=subscriber, asset=self.mushaf, status="approved")
+        baker.make(
+            AssetAccess,
+            asset_access_request=access_request,
+            user=subscriber,
+            asset=self.mushaf,
+            effective_license="CC0",
+        )
+        file = SimpleUploadedFile("mushaf.pdf", b"content", content_type="application/pdf")
+
+        # Act
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                f"/portal/mushafs/{self.mushaf.slug}/versions/",
+                data={"asset_id": self.mushaf.id, "summary_en": "New release", "file": file, "publish": True},
+            )
+
+        # Assert
+        self.assertEqual(201, response.status_code, response.content)
+        recipients = [email for m in mail.outbox for email in m.to]
+        self.assertIn("mushaf-subscriber@example.com", recipients)
+
+    def test_create_version_where_not_published_should_not_email_subscribers(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_MUSHAF)
+        publish(baker.make(AssetVersion, asset=self.mushaf, name="1.0"))
         subscriber = baker.make(User, email="mushaf-subscriber@example.com")
         access_request = baker.make(AssetAccessRequest, developer_user=subscriber, asset=self.mushaf, status="approved")
         baker.make(
@@ -255,7 +285,7 @@ class MushafVersionCreateTest(MushafVersionBaseTest):
         # Assert
         self.assertEqual(201, response.status_code, response.content)
         recipients = [email for m in mail.outbox for email in m.to]
-        self.assertIn("mushaf-subscriber@example.com", recipients)
+        self.assertNotIn("mushaf-subscriber@example.com", recipients)
 
     def test_create_version_without_subscribers_should_not_send_email(self):
         # Arrange

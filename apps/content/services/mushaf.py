@@ -10,8 +10,12 @@ from django.utils.translation import gettext as _
 from apps.content.models import Asset as AssetModel, AssetVersion, CategoryChoice, LicenseChoice
 from apps.content.repositories.mushaf import MushafRepository
 from apps.content.services.asset_access import guard_restrict_for_tenant
-from apps.content.services.asset_content import VersionBump, issue_version_number
-from apps.content.tasks import notify_asset_version_created
+from apps.content.services.asset_content import (
+    AssetContentService,
+    VersionBump,
+    forbid_published_version_change,
+    issue_version_number,
+)
 from apps.content.version_text import VersionText
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
@@ -131,11 +135,13 @@ class MushafService:
         with transaction.atomic():
             mushaf = self.create_mushaf(**mushaf_kwargs)
             if file is not None:
+                # The first version is the mushaf's initial content: it is published with it.
                 self.create_mushaf_version(
                     mushaf.slug,
                     text=version_text,
                     version_number=version_number,
                     file=file,
+                    publish=True,
                 )
         mushaf.refresh_from_db()
         return mushaf
@@ -227,6 +233,7 @@ class MushafService:
         version_number: str | None = None,
         bump: VersionBump = "minor",
         file: Any = None,
+        publish: bool = False,
         publisher_q: Q | None = None,
     ) -> AssetVersion:
         """
@@ -247,7 +254,9 @@ class MushafService:
                 file=file,
             )
         logger.info(f"Mushaf version created [version_id={version.pk}, asset_id={asset.pk}, slug={mushaf_slug}]")
-        transaction.on_commit(lambda: notify_asset_version_created.delay(version.pk))
+        # Consumers get it (and subscribers are emailed) once it is published.
+        if publish:
+            version = AssetContentService().publish_new_version(asset, version)
         return version
 
     def update_mushaf_version(
@@ -261,6 +270,8 @@ class MushafService:
         Business Logic: Update an existing mushaf version.
         """
         version = self._get_mushaf_version_or_404(mushaf_slug, version_id, publisher_q=publisher_q)
+        if "file_url" in fields:
+            forbid_published_version_change(version)
         # The version number is fixed once issued.
         fields = {key: value for key, value in fields.items() if key != "name"}
         updated = self.repo.update_mushaf_version(version, fields=fields)
@@ -272,5 +283,6 @@ class MushafService:
         Business Logic: Delete a mushaf version.
         """
         version = self._get_mushaf_version_or_404(mushaf_slug, version_id, publisher_q=publisher_q)
+        forbid_published_version_change(version)
         self.repo.delete_mushaf_version(version)
         logger.info(f"Mushaf version deleted [version_id={version_id}, asset_slug={mushaf_slug}]")

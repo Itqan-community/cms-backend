@@ -20,6 +20,7 @@ from django.db.models import Q
 from django.utils.translation import gettext as _
 
 from apps.content.models import (
+    REVIEWED_CATEGORIES,
     Asset,
     AssetLanguage,
     AssetTemplateChoice,
@@ -47,6 +48,8 @@ logger = logging.getLogger(__name__)
 _NOT_FOUND_ERROR = {
     CategoryChoice.TRANSLATION: "translation_not_found",
     CategoryChoice.TAFSIR: "tafsir_not_found",
+    CategoryChoice.MUSHAF: "mushaf_not_found",
+    CategoryChoice.FONT: "font_not_found",
 }
 
 
@@ -705,11 +708,11 @@ class AssetContentService:
         reason: str = "",
         publisher_q: Q | None = None,
     ) -> AssetVersion:
-        """Make a fully approved committed version the one consumers see for its
-        language. Any approved version may be published, including an older one
-        (a rollback), which needs a ``reason``: the itqan CLI shows it to projects
-        still locked to a version rolled back past. Re-publishing the current
-        version is a no-op."""
+        """Make a committed version the one consumers see for its language
+        (translations / tafsirs: only once fully approved). Any such version may
+        be published, including an older one (a rollback), which needs a
+        ``reason``: the itqan CLI shows it to projects still locked to a version
+        rolled back past. Re-publishing the current version is a no-op."""
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
         version = self.get_version_or_404(slug, category, version_id, publisher_q=publisher_q)
         with transaction.atomic():
@@ -721,6 +724,17 @@ class AssetContentService:
                 .get(pk=version.pk)
             )
             return self._publish_locked(asset, version, reason=reason.strip())
+
+    def publish_new_version(self, asset: Asset, version: AssetVersion) -> AssetVersion:
+        """Publish a version just created (a mushaf / font upload with "publish
+        now", or the first version created with its asset). Never a rollback."""
+        with transaction.atomic():
+            version = (
+                AssetVersion.objects.select_related("asset_language", "asset")
+                .select_for_update(of=("self",))
+                .get(pk=version.pk)
+            )
+            return self._publish_locked(asset, version)
 
     def _publish_locked(self, asset: Asset, version: AssetVersion, *, reason: str = "") -> AssetVersion:
         """``set_published_version`` once ``version``'s row is locked."""
@@ -737,7 +751,9 @@ class AssetContentService:
                 status_code=400,
             )
         language = version.resolved_language
-        pending = AssetReviewRepository().pending_units_by_version(asset, language).get(version.pk, 0)
+        pending = 0
+        if asset.category in REVIEWED_CATEGORIES:
+            pending = AssetReviewRepository().pending_units_by_version(asset, language).get(version.pk, 0)
         if pending:
             raise ItqanError(
                 error_name="version_not_approved",

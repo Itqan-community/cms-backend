@@ -8,7 +8,7 @@ from django.db import transaction
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
-from apps.content.models import REVIEWED_CATEGORIES, AssetVersion, VersionStateChoice
+from apps.content.models import PUBLISHED_VERSION_CATEGORIES, AssetVersion, VersionStateChoice
 
 logger = logging.getLogger(__name__)
 
@@ -48,9 +48,9 @@ def on_asset_version_published(
     if instance.state != VersionStateChoice.PUBLISHED:
         return
 
-    # A reviewed category's commit is not visible to consumers yet; its update is
-    # dispatched when the version is explicitly published instead.
-    if instance.asset.category in REVIEWED_CATEGORIES:
+    # A published-version category's commit is not visible to consumers yet; its
+    # update is dispatched when the version is explicitly published instead.
+    if instance.asset.category in PUBLISHED_VERSION_CATEGORIES:
         return
 
     if not created and not getattr(instance, "_dependabot_relevant_change", True):

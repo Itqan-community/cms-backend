@@ -6,6 +6,7 @@ import redis as redis_lib
 
 from apps.content.models import Asset, CategoryChoice, LicenseChoice, StatusChoice, UsageEvent
 from apps.content.services.recommendations import compute_trending_recommendations
+from apps.content.tests.publishing import make_visible
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -33,12 +34,14 @@ class TrendingRecommendationsEndpointTest(BaseTestCase):
         self._redis_patcher.start()
 
         self.publisher = baker.make(Publisher)
-        self.trending_asset = baker.make(
-            Asset,
-            category=CategoryChoice.MUSHAF,
-            status=StatusChoice.READY,
-            restricted_for_tenant=False,
-            publisher=self.publisher,
+        self.trending_asset = make_visible(
+            baker.make(
+                Asset,
+                category=CategoryChoice.MUSHAF,
+                status=StatusChoice.READY,
+                restricted_for_tenant=False,
+                publisher=self.publisher,
+            )
         )
 
         self.user = User.objects.create_user(email="oauthuser2@example.com", name="OAuth User")

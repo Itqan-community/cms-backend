@@ -18,6 +18,8 @@ from apps.publishers.models import MemberLanguage
 
 # The module name starts with a digit, so a plain `from ... import` is illegal.
 migration = importlib.import_module("apps.content.migrations.0005_language_codes_and_mushaf_font_numbers")
+# Runs after 0005 on deploy: publishes each mushaf / font language's newest version.
+publish_migration = importlib.import_module("apps.content.migrations.0007_publish_newest_mushaf_and_font_versions")
 
 
 class NumberMushafFontVersionsTests(BaseTestCase):
@@ -117,6 +119,7 @@ class NumberMushafFontVersionsTests(BaseTestCase):
 
         # Act
         migration.number_mushaf_font_versions(django_apps, None)
+        publish_migration.publish_newest_versions(django_apps, None)
 
         # Assert
         languages = PackageRegistryService().catalog_languages(self.mushaf)
@@ -204,6 +207,7 @@ class NormalizeLanguageCodesTests(BaseTestCase):
 
         # Act
         migration.normalize_language_codes(django_apps, None)
+        publish_migration.publish_newest_versions(django_apps, None)
 
         # Assert
         languages = PackageRegistryService().catalog_languages(asset)

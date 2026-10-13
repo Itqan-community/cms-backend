@@ -10,6 +10,7 @@ from django.test import override_settings
 from model_bakery import baker
 
 from apps.content.models import Asset, AssetVersion, CategoryChoice, StatusChoice, VersionStateChoice
+from apps.content.tests.publishing import publish
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -43,6 +44,8 @@ def _make_version_with_file(
     if has_file:
         version.file_url = SimpleUploadedFile(name=filename, content=b"dummy")
         version.save()
+    # Published as committed, so the newest commit is what consumers get.
+    publish(version)
     return version
 
 

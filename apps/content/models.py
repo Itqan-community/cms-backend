@@ -67,6 +67,12 @@ class StatusChoice(models.TextChoices):
 # consumers only once fully approved and explicitly published.
 REVIEWED_CATEGORIES = frozenset({CategoryChoice.TRANSLATION, CategoryChoice.TAFSIR})
 
+# Categories whose consumers are served an explicitly published version
+# (``AssetLanguage.published_version``) rather than the newest commit, so a
+# publisher can stage a version and roll back. Reviewed categories also need
+# every change approved before a version can be published.
+PUBLISHED_VERSION_CATEGORIES = REVIEWED_CATEGORIES | {CategoryChoice.MUSHAF, CategoryChoice.FONT}
+
 
 class AssetTemplateChoice(models.TextChoices):
     """Granularity of a text asset's content rows.
@@ -408,12 +414,12 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
     def get_published_version(self, language: str | None = None) -> "AssetVersion | None":
         """The version consumers are served for a language.
 
-        Reviewed categories (translations / tafsirs) serve whichever version was
+        Translations, tafsirs, mushafs and fonts serve whichever version was
         explicitly published (``AssetLanguage.published_version``) — committing a
         version does not make it visible. Every other category keeps newest-wins,
         skipping versions an admin removed (a published version can't be removed).
         """
-        if self.category not in REVIEWED_CATEGORIES:
+        if self.category not in PUBLISHED_VERSION_CATEGORIES:
             return (
                 self.versions.filter(
                     state=VersionStateChoice.PUBLISHED,
@@ -513,16 +519,17 @@ class AssetLanguage(BaseModel):
 def consumer_visible_q() -> models.Q:
     """Assets that may be listed to consumers (gallery, recommendations).
 
-    A reviewed category (translation / tafsir) is listed only while at least one of
-    its languages is available (READY) and has a published version — hiding every
-    language takes the asset out of the gallery. Other categories are unaffected.
+    A published-version category (translation / tafsir / mushaf / font) is listed
+    only while at least one of its languages is available (READY) and has a
+    published version — hiding every language takes the asset out of the gallery.
+    Other categories are unaffected.
     """
     visible_language = AssetLanguage.objects.filter(
         asset=models.OuterRef("pk"),
         status=StatusChoice.READY,
         published_version__isnull=False,
     )
-    return ~models.Q(category__in=REVIEWED_CATEGORIES) | models.Q(models.Exists(visible_language))
+    return ~models.Q(category__in=PUBLISHED_VERSION_CATEGORIES) | models.Q(models.Exists(visible_language))
 
 
 class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
