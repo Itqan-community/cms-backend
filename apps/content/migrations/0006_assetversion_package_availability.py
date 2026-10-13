@@ -2,16 +2,46 @@
 
 import django.db.models.deletion
 from django.conf import settings
-from django.db import migrations, models
+from django.db import connections, migrations, models
+
+
+# AssetLanguage's audit history lives in the "audit" database, so it is read with
+# raw SQL rather than through the migration state of the "default" database.
+HISTORY_TABLE = "simple_history_historicalassetlanguage"
+
+
+def _published_at_from_history() -> dict[int, object]:
+    """``{version_id: first time a language pointed at it}`` from the audit history,
+    or empty where the audit database or its table is missing."""
+    if "audit" not in connections.databases:
+        return {}
+    audit = connections["audit"]
+    with audit.cursor() as cursor:
+        if HISTORY_TABLE not in audit.introspection.table_names(cursor):
+            return {}
+        cursor.execute(
+            f"SELECT published_version_id, MIN(history_date) FROM {HISTORY_TABLE} "  # nosec B608
+            "WHERE published_version_id IS NOT NULL GROUP BY published_version_id"
+        )
+        return dict(cursor.fetchall())
 
 
 def backfill_first_published_at(apps, schema_editor):
-    """Each language's current published version has been released; older
-    published versions are unknown (nothing recorded them), so they stay unset."""
+    """Mark every version that was ever published, so one rolled back past before
+    this release still counts as withdrawn (lockfiles keep installing it).
+
+    The audit history gives when each version was first published. A current
+    published version without history falls back to its creation time."""
     AssetVersion = apps.get_model("content", "AssetVersion")
     AssetLanguage = apps.get_model("content", "AssetLanguage")
+    for version_id, published_at in _published_at_from_history().items():
+        AssetVersion.objects.filter(pk=version_id, first_published_at__isnull=True).update(
+            first_published_at=published_at
+        )
     published_ids = AssetLanguage.objects.filter(published_version__isnull=False).values("published_version")
-    AssetVersion.objects.filter(pk__in=published_ids).update(first_published_at=models.F("created_at"))
+    AssetVersion.objects.filter(pk__in=published_ids, first_published_at__isnull=True).update(
+        first_published_at=models.F("created_at")
+    )
 
 
 class Migration(migrations.Migration):
