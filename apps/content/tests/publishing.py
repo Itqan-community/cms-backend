@@ -1,3 +1,4 @@
+from django.utils import timezone
 from model_bakery import baker
 
 from apps.content.models import REVIEWED_CATEGORIES, Asset, AssetLanguage, AssetVersion
@@ -7,6 +8,10 @@ def publish(version: AssetVersion) -> AssetVersion:
     """Make ``version`` the one consumers are served for its language, as the
     portal's publish action does once a reviewed version is approved."""
     AssetLanguage.objects.filter(pk=version.asset_language_id).update(published_version=version)
+    AssetVersion.objects.filter(pk=version.pk, first_published_at__isnull=True).update(
+        first_published_at=timezone.now()
+    )
+    version.refresh_from_db()
     return version
 
 

@@ -69,6 +69,7 @@ class PackageRegistryRepository:
             asset=OuterRef("pk"),
             state=VersionStateChoice.PUBLISHED,
             asset_language__status=StatusChoice.READY,
+            removed_at__isnull=True,
         ).filter(_has_content_q())
         qs = Asset.objects.select_related("publisher").filter(
             Exists(installable_version),
@@ -125,6 +126,29 @@ class PackageRegistryRepository:
             .select_related("asset", "asset_language")
             .order_by("-created_at")
         )
+
+    def get_portal_version(self, version_id: int, publisher_q: Q) -> AssetVersion | None:
+        """A committed version of an asset the caller's publisher scope can see."""
+        return (
+            AssetVersion.objects.filter(pk=version_id, state=VersionStateChoice.PUBLISHED)
+            .filter(publisher_q)
+            .select_related("asset", "asset_language__published_version")
+            .first()
+        )
+
+    def get_language(self, asset: Asset, language: str | None) -> AssetLanguage | None:
+        """The asset's rendition for ``language`` (source when None), whatever its status."""
+        renditions = AssetLanguage.objects.filter(asset=asset).select_related("published_version")
+        if language is None:
+            return renditions.filter(is_source=True).first()
+        return renditions.filter(language=language).first()
+
+    def set_removed(self, version: AssetVersion, *, user: User | None, reason: str) -> AssetVersion:
+        version.removed_at = timezone.now()
+        version.removed_by = user
+        version.removal_reason = reason
+        version.save(update_fields=["removed_at", "removed_by", "removal_reason", "updated_at"])
+        return version
 
     def pending_review_units_by_version(self, asset: Asset, language: str) -> dict[int, int]:
         """``{version_id: units awaiting approval}`` for the committed versions of

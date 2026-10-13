@@ -410,10 +410,19 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
 
         Reviewed categories (translations / tafsirs) serve whichever version was
         explicitly published (``AssetLanguage.published_version``) — committing a
-        version does not make it visible. Every other category keeps newest-wins.
+        version does not make it visible. Every other category keeps newest-wins,
+        skipping versions an admin removed (a published version can't be removed).
         """
         if self.category not in REVIEWED_CATEGORIES:
-            return self.get_latest_version(language)
+            return (
+                self.versions.filter(
+                    state=VersionStateChoice.PUBLISHED,
+                    asset_language__language=language or self.language,
+                    removed_at__isnull=True,
+                )
+                .order_by("-created_at")
+                .first()
+            )
         lang = language or self.language
         rendition = self.languages.filter(language=lang).select_related("published_version").first()
         return rendition.published_version if rendition is not None else None
@@ -602,6 +611,34 @@ class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
         ),
     )
 
+    # Package manager (itqan CLI) availability; see PackageRegistryService.version_statuses.
+    first_published_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=(
+            "When this version was first made the published version. "
+            "It stays set after a rollback, so lockfiles pinned to it keep installing (withdrawn)."
+        ),
+    )
+    withdrawal_reason = models.CharField(
+        max_length=500,
+        blank=True,
+        default="",
+        help_text=(
+            "Why the publisher rolled back past this version (set when an older version is "
+            "published, cleared when this one is published again); shown by the itqan CLI."
+        ),
+    )
+    removed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Removed by an Itqan admin: never installed or served to consumers again.",
+    )
+    removed_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="removed_asset_versions"
+    )
+    removal_reason = models.CharField(max_length=500, blank=True, default="")
+
     class Meta:
         constraints = [
             # At most one in-flight draft per (asset, language) (shared, get-or-create).
@@ -624,6 +661,14 @@ class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
 
     def __str__(self):
         return f"AssetVersion(asset={self.asset.name}, name={self.name})"
+
+    def publishing_rolls_back(self, published: "AssetVersion | None" = None) -> bool:
+        """Whether publishing this version goes back to before ``published`` (by
+        default its language's published version): a rollback, which needs a
+        reason that the itqan CLI shows to projects locked to a newer version."""
+        if published is None and self.asset_language_id:
+            published = self.asset_language.published_version
+        return published is not None and (self.created_at, self.pk) < (published.created_at, published.pk)
 
     @property
     def resolved_language(self) -> str:
