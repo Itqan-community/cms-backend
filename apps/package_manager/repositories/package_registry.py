@@ -147,7 +147,7 @@ class PackageRegistryRepository:
         version.removed_at = timezone.now()
         version.removed_by = user
         version.removal_reason = reason
-        version.save(update_fields=["removed_at", "removed_by", "removal_reason", "updated_at"])
+        version.save(update_fields=["removed_at", "removed_by", "removal_reason", "asset_language", "updated_at"])
         return version
 
     def clear_removed(self, version: AssetVersion, *, reason: str) -> AssetVersion:
@@ -156,7 +156,7 @@ class PackageRegistryRepository:
         version.removed_by = None
         version.removal_reason = ""
         version._change_reason = reason
-        version.save(update_fields=["removed_at", "removed_by", "removal_reason", "updated_at"])
+        version.save(update_fields=["removed_at", "removed_by", "removal_reason", "asset_language", "updated_at"])
         return version
 
     def pending_review_units_by_version(self, asset: Asset, language: str) -> dict[int, int]:

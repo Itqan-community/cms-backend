@@ -567,3 +567,20 @@ class PortalReinstatePackageVersionTests(WithdrawalBaseTest):
         # Assert
         self.assertEqual(400, response.status_code, response.content)
         self.assertEqual("validation_error", response.json()["error_name"])
+
+    def test_reinstate_package_version_where_version_has_no_language_should_be_released_again(self):
+        # Arrange
+        old = self._commit("1.0", asset=self.mushaf)
+        self._commit("1.1", asset=self.mushaf)
+        AssetVersion.objects.filter(pk=old.pk).update(asset_language=None)
+        self._remove(old)
+        self._authorize_admin()
+
+        # Act
+        response = self._reinstate(old)
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual("released", response.json()["package_status"])
+        old.refresh_from_db()
+        self.assertEqual(self.mushaf.get_or_create_source_language(), old.asset_language)
