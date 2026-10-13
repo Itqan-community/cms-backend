@@ -290,6 +290,9 @@ class PackageRequest:
     slug: str
     version: str
     language: str | None = None
+    # The manifest's range when ``version`` is a lockfile pin; only used to
+    # report the newest version the range allows.
+    constraint: str | None = None
 
 
 class CatalogAccess(StrEnum):
@@ -344,6 +347,10 @@ class ResolvedPackage:
     requested_constraint: str
     name: str = ""
     withdrawn: bool = False
+    # Newest released version of the rendition, and the newest one the
+    # request's range allows (None when the request has no range).
+    latest_version: str | None = None
+    latest_in_range: str | None = None
 
 
 class PackageRegistryService:
@@ -368,11 +375,14 @@ class PackageRegistryService:
         *,
         language: str | None = None,
         asset: Asset | None = None,
+        range_constraint: str | None = None,
     ) -> ResolvedPackage:
         """Resolve a single asset slug + constraint to a concrete AssetVersion.
 
         Each language rendition has its own version timeline, so resolution is
         scoped to ``language`` (or the asset's source language when None).
+        ``range_constraint`` is the manifest's range when ``version_constraint``
+        is a lockfile pin; it only sets the result's ``latest_in_range``.
 
         Raises ItqanError on failure with the appropriate error_name and status_code.
         """
@@ -452,6 +462,9 @@ class PackageRegistryService:
             (av, sv) for av, sv in valid_candidates if _matches_constraint(sv, constraint)
         ]
 
+        released = [(av, sv) for av, sv in valid_candidates if av.pk not in withdrawn_ids]
+        latest_version = _newest_stable(released)
+
         # 8. Exact pin: a removed version -> 410, missing version -> 404.
         if constraint.kind == "exact":
             if not matching:
@@ -471,6 +484,8 @@ class PackageRegistryService:
                 canonical_version=constraint.base.to_canonical_string(),
                 requested_constraint=version_constraint,
                 withdrawn=best_av.pk in withdrawn_ids,
+                latest_version=latest_version,
+                latest_in_range=_newest_in_range(released, range_constraint),
             )
 
         # 9. Range constraint: only released versions; no match -> 422.
@@ -496,6 +511,8 @@ class PackageRegistryService:
             asset_version=best_av,
             canonical_version=_best_sv.to_canonical_string(),
             requested_constraint=version_constraint,
+            latest_version=latest_version,
+            latest_in_range=_best_sv.to_canonical_string(),
         )
 
     def resolve_manifest(
@@ -528,7 +545,13 @@ class PackageRegistryService:
         for name in ordered_names:
             request = entries[name]
             pre_fetched = assets.get(request.slug) if assets is not None else None
-            result = self.resolve_single(request.slug, request.version, language=request.language, asset=pre_fetched)
+            result = self.resolve_single(
+                request.slug,
+                request.version,
+                language=request.language,
+                asset=pre_fetched,
+                range_constraint=request.constraint,
+            )
             result.name = name
             results.append(result)
 
@@ -765,11 +788,31 @@ class PackageRegistryService:
 
 def _latest_version_string(versions: list[AssetVersion]) -> str | None:
     """The newest stable SemVer-named version (newest prerelease when none is stable), canonical."""
-    semvers = [semver for semver in (_parse_candidate_version(v.name) for v in versions) if semver is not None]
+    return _newest_stable([(v, semver) for v in versions if (semver := _parse_candidate_version(v.name)) is not None])
+
+
+def _newest_stable(candidates: list[tuple[AssetVersion, SemVer]]) -> str | None:
+    """The newest stable version among ``candidates`` (newest prerelease when none is stable), canonical."""
+    semvers = [semver for _version, semver in candidates]
     stable = [semver for semver in semvers if not semver.is_prerelease] or semvers
     if not stable:
         return None
     return max(stable, key=lambda semver: semver._precedence_key()).to_canonical_string()
+
+
+def _newest_in_range(candidates: list[tuple[AssetVersion, SemVer]], constraint_text: str | None) -> str | None:
+    """The newest of ``candidates`` that ``constraint_text`` allows, canonical; None
+    without a constraint or with one that doesn't parse (it is informational only)."""
+    if not constraint_text:
+        return None
+    try:
+        constraint = _parse_constraint(constraint_text)
+    except ValueError:
+        return None
+    matching = [semver for _version, semver in candidates if _matches_constraint(semver, constraint)]
+    if not matching:
+        return None
+    return max(matching, key=lambda semver: semver._precedence_key()).to_canonical_string()
 
 
 def _parse_candidate_version(name: str) -> SemVer | None:
