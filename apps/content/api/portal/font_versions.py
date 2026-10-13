@@ -18,11 +18,12 @@ from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
 from apps.core.permission_utils import permission_class
 from apps.core.permissions import PermissionChoice
+from apps.package_manager.api.schemas import PackageStatusOut
 
 router = ItqanRouter(tags=[NinjaTag.FONTS])
 
 
-class FontVersionListOut(VersionTextOut):
+class FontVersionListOut(VersionTextOut, PackageStatusOut):
     id: int
     asset_id: int
     # Version number ("major.minor"), issued by the server; ``label_*`` is the version name.

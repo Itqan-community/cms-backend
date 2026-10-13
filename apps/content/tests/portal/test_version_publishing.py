@@ -245,12 +245,33 @@ class SetPublishedVersionApiTest(VersionPublishingBaseTest):
         self.authenticate_user(self.user)
 
         # Act
-        response = self.client.post(self._publish_url(v1))
+        response = self.client.post(
+            self._publish_url(v1), data={"reason": "Errors in v2"}, content_type="application/json"
+        )
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         self.fr.refresh_from_db()
         self.assertEqual(v1.id, self.fr.published_version_id)
+
+    def test_set_published_where_rolling_back_without_reason_should_return_400(self):
+        # Arrange — v2 is live; roll back to v1 without saying why
+        v1 = self._commit("v1", {self.ayah1: ("added", "x")})
+        self._review(v1, self.ayah1)
+        v2 = self._commit("v2", {self.ayah1: ("modified", "x2")})
+        self._review(v2, self.ayah1)
+        AssetLanguage.objects.filter(pk=self.fr.pk).update(published_version=v2)
+        self._authorize()
+        self.authenticate_user(self.user)
+
+        # Act
+        response = self.client.post(self._publish_url(v1))
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("rollback_reason_required", response.json()["error_name"])
+        self.fr.refresh_from_db()
+        self.assertEqual(v2.id, self.fr.published_version_id)
 
     def test_set_published_where_version_was_pruned_should_rematerialize_its_file(self):
         # Arrange — v1 keeps its entries as the anchor; v2 was pruned to deltas (no file)

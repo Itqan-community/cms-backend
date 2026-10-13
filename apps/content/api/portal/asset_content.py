@@ -260,6 +260,12 @@ class RestoreIn(Schema):
     bump: VersionBump = "minor"
 
 
+class SetPublishedIn(Schema):
+    # Required when going back to an earlier version; the itqan CLI shows it to
+    # projects still locked to a version rolled back past.
+    reason: str = Field(default="", max_length=500)
+
+
 class ChangeOut(Schema):
     unit_type: AssetTemplateChoice
     unit_id: int
@@ -595,17 +601,24 @@ def restore_version(request: Request, category: str, slug: str, version_id: int,
     response={
         200: DraftVersionOut,
         400: NinjaErrorResponse[Literal["version_not_publishable"]]
-        | NinjaErrorResponse[Literal["version_not_approved"]],
+        | NinjaErrorResponse[Literal["version_not_approved"]]
+        | NinjaErrorResponse[Literal["version_removed"]]
+        | NinjaErrorResponse[Literal["rollback_reason_required"]],
         404: NinjaErrorResponse[Literal["translation_not_found"]]
         | NinjaErrorResponse[Literal["tafsir_not_found"]]
         | NinjaErrorResponse[Literal["version_not_found"]]
         | NinjaErrorResponse[Literal["unsupported_content_category"]],
     },
 )
-def set_published_version(request: Request, category: str, slug: str, version_id: int) -> AssetVersion:
-    """Make a fully approved version the one consumers see for its language."""
+def set_published_version(
+    request: Request, category: str, slug: str, version_id: int, data: SetPublishedIn | None = None
+) -> AssetVersion:
+    """Make a fully approved version the one consumers see for its language.
+    Going back to an earlier version requires ``reason``."""
     resolved = _resolve_for_version(category, request, slug, version_id, access="publish")
-    return AssetContentService().set_published_version(slug, resolved, version_id, publisher_q=request.publisher_q())
+    return AssetContentService().set_published_version(
+        slug, resolved, version_id, reason=data.reason if data else "", publisher_q=request.publisher_q()
+    )
 
 
 @router.get(

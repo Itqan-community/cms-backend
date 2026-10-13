@@ -125,6 +125,9 @@ erDiagram
         text summary_ar
         file file_url
         int size_bytes
+        datetime first_published_at
+        string withdrawal_reason
+        datetime removed_at
     }
 
     ASSETLANGUAGE {
@@ -326,21 +329,29 @@ from the parsed entries, so consumers download exactly what was reviewed.
   Dependabot) are served `AssetLanguage.published_version`, read through
   `Asset.get_published_version()`. The package manager installs the published
   version and older fully approved versions (for exact lockfile pins), never a newer
-  commit. A holder of `PORTAL_PUBLISH_CONTENT`, assigned to
-  the language, sets it with
+  commit. A version published once and then rolled back past (`first_published_at`)
+  is *withdrawn*: ranges skip it, lockfile pins still install it. A holder of
+  `PORTAL_PUBLISH_CONTENT`, assigned to the language, sets it with
   `POST /portal/content/{category}/{slug}/versions/{id}/set-published/` — only for a
   committed (`version_not_publishable`), fully approved (`version_not_approved`)
-  version; any approved version may be published, so an older one is a rollback. A
+  version; any approved version may be published, so an older one is a rollback, which
+  needs a `reason` (`rollback_reason_required`): each released version rolled back past
+  stores it as its `withdrawal_reason`, which the itqan CLI shows. A
   version is *approved* when, for every unit, its latest change at or before that
   version is approved (units with no change rows predate tracking and count as
-  approved); the version list exposes `is_published`, `is_approved` and
-  `pending_review_count`. The published version cannot be deleted or have its file
+  approved); the version list exposes `is_published`, `is_approved`,
+  `pending_review_count` and `publishing_rolls_back` (publishing it would need a reason). The published version cannot be deleted or have its file
   replaced (`version_is_published`), and is never pruned when a newer commit lands;
   publishing a pruned version rebuilds its file. History is append-only: only the
   newest committed version of a language can be deleted or have its file replaced
   (`version_not_latest`), since later versions are stored as changes against it.
   Publishing and those changes lock the version row, so neither can slip in after
   the other's checks. Other categories keep newest-wins.
+- **Package removal** — an Itqan admin (`PORTAL_REMOVE_PACKAGE_VERSION`) may *remove* a
+  version (`POST /portal/packages/versions/{id}/remove/`, reason required): it is then never
+  installed or served (`Asset.get_published_version()` skips it, set-published rejects it),
+  and the version consumers are served can't be removed. The portal version lists expose each
+  version's `package_status`. See `ASSET_MANIFEST.md` §4.
 - **Viewing history** — any committed version is browsable read-only through the
   same entries endpoint the editor uses (`GET .../versions/{id}/` gives its name and
   language). A version pruned to deltas has its entries rebuilt on first view; the

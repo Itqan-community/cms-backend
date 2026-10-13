@@ -427,9 +427,15 @@ msgstr "لا يمكن استعادة سوى الإصدارات المنشورة.
 msgid "Only committed versions can be published."
 msgstr "لا يمكن نشر المسودات، بل الإصدارات المحفوظة فقط."
 
+msgid "This version was removed by an Itqan admin and can't be published."
+msgstr "أزال مسؤول في إتقان هذا الإصدار، ولا يمكن نشره."
+
 #, python-brace-format
 msgid "This version has {count} change(s) that are not approved yet."
 msgstr "يحتوي هذا الإصدار على {count} من التغييرات غير المعتمدة بعد."
+
+msgid "Give a reason for going back to an earlier version. Developers still using a newer version see it in the itqan CLI."
+msgstr "اذكر سبب الرجوع إلى إصدار سابق. يراه المطورون الذين ما زالوا يستخدمون إصدارًا أحدث في أداة itqan."
 
 #, python-brace-format
 msgid "Language {language} already exists for this asset."
@@ -819,6 +825,9 @@ msgstr "لوحة التحكم - مراجعة المحتوى"
 msgid "Portal - Publish Content"
 msgstr "لوحة التحكم - نشر المحتوى"
 
+msgid "Portal - Remove Package Versions"
+msgstr "البوابة - إزالة إصدارات الحزم"
+
 msgid "Portal - Edit Translation Content"
 msgstr "لوحة التحكم - تحرير محتوى الترجمات"
 
@@ -886,8 +895,21 @@ msgstr "لا يوجد إصدار PACKAGE مؤهل للمورد {slug} يحقق �
 msgid "{category} assets can't be installed with the package manager."
 msgstr "لا يمكن تثبيت موارد فئة {category} باستخدام مدير الحزم."
 
+#, python-brace-format
+msgid "Version {version} of {slug} was removed by Itqan."
+msgstr "أزالت إتقان الإصدار {version} من {slug}."
+
 msgid "Package version not found."
 msgstr "إصدار الحزمة غير موجود."
+
+msgid "Version not found."
+msgstr "الإصدار غير موجود."
+
+msgid "This version was already removed."
+msgstr "أُزيل هذا الإصدار من قبل."
+
+msgid "Consumers are served this version. Publish another version before removing it."
+msgstr "هذا هو الإصدار المقدَّم للمستخدمين. انشر إصدارًا آخر قبل إزالته."
 
 msgid "This package version has no downloadable content."
 msgstr "لا يحتوي إصدار الحزمة هذا على محتوى قابل للتنزيل."

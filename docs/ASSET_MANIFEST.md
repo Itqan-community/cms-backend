@@ -313,7 +313,7 @@ no "best effort" fallback.
 
 ### Which versions are eligible
 
-A version of an asset can be selected **only if all four** hold:
+A version of an asset can be selected **only if all five** hold:
 
 1. it belongs to the requested slug — an asset in `ready` status — **and the requested language rendition** (§2, Languages);
 2. it is **published** — a `draft` version is never selected;
@@ -331,6 +331,31 @@ A version of an asset can be selected **only if all four** hold:
 Other categories have no separate opt-in: every published version with content and a valid
 name is installable. A superseded version whose stored file was pruned still qualifies — its file is
 rebuilt from the stored changes the first time it is downloaded.
+
+### Withdrawn and removed versions
+
+On top of the conditions above, each eligible version has a package status
+(`PackageRegistryService.version_statuses`):
+
+| Status | Ranges (`^`, `~`) and the catalog's `latest_version` | Exact pin (a `FRESH` lockfile) |
+|---|---|---|
+| `released` | selectable | installs |
+| `withdrawn` | skipped | installs, with `withdrawn: true` and the publisher's rollback `withdrawal_reason` in the resolve response; clients warn |
+| `removed` | skipped | fails with `410 version_removed`; download returns 404 |
+| `not_released` | skipped | fails with `404 version_not_found` (a translation / tafsir version never published) |
+
+- **Withdrawn** — the publisher rolled back past it: it was published once
+  (`AssetVersion.first_published_at`) but an earlier version is published now, so it no longer satisfies
+  condition 5. There is no separate withdraw action: publishing an earlier version requires a reason,
+  stored on each version rolled back past as its `withdrawal_reason`; publishing that version again
+  clears it. A rollback never breaks a lockfile.
+- **Removed** — an Itqan admin (`PORTAL_REMOVE_PACKAGE_VERSION`) removed it
+  (`POST /portal/packages/versions/{id}/remove/`, reason required) for cases such as a revoked licence or
+  wrong content. It is never installed or served again: `Asset.get_published_version()` skips it, it
+  can't be published, and the version consumers are currently served can't be removed.
+
+The portal version lists (translations, tafsirs, mushafs, fonts) return each version's
+`package_status`, `withdrawal_reason` and `removal_reason`.
 
 Two details about condition 4, since `AssetVersion.name` is a free-text field and anything can
 end up in it:
@@ -579,10 +604,11 @@ downloaded. `FRESH` is a statement about your *dependency declaration*, not abou
 
 ### When a locked version is no longer there
 
-A `FRESH` lockfile names an exact version. If that version has since stopped being eligible —
-the record was deleted, the name was edited into
-something that is no longer valid SemVer — installation **fails, naming the asset and the
-missing version**.
+A `FRESH` lockfile names an exact version. If that version was **withdrawn** (see §4), it still
+installs and the client warns, so a publisher's rollback never breaks a build. If it
+has stopped being eligible — the record was deleted, the name was edited into something that is no
+longer valid SemVer, or an Itqan admin **removed** it (`410 version_removed`) — installation
+**fails, naming the asset and the missing version**.
 
 It does not quietly install the next patch, the previous patch, or the highest version still
 matching the constraint. Any of those would mean the lockfile silently stopped describing what
