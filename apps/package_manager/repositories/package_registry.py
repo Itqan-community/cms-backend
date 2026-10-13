@@ -18,8 +18,10 @@ from apps.content.models import (
     AssetVersionEntry,
     StatusChoice,
     VersionStateChoice,
+    consumer_visible_q,
 )
 from apps.content.repositories.asset_content import AssetContentRepository
+from apps.content.repositories.asset_review import AssetReviewRepository
 from apps.content.services.asset_templates import unit_spec_for
 
 if TYPE_CHECKING:
@@ -54,8 +56,11 @@ class PackageRegistryRepository:
         exclude_categories: Collection[str] = (),
         user: User | AnonymousUser | None = None,
     ) -> QuerySet[Asset]:
-        """READY, unrestricted assets with at least one installable version in a
-        READY language rendition, ordered by slug.
+        """READY, unrestricted, consumer-visible assets with at least one
+        installable version in a READY language rendition, ordered by slug.
+        Reviewed categories need a language with a published version
+        (``consumer_visible_q``); which of its versions install is decided by the
+        service.
 
         Each asset is annotated for ``user`` with ``caller_has_grant`` (an active
         access grant) and ``caller_request_status`` (their latest access request's
@@ -67,6 +72,7 @@ class PackageRegistryRepository:
         ).filter(_has_content_q())
         qs = Asset.objects.select_related("publisher").filter(
             Exists(installable_version),
+            consumer_visible_q(),
             status=StatusChoice.READY,
             restricted_for_tenant=False,
         )
@@ -120,6 +126,11 @@ class PackageRegistryRepository:
             .order_by("-created_at")
         )
 
+    def pending_review_units_by_version(self, asset: Asset, language: str) -> dict[int, int]:
+        """``{version_id: units awaiting approval}`` for the committed versions of
+        (asset, language); 0 means fully approved."""
+        return AssetReviewRepository().pending_units_by_version(asset, language)
+
     def get_downloadable_version(self, asset_version_id: int) -> AssetVersion | None:
         """A version the registry could have resolved: published, in a READY,
         unrestricted asset and a READY language, with content to serve."""
@@ -132,7 +143,7 @@ class PackageRegistryRepository:
                 asset_language__status=StatusChoice.READY,
             )
             .filter(_has_content_q())
-            .select_related("asset", "asset__publisher", "asset_language")
+            .select_related("asset", "asset__publisher", "asset_language__published_version")
             .first()
         )
 
