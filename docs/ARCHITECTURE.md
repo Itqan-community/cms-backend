@@ -350,7 +350,9 @@ from the parsed entries, so consumers download exactly what was reviewed.
 - **Package removal** — an Itqan admin (`PORTAL_REMOVE_PACKAGE_VERSION`) may *remove* a
   version (`POST /portal/packages/versions/{id}/remove/`, reason required): it is then never
   installed or served (`Asset.get_published_version()` skips it, set-published rejects it),
-  and the version consumers are served can't be removed. The portal version lists expose each
+  and the version consumers are served can't be removed. The admin can undo a removal
+  (`POST /portal/packages/versions/{id}/reinstate/`, reason required, kept as the audit record's
+  change reason): the version gets back the status the publishing rules give it. The portal version lists expose each
   version's `package_status`. See `ASSET_MANIFEST.md` §4.
 - **Viewing history** — any committed version is browsable read-only through the
   same entries endpoint the editor uses (`GET .../versions/{id}/` gives its name and

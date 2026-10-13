@@ -352,7 +352,10 @@ On top of the conditions above, each eligible version has a package status
 - **Removed** — an Itqan admin (`PORTAL_REMOVE_PACKAGE_VERSION`) removed it
   (`POST /portal/packages/versions/{id}/remove/`, reason required) for cases such as a revoked licence or
   wrong content. It is never installed or served again: `Asset.get_published_version()` skips it, it
-  can't be published, and the version consumers are currently served can't be removed.
+  can't be published, and the version consumers are currently served can't be removed. The admin can
+  undo it (`POST /portal/packages/versions/{id}/reinstate/`, reason required, up to 100 characters, kept
+  as the audit record's change reason): the version returns to released, withdrawn or not released by
+  the rules above, so lockfiles pinned to it install again.
 
 The portal version lists (translations, tafsirs, mushafs, fonts) return each version's
 `package_status`, `withdrawal_reason` and `removal_reason`.

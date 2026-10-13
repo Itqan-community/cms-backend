@@ -911,6 +911,9 @@ msgstr "أُزيل هذا الإصدار من قبل."
 msgid "Consumers are served this version. Publish another version before removing it."
 msgstr "هذا هو الإصدار المقدَّم للمستخدمين. انشر إصدارًا آخر قبل إزالته."
 
+msgid "This version is not removed."
+msgstr "هذا الإصدار غير مُزال."
+
 msgid "This package version has no downloadable content."
 msgstr "لا يحتوي إصدار الحزمة هذا على محتوى قابل للتنزيل."
 

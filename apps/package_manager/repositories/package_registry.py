@@ -150,6 +150,15 @@ class PackageRegistryRepository:
         version.save(update_fields=["removed_at", "removed_by", "removal_reason", "updated_at"])
         return version
 
+    def clear_removed(self, version: AssetVersion, *, reason: str) -> AssetVersion:
+        """Undo a removal. ``reason`` is kept as the audit record's change reason."""
+        version.removed_at = None
+        version.removed_by = None
+        version.removal_reason = ""
+        version._change_reason = reason
+        version.save(update_fields=["removed_at", "removed_by", "removal_reason", "updated_at"])
+        return version
+
     def pending_review_units_by_version(self, asset: Asset, language: str) -> dict[int, int]:
         """``{version_id: units awaiting approval}`` for the committed versions of
         (asset, language); 0 means fully approved."""
