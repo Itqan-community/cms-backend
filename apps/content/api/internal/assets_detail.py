@@ -20,6 +20,7 @@ from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
 from apps.core.ninja_utils.types import AbsoluteUrl
 from apps.mixins.helpers import run_task
+from apps.package_manager.services.package_registry import PackageRegistryService
 
 router = ItqanRouter(tags=[NinjaTag.ASSETS])
 logger = logging.getLogger(__name__)
@@ -48,6 +49,18 @@ class AssetMushafLayoutOut(Schema):
     page_count: int
 
 
+class DetailAssetPackageLanguageOut(Schema):
+    language: str
+    is_source: bool
+
+
+class DetailAssetPackageOut(Schema):
+    slug: str = Field(..., description="The asset's name for the itqan CLI, as in `itqan add <slug>`.")
+    languages: list[DetailAssetPackageLanguageOut] = Field(
+        ..., description="Languages the CLI can install, source first; others need `--language <code>`."
+    )
+
+
 class DetailAssetOut(Schema):
     id: int
     category: str
@@ -64,6 +77,21 @@ class DetailAssetOut(Schema):
     available_languages: list[str]
     template: AssetTemplateChoice | None = None
     mushaf_layout: AssetMushafLayoutOut | None = None
+    package: DetailAssetPackageOut | None = Field(
+        None, description="How to install the asset with the itqan CLI; null when the CLI can't install it."
+    )
+
+    @staticmethod
+    def resolve_package(obj: Asset) -> DetailAssetPackageOut | None:
+        languages = PackageRegistryService().installable_languages(obj)
+        if not languages:
+            return None
+        return DetailAssetPackageOut(
+            slug=obj.slug,
+            languages=[
+                DetailAssetPackageLanguageOut(language=lang.language, is_source=lang.is_source) for lang in languages
+            ],
+        )
 
     @staticmethod
     def resolve_available_languages(obj: Asset) -> list[str]:
