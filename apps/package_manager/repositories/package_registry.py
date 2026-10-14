@@ -106,6 +106,21 @@ class PackageRegistryRepository:
         """The asset's READY renditions, source language first."""
         return AssetLanguage.objects.filter(asset=asset, status=StatusChoice.READY).order_by("-is_source", "language")
 
+    def list_available_languages_with_published(self, asset: Asset) -> QuerySet[AssetLanguage]:
+        """:meth:`list_available_languages` with each rendition's published version
+        loaded, and ``published_installable``: that version is committed, not
+        removed and has content to serve."""
+        published_installable = AssetVersion.objects.filter(
+            pk=OuterRef("published_version_id"),
+            state=VersionStateChoice.PUBLISHED,
+            removed_at__isnull=True,
+        ).filter(_has_content_q())
+        return (
+            self.list_available_languages(asset)
+            .select_related("published_version")
+            .annotate(published_installable=Exists(published_installable))
+        )
+
     def get_available_language(self, asset: Asset, language: str | None) -> AssetLanguage | None:
         """The consumer-available (READY) rendition for ``language``, or the
         source rendition when ``language`` is None."""

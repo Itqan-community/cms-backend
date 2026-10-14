@@ -326,7 +326,9 @@ from the parsed entries, so consumers download exactly what was reviewed.
   The gallery's asset detail (`assets/{id}/`) also returns `package`: the asset's
   slug and the languages the itqan CLI can install, by the package catalog's rules
   (`PackageRegistryService.installable_languages`), or null when it can't install
-  the asset. The CMS shows the matching `itqan add` command from it.
+  the asset. It runs on every page view, so it reads each language's published
+  version in one query and only falls back to the version history for a language
+  whose published version can't be installed. The CMS shows the matching `itqan add` command from it.
 - **Commit vs publish** — committing makes a version the *head* (newest wins; what
   the editor builds on, `is_active` in the version list) but does **not** make it
   visible. Consumers (downloads, samples, `available_languages`, subscriber emails,

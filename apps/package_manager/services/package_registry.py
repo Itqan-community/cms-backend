@@ -622,12 +622,32 @@ class PackageRegistryService:
             )
         return languages
 
-    def installable_languages(self, asset: Asset) -> list[CatalogLanguage]:
-        """The languages the itqan CLI can install for ``asset``, as the catalog
-        (``GET /packages/``) lists them; empty when the catalog doesn't list it."""
+    def installable_languages(self, asset: Asset) -> list[AssetLanguage]:
+        """The renditions the itqan CLI can install for ``asset``, source first:
+        the languages the catalog (``GET /packages/``) lists, or none when the
+        catalog doesn't list the asset.
+
+        Cheap enough for every asset page view: a published version that is
+        installable is always released, so a language whose published version
+        qualifies needs no version history. Only a language failing that check
+        (say, its published version was removed) gets the catalog's full
+        computation.
+        """
         if not self.list_installable_assets().filter(pk=asset.pk).exists():
             return []
-        return self.catalog_languages(asset)
+        published_category = asset.category in PUBLISHED_VERSION_CATEGORIES
+        languages: list[AssetLanguage] = []
+        for rendition in self.repo.list_available_languages_with_published(asset):
+            published = rendition.published_version
+            if (
+                published_category
+                and rendition.published_installable
+                and _parse_candidate_version(published.name) is not None
+            ):
+                languages.append(rendition)
+            elif _latest_version_string(self.installable_versions(asset, rendition)) is not None:
+                languages.append(rendition)
+        return languages
 
     def version_statuses(self, asset: Asset, rendition: AssetLanguage) -> list[PackageVersionState]:
         """Each committed version of one language rendition that has content to
