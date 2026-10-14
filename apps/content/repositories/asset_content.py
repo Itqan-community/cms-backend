@@ -14,6 +14,7 @@ import os
 from django.core.files.base import ContentFile
 from django.db import transaction
 from django.db.models import Q
+from django.utils import timezone
 from django.utils.translation import gettext as _
 from simple_history.utils import bulk_create_with_history, bulk_update_with_history
 
@@ -511,12 +512,23 @@ class AssetContentRepository:
         self._record_changes(version, self._predecessor(version))
 
     @transaction.atomic
-    def set_published_version(self, rendition: AssetLanguage, version: AssetVersion) -> AssetLanguage:
+    def set_published_version(
+        self,
+        rendition: AssetLanguage,
+        version: AssetVersion,
+        *,
+        rolled_back_from: AssetVersion | None = None,
+        reason: str = "",
+    ) -> AssetLanguage:
         """Make ``version`` the one consumers are served for ``rendition``'s language.
 
         A superseded commit may have been pruned to deltas (entries and file
         dropped); consumers download the file, so it is materialized again from
         the reconstructed snapshot first.
+
+        On a rollback (``rolled_back_from`` is the version published until now),
+        each released version after ``version`` up to ``rolled_back_from`` records
+        ``reason`` as its withdrawal reason; publishing a version clears its own.
         """
         if not version.file_url:
             snapshot = self.reconstruct_entries(version)
@@ -525,6 +537,23 @@ class AssetContentRepository:
             version.file_url.save(filename, ContentFile(content), save=False)
             version.size_bytes = len(content)
             version.save(update_fields=["file_url", "size_bytes", "updated_at"])
+        if version.first_published_at is None or version.withdrawal_reason:
+            # Released once: a later rollback leaves lockfile pins on it installable.
+            version.first_published_at = version.first_published_at or timezone.now()
+            version.withdrawal_reason = ""
+            version.save(update_fields=["first_published_at", "withdrawal_reason", "updated_at"])
+        if rolled_back_from is not None:
+            rolled_back = (
+                AssetVersion.objects.filter(asset_language=rendition, first_published_at__isnull=False)
+                .filter(Q(created_at__gt=version.created_at) | Q(created_at=version.created_at, pk__gt=version.pk))
+                .filter(
+                    Q(created_at__lt=rolled_back_from.created_at)
+                    | Q(created_at=rolled_back_from.created_at, pk__lte=rolled_back_from.pk)
+                )
+            )
+            for withdrawn in rolled_back:
+                withdrawn.withdrawal_reason = reason
+                withdrawn.save(update_fields=["withdrawal_reason", "updated_at"])
         rendition.published_version = version
         rendition.save(update_fields=["published_version", "updated_at"])
         version.asset.file_size = version.human_readable_size

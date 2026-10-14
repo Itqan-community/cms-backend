@@ -124,6 +124,22 @@ cp deployment/docker/env.template deployment/docker/.env
 # edit deployment/docker/.env with your DB_*, SECRET_KEY, and SITE_DOMAIN
 ```
 
+#### Optional: asset download statistics
+
+Imported hourly from Cloudflare edge analytics. Requires `CF_ZONE_ID`, `CF_API_TOKEN`
+and `CF_R2_CUSTOM_DOMAIN` (the token needs Zone Analytics Read with access to
+`clientIP`). All settings are optional:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `ENABLE_ASSET_DOWNLOAD_SYNC` | `False` | Turn the hourly import on |
+| `ASSET_DOWNLOAD_SYNC_LAG_MINUTES` | `15` | Wait this long after an hour ends before importing it |
+| `ASSET_DOWNLOAD_SYNC_REFRESH_HOURS` | `2` | Re-import the latest complete hours every run (late Cloudflare data) |
+| `ASSET_DOWNLOAD_SYNC_MAX_SLICES_PER_RUN` | `24` | Hours imported per run when catching up |
+| `ASSET_DOWNLOAD_SYNC_STALE_HOURS` | `6` | Log an error when the import falls this far behind |
+| `ASSET_DOWNLOAD_PLAY_WINDOW_MINUTES` | `5` | Requests for the same file from the same client within this gap count as one play |
+| `ASSET_DOWNLOAD_EVENT_RETENTION_DAYS` | empty | Delete raw request events older than this; empty keeps them forever |
+
 ### 2) Start with Docker (recommended)
 
 ```bash
@@ -151,13 +167,6 @@ python manage.py runserver
 
 > **Note**: `pre-commit install` sets up Git hooks that run linting checks before each commit.
 > All PRs must pass linting to be merged.
-
-> **Note**: The project apps' migrations were reset to fresh initial migrations. A database
-> migrated before the reset fails `migrate` with `InconsistentMigrationHistory`; run
-> `python manage.py reset_migration_history` and `python manage.py reset_migration_history --database=audit`
-> first (deploys do this automatically). It only rewrites history for a database that had reached
-> the last pre-reset migration of each app; otherwise it refuses, and the database must first be
-> migrated on the last release before the reset (or recreated).
 
 ### 4) Access
 

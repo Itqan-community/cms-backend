@@ -125,6 +125,9 @@ erDiagram
         text summary_ar
         file file_url
         int size_bytes
+        datetime first_published_at
+        string withdrawal_reason
+        datetime removed_at
     }
 
     ASSETLANGUAGE {
@@ -318,27 +321,55 @@ from the parsed entries, so consumers download exactly what was reviewed.
   start hidden until marked available, which needs a published version
   (`language_has_no_published_version`). The source language starts available and
   is toggled the same way (`PATCH .../languages/{language}/availability/`). A
-  translation / tafsir with no available, published language is left out of the
-  gallery (`assets/`) and recommendations (`consumer_visible_q`).
+  translation / tafsir / mushaf / font with no available, published language is left
+  out of the gallery (`assets/`) and recommendations (`consumer_visible_q`).
+  The gallery's asset detail (`assets/{id}/`) also returns `package`: the asset's
+  slug and the languages the itqan CLI can install, by the package catalog's rules
+  (`PackageRegistryService.installable_languages`), or null when it can't install
+  the asset. It runs on every page view, so it reads each language's published
+  version in one query and only falls back to the version history for a language
+  whose published version can't be installed. The CMS shows the matching `itqan add` command from it.
 - **Commit vs publish** — committing makes a version the *head* (newest wins; what
   the editor builds on, `is_active` in the version list) but does **not** make it
   visible. Consumers (downloads, samples, `available_languages`, subscriber emails,
   Dependabot) are served `AssetLanguage.published_version`, read through
-  `Asset.get_published_version()`. A holder of `PORTAL_PUBLISH_CONTENT`, assigned to
-  the language, sets it with
+  `Asset.get_published_version()`. The package manager installs the published
+  version and older fully approved versions (for exact lockfile pins), never a newer
+  commit. A version published once and then rolled back past (`first_published_at`)
+  is *withdrawn*: ranges skip it, lockfile pins still install it. A holder of
+  `PORTAL_PUBLISH_CONTENT`, assigned to the language, sets it with
   `POST /portal/content/{category}/{slug}/versions/{id}/set-published/` — only for a
   committed (`version_not_publishable`), fully approved (`version_not_approved`)
-  version; any approved version may be published, so an older one is a rollback. A
+  version; any approved version may be published, so an older one is a rollback, which
+  needs a `reason` (`rollback_reason_required`): each released version rolled back past
+  stores it as its `withdrawal_reason`, which the itqan CLI shows. A
   version is *approved* when, for every unit, its latest change at or before that
   version is approved (units with no change rows predate tracking and count as
-  approved); the version list exposes `is_published`, `is_approved` and
-  `pending_review_count`. The published version cannot be deleted or have its file
+  approved); the version list exposes `is_published`, `is_approved`,
+  `pending_review_count` and `publishing_rolls_back` (publishing it would need a reason). The published version cannot be deleted or have its file
   replaced (`version_is_published`), and is never pruned when a newer commit lands;
   publishing a pruned version rebuilds its file. History is append-only: only the
   newest committed version of a language can be deleted or have its file replaced
   (`version_not_latest`), since later versions are stored as changes against it.
   Publishing and those changes lock the version row, so neither can slip in after
-  the other's checks. Other categories keep newest-wins.
+  the other's checks. Mushafs and fonts are published too (below); other categories
+  keep newest-wins.
+- **Mushaf and font publishing** — mushafs and fonts serve `AssetLanguage.published_version`
+  as well (`PUBLISHED_VERSION_CATEGORIES`), without the review step: any committed
+  version can be published with `POST /portal/{mushafs|fonts}/{slug}/versions/{id}/set-published/`
+  (`PORTAL_PUBLISH_CONTENT`; going back needs a `reason`). An upload is published right
+  away with `publish=true` (also needs `PORTAL_PUBLISH_CONTENT`), otherwise it is staged
+  until published; the first version created with the asset is published with it.
+  Subscribers are emailed and Dependabot runs on publish, not on upload, and the
+  published version can't be deleted or have its file replaced (`version_is_published`).
+  Migration `0007` pinned each mushaf / font language to its newest version.
+- **Package removal** — an Itqan admin (`PORTAL_REMOVE_PACKAGE_VERSION`) may *remove* a
+  version (`POST /portal/packages/versions/{id}/remove/`, reason required): it is then never
+  installed or served (`Asset.get_published_version()` skips it, set-published rejects it),
+  and the version consumers are served can't be removed. The admin can undo a removal
+  (`POST /portal/packages/versions/{id}/reinstate/`, reason required, kept as the audit record's
+  change reason): the version gets back the status the publishing rules give it. The portal version lists expose each
+  version's `package_status`. See `ASSET_MANIFEST.md` §4.
 - **Viewing history** — any committed version is browsable read-only through the
   same entries endpoint the editor uses (`GET .../versions/{id}/` gives its name and
   language). A version pruned to deltas has its entries rebuilt on first view; the
@@ -520,6 +551,53 @@ flowchart LR
 
     UE --> Stats["Analytics Dashboard"]
 ```
+
+### Asset download statistics
+
+Downloads of asset files are counted at Cloudflare's edge, because clients cache
+Django API responses and R2's own metrics miss cache hits. The `usage_tracking`
+app imports them and serves publisher-scoped numbers to the portal.
+
+**Models** (`apps/usage_tracking/models.py`; `asset_id` is a plain integer, not a foreign key):
+
+| Model | Holds |
+|---|---|
+| `AssetDownloadEvent` | One row per edge request: Cloudflare `ray_id` (unique), exact UTC time, asset, file kind (`surah` / `ayah` / `version`), surah or version id, country, status class (`full` 200 / `partial` 206 / `other`), and a daily-salted HMAC of the client IP (the raw IP is never stored) |
+| `AssetDownloadHourly` | Per UTC hour and dimension: `requests`, `bytes`, `plays` |
+| `AssetDownloadDaily` | The same per UTC day, rebuilt from the hourly rows |
+| `UsageSyncState` | The import watermark (every hour before it is fully stored), last run time and last error |
+
+**Source:** Cloudflare GraphQL Analytics on `CF_R2_CUSTOM_DOMAIN`, paths under
+`/media/uploads/assets/`. `httpRequestsAdaptive` gives individual requests (times
+and plays); `httpRequestsAdaptiveGroups` gives request and byte totals.
+
+**Sync** (`sync_asset_downloads_task`, hourly at minute 20, off unless
+`ENABLE_ASSET_DOWNLOAD_SYNC`):
+
+```mermaid
+flowchart LR
+    L["Advisory lock"] --> P["Plan hours: watermark (or oldest retained hour)<br/>+ last 2 complete hours"]
+    P --> F["Fetch hour from Cloudflare<br/>(split range if a page is full)"]
+    F --> W["One transaction: replace hour's events,<br/>hourly rows, day's daily rows; advance watermark"]
+    W --> P
+```
+
+Each hour is replaced, never incremented, so re-runs never double-count, and a
+missed or failed run is picked up by the next one (within Cloudflare's 31-day
+retention). Failures are recorded on `UsageSyncState` and logged as errors.
+
+**Plays:** only requests that delivered content (200/206) count. A request starts a
+play unless the same client requested the same file within the previous 5 minutes (`ASSET_DOWNLOAD_PLAY_WINDOW_MINUTES`). A play is
+credited to the hour, country and status class of its first request.
+
+**Portal API** (`PORTAL_READ_USAGE`, granted to every publisher member; scoped with
+`request.publisher_q()`; dates are inclusive UTC days):
+
+- `GET /portal/usage/downloads/summary/` — totals, overall and per file kind
+- `GET /portal/usage/downloads/timeseries/?granularity=hour|day|month&split_by=file_kind|status_class` — zero-filled series (hourly limited to 31 days)
+- `GET /portal/usage/downloads/breakdown/?by=asset|surah|country&limit=` — top items by plays
+
+Every response includes `data_until` (the watermark).
 
 ---
 

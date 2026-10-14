@@ -81,10 +81,16 @@ class PermissionChoice(TextChoices):
         _("Portal - Manage Access Requests Settings"),
     )
 
+    # Usage statistics
+    PORTAL_READ_USAGE = "portal_read_usage", _("Portal - View Usage Statistics")
+
     # Content review
     PORTAL_REVIEW_CONTENT = "portal_review_content", _("Portal - Review Content")
     # Choosing which fully approved version of a translation / tafsir consumers see.
     PORTAL_PUBLISH_CONTENT = "portal_publish_content", _("Portal - Publish Content")
+    # Removing a version from the package manager and every consumer surface. Itqan
+    # admins only: unlike withdrawing, it breaks lockfiles pinned to the version.
+    PORTAL_REMOVE_PACKAGE_VERSION = "portal_remove_package_version", _("Portal - Remove Package Versions")
 
     # Content editing: changing an asset's text (the content editor, uploading or
     # restoring a version). Separate from PORTAL_UPDATE_*, which covers metadata only.

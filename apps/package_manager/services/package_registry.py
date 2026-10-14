@@ -8,13 +8,21 @@ from typing import TYPE_CHECKING
 from django.conf import settings
 from django.utils.translation import gettext as _
 
-from apps.content.models import Asset, AssetAccessRequest, AssetLanguage, AssetVersion, CategoryChoice
+from apps.content.models import (
+    PUBLISHED_VERSION_CATEGORIES,
+    REVIEWED_CATEGORIES,
+    Asset,
+    AssetAccessRequest,
+    AssetLanguage,
+    AssetVersion,
+    CategoryChoice,
+)
 from apps.core.ninja_utils.errors import ItqanError
 from apps.package_manager.repositories.package_registry import PackageRegistryRepository
 
 if TYPE_CHECKING:
     from django.contrib.auth.models import AnonymousUser
-    from django.db.models import QuerySet
+    from django.db.models import Q, QuerySet
 
     from apps.users.models import User
 
@@ -282,6 +290,9 @@ class PackageRequest:
     slug: str
     version: str
     language: str | None = None
+    # The manifest's range when ``version`` is a lockfile pin; only used to
+    # report the newest version the range allows.
+    constraint: str | None = None
 
 
 class CatalogAccess(StrEnum):
@@ -303,6 +314,28 @@ class CatalogLanguage:
     latest_version: str
 
 
+class PackageVersionStatus(StrEnum):
+    """A committed version's availability in the package manager.
+
+    ``released``: installable and picked by ranges. ``withdrawn``: published
+    once, then the publisher rolled back past it; ranges skip it, but an exact
+    (lockfile) pin still installs it, with a warning showing the rollback reason.
+    ``removed``: an Itqan admin removed it; never installed. ``not_released``:
+    a translation, tafsir, mushaf or font version that was never published.
+    """
+
+    RELEASED = "released"
+    WITHDRAWN = "withdrawn"
+    REMOVED = "removed"
+    NOT_RELEASED = "not_released"
+
+
+@dataclass(frozen=True, slots=True)
+class PackageVersionState:
+    version: AssetVersion
+    status: PackageVersionStatus
+
+
 @dataclass
 class ResolvedPackage:
     """Internal resolution result. Fields are intentionally minimal."""
@@ -313,6 +346,11 @@ class ResolvedPackage:
     canonical_version: str
     requested_constraint: str
     name: str = ""
+    withdrawn: bool = False
+    # Newest released version of the rendition, and the newest one the
+    # request's range allows (None when the request has no range).
+    latest_version: str | None = None
+    latest_in_range: str | None = None
 
 
 class PackageRegistryService:
@@ -337,11 +375,14 @@ class PackageRegistryService:
         *,
         language: str | None = None,
         asset: Asset | None = None,
+        range_constraint: str | None = None,
     ) -> ResolvedPackage:
         """Resolve a single asset slug + constraint to a concrete AssetVersion.
 
         Each language rendition has its own version timeline, so resolution is
         scoped to ``language`` (or the asset's source language when None).
+        ``range_constraint`` is the manifest's range when ``version_constraint``
+        is a lockfile pin; it only sets the result's ``latest_in_range``.
 
         Raises ItqanError on failure with the appropriate error_name and status_code.
         """
@@ -367,9 +408,15 @@ class PackageRegistryService:
                 status_code=404,
             )
 
-        # 3. Obtain eligible versions of that rendition.
-        eligible_qs = self.repo.get_eligible_package_versions(asset_language)
-        eligible_versions: list[AssetVersion] = list(eligible_qs)
+        # 3. Obtain eligible versions of that rendition: what an exact pin may
+        # install (released or withdrawn); ranges narrow it to released below.
+        states = self.version_statuses(asset, asset_language)
+        eligible_versions = [
+            state.version
+            for state in states
+            if state.status in (PackageVersionStatus.RELEASED, PackageVersionStatus.WITHDRAWN)
+        ]
+        withdrawn_ids = {state.version.pk for state in states if state.status == PackageVersionStatus.WITHDRAWN}
 
         # 4. Parse/canonicalize candidate versions and filter invalid names.
         valid_candidates: list[tuple[AssetVersion, SemVer]] = []
@@ -415,9 +462,13 @@ class PackageRegistryService:
             (av, sv) for av, sv in valid_candidates if _matches_constraint(sv, constraint)
         ]
 
-        # 8. Exact pin: missing version -> 404.
+        released = [(av, sv) for av, sv in valid_candidates if av.pk not in withdrawn_ids]
+        latest_version = _newest_stable(released)
+
+        # 8. Exact pin: a removed version -> 410, missing version -> 404.
         if constraint.kind == "exact":
             if not matching:
+                self._raise_if_removed(slug, states, constraint.base)
                 raise ItqanError(
                     error_name="version_not_found",
                     message=_("Version {version} not found for asset {slug}.").format(
@@ -432,9 +483,13 @@ class PackageRegistryService:
                 asset_version=best_av,
                 canonical_version=constraint.base.to_canonical_string(),
                 requested_constraint=version_constraint,
+                withdrawn=best_av.pk in withdrawn_ids,
+                latest_version=latest_version,
+                latest_in_range=_newest_in_range(released, range_constraint),
             )
 
-        # 9. Range constraint: no match -> 422.
+        # 9. Range constraint: only released versions; no match -> 422.
+        matching = [(av, sv) for av, sv in matching if av.pk not in withdrawn_ids]
         if not matching:
             raise ItqanError(
                 error_name="unsatisfiable_version_constraint",
@@ -456,6 +511,8 @@ class PackageRegistryService:
             asset_version=best_av,
             canonical_version=_best_sv.to_canonical_string(),
             requested_constraint=version_constraint,
+            latest_version=latest_version,
+            latest_in_range=_best_sv.to_canonical_string(),
         )
 
     def resolve_manifest(
@@ -488,7 +545,13 @@ class PackageRegistryService:
         for name in ordered_names:
             request = entries[name]
             pre_fetched = assets.get(request.slug) if assets is not None else None
-            result = self.resolve_single(request.slug, request.version, language=request.language, asset=pre_fetched)
+            result = self.resolve_single(
+                request.slug,
+                request.version,
+                language=request.language,
+                asset=pre_fetched,
+                range_constraint=request.constraint,
+            )
             result.name = name
             results.append(result)
 
@@ -551,36 +614,187 @@ class PackageRegistryService:
         SemVer version are left out."""
         languages: list[CatalogLanguage] = []
         for rendition in self.repo.list_available_languages(asset):
-            versions = [
-                semver
-                for semver in (
-                    _parse_candidate_version(av.name) for av in self.repo.get_eligible_package_versions(rendition)
-                )
-                if semver is not None
-            ]
-            stable = [semver for semver in versions if not semver.is_prerelease] or versions
-            if not stable:
+            latest = _latest_version_string(self.installable_versions(asset, rendition))
+            if latest is None:
                 continue
-            latest = max(stable, key=lambda semver: semver._precedence_key())
             languages.append(
-                CatalogLanguage(
-                    language=rendition.language,
-                    is_source=rendition.is_source,
-                    latest_version=latest.to_canonical_string(),
-                )
+                CatalogLanguage(language=rendition.language, is_source=rendition.is_source, latest_version=latest)
             )
         return languages
+
+    def installable_languages(self, asset: Asset) -> list[AssetLanguage]:
+        """The renditions the itqan CLI can install for ``asset``, source first:
+        the languages the catalog (``GET /packages/``) lists, or none when the
+        catalog doesn't list the asset.
+
+        Cheap enough for every asset page view: a published version that is
+        installable is always released, so a language whose published version
+        qualifies needs no version history. Only a language failing that check
+        (say, its published version was removed) gets the catalog's full
+        computation.
+        """
+        if not self.list_installable_assets().filter(pk=asset.pk).exists():
+            return []
+        published_category = asset.category in PUBLISHED_VERSION_CATEGORIES
+        languages: list[AssetLanguage] = []
+        for rendition in self.repo.list_available_languages_with_published(asset):
+            published = rendition.published_version
+            if (
+                published_category
+                and rendition.published_installable
+                and _parse_candidate_version(published.name) is not None
+            ):
+                languages.append(rendition)
+            elif _latest_version_string(self.installable_versions(asset, rendition)) is not None:
+                languages.append(rendition)
+        return languages
+
+    def version_statuses(self, asset: Asset, rendition: AssetLanguage) -> list[PackageVersionState]:
+        """Each committed version of one language rendition that has content to
+        serve, newest first, with its :class:`PackageVersionStatus`.
+
+        Published-version categories (translations, tafsirs, mushafs, fonts)
+        release what the publisher published, as every other consumer surface
+        does: the published version, plus older committed versions (for
+        translations / tafsirs, only fully approved ones). A version that was
+        published once but no longer qualifies (the publisher rolled back past
+        it) is withdrawn, so lockfiles pinned to it keep installing; one never
+        published is not released. Other categories release every committed
+        version. In both, an Itqan admin may remove a version.
+        """
+        versions = list(self.repo.get_eligible_package_versions(rendition))
+        released_ids = self._released_version_ids(asset, rendition, versions)
+        states: list[PackageVersionState] = []
+        for version in versions:
+            if version.removed_at is not None:
+                status = PackageVersionStatus.REMOVED
+            elif version.pk in released_ids:
+                status = PackageVersionStatus.RELEASED
+            elif version.first_published_at is not None:
+                status = PackageVersionStatus.WITHDRAWN
+            else:
+                status = PackageVersionStatus.NOT_RELEASED
+            states.append(PackageVersionState(version=version, status=status))
+        return states
+
+    def installable_versions(self, asset: Asset, rendition: AssetLanguage) -> list[AssetVersion]:
+        """The released versions of one rendition (what a range picks from), newest first."""
+        return [
+            state.version
+            for state in self.version_statuses(asset, rendition)
+            if state.status == PackageVersionStatus.RELEASED
+        ]
+
+    def _released_version_ids(self, asset: Asset, rendition: AssetLanguage, versions: list[AssetVersion]) -> set[int]:
+        if asset.category not in PUBLISHED_VERSION_CATEGORIES:
+            return {version.pk for version in versions}
+        published = rendition.published_version
+        if published is None:
+            return set()
+        reviewed = asset.category in REVIEWED_CATEGORIES
+        pending = self.repo.pending_review_units_by_version(asset, rendition.language) if reviewed else {}
+        cutoff = (published.created_at, published.pk)
+        return {
+            version.pk
+            for version in versions
+            if version.pk == published.pk
+            or ((version.created_at, version.pk) < cutoff and (not reviewed or pending.get(version.pk) == 0))
+        }
+
+    @staticmethod
+    def _raise_if_removed(slug: str, states: list[PackageVersionState], requested: SemVer) -> None:
+        for state in states:
+            if state.status != PackageVersionStatus.REMOVED:
+                continue
+            semver = _parse_candidate_version(state.version.name)
+            if semver is not None and semver.to_canonical_string() == requested.to_canonical_string():
+                reason = state.version.removal_reason
+                message = _("Version {version} of {slug} was removed by Itqan.").format(
+                    version=requested.to_canonical_string(), slug=slug
+                )
+                raise ItqanError(
+                    error_name="version_removed",
+                    message=f"{message} {reason}".strip() if reason else message,
+                    status_code=410,
+                )
 
     def get_downloadable_version(self, asset_version_id: int) -> AssetVersion:
         """A version the registry serves, or 404."""
         version = self.repo.get_downloadable_version(asset_version_id)
-        if version is None or version.asset.category in NON_INSTALLABLE_CATEGORIES:
+        if version is None or version.asset.category in NON_INSTALLABLE_CATEGORIES or not self._is_pinnable(version):
             raise ItqanError(
                 error_name="version_not_found",
                 message=_("Package version not found."),
                 status_code=404,
             )
         return version
+
+    def _is_pinnable(self, version: AssetVersion) -> bool:
+        """Whether an exact pin may install ``version``: released or withdrawn."""
+        return self.status_of(version) in (PackageVersionStatus.RELEASED, PackageVersionStatus.WITHDRAWN)
+
+    # -- Publisher / admin controls ------------------------------------------
+
+    def get_portal_version(self, version_id: int, *, publisher_q: Q) -> AssetVersion:
+        version = self.repo.get_portal_version(version_id, publisher_q)
+        if version is None or version.asset.category in NON_INSTALLABLE_CATEGORIES:
+            raise ItqanError(
+                error_name="version_not_found",
+                message=_("Version not found."),
+                status_code=404,
+            )
+        return version
+
+    def remove_version(self, version: AssetVersion, *, user: User | None, reason: str) -> AssetVersion:
+        """Remove ``version`` from the package manager and every consumer surface.
+        The version consumers are served can't be removed."""
+        if version.removed_at is not None:
+            raise ItqanError(
+                error_name="version_already_removed",
+                message=_("This version was already removed."),
+                status_code=400,
+            )
+        served = version.asset.get_published_version(version.resolved_language)
+        if served is not None and served.pk == version.pk:
+            raise ItqanError(
+                error_name="version_is_served",
+                message=_("Consumers are served this version. Publish another version before removing it."),
+                status_code=400,
+            )
+        return self.repo.set_removed(version, user=user, reason=reason)
+
+    def reinstate_version(self, version: AssetVersion, *, reason: str) -> PackageVersionStatus:
+        """Undo an admin removal. The version gets back the status the publishing
+        rules give it (released, withdrawn or not released), never more."""
+        if version.removed_at is None:
+            raise ItqanError(
+                error_name="version_not_removed",
+                message=_("This version is not removed."),
+                status_code=400,
+            )
+        version = self.repo.clear_removed(version, reason=reason)
+        return self.status_of(version) or PackageVersionStatus.NOT_RELEASED
+
+    def cached_status(self, version: AssetVersion, cache: dict) -> PackageVersionStatus:
+        """``version``'s status, computing its whole language's statuses once per
+        ``cache`` (one per request), so a version list does not redo it per row."""
+        language = version.resolved_language
+        key = (version.asset_id, language)
+        if key not in cache:
+            rendition = self.repo.get_language(version.asset, language)
+            if rendition is None or version.asset.category in NON_INSTALLABLE_CATEGORIES:
+                cache[key] = {}
+            else:
+                cache[key] = {
+                    state.version.pk: state.status for state in self.version_statuses(version.asset, rendition)
+                }
+        return cache[key].get(version.pk, PackageVersionStatus.NOT_RELEASED)
+
+    def status_of(self, version: AssetVersion) -> PackageVersionStatus | None:
+        for state in self.version_statuses(version.asset, version.asset_language):
+            if state.version.pk == version.pk:
+                return state.status
+        return None
 
     def ensure_package_file(self, version: AssetVersion) -> AssetVersion:
         """Return ``version`` with a downloadable file, generating it on first request."""
@@ -597,6 +811,35 @@ class PackageRegistryService:
                 status_code=404,
             )
         return stored
+
+
+def _latest_version_string(versions: list[AssetVersion]) -> str | None:
+    """The newest stable SemVer-named version (newest prerelease when none is stable), canonical."""
+    return _newest_stable([(v, semver) for v in versions if (semver := _parse_candidate_version(v.name)) is not None])
+
+
+def _newest_stable(candidates: list[tuple[AssetVersion, SemVer]]) -> str | None:
+    """The newest stable version among ``candidates`` (newest prerelease when none is stable), canonical."""
+    semvers = [semver for _version, semver in candidates]
+    stable = [semver for semver in semvers if not semver.is_prerelease] or semvers
+    if not stable:
+        return None
+    return max(stable, key=lambda semver: semver._precedence_key()).to_canonical_string()
+
+
+def _newest_in_range(candidates: list[tuple[AssetVersion, SemVer]], constraint_text: str | None) -> str | None:
+    """The newest of ``candidates`` that ``constraint_text`` allows, canonical; None
+    without a constraint or with one that doesn't parse (it is informational only)."""
+    if not constraint_text:
+        return None
+    try:
+        constraint = _parse_constraint(constraint_text)
+    except ValueError:
+        return None
+    matching = [semver for _version, semver in candidates if _matches_constraint(semver, constraint)]
+    if not matching:
+        return None
+    return max(matching, key=lambda semver: semver._precedence_key()).to_canonical_string()
 
 
 def _parse_candidate_version(name: str) -> SemVer | None:

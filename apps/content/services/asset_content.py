@@ -20,6 +20,7 @@ from django.db.models import Q
 from django.utils.translation import gettext as _
 
 from apps.content.models import (
+    REVIEWED_CATEGORIES,
     Asset,
     AssetLanguage,
     AssetTemplateChoice,
@@ -47,6 +48,8 @@ logger = logging.getLogger(__name__)
 _NOT_FOUND_ERROR = {
     CategoryChoice.TRANSLATION: "translation_not_found",
     CategoryChoice.TAFSIR: "tafsir_not_found",
+    CategoryChoice.MUSHAF: "mushaf_not_found",
+    CategoryChoice.FONT: "font_not_found",
 }
 
 
@@ -702,11 +705,14 @@ class AssetContentService:
         category: CategoryChoice,
         version_id: int,
         *,
+        reason: str = "",
         publisher_q: Q | None = None,
     ) -> AssetVersion:
-        """Make a fully approved committed version the one consumers see for its
-        language. Any approved version may be published, including an older one
-        (a rollback). Re-publishing the current version is a no-op."""
+        """Make a committed version the one consumers see for its language
+        (translations / tafsirs: only once fully approved). Any such version may
+        be published, including an older one (a rollback), which needs a
+        ``reason``: the itqan CLI shows it to projects still locked to a version
+        rolled back past. Re-publishing the current version is a no-op."""
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
         version = self.get_version_or_404(slug, category, version_id, publisher_q=publisher_q)
         with transaction.atomic():
@@ -717,9 +723,20 @@ class AssetContentService:
                 .select_for_update(of=("self",))
                 .get(pk=version.pk)
             )
+            return self._publish_locked(asset, version, reason=reason.strip())
+
+    def publish_new_version(self, asset: Asset, version: AssetVersion) -> AssetVersion:
+        """Publish a version just created (a mushaf / font upload with "publish
+        now", or the first version created with its asset). Never a rollback."""
+        with transaction.atomic():
+            version = (
+                AssetVersion.objects.select_related("asset_language", "asset")
+                .select_for_update(of=("self",))
+                .get(pk=version.pk)
+            )
             return self._publish_locked(asset, version)
 
-    def _publish_locked(self, asset: Asset, version: AssetVersion) -> AssetVersion:
+    def _publish_locked(self, asset: Asset, version: AssetVersion, *, reason: str = "") -> AssetVersion:
         """``set_published_version`` once ``version``'s row is locked."""
         if version.state != VersionStateChoice.PUBLISHED:
             raise ItqanError(
@@ -727,8 +744,16 @@ class AssetContentService:
                 message=_("Only committed versions can be published."),
                 status_code=400,
             )
+        if version.removed_at is not None:
+            raise ItqanError(
+                error_name="version_removed",
+                message=_("This version was removed by an Itqan admin and can't be published."),
+                status_code=400,
+            )
         language = version.resolved_language
-        pending = AssetReviewRepository().pending_units_by_version(asset, language).get(version.pk, 0)
+        pending = 0
+        if asset.category in REVIEWED_CATEGORIES:
+            pending = AssetReviewRepository().pending_units_by_version(asset, language).get(version.pk, 0)
         if pending:
             raise ItqanError(
                 error_name="version_not_approved",
@@ -738,8 +763,21 @@ class AssetContentService:
         rendition = version.asset_language or asset.get_or_create_source_language()
         if rendition.published_version_id == version.pk:
             return version
+        previous = rendition.published_version
         previously_published_id = rendition.published_version_id
-        self.repo.set_published_version(rendition, version)
+        is_rollback = version.publishing_rolls_back(previous)
+        if is_rollback and not reason:
+            raise ItqanError(
+                error_name="rollback_reason_required",
+                message=_(
+                    "Give a reason for going back to an earlier version. Developers still using a newer "
+                    "version see it in the itqan CLI."
+                ),
+                status_code=400,
+            )
+        self.repo.set_published_version(
+            rendition, version, rolled_back_from=previous if is_rollback else None, reason=reason
+        )
         logger.info(
             f"Version published [version_id={version.pk}, asset_id={asset.pk}, language={language}, "
             f"previous_version_id={previously_published_id}]"

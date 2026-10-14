@@ -168,6 +168,13 @@ jobs:
                 echo "CF_R2_CUSTOM_DOMAIN=${{ vars.STAGING_CF_R2_CUSTOM_DOMAIN }}";
                 echo "ENABLE_AUDIO_USAGE_SYNC=${{ vars.STAGING_ENABLE_AUDIO_USAGE_SYNC }}";
                 echo "AUDIO_USAGE_SYNC_WINDOW_HOURS=${{ vars.STAGING_AUDIO_USAGE_SYNC_WINDOW_HOURS }}";
+                echo "ENABLE_ASSET_DOWNLOAD_SYNC=${{ vars.STAGING_ENABLE_ASSET_DOWNLOAD_SYNC || 'False' }}";
+                echo "ASSET_DOWNLOAD_SYNC_LAG_MINUTES=${{ vars.STAGING_ASSET_DOWNLOAD_SYNC_LAG_MINUTES || '15' }}";
+                echo "ASSET_DOWNLOAD_SYNC_REFRESH_HOURS=${{ vars.STAGING_ASSET_DOWNLOAD_SYNC_REFRESH_HOURS || '2' }}";
+                echo "ASSET_DOWNLOAD_SYNC_MAX_SLICES_PER_RUN=${{ vars.STAGING_ASSET_DOWNLOAD_SYNC_MAX_SLICES_PER_RUN || '24' }}";
+                echo "ASSET_DOWNLOAD_SYNC_STALE_HOURS=${{ vars.STAGING_ASSET_DOWNLOAD_SYNC_STALE_HOURS || '6' }}";
+                echo "ASSET_DOWNLOAD_PLAY_WINDOW_MINUTES=${{ vars.STAGING_ASSET_DOWNLOAD_PLAY_WINDOW_MINUTES || '5' }}";
+                echo "ASSET_DOWNLOAD_EVENT_RETENTION_DAYS=${{ vars.STAGING_ASSET_DOWNLOAD_EVENT_RETENTION_DAYS }}";
                 echo "EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend";
                 echo "EMAIL_HOST=${{ secrets.EMAIL_HOST }}";
                 echo "EMAIL_PORT=${{ secrets.EMAIL_PORT }}";
@@ -245,6 +252,13 @@ jobs:
                 echo "CF_R2_CUSTOM_DOMAIN=${{ vars.PROD_CF_R2_CUSTOM_DOMAIN }}";
                 echo "ENABLE_AUDIO_USAGE_SYNC=${{ vars.PROD_ENABLE_AUDIO_USAGE_SYNC }}";
                 echo "AUDIO_USAGE_SYNC_WINDOW_HOURS=${{ vars.PROD_AUDIO_USAGE_SYNC_WINDOW_HOURS }}";
+                echo "ENABLE_ASSET_DOWNLOAD_SYNC=${{ vars.PROD_ENABLE_ASSET_DOWNLOAD_SYNC || 'False' }}";
+                echo "ASSET_DOWNLOAD_SYNC_LAG_MINUTES=${{ vars.PROD_ASSET_DOWNLOAD_SYNC_LAG_MINUTES || '15' }}";
+                echo "ASSET_DOWNLOAD_SYNC_REFRESH_HOURS=${{ vars.PROD_ASSET_DOWNLOAD_SYNC_REFRESH_HOURS || '2' }}";
+                echo "ASSET_DOWNLOAD_SYNC_MAX_SLICES_PER_RUN=${{ vars.PROD_ASSET_DOWNLOAD_SYNC_MAX_SLICES_PER_RUN || '24' }}";
+                echo "ASSET_DOWNLOAD_SYNC_STALE_HOURS=${{ vars.PROD_ASSET_DOWNLOAD_SYNC_STALE_HOURS || '6' }}";
+                echo "ASSET_DOWNLOAD_PLAY_WINDOW_MINUTES=${{ vars.PROD_ASSET_DOWNLOAD_PLAY_WINDOW_MINUTES || '5' }}";
+                echo "ASSET_DOWNLOAD_EVENT_RETENTION_DAYS=${{ vars.PROD_ASSET_DOWNLOAD_EVENT_RETENTION_DAYS }}";
                 echo "ALLAUTH_JWT_PRIVATE_KEY=${{ secrets.PRODUCTION_ALLAUTH_JWT_PRIVATE_KEY }}";
                 echo "FRONTEND_BASE_URL=${{ secrets.PRODUCTION_FRONTEND_BASE_URL }}";
                 echo "GOOGLE_CLIENT_ID=${{ secrets.PROD_GOOGLE_CLIENT_ID }}";
@@ -304,9 +318,6 @@ jobs:
             # This avoids two app containers racing on migrate, and keeps the new image's
             # migrations backward-compatible with the still-running old web container.
             echo "🗄️ Running database migrations (one-off)..."
-            # Rewrite history left by the pre-reset migration chains (no-op on fresh or already-reset DBs).
-            $COMPOSE run --rm --no-deps web python manage.py reset_migration_history
-            $COMPOSE run --rm --no-deps web python manage.py reset_migration_history --database=audit
             $COMPOSE run --rm --no-deps web python manage.py migrate --noinput
             $COMPOSE run --rm --no-deps web python manage.py migrate --database=audit --noinput
 

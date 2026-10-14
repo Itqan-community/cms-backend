@@ -576,7 +576,17 @@ class AssetVersionAdmin(admin.ModelAdmin):
     list_display = ["asset", "name", "label", "size_bytes", "created_at"]
     list_filter = ["created_at"]
     search_fields = ["asset__name", "name", "label"]
-    readonly_fields = ["created_at", "updated_at"]
+    # Package availability changes go through the portal, which enforces its rules
+    # (the served version can't be removed).
+    readonly_fields = [
+        "created_at",
+        "updated_at",
+        "first_published_at",
+        "withdrawal_reason",
+        "removed_at",
+        "removed_by",
+        "removal_reason",
+    ]
 
 
 @admin.register(MushafLayout)

@@ -13,6 +13,7 @@ from apps.content.models import (
     StatusChoice,
     VersionStateChoice,
 )
+from apps.content.tests.publishing import publish
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 
@@ -48,6 +49,8 @@ class PackageCatalogApiTests(BaseTestCase):
             name=name,
             state=VersionStateChoice.PUBLISHED,
         )
+        # Published as committed, so the newest commit is what consumers get.
+        publish(version)
         if with_file:
             version.file_url = SimpleUploadedFile(name=f"{asset.slug}-{name}.csv", content=b"x")
             version.save()

@@ -25,11 +25,12 @@ from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
 from apps.core.permission_utils import check_permission, permission_class
 from apps.core.permissions import PermissionChoice
+from apps.package_manager.api.schemas import PackageStatusOut
 
 router = ItqanRouter(tags=[NinjaTag.TAFSIRS])
 
 
-class TafsirVersionListOut(VersionTextOut):
+class TafsirVersionListOut(VersionTextOut, PackageStatusOut):
     id: int
     asset_id: int
     language: str
@@ -37,6 +38,8 @@ class TafsirVersionListOut(VersionTextOut):
     is_active: bool
     # The version consumers are served for its language.
     is_published: bool
+    # Publishing it goes back to an earlier version, which needs a reason.
+    publishing_rolls_back: bool
     # Every change in it is approved, so it may be published.
     is_approved: bool
     # Units awaiting approval as of this version (0 when approved).
@@ -68,6 +71,10 @@ class TafsirVersionListOut(VersionTextOut):
         if obj.asset_language_id:
             return obj.asset_language.published_version_id == obj.id
         return AssetLanguage.objects.filter(published_version_id=obj.id).exists()
+
+    @staticmethod
+    def resolve_publishing_rolls_back(obj: AssetVersion) -> bool:
+        return obj.publishing_rolls_back()
 
     @staticmethod
     def resolve_is_first(obj: AssetVersion) -> bool:
@@ -148,7 +155,7 @@ def list_tafsir_versions(request: Request, tafsir_slug: str, language: str | Non
             status_code=404,
         ) from exc
     versions = AssetVersion.objects.filter(asset=asset, state=VersionStateChoice.PUBLISHED).select_related(
-        "created_by", "asset_language", "asset"
+        "created_by", "asset_language__published_version", "asset"
     )
     if language:
         require_language(request.user, asset, language)
