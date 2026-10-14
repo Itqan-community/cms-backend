@@ -35,6 +35,8 @@ logger = logging.getLogger(__name__)
 
 _HOUR = timedelta(hours=1)
 _MIN_SPLIT = timedelta(minutes=5)
+# Keeps the first queried hour clear of the retention edge while the run starts.
+_RETENTION_MARGIN = timedelta(minutes=5)
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,8 +107,10 @@ def build_event_rows(events: list[CFDownloadEvent]) -> tuple[list[DownloadEventR
             unmatched += 1
             continue
         occurred_at = datetime.fromisoformat(event["datetime"].replace("Z", "+00:00"))
-        if not event["clientIP"]:
+        client = event["clientIP"]
+        if not client:
             missing_ip += 1
+            client = f"ray:{event['rayName']}"  # never merge distinct IP-less requests into one play
         rows.append(
             DownloadEventRow(
                 ray_id=event["rayName"],
@@ -114,13 +118,13 @@ def build_event_rows(events: list[CFDownloadEvent]) -> tuple[list[DownloadEventR
                 file=file,
                 country=normalize_country(event["clientCountryName"]),
                 status_class=status_class_for(event["edgeResponseStatus"]),
-                client_hash=client_hash_for(event["clientIP"] or "", occurred_at.date()),
+                client_hash=client_hash_for(client, occurred_at.date()),
             )
         )
     if missing_ip:
-        # All IP-less requests share one hash, so plays collapse; usually a token-scope change.
+        # Each IP-less request counts as its own play; usually a token-scope change.
         logger.warning(
-            "sync_asset_downloads: %d request(s) without clientIP; plays are undercounted (check CF_API_TOKEN scope)",
+            "sync_asset_downloads: %d request(s) without clientIP; plays are overcounted (check CF_API_TOKEN scope)",
             missing_ip,
         )
     return rows, unmatched
@@ -190,7 +194,7 @@ def sync_asset_downloads(now: datetime | None = None) -> SyncResult:
     try:
         client = _build_client()
         limits = client.fetch_limits()
-        oldest_allowed = _ceil_hour(now - limits.not_older_than) + _HOUR
+        oldest_allowed = _ceil_hour(now - limits.not_older_than + _RETENTION_MARGIN)
         watermark = repo.get_watermark()
         if watermark is not None and watermark < oldest_allowed:
             logger.error(
@@ -216,8 +220,10 @@ def sync_asset_downloads(now: datetime | None = None) -> SyncResult:
         error = f"{type(exc).__name__}: {exc}"
         logger.exception("sync_asset_downloads: run failed after %d hour(s)", hours_synced)
     finally:
-        repo.record_run(now, error)
-        repo.unlock()
+        try:
+            repo.record_run(now, error)
+        finally:
+            repo.unlock()
 
     watermark = repo.get_watermark()
     if watermark is None or watermark < now - timedelta(hours=settings.ASSET_DOWNLOAD_SYNC_STALE_HOURS):
