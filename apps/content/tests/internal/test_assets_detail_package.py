@@ -1,8 +1,10 @@
 """`package` on the gallery's asset detail: what the CMS shows for `itqan add`."""
 
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from model_bakery import baker
 
-from apps.content.models import Asset, CategoryChoice, StatusChoice
+from apps.content.models import Asset, AssetLanguage, CategoryChoice, StatusChoice
 from apps.content.tests.publishing import publish
 from apps.package_manager.tests.test_package_registry_withdrawal import WithdrawalBaseTest
 
@@ -69,3 +71,40 @@ class DetailAssetPackageTest(WithdrawalBaseTest):
 
         # Assert
         self.assertIsNone(body["package"])
+
+    def test_detail_assets_where_published_version_removed_should_fall_back_to_older_released_version(self):
+        # Arrange
+        self._commit("1.0.0", asset=self.mushaf)
+        self._remove(self._commit("1.1.0", asset=self.mushaf))
+
+        # Act
+        body = self._detail(self.mushaf)
+
+        # Assert
+        self.assertEqual({"slug": "m1", "languages": [{"language": "ar", "is_source": True}]}, body["package"])
+
+    def test_detail_assets_where_only_version_removed_should_return_null_package(self):
+        # Arrange
+        self._remove(self._commit("1.0.0", asset=self.mushaf))
+
+        # Act
+        body = self._detail(self.mushaf)
+
+        # Assert
+        self.assertIsNone(body["package"])
+
+    def test_detail_assets_where_more_languages_should_not_run_more_queries(self):
+        # Arrange
+        publish(self._commit("1.0"))
+        with CaptureQueriesContext(connection) as one_language:
+            self._detail(self.asset)
+        self.fr = AssetLanguage.objects.create(asset=self.asset, language="de", status=StatusChoice.READY)
+        publish(self._commit("1.0"))
+
+        # Act
+        with CaptureQueriesContext(connection) as two_languages:
+            body = self._detail(self.asset)
+
+        # Assert
+        self.assertEqual(["de", "fr"], sorted(lang["language"] for lang in body["package"]["languages"]))
+        self.assertEqual(len(one_language.captured_queries), len(two_languages.captured_queries))
