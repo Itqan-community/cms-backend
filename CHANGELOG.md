@@ -1,3 +1,85 @@
+## v0.22.0 (2026-10-12)
+
+### Feat
+
+- **content**: issue version numbers for mushaf and font versions
+
+### Fix
+
+- **content**: store asset and member languages as codes
+
+### Perf
+
+- **content**: count version changes in the database when listing versions
+
+## v0.21.0 (2026-10-11)
+
+### Feat
+
+- **packages**: add GET /packages/me/ to check an API key
+- **packages**: report the caller's access to each asset in the catalog
+- **packages**: exclude recitations from the package registry
+- **packages**: add search and category filters to the package catalog
+
+## v0.20.0 (2026-10-08)
+
+### Feat
+
+- **content**: bilingual version name and summary
+- **content**: let reviewers upload a pre-approved version
+- **content**: bulk-approve review changes
+- **package-manager**: add `itqan init` to create a starter manifest
+- **package-manager**: add a catalog of installable packages
+- **package-manager**: let the manifest choose the assets folder
+- **package-manager**: resolve per language and generate missing files on download
+- **audit**: preserve history in bulk operations and bulk updates (ITQ-34) (#432)
+
+### Fix
+
+- **package-manager**: default the CLI to the production registry
+- **package-manager**: hide draft assets from the package registry
+- **content**: prevent asset access request races (#517)
+- stream R2 audio fallback in bounded chunks
+
+### Refactor
+
+- **package-manager**: move the itqan CLI to its own repository
+- **package-manager**: remove the Distribution model
+
+## v0.19.0 (2026-10-07)
+
+### Feat
+
+- **content**: number tafsir and translation versions as major.minor
+- **audit**: enable history on tracked models (ITQ-33) (#431)
+- **content**: review every change, with a filter by version
+- **content**: let the source language be hidden; drop unseen assets from the gallery
+- **content**: browse any committed version read-only
+- **content**: flag the first version of each language in version lists
+- **content**: name the editor of each change on the review page
+- **content**: publish translations/tafsirs only once every change is approved
+- **content**: flag draft entries differing from published versions as "changed"
+- **content**: implement comprehensive filters for entries endpoint
+- **content**: add CSV export for templates and assets across all categories
+- **dependabot**: implement PR updater automation on AssetVersion pub… (#510)
+
+### Fix
+
+- **core**: add missing migration in audit_migrations
+- **content**: keep the version number when reversing 0071 without a label
+- **audit**: qualify AssetVersion fk reference in AssetLanguage
+- **audit**: format migrations and allow audit db in dependabot tests
+- **content**: lock a version while publishing it or changing its content
+- **content**: only the newest version of a language can be replaced or deleted
+- **content**: serve an uploaded version's file generated from its reviewed entries
+- **content**: reject uploads whose rows would be dropped unreviewed
+- **content**: give no review state to diffs computed on the fly
+- **content**: prevent cross-tenant recitation upload mutations (#511)
+
+### Refactor
+
+- **content**: stop auto-deleting idle content drafts
+
 ## v0.18.0 (2026-09-28)
 
 ### Feat
