@@ -323,6 +323,10 @@ from the parsed entries, so consumers download exactly what was reviewed.
   is toggled the same way (`PATCH .../languages/{language}/availability/`). A
   translation / tafsir / mushaf / font with no available, published language is left
   out of the gallery (`assets/`) and recommendations (`consumer_visible_q`).
+  The gallery's asset detail (`assets/{id}/`) also returns `package`: the asset's
+  slug and the languages the itqan CLI can install, by the package catalog's rules
+  (`PackageRegistryService.installable_languages`), or null when it can't install
+  the asset. The CMS shows the matching `itqan add` command from it.
 - **Commit vs publish** — committing makes a version the *head* (newest wins; what
   the editor builds on, `is_active` in the version list) but does **not** make it
   visible. Consumers (downloads, samples, `available_languages`, subscriber emails,

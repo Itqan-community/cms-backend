@@ -622,6 +622,13 @@ class PackageRegistryService:
             )
         return languages
 
+    def installable_languages(self, asset: Asset) -> list[CatalogLanguage]:
+        """The languages the itqan CLI can install for ``asset``, as the catalog
+        (``GET /packages/``) lists them; empty when the catalog doesn't list it."""
+        if not self.list_installable_assets().filter(pk=asset.pk).exists():
+            return []
+        return self.catalog_languages(asset)
+
     def version_statuses(self, asset: Asset, rendition: AssetLanguage) -> list[PackageVersionState]:
         """Each committed version of one language rendition that has content to
         serve, newest first, with its :class:`PackageVersionStatus`.
