@@ -15,6 +15,7 @@ from django.db import connections
 import redis
 from requests.exceptions import ConnectionError as RequestsConnectionError, Timeout as RequestsTimeout
 
+from apps.usage_tracking.services.asset_download_sync import sync_asset_downloads
 from apps.usage_tracking.services.audio_usage_sync import sync_audio_usage
 from apps.usage_tracking.services.mixpanel_client import MixpanelIngestClient
 
@@ -215,3 +216,14 @@ def sync_audio_usage_task(self, window_hours: int = 6) -> None:
     """
     imported = sync_audio_usage(window_hours=window_hours)
     logger.info("sync_audio_usage_task: imported %d events to Mixpanel", imported)
+
+
+@shared_task(acks_late=True, soft_time_limit=900, time_limit=960, ignore_result=True)
+def sync_asset_downloads_task() -> None:
+    """Import asset download data from Cloudflare (see `asset_download_sync`).
+
+    No autoretry: failures are recorded on the sync state and the next hourly run
+    resumes from the watermark. Re-delivery is safe because each hour is replaced.
+    """
+    result = sync_asset_downloads()
+    logger.info("sync_asset_downloads_task: synced %d hour(s); error=%r", result.hours_synced, result.error)
