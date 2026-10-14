@@ -81,6 +81,9 @@ class PermissionChoice(TextChoices):
         _("Portal - Manage Access Requests Settings"),
     )
 
+    # Usage statistics
+    PORTAL_READ_USAGE = "portal_read_usage", _("Portal - View Usage Statistics")
+
     # Content review
     PORTAL_REVIEW_CONTENT = "portal_review_content", _("Portal - Review Content")
     # Choosing which fully approved version of a translation / tafsir consumers see.

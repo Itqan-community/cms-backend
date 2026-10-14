@@ -819,6 +819,9 @@ msgstr "البوابة - قبول أو رفض طلبات الوصول"
 msgid "Portal - Manage Access Requests Settings"
 msgstr "البوابة - إدارة إعدادات طلبات الوصول"
 
+msgid "Portal - View Usage Statistics"
+msgstr "البوابة - عرض إحصائيات الاستخدام"
+
 msgid "Portal - Review Content"
 msgstr "لوحة التحكم - مراجعة المحتوى"
 
@@ -981,6 +984,23 @@ msgstr "السورة غير موجودة."
 
 msgid "Ayah does not exist."
 msgstr "الآية غير موجودة."
+
+msgid "The end date must not be before the start date."
+msgstr "يجب ألا يكون تاريخ النهاية قبل تاريخ البداية."
+
+#, python-brace-format
+msgid "Statistics are limited to {days} days per request."
+msgstr "الإحصائيات محدودة بـ {days} يومًا لكل طلب."
+
+msgid "The end date is out of the supported range."
+msgstr "تاريخ النهاية خارج النطاق المدعوم."
+
+msgid "Asset does not exist."
+msgstr "المورد غير موجود."
+
+#, python-brace-format
+msgid "Hourly statistics are limited to {days} days."
+msgstr "الإحصائيات بالساعة محدودة بـ {days} يومًا."
 
 #, python-brace-format
 msgid "window_hours must divide 24 evenly, got {window_hours}"
