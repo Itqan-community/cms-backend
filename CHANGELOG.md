@@ -1,3 +1,51 @@
+## v0.23.0 (2026-10-14)
+
+### Feat
+
+- **usage**: expose asset download stats to publishers in the portal
+- **usage**: sync asset downloads from Cloudflare into hourly and daily stats
+- **content**: show how to install an asset with the itqan CLI
+- **packages**: report newer versions on resolve
+- **content**: publish mushaf and font versions like translations
+- **packages**: let Itqan admins undo a version removal
+- **packages**: withdraw versions on rollback and let admins remove them
+- **content**: issue version numbers for mushaf and font versions
+- **packages**: add GET /packages/me/ to check an API key
+- **packages**: report the caller's access to each asset in the catalog
+- **packages**: exclude recitations from the package registry
+- **packages**: add search and category filters to the package catalog
+- **content**: bilingual version name and summary
+- **content**: let reviewers upload a pre-approved version
+- **content**: bulk-approve review changes
+- **package-manager**: add `itqan init` to create a starter manifest
+- **package-manager**: add a catalog of installable packages
+- **package-manager**: let the manifest choose the assets folder
+- **package-manager**: resolve per language and generate missing files on download
+- **audit**: preserve history in bulk operations and bulk updates (ITQ-34) (#432)
+
+### Fix
+
+- **usage**: keep the first retained hour, separate IP-less requests, always release the sync lock
+- **packages**: enable asset access on public API and update coverage version to 7.16.2
+- **packages**: keep a legacy version's language when removing or reinstating it
+- **packages**: mark versions published before the release from audit history
+- **packages**: serve only published or approved versions of reviewed assets
+- **content**: store asset and member languages as codes
+- **package-manager**: default the CLI to the production registry
+- **package-manager**: hide draft assets from the package registry
+- **content**: prevent asset access request races (#517)
+- stream R2 audio fallback in bounded chunks
+
+### Refactor
+
+- **package-manager**: move the itqan CLI to its own repository
+- **package-manager**: remove the Distribution model
+
+### Perf
+
+- **content**: read installable languages from published versions on asset detail
+- **content**: count version changes in the database when listing versions
+
 ## v0.22.0 (2026-10-12)
 
 ### Feat
