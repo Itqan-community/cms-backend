@@ -636,8 +636,9 @@ MIXPANEL_PROJECT_TOKEN = config("MIXPANEL_PROJECT_TOKEN", default="")
 MIXPANEL_PROJECT_ID = config("MIXPANEL_PROJECT_ID", default="")
 MIXPANEL_INGEST_HOST = config("MIXPANEL_INGEST_HOST", default="api-eu.mixpanel.com")
 
-if MIXPANEL_ENABLED:
-    LOCAL_APPS.append("apps.usage_tracking")
+# Always installed: holds the asset download statistics tables, which do not depend on
+# Mixpanel. Mixpanel behaviour stays gated by MIXPANEL_ENABLED inside the app.
+LOCAL_APPS.append("apps.usage_tracking")
 
 # Audio usage sync from Cloudflare to Mixpanel
 CF_ZONE_ID = config("CF_ZONE_ID", default="")
@@ -645,6 +646,19 @@ CF_API_TOKEN = config("CF_API_TOKEN", default="")
 CF_R2_CUSTOM_DOMAIN = config("CF_R2_CUSTOM_DOMAIN", default="")
 ENABLE_AUDIO_USAGE_SYNC = config("ENABLE_AUDIO_USAGE_SYNC", default=False, cast=bool)
 AUDIO_USAGE_SYNC_WINDOW_HOURS = config("AUDIO_USAGE_SYNC_WINDOW_HOURS", default=6, cast=int)
+
+# Asset download statistics from Cloudflare edge analytics (reuses CF_ZONE_ID,
+# CF_API_TOKEN and CF_R2_CUSTOM_DOMAIN). All optional.
+ENABLE_ASSET_DOWNLOAD_SYNC = config("ENABLE_ASSET_DOWNLOAD_SYNC", default=False, cast=bool)
+ASSET_DOWNLOAD_SYNC_LAG_MINUTES = config("ASSET_DOWNLOAD_SYNC_LAG_MINUTES", default=15, cast=int)
+ASSET_DOWNLOAD_SYNC_REFRESH_HOURS = config("ASSET_DOWNLOAD_SYNC_REFRESH_HOURS", default=2, cast=int)
+ASSET_DOWNLOAD_SYNC_MAX_SLICES_PER_RUN = config("ASSET_DOWNLOAD_SYNC_MAX_SLICES_PER_RUN", default=24, cast=int)
+ASSET_DOWNLOAD_SYNC_STALE_HOURS = config("ASSET_DOWNLOAD_SYNC_STALE_HOURS", default=6, cast=int)
+ASSET_DOWNLOAD_PLAY_WINDOW_MINUTES = config("ASSET_DOWNLOAD_PLAY_WINDOW_MINUTES", default=5, cast=int)
+# Unset/empty keeps raw download events forever; rollups are never trimmed.
+ASSET_DOWNLOAD_EVENT_RETENTION_DAYS = config(
+    "ASSET_DOWNLOAD_EVENT_RETENTION_DAYS", default="", cast=lambda value: int(value) if value else None
+)
 
 
 # plain_permissions settings
