@@ -552,6 +552,53 @@ flowchart LR
     UE --> Stats["Analytics Dashboard"]
 ```
 
+### Asset download statistics
+
+Downloads of asset files are counted at Cloudflare's edge, because clients cache
+Django API responses and R2's own metrics miss cache hits. The `usage_tracking`
+app imports them and serves publisher-scoped numbers to the portal.
+
+**Models** (`apps/usage_tracking/models.py`; `asset_id` is a plain integer, not a foreign key):
+
+| Model | Holds |
+|---|---|
+| `AssetDownloadEvent` | One row per edge request: Cloudflare `ray_id` (unique), exact UTC time, asset, file kind (`surah` / `ayah` / `version`), surah or version id, country, status class (`full` 200 / `partial` 206 / `other`), and a daily-salted HMAC of the client IP (the raw IP is never stored) |
+| `AssetDownloadHourly` | Per UTC hour and dimension: `requests`, `bytes`, `plays` |
+| `AssetDownloadDaily` | The same per UTC day, rebuilt from the hourly rows |
+| `UsageSyncState` | The import watermark (every hour before it is fully stored), last run time and last error |
+
+**Source:** Cloudflare GraphQL Analytics on `CF_R2_CUSTOM_DOMAIN`, paths under
+`/media/uploads/assets/`. `httpRequestsAdaptive` gives individual requests (times
+and plays); `httpRequestsAdaptiveGroups` gives request and byte totals.
+
+**Sync** (`sync_asset_downloads_task`, hourly at minute 20, off unless
+`ENABLE_ASSET_DOWNLOAD_SYNC`):
+
+```mermaid
+flowchart LR
+    L["Advisory lock"] --> P["Plan hours: watermark (or oldest retained hour)<br/>+ last 2 complete hours"]
+    P --> F["Fetch hour from Cloudflare<br/>(split range if a page is full)"]
+    F --> W["One transaction: replace hour's events,<br/>hourly rows, day's daily rows; advance watermark"]
+    W --> P
+```
+
+Each hour is replaced, never incremented, so re-runs never double-count, and a
+missed or failed run is picked up by the next one (within Cloudflare's 31-day
+retention). Failures are recorded on `UsageSyncState` and logged as errors.
+
+**Plays:** only requests that delivered content (200/206) count. A request starts a
+play unless the same client requested the same file within the previous 5 minutes (`ASSET_DOWNLOAD_PLAY_WINDOW_MINUTES`). A play is
+credited to the hour, country and status class of its first request.
+
+**Portal API** (`PORTAL_READ_USAGE`, granted to every publisher member; scoped with
+`request.publisher_q()`; dates are inclusive UTC days):
+
+- `GET /portal/usage/downloads/summary/` — totals, overall and per file kind
+- `GET /portal/usage/downloads/timeseries/?granularity=hour|day|month&split_by=file_kind|status_class` — zero-filled series (hourly limited to 31 days)
+- `GET /portal/usage/downloads/breakdown/?by=asset|surah|country&limit=` — top items by plays
+
+Every response includes `data_until` (the watermark).
+
 ---
 
 ## System Boundaries
