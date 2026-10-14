@@ -362,6 +362,11 @@ The Registry API (`GET /packages/resolve/<slug>/?version=…&language=…` and `
 }
 ```
 
+Each result also reports newer versions, so a client can tell the user an update exists without another request:
+
+* `latest_version` — the newest released version of the resolved language (newest prerelease when none is stable), whatever the constraint allows. Withdrawn and removed versions are never reported.
+* `latest_in_range` — the newest released version the entry's range allows. For a range request it equals `resolved_version`. A client installing a lockfile pin sends the manifest's range as the entry's optional `constraint` field (`"tafsir-en": {"asset": "tafsir", "version": "1.2.0", "constraint": "^1.0.0"}`); `constraint` never changes what is resolved. It is `null` for an exact pin sent without `constraint`, or with one that doesn't parse.
+
 Both endpoints reject an asset whose category the package manager does not serve (recitations, §4.4) with `422 category_not_installable`, after the access check.
 
 ### 9.1a. Catalog (`GET /packages/`)

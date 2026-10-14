@@ -313,18 +313,52 @@ no "best effort" fallback.
 
 ### Which versions are eligible
 
-A version of an asset can be selected **only if all four** hold:
+A version of an asset can be selected **only if all five** hold:
 
 1. it belongs to the requested slug — an asset in `ready` status — **and the requested language rendition** (§2, Languages);
 2. it is **published** — a `draft` version is never selected;
 3. it has **content to serve**: an uploaded file, or entries or stored changes the file can be
    built from. A version with none of these is skipped;
 4. its name, after canonicalization, is a valid SemVer 2.0.0 version **carrying no build
-   metadata** — a version named `draft-2`, `v1.0` or `1.2.3+build1` is skipped, not repaired.
+   metadata** — a version named `draft-2`, `v1.0` or `1.2.3+build1` is skipped, not repaired;
+5. for a translation, tafsir, mushaf or font, the publisher has released it: it is the
+   language's published version (`AssetLanguage.published_version`), or an older committed
+   version (for translations and tafsirs, one whose changes are all approved). A commit newer than the published version is never
+   selected, so a rollback (publishing an older version) reaches the registry too, and a
+   language with no published version has no eligible versions. The catalog leaves out an
+   asset with no such language, as the gallery does.
 
-There is no separate opt-in: every published version with content and a valid name is
-installable. A superseded version whose stored file was pruned still qualifies — its file is
+Other categories have no separate opt-in: every published version with content and a valid
+name is installable. A superseded version whose stored file was pruned still qualifies — its file is
 rebuilt from the stored changes the first time it is downloaded.
+
+### Withdrawn and removed versions
+
+On top of the conditions above, each eligible version has a package status
+(`PackageRegistryService.version_statuses`):
+
+| Status | Ranges (`^`, `~`) and the catalog's `latest_version` | Exact pin (a `FRESH` lockfile) |
+|---|---|---|
+| `released` | selectable | installs |
+| `withdrawn` | skipped | installs, with `withdrawn: true` and the publisher's rollback `withdrawal_reason` in the resolve response; clients warn |
+| `removed` | skipped | fails with `410 version_removed`; download returns 404 |
+| `not_released` | skipped | fails with `404 version_not_found` (a translation, tafsir, mushaf or font version never published) |
+
+- **Withdrawn** — the publisher rolled back past it: it was published once
+  (`AssetVersion.first_published_at`) but an earlier version is published now, so it no longer satisfies
+  condition 5. There is no separate withdraw action: publishing an earlier version requires a reason,
+  stored on each version rolled back past as its `withdrawal_reason`; publishing that version again
+  clears it. A rollback never breaks a lockfile.
+- **Removed** — an Itqan admin (`PORTAL_REMOVE_PACKAGE_VERSION`) removed it
+  (`POST /portal/packages/versions/{id}/remove/`, reason required) for cases such as a revoked licence or
+  wrong content. It is never installed or served again: `Asset.get_published_version()` skips it, it
+  can't be published, and the version consumers are currently served can't be removed. The admin can
+  undo it (`POST /portal/packages/versions/{id}/reinstate/`, reason required, up to 100 characters, kept
+  as the audit record's change reason): the version returns to released, withdrawn or not released by
+  the rules above, so lockfiles pinned to it install again.
+
+The portal version lists (translations, tafsirs, mushafs, fonts) return each version's
+`package_status`, `withdrawal_reason` and `removal_reason`.
 
 Two details about condition 4, since `AssetVersion.name` is a free-text field and anything can
 end up in it:
@@ -397,7 +431,7 @@ reproducible state it already had.
 | Unknown Asset | the slug matches no asset available to consumers — an asset the publisher keeps in `draft` status is reported exactly like a missing one |
 | Category Not Installable | the asset belongs to a category the package manager does not serve (recitations) |
 | Language Not Found | the asset has no consumer-available rendition in the requested language (or, with `language` omitted, no available source rendition) |
-| No Eligible Package Versions | the rendition exists but has no published, SemVer-valid version with content |
+| No Eligible Package Versions | the rendition exists but has no eligible version (§4): none published, SemVer-valid and with content — or, for a translation or tafsir, none released by the publisher |
 | Unsatisfiable Version Constraint | eligible versions exist, none match |
 | Canonical Version Collision | multiple eligible `AssetVersion` records of one language rendition canonicalize to the same version; identifies the asset and requested version. The same version name in **different** languages is normal and never collides. |
 
@@ -573,16 +607,25 @@ downloaded. `FRESH` is a statement about your *dependency declaration*, not abou
 
 ### When a locked version is no longer there
 
-A `FRESH` lockfile names an exact version. If that version has since stopped being eligible —
-the record was deleted, the name was edited into
-something that is no longer valid SemVer — installation **fails, naming the asset and the
-missing version**.
+A `FRESH` lockfile names an exact version. If that version was **withdrawn** (see §4), it still
+installs and the client warns, so a publisher's rollback never breaks a build. If it
+has stopped being eligible — the record was deleted, the name was edited into something that is no
+longer valid SemVer, or an Itqan admin **removed** it (`410 version_removed`) — installation
+**fails, naming the asset and the missing version**.
 
 It does not quietly install the next patch, the previous patch, or the highest version still
 matching the constraint. Any of those would mean the lockfile silently stopped describing what
 you get, which makes it worse than not having one: a lockfile that lies is discovered in
 production, and one that fails is discovered in CI. Recovering is a deliberate act — broaden or
 change the constraint in the manifest and re-resolve.
+
+### Newer versions of locked assets
+
+A `FRESH` install keeps the locked versions even when newer ones exist. To let the client say so,
+it sends each entry's manifest range as `constraint` next to the locked `version`, and the resolve
+response reports `latest_in_range` and `latest_version` (see PACKAGE_ARTIFACT.md §9.1). The client
+only reports them; it never installs them without a re-resolve (`itqan install --force`, or a
+manifest change).
 
 ### Published versions do not change underneath you
 

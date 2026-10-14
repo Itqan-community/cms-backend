@@ -173,16 +173,35 @@ class DependabotTasksTest(TestCase):
                 assert res["action"] == "created"
                 assert res["pr_number"] == 55
 
+    def _newest_wins_version(self) -> AssetVersion:
+        """A committed version of a category whose consumers get the newest commit."""
+        asset = Asset.objects.create(
+            publisher=self.publisher, name="Search", category=CategoryChoice.SEARCH, slug="search"
+        )
+        return AssetVersion.objects.create(asset=asset, name="1.0.0", state=VersionStateChoice.PUBLISHED)
+
     def test_signal_triggers_dispatch_on_commit(self):
+        version = self._newest_wins_version()
         with self._settings():
             with patch("apps.dependabot.tasks.dispatch_dependabot_updates_for_version.delay") as mock_delay:
                 with self.captureOnCommitCallbacks(execute=True):
                     on_asset_version_published(
                         sender=AssetVersion,
-                        instance=self.published_version,
+                        instance=version,
                         created=False,
                     )
-                mock_delay.assert_called_once_with(self.published_version.id)
+                mock_delay.assert_called_once_with(version.id)
+
+    def test_signal_skips_mushaf_commit_until_published(self):
+        # A mushaf commit is not visible to consumers until it is published.
+        committed = AssetVersion.objects.create(
+            asset=self.published_version.asset, name="9.0.0", state=VersionStateChoice.PUBLISHED
+        )
+        with self._settings():
+            with patch("apps.dependabot.tasks.dispatch_dependabot_updates_for_version.delay") as mock_delay:
+                with self.captureOnCommitCallbacks(execute=True):
+                    on_asset_version_published(sender=AssetVersion, instance=committed, created=True)
+                mock_delay.assert_not_called()
 
     def test_signal_skips_reviewed_category_commit_until_published(self):
         # A translation commit is not visible to consumers until it is published;
@@ -210,9 +229,10 @@ class DependabotTasksTest(TestCase):
                 mock_delay.assert_not_called()
 
     def test_signal_triggers_when_name_or_summary_changed(self):
+        version = self._newest_wins_version()
         with self._settings():
             with patch("apps.dependabot.tasks.dispatch_dependabot_updates_for_version.delay") as mock_delay:
                 with self.captureOnCommitCallbacks(execute=True):
-                    self.published_version.summary = "Updated release notes summary"
-                    self.published_version.save()
-                mock_delay.assert_called_once_with(self.published_version.id)
+                    version.summary = "Updated release notes summary"
+                    version.save()
+                mock_delay.assert_called_once_with(version.id)

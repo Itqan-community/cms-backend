@@ -16,6 +16,7 @@ from apps.content.models import (
     StatusChoice,
     VersionStateChoice,
 )
+from apps.content.tests.publishing import publish
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.quran.models import Ayah, Sura
@@ -53,6 +54,8 @@ class PackageApiTestCase(BaseTestCase):
             name=name,
             state=VersionStateChoice.PUBLISHED,
         )
+        # Published as committed, so the newest commit is what consumers get.
+        publish(version)
         if with_file:
             version.file_url = SimpleUploadedFile(name=f"tafsir-{name}.csv", content=b"surah,ayah,text\n")
             version.save()

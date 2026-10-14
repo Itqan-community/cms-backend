@@ -41,6 +41,11 @@ app.conf.beat_schedule = {
         "schedule": crontab(minute=5, hour=f"*/{settings.AUDIO_USAGE_SYNC_WINDOW_HOURS}"),
         "kwargs": {"window_hours": settings.AUDIO_USAGE_SYNC_WINDOW_HOURS},
     },
+    "sync-asset-downloads": {
+        "task": "apps.usage_tracking.tasks.sync_asset_downloads_task",
+        # Minute 20: after the 15-minute Cloudflare lag, offset from sync-audio-usage (minute 5).
+        "schedule": crontab(minute=20),
+    },
     "notify-publishers-pending-access-requests": {
         "task": "apps.content.tasks.notify_publishers_pending_access_requests",
         "schedule": crontab(minute=0, hour=settings.PENDING_ACCESS_REQUEST_NOTIFICATION_HOUR),

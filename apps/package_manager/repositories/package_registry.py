@@ -18,8 +18,10 @@ from apps.content.models import (
     AssetVersionEntry,
     StatusChoice,
     VersionStateChoice,
+    consumer_visible_q,
 )
 from apps.content.repositories.asset_content import AssetContentRepository
+from apps.content.repositories.asset_review import AssetReviewRepository
 from apps.content.services.asset_templates import unit_spec_for
 
 if TYPE_CHECKING:
@@ -54,8 +56,11 @@ class PackageRegistryRepository:
         exclude_categories: Collection[str] = (),
         user: User | AnonymousUser | None = None,
     ) -> QuerySet[Asset]:
-        """READY, unrestricted assets with at least one installable version in a
-        READY language rendition, ordered by slug.
+        """READY, unrestricted, consumer-visible assets with at least one
+        installable version in a READY language rendition, ordered by slug.
+        Reviewed categories need a language with a published version
+        (``consumer_visible_q``); which of its versions install is decided by the
+        service.
 
         Each asset is annotated for ``user`` with ``caller_has_grant`` (an active
         access grant) and ``caller_request_status`` (their latest access request's
@@ -64,9 +69,11 @@ class PackageRegistryRepository:
             asset=OuterRef("pk"),
             state=VersionStateChoice.PUBLISHED,
             asset_language__status=StatusChoice.READY,
+            removed_at__isnull=True,
         ).filter(_has_content_q())
         qs = Asset.objects.select_related("publisher").filter(
             Exists(installable_version),
+            consumer_visible_q(),
             status=StatusChoice.READY,
             restricted_for_tenant=False,
         )
@@ -99,6 +106,21 @@ class PackageRegistryRepository:
         """The asset's READY renditions, source language first."""
         return AssetLanguage.objects.filter(asset=asset, status=StatusChoice.READY).order_by("-is_source", "language")
 
+    def list_available_languages_with_published(self, asset: Asset) -> QuerySet[AssetLanguage]:
+        """:meth:`list_available_languages` with each rendition's published version
+        loaded, and ``published_installable``: that version is committed, not
+        removed and has content to serve."""
+        published_installable = AssetVersion.objects.filter(
+            pk=OuterRef("published_version_id"),
+            state=VersionStateChoice.PUBLISHED,
+            removed_at__isnull=True,
+        ).filter(_has_content_q())
+        return (
+            self.list_available_languages(asset)
+            .select_related("published_version")
+            .annotate(published_installable=Exists(published_installable))
+        )
+
     def get_available_language(self, asset: Asset, language: str | None) -> AssetLanguage | None:
         """The consumer-available (READY) rendition for ``language``, or the
         source rendition when ``language`` is None."""
@@ -120,6 +142,43 @@ class PackageRegistryRepository:
             .order_by("-created_at")
         )
 
+    def get_portal_version(self, version_id: int, publisher_q: Q) -> AssetVersion | None:
+        """A committed version of an asset the caller's publisher scope can see."""
+        return (
+            AssetVersion.objects.filter(pk=version_id, state=VersionStateChoice.PUBLISHED)
+            .filter(publisher_q)
+            .select_related("asset", "asset_language__published_version")
+            .first()
+        )
+
+    def get_language(self, asset: Asset, language: str | None) -> AssetLanguage | None:
+        """The asset's rendition for ``language`` (source when None), whatever its status."""
+        renditions = AssetLanguage.objects.filter(asset=asset).select_related("published_version")
+        if language is None:
+            return renditions.filter(is_source=True).first()
+        return renditions.filter(language=language).first()
+
+    def set_removed(self, version: AssetVersion, *, user: User | None, reason: str) -> AssetVersion:
+        version.removed_at = timezone.now()
+        version.removed_by = user
+        version.removal_reason = reason
+        version.save(update_fields=["removed_at", "removed_by", "removal_reason", "asset_language", "updated_at"])
+        return version
+
+    def clear_removed(self, version: AssetVersion, *, reason: str) -> AssetVersion:
+        """Undo a removal. ``reason`` is kept as the audit record's change reason."""
+        version.removed_at = None
+        version.removed_by = None
+        version.removal_reason = ""
+        version._change_reason = reason
+        version.save(update_fields=["removed_at", "removed_by", "removal_reason", "asset_language", "updated_at"])
+        return version
+
+    def pending_review_units_by_version(self, asset: Asset, language: str) -> dict[int, int]:
+        """``{version_id: units awaiting approval}`` for the committed versions of
+        (asset, language); 0 means fully approved."""
+        return AssetReviewRepository().pending_units_by_version(asset, language)
+
     def get_downloadable_version(self, asset_version_id: int) -> AssetVersion | None:
         """A version the registry could have resolved: published, in a READY,
         unrestricted asset and a READY language, with content to serve."""
@@ -132,7 +191,7 @@ class PackageRegistryRepository:
                 asset_language__status=StatusChoice.READY,
             )
             .filter(_has_content_q())
-            .select_related("asset", "asset__publisher", "asset_language")
+            .select_related("asset", "asset__publisher", "asset_language__published_version")
             .first()
         )
 

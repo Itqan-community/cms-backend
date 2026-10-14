@@ -10,8 +10,12 @@ from django.utils.translation import gettext as _
 from apps.content.models import Asset as AssetModel, AssetVersion, CategoryChoice, LicenseChoice
 from apps.content.repositories.font import FontRepository
 from apps.content.services.asset_access import guard_restrict_for_tenant
-from apps.content.services.asset_content import VersionBump, issue_version_number
-from apps.content.tasks import notify_asset_version_created
+from apps.content.services.asset_content import (
+    AssetContentService,
+    VersionBump,
+    forbid_published_version_change,
+    issue_version_number,
+)
 from apps.content.version_text import VersionText
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
@@ -131,11 +135,13 @@ class FontService:
         with transaction.atomic():
             font = self.create_font(**font_kwargs)
             if file is not None:
+                # The first version is the font's initial content: it is published with it.
                 self.create_font_version(
                     font.slug,
                     text=version_text,
                     version_number=version_number,
                     file=file,
+                    publish=True,
                 )
         font.refresh_from_db()
         return font
@@ -225,6 +231,7 @@ class FontService:
         version_number: str | None = None,
         bump: VersionBump = "minor",
         file: Any = None,
+        publish: bool = False,
         publisher_q: Q | None = None,
     ) -> AssetVersion:
         """
@@ -245,7 +252,9 @@ class FontService:
                 file=file,
             )
         logger.info(f"Font version created [version_id={version.pk}, asset_id={asset.pk}, slug={font_slug}]")
-        transaction.on_commit(lambda: notify_asset_version_created.delay(version.pk))
+        # Consumers get it (and subscribers are emailed) once it is published.
+        if publish:
+            version = AssetContentService().publish_new_version(asset, version)
         return version
 
     def update_font_version(
@@ -259,6 +268,8 @@ class FontService:
         Business Logic: Update an existing font version.
         """
         version = self._get_font_version_or_404(font_slug, version_id, publisher_q=publisher_q)
+        if "file_url" in fields:
+            forbid_published_version_change(version)
         # The version number is fixed once issued.
         fields = {key: value for key, value in fields.items() if key != "name"}
         updated = self.repo.update_font_version(version, fields=fields)
@@ -270,5 +281,6 @@ class FontService:
         Business Logic: Delete a font version.
         """
         version = self._get_font_version_or_404(font_slug, version_id, publisher_q=publisher_q)
+        forbid_published_version_change(version)
         self.repo.delete_font_version(version)
         logger.info(f"Font version deleted [version_id={version_id}, asset_slug={font_slug}]")
