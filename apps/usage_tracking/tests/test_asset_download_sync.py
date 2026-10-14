@@ -153,6 +153,26 @@ class TestBuildRows:
         warning.assert_called_once()
         assert "clientIP" in warning.call_args.args[0]
 
+    def test_build_event_rows_where_client_ip_missing_should_not_merge_distinct_requests(self):
+        # Arrange
+        events = [
+            {
+                "datetime": "2026-10-13T10:00:18Z",
+                "rayName": ray,
+                "clientRequestPath": "/media/uploads/assets/13/recitations/091.mp3",
+                "clientCountryName": "SA",
+                "edgeResponseStatus": 200,
+                "clientIP": "",
+            }
+            for ray in ("r1", "r2")
+        ]
+
+        # Act
+        rows, _ = build_event_rows(events)
+
+        # Assert
+        assert rows[0].client_hash != rows[1].client_hash
+
     def test_build_total_rows_where_sample_interval_above_one_should_flag_sampled(self):
         # Arrange
         totals = [
@@ -242,8 +262,8 @@ class TestSyncAssetDownloads(BaseTestCase):
             # Act
             result = sync_asset_downloads(NOW)
 
-        # Assert  (oldest allowed = ceil(12:20 - 4h) + 1h = 10:00 → hours 10, 11)
-        assert (result.hours_synced, result.error) == (2, "")
+        # Assert  (oldest allowed = ceil(12:20 - 4h + 5m) = 09:00 → hours 9, 10, 11)
+        assert (result.hours_synced, result.error) == (3, "")
         assert AssetDownloadRepository().get_watermark() == datetime(2026, 10, 13, 12, tzinfo=UTC)
         assert AssetDownloadHourly.objects.get(hour=h11).plays == 1
 
@@ -268,8 +288,8 @@ class TestSyncAssetDownloads(BaseTestCase):
             # Act
             result = sync_asset_downloads(NOW)
 
-        # Assert  (hour 10 committed; hour 11 failed and rolled back)
-        assert result.hours_synced == 1
+        # Assert  (hours 9 and 10 committed; hour 11 failed and rolled back)
+        assert result.hours_synced == 2
         assert "cloudflare down" in result.error
         assert AssetDownloadRepository().get_watermark() == h11
         assert UsageSyncState.objects.get().last_error == result.error
@@ -287,6 +307,22 @@ class TestSyncAssetDownloads(BaseTestCase):
         # Assert
         assert result.hours_synced == 0
         build_client.assert_not_called()
+
+    def test_sync_asset_downloads_where_record_run_fails_should_still_unlock(self):
+        # Arrange
+        with (
+            patch.object(
+                AssetDownloadRepository, AssetDownloadRepository.record_run.__name__, side_effect=RuntimeError("db")
+            ),
+            patch.object(AssetDownloadRepository, AssetDownloadRepository.unlock.__name__) as unlock,
+            self._patch_client({}),
+            pytest.raises(RuntimeError),
+        ):
+            # Act
+            sync_asset_downloads(NOW)
+
+        # Assert
+        unlock.assert_called_once()
 
     @override_settings(ASSET_DOWNLOAD_EVENT_RETENTION_DAYS=1)
     def test_sync_asset_downloads_where_retention_set_should_purge_old_events(self):

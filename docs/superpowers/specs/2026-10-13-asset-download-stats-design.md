@@ -341,7 +341,8 @@ extra). Cloudflare is mocked with recorded GraphQL responses.
 - **Permissions conflict:** `apps/core/permissions.py` has uncommitted changes on
   another branch; expect a small rebase conflict.
 - **`clientIP` access:** verified on 2026-10-13. If the token is rotated, the new
-  one must keep access to `clientIP`, or plays cannot be deduplicated per client.
+  one must keep access to `clientIP`, or plays cannot be deduplicated per client
+  (each IP-less request then counts as its own play and the sync logs a warning).
 - **Growth:** at millions of requests/day, `httpRequestsAdaptive` will sample and
   the event table grows fast; set `ASSET_DOWNLOAD_EVENT_RETENTION_DAYS` and
   revisit Logpush.
