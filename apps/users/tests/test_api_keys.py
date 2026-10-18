@@ -269,3 +269,55 @@ class ApiKeyTests(BaseTestCase):
         # Assert
         self.assertEqual(404, response.status_code, response.content)
         self.assertEqual("api_key_not_found", response.json()["error_name"])
+
+    # --- App slug ---
+    def test_create_api_key_where_created_should_return_app_slug(self):
+        # Arrange
+        user = User.objects.create_user(email="slug@example.com", password="pass123", name="User")
+        self.authenticate_user(user)
+
+        # Act
+        response = self.client.post("/cms-api/api-keys/", data={"name": "Quran Companion"}, format="json")
+
+        # Assert
+        self.assertEqual(201, response.status_code, response.content)
+        self.assertEqual("quran-companion", response.json()["app_slug"])
+
+    def test_list_api_keys_where_key_exists_should_include_app_slug(self):
+        # Arrange
+        user = User.objects.create_user(email="slug2@example.com", password="pass123", name="User")
+        APIKey.objects.create_key(name="Listed App", user=user)
+        self.authenticate_user(user)
+
+        # Act
+        response = self.client.get("/cms-api/api-keys/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual("listed-app", response.json()[0]["app_slug"])
+
+    def test_update_api_key_where_app_slug_valid_should_change_it(self):
+        # Arrange
+        user = User.objects.create_user(email="slug3@example.com", password="pass123", name="User")
+        api_key, _ = APIKey.objects.create_key(name="Old Name", user=user)
+        self.authenticate_user(user)
+
+        # Act
+        response = self.client.patch(f"/cms-api/api-keys/{api_key.id}/", data={"app_slug": "my-app"}, format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual("my-app", response.json()["app_slug"])
+
+    def test_update_api_key_where_app_slug_invalid_should_return_400_invalid_app_slug(self):
+        # Arrange
+        user = User.objects.create_user(email="slug4@example.com", password="pass123", name="User")
+        api_key, _ = APIKey.objects.create_key(name="Some App", user=user)
+        self.authenticate_user(user)
+
+        # Act
+        response = self.client.patch(f"/cms-api/api-keys/{api_key.id}/", data={"app_slug": "Bad!"}, format="json")
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("invalid_app_slug", response.json()["error_name"])

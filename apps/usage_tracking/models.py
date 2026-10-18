@@ -329,3 +329,15 @@ class UsageImportState(BaseModel):
     watermark = models.DateTimeField(null=True, blank=True)
     last_run_at = models.DateTimeField(null=True, blank=True)
     last_error = models.TextField(blank=True, default="")
+
+
+class UsageApp(BaseModel):
+    """An integrating app: one per API key. Kept when the key is deleted so history stays attributed."""
+
+    api_key = models.OneToOneField(
+        "users.APIKey", null=True, blank=True, on_delete=models.SET_NULL, related_name="usage_app"
+    )
+    user = models.ForeignKey("users.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="usage_apps")
+    name = models.CharField(max_length=50)
+    # Public, non-secret: appended to audio/file URLs as `?c=<slug>`.
+    slug = models.SlugField(max_length=40, unique=True)
