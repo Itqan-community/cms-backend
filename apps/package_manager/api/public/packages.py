@@ -20,6 +20,7 @@ from apps.package_manager.services.package_registry import (
     ResolvedPackage,
 )
 from apps.usage_tracking.decorators.track_usage import track_extra, track_usage
+from apps.usage_tracking.services.install_events import record_installs
 
 router = ItqanRouter(tags=[NinjaTag.PACKAGES])
 
@@ -244,6 +245,7 @@ def resolve_package_manifest(request: Request, body: PackageManifestEntryIn):
         pre_fetched_assets[package_request.slug] = asset
 
     results = service.resolve_manifest(package_requests, assets=pre_fetched_assets)
+    record_installs(request, results)
 
     entity_ids: list[int] = []
     entity_names: list[str] = []
@@ -302,6 +304,7 @@ def resolve_package_single(
     asset = service.find_asset(slug)
     enforce_asset_access_on_public_api(getattr(request, "user", None), asset)
     result = service.resolve_single(slug, version, language=language, asset=asset)
+    record_installs(request, [result])
 
     track_extra(
         request,

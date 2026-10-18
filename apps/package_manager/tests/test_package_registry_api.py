@@ -210,6 +210,39 @@ class PackageSingleResolveAPITests(BaseTestCase):
         body = response.json()
         self.assertEqual("1.0.0", body["result"]["resolved_version"])
 
+    def test_resolve_single_where_cli_resolves_should_record_install_event(self):
+        # Arrange
+        from apps.usage_tracking.models import TrafficEvent, TrafficKind
+
+        asset = self._create_asset_with_versions("install-me", ["1.0.0"])
+
+        # Act
+        response = self.client.get(
+            f"/packages/resolve/{asset.slug}/?version=1.0.0",
+            headers={"user-agent": "itqan-cli/0.4.0", "x-itqan-install-id": "u-1"},
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        event = TrafficEvent.objects.get(kind=TrafficKind.CLI_INSTALL)
+        self.assertEqual((asset.id, "cli"), (event.asset_id, event.channel))
+
+    def test_resolve_single_where_outdated_check_should_not_record_install(self):
+        # Arrange
+        from apps.usage_tracking.models import TrafficEvent
+
+        asset = self._create_asset_with_versions("check-me", ["1.0.0"])
+
+        # Act
+        response = self.client.get(
+            f"/packages/resolve/{asset.slug}/?version=1.0.0",
+            headers={"user-agent": "itqan-cli/0.4.0", "x-itqan-command": "outdated"},
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertFalse(TrafficEvent.objects.exists())
+
 
 class PackageManifestResolveAPITests(BaseTestCase):
     def setUp(self):
