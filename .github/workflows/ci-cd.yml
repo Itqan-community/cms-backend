@@ -178,8 +178,8 @@ jobs:
                 echo "ENABLE_USAGE_LOGPUSH_IMPORT=${{ vars.STAGING_ENABLE_USAGE_LOGPUSH_IMPORT || 'False' }}";
                 echo "USAGE_LOGS_BUCKET=${{ vars.STAGING_USAGE_LOGS_BUCKET || 'itqan-usage-logs' }}";
                 echo "USAGE_LOGS_PREFIX=${{ vars.STAGING_USAGE_LOGS_PREFIX || 'http/staging/' }}";
-                echo "USAGE_LOGS_ACCESS_KEY_ID=${{ secrets.STAGING_USAGE_LOGS_ACCESS_KEY_ID }}";
-                echo "USAGE_LOGS_SECRET_ACCESS_KEY=${{ secrets.STAGING_USAGE_LOGS_SECRET_ACCESS_KEY }}";
+                echo "USAGE_LOGS_ACCESS_KEY_ID=${{ secrets.USAGE_LOGS_ACCESS_KEY_ID }}";
+                echo "USAGE_LOGS_SECRET_ACCESS_KEY=${{ secrets.USAGE_LOGS_SECRET_ACCESS_KEY }}";
                 echo "USAGE_LOGPUSH_MAX_FILES_PER_RUN=${{ vars.STAGING_USAGE_LOGPUSH_MAX_FILES_PER_RUN || '500' }}";
                 echo "ENABLE_USAGE_R2_RECONCILIATION=${{ vars.STAGING_ENABLE_USAGE_R2_RECONCILIATION || 'False' }}";
                 echo "CF_ACCOUNT_ID=${{ vars.CF_ACCOUNT_ID }}";
@@ -276,8 +276,8 @@ jobs:
                 echo "ENABLE_USAGE_LOGPUSH_IMPORT=${{ vars.PROD_ENABLE_USAGE_LOGPUSH_IMPORT || 'False' }}";
                 echo "USAGE_LOGS_BUCKET=${{ vars.PROD_USAGE_LOGS_BUCKET || 'itqan-usage-logs' }}";
                 echo "USAGE_LOGS_PREFIX=${{ vars.PROD_USAGE_LOGS_PREFIX || 'http/production/' }}";
-                echo "USAGE_LOGS_ACCESS_KEY_ID=${{ secrets.PROD_USAGE_LOGS_ACCESS_KEY_ID }}";
-                echo "USAGE_LOGS_SECRET_ACCESS_KEY=${{ secrets.PROD_USAGE_LOGS_SECRET_ACCESS_KEY }}";
+                echo "USAGE_LOGS_ACCESS_KEY_ID=${{ secrets.USAGE_LOGS_ACCESS_KEY_ID }}";
+                echo "USAGE_LOGS_SECRET_ACCESS_KEY=${{ secrets.USAGE_LOGS_SECRET_ACCESS_KEY }}";
                 echo "USAGE_LOGPUSH_MAX_FILES_PER_RUN=${{ vars.PROD_USAGE_LOGPUSH_MAX_FILES_PER_RUN || '500' }}";
                 echo "ENABLE_USAGE_R2_RECONCILIATION=${{ vars.PROD_ENABLE_USAGE_R2_RECONCILIATION || 'False' }}";
                 echo "CF_ACCOUNT_ID=${{ vars.CF_ACCOUNT_ID }}";

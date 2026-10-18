@@ -371,3 +371,7 @@ tracking beyond the hashed identities above, revenue reporting, and email/schedu
 7. New setting `USAGE_LOGPUSH_MAX_FILES_PER_RUN` (default 500) bounds a catch-up run.
 8. On edge rows `end_user_id` hashes `x-client-name` + external id (the edge never sees the API
    key); plan 2's Django fallback hashes `app_id` + external id.
+9. Staging and production share one Cloudflare token: the repository-level secrets
+   `USAGE_ANALYTICS_API_TOKEN`, `USAGE_LOGS_ACCESS_KEY_ID` and `USAGE_LOGS_SECRET_ACCESS_KEY`
+   feed both deploys. Each environment still reads only its own prefix and keeps its own
+   `<ENV>_USAGE_IDENTITY_KEY`.
