@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from allauth.account.decorators import secure_admin_login
 from django import forms
 from django.conf import settings
@@ -96,10 +98,15 @@ class UserAdmin(auth_admin.UserAdmin):
         (_("Important dates"), {"fields": ("last_login", "created_at", "updated_at")}),
     )
     inlines = [PublisherMemberInline]
-    list_display = ["email", "name", "is_superuser"]
+    list_display = ["email", "name", "is_superuser", "date_joined"]
     search_fields = ["name", "email", "phone"]
     ordering = ["id"]
     readonly_fields = ("created_at", "updated_at", "assigned_languages_summary")
+
+    # User drops AbstractUser.date_joined; created_at records the same moment.
+    @admin.display(description=_("Date joined"), ordering="created_at")
+    def date_joined(self, obj: User) -> datetime:
+        return obj.created_at
 
     @admin.display(description=_("Assigned languages (per publisher)"))
     def assigned_languages_summary(self, obj: User) -> str:

@@ -1042,6 +1042,9 @@ msgstr "تعيينات اللغات"
 msgid "Important dates"
 msgstr "تواريخ مهمة"
 
+msgid "Date joined"
+msgstr "تاريخ الانضمام"
+
 msgid "Assigned languages (per publisher)"
 msgstr "اللغات المعيّنة (لكل ناشر)"
 
