@@ -197,6 +197,9 @@ jobs:
                 echo "ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=${{ vars.STAGING_ENFORCE_ASSET_ACCESS_ON_PUBLIC_API }}";
                 echo "GUNICORN_WORKERS=${{ vars.STAGING_GUNICORN_WORKERS }}";
                 echo "SENTRY_TRACES_SAMPLE_RATE=${{ vars.STAGING_SENTRY_TRACES_SAMPLE_RATE }}";
+                echo "GEMINI_API_KEY=${{ secrets.STAGING_GEMINI_API_KEY }}";
+                echo "GEMINI_FAST_MODEL=${{ vars.STAGING_GEMINI_FAST_MODEL || 'gemini-3.5-flash-lite' }}";
+                echo "GEMINI_TIMEOUT_SECONDS=${{ vars.STAGING_GEMINI_TIMEOUT_SECONDS || '20' }}";
               } > deployment/docker/.env
             elif [ "${{ env.ENV_NAME }}" = "production" ]; then
               {
@@ -272,6 +275,9 @@ jobs:
                 echo "XMLSEC_BINARY=${{ vars.PROD_XMLSEC_BINARY }}";
                 echo "ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=${{ vars.PROD_ENFORCE_ASSET_ACCESS_ON_PUBLIC_API }}";
                 echo "SENTRY_TRACES_SAMPLE_RATE=${{ vars.PROD_SENTRY_TRACES_SAMPLE_RATE }}";
+                echo "GEMINI_API_KEY=${{ secrets.PROD_GEMINI_API_KEY }}";
+                echo "GEMINI_FAST_MODEL=${{ vars.PROD_GEMINI_FAST_MODEL || 'gemini-3.5-flash-lite' }}";
+                echo "GEMINI_TIMEOUT_SECONDS=${{ vars.PROD_GEMINI_TIMEOUT_SECONDS || '20' }}";
               } > deployment/docker/.env
             fi
             # Append image coordinates for docker compose variable substitution

@@ -464,6 +464,16 @@ GITHUB_TOKEN_CACHE_SKEW_SECONDS = config("GITHUB_TOKEN_CACHE_SKEW_SECONDS", cast
 GITHUB_WEBHOOK_SECRET = config("GITHUB_WEBHOOK_SECRET", default="")
 
 # ========================
+# Gemini (admin AI helpers: translation + asset slugs)
+# ========================
+# Free tier only: never link a billing account to this key's project. With no key,
+# slugs keep the category template with the slugified name and AI translate returns 503.
+GEMINI_API_KEY = config("GEMINI_API_KEY", default="")
+GEMINI_FAST_MODEL = config("GEMINI_FAST_MODEL", default="gemini-3.5-flash-lite")
+# Free-tier latency varies (4-11s observed); only Translate clicks wait on it, never asset creation.
+GEMINI_TIMEOUT_SECONDS = config("GEMINI_TIMEOUT_SECONDS", cast=float, default=20.0)
+
+# ========================
 # SAML IDP (djangosaml2idp)
 # ========================
 if SAML_IDP_ENABLED:
