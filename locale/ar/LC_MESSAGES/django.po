@@ -1021,6 +1021,12 @@ msgstr "الإحصائيات بالساعة محدودة بـ {days} يومًا.
 msgid "window_hours must divide 24 evenly, got {window_hours}"
 msgstr "يجب أن يقسّم window_hours الرقم 24 دون باقٍ، القيمة المُعطاة {window_hours}"
 
+msgid "App slug must be 3-40 lowercase letters, digits or hyphens, and start and end with a letter or digit."
+msgstr "يجب أن يتكون المعرّف العام للتطبيق من 3 إلى 40 حرفًا لاتينيًا صغيرًا أو رقمًا أو شرطة، وأن يبدأ وينتهي بحرف أو رقم."
+
+msgid "This app slug is already taken."
+msgstr "هذا المعرّف العام للتطبيق مستخدم بالفعل."
+
 msgid "Itqan Community"
 msgstr "مجتمع اتقان"
 

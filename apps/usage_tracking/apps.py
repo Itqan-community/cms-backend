@@ -11,3 +11,5 @@ class UsageTrackingConfig(AppConfig):
         from apps.usage_tracking.checks import check_usage_identity_key
 
         checks.register(check_usage_identity_key)
+
+        from apps.usage_tracking import signals  # noqa: F401
