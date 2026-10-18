@@ -670,6 +670,22 @@ ASSET_DOWNLOAD_EVENT_RETENTION_DAYS = config(
     "ASSET_DOWNLOAD_EVENT_RETENTION_DAYS", default="", cast=lambda value: int(value) if value else None
 )
 
+# Usage reports: Cloudflare Logpush import (every edge request) and R2 read reconciliation.
+# All optional; both jobs are off until enabled.
+ENABLE_USAGE_LOGPUSH_IMPORT = config("ENABLE_USAGE_LOGPUSH_IMPORT", default=False, cast=bool)
+USAGE_LOGS_BUCKET = config("USAGE_LOGS_BUCKET", default="itqan-usage-logs")
+USAGE_LOGS_PREFIX = config("USAGE_LOGS_PREFIX", default="http/production/")
+USAGE_LOGS_ACCESS_KEY_ID = config("USAGE_LOGS_ACCESS_KEY_ID", default="")
+USAGE_LOGS_SECRET_ACCESS_KEY = config("USAGE_LOGS_SECRET_ACCESS_KEY", default="")
+USAGE_LOGPUSH_MAX_FILES_PER_RUN = config("USAGE_LOGPUSH_MAX_FILES_PER_RUN", default=500, cast=int)
+ENABLE_USAGE_R2_RECONCILIATION = config("ENABLE_USAGE_R2_RECONCILIATION", default=False, cast=bool)
+CF_ACCOUNT_ID = config("CF_ACCOUNT_ID", default="")
+# Needs Account Analytics Read; falls back to CF_API_TOKEN.
+USAGE_ANALYTICS_API_TOKEN = config("USAGE_ANALYTICS_API_TOKEN", default="") or CF_API_TOKEN
+# Never rotate: listener/install/end-user ids are HMACs under this key. Empty derives from SECRET_KEY.
+USAGE_IDENTITY_KEY = config("USAGE_IDENTITY_KEY", default="")
+USAGE_EVENT_RETENTION_MONTHS = config("USAGE_EVENT_RETENTION_MONTHS", default=25, cast=int)
+
 
 # plain_permissions settings
 PERMISSIONS_SETTINGS = {
