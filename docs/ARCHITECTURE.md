@@ -729,6 +729,41 @@ erDiagram
     }
 ```
 
+
+### Usage reports: traffic collection
+
+Replaces the asset download statistics sync above once both have matched for a week
+(spec: `docs/superpowers/specs/2026-10-18-usage-reports-design.md`).
+
+```mermaid
+flowchart LR
+    CF["Cloudflare Logpush<br/>(storage + API hosts, every request)"] --> R2["R2 itqan-usage-logs<br/>http/&lt;env&gt;/YYYYMMDD/*.log.gz"]
+    R2 --> I["import_logpush_task (minute 10)<br/>parse → classify → hash ids"]
+    I --> E["TrafficEvent"] --> H["TrafficHourly → TrafficDaily"]
+    E --> M["usage_maintenance_task (03:30)<br/>TrafficMonthlyUniques + purge"]
+    A["R2 analytics (GetObject per object)"] --> RC["reconcile_r2_reads_task (minute 40)"] --> RR["R2ObjectReadsHourly"]
+```
+
+| Model | Holds |
+|---|---|
+| `TrafficEvent` | One row per edge request (Cloudflare `ray_id`, unique) for an asset file or a public-API route: kind (`audio_surah`, `audio_ayah`, `version_file`, `gallery_download`, `api_call`, `cli_install`, `view`), asset/surah/version/language, country, channel, platform, endpoint, path, status class, bytes, and HMAC identities (`listener_id` = IP + user agent, `install_id`, `end_user_id`). Raw IPs are never stored. Purged after `USAGE_EVENT_RETENTION_MONTHS` |
+| `TrafficHourly` / `TrafficDaily` | Per hour/day and dimension: `requests`, `bytes`, `sessions` (plays for audio, downloads for files, first install per install id and day, every call for API calls and views). Bots and 4xx/5xx are excluded |
+| `TrafficMonthlyUniques` | Distinct listeners, downloaders, installs and end users per month for all traffic, each asset, publisher and app. Kept forever |
+| `R2ObjectReadsHourly` | R2 reads per object and hour beside the edge requests seen for it; the difference is traffic the edge never saw |
+| `LogFileImport` / `UsageImportState` | Imported Logpush files (idempotency; corrupt files recorded with `error`) and per-job watermark, last run and last error |
+
+- **Import:** lists the day folders from the watermark day minus one, skips files already in
+  `LogFileImport`, stores each file's events and its record (with the hours they touch) in one
+  transaction, then rebuilds those hours (plus the next hour when a play may continue into it)
+  and marks the file rolled up. Files left un-rolled-up by a failed run are finished first by
+  the next run. Only `GET` requests count (CORS preflights and `HEAD` probes are dropped).
+  Network errors leave a file pending; only corrupt gzip files are recorded with `error`.
+- **Channel** (first match): `gallery` (`?download=` links), `cli` (`itqan-cli/` user agent or
+  install header), `web` (browsers), `app_unidentified` (Android/iOS media players and HTTP
+  libraries), `script` (curl, python, node…), `other`. Bots are kept but flagged and excluded.
+- **Routes:** public-API paths are matched against the developer API's own OpenAPI schema;
+  portal, CMS and OAuth paths are dropped.
+
 ### Folders (recitation variants)
 
 A **RecitationFolder** sits between `Asset` and `RecitationSurahTrack`. It lets one
