@@ -186,6 +186,7 @@ jobs:
                 echo "USAGE_ANALYTICS_API_TOKEN=${{ secrets.USAGE_ANALYTICS_API_TOKEN }}";
                 echo "USAGE_IDENTITY_KEY=${{ secrets.STAGING_USAGE_IDENTITY_KEY }}";
                 echo "USAGE_EVENT_RETENTION_MONTHS=${{ vars.STAGING_USAGE_EVENT_RETENTION_MONTHS || '25' }}";
+                echo "GALLERY_DOWNLOADS_VIA_CDN=${{ vars.STAGING_GALLERY_DOWNLOADS_VIA_CDN || 'False' }}";
                 echo "EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend";
                 echo "EMAIL_HOST=${{ secrets.EMAIL_HOST }}";
                 echo "EMAIL_PORT=${{ secrets.EMAIL_PORT }}";
@@ -284,6 +285,7 @@ jobs:
                 echo "USAGE_ANALYTICS_API_TOKEN=${{ secrets.USAGE_ANALYTICS_API_TOKEN }}";
                 echo "USAGE_IDENTITY_KEY=${{ secrets.PROD_USAGE_IDENTITY_KEY }}";
                 echo "USAGE_EVENT_RETENTION_MONTHS=${{ vars.PROD_USAGE_EVENT_RETENTION_MONTHS || '25' }}";
+                echo "GALLERY_DOWNLOADS_VIA_CDN=${{ vars.PROD_GALLERY_DOWNLOADS_VIA_CDN || 'False' }}";
                 echo "ALLAUTH_JWT_PRIVATE_KEY=${{ secrets.PRODUCTION_ALLAUTH_JWT_PRIVATE_KEY }}";
                 echo "FRONTEND_BASE_URL=${{ secrets.PRODUCTION_FRONTEND_BASE_URL }}";
                 echo "GOOGLE_CLIENT_ID=${{ secrets.PROD_GOOGLE_CLIENT_ID }}";
