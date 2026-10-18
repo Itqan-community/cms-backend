@@ -26,3 +26,4 @@ class NinjaTag(models.TextChoices):
     SAMPLE_DATA = "Sample Data"
     PACKAGES = "Packages"
     DEPENDABOT = "Dependabot"
+    AI = "AI"
