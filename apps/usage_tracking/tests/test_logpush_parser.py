@@ -171,3 +171,17 @@ class TestParseLineFilters:
 
         # Assert
         assert "\x00" not in parsed.user_agent + parsed.client_name
+
+
+class TestAttributionParsing:
+    def test_parse_line_where_api_response_names_app_should_use_it(self):
+        # Act
+        parsed = parse_line(_line(ClientRequestURI="/recitations/13/", ResponseHeaders={"x-itqan-app": "my-app"}))
+
+        # Assert
+        assert parsed.app_slug_raw == "my-app"
+
+    def test_parse_line_where_api_post_should_keep_but_file_post_should_skip(self):
+        # Act / Assert
+        assert parse_line(_line(ClientRequestURI="/packages/resolve/manifest/", ClientRequestMethod="POST")) is not None
+        assert parse_line(_line(ClientRequestMethod="POST")) is None

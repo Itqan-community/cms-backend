@@ -113,6 +113,25 @@ class TestBuildEvents(BaseTestCase):
         # Assert
         assert hours == {datetime(2026, 10, 18, 10, tzinfo=UTC), datetime(2026, 10, 18, 11, tzinfo=UTC)}
 
+    def test_build_events_where_slug_known_should_attribute_app(self):
+        # Arrange
+        from apps.usage_tracking.services.usage_apps import app_for_key
+        from apps.users.models import APIKey, User
+
+        user = User.objects.create_user(email="dev3@example.com", name="Dev")
+        api_key, _ = APIKey.objects.create_key(name="Tagged App", user=user)
+        app = app_for_key(api_key)
+        uri = f"/media/uploads/assets/13/recitations/091.mp3?c={app.slug}"
+
+        # Act
+        [known, unknown] = build_events(
+            [parse_line(_line("k1", ClientRequestURI=uri)), parse_line(_line("u1", ClientRequestURI=uri + "x"))]
+        )
+
+        # Assert
+        assert (known.app_id, known.channel) == (app.id, TrafficChannel.APP_IDENTIFIED)
+        assert (unknown.app_id, unknown.channel) == (None, TrafficChannel.APP_UNIDENTIFIED)
+
 
 @override_settings(**_SETTINGS)
 class TestImportLogpush(BaseTestCase):

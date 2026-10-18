@@ -111,3 +111,20 @@ class TestChannel:
     ):
         # Act / Assert
         assert channel_for(kind, family, has_install_id=has_install_id) == expected
+
+
+class TestIdentifiedChannel:
+    def test_channel_for_where_app_identified_should_beat_family_but_not_gallery_or_cli(self):
+        # Act / Assert
+        assert (
+            channel_for(TrafficKind.AUDIO_SURAH, "dalvik", has_install_id=False, app_identified=True)
+            == TrafficChannel.APP_IDENTIFIED
+        )
+        assert (
+            channel_for(TrafficKind.GALLERY_DOWNLOAD, "browser", has_install_id=False, app_identified=True)
+            == TrafficChannel.GALLERY
+        )
+        assert (
+            channel_for(TrafficKind.VERSION_FILE, "itqan-cli", has_install_id=False, app_identified=True)
+            == TrafficChannel.CLI
+        )
