@@ -118,8 +118,9 @@ def parse_line(line: bytes | str) -> ParsedRequest | None:
         record = json.loads(line)
         if not isinstance(record, dict) or not record.get("RayID"):
             return None
-        # Only GET fetches content; CORS preflights (OPTIONS) and HEAD probes are not usage.
-        if (record.get("ClientRequestMethod") or "GET") != "GET":
+        # CORS preflights (OPTIONS) and HEAD probes are not usage; POST only counts on API routes.
+        method = record.get("ClientRequestMethod") or "GET"
+        if method not in ("GET", "POST"):
             return None
         uri = _text(record.get("ClientRequestURI") or record.get("ClientRequestPath"), 4096)
         path, _, query = uri.partition("?")
@@ -128,6 +129,8 @@ def parse_line(line: bytes | str) -> ParsedRequest | None:
         if located is None:
             return None
         kind, asset_id, surah, version_id, slug, endpoint = located
+        if method == "POST" and kind != TrafficKind.API_CALL:
+            return None
         headers = record.get("RequestHeaders") or {}
         return ParsedRequest(
             ray_id=_text(record["RayID"], 64),
@@ -145,7 +148,8 @@ def parse_line(line: bytes | str) -> ParsedRequest | None:
             cache_status=_text(record.get("CacheCacheStatus"), 16),
             ip=_text(record.get("ClientIP"), 64),
             user_agent=_text(record.get("ClientRequestUserAgent"), 1024),
-            app_slug_raw=_first(params, "c")[:64],
+            # Files carry the app in `?c=`; API calls in the X-Itqan-App response header.
+            app_slug_raw=_text(_first(params, "c") or (record.get("ResponseHeaders") or {}).get("x-itqan-app"), 64),
             client_name=_text(headers.get("x-client-name"), 64),
             client_version=_text(headers.get("x-client-version"), 32),
             external_user_id=_text(headers.get("x-external-user-id"), 64),

@@ -23,6 +23,7 @@ from apps.usage_tracking.services.logpush_parser import ParsedRequest, parse_lin
 from apps.usage_tracking.services.r2_logs_client import R2LogsClient
 from apps.usage_tracking.services.traffic_classify import channel_for, is_bot_user_agent, platform_for, ua_family
 from apps.usage_tracking.services.traffic_identity import end_user_id_for, install_id_for, listener_id_for
+from apps.usage_tracking.services.usage_apps import slug_ids
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,7 @@ class _Resolver:
             )
         }
         self._slugs = dict(Asset.objects.filter(slug__in=slugs).values_list("slug", "id"))
+        self._apps = slug_ids(p.app_slug_raw for p in parsed if p.app_slug_raw)
 
     def asset_id(self, parsed: ParsedRequest) -> int | None:
         if parsed.asset_id is not None:
@@ -62,6 +64,9 @@ class _Resolver:
         if parsed.asset_version_id in self._versions:
             return self._versions[parsed.asset_version_id][0]
         return self._slugs.get(parsed.asset_slug)
+
+    def app_id(self, parsed: ParsedRequest) -> int | None:
+        return self._apps.get(parsed.app_slug_raw)
 
     def language(self, parsed: ParsedRequest) -> str:
         return self._versions.get(parsed.asset_version_id, (None, ""))[1]
@@ -73,6 +78,7 @@ def build_events(parsed: list[ParsedRequest]) -> list[TrafficEvent]:
     missing_ip = 0
     for request in parsed:
         family = ua_family(request.user_agent)
+        app_id = resolver.app_id(request)
         if not request.ip:
             missing_ip += 1
         events.append(
@@ -86,9 +92,11 @@ def build_events(parsed: list[ParsedRequest]) -> list[TrafficEvent]:
                 asset_version_id=request.asset_version_id,
                 language=resolver.language(request),
                 country=request.country,
-                channel=channel_for(request.kind, family, has_install_id=bool(request.install_id_raw)),
+                channel=channel_for(
+                    request.kind, family, has_install_id=bool(request.install_id_raw), app_identified=app_id is not None
+                ),
                 platform=platform_for(request.user_agent, family),
-                app_id=None,
+                app_id=app_id,
                 endpoint=request.endpoint,
                 path=request.path,
                 app_slug_raw=request.app_slug_raw,

@@ -82,12 +82,14 @@ def platform_for(user_agent: str, family: str) -> str:
     return TrafficPlatform.UNKNOWN
 
 
-def channel_for(kind: str, family: str, *, has_install_id: bool) -> str:
-    """First matching rule wins (spec §5.1). `app_identified` is added in plan 2."""
+def channel_for(kind: str, family: str, *, has_install_id: bool, app_identified: bool = False) -> str:
+    """First matching rule wins (spec §5.1)."""
     if kind == TrafficKind.GALLERY_DOWNLOAD:
         return TrafficChannel.GALLERY
     if family == "itqan-cli" or has_install_id:
         return TrafficChannel.CLI
+    if app_identified:
+        return TrafficChannel.APP_IDENTIFIED
     if family == "browser":
         return TrafficChannel.WEB
     if family in _APP_FAMILIES:
