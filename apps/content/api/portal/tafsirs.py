@@ -140,6 +140,10 @@ class TafsirCreateIn(Schema):
     version_summary_ar: str = ""
     template: AssetTemplateChoice
     mushaf_layout_id: int | None = None
+    slug: str | None = Field(
+        default=None,
+        description="Package name from `POST /portal/ai/translate/` (`slug_for`); built from the names when omitted.",
+    )
 
 
 class TafsirPutIn(Schema):
@@ -230,6 +234,7 @@ def list_tafsirs(request: Request, filters: TafsirFilter = Query()):
     response={
         201: TafsirDetailOut,
         400: NinjaErrorResponse[Literal["tafsir_name_required"]]
+        | NinjaErrorResponse[Literal["asset_slug_invalid"]]
         | NinjaErrorResponse[Literal["external_url_required"]]
         | NinjaErrorResponse[Literal["version_number_required"]]
         | NinjaErrorResponse[Literal["version_number_invalid"]]
@@ -273,6 +278,7 @@ def create_tafsir(
         thumbnail_url=thumbnail,
         is_open_access=data.is_open_access,
         restricted_for_tenant=data.restricted_for_tenant,
+        slug=data.slug,
         template=data.template,
         mushaf_layout_id=data.mushaf_layout_id,
     )

@@ -16,7 +16,8 @@ from apps.publishers.models import Domain
 from apps.users.models import User
 
 
-@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+# GEMINI_API_KEY is blanked so a key in a developer's .env never makes tests call the live (quota-limited) API.
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True, GEMINI_API_KEY="")
 class BaseTestCase(TestCase):
     databases = "__all__"
     client_class = APIClient

@@ -358,6 +358,18 @@ msgstr "انتهت المهلة الزمنية لتقطيع صوت الآية."
 msgid "Failed to slice ayah audio with ffmpeg."
 msgstr "تعذر تقطيع صوت الآية باستخدام ffmpeg."
 
+msgid "Fill in at least one Arabic field to translate."
+msgstr "املأ حقلاً عربياً واحداً على الأقل للترجمة."
+
+msgid "The free daily AI limit has been reached. Try again tomorrow."
+msgstr "تم بلوغ الحد اليومي المجاني للذكاء الاصطناعي. حاول مرة أخرى غداً."
+
+msgid "Too many AI requests right now. Wait a minute and try again."
+msgstr "طلبات كثيرة للذكاء الاصطناعي حالياً. انتظر دقيقة ثم حاول مرة أخرى."
+
+msgid "The AI service is unavailable right now. Try again later."
+msgstr "خدمة الذكاء الاصطناعي غير متاحة حالياً. حاول لاحقاً."
+
 msgid "Not found."
 msgstr "غير موجود."
 
@@ -464,6 +476,9 @@ msgstr "حالة مراجعة غير صالحة."
 
 msgid "A comment is required when requesting changes."
 msgstr "التعليق مطلوب عند طلب إجراء تعديلات."
+
+msgid "The package name (slug) is not valid for this asset."
+msgstr "اسم الحزمة (المعرّف) غير صالح لهذا الأصل."
 
 msgid "This asset has no content template."
 msgstr "هذه المادة ليس لها قالب محتوى."

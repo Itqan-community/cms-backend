@@ -16,6 +16,7 @@ from apps.content.services.asset_content import (
     forbid_published_version_change,
     issue_version_number,
 )
+from apps.content.services.asset_slug import AssetSlugService
 from apps.content.version_text import VersionText
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
@@ -61,6 +62,7 @@ class FontService:
         thumbnail_url: Any | None = None,
         is_open_access: bool = False,
         restricted_for_tenant: bool = False,
+        slug: str | None = None,
     ) -> Asset:
         """
         Business Logic: Create a new font.
@@ -96,7 +98,16 @@ class FontService:
         if not is_external:
             external_url = None
 
+        # No AI here: the portal sends the slug its Translate call returned (POST /portal/ai/translate/).
+        slug = AssetSlugService().resolve_slug(
+            category=CategoryChoice.FONT,
+            requested=slug,
+            name_en=normalized_name_en,
+            name_ar=normalized_name_ar,
+            language=language,
+        )
         font = self.repo.create_font(
+            slug=slug,
             publisher_id=publisher_id,
             name=name,
             name_ar=normalized_name_ar,

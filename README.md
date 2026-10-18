@@ -140,6 +140,24 @@ and `CF_R2_CUSTOM_DOMAIN` (the token needs Zone Analytics Read with access to
 | `ASSET_DOWNLOAD_PLAY_WINDOW_MINUTES` | `5` | Requests for the same file from the same client within this gap count as one play |
 | `ASSET_DOWNLOAD_EVENT_RETENTION_DAYS` | empty | Delete raw request events older than this; empty keeps them forever |
 
+#### Optional: AI translation and asset slugs (Gemini free tier)
+
+The portal's "Translate from Arabic" / "Write from the web" buttons and the human-friendly slug of
+new assets (suggested when Translate is clicked; creating an asset never calls Gemini) use the Gemini
+API free tier. Create a key in Google AI Studio and **never link a billing
+account** to its project (that ends the free tier). Without a key everything still works: slugs keep
+the category template with the slugified name (e.g. `mushaf-warsh`) and the translate endpoint returns
+`ai_unavailable` (503). Tests always run with the key blanked (`BaseTestCase`). Free-tier prompts
+may be used by Google to improve its products, so only public catalog metadata is sent.
+"Write from the web" reads the intro of the matching Arabic and English Wikipedia articles (public API,
+no key); Google Search grounding is not part of the free tier for new projects.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `GEMINI_API_KEY` | empty | AI Studio API key (backend only) |
+| `GEMINI_FAST_MODEL` | `gemini-3.5-flash-lite` | Translation, slug words and "Write from the web" (free tier: ~500 requests/day) |
+| `GEMINI_TIMEOUT_SECONDS` | `20` | Per-request timeout (free-tier latency varies; only Translate clicks wait on it) |
+
 ### 2) Start with Docker (recommended)
 
 ```bash
