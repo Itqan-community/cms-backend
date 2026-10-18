@@ -329,6 +329,9 @@ class UsageImportState(BaseModel):
     watermark = models.DateTimeField(null=True, blank=True)
     last_run_at = models.DateTimeField(null=True, blank=True)
     last_error = models.TextField(blank=True, default="")
+    # Id-based progress for jobs that walk tables (Django fold-in): source rows and traffic rows.
+    cursor = models.BigIntegerField(null=True, blank=True)
+    traffic_cursor = models.BigIntegerField(null=True, blank=True)
 
 
 class UsageApp(BaseModel):

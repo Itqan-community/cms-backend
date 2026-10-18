@@ -34,8 +34,14 @@ from apps.usage_tracking.models import (
 LOGPUSH_JOB = "logpush"
 R2_RECONCILIATION_JOB = "r2_reconciliation"
 MAINTENANCE_JOB = "maintenance"
+DJANGO_FOLDIN_JOB = "django_foldin"
 # Arbitrary constants identifying each job's Postgres advisory lock.
-_LOCK_IDS = {LOGPUSH_JOB: 7_340_212_027, R2_RECONCILIATION_JOB: 7_340_212_028, MAINTENANCE_JOB: 7_340_212_029}
+_LOCK_IDS = {
+    LOGPUSH_JOB: 7_340_212_027,
+    R2_RECONCILIATION_JOB: 7_340_212_028,
+    MAINTENANCE_JOB: 7_340_212_029,
+    DJANGO_FOLDIN_JOB: 7_340_212_030,
+}
 _HOUR = timedelta(hours=1)
 _DIMENSION_COLUMNS = ", ".join(TRAFFIC_DIMENSIONS)
 
@@ -317,6 +323,15 @@ class TrafficRepository:
     def unlock(self, job: str) -> None:
         with connection.cursor() as cursor:
             cursor.execute("SELECT pg_advisory_unlock(%s)", [_LOCK_IDS[job]])
+
+    def get_state(self, key: str) -> UsageImportState:
+        state, _ = UsageImportState.objects.get_or_create(key=key)
+        return state
+
+    def set_cursor(self, key: str, cursor: int, *, traffic_cursor: int) -> None:
+        UsageImportState.objects.update_or_create(
+            key=key, defaults={"cursor": cursor, "traffic_cursor": traffic_cursor}
+        )
 
     def get_watermark(self, key: str) -> datetime | None:
         return UsageImportState.objects.filter(key=key).values_list("watermark", flat=True).first()
