@@ -1,6 +1,7 @@
 import logging
 from typing import Annotated
 
+from django.db.models import Exists, OuterRef
 from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import Field
@@ -10,6 +11,7 @@ from apps.content.models import (
     AssetTemplateChoice,
     CategoryChoice,
     LicenseChoice,
+    RecitationAyahTiming,
     StatusChoice,
     consumer_visible_q,
 )
@@ -50,6 +52,7 @@ class ListAssetOut(Schema):
     is_open_access: bool
     template: AssetTemplateChoice | None = None
     mushaf_layout: AssetMushafLayoutOut | None = None
+    has_ayah_timings: bool
 
 
 class AssetFilter(FilterSchema):
@@ -76,6 +79,12 @@ def list_assets(request: Request, filters: AssetFilter = Query()):
         .filter(restricted_for_tenant=False)
         .exclude(status=StatusChoice.DRAFT)
         .filter(consumer_visible_q())
+        .annotate(
+            # Only folders consumers can see count; a hidden folder's timings are withdrawn.
+            has_ayah_timings=Exists(
+                RecitationAyahTiming.objects.filter(track__asset=OuterRef("pk"), track__folder__is_visible=True)
+            )
+        )
     )
     assets = filters.filter(assets)
     return assets

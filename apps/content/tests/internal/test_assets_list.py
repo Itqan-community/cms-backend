@@ -1,3 +1,6 @@
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from model_bakery import baker
 
 from apps.content.models import (
@@ -6,6 +9,9 @@ from apps.content.models import (
     CategoryChoice,
     LicenseChoice,
     MushafLayout,
+    RecitationAyahTiming,
+    RecitationFolder,
+    RecitationSurahTrack,
     StatusChoice,
 )
 from apps.content.tests.publishing import make_visible
@@ -647,3 +653,118 @@ class ListAssetTest(BaseTestCase):
         self.assertEqual(1, len(body["results"]))
         self.assertIsNone(body["results"][0]["template"])
         self.assertIsNone(body["results"][0]["mushaf_layout"])
+
+    # ── Ayah timings ──────────────────────────────────────────
+
+    def _make_recitation(self, name: str) -> Asset:
+        return make_visible(
+            baker.make(
+                Asset,
+                name=name,
+                category=CategoryChoice.RECITATION,
+                reciter=baker.make("content.Reciter", name=f"{name} Reciter"),
+                riwayah=baker.make("content.Riwayah", name=f"{name} Riwayah"),
+                status=StatusChoice.READY,
+            )
+        )
+
+    def _add_timing(self, folder: RecitationFolder) -> None:
+        track = baker.make(
+            RecitationSurahTrack,
+            asset=folder.asset,
+            folder=folder,
+            surah_number=1,
+            audio_file=SimpleUploadedFile("s001.mp3", b"dummy-track-content"),
+            duration_ms=1000,
+            size_bytes=100,
+        )
+        baker.make(RecitationAyahTiming, track=track, ayah_key="1:1", start_ms=0, end_ms=1000, duration_ms=1000)
+
+    def test_list_asset_where_recitation_has_ayah_timings_should_report_has_ayah_timings_true(self):
+        # Arrange
+        asset = self._make_recitation("Timed Recitation")
+        self._add_timing(asset.recitation_folders.get(is_default=True))
+
+        # Act
+        response = self.client.get("/cms-api/assets/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(1, len(body["results"]))
+        self.assertTrue(body["results"][0]["has_ayah_timings"])
+
+    def test_list_asset_where_recitation_has_no_ayah_timings_should_report_has_ayah_timings_false(self):
+        # Arrange
+        asset = self._make_recitation("Untimed Recitation")
+        baker.make(
+            RecitationSurahTrack,
+            asset=asset,
+            folder=asset.recitation_folders.get(is_default=True),
+            surah_number=1,
+            audio_file=SimpleUploadedFile("s001.mp3", b"dummy-track-content"),
+            duration_ms=1000,
+            size_bytes=100,
+        )
+
+        # Act
+        response = self.client.get("/cms-api/assets/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(1, len(body["results"]))
+        self.assertFalse(body["results"][0]["has_ayah_timings"])
+
+    def test_list_asset_where_ayah_timings_only_in_hidden_folder_should_report_has_ayah_timings_false(self):
+        # Arrange
+        asset = self._make_recitation("Hidden Timings Recitation")
+        hidden_folder = baker.make(RecitationFolder, asset=asset, name="Hidden", is_visible=False)
+        self._add_timing(hidden_folder)
+
+        # Act
+        response = self.client.get("/cms-api/assets/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(1, len(body["results"]))
+        self.assertFalse(body["results"][0]["has_ayah_timings"])
+
+    def test_list_asset_where_non_recitation_should_report_has_ayah_timings_false(self):
+        # Arrange
+        make_visible(
+            baker.make(
+                Asset,
+                name="Tafsir Asset",
+                category=CategoryChoice.TAFSIR,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+            )
+        )
+
+        # Act
+        response = self.client.get("/cms-api/assets/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertFalse(response.json()["results"][0]["has_ayah_timings"])
+
+    def test_list_asset_where_many_timed_recitations_should_not_add_queries_per_asset(self):
+        # Arrange
+        asset = self._make_recitation("Timed Recitation 1")
+        self._add_timing(asset.recitation_folders.get(is_default=True))
+        with CaptureQueriesContext(connection) as single:
+            self.client.get("/cms-api/assets/", format="json")
+        for index in range(2, 5):
+            asset = self._make_recitation(f"Timed Recitation {index}")
+            self._add_timing(asset.recitation_folders.get(is_default=True))
+
+        # Act
+        with CaptureQueriesContext(connection) as many:
+            response = self.client.get("/cms-api/assets/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(4, len(response.json()["results"]))
+        self.assertEqual(len(single.captured_queries), len(many.captured_queries))
