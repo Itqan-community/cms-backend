@@ -46,6 +46,19 @@ app.conf.beat_schedule = {
         # Minute 20: after the 15-minute Cloudflare lag, offset from sync-audio-usage (minute 5).
         "schedule": crontab(minute=20),
     },
+    "import-logpush": {
+        "task": "apps.usage_tracking.tasks.import_logpush_task",
+        # Minute 10: Logpush delivers within minutes; offset from the other usage jobs.
+        "schedule": crontab(minute=10),
+    },
+    "reconcile-r2-reads": {
+        "task": "apps.usage_tracking.tasks.reconcile_r2_reads_task",
+        "schedule": crontab(minute=40),
+    },
+    "usage-maintenance": {
+        "task": "apps.usage_tracking.tasks.usage_maintenance_task",
+        "schedule": crontab(minute=30, hour=3),
+    },
     "notify-publishers-pending-access-requests": {
         "task": "apps.content.tasks.notify_publishers_pending_access_requests",
         "schedule": crontab(minute=0, hour=settings.PENDING_ACCESS_REQUEST_NOTIFICATION_HOUR),
