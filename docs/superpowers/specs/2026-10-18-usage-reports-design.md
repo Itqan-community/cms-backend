@@ -375,3 +375,28 @@ tracking beyond the hashed identities above, revenue reporting, and email/schedu
    `USAGE_ANALYTICS_API_TOKEN`, `USAGE_LOGS_ACCESS_KEY_ID` and `USAGE_LOGS_SECRET_ACCESS_KEY`
    feed both deploys. Each environment still reads only its own prefix and keeps its own
    `<ENV>_USAGE_IDENTITY_KEY`.
+
+## 19. Amendments from plan 2 (attribution)
+
+1. `UsageApp` (usage_tracking) holds the public slug, one per API key, kept when the key is
+   deleted; `APIKey`'s pk is a string while rollups and monthly uniques key apps by integer.
+2. No Cloudflare API cache rule: API-key responses are `Cache-Control: private`; Django's Redis
+   response caches stay shared because the tag is applied on the way out.
+3. API-call attribution uses an `X-Itqan-App` response header captured by a Logpush custom
+   response-header field.
+4. OAuth apps are not tagged (`ENABLE_OAUTH2=False` everywhere).
+5. Parser method rule: files count `GET` only; API routes count `GET` and `POST`.
+6. Gallery CDN downloads are behind `GALLERY_DOWNLOADS_VIA_CDN` (default `False`).
+7. Django usage events store the `X-Forwarded-For` client IP; the fold-in starts at the newest
+   `content.UsageEvent` on its first run.
+8. The app slug is cached in Redis per key (cleared on change), keeping warm public-API
+   responses query-free.
+9. **Cloudflare cache bypass for API-key requests (user step, required with plan 2):** anonymous
+   open-asset API responses are edge-cached for 300 s, so a keyed request could get the untagged
+   copy. Cache rule on `api.cms.itqan.dev` / `staging.api.cms.itqan.dev`: when the request
+   header `x-api-key` is present → *Bypass cache*.
+10. Resolves sent with `X-Itqan-Command: outdated` are not counted as installs; the CLI (plan 5)
+    sends `X-Itqan-Command: <command>` on registry calls. Older CLIs without the header still
+    count every resolve.
+11. Gallery CDN download links use `CLOUDFLARE_R2_PUBLIC_BASE_URL` (the custom domain), not
+    `file_url.url` (the presigned S3-endpoint URL).
