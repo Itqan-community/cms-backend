@@ -95,6 +95,20 @@ class AssetSlugFromWordsTests(BaseTestCase):
         # Assert
         self.assertEqual("recitation-mishary-alafasy-2005", slug)
 
+    def test_slug_from_words_where_year_suffix_would_exceed_field_should_use_counter(self):
+        # Arrange
+        words = ["abdulrahman", "abdulmohsen", "alhudhaify", "qaloon"]
+        service = AssetSlugService()
+        base = service.slug_from_words(category=CategoryChoice.RECITATION, words=words)
+        baker.make(Asset, slug=base, category=CategoryChoice.MUSHAF)
+
+        # Act
+        slug = service.slug_from_words(category=CategoryChoice.RECITATION, words=words, year=2147483647)
+
+        # Assert
+        self.assertLessEqual(len(slug), 50)
+        self.assertEqual(f"{base}-2", slug)
+
 
 class AssetSlugPromptTests(BaseTestCase):
     def test_slug_prompt_where_recitation_should_name_reciter_and_riwayah(self):

@@ -180,8 +180,10 @@ class AssetSlugService:
     def _unique(self, base: str, year: int | None) -> str:
         if not self.repo.slug_exists(base):
             return base
-        if year is not None and not self.repo.slug_exists(f"{base}-{year}"):
-            return f"{base}-{year}"
+        with_year = f"{base}-{year}" if year is not None else ""
+        # The year is unbounded user input: use it only when it still fits the field.
+        if with_year and len(with_year) <= MAX_SLUG_LENGTH and not self.repo.slug_exists(with_year):
+            return with_year
         counter = 2
         while self.repo.slug_exists(f"{base}-{counter}"):
             counter += 1
