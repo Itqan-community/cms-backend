@@ -17,7 +17,10 @@ from requests.exceptions import ConnectionError as RequestsConnectionError, Time
 
 from apps.usage_tracking.services.asset_download_sync import sync_asset_downloads
 from apps.usage_tracking.services.audio_usage_sync import sync_audio_usage
+from apps.usage_tracking.services.logpush_import import import_logpush
 from apps.usage_tracking.services.mixpanel_client import MixpanelIngestClient
+from apps.usage_tracking.services.r2_reconciliation import reconcile_r2_reads
+from apps.usage_tracking.services.traffic_maintenance import run_usage_maintenance
 
 logger = logging.getLogger(__name__)
 
@@ -227,3 +230,26 @@ def sync_asset_downloads_task() -> None:
     """
     result = sync_asset_downloads()
     logger.info("sync_asset_downloads_task: synced %d hour(s); error=%r", result.hours_synced, result.error)
+
+
+@shared_task(acks_late=True, soft_time_limit=1500, time_limit=1560, ignore_result=True)
+def import_logpush_task() -> None:
+    """Import new Cloudflare Logpush files (see `logpush_import`).
+
+    No autoretry: unimported files stay pending and the next hourly run picks them up.
+    """
+    result = import_logpush()
+    logger.info("import_logpush_task: files=%d events=%d error=%r", result.files_imported, result.events, result.error)
+
+
+@shared_task(acks_late=True, soft_time_limit=900, time_limit=960, ignore_result=True)
+def reconcile_r2_reads_task() -> None:
+    """Record R2 reads per asset object (see `r2_reconciliation`)."""
+    result = reconcile_r2_reads()
+    logger.info("reconcile_r2_reads_task: hours=%d error=%r", result.hours, result.error)
+
+
+@shared_task(acks_late=True, soft_time_limit=1500, time_limit=1560, ignore_result=True)
+def usage_maintenance_task() -> None:
+    """Rebuild monthly unique counts and purge expired traffic events."""
+    run_usage_maintenance()
