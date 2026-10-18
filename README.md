@@ -176,6 +176,11 @@ All settings are optional:
 | `USAGE_ANALYTICS_API_TOKEN` | `CF_API_TOKEN` | Token with Account Analytics Read |
 | `USAGE_IDENTITY_KEY` | derived from `SECRET_KEY` | Key for listener/install/end-user hashes. Set it and never rotate it |
 | `USAGE_EVENT_RETENTION_MONTHS` | `25` | Delete raw traffic events older than this; rollups and monthly uniques are kept |
+| `GALLERY_DOWNLOADS_VIA_CDN` | `False` | Serve open-access gallery downloads from the storage domain (`?download=`) so the edge counts them; needs the Cloudflare `Content-Disposition` transform rule |
+
+**App attribution:** every API key has a public app slug (`UsageApp`, editable on the API Keys
+page). Public-API responses to a request with an API key get `?c=<slug>` on storage file URLs,
+an `X-Itqan-App` header and private caching, so plays and calls are attributed to that app.
 
 S3 credentials can come from the Cloudflare API token itself: access key id = the token id,
 secret = the SHA-256 of the token value.

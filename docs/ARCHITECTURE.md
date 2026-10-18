@@ -759,8 +759,18 @@ flowchart LR
   the next run. Only `GET` requests count (CORS preflights and `HEAD` probes are dropped).
   Network errors leave a file pending; only corrupt gzip files are recorded with `error`.
 - **Channel** (first match): `gallery` (`?download=` links), `cli` (`itqan-cli/` user agent or
-  install header), `web` (browsers), `app_unidentified` (Android/iOS media players and HTTP
-  libraries), `script` (curl, python, node…), `other`. Bots are kept but flagged and excluded.
+  install header), `app_identified` (a known app slug), `web` (browsers), `app_unidentified`
+  (Android/iOS media players and HTTP libraries), `script` (curl, python, node…), `other`. Bots
+  are kept but flagged and excluded.
+- **App attribution:** `UsageApp` gives each API key an integer id and a public slug (kept when
+  the key is deleted). `AppTaggingMiddleware` adds `?c=<slug>` to storage URLs in API-key JSON
+  responses, sets `X-Itqan-App: <slug>` (captured by a Logpush custom response-header field) and
+  makes caching private. The importer maps `c` / `x-itqan-app` to `UsageApp` ids.
+- **Django-side events:** package resolves write one `cli_install` traffic event per package
+  (`source=django`). `fold_in_django_events_task` (minute 15) copies gallery views and presigned
+  downloads from `content.UsageEvent` (CDN downloads are counted at the edge, behind
+  `GALLERY_DOWNLOADS_VIA_CDN`) and rebuilds every hour that gained Django rows. Django events
+  record the client IP from `X-Forwarded-For` (Caddy forwards `CF-Connecting-IP`).
 - **Routes:** public-API paths are matched against the developer API's own OpenAPI schema;
   portal, CMS and OAuth paths are dropped.
 
