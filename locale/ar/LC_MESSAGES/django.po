@@ -465,6 +465,9 @@ msgstr "حالة مراجعة غير صالحة."
 msgid "A comment is required when requesting changes."
 msgstr "التعليق مطلوب عند طلب إجراء تعديلات."
 
+msgid "The package name (slug) is not valid for this asset."
+msgstr "اسم الحزمة (المعرّف) غير صالح لهذا الأصل."
+
 msgid "This asset has no content template."
 msgstr "هذه المادة ليس لها قالب محتوى."
 

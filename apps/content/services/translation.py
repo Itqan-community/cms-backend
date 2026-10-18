@@ -27,6 +27,7 @@ from apps.content.services.asset_content import (
     lock_version_for_content_change,
     set_version_language,
 )
+from apps.content.services.asset_slug import AssetSlugService
 from apps.content.services.mushaf_layout import MushafLayoutService
 from apps.content.version_text import VersionText
 from apps.core.ninja_utils.errors import ItqanError
@@ -92,6 +93,7 @@ class TranslationService:
         external_url: str | None = None,
         is_open_access: bool = False,
         restricted_for_tenant: bool = False,
+        slug: str | None = None,
     ) -> Asset:
         """
         Business Logic: Create a new translation.
@@ -129,7 +131,16 @@ class TranslationService:
 
         layout = self._resolve_layout(template, mushaf_layout_id)
 
+        # No AI here: the portal sends the slug its Translate call returned (POST /portal/ai/translate/).
+        slug = AssetSlugService().resolve_slug(
+            category=CategoryChoice.TRANSLATION,
+            requested=slug,
+            name_en=normalized_name_en,
+            name_ar=normalized_name_ar,
+            language=language,
+        )
         translation = self.repo.create_translation(
+            slug=slug,
             publisher_id=publisher_id,
             name=name,
             name_ar=normalized_name_ar,

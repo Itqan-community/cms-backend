@@ -5,7 +5,7 @@ from typing import Any
 
 from django.conf import settings
 from django.core.validators import FileExtensionValidator, MaxValueValidator, MinValueValidator
-from django.db import models
+from django.db import IntegrityError, models, transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_countries.fields import CountryField
@@ -100,6 +100,10 @@ class VersionStateChoice(models.TextChoices):
 
     DRAFT = "draft", _("Draft")
     PUBLISHED = "published", _("Published")
+
+
+# Extra insert attempts when a new asset's slug is taken by a concurrent create.
+SLUG_CONFLICT_RETRIES = 3
 
 
 class Asset(DeleteFilesOnDeleteMixin, BaseModel):
@@ -370,6 +374,22 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
                 slug = f"{base_slug[:40]}-{counter}"
                 counter += 1
             self.slug = slug
+        if not self._state.adding:
+            super().save(*args, **kwargs)
+            return
+        # The slug's uniqueness is checked before the insert, so a concurrent create can take it
+        # in between: retry new assets with a numeric suffix instead of failing with a 500.
+        base_slug = self.slug
+        for attempt in range(2, 2 + SLUG_CONFLICT_RETRIES):
+            try:
+                with transaction.atomic():
+                    super().save(*args, **kwargs)
+                return
+            except IntegrityError as exc:
+                if "content_asset_slug" not in str(exc):
+                    raise
+                logger.warning("asset: slug taken on insert, retrying [slug=%s]", self.slug)
+                self.slug = f"{base_slug[:44]}-{attempt}"
         super().save(*args, **kwargs)
 
     @staticmethod
