@@ -47,6 +47,15 @@ The system serves **four distinct API surfaces**, each with their own audience a
 | **Tenant API** | `tenant/` | Multi-tenant SaaS API for publishers. Each publisher can have their own domain; content is filtered by the `Domain` the request originates from. All tenants share a single database. | JWT/Session |
 | **Portal API** | `portal/` | Internal admin portal for uploading, writing, updating, and managing content (full CRUD). All users are internal company staff. | JWT/Session + group-based permissions |
 
+The portal also exposes `POST /portal/ai/translate/` for the create forms: it translates the
+Arabic name/description/bio fields to English with the Gemini free tier (`mode=translate`), or
+writes the description fields from the matching Arabic / English Wikipedia articles and returns their `sources`
+(`mode=web`). It needs any portal create permission for mushafs, tafsirs, translations, fonts,
+recitations or reciters, and returns `ai_translate_empty` (400), `ai_rate_limited` (429, a per-minute
+limit: retry shortly), `ai_quota_exceeded` (429, the free daily limit) or `ai_unavailable` (503).
+With `slug_for` (asset create forms) the same call also returns the new asset's suggested `slug`
+(see Asset below), so each click is one Gemini call.
+
 ---
 
 ## Core Domain Models
@@ -220,6 +229,26 @@ An **Asset** is a **derivation** of a Resource. It represents content that has b
 
 - Linked to a parent Resource
 - Inherits or specifies its own license
+- Has a globally unique **slug** — the itqan CLI package name (`itqan add <slug>`) and the
+  prefix of downloaded file names. It is set **once, when the asset is created**, and never
+  changes afterwards. It follows a fixed template per category:
+  `recitation-<reciter>-<riwayah>`, `translation-<language>-<words>`, and
+  `<category>-<words>` for mushafs, tafsirs and fonts (e.g. `tafsir-ibn-kathir`,
+  `translation-en-sahih-international`, `recitation-mishary-alafasy-hafs`).
+  - **Suggested, not computed at create.** When the admin clicks Translate on a create form, the
+    same `POST /portal/ai/translate/` call (`slug_for`) returns `slug_words`: 1–4 English words
+    the Gemini free tier derives from the name (transliterating Arabic), or the reciter and
+    riwayah names for a recitation. `AssetSlugService.slug_from_words` turns them into the
+    template slug; the form shows it, requires it before saving, and sends it back as `slug`.
+    When the call fails the admin types it instead.
+  - **Creating never calls AI** (`AssetSlugService.resolve_slug`), so the request does not wait on
+    Gemini. A sent slug must be `[a-z0-9-]`, ≤ 50 characters and carry the category prefix
+    (`asset_slug_invalid`, 400); without one (non-portal callers), the template is built from the
+    slugified names.
+  - Collisions get `-<year>` (recitations) and then `-2`, `-3`, …, including a suggested slug taken
+    since it was suggested; one taken by a concurrent create between the check and the insert is
+    retried with a suffix in `Asset.save()`. Assets created outside these services (admin, fixtures)
+    get the model's plain slugify fallback.
 - Can have multiple preview images
 - For recitation assets: linked to a **Reciter** and **Riwayah**, and owns one or more
   **RecitationFolder** variants (see [Recitation-Specific Components](#recitation-specific-components))
