@@ -86,6 +86,7 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "apps.usage_tracking.middlewares.app_tagging.AppTaggingMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "apps.publishers.middlewares.publisher_middleware.PublisherMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
