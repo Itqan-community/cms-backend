@@ -158,6 +158,28 @@ no key); Google Search grounding is not part of the free tier for new projects.
 | `GEMINI_FAST_MODEL` | `gemini-3.5-flash-lite` | Translation, slug words and "Write from the web" (free tier: ~500 requests/day) |
 | `GEMINI_TIMEOUT_SECONDS` | `20` | Per-request timeout (free-tier latency varies; only Translate clicks wait on it) |
 
+#### Optional: usage reports (Cloudflare Logpush)
+
+Every edge request on the storage and API hosts is pushed by Cloudflare Logpush to an R2
+bucket and imported hourly; R2's own read counts are imported as a reconciliation check.
+All settings are optional:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `ENABLE_USAGE_LOGPUSH_IMPORT` | `False` | Turn the hourly Logpush import on |
+| `USAGE_LOGS_BUCKET` | `itqan-usage-logs` | R2 bucket Logpush writes to |
+| `USAGE_LOGS_PREFIX` | `http/production/` | This environment's folder in the bucket (staging: `http/staging/`) |
+| `USAGE_LOGS_ACCESS_KEY_ID` / `USAGE_LOGS_SECRET_ACCESS_KEY` | empty | Read-only S3 credentials for the bucket; the import skips without them |
+| `USAGE_LOGPUSH_MAX_FILES_PER_RUN` | `500` | Files imported per run while catching up |
+| `ENABLE_USAGE_R2_RECONCILIATION` | `False` | Turn the hourly R2 read-count import on |
+| `CF_ACCOUNT_ID` | empty | Cloudflare account for R2 analytics |
+| `USAGE_ANALYTICS_API_TOKEN` | `CF_API_TOKEN` | Token with Account Analytics Read |
+| `USAGE_IDENTITY_KEY` | derived from `SECRET_KEY` | Key for listener/install/end-user hashes. Set it and never rotate it |
+| `USAGE_EVENT_RETENTION_MONTHS` | `25` | Delete raw traffic events older than this; rollups and monthly uniques are kept |
+
+S3 credentials can come from the Cloudflare API token itself: access key id = the token id,
+secret = the SHA-256 of the token value.
+
 ### 2) Start with Docker (recommended)
 
 ```bash
