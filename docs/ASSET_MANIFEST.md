@@ -962,7 +962,7 @@ Verified against `apps/content/models.py`. **This specification changes none of 
 
 | Concept here | Backend today |
 |---|---|
-| Asset identity | `Asset.slug` — `SlugField(allow_unicode=True, unique=True, db_index=True)`, auto-generated in `Asset.save()` from the asset's names, with a numeric suffix on collision. |
+| Asset identity | `Asset.slug` — `SlugField(allow_unicode=True, unique=True, db_index=True)`, set at creation by the category create services through `AssetSlugService`: the validated slug the portal sends, else a per-category template from the names; `Asset.save()` fills it only when empty (other callers). Numeric suffix on collision. |
 | Version string | `AssetVersion.name` — `CharField(max_length=255)`. |
 | Package eligibility | `AssetVersion.state == "published"` with an uploaded `file_url`, entries, or stored changes. There is no per-channel opt-in; the former `Distribution` model was removed. |
 | Language rendition | `AssetVersion.asset_language` → `AssetLanguage(language, is_source, status)`. Version names are sequenced per rendition; only `status = "ready"` renditions are installable. |
