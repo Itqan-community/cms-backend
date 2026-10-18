@@ -17,6 +17,7 @@ from requests.exceptions import ConnectionError as RequestsConnectionError, Time
 
 from apps.usage_tracking.services.asset_download_sync import sync_asset_downloads
 from apps.usage_tracking.services.audio_usage_sync import sync_audio_usage
+from apps.usage_tracking.services.django_foldin import fold_in_django_events
 from apps.usage_tracking.services.logpush_import import import_logpush
 from apps.usage_tracking.services.mixpanel_client import MixpanelIngestClient
 from apps.usage_tracking.services.r2_reconciliation import reconcile_r2_reads
@@ -253,3 +254,10 @@ def reconcile_r2_reads_task() -> None:
 def usage_maintenance_task() -> None:
     """Rebuild monthly unique counts and purge expired traffic events."""
     run_usage_maintenance()
+
+
+@shared_task(acks_late=True, soft_time_limit=900, time_limit=960, ignore_result=True)
+def fold_in_django_events_task() -> None:
+    """Copy Django usage events into traffic events and roll up their hours."""
+    result = fold_in_django_events()
+    logger.info("fold_in_django_events_task: events=%d hours=%d error=%r", result.events, result.hours, result.error)

@@ -51,6 +51,10 @@ app.conf.beat_schedule = {
         # Minute 10: Logpush delivers within minutes; offset from the other usage jobs.
         "schedule": crontab(minute=10),
     },
+    "fold-in-django-events": {
+        "task": "apps.usage_tracking.tasks.fold_in_django_events_task",
+        "schedule": crontab(minute=15),
+    },
     "reconcile-r2-reads": {
         "task": "apps.usage_tracking.tasks.reconcile_r2_reads_task",
         "schedule": crontab(minute=40),
