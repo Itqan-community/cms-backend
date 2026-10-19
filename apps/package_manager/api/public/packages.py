@@ -6,13 +6,14 @@ from django.utils.translation import gettext_lazy as _
 from ninja import Field, Query, Schema
 from ninja.pagination import paginate
 
-from apps.content.models import Asset, CategoryChoice
+from apps.content.models import Asset, AssetVersion, CategoryChoice
 from apps.content.services.asset_access import enforce_asset_access_on_public_api
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.core.utils.media_urls import public_media_url
 from apps.package_manager.services.package_registry import (
     CatalogAccess,
     PackageRegistryService,
@@ -139,12 +140,20 @@ class PackageManifestOut(Schema):
     results: list[PackageVersionOut]
 
 
+def _file_url(request: Request, version: AssetVersion, asset: Asset) -> str:
+    """Open assets through the CDN, so the edge counts the download; restricted ones keep
+    their signed, expiring link."""
+    if asset.is_open_access:
+        return public_media_url(version.file_url, request)
+    return request.build_absolute_uri(version.file_url.url)
+
+
 def _download_url(request: Request, result: ResolvedPackage) -> str:
     """Absolute URL to fetch the version's file: the stored file when it has
     one, otherwise the download endpoint that generates it on first request."""
     version = result.asset_version
     if version.file_url:
-        return request.build_absolute_uri(version.file_url.url)
+        return _file_url(request, version, result.asset)
     filename = f"{result.asset.slug}-{result.asset_language.language}-{version.name}.csv".replace(" ", "_")
     path = reverse(
         f"{request.resolver_match.namespace}:download_package_file",
@@ -338,5 +347,6 @@ def download_package_file(request: Request, asset_version_id: int, filename: str
     service = PackageRegistryService()
     version = service.get_downloadable_version(asset_version_id)
     enforce_asset_access_on_public_api(getattr(request, "user", None), version.asset)
+    asset = version.asset
     version = service.ensure_package_file(version)
-    return HttpResponseRedirect(version.file_url.url)
+    return HttpResponseRedirect(_file_url(request, version, asset))

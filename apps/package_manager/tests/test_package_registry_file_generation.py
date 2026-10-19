@@ -7,6 +7,8 @@ from model_bakery import baker
 
 from apps.content.models import (
     Asset,
+    AssetAccess,
+    AssetAccessRequest,
     AssetLanguage,
     AssetTemplateChoice,
     AssetVersion,
@@ -20,6 +22,12 @@ from apps.content.tests.publishing import publish
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.quran.models import Ayah, Sura
+from apps.users.models import APIKey, User
+
+R2_SETTINGS = {
+    "CLOUDFLARE_R2_ENDPOINT": "https://acct.r2.cloudflarestorage.com",
+    "CLOUDFLARE_R2_PUBLIC_BASE_URL": "https://storage.example.com",
+}
 
 
 class PackageApiTestCase(BaseTestCase):
@@ -216,6 +224,54 @@ class PackageDownloadUrlApiTests(PackageApiTestCase):
 
 
 class DownloadPackageFileTests(PackageApiTestCase):
+    @override_settings(**R2_SETTINGS)
+    def test_download_package_file_where_r2_and_open_access_should_redirect_to_the_cdn(self):
+        # Arrange
+        version = self._version("1.0")
+
+        # Act
+        response = self.client.get(f"/packages/download/{version.pk}/tafsir-ar-1.0.csv/")
+
+        # Assert
+        self.assertEqual(302, response.status_code, response.content)
+        self.assertEqual(f"https://storage.example.com/media/{version.file_url.name}", response["Location"])
+
+    @override_settings(**R2_SETTINGS)
+    def test_download_package_file_where_r2_and_restricted_should_keep_the_signed_url(self):
+        # Arrange
+        self.asset.is_open_access = False
+        self.asset.save(update_fields=["is_open_access"])
+        version = self._version("1.0")
+        user = baker.make(User)
+        request = baker.make(
+            AssetAccessRequest, developer_user=user, asset=self.asset, status=AssetAccessRequest.StatusChoice.APPROVED
+        )
+        baker.make(AssetAccess, asset_access_request=request, user=user, asset=self.asset)
+        _, raw_key = APIKey.objects.create_key(name="test-key", user=user)
+
+        # Act
+        response = self.client.get(
+            f"/packages/download/{version.pk}/tafsir-ar-1.0.csv/", headers={"x-api-key": raw_key}
+        )
+
+        # Assert
+        self.assertEqual(302, response.status_code, response.content)
+        self.assertEqual(f"http://testserver{version.file_url.url}", response["Location"])
+
+    @override_settings(**R2_SETTINGS)
+    def test_resolve_where_r2_and_open_access_should_return_a_cdn_download_url(self):
+        # Arrange
+        version = self._version("1.0")
+
+        # Act
+        response = self.client.get("/packages/resolve/tafsir/?version=1.0")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(
+            f"https://storage.example.com/media/{version.file_url.name}", response.json()["result"]["download_url"]
+        )
+
     def test_download_package_file_where_version_has_file_should_redirect_to_it(self):
         # Arrange
         version = self._version("1.0")
@@ -225,7 +281,7 @@ class DownloadPackageFileTests(PackageApiTestCase):
 
         # Assert
         self.assertEqual(302, response.status_code, response.content)
-        self.assertEqual(version.file_url.url, response["Location"])
+        self.assertEqual(f"http://testserver{version.file_url.url}", response["Location"])
 
     def test_download_package_file_where_version_has_no_file_should_generate_and_save_it(self):
         # Arrange
@@ -238,7 +294,7 @@ class DownloadPackageFileTests(PackageApiTestCase):
         self.assertEqual(302, response.status_code, response.content)
         version.refresh_from_db()
         self.assertTrue(version.file_url)
-        self.assertEqual(version.file_url.url, response["Location"])
+        self.assertEqual(f"http://testserver{version.file_url.url}", response["Location"])
         with version.file_url.open("rb") as f:
             self.assertEqual(b"surah,ayah,text\r\n1,1,first\r\n1,2,second\r\n", f.read())
         self.assertEqual(len(b"surah,ayah,text\r\n1,1,first\r\n1,2,second\r\n"), version.size_bytes)
