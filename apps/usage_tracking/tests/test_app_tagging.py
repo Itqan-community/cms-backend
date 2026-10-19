@@ -73,3 +73,16 @@ class TestAppTaggingMiddleware(BaseTestCase):
         assert b"?c=" not in result.content
         assert "X-Itqan-App" not in result
         assert result["Cache-Control"] == "public, max-age=300, s-maxage=300"
+
+    def test_middleware_where_api_key_auth_should_keep_no_store_and_mark_uncached_responses_private(self):
+        # Arrange
+        no_store = JsonResponse({})
+        no_store["Cache-Control"] = "no-store, max-age=0"
+
+        # Act
+        kept = self._run(no_store, auth=self.api_key)
+        added = self._run(JsonResponse({}), auth=self.api_key)
+
+        # Assert
+        assert kept["Cache-Control"] == "private, no-store"
+        assert added["Cache-Control"] == "private, no-cache"
