@@ -426,6 +426,8 @@ def summary(scope: ReportScope, filters: ReportFilters) -> dict[str, Any]:
         for metric in METRIC_DEFINITIONS:
             source = uniques if metric in UNIQUE_METRICS else totals
             value, before = source["current"].get(metric), source["previous"].get(metric)
+            if metric in UNIQUE_METRICS and basis["previous"] != basis["current"]:
+                before = None  # exact and month-summed uniques are not comparable
             metrics[metric] = {"value": value, "previous": before, "change": _change(value, before)}
         apps_now, apps_before = totals["current"]["apps"], totals["previous"]["apps"]
         return {
