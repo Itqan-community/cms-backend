@@ -177,6 +177,8 @@ All settings are optional:
 | `USAGE_IDENTITY_KEY` | derived from `SECRET_KEY` | Key for listener/install/end-user hashes. Set it and never rotate it |
 | `USAGE_EVENT_RETENTION_MONTHS` | `25` | Delete raw traffic events older than this; rollups and monthly uniques are kept |
 | `GALLERY_DOWNLOADS_VIA_CDN` | `False` | Serve open-access gallery downloads from the storage domain (`?download=`) so the edge counts them; needs the Cloudflare `Content-Disposition` transform rule |
+| `USAGE_REPORTS_CACHE_SECONDS` | `600` | How long a usage report response is cached per scope, language and parameters (`0` turns caching off) |
+| `PUBLIC_USAGE_COUNTS_ENABLED` | `False` | Show all-time plays, downloads and apps on gallery asset pages (`/cms-api/assets/{id}/usage-counts/` returns 404 while off) |
 
 **App attribution:** every API key has a public app slug (`UsageApp`, editable on the API Keys
 page). Public-API responses to a request with an API key get `?c=<slug>` on storage file URLs,
