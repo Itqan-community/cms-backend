@@ -49,3 +49,32 @@ Spec: `docs/superpowers/specs/2026-10-18-usage-reports-design.md`.
       `USAGE_REPORTS_CACHE_SECONDS`. Fix: include `data_updated_at` in the cache key if needed.
 - [ ] **The publisher-scope publisher list runs on every request**, including cache hits (one
       small query). Fix: cache it with the membership ids.
+
+## Later phase: expiring, signed storage links (after the plan-6 cutover)
+
+Not a defect; a design to pick up once the reports are live. Decided 2026-10-19: do **not**
+move assets to R2 presigned URLs. Those bypass `storage.cms.itqan.dev`, so Logpush loses every
+play (no country, user agent, uniques or `?c=` app), the CDN cache goes away, long playback
+breaks when the link expires mid-listen, and apps can still copy the file while the link is
+valid.
+
+Instead, sign links on our own domain and let Cloudflare check them at the edge:
+
+- [ ] **Confirm plan support.** WAF custom rules with `is_timed_hmac_valid_v0` may need a plan
+      above Pro; check Cloudflare's docs before committing to it.
+- [ ] **Link format.** `https://storage.cms.itqan.dev/media/<path>?c=<slug>&verify=<ts>-<hmac>`.
+      The HMAC covers path + `c` + timestamp, so the app slug can't be stripped or swapped (makes
+      attribution tamper-proof). The secret lives in settings and the Cloudflare rule only.
+- [ ] **Signing in Django.** Extend `tag_storage_urls` (plan 2 middleware) and the gallery CDN
+      download link to append `verify`. TTL setting, e.g. `STORAGE_LINK_TTL_HOURS` (6–24 h),
+      well above the 300 s API edge cache so cached responses never hand out expired links.
+- [ ] **Edge rule.** Block requests on the storage hosts whose `verify` is missing or invalid;
+      the cache key ignores `verify` (and `c`, `download`) so CDN hit rates stay the same.
+- [ ] **Transition.** Ship signing first with the rule in log-only mode; measure unsigned
+      traffic per app in the reports (needs a `signed` flag on `TrafficEvent` or a Logpush
+      field), announce a deadline to integrators, then enforce. Existing hard-coded URLs break at
+      enforcement.
+- [ ] **Limits to state in docs.** Expiry stops reuse of old links, not copying during the
+      valid window; device caching stays invisible (the cache disclaimer still applies).
+- [ ] **Optional.** A shorter `Cache-Control: max-age` on audio, so well-behaved players
+      re-fetch more often; trade-off is bandwidth and offline listening.
