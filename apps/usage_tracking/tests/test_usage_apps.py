@@ -71,8 +71,25 @@ class TestUsageApps(BaseTestCase):
         # Act / Assert
         with self.assertNumQueries(0):
             assert slug_for_key(api_key) == "cached-app"
-        set_app_slug(api_key, "renamed-app")
+        with self.captureOnCommitCallbacks(execute=True):
+            set_app_slug(api_key, "renamed-app")
         assert slug_for_key(api_key) == "renamed-app"
+
+    def test_set_app_slug_where_not_committed_yet_should_keep_the_cached_slug(self):
+        # Arrange
+        from apps.usage_tracking.services.usage_apps import slug_for_key
+
+        api_key = self._key("Pending App")
+        slug_for_key(api_key)
+
+        # Act
+        with self.captureOnCommitCallbacks(execute=False) as callbacks:
+            set_app_slug(api_key, "pending-new")
+            cached_before_commit = slug_for_key(api_key)
+
+        # Assert: a request during the transaction cannot re-cache a stale slug after it.
+        assert cached_before_commit == "pending-app"
+        assert len(callbacks) == 1
 
     def test_app_for_key_where_slug_is_taken_meanwhile_should_retry_with_a_new_slug(self):
         # Arrange

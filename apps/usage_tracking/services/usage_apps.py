@@ -76,7 +76,8 @@ def set_app_slug(api_key, slug: str) -> UsageApp:
             app.save(update_fields=["slug", "updated_at"])
     except IntegrityError as exc:  # lost a race for the same slug
         raise ItqanError("app_slug_taken", _("This app slug is already taken."), status_code=400) from exc
-    cache.delete(_slug_cache_key(api_key.id))
+    # After commit: deleting inside the transaction lets a concurrent read re-cache the old slug.
+    transaction.on_commit(lambda: cache.delete(_slug_cache_key(api_key.id)))
     return app
 
 
