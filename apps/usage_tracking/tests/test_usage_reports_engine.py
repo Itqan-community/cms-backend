@@ -325,7 +325,7 @@ class TestUsageReportsEngine(BaseTestCase):
     def test_data_updated_at_where_last_run_failed_should_ignore_it(self):
         # Arrange
         UsageImportState.objects.create(key="logpush", last_run_at=at(16), last_error="boom")
-        UsageImportState.objects.create(key="django_foldin", last_run_at=at(15))
+        UsageImportState.objects.update_or_create(key="django_foldin", defaults={"last_run_at": at(15)})
 
         # Act
         with patch.object(usage_reports, "cache_seconds", return_value=0):

@@ -70,7 +70,8 @@ def fold_in_django_events(now: datetime | None = None) -> FoldInResult:
     try:
         state = repo.get_state(DJANGO_FOLDIN_JOB)
         if state.cursor is None:
-            # First run: older UsageEvent rows carry the proxy IP, so start after them.
+            # No cutover recorded (migration 0005 sets it at deploy): older UsageEvent rows carry
+            # the proxy IP, so start after them.
             start_id = UsageEvent.objects.aggregate(top=Max("id"))["top"] or 0
             last_traffic_id = TrafficEvent.objects.aggregate(top=Max("id"))["top"] or 0
             repo.set_cursor(DJANGO_FOLDIN_JOB, start_id, traffic_cursor=last_traffic_id)
@@ -88,15 +89,22 @@ def fold_in_django_events(now: datetime | None = None) -> FoldInResult:
                 cursor = events[-1].id
             if len(events) < _BATCH:
                 break
-        # Every hour that gained Django-sourced rows since the last run (fold-in and CLI installs).
-        new_rows = TrafficEvent.objects.filter(source=TrafficSource.DJANGO, id__gt=state.traffic_cursor or 0)
-        hours = {floor_hour(at) for at in new_rows.values_list("occurred_at", flat=True)}
+        # Every hour that gained Django-sourced rows since the last run (fold-in and CLI installs),
+        # up to a fixed id: rows written while hours rebuild stay for the next run.
+        top_traffic = TrafficEvent.objects.aggregate(top=Max("id"))["top"] or 0
+        new_rows = TrafficEvent.objects.filter(
+            source=TrafficSource.DJANGO, id__gt=state.traffic_cursor or 0, id__lte=top_traffic
+        )
         play_window = timedelta(minutes=settings.ASSET_DOWNLOAD_PLAY_WINDOW_MINUTES)
+        hours: set[datetime] = set()
+        for at in new_rows.values_list("occurred_at", flat=True):
+            hours.add(floor_hour(at))
+            # An event near the end of an hour is context for the next hour's sessions.
+            hours.add(floor_hour(at + play_window))
         for hour in sorted(hours):
             repo.rebuild_hour(hour, play_window)
         hours_rebuilt = len(hours)
-        top_traffic = new_rows.aggregate(top=Max("id"))["top"] or state.traffic_cursor or 0
-        repo.set_cursor(DJANGO_FOLDIN_JOB, cursor, traffic_cursor=top_traffic)
+        repo.set_cursor(DJANGO_FOLDIN_JOB, cursor, traffic_cursor=max(top_traffic, state.traffic_cursor or 0))
     except Exception as exc:  # noqa: BLE001 — record, alert, and let the next run resume
         error = f"{type(exc).__name__}: {exc}"
         logger.exception("fold_in_django_events: run failed")

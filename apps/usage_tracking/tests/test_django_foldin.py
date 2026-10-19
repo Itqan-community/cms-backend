@@ -27,8 +27,11 @@ class TestFoldIn(BaseTestCase):
             effective_license=self.asset.license,
         )
 
-    def test_fold_in_where_first_run_should_start_after_existing_events(self):
+    def test_fold_in_where_no_cutover_recorded_should_start_after_existing_events(self):
         # Arrange
+        from apps.usage_tracking.models import UsageImportState
+
+        UsageImportState.objects.filter(key="django_foldin").delete()
         self._event("view")
 
         # Act
@@ -40,7 +43,6 @@ class TestFoldIn(BaseTestCase):
 
     def test_fold_in_where_new_view_and_presigned_download_should_copy_and_skip_cdn(self):
         # Arrange
-        fold_in_django_events()  # sets the cursor
         view, presigned, cdn = (
             self._event("view"),
             self._event("file_download", "presigned"),
@@ -78,3 +80,75 @@ class TestFoldIn(BaseTestCase):
         # Assert
         assert result.events == 5
         assert TrafficEvent.objects.count() == 5
+
+    def test_fold_in_where_rows_arrive_during_rebuild_should_leave_them_for_the_next_run(self):
+        # Arrange
+        from unittest.mock import patch
+
+        from apps.usage_tracking.models import TrafficSource, UsageImportState
+        from apps.usage_tracking.repositories.traffic import TrafficRepository
+
+        fold_in_django_events()
+        self._event("view")
+        late: list[TrafficEvent] = []
+        original = TrafficRepository.rebuild_hour
+
+        def rebuild_and_write(repo, hour, window):
+            if not late:
+                late.append(
+                    baker.make(
+                        TrafficEvent, ray_id="django:install:late", source=TrafficSource.DJANGO, occurred_at=hour
+                    )
+                )
+            return original(repo, hour, window)
+
+        # Act
+        with patch.object(TrafficRepository, "rebuild_hour", rebuild_and_write):
+            fold_in_django_events()
+
+        # Assert
+        state = UsageImportState.objects.get(key="django_foldin")
+        assert state.traffic_cursor < late[0].id
+
+    def test_fold_in_where_event_is_near_the_end_of_an_hour_should_rebuild_the_next_hour(self):
+        # Arrange
+        from datetime import UTC, datetime
+        from unittest.mock import patch
+
+        from apps.usage_tracking.repositories.traffic import TrafficRepository
+
+        fold_in_django_events()
+        event = self._event("file_download", "presigned")
+        UsageEvent.objects.filter(pk=event.pk).update(created_at=datetime(2026, 10, 1, 10, 58, tzinfo=UTC))
+        rebuilt: list[datetime] = []
+
+        # Act
+        with patch.object(TrafficRepository, "rebuild_hour", lambda repo, hour, window: rebuilt.append(hour)):
+            fold_in_django_events()
+
+        # Assert
+        assert rebuilt == [datetime(2026, 10, 1, 10, tzinfo=UTC), datetime(2026, 10, 1, 11, tzinfo=UTC)]
+
+
+class TestFoldInCutoverMigration(BaseTestCase):
+    def test_initialize_cursor_where_no_state_should_start_after_existing_rows(self):
+        # Arrange
+        import importlib
+
+        from django.apps import apps as global_apps
+
+        from apps.usage_tracking.models import UsageImportState
+
+        migration = importlib.import_module("apps.usage_tracking.migrations.0005_django_foldin_cutover")
+        asset = baker.make(Asset, category=CategoryChoice.MUSHAF)
+        event = baker.make(UsageEvent, asset_id=asset.id, usage_kind="view")
+        traffic = baker.make(TrafficEvent, ray_id="edge-1")
+        UsageImportState.objects.filter(key="django_foldin").delete()
+
+        # Act
+        migration.initialize_cursor(global_apps, None)
+        migration.initialize_cursor(global_apps, None)  # idempotent
+
+        # Assert
+        state = UsageImportState.objects.get(key="django_foldin")
+        assert (state.cursor, state.traffic_cursor) == (event.id, traffic.id)
