@@ -185,3 +185,13 @@ class TestAttributionParsing:
         # Act / Assert
         assert parse_line(_line(ClientRequestURI="/packages/resolve/manifest/", ClientRequestMethod="POST")) is not None
         assert parse_line(_line(ClientRequestMethod="POST")) is None
+
+    def test_parse_line_where_api_call_has_c_param_should_ignore_it(self):
+        # Act
+        spoofed = parse_line(_line(ClientRequestURI="/recitations/13/?c=other-app"))
+        tagged = parse_line(
+            _line(ClientRequestURI="/recitations/13/?c=other-app", ResponseHeaders={"x-itqan-app": "my-app"})
+        )
+
+        # Assert
+        assert (spoofed.app_slug_raw, tagged.app_slug_raw) == ("", "my-app")

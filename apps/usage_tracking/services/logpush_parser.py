@@ -148,8 +148,16 @@ def parse_line(line: bytes | str) -> ParsedRequest | None:
             cache_status=_text(record.get("CacheCacheStatus"), 16),
             ip=_text(record.get("ClientIP"), 64),
             user_agent=_text(record.get("ClientRequestUserAgent"), 1024),
-            # Files carry the app in `?c=`; API calls in the X-Itqan-App response header.
-            app_slug_raw=_text(_first(params, "c") or (record.get("ResponseHeaders") or {}).get("x-itqan-app"), 64),
+            # Files carry the app in `?c=`; API calls only in the X-Itqan-App response header (Django
+            # sets it from the API key, while `c` on an API call is whatever the caller typed).
+            app_slug_raw=_text(
+                (
+                    (record.get("ResponseHeaders") or {}).get("x-itqan-app")
+                    if kind == TrafficKind.API_CALL
+                    else _first(params, "c")
+                ),
+                64,
+            ),
             client_name=_text(headers.get("x-client-name"), 64),
             client_version=_text(headers.get("x-client-version"), 32),
             external_user_id=_text(headers.get("x-external-user-id"), 64),
