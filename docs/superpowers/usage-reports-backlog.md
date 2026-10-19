@@ -12,16 +12,16 @@ Spec: `docs/superpowers/specs/2026-10-18-usage-reports-design.md`.
 - [ ] **Renamed slugs can be reused.** After an app renames its slug, another app can claim the
       old one and old `?c=` URLs get attributed to the new owner. Fix: keep retired slugs reserved
       (history table or `UsageApp.previous_slugs`).
-- [ ] **API-key PATCH is not atomic.** The name is saved before a bad `app_slug` is rejected.
+- [x] **API-key PATCH is not atomic.** The name is saved before a bad `app_slug` is rejected.
       Fix: validate the slug first, or wrap both updates in one transaction.
 - [ ] **API-key list is N+1 on `app_slug`.** One query per key. Fix: `select_related("usage_app")`.
-- [ ] **Generated slugs can contain `_`**, which then fails the edit validation; two keys created
+- [x] **Generated slugs can contain `_`**, which then fails the edit validation; two keys created
       at the same moment with the same name can raise a 500 on the unique slug. Fix: slugify to
       `[a-z0-9-]` only and retry on `IntegrityError`.
 - [ ] **Non-ASCII storage URLs are not tagged.** JSON escapes them as `\uXXXX`, so the
       `tag_storage_urls` regex stops at the backslash. Fix: tag before serialization, or match
       escaped sequences.
-- [ ] **`no-store` becomes `no-cache`** when the tagging middleware marks a keyed response
+- [x] **`no-store` becomes `no-cache`** when the tagging middleware marks a keyed response
       private. Fix: keep `no-store` when present.
 - [ ] **`X-Forwarded-For` is spoofable at the origin.** Requests that bypass Cloudflare can set
       any client IP. Fix: firewall the origin to Cloudflare IP ranges (or Cloudflare Tunnel).
