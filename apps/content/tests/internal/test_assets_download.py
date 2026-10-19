@@ -416,6 +416,31 @@ class TestAssetDownload(BaseTestCase):
         event = UsageEvent.objects.get(asset_id=self.asset.id, usage_kind=UsageEvent.UsageKindChoice.FILE_DOWNLOAD)
         self.assertEqual("presigned", event.metadata["delivery"])
 
+    @override_settings(
+        CLOUDFLARE_R2_ENDPOINT="https://account.r2.cloudflarestorage.com",
+        CLOUDFLARE_R2_PUBLIC_BASE_URL="",
+        GALLERY_DOWNLOADS_VIA_CDN=True,
+    )
+    @patch("apps.content.api.internal.assets_download.generate_presigned_download_url", return_value="https://signed")
+    @patch("apps.content.api.internal.assets_download.user_has_access")
+    def test_download_asset_where_cdn_enabled_but_no_public_url_should_return_presigned_link(
+        self, mock_user_has_access, _signed
+    ):
+        # Arrange
+        mock_user_has_access.return_value = True
+        self.asset.is_open_access = True
+        self.asset.save(update_fields=["is_open_access"])
+        mock_file = SimpleUploadedFile("test.pdf", b"fake pdf content", content_type="application/pdf")
+        publish(baker.make(AssetVersion, asset=self.asset, name="No Public URL", file_url=mock_file))
+        self.authenticate_user(self.user)
+
+        # Act
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/download/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual("https://signed", response.json()["download_url"])
+
 
 class TestAssetDownloadLanguage(BaseTestCase):
     """Per-language download resolution for multi-language assets."""

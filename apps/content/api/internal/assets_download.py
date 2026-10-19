@@ -91,7 +91,12 @@ def download_asset(request: Request, id: int, language: str | None = None):
             raise Http404(str(_("Download URL not available")))
 
     filename = download_filename(asset, asset_latest_version)
-    if settings.CLOUDFLARE_R2_ENDPOINT and settings.GALLERY_DOWNLOADS_VIA_CDN and asset.is_open_access:
+    if (
+        settings.CLOUDFLARE_R2_ENDPOINT
+        and settings.CLOUDFLARE_R2_PUBLIC_BASE_URL
+        and settings.GALLERY_DOWNLOADS_VIA_CDN
+        and asset.is_open_access
+    ):
         # Through the custom domain, so the edge sees (and counts) the download; a Cloudflare
         # transform rule turns `download` into Content-Disposition: attachment.
         # `file_url.url` is the presigned S3-endpoint URL; the public custom domain is what the edge logs.
