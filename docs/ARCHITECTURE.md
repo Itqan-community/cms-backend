@@ -771,6 +771,10 @@ flowchart LR
   downloads from `content.UsageEvent` (CDN downloads are counted at the edge, behind
   `GALLERY_DOWNLOADS_VIA_CDN`) and rebuilds every hour that gained Django rows. Django events
   record the client IP from `X-Forwarded-For` (Caddy forwards `CF-Connecting-IP`).
+- **File URLs:** consumer-facing links to open-access files use the storage custom domain
+  (`public_media_url`), so the edge caches and counts them; this covers the `itqan` CLI's package
+  downloads (`/packages/resolve/…`, `/packages/download/…`). Restricted assets keep presigned
+  bucket URLs, which the edge never sees. Rules: `.agents/rules/cms-backend.mdc` → "Serving file URLs".
 - **Routes:** public-API paths are matched against the developer API's own OpenAPI schema;
   portal, CMS and OAuth paths are dropped.
 
