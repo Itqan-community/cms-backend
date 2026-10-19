@@ -380,8 +380,10 @@ tracking beyond the hashed identities above, revenue reporting, and email/schedu
 
 1. `UsageApp` (usage_tracking) holds the public slug, one per API key, kept when the key is
    deleted; `APIKey`'s pk is a string while rollups and monthly uniques key apps by integer.
-2. No Cloudflare API cache rule: API-key responses are `Cache-Control: private`; Django's Redis
-   response caches stay shared because the tag is applied on the way out.
+2. API-key responses are `Cache-Control: private`, and Django's Redis response caches stay shared
+   because the tag is applied on the way out. That alone does not stop the edge serving a cached
+   anonymous response to a keyed request, so deployment still needs the `x-api-key` cache-bypass
+   rule (amendment 9).
 3. API-call attribution uses an `X-Itqan-App` response header captured by a Logpush custom
    response-header field.
 4. OAuth apps are not tagged (`ENABLE_OAUTH2=False` everywhere).
