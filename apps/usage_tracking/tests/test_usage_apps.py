@@ -73,3 +73,25 @@ class TestUsageApps(BaseTestCase):
             assert slug_for_key(api_key) == "cached-app"
         set_app_slug(api_key, "renamed-app")
         assert slug_for_key(api_key) == "renamed-app"
+
+    def test_app_for_key_where_slug_is_taken_meanwhile_should_retry_with_a_new_slug(self):
+        # Arrange
+        from unittest.mock import patch
+
+        from apps.usage_tracking.services import usage_apps
+
+        api_key = self._key("Racer")
+        UsageApp.objects.filter(api_key=api_key).delete()
+        UsageApp.objects.create(name="Other", slug="racer")
+        slugs = iter(["racer", "racer-2"])
+
+        # Act
+        with patch.object(usage_apps, "unique_slug", lambda name: next(slugs)):
+            app = app_for_key(api_key)
+
+        # Assert
+        assert (app.slug, app.api_key_id) == ("racer-2", api_key.id)
+
+    def test_unique_slug_where_name_has_underscores_should_use_hyphens(self):
+        # Act / Assert
+        assert unique_slug("my_app") == "my-app"

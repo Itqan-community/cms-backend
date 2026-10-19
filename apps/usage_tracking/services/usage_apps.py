@@ -16,6 +16,7 @@ _SLUG_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{1,38})[a-z0-9]$")
 _BASE_MAX = 34  # leaves room for "-xxxx"
 # Public-API requests with a warm response cache make no DB queries; keep the slug lookup cached too.
 _SLUG_CACHE_TTL = 24 * 3600
+_CREATE_ATTEMPTS = 5
 
 
 def _slug_cache_key(api_key_id: str) -> str:
@@ -23,7 +24,7 @@ def _slug_cache_key(api_key_id: str) -> str:
 
 
 def unique_slug(name: str) -> str:
-    base = slugify(name)[:_BASE_MAX].strip("-") or "app"
+    base = slugify(name).replace("_", "-")[:_BASE_MAX].strip("-") or "app"
     if len(base) < 3:
         base = f"app-{base}" if base != "app" else base
     candidate = base
@@ -33,12 +34,20 @@ def unique_slug(name: str) -> str:
 
 
 def app_for_key(api_key) -> UsageApp:
-    app = UsageApp.objects.filter(api_key=api_key).first()
-    if app is not None:
-        return app
-    return UsageApp.objects.create(
-        api_key=api_key, user_id=api_key.user_id, name=api_key.name, slug=unique_slug(api_key.name)
-    )
+    for _attempt in range(_CREATE_ATTEMPTS):
+        app = UsageApp.objects.filter(api_key=api_key).first()
+        if app is not None:
+            return app
+        try:
+            # A concurrent request can take the slug (or create this key's app) between the check
+            # and the insert; the savepoint keeps the caller's transaction usable for the retry.
+            with transaction.atomic():
+                return UsageApp.objects.create(
+                    api_key=api_key, user_id=api_key.user_id, name=api_key.name, slug=unique_slug(api_key.name)
+                )
+        except IntegrityError:
+            continue
+    raise RuntimeError(f"could not create a usage app for API key {api_key.pk}")
 
 
 def slug_for_key(api_key) -> str:
