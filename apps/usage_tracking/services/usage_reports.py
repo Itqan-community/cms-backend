@@ -350,6 +350,9 @@ def _monthly_scope(scope: ReportScope, filters: ReportFilters) -> tuple[str, tup
     if any(value not in (None, "") for value in others.values()):
         return None
     if filters.asset_id is not None:
+        # Asset uniques count every app's listeners; no stored scope is per asset *and* app.
+        if filters.app is not None or scope.app_ids is not None:
+            return None
         return UniqueScope.ASSET, (filters.asset_id,)
     if filters.app is not None:
         return UniqueScope.APP, (filters.app,)
@@ -684,7 +687,8 @@ def breakdown(
                 if listeners.get(item["key"], 0) < PRIVACY_FLOOR:
                     item["value"] = f"<{PRIVACY_FLOOR}"
                     item["previous"] = None
-            other = None
+            # Total minus the visible values would reveal the hidden ones.
+            other = total = None
         return {
             "metric": metric,
             "by": by,
