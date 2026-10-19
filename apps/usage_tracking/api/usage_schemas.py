@@ -85,6 +85,45 @@ class AdminBreakdownQuery(BreakdownQuery):
     by: AdminBreakdownDimension  # type: ignore[assignment]
 
 
+class AdminScopeQuery(Schema):
+    publisher_id: int | None = Field(None, description="Limit the report to one publisher's assets.")
+
+
+class LeaderboardQuery(ReportQuery):
+    metric: Metric = "plays"
+    by: Literal["publisher", "asset"] = "publisher"
+    limit: int = Field(20, ge=1, le=200)
+
+
+class ReconciliationQuery(Schema):
+    start_date: date
+    end_date: date
+    publisher_id: int | None = None
+    limit: int = Field(20, ge=1, le=200)
+
+
+class ReconciliationNumbersOut(Schema):
+    reads: int = Field(..., description="R2 GetObject reads.")
+    edge_requests: int = Field(..., description="Edge requests seen in Logpush for the same objects.")
+    unseen: int = Field(..., description="Reads the edge never saw: max(reads − edge requests, 0) per object-hour.")
+
+
+class ReconciliationAssetOut(ReconciliationNumbersOut):
+    key: str
+    label: str | None
+
+
+class ReconciliationDayOut(ReconciliationNumbersOut):
+    t: str
+
+
+class ReconciliationOut(Schema):
+    total: ReconciliationNumbersOut
+    assets: list[ReconciliationAssetOut]
+    days: list[ReconciliationDayOut]
+    data_updated_at: AwareDatetime | None
+
+
 class ExportQuery(ReportQuery):
     granularity: Granularity = "day"
 

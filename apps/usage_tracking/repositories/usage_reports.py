@@ -334,12 +334,12 @@ _UNSEEN = Greatest(F("reads") - F("edge_requests"), Value(0))
 def reconciliation(asset_q: Q, period: Period, limit: int) -> dict[str, Any]:
     queryset = R2ObjectReadsHourly.objects.filter(asset_q, period.hourly_q())
     metrics = {
-        "reads": Coalesce(Sum("reads"), 0),
-        "edge": Coalesce(Sum("edge_requests"), 0),
-        "unseen": Coalesce(Sum(_UNSEEN), 0),
+        "m_reads": Coalesce(Sum("reads"), 0),
+        "m_edge": Coalesce(Sum("edge_requests"), 0),
+        "m_unseen": Coalesce(Sum(_UNSEEN), 0),
     }
     total = queryset.aggregate(**metrics)
-    assets = list(queryset.values("asset_id").annotate(**metrics).order_by("-unseen", "asset_id")[:limit])
+    assets = list(queryset.values("asset_id").annotate(**metrics).order_by("-m_unseen", "asset_id")[:limit])
     days = list(queryset.annotate(bucket=TruncDay("hour", tzinfo=UTC)).values("bucket").annotate(**metrics).order_by())
     return {"total": total, "assets": assets, "days": days}
 

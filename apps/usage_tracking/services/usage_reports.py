@@ -731,3 +731,40 @@ def export_csv(scope: ReportScope, filters: ReportFilters, granularity: str = "d
             line += [asset.get("publisher_id") or "", asset.get("publisher__name") or ""]
         writer.writerow(line + [row[f"m_{metric}"] for metric in EXPORT_METRICS])
     return response
+
+
+# ---------------------------------------------------------------------------------------------
+# Admin: unseen traffic (R2 reads the edge never saw)
+# ---------------------------------------------------------------------------------------------
+
+
+def reconciliation(scope: ReportScope, start_date: date, end_date: date, limit: int = 20) -> dict[str, Any]:
+    validate_filters(ReportFilters(start_date=start_date, end_date=end_date))
+
+    def compute() -> dict[str, Any]:
+        period = Period(start_date, end_date)
+        data = repo.reconciliation(scope.q(), period, limit)
+
+        def numbers(row: dict[str, Any]) -> dict[str, int]:
+            return {"reads": int(row["m_reads"]), "edge_requests": int(row["m_edge"]), "unseen": int(row["m_unseen"])}
+
+        by_day = {row["bucket"].date(): numbers(row) for row in data["days"]}
+        zero = {"reads": 0, "edge_requests": 0, "unseen": 0}
+        names = _labels("asset", [str(row["asset_id"]) for row in data["assets"] if row["asset_id"] is not None])
+        return {
+            "total": numbers(data["total"]),
+            "assets": [
+                {
+                    "key": "" if row["asset_id"] is None else str(row["asset_id"]),
+                    "label": names.get(str(row["asset_id"])),
+                    **numbers(row),
+                }
+                for row in data["assets"]
+            ],
+            "days": [
+                {"t": day.isoformat(), **by_day.get(day, zero)} for day in bucket_starts(start_date, end_date, "day")
+            ],
+            "data_updated_at": repo.data_updated_at(),
+        }
+
+    return _cached(scope, "reconciliation", {"start": start_date, "end": end_date, "limit": limit}, compute)
