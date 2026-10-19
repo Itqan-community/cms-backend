@@ -619,14 +619,8 @@ retention). Failures are recorded on `UsageSyncState` and logged as errors.
 play unless the same client requested the same file within the previous 5 minutes (`ASSET_DOWNLOAD_PLAY_WINDOW_MINUTES`). A play is
 credited to the hour, country and status class of its first request.
 
-**Portal API** (`PORTAL_READ_USAGE`, granted to every publisher member; scoped with
-`request.publisher_q()`; dates are inclusive UTC days):
-
-- `GET /portal/usage/downloads/summary/` — totals, overall and per file kind
-- `GET /portal/usage/downloads/timeseries/?granularity=hour|day|month&split_by=file_kind|status_class` — zero-filled series (hourly limited to 31 days)
-- `GET /portal/usage/downloads/breakdown/?by=asset|surah|country&limit=` — top items by plays
-
-Every response includes `data_until` (the watermark).
+These tables are no longer served by any endpoint: the usage reports API below replaced the
+`/portal/usage/downloads/*` endpoints. The sync keeps running until the Logpush cutover.
 
 ---
 
@@ -777,6 +771,42 @@ flowchart LR
   bucket URLs, which the edge never sees. Rules: `.agents/rules/cms-backend.mdc` → "Serving file URLs".
 - **Routes:** public-API paths are matched against the developer API's own OpenAPI schema;
   portal, CMS and OAuth paths are dropped.
+
+### Usage reports: API
+
+One engine (`apps/usage_tracking/services/usage_reports.py`, queries in
+`repositories/usage_reports.py`) serves four scopes. Additive metrics (`plays`, `downloads`,
+`installs`, `api_calls`, `views`, `requests`, `bytes`) read `TrafficDaily` (`TrafficHourly` for
+hourly series and hour-of-week); unique metrics (`unique_listeners`, `unique_downloaders`,
+`unique_end_users`) count distinct identities in `TrafficEvent`, or sum `TrafficMonthlyUniques`
+when the range starts before event retention (`uniques_basis`). Dates are inclusive UTC days
+(≤ 3660 days; hourly ≤ 31). Responses are cached per scope, language and parameters for
+`USAGE_REPORTS_CACHE_SECONDS` (600).
+
+| Scope | Endpoints | Access |
+|---|---|---|
+| Publisher | `GET /portal/usage/{summary,timeseries,breakdown,export}/` | `PORTAL_READ_USAGE`; the X-Tenant publisher, else every publisher the member belongs to (staff without X-Tenant: all) |
+| Itqan admin | `GET /portal/admin/usage/{summary,timeseries,breakdown,leaderboard,reconciliation,export}/` | `is_staff`; optional `publisher_id`; includes traffic without an asset and `by=publisher` |
+| Developer | `GET /cms-api/developers/usage/{summary,timeseries,breakdown}/` | signed in; only the caller's `UsageApp`s; breakdown rows under 3 listeners return `"<3"` |
+| Public | `GET /cms-api/assets/{id}/usage-counts/` | anonymous; same visibility as `assets/{id}/`; 404 `usage_counts_disabled` unless `PUBLIC_USAGE_COUNTS_ENABLED`; cached 1 h |
+
+- **Filters:** `asset_id`, `category`, `kind`, `channel`, `platform`, `app`, `country`,
+  `language`, `version_id`, `surah`.
+- **summary:** every metric with previous-period value and change, integrating apps, whether
+  unidentified apps were seen, `latest_version_share` (with `asset_id`), localized metric
+  `definitions`, `disclaimers` (`lower_bound`, `uniques_estimated`, `hourly_delay`) and
+  `data_updated_at` (newest error-free Logpush or fold-in run).
+- **timeseries:** zero-filled `hour|day|week|month` buckets (weeks start Monday); `split_by` keeps
+  the top N (`top`, default 8) and folds the rest into the `__other__` series; `compare=previous_period` adds an
+  aligned `previous` series.
+- **breakdown:** `by=asset|surah|country|channel|platform|app|version|language|kind|endpoint|hour_of_week`
+  (admin also `publisher`); `hour_of_week` keys are `<ISO weekday>-<hour>` in `tz`.
+- **export:** CSV of the additive metrics per period and asset (admin adds the publisher); names
+  that start like a spreadsheet formula are prefixed with `'`.
+- **reconciliation:** R2 reads, edge requests and unseen (`max(reads − edge, 0)` per object-hour)
+  in total, per asset and per day.
+- **Errors:** `invalid_range`, `range_too_large`, `invalid_metric_for_kind`, `invalid_dimension`,
+  `invalid_timezone`, `asset_not_found`, `app_not_found`, `usage_counts_disabled`.
 
 ### Folders (recitation variants)
 

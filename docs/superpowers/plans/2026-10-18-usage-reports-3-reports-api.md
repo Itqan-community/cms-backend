@@ -1,6 +1,6 @@
 # Usage Reports — Plan 3: Reports API (backend)
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** One query engine over the traffic rollups and events that serves four report scopes
 (publisher portal, Itqan admin, developer account, public gallery counts) with summary,
@@ -125,23 +125,23 @@ Errors (`ItqanError`, localized): `invalid_range`, `range_too_large`, `invalid_m
 **Files:** Create `apps/usage_tracking/services/usage_reports.py`; test
 `apps/usage_tracking/tests/test_usage_reports_params.py`.
 
-- [ ] **Step 1: Failing tests** — `validate_filters` rejects `end < start` (`invalid_range`),
+- [x] **Step 1: Failing tests** — `validate_filters` rejects `end < start` (`invalid_range`),
   > 3660 days (`range_too_large`), hourly > 31 days (`range_too_large`); `check_metric_kind`
   rejects `plays` with `kind=version_file` (`invalid_metric_for_kind`) and accepts `requests`
   with any kind; `previous_period(2026-10-10..2026-10-16)` is `2026-10-03..2026-10-09`;
   `parse_tz("Mars/Base")` raises `invalid_timezone`.
-- [ ] **Step 2: Run** `uv run --frozen pytest -q apps/usage_tracking/tests/test_usage_reports_params.py` — FAIL (ImportError).
-- [ ] **Step 3: Implement** the metric catalogue (`ROLLUP_METRICS`: field + kinds;
+- [x] **Step 2: Run** `uv run --frozen pytest -q apps/usage_tracking/tests/test_usage_reports_params.py` — FAIL (ImportError).
+- [x] **Step 3: Implement** the metric catalogue (`ROLLUP_METRICS`: field + kinds;
   `UNIQUE_METRICS`: kinds, statuses, identity column, monthly measure), `DIMENSIONS`,
   `METRIC_DEFINITIONS` and `DISCLAIMERS` (lazy-translated), validation helpers.
-- [ ] **Step 4: Run** — PASS. Commit `feat(usage): validate usage report parameters and define report metrics`.
+- [x] **Step 4: Run** — PASS. Commit `feat(usage): validate usage report parameters and define report metrics`.
 
 ### Task 2: Report repository and engine (summary, timeseries, breakdown)
 
 **Files:** Create `apps/usage_tracking/repositories/usage_reports.py`; modify the service;
 test `apps/usage_tracking/tests/test_usage_reports_engine.py`.
 
-- [ ] **Step 1: Failing tests** (admin scope, data built with `TrafficDaily`/`TrafficHourly`
+- [x] **Step 1: Failing tests** (admin scope, data built with `TrafficDaily`/`TrafficHourly`
   rows and `TrafficEvent` rows):
   - summary: plays/downloads/installs/api_calls/views/requests/bytes for the range with
     previous-period values and `change`; integrating apps counts identified apps with sessions;
@@ -153,11 +153,11 @@ test `apps/usage_tracking/tests/test_usage_reports_engine.py`.
   - breakdown by asset carries labels; by `hour_of_week` with `tz=Asia/Riyadh` shifts by +3 h;
   - unique metrics beyond retention use monthly uniques (`uniques_basis="monthly"`), or `null`
     with an incompatible filter (`"unavailable"`).
-- [ ] **Step 2: Run** — FAIL.
-- [ ] **Step 3: Implement** the repository (scope/filter `Q` builders, rollup aggregates,
+- [x] **Step 2: Run** — FAIL.
+- [x] **Step 3: Implement** the repository (scope/filter `Q` builders, rollup aggregates,
   bucketed series, grouped breakdowns, event distincts, monthly uniques, labels,
   `data_updated_at`) and the engine functions with caching (`USAGE_REPORTS_CACHE_SECONDS`).
-- [ ] **Step 4: Run** — PASS. Commit `feat(usage): add the usage report query engine`.
+- [x] **Step 4: Run** — PASS. Commit `feat(usage): add the usage report query engine`.
 
 ### Task 3: Publisher endpoints, CSV export, removal of the download-stats endpoints
 
@@ -165,12 +165,12 @@ test `apps/usage_tracking/tests/test_usage_reports_engine.py`.
 delete `apps/usage_tracking/api/portal/downloads.py`, `apps/usage_tracking/tests/test_portal_downloads.py`;
 test `apps/usage_tracking/tests/test_portal_usage_reports.py`.
 
-- [ ] **Step 1: Failing tests** — `/portal/usage/summary|timeseries|breakdown|export/`:
+- [x] **Step 1: Failing tests** — `/portal/usage/summary|timeseries|breakdown|export/`:
   403 `permission_denied` without `PORTAL_READ_USAGE`; own assets only (other publisher's
   `asset_id` → 404 `asset_not_found`; other publisher's rows absent from totals, splits and
   CSV); member of no publisher → zeros; CSV header and rows; constant query counts; second
   identical request served from cache (0 report queries).
-- [ ] **Step 2–4:** run (FAIL), implement, run (PASS). Commit
+- [x] **Step 2–4:** run (FAIL), implement, run (PASS). Commit
   `feat(usage): serve publisher usage reports and CSV export` and, separately,
   `refactor(usage): remove the superseded download statistics endpoints`.
 
@@ -179,41 +179,41 @@ test `apps/usage_tracking/tests/test_portal_usage_reports.py`.
 **Files:** Modify `apps/usage_tracking/api/portal/usage_reports.py`; test
 `apps/usage_tracking/tests/test_admin_usage_reports.py`.
 
-- [ ] **Step 1: Failing tests** — `/portal/admin/usage/…`: non-staff → 403 `permission_denied`;
+- [x] **Step 1: Failing tests** — `/portal/admin/usage/…`: non-staff → 403 `permission_denied`;
   all publishers by default (API calls without an asset included); `publisher_id` narrows;
   `leaderboard/?by=publisher` ranks with previous values; `reconciliation/` returns reads,
   edge requests and unseen (`max(reads − edge, 0)` per object-hour) in total, per asset and per
   day; CSV has a publisher column.
-- [ ] **Step 2–4:** run, implement, run. Commit `feat(usage): serve Itqan admin usage reports, leaderboard and reconciliation`.
+- [x] **Step 2–4:** run, implement, run. Commit `feat(usage): serve Itqan admin usage reports, leaderboard and reconciliation`.
 
 ### Task 5: Developer endpoints and the privacy floor
 
 **Files:** Create `apps/usage_tracking/api/internal/usage_reports.py`; test
 `apps/usage_tracking/tests/test_developer_usage_reports.py`.
 
-- [ ] **Step 1: Failing tests** — `/cms-api/developers/usage/…`: anonymous → 401; only the
+- [x] **Step 1: Failing tests** — `/cms-api/developers/usage/…`: anonymous → 401; only the
   caller's apps (another user's `app` → 404 `app_not_found`); breakdown by `endpoint` and `app`;
   rows with < 3 listeners → `"<3"` and no `other`; `unique_end_users` metric.
-- [ ] **Step 2–4:** run, implement, run. Commit `feat(usage): serve developer usage reports with a privacy floor`.
+- [x] **Step 2–4:** run, implement, run. Commit `feat(usage): serve developer usage reports with a privacy floor`.
 
 ### Task 6: Public gallery counts behind `PUBLIC_USAGE_COUNTS_ENABLED`
 
 **Files:** Modify `apps/usage_tracking/api/internal/usage_reports.py`, `config/settings/base.py`;
 test `apps/usage_tracking/tests/test_public_usage_counts.py`.
 
-- [ ] **Step 1: Failing tests** — flag off → 404 `usage_counts_disabled`; flag on → rounded
+- [x] **Step 1: Failing tests** — flag off → 404 `usage_counts_disabled`; flag on → rounded
   counts; tenant-restricted asset → 404 `not_found`; second call served from cache.
-- [ ] **Step 2–4:** run, implement, run. Commit `feat(usage): expose public usage counts behind a flag`.
+- [x] **Step 2–4:** run, implement, run. Commit `feat(usage): expose public usage counts behind a flag`.
 
 ### Task 7: Settings, CI/CD, translations, docs, spec §20, performance
 
-- [ ] Settings in `config/settings/base.py`, `env.example`, `deployment/docker/env.template`,
+- [x] Settings in `config/settings/base.py`, `env.example`, `deployment/docker/env.template`,
   `.github/workflows/ci-cd.yml` (`vars.STAGING_X || 'default'`, `vars.PROD_X || 'default'`),
   README table. Commit `ci(usage): wire the usage report settings into env files and deploys`.
-- [ ] `makemessages`, Arabic for every new string, `msgfmt --check --statistics` → 0
+- [x] `makemessages`, Arabic for every new string, `msgfmt --check --statistics` → 0
   untranslated. Commit `feat(usage): translate usage report messages to Arabic`.
-- [ ] `docs/ARCHITECTURE.md` usage section, spec §20 amendments, backlog minors.
+- [x] `docs/ARCHITECTURE.md` usage section, spec §20 amendments, backlog minors.
   Commit `docs(usage): document the usage reports API`.
-- [ ] Performance: 50k events over 30 days rolled up; time each endpoint cold/warm and record
+- [x] Performance: 50k events over 30 days rolled up; time each endpoint cold/warm and record
   query counts in the PR.
-- [ ] Full suite + `makemigrations --check`.
+- [x] Full suite + `makemigrations --check`.

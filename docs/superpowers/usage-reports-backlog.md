@@ -30,3 +30,22 @@ Spec: `docs/superpowers/specs/2026-10-18-usage-reports-design.md`.
       `ignore_conflicts` skipped.
 - [ ] **Old CLIs count `itqan outdated` as installs.** Goes away once plan 5's CLI (sends
       `X-Itqan-Command`) is widely adopted.
+
+## From plan 3 (reports API)
+
+- [ ] **API calls include 3xx.** Rollup sessions for `api_call` count every counted status
+      (2xx and 3xx); spec §8 says 2xx. Fix in `rebuild_hour` (count `SUCCESS`/`FULL` only).
+- [ ] **Hour-of-week for half-hour zones.** Hourly rollups are shifted by whole hours, so
+      `Asia/Kolkata` buckets are 30 minutes off. Fix: read events for such zones, or document.
+- [ ] **Monthly uniques are summed across months and scopes.** Past retention, a listener active
+      in two months (or under two publishers of one member) counts twice. Fix: store yearly
+      uniques too, or label the basis in the UI (the API already returns `uniques_basis`).
+- [ ] **Privacy floor masks everything past retention.** Developer breakdown rows whose events
+      were purged have 0 known listeners and show `"<3"`. Fix: store per-row listener counts in
+      the monthly table, or skip the floor for ranges past retention.
+- [ ] **Unique splits run three event queries.** Fine at 50k events (≈ 50 ms); revisit with
+      production volume.
+- [ ] **No cache invalidation.** Reports may lag the hourly import by up to
+      `USAGE_REPORTS_CACHE_SECONDS`. Fix: include `data_updated_at` in the cache key if needed.
+- [ ] **The publisher-scope publisher list runs on every request**, including cache hits (one
+      small query). Fix: cache it with the membership ids.
