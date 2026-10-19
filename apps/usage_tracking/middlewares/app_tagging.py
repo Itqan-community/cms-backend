@@ -28,6 +28,8 @@ def tag_storage_urls(body: bytes, base_url: str, slug: str) -> bytes:
 
 
 def _private(cache_control: str) -> str:
+    if "no-store" in cache_control:
+        return "private, no-store"
     max_age = re.search(r"(?<!s-)max-age=(\d+)", cache_control)
     return f"private, max-age={max_age.group(1)}" if max_age else "private, no-cache"
 
@@ -43,8 +45,8 @@ class AppTaggingMiddleware:
             return response
         slug = slug_for_key(api_key)
         response[APP_HEADER] = slug
-        if response.has_header("Cache-Control"):
-            response["Cache-Control"] = _private(response["Cache-Control"])
+        # Every tagged response is private, so a shared cache never serves one app's links to another.
+        response["Cache-Control"] = _private(response.get("Cache-Control", ""))
         base_url = settings.CLOUDFLARE_R2_PUBLIC_BASE_URL
         if base_url and not response.streaming and response.get("Content-Type", "").startswith("application/json"):
             response.content = tag_storage_urls(response.content, base_url, slug)
