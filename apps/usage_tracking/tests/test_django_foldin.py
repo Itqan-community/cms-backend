@@ -15,14 +15,14 @@ class TestFoldIn(BaseTestCase):
         self.user = User.objects.create_user(email="viewer@example.com", name="Viewer")
         self.asset = baker.make(Asset, category=CategoryChoice.MUSHAF)
 
-    def _event(self, kind: str, delivery: str | None = None) -> UsageEvent:
+    def _event(self, kind: str, delivery: str | None = None, ip: str = "203.0.113.7") -> UsageEvent:
         metadata = {"delivery": delivery} if delivery else {}
         return UsageEvent.objects.create(
             developer_user=self.user,
             usage_kind=kind,
             asset_id=self.asset.id,
             metadata=metadata,
-            ip_address="203.0.113.7",
+            ip_address=ip,
             user_agent="Mozilla/5.0",
             effective_license=self.asset.license,
         )
@@ -128,6 +128,19 @@ class TestFoldIn(BaseTestCase):
 
         # Assert
         assert rebuilt == [datetime(2026, 10, 1, 10, tzinfo=UTC), datetime(2026, 10, 1, 11, tzinfo=UTC)]
+
+    def test_fold_in_where_event_has_the_proxy_ip_should_skip_it(self):
+        # Arrange: old workers still running during a deploy record Caddy's internal address.
+        proxied = self._event("view", ip="172.18.0.5")
+        visitor = self._event("view", ip="198.51.100.20")
+
+        # Act
+        fold_in_django_events()
+
+        # Assert
+        rays = set(TrafficEvent.objects.values_list("ray_id", flat=True))
+        assert rays == {f"django:view:{visitor.pk}"}
+        assert f"django:view:{proxied.pk}" not in rays
 
 
 class TestFoldInCutoverMigration(BaseTestCase):
