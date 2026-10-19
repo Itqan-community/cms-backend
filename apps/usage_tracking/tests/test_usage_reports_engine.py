@@ -150,6 +150,21 @@ class TestUsageReportsEngine(BaseTestCase):
         assert filtered["uniques_basis"] == "unavailable"
         assert filtered["metrics"]["unique_listeners"]["value"] is None
 
+    def test_summary_where_periods_counted_on_different_bases_should_not_compare_uniques(self):
+        # Arrange: the current week is exact, the previous week only has monthly uniques.
+        event(at(12), "listener-a")
+        TrafficMonthlyUniques.objects.create(
+            month=date(2026, 10, 1), scope="all", scope_id=0, measure="listeners", count=50
+        )
+
+        # Act
+        with patch("apps.usage_tracking.services.usage_reports.retention_cutoff", return_value=date(2026, 10, 10)):
+            result = summary(admin_scope(None), WEEK)
+
+        # Assert
+        listeners = result["metrics"]["unique_listeners"]
+        assert (listeners["value"], listeners["previous"], listeners["change"]) == (1, None, None)
+
     def test_timeseries_where_day_granularity_should_zero_fill(self):
         # Arrange
         daily(date(2026, 10, 11), sessions=5)
