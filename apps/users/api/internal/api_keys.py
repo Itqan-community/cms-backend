@@ -1,6 +1,7 @@
 from typing import Literal
 
 from django.conf import settings
+from django.db import transaction
 from ninja import Schema
 from pydantic import AwareDatetime
 
@@ -108,9 +109,11 @@ if settings.ENABLE_API_KEY_AUTH:
     def update_api_key(request: Request, key_id: str, data: ApiKeyPatchInSchema):
         fields = data.model_dump(exclude_unset=True)
         slug = fields.pop("app_slug", None)
-        api_key = _service.update(request.user, key_id, fields) if fields else _service.get(request.user, key_id)
-        if slug is not None:
-            set_app_slug(api_key, slug)
+        # One transaction: a rejected slug must not leave the new name saved.
+        with transaction.atomic():
+            api_key = _service.update(request.user, key_id, fields) if fields else _service.get(request.user, key_id)
+            if slug is not None:
+                set_app_slug(api_key, slug)
         return api_key
 
     @router.delete(
