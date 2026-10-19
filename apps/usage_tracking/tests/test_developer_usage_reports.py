@@ -106,6 +106,17 @@ class TestDeveloperUsageReports(BaseTestCase):
         ]
         assert body["other"] is None
 
+    def test_breakdown_where_privacy_floor_applies_should_hide_the_total(self):
+        # Arrange
+        self.authenticate_user(self.user)
+
+        # Act
+        response = self.client.get(f"{BASE}/breakdown/?{RANGE}&metric=api_calls&by=endpoint")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        assert response.json()["total"] is None
+
     def test_breakdown_where_by_app_should_label_own_apps(self):
         # Arrange
         self.authenticate_user(self.user)
