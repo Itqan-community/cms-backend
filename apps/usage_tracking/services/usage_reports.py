@@ -200,6 +200,8 @@ SPLIT_DIMENSIONS = frozenset(repo.DIMENSION_COLUMNS)
 BREAKDOWN_DIMENSIONS = SPLIT_DIMENSIONS | {"hour_of_week"}
 ADMIN_DIMENSIONS = BREAKDOWN_DIMENSIONS | {"publisher"}
 PRIVACY_FLOOR = 3
+# Series key of the folded rest when splitting; cannot clash with a real value (channel "other").
+OTHER_KEY = "__other__"
 # Kinds whose sessions make an app "integrating" (spec §8).
 APP_KINDS: tuple[str, ...] = (*AUDIO_KINDS, *DOWNLOAD_KINDS, TrafficKind.API_CALL)
 
@@ -528,7 +530,7 @@ def _split_series(
     period: Period,
     buckets: list[Bucket],
 ) -> list[dict[str, Any]]:
-    """Top-N keys by range total, plus "other" (a true distinct over the rest for unique metrics)."""
+    """Top-N keys by range total, plus OTHER_KEY (a true distinct over the rest for unique metrics)."""
     by_key: dict[str, dict[Any, int]] = defaultdict(dict)
     if metric in UNIQUE_METRICS:
         spec = _unique_spec(metric)
@@ -542,7 +544,7 @@ def _split_series(
             for bucket, _key, value in repo.unique_series(
                 base_q, period, spec, granularity, split_by, exclude_keys=raw_top, group=False
             ):
-                by_key["other"][bucket] = value
+                by_key[OTHER_KEY][bucket] = value
     else:
         rollup = ROLLUP_METRICS[metric]
         rows = repo.rollup_series(base_q, period, rollup.field, rollup.kinds, granularity, split_by)
@@ -553,9 +555,9 @@ def _split_series(
         top_keys, has_rest = ranked[:top], len(ranked) > top
         kept = set(top_keys)
         for bucket, key, value in rows:
-            target = key if key in kept else "other"
+            target = key if key in kept else OTHER_KEY
             by_key[target][bucket] = by_key[target].get(bucket, 0) + value
-    keys = top_keys + (["other"] if has_rest else [])
+    keys = top_keys + ([OTHER_KEY] if has_rest else [])
     label_map = _labels(split_by, top_keys)
     return [{"key": key, "label": label_map.get(key), "points": _points(buckets, by_key.get(key, {}))} for key in keys]
 
