@@ -400,3 +400,37 @@ tracking beyond the hashed identities above, revenue reporting, and email/schedu
     count every resolve.
 11. Gallery CDN download links use `CLOUDFLARE_R2_PUBLIC_BASE_URL` (the custom domain), not
     `file_url.url` (the presigned S3-endpoint URL).
+
+## 20. Amendments from plan 3 (reports API)
+
+1. **Paths.** The root mount is the public developers API, so the admin scope is
+   `/portal/admin/usage/…` (Itqan staff = `is_staff`); developer `/cms-api/developers/usage/…`;
+   public `/cms-api/assets/{id}/usage-counts/`, with the same asset visibility as
+   `/cms-api/assets/{id}/`. Publisher stays `/portal/usage/…`.
+2. **Summary** always returns the previous period (same length, immediately before) with a
+   `change` ratio. `compare=previous_period` adds an aligned `previous` series to timeseries and
+   `previous` values to breakdown rows. `leaderboard/` is a breakdown by `publisher` or `asset`
+   with the comparison on. Admin breakdowns and splits also accept `by=publisher`.
+3. **Uniques past retention** (range starting before the event-retention cutoff) are the sum of
+   `TrafficMonthlyUniques` months (`uniques_basis: "monthly"`), only for filters limited to the
+   scope, `asset_id` and `app`; otherwise `null` (`"unavailable"`). Inside retention they are
+   exact distincts (`"events"`).
+4. **Privacy floor** (developer breakdowns): a row with fewer than 3 distinct listeners in
+   retained events returns `"<3"`, and the `other` total is omitted.
+5. **Public counts** return `plays`, `downloads` (downloads + CLI installs) and `apps`
+   (identified apps with ≥ 1 play, download or API call), floored to two significant figures,
+   plus the disclaimers; 404 `usage_counts_disabled` while `PUBLIC_USAGE_COUNTS_ENABLED` is off.
+6. **CSV export** (publisher and admin) has one row per period × asset with the additive
+   metrics only; unique metrics are not additive across rows.
+7. `data_updated_at` = newest error-free run of the Logpush import or the Django fold-in.
+8. Split series fold the rest into the key `__other__`; rows without a dimension value (no
+   asset, no identified app) use the key `""`.
+9. Hour-of-week uses hourly rollups shifted to `tz`; zones with non-hour offsets are bucketed by
+   whole hours.
+10. Disclaimers are returned as `{code, text}`: `lower_bound`, `uniques_estimated`,
+    `hourly_delay`. Metric definitions are localized in `definitions`.
+11. New settings: `USAGE_REPORTS_CACHE_SECONDS` (600, `0` disables) and
+    `PUBLIC_USAGE_COUNTS_ENABLED` (False). Errors gain `invalid_dimension`, `invalid_timezone`,
+    `app_not_found` and `usage_counts_disabled`.
+12. The developer page's app filter takes `UsageApp` ids; the options come from a breakdown by
+    `app` (apps with traffic in the range).
