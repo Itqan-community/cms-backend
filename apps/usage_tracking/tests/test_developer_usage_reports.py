@@ -117,6 +117,20 @@ class TestDeveloperUsageReports(BaseTestCase):
         self.assertEqual(200, response.status_code, response.content)
         assert response.json()["total"] is None
 
+    def test_breakdown_where_previous_period_is_below_the_floor_should_hide_it(self):
+        # Arrange: one listener called /recitations/{id}/ in the previous week.
+        daily(date(2026, 10, 5), app_id=self.app.id, sessions=1, endpoint="/recitations/{id}/")
+        event("P1", app_id=self.app.id, endpoint="/recitations/{id}/", occurred_at=datetime(2026, 10, 5, 9, tzinfo=UTC))
+        self.authenticate_user(self.user)
+
+        # Act
+        response = self.client.get(f"{BASE}/breakdown/?{RANGE}&metric=api_calls&by=endpoint&compare=previous_period")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        first = response.json()["items"][0]
+        assert (first["value"], first["previous"]) == (40, None)
+
     def test_breakdown_where_by_app_should_label_own_apps(self):
         # Arrange
         self.authenticate_user(self.user)

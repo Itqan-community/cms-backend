@@ -685,9 +685,18 @@ def breakdown(
         ]
         if scope.privacy_floor:
             listeners = repo.listeners_per_group(base_q, period, metric_kinds(metric), by, zone)
+            listeners_before = (
+                repo.listeners_per_group(
+                    base_q, Period(*previous_period(period.start, period.end)), metric_kinds(metric), by, zone
+                )
+                if compare
+                else {}
+            )
             for item in items:
                 if listeners.get(item["key"], 0) < PRIVACY_FLOOR:
                     item["value"] = f"<{PRIVACY_FLOOR}"
+                    item["previous"] = None
+                elif compare and listeners_before.get(item["key"], 0) < PRIVACY_FLOOR:
                     item["previous"] = None
             # Total minus the visible values would reveal the hidden ones.
             other = total = None
