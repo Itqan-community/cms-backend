@@ -1026,22 +1026,11 @@ msgstr "السورة غير موجودة."
 msgid "Ayah does not exist."
 msgstr "الآية غير موجودة."
 
-msgid "The end date must not be before the start date."
-msgstr "يجب ألا يكون تاريخ النهاية قبل تاريخ البداية."
-
-#, python-brace-format
-msgid "Statistics are limited to {days} days per request."
-msgstr "الإحصائيات محدودة بـ {days} يومًا لكل طلب."
-
-msgid "The end date is out of the supported range."
-msgstr "تاريخ النهاية خارج النطاق المدعوم."
+msgid "Usage counts are not available."
+msgstr "إحصاءات الاستخدام غير متاحة."
 
 msgid "Asset does not exist."
 msgstr "المورد غير موجود."
-
-#, python-brace-format
-msgid "Hourly statistics are limited to {days} days."
-msgstr "الإحصائيات بالساعة محدودة بـ {days} يومًا."
 
 #, python-brace-format
 msgid "window_hours must divide 24 evenly, got {window_hours}"
@@ -1052,6 +1041,73 @@ msgstr "يجب أن يتكون المعرّف العام للتطبيق من 3 �
 
 msgid "This app slug is already taken."
 msgstr "هذا المعرّف العام للتطبيق مستخدم بالفعل."
+
+msgid "A listener's first request for an audio file after at least 5 minutes without one. Seeking and buffering inside a play are not counted again."
+msgstr "أول طلب يرسله المستمع لملف صوتي بعد 5 دقائق على الأقل دون طلب. لا يُحتسب التقديم والتخزين المؤقت داخل التشغيل مرة أخرى."
+
+msgid "Version files and gallery downloads, counted like plays: repeats within 5 minutes count once."
+msgstr "ملفات الإصدارات وتنزيلات المعرض، وتُحتسب مثل مرات التشغيل: التكرار خلال 5 دقائق يُحتسب مرة واحدة."
+
+msgid "Packages installed with the itqan CLI, once per installation, version and day."
+msgstr "الحزم المثبتة بأداة itqan لسطر الأوامر، مرة واحدة لكل تثبيت وإصدار ويوم."
+
+msgid "Successful public API calls for this content, including responses served from the CDN cache."
+msgstr "طلبات الواجهة البرمجية العامة الناجحة لهذا المحتوى، بما فيها الردود المقدَّمة من ذاكرة شبكة توزيع المحتوى المؤقتة."
+
+msgid "Asset pages opened by signed-in users in the gallery."
+msgstr "صفحات الموارد التي فتحها المستخدمون المسجَّلون في المعرض."
+
+msgid "Every successful request for an asset file or API route, including partial requests."
+msgstr "كل طلب ناجح لملف مورد أو لمسار في الواجهة البرمجية، بما فيها الطلبات الجزئية."
+
+msgid "Bytes delivered to clients."
+msgstr "البايتات المرسلة إلى العملاء."
+
+msgid "Distinct devices and networks that played audio in the period (estimate)."
+msgstr "الأجهزة والشبكات المختلفة التي شغّلت الصوت خلال الفترة (تقدير)."
+
+msgid "Distinct devices and networks that downloaded files in the period (estimate)."
+msgstr "الأجهزة والشبكات المختلفة التي نزّلت الملفات خلال الفترة (تقدير)."
+
+msgid "Distinct end users reported by apps through the X-External-User-Id header."
+msgstr "المستخدمون النهائيون المختلفون الذين أبلغت عنهم التطبيقات عبر الترويسة X-External-User-Id."
+
+msgid "Counts are lower bounds: apps and browsers cache files locally and some content is re-hosted, so that usage never reaches Itqan."
+msgstr "الأرقام حد أدنى: تحفظ التطبيقات والمتصفحات الملفات محليًا ويُعاد استضافة بعض المحتوى، فلا يصل ذلك الاستخدام إلى إتقان."
+
+msgid "Unique counts are estimates: people sharing a network may count as one, and one person on several networks may count more than once."
+msgstr "أعداد المستخدمين الفريدين تقديرية: قد يُحتسب من يتشاركون شبكة واحدة شخصًا واحدًا، وقد يُحتسب الشخص الواحد على عدة شبكات أكثر من مرة."
+
+msgid "Reports are updated hourly; the latest hours may still be incomplete."
+msgstr "تُحدَّث التقارير كل ساعة، وقد تكون الساعات الأخيرة غير مكتملة بعد."
+
+msgid "The end date must not be before the start date."
+msgstr "يجب ألا يكون تاريخ النهاية قبل تاريخ البداية."
+
+msgid "The dates are out of the supported range."
+msgstr "التواريخ خارج النطاق المدعوم."
+
+#, python-brace-format
+msgid "Reports are limited to {days} days per request."
+msgstr "التقارير محدودة بـ {days} يومًا لكل طلب."
+
+#, python-brace-format
+msgid "Hourly reports are limited to {days} days."
+msgstr "التقارير بالساعة محدودة بـ {days} يومًا."
+
+#, python-brace-format
+msgid "The metric {metric} does not apply to {kind} traffic."
+msgstr "المقياس {metric} لا ينطبق على حركة {kind}."
+
+msgid "Unknown time zone."
+msgstr "منطقة زمنية غير معروفة."
+
+msgid "App does not exist."
+msgstr "التطبيق غير موجود."
+
+#, python-brace-format
+msgid "This report cannot be split by {name}."
+msgstr "لا يمكن تقسيم هذا التقرير حسب {name}."
 
 msgid "Itqan Community"
 msgstr "مجتمع اتقان"
@@ -1547,6 +1603,17 @@ msgstr "مرحبًا بك في نظام إتقان لإدارة المحتوى!"
 
 msgid "This is a test email to verify the email service is working correctly."
 msgstr "هذه رسالة اختبارية للتأكد من عمل خدمة البريد الإلكتروني بشكل صحيح."
+
+#, python-brace-format
+#~ msgid "Statistics are limited to {days} days per request."
+#~ msgstr "الإحصائيات محدودة بـ {days} يومًا لكل طلب."
+
+#~ msgid "The end date is out of the supported range."
+#~ msgstr "تاريخ النهاية خارج النطاق المدعوم."
+
+#, python-brace-format
+#~ msgid "Hourly statistics are limited to {days} days."
+#~ msgstr "الإحصائيات بالساعة محدودة بـ {days} يومًا."
 
 #~ msgid "Version name is required when a file is provided."
 #~ msgstr "اسم الإصدار مطلوب عند تقديم ملف."
