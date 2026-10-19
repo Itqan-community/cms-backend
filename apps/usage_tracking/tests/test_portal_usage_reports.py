@@ -197,6 +197,17 @@ class TestPortalUsageReports(BaseTestCase):
         assert lines[0] == ("period,asset_id,asset,category,plays,downloads,installs,api_calls,views,requests,bytes")
         assert lines[1:] == [f"2026-10-12,{self.asset.id},Asset A,mushaf,5,0,0,0,0,6,10"]
 
+    def test_export_where_asset_name_starts_like_a_formula_should_neutralize_it(self):
+        # Arrange
+        self._allow()
+        Asset.objects.filter(id=self.asset.id).update(name='=HYPERLINK("http://x")')
+
+        # Act
+        response = self._get(f"export/?{RANGE}")
+
+        # Assert
+        assert "'=HYPERLINK" in response.content.decode()
+
     def test_endpoints_where_data_grows_should_keep_query_count(self):
         # Arrange
         self._allow()

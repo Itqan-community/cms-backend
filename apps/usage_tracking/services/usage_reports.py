@@ -703,6 +703,13 @@ def breakdown(
 # ---------------------------------------------------------------------------------------------
 
 EXPORT_METRICS = ("plays", "downloads", "installs", "api_calls", "views", "requests", "bytes")
+_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _csv_text(value: object) -> str:
+    """Spreadsheet-safe text: a leading formula character is escaped so names never run as formulas."""
+    text = "" if value is None else str(value)
+    return f"'{text}" if text.startswith(_FORMULA_PREFIXES) else text
 
 
 def export_csv(scope: ReportScope, filters: ReportFilters, granularity: str = "day") -> HttpResponse:
@@ -728,9 +735,14 @@ def export_csv(scope: ReportScope, filters: ReportFilters, granularity: str = "d
     writer.writerow(header + list(EXPORT_METRICS))
     for row in rows:
         asset = details.get(row["asset_id"], {})
-        line = [row["bucket"].isoformat(), row["asset_id"] or "", asset.get("name", ""), asset.get("category", "")]
+        line = [
+            row["bucket"].isoformat(),
+            row["asset_id"] or "",
+            _csv_text(asset.get("name")),
+            asset.get("category", ""),
+        ]
         if with_publisher:
-            line += [asset.get("publisher_id") or "", asset.get("publisher__name") or ""]
+            line += [asset.get("publisher_id") or "", _csv_text(asset.get("publisher__name"))]
         writer.writerow(line + [row[f"m_{metric}"] for metric in EXPORT_METRICS])
     return response
 
