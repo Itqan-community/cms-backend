@@ -763,7 +763,9 @@ flowchart LR
 - **Django-side events:** package resolves write one `cli_install` traffic event per package
   (`source=django`). `fold_in_django_events_task` (minute 15) copies gallery views and presigned
   downloads from `content.UsageEvent` (CDN downloads are counted at the edge, behind
-  `GALLERY_DOWNLOADS_VIA_CDN`) and rebuilds every hour that gained Django rows. Django events
+  `GALLERY_DOWNLOADS_VIA_CDN`), skips events recorded with Caddy's internal address (before the
+  client-IP fix or from old workers mid-deploy), and rebuilds every hour that gained Django rows
+  (plus the next hour when an event sits inside the session window of its end). Django events
   record the client IP from `X-Forwarded-For` (Caddy forwards `CF-Connecting-IP`).
 - **File URLs:** consumer-facing links to open-access files use the storage custom domain
   (`public_media_url`), so the edge caches and counts them; this covers the `itqan` CLI's package

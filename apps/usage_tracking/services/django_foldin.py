@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+import ipaddress
 import logging
 
 from django.conf import settings
@@ -23,6 +24,10 @@ from apps.usage_tracking.services.traffic_identity import listener_id_for
 logger = logging.getLogger(__name__)
 
 _BATCH = 5000
+# Private ranges only: `ipaddress.is_private` also covers documentation and other public-looking blocks.
+_PROXY_NETWORKS = tuple(
+    ipaddress.ip_network(net) for net in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7")
+)
 _EVENT_KINDS = {
     UsageEvent.UsageKindChoice.VIEW: ("view", TrafficKind.VIEW, TrafficChannel.WEB),
     UsageEvent.UsageKindChoice.FILE_DOWNLOAD: ("download", TrafficKind.GALLERY_DOWNLOAD, TrafficChannel.GALLERY),
@@ -36,10 +41,22 @@ class FoldInResult:
     error: str
 
 
+def _is_proxy_ip(value: str | None) -> bool:
+    """Caddy's container address: what events recorded before the client-IP fix (or by old workers
+    still running mid-deploy) carry instead of the visitor's. Visitors via Cloudflare never have one."""
+    try:
+        address = ipaddress.ip_address(value or "")
+    except ValueError:
+        return False
+    return address.is_loopback or address.is_link_local or any(address in net for net in _PROXY_NETWORKS)
+
+
 def _copy(event: UsageEvent) -> TrafficEvent | None:
     prefix, kind, channel = _EVENT_KINDS[event.usage_kind]
     if kind == TrafficKind.GALLERY_DOWNLOAD and (event.metadata or {}).get("delivery") == "cdn":
         return None  # the edge already counted this download
+    if _is_proxy_ip(event.ip_address):
+        return None  # one shared address would merge every visitor into one listener
     ray_id = f"django:{prefix}:{event.pk}"
     user_agent = (event.user_agent or "")[:1024]
     family = ua_family(user_agent)
