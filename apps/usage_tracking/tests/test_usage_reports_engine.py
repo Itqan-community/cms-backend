@@ -18,7 +18,14 @@ from apps.usage_tracking.models import (
     UsageImportState,
 )
 from apps.usage_tracking.services import usage_reports
-from apps.usage_tracking.services.usage_reports import ReportFilters, admin_scope, breakdown, summary, timeseries
+from apps.usage_tracking.services.usage_reports import (
+    OTHER_KEY,
+    ReportFilters,
+    admin_scope,
+    breakdown,
+    summary,
+    timeseries,
+)
 
 _ray = itertools.count(1)
 
@@ -193,9 +200,9 @@ class TestUsageReportsEngine(BaseTestCase):
 
         # Assert
         series = {item["key"]: item["points"] for item in result["series"]}
-        assert list(series) == ["SA", "other"]
-        assert series["other"][1]["value"] == 2
-        assert series["other"][2]["value"] == 1
+        assert list(series) == ["SA", OTHER_KEY]
+        assert series[OTHER_KEY][1]["value"] == 2
+        assert series[OTHER_KEY][2]["value"] == 1
 
     def test_timeseries_where_unique_split_should_count_distinct_per_bucket(self):
         # Arrange
@@ -213,7 +220,19 @@ class TestUsageReportsEngine(BaseTestCase):
         series = {item["key"]: item["points"] for item in result["series"]}
         assert series["EG"][1]["value"] == 1 or series["SA"][1]["value"] == 1
         assert sum(points[1]["value"] for points in series.values()) == 3
-        assert series["other"][1]["value"] == 2
+        assert series[OTHER_KEY][1]["value"] == 2
+
+    def test_timeseries_where_real_other_channel_is_on_top_should_keep_it_apart_from_the_rest(self):
+        # Arrange
+        daily(date(2026, 10, 11), sessions=9, channel="other")
+        daily(date(2026, 10, 11), sessions=2, channel="web")
+
+        # Act
+        result = timeseries(admin_scope(None), WEEK, metric="plays", granularity="day", split_by="channel", top=1)
+
+        # Assert
+        series = {item["key"]: item["points"][1]["value"] for item in result["series"]}
+        assert series == {"other": 9, OTHER_KEY: 2}
 
     def test_timeseries_where_compare_should_add_aligned_previous_series(self):
         # Arrange
