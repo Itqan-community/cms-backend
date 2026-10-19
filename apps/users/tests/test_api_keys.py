@@ -309,6 +309,22 @@ class ApiKeyTests(BaseTestCase):
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual("my-app", response.json()["app_slug"])
 
+    def test_update_api_key_where_name_and_bad_slug_should_change_neither(self):
+        # Arrange
+        user = User.objects.create_user(email="slug-atomic@example.com", password="pass123", name="User")
+        api_key, _ = APIKey.objects.create_key(name="Old Name", user=user)
+        self.authenticate_user(user)
+
+        # Act
+        response = self.client.patch(
+            f"/cms-api/api-keys/{api_key.id}/", data={"name": "New Name", "app_slug": "-bad-"}, format="json"
+        )
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        api_key.refresh_from_db()
+        self.assertEqual("Old Name", api_key.name)
+
     def test_update_api_key_where_app_slug_invalid_should_return_400_invalid_app_slug(self):
         # Arrange
         user = User.objects.create_user(email="slug4@example.com", password="pass123", name="User")
