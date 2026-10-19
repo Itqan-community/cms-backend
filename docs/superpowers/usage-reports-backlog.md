@@ -78,3 +78,17 @@ Instead, sign links on our own domain and let Cloudflare check them at the edge:
       valid window; device caching stays invisible (the cache disclaimer still applies).
 - [ ] **Optional.** A shorter `Cache-Control: max-age` on audio, so well-behaved players
       re-fetch more often; trade-off is bandwidth and offline listening.
+
+## File URLs (found 2026-10-19, PR #558)
+
+- [ ] **Restricted files are reachable through the CDN domain.** `MediaFileStorage` uploads
+      every file `public-read` and `storage.cms.itqan.dev` serves all of `/media/`, so a
+      restricted asset's presigned link only hides its path: anyone who learns or guesses
+      `uploads/assets/<id>/versions/<id>/<name>` downloads it without an access check. Fix:
+      store restricted assets under a prefix (or bucket) the custom domain does not serve, plus a
+      WAF rule blocking that prefix; move files when `is_open_access` changes.
+- [ ] **Use `public_media_url` everywhere.** `recitation_track_list.py`, `samples.py`,
+      `services/recitation.py`, `services/recitation_range.py` and
+      `asset_recitation_json_file_sync_service.py` still build
+      `f"{CLOUDFLARE_R2_PUBLIC_BASE_URL}/media/{name}"` by hand (no percent-encoding, no local
+      fallback). Switch them to the helper.
