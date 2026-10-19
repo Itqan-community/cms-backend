@@ -362,12 +362,12 @@ def labels(dimension: str, raw_keys: Iterable[Any]) -> dict[Any, str]:
     return {}
 
 
-def asset_publishers(asset_ids: Iterable[int]) -> dict[int, tuple[str, int | None, str]]:
-    """Asset id -> (name, publisher id, publisher name)."""
+def asset_details(asset_ids: Iterable[int | None]) -> dict[int, dict[str, Any]]:
+    """Asset id -> name, category, publisher id and publisher name."""
     return {
-        row["id"]: (row["name"], row["publisher_id"], row["publisher__name"] or "")
-        for row in Asset.objects.filter(id__in=[i for i in asset_ids if i is not None]).values(
-            "id", "name", "publisher_id", "publisher__name"
+        row["id"]: row
+        for row in Asset.objects.filter(id__in={i for i in asset_ids if i is not None}).values(
+            "id", "name", "category", "publisher_id", "publisher__name"
         )
     }
 

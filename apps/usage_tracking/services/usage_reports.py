@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Callable
+import csv
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, date, datetime, timedelta
 import hashlib
@@ -18,6 +19,8 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from django.conf import settings
 from django.core.cache import cache
 from django.db.models import Q, QuerySet
+from django.http import HttpResponse
+from django.utils.http import content_disposition_header
 from django.utils.translation import get_language, gettext_lazy as _
 
 from apps.content.models import Asset
@@ -691,3 +694,40 @@ def breakdown(
 
     params = {**asdict(filters), "metric": metric, "by": by, "limit": limit, "cmp": compare, "tz": tz}
     return _cached(scope, "breakdown", params, compute)
+
+
+# ---------------------------------------------------------------------------------------------
+# CSV export
+# ---------------------------------------------------------------------------------------------
+
+EXPORT_METRICS = ("plays", "downloads", "installs", "api_calls", "views", "requests", "bytes")
+
+
+def export_csv(scope: ReportScope, filters: ReportFilters, granularity: str = "day") -> HttpResponse:
+    """Additive metrics per period and asset; unique metrics are not additive and are left out."""
+    validate_filters(filters, granularity=granularity)
+    check_scope(scope, filters)
+    rows = repo.export_rows(
+        _base_q(scope, filters),
+        Period(filters.start_date, filters.end_date),
+        granularity,
+        {metric: (ROLLUP_METRICS[metric].field, ROLLUP_METRICS[metric].kinds) for metric in EXPORT_METRICS},
+    )
+    details = repo.asset_details(row["asset_id"] for row in rows)
+    with_publisher = scope.name == "admin"
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = content_disposition_header(
+        as_attachment=True, filename=f"usage-{filters.start_date}-{filters.end_date}.csv"
+    )
+    writer = csv.writer(response)
+    header = ["period", "asset_id", "asset", "category"]
+    if with_publisher:
+        header += ["publisher_id", "publisher"]
+    writer.writerow(header + list(EXPORT_METRICS))
+    for row in rows:
+        asset = details.get(row["asset_id"], {})
+        line = [row["bucket"].isoformat(), row["asset_id"] or "", asset.get("name", ""), asset.get("category", "")]
+        if with_publisher:
+            line += [asset.get("publisher_id") or "", asset.get("publisher__name") or ""]
+        writer.writerow(line + [row[f"m_{metric}"] for metric in EXPORT_METRICS])
+    return response
