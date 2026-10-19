@@ -686,6 +686,8 @@ USAGE_ANALYTICS_API_TOKEN = config("USAGE_ANALYTICS_API_TOKEN", default="") or C
 # Never rotate: listener/install/end-user ids are HMACs under this key. Empty derives from SECRET_KEY.
 USAGE_IDENTITY_KEY = config("USAGE_IDENTITY_KEY", default="")
 USAGE_EVENT_RETENTION_MONTHS = config("USAGE_EVENT_RETENTION_MONTHS", default=25, cast=int)
+# How long a usage report response is cached per scope, language and parameter set (0 disables).
+USAGE_REPORTS_CACHE_SECONDS = config("USAGE_REPORTS_CACHE_SECONDS", default=600, cast=int)
 # Open-access gallery downloads go through the storage custom domain (`?download=`), so the
 # edge counts them. Needs the Cloudflare Content-Disposition transform rule first.
 GALLERY_DOWNLOADS_VIA_CDN = config("GALLERY_DOWNLOADS_VIA_CDN", default=False, cast=bool)
