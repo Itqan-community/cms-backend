@@ -228,6 +228,17 @@ Rules that decide what consumers can see or download — asset `status`, `restri
 - Reuse the shared definition (`Asset.get_published_version`, `consumer_visible_q`, …) instead of re-deriving the rule with a new query; if a surface needs a different shape, add it next to the shared one.
 - Add a test per affected surface showing the rule is enforced there, and say in the task summary which surfaces were checked and which needed changes.
 
+## Serving file URLs (REQUIRED)
+Files live in Cloudflare R2. How a URL is built decides whether Cloudflare caches the file and whether the usage reports can see the request (Logpush only covers our own hosts: `storage.cms.itqan.dev`, `api.cms.itqan.dev` and their `staging.` twins).
+- **Open-access files handed to consumers** (public/developer API, `itqan` CLI package registry, gallery, tenant APIs, generated JSON/CSV that embeds file links): use `apps.core.utils.media_urls.public_media_url(file, request)`. On R2 it returns `CLOUDFLARE_R2_PUBLIC_BASE_URL/media/<name>` (the CDN custom domain); locally it falls back to the absolute media URL.
+- **Do not hand consumers `FieldFile.url`.** `MediaFileStorage` signs it: on staging/production it is a presigned link to the private bucket endpoint (`<account>.r2.cloudflarestorage.com`), which bypasses the CDN cache and every usage report (no country, app, listener or install counts).
+- **Restricted assets** (`is_open_access=False`): keep the signed, expiring `FieldFile.url` (or `generate_presigned_download_url` for a forced download), and only after the access check (`enforce_asset_access_on_public_api`, `AssetAccess`). Never build a CDN URL for them.
+- **Forced downloads with a filename** (gallery): for open assets use the CDN URL plus `?download=<filename>` behind `GALLERY_DOWNLOADS_VIA_CDN` (a Cloudflare transform rule sets `Content-Disposition`); otherwise `generate_presigned_download_url`.
+- **Uploads**: presigned `PUT`/multipart URLs (e.g. the recitation direct-upload service) are correct; they are not consumer traffic.
+- **Internal portal/admin previews** may use `FieldFile.url`; they are not usage.
+- Keep `?c=<app slug>` intact: `AppTaggingMiddleware` appends it to storage URLs in API-key responses, so build links on the CDN domain for it to work.
+- Add a test asserting the URL host for every new consumer surface that returns file links.
+
 ## Architecture
 - **WRITE operations** (POST/PUT/PATCH/DELETE): always go through Service → Repository → ORM. Services own validation, business rules, and transactions; Repositories own ORM access.
 - **READ operations in `portal_api`** (GET list / GET retrieve in `apps/*/api/portal/`): query the Model directly inside the view function. Do **not** introduce a Service or Repository for portal reads. For retrieve endpoints, use `try/except Model.DoesNotExist` and raise `ItqanError(error_name="<resource>_not_found", status_code=404)` so the typed `404: NinjaErrorResponse[Literal["..._not_found"]]` OpenAPI contract is preserved. Filters from `FilterSchema` should be applied inline. The rationale: portal read paths have no business logic — keeping the queryset visible at the call site removes pass-through indirection.
