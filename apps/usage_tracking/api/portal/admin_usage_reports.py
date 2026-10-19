@@ -4,9 +4,12 @@ Includes traffic that belongs to no asset (API lists and search), the publisher 
 and the unseen-traffic reconciliation against R2 reads.
 """
 
+from typing import Literal
+
 from ninja import Query
 from rest_framework.exceptions import PermissionDenied
 
+from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
@@ -29,6 +32,8 @@ from apps.usage_tracking.services.usage_reports import ReportScope
 
 router = ItqanRouter(tags=[NinjaTag.USAGE])
 
+ADMIN_ERRORS = {**REPORT_ERRORS, 403: NinjaErrorResponse[Literal["permission_denied"]]}
+
 
 def _scope(request: Request, publisher_id: int | None) -> ReportScope:
     if not request.user.is_staff:
@@ -38,7 +43,7 @@ def _scope(request: Request, publisher_id: int | None) -> ReportScope:
 
 @router.get(
     "admin/usage/summary/",
-    response={200: SummaryOut, **REPORT_ERRORS},
+    response={200: SummaryOut, **ADMIN_ERRORS},
     description="Headline usage numbers across every publisher (Itqan staff).",
 )
 def admin_usage_summary(request: Request, params: ReportQuery = Query(...), scope: AdminScopeQuery = Query(...)):
@@ -47,7 +52,7 @@ def admin_usage_summary(request: Request, params: ReportQuery = Query(...), scop
 
 @router.get(
     "admin/usage/timeseries/",
-    response={200: TimeseriesOut, **REPORT_ERRORS},
+    response={200: TimeseriesOut, **ADMIN_ERRORS},
     description="A zero-filled series across every publisher; can also be split by publisher (Itqan staff).",
 )
 def admin_usage_timeseries(
@@ -66,7 +71,7 @@ def admin_usage_timeseries(
 
 @router.get(
     "admin/usage/breakdown/",
-    response={200: BreakdownOut, **REPORT_ERRORS},
+    response={200: BreakdownOut, **ADMIN_ERRORS},
     description="One metric per dimension across every publisher; can also break down by publisher (Itqan staff).",
 )
 def admin_usage_breakdown(
@@ -85,7 +90,7 @@ def admin_usage_breakdown(
 
 @router.get(
     "admin/usage/leaderboard/",
-    response={200: BreakdownOut, **REPORT_ERRORS},
+    response={200: BreakdownOut, **ADMIN_ERRORS},
     description="Top publishers or assets by a metric, with their previous-period values (Itqan staff).",
 )
 def admin_usage_leaderboard(
@@ -103,7 +108,7 @@ def admin_usage_leaderboard(
 
 @router.get(
     "admin/usage/reconciliation/",
-    response={200: ReconciliationOut, **REPORT_ERRORS},
+    response={200: ReconciliationOut, **ADMIN_ERRORS},
     description="Unseen traffic: R2 reads minus the edge requests seen for the same objects (Itqan staff).",
 )
 def admin_usage_reconciliation(request: Request, params: ReconciliationQuery = Query(...)):
@@ -114,7 +119,7 @@ def admin_usage_reconciliation(request: Request, params: ReconciliationQuery = Q
 
 @router.get(
     "admin/usage/export/",
-    response=REPORT_ERRORS,
+    response=ADMIN_ERRORS,
     description="CSV of the additive metrics per period, asset and publisher (Itqan staff).",
 )
 def admin_usage_export(request: Request, params: ExportQuery = Query(...), scope: AdminScopeQuery = Query(...)):

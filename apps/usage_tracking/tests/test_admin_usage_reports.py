@@ -8,6 +8,7 @@ from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.usage_tracking.models import R2ObjectReadsHourly, TrafficDaily
 from apps.users.models import User
+from config.portal_api import portal_api
 
 BASE = "/portal/admin/usage"
 RANGE = "start_date=2026-10-10&end_date=2026-10-16"
@@ -45,6 +46,15 @@ class TestAdminUsageReports(BaseTestCase):
         # Assert
         self.assertEqual(403, response.status_code, response.content)
         self.assertEqual("permission_denied", response.json()["error_name"])
+
+    def test_openapi_where_admin_endpoints_should_document_403(self):
+        # Act
+        paths = portal_api.get_openapi_schema()["paths"]
+
+        # Assert
+        admin = [operation for path, item in paths.items() if "/admin/usage/" in path for operation in item.values()]
+        assert len(admin) == 6
+        assert all(403 in operation["responses"] for operation in admin)
 
     def test_summary_where_staff_should_include_every_publisher_and_unassigned_api_calls(self):
         # Arrange
