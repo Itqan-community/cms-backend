@@ -768,3 +768,43 @@ def reconciliation(scope: ReportScope, start_date: date, end_date: date, limit: 
         }
 
     return _cached(scope, "reconciliation", {"start": start_date, "end": end_date, "limit": limit}, compute)
+
+
+# ---------------------------------------------------------------------------------------------
+# Public gallery counts
+# ---------------------------------------------------------------------------------------------
+
+PUBLIC_COUNTS_CACHE_SECONDS = 3600
+
+
+def round_public(value: int) -> int:
+    """Floor to two significant figures (1234 -> 1200), so public numbers do not tick per request."""
+    if value < 100:
+        return value
+    step = 10 ** (len(str(value)) - 2)
+    return value // step * step
+
+
+def public_counts(asset_id: int) -> dict[str, Any]:
+    """All-time plays, downloads (with CLI installs) and integrating apps of one asset, rounded."""
+
+    def compute() -> dict[str, Any]:
+        totals = repo.rollup_totals(
+            Q(asset_id=asset_id),
+            {"all": Period(EARLIEST_START_DATE, LATEST_END_DATE)},
+            {
+                "plays": ("sessions", tuple(AUDIO_KINDS)),
+                "downloads": ("sessions", (*DOWNLOAD_KINDS, TrafficKind.CLI_INSTALL)),
+            },
+            APP_KINDS,
+            TrafficChannel.APP_UNIDENTIFIED,
+        )["all"]
+        return {
+            "plays": round_public(totals["plays"]),
+            "downloads": round_public(totals["downloads"]),
+            "apps": round_public(totals["apps"]),
+            "disclaimers": disclaimers(),
+            "data_updated_at": repo.data_updated_at(),
+        }
+
+    return cached("public_counts", [asset_id], compute, PUBLIC_COUNTS_CACHE_SECONDS)

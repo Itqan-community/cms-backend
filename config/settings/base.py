@@ -688,6 +688,8 @@ USAGE_IDENTITY_KEY = config("USAGE_IDENTITY_KEY", default="")
 USAGE_EVENT_RETENTION_MONTHS = config("USAGE_EVENT_RETENTION_MONTHS", default=25, cast=int)
 # How long a usage report response is cached per scope, language and parameter set (0 disables).
 USAGE_REPORTS_CACHE_SECONDS = config("USAGE_REPORTS_CACHE_SECONDS", default=600, cast=int)
+# Show all-time plays/downloads/apps on gallery asset pages; the endpoint returns 404 while off.
+PUBLIC_USAGE_COUNTS_ENABLED = config("PUBLIC_USAGE_COUNTS_ENABLED", default=False, cast=bool)
 # Open-access gallery downloads go through the storage custom domain (`?download=`), so the
 # edge counts them. Needs the Cloudflare Content-Disposition transform rule first.
 GALLERY_DOWNLOADS_VIA_CDN = config("GALLERY_DOWNLOADS_VIA_CDN", default=False, cast=bool)

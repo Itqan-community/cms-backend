@@ -192,3 +192,11 @@ class BreakdownOut(Schema):
     other: int | None
     total: int | None
     data_updated_at: AwareDatetime | None
+
+
+class PublicUsageCountsOut(Schema):
+    plays: int = Field(..., description="All-time plays, floored to two significant figures.")
+    downloads: int = Field(..., description="All-time downloads and CLI installs, floored to two significant figures.")
+    apps: int = Field(..., description="Identified apps with at least one play, download or API call.")
+    disclaimers: list[DisclaimerOut]
+    data_updated_at: AwareDatetime | None
