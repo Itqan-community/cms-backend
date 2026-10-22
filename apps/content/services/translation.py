@@ -356,9 +356,9 @@ class TranslationService:
         fields = {key: value for key, value in fields.items() if key != "name"}
         with transaction.atomic():
             if fields.get("file_url"):
-                # Asset first, the order column changes and commits lock in.
-                AssetContentRepository().lock_asset(version.asset)
+                # Version first, then the asset: the order publishing takes them in.
                 version = lock_version_for_content_change(version)
+                AssetContentRepository().lock_asset(version.asset)
             updated = self.repo.update_translation_version(version, fields=fields)
             if fields.get("file_url"):
                 adopt_current_columns(updated)
