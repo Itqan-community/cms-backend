@@ -7,15 +7,14 @@ language, because a column applies to all of the asset's languages.
 
 from typing import Literal
 
-from django.utils.translation import gettext_lazy as _
 from ninja import Schema
 from pydantic import Field
 
 from apps.content.api.portal.asset_content import _resolve
-from apps.content.models import Asset, AssetColumn, CategoryChoice, StatusChoice
+from apps.content.models import Asset, AssetColumn, CategoryChoice
 from apps.content.services.asset_columns import AssetColumnService
-from apps.content.services.asset_content import _NOT_FOUND_ERROR
-from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
+from apps.content.services.asset_content import AssetContentService
+from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
@@ -68,14 +67,7 @@ class AssetColumnOrderIn(Schema):
 
 
 def _get_asset(request: Request, category: CategoryChoice, slug: str) -> Asset:
-    try:
-        return Asset.objects.filter(request.publisher_q()).get(slug=slug, category=category, status=StatusChoice.READY)
-    except Asset.DoesNotExist as exc:
-        raise ItqanError(
-            error_name=_NOT_FOUND_ERROR[category],
-            message=_("{category} with slug {slug} not found.").format(category=category.label, slug=slug),
-            status_code=404,
-        ) from exc
+    return AssetContentService()._get_asset_or_404(slug, category, publisher_q=request.publisher_q())
 
 
 def _require_manage_columns(request: Request) -> None:

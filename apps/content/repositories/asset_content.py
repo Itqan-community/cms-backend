@@ -105,6 +105,10 @@ class AssetContentRepository:
         """Row-lock the asset for the rest of the transaction (serializes numbering)."""
         return Asset.objects.select_for_update().get(pk=asset.pk)
 
+    def set_column_keys(self, version: AssetVersion, keys: list[str]) -> None:
+        version.column_keys = keys
+        version.save(update_fields=["column_keys", "updated_at"])
+
     def sequence_version_names(self, asset: Asset, language: str) -> list[str]:
         """Names of the committed versions in the asset's number sequence for ``language``.
 

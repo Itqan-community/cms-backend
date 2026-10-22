@@ -11,6 +11,7 @@ from apps.content.models import (
 )
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
+from apps.publishers.models import Publisher, PublisherMember
 from apps.users.models import User
 
 
@@ -175,4 +176,32 @@ class AssetColumnsApiTests(BaseTestCase):
 
         # Assert
         self.assertEqual(response.status_code, 204)
+        self.assertFalse(AssetColumn.objects.filter(asset=self.asset, key="answer").exists())
+
+    def test_create_column_where_member_of_another_publisher_should_return_404(self):
+        # Arrange
+        self.asset.publisher = baker.make(Publisher, name="Owner")
+        self.asset.save(update_fields=["publisher"])
+        outsider = User.objects.create_user(email="outsider@example.com", name="Outsider")  # not staff: scoped
+        baker.make(
+            PublisherMember,
+            user=outsider,
+            publisher=baker.make(Publisher, name="Other"),
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
+        for permission in (
+            PermissionChoice.PORTAL_ACCESS,
+            PermissionChoice.PORTAL_READ_TAFSIR,
+            PermissionChoice.PORTAL_MANAGE_ASSET_COLUMNS,
+            PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES,
+        ):
+            self.give_permission(outsider, permission)
+        self.authenticate_user(outsider)
+
+        # Act
+        response = self.client.post(self.url, data={"key": "answer"}, content_type="application/json")
+
+        # Assert
+        self.assertEqual(response.status_code, 404, response.content)
+        self.assertEqual(response.json()["error_name"], "tafsir_not_found")
         self.assertFalse(AssetColumn.objects.filter(asset=self.asset, key="answer").exists())

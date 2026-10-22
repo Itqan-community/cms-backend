@@ -359,8 +359,15 @@ can use it as a CSV header, JSON field or identifier, and it may not shadow a un
 single column keyed `text`, so their files are unchanged: `Asset.text_columns()` reads
 it without writing, and the first write saves it (`Asset.ensure_text_columns()`). A committed version freezes its ordered keys in
 `AssetVersion.column_keys`, which is its file's layout; drafts follow the asset's
-current columns. Once a committed version contains a column, the column can no
-longer be renamed or deleted.
+current columns. Replacing a committed version's file parses it with the asset's
+current columns and gives the version those keys, so its stored file carries every
+column reviewers approve; columns reordered since that commit are refused
+(`major_bump_required`), since its number is already issued. Once a committed version
+contains a column, the column can no longer be renamed or deleted. Commits, restores
+and file replacements lock the asset before checking the column order, as column
+edits do. Deploying the columns migrations: stop the previous release's workers
+before `content.0010` (once it is applied their writes, which set no column, fail);
+`0010` is one-way in practice once any unit has cells in two columns.
 
 Every commit — an editor draft committed, an uploaded or replaced version
 file, a restore — records a per-cell delta (`AssetVersionChange`) against the
@@ -394,7 +401,8 @@ from the parsed entries, so consumers download exactly what was reviewed.
   translation's / tafsir's download for one language (default: the source): `format`
   (`csv`), `template`, the CSV `header`, the text `columns` (key + en/ar labels) and up
   to 3 sample `rows` of its published version (rebuilt from its deltas when a rollback
-  re-published a pruned commit). No access grant is needed; a language
+  re-published a pruned commit). It reads only the cells those rows need, and caches
+  the rows per served version. No access grant is needed; a language
   consumers can't see, or another category, is 404 `file_structure_unavailable`.
 - **Commit vs publish** — committing makes a version the *head* (newest wins; what
   the editor builds on, `is_active` in the version list) but does **not** make it

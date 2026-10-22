@@ -1,6 +1,8 @@
 import json
 from urllib.parse import quote
 
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from model_bakery import baker
 
 from apps.content.models import (
@@ -282,3 +284,46 @@ class MultiColumnEditorApiTests(QuranDataMixin, BaseTestCase):
         lines = response.content.decode().splitlines()
         self.assertEqual(lines[0], "surah,ayah,surah_name,ayah_text,question,answer")
         self.assertEqual(lines[1], "1,1,الفاتحة,ayah 1,,A")
+
+    def test_list_entries_where_more_columns_and_cells_should_not_add_queries(self):
+        # Arrange
+        AssetVersionEntry.objects.create(version=self.draft, ayah=self.ayah1, column=self.question, text="Q")
+        self.authenticate_user(self.user)
+        with CaptureQueriesContext(connection) as two_columns:
+            self.client.get(f"{self.base}entries/?page_size=10")
+        for order, key in enumerate(("hint", "source"), start=2):
+            column = AssetColumn.objects.create(asset=self.asset, key=key, order=order)
+            for ayah in (self.ayah1, self.ayah2, self.ayah3):
+                AssetVersionEntry.objects.create(version=self.draft, ayah=ayah, column=column, text=key)
+
+        # Act
+        with CaptureQueriesContext(connection) as four_columns:
+            response = self.client.get(f"{self.base}entries/?page_size=10")
+
+        # Assert
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(len(four_columns.captured_queries), len(two_columns.captured_queries))
+
+    def test_patch_entries_where_more_cells_should_not_add_queries(self):
+        # Arrange — each patch both updates existing cells and creates new ones
+        AssetVersionEntry.objects.create(version=self.draft, ayah=self.ayah1, column=self.question, text="Q")
+        self.authenticate_user(self.user)
+        url = f"{self.base}entries/"
+
+        def patch(cells):
+            rows = [{"unit_id": ayah.id, "column": key, "text": f"{key} v2"} for ayah, key in cells]
+            return self.client.patch(url, data={"rows": rows}, content_type="application/json")
+
+        patch([(self.ayah1, "question")])  # the draft's first edit marks it edited, once
+        with CaptureQueriesContext(connection) as two_cells:
+            patch([(self.ayah1, "question"), (self.ayah1, "answer")])
+
+        # Act
+        with CaptureQueriesContext(connection) as six_cells:
+            response = patch(
+                [(ayah, key) for ayah in (self.ayah1, self.ayah2, self.ayah3) for key in ("question", "answer")]
+            )
+
+        # Assert
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(len(six_cells.captured_queries), len(two_cells.captured_queries))

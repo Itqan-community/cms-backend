@@ -1,3 +1,5 @@
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from model_bakery import baker
 
 from apps.content.models import (
@@ -5,6 +7,7 @@ from apps.content.models import (
     AssetColumn,
     AssetTemplateChoice,
     AssetVersion,
+    AssetVersionChange,
     AssetVersionEntry,
     CategoryChoice,
     StatusChoice,
@@ -161,3 +164,19 @@ class AssetColumnServiceTests(QuranDataMixin, BaseTestCase):
 
         # Act / Assert
         self.assertFalse(self.service.is_committed(column))
+
+    def test_committed_keys_where_asset_has_many_changes_should_not_read_them_row_by_row(self):
+        # Arrange
+        column = self.asset.ensure_text_columns()[0]
+        version = baker.make(AssetVersion, asset=self.asset, state=VersionStateChoice.DRAFT)
+        baker.make(AssetVersionChange, version=version, ayah=self.ayah1, column=column)
+        baker.make(AssetVersionChange, version=version, ayah=self.ayah2, column=column)
+
+        # Act
+        with CaptureQueriesContext(connection) as queries:
+            keys = self.service.committed_keys(self.asset)
+
+        # Assert — one row per column, however many cells changed
+        self.assertEqual(keys, {"text"})
+        change_queries = [q["sql"] for q in queries.captured_queries if "content_assetversionchange" in q["sql"]]
+        self.assertTrue(all("EXISTS" in sql for sql in change_queries), change_queries)

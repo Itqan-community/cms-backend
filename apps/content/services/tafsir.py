@@ -21,6 +21,7 @@ from apps.content.repositories.tafsir import TafsirRepository
 from apps.content.services.asset_access import guard_restrict_for_tenant
 from apps.content.services.asset_content import (
     VersionBump,
+    adopt_current_columns,
     forbid_minor_after_column_reorder,
     import_uploaded_file_into_entries,
     issue_version_number,
@@ -350,9 +351,12 @@ class TafsirService:
         fields = {key: value for key, value in fields.items() if key != "name"}
         with transaction.atomic():
             if fields.get("file_url"):
+                # Asset first, the order column changes and commits lock in.
+                AssetContentRepository().lock_asset(version.asset)
                 version = lock_version_for_content_change(version)
             updated = self.repo.update_tafsir_version(version, fields=fields)
             if fields.get("file_url"):
+                adopt_current_columns(updated)
                 # New content: re-recorded as changes, so it is reviewed again.
                 import_uploaded_file_into_entries(updated, strict=True)
                 AssetContentRepository().record_upload_changes(updated)
