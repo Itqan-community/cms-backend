@@ -810,3 +810,27 @@ def test_in_range_bump_where_manifest_invalid_should_fall_back_to_lockfile_only(
 
     assert "itqan-assets.lock" in committed["body"]
     assert "itqan-assets.yaml" not in committed["body"]
+
+
+def test_in_range_bump_where_manifest_read_fails_should_fall_back_to_lockfile_only():
+    from unittest.mock import patch
+
+    from apps.core.ninja_utils.errors import ItqanError
+
+    get_file = GitHubContentsClient.get_file
+    manifest_reads: list[str] = []
+
+    def flaky_manifest_read(self, **kwargs):
+        # Discovery's read succeeds; the in-range column-notes read times out.
+        if kwargs["path"] == MANIFEST_PATH:
+            manifest_reads.append(kwargs["path"])
+            if len(manifest_reads) > 1:
+                raise ItqanError(error_name="github_request_failed", message="timeout", status_code=502)
+        return get_file(self, **kwargs)
+
+    with patch.object(GitHubContentsClient, "get_file", autospec=True, side_effect=flaky_manifest_read):
+        committed = _run_tafsir_bump(SAMPLE_MANIFEST, SAMPLE_LOCKFILE, _qa_structure("question", "answer"))
+
+    assert len(manifest_reads) == 2
+    assert "itqan-assets.lock" in committed["body"]
+    assert "itqan-assets.yaml" not in committed["body"]

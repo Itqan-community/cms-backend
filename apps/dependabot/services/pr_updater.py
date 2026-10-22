@@ -17,6 +17,7 @@ import re
 
 from apps.content.models import REVIEWED_CATEGORIES, AssetVersion
 from apps.content.services.asset_columns import version_structure
+from apps.core.ninja_utils.errors import ItqanError
 from apps.dependabot.models import WatchedRepository
 from apps.dependabot.services.github_client import (
     LOCKFILE_PATH,
@@ -187,14 +188,24 @@ class PrUpdaterService:
             # notes (nothing else changes). Single-column versions have none to refresh;
             # an unreadable or invalid manifest leaves the PR lockfile-only.
             if columns_comment is not None and len(structure.columns) > 1:
-                manifest_file = self._github_client.get_file(
-                    owner=watched_repo.owner,
-                    repository_name=watched_repo.repository_name,
-                    installation_id=watched_repo.installation_id,
-                    path=MANIFEST_PATH,
-                    ref=discovery.default_branch,
-                )
-                if manifest_file.content is not None:
+                try:
+                    manifest_file = self._github_client.get_file(
+                        owner=watched_repo.owner,
+                        repository_name=watched_repo.repository_name,
+                        installation_id=watched_repo.installation_id,
+                        path=MANIFEST_PATH,
+                        ref=discovery.default_branch,
+                    )
+                except ItqanError:
+                    # The notes are informational: a GitHub failure must not block the bump.
+                    logger.warning(
+                        "Manifest column notes not refreshed: manifest unreadable [repo=%s/%s, entry=%s]",
+                        watched_repo.owner,
+                        watched_repo.repository_name,
+                        entry_name,
+                    )
+                    manifest_file = None
+                if manifest_file is not None and manifest_file.content is not None:
                     try:
                         refreshed = refresh_columns_comment(manifest_file.content, entry_name, columns_comment)
                     except ManifestDocumentError:
