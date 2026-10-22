@@ -109,10 +109,18 @@ def _resolve_for_version(
     an unassigned language's content would be reachable by id alone. Reads are
     gated as well as writes, for that reason.
     """
+    return _resolve_version(category, request, slug, version_id, access=access)[0]
+
+
+def _resolve_version(
+    category: str, request: Request, slug: str, version_id: int, *, access: Access
+) -> tuple[CategoryChoice, AssetVersion]:
+    """``_resolve_for_version`` that also returns the version it looked up, so an
+    endpoint the editor calls often doesn't load the asset and version twice."""
     resolved = _resolve(category, request, access=access)
     version = AssetContentService().get_version_or_404(slug, resolved, version_id, publisher_q=request.publisher_q())
     require_version_language(request.user, version.asset, version)
-    return resolved
+    return resolved, version
 
 
 class VersionTextOut(Schema):
@@ -512,18 +520,15 @@ def list_entries(
     sura: int | None = None,
     filters: Json[EntriesFilterModelIn] | None = Query(None),
 ):
-    resolved = _resolve_for_version(category, request, slug, version_id, access="read")
+    _, version = _resolve_version(category, request, slug, version_id, access="read")
     service = AssetContentService()
     page_size = min(page_size, MAX_PAGE_SIZE)
     rows, count = service.get_entries_page(
-        slug,
-        resolved,
-        version_id,
+        version,
         offset=(page - 1) * page_size,
         limit=page_size,
         sura=sura,
         filters=filters.to_filters() if filters is not None else None,
-        publisher_q=request.publisher_q(),
     )
     return {"results": rows, "count": count}
 
@@ -581,9 +586,8 @@ def version_diff(request: Request, category: str, slug: str, version_id: int):
 )
 @paginate
 def pending_diff(request: Request, category: str, slug: str, version_id: int):
-    resolved = _resolve_for_version(category, request, slug, version_id, access="content")
-    service = AssetContentService()
-    return service.get_pending_changes(slug, resolved, version_id, publisher_q=request.publisher_q())
+    _, version = _resolve_version(category, request, slug, version_id, access="content")
+    return AssetContentService().get_pending_changes(version)
 
 
 @router.get(

@@ -304,6 +304,46 @@ class MultiColumnEditorApiTests(QuranDataMixin, BaseTestCase):
         self.assertEqual(response.status_code, 200, response.content)
         self.assertEqual(len(four_columns.captured_queries), len(two_columns.captured_queries))
 
+    def _lookups(self, queries) -> tuple[int, int]:
+        """How many queries loaded the asset (by slug or id), and the draft by id."""
+        sqls = [query["sql"] for query in queries.captured_queries]
+        asset = sum(
+            1
+            for sql in sqls
+            if 'FROM "content_asset" ' in sql
+            and (f"'{self.asset.slug}'" in sql or f'"content_asset"."id" = {self.asset.id} ' in sql)
+        )
+        draft = sum(
+            1
+            for sql in sqls
+            if 'FROM "content_assetversion" ' in sql and f'"content_assetversion"."id" = {self.draft.id}' in sql
+        )
+        return asset, draft
+
+    def test_list_entries_should_load_the_asset_and_version_once(self):
+        # Arrange
+        self.authenticate_user(self.user)
+
+        # Act
+        with CaptureQueriesContext(connection) as queries:
+            response = self.client.get(f"{self.base}entries/?page_size=10")
+
+        # Assert
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(self._lookups(queries), (1, 1))
+
+    def test_pending_diff_should_load_the_asset_and_version_once(self):
+        # Arrange
+        self.authenticate_user(self.user)
+
+        # Act
+        with CaptureQueriesContext(connection) as queries:
+            response = self.client.get(f"{self.base}pending-diff/?page_size=1")
+
+        # Assert
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(self._lookups(queries), (1, 1))
+
     def test_patch_entries_where_more_cells_should_not_add_queries(self):
         # Arrange — each patch both updates existing cells and creates new ones
         AssetVersionEntry.objects.create(version=self.draft, ayah=self.ayah1, column=self.question, text="Q")

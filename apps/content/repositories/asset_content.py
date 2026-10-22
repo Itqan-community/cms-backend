@@ -129,7 +129,13 @@ class AssetContentRepository:
         ).first()
 
     def get_version(self, asset: Asset, version_id: int) -> AssetVersion | None:
-        return self.asset_version_model.objects.filter(asset=asset, id=version_id).first()
+        version = (
+            self.asset_version_model.objects.filter(asset=asset, id=version_id).select_related("asset_language").first()
+        )
+        if version is not None:
+            # The caller's asset is this row: reading ``version.asset`` costs no query.
+            version.asset = asset
+        return version
 
     @transaction.atomic
     def ensure_mushaf_coverage(self, draft: AssetVersion, mushaf_version: AssetVersion) -> int:
