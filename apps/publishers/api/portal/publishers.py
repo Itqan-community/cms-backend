@@ -98,9 +98,10 @@ class MyPublisherOut(Schema):
 
 
 @router.get("publishers/me/", response=list[MyPublisherOut])
-@permission_required([permission_class(PermissionChoice.PORTAL_READ_PUBLISHER)])
+@permission_required([permission_class(PermissionChoice.PORTAL_ACCESS)])
 def list_my_publishers(request: Request) -> list[Publisher]:
-    """Returns all publishers the authenticated user is a member of."""
+    """Returns all publishers the authenticated user is a member of. Needs only portal
+    access: the portal shell picks its tenant from this list before anything else loads."""
     return list(Publisher.objects.filter(request.publisher_q("id")).order_by("name"))
 
 

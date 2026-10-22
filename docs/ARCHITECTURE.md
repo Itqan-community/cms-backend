@@ -214,6 +214,7 @@ The **Publisher** represents an organization or individual who owns and uploads 
   - Members are invited by `group_id`; the group is chosen from `GET /portal/groups/`, not a fixed role list
   - The group is applied to the user's `auth` groups on invitation acceptance, and drives runtime authorization
   - Membership is per-publisher, so one user may hold a different group at each publisher they belong to
+  - `GET /portal/publishers/me/` (the portal's tenant picker) needs only `portal_access`: it lists the caller's own memberships (staff see every publisher)
   - The `Itqan Internal` group holds every permission and is never listed or assignable through the portal APIs
 
 ### 2. Resource
