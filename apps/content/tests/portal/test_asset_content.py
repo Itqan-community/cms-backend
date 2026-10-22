@@ -213,6 +213,22 @@ class GetOrCreateDraftTest(AssetContentBaseTest):
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual("ar", response.json()["language"])
 
+    def test_get_or_create_draft_where_language_empty_should_not_open_source_draft(self):
+        # Arrange — only an omitted language means the source; an empty one is invalid
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
+
+        # Act
+        response = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/draft/",
+            data={"language": ""},
+            content_type="application/json",
+        )
+
+        # Assert
+        self.assertNotEqual(200, response.status_code, response.content)
+        self.assertFalse(AssetVersion.objects.filter(asset=self.translation, state=VersionStateChoice.DRAFT).exists())
+
     def test_get_or_create_draft_should_return_asset_template(self):
         # Arrange
         self.authenticate_user(self.user)

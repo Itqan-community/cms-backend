@@ -356,7 +356,7 @@ def get_or_create_draft(request: Request, category: str, slug: str, data: DraftI
     resolved = _resolve(category, request, access="content")
     service = AssetContentService()
     asset = service._get_asset_or_404(slug, resolved, publisher_q=request.publisher_q())
-    language = data.language or asset.language
+    language = asset.language if data.language is None else data.language
     require_language(request.user, asset, language)
     return service.get_or_create_draft(
         slug,
