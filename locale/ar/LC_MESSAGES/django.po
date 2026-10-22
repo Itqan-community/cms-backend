@@ -50,10 +50,6 @@ msgid "Reciter with slug {slug} not found."
 msgstr "لم يتم العثور على القارئ بالمعرّف {slug}."
 
 #, python-brace-format
-msgid "{category} with slug {slug} not found."
-msgstr "لم يتم العثور على {category} بالمعرّف {slug}."
-
-#, python-brace-format
 msgid "Unsupported content category: {category}"
 msgstr "فئة محتوى غير مدعومة: {category}"
 
@@ -404,7 +400,7 @@ msgid "This asset already has a column with the key {key}."
 msgstr "يحتوي هذا الأصل بالفعل على عمود بالمفتاح {key}."
 
 msgid "This column is part of a committed version, so it can't be renamed or deleted."
-msgstr "هذا العمود جزء من إصدار معتمد، لذا لا يمكن إعادة تسميته أو حذفه."
+msgstr "هذا العمود جزء من إصدار محفوظ، لذا لا يمكن إعادة تسميته أو حذفه."
 
 msgid "The new order must list every column of the asset exactly once."
 msgstr "يجب أن يتضمن الترتيب الجديد كل أعمدة الأصل مرة واحدة فقط."
@@ -443,6 +439,10 @@ msgstr "رقم الإصدار الابتدائي مطلوب للإصدار ال�
 
 msgid "Version number must be in the form major.minor, e.g. 7.0."
 msgstr "يجب أن يكون رقم الإصدار بالصيغة رئيسي.فرعي، مثل 7.0."
+
+#, python-brace-format
+msgid "{category} with slug {slug} not found."
+msgstr "لم يتم العثور على {category} بالمعرّف {slug}."
 
 #, python-brace-format
 msgid "Version with id {id} not found."
