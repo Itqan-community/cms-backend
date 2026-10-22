@@ -362,13 +362,17 @@ class AssetContentService:
                 message=_("Version with id {id} not found.").format(id=version_id),
                 status_code=404,
             )
+        self._require_draft(version)
+        return version
+
+    @staticmethod
+    def _require_draft(version: AssetVersion) -> None:
         if version.state != VersionStateChoice.DRAFT:
             raise ItqanError(
                 error_name="version_not_editable",
                 message=_("Only draft versions can be edited."),
                 status_code=400,
             )
-        return version
 
     def get_or_create_draft(
         self,
@@ -457,35 +461,28 @@ class AssetContentService:
         version = self.get_version_or_404(slug, category, version_id, publisher_q=publisher_q)
         return self.repo.version_diff(version)
 
-    def get_pending_changes(
-        self,
-        slug: str,
-        category: CategoryChoice,
-        version_id: int,
-        publisher_q: Q | None = None,
-    ) -> list[dict]:
+    def get_pending_changes(self, draft: AssetVersion) -> list[dict]:
         """The uncommitted diff of a draft vs the current head — what a commit would
-        record. Empty draft rows are excluded (they are dropped on commit)."""
-        asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
-        draft = self._get_editable_draft_or_400(asset, version_id)
+        record. Empty draft rows are excluded (they are dropped on commit).
+
+        ``draft`` is the version the endpoint already resolved (see ``get_version_or_404``)."""
+        self._require_draft(draft)
+        asset = draft.asset
         spec = unit_spec_for(asset)
         language = draft.asset_language.language if draft.asset_language_id else asset.language
-        head = draft.asset.get_latest_version(language)
+        head = asset.get_latest_version(language)
         old_map = self.repo.reconstruct_entries(head) if head is not None else {}
         new_map = {cell: text for cell, text in self.repo._entries_map(draft).items() if text != ""}
         return self.repo.diff_maps(spec, old_map, new_map, column_keys=draft.resolved_column_keys)
 
     def get_entries_page(
         self,
-        slug: str,
-        category: CategoryChoice,
-        version_id: int,
+        version: AssetVersion,
         *,
         offset: int,
         limit: int,
         sura: int | None = None,
         filters: EntryFilters | None = None,
-        publisher_q: Q | None = None,
     ) -> tuple[list[dict], int]:
         """One page of the template's canonical units with stored text overlaid.
 
@@ -504,15 +501,10 @@ class AssetContentService:
         A committed version that was pruned to deltas has its entries rebuilt on
         first view (see ``AssetContentRepository.ensure_entries``), so history is
         browsed and filtered exactly like the current version.
+
+        ``version`` is the one the endpoint already resolved (see ``get_version_or_404``).
         """
-        asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
-        version = self.repo.get_version(asset, version_id)
-        if version is None:
-            raise ItqanError(
-                error_name="version_not_found",
-                message=_("Version with id {id} not found.").format(id=version_id),
-                status_code=404,
-            )
+        asset = version.asset
         if version.state == VersionStateChoice.PUBLISHED and not version.entries.exists():
             self.repo.ensure_entries(version)
 
