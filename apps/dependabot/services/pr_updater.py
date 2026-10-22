@@ -15,7 +15,8 @@ from dataclasses import dataclass
 import logging
 import re
 
-from apps.content.models import AssetVersion
+from apps.content.models import REVIEWED_CATEGORIES, AssetVersion
+from apps.content.services.asset_columns import version_structure
 from apps.dependabot.models import WatchedRepository
 from apps.dependabot.services.github_client import (
     LOCKFILE_PATH,
@@ -25,11 +26,13 @@ from apps.dependabot.services.github_client import (
 )
 from apps.dependabot.services.github_token import load_github_app_config
 from apps.dependabot.services.manifest_discovery import ManifestDiscoveryService
-from apps.dependabot.services.manifest_parse import ParsedManifest
+from apps.dependabot.services.manifest_parse import ManifestDocumentError, ParsedManifest
 from apps.dependabot.services.manifest_update import (
+    refresh_columns_comment,
     serialize_updated_lockfile,
     update_manifest_content,
 )
+from apps.package_manager.services.columns_comment import render_columns_comment
 from apps.package_manager.services.package_registry import (
     _parse_candidate_version,
     constraint_satisfied,
@@ -170,6 +173,8 @@ class PrUpdaterService:
         # 4. Classify In-Range vs Out-of-Range
         is_in_range = manifest_constraint is not None and constraint_satisfied(new_semver, manifest_constraint)
 
+        structure = version_structure(asset_version) if asset_version.asset.category in REVIEWED_CATEGORIES else None
+        columns_comment = (lambda indent: render_columns_comment(structure, indent)) if structure is not None else None
         if is_in_range:
             new_lockfile_bytes = serialize_updated_lockfile(
                 discovery.lockfile,
@@ -178,6 +183,30 @@ class PrUpdaterService:
                 new_version=new_version_str,
             )
             files = {LOCKFILE_PATH: new_lockfile_bytes}
+            # A minor version may have added a column: refresh only the manifest's column
+            # notes (nothing else changes). Single-column versions have none to refresh;
+            # an unreadable or invalid manifest leaves the PR lockfile-only.
+            if columns_comment is not None and len(structure.columns) > 1:
+                manifest_file = self._github_client.get_file(
+                    owner=watched_repo.owner,
+                    repository_name=watched_repo.repository_name,
+                    installation_id=watched_repo.installation_id,
+                    path=MANIFEST_PATH,
+                    ref=discovery.default_branch,
+                )
+                if manifest_file.content is not None:
+                    try:
+                        refreshed = refresh_columns_comment(manifest_file.content, entry_name, columns_comment)
+                    except ManifestDocumentError:
+                        logger.warning(
+                            "Manifest column notes not refreshed: invalid manifest [repo=%s/%s, entry=%s]",
+                            watched_repo.owner,
+                            watched_repo.repository_name,
+                            entry_name,
+                        )
+                        refreshed = manifest_file.content
+                    if refreshed != manifest_file.content:
+                        files[MANIFEST_PATH] = refreshed
             title = f"chore(deps): update {entry_name} to {new_version_str}"
             update_type_desc = "In-Range (lockfile only)"
         else:
@@ -206,7 +235,9 @@ class PrUpdaterService:
                     is_in_range=None,
                 )
 
-            new_manifest_bytes = update_manifest_content(manifest_file.content, entry_name, new_constraint)
+            new_manifest_bytes = update_manifest_content(
+                manifest_file.content, entry_name, new_constraint, columns_comment=columns_comment
+            )
             new_lockfile_bytes = serialize_updated_lockfile(
                 discovery.lockfile,
                 slug=entry_name,

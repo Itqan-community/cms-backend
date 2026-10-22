@@ -139,3 +139,13 @@ fields to work around this.
 - refreshing / superseding open PRs
 - batching and fan-out over opted-in repositories
 - requesting Pull Requests write permission on the GitHub App
+
+## 8. Column notes in the manifest
+
+For a translation or tafsir, a bump PR also keeps the entry's `# itqan:columns` comment block
+current (format: `docs/ASSET_MANIFEST.md`, "Column comment block"). An out-of-range bump
+rewrites it with the manifest; an in-range bump, which otherwise touches only the lockfile,
+also commits the manifest when the new version's columns differ from what the block says
+(a minor version may add a column). That commit changes only the block's lines — every other
+byte, the version line included, is kept — and is skipped for single-column versions; an
+invalid manifest leaves the PR lockfile-only. Other categories' manifests are never touched.

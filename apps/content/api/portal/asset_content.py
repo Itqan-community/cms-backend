@@ -11,12 +11,28 @@ from django.utils.http import content_disposition_header
 from django.utils.translation import gettext_lazy as _
 from ninja import Query, Schema
 from ninja.pagination import paginate
+from ninja.schema import DjangoGetter
 from pydantic import AwareDatetime, ConfigDict, Field, Json, model_validator
 
-from apps.content.models import AssetTemplateChoice, AssetVersion, AssetVersionEntry, CategoryChoice, MushafLayout
-from apps.content.services.asset_content import AssetContentService, VersionBump
+from apps.content.models import (
+    AssetTemplateChoice,
+    AssetVersion,
+    AssetVersionEntry,
+    CategoryChoice,
+    MushafLayout,
+    VersionStateChoice,
+)
+from apps.content.services.asset_content import (
+    AssetContentService,
+    PatchResponseContext,
+    VersionBump,
+    cell_fields,
+    changed_fields,
+    column_reorder_requires_major,
+)
 from apps.content.services.asset_language_access import require_language, require_version_language
 from apps.content.services.asset_templates import (
+    FIRST_COLUMN,
     ColumnFilter,
     EntryFilters,
     NumberCondition,
@@ -142,6 +158,21 @@ class DraftVersionOut(VersionTextOut):
     entries_count: int
     has_changes: bool
     created_at: AwareDatetime
+    # Text columns in file order: the draft's are the asset's current ones; a
+    # committed version's are frozen.
+    column_keys: list[str]
+    # Columns of the previous version were reordered: committing needs a major bump.
+    requires_major: bool = False
+
+    @staticmethod
+    def resolve_column_keys(obj: AssetVersion) -> list[str]:
+        return obj.resolved_column_keys
+
+    @staticmethod
+    def resolve_requires_major(obj: AssetVersion) -> bool:
+        if obj.state != VersionStateChoice.DRAFT:
+            return False
+        return column_reorder_requires_major(obj.asset, obj.resolved_language)
 
     @staticmethod
     def resolve_language(obj: AssetVersion) -> str:
@@ -163,21 +194,23 @@ class EntryOut(Schema):
     reference_text: str
     sura: int | None = None
     aya: int | None = None
+    # Every text column's cell ("" when empty), keyed by column key.
+    cells: dict[str, str]
+    # The first column; kept for clients that predate columns.
     text: str
+    # Translations only: the source language's cells / first column (read-only).
+    source_cells: dict[str, str] | None = None
     source_text: str | None = None
     order: int
-    # Draft text differs from the latest published version (always False
-    # outside drafts).
+    # A cell differs from the latest published version (always False
+    # outside drafts); ``changed_columns`` names those cells' columns.
     changed: bool = False
+    changed_columns: list[str] = []
 
 
-def _entries_to_out(
-    entries: list[AssetVersionEntry],
-    template: str,
-    source_text_by_unit: dict[int, str],
-    changed_units: set[int],
-) -> list[dict]:
-    """Build ``EntryOut``-shaped dicts for a batch of persisted entries.
+def _entries_to_out(entries: list[AssetVersionEntry], context: PatchResponseContext) -> list[dict]:
+    """Build ``EntryOut``-shaped dicts for the units of a batch of persisted entries,
+    one row per unit (a patch may touch several columns of the same unit).
 
     Resolves each entry's related unit (ayah / sura / word) via one bulk
     query per unit kind rather than lazily per row: ``bulk_create``'d
@@ -198,7 +231,11 @@ def _entries_to_out(
     words = Word.objects.select_related("ayah").in_bulk(word_ids)
 
     rows = []
+    seen: set[int] = set()
     for entry in entries:
+        if entry.unit_id in seen:
+            continue
+        seen.add(entry.unit_id)
         if entry.sura_id is not None:
             sura = suras[entry.sura_id]
             label = f"{entry.sura_id}. {sura.transliterated_name}"
@@ -220,16 +257,15 @@ def _entries_to_out(
             sura_field, aya_field = None, None
         rows.append(
             {
-                "unit_type": template,
+                "unit_type": context.template,
                 "unit_id": entry.unit_id,
                 "label": label,
                 "reference_text": reference_text,
                 "sura": sura_field,
                 "aya": aya_field,
-                "text": entry.text,
-                "source_text": source_text_by_unit.get(entry.unit_id),
+                **cell_fields(entry.unit_id, context.column_keys, context.cells, context.source_cells),
                 "order": entry.unit_id,
-                "changed": entry.unit_id in changed_units,
+                **changed_fields(entry.unit_id, context.column_keys, context.changed_cells),
             }
         )
     return rows
@@ -237,6 +273,8 @@ def _entries_to_out(
 
 class EntryPatchRow(Schema):
     unit_id: int
+    # The text column; omitted means the asset's first column.
+    column: str | None = None
     text: str = ""
 
 
@@ -270,6 +308,8 @@ class ChangeOut(Schema):
     unit_type: AssetTemplateChoice
     unit_id: int
     label: str
+    # The text column of the changed cell.
+    column: str
     change_type: str
     old_text: str
     new_text: str
@@ -377,10 +417,13 @@ def _column_filter(
 class EntriesFilterModelIn(Schema):
     """The entries grid's AG Grid filter model, keyed by column id.
 
-    ``surah`` is the unit column's surah-name dropdown and ``sura`` the
-    surah-number column; both filter the surah number. Unknown columns are
-    rejected so a typo surfaces as a 400 instead of silently returning
-    unfiltered rows.
+    Text columns are ``cell__<key>`` (the version's own cells) and
+    ``source__<key>`` (the source language's); ``text`` / ``source_text`` name
+    the first column. ``surah`` is the unit column's surah-name dropdown and
+    ``sura`` the surah-number column; both filter the surah number. Unknown
+    grid columns are rejected so a typo surfaces as a 400 instead of silently
+    returning unfiltered rows; an unknown text column is rejected by the
+    service (``unknown_filter_column``), which knows the asset's columns.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -391,12 +434,40 @@ class EntriesFilterModelIn(Schema):
     surah: GridNumberFilterIn | None = None
     sura: GridNumberFilterIn | None = None
     aya: GridNumberFilterIn | None = None
+    cells: dict[str, GridTextFilterIn] = Field(default_factory=dict)
+    source_cells: dict[str, GridTextFilterIn] = Field(default_factory=dict)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _collect_column_filters(cls, data: object) -> object:
+        """Gather the ``cell__<key>`` / ``source__<key>`` grid columns."""
+        if isinstance(data, DjangoGetter):  # ninja's Schema wraps the raw dict
+            data = data._obj
+        if not isinstance(data, dict):
+            return data
+        data = dict(data)
+        cells: dict[str, object] = {}
+        source_cells: dict[str, object] = {}
+        for name in list(data):
+            if name.startswith("cell__"):
+                cells[name.removeprefix("cell__")] = data.pop(name)
+            elif name.startswith("source__"):
+                source_cells[name.removeprefix("source__")] = data.pop(name)
+        data["cells"] = cells
+        data["source_cells"] = source_cells
+        return data
 
     def to_filters(self) -> EntryFilters:
+        cells = {key: _column_filter(model) for key, model in self.cells.items()}
+        source_cells = {key: _column_filter(model) for key, model in self.source_cells.items()}
+        if self.text is not None:
+            cells.setdefault(FIRST_COLUMN, _column_filter(self.text))
+        if self.source_text is not None:
+            source_cells.setdefault(FIRST_COLUMN, _column_filter(self.source_text))
         return EntryFilters(
-            text=_column_filter(self.text),
+            cells=cells,
             reference_text=_column_filter(self.reference_text),
-            source_text=_column_filter(self.source_text),
+            source_cells=source_cells,
             surah=_column_filter(self.surah),
             sura=_column_filter(self.sura),
             aya=_column_filter(self.aya),
@@ -414,7 +485,8 @@ class EntriesPageOut(Schema):
     "content/{category}/{slug}/versions/{version_id}/entries/",
     response={
         200: EntriesPageOut,
-        400: NinjaErrorResponse[Literal["asset_template_missing"]],
+        400: NinjaErrorResponse[Literal["asset_template_missing"]]
+        | NinjaErrorResponse[Literal["unknown_filter_column"]],
         404: NinjaErrorResponse[Literal["translation_not_found"]]
         | NinjaErrorResponse[Literal["tafsir_not_found"]]
         | NinjaErrorResponse[Literal["version_not_found"]]
@@ -453,6 +525,7 @@ def list_entries(
         200: list[EntryOut],
         400: NinjaErrorResponse[Literal["version_not_editable"]]
         | NinjaErrorResponse[Literal["unit_not_in_template"]]
+        | NinjaErrorResponse[Literal["unknown_column"]]
         | NinjaErrorResponse[Literal["asset_template_missing"]],
         404: NinjaErrorResponse[Literal["translation_not_found"]]
         | NinjaErrorResponse[Literal["tafsir_not_found"]]
@@ -465,10 +538,8 @@ def patch_entries(request: Request, category: str, slug: str, version_id: int, d
     service = AssetContentService()
     rows = [row.model_dump() for row in data.rows]
     changed = service.upsert_entries(slug, resolved, version_id, rows, publisher_q=request.publisher_q())
-    template, source_text_by_unit, changed_units = service.get_patch_response_context(
-        slug, resolved, version_id, changed, publisher_q=request.publisher_q()
-    )
-    return _entries_to_out(changed, template, source_text_by_unit, changed_units)
+    context = service.get_patch_response_context(slug, resolved, version_id, changed, publisher_q=request.publisher_q())
+    return _entries_to_out(changed, context)
 
 
 @router.get(
@@ -528,6 +599,7 @@ def get_version(request: Request, category: str, slug: str, version_id: int) -> 
         200: DraftVersionOut,
         400: NinjaErrorResponse[Literal["version_not_editable"]]
         | NinjaErrorResponse[Literal["no_changes_to_publish"]]
+        | NinjaErrorResponse[Literal["major_bump_required"]]
         | NinjaErrorResponse[Literal["commit_message_required"]]
         | NinjaErrorResponse[Literal["version_number_required"]]
         | NinjaErrorResponse[Literal["version_number_invalid"]],
@@ -576,7 +648,7 @@ def discard_draft(request: Request, category: str, slug: str, version_id: int) -
     "content/{category}/{slug}/versions/{version_id}/restore/",
     response={
         200: DraftVersionOut,
-        400: NinjaErrorResponse[Literal["version_not_restorable"]],
+        400: NinjaErrorResponse[Literal["version_not_restorable"]] | NinjaErrorResponse[Literal["major_bump_required"]],
         404: NinjaErrorResponse[Literal["translation_not_found"]]
         | NinjaErrorResponse[Literal["tafsir_not_found"]]
         | NinjaErrorResponse[Literal["version_not_found"]]
@@ -644,7 +716,9 @@ def export_version(request: Request, category: str, slug: str, version_id: int):
         # A pruned commit: reconstruct its snapshot from deltas for download.
         snapshot = service.repo.reconstruct_entries(version)
         if snapshot:
-            content = service.repo.snapshot_to_csv_bytes(snapshot, spec, asset=version.asset, verbose=True)
+            content = service.repo.snapshot_to_csv_bytes(
+                snapshot, spec, asset=version.asset, column_keys=version.resolved_column_keys, verbose=True
+            )
         elif version.file_url:
             return HttpResponseRedirect(version.file_url.url)
         else:
@@ -726,6 +800,10 @@ def download_asset_csv_template(request: Request, category: str, slug: str):
     resolved = _resolve(category, request, access="read")
     service = AssetContentService()
     asset = service._get_asset_or_404(slug, resolved, publisher_q=request.publisher_q())
-    content = service.repo.blank_template_csv_bytes(unit_spec_for(asset), page_count=service.repo.page_count(asset))
+    content = service.repo.blank_template_csv_bytes(
+        unit_spec_for(asset),
+        page_count=service.repo.page_count(asset),
+        column_keys=[column.key for column in asset.text_columns()],
+    )
     filename = "_".join(f"{asset.name_en or slug}-{asset.template}-template.csv".split())
     return _csv_template_response(content, filename)

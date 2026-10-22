@@ -157,7 +157,7 @@ class SnapshotToCsvTemplateTests(QuranDataMixin, BaseTestCase):
         snapshot = repo.reconstruct_entries(version)
 
         # Act
-        csv_bytes = repo.snapshot_to_csv_bytes(snapshot, spec, asset=asset)
+        csv_bytes = repo.snapshot_to_csv_bytes(snapshot, spec, asset=asset, column_keys=["text"])
 
         # Assert — the surah's own row, not ayah 1's text under a "surah,text" header
         text = csv_bytes.decode("utf-8")
@@ -181,7 +181,7 @@ class SnapshotToCsvTemplateTests(QuranDataMixin, BaseTestCase):
         snapshot = repo.reconstruct_entries(version)
 
         # Act
-        csv_bytes = repo.snapshot_to_csv_bytes(snapshot, spec, asset=asset)
+        csv_bytes = repo.snapshot_to_csv_bytes(snapshot, spec, asset=asset, column_keys=["text"])
 
         # Assert
         text = csv_bytes.decode("utf-8")
@@ -209,7 +209,7 @@ class SnapshotToCsvTemplateTests(QuranDataMixin, BaseTestCase):
         # Act — exactly one query (the bulk fetch with `select_related("sura")`),
         # regardless of how many ayahs/suras are in the snapshot.
         with self.assertNumQueries(1):
-            csv_bytes = repo.snapshot_to_csv_bytes(snapshot, spec, asset=asset, verbose=True)
+            csv_bytes = repo.snapshot_to_csv_bytes(snapshot, spec, asset=asset, column_keys=["text"], verbose=True)
 
         # Assert
         text = csv_bytes.decode("utf-8")

@@ -334,7 +334,7 @@ We explicitly adopt the **Asynchronous On-Publish** strategy over on-demand buil
 Until artifacts are built, the registry serves each version's stored file (`AssetVersion.file_url`). Publishing prunes superseded versions down to their stored changes, deleting their file. Such a version stays installable:
 
 1. The Registry API returns, as its `download_url`, the download endpoint `GET /packages/download/<asset_version_id>/<slug>-<language>-<version>.csv/` in place of a file URL.
-2. The first request rebuilds the version's content from its stored changes, writes it as CSV (the same columns publishing stores), saves it as the version's `file_url`, and redirects to it. The version row is locked while this happens, so concurrent first downloads build the file once.
+2. The first request rebuilds the version's content from its stored changes, writes it as CSV (the same columns publishing stores — the unit columns, then the version's `column_keys`), saves it as the version's `file_url`, and redirects to it. The version row is locked while this happens, so concurrent first downloads build the file once.
 3. Later requests — and later resolutions, which now see a stored file — go straight to the file.
 
 A version with no file, no entries and no stored changes has nothing to rebuild and is never resolved.

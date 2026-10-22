@@ -83,7 +83,9 @@ class ContentBulkHistoryTest(BaseTestCase):
             name="Source Mushaf",
             name_en="Source Mushaf",
             name_ar="المصحف المصدر",
-            category=CategoryChoice.MUSHAF,
+            # Entries only exist on text assets: the "mushaf" here is a source-language tafsir.
+            category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH,
             slug="source-mushaf",
         )
         mushaf_lang = AssetLanguage.objects.create(asset=mushaf_asset, language="ar", is_source=True)
@@ -180,7 +182,7 @@ class ContentBulkHistoryTest(BaseTestCase):
         )
         spec = unit_spec_for(self.asset)
         parsed = [
-            ParsedEntry(unit_id=1, text="Parsed text 1"),
+            ParsedEntry(unit_id=1, cells={"text": "Parsed text 1"}),
         ]
 
         # Act: replace entries

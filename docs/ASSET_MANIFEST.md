@@ -196,6 +196,43 @@ quran-uthmani-hafs: "^2.1.0"
 There is one shape for an entry, so there is one thing to validate and one thing to extend
 later.
 
+### Column comment block
+
+A translation or tafsir can have several text columns (say `question` and `answer`), and
+its CSV has one header per column. When an entry installs such an asset, `itqan add` (and
+`itqan browse`) writes a comment block directly above the entry describing the file, and
+`itqan install` and Itqan Dependabot keep it current when the resolved version's columns change
+(`itqan init`'s commented-out examples get none; the first install adds it):
+
+```yaml
+assets:
+  # itqan:columns CSV, one row per ayah: surah, ayah, question, answer
+  # itqan:columns   question: Question / السؤال
+  # itqan:columns   answer: Answer / الجواب
+  ayah-qa:
+    version: "^1.2.0"
+```
+
+The format is exact — the CLI and the backend must render it byte for byte the same:
+
+- Every line starts with the entry key's indentation, then `# itqan:columns`.
+- Line 1: `# itqan:columns CSV, one row per <template>: <header>` — `<template>` is `surah`,
+  `ayah`, `word` or `page`; `<header>` is the CSV header joined by `", "`.
+- Then one line per column that has a label: `# itqan:columns   <key>: <label_en> / <label_ar>`
+  (three spaces after the marker; only the labels that exist, joined by `" / "`).
+- Every value (template, header names, keys, labels) is written on one line: each run of
+  whitespace, newlines included, becomes a single space.
+- The block's lines end like the manifest's other lines (CRLF or LF).
+- The block is written only for assets with more than one column; a single-column asset gets
+  none (and loses an existing one).
+- Replacing it removes exactly the consecutive `# itqan:columns` lines directly above the
+  entry key. Other comments, including ones right above the block, are never touched.
+  Flow-style entries (`name: {version: ...}`) get no block.
+
+The comment is informational: the parser ignores it like any other comment. The catalog
+(`GET /packages/`) and resolve responses carry the same information as `structure`
+(`template`, `header`, `columns` with `key`, `label_en`, `label_ar`).
+
 ### Strict parsing
 
 The manifest and lockfile are both parsed under a strict YAML profile. These are **rejected**,

@@ -104,7 +104,7 @@ class DownloadCsvTemplateTest(AssetContentBaseTest):
         entries = parse_content_file(buffer.getvalue().encode(), unit_spec_for(self.translation), self.translation)
 
         # Assert
-        self.assertEqual([(1, "first"), (3, "third")], [(entry.unit_id, entry.text) for entry in entries])
+        self.assertEqual([(1, "first"), (3, "third")], [(entry.unit_id, entry.cells["text"]) for entry in entries])
 
 
 class DownloadAssetCsvTemplateTest(AssetContentBaseTest):

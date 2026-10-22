@@ -99,61 +99,61 @@ class VersionPublishingBaseTest(BaseTestCase):
 
 
 class PendingUnitsByVersionTest(VersionPublishingBaseTest):
-    def test_pending_units_by_version_where_all_latest_changes_approved_should_be_zero(self):
+    def test_pending_cells_by_version_where_all_latest_changes_approved_should_be_zero(self):
         # Arrange
         v1 = self._commit("v1", {self.ayah1: ("added", "x"), self.ayah2: ("added", "y")})
         self._review(v1, self.ayah1)
         self._review(v1, self.ayah2)
 
         # Act
-        result = AssetReviewRepository().pending_units_by_version(self.asset, "fr")
+        result = AssetReviewRepository().pending_cells_by_version(self.asset, "fr")
 
         # Assert
         self.assertEqual({v1.id: 0}, result)
 
-    def test_pending_units_by_version_where_unit_unreviewed_or_commented_should_count_it(self):
+    def test_pending_cells_by_version_where_unit_unreviewed_or_commented_should_count_it(self):
         # Arrange
         v1 = self._commit("v1", {self.ayah1: ("added", "x"), self.ayah2: ("added", "y")})
         self._review(v1, self.ayah1, ReviewStateChoice.COMMENTED)
 
         # Act
-        result = AssetReviewRepository().pending_units_by_version(self.asset, "fr")
+        result = AssetReviewRepository().pending_cells_by_version(self.asset, "fr")
 
         # Assert — ayah1 commented, ayah2 unreviewed
         self.assertEqual({v1.id: 2}, result)
 
-    def test_pending_units_by_version_where_earlier_change_unreviewed_should_count_in_later_versions(self):
+    def test_pending_cells_by_version_where_earlier_change_unreviewed_should_count_in_later_versions(self):
         # Arrange — v1's ayah2 change is never reviewed and is still v2's content
         v1 = self._commit("v1", {self.ayah1: ("added", "x"), self.ayah2: ("added", "y")})
         v2 = self._commit("v2", {self.ayah1: ("modified", "x2")})
         self._review(v2, self.ayah1)
 
         # Act
-        result = AssetReviewRepository().pending_units_by_version(self.asset, "fr")
+        result = AssetReviewRepository().pending_cells_by_version(self.asset, "fr")
 
         # Assert
         self.assertEqual({v1.id: 2, v2.id: 1}, result)
 
-    def test_pending_units_by_version_where_later_change_supersedes_unreviewed_one_should_approve_later_only(self):
+    def test_pending_cells_by_version_where_later_change_supersedes_unreviewed_one_should_approve_later_only(self):
         # Arrange — v1's ayah1 text is superseded by v2's approved text
         v1 = self._commit("v1", {self.ayah1: ("added", "x")})
         v2 = self._commit("v2", {self.ayah1: ("modified", "x2")})
         self._review(v2, self.ayah1)
 
         # Act
-        result = AssetReviewRepository().pending_units_by_version(self.asset, "fr")
+        result = AssetReviewRepository().pending_cells_by_version(self.asset, "fr")
 
         # Assert — v1 itself was never approved
         self.assertEqual({v1.id: 1, v2.id: 0}, result)
 
-    def test_pending_units_by_version_where_version_has_no_changes_should_inherit_previous_state(self):
+    def test_pending_cells_by_version_where_version_has_no_changes_should_inherit_previous_state(self):
         # Arrange — v2 is an upload identical to v1 (no change rows)
         v1 = self._commit("v1", {self.ayah1: ("added", "x")})
         v2 = self._commit("v2", {})
         self._review(v1, self.ayah1)
 
         # Act
-        result = AssetReviewRepository().pending_units_by_version(self.asset, "fr")
+        result = AssetReviewRepository().pending_cells_by_version(self.asset, "fr")
 
         # Assert
         self.assertEqual({v1.id: 0, v2.id: 0}, result)
@@ -431,7 +431,7 @@ class VersionViewerTest(VersionPublishingBaseTest):
         # Assert — the rebuilt snapshot is dropped again; the published version keeps its own
         self.assertFalse(v2.entries.exists())
         self.assertTrue(v3.entries.exists())
-        self.assertEqual({1: "x", 2: "y"}, AssetContentRepository().reconstruct_entries(v2))
+        self.assertEqual({(1, "text"): "x", (2, "text"): "y"}, AssetContentRepository().reconstruct_entries(v2))
 
 
 class SourceLanguageVisibilityTest(VersionPublishingBaseTest):

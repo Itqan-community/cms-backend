@@ -50,6 +50,10 @@ msgid "Reciter with slug {slug} not found."
 msgstr "لم يتم العثور على القارئ بالمعرّف {slug}."
 
 #, python-brace-format
+msgid "{category} with slug {slug} not found."
+msgstr "لم يتم العثور على {category} بالمعرّف {slug}."
+
+#, python-brace-format
 msgid "Unsupported content category: {category}"
 msgstr "فئة محتوى غير مدعومة: {category}"
 
@@ -143,6 +147,9 @@ msgstr "لا توجد تلاوة متاحة"
 #, python-brace-format
 msgid "No recitation track available for surah {surah}."
 msgstr "لا يوجد مقطع تلاوة متاح للسورة {surah}."
+
+msgid "A column key must start with a lowercase English letter (a-z), use only a-z, 0-9 and underscores (at most 64), and must not be a unit name such as sura or ayah."
+msgstr "يجب أن يبدأ مفتاح العمود بحرف إنجليزي صغير (a-z)، وأن يتكوّن من a-z و0-9 والشرطة السفلية فقط (64 حرفًا على الأكثر)، وألا يكون اسم وحدة مثل sura أو ayah."
 
 msgid "Please select at least one file."
 msgstr "يرجى اختيار ملف واحد على الأقل."
@@ -388,6 +395,26 @@ msgstr "مطلوب مفتاح API للوصول إلى محتوى هذا الأص
 msgid "You don't have an approved access request for this asset."
 msgstr "ليس لديك طلب وصول مُوافَق عليه لهذا الأصل."
 
+#, python-brace-format
+msgid "Column {key} not found."
+msgstr "العمود {key} غير موجود."
+
+#, python-brace-format
+msgid "This asset already has a column with the key {key}."
+msgstr "يحتوي هذا الأصل بالفعل على عمود بالمفتاح {key}."
+
+msgid "This column is part of a committed version, so it can't be renamed or deleted."
+msgstr "هذا العمود جزء من إصدار معتمد، لذا لا يمكن إعادة تسميته أو حذفه."
+
+msgid "The new order must list every column of the asset exactly once."
+msgstr "يجب أن يتضمن الترتيب الجديد كل أعمدة الأصل مرة واحدة فقط."
+
+msgid "An asset needs at least one column."
+msgstr "يجب أن يحتوي الأصل على عمود واحد على الأقل."
+
+msgid "This asset has no file structure to show in this language."
+msgstr "لا توجد بنية ملف لعرضها لهذا الأصل بهذه اللغة."
+
 msgid "The uploaded file could not be read."
 msgstr "تعذّرت قراءة الملف المرفوع."
 
@@ -397,6 +424,13 @@ msgstr "بعض الصفوف غير صالحة للاستخدام: إمّا أن�
 
 msgid "The uploaded file could not be parsed into content entries."
 msgstr "تعذّر تحليل الملف المرفوع إلى إدخالات محتوى."
+
+#, python-brace-format
+msgid "The file is missing these columns: {columns}."
+msgstr "الملف ينقصه هذه الأعمدة: {columns}."
+
+msgid "Columns were reordered since the last version. Reordering changes the file layout, so this must be a major version."
+msgstr "أُعيد ترتيب الأعمدة منذ الإصدار الأخير. إعادة الترتيب تغيّر بنية الملف، لذا يجب أن يكون هذا إصدارًا رئيسيًا."
 
 msgid "This version is published. Publish another version first."
 msgstr "هذا الإصدار منشور. انشر إصدارًا آخر أولًا."
@@ -411,15 +445,15 @@ msgid "Version number must be in the form major.minor, e.g. 7.0."
 msgstr "يجب أن يكون رقم الإصدار بالصيغة رئيسي.فرعي، مثل 7.0."
 
 #, python-brace-format
-msgid "{category} with slug {slug} not found."
-msgstr "لم يتم العثور على {category} بالمعرّف {slug}."
-
-#, python-brace-format
 msgid "Version with id {id} not found."
 msgstr "الإصدار ذو المعرف {id} غير موجود."
 
 msgid "Only draft versions can be edited."
 msgstr "لا يمكن تعديل سوى إصدارات المسودة."
+
+#, python-brace-format
+msgid "This asset has no column named {columns}."
+msgstr "لا يحتوي هذا الأصل على عمود باسم {columns}."
 
 #, python-brace-format
 msgid "Units {units} are not part of this asset's template."
@@ -856,6 +890,9 @@ msgstr "لوحة التحكم - الوصول إلى جميع اللغات"
 
 msgid "Portal - Add Asset Language"
 msgstr "لوحة التحكم - إضافة لغة إلى الأصل"
+
+msgid "Portal - Manage Asset Columns"
+msgstr "البوابة - إدارة أعمدة الأصول"
 
 msgid "Created"
 msgstr "تم الإنشاء"
