@@ -365,7 +365,7 @@ column reviewers approve; columns reordered since that commit are refused
 (`major_bump_required`), since its number is already issued. Once a committed version
 contains a column, the column can no longer be renamed or deleted. Commits, restores
 and file replacements lock the asset before checking the column order, as column
-edits do. Deploying the columns migrations: stop the previous release's workers
+edits do; a file replacement locks its version first, the order publishing uses. Deploying the columns migrations: stop the previous release's workers
 before `content.0010` (once it is applied their writes, which set no column, fail);
 `0010` is one-way in practice once any unit has cells in two columns.
 
