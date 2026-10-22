@@ -665,3 +665,148 @@ def test_process_repository_skips_when_newer_pr_already_open():
     assert result.pr.number == 99
     # Ensure commit_files was NOT called
     assert len(commit_calls) == 0
+
+
+def _columns_handler(manifest: str, lockfile: str, committed_files: dict):
+    """A GitHub stub serving ``manifest`` / ``lockfile`` and recording the committed tree."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        url = str(request.url)
+        if url == f"https://api.github.com/repos/{OWNER}/{REPO}":
+            return httpx.Response(200, json={"default_branch": "main"})
+        for path, content, sha in ((MANIFEST_PATH, manifest, "a" * 40), (LOCKFILE_PATH, lockfile, "b" * 40)):
+            if f"/contents/{path}" in url:
+                encoded = base64.b64encode(content.encode("utf-8")).decode("ascii")
+                return httpx.Response(
+                    200,
+                    json={
+                        "type": "file",
+                        "path": path,
+                        "sha": sha,
+                        "content": encoded,
+                        "size": len(content),
+                        "encoding": "base64",
+                    },
+                )
+        if url.endswith("/git/ref/heads/main"):
+            return httpx.Response(200, json={"object": {"sha": "base_commit_1"}})
+        if url.endswith("/git/commits/base_commit_1"):
+            return httpx.Response(200, json={"sha": "base_commit_1", "tree": {"sha": "base_tree_1"}})
+        if url.endswith("/git/trees"):
+            committed_files["body"] = request.read().decode("utf-8")
+            return httpx.Response(201, json={"sha": "new_tree_sha"})
+        if url.endswith("/git/commits"):
+            return httpx.Response(201, json={"sha": "new_commit_sha"})
+        if url.endswith("/git/refs"):
+            return httpx.Response(201, json={"ref": f"refs/heads/itqan-dependabot/assets/{SLUG}"})
+        if "/pulls" in url and request.method == "GET":
+            return httpx.Response(200, json=[])
+        if "/pulls" in url and request.method == "POST":
+            import json
+
+            payload = json.loads(request.read())
+            return httpx.Response(
+                201,
+                json={
+                    "number": 103,
+                    "title": payload["title"],
+                    "body": payload["body"],
+                    "head": {"ref": payload["head"]},
+                    "base": {"ref": payload["base"]},
+                    "state": "open",
+                    "html_url": "https://github.com/itqan-community/sample-app/pull/103",
+                },
+            )
+        return httpx.Response(404, json={"message": f"Unhandled {request.method} {url}"})
+
+    return handler
+
+
+def _run_tafsir_bump(manifest: str, lockfile: str, structure) -> dict:
+    from unittest.mock import patch
+
+    from apps.content.services.asset_columns import version_structure
+    from apps.dependabot.services import pr_updater as pr_updater_module
+
+    committed_files: dict = {}
+    client = GitHubContentsClient(
+        http_client=httpx.Client(transport=httpx.MockTransport(_columns_handler(manifest, lockfile, committed_files))),
+        token_service=StubTokenService(),
+    )
+    version = _make_asset_and_version(name="1.3.0")
+    version.asset.category = CategoryChoice.TAFSIR
+    with patch.object(pr_updater_module, version_structure.__name__, return_value=structure):
+        result = _make_updater(client).process_repository(_make_watched_repo(), version)
+    assert result.action == "created"
+    return committed_files
+
+
+def _qa_structure(*keys: str):
+    from apps.content.services.asset_columns import ColumnInfo, VersionStructure
+
+    return VersionStructure(
+        template="ayah", header=["surah", "ayah", *keys], columns=[ColumnInfo(key, "", "") for key in keys]
+    )
+
+
+def test_out_of_range_bump_where_tafsir_has_two_columns_should_write_columns_block():
+    manifest = f'schema_version: 1\n\nassets:\n  {SLUG}:\n    version: "~1.2.0"\n'
+    lockfile = (
+        f'lockfile_version: 1\nmanifest_schema_version: 1\n\nassets:\n  "{SLUG}":\n'
+        f'    constraint: "~1.2.0"\n    version: "1.2.5"\n'
+    )
+
+    committed = _run_tafsir_bump(manifest, lockfile, _qa_structure("question", "answer"))
+
+    assert "itqan:columns CSV, one row per ayah: surah, ayah, question, answer" in committed["body"]
+
+
+def test_in_range_bump_where_minor_added_a_column_should_also_commit_manifest_block():
+    committed = _run_tafsir_bump(SAMPLE_MANIFEST, SAMPLE_LOCKFILE, _qa_structure("question", "answer"))
+
+    assert "itqan-assets.yaml" in committed["body"]
+    assert "itqan:columns CSV, one row per ayah: surah, ayah, question, answer" in committed["body"]
+
+
+def test_in_range_bump_where_columns_unchanged_should_stay_lockfile_only():
+    committed = _run_tafsir_bump(SAMPLE_MANIFEST, SAMPLE_LOCKFILE, _qa_structure("text"))
+
+    assert "itqan-assets.lock" in committed["body"]
+    assert "itqan-assets.yaml" not in committed["body"]
+
+
+def test_in_range_bump_where_tafsir_single_column_should_not_fetch_or_commit_manifest():
+    unquoted = f"schema_version: 1\n\nassets:\n  {SLUG}:\n    version: ^1.2.0\n"
+
+    committed = _run_tafsir_bump(unquoted, SAMPLE_LOCKFILE, _qa_structure("text"))
+
+    assert "itqan-assets.yaml" not in committed["body"]
+
+
+def test_in_range_bump_where_version_unquoted_and_column_added_should_keep_version_line():
+    import json
+
+    unquoted = f"schema_version: 1\n\nassets:\n  {SLUG}:\n    version: ^1.2.0\n"
+
+    committed = _run_tafsir_bump(unquoted, SAMPLE_LOCKFILE, _qa_structure("question", "answer"))
+
+    tree = json.loads(committed["body"])["tree"]
+    manifest = next(item["content"] for item in tree if item["path"] == "itqan-assets.yaml")
+    assert "    version: ^1.2.0\n" in manifest
+    assert "itqan:columns CSV, one row per ayah" in manifest
+
+
+def test_in_range_bump_where_manifest_invalid_should_fall_back_to_lockfile_only():
+    from unittest.mock import patch
+
+    from apps.dependabot.services import pr_updater as pr_updater_module
+    from apps.dependabot.services.manifest_parse import ManifestDocumentError
+    from apps.dependabot.services.manifest_update import refresh_columns_comment
+
+    with patch.object(
+        pr_updater_module, refresh_columns_comment.__name__, side_effect=ManifestDocumentError("invalid", "bad")
+    ):
+        committed = _run_tafsir_bump(SAMPLE_MANIFEST, SAMPLE_LOCKFILE, _qa_structure("question", "answer"))
+
+    assert "itqan-assets.lock" in committed["body"]
+    assert "itqan-assets.yaml" not in committed["body"]

@@ -105,6 +105,11 @@ class PermissionChoice(TextChoices):
     PORTAL_ACCESS_ALL_LANGUAGES = "portal_access_all_languages", _("Portal - Access All Languages")
     PORTAL_ADD_ASSET_LANGUAGE = "portal_add_asset_language", _("Portal - Add Asset Language")
 
+    # Text columns of translations / tafsirs: add, label, reorder and delete columns.
+    # Granted to very few users; editing the cells needs only PORTAL_EDIT_*_CONTENT.
+    # Managing also requires PORTAL_ACCESS_ALL_LANGUAGES, since a column applies to every language.
+    PORTAL_MANAGE_ASSET_COLUMNS = "portal_manage_asset_columns", _("Portal - Manage Asset Columns")
+
 
 # Permission hierarchy: maps each permission to the set of permissions it directly implies.
 #
@@ -253,6 +258,10 @@ PERMISSION_IMPLICATIONS: dict[PermissionChoice, frozenset[PermissionChoice]] = {
     PermissionChoice.PORTAL_INVITE_PUBLISHER_MEMBERS: frozenset({PermissionChoice.PORTAL_VIEW_PUBLISHER_MEMBERS}),
     PermissionChoice.PORTAL_UPDATE_PUBLISHER_MEMBERS: frozenset({PermissionChoice.PORTAL_VIEW_PUBLISHER_MEMBERS}),
     PermissionChoice.PORTAL_DELETE_PUBLISHER_MEMBERS: frozenset({PermissionChoice.PORTAL_VIEW_PUBLISHER_MEMBERS}),
+    # Asset columns
+    PermissionChoice.PORTAL_MANAGE_ASSET_COLUMNS: frozenset(
+        {PermissionChoice.PORTAL_READ_TAFSIR, PermissionChoice.PORTAL_READ_TRANSLATION}
+    ),
     # Access Requests
     PermissionChoice.PORTAL_ACCEPT_OR_REJECT_ACCESS_REQUESTS: frozenset({PermissionChoice.PORTAL_VIEW_ACCESS_REQUESTS}),
     PermissionChoice.PORTAL_MANAGE_ACCESS_REQUESTS_SETTINGS: frozenset({PermissionChoice.PORTAL_VIEW_ACCESS_REQUESTS}),

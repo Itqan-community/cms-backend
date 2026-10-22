@@ -22,6 +22,7 @@ from apps.content.repositories.translation import TranslationRepository
 from apps.content.services.asset_access import guard_restrict_for_tenant
 from apps.content.services.asset_content import (
     VersionBump,
+    forbid_minor_after_column_reorder,
     import_uploaded_file_into_entries,
     issue_version_number,
     lock_version_for_content_change,
@@ -310,6 +311,10 @@ class TranslationService:
         """
         asset = self._get_translation_or_404(translation_slug, publisher_q=publisher_q)
         with transaction.atomic():
+            # Serialize with column changes and other commits of this asset, and refuse a
+            # minor number when the columns were reordered since the last version.
+            AssetContentRepository().lock_asset(asset)
+            forbid_minor_after_column_reorder(asset, language or asset.language, bump)
             version = self.repo.create_translation_version(
                 asset,
                 name="",

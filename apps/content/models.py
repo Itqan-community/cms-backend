@@ -473,10 +473,61 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
             source.save(update_fields=["is_source"])
         return source
 
+    def text_columns(self) -> list["AssetColumn"]:
+        """The asset's text columns in order (translations / tafsirs only). Read-only.
+
+        Every text asset has at least one column: one with no rows yet (a freshly
+        created asset) reads as the default ``text`` column, unsaved. Writes that
+        need saved columns use ``ensure_text_columns``.
+        """
+        if self.category not in REVIEWED_CATEGORIES:
+            return []
+        return list(self.columns.all()) or [AssetColumn(asset=self, key=DEFAULT_COLUMN_KEY, order=0)]
+
+    def ensure_text_columns(self) -> list["AssetColumn"]:
+        """``text_columns``, first saving the default column when the asset has none
+        (created lazily, like the source rendition). For write paths only."""
+        if self.category not in REVIEWED_CATEGORIES:
+            return []
+        columns = list(self.columns.all())
+        if columns:
+            return columns
+        default, _created = AssetColumn.objects.get_or_create(asset=self, key=DEFAULT_COLUMN_KEY, defaults={"order": 0})
+        return [default]
+
     @property
     def human_readable_size(self):
         """Get file size in bytes (computed from human readable)"""
         return self._parse_file_size_to_bytes(self.file_size)
+
+
+DEFAULT_COLUMN_KEY = "text"
+
+
+class AssetColumn(BaseModel):
+    """One named text column of a translation / tafsir.
+
+    Every unit row of the asset holds one cell per column (``AssetVersionEntry``).
+    The ``key`` is what files and APIs use — the CSV header — and is the same in
+    every language; ``label`` (translated en/ar) is only for display. Once a
+    committed version contains a column, its key can no longer change and the
+    column can no longer be deleted. History is registered in translation.py,
+    after modeltranslation adds label_en/label_ar.
+    """
+
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="columns")
+    key = models.CharField(max_length=64, help_text="CSV header / API name, e.g. 'question'")
+    label = models.CharField(max_length=255, blank=True, default="", help_text="Display name; translated to en/ar.")
+    order = models.PositiveIntegerField(default=0, help_text="Position in files and in the editor")
+
+    class Meta:
+        ordering = ["order", "id"]
+        constraints = [
+            models.UniqueConstraint(fields=["asset", "key"], name="unique_column_key_per_asset"),
+        ]
+
+    def __str__(self) -> str:
+        return f"AssetColumn(asset_id={self.asset_id}, key={self.key})"
 
 
 class AssetLanguage(BaseModel):
@@ -665,6 +716,14 @@ class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name="removed_asset_versions"
     )
     removal_reason = models.CharField(max_length=500, blank=True, default="")
+    column_keys = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=(
+            "Translations / tafsirs: the ordered text column keys this version was committed with — "
+            "its file's layout. Empty on drafts, which follow the asset's current columns."
+        ),
+    )
 
     class Meta:
         constraints = [
@@ -684,10 +743,25 @@ class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
         # Invariant: a version's asset must match its language rendition's asset.
         if self.asset_language_id and self.asset_id != self.asset_language.asset_id:
             self.asset_id = self.asset_language.asset_id
+        # A committed text version keeps the columns it was committed with — its file
+        # layout — whichever path committed it (editor, upload, restore, add-language).
+        if self.state == VersionStateChoice.PUBLISHED and not self.column_keys and self.asset_id:
+            keys = [column.key for column in self.asset.text_columns()]
+            if keys:
+                self.column_keys = keys
+                if kwargs.get("update_fields") is not None:
+                    kwargs["update_fields"] = [*kwargs["update_fields"], "column_keys"]
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"AssetVersion(asset={self.asset.name}, name={self.name})"
+
+    @property
+    def resolved_column_keys(self) -> list[str]:
+        """The text column keys of this version: frozen at commit, else the asset's current ones."""
+        if self.column_keys:
+            return list(self.column_keys)
+        return [column.key for column in self.asset.text_columns()]
 
     def publishing_rolls_back(self, published: "AssetVersion | None" = None) -> bool:
         """Whether publishing this version goes back to before ``published`` (by
@@ -784,6 +858,15 @@ class AssetVersionEntry(BaseModel):
         blank=True,
         help_text="Page within the asset's MushafLayout — set only for page-template assets",
     )
+    column = models.ForeignKey(
+        "content.AssetColumn",
+        on_delete=models.CASCADE,
+        related_name="entries",
+        # No real default: ``save()`` fills the asset's first column. Declaring one
+        # keeps factories (model_bakery) from inventing an unrelated column.
+        default=None,
+        help_text="The text column this cell belongs to",
+    )
     text = models.TextField(blank=True, help_text="Translation / tafsir text for this ayah")
     order = models.PositiveIntegerField(default=0, help_text="Display order (defaults to the canonical ayah index)")
 
@@ -798,10 +881,12 @@ class AssetVersionEntry(BaseModel):
                 ),
                 name="entry_exactly_one_unit",
             ),
-            models.UniqueConstraint(fields=["version", "ayah"], name="unique_entry_per_version_ayah"),
-            models.UniqueConstraint(fields=["version", "sura"], name="unique_entry_per_version_sura"),
-            models.UniqueConstraint(fields=["version", "word"], name="unique_entry_per_version_word"),
-            models.UniqueConstraint(fields=["version", "page_no"], name="unique_entry_per_version_page"),
+            models.UniqueConstraint(fields=["version", "ayah", "column"], name="unique_entry_per_version_ayah_column"),
+            models.UniqueConstraint(fields=["version", "sura", "column"], name="unique_entry_per_version_sura_column"),
+            models.UniqueConstraint(fields=["version", "word", "column"], name="unique_entry_per_version_word_column"),
+            models.UniqueConstraint(
+                fields=["version", "page_no", "column"], name="unique_entry_per_version_page_column"
+            ),
         ]
         indexes = [
             models.Index(fields=["version", "order"]),
@@ -809,6 +894,13 @@ class AssetVersionEntry(BaseModel):
 
     def __str__(self) -> str:
         return f"AssetVersionEntry(version={self.version_id}, unit={self.unit_id})"
+
+    def save(self, *args, **kwargs):
+        # A cell written without a column belongs to the asset's first column,
+        # which keeps single-column callers unchanged.
+        if self.column_id is None and self.version_id is not None:
+            self.column = self.version.asset.ensure_text_columns()[0]
+        super().save(*args, **kwargs)
 
     @property
     def unit_id(self) -> int | None:
@@ -879,6 +971,17 @@ class AssetVersionChange(BaseModel):
         blank=True,
         help_text="Page within the asset's MushafLayout — set only for page-template assets",
     )
+    column = models.ForeignKey(
+        "content.AssetColumn",
+        # RESTRICT, not PROTECT: deleting the whole asset still cascades through its
+        # versions, while deleting the column alone is refused.
+        on_delete=models.RESTRICT,
+        related_name="changes",
+        # No real default: ``save()`` fills the asset's first column. Declaring one
+        # keeps factories (model_bakery) from inventing an unrelated column.
+        default=None,
+        help_text="The text column of the changed cell",
+    )
     change_type = models.CharField(max_length=10, choices=ChangeTypeChoice)
     old_text = models.TextField(blank=True, help_text="Previous text; empty for added")
     new_text = models.TextField(blank=True, help_text="New text; empty for removed")
@@ -895,10 +998,12 @@ class AssetVersionChange(BaseModel):
                 ),
                 name="change_exactly_one_unit",
             ),
-            models.UniqueConstraint(fields=["version", "ayah"], name="unique_change_per_version_ayah"),
-            models.UniqueConstraint(fields=["version", "sura"], name="unique_change_per_version_sura"),
-            models.UniqueConstraint(fields=["version", "word"], name="unique_change_per_version_word"),
-            models.UniqueConstraint(fields=["version", "page_no"], name="unique_change_per_version_page"),
+            models.UniqueConstraint(fields=["version", "ayah", "column"], name="unique_change_per_version_ayah_column"),
+            models.UniqueConstraint(fields=["version", "sura", "column"], name="unique_change_per_version_sura_column"),
+            models.UniqueConstraint(fields=["version", "word", "column"], name="unique_change_per_version_word_column"),
+            models.UniqueConstraint(
+                fields=["version", "page_no", "column"], name="unique_change_per_version_page_column"
+            ),
         ]
         indexes = [
             models.Index(fields=["version", "order"]),
@@ -906,6 +1011,11 @@ class AssetVersionChange(BaseModel):
 
     def __str__(self) -> str:
         return f"AssetVersionChange(version_id={self.version_id}, unit={self.unit_id}, {self.change_type})"
+
+    def save(self, *args, **kwargs):
+        if self.column_id is None and self.version_id is not None:
+            self.column = self.version.asset.ensure_text_columns()[0]
+        super().save(*args, **kwargs)
 
     @property
     def unit_id(self) -> int | None:

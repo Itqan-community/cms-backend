@@ -905,7 +905,7 @@ class ReconstructAndRestoreTest(AssetContentBaseTest):
         from apps.content.repositories.asset_content import AssetContentRepository
 
         state = AssetContentRepository().reconstruct_entries(c2)
-        self.assertEqual({self.ayahs[0].id: "ONE", self.ayahs[1].id: "two"}, state)
+        self.assertEqual({(self.ayahs[0].id, "text"): "ONE", (self.ayahs[1].id, "text"): "two"}, state)
 
     def test_restore_reconstructs_pruned_version(self):
         self.authenticate_user(self.user)

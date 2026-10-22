@@ -239,6 +239,7 @@ def list_tafsirs(request: Request, filters: TafsirFilter = Query()):
         | NinjaErrorResponse[Literal["version_number_required"]]
         | NinjaErrorResponse[Literal["version_number_invalid"]]
         | NinjaErrorResponse[Literal["content_file_unparseable"]]
+        | NinjaErrorResponse[Literal["content_file_missing_columns"]]
         | NinjaErrorResponse[Literal["content_file_invalid_rows"]]
         | NinjaErrorResponse[Literal["mushaf_layout_required"]]
         | NinjaErrorResponse[Literal["mushaf_layout_not_allowed"]],

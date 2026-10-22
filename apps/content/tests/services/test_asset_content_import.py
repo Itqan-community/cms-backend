@@ -47,7 +47,7 @@ class ParseContentFileTest(QuranDataMixin, BaseTestCase):
         # Assert
         self.assertEqual(2, len(entries))
         self.assertEqual(self.ayah1.id, entries[0].unit_id)
-        self.assertEqual("In the name of Allah", entries[0].text)
+        self.assertEqual("In the name of Allah", entries[0].cells["text"])
         self.assertEqual(self.ayah2.id, entries[1].unit_id)
 
     def test_parse_where_arabic_tafsir_format_should_map_content(self):
@@ -57,7 +57,7 @@ class ParseContentFileTest(QuranDataMixin, BaseTestCase):
         # Assert
         self.assertEqual(1, len(entries))
         self.assertEqual(self.ayah1.id, entries[0].unit_id)
-        self.assertEqual("محتوى الآية", entries[0].text)
+        self.assertEqual("محتوى الآية", entries[0].cells["text"])
 
     def test_parse_where_no_header_should_raise(self):
         # Arrange
@@ -112,7 +112,7 @@ class StrictParseTest(QuranDataMixin, BaseTestCase):
         entries = self._parse_strict(content)
 
         # Assert
-        self.assertEqual(["same", "second"], [entry.text for entry in entries])
+        self.assertEqual(["same", "second"], [entry.cells["text"] for entry in entries])
 
     def test_parse_where_not_strict_should_keep_skipping_bad_rows(self):
         # Arrange — internal reads (e.g. rebuilding legacy versions) stay lenient
@@ -122,4 +122,4 @@ class StrictParseTest(QuranDataMixin, BaseTestCase):
         entries = parse_content_file(content, self.spec, self.asset)
 
         # Assert — the last duplicate wins, the missing ayah is skipped
-        self.assertEqual([(self.ayah1.id, "second")], [(entry.unit_id, entry.text) for entry in entries])
+        self.assertEqual([(self.ayah1.id, "second")], [(entry.unit_id, entry.cells["text"]) for entry in entries])

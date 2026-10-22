@@ -83,6 +83,7 @@ def list_languages(request: Request, category: str, slug: str) -> list[AssetLang
         200: LanguageOut,
         400: NinjaErrorResponse[Literal["language_exists"]]
         | NinjaErrorResponse[Literal["content_file_unparseable"]]
+        | NinjaErrorResponse[Literal["content_file_missing_columns"]]
         | NinjaErrorResponse[Literal["content_file_invalid_rows"]]
         | NinjaErrorResponse[Literal["version_number_required"]]
         | NinjaErrorResponse[Literal["version_number_invalid"]],

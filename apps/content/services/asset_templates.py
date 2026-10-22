@@ -8,8 +8,8 @@ are keyed to and what its canonical unit set is, rather than branching on
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from dataclasses import dataclass
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field, replace
 from functools import reduce
 import operator
 import re
@@ -192,27 +192,55 @@ class ColumnFilter:
         return all(results) if self.operator == "AND" else any(results)
 
 
+# Key of ``EntryFilters.cells`` / ``source_cells`` for "the asset's first column",
+# which the grid's legacy ``text`` / ``source_text`` filters name.
+FIRST_COLUMN = ""
+
+
 @dataclass(frozen=True)
 class EntryFilters:
     """Column filters for the entries grid, applied to the whole unit set before paging.
 
-    ``text`` is the version's own text and ``source_text`` the source
-    language's, both treated as "" for units with no stored entry. ``surah``
-    and ``sura`` both filter the surah number — the grid's surah-name dropdown
-    and its surah-number column — and must both match.
+    ``cells`` filter the version's own text and ``source_cells`` the source
+    language's, both keyed by text column and treating a missing cell as "".
+    ``surah`` and ``sura`` both filter the surah number — the grid's
+    surah-name dropdown and its surah-number column — and must both match.
     """
 
-    text: ColumnFilter | None = None
+    cells: Mapping[str, ColumnFilter] = field(default_factory=dict)
     reference_text: ColumnFilter | None = None
-    source_text: ColumnFilter | None = None
+    source_cells: Mapping[str, ColumnFilter] = field(default_factory=dict)
     surah: ColumnFilter | None = None
     sura: ColumnFilter | None = None
     aya: ColumnFilter | None = None
 
+    def for_columns(self, column_keys: Sequence[str]) -> EntryFilters:
+        """These filters with ``FIRST_COLUMN`` resolved to the asset's first key.
+
+        Raises ``unknown_filter_column`` for a column the asset doesn't have —
+        typically one deleted while the grid still filtered on it.
+        """
+
+        def resolve(filters: Mapping[str, ColumnFilter]) -> dict[str, ColumnFilter]:
+            resolved = {}
+            for key, cell_filter in filters.items():
+                resolved[column_keys[0] if key == FIRST_COLUMN else key] = cell_filter
+            return resolved
+
+        cells, source_cells = resolve(self.cells), resolve(self.source_cells)
+        unknown = sorted((set(cells) | set(source_cells)) - set(column_keys))
+        if unknown:
+            raise ItqanError(
+                error_name="unknown_filter_column",
+                message=_("This asset has no column named {columns}.").format(columns=", ".join(unknown)),
+                status_code=400,
+            )
+        return replace(self, cells=cells, source_cells=source_cells)
+
     @property
     def active(self) -> bool:
-        return any(
-            f is not None for f in (self.text, self.reference_text, self.source_text, self.surah, self.sura, self.aya)
+        return bool(self.cells or self.source_cells) or any(
+            f is not None for f in (self.reference_text, self.surah, self.sura, self.aya)
         )
 
 
@@ -308,11 +336,13 @@ class UnitSpec:
             return Word.objects.count()
         return asset.mushaf_layout.page_count
 
-    def _entry_text(self, version: AssetVersion | None) -> Coalesce | Value:
-        """Annotation: the unit's stored text in ``version``, or "" when it has none."""
+    def _entry_text(self, version: AssetVersion | None, column_key: str) -> Coalesce | Value:
+        """Annotation: the unit's stored cell in ``version``'s column, or "" when it has none."""
         if version is None:
             return Value("", output_field=TextField())
-        stored = AssetVersionEntry.objects.filter(version=version, **{self.field: OuterRef("pk")}).values("text")[:1]
+        stored = AssetVersionEntry.objects.filter(
+            version=version, column__key=column_key, **{self.field: OuterRef("pk")}
+        ).values("text")[:1]
         return Coalesce(Subquery(stored), Value(""), output_field=TextField())
 
     def _filter_queryset(
@@ -323,12 +353,12 @@ class UnitSpec:
         source_version: AssetVersion | None,
     ) -> QuerySet:
         """Narrow a surah/ayah/word queryset by the grid's column filters."""
-        if filters.text is not None:
-            qs = qs.annotate(_entry_text=_normalized(self._entry_text(version))).filter(filters.text.q("_entry_text"))
-        if filters.source_text is not None:
-            qs = qs.annotate(_source_text=_normalized(self._entry_text(source_version))).filter(
-                filters.source_text.q("_source_text")
-            )
+        for index, (key, cell_filter) in enumerate(filters.cells.items()):
+            name = f"_cell_{index}"
+            qs = qs.annotate(**{name: _normalized(self._entry_text(version, key))}).filter(cell_filter.q(name))
+        for index, (key, cell_filter) in enumerate(filters.source_cells.items()):
+            name = f"_source_{index}"
+            qs = qs.annotate(**{name: _normalized(self._entry_text(source_version, key))}).filter(cell_filter.q(name))
         if filters.reference_text is not None:
             reference = "name" if self.template == AssetTemplateChoice.SURAH else "text"
             qs = qs.annotate(_reference_text=_normalized(F(reference))).filter(
@@ -358,18 +388,21 @@ class UnitSpec:
         """Narrow the generated page range in Python: pages have no table to query,
         and a layout has at most a few hundred of them."""
 
-        def texts(version: AssetVersion | None) -> dict[int, str]:
-            if version is None:
+        def texts(version: AssetVersion | None, keys: Sequence[str]) -> dict[tuple[int, str], str]:
+            if version is None or not keys:
                 return {}
-            return dict(version.entries.filter(page_no__isnull=False).values_list("page_no", "text"))
+            rows = version.entries.filter(page_no__isnull=False, column__key__in=keys).values_list(
+                "page_no", "column__key", "text"
+            )
+            return {(page, key): text for page, key, text in rows}
 
-        own = texts(version) if filters.text is not None else {}
-        source = texts(source_version) if filters.source_text is not None else {}
+        own = texts(version, list(filters.cells))
+        source = texts(source_version, list(filters.source_cells))
         kept = []
         for page in pages:
-            if filters.text is not None and not filters.text.matches(own.get(page, "")):
+            if any(not f.matches(own.get((page, key), "")) for key, f in filters.cells.items()):
                 continue
-            if filters.source_text is not None and not filters.source_text.matches(source.get(page, "")):
+            if any(not f.matches(source.get((page, key), "")) for key, f in filters.source_cells.items()):
                 continue
             # Pages carry no reference text and no surah / ayah number.
             if filters.reference_text is not None and not filters.reference_text.matches(""):
@@ -396,7 +429,7 @@ class UnitSpec:
         ``UnitRow`` is built, so a word-template request never materialises
         77,431 objects. ``filters`` narrow the whole unit set first, so
         ``total`` is the filtered count; ``version`` / ``source_version`` are
-        where the ``text`` / ``source_text`` filters read stored text from
+        where the ``cells`` / ``source_cells`` filters read stored text from
         (``source_version`` is None when there is no source to compare to).
         """
         source = self._queryset(asset, sura)

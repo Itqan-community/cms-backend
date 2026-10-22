@@ -6,8 +6,9 @@ from django.utils.translation import gettext_lazy as _
 from ninja import Field, Query, Schema
 from ninja.pagination import paginate
 
-from apps.content.models import Asset, AssetVersion, CategoryChoice
+from apps.content.models import REVIEWED_CATEGORIES, Asset, AssetVersion, CategoryChoice
 from apps.content.services.asset_access import enforce_asset_access_on_public_api
+from apps.content.services.asset_columns import version_structure
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -24,6 +25,34 @@ from apps.usage_tracking.decorators.track_usage import track_extra, track_usage
 from apps.usage_tracking.services.install_events import record_installs
 
 router = ItqanRouter(tags=[NinjaTag.PACKAGES])
+
+
+class PackageColumnOut(Schema):
+    key: str = Field(..., description="The CSV header of this text column; the same in every language.")
+    label_en: str
+    label_ar: str
+
+
+class PackageStructureOut(Schema):
+    template: str = Field(..., description="What one row is: `surah`, `ayah`, `word` or `page`.")
+    header: list[str] = Field(..., description="The CSV header: unit columns, then one per text column.")
+    columns: list[PackageColumnOut]
+
+
+def _structure(version: AssetVersion | None, asset: Asset) -> PackageStructureOut | None:
+    """The layout of ``version``'s file; None for categories without text columns."""
+    if version is None or asset.category not in REVIEWED_CATEGORIES:
+        return None
+    version.asset = asset  # reuse the loaded asset (and its prefetched columns)
+    structure = version_structure(version)
+    return PackageStructureOut(
+        template=structure.template,
+        header=structure.header,
+        columns=[
+            PackageColumnOut(key=column.key, label_en=column.label_en, label_ar=column.label_ar)
+            for column in structure.columns
+        ],
+    )
 
 
 class PackageVersionOut(Schema):
@@ -50,12 +79,18 @@ class PackageVersionOut(Schema):
         description="Newest released version the request's range allows: the range in `version`, or "
         "`constraint` when `version` is an exact (lockfile) pin. Null when the request has no range.",
     )
+    structure: PackageStructureOut | None = Field(
+        None, description="Translations / tafsirs: the resolved version's CSV layout. Null otherwise."
+    )
 
 
 class PackageLanguageOut(Schema):
     language: str
     is_source: bool
     latest_version: str = Field(..., description="Newest stable version; what a `^` constraint on it resolves to.")
+    structure: PackageStructureOut | None = Field(
+        None, description="Translations / tafsirs: `latest_version`'s CSV layout. Null otherwise."
+    )
 
 
 class PackageCatalogOut(Schema):
@@ -89,7 +124,12 @@ class PackageCatalogOut(Schema):
     @staticmethod
     def resolve_languages(obj: Asset) -> list[PackageLanguageOut]:
         return [
-            PackageLanguageOut(language=lang.language, is_source=lang.is_source, latest_version=lang.latest_version)
+            PackageLanguageOut(
+                language=lang.language,
+                is_source=lang.is_source,
+                latest_version=lang.latest_version,
+                structure=_structure(lang.latest, obj),
+            )
             for lang in PackageRegistryService().catalog_languages(obj)
         ]
 
@@ -177,6 +217,7 @@ def _resolve_package_to_schema(request: Request, result: ResolvedPackage) -> Pac
         withdrawal_reason=(result.asset_version.withdrawal_reason or None) if result.withdrawn else None,
         latest_version=result.latest_version,
         latest_in_range=result.latest_in_range,
+        structure=_structure(result.asset_version, result.asset),
     )
 
 

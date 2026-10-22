@@ -78,8 +78,11 @@ erDiagram
 
     Asset ||--o{ AssetLanguage : "provides languages"
     AssetLanguage }o--o| AssetVersion : "publishes (published_version)"
-    AssetVersion ||--o{ AssetVersionEntry : "holds entries"
-    AssetVersion ||--o{ AssetVersionChange : "records per-unit deltas"
+    Asset ||--o{ AssetColumn : "has text columns"
+    AssetVersion ||--o{ AssetVersionEntry : "holds cells"
+    AssetVersion ||--o{ AssetVersionChange : "records per-cell deltas"
+    AssetColumn ||--o{ AssetVersionEntry : "holds"
+    AssetColumn ||--o{ AssetVersionChange : "changed in"
     AssetVersionChange ||--o| AssetVersionChangeReview : "reviewed as"
     PublisherMember ||--o{ MemberLanguage : "works in languages"
 
@@ -137,6 +140,15 @@ erDiagram
         datetime first_published_at
         string withdrawal_reason
         datetime removed_at
+        json column_keys
+    }
+
+    ASSETCOLUMN {
+        int asset_id
+        string key
+        string label_en
+        string label_ar
+        int order
     }
 
     ASSETLANGUAGE {
@@ -266,8 +278,8 @@ Similar to ResourceVersion, **AssetVersion** tracks each uploaded file version o
 - Enables tracking of which Asset version corresponds to which Resource version
 - For translations and tafsirs, an uploaded CSV is imported into per-unit entries. To
   guide uploaders the portal serves an empty fill-in CSV per template — one row per
-  surah / ayah / word / page with a blank `text` column, in the same columns as a
-  version export, so a filled-in sheet imports as is:
+  surah / ayah / word / page with a blank cell per text column (just `text` before the
+  asset exists), in the same columns as a version export, so a filled-in sheet imports as is:
   `GET /portal/content/{category}/csv-template/?template=&mushaf_layout_id=` (asset
   creation; `page` needs the layout) and `GET /portal/content/{category}/{slug}/csv-template/`
   (an existing asset's template).
@@ -334,14 +346,33 @@ number of translation renditions (`AssetLanguage`), each with its own version
 history. Languages are stored as codes (`ar`, `en`) on `Asset.language`,
 `AssetLanguage.language` and `MemberLanguage.language`, which are compared with each
 other; older rows that held names (`Arabic`) were rewritten to codes by migration
-`content.0005_language_codes_and_mushaf_font_numbers`. Every commit — an editor draft committed, an uploaded or replaced version
-file, a restore — records a per-unit delta (`AssetVersionChange`) against the
+`content.0005_language_codes_and_mushaf_font_numbers`.
+
+Each text asset has one or more named text columns (`AssetColumn`): every unit row
+holds one *cell* per column (`AssetVersionEntry`, keyed by unit and column). The
+column `key` is the CSV header and API name and is the same in every language; its
+`label_en` / `label_ar` are only for display, and may be left empty (the key is then
+shown). A key is plain ASCII (`a-z`, `0-9`, `_`, starting with a letter) so developers
+can use it as a CSV header, JSON field or identifier, and it may not shadow a unit header or any of the importer's unit aliases
+(`word_index`, `position`, …). Assets that predate columns — and any new one — get a
+single column keyed `text`, so their files are unchanged: `Asset.text_columns()` reads
+it without writing, and the first write saves it (`Asset.ensure_text_columns()`). A committed version freezes its ordered keys in
+`AssetVersion.column_keys`, which is its file's layout; drafts follow the asset's
+current columns. Once a committed version contains a column, the column can no
+longer be renamed or deleted.
+
+Every commit — an editor draft committed, an uploaded or replaced version
+file, a restore — records a per-cell delta (`AssetVersionChange`) against the
 language's previous version, keyed to whichever unit the asset's template uses
-(surah, ayah, word or page). Uploaded files must parse into entries
+(surah, ayah, word or page) and to the column. Uploaded files must parse into entries
 (`content_file_unparseable` otherwise), so their content can be reviewed, and must
 not contain rows whose text would be dropped — a unit repeated with different text,
 a unit that doesn't exist, or an unreadable row (`content_file_invalid_rows`, with
-the row numbers in `extra.rows`); an upload identical to the previous version
+the row numbers in `extra.rows`). A multi-column asset's file needs a header for
+every column key (`content_file_missing_columns`, the keys in `extra.missing`) — a
+missing column would otherwise read as all its cells removed — while a single-column
+asset still accepts the legacy text headers (`translation`, `text`, `content`,
+`المحتوى`); an upload identical to the previous version
 records no changes. The stored file is then replaced by a CSV generated
 from the parsed entries, so consumers download exactly what was reviewed.
 
@@ -358,6 +389,12 @@ from the parsed entries, so consumers download exactly what was reviewed.
   the asset. It runs on every page view, so it reads each language's published
   version in one query and only falls back to the version history for a language
   whose published version can't be installed. The CMS shows the matching `itqan add` command from it.
+  `assets/{id}/file-structure/?language=` (anonymous, same asset visibility) describes a
+  translation's / tafsir's download for one language (default: the source): `format`
+  (`csv`), `template`, the CSV `header`, the text `columns` (key + en/ar labels) and up
+  to 3 sample `rows` of its published version (rebuilt from its deltas when a rollback
+  re-published a pruned commit). No access grant is needed; a language
+  consumers can't see, or another category, is 404 `file_structure_unavailable`.
 - **Commit vs publish** — committing makes a version the *head* (newest wins; what
   the editor builds on, `is_active` in the version list) but does **not** make it
   visible. Consumers (downloads, samples, `available_languages`, subscriber emails,
@@ -408,21 +445,39 @@ from the parsed entries, so consumers download exactly what was reviewed.
   `PORTAL_EDIT_TRANSLATION_CONTENT` / `PORTAL_EDIT_TAFSIR_CONTENT`; `PORTAL_UPDATE_*`
   covers metadata only (names, descriptions, license, version label/summary,
   language availability). Both are limited to the member's assigned languages.
+- **Columns** — `GET /portal/content/{category}/{slug}/columns/` lists an asset's text
+  columns (read permission). Adding, labelling, reordering and deleting them
+  (`POST` / `PATCH {key}/` / `PUT order/` / `DELETE {key}/`) needs
+  `PORTAL_MANAGE_ASSET_COLUMNS` **and** `PORTAL_ACCESS_ALL_LANGUAGES`, since a column
+  applies to every language; only a few users hold it. Filling and translating the
+  cells needs only the content-edit permission. A column a committed version contains
+  can't be re-keyed or deleted (`column_committed`); the last column can't be deleted
+  (`column_last`).
+  Adding a column is a minor change; reordering the columns a language's latest
+  committed version has makes its next commit or restore major — a minor bump is
+  refused with `major_bump_required`, and a draft reports `requires_major`.
 - **Reading entries** — the editor pages through
   `GET /portal/content/{category}/{slug}/versions/{id}/entries/` (`page`, `page_size`,
-  optional `sura`). Its optional `filters` param is the grid's AG Grid filter model as
-  JSON, keyed by `text`, `reference_text`, `source_text` (text filters, case-insensitive and
+  optional `sura`). Each row carries `cells` (every text column's cell, keyed by column key)
+  and, for a translation, the source language's `source_cells`; `text` / `source_text` are
+  the first column, for older clients. `PATCH` rows name their `column` (default: the first;
+  unknown → `unknown_column`). Its optional `filters` param is the grid's AG Grid filter model as
+  JSON, keyed by `cell__<key>` / `source__<key>` per text column (`text` / `source_text` are the
+  first column; a column the asset lacks → `unknown_filter_column`), `reference_text` (text filters, case-insensitive and
   ignoring Arabic vocalization — harakat, Quranic marks, alef forms, and Uthmani dagger alefs —
   so plain typing matches Uthmani text; a unit with no stored entry counts as empty) and `surah`, `sura`, `aya` (number filters,
   `inRange` inclusive; `surah` is the unit column's surah-name dropdown and `sura` the
   surah-number column, both applied), each a single condition or two joined by `AND`/`OR`. Filters
   narrow the whole unit set before paging, so `count` is the filtered total; unknown
-  columns or malformed conditions return 400 `validation_error`. On a draft, each row's
-  `changed` is true when its text differs from the language's latest committed version
-  (what a commit would record; missing rows count as empty) — the editor highlights those
-  cells. The autosave `PATCH` response carries the same flag for the rows it wrote.
+  columns or malformed conditions return 400 `validation_error`. Rows carry the cells of
+  the viewed version's own columns (`column_keys`), so an older commit shows its own
+  layout. On a draft, each row's `changed` is true when any cell differs from the
+  language's latest committed version (what a commit would record; missing rows count
+  as empty) and `changed_columns` names those cells' columns — the editor highlights
+  those cells. The autosave `PATCH` response carries the same fields for the rows it wrote.
 - **Review** — reviewers with `PORTAL_REVIEW_CONTENT`, assigned to languages via
-  `MemberLanguage`, approve or comment ("needs changes") each `AssetVersionChange`.
+  `MemberLanguage`, approve or comment ("needs changes") each `AssetVersionChange` —
+  one per changed cell, so a unit edited in two columns needs both approved.
   State is stored one-per-change as `AssetVersionChangeReview` with
   `reviewed_by`/`reviewed_at` for auditing. Each listed change carries `edited_by`,
   the author (`created_by`) of the commit that made it — editor commits, uploads and

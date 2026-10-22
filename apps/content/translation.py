@@ -6,6 +6,7 @@ from apps.core.audit import AuditHistoricalRecords
 
 from .models import (
     Asset,
+    AssetColumn,
     AssetVersion,
     EditorialRecommendation,
     MushafLayout,
@@ -30,6 +31,11 @@ class AssetVersionTranslationOptions(TranslationOptions):
     # Bilingual for tafsir/translation versions; other kinds read `summary`,
     # which falls back across languages.
     fields = ("label", "summary")
+
+
+@register(AssetColumn)
+class AssetColumnTranslationOptions(TranslationOptions):
+    fields = ("label",)
 
 
 @register(Reciter)
@@ -66,6 +72,7 @@ class MushafLayoutTranslationOptions(TranslationOptions):
 # after modeltranslation has attached the translated fields (name_ar, name_en, etc.).
 for _translated_model in (
     Asset,
+    AssetColumn,
     AssetVersion,
     Reciter,
     Riwayah,
