@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import logging
 
+from django.core.cache import cache
 from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 
@@ -22,6 +23,9 @@ from apps.core.ninja_utils.errors import ItqanError
 logger = logging.getLogger(__name__)
 
 PREVIEW_ROWS = 3
+# A served version's content can't change while it is served (see
+# `forbid_published_version_change`); its `updated_at` in the key covers a later replacement.
+_PREVIEW_ROWS_CACHE_TTL = 24 * 60 * 60
 
 
 @dataclass(frozen=True)
@@ -206,7 +210,16 @@ class FileStructureService:
         version = rendition.published_version
         version.asset = asset
         structure = version_structure(version)
-        unit_ids = self.repo.first_units_with_text(version, PREVIEW_ROWS)
+        keys = [column.key for column in structure.columns]
+        cache_key = f"content:file-structure-rows:{version.pk}:{version.updated_at.timestamp()}:{','.join(keys)}"
+        rows = cache.get(cache_key)
+        if rows is None:
+            rows = self._rows(asset, version, keys)
+            cache.set(cache_key, rows, _PREVIEW_ROWS_CACHE_TTL)
+        return FileStructurePreview(structure=structure, rows=rows)
+
+    def _rows(self, asset: Asset, version: AssetVersion, keys: list[str]) -> list[list[str]]:
+        unit_ids = self.repo.first_units_with_text(version, PREVIEW_ROWS, columns=len(keys))
         if unit_ids:
             cells = self.repo.cells_for_units(version, unit_ids)
         else:
@@ -214,8 +227,6 @@ class FileStructureService:
             cells = self.repo.rebuilt_cells(version)
             unit_ids = sorted({unit_id for (unit_id, _), text in cells.items() if text})[:PREVIEW_ROWS]
         if not unit_ids:
-            return FileStructurePreview(structure=structure, rows=[])
+            return []
         units = self.repo.unit_header_values(asset.template, unit_ids)
-        keys = [column.key for column in structure.columns]
-        rows = [[*units[unit_id], *(cells.get((unit_id, key), "") for key in keys)] for unit_id in unit_ids]
-        return FileStructurePreview(structure=structure, rows=rows)
+        return [[*units[unit_id], *(cells.get((unit_id, key), "") for key in keys)] for unit_id in unit_ids]

@@ -17,8 +17,7 @@ from apps.dependabot.services.manifest_parse import (
     parse_lockfile_document,
     parse_manifest_document,
 )
-
-COLUMNS_COMMENT_MARKER = "# itqan:columns"
+from apps.package_manager.services.columns_comment import MARKER as COLUMNS_COMMENT_MARKER
 
 
 def update_manifest_content(

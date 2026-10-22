@@ -1,3 +1,6 @@
+from django.core.cache import cache
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from model_bakery import baker
 
 from apps.content.models import (
@@ -19,6 +22,7 @@ from apps.core.tests.base import BaseTestCase
 class AssetFileStructureTests(QuranDataMixin, BaseTestCase):
     def setUp(self):
         super().setUp()
+        cache.clear()
         self.bake_quran()
         self.asset = baker.make(
             Asset,
@@ -170,3 +174,34 @@ class AssetFileStructureTests(QuranDataMixin, BaseTestCase):
         # Act / Assert
         with self.assertNumQueries(6):
             self.client.get(self.url)
+
+    def _entry_queries(self, queries) -> list[str]:
+        return [query["sql"] for query in queries if 'FROM "content_assetversionentry"' in query["sql"]]
+
+    def test_file_structure_where_published_should_read_only_the_preview_rows(self):
+        # Arrange
+        question = AssetColumn.objects.create(asset=self.asset, key="question", order=0)
+        answer = AssetColumn.objects.create(asset=self.asset, key="answer", order=1)
+        self._publish(["question", "answer"], {(self.ayah1, question): "Q", (self.ayah1, answer): "A"})
+
+        # Act
+        with CaptureQueriesContext(connection) as queries:
+            self.client.get(self.url)
+
+        # Assert — 3 rows of 2 columns, never the whole version
+        first_units = self._entry_queries(queries.captured_queries)[0]
+        self.assertIn("LIMIT 6", first_units)
+
+    def test_file_structure_where_requested_again_should_not_read_the_cells_again(self):
+        # Arrange
+        column = self.asset.ensure_text_columns()[0]
+        self._publish(["text"], {(self.ayah1, column): "t"})
+        first = self.client.get(self.url)
+
+        # Act
+        with CaptureQueriesContext(connection) as queries:
+            second = self.client.get(self.url)
+
+        # Assert — a published version's rows can't change, so they are cached
+        self.assertEqual(second.json(), first.json())
+        self.assertEqual(self._entry_queries(queries.captured_queries), [])

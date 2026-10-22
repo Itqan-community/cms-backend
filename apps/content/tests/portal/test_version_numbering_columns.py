@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from model_bakery import baker
 
 from apps.content.columns import requires_major_bump
@@ -12,6 +14,8 @@ from apps.content.models import (
     VersionStateChoice,
 )
 from apps.content.repositories.asset_content import AssetContentRepository
+from apps.content.services import asset_content as asset_content_service
+from apps.content.services.asset_content import AssetContentService
 from apps.content.tests.quran_data import QuranDataMixin
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
@@ -130,3 +134,49 @@ class ColumnReorderVersioningTests(QuranDataMixin, BaseTestCase):
         # Assert
         self.assertEqual(response.status_code, 200, response.content)
         self.assertTrue(response.json()["requires_major"])
+
+    def _record_lock_and_reorder_check(self) -> tuple[list[str], list]:
+        calls: list[str] = []
+        lock_asset = AssetContentRepository.lock_asset
+        reorder_check = asset_content_service.column_reorder_requires_major
+
+        def locking(repo, asset):
+            calls.append("lock")
+            return lock_asset(repo, asset)
+
+        def checking(asset, language):
+            calls.append("check")
+            return reorder_check(asset, language)
+
+        return calls, [
+            patch.object(AssetContentRepository, "lock_asset", autospec=True, side_effect=locking),
+            patch.object(asset_content_service, "column_reorder_requires_major", side_effect=checking),
+        ]
+
+    def test_publish_draft_where_minor_should_lock_the_asset_before_checking_the_column_order(self):
+        # Arrange — a concurrent reorder (which locks the asset) can't slip in between
+        draft = self._draft("Q2")
+        self.authenticate_user(self.user)
+        calls, patches = self._record_lock_and_reorder_check()
+
+        # Act
+        with patches[0], patches[1]:
+            response = self._publish(draft, "minor")
+
+        # Assert
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(calls[:2], ["lock", "check"])
+
+    def test_restore_version_where_minor_should_lock_the_asset_before_checking_the_column_order(self):
+        # Arrange
+        committed = AssetVersion.objects.get(asset=self.asset, state=VersionStateChoice.PUBLISHED)
+        calls, patches = self._record_lock_and_reorder_check()
+
+        # Act
+        with patches[0], patches[1]:
+            AssetContentService().restore_version(
+                self.asset.slug, CategoryChoice.TAFSIR, committed.id, created_by_id=self.user.id
+            )
+
+        # Assert
+        self.assertEqual(calls[:2], ["lock", "check"])

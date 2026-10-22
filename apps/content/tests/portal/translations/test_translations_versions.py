@@ -7,6 +7,7 @@ from apps.content.models import (
     Asset,
     AssetAccess,
     AssetAccessRequest,
+    AssetColumn,
     AssetLanguage,
     AssetTemplateChoice,
     AssetVersion,
@@ -563,6 +564,27 @@ class TranslationVersionFileReplaceTest(TranslationVersionBaseTest):
         self.assertEqual(200, response.status_code, response.content)
         change = AssetVersionChange.objects.get(version=version)
         self.assertEqual("in the name", change.new_text)
+
+    def test_patch_version_where_column_added_since_commit_should_take_the_new_layout(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
+        AssetColumn.objects.create(asset=self.translation, key="question", order=0)
+        version = baker.make(AssetVersion, asset=self.translation, name="v1")
+        AssetColumn.objects.create(asset=self.translation, key="answer", order=1)
+        file = SimpleUploadedFile("translation.csv", b"surah,ayah,question,answer\n1,1,Q,A", content_type="text/csv")
+
+        # Act
+        response = self.client.patch(
+            f"/portal/translations/{self.translation.slug}/versions/{version.id}/",
+            data={"file": file},
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        version.refresh_from_db()
+        self.assertEqual(["question", "answer"], version.column_keys)
 
 
 class TranslationVersionHistoryIsAppendOnlyTest(TranslationVersionBaseTest):

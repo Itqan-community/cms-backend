@@ -71,11 +71,11 @@ class AssetReviewRepository:
         pending: set[tuple[int, int]] = set()
         result: dict[int, int] = {}
         for version_id in version_ids:
-            for unit_key, review_state in changes_by_version.get(version_id, ()):
+            for cell, review_state in changes_by_version.get(version_id, ()):
                 if review_state == ReviewStateChoice.APPROVED:
-                    pending.discard(unit_key)
+                    pending.discard(cell)
                 else:
-                    pending.add(unit_key)
+                    pending.add(cell)
             result[version_id] = len(pending)
         return result
 

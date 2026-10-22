@@ -182,16 +182,34 @@ def column_reorder_requires_major(asset: Asset, language: str) -> bool:
     return requires_major_bump(previous.resolved_column_keys, current)
 
 
+def _major_bump_required() -> ItqanError:
+    return ItqanError(
+        error_name="major_bump_required",
+        message=_(
+            "Columns were reordered since the last version. Reordering changes the file layout, "
+            "so this must be a major version."
+        ),
+        status_code=400,
+    )
+
+
 def forbid_minor_after_column_reorder(asset: Asset, language: str, bump: VersionBump) -> None:
     if bump == "minor" and column_reorder_requires_major(asset, language):
-        raise ItqanError(
-            error_name="major_bump_required",
-            message=_(
-                "Columns were reordered since the last version. Reordering changes the file layout, "
-                "so this must be a major version."
-            ),
-            status_code=400,
-        )
+        raise _major_bump_required()
+
+
+def adopt_current_columns(version: AssetVersion) -> None:
+    """Give a committed version whose file is being replaced the asset's current
+    columns, which the new file is parsed with — so its stored file carries every
+    column reviewers approve. Its number is already issued, so columns reordered
+    since it was committed are refused: that layout change needs a major version."""
+    if not version.column_keys:
+        return  # a draft follows the asset's columns anyway
+    current = [column.key for column in version.asset.ensure_text_columns()]
+    if requires_major_bump(version.column_keys, current):
+        raise _major_bump_required()
+    if current != version.column_keys:
+        AssetContentRepository().set_column_keys(version, current)
 
 
 def forbid_published_version_change(version: AssetVersion) -> None:
@@ -749,6 +767,8 @@ class AssetContentService:
         if label_ar is not None:
             draft.label_ar = label_ar.strip()
         with transaction.atomic():
+            # Locked before the check, so a concurrent column reorder can't land between them.
+            self.repo.lock_asset(asset)
             forbid_minor_after_column_reorder(asset, draft.asset_language.language, bump)
             draft.name = issue_version_number(asset, draft.asset_language.language, start=version_number, bump=bump)
             published = self.repo.publish_draft(draft)
@@ -790,6 +810,7 @@ class AssetContentService:
             )
         language = version.asset_language.language if version.asset_language_id else version.asset.language
         with transaction.atomic():
+            self.repo.lock_asset(version.asset)
             forbid_minor_after_column_reorder(version.asset, language, bump)
             name = issue_version_number(version.asset, language, bump=bump)
             restored = self.repo.restore_version(version, name=name, created_by_id=created_by_id)

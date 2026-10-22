@@ -5,10 +5,20 @@ import importlib
 import django.db.models.deletion
 from django.db import migrations, models
 
-# Rows the previous release wrote between 0009 and here (it keeps serving during the
-# deploy and never sets a column) are given their asset's `text` column first, so
-# NOT NULL can't fail on them.
+# Rows the previous release wrote between 0009 and here are given their asset's
+# `text` column first, so NOT NULL can't fail on them. Stop the previous release's
+# workers before this migration: once it is applied their inserts (no column) fail.
+#
+# One-way in practice: reversing restores the per-unit unique constraints, which
+# fail as soon as any unit has cells in two columns.
 _backfill = importlib.import_module("apps.content.migrations.0009_backfill_asset_columns").backfill
+
+
+def backfill_cells(apps, schema_editor):
+    _backfill(apps, schema_editor)
+    # The backfill's UPDATEs queue deferred FK checks, and Postgres refuses to ALTER
+    # a table with pending trigger events, so run those checks now.
+    schema_editor.execute("SET CONSTRAINTS ALL IMMEDIATE")
 
 
 class Migration(migrations.Migration):
@@ -19,7 +29,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(_backfill, migrations.RunPython.noop),
+        migrations.RunPython(backfill_cells, migrations.RunPython.noop),
         migrations.RemoveConstraint(
             model_name='assetversionchange',
             name='unique_change_per_version_ayah',

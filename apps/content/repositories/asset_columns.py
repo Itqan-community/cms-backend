@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
 
 from apps.content.columns import Snapshot
 from apps.content.models import (
@@ -71,7 +71,9 @@ class AssetColumnRepository:
         )
         for column_keys in rows:
             keys.update(column_keys or [])
-        keys.update(AssetVersionChange.objects.filter(version__asset=asset).values_list("column__key", flat=True))
+        # A column with any recorded change is committed too (one EXISTS per column).
+        changed = Exists(AssetVersionChange.objects.filter(column=OuterRef("pk")))
+        keys.update(self.model.objects.filter(asset=asset).filter(changed).values_list("key", flat=True))
         return keys
 
     def consumer_rendition(self, asset: Asset, language: str) -> AssetLanguage | None:
@@ -83,15 +85,19 @@ class AssetColumnRepository:
             .first()
         )
 
-    def first_units_with_text(self, version: AssetVersion, limit: int) -> list[int]:
-        """The first ``limit`` units (in display order) that have any non-blank cell."""
+    def first_units_with_text(self, version: AssetVersion, limit: int, *, columns: int) -> list[int]:
+        """The first ``limit`` units (in display order) that have any non-blank cell.
+
+        A unit has at most one cell per column, so the first ``limit * columns``
+        non-blank cells hold those units: only those are read.
+        """
         units: list[int] = []
         rows = (
             version.entries.exclude(text="")
             .order_by("order", "sura_id", "ayah_id", "word_id", "page_no")
-            .values_list("sura_id", "ayah_id", "word_id", "page_no")
+            .values_list("sura_id", "ayah_id", "word_id", "page_no")[: limit * max(columns, 1)]
         )
-        for row in rows.iterator():
+        for row in rows:
             unit_id = next(unit for unit in row if unit is not None)
             if unit_id not in units:
                 units.append(unit_id)

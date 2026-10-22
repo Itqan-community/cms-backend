@@ -896,8 +896,9 @@ class AssetVersionEntry(BaseModel):
         return f"AssetVersionEntry(version={self.version_id}, unit={self.unit_id})"
 
     def save(self, *args, **kwargs):
-        # A cell written without a column belongs to the asset's first column,
-        # which keeps single-column callers unchanged.
+        # A cell saved without a column belongs to the asset's first column. Only
+        # single-row saves (tests, the shell) rely on this: the repositories write
+        # cells with bulk_create, which skips save(), and always set the column.
         if self.column_id is None and self.version_id is not None:
             self.column = self.version.asset.ensure_text_columns()[0]
         super().save(*args, **kwargs)
@@ -1013,6 +1014,7 @@ class AssetVersionChange(BaseModel):
         return f"AssetVersionChange(version_id={self.version_id}, unit={self.unit_id}, {self.change_type})"
 
     def save(self, *args, **kwargs):
+        # As on AssetVersionEntry: a fallback for single-row saves only.
         if self.column_id is None and self.version_id is not None:
             self.column = self.version.asset.ensure_text_columns()[0]
         super().save(*args, **kwargs)

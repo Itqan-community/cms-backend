@@ -10,13 +10,16 @@ from apps.content.models import (
     AssetColumn,
     AssetTemplateChoice,
     AssetVersion,
+    AssetVersionEntry,
     CategoryChoice,
     VersionStateChoice,
 )
+from apps.content.tests.quran_data import QuranDataMixin
 from apps.core.tests.base import BaseTestCase
 
 # The module name starts with a digit, so a plain `from ... import` is illegal.
 migration = importlib.import_module("apps.content.migrations.0009_backfill_asset_columns")
+require_migration = importlib.import_module("apps.content.migrations.0010_asset_columns_required")
 
 
 class BackfillAssetColumnsTests(BaseTestCase):
@@ -60,3 +63,24 @@ class BackfillAssetColumnsTests(BaseTestCase):
         draft.refresh_from_db()
         self.assertEqual(committed.column_keys, ["text"])
         self.assertEqual(draft.column_keys, [])
+
+
+class RequireAssetColumnsMigrationTests(QuranDataMixin, BaseTestCase):
+    def test_backfill_cells_where_update_left_fk_checks_pending_should_allow_altering_the_table(self):
+        # Arrange — moving a cell to another column queues a deferred FK check, as the
+        # catch-up backfill does for rows the previous release wrote mid-deploy
+        self.bake_quran()
+        tafsir = baker.make(Asset, category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.AYAH)
+        text = AssetColumn.objects.create(asset=tafsir, key="text", order=0)
+        other = AssetColumn.objects.create(asset=tafsir, key="other", order=1)
+        version = baker.make(AssetVersion, asset=tafsir)
+        entry = AssetVersionEntry.objects.create(version=version, ayah=self.ayah1, column=text, text="x")
+        with connection.cursor() as cursor:
+            cursor.execute("UPDATE content_assetversionentry SET column_id = %s WHERE id = %s", [other.id, entry.id])
+
+        # Act
+        require_migration.backfill_cells(django_apps, connection.schema_editor())
+
+        # Assert — 0010's schema changes can now run in the same transaction
+        with connection.cursor() as cursor:
+            cursor.execute("ALTER TABLE content_assetversionentry ALTER COLUMN column_id SET NOT NULL")
