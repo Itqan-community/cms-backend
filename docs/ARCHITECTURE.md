@@ -465,6 +465,11 @@ from the parsed entries, so consumers download exactly what was reviewed.
   Adding a column is a minor change; reordering the columns a language's latest
   committed version has makes its next commit or restore major — a minor bump is
   refused with `major_bump_required`, and a draft reports `requires_major`.
+- **Opening the editor** — `POST /portal/content/{category}/{slug}/draft/` gets or creates
+  the shared draft for `language`; without one it opens the source language's, so the
+  editor can open the draft while it lists the languages. The draft (like every version
+  the editor reads) carries the asset's unit `template`, which the grid builds its
+  columns from before the first page of entries arrives.
 - **Reading entries** — the editor pages through
   `GET /portal/content/{category}/{slug}/versions/{id}/entries/` (`page`, `page_size`,
   optional `sura`). Each row carries `cells` (every text column's cell, keyed by column key)
