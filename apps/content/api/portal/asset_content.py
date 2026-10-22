@@ -163,6 +163,13 @@ class DraftVersionOut(VersionTextOut):
     column_keys: list[str]
     # Columns of the previous version were reordered: committing needs a major bump.
     requires_major: bool = False
+    # The asset's unit template (ayah/surah/word/page): the editor builds its columns
+    # from it before the first page of entries arrives.
+    template: str | None = None
+
+    @staticmethod
+    def resolve_template(obj: AssetVersion) -> str | None:
+        return obj.asset.template
 
     @staticmethod
     def resolve_column_keys(obj: AssetVersion) -> list[str]:
@@ -323,7 +330,8 @@ class ChangeOut(Schema):
 
 
 class DraftIn(Schema):
-    language: str
+    # Omitted: the source language, so the editor can open before it lists the languages.
+    language: str | None = None
 
 
 @router.post(
@@ -340,11 +348,12 @@ def get_or_create_draft(request: Request, category: str, slug: str, data: DraftI
     resolved = _resolve(category, request, access="content")
     service = AssetContentService()
     asset = service._get_asset_or_404(slug, resolved, publisher_q=request.publisher_q())
-    require_language(request.user, asset, data.language)
+    language = data.language or asset.language
+    require_language(request.user, asset, language)
     return service.get_or_create_draft(
         slug,
         resolved,
-        language=data.language,
+        language=language,
         created_by_id=getattr(request.user, "id", None),
         publisher_q=request.publisher_q(),
     )
