@@ -28,8 +28,13 @@ from .models import (
     Asset,
     AssetAccess,
     AssetAccessRequest,
+    AssetColumn,
+    AssetLanguage,
     AssetPreview,
     AssetVersion,
+    AssetVersionChange,
+    AssetVersionChangeReview,
+    AssetVersionEntry,
     CategoryChoice,
     ContentIssueReport,
     EditorialRecommendation,
@@ -1041,3 +1046,49 @@ class EditorialRecommendationAdmin(AuditedModelAdmin):
     @admin.display(description="Assets")
     def assets_count(self, obj: EditorialRecommendation) -> int:
         return obj.recommendation_assets.count() if obj.pk else 0
+
+
+@admin.register(AssetLanguage)
+class AssetLanguageAdmin(AuditedModelAdmin):
+    list_display = ["asset", "language", "is_source", "status", "created_at"]
+    search_fields = ["asset__name", "language"]
+    list_filter = ["is_source", "status"]
+    raw_id_fields = ["asset"]
+
+
+@admin.register(AssetVersionEntry)
+class AssetVersionEntryAdmin(AuditedModelAdmin):
+    list_display = ["version", "sura", "ayah", "order", "created_at"]
+    search_fields = ["version__name", "text"]
+    list_filter = ["sura"]
+    raw_id_fields = ["version"]
+
+
+@admin.register(AssetVersionChange)
+class AssetVersionChangeAdmin(AuditedModelAdmin):
+    list_display = ["version", "change_type", "sura", "ayah", "order", "created_at"]
+    search_fields = ["version__name", "old_text", "new_text"]
+    list_filter = ["change_type", "sura"]
+    raw_id_fields = ["version"]
+
+
+@admin.register(AssetVersionChangeReview)
+class AssetVersionChangeReviewAdmin(AuditedModelAdmin):
+    list_display = ["change", "state", "reviewed_by", "reviewed_at", "created_at"]
+    search_fields = ["comment", "reviewed_by__email", "reviewed_by__name"]
+    list_filter = ["state"]
+    raw_id_fields = ["change", "reviewed_by"]
+
+
+@admin.register(EditorialRecommendationAsset)
+class EditorialRecommendationAssetAdmin(AuditedModelAdmin):
+    list_display = ["recommendation", "asset", "position", "created_at"]
+    search_fields = ["recommendation__title_en", "recommendation__title_ar", "asset__name"]
+    raw_id_fields = ["recommendation", "asset"]
+
+
+@admin.register(AssetColumn)
+class AssetColumnAdmin(AuditedModelAdmin):
+    list_display = ["asset", "key", "label", "order", "created_at"]
+    search_fields = ["asset__name", "key", "label"]
+    raw_id_fields = ["asset"]

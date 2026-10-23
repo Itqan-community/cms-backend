@@ -83,7 +83,7 @@ flowchart TD
 
 ---
 
-## Tracked Models (27 Models)
+## Tracked Models (28 Models)
 
 All mutable business and content entities are tracked in the audit trail:
 
@@ -103,10 +103,10 @@ All mutable business and content entities are tracked in the audit trail:
 | `PublisherMemberInvitation` | Invitations to join publisher organizations |
 | `MemberLanguage` | Language specializations for publisher members |
 
-### `apps.content` (19 models)
+### `apps.content` (20 models)
 | Category | Models |
 |----------|--------|
-| **Core Assets & Versions** | `Asset`, `AssetLanguage`, `AssetVersion`, `AssetVersionEntry`, `AssetVersionChange`, `AssetVersionChangeReview`, `AssetPreview`, `AssetAccessRequest`, `AssetAccess` |
+| **Core Assets & Versions** | `Asset`, `AssetColumn`, `AssetLanguage`, `AssetVersion`, `AssetVersionEntry`, `AssetVersionChange`, `AssetVersionChangeReview`, `AssetPreview`, `AssetAccessRequest`, `AssetAccess` |
 | **Recitation & Metadata** | `Reciter`, `Qiraah`, `Riwayah`, `MushafLayout`, `RecitationFolder`, `RecitationSurahTrack`, `RecitationAyahTiming` |
 | **Editorial & Reports** | `ContentIssueReport`, `EditorialRecommendation`, `EditorialRecommendationAsset` |
 
@@ -328,5 +328,66 @@ In complex systems, a single operator action can touch multiple rows (e.g. bulk 
   - **Single-Object Reversibility as the Atomic Foundation**: All revert actions are scoped strictly to individual objects (`singular revert action`).
   - **Rationale**: Single-object reversibility provides absolute atomicity and avoids the severe hazards of bulk multi-row rollback (such as rolling back rows that underwent subsequent independent edits, or violating foreign key constraints across tables that lack Two-Phase Commit in a dual-database environment).
   - If a group/bulk reversion need arises in future milestones, a timestamp-window grouping strategy can be considered on top of this single-object foundation.
+
+---
+
+## Readable Audit Trail & Diffs (ITQ-36 / #434)
+
+An audit trail has little operational value if staff cannot easily read and understand past changes. In Itqan CMS, every tracked model (27 models across `apps.content`, `apps.publishers`, and `apps.users`) integrates with Django Admin via `AuditedModelAdmin` to provide a first-class, human-readable change trail:
+
+### 1. Visual Presentation & Action Badges
+When inspecting the history of any object (`/admin/<app>/<model>/<id>/history/`), operators are presented with a unified, styled timeline:
+- **Action Type Badges**:
+  - `Created (+)` (Green badge): Indicates row creation / resurrection.
+  - `Changed (~)` (Blue badge): Indicates field updates.
+  - `Deleted (-)` (Red badge): Indicates deletion / unpublishing.
+- **Accurate User Attribution**:
+  - Displays authenticated user name and email linked directly to their user change view.
+  - **Graceful Fallback**: Because historical user IDs are stored as scalar `BigIntegerField` values on the `audit` database, if the actor account is deleted from the `default` operational database, the view cleanly falls back to `User #<id>` rather than displaying an ambiguous `None`. Automated system actions without an authenticated request context are clearly marked as `System / Automated`.
+- **Granular Field Diffs**:
+  - Computes deltas between consecutive historical snapshots using `simple-history`'s `diff_against`.
+  - Changed fields are listed with field labels, with previous values highlighted in strikethrough red and replacement values in green.
+  - Initial creation rows clearly indicate `Initial version created`.
+
+### 2. Access Control & Role Permissions
+History visibility is strictly gated according to Django's standard permission hierarchy:
+- **History Inspection (`GET`)**: Requires either `view_<model>` or `change_<model>` permission on the target entity, restricted to staff accounts (`is_staff=True`).
+- **Snapshot Reversion (`POST`)**: Strictly enforces `has_change_permission(request, obj)`. View-only staff members are denied with HTTP 403 Forbidden.
+
+---
+
+## Retention & Pruning Policy (ITQ-36 / #434)
+
+Because `django-simple-history` writes a historical snapshot for every model creation, update, and deletion, the `audit` database grows monotonically over time. To balance regulatory non-repudiation with sustainable storage costs, Itqan CMS defines an explicit, three-tier retention architecture:
+
+### 1. Three-Tier Retention Manifesto
+
+| Retention Tier | Target Models | Policy | Justification |
+|---|---|---|---|
+| **Tier 1: Sovereign Canonical Entities** | `Asset`, `AssetVersion`, `License`, `Publisher`, `User` | **Retain Indefinitely** | Critical for intellectual property provenance, licensing compliance, and canonical Quranic authenticity. Deletion snapshots must never be purged. |
+| **Tier 2: Operational & Ephemeral Data** | `AssetAccessRequest`, `ContentIssueReport`, `PublisherMemberInvitation`, `MemberLanguage` | **365-Day Window (1 Year)** | Transient workflows; historical records older than 1 year provide zero operational audit value and can be safely pruned after closure. |
+| **Tier 3: Consecutive Zero-Diff Noise** | All tracked models | **Continuous Deduplication** | Redundant historical snapshots generated without actual data field changes are cleaned via scheduled deduplication. |
+
+### 2. Storage Separation Safeguards
+- Because all historical tables reside on the dedicated `audit` database (enforced by `AuditRouter`), historical record volume does **not** bloat operational PostgreSQL tables, vacuum buffers, or indexing trees on the `default` database.
+- Read queries on the public API (`/`) and internal portal (`/portal/`) only query `default` and experience zero performance impact from audit table scale.
+
+### 3. Automated Pruning Tooling (`prune_audit_history`)
+Operators and automated maintenance cron jobs use the dedicated management command to enforce retention:
+
+```bash
+# 1. Dry run: inspect records eligible for pruning older than 365 days (core sovereign models automatically protected)
+uv run python manage.py prune_audit_history --dry-run
+
+# 2. Prune records older than 180 days for a specific operational model
+uv run python manage.py prune_audit_history --days=180 --models=ContentIssueReport
+
+# 3. Clean zero-diff duplicates across all historical models
+uv run python manage.py clean_duplicate_history --auto
+```
+
+> [!NOTE]
+> Core sovereign models (`Asset`, `AssetVersion`, `License`, `Publisher`, `User`) are protected by default and cannot be purged by `prune_audit_history` unless the explicit `--force-core` flag is passed.
+
 
 
