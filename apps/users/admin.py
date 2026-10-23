@@ -7,12 +7,14 @@ from django.contrib import admin
 from django.contrib.admin import widgets
 from django.contrib.auth import admin as auth_admin, forms as admin_forms
 from django.contrib.auth.models import Group
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import QuerySet
 from django.forms import EmailField, ModelForm
 from django.http import HttpRequest
+from django.shortcuts import get_object_or_404
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
+from ninja_keys.admin import APIKeyModelAdmin
 from plain_permissions.utils import get_permissions_queryset
 
 from apps.core.admin import AuditedModelAdmin
@@ -20,7 +22,7 @@ from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import PublisherMember
 from apps.users.services.group import GroupService
 
-from .models import User
+from .models import APIKey, Developer, User
 
 
 class PublisherMemberInline(admin.TabularInline):
@@ -228,3 +230,39 @@ class GroupAdmin(admin.ModelAdmin):
         service = self.get_service()
         for group in queryset:
             service.delete_group(group)
+
+
+if admin.site.is_registered(APIKey):
+    admin.site.unregister(APIKey)
+
+
+@admin.register(APIKey)
+class AuditedAPIKeyAdmin(AuditedModelAdmin, APIKeyModelAdmin):
+    def save_model(self, request: HttpRequest, obj: APIKey, form=None, change: bool = False) -> None:
+        obj._history_user = request.user
+        if not obj.pk:
+            APIKeyModelAdmin.save_model(self, request, obj, form, change)
+        else:
+            AuditedModelAdmin.save_model(self, request, obj, form, change)
+
+    def history_form_view(self, request: HttpRequest, object_id: str, version_id: str, extra_context=None):
+        if request.method == "POST":
+            persisted_key = self.model.objects.filter(pk=object_id).first()
+            if persisted_key and persisted_key.revoked:
+                history_model = getattr(self.model, self.model._meta.simple_history_manager_attribute).model
+                historical_record = get_object_or_404(
+                    history_model,
+                    **{self.model._meta.pk.attname: object_id, "history_id": version_id},
+                )
+                if not historical_record.instance.revoked:
+                    raise PermissionDenied(_("Cannot restore a revoked API key to an active state."))
+
+        return super().history_form_view(request, object_id, version_id, extra_context=extra_context)
+
+
+@admin.register(Developer)
+class DeveloperAdmin(AuditedModelAdmin):
+    list_display = ["user", "job_title", "profile_completed", "created_at"]
+    search_fields = ["user__email", "user__name", "job_title"]
+    list_filter = ["profile_completed"]
+    raw_id_fields = ["user"]

@@ -1176,6 +1176,9 @@ msgstr "اللغات المعيّنة (لكل ناشر)"
 msgid "permissions"
 msgstr "الصلاحيات"
 
+msgid "Cannot restore a revoked API key to an active state."
+msgstr "لا يمكن استعادة مفتاح API ملغى إلى حالة نشطة."
+
 #, python-brace-format
 msgid "Group with id {id} not found."
 msgstr "لم يتم العثور على المجموعة بالمعرّف {id}."
@@ -1640,6 +1643,66 @@ msgstr "مرحبًا بك في نظام إتقان لإدارة المحتوى!"
 
 msgid "This is a test email to verify the email service is working correctly."
 msgstr "هذه رسالة اختبارية للتأكد من عمل خدمة البريد الإلكتروني بشكل صحيح."
+
+msgid "Object"
+msgstr "الكائن"
+
+msgid "Date/time"
+msgstr "التاريخ/الوقت"
+
+msgid "Action"
+msgstr "الإجراء"
+
+msgid "Changed by"
+msgstr "عُدِّل بواسطة"
+
+msgid "Change reason"
+msgstr "سبب التعديل"
+
+msgid "Changes"
+msgstr "التغييرات"
+
+msgid "Created (+)"
+msgstr "إنشاء (+)"
+
+msgid "Changed (~)"
+msgstr "تعديل (~)"
+
+msgid "Deleted (-)"
+msgstr "حذف (-)"
+
+msgid "Historical user ID"
+msgstr "معرّف المستخدم التاريخي"
+
+msgid "User #"
+msgstr "مستخدم رقم #"
+
+msgid "System / Automated"
+msgstr "النظام / آلي"
+
+msgid "empty"
+msgstr "فارغ"
+
+msgid "Initial version created"
+msgstr "تم إنشاء النسخة الأولى"
+
+msgid "Record deleted"
+msgstr "تم حذف السجل"
+
+msgid "No tracked field changes"
+msgstr "لا توجد تغييرات في الحقول المتتبعة"
+
+msgid "Diff unavailable"
+msgstr "الفروقات غير متوفرة"
+
+msgid "entry"
+msgid_plural "entries"
+msgstr[0] "مدخل"
+msgstr[1] "مدخل واحد"
+msgstr[2] "مدخلان"
+msgstr[3] "مدخلات"
+msgstr[4] "مدخلاً"
+msgstr[5] "مدخل"
 
 #, python-brace-format
 #~ msgid "Statistics are limited to {days} days per request."
