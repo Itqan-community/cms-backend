@@ -23,6 +23,7 @@ class User(BaseModel, AbstractUser):
         app="simple_history",
         use_base_model_db=False,
         history_user_id_field=models.BigIntegerField(null=True),
+        excluded_fields=["password"],
     )
 
     # The First and last name do not cover name patterns around the globe
@@ -64,6 +65,7 @@ class APIKey(AbstractAPIKey):
         app="simple_history",
         use_base_model_db=False,
         history_user_id_field=models.BigIntegerField(null=True),
+        excluded_fields=["hashed_key"],
     )
 
     objects: ClassVar[APIKeyManager] = APIKeyManager()
