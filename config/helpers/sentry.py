@@ -36,6 +36,21 @@ def traces_sampler(sampling_context: dict[str, Any]) -> float:
     return config("SENTRY_TRACES_SAMPLE_RATE", cast=float, default=1)
 
 
+def _is_tornado_client_error(exc: BaseException | None) -> bool:
+    """A 4xx response raised in Tornado, the web server Flower runs on. Flower logs
+    every rejected request (scanners, failed basic auth, unknown paths) as an error."""
+    cls = type(exc)
+    return cls.__module__ == "tornado.web" and cls.__name__ == "HTTPError" and getattr(exc, "status_code", 500) < 500
+
+
+def before_send(event: dict[str, Any], hint: dict[str, Any]) -> dict[str, Any] | None:
+    """Drop error events that are not ours to fix."""
+    exc_info = hint.get("exc_info")
+    if exc_info and _is_tornado_client_error(exc_info[1]):
+        return None
+    return event
+
+
 def enable_sentry() -> None:
     from sentry_sdk import init
     from sentry_sdk.integrations.celery import CeleryIntegration
@@ -66,5 +81,5 @@ def enable_sentry() -> None:
         # Additional configuration
         max_breadcrumbs=config("SENTRY_MAX_BREADCRUMBS", cast=int, default=50),
         attach_stacktrace=True,
-        before_send=lambda event, hint: event,  # Hook for custom event filtering
+        before_send=before_send,
     )
