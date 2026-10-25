@@ -1,3 +1,67 @@
+## v0.24.0 (2026-10-25)
+
+### Feat
+
+- **content**: the draft carries the asset's template and defaults to the source language
+- **content**: multi-column tafsirs and translations
+- **usage**: translate usage report messages to Arabic
+- **usage**: expose public usage counts behind a flag
+- **usage**: serve developer usage reports with a privacy floor
+- **usage**: serve Itqan admin usage reports, leaderboard and reconciliation
+- **usage**: serve publisher usage reports and CSV export
+- **usage**: add the usage report query engine
+- **usage**: validate usage report parameters and define report metrics
+- **usage**: fold Django views and downloads into traffic events hourly
+- **usage**: record CLI package resolves as installs
+- **content**: record the real client IP and serve open gallery downloads through the CDN
+- **usage**: attribute imported traffic to apps and count API POST routes
+- **usage**: tag API-key responses with the app slug and keep them out of shared caches
+- **usage**: give every API key a public app slug
+- **audit**: snapshot recovery and reversibility service (ITQ-35) (#433)
+- **usage**: import Logpush files hourly, reconcile R2 reads and purge old events
+- **usage**: store traffic events and rebuild hourly, daily and monthly rollups
+- **usage**: parse Cloudflare Logpush lines for asset files and public API routes
+- **usage**: classify requests and hash stable client identities
+- **usage**: add traffic event, rollup and import-state models
+- **users**: show a sortable date joined column in the user admin
+- **content**: flag recitations with ayah timings in the gallery list
+- **content**: add portal AI translate endpoint
+- **content**: set human-friendly template slugs on asset create
+- **core**: add free-tier Gemini client and deploy wiring
+
+### Fix
+
+- **content**: default the draft language only when it is omitted
+- **dependabot**: keep the bump when the manifest can't be read for column notes
+- **content**: lock a replaced version before its asset, as publishing does
+- **i18n**: regenerate the Arabic catalog and call committed versions محفوظ
+- **content**: address the multi-column review
+- **publishers**: the portal's tenant picker needs only portal access
+- **usage**: clear the cached app slug only after the change commits
+- **usage**: hide previous values below the developer privacy floor
+- **usage**: do not compare unique counts counted on different bases
+- **usage**: skip proxy-IP events in the Django fold-in
+- **usage**: hide totals and asset uniques that would reveal private counts
+- **users**: save the API-key name and app slug in one transaction
+- **usage**: retry app creation after a slug collision
+- **usage**: attribute API calls only from the X-Itqan-App header
+- **usage**: start the Django fold-in at deploy and keep late rows for the next run
+- **usage**: keep no-store and mark every tagged response private
+- **content**: require the public base URL before CDN gallery downloads
+- **usage**: document the 403 response of the admin usage reports
+- **usage**: escape formula-like names in usage CSV exports
+- **usage**: keep the folded split series apart from a real "other" value
+- **packages**: serve open-access package files through the storage CDN domain
+- **content**: keep a recitation year suffix within the slug length
+
+### Refactor
+
+- **usage**: remove the superseded download statistics endpoints
+
+### Perf
+
+- **content**: load the asset and version once for entries and pending-diff
+
 ## v0.23.0 (2026-10-14)
 
 ### Feat
