@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 
 from django.conf import settings
+from django.utils.text import format_lazy
+from django.utils.translation import gettext_lazy as _
 
 from apps.core.services.email import email_service
 from apps.publishers.repositories.publisher_member import PublisherMemberRepository
@@ -29,12 +31,12 @@ class PublisherMemberNotificationService:
 
         accept_url = f"{settings.FRONTEND_BASE_URL}/portal/invitations/accept?token={raw_token}"
         email_service.send_email(
-            subject=f"You're invited to {inv.publisher.name}",
+            subject=format_lazy(_("You're invited to {publisher_name}"), publisher_name=inv.publisher.name),
             recipients=[inv.email],
             template="emails/publisher_member_invitation.html",
             context={
                 "publisher_name": inv.publisher.name,
-                "invited_by_name": inv.invited_by.name if inv.invited_by else "An administrator",
+                "invited_by_name": inv.invited_by.name if inv.invited_by else _("An administrator"),
                 "group_name": inv.group_name,
                 "accept_url": accept_url,
                 "expires_at": inv.expires_at.date().isoformat(),
@@ -50,7 +52,7 @@ class PublisherMemberNotificationService:
             return
 
         email_service.send_email(
-            subject=f"Welcome to {member.publisher.name}",
+            subject=format_lazy(_("Welcome to {publisher_name}"), publisher_name=member.publisher.name),
             recipients=[member.user.email],
             template="emails/publisher_member_activated.html",
             context={

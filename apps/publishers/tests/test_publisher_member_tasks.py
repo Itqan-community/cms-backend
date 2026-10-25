@@ -9,13 +9,13 @@ from apps.publishers.models import Publisher, PublisherMember, PublisherMemberIn
 from apps.publishers.services.publisher_member_notification_service import PublisherMemberNotificationService
 from apps.publishers.tasks import send_publisher_member_activated_email, send_publisher_member_invitation_email
 from apps.publishers.tests.group_helpers import member_group
-from apps.users.models import User
+from apps.users.models import LanguageChoice, User
 
 
 class MemberTasksTest(BaseTestCase):
     def _invitation(self):
         publisher = baker.make(Publisher, name="Tafsir Center")
-        user = baker.make(User, email="invitee@example.com")
+        user = baker.make(User, email="invitee@example.com", preferred_language=LanguageChoice.ENGLISH)
         member = PublisherMember.objects.create(user=user, publisher=publisher, group=member_group())
         return PublisherMemberInvitation.objects.create(
             publisher=publisher,

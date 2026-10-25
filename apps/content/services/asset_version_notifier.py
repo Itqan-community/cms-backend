@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import logging
 
+from django.utils.text import format_lazy
+from django.utils.translation import gettext_lazy as _
+
 from apps.content.models import AssetAccess, AssetVersion, VersionStateChoice
 from apps.core.services.email import email_service
 
@@ -38,7 +41,7 @@ class AssetVersionNotifier:
             logger.info(f"No subscribers to notify [asset_version_id={asset_version_id}]")
             return
 
-        subject = f"New Update for {asset_version.asset.name}"
+        subject = format_lazy(_("New Update for {asset_name}"), asset_name=asset_version.asset.name)
         context = {
             "asset_name": asset_version.asset.name,
             "version": asset_version.name,
