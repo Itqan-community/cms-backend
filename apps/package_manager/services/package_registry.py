@@ -568,11 +568,13 @@ class PackageRegistryService:
     ) -> QuerySet[Asset]:
         """Installable assets, annotated with ``user``'s access to each (see
         :meth:`catalog_access`)."""
-        return self.repo.list_installable_assets(
-            open_access=open_access,
-            category=category,
-            exclude_categories=NON_INSTALLABLE_CATEGORIES,
-            user=user,
+        return self.repo.prefetch_catalog_renditions(
+            self.repo.list_installable_assets(
+                open_access=open_access,
+                category=category,
+                exclude_categories=NON_INSTALLABLE_CATEGORIES,
+                user=user,
+            )
         )
 
     @staticmethod
@@ -615,8 +617,10 @@ class PackageRegistryService:
         stable version a ``^`` constraint would pick. Languages with no valid
         SemVer version are left out."""
         languages: list[CatalogLanguage] = []
-        for rendition in self.repo.list_available_languages(asset):
-            latest = _latest_version(self.installable_versions(asset, rendition))
+        for rendition in self.repo.list_catalog_renditions(asset):
+            latest = self._published_if_latest(asset, rendition) or _latest_version(
+                self.installable_versions(asset, rendition)
+            )
             if latest is None:
                 continue
             version, semver = latest
@@ -629,6 +633,26 @@ class PackageRegistryService:
                 )
             )
         return languages
+
+    def _published_if_latest(self, asset: Asset, rendition: AssetLanguage) -> tuple[AssetVersion, SemVer] | None:
+        """The rendition's published version when no released version can beat it,
+        else None. Spares the catalog the review check of older versions
+        (:meth:`_released_version_ids`): versions committed after the published
+        one are never released, so a stable published version is the latest
+        unless an older one carries a higher number."""
+        published = rendition.published_version
+        if asset.category not in PUBLISHED_VERSION_CATEGORIES or published is None:
+            return None
+        versions = self.repo.get_eligible_package_versions(rendition)
+        served = next((v for v in versions if v.pk == published.pk and v.removed_at is None), None)
+        semver = _parse_candidate_version(published.name)
+        if served is None or semver is None or semver.is_prerelease:
+            return None
+        cutoff = (published.created_at, published.pk)
+        for version, other in _candidates(versions):
+            if (version.created_at, version.pk) < cutoff and other._precedence_key() > semver._precedence_key():
+                return None
+        return served, semver
 
     def installable_languages(self, asset: Asset) -> list[AssetLanguage]:
         """The renditions the itqan CLI can install for ``asset``, source first:

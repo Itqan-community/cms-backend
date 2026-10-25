@@ -1,6 +1,8 @@
 """GET /packages/: the catalog of installable assets and their languages."""
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from model_bakery import baker
 
 from apps.content.models import (
@@ -213,3 +215,41 @@ class PackageCatalogApiTests(BaseTestCase):
         self.assertEqual(["tafsir-a"], [r["slug"] for r in all_assets.json()["results"]])
         self.assertEqual(200, recitations.status_code, recitations.content)
         self.assertEqual([], recitations.json()["results"])
+
+    def _catalog_asset(self, slug: str, category: str) -> Asset:
+        template = AssetTemplateChoice.AYAH if category == "tafsir" else None
+        asset = self._asset(slug, category=category, template=template)
+        self._version(asset, "1.0")
+        self._version(asset, "1.1")
+        self._version(asset, "2.0", language=self._language(asset, "en"))
+        return asset
+
+    def test_list_packages_where_more_assets_and_languages_should_not_add_queries(self):
+        # Arrange
+        self._catalog_asset("tafsir-0", "tafsir")
+        self._catalog_asset("mushaf-0", "mushaf")
+        with CaptureQueriesContext(connection) as few:
+            self.client.get("/packages/")
+        for index in range(1, 4):
+            self._catalog_asset(f"tafsir-{index}", "tafsir")
+            self._catalog_asset(f"mushaf-{index}", "mushaf")
+
+        # Act
+        with CaptureQueriesContext(connection) as many:
+            response = self.client.get("/packages/")
+
+        # Assert
+        self.assertEqual(8, len(response.json()["results"]))
+        self.assertEqual(len(few.captured_queries), len(many.captured_queries))
+
+    def test_list_packages_where_older_version_has_higher_number_should_list_it_as_latest(self):
+        # Arrange
+        asset = self._asset("mushaf", category="mushaf", template=None)
+        self._version(asset, "2.0")
+        self._version(asset, "1.0")
+
+        # Act
+        response = self.client.get("/packages/")
+
+        # Assert
+        self.assertEqual("2.0.0", response.json()["results"][0]["languages"][0]["latest_version"])
