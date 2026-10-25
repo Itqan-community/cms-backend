@@ -71,11 +71,16 @@ class PackageRegistryRepository:
             asset_language__status=StatusChoice.READY,
             removed_at__isnull=True,
         ).filter(_has_content_q())
-        qs = Asset.objects.select_related("publisher").filter(
-            Exists(installable_version),
-            consumer_visible_q(),
-            status=StatusChoice.READY,
-            restricted_for_tenant=False,
+        # `columns`: the catalog describes each language's file layout (`structure`).
+        qs = (
+            Asset.objects.select_related("publisher")
+            .prefetch_related("columns")
+            .filter(
+                Exists(installable_version),
+                consumer_visible_q(),
+                status=StatusChoice.READY,
+                restricted_for_tenant=False,
+            )
         )
         if open_access is not None:
             qs = qs.filter(is_open_access=open_access)
@@ -174,10 +179,10 @@ class PackageRegistryRepository:
         version.save(update_fields=["removed_at", "removed_by", "removal_reason", "asset_language", "updated_at"])
         return version
 
-    def pending_review_units_by_version(self, asset: Asset, language: str) -> dict[int, int]:
-        """``{version_id: units awaiting approval}`` for the committed versions of
+    def pending_review_cells_by_version(self, asset: Asset, language: str) -> dict[int, int]:
+        """``{version_id: cells awaiting approval}`` for the committed versions of
         (asset, language); 0 means fully approved."""
-        return AssetReviewRepository().pending_units_by_version(asset, language)
+        return AssetReviewRepository().pending_cells_by_version(asset, language)
 
     def get_downloadable_version(self, asset_version_id: int) -> AssetVersion | None:
         """A version the registry could have resolved: published, in a READY,
@@ -215,7 +220,9 @@ class PackageRegistryRepository:
         snapshot = content_repo.reconstruct_entries(locked)
         if not any(snapshot.values()):
             return None
-        content = content_repo.snapshot_to_csv_bytes(snapshot, unit_spec_for(locked.asset), asset=locked.asset)
+        content = content_repo.snapshot_to_csv_bytes(
+            snapshot, unit_spec_for(locked.asset), asset=locked.asset, column_keys=locked.resolved_column_keys
+        )
         filename = f"{locked.asset.slug}-{locked.asset_language.language}-{locked.name}.csv".replace(" ", "_")
         locked.file_url.save(filename, ContentFile(content), save=False)
         locked.size_bytes = len(content)

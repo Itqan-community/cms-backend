@@ -91,3 +91,121 @@ def test_serialize_updated_lockfile_updates_target_and_preserves_others():
     assert reparsed.assets["quran-uthmani-hafs"].constraint == "^1.3.0"
     assert reparsed.assets["quran-uthmani-hafs"].version == "1.3.0"
     assert reparsed.assets["tafsir-muyassar"].version == "1.0.0"
+
+
+QA_BLOCK = [
+    "  # itqan:columns CSV, one row per ayah: surah, ayah, question, answer",
+    "  # itqan:columns   question: Question",
+]
+
+
+def _block(indent: str) -> list[str]:
+    return [line.replace("  ", indent, 1) for line in QA_BLOCK]
+
+
+def test_update_manifest_content_where_columns_comment_should_insert_block_above_entry():
+    manifest = b'schema_version: 1\n\nassets:\n  qa:\n    version: "^1.0.0"\n'
+
+    updated = update_manifest_content(manifest, "qa", "^2.0.0", columns_comment=_block).decode()
+
+    assert updated == (
+        "schema_version: 1\n\nassets:\n"
+        "  # itqan:columns CSV, one row per ayah: surah, ayah, question, answer\n"
+        "  # itqan:columns   question: Question\n"
+        '  qa:\n    version: "^2.0.0"\n'
+    )
+
+
+def test_update_manifest_content_where_old_block_and_user_comment_should_replace_block_only():
+    manifest = (
+        b"schema_version: 1\n\nassets:\n"
+        b"  # pinned for the quiz screen\n"
+        b"  # itqan:columns CSV, one row per ayah: surah, ayah, question\n"
+        b'  qa:\n    version: "^1.0.0"\n'
+    )
+
+    updated = update_manifest_content(manifest, "qa", "^1.0.0", columns_comment=_block).decode()
+
+    assert updated == (
+        "schema_version: 1\n\nassets:\n"
+        "  # pinned for the quiz screen\n"
+        "  # itqan:columns CSV, one row per ayah: surah, ayah, question, answer\n"
+        "  # itqan:columns   question: Question\n"
+        '  qa:\n    version: "^1.0.0"\n'
+    )
+
+
+def test_update_manifest_content_where_columns_comment_returns_nothing_should_remove_block():
+    manifest = (
+        b"schema_version: 1\n\nassets:\n"
+        b"  # itqan:columns CSV, one row per ayah: surah, ayah, question\n"
+        b'  qa:\n    version: "^1.0.0"\n'
+    )
+
+    updated = update_manifest_content(manifest, "qa", "^1.0.0", columns_comment=lambda indent: []).decode()
+
+    assert updated == 'schema_version: 1\n\nassets:\n  qa:\n    version: "^1.0.0"\n'
+
+
+def test_update_manifest_content_where_no_columns_comment_should_leave_comments_byte_identical():
+    manifest = (
+        b"schema_version: 1\n\nassets:\n"
+        b"  # itqan:columns CSV, one row per ayah: surah, ayah, question\n"
+        b'  qa:\n    version: "^1.0.0"\n'
+    )
+
+    updated = update_manifest_content(manifest, "qa", "^1.0.0")
+
+    assert updated == manifest
+
+
+def test_update_manifest_content_where_columns_comment_on_other_entry_should_not_touch_it():
+    manifest = (
+        b"schema_version: 1\n\nassets:\n"
+        b"  # itqan:columns CSV, one row per ayah: surah, ayah, a, b\n"
+        b'  other:\n    version: "^1.0.0"\n'
+        b'  qa:\n    version: "^1.0.0"\n'
+    )
+
+    updated = update_manifest_content(manifest, "qa", "^1.0.0", columns_comment=_block).decode()
+
+    assert "  # itqan:columns CSV, one row per ayah: surah, ayah, a, b\n  other:" in updated
+    assert updated.endswith(
+        "  # itqan:columns CSV, one row per ayah: surah, ayah, question, answer\n"
+        "  # itqan:columns   question: Question\n"
+        '  qa:\n    version: "^1.0.0"\n'
+    )
+
+
+def test_refresh_columns_comment_where_version_unquoted_should_keep_version_line_byte_identical():
+    from apps.dependabot.services.manifest_update import refresh_columns_comment
+
+    manifest = b"schema_version: 1\n\nassets:\n  qa:\n    version: ^1.0.0  # pinned\n"
+
+    updated = refresh_columns_comment(manifest, "qa", _block).decode()
+
+    assert updated == (
+        "schema_version: 1\n\nassets:\n"
+        "  # itqan:columns CSV, one row per ayah: surah, ayah, question, answer\n"
+        "  # itqan:columns   question: Question\n"
+        "  qa:\n    version: ^1.0.0  # pinned\n"
+    )
+
+
+def test_refresh_columns_comment_where_block_current_should_return_same_bytes():
+    from apps.dependabot.services.manifest_update import refresh_columns_comment
+
+    manifest = ("schema_version: 1\n\nassets:\n" + "\n".join(QA_BLOCK) + "\n  qa:\n    version: ^1.0.0\n").encode()
+
+    assert refresh_columns_comment(manifest, "qa", _block) == manifest
+
+
+def test_refresh_columns_comment_where_manifest_uses_crlf_should_write_block_with_crlf():
+    from apps.dependabot.services.manifest_update import refresh_columns_comment
+
+    manifest = b"schema_version: 1\r\n\r\nassets:\r\n  qa:\r\n    version: ^1.0.0\r\n"
+
+    updated = refresh_columns_comment(manifest, "qa", _block)
+
+    assert b"  # itqan:columns   question: Question\r\n  qa:\r\n" in updated
+    assert updated.count(b"\n") == updated.count(b"\r\n")

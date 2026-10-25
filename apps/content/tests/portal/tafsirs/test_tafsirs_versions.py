@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
@@ -9,6 +11,7 @@ from apps.content.models import (
     Asset,
     AssetAccess,
     AssetAccessRequest,
+    AssetColumn,
     AssetLanguage,
     AssetTemplateChoice,
     AssetVersion,
@@ -19,6 +22,8 @@ from apps.content.models import (
     ReviewStateChoice,
     StatusChoice,
 )
+from apps.content.repositories.asset_content import AssetContentRepository
+from apps.content.services import tafsir as tafsir_service
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
@@ -709,6 +714,92 @@ class TafsirVersionFileReplaceTest(TafsirVersionBaseTest):
         self.assertEqual(200, response.status_code, response.content)
         change = AssetVersionChange.objects.get(version=version)
         self.assertEqual("in the name", change.new_text)
+
+    def _committed_with_question_column(self) -> AssetVersion:
+        AssetColumn.objects.create(asset=self.tafsir, key="question", order=0)
+        version = baker.make(AssetVersion, asset=self.tafsir, name="v1")
+        self.assertEqual(["question"], version.column_keys)
+        return version
+
+    def test_patch_version_where_column_added_since_commit_should_take_the_new_layout(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
+        version = self._committed_with_question_column()
+        AssetColumn.objects.create(asset=self.tafsir, key="answer", order=1)
+        file = SimpleUploadedFile("tafsir.csv", b"surah,ayah,question,answer\n1,1,Q,A", content_type="text/csv")
+
+        # Act
+        response = self.client.patch(
+            f"/portal/tafsirs/{self.tafsir.slug}/versions/{version.id}/",
+            data={"file": file},
+        )
+
+        # Assert — consumers get every column that reviewers approve
+        self.assertEqual(200, response.status_code, response.content)
+        version.refresh_from_db()
+        self.assertEqual(["question", "answer"], version.column_keys)
+        version.file_url.open("rb")
+        try:
+            header = version.file_url.read().decode().splitlines()[0]
+        finally:
+            version.file_url.close()
+        self.assertEqual("surah,ayah,question,answer", header)
+
+    def test_patch_version_where_columns_reordered_since_commit_should_return_400(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
+        version = self._committed_with_question_column()
+        AssetColumn.objects.create(asset=self.tafsir, key="answer", order=1)
+        AssetVersion.objects.filter(pk=version.pk).update(column_keys=["question", "answer"])
+        version.refresh_from_db()
+        AssetColumn.objects.filter(asset=self.tafsir, key="question").update(order=2)
+        file = SimpleUploadedFile("tafsir.csv", b"surah,ayah,answer,question\n1,1,A,Q", content_type="text/csv")
+
+        # Act
+        response = self.client.patch(
+            f"/portal/tafsirs/{self.tafsir.slug}/versions/{version.id}/",
+            data={"file": file},
+        )
+
+        # Assert — its number is already issued, and a reorder needs a major one
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("major_bump_required", response.json()["error_name"])
+
+    def test_patch_version_where_file_replaced_should_lock_the_version_before_the_asset(self):
+        # Arrange — publishing locks the version, then writes the asset: the same order can't deadlock
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
+        version = baker.make(AssetVersion, asset=self.tafsir, name="v1")
+        file = SimpleUploadedFile("file.csv", CSV, content_type="text/csv")
+        calls: list[str] = []
+        lock_version = tafsir_service.lock_version_for_content_change
+        lock_asset = AssetContentRepository.lock_asset
+
+        def locking_version(locked):
+            calls.append("version")
+            return lock_version(locked)
+
+        def locking_asset(repo, asset):
+            calls.append("asset")
+            return lock_asset(repo, asset)
+
+        # Act
+        with (
+            patch.object(tafsir_service, "lock_version_for_content_change", side_effect=locking_version),
+            patch.object(AssetContentRepository, "lock_asset", autospec=True, side_effect=locking_asset),
+        ):
+            response = self.client.patch(
+                f"/portal/tafsirs/{self.tafsir.slug}/versions/{version.id}/", data={"file": file}
+            )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(["version", "asset"], calls[:2])
 
 
 class TafsirVersionHistoryIsAppendOnlyTest(TafsirVersionBaseTest):

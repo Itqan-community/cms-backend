@@ -38,14 +38,15 @@ class AssetReviewRepository:
         """The per-asset unit key of a change row (see ``changes_for``)."""
         return Coalesce("sura_id", "ayah_id", "word_id", "page_no", output_field=IntegerField())
 
-    def pending_units_by_version(self, asset: Asset, language: str) -> dict[int, int]:
-        """``{version_id: units awaiting approval}`` for every committed version of
+    def pending_cells_by_version(self, asset: Asset, language: str) -> dict[int, int]:
+        """``{version_id: cells awaiting approval}`` for every committed version of
         (asset, language). A version is fully approved when its count is 0.
 
-        A unit awaits approval at version V when its most recent change at or
-        before V is not approved (unreviewed or commented) — the same "latest
-        change per unit" the review page shows, evaluated as of V. Units with no
-        change rows (content that predates change tracking) never await approval.
+        A cell — (unit, column) — awaits approval at version V when its most
+        recent change at or before V is not approved (unreviewed or commented) —
+        the same "latest change per cell" the review page shows, evaluated as of
+        V. Cells with no change rows (content that predates change tracking)
+        never await approval.
         One pass over the language's change rows, oldest commit first.
         """
         version_language_q = Q(asset_language__language=language)
@@ -57,23 +58,24 @@ class AssetReviewRepository:
             .order_by("created_at", "id")
             .values_list("id", flat=True)
         )
-        changes_by_version: dict[int, list[tuple[int, str | None]]] = defaultdict(list)
+        changes_by_version: dict[int, list[tuple[tuple[int, int], str | None]]] = defaultdict(list)
         rows = (
             AssetVersionChange.objects.filter(version_id__in=version_ids)
             .annotate(unit_key=self._unit_key())
-            .values_list("version_id", "unit_key", "review__state")
+            .values_list("version_id", "unit_key", "column_id", "review__state")
         )
-        for version_id, unit_key, review_state in rows.iterator():
-            changes_by_version[version_id].append((unit_key, review_state))
+        for version_id, unit_key, column_id, review_state in rows.iterator():
+            # A cell — (unit, column) — is what awaits approval.
+            changes_by_version[version_id].append(((unit_key, column_id), review_state))
 
-        pending: set[int] = set()
+        pending: set[tuple[int, int]] = set()
         result: dict[int, int] = {}
         for version_id in version_ids:
-            for unit_key, review_state in changes_by_version.get(version_id, ()):
+            for cell, review_state in changes_by_version.get(version_id, ()):
                 if review_state == ReviewStateChoice.APPROVED:
-                    pending.discard(unit_key)
+                    pending.discard(cell)
                 else:
-                    pending.add(unit_key)
+                    pending.add(cell)
             result[version_id] = len(pending)
         return result
 
@@ -94,7 +96,7 @@ class AssetReviewRepository:
         With ``as_of`` (a committed version): the changes that make up that
         version — the latest change per unit among commits up to and including
         it. Exactly these decide whether it is approved
-        (``pending_units_by_version``), so this answers "why is it not approved".
+        (``pending_cells_by_version``), so this answers "why is it not approved".
 
         Each row is annotated with ``baseline_text``: the unit's text at its most
         recent *approved* change in an earlier commit, so the reviewer sees the net
@@ -128,7 +130,7 @@ class AssetReviewRepository:
                 .annotate(
                     rank=Window(
                         expression=RowNumber(),
-                        partition_by=[unit_key],
+                        partition_by=[unit_key, F("column_id")],
                         order_by=[F("version__created_at").desc(), F("version_id").desc()],
                     )
                 )
@@ -142,7 +144,7 @@ class AssetReviewRepository:
             AssetVersionChange.objects.filter(version__asset=asset, review__state=ReviewStateChoice.APPROVED)
             .filter(language_q)
             .annotate(unit_key=unit_key)
-            .filter(unit_key=OuterRef("unit_key"))
+            .filter(unit_key=OuterRef("unit_key"), column_id=OuterRef("column_id"))
             .filter(
                 Q(version__created_at__lt=OuterRef("version__created_at"))
                 | Q(version__created_at=OuterRef("version__created_at"), version_id__lt=OuterRef("version_id"))
@@ -163,6 +165,7 @@ class AssetReviewRepository:
                 "version__created_by",
                 "review",
                 "review__reviewed_by",
+                "column",
             )
             .annotate(baseline_text=Subquery(earlier_approved_text))
         )

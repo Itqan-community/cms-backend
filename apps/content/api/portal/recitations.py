@@ -165,6 +165,10 @@ class RecitationCreateIn(Schema):
     license: LicenseChoice
     is_open_access: bool = False
     restricted_for_tenant: bool = False
+    slug: str | None = Field(
+        default=None,
+        description="Package name from `POST /portal/ai/translate/` (`slug_for`); built from the names when omitted.",
+    )
 
 
 class RecitationPutIn(Schema):
@@ -289,6 +293,7 @@ def list_recitations(request: Request, filters: RecitationFilter = Query()):
     response={
         201: RecitationDetailOut,
         400: NinjaErrorResponse[Literal["recitation_name_required"]]
+        | NinjaErrorResponse[Literal["asset_slug_invalid"]]
         | NinjaErrorResponse[Literal["invalid_riwayah_qiraah_combo"]],
         404: NinjaErrorResponse[Literal["publisher_not_found"]]
         | NinjaErrorResponse[Literal["reciter_not_found"]]
@@ -321,6 +326,7 @@ def create_recitation(
         year=data.year,
         is_open_access=data.is_open_access,
         restricted_for_tenant=data.restricted_for_tenant,
+        slug=data.slug,
     )
     logger.info(f"Recitation created [recitation_id={recitation.id}, user_id={request.user.id}]")
     return 201, recitation

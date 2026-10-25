@@ -140,6 +140,53 @@ and `CF_R2_CUSTOM_DOMAIN` (the token needs Zone Analytics Read with access to
 | `ASSET_DOWNLOAD_PLAY_WINDOW_MINUTES` | `5` | Requests for the same file from the same client within this gap count as one play |
 | `ASSET_DOWNLOAD_EVENT_RETENTION_DAYS` | empty | Delete raw request events older than this; empty keeps them forever |
 
+#### Optional: AI translation and asset slugs (Gemini free tier)
+
+The portal's "Translate from Arabic" / "Write from the web" buttons and the human-friendly slug of
+new assets (suggested when Translate is clicked; creating an asset never calls Gemini) use the Gemini
+API free tier. Create a key in Google AI Studio and **never link a billing
+account** to its project (that ends the free tier). Without a key everything still works: slugs keep
+the category template with the slugified name (e.g. `mushaf-warsh`) and the translate endpoint returns
+`ai_unavailable` (503). Tests always run with the key blanked (`BaseTestCase`). Free-tier prompts
+may be used by Google to improve its products, so only public catalog metadata is sent.
+"Write from the web" reads the intro of the matching Arabic and English Wikipedia articles (public API,
+no key); Google Search grounding is not part of the free tier for new projects.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `GEMINI_API_KEY` | empty | AI Studio API key (backend only) |
+| `GEMINI_FAST_MODEL` | `gemini-3.5-flash-lite` | Translation, slug words and "Write from the web" (free tier: ~500 requests/day) |
+| `GEMINI_TIMEOUT_SECONDS` | `20` | Per-request timeout (free-tier latency varies; only Translate clicks wait on it) |
+
+#### Optional: usage reports (Cloudflare Logpush)
+
+Every edge request on the storage and API hosts is pushed by Cloudflare Logpush to an R2
+bucket and imported hourly; R2's own read counts are imported as a reconciliation check.
+All settings are optional:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `ENABLE_USAGE_LOGPUSH_IMPORT` | `False` | Turn the hourly Logpush import on |
+| `USAGE_LOGS_BUCKET` | `itqan-usage-logs` | R2 bucket Logpush writes to |
+| `USAGE_LOGS_PREFIX` | `http/production/` | This environment's folder in the bucket (staging: `http/staging/`) |
+| `USAGE_LOGS_ACCESS_KEY_ID` / `USAGE_LOGS_SECRET_ACCESS_KEY` | empty | Read-only S3 credentials for the bucket; the import skips without them |
+| `USAGE_LOGPUSH_MAX_FILES_PER_RUN` | `500` | Files imported per run while catching up |
+| `ENABLE_USAGE_R2_RECONCILIATION` | `False` | Turn the hourly R2 read-count import on |
+| `CF_ACCOUNT_ID` | empty | Cloudflare account for R2 analytics |
+| `USAGE_ANALYTICS_API_TOKEN` | `CF_API_TOKEN` | Token with Account Analytics Read |
+| `USAGE_IDENTITY_KEY` | derived from `SECRET_KEY` | Key for listener/install/end-user hashes. Set it and never rotate it |
+| `USAGE_EVENT_RETENTION_MONTHS` | `25` | Delete raw traffic events older than this; rollups and monthly uniques are kept |
+| `GALLERY_DOWNLOADS_VIA_CDN` | `False` | Serve open-access gallery downloads from the storage domain (`?download=`) so the edge counts them; needs the Cloudflare `Content-Disposition` transform rule |
+| `USAGE_REPORTS_CACHE_SECONDS` | `600` | How long a usage report response is cached per scope, language and parameters (`0` turns caching off) |
+| `PUBLIC_USAGE_COUNTS_ENABLED` | `False` | Show all-time plays, downloads and apps on gallery asset pages (`/cms-api/assets/{id}/usage-counts/` returns 404 while off) |
+
+**App attribution:** every API key has a public app slug (`UsageApp`, editable on the API Keys
+page). Public-API responses to a request with an API key get `?c=<slug>` on storage file URLs,
+an `X-Itqan-App` header and private caching, so plays and calls are attributed to that app.
+
+S3 credentials can come from the Cloudflare API token itself: access key id = the token id,
+secret = the SHA-256 of the token value.
+
 ### 2) Start with Docker (recommended)
 
 ```bash

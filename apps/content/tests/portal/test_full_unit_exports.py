@@ -105,7 +105,9 @@ class FullUnitExportTests(BaseTestCase):
         version = self._version(AssetTemplateChoice.PAGE, mushaf_layout=layout)
 
         # Act
-        content = self.repo.snapshot_to_csv_bytes({2: "page two"}, unit_spec_for(version.asset), asset=version.asset)
+        content = self.repo.snapshot_to_csv_bytes(
+            {(2, "text"): "page two"}, unit_spec_for(version.asset), asset=version.asset, column_keys=["text"]
+        )
 
         # Assert
         self.assertEqual(_rows(content), [["page", "text"], ["1", ""], ["2", "page two"], ["3", ""]])
@@ -137,4 +139,4 @@ class FullUnitExportTests(BaseTestCase):
         parsed = parse_content_file(content, unit_spec_for(version.asset), version.asset)
 
         # Assert
-        self.assertEqual([(entry.unit_id, entry.text) for entry in parsed], [(2, "tafsir of 1:2")])
+        self.assertEqual([(entry.unit_id, entry.cells["text"]) for entry in parsed], [(2, "tafsir of 1:2")])

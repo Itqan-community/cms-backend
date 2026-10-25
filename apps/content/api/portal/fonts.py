@@ -120,6 +120,10 @@ class FontCreateIn(Schema):
     version_number: str | None = Field(default=None, max_length=20)
     version_summary_en: str = ""
     version_summary_ar: str = ""
+    slug: str | None = Field(
+        default=None,
+        description="Package name from `POST /portal/ai/translate/` (`slug_for`); built from the names when omitted.",
+    )
 
 
 class FontPutIn(Schema):
@@ -207,6 +211,7 @@ def list_fonts(request: Request, filters: FontFilter = Query()):
     response={
         201: FontDetailOut,
         400: NinjaErrorResponse[Literal["font_name_required"]]
+        | NinjaErrorResponse[Literal["asset_slug_invalid"]]
         | NinjaErrorResponse[Literal["external_url_required"]]
         | NinjaErrorResponse[Literal["version_number_required"]]
         | NinjaErrorResponse[Literal["version_number_invalid"]],
@@ -243,6 +248,7 @@ def create_font(
         thumbnail_url=thumbnail,
         is_open_access=data.is_open_access,
         restricted_for_tenant=data.restricted_for_tenant,
+        slug=data.slug,
     )
     logger.info(f"Font created [font_id={font.id}, user_id={request.user.id}]")
     return 201, font

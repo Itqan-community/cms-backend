@@ -135,6 +135,10 @@ class TranslationCreateIn(Schema):
     version_summary_ar: str = ""
     template: AssetTemplateChoice
     mushaf_layout_id: int | None = None
+    slug: str | None = Field(
+        default=None,
+        description="Package name from `POST /portal/ai/translate/` (`slug_for`); built from the names when omitted.",
+    )
 
 
 class TranslationPutIn(Schema):
@@ -215,10 +219,12 @@ def list_translations(request: Request, filters: TranslationFilter = Query()):
     response={
         201: TranslationDetailOut,
         400: NinjaErrorResponse[Literal["translation_name_required"]]
+        | NinjaErrorResponse[Literal["asset_slug_invalid"]]
         | NinjaErrorResponse[Literal["external_url_required"]]
         | NinjaErrorResponse[Literal["version_number_required"]]
         | NinjaErrorResponse[Literal["version_number_invalid"]]
         | NinjaErrorResponse[Literal["content_file_unparseable"]]
+        | NinjaErrorResponse[Literal["content_file_missing_columns"]]
         | NinjaErrorResponse[Literal["content_file_invalid_rows"]]
         | NinjaErrorResponse[Literal["mushaf_layout_required"]]
         | NinjaErrorResponse[Literal["mushaf_layout_not_allowed"]],
@@ -255,6 +261,7 @@ def create_translation(
         external_url=data.external_url,
         is_open_access=data.is_open_access,
         restricted_for_tenant=data.restricted_for_tenant,
+        slug=data.slug,
         template=data.template,
         mushaf_layout_id=data.mushaf_layout_id,
     )

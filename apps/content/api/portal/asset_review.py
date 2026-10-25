@@ -37,16 +37,16 @@ def _review_of(obj: AssetVersionChange) -> AssetVersionChangeReview | None:
 
 
 def pending_review_count(obj: AssetVersion, context: dict) -> int:
-    """Units of ``obj`` awaiting approval (0 = fully approved, publishable).
+    """Cells (unit, column) of ``obj`` awaiting approval (0 = fully approved, publishable).
 
     Memoized on the request per (asset, language), so a version list runs the
     approval pass once rather than once per row.
     """
-    cache = context["request"].__dict__.setdefault("_pending_units_by_version", {})
+    cache = context["request"].__dict__.setdefault("_pending_cells_by_version", {})
     language = obj.resolved_language
     key = (obj.asset_id, language)
     if key not in cache:
-        cache[key] = AssetReviewRepository().pending_units_by_version(obj.asset, language)
+        cache[key] = AssetReviewRepository().pending_cells_by_version(obj.asset, language)
     return cache[key].get(obj.id, 0)
 
 
@@ -114,6 +114,10 @@ class ReviewChangeOut(Schema):
     unit_type: AssetTemplateChoice
     unit_id: int
     label: str
+    # The text column of the changed cell, with its display labels.
+    column: str
+    column_label_en: str
+    column_label_ar: str
     change_type: str
     old_text: str
     new_text: str
@@ -134,6 +138,18 @@ class ReviewChangeOut(Schema):
     @staticmethod
     def resolve_unit_id(obj: AssetVersionChange) -> int:
         return obj.unit_id
+
+    @staticmethod
+    def resolve_column(obj: AssetVersionChange) -> str:
+        return obj.column.key
+
+    @staticmethod
+    def resolve_column_label_en(obj: AssetVersionChange) -> str:
+        return obj.column.label_en or ""
+
+    @staticmethod
+    def resolve_column_label_ar(obj: AssetVersionChange) -> str:
+        return obj.column.label_ar or ""
 
     @staticmethod
     def resolve_label(obj: AssetVersionChange) -> str:

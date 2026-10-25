@@ -18,8 +18,11 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 from simple_history.utils import bulk_create_with_history, bulk_update_with_history
 
+from apps.content.columns import Snapshot, csv_header
 from apps.content.models import (
+    DEFAULT_COLUMN_KEY,
     Asset,
+    AssetColumn,
     AssetLanguage,
     AssetTemplateChoice,
     AssetVersion,
@@ -41,6 +44,42 @@ class AssetContentRepository:
     def __init__(self) -> None:
         self.asset_version_model = AssetVersion
         self.entry_model = AssetVersionEntry
+
+    @staticmethod
+    def _columns_by_key(asset: Asset) -> dict[str, AssetColumn]:
+        """Every saved column of ``asset`` (the default one is created when missing)."""
+        return {column.key: column for column in asset.ensure_text_columns()}
+
+    @staticmethod
+    def _cell_rows(queryset) -> Snapshot:
+        """``{(unit_id, column_key): text}`` for a queryset of entries, in one query."""
+        cells: Snapshot = {}
+        for sura_id, ayah_id, word_id, page_no, key, text in queryset.values_list(
+            "sura_id", "ayah_id", "word_id", "page_no", "column__key", "text"
+        ):
+            unit_id = next(unit for unit in (sura_id, ayah_id, word_id, page_no) if unit is not None)
+            cells[(unit_id, key)] = text or ""
+        return cells
+
+    def entry_cells(self, version: AssetVersion, spec: UnitSpec, unit_ids: list[int]) -> Snapshot:
+        """Stored cells for the given units of one version.
+
+        Only the units on the requested page are fetched, so a word-template
+        request reads at most ``limit`` rows per column rather than the whole version.
+        """
+        return self._cell_rows(version.entries.filter(**{f"{spec.field}__in": unit_ids}))
+
+    def published_cells(self, head: AssetVersion, spec: UnitSpec, unit_ids: list[int]) -> Snapshot:
+        """The latest published version's cells for the given units.
+
+        The head keeps its full entries (only superseded commits are pruned), so
+        this is normally one page-sized query; a head stored only as a legacy
+        file is reconstructed in full and narrowed to the requested units.
+        """
+        if head.entries.exists():
+            return self.entry_cells(head, spec, unit_ids)
+        wanted = set(unit_ids)
+        return {cell: text for cell, text in self.reconstruct_entries(head).items() if cell[0] in wanted}
 
     def _ayah_id_by_sura_aya(self) -> dict[tuple[int, int], int]:
         """Map (sura_id, number_in_sura) -> ayah pk for resolving parsed rows."""
@@ -66,6 +105,10 @@ class AssetContentRepository:
         """Row-lock the asset for the rest of the transaction (serializes numbering)."""
         return Asset.objects.select_for_update().get(pk=asset.pk)
 
+    def set_column_keys(self, version: AssetVersion, keys: list[str]) -> None:
+        version.column_keys = keys
+        version.save(update_fields=["column_keys", "updated_at"])
+
     def sequence_version_names(self, asset: Asset, language: str) -> list[str]:
         """Names of the committed versions in the asset's number sequence for ``language``.
 
@@ -86,48 +129,45 @@ class AssetContentRepository:
         ).first()
 
     def get_version(self, asset: Asset, version_id: int) -> AssetVersion | None:
-        return self.asset_version_model.objects.filter(asset=asset, id=version_id).first()
-
-    def entry_text_map(self, version: AssetVersion, spec: UnitSpec, unit_ids: list[int]) -> dict[int, str]:
-        """Stored text for the given units of one version, keyed by unit id.
-
-        Only the units on the requested page are fetched, so a word-template
-        request reads at most ``limit`` rows rather than the whole version.
-        """
-        lookup = {f"{spec.field}__in": unit_ids}
-        rows = version.entries.filter(**lookup).values_list(spec.field, "text")
-        return dict(rows)
-
-    def published_text_map(self, head: AssetVersion, spec: UnitSpec, unit_ids: list[int]) -> dict[int, str]:
-        """The latest published version's text for the given units.
-
-        The head keeps its full entries (only superseded commits are pruned), so
-        this is normally one page-sized query; a head stored only as a legacy
-        file is reconstructed in full and narrowed to the requested units.
-        """
-        if head.entries.exists():
-            return self.entry_text_map(head, spec, unit_ids)
-        snapshot = self.reconstruct_entries(head)
-        return {unit_id: snapshot[unit_id] for unit_id in unit_ids if unit_id in snapshot}
+        version = (
+            self.asset_version_model.objects.filter(asset=asset, id=version_id).select_related("asset_language").first()
+        )
+        if version is not None:
+            # The caller's asset is this row: reading ``version.asset`` costs no query.
+            version.asset = asset
+        return version
 
     @transaction.atomic
     def ensure_mushaf_coverage(self, draft: AssetVersion, mushaf_version: AssetVersion) -> int:
-        """Add empty-text rows for any mushaf ayahs the draft doesn't cover yet.
+        """Add empty cells for any (mushaf ayah, column) the draft doesn't cover yet.
 
         Keeps a translation draft showing the whole original even if it was created
         sparse (before full-mushaf seeding, via upload, or when the source had
-        fewer ayahs). Existing entries — including in-progress edits — are kept.
+        fewer ayahs), and gives a column added since the draft was opened its
+        cells. Existing entries — including in-progress edits — are kept.
         Returns the number of rows added.
         """
-        existing_ayahs = set(draft.entries.values_list("ayah_id", flat=True))
+        columns = draft.asset.ensure_text_columns()
+        existing = set(draft.entries.values_list("ayah_id", "column_id"))
         to_create = [
-            AssetVersionEntry(version=draft, ayah_id=entry.ayah_id, text="", order=entry.order)
-            for entry in mushaf_version.entries.all().order_by("order", "ayah_id").iterator()
-            if entry.ayah_id not in existing_ayahs
+            AssetVersionEntry(version=draft, ayah_id=ayah_id, text="", order=order, column=column)
+            for ayah_id, order in self._mushaf_ayahs(mushaf_version)
+            for column in columns
+            if (ayah_id, column.pk) not in existing
         ]
         if to_create:
             bulk_create_with_history(to_create, AssetVersionEntry, batch_size=1000)
         return len(to_create)
+
+    @staticmethod
+    def _mushaf_ayahs(mushaf_version: AssetVersion) -> list[tuple[int, int]]:
+        """``(ayah_id, order)`` of every ayah the version covers, once each, in order."""
+        seen: dict[int, int] = {}
+        rows = mushaf_version.entries.order_by("order", "ayah_id").values_list("ayah_id", "order")
+        for ayah_id, order in rows.iterator():
+            if ayah_id is not None and ayah_id not in seen:
+                seen[ayah_id] = order
+        return list(seen.items())
 
     @transaction.atomic
     def create_draft_seeded_from(
@@ -145,16 +185,16 @@ class AssetContentRepository:
 
         When ``mushaf_version`` is given (editing an ayah-template translation —
         the only template this overlay applies to; the service never passes it
-        for surah/word/page), the draft gets one row per ayah covered by the
-        source-language mushaf — so the whole original is always visible — with
-        the same-language translation text (from ``source_version``) overlaid
-        where it exists and blank otherwise. Any translation-only ayahs beyond
-        the mushaf are preserved too.
+        for surah/word/page), the draft gets one cell per (ayah covered by the
+        source-language mushaf, column of the asset) — so the whole original is
+        always visible — with the same-language translation text (from
+        ``source_version``) overlaid where it exists and blank otherwise. Any
+        translation-only ayahs beyond the mushaf are preserved too.
 
         When ``mushaf_version`` is ``None`` (editing the source, or any
         non-ayah template), the version's own ``source_version`` entries are
         copied verbatim, keyed to whichever unit column the asset's template
-        uses.
+        uses and to their own text column.
         """
         draft = self.asset_version_model.objects.create(
             asset=asset,
@@ -164,32 +204,38 @@ class AssetContentRepository:
             state=VersionStateChoice.DRAFT,
             created_by_id=created_by_id,
         )
+        copies: list[AssetVersionEntry] = []
         if mushaf_version is not None:
             translation_text = (
-                {entry.ayah_id: entry.text for entry in source_version.entries.all().iterator()}
+                {(entry.ayah_id, entry.column_id): entry.text for entry in source_version.entries.all().iterator()}
                 if source_version is not None
                 else {}
             )
-            copies: list[AssetVersionEntry] = []
-            seen: set[int] = set()
-            # A row for every ayah of the original, translation overlaid or blank.
-            for entry in mushaf_version.entries.all().order_by("order", "ayah_id").iterator():
-                copies.append(
-                    AssetVersionEntry(
-                        version=draft,
-                        ayah_id=entry.ayah_id,
-                        text=translation_text.get(entry.ayah_id, ""),
-                        order=entry.order,
+            columns = asset.ensure_text_columns()
+            mushaf_ayahs = self._mushaf_ayahs(mushaf_version)
+            # A cell for every ayah of the original and every column, translation overlaid or blank.
+            for ayah_id, order in mushaf_ayahs:
+                for column in columns:
+                    copies.append(
+                        AssetVersionEntry(
+                            version=draft,
+                            ayah_id=ayah_id,
+                            column=column,
+                            text=translation_text.get((ayah_id, column.pk), ""),
+                            order=order,
+                        )
                     )
-                )
-                seen.add(entry.ayah_id)
             # Keep any translated ayahs the original mushaf doesn't cover.
             if source_version is not None:
-                for entry in source_version.entries.exclude(ayah_id__in=seen).order_by("order", "ayah_id").iterator():
+                covered = [ayah_id for ayah_id, _order in mushaf_ayahs]
+                for entry in (
+                    source_version.entries.exclude(ayah_id__in=covered).order_by("order", "ayah_id").iterator()
+                ):
                     copies.append(
                         AssetVersionEntry(
                             version=draft,
                             ayah_id=entry.ayah_id,
+                            column_id=entry.column_id,
                             text=entry.text,
                             order=entry.order,
                         )
@@ -202,12 +248,11 @@ class AssetContentRepository:
                     version=draft,
                     text=entry.text,
                     order=entry.order,
+                    column_id=entry.column_id,
                     **{unit_field: entry.unit_id},
                 )
                 for entry in source_version.entries.all().iterator()
             ]
-        else:
-            copies = []
         if copies:
             bulk_create_with_history(copies, AssetVersionEntry, batch_size=1000)
         return draft
@@ -215,18 +260,21 @@ class AssetContentRepository:
     @transaction.atomic
     def replace_entries_from_parsed(self, version: AssetVersion, spec: UnitSpec, parsed: list[ParsedEntry]) -> int:
         """Replace a version's entries with parsed rows, keyed to the template's
-        unit column. Returns count."""
+        unit column and to each cell's text column. Returns the number of cells."""
         unit_field = spec.field + ("_id" if spec.fk_field else "")
         logger.info(f"replace_entries_from_parsed: deleting existing entries [version_id={version.pk}]")
         version.entries.all().delete()
+        columns = self._columns_by_key(version.asset)
         rows = [
             AssetVersionEntry(
                 version=version,
-                text=parsed_entry.text,
+                column=columns[key],
+                text=text,
                 order=parsed_entry.unit_id,
                 **{unit_field: parsed_entry.unit_id},
             )
             for parsed_entry in parsed
+            for key, text in parsed_entry.cells.items()
         ]
         logger.info(f"replace_entries_from_parsed: creating new entries [version_id={version.pk}, rows={len(rows)}]")
         if rows:
@@ -235,13 +283,25 @@ class AssetContentRepository:
 
     @transaction.atomic
     def upsert_entries(
-        self, version: AssetVersion, spec: UnitSpec, rows: list[dict[str, object]]
+        self,
+        version: AssetVersion,
+        spec: UnitSpec,
+        rows: list[dict[str, object]],
+        *,
+        columns: list[AssetColumn] | None = None,
     ) -> list[AssetVersionEntry]:
-        """Create or update one entry per row, keyed to the template's unit column."""
+        """Create or update one cell per row, keyed to the template's unit column
+        and to the row's ``column`` key (the asset's first column when absent).
+        ``columns`` (the asset's text columns) can be passed when already loaded."""
         unit_field = spec.field + ("_id" if spec.fk_field else "")
+        columns = (
+            {column.key: column for column in columns} if columns is not None else self._columns_by_key(version.asset)
+        )
+        first = next(iter(columns.values()))
         unit_ids = [int(row["unit_id"]) for row in rows]
         existing = {
-            getattr(entry, unit_field): entry for entry in version.entries.filter(**{f"{spec.field}__in": unit_ids})
+            (getattr(entry, unit_field), entry.column_id): entry
+            for entry in version.entries.filter(**{f"{spec.field}__in": unit_ids})
         }
         to_create: list[AssetVersionEntry] = []
         to_update: list[AssetVersionEntry] = []
@@ -249,14 +309,19 @@ class AssetContentRepository:
 
         for row in rows:
             unit_id = int(row["unit_id"])
+            column = columns[row["column"]] if row.get("column") else first
             text = str(row.get("text", "") or "")
-            entry = existing.get(unit_id)
+            entry = existing.get((unit_id, column.pk))
             if entry is None:
-                entry = AssetVersionEntry(version=version, text=text, order=unit_id, **{unit_field: unit_id})
+                entry = AssetVersionEntry(
+                    version=version, text=text, order=unit_id, column=column, **{unit_field: unit_id}
+                )
+                existing[(unit_id, column.pk)] = entry
                 to_create.append(entry)
             else:
                 entry.text = text
-                to_update.append(entry)
+                if entry.pk is not None:
+                    to_update.append(entry)
             changed.append(entry)
 
         if to_create:
@@ -273,78 +338,87 @@ class AssetContentRepository:
         """Serialize a version's entries to CSV in its template's columns.
 
         Lists every canonical unit of the template (every surah / ayah / word /
-        page, in order), with an empty ``text`` where the version has none, so a
-        download is a complete sheet to fill in. Headers: ``sura,text`` (surah),
-        ``surah,ayah,text`` (ayah), ``word_id,sura,aya,word,text`` (word),
-        ``page,text`` (page). ``verbose`` only changes the ayah template's
-        output — it adds the surah name and the Arabic ayah text
-        (``surah,ayah,surah_name,ayah_text,text``) so a reviewer can check a
-        translation/tafsir against the original at a glance. Every lean header
-        matches a column the importer recognises, and the importer skips blank
-        rows, so a lean export round-trips.
+        page, in order), with an empty cell where the version has none, so a
+        download is a complete sheet to fill in. The unit headers are
+        ``sura`` (surah), ``surah,ayah`` (ayah), ``word_id,sura,aya,word`` (word)
+        and ``page`` (page), followed by one header per text column — the
+        version's ``resolved_column_keys``, just ``text`` for a single-column
+        asset. ``verbose`` only changes the ayah template's output — it adds the
+        surah name and the Arabic ayah text (``surah,ayah,surah_name,ayah_text,…``)
+        so a reviewer can check a translation/tafsir against the original at a
+        glance. Every lean header matches a column the importer recognises, and
+        the importer skips blank rows, so a lean export round-trips.
         """
         return self._units_to_csv_bytes(
-            spec, self._entries_map(version), verbose=verbose, page_count=self.page_count(version.asset)
+            spec,
+            self._entries_map(version),
+            version.resolved_column_keys,
+            verbose=verbose,
+            page_count=self.page_count(version.asset),
         )
 
     def snapshot_to_csv_bytes(
-        self, snapshot: dict[int, str], spec: UnitSpec, *, asset: Asset, verbose: bool = False
+        self, snapshot: Snapshot, spec: UnitSpec, *, asset: Asset, column_keys: list[str], verbose: bool = False
     ) -> bytes:
-        """Serialize a reconstructed {unit_id: text} snapshot to CSV (for
-        historical commit downloads). Same rows and columns as
-        ``entries_to_csv_bytes``; ``snapshot`` keys are canonical ids of whichever
-        unit the asset's template uses."""
-        return self._units_to_csv_bytes(spec, snapshot, verbose=verbose, page_count=self.page_count(asset))
+        """Serialize a reconstructed snapshot to CSV (for historical commit
+        downloads). Same rows and columns as ``entries_to_csv_bytes``;
+        ``column_keys`` is the layout of the version the snapshot belongs to
+        (its ``resolved_column_keys``)."""
+        return self._units_to_csv_bytes(spec, snapshot, column_keys, verbose=verbose, page_count=self.page_count(asset))
 
-    def blank_template_csv_bytes(self, spec: UnitSpec, *, page_count: int | None) -> bytes:
-        """An empty fill-in sheet for ``spec``'s template: every unit, blank text.
+    def blank_template_csv_bytes(
+        self, spec: UnitSpec, *, page_count: int | None, column_keys: list[str] | None = None
+    ) -> bytes:
+        """An empty fill-in sheet for ``spec``'s template: every unit, blank cells.
 
         Same rows and columns as a verbose export, so a filled-in sheet imports
-        as is. ``page_count`` is required for the page template only.
+        as is. ``page_count`` is required for the page template only;
+        ``column_keys`` defaults to the single ``text`` column.
         """
-        return self._units_to_csv_bytes(spec, {}, verbose=True, page_count=page_count)
+        return self._units_to_csv_bytes(
+            spec, {}, column_keys or [DEFAULT_COLUMN_KEY], verbose=True, page_count=page_count
+        )
 
     @staticmethod
     def page_count(asset: Asset) -> int | None:
         return asset.mushaf_layout.page_count if asset.mushaf_layout_id else None
 
     def _units_to_csv_bytes(
-        self, spec: UnitSpec, texts: dict[int, str], *, verbose: bool, page_count: int | None
+        self, spec: UnitSpec, cells: Snapshot, column_keys: list[str], *, verbose: bool, page_count: int | None
     ) -> bytes:
-        """One CSV row per canonical unit of ``spec``'s template, text from ``texts``
-        (blank when absent). Streams the word template's ~77k units with
-        ``iterator()`` rather than materialising them."""
+        """One CSV row per canonical unit of ``spec``'s template, one cell per key
+        of ``column_keys`` (blank when absent). Streams the word template's ~77k
+        units with ``iterator()`` rather than materialising them."""
         buffer = io.StringIO()
         writer = csv.writer(buffer)
+        writer.writerow(csv_header(spec.template, column_keys, verbose=verbose))
+
+        def row_cells(unit_id: int) -> list[str]:
+            return [cells.get((unit_id, key), "") for key in column_keys]
 
         if spec.template == AssetTemplateChoice.SURAH:
-            writer.writerow(["sura", "text"])
             for sura_id in Sura.objects.order_by("id").values_list("id", flat=True).iterator():
-                writer.writerow([sura_id, texts.get(sura_id, "")])
+                writer.writerow([sura_id, *row_cells(sura_id)])
         elif spec.template == AssetTemplateChoice.WORD:
-            writer.writerow(["word_id", "sura", "aya", "word", "text"])
             words = Word.objects.order_by("id").values_list("id", "sura_id", "ayah__number_in_sura", "position_in_ayah")
             for word_id, sura_id, aya, position in words.iterator():
-                writer.writerow([word_id, sura_id, aya, position, texts.get(word_id, "")])
+                writer.writerow([word_id, sura_id, aya, position, *row_cells(word_id)])
         elif spec.template == AssetTemplateChoice.PAGE:
-            writer.writerow(["page", "text"])
             for page in range(1, (page_count or 0) + 1):
-                writer.writerow([page, texts.get(page, "")])
+                writer.writerow([page, *row_cells(page)])
         elif verbose:  # ayah
-            writer.writerow(["surah", "ayah", "surah_name", "ayah_text", "text"])
             for ayah in Ayah.objects.select_related("sura").order_by("id").iterator():
-                writer.writerow([ayah.sura_id, ayah.number_in_sura, ayah.sura.name, ayah.text, texts.get(ayah.id, "")])
+                writer.writerow([ayah.sura_id, ayah.number_in_sura, ayah.sura.name, ayah.text, *row_cells(ayah.id)])
         else:  # ayah
-            writer.writerow(["surah", "ayah", "text"])
             ayahs = Ayah.objects.order_by("id").values_list("id", "sura_id", "number_in_sura")
             for ayah_id, sura_id, aya in ayahs.iterator():
-                writer.writerow([sura_id, aya, texts.get(ayah_id, "")])
+                writer.writerow([sura_id, aya, *row_cells(ayah_id)])
         return buffer.getvalue().encode("utf-8")
 
-    def _snapshot_from_file(self, version: AssetVersion) -> dict[int, str]:
-        """Reconstruct a {unit_id: text} snapshot from a legacy version's stored
-        file, used when a pre-entries commit (file only, no entries/deltas) is
-        restored. Returns {} when the file is missing or unparseable."""
+    def _snapshot_from_file(self, version: AssetVersion) -> Snapshot:
+        """Reconstruct a snapshot from a legacy version's stored file, used when
+        a pre-entries commit (file only, no entries/deltas) is restored. Returns
+        {} when the file is missing or unparseable."""
         saved = getattr(version, "file_url", None)
         if not saved:
             return {}
@@ -359,15 +433,15 @@ class AssetContentRepository:
             return {}
         spec = unit_spec_for(version.asset)
         try:
-            parsed = parse_content_file(raw, spec, version.asset)
+            parsed = parse_content_file(raw, spec, version.asset, column_keys=version.resolved_column_keys)
         except AssetContentParseError:
             logger.info(f"Version file not parseable for snapshot [version_id={version.pk}]")
             return {}
-        return {entry.unit_id: entry.text for entry in parsed}
+        return {(entry.unit_id, key): text for entry in parsed for key, text in entry.cells.items()}
 
-    def _entries_map(self, version: AssetVersion) -> dict[int, str]:
-        """{unit_id: text} for a version's full entries."""
-        return {entry.unit_id: (entry.text or "") for entry in version.entries.all()}
+    def _entries_map(self, version: AssetVersion) -> Snapshot:
+        """Every cell of a version's full entries."""
+        return self._cell_rows(version.entries.all())
 
     def _order_map(self, version: AssetVersion) -> dict[int, int]:
         """{unit_id: order} for a version's full entries."""
@@ -376,22 +450,24 @@ class AssetContentRepository:
     def _record_changes(self, new_version: AssetVersion, previous_head: AssetVersion | None) -> dict[str, int]:
         """Store AssetVersionChange rows for new_version's delta vs previous_head.
 
-        Returns counts keyed 'added' / 'modified' / 'removed'. The predecessor's
-        map is reconstructed so it works whether or not the head still has full
-        entries. Keyed to whichever unit column the asset's template uses.
+        Returns counts keyed 'added' / 'modified' / 'removed', one per changed
+        cell. The predecessor's cells are reconstructed so it works whether or
+        not the head still has full entries. Keyed to whichever unit column the
+        asset's template uses, and to the cell's text column.
         """
         spec = unit_spec_for(new_version.asset)
         unit_field = spec.field + ("_id" if spec.fk_field else "")
         old = self.reconstruct_entries(previous_head) if previous_head is not None else {}
         new = self._entries_map(new_version)
         orders = self._order_map(new_version)
+        columns = self._columns_by_key(new_version.asset)
         rows: list[AssetVersionChange] = []
         counts = {"added": 0, "modified": 0, "removed": 0}
-        for unit_id, new_text in new.items():
-            if unit_id not in old:
+        for (unit_id, key), new_text in new.items():
+            if (unit_id, key) not in old:
                 change_type = ChangeTypeChoice.ADDED
                 counts["added"] += 1
-            elif old[unit_id] != new_text:
+            elif old[(unit_id, key)] != new_text:
                 change_type = ChangeTypeChoice.MODIFIED
                 counts["modified"] += 1
             else:
@@ -399,18 +475,20 @@ class AssetContentRepository:
             rows.append(
                 AssetVersionChange(
                     version=new_version,
+                    column=columns[key],
                     change_type=change_type,
-                    old_text=old.get(unit_id, ""),
+                    old_text=old.get((unit_id, key), ""),
                     new_text=new_text,
                     order=orders.get(unit_id, unit_id),
                     **{unit_field: unit_id},
                 )
             )
-        for unit_id, old_text in old.items():
-            if unit_id not in new:
+        for (unit_id, key), old_text in old.items():
+            if (unit_id, key) not in new:
                 rows.append(
                     AssetVersionChange(
                         version=new_version,
+                        column=columns[key],
                         change_type=ChangeTypeChoice.REMOVED,
                         old_text=old_text,
                         new_text="",
@@ -470,9 +548,10 @@ class AssetContentRepository:
             snapshot = self._snapshot_from_file(locked)  # legacy file-only commit
         spec = unit_spec_for(locked.asset)
         unit_field = spec.field + ("_id" if spec.fk_field else "")
+        columns = self._columns_by_key(locked.asset)
         rows = [
-            AssetVersionEntry(version=locked, text=text, order=unit_id, **{unit_field: unit_id})
-            for unit_id, text in snapshot.items()
+            AssetVersionEntry(version=locked, text=text, order=unit_id, column=columns[key], **{unit_field: unit_id})
+            for (unit_id, key), text in snapshot.items()
             if text != ""
         ]
         if rows:
@@ -532,7 +611,9 @@ class AssetContentRepository:
         """
         if not version.file_url:
             snapshot = self.reconstruct_entries(version)
-            content = self.snapshot_to_csv_bytes(snapshot, unit_spec_for(version.asset), asset=version.asset)
+            content = self.snapshot_to_csv_bytes(
+                snapshot, unit_spec_for(version.asset), asset=version.asset, column_keys=version.resolved_column_keys
+            )
             filename = f"{version.asset.slug}-{version.name}.csv".replace(" ", "_")
             version.file_url.save(filename, ContentFile(content), save=False)
             version.size_bytes = len(content)
@@ -589,9 +670,11 @@ class AssetContentRepository:
                 status_code=400,
             )
         draft.state = VersionStateChoice.PUBLISHED
+        # The commit freezes the asset's current columns: this version's file layout.
+        draft.column_keys = [column.key for column in draft.asset.text_columns()]
         # Persist name/label/summary too: the service may have set them from the publish
         # payload, and they must be written (not just held in memory).
-        update_fields = ["state", "name", *VersionText.field_names(), "updated_at"]
+        update_fields = ["state", "name", "column_keys", *VersionText.field_names(), "updated_at"]
         if not draft.file_url and draft.entries.exists():
             content = self.entries_to_csv_bytes(draft, unit_spec_for(draft.asset))
             filename = f"{draft.asset.slug}-{draft.name}.csv".replace(" ", "_")
@@ -644,7 +727,14 @@ class AssetContentRepository:
         return {unit_id: unit_id for unit_id in unit_ids}
 
     def _change_to_dict(
-        self, spec: UnitSpec, unit_id: int, unit_obj: object, change_type: str, old_text: str, new_text: str
+        self,
+        spec: UnitSpec,
+        unit_id: int,
+        unit_obj: object,
+        change_type: str,
+        old_text: str,
+        new_text: str,
+        column: str,
     ) -> dict:
         """Mirrors the label format ``UnitSpec._to_row`` builds for the read path."""
         if spec.template == AssetTemplateChoice.SURAH:
@@ -659,6 +749,7 @@ class AssetContentRepository:
             "unit_type": spec.template,
             "unit_id": unit_id,
             "label": label,
+            "column": column,
             "change_type": str(change_type),
             "old_text": old_text,
             "new_text": new_text,
@@ -678,28 +769,32 @@ class AssetContentRepository:
             "reviewed_at": review.reviewed_at,
         }
 
-    def diff_maps(self, spec: UnitSpec, old_map: dict[int, str], new_map: dict[int, str]) -> list[dict]:
-        """Diff two {unit_id: text} snapshots into ordered change dicts."""
-        unit_ids = sorted(set(old_map) | set(new_map))
-        units_by_id = self._units_by_id(spec, unit_ids)
+    def diff_maps(
+        self, spec: UnitSpec, old_map: Snapshot, new_map: Snapshot, *, column_keys: list[str] | None = None
+    ) -> list[dict]:
+        """Diff two snapshots into change dicts ordered by unit, then by column
+        (``column_keys`` order; key name for columns it doesn't list)."""
+        position = {key: index for index, key in enumerate(column_keys or [])}
+        cells = sorted(
+            set(old_map) | set(new_map), key=lambda cell: (cell[0], position.get(cell[1], len(position)), cell[1])
+        )
+        units_by_id = self._units_by_id(spec, sorted({unit_id for unit_id, _key in cells}))
         out: list[dict] = []
-        for unit_id in unit_ids:
+        for cell in cells:
+            unit_id, key = cell
             unit_obj = units_by_id.get(unit_id)
             if unit_obj is None:
                 continue
-            in_old, in_new = unit_id in old_map, unit_id in new_map
+            in_old, in_new = cell in old_map, cell in new_map
             if in_new and not in_old:
-                out.append(self._change_to_dict(spec, unit_id, unit_obj, ChangeTypeChoice.ADDED, "", new_map[unit_id]))
+                change = (ChangeTypeChoice.ADDED, "", new_map[cell])
             elif in_old and not in_new:
-                out.append(
-                    self._change_to_dict(spec, unit_id, unit_obj, ChangeTypeChoice.REMOVED, old_map[unit_id], "")
-                )
-            elif old_map.get(unit_id) != new_map.get(unit_id):
-                out.append(
-                    self._change_to_dict(
-                        spec, unit_id, unit_obj, ChangeTypeChoice.MODIFIED, old_map[unit_id], new_map[unit_id]
-                    )
-                )
+                change = (ChangeTypeChoice.REMOVED, old_map[cell], "")
+            elif old_map[cell] != new_map[cell]:
+                change = (ChangeTypeChoice.MODIFIED, old_map[cell], new_map[cell])
+            else:
+                continue
+            out.append(self._change_to_dict(spec, unit_id, unit_obj, *change, column=key))
         return out
 
     def version_diff(self, version: AssetVersion) -> list[dict]:
@@ -710,13 +805,21 @@ class AssetContentRepository:
         # unique per version, and this endpoint is paginated, so an unstable tie
         # order would let rows repeat or vanish across page boundaries.
         stored = list(
-            version.changes.select_related("sura", "ayah", "word__ayah", "review__reviewed_by").order_by("order", "id")
+            version.changes.select_related("sura", "ayah", "word__ayah", "column", "review__reviewed_by").order_by(
+                "order", "id"
+            )
         )
         if stored:
             return [
                 {
                     **self._change_to_dict(
-                        spec, c.unit_id, getattr(c, spec.field), c.change_type, c.old_text, c.new_text
+                        spec,
+                        c.unit_id,
+                        getattr(c, spec.field),
+                        c.change_type,
+                        c.old_text,
+                        c.new_text,
+                        column=c.column.key,
                     ),
                     **self._review_fields(c),
                 }
@@ -724,10 +827,12 @@ class AssetContentRepository:
             ]
         predecessor = self._predecessor(version)
         old_map = self.reconstruct_entries(predecessor) if predecessor is not None else {}
-        return self.diff_maps(spec, old_map, self.reconstruct_entries(version))
+        return self.diff_maps(
+            spec, old_map, self.reconstruct_entries(version), column_keys=version.resolved_column_keys
+        )
 
-    def reconstruct_entries(self, version: AssetVersion) -> dict[int, str]:
-        """Full {unit_id: text} at this commit.
+    def reconstruct_entries(self, version: AssetVersion) -> Snapshot:
+        """Every cell at this commit.
 
         Uses the version's own entries when present (head or a legacy commit);
         otherwise folds snapshots + deltas up to this commit for its
@@ -744,19 +849,20 @@ class AssetContentRepository:
                 created_at__lte=version.created_at,
             )
             .order_by("created_at", "id")
-            .prefetch_related("entries", "changes")
+            .prefetch_related("entries__column", "changes__column")
         )
-        state: dict[int, str] = {}
+        state: Snapshot = {}
         for commit in timeline:
-            entry_map = {entry.unit_id: (entry.text or "") for entry in commit.entries.all()}
+            entry_map = {(entry.unit_id, entry.column.key): (entry.text or "") for entry in commit.entries.all()}
             if entry_map:
                 state = entry_map  # snapshot anchor (legacy commit or head)
                 continue
             for change in commit.changes.all():
+                cell = (change.unit_id, change.column.key)
                 if change.change_type == ChangeTypeChoice.REMOVED:
-                    state.pop(change.unit_id, None)
+                    state.pop(cell, None)
                 else:
-                    state[change.unit_id] = change.new_text
+                    state[cell] = change.new_text
         return state
 
     @transaction.atomic
@@ -767,13 +873,17 @@ class AssetContentRepository:
         (its snapshot is reconstructed). Records the restore's delta vs the current
         head and prunes the superseded head, so a restore is a commit like any
         other. The original is left intact, so history is preserved.
+
+        The new version has the asset's *current* columns: a column added after
+        `version` comes back empty, and every column `version` had still exists
+        (committed columns can't be deleted).
         """
         asset = version.asset
         spec = unit_spec_for(asset)
         unit_field = spec.field + ("_id" if spec.fk_field else "")
         language = version.asset_language.language if version.asset_language_id else asset.language
         previous_head = asset.get_latest_version(language)  # current head before restore
-        snapshot = self.reconstruct_entries(version)  # {unit_id: text}
+        snapshot = self.reconstruct_entries(version)
         order_index = self._order_map(version)
         if not snapshot and version.file_url:
             # Legacy file-only commit (pre-entries): parse its stored file so the
@@ -784,6 +894,7 @@ class AssetContentRepository:
             # file belongs to an ayah-template asset, since templates postdate
             # the entries system, but the resolution itself is template-generic.
             snapshot = self._snapshot_from_file(version)
+        columns = self._columns_by_key(asset)
         new_version = self.asset_version_model.objects.create(
             asset=asset,
             asset_language=version.asset_language,
@@ -791,6 +902,7 @@ class AssetContentRepository:
             **VersionText.of(version).as_fields(),
             state=VersionStateChoice.PUBLISHED,
             created_by_id=created_by_id,
+            column_keys=list(columns),
         )
         if not snapshot and version.file_url:
             # Legacy file that could not be parsed into entries: copy it verbatim so
@@ -808,9 +920,13 @@ class AssetContentRepository:
 
         copies = [
             AssetVersionEntry(
-                version=new_version, text=text, order=order_index.get(unit_id, unit_id), **{unit_field: unit_id}
+                version=new_version,
+                text=text,
+                order=order_index.get(unit_id, unit_id),
+                column=columns[key],
+                **{unit_field: unit_id},
             )
-            for unit_id, text in snapshot.items()
+            for (unit_id, key), text in snapshot.items()
             if text != ""
         ]
         if copies:

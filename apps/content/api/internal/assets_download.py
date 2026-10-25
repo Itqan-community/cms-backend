@@ -2,6 +2,7 @@ import logging
 import os
 import re
 from typing import Literal
+from urllib.parse import quote
 
 from django.conf import settings
 from django.http import Http404
@@ -18,6 +19,7 @@ from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.core.utils.client_ip import client_ip
 
 router = ItqanRouter(tags=[NinjaTag.ASSETS])
 logger = logging.getLogger(__name__)
@@ -89,14 +91,28 @@ def download_asset(request: Request, id: int, language: str | None = None):
             raise Http404(str(_("Download URL not available")))
 
     filename = download_filename(asset, asset_latest_version)
-    if settings.CLOUDFLARE_R2_ENDPOINT:
+    if (
+        settings.CLOUDFLARE_R2_ENDPOINT
+        and settings.CLOUDFLARE_R2_PUBLIC_BASE_URL
+        and settings.GALLERY_DOWNLOADS_VIA_CDN
+        and asset.is_open_access
+    ):
+        # Through the custom domain, so the edge sees (and counts) the download; a Cloudflare
+        # transform rule turns `download` into Content-Disposition: attachment.
+        # `file_url.url` is the presigned S3-endpoint URL; the public custom domain is what the edge logs.
+        public_url = f"{settings.CLOUDFLARE_R2_PUBLIC_BASE_URL.rstrip('/')}/media/{asset_latest_version.file_url.name}"
+        download_url = f"{public_url}?download={quote(filename)}"
+        delivery = "cdn"
+    elif settings.CLOUDFLARE_R2_ENDPOINT:
         # Object storage (staging/prod): hand out a short-lived pre-signed URL.
         key = f"media/{asset_latest_version.file_url.name}"  # object key within the bucket
         download_url = generate_presigned_download_url(key=key, filename=filename, expires_in=3600)
+        delivery = "presigned"
     else:
         # Local/dev without object storage: serve the file via its media URL so
         # downloads work without R2. Prod/staging keep the pre-signed flow above.
         download_url = request.build_absolute_uri(asset_latest_version.file_url.url)
+        delivery = "local"
 
     # Create usage event for file download
     create_usage_event_task.delay(
@@ -104,12 +120,15 @@ def download_asset(request: Request, id: int, language: str | None = None):
             "developer_user_id": request.user.id,
             "usage_kind": UsageEvent.UsageKindChoice.FILE_DOWNLOAD,
             "asset_id": asset.id,
-            "metadata": (
-                {"language": asset_latest_version.asset_language.language}
-                if asset_latest_version.asset_language_id
-                else {}
-            ),
-            "ip_address": request.META.get("REMOTE_ADDR"),
+            "metadata": {
+                "delivery": delivery,
+                **(
+                    {"language": asset_latest_version.asset_language.language}
+                    if asset_latest_version.asset_language_id
+                    else {}
+                ),
+            },
+            "ip_address": client_ip(request),
             "user_agent": request.headers.get("User-Agent", ""),
             "effective_license": asset.license,
         }

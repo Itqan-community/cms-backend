@@ -1,4 +1,5 @@
 from unittest.mock import patch
+from urllib.parse import quote
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
@@ -361,6 +362,84 @@ class TestAssetDownload(BaseTestCase):
         # Assert
         self.assertEqual(404, response.status_code, response.content)
         self.assertEqual("not_found", response.json()["error_name"])
+
+    @override_settings(
+        CLOUDFLARE_R2_ENDPOINT="https://account.r2.cloudflarestorage.com",
+        CLOUDFLARE_R2_PUBLIC_BASE_URL="https://storage.example.com",
+        GALLERY_DOWNLOADS_VIA_CDN=True,
+    )
+    @patch("apps.content.api.internal.assets_download.user_has_access")
+    def test_download_asset_where_cdn_enabled_and_open_should_return_custom_domain_link(self, mock_user_has_access):
+        # Arrange
+        mock_user_has_access.return_value = True
+        self.asset.is_open_access = True
+        self.asset.save(update_fields=["is_open_access"])
+        mock_file = SimpleUploadedFile("test.pdf", b"fake pdf content", content_type="application/pdf")
+        publish(baker.make(AssetVersion, asset=self.asset, name="CDN Test", file_url=mock_file))
+        self.authenticate_user(self.user)
+
+        # Act
+        response = self.client.get(
+            f"/cms-api/assets/{self.asset.id}/download/", headers={"x-forwarded-for": "203.0.113.7"}
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        data = response.json()
+        self.assertTrue(data["download_url"].startswith("https://storage.example.com/media/uploads/"))
+        self.assertNotIn("X-Amz", data["download_url"])
+        self.assertIn("?download=", data["download_url"])
+        self.assertTrue(data["download_url"].endswith(quote(data["filename"])))
+        event = UsageEvent.objects.get(asset_id=self.asset.id, usage_kind=UsageEvent.UsageKindChoice.FILE_DOWNLOAD)
+        self.assertEqual(("cdn", "203.0.113.7"), (event.metadata["delivery"], event.ip_address))
+
+    @override_settings(
+        CLOUDFLARE_R2_ENDPOINT="https://account.r2.cloudflarestorage.com", GALLERY_DOWNLOADS_VIA_CDN=False
+    )
+    @patch("apps.content.api.internal.assets_download.generate_presigned_download_url", return_value="https://signed")
+    @patch("apps.content.api.internal.assets_download.user_has_access")
+    def test_download_asset_where_cdn_disabled_should_return_presigned_link(self, mock_user_has_access, _signed):
+        # Arrange
+        mock_user_has_access.return_value = True
+        self.asset.is_open_access = True
+        self.asset.save(update_fields=["is_open_access"])
+        mock_file = SimpleUploadedFile("test.pdf", b"fake pdf content", content_type="application/pdf")
+        publish(baker.make(AssetVersion, asset=self.asset, name="Presigned Test", file_url=mock_file))
+        self.authenticate_user(self.user)
+
+        # Act
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/download/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual("https://signed", response.json()["download_url"])
+        event = UsageEvent.objects.get(asset_id=self.asset.id, usage_kind=UsageEvent.UsageKindChoice.FILE_DOWNLOAD)
+        self.assertEqual("presigned", event.metadata["delivery"])
+
+    @override_settings(
+        CLOUDFLARE_R2_ENDPOINT="https://account.r2.cloudflarestorage.com",
+        CLOUDFLARE_R2_PUBLIC_BASE_URL="",
+        GALLERY_DOWNLOADS_VIA_CDN=True,
+    )
+    @patch("apps.content.api.internal.assets_download.generate_presigned_download_url", return_value="https://signed")
+    @patch("apps.content.api.internal.assets_download.user_has_access")
+    def test_download_asset_where_cdn_enabled_but_no_public_url_should_return_presigned_link(
+        self, mock_user_has_access, _signed
+    ):
+        # Arrange
+        mock_user_has_access.return_value = True
+        self.asset.is_open_access = True
+        self.asset.save(update_fields=["is_open_access"])
+        mock_file = SimpleUploadedFile("test.pdf", b"fake pdf content", content_type="application/pdf")
+        publish(baker.make(AssetVersion, asset=self.asset, name="No Public URL", file_url=mock_file))
+        self.authenticate_user(self.user)
+
+        # Act
+        response = self.client.get(f"/cms-api/assets/{self.asset.id}/download/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual("https://signed", response.json()["download_url"])
 
 
 class TestAssetDownloadLanguage(BaseTestCase):

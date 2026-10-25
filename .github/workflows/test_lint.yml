@@ -90,7 +90,7 @@ jobs:
           cat .env
 
       - name: Build Django image with layer cache
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: deployment/docker/Dockerfile.backend

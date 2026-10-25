@@ -25,7 +25,7 @@ class TemplateImportTests(QuranDataMixin, BaseTestCase):
         parsed = parse_content_file(raw, spec, asset)
 
         # Assert
-        self.assertEqual([(p.unit_id, p.text) for p in parsed], [(1, "opening"), (2, "cow")])
+        self.assertEqual([(p.unit_id, p.cells["text"]) for p in parsed], [(1, "opening"), (2, "cow")])
 
     def test_parse_where_page_file_should_key_by_page_number(self):
         # Arrange
@@ -37,7 +37,7 @@ class TemplateImportTests(QuranDataMixin, BaseTestCase):
         parsed = parse_content_file(raw, spec, asset)
 
         # Assert
-        self.assertEqual([(p.unit_id, p.text) for p in parsed], [(1, "first"), (604, "last")])
+        self.assertEqual([(p.unit_id, p.cells["text"]) for p in parsed], [(1, "first"), (604, "last")])
 
     def test_parse_where_word_file_has_word_id_should_prefer_it(self):
         # Arrange
@@ -62,7 +62,7 @@ class TemplateImportTests(QuranDataMixin, BaseTestCase):
 
         # Assert
         self.assertEqual(parsed[0].unit_id, self.word2.id)
-        self.assertEqual(parsed[0].text, "gloss")
+        self.assertEqual(parsed[0].cells["text"], "gloss")
 
     def test_parse_where_ayah_file_should_keep_working(self):
         # Arrange
@@ -74,7 +74,7 @@ class TemplateImportTests(QuranDataMixin, BaseTestCase):
 
         # Assert
         self.assertEqual(parsed[0].unit_id, 1)
-        self.assertEqual(parsed[0].text, "bismillah")
+        self.assertEqual(parsed[0].cells["text"], "bismillah")
 
     def test_parse_where_columns_do_not_match_template_should_raise(self):
         # Arrange

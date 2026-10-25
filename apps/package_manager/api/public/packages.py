@@ -6,13 +6,15 @@ from django.utils.translation import gettext_lazy as _
 from ninja import Field, Query, Schema
 from ninja.pagination import paginate
 
-from apps.content.models import Asset, CategoryChoice
+from apps.content.models import REVIEWED_CATEGORIES, Asset, AssetVersion, CategoryChoice
 from apps.content.services.asset_access import enforce_asset_access_on_public_api
+from apps.content.services.asset_columns import version_structure
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.core.utils.media_urls import public_media_url
 from apps.package_manager.services.package_registry import (
     CatalogAccess,
     PackageRegistryService,
@@ -20,8 +22,37 @@ from apps.package_manager.services.package_registry import (
     ResolvedPackage,
 )
 from apps.usage_tracking.decorators.track_usage import track_extra, track_usage
+from apps.usage_tracking.services.install_events import record_installs
 
 router = ItqanRouter(tags=[NinjaTag.PACKAGES])
+
+
+class PackageColumnOut(Schema):
+    key: str = Field(..., description="The CSV header of this text column; the same in every language.")
+    label_en: str
+    label_ar: str
+
+
+class PackageStructureOut(Schema):
+    template: str = Field(..., description="What one row is: `surah`, `ayah`, `word` or `page`.")
+    header: list[str] = Field(..., description="The CSV header: unit columns, then one per text column.")
+    columns: list[PackageColumnOut]
+
+
+def _structure(version: AssetVersion | None, asset: Asset) -> PackageStructureOut | None:
+    """The layout of ``version``'s file; None for categories without text columns."""
+    if version is None or asset.category not in REVIEWED_CATEGORIES:
+        return None
+    version.asset = asset  # reuse the loaded asset (and its prefetched columns)
+    structure = version_structure(version)
+    return PackageStructureOut(
+        template=structure.template,
+        header=structure.header,
+        columns=[
+            PackageColumnOut(key=column.key, label_en=column.label_en, label_ar=column.label_ar)
+            for column in structure.columns
+        ],
+    )
 
 
 class PackageVersionOut(Schema):
@@ -48,12 +79,18 @@ class PackageVersionOut(Schema):
         description="Newest released version the request's range allows: the range in `version`, or "
         "`constraint` when `version` is an exact (lockfile) pin. Null when the request has no range.",
     )
+    structure: PackageStructureOut | None = Field(
+        None, description="Translations / tafsirs: the resolved version's CSV layout. Null otherwise."
+    )
 
 
 class PackageLanguageOut(Schema):
     language: str
     is_source: bool
     latest_version: str = Field(..., description="Newest stable version; what a `^` constraint on it resolves to.")
+    structure: PackageStructureOut | None = Field(
+        None, description="Translations / tafsirs: `latest_version`'s CSV layout. Null otherwise."
+    )
 
 
 class PackageCatalogOut(Schema):
@@ -87,7 +124,12 @@ class PackageCatalogOut(Schema):
     @staticmethod
     def resolve_languages(obj: Asset) -> list[PackageLanguageOut]:
         return [
-            PackageLanguageOut(language=lang.language, is_source=lang.is_source, latest_version=lang.latest_version)
+            PackageLanguageOut(
+                language=lang.language,
+                is_source=lang.is_source,
+                latest_version=lang.latest_version,
+                structure=_structure(lang.latest, obj),
+            )
             for lang in PackageRegistryService().catalog_languages(obj)
         ]
 
@@ -138,12 +180,20 @@ class PackageManifestOut(Schema):
     results: list[PackageVersionOut]
 
 
+def _file_url(request: Request, version: AssetVersion, asset: Asset) -> str:
+    """Open assets through the CDN, so the edge counts the download; restricted ones keep
+    their signed, expiring link."""
+    if asset.is_open_access:
+        return public_media_url(version.file_url, request)
+    return request.build_absolute_uri(version.file_url.url)
+
+
 def _download_url(request: Request, result: ResolvedPackage) -> str:
     """Absolute URL to fetch the version's file: the stored file when it has
     one, otherwise the download endpoint that generates it on first request."""
     version = result.asset_version
     if version.file_url:
-        return request.build_absolute_uri(version.file_url.url)
+        return _file_url(request, version, result.asset)
     filename = f"{result.asset.slug}-{result.asset_language.language}-{version.name}.csv".replace(" ", "_")
     path = reverse(
         f"{request.resolver_match.namespace}:download_package_file",
@@ -167,6 +217,7 @@ def _resolve_package_to_schema(request: Request, result: ResolvedPackage) -> Pac
         withdrawal_reason=(result.asset_version.withdrawal_reason or None) if result.withdrawn else None,
         latest_version=result.latest_version,
         latest_in_range=result.latest_in_range,
+        structure=_structure(result.asset_version, result.asset),
     )
 
 
@@ -244,6 +295,7 @@ def resolve_package_manifest(request: Request, body: PackageManifestEntryIn):
         pre_fetched_assets[package_request.slug] = asset
 
     results = service.resolve_manifest(package_requests, assets=pre_fetched_assets)
+    record_installs(request, results)
 
     entity_ids: list[int] = []
     entity_names: list[str] = []
@@ -302,6 +354,7 @@ def resolve_package_single(
     asset = service.find_asset(slug)
     enforce_asset_access_on_public_api(getattr(request, "user", None), asset)
     result = service.resolve_single(slug, version, language=language, asset=asset)
+    record_installs(request, [result])
 
     track_extra(
         request,
@@ -335,5 +388,6 @@ def download_package_file(request: Request, asset_version_id: int, filename: str
     service = PackageRegistryService()
     version = service.get_downloadable_version(asset_version_id)
     enforce_asset_access_on_public_api(getattr(request, "user", None), version.asset)
+    asset = version.asset
     version = service.ensure_package_file(version)
-    return HttpResponseRedirect(version.file_url.url)
+    return HttpResponseRedirect(_file_url(request, version, asset))

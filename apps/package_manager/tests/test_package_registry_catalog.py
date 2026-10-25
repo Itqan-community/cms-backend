@@ -74,6 +74,11 @@ class PackageCatalogApiTests(BaseTestCase):
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
         self.assertEqual(1, body["count"])
+        text_structure = {
+            "template": "ayah",
+            "header": ["surah", "ayah", "text"],
+            "columns": [{"key": "text", "label_en": "", "label_ar": ""}],
+        }
         self.assertEqual(
             {
                 "slug": "tafsir",
@@ -84,8 +89,8 @@ class PackageCatalogApiTests(BaseTestCase):
                 "access_request_url": None,
                 "publisher_name": "Publisher",
                 "languages": [
-                    {"language": "ar", "is_source": True, "latest_version": "1.2.0"},
-                    {"language": "en", "is_source": False, "latest_version": "2.0.0"},
+                    {"language": "ar", "is_source": True, "latest_version": "1.2.0", "structure": text_structure},
+                    {"language": "en", "is_source": False, "latest_version": "2.0.0", "structure": text_structure},
                 ],
             },
             body["results"][0],

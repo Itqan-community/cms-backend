@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from allauth.account.decorators import secure_admin_login
 from django import forms
 from django.conf import settings
@@ -13,6 +15,7 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from plain_permissions.utils import get_permissions_queryset
 
+from apps.core.admin import AuditedModelAdmin
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import PublisherMember
 from apps.users.services.group import GroupService
@@ -74,7 +77,7 @@ if getattr(settings, "DJANGO_ADMIN_FORCE_ALLAUTH", False):
 
 
 @admin.register(User)
-class UserAdmin(auth_admin.UserAdmin):
+class UserAdmin(AuditedModelAdmin, auth_admin.UserAdmin):
     form = UserAdminChangeForm
     add_form = UserAdminCreationForm
     fieldsets = (
@@ -96,10 +99,15 @@ class UserAdmin(auth_admin.UserAdmin):
         (_("Important dates"), {"fields": ("last_login", "created_at", "updated_at")}),
     )
     inlines = [PublisherMemberInline]
-    list_display = ["email", "name", "is_superuser"]
+    list_display = ["email", "name", "is_superuser", "date_joined"]
     search_fields = ["name", "email", "phone"]
     ordering = ["id"]
     readonly_fields = ("created_at", "updated_at", "assigned_languages_summary")
+
+    # User drops AbstractUser.date_joined; created_at records the same moment.
+    @admin.display(description=_("Date joined"), ordering="created_at")
+    def date_joined(self, obj: User) -> datetime:
+        return obj.created_at
 
     @admin.display(description=_("Assigned languages (per publisher)"))
     def assigned_languages_summary(self, obj: User) -> str:

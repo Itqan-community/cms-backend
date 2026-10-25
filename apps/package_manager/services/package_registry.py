@@ -312,6 +312,8 @@ class CatalogLanguage:
     language: str
     is_source: bool
     latest_version: str
+    # The version ``latest_version`` names.
+    latest: AssetVersion | None = None
 
 
 class PackageVersionStatus(StrEnum):
@@ -614,11 +616,17 @@ class PackageRegistryService:
         SemVer version are left out."""
         languages: list[CatalogLanguage] = []
         for rendition in self.repo.list_available_languages(asset):
-            latest = _latest_version_string(self.installable_versions(asset, rendition))
+            latest = _latest_version(self.installable_versions(asset, rendition))
             if latest is None:
                 continue
+            version, semver = latest
             languages.append(
-                CatalogLanguage(language=rendition.language, is_source=rendition.is_source, latest_version=latest)
+                CatalogLanguage(
+                    language=rendition.language,
+                    is_source=rendition.is_source,
+                    latest_version=semver.to_canonical_string(),
+                    latest=version,
+                )
             )
         return languages
 
@@ -692,7 +700,7 @@ class PackageRegistryService:
         if published is None:
             return set()
         reviewed = asset.category in REVIEWED_CATEGORIES
-        pending = self.repo.pending_review_units_by_version(asset, rendition.language) if reviewed else {}
+        pending = self.repo.pending_review_cells_by_version(asset, rendition.language) if reviewed else {}
         cutoff = (published.created_at, published.pk)
         return {
             version.pk
@@ -813,18 +821,35 @@ class PackageRegistryService:
         return stored
 
 
+def _candidates(versions: list[AssetVersion]) -> list[tuple[AssetVersion, SemVer]]:
+    """``versions`` whose names are canonical SemVer, with the parsed version."""
+    return [(v, semver) for v in versions if (semver := _parse_candidate_version(v.name)) is not None]
+
+
+def _newest_stable_candidate(
+    candidates: list[tuple[AssetVersion, SemVer]],
+) -> tuple[AssetVersion, SemVer] | None:
+    """The newest stable candidate (newest prerelease when none is stable)."""
+    stable = [candidate for candidate in candidates if not candidate[1].is_prerelease] or candidates
+    if not stable:
+        return None
+    return max(stable, key=lambda candidate: candidate[1]._precedence_key())
+
+
+def _latest_version(versions: list[AssetVersion]) -> tuple[AssetVersion, SemVer] | None:
+    """The newest stable SemVer-named version (newest prerelease when none is stable)."""
+    return _newest_stable_candidate(_candidates(versions))
+
+
 def _latest_version_string(versions: list[AssetVersion]) -> str | None:
     """The newest stable SemVer-named version (newest prerelease when none is stable), canonical."""
-    return _newest_stable([(v, semver) for v in versions if (semver := _parse_candidate_version(v.name)) is not None])
+    return _newest_stable(_candidates(versions))
 
 
 def _newest_stable(candidates: list[tuple[AssetVersion, SemVer]]) -> str | None:
     """The newest stable version among ``candidates`` (newest prerelease when none is stable), canonical."""
-    semvers = [semver for _version, semver in candidates]
-    stable = [semver for semver in semvers if not semver.is_prerelease] or semvers
-    if not stable:
-        return None
-    return max(stable, key=lambda semver: semver._precedence_key()).to_canonical_string()
+    newest = _newest_stable_candidate(candidates)
+    return newest[1].to_canonical_string() if newest else None
 
 
 def _newest_in_range(candidates: list[tuple[AssetVersion, SemVer]], constraint_text: str | None) -> str | None:

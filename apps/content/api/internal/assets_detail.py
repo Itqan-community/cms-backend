@@ -19,6 +19,7 @@ from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
 from apps.core.ninja_utils.types import AbsoluteUrl
+from apps.core.utils.client_ip import client_ip
 from apps.mixins.helpers import run_task
 from apps.package_manager.services.package_registry import PackageRegistryService
 
@@ -140,7 +141,7 @@ def detail_assets(request: Request, id: int):
                 "usage_kind": UsageEvent.UsageKindChoice.VIEW,
                 "asset_id": asset.id,
                 "metadata": {},
-                "ip_address": request.META.get("REMOTE_ADDR"),
+                "ip_address": client_ip(request),
                 "user_agent": request.headers.get("User-Agent", ""),
                 "effective_license": asset.license,
             },

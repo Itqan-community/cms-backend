@@ -1,6 +1,7 @@
 from typing import Literal
 
 from django.conf import settings
+from django.db import transaction
 from ninja import Schema
 from pydantic import AwareDatetime
 
@@ -8,6 +9,8 @@ from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.usage_tracking.models import UsageApp
+from apps.usage_tracking.services.usage_apps import app_for_key, set_app_slug
 from apps.users.services.api_key import ApiKeyService
 
 router = ItqanRouter(tags=[NinjaTag.AUTH])
@@ -21,6 +24,12 @@ class ApiKeyOutSchema(Schema):
     revoked: bool
     expiry_date: AwareDatetime | None = None
     created: AwareDatetime
+    # Public app slug appended to file URLs (`?c=`) so usage is attributed to this key's app.
+    app_slug: str | None = None
+
+    @staticmethod
+    def resolve_app_slug(obj) -> str | None:
+        return UsageApp.objects.filter(api_key_id=obj.id).values_list("slug", flat=True).first()
 
 
 class ApiKeyCreatedOutSchema(ApiKeyOutSchema):
@@ -36,6 +45,7 @@ class ApiKeyPatchInSchema(Schema):
     name: str | None = None
     expiry_date: AwareDatetime | None = None
     revoked: bool | None = None
+    app_slug: str | None = None
 
 
 if settings.ENABLE_API_KEY_AUTH:
@@ -60,6 +70,7 @@ if settings.ENABLE_API_KEY_AUTH:
             revoked=api_key.revoked,
             expiry_date=api_key.expiry_date,
             created=api_key.created,
+            app_slug=app_for_key(api_key).slug,
             key=raw_key,
         )
 
@@ -88,14 +99,22 @@ if settings.ENABLE_API_KEY_AUTH:
             200: ApiKeyOutSchema,
             400: NinjaErrorResponse[Literal["invalid_api_key_name"]]
             | NinjaErrorResponse[Literal["api_key_name_taken"]]
-            | NinjaErrorResponse[Literal["api_key_revoke_irreversible"]],
+            | NinjaErrorResponse[Literal["api_key_revoke_irreversible"]]
+            | NinjaErrorResponse[Literal["invalid_app_slug"]]
+            | NinjaErrorResponse[Literal["app_slug_taken"]],
             404: NinjaErrorResponse[Literal["api_key_not_found"]],
         },
         summary="Update API Key",
     )
     def update_api_key(request: Request, key_id: str, data: ApiKeyPatchInSchema):
         fields = data.model_dump(exclude_unset=True)
-        return _service.update(request.user, key_id, fields)
+        slug = fields.pop("app_slug", None)
+        # One transaction: a rejected slug must not leave the new name saved.
+        with transaction.atomic():
+            api_key = _service.update(request.user, key_id, fields) if fields else _service.get(request.user, key_id)
+            if slug is not None:
+                set_app_slug(api_key, slug)
+        return api_key
 
     @router.delete(
         "api-keys/{key_id}/",

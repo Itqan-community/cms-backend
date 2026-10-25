@@ -197,6 +197,54 @@ class GetOrCreateDraftTest(AssetContentBaseTest):
         self.assertEqual(403, response.status_code)
         self.assertEqual("permission_denied", response.json()["error_name"])
 
+    def test_get_or_create_draft_where_language_omitted_should_open_source_language_draft(self):
+        # Arrange — the editor opens before it knows the asset's languages
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
+
+        # Act
+        response = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/draft/",
+            data={},
+            content_type="application/json",
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual("ar", response.json()["language"])
+
+    def test_get_or_create_draft_where_language_empty_should_not_open_source_draft(self):
+        # Arrange — only an omitted language means the source; an empty one is invalid
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
+
+        # Act
+        response = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/draft/",
+            data={"language": ""},
+            content_type="application/json",
+        )
+
+        # Assert
+        self.assertNotEqual(200, response.status_code, response.content)
+        self.assertFalse(AssetVersion.objects.filter(asset=self.translation, state=VersionStateChoice.DRAFT).exists())
+
+    def test_get_or_create_draft_should_return_asset_template(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
+
+        # Act
+        response = self.client.post(
+            f"/portal/content/translations/{self.translation.slug}/draft/",
+            data={"language": "ar"},
+            content_type="application/json",
+        )
+
+        # Assert — the grid builds its columns from it without probing the entries
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(AssetTemplateChoice.AYAH, response.json()["template"])
+
 
 class PatchEntriesTest(AssetContentBaseTest):
     def _make_draft(self) -> AssetVersion:
@@ -905,7 +953,7 @@ class ReconstructAndRestoreTest(AssetContentBaseTest):
         from apps.content.repositories.asset_content import AssetContentRepository
 
         state = AssetContentRepository().reconstruct_entries(c2)
-        self.assertEqual({self.ayahs[0].id: "ONE", self.ayahs[1].id: "two"}, state)
+        self.assertEqual({(self.ayahs[0].id, "text"): "ONE", (self.ayahs[1].id, "text"): "two"}, state)
 
     def test_restore_reconstructs_pruned_version(self):
         self.authenticate_user(self.user)

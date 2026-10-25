@@ -86,6 +86,7 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "apps.usage_tracking.middlewares.app_tagging.AppTaggingMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "apps.publishers.middlewares.publisher_middleware.PublisherMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -464,6 +465,16 @@ GITHUB_TOKEN_CACHE_SKEW_SECONDS = config("GITHUB_TOKEN_CACHE_SKEW_SECONDS", cast
 GITHUB_WEBHOOK_SECRET = config("GITHUB_WEBHOOK_SECRET", default="")
 
 # ========================
+# Gemini (admin AI helpers: translation + asset slugs)
+# ========================
+# Free tier only: never link a billing account to this key's project. With no key,
+# slugs keep the category template with the slugified name and AI translate returns 503.
+GEMINI_API_KEY = config("GEMINI_API_KEY", default="")
+GEMINI_FAST_MODEL = config("GEMINI_FAST_MODEL", default="gemini-3.5-flash-lite")
+# Free-tier latency varies (4-11s observed); only Translate clicks wait on it, never asset creation.
+GEMINI_TIMEOUT_SECONDS = config("GEMINI_TIMEOUT_SECONDS", cast=float, default=20.0)
+
+# ========================
 # SAML IDP (djangosaml2idp)
 # ========================
 if SAML_IDP_ENABLED:
@@ -659,6 +670,29 @@ ASSET_DOWNLOAD_PLAY_WINDOW_MINUTES = config("ASSET_DOWNLOAD_PLAY_WINDOW_MINUTES"
 ASSET_DOWNLOAD_EVENT_RETENTION_DAYS = config(
     "ASSET_DOWNLOAD_EVENT_RETENTION_DAYS", default="", cast=lambda value: int(value) if value else None
 )
+
+# Usage reports: Cloudflare Logpush import (every edge request) and R2 read reconciliation.
+# All optional; both jobs are off until enabled.
+ENABLE_USAGE_LOGPUSH_IMPORT = config("ENABLE_USAGE_LOGPUSH_IMPORT", default=False, cast=bool)
+USAGE_LOGS_BUCKET = config("USAGE_LOGS_BUCKET", default="itqan-usage-logs")
+USAGE_LOGS_PREFIX = config("USAGE_LOGS_PREFIX", default="http/production/")
+USAGE_LOGS_ACCESS_KEY_ID = config("USAGE_LOGS_ACCESS_KEY_ID", default="")
+USAGE_LOGS_SECRET_ACCESS_KEY = config("USAGE_LOGS_SECRET_ACCESS_KEY", default="")
+USAGE_LOGPUSH_MAX_FILES_PER_RUN = config("USAGE_LOGPUSH_MAX_FILES_PER_RUN", default=500, cast=int)
+ENABLE_USAGE_R2_RECONCILIATION = config("ENABLE_USAGE_R2_RECONCILIATION", default=False, cast=bool)
+CF_ACCOUNT_ID = config("CF_ACCOUNT_ID", default="")
+# Needs Account Analytics Read; falls back to CF_API_TOKEN.
+USAGE_ANALYTICS_API_TOKEN = config("USAGE_ANALYTICS_API_TOKEN", default="") or CF_API_TOKEN
+# Never rotate: listener/install/end-user ids are HMACs under this key. Empty derives from SECRET_KEY.
+USAGE_IDENTITY_KEY = config("USAGE_IDENTITY_KEY", default="")
+USAGE_EVENT_RETENTION_MONTHS = config("USAGE_EVENT_RETENTION_MONTHS", default=25, cast=int)
+# How long a usage report response is cached per scope, language and parameter set (0 disables).
+USAGE_REPORTS_CACHE_SECONDS = config("USAGE_REPORTS_CACHE_SECONDS", default=600, cast=int)
+# Show all-time plays/downloads/apps on gallery asset pages; the endpoint returns 404 while off.
+PUBLIC_USAGE_COUNTS_ENABLED = config("PUBLIC_USAGE_COUNTS_ENABLED", default=False, cast=bool)
+# Open-access gallery downloads go through the storage custom domain (`?download=`), so the
+# edge counts them. Needs the Cloudflare Content-Disposition transform rule first.
+GALLERY_DOWNLOADS_VIA_CDN = config("GALLERY_DOWNLOADS_VIA_CDN", default=False, cast=bool)
 
 
 # plain_permissions settings

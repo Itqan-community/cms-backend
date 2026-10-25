@@ -17,6 +17,7 @@ from apps.content.services.admin.asset_recitation_audio_tracks_direct_upload_ser
 )
 from apps.content.services.admin.asset_recitation_json_file_sync_service import sync_asset_recitations_json_file
 from apps.content.services.asset_access import AssetAccessRequestService
+from apps.core.admin import AuditedModelAdmin
 from apps.core.audit import update_with_history
 from apps.core.ninja_utils.errors import ItqanError
 
@@ -71,7 +72,7 @@ class RecitationFolderInline(admin.TabularInline):
 
 
 @admin.register(Asset)
-class AssetAdmin(admin.ModelAdmin):
+class AssetAdmin(AuditedModelAdmin):
     list_display = [
         "name",
         "publisher_name",
@@ -411,6 +412,7 @@ class AssetAdmin(admin.ModelAdmin):
             )
 
     def uploads_sign_part_view(self, request: HttpRequest) -> JsonResponse:
+        """Signs a single part URL for multi-part direct S3 uploads."""
         if not request.user.is_staff:
             raise PermissionDenied(_("Staff only"))
         if request.method != "POST":
@@ -430,17 +432,23 @@ class AssetAdmin(admin.ModelAdmin):
                 {"error_name": e.error_name, "message": e.message, "extra": e.extra}, status=e.status_code
             )
         except Exception:
-            logger.exception(f"uploads_sign_part_view failed (\
-                    key={(locals().get('body') or {}).get('key')},\
-                    upload_id={(locals().get('body') or {}).get('uploadId')},\
-                    part_number={(locals().get('body') or {}).get('partNumber')}\
-                )")
+            body = locals().get("body") or {}
+            key = body.get("key")
+            upload_id = body.get("uploadId")
+            part_number = body.get("partNumber")
+            logger.exception(
+                "uploads_sign_part_view failed (key=%s, upload_id=%s, part_number=%s)",
+                key,
+                upload_id,
+                part_number,
+            )
             return JsonResponse(
                 {"error_name": "server_error", "message": str(_("An unexpected error occurred"))},
                 status=500,
             )
 
     def uploads_finish_view(self, request: HttpRequest) -> JsonResponse:
+        """Completes multi-part direct S3 upload and persists track."""
         if not request.user.is_staff:
             raise PermissionDenied(_("Staff only"))
         if request.method != "POST":
@@ -463,16 +471,21 @@ class AssetAdmin(admin.ModelAdmin):
                 {"error_name": e.error_name, "message": e.message, "extra": e.extra}, status=e.status_code
             )
         except Exception:
-            logger.exception(f"uploads_finish_view failed (\
-                    key={(locals().get('body') or {}).get('key')},\
-                    upload_id={(locals().get('body') or {}).get('uploadId')}\
-                )")
+            body = locals().get("body") or {}
+            key = body.get("key")
+            upload_id = body.get("uploadId")
+            logger.exception(
+                "uploads_finish_view failed (key=%s, upload_id=%s)",
+                key,
+                upload_id,
+            )
             return JsonResponse(
                 {"error_name": "server_error", "message": str(_("An unexpected error occurred"))},
                 status=500,
             )
 
     def uploads_abort_view(self, request: HttpRequest) -> JsonResponse:
+        """Aborts an active multi-part direct S3 upload session."""
         if not request.user.is_staff:
             raise PermissionDenied(_("Staff only"))
         if request.method != "POST":
@@ -487,10 +500,14 @@ class AssetAdmin(admin.ModelAdmin):
                 {"error_name": e.error_name, "message": e.message, "extra": e.extra}, status=e.status_code
             )
         except Exception:
-            logger.exception(f"uploads_abort_view failed (\
-                    key={(locals().get('body') or {}).get('key')},\
-                    upload_id={(locals().get('body') or {}).get('uploadId')}\
-                )")
+            body = locals().get("body") or {}
+            key = body.get("key")
+            upload_id = body.get("uploadId")
+            logger.exception(
+                "uploads_abort_view failed (key=%s, upload_id=%s)",
+                key,
+                upload_id,
+            )
             return JsonResponse(
                 {"error_name": "server_error", "message": str(_("An unexpected error occurred"))},
                 status=500,
@@ -572,7 +589,7 @@ class AssetAdmin(admin.ModelAdmin):
 
 
 @admin.register(AssetVersion)
-class AssetVersionAdmin(admin.ModelAdmin):
+class AssetVersionAdmin(AuditedModelAdmin):
     list_display = ["asset", "name", "label", "size_bytes", "created_at"]
     list_filter = ["created_at"]
     search_fields = ["asset__name", "name", "label"]
@@ -590,20 +607,20 @@ class AssetVersionAdmin(admin.ModelAdmin):
 
 
 @admin.register(MushafLayout)
-class MushafLayoutAdmin(admin.ModelAdmin):
+class MushafLayoutAdmin(AuditedModelAdmin):
     list_display = ("name", "page_count")
     search_fields = ("name",)
 
 
 @admin.register(AssetPreview)
-class AssetPreviewAdmin(admin.ModelAdmin):
+class AssetPreviewAdmin(AuditedModelAdmin):
     list_display = ["asset", "image_url", "title", "description", "order", "created_at"]
     search_fields = ["asset__name"]
     readonly_fields = ["created_at", "updated_at"]
 
 
 @admin.register(AssetAccessRequest)
-class AssetAccessRequestAdmin(admin.ModelAdmin):
+class AssetAccessRequestAdmin(AuditedModelAdmin):
     list_display = [
         "developer_user",
         "asset",
@@ -684,7 +701,7 @@ class AssetAccessRequestAdmin(admin.ModelAdmin):
 
 
 @admin.register(AssetAccess)
-class AssetAccessAdmin(admin.ModelAdmin):
+class AssetAccessAdmin(AuditedModelAdmin):
     list_display = [
         "user",
         "asset",
@@ -753,7 +770,7 @@ class UsageEventAdmin(admin.ModelAdmin):
 
 
 @admin.register(Qiraah)
-class QiraahAdmin(admin.ModelAdmin):
+class QiraahAdmin(AuditedModelAdmin):
     list_display = ["id", "name", "slug", "is_active", "created_at"]
     list_filter = ["is_active", "created_at"]
     search_fields = ["name", "slug"]
@@ -778,7 +795,7 @@ class QiraahAdmin(admin.ModelAdmin):
 
 
 @admin.register(Reciter)
-class ReciterAdmin(admin.ModelAdmin):
+class ReciterAdmin(AuditedModelAdmin):
     list_display = ["id", "name", "slug", "is_active", "created_at"]
     list_filter = ["is_active", "created_at"]
     search_fields = ["name", "slug"]
@@ -813,7 +830,7 @@ class ReciterAdmin(admin.ModelAdmin):
 
 
 @admin.register(Riwayah)
-class RiwayahAdmin(admin.ModelAdmin):
+class RiwayahAdmin(AuditedModelAdmin):
     list_display = ["id", "name", "slug", "qiraah", "is_active", "created_at"]
     list_filter = ["is_active", "qiraah", "created_at"]
     search_fields = ["name", "slug"]
@@ -838,7 +855,7 @@ class RiwayahAdmin(admin.ModelAdmin):
 
 
 @admin.register(RecitationFolder)
-class RecitationFolderAdmin(admin.ModelAdmin):
+class RecitationFolderAdmin(AuditedModelAdmin):
     list_display = ["id", "asset", "name", "slug", "is_default", "tracks_count", "created_at"]
     list_filter = ["is_default", "created_at"]
     search_fields = ["name", "slug", "asset__name"]
@@ -853,7 +870,7 @@ class RecitationFolderAdmin(admin.ModelAdmin):
 
 
 @admin.register(RecitationSurahTrack)
-class RecitationSurahTrackAdmin(admin.ModelAdmin):
+class RecitationSurahTrackAdmin(AuditedModelAdmin):
     list_display = [
         "id",
         "asset",
@@ -894,7 +911,7 @@ class RecitationSurahTrackAdmin(admin.ModelAdmin):
 
 
 @admin.register(RecitationAyahTiming)
-class RecitationAyahTimingAdmin(admin.ModelAdmin):
+class RecitationAyahTimingAdmin(AuditedModelAdmin):
     list_display = [
         "id",
         "track",
@@ -919,7 +936,7 @@ class RecitationAyahTimingAdmin(admin.ModelAdmin):
 
 
 @admin.register(ContentIssueReport)
-class ContentIssueReportAdmin(admin.ModelAdmin):
+class ContentIssueReportAdmin(AuditedModelAdmin):
     list_display = [
         "id",
         "reporter",
@@ -1002,7 +1019,7 @@ class EditorialRecommendationAssetInline(admin.TabularInline):
 
 
 @admin.register(EditorialRecommendation)
-class EditorialRecommendationAdmin(admin.ModelAdmin):
+class EditorialRecommendationAdmin(AuditedModelAdmin):
     list_display = ["id", "title", "is_active", "starts_at", "ends_at", "assets_count", "created_at"]
     list_filter = ["is_active"]
     search_fields = ["title_en", "title_ar", "description_en", "description_ar"]

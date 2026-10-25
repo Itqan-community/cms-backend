@@ -21,11 +21,14 @@ from apps.content.repositories.tafsir import TafsirRepository
 from apps.content.services.asset_access import guard_restrict_for_tenant
 from apps.content.services.asset_content import (
     VersionBump,
+    adopt_current_columns,
+    forbid_minor_after_column_reorder,
     import_uploaded_file_into_entries,
     issue_version_number,
     lock_version_for_content_change,
     set_version_language,
 )
+from apps.content.services.asset_slug import AssetSlugService
 from apps.content.services.mushaf_layout import MushafLayoutService
 from apps.content.version_text import VersionText
 from apps.core.ninja_utils.errors import ItqanError
@@ -92,6 +95,7 @@ class TafsirService:
         thumbnail_url: Any | None = None,
         is_open_access: bool = False,
         restricted_for_tenant: bool = False,
+        slug: str | None = None,
     ) -> Asset:
         """
         Business Logic: Create a new tafsir.
@@ -129,7 +133,16 @@ class TafsirService:
 
         layout = self._resolve_layout(template, mushaf_layout_id)
 
+        # No AI here: the portal sends the slug its Translate call returned (POST /portal/ai/translate/).
+        slug = AssetSlugService().resolve_slug(
+            category=CategoryChoice.TAFSIR,
+            requested=slug,
+            name_en=normalized_name_en,
+            name_ar=normalized_name_ar,
+            language=language,
+        )
         tafsir = self.repo.create_tafsir(
+            slug=slug,
             publisher_id=publisher_id,
             name=name,
             name_ar=normalized_name_ar,
@@ -296,6 +309,10 @@ class TafsirService:
         """
         asset = self._get_tafsir_or_404(tafsir_slug, publisher_q=publisher_q)
         with transaction.atomic():
+            # Serialize with column changes and other commits of this asset, and refuse a
+            # minor number when the columns were reordered since the last version.
+            AssetContentRepository().lock_asset(asset)
+            forbid_minor_after_column_reorder(asset, language or asset.language, bump)
             version = self.repo.create_tafsir_version(
                 asset,
                 name="",
@@ -334,9 +351,12 @@ class TafsirService:
         fields = {key: value for key, value in fields.items() if key != "name"}
         with transaction.atomic():
             if fields.get("file_url"):
+                # Version first, then the asset: the order publishing takes them in.
                 version = lock_version_for_content_change(version)
+                AssetContentRepository().lock_asset(version.asset)
             updated = self.repo.update_tafsir_version(version, fields=fields)
             if fields.get("file_url"):
+                adopt_current_columns(updated)
                 # New content: re-recorded as changes, so it is reviewed again.
                 import_uploaded_file_into_entries(updated, strict=True)
                 AssetContentRepository().record_upload_changes(updated)

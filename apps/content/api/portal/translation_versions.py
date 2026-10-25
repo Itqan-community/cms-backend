@@ -186,6 +186,7 @@ def list_translation_versions(request: Request, translation_slug: str, language:
         201: TranslationVersionListOut,
         400: NinjaErrorResponse[Literal["asset_id_mismatch"]]
         | NinjaErrorResponse[Literal["content_file_unparseable"]]
+        | NinjaErrorResponse[Literal["content_file_missing_columns"]]
         | NinjaErrorResponse[Literal["content_file_invalid_rows"]]
         | NinjaErrorResponse[Literal["version_number_required"]]
         | NinjaErrorResponse[Literal["version_number_invalid"]],
@@ -246,6 +247,7 @@ def create_translation_version(
         | NinjaErrorResponse[Literal["version_is_published"]]
         | NinjaErrorResponse[Literal["version_not_latest"]]
         | NinjaErrorResponse[Literal["content_file_unparseable"]]
+        | NinjaErrorResponse[Literal["content_file_missing_columns"]]
         | NinjaErrorResponse[Literal["content_file_invalid_rows"]],
         404: NinjaErrorResponse[Literal["translation_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
@@ -299,6 +301,7 @@ def update_translation_version_put(
         | NinjaErrorResponse[Literal["version_is_published"]]
         | NinjaErrorResponse[Literal["version_not_latest"]]
         | NinjaErrorResponse[Literal["content_file_unparseable"]]
+        | NinjaErrorResponse[Literal["content_file_missing_columns"]]
         | NinjaErrorResponse[Literal["content_file_invalid_rows"]],
         404: NinjaErrorResponse[Literal["translation_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },

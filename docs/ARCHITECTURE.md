@@ -47,6 +47,15 @@ The system serves **four distinct API surfaces**, each with their own audience a
 | **Tenant API** | `tenant/` | Multi-tenant SaaS API for publishers. Each publisher can have their own domain; content is filtered by the `Domain` the request originates from. All tenants share a single database. | JWT/Session |
 | **Portal API** | `portal/` | Internal admin portal for uploading, writing, updating, and managing content (full CRUD). All users are internal company staff. | JWT/Session + group-based permissions |
 
+The portal also exposes `POST /portal/ai/translate/` for the create forms: it translates the
+Arabic name/description/bio fields to English with the Gemini free tier (`mode=translate`), or
+writes the description fields from the matching Arabic / English Wikipedia articles and returns their `sources`
+(`mode=web`). It needs any portal create permission for mushafs, tafsirs, translations, fonts,
+recitations or reciters, and returns `ai_translate_empty` (400), `ai_rate_limited` (429, a per-minute
+limit: retry shortly), `ai_quota_exceeded` (429, the free daily limit) or `ai_unavailable` (503).
+With `slug_for` (asset create forms) the same call also returns the new asset's suggested `slug`
+(see Asset below), so each click is one Gemini call.
+
 ---
 
 ## Core Domain Models
@@ -69,8 +78,11 @@ erDiagram
 
     Asset ||--o{ AssetLanguage : "provides languages"
     AssetLanguage }o--o| AssetVersion : "publishes (published_version)"
-    AssetVersion ||--o{ AssetVersionEntry : "holds entries"
-    AssetVersion ||--o{ AssetVersionChange : "records per-unit deltas"
+    Asset ||--o{ AssetColumn : "has text columns"
+    AssetVersion ||--o{ AssetVersionEntry : "holds cells"
+    AssetVersion ||--o{ AssetVersionChange : "records per-cell deltas"
+    AssetColumn ||--o{ AssetVersionEntry : "holds"
+    AssetColumn ||--o{ AssetVersionChange : "changed in"
     AssetVersionChange ||--o| AssetVersionChangeReview : "reviewed as"
     PublisherMember ||--o{ MemberLanguage : "works in languages"
 
@@ -128,6 +140,15 @@ erDiagram
         datetime first_published_at
         string withdrawal_reason
         datetime removed_at
+        json column_keys
+    }
+
+    ASSETCOLUMN {
+        int asset_id
+        string key
+        string label_en
+        string label_ar
+        int order
     }
 
     ASSETLANGUAGE {
@@ -193,6 +214,7 @@ The **Publisher** represents an organization or individual who owns and uploads 
   - Members are invited by `group_id`; the group is chosen from `GET /portal/groups/`, not a fixed role list
   - The group is applied to the user's `auth` groups on invitation acceptance, and drives runtime authorization
   - Membership is per-publisher, so one user may hold a different group at each publisher they belong to
+  - `GET /portal/publishers/me/` (the portal's tenant picker) needs only `portal_access`: it lists the caller's own memberships (staff see every publisher)
   - The `Itqan Internal` group holds every permission and is never listed or assignable through the portal APIs
 
 ### 2. Resource
@@ -220,6 +242,26 @@ An **Asset** is a **derivation** of a Resource. It represents content that has b
 
 - Linked to a parent Resource
 - Inherits or specifies its own license
+- Has a globally unique **slug** — the itqan CLI package name (`itqan add <slug>`) and the
+  prefix of downloaded file names. It is set **once, when the asset is created**, and never
+  changes afterwards. It follows a fixed template per category:
+  `recitation-<reciter>-<riwayah>`, `translation-<language>-<words>`, and
+  `<category>-<words>` for mushafs, tafsirs and fonts (e.g. `tafsir-ibn-kathir`,
+  `translation-en-sahih-international`, `recitation-mishary-alafasy-hafs`).
+  - **Suggested, not computed at create.** When the admin clicks Translate on a create form, the
+    same `POST /portal/ai/translate/` call (`slug_for`) returns `slug_words`: 1–4 English words
+    the Gemini free tier derives from the name (transliterating Arabic), or the reciter and
+    riwayah names for a recitation. `AssetSlugService.slug_from_words` turns them into the
+    template slug; the form shows it, requires it before saving, and sends it back as `slug`.
+    When the call fails the admin types it instead.
+  - **Creating never calls AI** (`AssetSlugService.resolve_slug`), so the request does not wait on
+    Gemini. A sent slug must be `[a-z0-9-]`, ≤ 50 characters and carry the category prefix
+    (`asset_slug_invalid`, 400); without one (non-portal callers), the template is built from the
+    slugified names.
+  - Collisions get `-<year>` (recitations) and then `-2`, `-3`, …, including a suggested slug taken
+    since it was suggested; one taken by a concurrent create between the check and the insert is
+    retried with a suffix in `Asset.save()`. Assets created outside these services (admin, fixtures)
+    get the model's plain slugify fallback.
 - Can have multiple preview images
 - For recitation assets: linked to a **Reciter** and **Riwayah**, and owns one or more
   **RecitationFolder** variants (see [Recitation-Specific Components](#recitation-specific-components))
@@ -237,8 +279,8 @@ Similar to ResourceVersion, **AssetVersion** tracks each uploaded file version o
 - Enables tracking of which Asset version corresponds to which Resource version
 - For translations and tafsirs, an uploaded CSV is imported into per-unit entries. To
   guide uploaders the portal serves an empty fill-in CSV per template — one row per
-  surah / ayah / word / page with a blank `text` column, in the same columns as a
-  version export, so a filled-in sheet imports as is:
+  surah / ayah / word / page with a blank cell per text column (just `text` before the
+  asset exists), in the same columns as a version export, so a filled-in sheet imports as is:
   `GET /portal/content/{category}/csv-template/?template=&mushaf_layout_id=` (asset
   creation; `page` needs the layout) and `GET /portal/content/{category}/{slug}/csv-template/`
   (an existing asset's template).
@@ -305,14 +347,40 @@ number of translation renditions (`AssetLanguage`), each with its own version
 history. Languages are stored as codes (`ar`, `en`) on `Asset.language`,
 `AssetLanguage.language` and `MemberLanguage.language`, which are compared with each
 other; older rows that held names (`Arabic`) were rewritten to codes by migration
-`content.0005_language_codes_and_mushaf_font_numbers`. Every commit — an editor draft committed, an uploaded or replaced version
-file, a restore — records a per-unit delta (`AssetVersionChange`) against the
+`content.0005_language_codes_and_mushaf_font_numbers`.
+
+Each text asset has one or more named text columns (`AssetColumn`): every unit row
+holds one *cell* per column (`AssetVersionEntry`, keyed by unit and column). The
+column `key` is the CSV header and API name and is the same in every language; its
+`label_en` / `label_ar` are only for display, and may be left empty (the key is then
+shown). A key is plain ASCII (`a-z`, `0-9`, `_`, starting with a letter) so developers
+can use it as a CSV header, JSON field or identifier, and it may not shadow a unit header or any of the importer's unit aliases
+(`word_index`, `position`, …). Assets that predate columns — and any new one — get a
+single column keyed `text`, so their files are unchanged: `Asset.text_columns()` reads
+it without writing, and the first write saves it (`Asset.ensure_text_columns()`). A committed version freezes its ordered keys in
+`AssetVersion.column_keys`, which is its file's layout; drafts follow the asset's
+current columns. Replacing a committed version's file parses it with the asset's
+current columns and gives the version those keys, so its stored file carries every
+column reviewers approve; columns reordered since that commit are refused
+(`major_bump_required`), since its number is already issued. Once a committed version
+contains a column, the column can no longer be renamed or deleted. Commits, restores
+and file replacements lock the asset before checking the column order, as column
+edits do; a file replacement locks its version first, the order publishing uses. Deploying the columns migrations: stop the previous release's workers
+before `content.0010` (once it is applied their writes, which set no column, fail);
+`0010` is one-way in practice once any unit has cells in two columns.
+
+Every commit — an editor draft committed, an uploaded or replaced version
+file, a restore — records a per-cell delta (`AssetVersionChange`) against the
 language's previous version, keyed to whichever unit the asset's template uses
-(surah, ayah, word or page). Uploaded files must parse into entries
+(surah, ayah, word or page) and to the column. Uploaded files must parse into entries
 (`content_file_unparseable` otherwise), so their content can be reviewed, and must
 not contain rows whose text would be dropped — a unit repeated with different text,
 a unit that doesn't exist, or an unreadable row (`content_file_invalid_rows`, with
-the row numbers in `extra.rows`); an upload identical to the previous version
+the row numbers in `extra.rows`). A multi-column asset's file needs a header for
+every column key (`content_file_missing_columns`, the keys in `extra.missing`) — a
+missing column would otherwise read as all its cells removed — while a single-column
+asset still accepts the legacy text headers (`translation`, `text`, `content`,
+`المحتوى`); an upload identical to the previous version
 records no changes. The stored file is then replaced by a CSV generated
 from the parsed entries, so consumers download exactly what was reviewed.
 
@@ -329,6 +397,13 @@ from the parsed entries, so consumers download exactly what was reviewed.
   the asset. It runs on every page view, so it reads each language's published
   version in one query and only falls back to the version history for a language
   whose published version can't be installed. The CMS shows the matching `itqan add` command from it.
+  `assets/{id}/file-structure/?language=` (anonymous, same asset visibility) describes a
+  translation's / tafsir's download for one language (default: the source): `format`
+  (`csv`), `template`, the CSV `header`, the text `columns` (key + en/ar labels) and up
+  to 3 sample `rows` of its published version (rebuilt from its deltas when a rollback
+  re-published a pruned commit). It reads only the cells those rows need, and caches
+  the rows per served version. No access grant is needed; a language
+  consumers can't see, or another category, is 404 `file_structure_unavailable`.
 - **Commit vs publish** — committing makes a version the *head* (newest wins; what
   the editor builds on, `is_active` in the version list) but does **not** make it
   visible. Consumers (downloads, samples, `available_languages`, subscriber emails,
@@ -379,21 +454,44 @@ from the parsed entries, so consumers download exactly what was reviewed.
   `PORTAL_EDIT_TRANSLATION_CONTENT` / `PORTAL_EDIT_TAFSIR_CONTENT`; `PORTAL_UPDATE_*`
   covers metadata only (names, descriptions, license, version label/summary,
   language availability). Both are limited to the member's assigned languages.
+- **Columns** — `GET /portal/content/{category}/{slug}/columns/` lists an asset's text
+  columns (read permission). Adding, labelling, reordering and deleting them
+  (`POST` / `PATCH {key}/` / `PUT order/` / `DELETE {key}/`) needs
+  `PORTAL_MANAGE_ASSET_COLUMNS` **and** `PORTAL_ACCESS_ALL_LANGUAGES`, since a column
+  applies to every language; only a few users hold it. Filling and translating the
+  cells needs only the content-edit permission. A column a committed version contains
+  can't be re-keyed or deleted (`column_committed`); the last column can't be deleted
+  (`column_last`).
+  Adding a column is a minor change; reordering the columns a language's latest
+  committed version has makes its next commit or restore major — a minor bump is
+  refused with `major_bump_required`, and a draft reports `requires_major`.
+- **Opening the editor** — `POST /portal/content/{category}/{slug}/draft/` gets or creates
+  the shared draft for `language`; without one it opens the source language's, so the
+  editor can open the draft while it lists the languages. The draft (like every version
+  the editor reads) carries the asset's unit `template`, which the grid builds its
+  columns from before the first page of entries arrives.
 - **Reading entries** — the editor pages through
   `GET /portal/content/{category}/{slug}/versions/{id}/entries/` (`page`, `page_size`,
-  optional `sura`). Its optional `filters` param is the grid's AG Grid filter model as
-  JSON, keyed by `text`, `reference_text`, `source_text` (text filters, case-insensitive and
+  optional `sura`). Each row carries `cells` (every text column's cell, keyed by column key)
+  and, for a translation, the source language's `source_cells`; `text` / `source_text` are
+  the first column, for older clients. `PATCH` rows name their `column` (default: the first;
+  unknown → `unknown_column`). Its optional `filters` param is the grid's AG Grid filter model as
+  JSON, keyed by `cell__<key>` / `source__<key>` per text column (`text` / `source_text` are the
+  first column; a column the asset lacks → `unknown_filter_column`), `reference_text` (text filters, case-insensitive and
   ignoring Arabic vocalization — harakat, Quranic marks, alef forms, and Uthmani dagger alefs —
   so plain typing matches Uthmani text; a unit with no stored entry counts as empty) and `surah`, `sura`, `aya` (number filters,
   `inRange` inclusive; `surah` is the unit column's surah-name dropdown and `sura` the
   surah-number column, both applied), each a single condition or two joined by `AND`/`OR`. Filters
   narrow the whole unit set before paging, so `count` is the filtered total; unknown
-  columns or malformed conditions return 400 `validation_error`. On a draft, each row's
-  `changed` is true when its text differs from the language's latest committed version
-  (what a commit would record; missing rows count as empty) — the editor highlights those
-  cells. The autosave `PATCH` response carries the same flag for the rows it wrote.
+  columns or malformed conditions return 400 `validation_error`. Rows carry the cells of
+  the viewed version's own columns (`column_keys`), so an older commit shows its own
+  layout. On a draft, each row's `changed` is true when any cell differs from the
+  language's latest committed version (what a commit would record; missing rows count
+  as empty) and `changed_columns` names those cells' columns — the editor highlights
+  those cells. The autosave `PATCH` response carries the same fields for the rows it wrote.
 - **Review** — reviewers with `PORTAL_REVIEW_CONTENT`, assigned to languages via
-  `MemberLanguage`, approve or comment ("needs changes") each `AssetVersionChange`.
+  `MemberLanguage`, approve or comment ("needs changes") each `AssetVersionChange` —
+  one per changed cell, so a unit edited in two columns needs both approved.
   State is stored one-per-change as `AssetVersionChangeReview` with
   `reviewed_by`/`reviewed_at` for auditing. Each listed change carries `edited_by`,
   the author (`created_by`) of the commit that made it — editor commits, uploads and
@@ -590,14 +688,8 @@ retention). Failures are recorded on `UsageSyncState` and logged as errors.
 play unless the same client requested the same file within the previous 5 minutes (`ASSET_DOWNLOAD_PLAY_WINDOW_MINUTES`). A play is
 credited to the hour, country and status class of its first request.
 
-**Portal API** (`PORTAL_READ_USAGE`, granted to every publisher member; scoped with
-`request.publisher_q()`; dates are inclusive UTC days):
-
-- `GET /portal/usage/downloads/summary/` — totals, overall and per file kind
-- `GET /portal/usage/downloads/timeseries/?granularity=hour|day|month&split_by=file_kind|status_class` — zero-filled series (hourly limited to 31 days)
-- `GET /portal/usage/downloads/breakdown/?by=asset|surah|country&limit=` — top items by plays
-
-Every response includes `data_until` (the watermark).
+These tables are no longer served by any endpoint: the usage reports API below replaced the
+`/portal/usage/downloads/*` endpoints. The sync keeps running until the Logpush cutover.
 
 ---
 
@@ -699,6 +791,93 @@ erDiagram
         int size_bytes
     }
 ```
+
+
+### Usage reports: traffic collection
+
+Replaces the asset download statistics sync above once both have matched for a week
+(spec: `docs/superpowers/specs/2026-10-18-usage-reports-design.md`).
+
+```mermaid
+flowchart LR
+    CF["Cloudflare Logpush<br/>(storage + API hosts, every request)"] --> R2["R2 itqan-usage-logs<br/>http/&lt;env&gt;/YYYYMMDD/*.log.gz"]
+    R2 --> I["import_logpush_task (minute 10)<br/>parse → classify → hash ids"]
+    I --> E["TrafficEvent"] --> H["TrafficHourly → TrafficDaily"]
+    E --> M["usage_maintenance_task (03:30)<br/>TrafficMonthlyUniques + purge"]
+    A["R2 analytics (GetObject per object)"] --> RC["reconcile_r2_reads_task (minute 40)"] --> RR["R2ObjectReadsHourly"]
+```
+
+| Model | Holds |
+|---|---|
+| `TrafficEvent` | One row per edge request (Cloudflare `ray_id`, unique) for an asset file or a public-API route: kind (`audio_surah`, `audio_ayah`, `version_file`, `gallery_download`, `api_call`, `cli_install`, `view`), asset/surah/version/language, country, channel, platform, endpoint, path, status class, bytes, and HMAC identities (`listener_id` = IP + user agent, `install_id`, `end_user_id`). Raw IPs are never stored. Purged after `USAGE_EVENT_RETENTION_MONTHS` |
+| `TrafficHourly` / `TrafficDaily` | Per hour/day and dimension: `requests`, `bytes`, `sessions` (plays for audio, downloads for files, first install per install id and day, every call for API calls and views). Bots and 4xx/5xx are excluded |
+| `TrafficMonthlyUniques` | Distinct listeners, downloaders, installs and end users per month for all traffic, each asset, publisher and app. Kept forever |
+| `R2ObjectReadsHourly` | R2 reads per object and hour beside the edge requests seen for it; the difference is traffic the edge never saw |
+| `LogFileImport` / `UsageImportState` | Imported Logpush files (idempotency; corrupt files recorded with `error`) and per-job watermark, last run and last error |
+
+- **Import:** lists the day folders from the watermark day minus one, skips files already in
+  `LogFileImport`, stores each file's events and its record (with the hours they touch) in one
+  transaction, then rebuilds those hours (plus the next hour when a play may continue into it)
+  and marks the file rolled up. Files left un-rolled-up by a failed run are finished first by
+  the next run. Only `GET` requests count (CORS preflights and `HEAD` probes are dropped).
+  Network errors leave a file pending; only corrupt gzip files are recorded with `error`.
+- **Channel** (first match): `gallery` (`?download=` links), `cli` (`itqan-cli/` user agent or
+  install header), `app_identified` (a known app slug), `web` (browsers), `app_unidentified`
+  (Android/iOS media players and HTTP libraries), `script` (curl, python, node…), `other`. Bots
+  are kept but flagged and excluded.
+- **App attribution:** `UsageApp` gives each API key an integer id and a public slug (kept when
+  the key is deleted). `AppTaggingMiddleware` adds `?c=<slug>` to storage URLs in API-key JSON
+  responses, sets `X-Itqan-App: <slug>` (captured by a Logpush custom response-header field) and
+  makes caching private. The importer maps `c` / `x-itqan-app` to `UsageApp` ids.
+- **Django-side events:** package resolves write one `cli_install` traffic event per package
+  (`source=django`). `fold_in_django_events_task` (minute 15) copies gallery views and presigned
+  downloads from `content.UsageEvent` (CDN downloads are counted at the edge, behind
+  `GALLERY_DOWNLOADS_VIA_CDN`), skips events recorded with Caddy's internal address (before the
+  client-IP fix or from old workers mid-deploy), and rebuilds every hour that gained Django rows
+  (plus the next hour when an event sits inside the session window of its end). Django events
+  record the client IP from `X-Forwarded-For` (Caddy forwards `CF-Connecting-IP`).
+- **File URLs:** consumer-facing links to open-access files use the storage custom domain
+  (`public_media_url`), so the edge caches and counts them; this covers the `itqan` CLI's package
+  downloads (`/packages/resolve/…`, `/packages/download/…`). Restricted assets keep presigned
+  bucket URLs, which the edge never sees. Rules: `.agents/rules/cms-backend.mdc` → "Serving file URLs".
+- **Routes:** public-API paths are matched against the developer API's own OpenAPI schema;
+  portal, CMS and OAuth paths are dropped.
+
+### Usage reports: API
+
+One engine (`apps/usage_tracking/services/usage_reports.py`, queries in
+`repositories/usage_reports.py`) serves four scopes. Additive metrics (`plays`, `downloads`,
+`installs`, `api_calls`, `views`, `requests`, `bytes`) read `TrafficDaily` (`TrafficHourly` for
+hourly series and hour-of-week); unique metrics (`unique_listeners`, `unique_downloaders`,
+`unique_end_users`) count distinct identities in `TrafficEvent`, or sum `TrafficMonthlyUniques`
+when the range starts before event retention (`uniques_basis`). Dates are inclusive UTC days
+(≤ 3660 days; hourly ≤ 31). Responses are cached per scope, language and parameters for
+`USAGE_REPORTS_CACHE_SECONDS` (600).
+
+| Scope | Endpoints | Access |
+|---|---|---|
+| Publisher | `GET /portal/usage/{summary,timeseries,breakdown,export}/` | `PORTAL_READ_USAGE`; the X-Tenant publisher, else every publisher the member belongs to (staff without X-Tenant: all) |
+| Itqan admin | `GET /portal/admin/usage/{summary,timeseries,breakdown,leaderboard,reconciliation,export}/` | `is_staff`; optional `publisher_id`; includes traffic without an asset and `by=publisher` |
+| Developer | `GET /cms-api/developers/usage/{summary,timeseries,breakdown}/` | signed in; only the caller's `UsageApp`s; breakdown rows under 3 listeners return `"<3"` |
+| Public | `GET /cms-api/assets/{id}/usage-counts/` | anonymous; same visibility as `assets/{id}/`; 404 `usage_counts_disabled` unless `PUBLIC_USAGE_COUNTS_ENABLED`; cached 1 h |
+
+- **Filters:** `asset_id`, `category`, `kind`, `channel`, `platform`, `app`, `country`,
+  `language`, `version_id`, `surah`.
+- **summary:** every metric with previous-period value and change, integrating apps, whether
+  unidentified apps were seen, `latest_version_share` (with `asset_id`), localized metric
+  `definitions`, `disclaimers` (`lower_bound`, `uniques_estimated`, `hourly_delay`) and
+  `data_updated_at` (newest error-free Logpush or fold-in run).
+- **timeseries:** zero-filled `hour|day|week|month` buckets (weeks start Monday); `split_by` keeps
+  the top N (`top`, default 8) and folds the rest into the `__other__` series; `compare=previous_period` adds an
+  aligned `previous` series.
+- **breakdown:** `by=asset|surah|country|channel|platform|app|version|language|kind|endpoint|hour_of_week`
+  (admin also `publisher`); `hour_of_week` keys are `<ISO weekday>-<hour>` in `tz`.
+- **export:** CSV of the additive metrics per period and asset (admin adds the publisher); names
+  that start like a spreadsheet formula are prefixed with `'`.
+- **reconciliation:** R2 reads, edge requests and unseen (`max(reads − edge, 0)` per object-hour)
+  in total, per asset and per day.
+- **Errors:** `invalid_range`, `range_too_large`, `invalid_metric_for_kind`, `invalid_dimension`,
+  `invalid_timezone`, `asset_not_found`, `app_not_found`, `usage_counts_disabled`.
 
 ### Folders (recitation variants)
 

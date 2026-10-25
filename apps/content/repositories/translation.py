@@ -64,12 +64,14 @@ class TranslationRepository:
         external_url: str | None = None,
         is_open_access: bool = False,
         restricted_for_tenant: bool = False,
+        slug: str = "",
     ) -> Asset:
         """
         Create an Asset for a new Translation.
         """
         with transaction.atomic():
             asset = self.asset_model.objects.create(
+                slug=slug,
                 publisher_id=publisher_id,
                 status=StatusChoice.READY,
                 category=CategoryChoice.TRANSLATION,

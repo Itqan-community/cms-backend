@@ -11,6 +11,7 @@ reaches consumers only once its changes are approved and it is explicitly
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import logging
 import re
 from typing import Literal
@@ -19,6 +20,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils.translation import gettext as _
 
+from apps.content.columns import CellKey, Snapshot, requires_major_bump
 from apps.content.models import (
     REVIEWED_CATEGORIES,
     Asset,
@@ -34,6 +36,7 @@ from apps.content.repositories.asset_content import AssetContentRepository
 from apps.content.repositories.asset_review import AssetReviewRepository
 from apps.content.services.asset_content_import import (
     AssetContentInvalidRowsError,
+    AssetContentMissingColumnsError,
     AssetContentParseError,
     parse_content_file,
 )
@@ -44,6 +47,36 @@ from apps.core.ninja_utils.errors import ItqanError
 from apps.dependabot.tasks import dispatch_dependabot_updates_for_version
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class PatchResponseContext:
+    template: str
+    column_keys: list[str]
+    cells: Snapshot
+    source_cells: Snapshot | None
+    changed_cells: set[CellKey]
+
+
+def cell_fields(unit_id: int, keys: list[str], cells: Snapshot, source_cells: Snapshot | None) -> dict:
+    """A unit's ``cells`` / ``source_cells`` (every column, "" when empty), plus
+    ``text`` / ``source_text`` — its first column — for single-text clients."""
+    first = keys[0]
+    return {
+        "cells": {key: cells.get((unit_id, key), "") for key in keys},
+        "text": cells.get((unit_id, first), ""),
+        "source_cells": (
+            {key: source_cells.get((unit_id, key), "") for key in keys} if source_cells is not None else None
+        ),
+        "source_text": source_cells.get((unit_id, first)) if source_cells is not None else None,
+    }
+
+
+def changed_fields(unit_id: int, keys: list[str], changed_cells: set[CellKey]) -> dict:
+    """A unit's ``changed`` flag and the keys of its ``changed_columns``, in column order."""
+    columns = [key for key in keys if (unit_id, key) in changed_cells]
+    return {"changed": bool(columns), "changed_columns": columns}
+
 
 _NOT_FOUND_ERROR = {
     CategoryChoice.TRANSLATION: "translation_not_found",
@@ -99,6 +132,10 @@ def import_uploaded_file_into_entries(version: AssetVersion, *, strict: bool = F
     spec = unit_spec_for(version.asset)
     try:
         parsed = parse_content_file(raw, spec, version.asset, strict=strict)
+    except AssetContentMissingColumnsError as exc:
+        # Raised whatever `strict` says: a version missing a column would drop all its cells.
+        logger.info(f"Uploaded file is missing columns [version_id={version.pk}, missing={exc.missing}]")
+        raise missing_columns_error(exc) from exc
     except AssetContentInvalidRowsError as exc:
         # Only raised in strict mode: rows whose text a lenient parse would drop
         # could reach consumers without ever being reviewed.
@@ -126,6 +163,55 @@ def import_uploaded_file_into_entries(version: AssetVersion, *, strict: bool = F
     logger.info(f"Uploaded file imported into entries [version_id={version.pk}, entries={entries_count}]")
 
 
+def missing_columns_error(exc: AssetContentMissingColumnsError) -> ItqanError:
+    return ItqanError(
+        error_name="content_file_missing_columns",
+        message=_("The file is missing these columns: {columns}.").format(columns=", ".join(exc.missing)),
+        status_code=400,
+        extra={"missing": exc.missing},
+    )
+
+
+def column_reorder_requires_major(asset: Asset, language: str) -> bool:
+    """Whether the next commit of ``language`` must be a major version: the
+    asset's columns were reordered since the language's latest committed version."""
+    previous = asset.get_latest_version(language)
+    if previous is None:
+        return False
+    current = [column.key for column in asset.text_columns()]
+    return requires_major_bump(previous.resolved_column_keys, current)
+
+
+def _major_bump_required() -> ItqanError:
+    return ItqanError(
+        error_name="major_bump_required",
+        message=_(
+            "Columns were reordered since the last version. Reordering changes the file layout, "
+            "so this must be a major version."
+        ),
+        status_code=400,
+    )
+
+
+def forbid_minor_after_column_reorder(asset: Asset, language: str, bump: VersionBump) -> None:
+    if bump == "minor" and column_reorder_requires_major(asset, language):
+        raise _major_bump_required()
+
+
+def adopt_current_columns(version: AssetVersion) -> None:
+    """Give a committed version whose file is being replaced the asset's current
+    columns, which the new file is parsed with — so its stored file carries every
+    column reviewers approve. Its number is already issued, so columns reordered
+    since it was committed are refused: that layout change needs a major version."""
+    if not version.column_keys:
+        return  # a draft follows the asset's columns anyway
+    current = [column.key for column in version.asset.ensure_text_columns()]
+    if requires_major_bump(version.column_keys, current):
+        raise _major_bump_required()
+    if current != version.column_keys:
+        AssetContentRepository().set_column_keys(version, current)
+
+
 def forbid_published_version_change(version: AssetVersion) -> None:
     """Consumers are served the published version, so its content cannot be
     replaced and it cannot be deleted — publish another version first."""
@@ -141,7 +227,7 @@ def forbid_history_rewrite(version: AssetVersion) -> None:
     """Only the newest committed version of a language may be replaced or deleted.
 
     History is append-only: each commit's stored changes are a delta against its
-    predecessor, which is what approval (``pending_units_by_version``) and the
+    predecessor, which is what approval (``pending_cells_by_version``) and the
     reconstruction of pruned versions replay. Rewriting or removing a version
     that later versions build on would silently change what those versions
     contain — and could make unreviewed text look approved in them.
@@ -276,13 +362,17 @@ class AssetContentService:
                 message=_("Version with id {id} not found.").format(id=version_id),
                 status_code=404,
             )
+        self._require_draft(version)
+        return version
+
+    @staticmethod
+    def _require_draft(version: AssetVersion) -> None:
         if version.state != VersionStateChoice.DRAFT:
             raise ItqanError(
                 error_name="version_not_editable",
                 message=_("Only draft versions can be edited."),
                 status_code=400,
             )
-        return version
 
     def get_or_create_draft(
         self,
@@ -371,35 +461,28 @@ class AssetContentService:
         version = self.get_version_or_404(slug, category, version_id, publisher_q=publisher_q)
         return self.repo.version_diff(version)
 
-    def get_pending_changes(
-        self,
-        slug: str,
-        category: CategoryChoice,
-        version_id: int,
-        publisher_q: Q | None = None,
-    ) -> list[dict]:
+    def get_pending_changes(self, draft: AssetVersion) -> list[dict]:
         """The uncommitted diff of a draft vs the current head — what a commit would
-        record. Empty draft rows are excluded (they are dropped on commit)."""
-        asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
-        draft = self._get_editable_draft_or_400(asset, version_id)
+        record. Empty draft rows are excluded (they are dropped on commit).
+
+        ``draft`` is the version the endpoint already resolved (see ``get_version_or_404``)."""
+        self._require_draft(draft)
+        asset = draft.asset
         spec = unit_spec_for(asset)
         language = draft.asset_language.language if draft.asset_language_id else asset.language
-        head = draft.asset.get_latest_version(language)
+        head = asset.get_latest_version(language)
         old_map = self.repo.reconstruct_entries(head) if head is not None else {}
-        new_map = {unit_id: text for unit_id, text in self.repo._entries_map(draft).items() if text != ""}
-        return self.repo.diff_maps(spec, old_map, new_map)
+        new_map = {cell: text for cell, text in self.repo._entries_map(draft).items() if text != ""}
+        return self.repo.diff_maps(spec, old_map, new_map, column_keys=draft.resolved_column_keys)
 
     def get_entries_page(
         self,
-        slug: str,
-        category: CategoryChoice,
-        version_id: int,
+        version: AssetVersion,
         *,
         offset: int,
         limit: int,
         sura: int | None = None,
         filters: EntryFilters | None = None,
-        publisher_q: Q | None = None,
     ) -> tuple[list[dict], int]:
         """One page of the template's canonical units with stored text overlaid.
 
@@ -418,19 +501,17 @@ class AssetContentService:
         A committed version that was pruned to deltas has its entries rebuilt on
         first view (see ``AssetContentRepository.ensure_entries``), so history is
         browsed and filtered exactly like the current version.
+
+        ``version`` is the one the endpoint already resolved (see ``get_version_or_404``).
         """
-        asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
-        version = self.repo.get_version(asset, version_id)
-        if version is None:
-            raise ItqanError(
-                error_name="version_not_found",
-                message=_("Version with id {id} not found.").format(id=version_id),
-                status_code=404,
-            )
+        asset = version.asset
         if version.state == VersionStateChoice.PUBLISHED and not version.entries.exists():
             self.repo.ensure_entries(version)
 
         spec = unit_spec_for(asset)
+        keys = version.resolved_column_keys
+        if filters is not None:
+            filters = filters.for_columns(keys)
         source_version = self._source_version(asset, version)
         units, total = spec.units_page(
             asset,
@@ -442,11 +523,9 @@ class AssetContentService:
             source_version=source_version,
         )
         unit_ids = [unit.unit_id for unit in units]
-        text_by_unit = self.repo.entry_text_map(version, spec, unit_ids)
-        source_text_by_unit = (
-            self.repo.entry_text_map(source_version, spec, unit_ids) if source_version is not None else {}
-        )
-        changed_units = self._changed_units(asset, version, spec, text_by_unit, unit_ids)
+        cells = self.repo.entry_cells(version, spec, unit_ids)
+        source_cells = self.repo.entry_cells(source_version, spec, unit_ids) if source_version is not None else None
+        changed_cells = self._changed_cells(asset, version, spec, cells, unit_ids)
 
         rows = [
             {
@@ -456,27 +535,26 @@ class AssetContentService:
                 "reference_text": unit.reference_text,
                 "sura": unit.sura,
                 "aya": unit.aya,
-                "text": text_by_unit.get(unit.unit_id, ""),
-                "source_text": source_text_by_unit.get(unit.unit_id),
+                **cell_fields(unit.unit_id, keys, cells, source_cells),
                 "order": unit.order,
-                "changed": unit.unit_id in changed_units,
+                **changed_fields(unit.unit_id, keys, changed_cells),
             }
             for unit in units
         ]
         return rows, total
 
-    def _changed_units(
+    def _changed_cells(
         self,
         asset: Asset,
         version: AssetVersion,
         spec: UnitSpec,
-        text_by_unit: dict[int, str],
+        cells: Snapshot,
         unit_ids: list[int],
-    ) -> set[int]:
-        """Units whose draft text differs from the language's latest published
+    ) -> set[CellKey]:
+        """Cells whose draft text differs from the language's latest published
         version — what a commit would record (added, modified or removed).
 
-        A unit missing from either side reads as empty text, so an empty draft row
+        A cell missing from either side reads as empty text, so an empty draft row
         with nothing published is unchanged, and clearing published text is a
         change. Only drafts are compared; any other version reports no changes.
         """
@@ -484,23 +562,27 @@ class AssetContentService:
             return set()
         language = version.asset_language.language if version.asset_language_id else asset.language
         head = asset.get_latest_version(language)
-        published = self.repo.published_text_map(head, spec, unit_ids) if head is not None else {}
-        return {unit_id for unit_id in unit_ids if (text_by_unit.get(unit_id) or "") != (published.get(unit_id) or "")}
+        published = self.repo.published_cells(head, spec, unit_ids) if head is not None else {}
+        wanted = set(unit_ids)
+        return {
+            (unit_id, key)
+            for (unit_id, key) in set(cells) | set(published)
+            if unit_id in wanted and (cells.get((unit_id, key)) or "") != (published.get((unit_id, key)) or "")
+        }
 
-    def _resolve_source_text(
+    def _resolve_source_cells(
         self, asset: Asset, version: AssetVersion, spec: UnitSpec, unit_ids: list[int]
-    ) -> dict[int, str]:
-        """The source-language text map for a translation's units.
+    ) -> Snapshot | None:
+        """The source-language cells for a translation's units.
 
-        Empty when this version IS the source (nothing to overlay) or when no
-        source version has been published yet — in both cases every unit's
-        ``source_text`` should read ``None``, which an empty map already gives
-        via ``.get()``.
+        ``None`` when this version IS the source (nothing to overlay) or when no
+        source version has been published yet — every unit's ``source_cells``
+        and ``source_text`` then read ``None``.
         """
         source_version = self._source_version(asset, version)
         if source_version is None:
-            return {}
-        return self.repo.entry_text_map(source_version, spec, unit_ids)
+            return None
+        return self.repo.entry_cells(source_version, spec, unit_ids)
 
     def _source_version(self, asset: Asset, version: AssetVersion) -> AssetVersion | None:
         """The source language's latest published version a translation reads its
@@ -517,14 +599,15 @@ class AssetContentService:
         version_id: int,
         changed: list[AssetVersionEntry],
         publisher_q: Q | None = None,
-    ) -> tuple[str, dict[int, str], set[int]]:
-        """``(asset.template, source_text_by_unit, changed_units)`` for shaping a
-        patch response.
+    ) -> PatchResponseContext:
+        """What a patch response needs: the template, the patched units' full
+        cells (every column, not only the ones patched), their source cells and
+        which of them now differ from the published version.
 
-        Uses the same source-text overlay and changed rules as
-        ``get_entries_page``, resolved once for the whole patched batch rather
-        than per row, so the autosave response matches what the next GET would
-        show instead of going blank until the page is reloaded.
+        Uses the same source overlay and changed rules as ``get_entries_page``,
+        resolved once for the whole patched batch rather than per row, so the
+        autosave response matches what the next GET would show instead of going
+        blank until the page is reloaded.
         """
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
         version = self.repo.get_version(asset, version_id)
@@ -535,11 +618,20 @@ class AssetContentService:
                 status_code=404,
             )
         spec = unit_spec_for(asset)
-        unit_ids = [entry.unit_id for entry in changed if entry.unit_id is not None]
-        source_text_by_unit = self._resolve_source_text(asset, version, spec, unit_ids)
-        text_by_unit = {entry.unit_id: entry.text for entry in changed if entry.unit_id is not None}
-        changed_units = self._changed_units(asset, version, spec, text_by_unit, unit_ids)
-        return asset.template, source_text_by_unit, changed_units
+        unit_ids = list(dict.fromkeys(entry.unit_id for entry in changed if entry.unit_id is not None))
+        keys = [column.key for column in asset.text_columns()]
+        if len(keys) == 1:
+            # One column: the patched entries are the units' whole rows.
+            cells = {(entry.unit_id, keys[0]): entry.text for entry in changed if entry.unit_id is not None}
+        else:
+            cells = self.repo.entry_cells(version, spec, unit_ids)
+        return PatchResponseContext(
+            template=asset.template,
+            column_keys=keys,
+            cells=cells,
+            source_cells=self._resolve_source_cells(asset, version, spec, unit_ids),
+            changed_cells=self._changed_cells(asset, version, spec, cells, unit_ids),
+        )
 
     def get_version_or_404(
         self,
@@ -577,6 +669,17 @@ class AssetContentService:
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
         draft = self._get_editable_draft_or_400(asset, version_id)
         spec = unit_spec_for(asset)
+        columns = asset.ensure_text_columns()  # cells are written to saved columns
+        keys = {column.key for column in columns}
+        unknown_columns = sorted(
+            {str(row["column"]) for row in rows if row.get("column") and row["column"] not in keys}
+        )
+        if unknown_columns:
+            raise ItqanError(
+                error_name="unknown_column",
+                message=_("This asset has no column named {columns}.").format(columns=", ".join(unknown_columns)),
+                status_code=400,
+            )
         candidates = [int(row["unit_id"]) for row in rows]
         valid_ids = spec.valid_unit_ids(asset, candidates)
         unknown = [unit_id for unit_id in candidates if unit_id not in valid_ids]
@@ -588,7 +691,7 @@ class AssetContentService:
                 ),
                 status_code=400,
             )
-        changed = self.repo.upsert_entries(draft, spec, rows)
+        changed = self.repo.upsert_entries(draft, spec, rows, columns=columns)
         logger.info(f"Draft entries upserted [version_id={draft.pk}, count={len(changed)}]")
         return changed
 
@@ -601,6 +704,8 @@ class AssetContentService:
         spec = unit_spec_for(version.asset)
         try:
             parsed = parse_content_file(raw, spec, version.asset)
+        except AssetContentMissingColumnsError as exc:
+            raise missing_columns_error(exc) from exc
         except AssetContentParseError as exc:
             raise ItqanError(
                 error_name="content_file_unparseable",
@@ -654,6 +759,9 @@ class AssetContentService:
         if label_ar is not None:
             draft.label_ar = label_ar.strip()
         with transaction.atomic():
+            # Locked before the check, so a concurrent column reorder can't land between them.
+            self.repo.lock_asset(asset)
+            forbid_minor_after_column_reorder(asset, draft.asset_language.language, bump)
             draft.name = issue_version_number(asset, draft.asset_language.language, start=version_number, bump=bump)
             published = self.repo.publish_draft(draft)
         logger.info(f"Draft committed [version_id={published.pk}, asset_id={asset.pk}, name={published.name}]")
@@ -694,6 +802,8 @@ class AssetContentService:
             )
         language = version.asset_language.language if version.asset_language_id else version.asset.language
         with transaction.atomic():
+            self.repo.lock_asset(version.asset)
+            forbid_minor_after_column_reorder(version.asset, language, bump)
             name = issue_version_number(version.asset, language, bump=bump)
             restored = self.repo.restore_version(version, name=name, created_by_id=created_by_id)
         logger.info(f"Version restored [source_version_id={version.pk}, new_version_id={restored.pk}]")
@@ -753,7 +863,7 @@ class AssetContentService:
         language = version.resolved_language
         pending = 0
         if asset.category in REVIEWED_CATEGORIES:
-            pending = AssetReviewRepository().pending_units_by_version(asset, language).get(version.pk, 0)
+            pending = AssetReviewRepository().pending_cells_by_version(asset, language).get(version.pk, 0)
         if pending:
             raise ItqanError(
                 error_name="version_not_approved",

@@ -30,6 +30,11 @@ client-side code.
 
 Send the key in the `X-API-Key` header on each request.
 
+Responses to requests with an API key carry an `X-Itqan-App` header with your app's public \
+slug, and audio and file URLs get a `c=<slug>` query parameter. Keep that parameter when you \
+play or download the files: it is how publishers see that their content is used in your app. \
+You can change the slug on the **API Keys** page.
+
 For per-end-user usage metrics, include an opaque identifier in the
 `X-External-User-Id` header. The value is trimmed and must be 1-64 ASCII
 characters, start with an alphanumeric character, and otherwise contain only
