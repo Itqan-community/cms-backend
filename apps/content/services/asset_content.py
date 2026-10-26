@@ -47,9 +47,11 @@ from apps.content.services.asset_templates import (
     UnitRow,
     UnitSpec,
     group_label,
+    range_invalid_error,
     unit_spec_for,
 )
 from apps.content.tasks import notify_asset_version_created
+from apps.content.unit_keys import decode_group_key, encode_group_key
 from apps.content.version_text import VersionText
 from apps.core.ninja_utils.errors import ItqanError
 from apps.dependabot.tasks import dispatch_dependabot_updates_for_version
@@ -810,10 +812,11 @@ class AssetContentService:
         cells: dict[str, str],
         publisher_q: Q | None = None,
     ) -> list[AssetVersionEntry]:
-        """Add a group to a source-language draft with its first text.
+        """Add a group to a source-language draft, with its first text if given.
 
-        A group exists only while it has text, so at least one cell must be
-        non-blank (``group_text_required``).
+        With no text the group is a blank row in the draft's first column, to be
+        filled in the grid; committing drops it if it is still blank (a committed
+        group always has text).
         """
         asset, draft, spec = self._group_draft_or_400(slug, category, version_id, publisher_q)
         if draft.asset_language_id and not draft.asset_language.is_source:
@@ -829,11 +832,7 @@ class AssetContentService:
             )
         rows = [{"unit_id": key, "column": column, "text": text} for column, text in cells.items() if text.strip()]
         if not rows:
-            raise ItqanError(
-                error_name="group_text_required",
-                message=_("Write the group's text in at least one column."),
-                status_code=400,
-            )
+            rows = [{"unit_id": key, "column": columns[0].key, "text": ""}]
         try:
             with transaction.atomic():
                 locked = self._lock_draft(draft)
@@ -845,6 +844,63 @@ class AssetContentService:
             raise self._group_exists_error() from exc
         logger.info(f"Group added [version_id={draft.pk}, unit_id={key}]")
         return changed
+
+    def append_group(
+        self, slug: str, category: CategoryChoice, version_id: int, publisher_q: Q | None = None
+    ) -> list[AssetVersionEntry]:
+        """Add a blank one-unit group right after the furthest unit any group of the
+        draft reaches (the first ayah / word when it has none): "continue writing"."""
+        asset, draft, spec = self._group_draft_or_400(slug, category, version_id, publisher_q)
+        if draft.asset_language_id and not draft.asset_language.is_source:
+            raise self._source_only_error()
+        columns = asset.ensure_text_columns()
+        try:
+            with transaction.atomic():
+                locked = self._lock_draft(draft)
+                ends = [decode_group_key(key)[1] for key in spec.stored_ranges(locked)]
+                start = max(ends) + 1 if ends else spec.first_unit_id()
+                key = encode_group_key(start, start) if start is not None else 0
+                if start is None or key not in spec.valid_unit_ids(asset, [key]):
+                    raise range_invalid_error()
+                changed = self.repo.upsert_entries(
+                    locked, spec, [{"unit_id": key, "column": columns[0].key, "text": ""}], columns=columns
+                )
+        except IntegrityError as exc:
+            raise self._group_exists_error() from exc
+        logger.info(f"Group appended [version_id={draft.pk}, unit_id={key}]")
+        return changed
+
+    def extend_group(
+        self,
+        slug: str,
+        category: CategoryChoice,
+        version_id: int,
+        unit_id: int,
+        *,
+        by: int,
+        publisher_q: Q | None = None,
+    ) -> list[AssetVersionEntry]:
+        """Grow (``by=1``) or shrink (``by=-1``) a group's end by one ayah / word,
+        keeping its text. Ids are in mushaf order, so the next unit is id + 1,
+        across ayah and surah boundaries."""
+        asset, draft, spec = self._group_draft_or_400(slug, category, version_id, publisher_q)
+        if draft.asset_language_id and not draft.asset_language.is_source:
+            raise self._source_only_error()
+        start, end = decode_group_key(unit_id)
+        new_key = encode_group_key(start, end + by)
+        if end + by < start or new_key not in spec.valid_unit_ids(asset, [new_key]):
+            raise range_invalid_error()
+        try:
+            with transaction.atomic():
+                locked = self._lock_draft(draft)
+                self._require_group(locked, spec, unit_id)
+                if locked.entries.filter(spec.entries_q([new_key])).exists():
+                    raise self._group_exists_error()
+                moved = self.repo.move_group_cells(locked, spec, unit_id, new_key)
+        except IntegrityError as exc:
+            raise self._group_exists_error() from exc
+        logger.info(f"Group resized [version_id={draft.pk}, from={unit_id}, to={new_key}]")
+        return moved
 
     def move_group(
         self,

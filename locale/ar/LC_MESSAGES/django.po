@@ -488,9 +488,6 @@ msgstr "تحتوي هذه المسودة بالفعل على مجموعة بال
 msgid "This draft has no such group."
 msgstr "لا تحتوي هذه المسودة على هذه المجموعة."
 
-msgid "Write the group's text in at least one column."
-msgstr "اكتب نص المجموعة في عمود واحد على الأقل."
-
 #, python-brace-format
 msgid "Move or delete the text of groups the source no longer has: {groups}."
 msgstr "انقل أو احذف نص المجموعات التي لم تعد موجودة في اللغة الأصلية: {groups}."
@@ -1713,6 +1710,9 @@ msgstr "مرحبًا بك في نظام إتقان لإدارة المحتوى!"
 
 msgid "This is a test email to verify the email service is working correctly."
 msgstr "هذه رسالة اختبارية للتأكد من عمل خدمة البريد الإلكتروني بشكل صحيح."
+
+#~ msgid "Write the group's text in at least one column."
+#~ msgstr "اكتب نص المجموعة في عمود واحد على الأقل."
 
 #, python-brace-format
 #~ msgid "Some rows can't be used: they repeat a unit with different text, name a unit that doesn't exist, or can't be read. Fix row(s) {rows} and upload again."

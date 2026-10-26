@@ -225,6 +225,11 @@ class GroupRangeIn(Schema):
     end: QuranPositionIn
 
 
+class GroupExtendIn(Schema):
+    # Grow (1) or shrink (-1) the group's end by one ayah / word.
+    by: Literal[1, -1]
+
+
 class GroupIn(GroupRangeIn):
     # The group's first text, per column key; at least one must be non-blank.
     cells: dict[str, str] = Field(default_factory=dict)
@@ -634,14 +639,13 @@ _GROUP_404 = (
     "content/{category}/{slug}/versions/{version_id}/groups/",
     response={
         200: list[EntryOut],
-        400: _GROUP_400
-        | NinjaErrorResponse[Literal["unknown_column"]]
-        | NinjaErrorResponse[Literal["group_text_required"]],
+        400: _GROUP_400 | NinjaErrorResponse[Literal["unknown_column"]],
         404: _GROUP_404,
     },
 )
 def add_group(request: Request, category: str, slug: str, version_id: int, data: GroupIn) -> list[dict]:
-    """Add a group (a range of ayahs / words) with its first text to a source-language draft."""
+    """Add a group (a range of ayahs / words) to a source-language draft, with its
+    first text if given; a group left blank is dropped when the draft is committed."""
     resolved = _resolve_for_version(category, request, slug, version_id, access="content")
     service = AssetContentService()
     changed = service.add_group(
@@ -655,6 +659,35 @@ def add_group(request: Request, category: str, slug: str, version_id: int, data:
     )
     context = service.get_patch_response_context(slug, resolved, version_id, changed, publisher_q=request.publisher_q())
     return _entries_to_out(changed, context)
+
+
+@router.post(
+    "content/{category}/{slug}/versions/{version_id}/groups/next/",
+    response={200: list[EntryOut], 400: _GROUP_400, 404: _GROUP_404},
+)
+def append_group(request: Request, category: str, slug: str, version_id: int) -> list[dict]:
+    """Add a blank one-ayah (or one-word) group right after the furthest unit the
+    draft's groups reach — the grid's "add next group"."""
+    resolved = _resolve_for_version(category, request, slug, version_id, access="content")
+    service = AssetContentService()
+    added = service.append_group(slug, resolved, version_id, publisher_q=request.publisher_q())
+    context = service.get_patch_response_context(slug, resolved, version_id, added, publisher_q=request.publisher_q())
+    return _entries_to_out(added, context)
+
+
+@router.post(
+    "content/{category}/{slug}/versions/{version_id}/groups/{unit_id}/extend/",
+    response={200: list[EntryOut], 400: _GROUP_400, 404: _GROUP_404 | NinjaErrorResponse[Literal["group_not_found"]]},
+)
+def extend_group(
+    request: Request, category: str, slug: str, version_id: int, unit_id: int, data: GroupExtendIn
+) -> list[dict]:
+    """Grow or shrink a group's end by one ayah / word, keeping its text."""
+    resolved = _resolve_for_version(category, request, slug, version_id, access="content")
+    service = AssetContentService()
+    moved = service.extend_group(slug, resolved, version_id, unit_id, by=data.by, publisher_q=request.publisher_q())
+    context = service.get_patch_response_context(slug, resolved, version_id, moved, publisher_q=request.publisher_q())
+    return _entries_to_out(moved, context)
 
 
 @router.put(

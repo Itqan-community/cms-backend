@@ -129,18 +129,6 @@ class GroupContentApiTests(GroupQuranDataMixin, BaseTestCase):
         self.assertEqual(response.status_code, 400, response.content)
         self.assertEqual(response.json()["error_name"], "group_range_invalid")
 
-    def test_add_group_where_all_cells_blank_should_return_400(self):
-        # Arrange
-        self.authenticate_user(self.user)
-        draft_id = self._draft()
-
-        # Act
-        response = self._add(draft_id, {"surah": 1, "ayah": 1}, {"surah": 1, "ayah": 1}, {"text": "  "})
-
-        # Assert
-        self.assertEqual(response.status_code, 400, response.content)
-        self.assertEqual(response.json()["error_name"], "group_text_required")
-
     def test_add_group_where_word_crosses_ayah_should_store(self):
         # Arrange
         self.authenticate_user(self.user)

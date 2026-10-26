@@ -77,7 +77,7 @@ class QuranPosition:
     word: int | None = None
 
 
-def _range_invalid() -> ItqanError:
+def range_invalid_error() -> ItqanError:
     return ItqanError(
         error_name="group_range_invalid",
         message=_("This range doesn't exist in the Quran, or it ends before it starts."),
@@ -336,6 +336,11 @@ class UnitSpec:
         """The stored ``order`` of a unit: its start for a group (an encoded key overflows int4)."""
         return decode_group_key(unit_id)[0] if self.is_group else unit_id
 
+    def first_unit_id(self) -> int | None:
+        """The first ayah / word of a group template (None with no Quran data)."""
+        model = Ayah if self.template == AssetTemplateChoice.AYAH_GROUP else Word
+        return model.objects.order_by("id").values_list("id", flat=True).first()
+
     def key_for_range(self, start: QuranPosition, end: QuranPosition) -> int:
         """The group key of ``start``..``end``, resolved in one query.
 
@@ -345,7 +350,7 @@ class UnitSpec:
         """
         words = self.template == AssetTemplateChoice.WORD_GROUP
         if not self.is_group or any((position.word is not None) != words for position in (start, end)):
-            raise _range_invalid()
+            raise range_invalid_error()
         if words:
             found = {
                 (sura, aya, word): pk
@@ -369,7 +374,7 @@ class UnitSpec:
         start_id = found.get((start.surah, start.ayah, start.word))
         end_id = found.get((end.surah, end.ayah, end.word))
         if start_id is None or end_id is None or start_id > end_id:
-            raise _range_invalid()
+            raise range_invalid_error()
         return encode_group_key(start_id, end_id)
 
     def group_units(self, ids: Iterable[int]) -> dict[int, Ayah | Word]:

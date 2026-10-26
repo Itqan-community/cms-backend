@@ -285,7 +285,10 @@ An **Asset** is a **derivation** of a Resource. It represents content that has b
   integer, `from_id * 1_000_000 + to_id` (`apps/content/unit_keys.py`), so the content,
   diff and review pipelines handle it like any unit id; changing a range is recorded as
   the old range removed and the new one added. Only the source language adds, moves or
-  deletes groups (`POST/PUT/DELETE …/versions/{id}/groups/`); a translated language lists
+  deletes groups (`POST/PUT/DELETE …/versions/{id}/groups/`, plus `POST …/groups/next/` — a
+  blank one-unit group right after the furthest unit any group reaches — and
+  `POST …/groups/{id}/extend/` with `by` ±1 to grow or shrink a group's end by one ayah / word);
+  a group may be added blank to a draft and is dropped at commit if still blank; a translated language lists
   its source's ranges, may only write text for them (its uploads too), and cannot commit
   text left on a range the source no longer has (`orphaned_groups`). The portal previews a
   range's mushaf text with `GET /portal/content/quran-range/`. The CSV has one row per
