@@ -64,7 +64,10 @@ def build_throttle_log_context(
 class NinjaUserPathRateThrottle(NinjaUserRateThrottle):
     """
     This Throttle will not throttle any request
-    however it will only log and `error` to catch FE duplicate requests
+    however it will only log and `error` to catch FE duplicate requests.
+    Only requests made from a web page (they carry ``Origin`` or ``Referer``) are
+    logged: a server calling the API, such as another site's Cloudflare Worker that
+    sends all its visitors' requests from one IP, is not a frontend bug.
     """
 
     scope = "user"
@@ -73,6 +76,7 @@ class NinjaUserPathRateThrottle(NinjaUserRateThrottle):
         return settings.USER_PATH_THROTTLE_RATE
 
     def get_cache_key(self, request: HttpRequest) -> str:
+        _throttle_request_ctx.set(request)
         if request.user and request.user.is_authenticated:
             ident = request.user.pk
         else:
@@ -84,9 +88,14 @@ class NinjaUserPathRateThrottle(NinjaUserRateThrottle):
         }
 
     def throttle_failure(self) -> bool:
-        logger = logging.getLogger(__name__)
-        logger.error(f"UserPathRateThrottle error for {self.key}")
+        request = _throttle_request_ctx.get()
+        if request is None or _is_from_web_page(request):
+            logger.error(f"UserPathRateThrottle error for {self.key}")
         return True
+
+
+def _is_from_web_page(request: HttpRequest) -> bool:
+    return bool(request.headers.get("origin") or request.headers.get("referer"))
 
 
 class _LoggingThrottleMixin:

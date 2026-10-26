@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from django.core.files.base import ContentFile
 from django.db import transaction
-from django.db.models import BooleanField, CharField, Exists, OuterRef, Q, QuerySet, Subquery, Value
+from django.db.models import BooleanField, CharField, Exists, OuterRef, Prefetch, Q, QuerySet, Subquery, Value
 from django.utils import timezone
 
 from apps.content.models import (
@@ -28,6 +28,10 @@ if TYPE_CHECKING:
     from django.contrib.auth.models import AnonymousUser
 
     from apps.users.models import User
+
+# Attributes set by :meth:`PackageRegistryRepository.prefetch_catalog_renditions`.
+_CATALOG_RENDITIONS = "catalog_renditions"
+_ELIGIBLE_VERSIONS = "eligible_package_versions"
 
 
 class PackageRegistryRepository:
@@ -107,9 +111,34 @@ class PackageRegistryRepository:
             caller_request_status=Subquery(latest_request.values("status")[:1]),
         )
 
+    def prefetch_catalog_renditions(self, qs: QuerySet[Asset]) -> QuerySet[Asset]:
+        """Load what the catalog shows for each asset in a few queries per page,
+        instead of a few per asset and language: its READY renditions (source
+        first) with their published version and eligible package versions.
+        :meth:`list_catalog_renditions` and :meth:`get_eligible_package_versions`
+        read them back."""
+        versions = self._eligible_package_versions().order_by("-created_at")
+        renditions = (
+            self._available_languages()
+            .select_related("published_version")
+            .prefetch_related(Prefetch("versions", queryset=versions, to_attr=_ELIGIBLE_VERSIONS))
+        )
+        return qs.prefetch_related(Prefetch("languages", queryset=renditions, to_attr=_CATALOG_RENDITIONS))
+
+    def list_catalog_renditions(self, asset: Asset) -> list[AssetLanguage]:
+        """The asset's READY renditions, source first, with their published version
+        (prefetched by :meth:`prefetch_catalog_renditions` when available)."""
+        prefetched = getattr(asset, _CATALOG_RENDITIONS, None)
+        if prefetched is not None:
+            return prefetched
+        return list(self.list_available_languages(asset).select_related("published_version"))
+
+    def _available_languages(self) -> QuerySet[AssetLanguage]:
+        return AssetLanguage.objects.filter(status=StatusChoice.READY).order_by("-is_source", "language")
+
     def list_available_languages(self, asset: Asset) -> QuerySet[AssetLanguage]:
         """The asset's READY renditions, source language first."""
-        return AssetLanguage.objects.filter(asset=asset, status=StatusChoice.READY).order_by("-is_source", "language")
+        return self._available_languages().filter(asset=asset)
 
     def list_available_languages_with_published(self, asset: Asset) -> QuerySet[AssetLanguage]:
         """:meth:`list_available_languages` with each rendition's published version
@@ -134,18 +163,22 @@ class PackageRegistryRepository:
             return renditions.filter(is_source=True).first()
         return renditions.filter(language=language).first()
 
-    def get_eligible_package_versions(self, asset_language: AssetLanguage) -> QuerySet[AssetVersion]:
+    def get_eligible_package_versions(self, asset_language: AssetLanguage) -> list[AssetVersion]:
         """Published versions of one language rendition that have content to
-        serve: an uploaded file, or entries / stored changes to build one from."""
-        return (
-            AssetVersion.objects.filter(
-                asset_language=asset_language,
-                state=VersionStateChoice.PUBLISHED,
-            )
-            .filter(_has_content_q())
+        serve: an uploaded file, or entries / stored changes to build one from.
+        Newest first; prefetched by :meth:`prefetch_catalog_renditions` when available."""
+        prefetched = getattr(asset_language, _ELIGIBLE_VERSIONS, None)
+        if prefetched is not None:
+            return prefetched
+        return list(
+            self._eligible_package_versions()
+            .filter(asset_language=asset_language)
             .select_related("asset", "asset_language")
             .order_by("-created_at")
         )
+
+    def _eligible_package_versions(self) -> QuerySet[AssetVersion]:
+        return AssetVersion.objects.filter(state=VersionStateChoice.PUBLISHED).filter(_has_content_q())
 
     def get_portal_version(self, version_id: int, publisher_q: Q) -> AssetVersion | None:
         """A committed version of an asset the caller's publisher scope can see."""
