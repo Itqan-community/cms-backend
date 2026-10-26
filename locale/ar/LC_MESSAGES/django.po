@@ -221,10 +221,10 @@ msgid "Page based"
 msgstr "حسب الصفحة"
 
 msgid "Ayah-group based"
-msgstr "حسب مجموعات الآيات"
+msgstr "حسب نطاقات الآيات"
 
 msgid "Word-group based"
-msgstr "حسب مجموعات الكلمات"
+msgstr "حسب نطاقات الكلمات"
 
 msgid "Published"
 msgstr "منشور"
@@ -474,23 +474,23 @@ msgid "Units {units} are not part of this asset's template."
 msgstr "الوحدات {units} ليست جزءًا من قالب هذه المادة."
 
 msgid "A translation can only write text for the source language's groups."
-msgstr "لا يمكن للترجمة كتابة نص إلا لمجموعات اللغة الأصلية."
+msgstr "لا يمكن للترجمة كتابة نص إلا لنطاقات اللغة الأصلية."
 
 msgid "Only ayah-group and word-group assets have groups."
-msgstr "المجموعات متاحة فقط للمواد القائمة على مجموعات الآيات أو مجموعات الكلمات."
+msgstr "النطاقات متاحة فقط للمواد القائمة على نطاقات الآيات أو نطاقات الكلمات."
 
 msgid "Groups are added, moved and deleted in the source language; translations follow them."
-msgstr "تُضاف المجموعات وتُنقل وتُحذف في اللغة الأصلية، وتتبعها الترجمات."
+msgstr "تُضاف النطاقات وتُنقل وتُحذف في اللغة الأصلية، وتتبعها الترجمات."
 
 msgid "This draft already has a group with exactly this range."
-msgstr "تحتوي هذه المسودة بالفعل على مجموعة بالنطاق نفسه تمامًا."
+msgstr "تحتوي هذه المسودة بالفعل على هذا النطاق نفسه تمامًا."
 
 msgid "This draft has no such group."
-msgstr "لا تحتوي هذه المسودة على هذه المجموعة."
+msgstr "لا تحتوي هذه المسودة على هذا النطاق."
 
 #, python-brace-format
 msgid "Move or delete the text of groups the source no longer has: {groups}."
-msgstr "انقل أو احذف نص المجموعات التي لم تعد موجودة في اللغة الأصلية: {groups}."
+msgstr "انقل أو احذف نص النطاقات التي لم تعد موجودة في اللغة الأصلية: {groups}."
 
 #, python-brace-format
 msgid "Could not parse the uploaded content file: {reason}"
@@ -737,7 +737,7 @@ msgid "Translation name (Arabic or English) is required."
 msgstr "اسم الترجمة (بالعربية أو الإنجليزية) مطلوب."
 
 msgid "Ayah-group and word-group templates are only available for tafsir."
-msgstr "قوالب مجموعات الآيات ومجموعات الكلمات متاحة للتفسير فقط."
+msgstr "قوالب نطاقات الآيات ونطاقات الكلمات متاحة للتفسير فقط."
 
 msgid "Cannot delete Translation because they are referenced through other objects"
 msgstr "لا يمكن حذف الترجمة لأن هناك بيانات أخرى مرتبطة بها"
@@ -1712,7 +1712,7 @@ msgid "This is a test email to verify the email service is working correctly."
 msgstr "هذه رسالة اختبارية للتأكد من عمل خدمة البريد الإلكتروني بشكل صحيح."
 
 #~ msgid "Write the group's text in at least one column."
-#~ msgstr "اكتب نص المجموعة في عمود واحد على الأقل."
+#~ msgstr "اكتب نص النطاق في عمود واحد على الأقل."
 
 #, python-brace-format
 #~ msgid "Some rows can't be used: they repeat a unit with different text, name a unit that doesn't exist, or can't be read. Fix row(s) {rows} and upload again."
