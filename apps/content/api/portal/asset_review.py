@@ -18,6 +18,7 @@ from apps.content.models import (
 )
 from apps.content.repositories.asset_review import AssetReviewRepository
 from apps.content.services.asset_review import AssetReviewService
+from apps.content.services.asset_templates import group_label
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -160,6 +161,10 @@ class ReviewChangeOut(Schema):
             return f"{obj.ayah.sura_id}:{obj.ayah.number_in_sura}"
         if obj.word_id is not None:
             return f"{obj.word.sura_id}:{obj.word.ayah.number_in_sura}:{obj.word.position_in_ayah}"
+        if obj.from_ayah_id is not None:
+            return group_label(obj.from_ayah, obj.to_ayah)
+        if obj.from_word_id is not None:
+            return group_label(obj.from_word, obj.to_word)
         return _("Page {number}").format(number=obj.page_no)
 
     @staticmethod

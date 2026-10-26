@@ -178,6 +178,51 @@ class TranslationTemplateCreateTests(BaseTestCase):
         self.assertEqual(ctx.exception.status_code, 400)
 
 
+class GroupTemplateCreateTests(BaseTestCase):
+    def _payload(self, **overrides):
+        publisher = baker.make(Publisher)
+        payload = {
+            "name_en": "Grouped",
+            "description_en": "d",
+            "license": LicenseChoice.CC0.value,
+            "language": "ar",
+            "publisher_id": publisher.id,
+        }
+        payload.update(overrides)
+        return payload
+
+    def test_create_translation_where_group_template_should_return_400(self):
+        # Arrange
+        user = User.objects.create_user(email="admin@example.com", name="Admin", is_staff=True)
+        self.authenticate_user(user)
+        self.give_permission(user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
+
+        # Act
+        response = self.client.post(
+            "/portal/translations/", data=self._payload(template=AssetTemplateChoice.AYAH_GROUP.value)
+        )
+
+        # Assert
+        self.assertEqual(response.status_code, 400, response.content)
+        self.assertEqual(response.json()["error_name"], "template_not_allowed")
+        self.assertFalse(Asset.objects.exists())
+
+    def test_create_tafsir_where_group_template_should_create(self):
+        # Arrange
+        user = User.objects.create_user(email="admin@example.com", name="Admin", is_staff=True)
+        self.authenticate_user(user)
+        self.give_permission(user, PermissionChoice.PORTAL_CREATE_TAFSIR)
+
+        # Act
+        response = self.client.post(
+            "/portal/tafsirs/", data=self._payload(template=AssetTemplateChoice.WORD_GROUP.value)
+        )
+
+        # Assert
+        self.assertEqual(response.status_code, 201, response.content)
+        self.assertEqual(Asset.objects.get().template, AssetTemplateChoice.WORD_GROUP)
+
+
 class TafsirTemplateCreateTests(BaseTestCase):
     def _payload(self, **overrides):
         publisher = baker.make(Publisher)

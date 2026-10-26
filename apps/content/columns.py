@@ -26,10 +26,25 @@ PAGE_HEADERS = frozenset({"page", "page_no", "رقم الصفحة"})
 WORD_ID_HEADERS = frozenset({"word_id", "word_index"})
 WORD_POSITION_HEADERS = frozenset({"word", "position", "رقم الكلمة"})
 
+# A group template's row names its range by both ends (exact names, no aliases).
+RANGE_HEADERS_BY_TEMPLATE: dict[str, list[str]] = {
+    AssetTemplateChoice.AYAH_GROUP: ["from_surah", "from_ayah", "to_surah", "to_ayah"],
+    AssetTemplateChoice.WORD_GROUP: ["from_surah", "from_ayah", "from_word", "to_surah", "to_ayah", "to_word"],
+}
+# The covered Quran text a verbose group export carries; the importer ignores it.
+REFERENCE_TEXT_HEADER = "reference_text"
+
 # Names the unit part of a CSV uses (export headers and import aliases): a column
 # key may not shadow them.
 UNIT_HEADERS: frozenset[str] = frozenset(
-    {"surah_name", "ayah_text"}.union(SURA_HEADERS, AYA_HEADERS, PAGE_HEADERS, WORD_ID_HEADERS, WORD_POSITION_HEADERS)
+    {"surah_name", "ayah_text", REFERENCE_TEXT_HEADER}.union(
+        SURA_HEADERS,
+        AYA_HEADERS,
+        PAGE_HEADERS,
+        WORD_ID_HEADERS,
+        WORD_POSITION_HEADERS,
+        *RANGE_HEADERS_BY_TEMPLATE.values(),
+    )
 )
 
 # Not unit headers, but taken by the portal's column routes (`columns/order/`).
@@ -43,6 +58,7 @@ _UNIT_HEADER_BY_TEMPLATE: dict[str, list[str]] = {
     AssetTemplateChoice.AYAH: ["surah", "ayah"],
     AssetTemplateChoice.WORD: ["word_id", "sura", "aya", "word"],
     AssetTemplateChoice.PAGE: ["page"],
+    **RANGE_HEADERS_BY_TEMPLATE,
 }
 
 
@@ -71,10 +87,13 @@ def csv_header(template: str, column_keys: list[str], *, verbose: bool = False) 
     """The CSV header for ``template`` with one text column per key.
 
     ``verbose`` only changes the ayah template, which then also carries the
-    surah name and the ayah text for reviewers.
+    surah name and the ayah text for reviewers, and the group templates, which
+    then carry the covered Quran text (``reference_text``).
     """
     if verbose and template == AssetTemplateChoice.AYAH:
         units = ["surah", "ayah", "surah_name", "ayah_text"]
+    elif verbose and template in RANGE_HEADERS_BY_TEMPLATE:
+        units = [*RANGE_HEADERS_BY_TEMPLATE[template], REFERENCE_TEXT_HEADER]
     else:
         units = _UNIT_HEADER_BY_TEMPLATE[template]
     return [*units, *column_keys]

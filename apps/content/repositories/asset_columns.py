@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from django.db.models import Exists, OuterRef, Q
+from django.db.models import Exists, OuterRef
 
 from apps.content.columns import Snapshot
 from apps.content.models import (
+    GROUP_TEMPLATES,
     Asset,
     AssetColumn,
     AssetLanguage,
@@ -16,6 +17,8 @@ from apps.content.models import (
     VersionStateChoice,
 )
 from apps.content.repositories.asset_content import AssetContentRepository
+from apps.content.services.asset_templates import unit_position, unit_spec_for_template
+from apps.content.unit_keys import UNIT_VALUE_FIELDS, decode_group_key, unit_key_of, unit_q
 from apps.quran.models import Ayah, Word
 
 
@@ -94,11 +97,11 @@ class AssetColumnRepository:
         units: list[int] = []
         rows = (
             version.entries.exclude(text="")
-            .order_by("order", "sura_id", "ayah_id", "word_id", "page_no")
-            .values_list("sura_id", "ayah_id", "word_id", "page_no")[: limit * max(columns, 1)]
+            .order_by("order", *UNIT_VALUE_FIELDS)
+            .values_list(*UNIT_VALUE_FIELDS)[: limit * max(columns, 1)]
         )
         for row in rows:
-            unit_id = next(unit for unit in row if unit is not None)
+            unit_id = unit_key_of(row)
             if unit_id not in units:
                 units.append(unit_id)
                 if len(units) == limit:
@@ -107,12 +110,10 @@ class AssetColumnRepository:
 
     def cells_for_units(self, version: AssetVersion, unit_ids: list[int]) -> Snapshot:
         cells: Snapshot = {}
-        unit_q = Q(sura_id__in=unit_ids) | Q(ayah_id__in=unit_ids) | Q(word_id__in=unit_ids) | Q(page_no__in=unit_ids)
-        for sura_id, ayah_id, word_id, page_no, key, text in version.entries.filter(unit_q).values_list(
-            "sura_id", "ayah_id", "word_id", "page_no", "column__key", "text"
+        for *units, key, text in version.entries.filter(unit_q(unit_ids)).values_list(
+            *UNIT_VALUE_FIELDS, "column__key", "text"
         ):
-            unit_id = next(unit for unit in (sura_id, ayah_id, word_id, page_no) if unit is not None)
-            cells[(unit_id, key)] = text
+            cells[(unit_key_of(units), key)] = text
         return cells
 
     def rebuilt_cells(self, version: AssetVersion) -> Snapshot:
@@ -129,4 +130,12 @@ class AssetColumnRepository:
                 "id", "sura_id", "ayah__number_in_sura", "position_in_ayah"
             )
             return {word_id: [str(word_id), str(sura), str(aya), str(pos)] for word_id, sura, aya, pos in words}
+        if template in GROUP_TEMPLATES:
+            spec = unit_spec_for_template(template)
+            pairs = {unit_id: decode_group_key(unit_id) for unit_id in unit_ids}
+            ends = spec.group_units({end for pair in pairs.values() for end in pair})
+            return {
+                unit_id: [str(part) for end in (start, stop) for part in unit_position(ends[end])]
+                for unit_id, (start, stop) in pairs.items()
+            }
         return {unit_id: [str(unit_id)] for unit_id in unit_ids}  # surah id / page number

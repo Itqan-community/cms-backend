@@ -165,6 +165,10 @@ erDiagram
         int ayah_id
         int word_id
         int page_no
+        int from_ayah_id
+        int to_ayah_id
+        int from_word_id
+        int to_word_id
         text text
         int order
     }
@@ -175,6 +179,10 @@ erDiagram
         int ayah_id
         int word_id
         int page_no
+        int from_ayah_id
+        int to_ayah_id
+        int from_word_id
+        int to_word_id
         string change_type
         text old_text
         text new_text
@@ -266,9 +274,24 @@ An **Asset** is a **derivation** of a Resource. It represents content that has b
 - For recitation assets: linked to a **Reciter** and **Riwayah**, and owns one or more
   **RecitationFolder** variants (see [Recitation-Specific Components](#recitation-specific-components))
 - For text assets (translations and tafsirs): carries a **template** (`surah` / `ayah` /
-  `word` / `page`) that fixes the granularity its entries are keyed to — chosen at
-  creation and **immutable afterwards**. A `page`-template asset additionally links to
-  a **MushafLayout** (its pagination), which every other template leaves unset.
+  `word` / `page`, and for tafsirs only `ayah_group` / `word_group`) that fixes the
+  granularity its entries are keyed to — chosen at creation and **immutable afterwards**.
+  A `page`-template asset additionally links to a **MushafLayout** (its pagination),
+  which every other template leaves unset.
+- Group templates: each row covers a publisher-defined **range** — `from_ayah`..`to_ayah`
+  or `from_word`..`to_word` on the entry / change — for commentary that explains several
+  ayahs together or only part of an ayah. Ranges may overlap, leave gaps and cross ayah /
+  surah boundaries; one range appears once per column. Internally a range is keyed by one
+  integer, `from_id * 1_000_000 + to_id` (`apps/content/unit_keys.py`), so the content,
+  diff and review pipelines handle it like any unit id; changing a range is recorded as
+  the old range removed and the new one added. Only the source language adds, moves or
+  deletes groups (`POST/PUT/DELETE …/versions/{id}/groups/`); a translated language lists
+  its source's ranges, may only write text for them (its uploads too), and cannot commit
+  text left on a range the source no longer has (`orphaned_groups`). The portal previews a
+  range's mushaf text with `GET /portal/content/quran-range/`. The CSV has one row per
+  range: `from_surah,from_ayah,to_surah,to_ayah` (ayah group) or
+  `from_surah,from_ayah,from_word,to_surah,to_ayah,to_word` (word group, word positions
+  within their ayah), then the text columns; group files are always imported strictly.
 
 ### 5. AssetVersion
 
@@ -280,7 +303,8 @@ Similar to ResourceVersion, **AssetVersion** tracks each uploaded file version o
 - For translations and tafsirs, an uploaded CSV is imported into per-unit entries. To
   guide uploaders the portal serves an empty fill-in CSV per template — one row per
   surah / ayah / word / page with a blank cell per text column (just `text` before the
-  asset exists), in the same columns as a version export, so a filled-in sheet imports as is:
+  asset exists; a group template has no rows to list, so its sheet is the header alone),
+  in the same columns as a version export, so a filled-in sheet imports as is:
   `GET /portal/content/{category}/csv-template/?template=&mushaf_layout_id=` (asset
   creation; `page` needs the layout) and `GET /portal/content/{category}/{slug}/csv-template/`
   (an existing asset's template).

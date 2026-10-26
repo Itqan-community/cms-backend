@@ -186,6 +186,30 @@ class ContentSamplesTest(BaseTestCase):
         self.assertEqual(200, response.status_code)
         self.assertEqual({"surah": 2, "ayah": 255, "text": verse_text}, response.json()["sample_verse"])
 
+    def test_get_tafsir_sample_where_only_group_tafsir_exists_should_return_404(self):
+        """A group tafsir has no per-ayah text, so it is never picked as the sample."""
+        # Arrange
+        tafsir_asset = baker.make(
+            Asset,
+            category=CategoryChoice.TAFSIR,
+            template=AssetTemplateChoice.AYAH_GROUP,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
+            name="Grouped Tafsir",
+            language="ar",
+        )
+        payload = json.dumps({"1:1": "نص"}, ensure_ascii=False).encode("utf-8")
+        publish(
+            baker.make(AssetVersion, asset=tafsir_asset, name="v1", file_url=ContentFile(payload, name="tafsir.json"))
+        )
+
+        # Act
+        response = self.client.get("/sample-data/tafsir/")
+
+        # Assert
+        self.assertEqual(404, response.status_code)
+        self.assertEqual("tafsir_not_found", response.json()["error_name"])
+
     def test_get_tafsir_sample_where_latest_version_lacks_the_verse_should_return_404(self):
         """A READY asset whose file omits the requested verse fails honestly (typed 404)."""
         # Arrange - READY asset whose file only carries a different ayah
