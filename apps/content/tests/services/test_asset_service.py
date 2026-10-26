@@ -4,7 +4,7 @@ from model_bakery import baker
 from apps.content.models import Asset, AssetAccess, AssetAccessRequest, AssetVersion
 from apps.content.services.asset import AssetService
 from apps.core.tests.base import BaseTestCase
-from apps.users.models import User
+from apps.users.models import LanguageChoice, User
 
 
 class TestAssetService(BaseTestCase):
@@ -19,7 +19,7 @@ class TestAssetService(BaseTestCase):
             qiraah=None,
         )
 
-        user1 = baker.make(User, email="user1@example.com")
+        user1 = baker.make(User, email="user1@example.com", preferred_language=LanguageChoice.ENGLISH)
 
         # Grant access to user1
         request = baker.make(AssetAccessRequest, developer_user=user1, asset=asset, status="approved")

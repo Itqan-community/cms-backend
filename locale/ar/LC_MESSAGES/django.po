@@ -293,6 +293,14 @@ msgid "There are no changes to publish."
 msgstr "لا توجد تغييرات للنشر."
 
 #, python-brace-format
+msgid "Your access request for {asset_name} was accepted"
+msgstr "تم قبول طلب وصولك إلى {asset_name}"
+
+#, python-brace-format
+msgid "Your access request for {asset_name} was rejected"
+msgstr "تم رفض طلب وصولك إلى {asset_name}"
+
+#, python-brace-format
 msgid "You have {count} pending access request(s)"
 msgstr "لديك {count} طلب(ات) وصول معلقة"
 
@@ -517,6 +525,10 @@ msgid "This asset has no content template."
 msgstr "هذه المادة ليس لها قالب محتوى."
 
 #, python-brace-format
+msgid "New Update for {asset_name}"
+msgstr "تحديث جديد لـ {asset_name}"
+
+#, python-brace-format
 msgid "Publisher with id {id} not found."
 msgstr "لم يتم العثور على الناشر بالمعرّف {id}."
 
@@ -552,6 +564,10 @@ msgstr "يمكنك فقط حذف تقارير المشكلات الخاصة بك
 
 msgid "You can only delete pending issue reports."
 msgstr "يمكنك فقط حذف تقارير المشكلات المعلقة."
+
+#, python-brace-format
+msgid "Your issue status has been updated: {old_status} → {new_status}"
+msgstr "تم تحديث حالة بلاغك: {old_status} ← {new_status}"
 
 msgid "Mushaf name (Arabic or English) is required."
 msgstr "اسم المصحف (بالعربية أو الإنجليزية) مطلوب."
@@ -1057,6 +1073,17 @@ msgstr "هذه الدعوة لم تعد صالحة."
 msgid "Only pending invitations can be cancelled."
 msgstr "يمكن إلغاء الدعوات المعلقة فقط."
 
+#, python-brace-format
+msgid "You're invited to {publisher_name}"
+msgstr "تمت دعوتك إلى {publisher_name}"
+
+msgid "An administrator"
+msgstr "أحد المسؤولين"
+
+#, python-brace-format
+msgid "Welcome to {publisher_name}"
+msgstr "مرحبًا بك في {publisher_name}"
+
 msgid "Sura does not exist."
 msgstr "السورة غير موجودة."
 
@@ -1189,6 +1216,12 @@ msgstr "يجب أن يكون للمستخدم المتميز is_staff=True."
 msgid "Superuser must have is_superuser=True."
 msgstr "يجب أن يكون للمستخدم المتميز is_superuser=True."
 
+msgid "English"
+msgstr "الإنجليزية"
+
+msgid "Arabic"
+msgstr "العربية"
+
 msgid "Name of User"
 msgstr "اسم المستخدم"
 
@@ -1197,6 +1230,12 @@ msgstr "البريد الإلكتروني"
 
 msgid "Phone Number"
 msgstr "رقم الهاتف"
+
+msgid "Preferred Language"
+msgstr "اللغة المفضلة"
+
+msgid "Language of the emails sent to this user."
+msgstr "لغة الرسائل البريدية المرسلة إلى هذا المستخدم."
 
 msgid "A name for the API key. 50 characters max."
 msgstr "اسم لمفتاح API. 50 حرفاً كحد أقصى."

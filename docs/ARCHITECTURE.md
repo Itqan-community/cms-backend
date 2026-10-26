@@ -607,6 +607,24 @@ response carries an advisory `X-Itqan-Warning` header; a missing header is silen
 
 ---
 
+## Email Language
+
+Every user has a `preferred_language` (`en` or `ar`, default `ar`). Signup (email or
+social) stores the language of the signup request (`Accept-Language`); users change it
+through `PUT /cms-api/auth/profile/`, which also returns it.
+
+All emails render in the recipient's preferred language, whether they are sent in a
+request or a background task:
+- `apps.core.services.email.EmailService` looks up each recipient by email, groups
+  recipients by language and renders the subject and template once per language.
+  Addresses without an account (e.g. a publisher's `contact_email`) get the
+  `language` argument, or the active language when it is omitted. Callers pass the
+  subject as a lazy string (`format_lazy(gettext_lazy(...))`) so it is translated too.
+- allauth emails (`AccountAdapter.send_mail`) use the account owner's language, and
+  the request's language when the address has no account.
+
+---
+
 
 
 ## Distribution Channels

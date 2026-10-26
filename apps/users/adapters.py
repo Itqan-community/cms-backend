@@ -10,7 +10,11 @@ from django.conf import settings
 from django.core.mail import EmailMessage, EmailMultiAlternatives
 from django.template import TemplateDoesNotExist
 from django.template.loader import render_to_string
+from django.utils import translation
 from django.utils.translation import gettext_lazy as _
+
+from apps.users.models import LanguageChoice
+from apps.users.repositories.user import UserRepository
 
 
 class AccountAdapter(DefaultAccountAdapter):
@@ -23,7 +27,19 @@ class AccountAdapter(DefaultAccountAdapter):
         # recipient's language (allauth activates it before sending) instead of
         # the non-translatable Site.name from the database.
         context.setdefault("site_name", _("Itqan Community"))
-        return super().send_mail(template_prefix, email, context)
+        # Account holders get the email in their saved language; an address with
+        # no account (e.g. a password reset for an unknown email) keeps the request's.
+        language = UserRepository().get_preferred_languages([email]).get(email.lower()) or translation.get_language()
+        with translation.override(language):
+            return super().send_mail(template_prefix, email, context)
+
+    def new_user(self, request):
+        # Also reached from SocialAccountAdapter.new_user, so it covers social signups.
+        user = super().new_user(request)
+        language = translation.get_language_from_request(request)
+        if language in LanguageChoice.values:
+            user.preferred_language = language
+        return user
 
     def render_mail(self, template_prefix, email, context, headers=None):
         # allauth hardcodes _subject.txt; we override to use .html subject templates
