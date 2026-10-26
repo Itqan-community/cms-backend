@@ -33,7 +33,7 @@ from apps.usage_tracking.models import (
     TrafficStatusClass,
 )
 from apps.usage_tracking.repositories.search_events import SearchEventRepository
-from apps.usage_tracking.repositories.traffic import TrafficRepository
+from apps.usage_tracking.repositories.traffic import DJANGO_FOLDIN_JOB, LOGPUSH_JOB, TrafficRepository
 from apps.usage_tracking.services import usage_reports
 from apps.usage_tracking.services.search_terms import normalize_term
 from apps.usage_tracking.services.traffic_maintenance import rebuild_rollups
@@ -193,6 +193,25 @@ class TestListenedSeconds(_ReportTestCase):
         # Assert
         assert rebuilt is None
         rebuild_hour.assert_not_called()
+
+    def test_rebuild_rollups_where_fold_in_holds_its_lock_should_skip_and_release_the_others(self):
+        # Arrange
+        _event("r1", H10, asset_id=self.asset.id)
+
+        # Act
+        with (
+            patch.object(
+                TrafficRepository, TrafficRepository.try_lock.__name__, side_effect=lambda job: job != DJANGO_FOLDIN_JOB
+            ),
+            patch.object(TrafficRepository, TrafficRepository.unlock.__name__) as unlock,
+            patch.object(TrafficRepository, TrafficRepository.rebuild_hour.__name__) as rebuild_hour,
+        ):
+            rebuilt = rebuild_rollups(date(2026, 10, 1))
+
+        # Assert
+        assert rebuilt is None
+        rebuild_hour.assert_not_called()
+        assert [call.args[0] for call in unlock.call_args_list] == [LOGPUSH_JOB]
 
 
 class TestReciterDimensions(_ReportTestCase):

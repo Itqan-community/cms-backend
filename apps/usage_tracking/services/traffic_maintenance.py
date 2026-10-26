@@ -7,9 +7,17 @@ import logging
 
 from django.conf import settings
 
-from apps.usage_tracking.repositories.traffic import LOGPUSH_JOB, MAINTENANCE_JOB, TrafficRepository
+from apps.usage_tracking.repositories.traffic import (
+    DJANGO_FOLDIN_JOB,
+    LOGPUSH_JOB,
+    MAINTENANCE_JOB,
+    TrafficRepository,
+)
 
 logger = logging.getLogger(__name__)
+
+# Every job that rebuilds hours (Logpush import, Django fold-in) or purges events (maintenance).
+_REBUILD_LOCKS = (LOGPUSH_JOB, DJANGO_FOLDIN_JOB, MAINTENANCE_JOB)
 
 
 def add_months(month: date, months: int) -> date:
@@ -40,12 +48,16 @@ def rebuild_rollups(since: date) -> int | None:
     """Rebuild the hourly and daily rollups of every hour since `since` that still has events.
 
     Hours whose events were purged are left alone (rebuilding them would erase their rollups).
-    Holds the Logpush import lock, so it never races the hourly import; returns None when busy.
+    Holds the Logpush, fold-in and maintenance locks, so it never races a job that rebuilds the
+    same hours or purges their events; returns None when any of them is busy.
     """
     repo = TrafficRepository()
-    if not repo.try_lock(LOGPUSH_JOB):
-        return None
+    held: list[str] = []
     try:
+        for job in _REBUILD_LOCKS:
+            if not repo.try_lock(job):
+                return None
+            held.append(job)
         play_window = timedelta(minutes=settings.ASSET_DOWNLOAD_PLAY_WINDOW_MINUTES)
         hours = repo.event_hours_since(datetime.combine(since, time.min, tzinfo=UTC))
         for hour in hours:
@@ -53,4 +65,5 @@ def rebuild_rollups(since: date) -> int | None:
         logger.info("rebuild_rollups: rebuilt %d hour(s) since %s", len(hours), since)
         return len(hours)
     finally:
-        repo.unlock(LOGPUSH_JOB)
+        for job in reversed(held):
+            repo.unlock(job)
