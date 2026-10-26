@@ -1176,6 +1176,9 @@ msgstr "التطبيق غير موجود."
 msgid "This report cannot be split by {name}."
 msgstr "لا يمكن تقسيم هذا التقرير حسب {name}."
 
+msgid "The hour-of-week breakdown cannot be ordered by growth."
+msgstr "لا يمكن ترتيب التوزيع حسب ساعات الأسبوع بحسب النمو."
+
 #, python-brace-format
 msgid "Listener reports only cover the last {months} months."
 msgstr "تقارير المستمعين تغطي آخر {months} شهرًا فقط."

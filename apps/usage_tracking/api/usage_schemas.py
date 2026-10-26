@@ -106,7 +106,8 @@ class BreakdownQuery(ReportQuery):
     compare: Literal["previous_period"] | None = None
     tz: str = Field("UTC", max_length=64, description="IANA time zone, used by `by=hour_of_week` only.")
     order: Literal["value", "growth"] = Field(
-        "value", description="`growth`: largest increase over the previous period first (implies `compare`)."
+        "value",
+        description="`growth`: largest increase over the previous period first (implies `compare`; not with `by=hour_of_week`).",
     )
 
 

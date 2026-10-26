@@ -669,7 +669,9 @@ def breakdown(
     check_dimension(scope, by, scope.dimensions)
     zone = parse_tz(tz)
     check_scope(scope, filters)
-    by_growth = order == "growth" and by != "hour_of_week"
+    if order == "growth" and by == "hour_of_week":
+        raise ItqanError("invalid_dimension", _("The hour-of-week breakdown cannot be ordered by growth."), 400)
+    by_growth = order == "growth"
     compare = compare or by_growth
 
     def compute() -> dict[str, Any]:

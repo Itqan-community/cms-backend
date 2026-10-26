@@ -261,6 +261,17 @@ class TestReciterDimensions(_ReportTestCase):
             ("Recitation A", 7, 6),
         ]
 
+    def test_breakdown_where_order_is_growth_by_hour_of_week_should_reject(self):
+        # Arrange
+        self._allow()
+
+        # Act
+        response = self._get("breakdown/?start_date=2026-10-10&end_date=2026-10-16&by=hour_of_week&order=growth")
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        assert response.json()["error_name"] == "invalid_dimension"
+
 
 class TestListenerGrowth(_ReportTestCase):
     def setUp(self):
