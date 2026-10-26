@@ -1136,6 +1136,9 @@ msgstr "الأجهزة والشبكات المختلفة التي نزّلت ا�
 msgid "Distinct end users reported by apps through the X-External-User-Id header."
 msgstr "المستخدمون النهائيون المختلفون الذين أبلغت عنهم التطبيقات عبر الترويسة X-External-User-Id."
 
+msgid "Seconds of audio delivered, from the bytes sent and each file's length (estimate). Apps that download a whole file before playing count its full length."
+msgstr "ثوانٍ من الصوت المُرسَل، محسوبة من البايتات المرسلة وطول كل ملف (تقدير). التطبيقات التي تنزّل الملف كاملًا قبل تشغيله تُحتسب بطوله الكامل."
+
 msgid "Counts are lower bounds: apps and browsers cache files locally and some content is re-hosted, so that usage never reaches Itqan."
 msgstr "الأرقام حد أدنى: تحفظ التطبيقات والمتصفحات الملفات محليًا ويُعاد استضافة بعض المحتوى، فلا يصل ذلك الاستخدام إلى إتقان."
 
@@ -1172,6 +1175,14 @@ msgstr "التطبيق غير موجود."
 #, python-brace-format
 msgid "This report cannot be split by {name}."
 msgstr "لا يمكن تقسيم هذا التقرير حسب {name}."
+
+#, python-brace-format
+msgid "Listener reports only cover the last {months} months."
+msgstr "تقارير المستمعين تغطي آخر {months} شهرًا فقط."
+
+#, python-brace-format
+msgid "Cohort reports are limited to {days} days."
+msgstr "تقارير الدفعات محدودة بـ {days} يومًا."
 
 msgid "Itqan Community"
 msgstr "مجتمع اتقان"

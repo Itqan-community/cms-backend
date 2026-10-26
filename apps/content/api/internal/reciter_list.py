@@ -13,6 +13,8 @@ from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
 from apps.core.ninja_utils.types import AbsoluteUrl
+from apps.usage_tracking.decorators.track_search import track_search
+from apps.usage_tracking.models import SearchSurface
 
 router = ItqanRouter(tags=[NinjaTag.RECITERS])
 
@@ -43,6 +45,7 @@ class ReciterFilter(FilterSchema):
 
 
 @router.get("reciters/", response=list[ReciterOut], auth=None)
+@track_search(SearchSurface.RECITERS)
 @paginate
 @ordering(ordering_fields=["name", "name_ar", "name_en", "created_at", "updated_at"])
 @searching(search_fields=["name", "name_en", "name_ar", "slug"])

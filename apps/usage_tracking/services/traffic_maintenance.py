@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, time
+from datetime import UTC, date, datetime, time, timedelta
 import logging
 
 from django.conf import settings
 
-from apps.usage_tracking.repositories.traffic import MAINTENANCE_JOB, TrafficRepository
+from apps.usage_tracking.repositories.traffic import LOGPUSH_JOB, MAINTENANCE_JOB, TrafficRepository
 
 logger = logging.getLogger(__name__)
 
@@ -34,3 +34,23 @@ def run_usage_maintenance(now: datetime | None = None) -> int:
         return deleted
     finally:
         repo.unlock(MAINTENANCE_JOB)
+
+
+def rebuild_rollups(since: date) -> int | None:
+    """Rebuild the hourly and daily rollups of every hour since `since` that still has events.
+
+    Hours whose events were purged are left alone (rebuilding them would erase their rollups).
+    Holds the Logpush import lock, so it never races the hourly import; returns None when busy.
+    """
+    repo = TrafficRepository()
+    if not repo.try_lock(LOGPUSH_JOB):
+        return None
+    try:
+        play_window = timedelta(minutes=settings.ASSET_DOWNLOAD_PLAY_WINDOW_MINUTES)
+        hours = repo.event_hours_since(datetime.combine(since, time.min, tzinfo=UTC))
+        for hour in hours:
+            repo.rebuild_hour(hour, play_window)
+        logger.info("rebuild_rollups: rebuilt %d hour(s) since %s", len(hours), since)
+        return len(hours)
+    finally:
+        repo.unlock(LOGPUSH_JOB)

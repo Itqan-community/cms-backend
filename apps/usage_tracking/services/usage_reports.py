@@ -23,7 +23,7 @@ from django.http import HttpResponse
 from django.utils.http import content_disposition_header
 from django.utils.translation import get_language, gettext_lazy as _
 
-from apps.content.models import Asset
+from apps.content.models import Asset, CategoryChoice
 from apps.core.ninja_utils.errors import ItqanError
 from apps.usage_tracking.models import (
     AUDIO_KINDS,
@@ -35,7 +35,9 @@ from apps.usage_tracking.models import (
     UniqueScope,
 )
 from apps.usage_tracking.repositories import usage_reports as repo
+from apps.usage_tracking.repositories.search_events import SearchEventRepository
 from apps.usage_tracking.repositories.usage_reports import Period
+from apps.usage_tracking.services.search_terms import load_entities, match_entity, match_out
 
 Metric = Literal[
     "plays",
@@ -48,6 +50,7 @@ Metric = Literal[
     "unique_downloaders",
     "unique_end_users",
     "views",
+    "listening_seconds",
 ]
 Granularity = Literal["hour", "day", "week", "month"]
 
@@ -82,6 +85,7 @@ ROLLUP_METRICS: dict[str, RollupMetric] = {
     "views": RollupMetric("sessions", (TrafficKind.VIEW,)),
     "requests": RollupMetric("requests", None),
     "bytes": RollupMetric("bytes", None),
+    "listening_seconds": RollupMetric("listened_seconds", tuple(AUDIO_KINDS)),
 }
 UNIQUE_METRICS: dict[str, UniqueMetric] = {
     "unique_listeners": UniqueMetric(
@@ -109,6 +113,10 @@ METRIC_DEFINITIONS = {
     "unique_listeners": _("Distinct devices and networks that played audio in the period (estimate)."),
     "unique_downloaders": _("Distinct devices and networks that downloaded files in the period (estimate)."),
     "unique_end_users": _("Distinct end users reported by apps through the X-External-User-Id header."),
+    "listening_seconds": _(
+        "Seconds of audio delivered, from the bytes sent and each file's length (estimate). "
+        "Apps that download a whole file before playing count its full length."
+    ),
 }
 
 DISCLAIMERS = {
@@ -138,6 +146,9 @@ class ReportFilters:
     language: str | None = None
     version_id: int | None = None
     surah: int | None = None
+    reciter_id: int | None = None
+    riwayah_id: int | None = None
+    qiraah_id: int | None = None
 
 
 def range_days(start: date, end: date) -> int:
@@ -196,7 +207,7 @@ def parse_tz(name: str) -> ZoneInfo:
 # Scopes
 # ---------------------------------------------------------------------------------------------
 
-SPLIT_DIMENSIONS = frozenset(repo.DIMENSION_COLUMNS)
+SPLIT_DIMENSIONS = frozenset(repo.DIMENSION_COLUMNS) | {"reciter", "riwayah", "qiraah"}
 BREAKDOWN_DIMENSIONS = SPLIT_DIMENSIONS | {"hour_of_week"}
 ADMIN_DIMENSIONS = BREAKDOWN_DIMENSIONS | {"publisher"}
 PRIVACY_FLOOR = 3
@@ -294,6 +305,13 @@ def _filters_q(filters: ReportFilters) -> Q:
         q &= Q(asset_id=filters.asset_id)
     if filters.category:
         q &= Q(asset_id__in=Asset.objects.filter(category=filters.category).values("id"))
+    for value, column in (
+        (filters.reciter_id, "reciter_id"),
+        (filters.riwayah_id, "riwayah_id"),
+        (filters.qiraah_id, "qiraah_id"),
+    ):
+        if value is not None:
+            q &= Q(asset_id__in=Asset.objects.filter(**{column: value}).values("id"))
     for value, column in (
         (filters.kind, "kind"),
         (filters.channel, "channel"),
@@ -395,7 +413,7 @@ def disclaimers() -> list[dict[str, str]]:
 
 
 def _labels(dimension: str, keys: list[str]) -> dict[str, str]:
-    if dimension not in ("asset", "app", "publisher", "version"):
+    if dimension not in ("asset", "app", "publisher", "version", "reciter", "riwayah", "qiraah"):
         return {}
     raw = [int(key) for key in keys if key.isdigit()]
     return {str(key): label for key, label in repo.labels(dimension, raw).items()}
@@ -643,24 +661,35 @@ def breakdown(
     limit: int = 10,
     compare: bool = False,
     tz: str = "UTC",
+    order: str = "value",
 ) -> dict[str, Any]:
+    """`order="growth"` ranks by current − previous (largest first) and implies `compare`."""
     validate_filters(filters)
     check_metric_kind(metric, filters)
     check_dimension(scope, by, scope.dimensions)
     zone = parse_tz(tz)
     check_scope(scope, filters)
+    by_growth = order == "growth" and by != "hour_of_week"
+    compare = compare or by_growth
 
     def compute() -> dict[str, Any]:
         base_q = _base_q(scope, filters)
         period = Period(filters.start_date, filters.end_date)
         is_unique = metric in UNIQUE_METRICS
-        groups = _groups(base_q, period, metric, by, zone, limit=limit if is_unique and by != "hour_of_week" else None)
-        if by == "hour_of_week":
+        top_only = is_unique and by != "hour_of_week" and not by_growth
+        groups = _groups(base_q, period, metric, by, zone, limit=limit if top_only else None)
+        before: dict[str, tuple[Any, int]] = {}
+        if by_growth:
+            # Every previous value is needed to rank, including keys absent from this period.
+            before = _groups(base_q, Period(*previous_period(period.start, period.end)), metric, by, zone)
+            for key, (raw, _value) in before.items():
+                groups.setdefault(key, (raw, 0))
+            ranked = sorted(groups, key=lambda key: (-(groups[key][1] - before.get(key, (None, 0))[1]), key))[:limit]
+        elif by == "hour_of_week":
             ranked = sorted(groups, key=lambda key: tuple(int(part) for part in key.split("-")))
         else:
             ranked = sorted(groups, key=lambda key: (-groups[key][1], key))[:limit]
-        before: dict[str, tuple[Any, int]] = {}
-        if compare and ranked:
+        if compare and ranked and not by_growth:
             before = _groups(
                 base_q,
                 Period(*previous_period(period.start, period.end)),
@@ -709,15 +738,251 @@ def breakdown(
             "data_updated_at": repo.data_updated_at(),
         }
 
-    params = {**asdict(filters), "metric": metric, "by": by, "limit": limit, "cmp": compare, "tz": tz}
+    params = {**asdict(filters), "metric": metric, "by": by, "limit": limit, "cmp": compare, "tz": tz, "order": order}
     return _cached(scope, "breakdown", params, compute)
+
+
+# ---------------------------------------------------------------------------------------------
+# Listener growth, cohorts and spread (recitations; traffic events only, so within retention)
+# ---------------------------------------------------------------------------------------------
+
+MAX_COHORT_DAYS = 26 * 7
+FIRST_SEEN_DIMENSIONS = ("country", "app")
+_LISTENERS = UNIQUE_METRICS["unique_listeners"]
+
+
+def _clamp_to_retention(filters: ReportFilters) -> tuple[Period, date | None]:
+    """The requested period starting no earlier than the retention cutoff, and the cutoff when clamped."""
+    cutoff = retention_cutoff()
+    if filters.end_date < cutoff:
+        raise ItqanError(
+            "range_before_retention",
+            _("Listener reports only cover the last {months} months.").format(
+                months=settings.USAGE_EVENT_RETENTION_MONTHS
+            ),
+            400,
+        )
+    if filters.start_date >= cutoff:
+        return Period(filters.start_date, filters.end_date), None
+    return Period(cutoff, filters.end_date), cutoff
+
+
+def listeners(scope: ReportScope, filters: ReportFilters, *, granularity: str = "day") -> dict[str, Any]:
+    """New, returning and cumulative listeners per day, week or month.
+
+    First seen counts from the retention cutoff, so listeners active before it look new.
+    """
+    validate_filters(filters)
+    check_scope(scope, filters)
+
+    def compute() -> dict[str, Any]:
+        base_q = _base_q(scope, filters)
+        period, clamped = _clamp_to_retention(filters)
+        cutoff = retention_cutoff()
+        buckets = bucket_starts(period.start, period.end, granularity)
+        before, new = repo.new_listeners(base_q, cutoff, period, _LISTENERS.kinds, _LISTENERS.statuses, granularity)
+        active = {
+            bucket: value
+            for bucket, _key, value in repo.unique_series(base_q, period, _unique_spec("unique_listeners"), granularity)
+        }
+        points = []
+        cumulative = before
+        for bucket in buckets:
+            fresh = new.get(bucket, 0)
+            cumulative += fresh
+            points.append(
+                {
+                    "t": bucket.isoformat(),
+                    "new": fresh,
+                    "returning": max(active.get(bucket, 0) - fresh, 0),
+                    "cumulative": cumulative,
+                }
+            )
+        return {
+            "granularity": granularity,
+            "points": points,
+            "clamped_start": clamped,
+            "data_updated_at": repo.data_updated_at(),
+        }
+
+    return _cached(scope, "listeners", {**asdict(filters), "g": granularity}, compute)
+
+
+def cohorts(scope: ReportScope, filters: ReportFilters) -> dict[str, Any]:
+    """Weekly cohorts (week first seen, inside the range) and the share of each still active per week."""
+    validate_filters(filters)
+    if range_days(filters.start_date, filters.end_date) > MAX_COHORT_DAYS:
+        raise ItqanError(
+            "range_too_large",
+            _("Cohort reports are limited to {days} days.").format(days=MAX_COHORT_DAYS),
+            400,
+        )
+    check_scope(scope, filters)
+
+    def compute() -> dict[str, Any]:
+        period, clamped = _clamp_to_retention(filters)
+        rows = repo.listener_cohorts(
+            _base_q(scope, filters), retention_cutoff(), period, _LISTENERS.kinds, _LISTENERS.statuses
+        )
+        active: dict[date, dict[int, int]] = defaultdict(dict)
+        for cohort, week, count in rows:
+            active[cohort][(week - cohort).days // 7] = count
+        weeks = bucket_starts(period.start, period.end, "week")
+        result = []
+        for cohort in weeks:
+            size = active.get(cohort, {}).get(0, 0)
+            if not size:
+                continue
+            offsets = range((weeks[-1] - cohort).days // 7 + 1)
+            result.append(
+                {
+                    "week": cohort,
+                    "size": size,
+                    "retention": [round(active[cohort].get(offset, 0) / size, 4) for offset in offsets],
+                }
+            )
+        return {"cohorts": result, "clamped_start": clamped, "data_updated_at": repo.data_updated_at()}
+
+    return _cached(scope, "cohorts", asdict(filters), compute)
+
+
+def first_seen(scope: ReportScope, filters: ReportFilters, *, by: str, limit: int = 50) -> dict[str, Any]:
+    """When each country or app first played this content (since the retention cutoff), newest first."""
+    validate_filters(filters)
+    check_scope(scope, filters)
+
+    def compute() -> dict[str, Any]:
+        base_q = _base_q(scope, filters)
+        period, clamped = _clamp_to_retention(filters)
+        rows = repo.first_seen(base_q, retention_cutoff(), period.end, _LISTENERS.kinds, _LISTENERS.statuses, by, limit)
+        plays = repo.rollup_groups(base_q, period, "sessions", tuple(AUDIO_KINDS), by, UTC)
+        label_map = _labels(by, [str(raw) for raw, _first in rows])
+        return {
+            "by": by,
+            "items": [
+                {
+                    "key": str(raw),
+                    "label": label_map.get(str(raw)),
+                    "first_seen": first.date(),
+                    # Unknown when the range starts before the events kept: everything looks new.
+                    "new": None if clamped else first.date() >= period.start,
+                    "plays": plays.get(str(raw), (raw, 0))[1],
+                }
+                for raw, first in rows
+            ],
+            "clamped_start": clamped,
+            "data_updated_at": repo.data_updated_at(),
+        }
+
+    return _cached(scope, "first_seen", {**asdict(filters), "by": by, "limit": limit}, compute)
+
+
+# ---------------------------------------------------------------------------------------------
+# Gallery search terms and recitation coverage (spec §21.4, §21.5)
+# ---------------------------------------------------------------------------------------------
+
+SEARCH_TERMS_FLOOR = 3
+COVERAGE_DEMAND_DAYS = 90
+ALL_SURAHS = frozenset(range(1, 115))
+
+
+def search_terms(start_date: date, end_date: date, *, zero_results: bool = False, limit: int = 50) -> dict[str, Any]:
+    """Gallery searches by every visitor (not only those that found the caller's content), recorded live.
+
+    Terms searched by fewer than `SEARCH_TERMS_FLOOR` distinct searchers are never returned.
+    """
+    validate_filters(ReportFilters(start_date=start_date, end_date=end_date))
+
+    def compute() -> dict[str, Any]:
+        period = Period(start_date, end_date)
+        rows = SearchEventRepository().terms(
+            repo.day_start(period.start),
+            repo.day_start(period.end + timedelta(days=1)),
+            min_searchers=SEARCH_TERMS_FLOOR,
+            limit=limit,
+            zero_results_only=zero_results,
+        )
+        entities = load_entities() if rows else []
+        return {
+            "items": [
+                {
+                    "term": row["term"],
+                    "searchers": row["searchers"],
+                    "searches": row["searches"],
+                    "zero_results": row["zero_results"],
+                    "latest_results": row["latest_results"],
+                    "match": match_out(match_entity(row["term"], entities)),
+                }
+                for row in rows
+            ]
+        }
+
+    # Every scope sees the same searches; the cache is shared.
+    return cached("search_terms", [start_date, end_date, zero_results, limit], compute)
+
+
+def recitation_coverage(
+    scope: ReportScope,
+    *,
+    asset_id: int | None = None,
+    reciter_id: int | None = None,
+    riwayah_id: int | None = None,
+    qiraah_id: int | None = None,
+    incomplete_only: bool = True,
+    limit: int = 50,
+) -> dict[str, Any]:
+    """Recitations in scope with their missing surahs, ordered by platform-wide demand, and timing coverage."""
+    assets = (scope.assets if scope.assets is not None else Asset.objects.all()).filter(
+        category=CategoryChoice.RECITATION
+    )
+    if asset_id is not None and not assets.filter(id=asset_id).exists():
+        raise ItqanError("asset_not_found", _("Asset does not exist."), 404)
+    for value, column in (
+        (asset_id, "id"),
+        (reciter_id, "reciter_id"),
+        (riwayah_id, "riwayah_id"),
+        (qiraah_id, "qiraah_id"),
+    ):
+        if value is not None:
+            assets = assets.filter(**{column: value})
+
+    def compute() -> dict[str, Any]:
+        rows = repo.recitation_coverage(assets)
+        if incomplete_only:
+            rows = [row for row in rows if len(row["surahs"]) < len(ALL_SURAHS)]
+        rows = rows[:limit]
+        demand = repo.surah_plays(datetime.now(UTC).date() - timedelta(days=COVERAGE_DEMAND_DAYS)) if rows else {}
+        items = []
+        for row in rows:
+            missing = sorted(ALL_SURAHS - set(row["surahs"]))
+            items.append(
+                {
+                    "asset_id": row["id"],
+                    "name": row["name"],
+                    "surahs": len(row["surahs"]),
+                    "missing": missing,
+                    "missing_by_demand": sorted(missing, key=lambda surah: (-demand.get(surah, 0), surah)),
+                    "timed_share": round(row["timed_tracks"] / row["tracks"], 4) if row["tracks"] else None,
+                }
+            )
+        return {"items": items, "demand_days": COVERAGE_DEMAND_DAYS, "data_updated_at": repo.data_updated_at()}
+
+    params = {
+        "asset": asset_id,
+        "reciter": reciter_id,
+        "riwayah": riwayah_id,
+        "qiraah": qiraah_id,
+        "incomplete": incomplete_only,
+        "limit": limit,
+    }
+    return _cached(scope, "recitation_coverage", params, compute)
 
 
 # ---------------------------------------------------------------------------------------------
 # CSV export
 # ---------------------------------------------------------------------------------------------
 
-EXPORT_METRICS = ("plays", "downloads", "installs", "api_calls", "views", "requests", "bytes")
+EXPORT_METRICS = ("plays", "downloads", "installs", "api_calls", "views", "requests", "bytes", "listening_seconds")
 _FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
 
 

@@ -20,6 +20,8 @@ from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.usage_tracking.decorators.track_search import track_search
+from apps.usage_tracking.models import SearchSurface
 
 router = ItqanRouter(tags=[NinjaTag.ASSETS])
 logger = logging.getLogger(__name__)
@@ -64,6 +66,7 @@ class AssetFilter(FilterSchema):
 
 
 @router.get("assets/", response=list[ListAssetOut], auth=None)
+@track_search(SearchSurface.ASSETS)
 @paginate
 @ordering(ordering_fields=["name", "category"])
 @searching(search_fields=["name", "description", "publisher__name", "category"])

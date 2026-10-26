@@ -15,11 +15,23 @@ from apps.core.permission_utils import permission_class
 from apps.core.permissions import PermissionChoice
 from apps.publishers.models import Publisher
 from apps.usage_tracking.api.usage_schemas import (
+    COVERAGE_ERRORS,
+    LISTENER_ERRORS,
     REPORT_ERRORS,
+    SEARCH_TERMS_ERRORS,
     BreakdownOut,
     BreakdownQuery,
+    CohortsOut,
+    CoverageOut,
+    CoverageQuery,
     ExportQuery,
+    FirstSeenOut,
+    FirstSeenQuery,
+    ListenersOut,
+    ListenersQuery,
     ReportQuery,
+    SearchTermsOut,
+    SearchTermsQuery,
     SummaryOut,
     TimeseriesOut,
     TimeseriesQuery,
@@ -71,7 +83,10 @@ def usage_timeseries(request: Request, params: TimeseriesQuery = Query(...)):
 @router.get(
     "usage/breakdown/",
     response={200: BreakdownOut, **REPORT_ERRORS},
-    description="One metric per asset, surah, country, channel, platform, app, version, language or hour of week.",
+    description=(
+        "One metric per asset, surah, country, channel, platform, app, version, language, reciter, riwayah, "
+        "qiraah or hour of week."
+    ),
 )
 @permission_required(_READ_USAGE)
 def usage_breakdown(request: Request, params: BreakdownQuery = Query(...)):
@@ -83,6 +98,7 @@ def usage_breakdown(request: Request, params: BreakdownQuery = Query(...)):
         limit=params.limit,
         compare=params.compare is not None,
         tz=params.tz,
+        order=params.order,
     )
 
 
@@ -94,3 +110,55 @@ def usage_breakdown(request: Request, params: BreakdownQuery = Query(...)):
 @permission_required(_READ_USAGE)
 def usage_export(request: Request, params: ExportQuery = Query(...)):
     return usage_reports.export_csv(_scope(request), params.filters(), params.granularity)
+
+
+@router.get(
+    "usage/listeners/",
+    response={200: ListenersOut, **LISTENER_ERRORS},
+    description="New, returning and cumulative listeners per day, week or month (within event retention).",
+)
+@permission_required(_READ_USAGE)
+def usage_listeners(request: Request, params: ListenersQuery = Query(...)):
+    return usage_reports.listeners(_scope(request), params.filters(), granularity=params.granularity)
+
+
+@router.get(
+    "usage/cohorts/",
+    response={200: CohortsOut, **LISTENER_ERRORS},
+    description="Weekly listener cohorts and the share of each still listening in later weeks (up to 182 days).",
+)
+@permission_required(_READ_USAGE)
+def usage_cohorts(request: Request, params: ReportQuery = Query(...)):
+    return usage_reports.cohorts(_scope(request), params.filters())
+
+
+@router.get(
+    "usage/first-seen/",
+    response={200: FirstSeenOut, **LISTENER_ERRORS},
+    description="When each country or app first played the content, newest first.",
+)
+@permission_required(_READ_USAGE)
+def usage_first_seen(request: Request, params: FirstSeenQuery = Query(...)):
+    return usage_reports.first_seen(_scope(request), params.filters(), by=params.by, limit=params.limit)
+
+
+@router.get(
+    "usage/search-terms/",
+    response={200: SearchTermsOut, **SEARCH_TERMS_ERRORS},
+    description="Top gallery search terms across all visitors, matched to reciters, riwayat and qira'at.",
+)
+@permission_required(_READ_USAGE)
+def usage_search_terms(request: Request, params: SearchTermsQuery = Query(...)):
+    return usage_reports.search_terms(
+        params.start_date, params.end_date, zero_results=params.zero_results, limit=params.limit
+    )
+
+
+@router.get(
+    "usage/recitation-coverage/",
+    response={200: CoverageOut, **COVERAGE_ERRORS},
+    description="Recitations missing surahs, with the missing surahs ordered by listener demand, and timing coverage.",
+)
+@permission_required(_READ_USAGE)
+def usage_recitation_coverage(request: Request, params: CoverageQuery = Query(...)):
+    return usage_reports.recitation_coverage(_scope(request), **params.dict())

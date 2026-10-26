@@ -213,6 +213,8 @@ class _TrafficMetrics(_TrafficDimensions):
     bytes = models.BigIntegerField(default=0)
     # Plays (audio), downloads (files), installs (CLI) or calls/views, by kind.
     sessions = models.BigIntegerField(default=0)
+    # Seconds of audio delivered: bytes x track duration / track size (estimate; 0 for non-audio).
+    listened_seconds = models.BigIntegerField(default=0)
 
     class Meta:
         abstract = True
@@ -344,3 +346,26 @@ class UsageApp(BaseModel):
     name = models.CharField(max_length=50)
     # Public, non-secret: appended to audio/file URLs as `?c=<slug>`.
     slug = models.SlugField(max_length=40, unique=True)
+
+
+class SearchSurface(models.TextChoices):
+    ASSETS = "assets"
+    RECITATIONS = "recitations"
+    RECITERS = "reciters"
+
+
+class SearchEvent(models.Model):
+    """A gallery search (first page only). The searcher is an HMAC, like `TrafficEvent.listener_id`."""
+
+    occurred_at = models.DateTimeField()
+    surface = models.CharField(max_length=12, choices=SearchSurface)
+    term = models.CharField(max_length=100)  # normalised, see services/search_terms.py
+    results = models.PositiveIntegerField()
+    listener_id = models.CharField(max_length=64)
+
+    class Meta:
+        indexes = [
+            BrinIndex(fields=["occurred_at"], name="search_event_time_brin"),
+            models.Index(fields=["listener_id", "occurred_at"], name="search_event_listener_idx"),
+            models.Index(fields=["term", "occurred_at"], name="search_event_term_idx"),
+        ]
