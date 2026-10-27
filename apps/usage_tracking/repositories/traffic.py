@@ -8,8 +8,9 @@ from datetime import UTC, date, datetime, time, timedelta
 
 from django.db import connection, transaction
 from django.db.models import Count, Sum
+from django.db.models.functions import TruncHour
 
-from apps.content.models import Asset
+from apps.content.models import Asset, RecitationAyahTiming, RecitationSurahTrack
 from apps.usage_tracking.models import (
     AUDIO_KINDS,
     COUNTED_STATUSES,
@@ -19,6 +20,7 @@ from apps.usage_tracking.models import (
     TRAFFIC_DIMENSIONS,
     LogFileImport,
     R2ObjectReadsHourly,
+    SearchEvent,
     TrafficDaily,
     TrafficEvent,
     TrafficHourly,
@@ -43,6 +45,8 @@ _LOCK_IDS = {
     DJANGO_FOLDIN_JOB: 7_340_212_030,
 }
 _HOUR = timedelta(hours=1)
+# Storage URLs are `<CDN host>/media/<file name>` (see `public_media_url`).
+_MEDIA_PREFIX = "/media/"
 _DIMENSION_COLUMNS = ", ".join(TRAFFIC_DIMENSIONS)
 
 DimensionKey = tuple[object, ...]
@@ -171,7 +175,7 @@ class TrafficRepository:
         hour = floor_hour(hour)
         end = hour + _HOUR
         with transaction.atomic():
-            metrics: dict[DimensionKey, list[int]] = defaultdict(lambda: [0, 0, 0])
+            metrics: dict[DimensionKey, list[int]] = defaultdict(lambda: [0, 0, 0, 0])
             for row in self._totals(hour, end):
                 entry = metrics[tuple(row[dimension] for dimension in TRAFFIC_DIMENSIONS)]
                 entry[0] += row["total_requests"]
@@ -180,6 +184,8 @@ class TrafficRepository:
                     entry[2] += row["total_requests"]
             for key, sessions in self._sessions(hour, end, play_window).items():
                 metrics[key][2] += sessions
+            for key, seconds in self._listened_seconds(hour, end).items():
+                metrics[key][3] += seconds
 
             TrafficHourly.objects.filter(hour=hour).delete()
             TrafficHourly.objects.bulk_create(
@@ -190,8 +196,9 @@ class TrafficRepository:
                         requests=requests,
                         bytes=bytes_,
                         sessions=sessions,
+                        listened_seconds=listened,
                     )
-                    for key, (requests, bytes_, sessions) in metrics.items()
+                    for key, (requests, bytes_, sessions, listened) in metrics.items()
                 ]
             )
             self._rebuild_day(hour.date())
@@ -205,6 +212,43 @@ class TrafficRepository:
             .annotate(total_requests=Count("id"), total_bytes=Sum("bytes"))
             .order_by()
         )
+
+    def _listened_seconds(self, start: datetime, end: datetime) -> dict[DimensionKey, int]:
+        """Seconds of audio delivered per dimension key: bytes x duration / size of the requested file.
+
+        Paths that are not a stored surah track or ayah file (renamed, deleted) add nothing.
+        """
+        rows = list(
+            TrafficEvent.objects.filter(
+                occurred_at__gte=start,
+                occurred_at__lt=end,
+                is_bot=False,
+                status_class__in=SESSION_STATUSES,
+                kind__in=AUDIO_KINDS,
+                bytes__gt=0,
+            )
+            .values(*TRAFFIC_DIMENSIONS, "path")
+            .annotate(total_bytes=Sum("bytes"))
+            .order_by()
+        )
+        names = {row["path"][len(_MEDIA_PREFIX) :] for row in rows if row["path"].startswith(_MEDIA_PREFIX)}
+        assets = {row["asset_id"] for row in rows if row["asset_id"] is not None}
+        surahs = {row["surah"] for row in rows if row["surah"] is not None}
+        ms_per_byte: dict[str, float] = {}
+        if names and assets and surahs:
+            # Narrowed by (asset, surah) first: both are indexed, the file name is not.
+            tracks = RecitationSurahTrack.objects.filter(asset_id__in=assets, surah_number__in=surahs)
+            ayahs = RecitationAyahTiming.objects.filter(track__in=tracks)
+            for queryset in (tracks, ayahs):
+                for name, duration_ms, size_bytes in queryset.filter(
+                    audio_file__in=names, size_bytes__gt=0, duration_ms__gt=0
+                ).values_list("audio_file", "duration_ms", "size_bytes"):
+                    ms_per_byte[_MEDIA_PREFIX + name] = duration_ms / size_bytes
+        totals: dict[DimensionKey, float] = defaultdict(float)
+        for row in rows:
+            if rate := ms_per_byte.get(row["path"]):
+                totals[tuple(row[dimension] for dimension in TRAFFIC_DIMENSIONS)] += row["total_bytes"] * rate / 1000
+        return {key: round(seconds) for key, seconds in totals.items()}
 
     def _sessions(self, hour: datetime, end: datetime, play_window: timedelta) -> dict[DimensionKey, int]:
         table = TrafficEvent._meta.db_table
@@ -242,7 +286,12 @@ class TrafficRepository:
         rows = (
             TrafficHourly.objects.filter(hour__gte=day_start, hour__lt=day_start + timedelta(days=1))
             .values(*TRAFFIC_DIMENSIONS)
-            .annotate(total_requests=Sum("requests"), total_bytes=Sum("bytes"), total_sessions=Sum("sessions"))
+            .annotate(
+                total_requests=Sum("requests"),
+                total_bytes=Sum("bytes"),
+                total_sessions=Sum("sessions"),
+                total_listened=Sum("listened_seconds"),
+            )
             .order_by()
         )
         TrafficDaily.objects.filter(day=day).delete()
@@ -254,6 +303,7 @@ class TrafficRepository:
                     requests=row["total_requests"],
                     bytes=row["total_bytes"],
                     sessions=row["total_sessions"],
+                    listened_seconds=row["total_listened"],
                 )
                 for row in rows
             ]
@@ -283,8 +333,18 @@ class TrafficRepository:
             TrafficMonthlyUniques.objects.filter(month=start.date()).delete()
             TrafficMonthlyUniques.objects.bulk_create(rows)
 
+    def event_hours_since(self, start: datetime) -> list[datetime]:
+        return list(
+            TrafficEvent.objects.filter(occurred_at__gte=start)
+            .annotate(hour=TruncHour("occurred_at", tzinfo=UTC))
+            .values_list("hour", flat=True)
+            .distinct()
+            .order_by("hour")
+        )
+
     def purge_events_before(self, cutoff: datetime) -> int:
         deleted, _ = TrafficEvent.objects.filter(occurred_at__lt=cutoff).delete()
+        SearchEvent.objects.filter(occurred_at__lt=cutoff).delete()
         return deleted
 
     # -- reconciliation -------------------------------------------------------

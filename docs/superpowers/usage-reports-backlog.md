@@ -92,3 +92,12 @@ Instead, sign links on our own domain and let Cloudflare check them at the edge:
       `asset_recitation_json_file_sync_service.py` still build
       `f"{CLOUDFLARE_R2_PUBLIC_BASE_URL}/media/{name}"` by hand (no percent-encoding, no local
       fallback). Switch them to the helper.
+
+## From the recitation reports (spec §21)
+
+- [ ] **Coverage reads the default folder only.** A recitation whose other folders (e.g. 320 kbps)
+      have more or fewer surahs shows the default folder's count. Fix: per-folder rows if
+      publishers ask for it.
+- [ ] **Check for suffixed track names (unverified).** If any track is stored under a name with a
+      storage suffix (`001_ab12cd.mp3`), the path regex does not parse it as a surah file, so its
+      plays and listening seconds are lost. Check prod `audio_file` names; fix `_SURAH_RE` if any.

@@ -828,10 +828,11 @@ flowchart LR
 | Model | Holds |
 |---|---|
 | `TrafficEvent` | One row per edge request (Cloudflare `ray_id`, unique) for an asset file or a public-API route: kind (`audio_surah`, `audio_ayah`, `version_file`, `gallery_download`, `api_call`, `cli_install`, `view`), asset/surah/version/language, country, channel, platform, endpoint, path, status class, bytes, and HMAC identities (`listener_id` = IP + user agent, `install_id`, `end_user_id`). Raw IPs are never stored. Purged after `USAGE_EVENT_RETENTION_MONTHS` |
-| `TrafficHourly` / `TrafficDaily` | Per hour/day and dimension: `requests`, `bytes`, `sessions` (plays for audio, downloads for files, first install per install id and day, every call for API calls and views). Bots and 4xx/5xx are excluded |
+| `TrafficHourly` / `TrafficDaily` | Per hour/day and dimension: `requests`, `bytes`, `sessions` (plays for audio, downloads for files, first install per install id and day, every call for API calls and views), `listened_seconds` (audio bytes × the requested track's or ayah file's `duration_ms` ÷ `size_bytes`; 0 for unknown paths). Bots and 4xx/5xx are excluded. `manage.py rebuild_traffic_rollups --since YYYY-MM-DD` rebuilds every hour that still has events |
 | `TrafficMonthlyUniques` | Distinct listeners, downloaders, installs and end users per month for all traffic, each asset, publisher and app. Kept forever |
 | `R2ObjectReadsHourly` | R2 reads per object and hour beside the edge requests seen for it; the difference is traffic the edge never saw |
 | `LogFileImport` / `UsageImportState` | Imported Logpush files (idempotency; corrupt files recorded with `error`) and per-job watermark, last run and last error |
+| `SearchEvent` | One gallery search (`/cms-api/{assets,recitations,reciters}/?search=`, first page; written by `@track_search`): surface, normalised term, result count, HMAC searcher. A search deletes the same searcher's searches for a prefix of it from the last 30 s (search-as-you-type). Bots skipped; purged with traffic events |
 
 - **Import:** lists the day folders from the watermark day minus one, skips files already in
   `LogFileImport`, stores each file's events and its record (with the hours they touch) in one
@@ -865,7 +866,7 @@ flowchart LR
 
 One engine (`apps/usage_tracking/services/usage_reports.py`, queries in
 `repositories/usage_reports.py`) serves four scopes. Additive metrics (`plays`, `downloads`,
-`installs`, `api_calls`, `views`, `requests`, `bytes`) read `TrafficDaily` (`TrafficHourly` for
+`installs`, `api_calls`, `views`, `requests`, `bytes`, `listening_seconds`) read `TrafficDaily` (`TrafficHourly` for
 hourly series and hour-of-week); unique metrics (`unique_listeners`, `unique_downloaders`,
 `unique_end_users`) count distinct identities in `TrafficEvent`, or sum `TrafficMonthlyUniques`
 when the range starts before event retention (`uniques_basis`). Dates are inclusive UTC days
@@ -874,13 +875,13 @@ when the range starts before event retention (`uniques_basis`). Dates are inclus
 
 | Scope | Endpoints | Access |
 |---|---|---|
-| Publisher | `GET /portal/usage/{summary,timeseries,breakdown,export}/` | `PORTAL_READ_USAGE`; the X-Tenant publisher, else every publisher the member belongs to (staff without X-Tenant: all) |
-| Itqan admin | `GET /portal/admin/usage/{summary,timeseries,breakdown,leaderboard,reconciliation,export}/` | `is_staff`; optional `publisher_id`; includes traffic without an asset and `by=publisher` |
+| Publisher | `GET /portal/usage/{summary,timeseries,breakdown,export,listeners,cohorts,first-seen,search-terms,recitation-coverage}/` | `PORTAL_READ_USAGE`; the X-Tenant publisher, else every publisher the member belongs to (staff without X-Tenant: all) |
+| Itqan admin | `GET /portal/admin/usage/{summary,timeseries,breakdown,leaderboard,reconciliation,export,listeners,cohorts,first-seen,search-terms,recitation-coverage}/` | `is_staff`; optional `publisher_id`; includes traffic without an asset and `by=publisher` |
 | Developer | `GET /cms-api/developers/usage/{summary,timeseries,breakdown}/` | signed in; only the caller's `UsageApp`s; breakdown rows under 3 listeners return `"<3"` |
 | Public | `GET /cms-api/assets/{id}/usage-counts/` | anonymous; same visibility as `assets/{id}/`; 404 `usage_counts_disabled` unless `PUBLIC_USAGE_COUNTS_ENABLED`; cached 1 h |
 
 - **Filters:** `asset_id`, `category`, `kind`, `channel`, `platform`, `app`, `country`,
-  `language`, `version_id`, `surah`.
+  `language`, `version_id`, `surah`, `reciter_id`, `riwayah_id`, `qiraah_id`.
 - **summary:** every metric with previous-period value and change, integrating apps, whether
   unidentified apps were seen, `latest_version_share` (with `asset_id`), localized metric
   `definitions`, `disclaimers` (`lower_bound`, `uniques_estimated`, `hourly_delay`) and
@@ -888,14 +889,29 @@ when the range starts before event retention (`uniques_basis`). Dates are inclus
 - **timeseries:** zero-filled `hour|day|week|month` buckets (weeks start Monday); `split_by` keeps
   the top N (`top`, default 8) and folds the rest into the `__other__` series; `compare=previous_period` adds an
   aligned `previous` series.
-- **breakdown:** `by=asset|surah|country|channel|platform|app|version|language|kind|endpoint|hour_of_week`
-  (admin also `publisher`); `hour_of_week` keys are `<ISO weekday>-<hour>` in `tz`.
+- **breakdown:** `by=asset|surah|country|channel|platform|app|version|language|kind|endpoint|reciter|riwayah|qiraah|hour_of_week`
+  (admin also `publisher`); `hour_of_week` keys are `<ISO weekday>-<hour>` in `tz`. `order=growth`
+  ranks by the increase over the previous period (implies `compare`). Reciter, riwayah and qiraah
+  are also `split_by` values for timeseries.
+- **listeners / cohorts / first-seen** (recitations; events only): a listener's first seen is
+  their earliest counted audio event since the retention cutoff. `listeners` gives `new`,
+  `returning` and `cumulative` per day/week/month; `cohorts` weekly cohorts (≤ 182 days) with the
+  share active in each later week; `first-seen` the first play per country or app (`new` within
+  the range). Ranges starting before retention are clamped (`clamped_start`); ranges ending
+  before it return `range_before_retention`.
+- **search-terms:** gallery searches by every visitor (publishers see all of them, to show unmet
+  demand), terms with ≥ 3 distinct searchers only; `zero_results=true` keeps terms whose latest
+  search found nothing; each term is matched to one reciter, riwayah or qiraah when unambiguous.
+- **recitation-coverage:** recitations in scope with surahs in the default folder, the missing
+  ones (also ordered by platform-wide plays of the last 90 days) and the share of tracks with
+  ayah timings; `incomplete_only` (default) hides complete ones.
 - **export:** CSV of the additive metrics per period and asset (admin adds the publisher); names
   that start like a spreadsheet formula are prefixed with `'`.
 - **reconciliation:** R2 reads, edge requests and unseen (`max(reads − edge, 0)` per object-hour)
   in total, per asset and per day.
 - **Errors:** `invalid_range`, `range_too_large`, `invalid_metric_for_kind`, `invalid_dimension`,
-  `invalid_timezone`, `asset_not_found`, `app_not_found`, `usage_counts_disabled`.
+  `invalid_timezone`, `range_before_retention`, `asset_not_found`, `app_not_found`,
+  `usage_counts_disabled`.
 
 ### Folders (recitation variants)
 

@@ -194,8 +194,10 @@ class TestPortalUsageReports(BaseTestCase):
         assert response["Content-Type"].startswith("text/csv")
         assert "usage-2026-10-10-2026-10-16.csv" in response["Content-Disposition"]
         lines = response.content.decode().strip().splitlines()
-        assert lines[0] == ("period,asset_id,asset,category,plays,downloads,installs,api_calls,views,requests,bytes")
-        assert lines[1:] == [f"2026-10-12,{self.asset.id},Asset A,mushaf,5,0,0,0,0,6,10"]
+        assert lines[0] == (
+            "period,asset_id,asset,category,plays,downloads,installs,api_calls,views,requests,bytes,listening_seconds"
+        )
+        assert lines[1:] == [f"2026-10-12,{self.asset.id},Asset A,mushaf,5,0,0,0,0,6,10,0"]
 
     def test_export_where_asset_name_starts_like_a_formula_should_neutralize_it(self):
         # Arrange

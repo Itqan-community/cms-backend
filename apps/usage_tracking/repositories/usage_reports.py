@@ -12,7 +12,9 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta, tzinfo
 from typing import Any
 
-from django.db.models import Count, F, Max, OuterRef, Q, QuerySet, Subquery, Sum, Value
+from django.contrib.postgres.aggregates import ArrayAgg
+from django.db import connection
+from django.db.models import Count, Exists, F, Max, Min, OuterRef, Q, QuerySet, Subquery, Sum, Value
 from django.db.models.functions import (
     Coalesce,
     ExtractHour,
@@ -24,9 +26,21 @@ from django.db.models.functions import (
     TruncWeek,
 )
 
-from apps.content.models import PUBLISHED_VERSION_CATEGORIES, Asset, AssetLanguage, AssetVersion, VersionStateChoice
+from apps.content.models import (
+    PUBLISHED_VERSION_CATEGORIES,
+    Asset,
+    AssetLanguage,
+    AssetVersion,
+    Qiraah,
+    RecitationAyahTiming,
+    RecitationSurahTrack,
+    Reciter,
+    Riwayah,
+    VersionStateChoice,
+)
 from apps.publishers.models import Publisher
 from apps.usage_tracking.models import (
+    AUDIO_KINDS,
     COUNTED_STATUSES,
     R2ObjectReadsHourly,
     TrafficDaily,
@@ -38,7 +52,7 @@ from apps.usage_tracking.models import (
 )
 from apps.usage_tracking.repositories.traffic import DJANGO_FOLDIN_JOB, LOGPUSH_JOB
 
-# Report dimension -> rollup/event column. `publisher` and `hour_of_week` are computed.
+# Report dimension -> rollup/event column. Asset dimensions and `hour_of_week` are computed.
 DIMENSION_COLUMNS: dict[str, str] = {
     "asset": "asset_id",
     "surah": "surah",
@@ -51,7 +65,15 @@ DIMENSION_COLUMNS: dict[str, str] = {
     "kind": "kind",
     "endpoint": "endpoint",
 }
-COMPUTED_DIMENSIONS = ("publisher", "hour_of_week")
+# Dimensions read from the event's asset.
+ASSET_DIMENSIONS: dict[str, str] = {
+    "publisher": "publisher_id",
+    "reciter": "reciter_id",
+    "riwayah": "riwayah_id",
+    "qiraah": "qiraah_id",
+}
+COMPUTED_DIMENSIONS = (*ASSET_DIMENSIONS, "hour_of_week")
+UNKNOWN_COUNTRY = "XX"
 
 Key = str
 
@@ -85,9 +107,9 @@ def _unique_q(kinds: Sequence[str], statuses: Sequence[str], identity: str) -> Q
 
 def _with_dimension(queryset: QuerySet, dimension: str, time_field: str, tz: tzinfo) -> tuple[QuerySet, list[str]]:
     """Annotate `queryset` so `.values(*fields)` groups by `dimension`."""
-    if dimension == "publisher":
-        publisher = Asset.objects.filter(pk=OuterRef("asset_id")).values("publisher_id")[:1]
-        return queryset.annotate(d_publisher=Subquery(publisher)), ["d_publisher"]
+    if dimension in ASSET_DIMENSIONS:
+        value = Asset.objects.filter(pk=OuterRef("asset_id")).values(ASSET_DIMENSIONS[dimension])[:1]
+        return queryset.annotate(**{f"d_{dimension}": Subquery(value)}), [f"d_{dimension}"]
     if dimension == "hour_of_week":
         return (
             queryset.annotate(
@@ -359,7 +381,12 @@ def labels(dimension: str, raw_keys: Iterable[Any]) -> dict[Any, str]:
         return dict(Publisher.objects.filter(id__in=ids).values_list("id", "name"))
     if dimension == "version":
         return dict(AssetVersion.objects.filter(id__in=ids).values_list("id", "name"))
+    if dimension in _NAMED_MODELS:
+        return dict(_NAMED_MODELS[dimension].objects.filter(id__in=ids).values_list("id", "name"))
     return {}
+
+
+_NAMED_MODELS = {"reciter": Reciter, "riwayah": Riwayah, "qiraah": Qiraah}
 
 
 def asset_details(asset_ids: Iterable[int | None]) -> dict[int, dict[str, Any]]:
@@ -403,3 +430,117 @@ def data_updated_at() -> datetime | None:
     return UsageImportState.objects.filter(key__in=[LOGPUSH_JOB, DJANGO_FOLDIN_JOB], last_error="").aggregate(
         latest=Max("last_run_at")
     )["latest"]
+
+
+# -- listener growth (first seen, cohorts) -------------------------------------------------------
+
+
+def _listener_events(base_q: Q, start: datetime, end: datetime, kinds: Sequence[str], statuses: Sequence[str]):
+    return TrafficEvent.objects.filter(
+        base_q, _unique_q(kinds, statuses, "listener_id"), occurred_at__gte=start, occurred_at__lt=end, is_bot=False
+    )
+
+
+def new_listeners(
+    base_q: Q, since: date, period: Period, kinds: Sequence[str], statuses: Sequence[str], granularity: str
+) -> tuple[int, dict[date, int]]:
+    """Listeners first seen (from `since`) before the period, and per bucket inside it."""
+    firsts = (
+        _listener_events(base_q, day_start(since), day_start(period.end + timedelta(days=1)), kinds, statuses)
+        .values("listener_id")
+        .annotate(first=Min("occurred_at"))
+        .order_by()
+    )
+    sql, params = firsts.query.sql_with_params()
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"""
+            SELECT CASE WHEN first < %s THEN NULL ELSE date_trunc(%s, first AT TIME ZONE 'UTC')::date END,
+                   COUNT(*)
+            FROM ({sql}) firsts
+            GROUP BY 1
+            """,  # nosec B608 — the subquery is compiled by the ORM; values are parameters
+            [day_start(period.start), granularity, *params],
+        )
+        rows = cursor.fetchall()
+    before = sum(count for bucket, count in rows if bucket is None)
+    return before, {bucket: count for bucket, count in rows if bucket is not None}
+
+
+def listener_cohorts(
+    base_q: Q, since: date, period: Period, kinds: Sequence[str], statuses: Sequence[str]
+) -> list[tuple[date, date, int]]:
+    """(cohort week, active week, listeners): cohort = week first seen (from `since`), inside the period."""
+    events = _listener_events(
+        base_q, day_start(since), day_start(period.end + timedelta(days=1)), kinds, statuses
+    ).values("listener_id", "occurred_at")
+    sql, params = events.query.sql_with_params()
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"""
+            WITH active AS (
+                SELECT DISTINCT listener_id, date_trunc('week', occurred_at AT TIME ZONE 'UTC')::date AS week
+                FROM ({sql}) events
+            ),
+            cohorts AS (SELECT listener_id, MIN(week) AS cohort FROM active GROUP BY listener_id)
+            SELECT cohorts.cohort, active.week, COUNT(*)
+            FROM active JOIN cohorts USING (listener_id)
+            WHERE cohorts.cohort >= date_trunc('week', %s::date)::date
+            GROUP BY 1, 2
+            """,  # nosec B608 — the subquery is compiled by the ORM; values are parameters
+            [*params, period.start],
+        )
+        return list(cursor.fetchall())
+
+
+def first_seen(
+    base_q: Q, since: date, end: date, kinds: Sequence[str], statuses: Sequence[str], dimension: str, limit: int
+) -> list[tuple[Any, datetime]]:
+    """(raw dimension value, first counted event) from `since`, newest first."""
+    column = DIMENSION_COLUMNS[dimension]
+    rows = (
+        _listener_events(base_q, day_start(since), day_start(end + timedelta(days=1)), kinds, statuses)
+        .exclude(**{f"{column}__isnull": True})
+        .exclude(**{column: UNKNOWN_COUNTRY} if dimension == "country" else {})
+        .values(column)
+        .annotate(first=Min("occurred_at"))
+        .order_by("-first", column)[:limit]
+    )
+    return [(row[column], row["first"]) for row in rows]
+
+
+# -- recitation coverage -------------------------------------------------------------------------
+
+
+def recitation_coverage(assets: QuerySet) -> list[dict[str, Any]]:
+    """Per recitation asset: name, surahs in its default folder, and tracks with / without ayah timings."""
+    timed = RecitationAyahTiming.objects.filter(track=OuterRef("pk"))
+    tracks = (
+        RecitationSurahTrack.objects.filter(asset__in=assets, folder__is_default=True)
+        .annotate(timed=Exists(timed))
+        .values("asset_id")
+        .annotate(
+            surahs=ArrayAgg("surah_number", distinct=True, default=Value([])),
+            tracks=Count("id"),
+            timed_tracks=Count("id", filter=Q(timed=True)),
+        )
+        .order_by()
+    )
+    by_asset = {row["asset_id"]: row for row in tracks}
+    rows = []
+    for asset in assets.values("id", "name").order_by("name", "id"):
+        row = by_asset.get(asset["id"], {"surahs": [], "tracks": 0, "timed_tracks": 0})
+        rows.append({**asset, **row})
+    rows.sort(key=lambda row: (len(row["surahs"]), row["name"], row["id"]))
+    return rows
+
+
+def surah_plays(since: date) -> dict[int, int]:
+    """Plays per surah across every recitation since `since` (aggregate only)."""
+    rows = (
+        TrafficDaily.objects.filter(day__gte=since, kind__in=list(AUDIO_KINDS), surah__isnull=False)
+        .values("surah")
+        .annotate(v=Sum("sessions"))
+        .order_by()
+    )
+    return {row["surah"]: int(row["v"] or 0) for row in rows}
