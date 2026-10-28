@@ -5,7 +5,7 @@ from django.utils.html import format_html
 
 from apps.core.admin import AuditedModelAdmin
 
-from .models import Domain, MemberLanguage, Publisher, PublisherMember, PublisherMemberInvitation
+from .models import Domain, MemberLanguage, Publisher, PublisherGroup, PublisherMember, PublisherMemberInvitation
 
 
 class PublisherMemberInline(admin.TabularInline):
@@ -153,6 +153,14 @@ class PublisherMemberInvitationAdmin(AuditedModelAdmin):
     @admin.display(description="Group")
     def group_name(self, obj):
         return obj.group_name
+
+
+@admin.register(PublisherGroup)
+class PublisherGroupAdmin(admin.ModelAdmin):
+    list_display = ["name", "publisher", "group"]
+    list_filter = ["publisher"]
+    search_fields = ["name", "publisher__name"]
+    raw_id_fields = ["group", "publisher"]
 
 
 @admin.register(MemberLanguage)

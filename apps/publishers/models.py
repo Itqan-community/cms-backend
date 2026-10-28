@@ -56,6 +56,27 @@ class Publisher(BaseModel):
         super().save(*args, **kwargs)
 
 
+class PublisherGroup(models.Model):
+    """Ties a permission group (role) to the one publisher that owns it.
+
+    ``auth.Group.name`` is globally unique, so the underlying group gets an opaque name and the
+    name admins see and edit lives here, unique per publisher. Groups without a PublisherGroup
+    are global (e.g. Itqan Internal) and are never offered through the portal.
+    """
+
+    group = models.OneToOneField(
+        "auth.Group", primary_key=True, on_delete=models.CASCADE, related_name="publisher_group"
+    )
+    publisher = models.ForeignKey(Publisher, on_delete=models.CASCADE, related_name="groups")
+    name = models.CharField(max_length=150, help_text="Role name shown to the publisher's admins e.g. 'Editors'")
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["publisher", "name"], name="unique_publisher_group_name")]
+
+    def __str__(self):
+        return f"PublisherGroup(name={self.name} publisher={self.publisher_id})"
+
+
 class PublisherMember(BaseModel):
     """
     Junction table for User <-> Publisher relationships.
@@ -79,7 +100,7 @@ class PublisherMember(BaseModel):
         "auth.Group",
         on_delete=models.PROTECT,
         related_name="publisher_memberships",
-        help_text="Permission group for this member. Applied to the user's groups on activation; per-membership, so a user in several publishers keeps a distinct group for each.",
+        help_text="Permission group (role) for this member at this publisher; per-membership, so a user in several publishers holds a distinct role at each.",
     )
     status = models.CharField(
         max_length=20,
@@ -93,6 +114,11 @@ class PublisherMember(BaseModel):
 
     def __str__(self):
         return f"PublisherMember(email={self.user.email} publisher={self.publisher_id} group={self.group_id})"
+
+    @property
+    def group_display_name(self) -> str:
+        publisher_group = getattr(self.group, "publisher_group", None)
+        return publisher_group.name if publisher_group else self.group.name
 
 
 class Domain(BaseModel):
