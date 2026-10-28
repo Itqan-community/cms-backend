@@ -117,8 +117,9 @@ jobs:
       - name: Compile Translations
         run: docker compose -f docker-compose.local.yml run --rm django uv run python manage.py compilemessages --locale ar
 
+      # -n auto runs one xdist worker per CPU, each with its own test DB.
       - name: Run Django Tests
-        run: docker compose -f docker-compose.local.yml run --rm django uv run pytest
+        run: docker compose -f docker-compose.local.yml run --rm django uv run pytest -n auto
 
       - name: Tear down the Stack
         run: docker compose -f docker-compose.local.yml down
