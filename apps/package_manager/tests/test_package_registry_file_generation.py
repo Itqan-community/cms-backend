@@ -21,7 +21,7 @@ from apps.content.models import (
 from apps.content.tests.publishing import publish
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
-from apps.quran.models import Ayah, Sura
+from apps.quran.models import Ayah, Surah
 from apps.users.models import APIKey, User
 
 R2_SETTINGS = {
@@ -34,9 +34,9 @@ class PackageApiTestCase(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.publisher = baker.make(Publisher)
-        sura = baker.make(Sura, id=1, name="الفاتحة", ayas_count=2)
-        self.ayah1 = baker.make(Ayah, id=1, sura=sura, number_in_sura=1, text="a1")
-        self.ayah2 = baker.make(Ayah, id=2, sura=sura, number_in_sura=2, text="a2")
+        surah = baker.make(Surah, id=1, name="الفاتحة", ayahs_count=2)
+        self.ayah1 = baker.make(Ayah, id=1, surah=surah, number_in_surah=1, text="a1")
+        self.ayah2 = baker.make(Ayah, id=2, surah=surah, number_in_surah=2, text="a2")
         self.asset = Asset.objects.create(
             status=StatusChoice.READY,
             name="Tafsir",

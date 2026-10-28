@@ -161,7 +161,7 @@ erDiagram
 
     ASSETVERSIONENTRY {
         int version_id
-        int sura_id
+        int surah_id
         int ayah_id
         int word_id
         int page_no
@@ -175,7 +175,7 @@ erDiagram
 
     ASSETVERSIONCHANGE {
         int version_id
-        int sura_id
+        int surah_id
         int ayah_id
         int word_id
         int page_no
@@ -500,15 +500,15 @@ from the parsed entries, so consumers download exactly what was reviewed.
   columns from before the first page of entries arrives.
 - **Reading entries** — the editor pages through
   `GET /portal/content/{category}/{slug}/versions/{id}/entries/` (`page`, `page_size`,
-  optional `sura`). Each row carries `cells` (every text column's cell, keyed by column key)
+  optional `surah`). Each row carries `cells` (every text column's cell, keyed by column key)
   and, for a translation, the source language's `source_cells`; `text` / `source_text` are
   the first column, for older clients. `PATCH` rows name their `column` (default: the first;
   unknown → `unknown_column`). Its optional `filters` param is the grid's AG Grid filter model as
   JSON, keyed by `cell__<key>` / `source__<key>` per text column (`text` / `source_text` are the
   first column; a column the asset lacks → `unknown_filter_column`), `reference_text` (text filters, case-insensitive and
   ignoring Arabic vocalization — harakat, Quranic marks, alef forms, and Uthmani dagger alefs —
-  so plain typing matches Uthmani text; a unit with no stored entry counts as empty) and `surah`, `sura`, `aya` (number filters,
-  `inRange` inclusive; `surah` is the unit column's surah-name dropdown and `sura` the
+  so plain typing matches Uthmani text; a unit with no stored entry counts as empty) and `unit_surah`, `surah`, `ayah` (number filters,
+  `inRange` inclusive; `unit_surah` is the unit column's surah-name dropdown and `surah` the
   surah-number column, both applied), each a single condition or two joined by `AND`/`OR`. Filters
   narrow the whole unit set before paging, so `count` is the filtered total; unknown
   columns or malformed conditions return 400 `validation_error`. Rows carry the cells of

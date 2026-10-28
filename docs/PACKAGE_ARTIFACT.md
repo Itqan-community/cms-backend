@@ -145,13 +145,13 @@ data/
 ```json
 [
   {
-    "sura": 1,
-    "aya": 1,
+    "surah": 1,
+    "ayah": 1,
     "text": "In the name of Allah, the Entirely Merciful, the Especially Merciful."
   },
   {
-    "sura": 1,
-    "aya": 2,
+    "surah": 1,
+    "ayah": 2,
     "text": "[All] praise is [due] to Allah, Lord of the worlds -"
   }
 ]

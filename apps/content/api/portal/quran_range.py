@@ -58,15 +58,15 @@ def quran_range(
     if words:
         rows = Word.objects.filter(id__range=(start, end)).order_by("id")
         units = [
-            {"surah": sura, "ayah": aya, "word": position, "text": text}
-            for sura, aya, position, text in rows.values_list(
-                "sura_id", "ayah__number_in_sura", "position_in_ayah", "text"
+            {"surah": surah, "ayah": ayah, "word": position, "text": text}
+            for surah, ayah, position, text in rows.values_list(
+                "surah_id", "ayah__number_in_surah", "position_in_ayah", "text"
             )[: QURAN_RANGE_LIMIT + 1]
         ]
     else:
         rows = Ayah.objects.filter(id__range=(start, end)).order_by("id")
         units = [
-            {"surah": sura, "ayah": aya, "word": None, "text": text}
-            for sura, aya, text in rows.values_list("sura_id", "number_in_sura", "text")[: QURAN_RANGE_LIMIT + 1]
+            {"surah": surah, "ayah": ayah, "word": None, "text": text}
+            for surah, ayah, text in rows.values_list("surah_id", "number_in_surah", "text")[: QURAN_RANGE_LIMIT + 1]
         ]
     return {"units": units[:QURAN_RANGE_LIMIT], "truncated": len(units) > QURAN_RANGE_LIMIT}

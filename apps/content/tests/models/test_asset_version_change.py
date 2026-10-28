@@ -3,7 +3,7 @@ from model_bakery import baker
 
 from apps.content.models import Asset, AssetTemplateChoice, AssetVersion, AssetVersionChange, CategoryChoice
 from apps.core.tests.base import BaseTestCase
-from apps.quran.models import Ayah, Sura
+from apps.quran.models import Ayah, Surah
 
 
 class AssetVersionChangeModelTest(BaseTestCase):
@@ -13,8 +13,8 @@ class AssetVersionChangeModelTest(BaseTestCase):
             Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH, language="ar"
         )
         self.version = baker.make(AssetVersion, asset=self.asset)
-        self.sura = baker.make(Sura, id=1, name="الفاتحة", ayas_count=3)
-        self.ayah = baker.make(Ayah, id=1, sura=self.sura, number_in_sura=1, text="ayah 1")
+        self.surah = baker.make(Surah, id=1, name="الفاتحة", ayahs_count=3)
+        self.ayah = baker.make(Ayah, id=1, surah=self.surah, number_in_surah=1, text="ayah 1")
 
     def test_unique_change_per_version_ayah(self):
         AssetVersionChange.objects.create(

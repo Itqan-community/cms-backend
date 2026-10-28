@@ -20,8 +20,8 @@ class WordOut(Schema):
 
 class AyahOut(Schema):
     id: int
-    sura_id: int
-    number_in_sura: int
+    surah_id: int
+    number_in_surah: int
     text: str
     juz: int
     hizb_quarter: int
@@ -30,23 +30,23 @@ class AyahOut(Schema):
 
 
 @router.get(
-    "suras/{int:sura_id}/ayahs/",
-    response={200: list[AyahOut], 404: NinjaErrorResponse[Literal["sura_not_found"]]},
+    "surahs/{int:surah_id}/ayahs/",
+    response={200: list[AyahOut], 404: NinjaErrorResponse[Literal["surah_not_found"]]},
 )
-def list_ayahs(request: Request, sura_id: int):
-    """List all ayahs of a sura (with their words), ordered within the sura."""
+def list_ayahs(request: Request, surah_id: int):
+    """List all ayahs of a surah (with their words), ordered within the surah."""
     service = QuranService(QuranRepository())
-    return service.list_ayahs_for_sura(sura_id)
+    return service.list_ayahs_for_surah(surah_id)
 
 
 @router.get(
-    "suras/{int:sura_id}/ayahs/{int:number_in_sura}/",
+    "surahs/{int:surah_id}/ayahs/{int:number_in_surah}/",
     response={
         200: AyahOut,
-        404: NinjaErrorResponse[Literal["sura_not_found"]] | NinjaErrorResponse[Literal["ayah_not_found"]],
+        404: NinjaErrorResponse[Literal["surah_not_found"]] | NinjaErrorResponse[Literal["ayah_not_found"]],
     },
 )
-def get_ayah(request: Request, sura_id: int, number_in_sura: int):
-    """Retrieve a single ayah (with its words) by sura number and ayah number."""
+def get_ayah(request: Request, surah_id: int, number_in_surah: int):
+    """Retrieve a single ayah (with its words) by surah number and ayah number."""
     service = QuranService(QuranRepository())
-    return service.get_ayah(sura_id, number_in_sura)
+    return service.get_ayah(surah_id, number_in_surah)

@@ -815,14 +815,14 @@ class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
 
 def _only_units_set(*names: str) -> models.Q:
     """Exactly the given unit columns are set; every other unit column is null."""
-    columns = ("sura", "ayah", "word", "page_no", "from_ayah", "to_ayah", "from_word", "to_word")
+    columns = ("surah", "ayah", "word", "page_no", "from_ayah", "to_ayah", "from_word", "to_word")
     return models.Q(**{f"{column}__isnull": column not in names for column in columns})
 
 
-# A row is keyed to exactly one unit: a single sura / ayah / word / page, or a
+# A row is keyed to exactly one unit: a single surah / ayah / word / page, or a
 # whole ayah range or word range (both ends set).
 _EXACTLY_ONE_UNIT = (
-    _only_units_set("sura")
+    _only_units_set("surah")
     | _only_units_set("ayah")
     | _only_units_set("word")
     | _only_units_set("page_no")
@@ -834,7 +834,7 @@ _EXACTLY_ONE_UNIT = (
 class AssetVersionEntry(BaseModel):
     """Per-unit content of a text-based asset version (translation / tafsir).
 
-    The unit is whichever one the asset's template names — a sura, an ayah, a
+    The unit is whichever one the asset's template names — a surah, an ayah, a
     word, a mushaf page, or a range of ayahs / words (group templates) — and
     exactly one unit (a range counts as one: both its ends) is set per row
     (enforced by ``entry_exactly_one_unit``).
@@ -856,13 +856,13 @@ class AssetVersionEntry(BaseModel):
         related_name="entries",
         help_text="Asset version this entry belongs to",
     )
-    sura = models.ForeignKey(
-        "quran.Sura",
+    surah = models.ForeignKey(
+        "quran.Surah",
         on_delete=models.PROTECT,
         null=True,
         blank=True,
         related_name="+",
-        help_text="Canonical sura (1-114) — set only for surah-template assets",
+        help_text="Canonical surah (1-114) — set only for surah-template assets",
     )
     ayah = models.ForeignKey(
         "quran.Ayah",
@@ -948,7 +948,9 @@ class AssetVersionEntry(BaseModel):
                 name="entry_exactly_one_unit",
             ),
             models.UniqueConstraint(fields=["version", "ayah", "column"], name="unique_entry_per_version_ayah_column"),
-            models.UniqueConstraint(fields=["version", "sura", "column"], name="unique_entry_per_version_sura_column"),
+            models.UniqueConstraint(
+                fields=["version", "surah", "column"], name="unique_entry_per_version_surah_column"
+            ),
             models.UniqueConstraint(fields=["version", "word", "column"], name="unique_entry_per_version_word_column"),
             models.UniqueConstraint(
                 fields=["version", "page_no", "column"], name="unique_entry_per_version_page_column"
@@ -1021,13 +1023,13 @@ class AssetVersionChange(BaseModel):
 
     version = models.ForeignKey(AssetVersion, on_delete=models.CASCADE, related_name="changes")
 
-    sura = models.ForeignKey(
-        "quran.Sura",
+    surah = models.ForeignKey(
+        "quran.Surah",
         on_delete=models.PROTECT,
         null=True,
         blank=True,
         related_name="+",
-        help_text="Canonical sura (1-114) — set only for surah-template assets",
+        help_text="Canonical surah (1-114) — set only for surah-template assets",
     )
     ayah = models.ForeignKey(
         "quran.Ayah",
@@ -1117,7 +1119,9 @@ class AssetVersionChange(BaseModel):
                 name="change_exactly_one_unit",
             ),
             models.UniqueConstraint(fields=["version", "ayah", "column"], name="unique_change_per_version_ayah_column"),
-            models.UniqueConstraint(fields=["version", "sura", "column"], name="unique_change_per_version_sura_column"),
+            models.UniqueConstraint(
+                fields=["version", "surah", "column"], name="unique_change_per_version_surah_column"
+            ),
             models.UniqueConstraint(fields=["version", "word", "column"], name="unique_change_per_version_word_column"),
             models.UniqueConstraint(
                 fields=["version", "page_no", "column"], name="unique_change_per_version_page_column"

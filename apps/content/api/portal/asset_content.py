@@ -52,7 +52,7 @@ from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
 from apps.core.permission_utils import check_permission
 from apps.core.permissions import PermissionChoice
-from apps.quran.models import Ayah, Sura, Word
+from apps.quran.models import Ayah, Surah, Word
 
 router = ItqanRouter(tags=[NinjaTag.TRANSLATIONS])
 
@@ -240,8 +240,8 @@ class EntryOut(Schema):
     unit_id: int
     label: str
     reference_text: str
-    sura: int | None = None
-    aya: int | None = None
+    surah: int | None = None
+    ayah: int | None = None
     # Every text column's cell ("" when empty), keyed by column key.
     cells: dict[str, str]
     # The first column; kept for clients that predate columns.
@@ -273,8 +273,8 @@ def _group_entries_to_out(entries: list[AssetVersionEntry], context: PatchRespon
             "unit_id": unit.unit_id,
             "label": unit.label,
             "reference_text": unit.reference_text,
-            "sura": unit.sura,
-            "aya": unit.aya,
+            "surah": unit.surah,
+            "ayah": unit.ayah,
             **cell_fields(unit.unit_id, context.column_keys, context.cells, context.source_cells),
             "order": unit.order,
             **changed_fields(unit.unit_id, context.column_keys, context.changed_cells),
@@ -288,7 +288,7 @@ def _entries_to_out(entries: list[AssetVersionEntry], context: PatchResponseCont
     """Build ``EntryOut``-shaped dicts for the units of a batch of persisted entries,
     one row per unit (a patch may touch several columns of the same unit).
 
-    Resolves each entry's related unit (ayah / sura / word) via one bulk
+    Resolves each entry's related unit (ayah / surah / word) via one bulk
     query per unit kind rather than lazily per row: ``bulk_create``'d
     instances carry no cached FK, so per-row ``entry.ayah`` access would cost
     one query per changed row. Dispatches on whichever unit column is set,
@@ -302,10 +302,10 @@ def _entries_to_out(entries: list[AssetVersionEntry], context: PatchResponseCont
     if context.template in GROUP_TEMPLATES:
         return _group_entries_to_out(entries, context)
     ayah_ids = [entry.ayah_id for entry in entries if entry.ayah_id is not None]
-    sura_ids = [entry.sura_id for entry in entries if entry.sura_id is not None]
+    surah_ids = [entry.surah_id for entry in entries if entry.surah_id is not None]
     word_ids = [entry.word_id for entry in entries if entry.word_id is not None]
     ayahs = Ayah.objects.in_bulk(ayah_ids)
-    suras = Sura.objects.in_bulk(sura_ids)
+    surahs = Surah.objects.in_bulk(surah_ids)
     words = Word.objects.select_related("ayah").in_bulk(word_ids)
 
     rows = []
@@ -314,33 +314,33 @@ def _entries_to_out(entries: list[AssetVersionEntry], context: PatchResponseCont
         if entry.unit_id in seen:
             continue
         seen.add(entry.unit_id)
-        if entry.sura_id is not None:
-            sura = suras[entry.sura_id]
-            label = f"{entry.sura_id}. {sura.transliterated_name}"
-            reference_text = sura.name
-            sura_field, aya_field = entry.sura_id, None
+        if entry.surah_id is not None:
+            surah = surahs[entry.surah_id]
+            label = f"{entry.surah_id}. {surah.transliterated_name}"
+            reference_text = surah.name
+            surah_field, ayah_field = entry.surah_id, None
         elif entry.ayah_id is not None:
             ayah = ayahs[entry.ayah_id]
-            label = f"{ayah.sura_id}:{ayah.number_in_sura}"
+            label = f"{ayah.surah_id}:{ayah.number_in_surah}"
             reference_text = ayah.text
-            sura_field, aya_field = ayah.sura_id, ayah.number_in_sura
+            surah_field, ayah_field = ayah.surah_id, ayah.number_in_surah
         elif entry.word_id is not None:
             word = words[entry.word_id]
-            label = f"{word.sura_id}:{word.ayah.number_in_sura}:{word.position_in_ayah}"
+            label = f"{word.surah_id}:{word.ayah.number_in_surah}:{word.position_in_ayah}"
             reference_text = word.text
-            sura_field, aya_field = word.sura_id, word.ayah.number_in_sura
+            surah_field, ayah_field = word.surah_id, word.ayah.number_in_surah
         else:
             label = _("Page {number}").format(number=entry.page_no)
             reference_text = ""
-            sura_field, aya_field = None, None
+            surah_field, ayah_field = None, None
         rows.append(
             {
                 "unit_type": context.template,
                 "unit_id": entry.unit_id,
                 "label": label,
                 "reference_text": reference_text,
-                "sura": sura_field,
-                "aya": aya_field,
+                "surah": surah_field,
+                "ayah": ayah_field,
                 **cell_fields(entry.unit_id, context.column_keys, context.cells, context.source_cells),
                 "order": entry.unit_id,
                 **changed_fields(entry.unit_id, context.column_keys, context.changed_cells),
@@ -499,8 +499,8 @@ class EntriesFilterModelIn(Schema):
 
     Text columns are ``cell__<key>`` (the version's own cells) and
     ``source__<key>`` (the source language's); ``text`` / ``source_text`` name
-    the first column. ``surah`` is the unit column's surah-name dropdown and
-    ``sura`` the surah-number column; both filter the surah number. Unknown
+    the first column. ``unit_surah`` is the unit column's surah-name dropdown and
+    ``surah`` the surah-number column; both filter the surah number. Unknown
     grid columns are rejected so a typo surfaces as a 400 instead of silently
     returning unfiltered rows; an unknown text column is rejected by the
     service (``unknown_filter_column``), which knows the asset's columns.
@@ -511,9 +511,9 @@ class EntriesFilterModelIn(Schema):
     text: GridTextFilterIn | None = None
     reference_text: GridTextFilterIn | None = None
     source_text: GridTextFilterIn | None = None
+    unit_surah: GridNumberFilterIn | None = None
     surah: GridNumberFilterIn | None = None
-    sura: GridNumberFilterIn | None = None
-    aya: GridNumberFilterIn | None = None
+    ayah: GridNumberFilterIn | None = None
     cells: dict[str, GridTextFilterIn] = Field(default_factory=dict)
     source_cells: dict[str, GridTextFilterIn] = Field(default_factory=dict)
 
@@ -548,9 +548,9 @@ class EntriesFilterModelIn(Schema):
             cells=cells,
             reference_text=_column_filter(self.reference_text),
             source_cells=source_cells,
+            unit_surah=_column_filter(self.unit_surah),
             surah=_column_filter(self.surah),
-            sura=_column_filter(self.sura),
-            aya=_column_filter(self.aya),
+            ayah=_column_filter(self.ayah),
         )
 
 
@@ -580,7 +580,7 @@ def list_entries(
     version_id: int,
     page: int = Query(1, ge=1),
     page_size: int = Query(DEFAULT_PAGE_SIZE, ge=1),
-    sura: int | None = None,
+    surah: int | None = None,
     filters: Json[EntriesFilterModelIn] | None = Query(None),
 ):
     _, version = _resolve_version(category, request, slug, version_id, access="read")
@@ -590,7 +590,7 @@ def list_entries(
         version,
         offset=(page - 1) * page_size,
         limit=page_size,
-        sura=sura,
+        surah=surah,
         filters=filters.to_filters() if filters is not None else None,
     )
     return {"results": rows, "count": count}

@@ -524,7 +524,7 @@ class AssetContentService:
         *,
         offset: int,
         limit: int,
-        sura: int | None = None,
+        surah: int | None = None,
         filters: EntryFilters | None = None,
     ) -> tuple[list[dict], int]:
         """One page of the template's canonical units with stored text overlaid.
@@ -560,7 +560,7 @@ class AssetContentService:
             asset,
             offset=offset,
             limit=limit,
-            sura=sura,
+            surah=surah,
             filters=filters,
             version=version,
             source_version=source_version,
@@ -576,8 +576,8 @@ class AssetContentService:
                 "unit_id": unit.unit_id,
                 "label": unit.label,
                 "reference_text": unit.reference_text,
-                "sura": unit.sura,
-                "aya": unit.aya,
+                "surah": unit.surah,
+                "ayah": unit.ayah,
                 **cell_fields(unit.unit_id, keys, cells, source_cells),
                 "order": unit.order,
                 **changed_fields(unit.unit_id, keys, changed_cells),

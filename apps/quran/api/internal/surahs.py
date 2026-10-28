@@ -13,31 +13,31 @@ from apps.quran.services.quran import QuranService
 router = ItqanRouter(tags=[NinjaTag.QURAN])
 
 
-class SuraOut(Schema):
+class SurahOut(Schema):
     id: int
     name: str
     transliterated_name: str
     english_name: str
-    ayas_count: int
+    ayahs_count: int
     start_offset: int
     revelation_type: str
     revelation_order: int
     rukus_count: int
 
 
-@router.get("suras/", response=list[SuraOut])
+@router.get("surahs/", response=list[SurahOut])
 @paginate
-def list_suras(request: Request):
-    """List all 114 suras, ordered by sura number."""
+def list_surahs(request: Request):
+    """List all 114 surahs, ordered by surah number."""
     service = QuranService(QuranRepository())
-    return service.list_suras()
+    return service.list_surahs()
 
 
 @router.get(
-    "suras/{int:sura_id}/",
-    response={200: SuraOut, 404: NinjaErrorResponse[Literal["sura_not_found"]]},
+    "surahs/{int:surah_id}/",
+    response={200: SurahOut, 404: NinjaErrorResponse[Literal["surah_not_found"]]},
 )
-def get_sura(request: Request, sura_id: int):
-    """Retrieve a single sura by its number."""
+def get_surah(request: Request, surah_id: int):
+    """Retrieve a single surah by its number."""
     service = QuranService(QuranRepository())
-    return service.get_sura(sura_id)
+    return service.get_surah(surah_id)

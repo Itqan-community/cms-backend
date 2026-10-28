@@ -19,7 +19,7 @@ from apps.content.models import (
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import MemberLanguage, Publisher, PublisherMember
-from apps.quran.models import Ayah, Sura
+from apps.quran.models import Ayah, Surah
 from apps.users.models import User
 
 
@@ -38,8 +38,8 @@ class AssetLanguageGatingTest(BaseTestCase):
         )
         self.fr = AssetLanguage.objects.create(asset=self.translation, language="fr")
         self.es = AssetLanguage.objects.create(asset=self.translation, language="es")
-        self.sura = baker.make(Sura, id=1, name="الفاتحة", ayas_count=3)
-        self.ayah = baker.make(Ayah, id=1, sura=self.sura, number_in_sura=1, text="a")
+        self.surah = baker.make(Surah, id=1, name="الفاتحة", ayahs_count=3)
+        self.ayah = baker.make(Ayah, id=1, surah=self.surah, number_in_surah=1, text="a")
 
         # Assigned to 'fr' only, with full content-edit rights but no bypass.
         self.user = User.objects.create_user(email="editor@example.com", name="Editor", is_staff=True)

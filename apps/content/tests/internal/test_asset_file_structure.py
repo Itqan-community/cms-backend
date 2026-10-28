@@ -118,7 +118,7 @@ class AssetFileStructureTests(QuranDataMixin, BaseTestCase):
         # Arrange
         column = self.asset.ensure_text_columns()[0]
         extra_ayah = baker.make(
-            "quran.Ayah", id=4, sura=self.sura2, number_in_sura=2, text="ayah 4", juz=1, hizb_quarter=1, page=2
+            "quran.Ayah", id=4, surah=self.surah2, number_in_surah=2, text="ayah 4", juz=1, hizb_quarter=1, page=2
         )
         self._publish(
             ["text"],

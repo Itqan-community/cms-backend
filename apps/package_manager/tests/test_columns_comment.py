@@ -37,7 +37,7 @@ class RenderColumnsCommentTests(BaseTestCase):
         # Arrange
         structure = VersionStructure(
             template="word",
-            header=["word_id", "sura", "aya", "word", "gloss", "note"],
+            header=["word_id", "surah", "ayah", "word", "gloss", "note"],
             columns=[ColumnInfo("gloss", "", "المعنى"), ColumnInfo("note", "", "")],
         )
 
@@ -48,7 +48,7 @@ class RenderColumnsCommentTests(BaseTestCase):
         self.assertEqual(
             lines,
             [
-                "    # itqan:columns CSV, one row per word: word_id, sura, aya, word, gloss, note",
+                "    # itqan:columns CSV, one row per word: word_id, surah, ayah, word, gloss, note",
                 "    # itqan:columns   gloss: المعنى",
             ],
         )

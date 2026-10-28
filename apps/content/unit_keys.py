@@ -2,7 +2,7 @@
 
 Every content pipeline (entries, changes, snapshots, diffs, the grid) keys a
 cell by ``(unit_id, column_key)``. For the single-unit templates the unit id is
-the sura / ayah / word id or the page number. A group row (ayah_group /
+the surah / ayah / word id or the page number. A group row (ayah_group /
 word_group template) covers a range, so its id encodes both ends:
 ``from_id * GROUP_KEY_BASE + to_id``. ``GROUP_KEY_BASE`` is above every
 ``Ayah.id`` (6,236) and ``Word.id`` (77,431), so a group key never collides
@@ -26,7 +26,7 @@ GROUP_KEY_BASE = 1_000_000
 # The unit columns of AssetVersionEntry / AssetVersionChange, in the order
 # ``unit_key_of`` reads them.
 UNIT_VALUE_FIELDS: tuple[str, ...] = (
-    "sura_id",
+    "surah_id",
     "ayah_id",
     "word_id",
     "page_no",
@@ -54,8 +54,8 @@ def unit_key_of(values: Sequence[int | None]) -> int | None:
     explicitly against ``None`` rather than by truthiness, so a legitimate
     zero would not fall through to the next unit.
     """
-    sura_id, ayah_id, word_id, page_no, from_ayah_id, to_ayah_id, from_word_id, to_word_id = values
-    for unit in (sura_id, ayah_id, word_id, page_no):
+    surah_id, ayah_id, word_id, page_no, from_ayah_id, to_ayah_id, from_word_id, to_word_id = values
+    for unit in (surah_id, ayah_id, word_id, page_no):
         if unit is not None:
             return unit
     if from_ayah_id is not None and to_ayah_id is not None:
@@ -73,7 +73,7 @@ def _pair_key(prefix: str) -> F:
 def unit_key_expression() -> Coalesce:
     """SQL twin of ``unit_key_of`` for annotating entry / change querysets."""
     return Coalesce(
-        "sura_id",
+        "surah_id",
         "ayah_id",
         "word_id",
         "page_no",
@@ -87,7 +87,7 @@ def unit_q(unit_ids: Iterable[int]) -> Q:
     """Entry / change rows of the given units, for an asset of any template."""
     ids = list(unit_ids)
     singles = [unit_id for unit_id in ids if unit_id < GROUP_KEY_BASE]
-    q = Q(sura_id__in=singles) | Q(ayah_id__in=singles) | Q(word_id__in=singles) | Q(page_no__in=singles)
+    q = Q(surah_id__in=singles) | Q(ayah_id__in=singles) | Q(word_id__in=singles) | Q(page_no__in=singles)
     pairs = [decode_group_key(unit_id) for unit_id in ids if unit_id >= GROUP_KEY_BASE]
     return reduce(
         operator.or_,

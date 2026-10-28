@@ -15,7 +15,7 @@ from apps.core.tests.base import BaseTestCase
 
 _TRANSLATION_CSV = (
     b'"Translation Info:\n# preamble line",,,,\n'
-    b"id,sura,aya,translation,footnotes\n"
+    b"id,surah,ayah,translation,footnotes\n"
     b'1,1,1,"In the name of Allah","[note]"\n'
     b'2,1,2,"All praise",""\n'
 )
@@ -30,7 +30,7 @@ _TAFSIR_CSV = (
 class ParseContentFileTest(QuranDataMixin, BaseTestCase):
     """Covers the two real QuranEnc export shapes for the ayah template.
 
-    Ayah ids come from ``QuranDataMixin.bake_quran``: sura 1 has ayah 1 (id 1)
+    Ayah ids come from ``QuranDataMixin.bake_quran``: surah 1 has ayah 1 (id 1)
     and ayah 2 (id 2).
     """
 
@@ -93,9 +93,9 @@ class StrictParseTest(QuranDataMixin, BaseTestCase):
         self.assertEqual([self.ayah1.id, self.ayah2.id], [entry.unit_id for entry in entries])
 
     def test_parse_strict_where_rows_would_be_dropped_should_name_each_row(self):
-        # Arrange — row 3: same ayah, different text; row 4: sura not a number;
+        # Arrange — row 3: same ayah, different text; row 4: surah not a number;
         # row 5: an ayah that does not exist
-        content = b"sura,aya,text\n1,1,first\n1,1,second\nx,2,unreadable\n1,99,missing\n"
+        content = b"surah,ayah,text\n1,1,first\n1,1,second\nx,2,unreadable\n1,99,missing\n"
 
         # Act
         with self.assertRaises(AssetContentInvalidRowsError) as ctx:
@@ -106,7 +106,7 @@ class StrictParseTest(QuranDataMixin, BaseTestCase):
 
     def test_parse_strict_where_rows_hide_no_text_should_accept_them(self):
         # Arrange — an identical duplicate, a blank row for a missing ayah, a blank line
-        content = b"sura,aya,text\n1,1,same\n1,1,same\n1,99,\n\n1,2,second\n"
+        content = b"surah,ayah,text\n1,1,same\n1,1,same\n1,99,\n\n1,2,second\n"
 
         # Act
         entries = self._parse_strict(content)
@@ -116,7 +116,7 @@ class StrictParseTest(QuranDataMixin, BaseTestCase):
 
     def test_parse_where_not_strict_should_keep_skipping_bad_rows(self):
         # Arrange — internal reads (e.g. rebuilding legacy versions) stay lenient
-        content = b"sura,aya,text\n1,1,first\n1,1,second\n1,99,missing\n"
+        content = b"surah,ayah,text\n1,1,first\n1,1,second\n1,99,missing\n"
 
         # Act
         entries = parse_content_file(content, self.spec, self.asset)

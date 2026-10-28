@@ -25,7 +25,7 @@ class MultiColumnImportTests(QuranDataMixin, BaseTestCase):
 
     def test_parse_content_file_where_single_column_translation_header_should_parse_into_text(self):
         # Arrange
-        raw = b"id,sura,aya,translation\n1,1,1,In the name\n"
+        raw = b"id,surah,ayah,translation\n1,1,1,In the name\n"
 
         # Act
         parsed = parse_content_file(raw, self.spec, self.asset, column_keys=["text"])
@@ -81,7 +81,7 @@ class MultiColumnImportTests(QuranDataMixin, BaseTestCase):
         asset = baker.make(
             Asset, category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.WORD, status=StatusChoice.READY
         )
-        raw = b"word_id,sura,aya,word,question,answer\n2,1,1,2,Q,A\n"
+        raw = b"word_id,surah,ayah,word,question,answer\n2,1,1,2,Q,A\n"
 
         # Act
         parsed = parse_content_file(raw, unit_spec_for(asset), asset, column_keys=["question", "answer"])

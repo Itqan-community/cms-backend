@@ -20,8 +20,9 @@ CellKey = tuple[int, str]
 Snapshot = dict[CellKey, str]
 
 # Header aliases the importer accepts for each unit field (matched lower-cased and stripped).
-SURA_HEADERS = frozenset({"sura", "surah", "رقم السورة"})
-AYA_HEADERS = frozenset({"aya", "ayah", "رقم الآية"})
+# "sura" / "aya" are the pre-Marqoom spellings: still read so older exports import.
+SURAH_HEADERS = frozenset({"surah", "sura", "رقم السورة"})
+AYAH_HEADERS = frozenset({"ayah", "aya", "رقم الآية"})
 PAGE_HEADERS = frozenset({"page", "page_no", "رقم الصفحة"})
 WORD_ID_HEADERS = frozenset({"word_id", "word_index"})
 WORD_POSITION_HEADERS = frozenset({"word", "position", "رقم الكلمة"})
@@ -38,8 +39,8 @@ REFERENCE_TEXT_HEADER = "reference_text"
 # key may not shadow them.
 UNIT_HEADERS: frozenset[str] = frozenset(
     {"surah_name", "ayah_text", REFERENCE_TEXT_HEADER}.union(
-        SURA_HEADERS,
-        AYA_HEADERS,
+        SURAH_HEADERS,
+        AYAH_HEADERS,
         PAGE_HEADERS,
         WORD_ID_HEADERS,
         WORD_POSITION_HEADERS,
@@ -54,9 +55,9 @@ _RESERVED_KEYS = frozenset({"order"})
 _KEY_RE = re.compile(r"[a-z][a-z0-9_]{0,63}")
 
 _UNIT_HEADER_BY_TEMPLATE: dict[str, list[str]] = {
-    AssetTemplateChoice.SURAH: ["sura"],
+    AssetTemplateChoice.SURAH: ["surah"],
     AssetTemplateChoice.AYAH: ["surah", "ayah"],
-    AssetTemplateChoice.WORD: ["word_id", "sura", "aya", "word"],
+    AssetTemplateChoice.WORD: ["word_id", "surah", "ayah", "word"],
     AssetTemplateChoice.PAGE: ["page"],
     **RANGE_HEADERS_BY_TEMPLATE,
 }
@@ -69,7 +70,7 @@ def validate_column_key(key: str) -> None:
             error_name="column_key_invalid",
             message=_(
                 "A column key must start with a lowercase English letter (a-z), use only a-z, 0-9 and "
-                "underscores (at most 64), and must not be a unit name such as sura or ayah."
+                "underscores (at most 64), and must not be a unit name such as surah or ayah."
             ),
             status_code=400,
         )

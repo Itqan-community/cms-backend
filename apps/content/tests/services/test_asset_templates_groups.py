@@ -115,7 +115,7 @@ class GroupUnitSpecTests(GroupQuranDataMixin, BaseTestCase):
         self.assertEqual(row.label, "1:1:3 → 1:2:1")
         self.assertEqual(row.group_from, (1, 1, 3))
         self.assertEqual(row.group_to, (1, 2, 1))
-        self.assertEqual((row.sura, row.aya), (1, 1))
+        self.assertEqual((row.surah, row.ayah), (1, 1))
 
     def test_units_page_where_reference_text_long_should_truncate_to_limit(self):
         # Arrange
@@ -130,15 +130,15 @@ class GroupUnitSpecTests(GroupQuranDataMixin, BaseTestCase):
         self.assertEqual(len(rows[0].reference_text), REFERENCE_TEXT_LIMIT + 1)
         self.assertTrue(rows[0].reference_text.endswith("…"))
 
-    def test_units_page_where_sura_filter_should_match_from_position(self):
+    def test_units_page_where_surah_filter_should_match_from_position(self):
         # Arrange — 1:3 → 2:1 starts in surah 1
         asset = self._asset(AssetTemplateChoice.AYAH_GROUP)
         version = self._version(asset, {(3, 4): "x"})
         spec = unit_spec_for(asset)
 
         # Act
-        in_one, _ = spec.units_page(asset, offset=0, limit=10, sura=1, version=version)
-        in_two, _ = spec.units_page(asset, offset=0, limit=10, sura=2, version=version)
+        in_one, _ = spec.units_page(asset, offset=0, limit=10, surah=1, version=version)
+        in_two, _ = spec.units_page(asset, offset=0, limit=10, surah=2, version=version)
 
         # Assert
         self.assertEqual(len(in_one), 1)
