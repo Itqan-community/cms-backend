@@ -8,6 +8,7 @@ import hashlib
 import logging
 from pathlib import PurePosixPath
 import zipfile
+import zlib
 
 from botocore.exceptions import BotoCoreError, ClientError
 from django.core.cache import cache
@@ -148,10 +149,16 @@ class AssetPreviewService:
                     ),
                     key=lambda m: (order.index(PurePosixPath(m.filename).suffix.lower()), m.filename),
                 )
-                if not fonts:
+                for font in fonts:
+                    try:
+                        content = archive.read(font)
+                    # A damaged, encrypted or unsupported member: try the next one.
+                    except (zipfile.BadZipFile, RuntimeError, NotImplementedError, EOFError, zlib.error):
+                        logger.warning(f"Unreadable font in zip [version_id={version.pk}, member={font.filename}]")
+                        continue
+                    break
+                else:
                     return None
-                font = fonts[0]
-                content = archive.read(font)
         name = storage.save(f"{directory}/{PurePosixPath(font.filename).name}", ContentFile(content))
         logger.info(f"Font preview extracted [version_id={version.pk}, member={font.filename}]")
         return name

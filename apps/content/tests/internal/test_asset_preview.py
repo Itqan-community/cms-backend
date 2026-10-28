@@ -255,6 +255,34 @@ class FontPreviewTests(QuranDataMixin, BaseTestCase):
         self.assertEqual(response.status_code, 404, response.content)
         self.assertEqual(response.json()["error_name"], "font_preview_unavailable")
 
+    def test_font_preview_where_preferred_member_corrupt_should_fall_back_to_next_font(self):
+        # Arrange — flipping stored bytes breaks the woff2 member's CRC
+        upload = _zip({"font/hafs.woff2": b"woff2-bytes", "font/hafs.ttf": b"ttf-bytes"})
+        self._publish("uthmanic.zip", upload.replace(b"woff2-bytes", b"woff2-BYTES"))
+
+        # Act
+        response = self.client.get(self.url)
+
+        # Assert
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()["file_name"], "hafs.ttf")
+        self.assertEqual(response.json()["format"], "truetype")
+
+    def test_font_preview_where_every_font_member_corrupt_should_return_404_and_not_retry(self):
+        # Arrange
+        self._publish("uthmanic.zip", _zip({"font/hafs.ttf": b"ttf-bytes"}).replace(b"ttf-bytes", b"ttf-BYTES"))
+
+        # Act
+        first = self.client.get(self.url)
+        with patch.object(AssetPreviewService, AssetPreviewService._extract.__name__) as extract:
+            second = self.client.get(self.url)
+
+        # Assert
+        self.assertEqual(first.status_code, 404, first.content)
+        self.assertEqual(first.json()["error_name"], "font_preview_unavailable")
+        self.assertEqual(second.status_code, 404, second.content)
+        extract.assert_not_called()
+
     def test_font_preview_where_upload_is_not_a_zip_should_return_404(self):
         # Arrange
         self._publish("setup.rar", b"Rar!not-a-zip")
