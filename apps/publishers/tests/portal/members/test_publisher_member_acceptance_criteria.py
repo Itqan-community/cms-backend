@@ -65,7 +65,11 @@ class AcceptanceCriteriaTest(BaseTestCase):
 
     # AC#6 + AC#2: accept → active member + password set + token unusable. Staff get READ baseline only.
     def test_accept_makes_active_read_baseline_for_staff_and_token_single_use(self):
-        member, inv, raw = self._invite_via_service(self.p1, "e2@example.com", group=member_group())
+        member, inv, raw = self._invite_via_service(
+            self.p1,
+            "e2@example.com",
+            group=member_group(PermissionChoice.PORTAL_ACCESS, PermissionChoice.PORTAL_VIEW_PUBLISHER_MEMBERS),
+        )
         with (
             patch(
                 "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_activated_email.delay"
@@ -89,7 +93,13 @@ class AcceptanceCriteriaTest(BaseTestCase):
 
     # AC#6 admin variant: accept as admin → 4 perms granted
     def test_accept_admin_grants_member_perms(self):
-        member, _inv, raw = self._invite_via_service(self.p1, "boss@example.com", group=admin_group())
+        member, _inv, raw = self._invite_via_service(
+            self.p1,
+            "boss@example.com",
+            group=admin_group(
+                PermissionChoice.PORTAL_UPDATE_PUBLISHER_MEMBERS, PermissionChoice.PORTAL_DELETE_PUBLISHER_MEMBERS
+            ),
+        )
         with (
             patch(
                 "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_activated_email.delay"

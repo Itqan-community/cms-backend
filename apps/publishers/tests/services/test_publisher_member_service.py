@@ -1,6 +1,7 @@
 from model_bakery import baker
 
 from apps.core.ninja_utils.errors import ItqanError
+from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher, PublisherMember
 from apps.publishers.services.publisher_member_service import PublisherMemberService
@@ -28,7 +29,8 @@ class MemberServiceTest(BaseTestCase):
         self.service.grant_member_perms(member)
 
         # Act
-        self.service.update_member(member, fields={"group_id": admin_group().id, "name": "Jane"})
+        new_group = admin_group(PermissionChoice.PORTAL_UPDATE_PUBLISHER_MEMBERS)
+        self.service.update_member(member, fields={"group_id": new_group.id, "name": "Jane"})
 
         # Assert
         member.refresh_from_db()

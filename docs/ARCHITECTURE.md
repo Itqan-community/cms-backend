@@ -216,6 +216,7 @@ The **Publisher** represents an organization or individual who owns and uploads 
   - Membership is per-publisher, so one user may hold a different group at each publisher they belong to
   - `GET /portal/publishers/me/` (the portal's tenant picker) needs only `portal_access`: it lists the caller's own memberships (staff see every publisher)
   - The `Itqan Internal` group holds every permission and is never listed or assignable through the portal APIs
+  - Publisher groups are not hardcoded or seeded: admins define them and their permissions through the portal groups APIs, and deploys never touch them. Only `Itqan Internal` is seeded, and it is reset to every permission on each `migrate`
 
 ### 2. Resource
 
