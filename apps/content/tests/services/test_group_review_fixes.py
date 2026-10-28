@@ -94,6 +94,33 @@ class GroupReviewFixTests(GroupQuranDataMixin, BaseTestCase):
         # Assert
         self.assertEqual(raised.exception.error_name, "orphaned_groups")
 
+    def test_restore_version_where_source_language_should_reconstruct_snapshot_once(self):
+        # Arrange — the orphan check does not apply to the source, so only the restore reads it
+        old = self._version(self.source, {(1, 3): "src"}, name="1.0")
+        self._version(self.source, {(4, 5): "src two"}, name="1.1")
+        repo = AssetContentRepository()
+
+        # Act
+        with patch.object(repo, repo.reconstruct_entries.__name__, wraps=repo.reconstruct_entries) as reconstruct:
+            AssetContentService(repo).restore_version(self.asset.slug, CategoryChoice.TAFSIR, old.pk)
+
+        # Assert
+        self.assertEqual([call.args[0] for call in reconstruct.call_args_list].count(old), 1)
+
+    def test_restore_version_where_translation_passes_orphan_check_should_reconstruct_snapshot_once(self):
+        # Arrange — the check's snapshot is reused by the restore
+        self._version(self.source, {(1, 3): "src"})
+        old = self._version(self.english, {(1, 3): "en"}, name="1.0")
+        self._version(self.english, {(1, 3): "en two"}, name="1.1")
+        repo = AssetContentRepository()
+
+        # Act
+        with patch.object(repo, repo.reconstruct_entries.__name__, wraps=repo.reconstruct_entries) as reconstruct:
+            AssetContentService(repo).restore_version(self.asset.slug, CategoryChoice.TAFSIR, old.pk)
+
+        # Assert
+        self.assertEqual([call.args[0] for call in reconstruct.call_args_list].count(old), 1)
+
     def test_add_group_where_version_committed_after_check_should_raise_not_editable(self):
         # Arrange — the draft is committed between the editable check and the row lock
         draft = self._version(self.source, {}, state=VersionStateChoice.DRAFT, name="")

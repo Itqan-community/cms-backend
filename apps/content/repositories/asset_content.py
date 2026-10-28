@@ -959,7 +959,14 @@ class AssetContentRepository:
         return state
 
     @transaction.atomic
-    def restore_version(self, version: AssetVersion, *, name: str, created_by_id: int | None = None) -> AssetVersion:
+    def restore_version(
+        self,
+        version: AssetVersion,
+        *,
+        name: str,
+        created_by_id: int | None = None,
+        snapshot: Snapshot | None = None,
+    ) -> AssetVersion:
         """Restore a commit's content as a new published version (the active one).
 
         Works whether `version` still has full entries or was pruned to deltas
@@ -970,12 +977,16 @@ class AssetContentRepository:
         The new version has the asset's *current* columns: a column added after
         `version` comes back empty, and every column `version` had still exists
         (committed columns can't be deleted).
+
+        ``snapshot`` is ``version``'s reconstructed cells when the caller has
+        already read them; otherwise they are reconstructed here.
         """
         asset = version.asset
         spec = unit_spec_for(asset)
         language = version.asset_language.language if version.asset_language_id else asset.language
         previous_head = asset.get_latest_version(language)  # current head before restore
-        snapshot = self.reconstruct_entries(version)
+        if snapshot is None:
+            snapshot = self.reconstruct_entries(version)
         order_index = self._order_map(version)
         if not snapshot and version.file_url:
             # Legacy file-only commit (pre-entries): parse its stored file so the

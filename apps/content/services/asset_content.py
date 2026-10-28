@@ -11,6 +11,7 @@ reaches consumers only once its changes are approved and it is explicitly
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 import logging
 import re
@@ -947,13 +948,18 @@ class AssetContentService:
             self.repo.delete_group_cells(locked, spec, unit_id)
         logger.info(f"Group deleted [version_id={draft.pk}, unit_id={unit_id}]")
 
-    def _forbid_orphaned_groups(self, version: AssetVersion, snapshot: Snapshot) -> None:
-        """A translated language may not commit (or restore) text for ranges its source no longer has."""
+    def _forbid_orphaned_groups(self, version: AssetVersion, load_snapshot: Callable[[], Snapshot]) -> None:
+        """A translated language may not commit (or restore) text for ranges its source no longer has.
+
+        ``load_snapshot`` is only called when the check applies, so other assets never read their cells here.
+        """
         allowed = source_group_keys(version)
         if allowed is None:
             return
         spec = unit_spec_for(version.asset)
-        orphans = sorted(unit_id for (unit_id, _key), text in snapshot.items() if text and unit_id not in allowed)
+        orphans = sorted(
+            unit_id for (unit_id, _key), text in load_snapshot().items() if text and unit_id not in allowed
+        )
         if not orphans:
             return
         units = self.repo._units_by_id(spec, list(dict.fromkeys(orphans)))
@@ -1033,7 +1039,7 @@ class AssetContentService:
             # Locked before the check, so a concurrent column reorder can't land between them.
             self.repo.lock_asset(asset)
             # Under the asset lock: a source commit can't move a group between the check and this commit.
-            self._forbid_orphaned_groups(draft, self.repo._entries_map(draft))
+            self._forbid_orphaned_groups(draft, lambda: self.repo._entries_map(draft))
             forbid_minor_after_column_reorder(asset, draft.asset_language.language, bump)
             draft.name = issue_version_number(asset, draft.asset_language.language, start=version_number, bump=bump)
             published = self.repo.publish_draft(draft)
@@ -1077,9 +1083,17 @@ class AssetContentService:
         with transaction.atomic():
             self.repo.lock_asset(version.asset)
             forbid_minor_after_column_reorder(version.asset, language, bump)
-            self._forbid_orphaned_groups(version, self.repo.reconstruct_entries(version))
+            snapshots: list[Snapshot] = []
+
+            def load_snapshot() -> Snapshot:
+                snapshots.append(self.repo.reconstruct_entries(version))
+                return snapshots[0]
+
+            self._forbid_orphaned_groups(version, load_snapshot)
             name = issue_version_number(version.asset, language, bump=bump)
-            restored = self.repo.restore_version(version, name=name, created_by_id=created_by_id)
+            restored = self.repo.restore_version(
+                version, name=name, created_by_id=created_by_id, snapshot=snapshots[0] if snapshots else None
+            )
         logger.info(f"Version restored [source_version_id={version.pk}, new_version_id={restored.pk}]")
         return restored
 
