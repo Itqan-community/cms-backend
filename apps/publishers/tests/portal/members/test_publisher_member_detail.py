@@ -104,7 +104,7 @@ class MemberDetailTest(BaseTestCase):
         self.assertEqual(admin_group().name, resp.json()["group_name"])
         self.p1_other.refresh_from_db()
         self.assertEqual(admin_group().id, self.p1_other.group_id)
-        self.assertTrue(self.p1_other.user.groups.filter(name="Publisher Member Admin").exists())
+        self.assertEqual(0, self.p1_other.user.groups.count())
 
     def test_update_member_where_group_is_itqan_internal_should_return_400(self):
         # Arrange

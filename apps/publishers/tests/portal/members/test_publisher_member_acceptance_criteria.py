@@ -6,6 +6,7 @@ from model_bakery import baker
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher, PublisherMember, PublisherMemberInvitation
+from apps.publishers.services.effective_permissions import effective_permissions
 from apps.publishers.services.publisher_member_invitation_service import PublisherMemberInvitationService
 from apps.publishers.tests.group_helpers import admin_group, member_group
 from apps.users.models import User
@@ -83,11 +84,10 @@ class AcceptanceCriteriaTest(BaseTestCase):
         self.assertEqual("active", member.status)
         self.assertTrue(member.user.is_active)
         self.assertTrue(member.user.has_usable_password())
-        self.assertTrue(member.user.groups.filter(name="Publisher Member").exists())
-        self.assertFalse(member.user.groups.filter(name="Publisher Member Admin").exists())
-        self.assertTrue(member.user.has_perm("portal_access"))
-        self.assertTrue(member.user.has_perm("portal_view_publisher_members"))
-        self.assertFalse(member.user.has_perm("portal_invite_publisher_members"))
+        perms = effective_permissions(member.user, member.publisher)
+        self.assertIn("portal_access", perms)
+        self.assertIn("portal_view_publisher_members", perms)
+        self.assertNotIn("portal_invite_publisher_members", perms)
         resp2 = self.client.post(f"/portal/invitations/{raw}/accept/")
         self.assertEqual(400, resp2.status_code)
 
@@ -109,9 +109,9 @@ class AcceptanceCriteriaTest(BaseTestCase):
             self.client.post(f"/portal/invitations/{raw}/accept/")
         member.refresh_from_db()
         member.user.refresh_from_db()
-        self.assertTrue(member.user.groups.filter(name="Publisher Member Admin").exists())
-        self.assertTrue(member.user.has_perm("portal_update_publisher_members"))
-        self.assertTrue(member.user.has_perm("portal_delete_publisher_members"))
+        perms = effective_permissions(member.user, member.publisher)
+        self.assertIn("portal_update_publisher_members", perms)
+        self.assertIn("portal_delete_publisher_members", perms)
 
     # AC#3: admin cannot manage other publisher's member
     def test_admin_cannot_manage_other_publisher(self):

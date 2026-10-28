@@ -9,6 +9,7 @@ from apps.core.ninja_utils.errors import ItqanError
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher, PublisherMember, PublisherMemberInvitation
+from apps.publishers.services.effective_permissions import effective_permissions
 from apps.publishers.services.publisher_member_invitation_service import PublisherMemberInvitationService
 from apps.publishers.tests.group_helpers import admin_group, itqan_internal_group, member_group
 from apps.users.models import User
@@ -94,7 +95,9 @@ class InvitationServiceTest(BaseTestCase):
         self.assertEqual("invalid_invitation", ctx.exception.error_name)
 
     def test_accept_admin_activates_sets_password_and_grants_perms(self):
-        member, inv, raw, _ = self._create(email="newbie@example.com", group=admin_group())
+        member, inv, raw, _ = self._create(
+            email="newbie@example.com", group=admin_group(PermissionChoice.PORTAL_UPDATE_PUBLISHER_MEMBERS)
+        )
         with (
             patch(
                 "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_activated_email.delay"
@@ -108,9 +111,12 @@ class InvitationServiceTest(BaseTestCase):
         self.assertEqual(PublisherMemberInvitation.StatusChoice.ACCEPTED, accepted.status)
         self.assertTrue(accepted.member.user.is_active)
         self.assertTrue(accepted.member.user.has_usable_password())
-        # The member's single chosen group is applied; nothing else is implied.
-        self.assertTrue(accepted.member.user.groups.filter(name="Publisher Member Admin").exists())
-        self.assertFalse(accepted.member.user.groups.filter(name="Publisher Member").exists())
+        # The member's chosen group applies through the membership; user.groups is untouched.
+        self.assertIn(
+            PermissionChoice.PORTAL_UPDATE_PUBLISHER_MEMBERS.value,
+            effective_permissions(accepted.member.user, accepted.member.publisher),
+        )
+        self.assertEqual(0, accepted.member.user.groups.count())
         mock_ack.assert_called_once()
 
     def test_accept_staff_activates_with_read_baseline_only(self):
@@ -130,12 +136,10 @@ class InvitationServiceTest(BaseTestCase):
         user = accepted.member.user
         self.assertEqual(PublisherMember.StatusChoice.ACTIVE, accepted.member.status)
         self.assertTrue(user.is_active)
-        # Staff get the READ baseline group, but not the admin (member-management) group.
-        self.assertTrue(user.groups.filter(name="Publisher Member").exists())
-        self.assertFalse(user.groups.filter(name="Publisher Member Admin").exists())
-        self.assertTrue(user.has_perm("portal_access"))
-        self.assertTrue(user.has_perm("portal_view_publisher_members"))
-        self.assertFalse(user.has_perm("portal_invite_publisher_members"))
+        perms = effective_permissions(user, accepted.member.publisher)
+        self.assertIn("portal_access", perms)
+        self.assertIn("portal_view_publisher_members", perms)
+        self.assertNotIn("portal_invite_publisher_members", perms)
 
     def test_create_invitation_where_group_is_itqan_internal_should_reject(self):
         # Arrange
@@ -178,18 +182,19 @@ class InvitationServiceTest(BaseTestCase):
         self.assertEqual(member.id, updated.id)
         self.assertEqual(admin_group().id, updated.group_id)
 
-    def test_accept_where_member_belongs_to_another_publisher_should_keep_both_groups(self):
+    def test_accept_where_member_belongs_to_another_publisher_should_keep_both_roles(self):
         # Arrange: same user is already an active admin at another publisher.
         user = baker.make(User, email="multi2@example.com", is_active=True)
         other_publisher = baker.make(Publisher)
         PublisherMember.objects.create(
             user=user,
             publisher=other_publisher,
-            group=admin_group(),
+            group=admin_group(PermissionChoice.PORTAL_UPDATE_PUBLISHER_MEMBERS),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
-        user.groups.add(admin_group())
-        _, _, raw, _ = self._create(email="multi2@example.com", group=member_group())
+        _, _, raw, _ = self._create(
+            email="multi2@example.com", group=member_group(PermissionChoice.PORTAL_READ_RECITER)
+        )
 
         # Act
         with (
@@ -200,10 +205,12 @@ class InvitationServiceTest(BaseTestCase):
         ):
             self.service.accept_invitation(raw)
 
-        # Assert: the new membership's group is added without disturbing the other one.
-        user.refresh_from_db()
-        self.assertTrue(user.groups.filter(name="Publisher Member").exists())
-        self.assertTrue(user.groups.filter(name="Publisher Member Admin").exists())
+        # Assert: each publisher keeps its own role.
+        user = User.objects.get(id=user.id)
+        self.assertIn("portal_update_publisher_members", effective_permissions(user, other_publisher))
+        self.assertNotIn("portal_read_reciter", effective_permissions(user, other_publisher))
+        new_publisher = PublisherMember.objects.exclude(publisher=other_publisher).get(user=user).publisher
+        self.assertIn("portal_read_reciter", effective_permissions(user, new_publisher))
 
     def test_accept_is_single_use(self):
         _, _, raw, _ = self._create(email="once@example.com")

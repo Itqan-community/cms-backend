@@ -166,7 +166,6 @@ class PublisherMemberInvitationService:
         user.save(update_fields=["password", "is_active"])
 
         self.member_repo.set_status(member, PublisherMember.StatusChoice.ACTIVE)
-        self.members.grant_member_perms(member)
 
         now = timezone.now()
         self.repo.mark_accepted(invitation, now=now)
