@@ -93,6 +93,10 @@ jobs:
           echo "Contents of .env:"
           cat .env
 
+      # Start the databases now so they boot while the image builds.
+      - name: Start services
+        run: docker compose -f docker-compose.local.yml up -d --no-build postgres audit-postgres redis
+
       - name: Build Django image with layer cache
         uses: docker/build-push-action@v7
         with:
@@ -106,7 +110,7 @@ jobs:
 
       # --wait blocks until the healthchecks pass, so the runs below can use
       # --no-deps and skip starting rabbitmq (CI points Celery at redis).
-      - name: Start services
+      - name: Wait for services
         run: docker compose -f docker-compose.local.yml up -d --wait --no-build postgres audit-postgres redis
 
       # One container for all three: each `compose run` costs ~5s to create
@@ -129,7 +133,8 @@ jobs:
 
       # pytest builds its own test databases by running every migration (both
       # the default and audit DBs), so no separate migrate step is needed.
-      # -n auto runs one xdist worker per CPU, each with its own test DB.
+      # -n auto runs one xdist worker per physical core (2 on the 4-vCPU
+      # runner), each with its own test DB. -n logical (4 workers) was slower.
       - name: Run Django Tests
         run: docker compose -f docker-compose.local.yml run --rm --no-deps django uv run pytest -n auto
 
