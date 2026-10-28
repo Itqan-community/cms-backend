@@ -25,7 +25,13 @@ class BoardUrlOut(Schema):
     ),
 )
 def get_usage_board_url(request: Request, publisher_id: int | None = None) -> BoardUrlOut:
-    publisher = request.publisher
     if publisher_id is not None and request.user.is_staff:
         publisher = Publisher.objects.filter(id=publisher_id).first()
+    else:
+        # X-Tenant is not checked for membership on its own; only answer for a publisher the caller may see.
+        publisher = (
+            Publisher.objects.filter(request.publisher_q("id")).filter(pk=request.publisher.pk).first()
+            if request.publisher
+            else None
+        )
     return BoardUrlOut(board_url=publisher.mixpanel_board_url if publisher else None)
