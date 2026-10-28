@@ -69,12 +69,13 @@ class GroupService:
         Each submitted codename is validated against :class:`PermissionChoice`; unknown
         codenames are rejected. The hierarchy is applied (e.g. CREATE pulls in READ) before
         the group's permission set is overwritten. Unless ``editor`` is Itqan staff, every
-        permission in that closure must be one the editor holds at this publisher, so a role
-        can never be used to escalate beyond its editor's own rights.
+        permission this *adds* to the group must be one the editor holds at this publisher, so a
+        role can never be used to escalate beyond its editor's own rights. Permissions the group
+        already has (e.g. granted by staff) may be kept or removed.
         """
         group = self._get_or_404(group_id, publisher_id)
         choices = self._validate_permissions(permissions)
-        self._check_grantable(editor, publisher_id, choices)
+        self._check_grantable(editor, publisher_id, group, choices)
         rows = self.hierarchy.implied_rows(choices)
         return self.repo.set_permissions(group, rows)
 
@@ -118,11 +119,13 @@ class GroupService:
         """Delete an already-loaded ``group``, bypassing the id lookup of :meth:`delete`."""
         self.repo.delete(group)
 
-    def _check_grantable(self, editor: User, publisher_id: int, choices: list[PermissionChoice]) -> None:
+    def _check_grantable(self, editor: User, publisher_id: int, group: Group, choices: list[PermissionChoice]) -> None:
         if editor.is_staff or editor.is_superuser:
             return
-        requested = {permission.value for permission in self.hierarchy.with_implied(choices)}
-        not_held = requested - effective_permissions(editor, publisher_id)
+        held = group.permissions.filter(codename__in=PermissionChoice.values).values_list("codename", flat=True)
+        current = self.hierarchy.with_implied(held)
+        added = {permission.value for permission in self.hierarchy.with_implied(choices) - current}
+        not_held = added - effective_permissions(editor, publisher_id)
         if not_held:
             raise ItqanError(
                 error_name="permission_not_grantable",

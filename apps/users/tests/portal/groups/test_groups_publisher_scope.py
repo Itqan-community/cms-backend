@@ -157,6 +157,25 @@ class GroupsPublisherScopeTest(BaseTestCase):
 
         self.assertEqual(200, response.status_code, response.content)
 
+    def test_editor_can_edit_role_that_already_holds_permission_they_lack(self) -> None:
+        editor = baker.make(User, email="publisher-admin3@example.com")
+        admin_role = publisher_role(
+            self.publisher_a, "Admins", PermissionChoice.PORTAL_UPDATE_GROUP, PermissionChoice.PORTAL_READ_RECITER
+        )
+        # Staff granted this role a permission the editor doesn't hold.
+        target = publisher_role(self.publisher_a, "Managers", PermissionChoice.PORTAL_CREATE_PUBLISHER)
+        PublisherMember.objects.create(
+            user=editor, publisher=self.publisher_a, group=admin_role, status=PublisherMember.StatusChoice.ACTIVE
+        )
+        self._as(editor, self.publisher_a)
+
+        response = self._set_permissions(
+            target.id,
+            [PermissionChoice.PORTAL_CREATE_PUBLISHER.value, PermissionChoice.PORTAL_READ_RECITER.value],
+        )
+
+        self.assertEqual(200, response.status_code, response.content)
+
     def test_staff_can_grant_any_permission(self) -> None:
         staff = baker.make(User, email="staff@example.com", is_staff=True)
         self.give_permission(staff, PermissionChoice.PORTAL_UPDATE_GROUP)
