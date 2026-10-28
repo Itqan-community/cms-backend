@@ -50,3 +50,33 @@ class TestGetUsageBoardUrl(BaseTestCase):
         resp = self.client.get(self.URL)
 
         assert resp.status_code == 401
+
+
+class TestGetUsageBoardUrlPublisherId(BaseTestCase):
+    URL = "/portal/usage/board-url/"
+
+    def test_get_usage_board_url_where_staff_passes_publisher_id_should_return_that_publishers_board(self):
+        # Arrange
+        staff = User.objects.create_user(email="staff@test.com", password="x", is_staff=True)
+        publisher = baker.make(Publisher, mixpanel_board_url="https://eu.mixpanel.com/public/PICKED")
+        self.authenticate_user(staff)
+
+        # Act
+        resp = self.client.get(self.URL, {"publisher_id": publisher.id})
+
+        # Assert
+        self.assertEqual(200, resp.status_code, resp.content)
+        self.assertEqual("https://eu.mixpanel.com/public/PICKED", resp.json()["board_url"])
+
+    def test_get_usage_board_url_where_non_staff_passes_publisher_id_should_ignore_it(self):
+        # Arrange
+        user = User.objects.create_user(email="user@test.com", password="x")
+        other = baker.make(Publisher, mixpanel_board_url="https://eu.mixpanel.com/public/OTHER")
+        self.authenticate_user(user)
+
+        # Act
+        resp = self.client.get(self.URL, {"publisher_id": other.id})
+
+        # Assert
+        self.assertEqual(200, resp.status_code, resp.content)
+        self.assertIsNone(resp.json()["board_url"])
