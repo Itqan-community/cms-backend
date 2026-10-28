@@ -35,7 +35,7 @@ It serves as the formal contract between:
 In the CMS backend, an asset version is not stored as a single deployable file. Instead, it is persisted across relational database rows and optional media files:
 * `Asset`: Root metadata (slug, name, category, language, license, publisher).
 * `AssetVersion`: Version header (SemVer name, state, creation timestamp).
-* `AssetVersionEntry`: Granular per-ayah records (up to 6,236 rows for text-based translations and tafsirs).
+* `AssetVersionEntry`: Granular per-unit records — one per surah, ayah, word, page or (group-template tafsirs) ayah / word range, per text column (e.g. up to 6,236 rows per column for an ayah-based translation or tafsir).
 * Supporting models: `RecitationSurahTrack`, `RecitationAyahTiming`, fonts, and page image files.
 
 Without a defined artifact format:

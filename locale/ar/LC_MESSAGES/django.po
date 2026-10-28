@@ -220,6 +220,12 @@ msgstr "حسب الكلمة"
 msgid "Page based"
 msgstr "حسب الصفحة"
 
+msgid "Ayah-group based"
+msgstr "حسب نطاقات الآيات"
+
+msgid "Word-group based"
+msgstr "حسب نطاقات الكلمات"
+
 msgid "Published"
 msgstr "منشور"
 
@@ -423,8 +429,8 @@ msgid "The uploaded file could not be read."
 msgstr "تعذّرت قراءة الملف المرفوع."
 
 #, python-brace-format
-msgid "Some rows can't be used: they repeat a unit with different text, name a unit that doesn't exist, or can't be read. Fix row(s) {rows} and upload again."
-msgstr "بعض الصفوف غير صالحة للاستخدام: إمّا أنها تكرّر وحدة بنص مختلف، أو تشير إلى وحدة غير موجودة، أو تتعذّر قراءتها. صحّح الصف/الصفوف {rows} ثم ارفع الملف مجددًا."
+msgid "Some rows can't be used: they repeat a unit or range, name a unit that doesn't exist, end before they start, use a range the source language doesn't have, or can't be read. Fix row(s) {rows} and upload again."
+msgstr "بعض الصفوف غير صالحة: تكرر وحدة أو نطاقًا، أو تشير إلى وحدة غير موجودة، أو تنتهي قبل أن تبدأ، أو تستخدم نطاقًا غير موجود في اللغة الأصلية، أو تتعذر قراءتها. صحّح الصف/الصفوف {rows} ثم ارفع الملف مرة أخرى."
 
 msgid "The uploaded file could not be parsed into content entries."
 msgstr "تعذّر تحليل الملف المرفوع إلى إدخالات محتوى."
@@ -466,6 +472,25 @@ msgstr "لا يحتوي هذا الأصل على عمود باسم {columns}."
 #, python-brace-format
 msgid "Units {units} are not part of this asset's template."
 msgstr "الوحدات {units} ليست جزءًا من قالب هذه المادة."
+
+msgid "A translation can only write text for the source language's groups."
+msgstr "لا يمكن للترجمة كتابة نص إلا لنطاقات اللغة الأصلية."
+
+msgid "Only ayah-group and word-group assets have groups."
+msgstr "النطاقات متاحة فقط للمواد القائمة على نطاقات الآيات أو نطاقات الكلمات."
+
+msgid "Groups are added, moved and deleted in the source language; translations follow them."
+msgstr "تُضاف النطاقات وتُنقل وتُحذف في اللغة الأصلية، وتتبعها الترجمات."
+
+msgid "This draft already has a group with exactly this range."
+msgstr "تحتوي هذه المسودة بالفعل على هذا النطاق نفسه تمامًا."
+
+msgid "This draft has no such group."
+msgstr "لا تحتوي هذه المسودة على هذا النطاق."
+
+#, python-brace-format
+msgid "Move or delete the text of groups the source no longer has: {groups}."
+msgstr "انقل أو احذف نص النطاقات التي لم تعد موجودة في اللغة الأصلية: {groups}."
 
 #, python-brace-format
 msgid "Could not parse the uploaded content file: {reason}"
@@ -520,6 +545,9 @@ msgstr "التعليق مطلوب عند طلب إجراء تعديلات."
 
 msgid "The package name (slug) is not valid for this asset."
 msgstr "اسم الحزمة (المعرّف) غير صالح لهذا الأصل."
+
+msgid "This range doesn't exist in the Quran, or it ends before it starts."
+msgstr "هذا النطاق غير موجود في القرآن، أو ينتهي قبل أن يبدأ."
 
 msgid "This asset has no content template."
 msgstr "هذه المادة ليس لها قالب محتوى."
@@ -707,6 +735,9 @@ msgstr "الإصدار ذو المعرف {id} غير موجود للتفسير {
 
 msgid "Translation name (Arabic or English) is required."
 msgstr "اسم الترجمة (بالعربية أو الإنجليزية) مطلوب."
+
+msgid "Ayah-group and word-group templates are only available for tafsir."
+msgstr "قوالب نطاقات الآيات ونطاقات الكلمات متاحة للتفسير فقط."
 
 msgid "Cannot delete Translation because they are referenced through other objects"
 msgstr "لا يمكن حذف الترجمة لأن هناك بيانات أخرى مرتبطة بها"
@@ -1693,6 +1724,13 @@ msgstr "مرحبًا بك في نظام إتقان لإدارة المحتوى!"
 
 msgid "This is a test email to verify the email service is working correctly."
 msgstr "هذه رسالة اختبارية للتأكد من عمل خدمة البريد الإلكتروني بشكل صحيح."
+
+#~ msgid "Write the group's text in at least one column."
+#~ msgstr "اكتب نص النطاق في عمود واحد على الأقل."
+
+#, python-brace-format
+#~ msgid "Some rows can't be used: they repeat a unit with different text, name a unit that doesn't exist, or can't be read. Fix row(s) {rows} and upload again."
+#~ msgstr "بعض الصفوف غير صالحة للاستخدام: إمّا أنها تكرّر وحدة بنص مختلف، أو تشير إلى وحدة غير موجودة، أو تتعذّر قراءتها. صحّح الصف/الصفوف {rows} ثم ارفع الملف مجددًا."
 
 #, python-brace-format
 #~ msgid "Statistics are limited to {days} days per request."

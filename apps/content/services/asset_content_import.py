@@ -20,6 +20,13 @@ the asset's template (``UnitSpec``):
   (position-in-ayah) triple, plus text. ``word_id`` takes precedence when
   present.
 * page — a ``page`` column + text.
+* ayah_group — ``from_surah,from_ayah,to_surah,to_ayah`` + text.
+* word_group — ``from_surah,from_ayah,from_word,to_surah,to_ayah,to_word`` +
+  text (word positions within their ayah). Group files are always parsed
+  strictly: a row repeating a range (even with the same text), naming a
+  position that doesn't exist, or ending before it starts rejects the file, so
+  a group tafsir is never half-imported. A verbose export's
+  ``reference_text`` column is ignored.
 
 Every resolved row is validated against the template's real unit set
 (``UnitSpec.valid_unit_ids``, which is bounded by the candidates on the page —
@@ -39,12 +46,14 @@ import sys
 from apps.content.columns import (
     AYA_HEADERS,
     PAGE_HEADERS,
+    RANGE_HEADERS_BY_TEMPLATE,
     SURA_HEADERS,
     WORD_ID_HEADERS,
     WORD_POSITION_HEADERS,
 )
 from apps.content.models import Asset, AssetTemplateChoice
 from apps.content.services.asset_templates import UnitSpec
+from apps.content.unit_keys import encode_group_key
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +108,8 @@ class AssetContentInvalidRowsError(AssetContentParseError):
 UNREADABLE = "unreadable"
 DUPLICATE = "duplicate"
 UNKNOWN_UNIT = "unknown_unit"
+RANGE_REVERSED = "range_reversed"
+NOT_IN_SOURCE = "not_in_source"
 
 
 @dataclass
@@ -293,6 +304,52 @@ def _word_column_map(header: list[str], text_headers: TextHeaders) -> dict[str, 
     return mapping
 
 
+def _parse_group_entries(
+    rows: list[list[str]], log: _RowLog, text_headers: TextHeaders, range_headers: list[str]
+) -> dict[tuple[int, ...], Cells]:
+    """Parse a group file into ``{(from…, to…): cells}``, keyed by the raw end positions.
+
+    Any repeated range is a problem (``DUPLICATE``), not only a conflicting one:
+    a group file has no canonical row list a download would repeat blank.
+    """
+    header_index = next(
+        (
+            index
+            for index, row in enumerate(rows)
+            if set(range_headers) <= (normalized := {cell.strip().lower() for cell in row})
+            and normalized & _any_text_header(text_headers)
+        ),
+        None,
+    )
+    if header_index is None:
+        raise AssetContentParseError(f"No recognisable header row (expected {', '.join(range_headers)} + text).")
+    header = rows[header_index]
+    # An ayah-group header is a subset of a word-group one: a word file must not
+    # pass for an ayah file with its word columns ignored.
+    foreign = {name for names in RANGE_HEADERS_BY_TEMPLATE.values() for name in names} - set(range_headers)
+    if foreign & {cell.strip().lower() for cell in header}:
+        raise AssetContentParseError("The file's range columns belong to a different template.")
+    columns = {name: index for index, cell in enumerate(header) if (name := cell.strip().lower()) in range_headers}
+    columns.update(_text_column_map(header, text_headers))
+
+    entries: dict[tuple[int, ...], Cells] = {}
+    for row_number, row in enumerate(rows[header_index + 1 :], start=header_index + 2):
+        if len(row) <= max(columns.values()):
+            log.unreadable(row, row_number)
+            continue
+        try:
+            key = tuple(int(row[columns[name]].strip()) for name in range_headers)
+        except (ValueError, AttributeError):
+            log.unreadable(row, row_number)
+            continue
+        content = _row_cells(row, columns, text_headers)
+        if key in entries and (any(entries[key]) or any(content)):
+            log.problems[row_number] = DUPLICATE
+        entries[key] = content
+        log.row_of[key] = row_number
+    return entries
+
+
 def _read_rows(raw: bytes) -> list[list[str]]:
     text = _decode(raw)
     rows = list(csv.reader(io.StringIO(text)))
@@ -417,7 +474,13 @@ def _parse_word_entries(
 
 
 def parse_content_file(
-    raw: bytes, spec: UnitSpec, asset: Asset, *, column_keys: list[str] | None = None, strict: bool = False
+    raw: bytes,
+    spec: UnitSpec,
+    asset: Asset,
+    *,
+    column_keys: list[str] | None = None,
+    strict: bool = False,
+    allowed_unit_ids: set[int] | None = None,
 ) -> list[ParsedEntry]:
     """Parse raw file bytes into rows keyed to the asset's template unit.
 
@@ -430,7 +493,11 @@ def parse_content_file(
     wins) and rows for units that do not exist are skipped. ``strict`` (uploads,
     whose content must be exactly what gets reviewed) instead raises
     ``AssetContentInvalidRowsError`` naming every such row that carries text.
+    Group files are always strict. ``allowed_unit_ids`` (a translated language
+    of a group asset: its source's ranges) flags any other valid unit as
+    ``NOT_IN_SOURCE``.
     """
+    strict = strict or spec.is_group
     column_keys = column_keys or [column.key for column in asset.text_columns()]
     text_headers = _text_headers(column_keys)
     rows = _read_rows(raw)
@@ -481,12 +548,37 @@ def parse_content_file(
                 resolved[triple] = word_id
                 texts[triple] = text
 
+    elif spec.is_group:
+        range_headers = RANGE_HEADERS_BY_TEMPLATE[spec.template]
+        entries = _parse_group_entries(rows, log, text_headers, range_headers)
+        from apps.content.repositories.asset_content import AssetContentRepository
+
+        repo = AssetContentRepository()
+        index = (
+            repo._ayah_id_by_sura_aya()
+            if spec.template == AssetTemplateChoice.AYAH_GROUP
+            else repo._word_id_by_sura_aya_position()
+        )
+        half = len(range_headers) // 2
+        for key, text in entries.items():
+            start, end = index.get(key[:half]), index.get(key[half:])
+            if start is None or end is None or start > end:
+                if any(text):
+                    log.problems[log.row_of[key]] = UNKNOWN_UNIT if start is None or end is None else RANGE_REVERSED
+                continue
+            resolved[key] = encode_group_key(start, end)
+            texts[key] = text
+
     else:  # page
         entries = _parse_page_entries(rows, log, text_headers)
         for page, text in entries.items():
             resolved[page] = page
             texts[page] = text
 
+    if spec.is_group and log.problems:
+        # Before the "no rows" check: a group file whose only rows are bad is
+        # reported row by row, not as an unreadable file.
+        raise AssetContentInvalidRowsError(log.problems)
     if not resolved:
         raise AssetContentParseError(f"No {spec.template} rows found after the header.")
 
@@ -494,6 +586,8 @@ def parse_content_file(
     for key, unit_id in resolved.items():
         if unit_id not in valid_ids and any(texts[key]):
             log.problems[log.row_of[key]] = UNKNOWN_UNIT
+        elif allowed_unit_ids is not None and unit_id not in allowed_unit_ids and any(texts[key]):
+            log.problems[log.row_of[key]] = NOT_IN_SOURCE
     if strict and log.problems:
         raise AssetContentInvalidRowsError(log.problems)
     # A blank cell means "no content for this unit" — downloads list every unit

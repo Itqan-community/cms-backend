@@ -22,9 +22,9 @@ class MushafLayoutModelTests(BaseTestCase):
         with self.assertRaises(ValidationError):
             layout.full_clean()
 
-    def test_asset_template_choice_where_listed_should_expose_four_values(self):
+    def test_asset_template_choice_where_listed_should_expose_six_values(self):
         # Arrange / Act
         values = set(AssetTemplateChoice.values)
 
         # Assert
-        self.assertEqual(values, {"surah", "ayah", "word", "page"})
+        self.assertEqual(values, {"surah", "ayah", "word", "page", "ayah_group", "word_group"})

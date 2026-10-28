@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
-from django.db.models import F, IntegerField, OuterRef, Q, QuerySet, Subquery, Window
+from django.db.models import F, OuterRef, Q, QuerySet, Subquery, Window
 from django.db.models.functions import Coalesce, RowNumber
 from django.utils import timezone
 from simple_history.utils import bulk_create_with_history, bulk_update_with_history
@@ -16,6 +16,7 @@ from apps.content.models import (
     ReviewStateChoice,
     VersionStateChoice,
 )
+from apps.content.unit_keys import unit_key_expression
 
 if TYPE_CHECKING:
     from apps.users.models import User
@@ -36,7 +37,7 @@ class AssetReviewRepository:
     @staticmethod
     def _unit_key() -> Coalesce:
         """The per-asset unit key of a change row (see ``changes_for``)."""
-        return Coalesce("sura_id", "ayah_id", "word_id", "page_no", output_field=IntegerField())
+        return unit_key_expression()
 
     def pending_cells_by_version(self, asset: Asset, language: str) -> dict[int, int]:
         """``{version_id: cells awaiting approval}`` for every committed version of
@@ -103,11 +104,12 @@ class AssetReviewRepository:
         ``last-approved -> this change`` diff (empty when the unit was never
         approved before it; the portal then compares with ``old_text``).
 
-        A change row is keyed to exactly one of ``sura``/``ayah``/``word``/``page_no``,
-        chosen by the asset's ``template`` — which is immutable after creation, so
-        every change row for a given asset shares exactly one unit kind. That makes
-        ``Coalesce`` of the four columns an unambiguous per-asset unit key: ids
-        cannot collide across unit kinds within one asset's change set.
+        A change row is keyed to exactly one unit — a ``sura``/``ayah``/``word``/
+        ``page_no``, or an ayah / word range — chosen by the asset's ``template``,
+        which is immutable after creation, so every change row for a given asset
+        shares exactly one unit kind. ``unit_key_expression`` (the SQL twin of
+        ``AssetVersionChange.unit_id``) is therefore an unambiguous per-asset unit
+        key: ids cannot collide across unit kinds within one asset's change set.
         """
         language_q = self._language_q(asset, language)
         unit_key = self._unit_key()
@@ -160,6 +162,10 @@ class AssetReviewRepository:
                 "sura",
                 "word__ayah",
                 "word__sura",
+                "from_ayah",
+                "to_ayah",
+                "from_word__ayah",
+                "to_word__ayah",
                 "version",
                 "version__asset",
                 "version__created_by",

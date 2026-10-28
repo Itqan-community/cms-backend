@@ -15,6 +15,7 @@ from ninja.schema import DjangoGetter
 from pydantic import AwareDatetime, ConfigDict, Field, Json, model_validator
 
 from apps.content.models import (
+    GROUP_TEMPLATES,
     AssetTemplateChoice,
     AssetVersion,
     AssetVersionEntry,
@@ -29,6 +30,7 @@ from apps.content.services.asset_content import (
     cell_fields,
     changed_fields,
     column_reorder_requires_major,
+    group_fields,
 )
 from apps.content.services.asset_language_access import require_language, require_version_language
 from apps.content.services.asset_templates import (
@@ -37,6 +39,7 @@ from apps.content.services.asset_templates import (
     EntryFilters,
     NumberCondition,
     NumberFilterType,
+    QuranPosition,
     TextCondition,
     TextFilterType,
     unit_spec_for,
@@ -202,6 +205,36 @@ class DraftVersionOut(VersionTextOut):
         return obj.content_edited
 
 
+class QuranPositionOut(Schema):
+    surah: int
+    ayah: int
+    word: int | None = None
+
+
+class QuranPositionIn(Schema):
+    surah: int = Field(ge=1)
+    ayah: int = Field(ge=1)
+    word: int | None = Field(default=None, ge=1)
+
+    def to_position(self) -> QuranPosition:
+        return QuranPosition(surah=self.surah, ayah=self.ayah, word=self.word)
+
+
+class GroupRangeIn(Schema):
+    start: QuranPositionIn
+    end: QuranPositionIn
+
+
+class GroupExtendIn(Schema):
+    # Grow (1) or shrink (-1) the group's end by one ayah / word.
+    by: Literal[1, -1]
+
+
+class GroupIn(GroupRangeIn):
+    # The group's first text, per column key; at least one must be non-blank.
+    cells: dict[str, str] = Field(default_factory=dict)
+
+
 class EntryOut(Schema):
     unit_type: AssetTemplateChoice
     unit_id: int
@@ -221,6 +254,34 @@ class EntryOut(Schema):
     # outside drafts); ``changed_columns`` names those cells' columns.
     changed: bool = False
     changed_columns: list[str] = []
+    # Group templates only: the range's ends, and whether a translated language
+    # holds text for a range its source no longer has.
+    group_from: QuranPositionOut | None = None
+    group_to: QuranPositionOut | None = None
+    orphaned: bool = False
+
+
+def _group_entries_to_out(entries: list[AssetVersionEntry], context: PatchResponseContext) -> list[dict]:
+    """``_entries_to_out`` for a group template: one row per range, built like
+    the read path's (``UnitSpec.group_rows``). Patched and added groups are
+    never orphaned: translations may only write their source's ranges."""
+    keys = list(dict.fromkeys(entry.unit_id for entry in entries))
+    rows = unit_spec_for_template(context.template).group_rows(keys, dict.fromkeys(keys, False))
+    return [
+        {
+            "unit_type": context.template,
+            "unit_id": unit.unit_id,
+            "label": unit.label,
+            "reference_text": unit.reference_text,
+            "sura": unit.sura,
+            "aya": unit.aya,
+            **cell_fields(unit.unit_id, context.column_keys, context.cells, context.source_cells),
+            "order": unit.order,
+            **changed_fields(unit.unit_id, context.column_keys, context.changed_cells),
+            **group_fields(unit),
+        }
+        for unit in rows
+    ]
 
 
 def _entries_to_out(entries: list[AssetVersionEntry], context: PatchResponseContext) -> list[dict]:
@@ -238,6 +299,8 @@ def _entries_to_out(entries: list[AssetVersionEntry], context: PatchResponseCont
     which the GET path uses), not the entry's stored ``order`` column, so a
     row sorts the same whether it came back from GET or PATCH.
     """
+    if context.template in GROUP_TEMPLATES:
+        return _group_entries_to_out(entries, context)
     ayah_ids = [entry.ayah_id for entry in entries if entry.ayah_id is not None]
     sura_ids = [entry.sura_id for entry in entries if entry.sura_id is not None]
     word_ids = [entry.word_id for entry in entries if entry.word_id is not None]
@@ -540,7 +603,8 @@ def list_entries(
         400: NinjaErrorResponse[Literal["version_not_editable"]]
         | NinjaErrorResponse[Literal["unit_not_in_template"]]
         | NinjaErrorResponse[Literal["unknown_column"]]
-        | NinjaErrorResponse[Literal["asset_template_missing"]],
+        | NinjaErrorResponse[Literal["asset_template_missing"]]
+        | NinjaErrorResponse[Literal["group_not_in_source"]],
         404: NinjaErrorResponse[Literal["translation_not_found"]]
         | NinjaErrorResponse[Literal["tafsir_not_found"]]
         | NinjaErrorResponse[Literal["version_not_found"]]
@@ -554,6 +618,110 @@ def patch_entries(request: Request, category: str, slug: str, version_id: int, d
     changed = service.upsert_entries(slug, resolved, version_id, rows, publisher_q=request.publisher_q())
     context = service.get_patch_response_context(slug, resolved, version_id, changed, publisher_q=request.publisher_q())
     return _entries_to_out(changed, context)
+
+
+_GROUP_400 = (
+    NinjaErrorResponse[Literal["version_not_editable"]]
+    | NinjaErrorResponse[Literal["template_not_grouped"]]
+    | NinjaErrorResponse[Literal["group_ranges_source_only"]]
+    | NinjaErrorResponse[Literal["group_range_invalid"]]
+    | NinjaErrorResponse[Literal["group_exists"]]
+)
+_GROUP_404 = (
+    NinjaErrorResponse[Literal["translation_not_found"]]
+    | NinjaErrorResponse[Literal["tafsir_not_found"]]
+    | NinjaErrorResponse[Literal["version_not_found"]]
+    | NinjaErrorResponse[Literal["unsupported_content_category"]]
+)
+
+
+@router.post(
+    "content/{category}/{slug}/versions/{version_id}/groups/",
+    response={
+        200: list[EntryOut],
+        400: _GROUP_400 | NinjaErrorResponse[Literal["unknown_column"]],
+        404: _GROUP_404,
+    },
+)
+def add_group(request: Request, category: str, slug: str, version_id: int, data: GroupIn) -> list[dict]:
+    """Add a group (a range of ayahs / words) to a source-language draft, with its
+    first text if given; a group left blank is dropped when the draft is committed."""
+    resolved = _resolve_for_version(category, request, slug, version_id, access="content")
+    service = AssetContentService()
+    changed = service.add_group(
+        slug,
+        resolved,
+        version_id,
+        start=data.start.to_position(),
+        end=data.end.to_position(),
+        cells=data.cells,
+        publisher_q=request.publisher_q(),
+    )
+    context = service.get_patch_response_context(slug, resolved, version_id, changed, publisher_q=request.publisher_q())
+    return _entries_to_out(changed, context)
+
+
+@router.post(
+    "content/{category}/{slug}/versions/{version_id}/groups/next/",
+    response={200: list[EntryOut], 400: _GROUP_400, 404: _GROUP_404},
+)
+def append_group(request: Request, category: str, slug: str, version_id: int) -> list[dict]:
+    """Add a blank one-ayah (or one-word) group right after the furthest unit the
+    draft's groups reach — the grid's "add next group"."""
+    resolved = _resolve_for_version(category, request, slug, version_id, access="content")
+    service = AssetContentService()
+    added = service.append_group(slug, resolved, version_id, publisher_q=request.publisher_q())
+    context = service.get_patch_response_context(slug, resolved, version_id, added, publisher_q=request.publisher_q())
+    return _entries_to_out(added, context)
+
+
+@router.post(
+    "content/{category}/{slug}/versions/{version_id}/groups/{unit_id}/extend/",
+    response={200: list[EntryOut], 400: _GROUP_400, 404: _GROUP_404 | NinjaErrorResponse[Literal["group_not_found"]]},
+)
+def extend_group(
+    request: Request, category: str, slug: str, version_id: int, unit_id: int, data: GroupExtendIn
+) -> list[dict]:
+    """Grow or shrink a group's end by one ayah / word, keeping its text."""
+    resolved = _resolve_for_version(category, request, slug, version_id, access="content")
+    service = AssetContentService()
+    moved = service.extend_group(slug, resolved, version_id, unit_id, by=data.by, publisher_q=request.publisher_q())
+    context = service.get_patch_response_context(slug, resolved, version_id, moved, publisher_q=request.publisher_q())
+    return _entries_to_out(moved, context)
+
+
+@router.put(
+    "content/{category}/{slug}/versions/{version_id}/groups/{unit_id}/",
+    response={200: list[EntryOut], 400: _GROUP_400, 404: _GROUP_404 | NinjaErrorResponse[Literal["group_not_found"]]},
+)
+def move_group(
+    request: Request, category: str, slug: str, version_id: int, unit_id: int, data: GroupRangeIn
+) -> list[dict]:
+    """Give a source-language draft's group a new range, keeping its text."""
+    resolved = _resolve_for_version(category, request, slug, version_id, access="content")
+    service = AssetContentService()
+    moved = service.move_group(
+        slug,
+        resolved,
+        version_id,
+        unit_id,
+        start=data.start.to_position(),
+        end=data.end.to_position(),
+        publisher_q=request.publisher_q(),
+    )
+    context = service.get_patch_response_context(slug, resolved, version_id, moved, publisher_q=request.publisher_q())
+    return _entries_to_out(moved, context)
+
+
+@router.delete(
+    "content/{category}/{slug}/versions/{version_id}/groups/{unit_id}/",
+    response={204: None, 400: _GROUP_400, 404: _GROUP_404 | NinjaErrorResponse[Literal["group_not_found"]]},
+)
+def delete_group(request: Request, category: str, slug: str, version_id: int, unit_id: int) -> tuple[int, None]:
+    """Delete a draft's group. A translated language may only delete a group its source no longer has."""
+    resolved = _resolve_for_version(category, request, slug, version_id, access="content")
+    AssetContentService().delete_group(slug, resolved, version_id, unit_id, publisher_q=request.publisher_q())
+    return 204, None
 
 
 @router.get(
@@ -615,7 +783,8 @@ def get_version(request: Request, category: str, slug: str, version_id: int) -> 
         | NinjaErrorResponse[Literal["major_bump_required"]]
         | NinjaErrorResponse[Literal["commit_message_required"]]
         | NinjaErrorResponse[Literal["version_number_required"]]
-        | NinjaErrorResponse[Literal["version_number_invalid"]],
+        | NinjaErrorResponse[Literal["version_number_invalid"]]
+        | NinjaErrorResponse[Literal["orphaned_groups"]],
         404: NinjaErrorResponse[Literal["translation_not_found"]]
         | NinjaErrorResponse[Literal["tafsir_not_found"]]
         | NinjaErrorResponse[Literal["version_not_found"]]
