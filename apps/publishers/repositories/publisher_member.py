@@ -35,4 +35,4 @@ class PublisherMemberRepository:
         member.delete()
 
     def get_with_relations(self, member_id: int) -> PublisherMember:
-        return self.model.objects.select_related("user", "publisher", "group").get(pk=member_id)
+        return self.model.objects.select_related("user", "publisher", "group__publisher_group").get(pk=member_id)

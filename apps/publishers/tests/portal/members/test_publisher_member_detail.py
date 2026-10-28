@@ -101,7 +101,7 @@ class MemberDetailTest(BaseTestCase):
         # Assert
         self.assertEqual(200, resp.status_code, resp.content)
         self.assertEqual(admin_group(publisher=self.p1).id, resp.json()["group_id"])
-        self.assertEqual(admin_group(publisher=self.p1).name, resp.json()["group_name"])
+        self.assertEqual(admin_group(publisher=self.p1).publisher_group.name, resp.json()["group_name"])
         self.p1_other.refresh_from_db()
         self.assertEqual(admin_group(publisher=self.p1).id, self.p1_other.group_id)
         self.assertEqual(0, self.p1_other.user.groups.count())

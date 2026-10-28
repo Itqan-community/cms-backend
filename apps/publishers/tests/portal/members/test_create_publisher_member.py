@@ -122,7 +122,7 @@ class CreateMemberTest(BaseTestCase):
         self.assertEqual(201, resp.status_code, resp.content)
         body = resp.json()
         self.assertEqual(group.id, body["group_id"])
-        self.assertEqual(group.name, body["group_name"])
+        self.assertEqual(group.publisher_group.name, body["group_name"])
         self.assertEqual(group.id, PublisherMember.objects.get(id=body["id"]).group_id)
 
     def test_invite_member_where_group_id_missing_should_return_400(self):

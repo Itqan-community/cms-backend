@@ -210,7 +210,7 @@ class PublisherMemberInvitation(BaseModel):
     @property
     def group_name(self) -> str | None:
         """Derived from member. None if member was deleted (cancelled invitation audit trail)."""
-        return self.member.group.name if self.member_id else None
+        return self.member.group_display_name if self.member_id else None
 
     def __str__(self):
         return f"PublisherMemberInvitation(member={self.member_id} publisher={self.publisher_id} status={self.status})"

@@ -56,7 +56,7 @@ class MemberOut(Schema):
 
     @staticmethod
     def resolve_group_name(obj: PublisherMember) -> str:
-        return obj.group.name
+        return obj.group_display_name
 
     @staticmethod
     def resolve_expires_at(obj: PublisherMember):
@@ -76,7 +76,7 @@ class MemberCreateIn(Schema):
 
 def _members_qs():
     return (
-        PublisherMember.objects.select_related("user", "publisher", "group")
+        PublisherMember.objects.select_related("user", "publisher", "group__publisher_group")
         .prefetch_related("invitations", "languages")
         .order_by("-created_at")
     )
@@ -258,7 +258,7 @@ class InvitationDetailsOut(Schema):
 
     @staticmethod
     def resolve_group_name(obj: PublisherMemberInvitation) -> str:
-        return obj.member.group.name
+        return obj.member.group_display_name
 
     @staticmethod
     def resolve_invited_by_name(obj: PublisherMemberInvitation) -> str:
