@@ -15,7 +15,7 @@ from apps.core.permissions import PermissionChoice
 from apps.core.services.permissions import PermissionHierarchyService
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
-from apps.quran.models import Ayah, Sura
+from apps.quran.models import Ayah, Surah
 from apps.users.models import User
 
 
@@ -122,8 +122,8 @@ class ContentEditPermissionTests(BaseTestCase):
         # Arrange
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
-        sura = baker.make(Sura, id=1, name="الفاتحة", ayas_count=7)
-        baker.make(Ayah, id=1, sura=sura, number_in_sura=1, text="a")
+        surah = baker.make(Surah, id=1, name="الفاتحة", ayahs_count=7)
+        baker.make(Ayah, id=1, surah=surah, number_in_surah=1, text="a")
 
         # Act
         response = self.client.post(

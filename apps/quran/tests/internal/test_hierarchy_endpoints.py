@@ -1,35 +1,35 @@
 from model_bakery import baker
 
 from apps.core.tests.base import BaseTestCase
-from apps.quran.models import Ayah, Sura, Word
+from apps.quran.models import Ayah, Surah, Word
 from apps.users.models import User
 
 
 class HierarchyEndpointsTest(BaseTestCase):
     def setUp(self) -> None:
         super().setUp()
-        self.sura = baker.make(
-            Sura,
+        self.surah = baker.make(
+            Surah,
             id=1,
             name="الفاتحة",
             transliterated_name="Al-Faatiha",
             english_name="The Opening",
-            ayas_count=2,
+            ayahs_count=2,
             start_offset=0,
             revelation_type="Meccan",
             revelation_order=5,
             rukus_count=1,
         )
         self.ayah1 = baker.make(
-            Ayah, id=1, sura=self.sura, number_in_sura=1, text="بِسۡمِ ٱللَّهِ", juz=1, hizb_quarter=1, page=1
+            Ayah, id=1, surah=self.surah, number_in_surah=1, text="بِسۡمِ ٱللَّهِ", juz=1, hizb_quarter=1, page=1
         )
         self.ayah2 = baker.make(
-            Ayah, id=2, sura=self.sura, number_in_sura=2, text="ٱلۡحَمۡدُ لِلَّهِ", juz=1, hizb_quarter=1, page=1
+            Ayah, id=2, surah=self.surah, number_in_surah=2, text="ٱلۡحَمۡدُ لِلَّهِ", juz=1, hizb_quarter=1, page=1
         )
-        baker.make(Word, id=1, sura=self.sura, ayah=self.ayah1, position_in_ayah=1, text="بِسْمِ")
-        baker.make(Word, id=2, sura=self.sura, ayah=self.ayah1, position_in_ayah=2, text="اللَّهِ")
+        baker.make(Word, id=1, surah=self.surah, ayah=self.ayah1, position_in_ayah=1, text="بِسْمِ")
+        baker.make(Word, id=2, surah=self.surah, ayah=self.ayah1, position_in_ayah=2, text="اللَّهِ")
 
-    def test_list_hierarchy_tree_where_authenticated_should_return_sura_summaries(self):
+    def test_list_hierarchy_tree_where_authenticated_should_return_surah_summaries(self):
         # Arrange
         user = baker.make(User, email="reader@example.com", is_active=True)
         self.authenticate_user(user)
@@ -48,7 +48,7 @@ class HierarchyEndpointsTest(BaseTestCase):
                 "name": "الفاتحة",
                 "transliterated_name": "Al-Faatiha",
                 "english_name": "The Opening",
-                "ayas_count": 2,
+                "ayahs_count": 2,
                 "start_offset": 0,
             },
         )
@@ -66,13 +66,13 @@ class HierarchyEndpointsTest(BaseTestCase):
         body = response.json()
         self.assertEqual(len(body), 2)
         self.assertEqual(body[0]["id"], 1)
-        self.assertEqual(body[0]["number_in_sura"], 1)
+        self.assertEqual(body[0]["number_in_surah"], 1)
         self.assertEqual(body[0]["words_count"], 2)
         self.assertEqual(body[1]["words_count"], 0)
         self.assertNotIn("words", body[0])
         self.assertNotIn("words", body[1])
 
-    def test_list_surah_ayah_tree_where_sura_missing_should_return_404_sura_not_found(self):
+    def test_list_surah_ayah_tree_where_surah_missing_should_return_404_surah_not_found(self):
         # Arrange
         user = baker.make(User, email="reader@example.com", is_active=True)
         self.authenticate_user(user)
@@ -82,7 +82,7 @@ class HierarchyEndpointsTest(BaseTestCase):
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
-        self.assertEqual(response.json()["error_name"], "sura_not_found")
+        self.assertEqual(response.json()["error_name"], "surah_not_found")
 
     def test_get_ayah_words_where_exists_should_return_ordered_words(self):
         # Arrange

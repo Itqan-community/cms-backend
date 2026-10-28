@@ -17,9 +17,9 @@ from apps.quran.api.public.samples import (
     DEFAULT_SAMPLE_AYAH,
     DEFAULT_SAMPLE_SURAH,
     AyahSampleOut,
-    SuraSampleOut,
+    SurahSampleOut,
     serialize_ayah,
-    serialize_sura,
+    serialize_surah,
 )
 from apps.quran.repositories.quran import QuranRepository
 from apps.quran.services.quran import QuranService
@@ -276,7 +276,7 @@ def _ayah_number_from_key(ayah_key: str) -> int | None:
 class JoinedAyahSampleOut(Schema):
     """One ayah joined across domains; content sections degrade to null, never fabricate."""
 
-    surah: SuraSampleOut
+    surah: SurahSampleOut
     ayah: AyahSampleOut
     tafsir: TafsirSampleOut | None = None
     translation: TranslationSampleOut | None = None
@@ -287,7 +287,7 @@ class JoinedAyahSampleOut(Schema):
     "sample-data/joined-ayah/",
     response={
         200: JoinedAyahSampleOut,
-        404: NinjaErrorResponse[Literal["sura_not_found"]] | NinjaErrorResponse[Literal["ayah_not_found"]],
+        404: NinjaErrorResponse[Literal["surah_not_found"]] | NinjaErrorResponse[Literal["ayah_not_found"]],
     },
     tags=[NinjaTag.SAMPLE_DATA],
 )
@@ -301,10 +301,10 @@ def get_joined_ayah(
     The requested location anchors the response; content sections whose assets
     cannot provide that exact verse degrade to null rather than fabricating text.
     """
-    # get_ayah selects the sura in the same query (repository pattern) -- the
+    # get_ayah selects the surah in the same query (repository pattern) -- the
     # surah section costs no extra round-trip and 404s use the canonical names.
     ayah_obj = QuranService(QuranRepository()).get_ayah(surah, ayah)
-    sura = ayah_obj.sura
+    surah_obj = ayah_obj.surah
 
     tafsir_asset = TafsirRepository().get_ready_asset()
     translation_asset = TranslationRepository().get_ready_asset()
@@ -314,7 +314,7 @@ def get_joined_ayah(
     track = recitation_service.get_sample_track(recitation_asset.id, surah) if recitation_asset else None
 
     return {
-        "surah": serialize_sura(sura),
+        "surah": serialize_surah(surah_obj),
         "ayah": serialize_ayah(ayah_obj),
         "tafsir": _content_section(tafsir_asset, surah, ayah) if tafsir_asset else None,
         "translation": _content_section(translation_asset, surah, ayah) if translation_asset else None,

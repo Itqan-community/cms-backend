@@ -6,7 +6,7 @@ from apps.content.services.asset_language import AssetLanguageService
 from apps.core.ninja_utils.errors import ItqanError
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
-from apps.quran.models import Ayah, Sura
+from apps.quran.models import Ayah, Surah
 from apps.users.models import User
 
 
@@ -25,8 +25,8 @@ class AssetLanguageServiceTest(BaseTestCase):
             language="ar",
         )
         self.user = User.objects.create_user(email="editor@example.com", name="Editor", is_staff=True)
-        self.sura = baker.make(Sura, id=1, name="الفاتحة", ayas_count=3)
-        self.ayahs = [baker.make(Ayah, id=i, sura=self.sura, number_in_sura=i, text=f"ayah {i}") for i in (1, 2, 3)]
+        self.surah = baker.make(Surah, id=1, name="الفاتحة", ayahs_count=3)
+        self.ayahs = [baker.make(Ayah, id=i, surah=self.surah, number_in_surah=i, text=f"ayah {i}") for i in (1, 2, 3)]
 
     def test_list_languages_creates_and_returns_source_first(self):
         AssetLanguage.objects.create(asset=self.translation, language="es")

@@ -104,7 +104,7 @@ class AssetReviewRepository:
         ``last-approved -> this change`` diff (empty when the unit was never
         approved before it; the portal then compares with ``old_text``).
 
-        A change row is keyed to exactly one unit — a ``sura``/``ayah``/``word``/
+        A change row is keyed to exactly one unit — a ``surah``/``ayah``/``word``/
         ``page_no``, or an ayah / word range — chosen by the asset's ``template``,
         which is immutable after creation, so every change row for a given asset
         shares exactly one unit kind. ``unit_key_expression`` (the SQL twin of
@@ -158,10 +158,10 @@ class AssetReviewRepository:
             qs.annotate(unit_key=unit_key)
             .select_related(
                 "ayah",
-                "ayah__sura",
-                "sura",
+                "ayah__surah",
+                "surah",
                 "word__ayah",
-                "word__sura",
+                "word__surah",
                 "from_ayah",
                 "to_ayah",
                 "from_word__ayah",

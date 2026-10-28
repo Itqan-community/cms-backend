@@ -144,8 +144,8 @@ msgstr "لا توجد تلاوة متاحة"
 msgid "No recitation track available for surah {surah}."
 msgstr "لا يوجد مقطع تلاوة متاح للسورة {surah}."
 
-msgid "A column key must start with a lowercase English letter (a-z), use only a-z, 0-9 and underscores (at most 64), and must not be a unit name such as sura or ayah."
-msgstr "يجب أن يبدأ مفتاح العمود بحرف إنجليزي صغير (a-z)، وأن يتكوّن من a-z و0-9 والشرطة السفلية فقط (64 حرفًا على الأكثر)، وألا يكون اسم وحدة مثل sura أو ayah."
+msgid "A column key must start with a lowercase English letter (a-z), use only a-z, 0-9 and underscores (at most 64), and must not be a unit name such as surah or ayah."
+msgstr "يجب أن يبدأ مفتاح العمود بحرف إنجليزي صغير (a-z)، وأن يتكوّن من a-z و0-9 والشرطة السفلية فقط (64 حرفًا على الأكثر)، وألا يكون اسم وحدة مثل surah أو ayah."
 
 msgid "Please select at least one file."
 msgstr "يرجى اختيار ملف واحد على الأقل."
@@ -1115,7 +1115,7 @@ msgstr "أحد المسؤولين"
 msgid "Welcome to {publisher_name}"
 msgstr "مرحبًا بك في {publisher_name}"
 
-msgid "Sura does not exist."
+msgid "Surah does not exist."
 msgstr "السورة غير موجودة."
 
 msgid "Ayah does not exist."

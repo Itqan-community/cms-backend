@@ -145,8 +145,8 @@ class ColumnHelperTests(BaseTestCase):
 
     def test_csv_header_where_each_template_single_text_column_should_match_existing_headers(self):
         # Arrange / Act / Assert
-        self.assertEqual(csv_header(AssetTemplateChoice.SURAH, ["text"]), ["sura", "text"])
-        self.assertEqual(csv_header(AssetTemplateChoice.WORD, ["text"]), ["word_id", "sura", "aya", "word", "text"])
+        self.assertEqual(csv_header(AssetTemplateChoice.SURAH, ["text"]), ["surah", "text"])
+        self.assertEqual(csv_header(AssetTemplateChoice.WORD, ["text"]), ["word_id", "surah", "ayah", "word", "text"])
         self.assertEqual(csv_header(AssetTemplateChoice.PAGE, ["text"]), ["page", "text"])
         self.assertEqual(
             csv_header(AssetTemplateChoice.AYAH, ["text"], verbose=True),
@@ -155,7 +155,7 @@ class ColumnHelperTests(BaseTestCase):
 
     def test_validate_column_key_where_reserved_or_malformed_should_raise(self):
         # Arrange
-        bad_keys = ["sura", "surah_name", "Question", "1a", "", "a" * 65, "with space"]
+        bad_keys = ["surah", "sura", "surah_name", "Question", "1a", "", "a" * 65, "with space"]
 
         for key in bad_keys:
             # Act

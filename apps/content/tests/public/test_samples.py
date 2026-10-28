@@ -25,7 +25,7 @@ from apps.content.services import asset_verse_text
 from apps.content.tests.publishing import publish
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
-from apps.quran.models import Ayah, Sura
+from apps.quran.models import Ayah, Surah
 
 
 class ContentSamplesTest(BaseTestCase):
@@ -47,30 +47,30 @@ class ContentSamplesTest(BaseTestCase):
         # Deterministic Quran anchor for the sample endpoints: Surah 1 / Ayah 1:1.
         self._seed_quran_location(1, 1)
 
-    def _seed_quran_location(self, sura_id: int, ayah_number: int):
-        """Create one sura and one ayah row at the given location."""
-        sura = baker.make(
-            Sura,
-            id=sura_id,
-            name="الفاتحة" if sura_id == 1 else "البقرة",
-            transliterated_name="Al-Faatiha" if sura_id == 1 else "Al-Baqara",
-            english_name="The Opening" if sura_id == 1 else "The Cow",
-            ayas_count=7 if sura_id == 1 else 286,
+    def _seed_quran_location(self, surah_id: int, ayah_number: int):
+        """Create one surah and one ayah row at the given location."""
+        surah = baker.make(
+            Surah,
+            id=surah_id,
+            name="الفاتحة" if surah_id == 1 else "البقرة",
+            transliterated_name="Al-Faatiha" if surah_id == 1 else "Al-Baqara",
+            english_name="The Opening" if surah_id == 1 else "The Cow",
+            ayahs_count=7 if surah_id == 1 else 286,
             start_offset=0,
-            revelation_type="Meccan" if sura_id == 1 else "Medinan",
-            revelation_order=5 if sura_id == 1 else 87,
-            rukus_count=1 if sura_id == 1 else 40,
+            revelation_type="Meccan" if surah_id == 1 else "Medinan",
+            revelation_order=5 if surah_id == 1 else 87,
+            rukus_count=1 if surah_id == 1 else 40,
         )
         ayah = baker.make(
             Ayah,
-            sura=sura,
-            number_in_sura=ayah_number,
-            text=f"نص الآية {sura_id}:{ayah_number}",
+            surah=surah,
+            number_in_surah=ayah_number,
+            text=f"نص الآية {surah_id}:{ayah_number}",
             juz=1,
             hizb_quarter=1,
             page=1,
         )
-        return sura, ayah
+        return surah, ayah
 
     def _seed_versioned_asset(self, category, name: str, payload: dict):
         """Create a READY asset whose latest version carries the given JSON payload."""
@@ -539,7 +539,7 @@ class ContentSamplesTest(BaseTestCase):
                 "name": "الفاتحة",
                 "transliterated_name": "Al-Faatiha",
                 "english_name": "The Opening",
-                "ayas_count": 7,
+                "ayahs_count": 7,
                 "revelation_type": "Meccan",
                 "revelation_order": 5,
                 "rukus_count": 1,
@@ -605,14 +605,14 @@ class ContentSamplesTest(BaseTestCase):
         self.assertEqual([255], [t["ayah_number"] for t in sample_track["ayah_timings"]])
         self.assertEqual(1000, sample_track["ayah_timings"][0]["start_ms"])
 
-    def test_get_joined_ayah_where_surah_missing_should_return_sura_not_found(self):
-        """Missing anchor sura fails the whole request with sura_not_found."""
+    def test_get_joined_ayah_where_surah_missing_should_return_surah_not_found(self):
+        """Missing anchor surah fails the whole request with surah_not_found."""
         # Arrange - only Surah 1 exists in setUp
         # Act
         response = self.client.get("/sample-data/joined-ayah/", {"surah": 3, "ayah": 1})
         # Assert
         self.assertEqual(404, response.status_code)
-        self.assertEqual("sura_not_found", response.json()["error_name"])
+        self.assertEqual("surah_not_found", response.json()["error_name"])
 
     def test_get_joined_ayah_where_ayah_missing_should_return_ayah_not_found(self):
         """Missing anchor ayah fails the whole request with ayah_not_found."""

@@ -29,11 +29,11 @@ class EntriesToCsvTemplateTests(QuranDataMixin, BaseTestCase):
         super().setUp()
         self.bake_quran()
 
-    def test_entries_to_csv_where_surah_template_should_emit_a_sura_column(self):
+    def test_entries_to_csv_where_surah_template_should_emit_a_surah_column(self):
         # Arrange
         asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.SURAH)
         version = baker.make(AssetVersion, asset=asset)
-        AssetVersionEntry.objects.create(version=version, sura_id=1, text="opening", order=1)
+        AssetVersionEntry.objects.create(version=version, surah_id=1, text="opening", order=1)
         repo = AssetContentRepository()
 
         # Act
@@ -41,7 +41,7 @@ class EntriesToCsvTemplateTests(QuranDataMixin, BaseTestCase):
 
         # Assert
         lines = csv_bytes.decode("utf-8").splitlines()
-        self.assertEqual("sura,text", lines[0])
+        self.assertEqual("surah,text", lines[0])
         self.assertEqual("1,opening", lines[1])
 
     def test_entries_to_csv_where_word_template_should_emit_word_columns(self):
@@ -54,9 +54,9 @@ class EntriesToCsvTemplateTests(QuranDataMixin, BaseTestCase):
         # Act
         csv_bytes = repo.entries_to_csv_bytes(version, unit_spec_for(asset))
 
-        # Assert — word_id, sura, aya (number in sura), word (position in ayah), text
+        # Assert — word_id, surah, ayah (number in surah), word (position in ayah), text
         lines = csv_bytes.decode("utf-8").splitlines()
-        self.assertEqual("word_id,sura,aya,word,text", lines[0])
+        self.assertEqual("word_id,surah,ayah,word,text", lines[0])
         self.assertEqual(f"{self.word1.id},1,1,1,the", lines[1])
 
     def test_entries_to_csv_where_page_template_should_emit_a_page_column(self):
@@ -139,7 +139,7 @@ class SnapshotToCsvTemplateTests(QuranDataMixin, BaseTestCase):
     def test_snapshot_to_csv_where_surah_template_should_not_be_mis_keyed_as_ayah(self):
         # Arrange — a published, pruned surah-template commit: only its delta
         # remains, so the download path must reconstruct + re-key via `spec`.
-        # sura id 1 and ayah id 1 coincide (QuranDataMixin bakes both as id=1),
+        # surah id 1 and ayah id 1 coincide (QuranDataMixin bakes both as id=1),
         # so the old ayah-only lookup would silently resolve this to ayah 1's
         # data instead of erroring — a worse failure than a crash.
         asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.SURAH)
@@ -147,7 +147,7 @@ class SnapshotToCsvTemplateTests(QuranDataMixin, BaseTestCase):
         baker.make(
             AssetVersionChange,
             version=version,
-            sura_id=1,
+            surah_id=1,
             change_type=ChangeTypeChoice.ADDED,
             new_text="opening surah",
             order=1,
@@ -161,7 +161,7 @@ class SnapshotToCsvTemplateTests(QuranDataMixin, BaseTestCase):
 
         # Assert — the surah's own row, not ayah 1's text under a "surah,text" header
         text = csv_bytes.decode("utf-8")
-        self.assertEqual("sura,text\r\n1,opening surah\r\n2,\r\n", text)
+        self.assertEqual("surah,text\r\n1,opening surah\r\n2,\r\n", text)
         self.assertNotIn(self.ayah1.text, text)
 
     def test_snapshot_to_csv_where_word_template_should_resolve_via_word_model(self):
@@ -185,11 +185,11 @@ class SnapshotToCsvTemplateTests(QuranDataMixin, BaseTestCase):
 
         # Assert
         text = csv_bytes.decode("utf-8")
-        self.assertEqual(f"word_id,sura,aya,word,text\r\n{self.word1.id},1,1,1,the\r\n2,1,1,2,\r\n", text)
+        self.assertEqual(f"word_id,surah,ayah,word,text\r\n{self.word1.id},1,1,1,the\r\n2,1,1,2,\r\n", text)
 
     def test_snapshot_to_csv_where_ayah_template_verbose_should_not_scale_queries_with_row_count(self):
         # Arrange — a published, pruned ayah-template commit spanning all 3 baked
-        # ayahs across 2 suras, so a per-row `.sura` lazy-load (the N+1 this
+        # ayahs across 2 surahs, so a per-row `.surah` lazy-load (the N+1 this
         # regression-tests against) would show up as more than one query.
         asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH)
         version = baker.make(AssetVersion, asset=asset, state=VersionStateChoice.PUBLISHED)
@@ -206,8 +206,8 @@ class SnapshotToCsvTemplateTests(QuranDataMixin, BaseTestCase):
         spec = unit_spec_for(asset)
         snapshot = repo.reconstruct_entries(version)
 
-        # Act — exactly one query (the bulk fetch with `select_related("sura")`),
-        # regardless of how many ayahs/suras are in the snapshot.
+        # Act — exactly one query (the bulk fetch with `select_related("surah")`),
+        # regardless of how many ayahs/surahs are in the snapshot.
         with self.assertNumQueries(1):
             csv_bytes = repo.snapshot_to_csv_bytes(snapshot, spec, asset=asset, column_keys=["text"], verbose=True)
 
@@ -237,7 +237,7 @@ class PublishNonAyahDraftTests(QuranDataMixin, BaseTestCase):
             language="ar",
         )
         draft = baker.make(AssetVersion, asset=asset, state=VersionStateChoice.DRAFT, content_edited=True)
-        AssetVersionEntry.objects.create(version=draft, sura_id=1, text="opening", order=1)
+        AssetVersionEntry.objects.create(version=draft, surah_id=1, text="opening", order=1)
         service = AssetContentService()
 
         # Act
@@ -253,7 +253,7 @@ class PublishNonAyahDraftTests(QuranDataMixin, BaseTestCase):
             content = published.file_url.read().decode("utf-8")
         finally:
             published.file_url.close()
-        self.assertEqual("sura,text\r\n1,opening\r\n2,\r\n", content)
+        self.assertEqual("surah,text\r\n1,opening\r\n2,\r\n", content)
 
     def test_publish_draft_where_word_template_should_publish_and_generate_csv(self):
         # Arrange
@@ -281,7 +281,7 @@ class PublishNonAyahDraftTests(QuranDataMixin, BaseTestCase):
             content = published.file_url.read().decode("utf-8")
         finally:
             published.file_url.close()
-        self.assertEqual(f"word_id,sura,aya,word,text\r\n{self.word1.id},1,1,1,the\r\n2,1,1,2,\r\n", content)
+        self.assertEqual(f"word_id,surah,ayah,word,text\r\n{self.word1.id},1,1,1,the\r\n2,1,1,2,\r\n", content)
 
     def test_publish_draft_where_page_template_should_publish_and_generate_csv(self):
         # Arrange

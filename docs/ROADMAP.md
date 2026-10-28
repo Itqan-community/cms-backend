@@ -27,7 +27,7 @@ mushaf) and **Developers** consume it through a public API. Core pieces already 
 | Content model (`Resource` → `Asset`, versioned, licensed) | ✅ Shipped | Request/approval access flow live. See [ARCHITECTURE.md](./ARCHITECTURE.md) |
 | Developer auth (OAuth2 client-credentials) | ✅ Shipped | Requires a confidential backend client. See [AUTHENTICATION.md](./AUTHENTICATION.md) |
 | API keys (`X-API-Key` via ninja-keys) | ✅ Shipped | Becomes the app-identity mechanism in §1 |
-| Canonical Quran reference data (`apps/quran`) | ✅ Shipped | Sura/Ayah/Word — 114 / 6,236 / 77,432 rows + internal read API |
+| Canonical Quran reference data (`apps/quran`) | ✅ Shipped | Surah/Ayah/Word — 114 / 6,236 / 77,432 rows + internal read API |
 | Per-request usage tracking → Mixpanel | ✅ Shipped | `@track_usage` decorator, publisher + entity context |
 | Tafsir & translation text editing (MVP) | 🚧 In progress | Portal CRUD + versioning |
 | Ayah-level recitation timing | 🚧 Data exists | `start_ms`/`end_ms` per ayah stored; not yet served |
@@ -269,7 +269,7 @@ that.
 
 ### Direction
 
-A developer-facing view per entity (Sura/Ayah/Word, Tafsir, Translation, Recitation
+A developer-facing view per entity (Surah/Ayah/Word, Tafsir, Translation, Recitation
 timing) showing structure in plain terms next to a real sample — a real ayah with its
 tafsir, translation, and recitation timing attached. Mostly presentation; models and
 internal read APIs already exist.

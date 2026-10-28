@@ -123,13 +123,13 @@ class AssetColumnRepository:
     def unit_header_values(self, template: str, unit_ids: list[int]) -> dict[int, list[str]]:
         """The unit part of each unit's CSV row, as ``csv_header`` names it (lean)."""
         if template == AssetTemplateChoice.AYAH:
-            ayahs = Ayah.objects.filter(id__in=unit_ids).values_list("id", "sura_id", "number_in_sura")
-            return {ayah_id: [str(sura), str(number)] for ayah_id, sura, number in ayahs}
+            ayahs = Ayah.objects.filter(id__in=unit_ids).values_list("id", "surah_id", "number_in_surah")
+            return {ayah_id: [str(surah), str(number)] for ayah_id, surah, number in ayahs}
         if template == AssetTemplateChoice.WORD:
             words = Word.objects.filter(id__in=unit_ids).values_list(
-                "id", "sura_id", "ayah__number_in_sura", "position_in_ayah"
+                "id", "surah_id", "ayah__number_in_surah", "position_in_ayah"
             )
-            return {word_id: [str(word_id), str(sura), str(aya), str(pos)] for word_id, sura, aya, pos in words}
+            return {word_id: [str(word_id), str(surah), str(ayah), str(pos)] for word_id, surah, ayah, pos in words}
         if template in GROUP_TEMPLATES:
             spec = unit_spec_for_template(template)
             pairs = {unit_id: decode_group_key(unit_id) for unit_id in unit_ids}

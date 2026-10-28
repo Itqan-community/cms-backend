@@ -27,7 +27,7 @@ from apps.content.services import tafsir as tafsir_service
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
-from apps.quran.models import Ayah, Sura
+from apps.quran.models import Ayah, Surah
 from apps.users.models import User
 
 # A file that parses into entries: uploads must, so their content can be reviewed.
@@ -52,8 +52,8 @@ class TafsirVersionBaseTest(BaseTestCase):
         # assignment bypass so they behave like the existing editor groups that the
         # rollout migration grants it to. Assignment itself is covered by its own tests.
         self.give_permission(self.user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES)
-        sura = baker.make(Sura, id=1, name="الفاتحة", ayas_count=7)
-        self.ayah = baker.make(Ayah, id=1, sura=sura, number_in_sura=1, text="a")
+        surah = baker.make(Surah, id=1, name="الفاتحة", ayahs_count=7)
+        self.ayah = baker.make(Ayah, id=1, surah=surah, number_in_surah=1, text="a")
 
 
 class TafsirVersionListTest(TafsirVersionBaseTest):
@@ -127,7 +127,7 @@ class TafsirVersionListTest(TafsirVersionBaseTest):
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
         version = baker.make(AssetVersion, asset=self.tafsir, name="1.0")
-        ayahs = [self.ayah] + [baker.make(Ayah, id=i, sura=self.ayah.sura, number_in_sura=i) for i in (2, 3)]
+        ayahs = [self.ayah] + [baker.make(Ayah, id=i, surah=self.ayah.surah, number_in_surah=i) for i in (2, 3)]
         added, modified, _ = (
             baker.make(AssetVersionChange, version=version, ayah=ayah, change_type=change_type, order=ayah.id)
             for ayah, change_type in zip(ayahs, ["added", "modified", "removed"], strict=False)
@@ -154,7 +154,7 @@ class TafsirVersionListTest(TafsirVersionBaseTest):
         with CaptureQueriesContext(connection) as few_changes:
             self.client.get(url)
         for i in range(2, 22):
-            ayah = baker.make(Ayah, id=i, sura=self.ayah.sura, number_in_sura=i)
+            ayah = baker.make(Ayah, id=i, surah=self.ayah.surah, number_in_surah=i)
             baker.make(AssetVersionChange, version=version, ayah=ayah, change_type="added", order=i)
 
         # Act

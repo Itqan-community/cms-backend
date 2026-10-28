@@ -119,7 +119,7 @@ The following models are **intentionally not tracked** by `django-simple-history
 1. **`apps.content.models.UsageEvent`**:
    - High-volume, append-only telemetry/analytics events (views, downloads, API hits).
    - Slated for migration to a dedicated metrics store; adding historical versioning would double write IOPS with zero audit utility.
-2. **`apps.quran` (`Sura`, `Ayah`, `Word`)**:
+2. **`apps.quran` (`Surah`, `Ayah`, `Word`)**:
    - Canonical reference data of the Holy Quran.
    - Seeded from authoritative static datasets and completely immutable at application runtime.
 3. **`apps.core`**:

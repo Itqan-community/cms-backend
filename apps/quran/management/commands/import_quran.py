@@ -6,13 +6,15 @@ from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from apps.quran.models import Ayah, Sura, Word
+from apps.quran.models import Ayah, Surah, Word
 
-SURAS_FILE = "quran-suras-list.xlsx - Sheet1.csv"
-AYAS_FILE = "quran-ayas-list.xlsx - Sheet1.csv"
+# The source files and their column names (sura_id, ayas, aya_id, ...) are the
+# upstream export's, so they keep its "sura" / "aya" spelling.
+SURAHS_FILE = "quran-suras-list.xlsx - Sheet1.csv"
+AYAHS_FILE = "quran-ayas-list.xlsx - Sheet1.csv"
 WORDS_FILE = "quran-words-list.xlsx - Sheet1.csv"
 
-EXPECTED_SURAS = 114
+EXPECTED_SURAHS = 114
 EXPECTED_AYAHS = 6236
 EXPECTED_WORDS = 77432
 
@@ -20,7 +22,7 @@ WORD_BATCH_SIZE = 2000
 
 
 class Command(BaseCommand):
-    help = "Import canonical Quran reference data (suras, ayahs, words) from the temp CSV files."
+    help = "Import canonical Quran reference data (surahs, ayahs, words) from the temp CSV files."
 
     def add_arguments(self, parser: Any) -> None:
         parser.add_argument(
@@ -47,48 +49,48 @@ class Command(BaseCommand):
         directory = Path(options["path"])
         self.stdout.write(f"Reading Quran CSVs from: {directory}")
 
-        sura_rows = self._read_rows(directory, SURAS_FILE)
-        aya_rows = self._read_rows(directory, AYAS_FILE)
+        surah_rows = self._read_rows(directory, SURAHS_FILE)
+        ayah_rows = self._read_rows(directory, AYAHS_FILE)
         word_rows = self._read_rows(directory, WORDS_FILE)
 
-        # Clear existing data so the command is fully idempotent. Deleting suras
+        # Clear existing data so the command is fully idempotent. Deleting surahs
         # cascades to ayahs and words.
         Word.objects.all().delete()
         Ayah.objects.all().delete()
-        Sura.objects.all().delete()
+        Surah.objects.all().delete()
 
-        suras = [
-            Sura(
+        surahs = [
+            Surah(
                 id=int(row["id"]),
                 name=row["name"],
                 transliterated_name=row["tname"],
                 english_name=row["ename"],
-                ayas_count=int(row["ayas"]),
+                ayahs_count=int(row["ayas"]),
                 start_offset=int(row["start"]),
                 revelation_type=row["type"],
                 revelation_order=int(row["order"]),
                 rukus_count=int(row["rukus"]),
             )
-            for row in sura_rows
+            for row in surah_rows
         ]
-        Sura.objects.bulk_create(suras, batch_size=WORD_BATCH_SIZE)
+        Surah.objects.bulk_create(surahs, batch_size=WORD_BATCH_SIZE)
 
         ayahs = [
             Ayah(
                 id=int(row["id"]),
-                sura_id=int(row["sura_id"]),
-                number_in_sura=int(row["index"]),
+                surah_id=int(row["sura_id"]),
+                number_in_surah=int(row["index"]),
                 text=row["text"],
                 juz=int(row["juz"]),
                 hizb_quarter=int(row["quarter"]),
                 page=int(row["page"]),
             )
-            for row in aya_rows
+            for row in ayah_rows
         ]
         Ayah.objects.bulk_create(ayahs, batch_size=WORD_BATCH_SIZE)
 
         # The CSV has no word-position column (its aya_index is the ayah's number
-        # within its sura), so number each ayah's words 1..n in word-id order.
+        # within its surah), so number each ayah's words 1..n in word-id order.
         words = []
         next_position: dict[int, int] = {}
         for row in sorted(word_rows, key=lambda r: int(r["id"])):
@@ -98,7 +100,7 @@ class Command(BaseCommand):
             words.append(
                 Word(
                     id=int(row["id"]),
-                    sura_id=int(row["sura_id"]),
+                    surah_id=int(row["sura_id"]),
                     ayah_id=ayah_id,
                     position_in_ayah=position,
                     text=row["word"],
@@ -106,18 +108,18 @@ class Command(BaseCommand):
             )
         Word.objects.bulk_create(words, batch_size=WORD_BATCH_SIZE)
 
-        sura_count = Sura.objects.count()
+        surah_count = Surah.objects.count()
         ayah_count = Ayah.objects.count()
         word_count = Word.objects.count()
 
-        self.stdout.write(f"Imported {sura_count} suras, {ayah_count} ayahs, {word_count} words.")
+        self.stdout.write(f"Imported {surah_count} surahs, {ayah_count} ayahs, {word_count} words.")
 
         if options["skip_validation"]:
             self.stdout.write(self.style.SUCCESS("Quran reference data imported (validation skipped)."))
             return
 
-        if sura_count != EXPECTED_SURAS:
-            raise CommandError(f"Expected {EXPECTED_SURAS} suras, got {sura_count}.")
+        if surah_count != EXPECTED_SURAHS:
+            raise CommandError(f"Expected {EXPECTED_SURAHS} surahs, got {surah_count}.")
         if ayah_count != EXPECTED_AYAHS:
             raise CommandError(f"Expected {EXPECTED_AYAHS} ayahs, got {ayah_count}.")
         if word_count != EXPECTED_WORDS:

@@ -28,7 +28,7 @@ from django.utils.translation import gettext as _
 from apps.content.models import GROUP_TEMPLATES, Asset, AssetTemplateChoice, AssetVersion, AssetVersionEntry
 from apps.content.unit_keys import decode_group_key, encode_group_key
 from apps.core.ninja_utils.errors import ItqanError
-from apps.quran.models import Ayah, Sura, Word
+from apps.quran.models import Ayah, Surah, Word
 
 
 @dataclass(frozen=True)
@@ -38,10 +38,10 @@ class UnitRow:
     unit_id: int
     label: str
     reference_text: str
-    sura: int | None
-    aya: int | None
+    surah: int | None
+    ayah: int | None
     order: int
-    # Group templates only: the range's ends as (sura, ayah) or (sura, ayah, word),
+    # Group templates only: the range's ends as (surah, ayah) or (surah, ayah, word),
     # and whether a translated language holds text for a range its source lacks.
     group_from: tuple[int, ...] | None = None
     group_to: tuple[int, ...] | None = None
@@ -54,10 +54,10 @@ REFERENCE_TEXT_LIMIT = 500
 
 
 def unit_position(unit: Ayah | Word) -> tuple[int, ...]:
-    """``(sura, ayah)`` of an ayah, ``(sura, ayah, word)`` of a word."""
+    """``(surah, ayah)`` of an ayah, ``(surah, ayah, word)`` of a word."""
     if isinstance(unit, Word):
-        return (unit.sura_id, unit.ayah.number_in_sura, unit.position_in_ayah)
-    return (unit.sura_id, unit.number_in_sura)
+        return (unit.surah_id, unit.ayah.number_in_surah, unit.position_in_ayah)
+    return (unit.surah_id, unit.number_in_surah)
 
 
 def group_label(start: Ayah | Word, end: Ayah | Word) -> str:
@@ -251,16 +251,16 @@ class EntryFilters:
 
     ``cells`` filter the version's own text and ``source_cells`` the source
     language's, both keyed by text column and treating a missing cell as "".
-    ``surah`` and ``sura`` both filter the surah number — the grid's
+    ``unit_surah`` and ``surah`` both filter the surah number — the grid's
     surah-name dropdown and its surah-number column — and must both match.
     """
 
     cells: Mapping[str, ColumnFilter] = field(default_factory=dict)
     reference_text: ColumnFilter | None = None
     source_cells: Mapping[str, ColumnFilter] = field(default_factory=dict)
+    unit_surah: ColumnFilter | None = None
     surah: ColumnFilter | None = None
-    sura: ColumnFilter | None = None
-    aya: ColumnFilter | None = None
+    ayah: ColumnFilter | None = None
 
     def for_columns(self, column_keys: Sequence[str]) -> EntryFilters:
         """These filters with ``FIRST_COLUMN`` resolved to the asset's first key.
@@ -288,7 +288,7 @@ class EntryFilters:
     @property
     def active(self) -> bool:
         return bool(self.cells or self.source_cells) or any(
-            f is not None for f in (self.reference_text, self.surah, self.sura, self.aya)
+            f is not None for f in (self.reference_text, self.unit_surah, self.surah, self.ayah)
         )
 
 
@@ -353,23 +353,23 @@ class UnitSpec:
             raise range_invalid_error()
         if words:
             found = {
-                (sura, aya, word): pk
-                for pk, sura, aya, word in Word.objects.filter(
+                (surah, ayah, word): pk
+                for pk, surah, ayah, word in Word.objects.filter(
                     reduce(
                         operator.or_,
                         (
-                            Q(sura_id=p.surah, ayah__number_in_sura=p.ayah, position_in_ayah=p.word)
+                            Q(surah_id=p.surah, ayah__number_in_surah=p.ayah, position_in_ayah=p.word)
                             for p in (start, end)
                         ),
                     )
-                ).values_list("id", "sura_id", "ayah__number_in_sura", "position_in_ayah")
+                ).values_list("id", "surah_id", "ayah__number_in_surah", "position_in_ayah")
             }
         else:
             found = {
-                (sura, aya, None): pk
-                for pk, sura, aya in Ayah.objects.filter(
-                    reduce(operator.or_, (Q(sura_id=p.surah, number_in_sura=p.ayah) for p in (start, end)))
-                ).values_list("id", "sura_id", "number_in_sura")
+                (surah, ayah, None): pk
+                for pk, surah, ayah in Ayah.objects.filter(
+                    reduce(operator.or_, (Q(surah_id=p.surah, number_in_surah=p.ayah) for p in (start, end)))
+                ).values_list("id", "surah_id", "number_in_surah")
             }
         start_id = found.get((start.surah, start.ayah, start.word))
         end_id = found.get((end.surah, end.ayah, end.word))
@@ -436,7 +436,7 @@ class UnitSpec:
     def _filter_groups(
         self,
         keys: list[int],
-        sura: int | None,
+        surah: int | None,
         filters: EntryFilters | None,
         version: AssetVersion | None,
         source_version: AssetVersion | None,
@@ -448,9 +448,9 @@ class UnitSpec:
         """
         filters = filters if filters is not None and filters.active else None
         by_start = filters is not None and any(
-            f is not None for f in (filters.reference_text, filters.surah, filters.sura, filters.aya)
+            f is not None for f in (filters.reference_text, filters.unit_surah, filters.surah, filters.ayah)
         )
-        starts = self.group_units({decode_group_key(key)[0] for key in keys}) if sura is not None or by_start else {}
+        starts = self.group_units({decode_group_key(key)[0] for key in keys}) if surah is not None or by_start else {}
         covered = (
             self._covered_texts(map(decode_group_key, keys))
             if filters is not None and filters.reference_text is not None
@@ -461,7 +461,7 @@ class UnitSpec:
         kept = []
         for key in keys:
             start = starts.get(decode_group_key(key)[0])
-            if sura is not None and (start is None or start.sura_id != sura):
+            if surah is not None and (start is None or start.surah_id != surah):
                 continue
             if filters is not None:
                 if any(not f.matches(own[k].get(key, "")) for k, f in filters.cells.items()):
@@ -472,9 +472,9 @@ class UnitSpec:
                     position = unit_position(start) if start is not None else (None, None)
                     checks = (
                         (filters.reference_text, self._joined(*decode_group_key(key), covered)),
+                        (filters.unit_surah, position[0]),
                         (filters.surah, position[0]),
-                        (filters.sura, position[0]),
-                        (filters.aya, position[1]),
+                        (filters.ayah, position[1]),
                     )
                     if any(f is not None and not f.matches(value) for f, value in checks):
                         continue
@@ -498,8 +498,8 @@ class UnitSpec:
                     unit_id=key,
                     label=group_label(start, end),
                     reference_text=reference,
-                    sura=first[0],
-                    aya=first[1],
+                    surah=first[0],
+                    ayah=first[1],
                     order=key,
                     group_from=first,
                     group_to=unit_position(end),
@@ -508,65 +508,65 @@ class UnitSpec:
             )
         return rows
 
-    def _queryset(self, asset: Asset, sura: int | None) -> QuerySet[Sura] | QuerySet[Ayah] | QuerySet[Word] | range:
+    def _queryset(self, asset: Asset, surah: int | None) -> QuerySet[Surah] | QuerySet[Ayah] | QuerySet[Word] | range:
         """The ordered source of canonical units for this template.
 
         A queryset for surah/ayah/word; a plain ``range`` for page, since
         pages have no backing table.
         """
         if self.template == AssetTemplateChoice.SURAH:
-            qs = Sura.objects.order_by("id")
-            if sura is not None:
-                qs = qs.filter(id=sura)
+            qs = Surah.objects.order_by("id")
+            if surah is not None:
+                qs = qs.filter(id=surah)
             return qs
 
         if self.template == AssetTemplateChoice.AYAH:
             qs = Ayah.objects.order_by("id")
-            if sura is not None:
-                qs = qs.filter(sura_id=sura)
+            if surah is not None:
+                qs = qs.filter(surah_id=surah)
             return qs
 
         if self.template == AssetTemplateChoice.WORD:
             qs = Word.objects.select_related("ayah").order_by("id")
-            if sura is not None:
-                qs = qs.filter(sura_id=sura)
+            if surah is not None:
+                qs = qs.filter(surah_id=surah)
             return qs
 
         # page: generated, there is no page table
-        if sura is not None:
+        if surah is not None:
             return range(0)
         page_count = asset.mushaf_layout.page_count
         return range(1, page_count + 1)
 
-    def _to_row(self, item: Sura | Ayah | Word | int) -> UnitRow:
+    def _to_row(self, item: Surah | Ayah | Word | int) -> UnitRow:
         """Build one ``UnitRow`` from a single source item, dispatching on the template."""
         if self.template == AssetTemplateChoice.SURAH:
             return UnitRow(
                 unit_id=item.id,
                 label=f"{item.id}. {item.transliterated_name}",
                 reference_text=item.name,
-                sura=item.id,
-                aya=None,
+                surah=item.id,
+                ayah=None,
                 order=item.id,
             )
 
         if self.template == AssetTemplateChoice.AYAH:
             return UnitRow(
                 unit_id=item.id,
-                label=f"{item.sura_id}:{item.number_in_sura}",
+                label=f"{item.surah_id}:{item.number_in_surah}",
                 reference_text=item.text,
-                sura=item.sura_id,
-                aya=item.number_in_sura,
+                surah=item.surah_id,
+                ayah=item.number_in_surah,
                 order=item.id,
             )
 
         if self.template == AssetTemplateChoice.WORD:
             return UnitRow(
                 unit_id=item.id,
-                label=f"{item.sura_id}:{item.ayah.number_in_sura}:{item.position_in_ayah}",
+                label=f"{item.surah_id}:{item.ayah.number_in_surah}:{item.position_in_ayah}",
                 reference_text=item.text,
-                sura=item.sura_id,
-                aya=item.ayah.number_in_sura,
+                surah=item.surah_id,
+                ayah=item.ayah.number_in_surah,
                 order=item.id,
             )
 
@@ -575,22 +575,22 @@ class UnitSpec:
             unit_id=item,
             label=_("Page {number}").format(number=item),
             reference_text="",
-            sura=None,
-            aya=None,
+            surah=None,
+            ayah=None,
             order=item,
         )
 
     def total(self, asset: Asset) -> int:
-        """The template's full unit count, ignoring any ``sura`` filter.
+        """The template's full unit count, ignoring any ``surah`` filter.
 
-        Callers paginating a ``sura``-filtered set must use the total that
+        Callers paginating a ``surah``-filtered set must use the total that
         ``units_page`` returns, not this. A group template has no canonical
         unit set: 0 (its rows are a version's stored ranges, see ``units_page``).
         """
         if self.is_group:
             return 0
         if self.template == AssetTemplateChoice.SURAH:
-            return Sura.objects.count()
+            return Surah.objects.count()
         if self.template == AssetTemplateChoice.AYAH:
             return Ayah.objects.count()
         if self.template == AssetTemplateChoice.WORD:
@@ -625,18 +625,18 @@ class UnitSpec:
             qs = qs.annotate(_reference_text=_normalized(F(reference))).filter(
                 filters.reference_text.q("_reference_text")
             )
-        sura_field = "id" if self.template == AssetTemplateChoice.SURAH else "sura_id"
-        for sura_filter in (filters.surah, filters.sura):
-            if sura_filter is not None:
-                qs = qs.filter(sura_filter.q(sura_field))
-        if filters.aya is not None:
+        surah_field = "id" if self.template == AssetTemplateChoice.SURAH else "surah_id"
+        for surah_filter in (filters.unit_surah, filters.surah):
+            if surah_filter is not None:
+                qs = qs.filter(surah_filter.q(surah_field))
+        if filters.ayah is not None:
             # Surah units have no ayah; the grid shows no ayah column for them.
-            aya_field = {
-                AssetTemplateChoice.AYAH: "number_in_sura",
-                AssetTemplateChoice.WORD: "ayah__number_in_sura",
+            ayah_field = {
+                AssetTemplateChoice.AYAH: "number_in_surah",
+                AssetTemplateChoice.WORD: "ayah__number_in_surah",
             }.get(self.template)
-            if aya_field is not None:
-                qs = qs.filter(filters.aya.q(aya_field))
+            if ayah_field is not None:
+                qs = qs.filter(filters.ayah.q(ayah_field))
         return qs
 
     def _filter_pages(
@@ -668,7 +668,7 @@ class UnitSpec:
             # Pages carry no reference text and no surah / ayah number.
             if filters.reference_text is not None and not filters.reference_text.matches(""):
                 continue
-            if any(f is not None and not f.matches(None) for f in (filters.surah, filters.sura, filters.aya)):
+            if any(f is not None and not f.matches(None) for f in (filters.unit_surah, filters.surah, filters.ayah)):
                 continue
             kept.append(page)
         return kept
@@ -679,7 +679,7 @@ class UnitSpec:
         *,
         offset: int,
         limit: int,
-        sura: int | None = None,
+        surah: int | None = None,
         filters: EntryFilters | None = None,
         version: AssetVersion | None = None,
         source_version: AssetVersion | None = None,
@@ -695,9 +695,9 @@ class UnitSpec:
         """
         if self.is_group:
             keys = self._group_keys(version, source_version)
-            kept = self._filter_groups(list(keys), sura, filters, version, source_version)
+            kept = self._filter_groups(list(keys), surah, filters, version, source_version)
             return self.group_rows(kept[offset : offset + limit], keys), len(kept)
-        source = self._queryset(asset, sura)
+        source = self._queryset(asset, surah)
         if filters is not None and filters.active:
             if isinstance(source, range):
                 source = self._filter_pages(source, filters, version, source_version)
@@ -722,10 +722,10 @@ class UnitSpec:
             pairs = {candidate: decode_group_key(candidate) for candidate in candidates}
             existing = self.group_units({unit for pair in pairs.values() for unit in pair})
             return {c for c, (start, end) in pairs.items() if start in existing and end in existing and start <= end}
-        model = {"sura": Sura, "ayah": Ayah, "word": Word}[self.field]
+        model = {"surah": Surah, "ayah": Ayah, "word": Word}[self.field]
         return set(model.objects.filter(id__in=candidates).values_list("id", flat=True))
 
-    def units(self, asset: Asset, *, sura: int | None = None) -> Sequence[UnitRow]:
+    def units(self, asset: Asset, *, surah: int | None = None) -> Sequence[UnitRow]:
         """Every canonical unit of this template, in order.
 
         Materialises the entire set. That is fine for surah (114) and page
@@ -734,12 +734,12 @@ class UnitSpec:
         ``units_page`` with an explicit limit instead of reaching for this as
         "the easy way to get everything".
         """
-        rows, _total = self.units_page(asset, offset=0, limit=self.total(asset), sura=sura)
+        rows, _total = self.units_page(asset, offset=0, limit=self.total(asset), surah=surah)
         return rows
 
 
 _SPECS: dict[str, UnitSpec] = {
-    AssetTemplateChoice.SURAH: UnitSpec(AssetTemplateChoice.SURAH, "sura", "sura"),
+    AssetTemplateChoice.SURAH: UnitSpec(AssetTemplateChoice.SURAH, "surah", "surah"),
     AssetTemplateChoice.AYAH: UnitSpec(AssetTemplateChoice.AYAH, "ayah", "ayah"),
     AssetTemplateChoice.WORD: UnitSpec(AssetTemplateChoice.WORD, "word", "word"),
     AssetTemplateChoice.PAGE: UnitSpec(AssetTemplateChoice.PAGE, "page_no", None),

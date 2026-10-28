@@ -27,7 +27,7 @@ from apps.content.models import (
 from apps.content.tests.publishing import publish
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
-from apps.quran.models import Ayah, Sura
+from apps.quran.models import Ayah, Surah
 from apps.users.models import User
 
 
@@ -50,8 +50,8 @@ class ReviewedPackageTests(BaseTestCase):
             name="T1",
         )
         self.fr = AssetLanguage.objects.create(asset=self.asset, language="fr", status=StatusChoice.READY)
-        sura = baker.make(Sura, id=1, name="الفاتحة", ayas_count=7)
-        self.ayah1 = baker.make(Ayah, id=1, sura=sura, number_in_sura=1, text="a")
+        surah = baker.make(Surah, id=1, name="الفاتحة", ayahs_count=7)
+        self.ayah1 = baker.make(Ayah, id=1, surah=surah, number_in_surah=1, text="a")
         self.reviewer = User.objects.create_user(email="rev@example.com", name="Rev")
         self._clock = timezone.now() - timedelta(days=10)
 

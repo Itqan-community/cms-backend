@@ -44,8 +44,8 @@ class EntriesEnumerationTests(QuranDataMixin, BaseTestCase):
         version = baker.make(AssetVersion, asset=asset)
         return asset, version
 
-    def test_list_entries_where_surah_asset_is_empty_should_return_baked_sura_rows(self):
-        # Arrange — QuranDataMixin bakes 2 suras (see module docstring)
+    def test_list_entries_where_surah_asset_is_empty_should_return_baked_surah_rows(self):
+        # Arrange — QuranDataMixin bakes 2 surahs (see module docstring)
         asset, version = self._draft_for(AssetTemplateChoice.SURAH)
 
         # Act
@@ -64,7 +64,7 @@ class EntriesEnumerationTests(QuranDataMixin, BaseTestCase):
     def test_list_entries_where_surah_asset_has_one_entry_should_overlay_its_text(self):
         # Arrange
         asset, version = self._draft_for(AssetTemplateChoice.SURAH)
-        AssetVersionEntry.objects.create(version=version, sura_id=self.sura2.id, text="content", order=2)
+        AssetVersionEntry.objects.create(version=version, surah_id=self.surah2.id, text="content", order=2)
 
         # Act
         response = self.client.get(
@@ -73,8 +73,8 @@ class EntriesEnumerationTests(QuranDataMixin, BaseTestCase):
 
         # Assert
         items = {item["unit_id"]: item["text"] for item in response.json()["results"]}
-        self.assertEqual(items[self.sura2.id], "content")
-        self.assertEqual(items[self.sura1.id], "")
+        self.assertEqual(items[self.surah2.id], "content")
+        self.assertEqual(items[self.surah1.id], "")
 
     def test_list_entries_where_page_asset_should_return_layout_page_count_rows(self):
         # Arrange
@@ -92,19 +92,19 @@ class EntriesEnumerationTests(QuranDataMixin, BaseTestCase):
         self.assertEqual([item["unit_id"] for item in body["results"]], [1, 2, 3, 4, 5])
         self.assertEqual(body["results"][0]["unit_type"], "page")
 
-    def test_list_entries_where_word_asset_filtered_by_sura_should_narrow_the_count(self):
-        # Arrange — 2 words baked, both in sura 1 (see QuranDataMixin docstring)
+    def test_list_entries_where_word_asset_filtered_by_surah_should_narrow_the_count(self):
+        # Arrange — 2 words baked, both in surah 1 (see QuranDataMixin docstring)
         asset, version = self._draft_for(AssetTemplateChoice.WORD)
 
         # Act
         response = self.client.get(
-            f"/portal/content/translations/{asset.slug}/versions/{version.id}/entries/?page_size=10&sura=1"
+            f"/portal/content/translations/{asset.slug}/versions/{version.id}/entries/?page_size=10&surah=1"
         )
 
         # Assert
         body = response.json()
         self.assertEqual(body["count"], 2)
-        self.assertTrue(all(item["sura"] == 1 for item in body["results"]))
+        self.assertTrue(all(item["surah"] == 1 for item in body["results"]))
 
     def test_list_entries_where_ayah_asset_should_return_baked_ayah_rows(self):
         # Arrange — 3 ayahs baked, not the canonical 6236 (see QuranDataMixin docstring)
@@ -249,7 +249,7 @@ class EntriesFilterTests(QuranDataMixin, BaseTestCase):
         self.assertEqual(count, 1)
         self.assertEqual(unit_ids, [self.ayah3.id])
 
-    def test_list_entries_where_aya_equals_should_match_the_number_in_every_sura(self):
+    def test_list_entries_where_ayah_equals_should_match_the_number_in_every_surah(self):
         # Arrange
         self.authenticate_user(self.user)
         asset, version = self._draft_for(AssetTemplateChoice.AYAH)
@@ -258,14 +258,14 @@ class EntriesFilterTests(QuranDataMixin, BaseTestCase):
         count, unit_ids = self._list(
             asset,
             version,
-            _filters({"aya": {"filterType": "number", "type": "equals", "filter": 1}}),
+            _filters({"ayah": {"filterType": "number", "type": "equals", "filter": 1}}),
         )
 
         # Assert
         self.assertEqual(count, 2)
         self.assertEqual(unit_ids, [self.ayah1.id, self.ayah3.id])
 
-    def test_list_entries_where_aya_in_range_should_include_both_ends(self):
+    def test_list_entries_where_ayah_in_range_should_include_both_ends(self):
         # Arrange
         self.authenticate_user(self.user)
         asset, version = self._draft_for(AssetTemplateChoice.AYAH)
@@ -274,14 +274,14 @@ class EntriesFilterTests(QuranDataMixin, BaseTestCase):
         count, unit_ids = self._list(
             asset,
             version,
-            "sura=1&" + _filters({"aya": {"filterType": "number", "type": "inRange", "filter": 2, "filterTo": 2}}),
+            "surah=1&" + _filters({"ayah": {"filterType": "number", "type": "inRange", "filter": 2, "filterTo": 2}}),
         )
 
         # Assert
         self.assertEqual(count, 1)
         self.assertEqual(unit_ids, [self.ayah2.id])
 
-    def test_list_entries_where_word_aya_greater_than_should_filter_by_the_parent_ayah(self):
+    def test_list_entries_where_word_ayah_greater_than_should_filter_by_the_parent_ayah(self):
         # Arrange — both baked words sit in ayah 1
         self.authenticate_user(self.user)
         asset, version = self._draft_for(AssetTemplateChoice.WORD)
@@ -290,7 +290,7 @@ class EntriesFilterTests(QuranDataMixin, BaseTestCase):
         count, _unit_ids = self._list(
             asset,
             version,
-            _filters({"aya": {"filterType": "number", "type": "greaterThan", "filter": 1}}),
+            _filters({"ayah": {"filterType": "number", "type": "greaterThan", "filter": 1}}),
         )
 
         # Assert
@@ -375,7 +375,7 @@ class EntriesFilterTests(QuranDataMixin, BaseTestCase):
         self.assertEqual(count, 2)
         self.assertEqual(unit_ids, [self.ayah1.id, self.ayah3.id])
 
-    def test_list_entries_where_sura_column_filter_equals_should_keep_that_surah(self):
+    def test_list_entries_where_surah_column_filter_equals_should_keep_that_surah(self):
         # Arrange
         self.authenticate_user(self.user)
         asset, version = self._draft_for(AssetTemplateChoice.AYAH)
@@ -384,7 +384,7 @@ class EntriesFilterTests(QuranDataMixin, BaseTestCase):
         count, unit_ids = self._list(
             asset,
             version,
-            _filters({"sura": {"filterType": "number", "type": "equals", "filter": 2}}),
+            _filters({"surah": {"filterType": "number", "type": "equals", "filter": 2}}),
         )
 
         # Assert
@@ -414,21 +414,21 @@ class EntriesFilterTests(QuranDataMixin, BaseTestCase):
         # Act
         response = self.client.get(
             f"/portal/content/translations/{asset.slug}/versions/{version.id}/entries/?"
-            + _filters({"aya": {"filterType": "number", "type": "inRange", "filter": 1}})
+            + _filters({"ayah": {"filterType": "number", "type": "inRange", "filter": 1}})
         )
 
         # Assert
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["error_name"], "validation_error")
 
-    def test_list_entries_where_surah_dropdown_and_sura_number_filter_should_both_apply(self):
-        # Arrange — the dropdown keeps sura 1, the number filter keeps sura >= 2
+    def test_list_entries_where_surah_dropdown_and_surah_number_filter_should_both_apply(self):
+        # Arrange — the dropdown keeps surah 1, the number filter keeps surah >= 2
         self.authenticate_user(self.user)
         asset, version = self._draft_for(AssetTemplateChoice.AYAH)
         query = _filters(
             {
-                "surah": {"filterType": "number", "type": "equals", "filter": 1},
-                "sura": {"filterType": "number", "type": "greaterThanOrEqual", "filter": 2},
+                "unit_surah": {"filterType": "number", "type": "equals", "filter": 1},
+                "surah": {"filterType": "number", "type": "greaterThanOrEqual", "filter": 2},
             }
         )
 
@@ -446,7 +446,7 @@ class EntriesFilterTests(QuranDataMixin, BaseTestCase):
 
         # Act
         count, unit_ids = self._list(
-            asset, version, _filters({"surah": {"filterType": "number", "type": "equals", "filter": 1}})
+            asset, version, _filters({"unit_surah": {"filterType": "number", "type": "equals", "filter": 1}})
         )
 
         # Assert

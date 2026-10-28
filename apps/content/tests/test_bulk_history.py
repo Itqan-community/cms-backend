@@ -28,7 +28,7 @@ from apps.content.services.asset_templates import unit_spec_for
 from apps.content.services.recitation_folder import RecitationFolderService
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
-from apps.quran.models import Ayah, Sura
+from apps.quran.models import Ayah, Surah
 from apps.users.models import User
 
 
@@ -51,13 +51,13 @@ class ContentBulkHistoryTest(BaseTestCase):
         self.repo = AssetContentRepository()
 
         # Ensure reference Ayah exists
-        self.sura, _ = Sura.objects.get_or_create(
+        self.surah, _ = Surah.objects.get_or_create(
             id=1,
             defaults={
                 "name": "Al-Fatiha",
                 "transliterated_name": "Al-Faatiha",
                 "english_name": "The Opening",
-                "ayas_count": 7,
+                "ayahs_count": 7,
                 "start_offset": 0,
                 "revelation_type": "Meccan",
                 "revelation_order": 5,
@@ -67,8 +67,8 @@ class ContentBulkHistoryTest(BaseTestCase):
         self.ayah, _ = Ayah.objects.get_or_create(
             id=1,
             defaults={
-                "sura": self.sura,
-                "number_in_sura": 1,
+                "surah": self.surah,
+                "number_in_surah": 1,
                 "text": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
                 "juz": 1,
                 "hizb_quarter": 1,
@@ -134,8 +134,8 @@ class ContentBulkHistoryTest(BaseTestCase):
         ayah2, _ = Ayah.objects.get_or_create(
             id=2,
             defaults={
-                "sura": self.sura,
-                "number_in_sura": 2,
+                "surah": self.surah,
+                "number_in_surah": 2,
                 "text": "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ",
                 "juz": 1,
                 "hizb_quarter": 1,

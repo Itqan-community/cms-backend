@@ -38,7 +38,7 @@ from apps.content.services.asset_templates import UnitSpec, group_label, unit_po
 from apps.content.unit_keys import UNIT_VALUE_FIELDS, decode_group_key, unit_key_of
 from apps.content.version_text import VersionText
 from apps.core.ninja_utils.errors import ItqanError
-from apps.quran.models import Ayah, Sura, Word
+from apps.quran.models import Ayah, Surah, Word
 
 logger = logging.getLogger(__name__)
 
@@ -90,23 +90,23 @@ class AssetContentRepository:
         wanted = set(unit_ids)
         return {cell: text for cell, text in self.reconstruct_entries(head).items() if cell[0] in wanted}
 
-    def _ayah_id_by_sura_aya(self) -> dict[tuple[int, int], int]:
-        """Map (sura_id, number_in_sura) -> ayah pk for resolving parsed rows."""
+    def _ayah_id_by_surah_ayah(self) -> dict[tuple[int, int], int]:
+        """Map (surah_id, number_in_surah) -> ayah pk for resolving parsed rows."""
         return {
-            (sura_id, number): ayah_id
-            for ayah_id, sura_id, number in Ayah.objects.values_list("id", "sura_id", "number_in_sura")
+            (surah_id, number): ayah_id
+            for ayah_id, surah_id, number in Ayah.objects.values_list("id", "surah_id", "number_in_surah")
         }
 
-    def _word_id_by_sura_aya_position(self) -> dict[tuple[int, int, int], int]:
-        """Canonical word ids keyed by (sura, ayah-in-sura, position-in-ayah).
+    def _word_id_by_surah_ayah_position(self) -> dict[tuple[int, int, int], int]:
+        """Canonical word ids keyed by (surah, ayah-in-surah, position-in-ayah).
 
         Builds a 77,431-entry dict in production. Used once per import — never
         call this from a request path.
         """
         return {
-            (sura_id, number_in_sura, position): word_id
-            for word_id, sura_id, number_in_sura, position in Word.objects.values_list(
-                "id", "sura_id", "ayah__number_in_sura", "position_in_ayah"
+            (surah_id, number_in_surah, position): word_id
+            for word_id, surah_id, number_in_surah, position in Word.objects.values_list(
+                "id", "surah_id", "ayah__number_in_surah", "position_in_ayah"
             )
         }
 
@@ -379,7 +379,7 @@ class AssetContentRepository:
         Lists every canonical unit of the template (every surah / ayah / word /
         page, in order), with an empty cell where the version has none, so a
         download is a complete sheet to fill in. The unit headers are
-        ``sura`` (surah), ``surah,ayah`` (ayah), ``word_id,sura,aya,word`` (word)
+        ``surah`` (surah), ``surah,ayah`` (ayah), ``word_id,surah,ayah,word`` (word)
         and ``page`` (page), followed by one header per text column — the
         version's ``resolved_column_keys``, just ``text`` for a single-column
         asset. ``verbose`` only changes the ayah template's output — it adds the
@@ -441,22 +441,24 @@ class AssetContentRepository:
             for unit_id, (start, end), reference in self._group_csv_units(spec, keys, verbose=verbose):
                 writer.writerow([*start, *end, *([reference] if verbose else []), *row_cells(unit_id)])
         elif spec.template == AssetTemplateChoice.SURAH:
-            for sura_id in Sura.objects.order_by("id").values_list("id", flat=True).iterator():
-                writer.writerow([sura_id, *row_cells(sura_id)])
+            for surah_id in Surah.objects.order_by("id").values_list("id", flat=True).iterator():
+                writer.writerow([surah_id, *row_cells(surah_id)])
         elif spec.template == AssetTemplateChoice.WORD:
-            words = Word.objects.order_by("id").values_list("id", "sura_id", "ayah__number_in_sura", "position_in_ayah")
-            for word_id, sura_id, aya, position in words.iterator():
-                writer.writerow([word_id, sura_id, aya, position, *row_cells(word_id)])
+            words = Word.objects.order_by("id").values_list(
+                "id", "surah_id", "ayah__number_in_surah", "position_in_ayah"
+            )
+            for word_id, surah_id, ayah, position in words.iterator():
+                writer.writerow([word_id, surah_id, ayah, position, *row_cells(word_id)])
         elif spec.template == AssetTemplateChoice.PAGE:
             for page in range(1, (page_count or 0) + 1):
                 writer.writerow([page, *row_cells(page)])
         elif verbose:  # ayah
-            for ayah in Ayah.objects.select_related("sura").order_by("id").iterator():
-                writer.writerow([ayah.sura_id, ayah.number_in_sura, ayah.sura.name, ayah.text, *row_cells(ayah.id)])
+            for ayah in Ayah.objects.select_related("surah").order_by("id").iterator():
+                writer.writerow([ayah.surah_id, ayah.number_in_surah, ayah.surah.name, ayah.text, *row_cells(ayah.id)])
         else:  # ayah
-            ayahs = Ayah.objects.order_by("id").values_list("id", "sura_id", "number_in_sura")
-            for ayah_id, sura_id, aya in ayahs.iterator():
-                writer.writerow([sura_id, aya, *row_cells(ayah_id)])
+            ayahs = Ayah.objects.order_by("id").values_list("id", "surah_id", "number_in_surah")
+            for ayah_id, surah_id, ayah in ayahs.iterator():
+                writer.writerow([surah_id, ayah, *row_cells(ayah_id)])
         return buffer.getvalue().encode("utf-8")
 
     @staticmethod
@@ -787,16 +789,16 @@ class AssetContentRepository:
 
         Only the ids appearing in the diff are fetched — never the template's
         full unit set (77,431 rows for word). Page has no backing table, so its
-        "object" is just the bare page number. Ayah joins ``sura`` up front:
-        ``_change_to_dict`` only needs ``sura_id`` (already on the row, no
+        "object" is just the bare page number. Ayah joins ``surah`` up front:
+        ``_change_to_dict`` only needs ``surah_id`` (already on the row, no
         join required), but ``snapshot_to_csv_bytes``'s verbose branch reads
-        ``ayah.sura.name`` per row, which without this join would lazy-load
-        one ``Sura`` per row instead of one query for the whole batch.
+        ``ayah.surah.name`` per row, which without this join would lazy-load
+        one ``Surah`` per row instead of one query for the whole batch.
         """
         if spec.template == AssetTemplateChoice.SURAH:
-            return Sura.objects.in_bulk(unit_ids)
+            return Surah.objects.in_bulk(unit_ids)
         if spec.template == AssetTemplateChoice.AYAH:
-            return Ayah.objects.select_related("sura").in_bulk(unit_ids)
+            return Ayah.objects.select_related("surah").in_bulk(unit_ids)
         if spec.template == AssetTemplateChoice.WORD:
             return Word.objects.select_related("ayah").in_bulk(unit_ids)
         if spec.is_group:
@@ -823,9 +825,9 @@ class AssetContentRepository:
         if spec.template == AssetTemplateChoice.SURAH:
             label = f"{unit_obj.id}. {unit_obj.transliterated_name}"
         elif spec.template == AssetTemplateChoice.AYAH:
-            label = f"{unit_obj.sura_id}:{unit_obj.number_in_sura}"
+            label = f"{unit_obj.surah_id}:{unit_obj.number_in_surah}"
         elif spec.template == AssetTemplateChoice.WORD:
-            label = f"{unit_obj.sura_id}:{unit_obj.ayah.number_in_sura}:{unit_obj.position_in_ayah}"
+            label = f"{unit_obj.surah_id}:{unit_obj.ayah.number_in_surah}:{unit_obj.position_in_ayah}"
         elif spec.is_group:
             label = group_label(*unit_obj)
         else:
@@ -891,7 +893,7 @@ class AssetContentRepository:
         # order would let rows repeat or vanish across page boundaries.
         stored = list(
             version.changes.select_related(
-                "sura",
+                "surah",
                 "ayah",
                 "word__ayah",
                 "from_ayah",

@@ -16,7 +16,7 @@ from apps.content.models import (
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
-from apps.quran.models import Ayah, Sura
+from apps.quran.models import Ayah, Surah
 from apps.users.models import User
 
 
@@ -29,8 +29,8 @@ class VersionReviewCommentsTests(BaseTestCase):
         self.reviewer = User.objects.create_user(email="reviewer@example.com", name="Aisha", is_staff=True)
         self.give_permission(self.user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES)
         self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
-        sura = baker.make(Sura, id=1, name="الفاتحة", ayas_count=2)
-        self.ayahs = [baker.make(Ayah, id=i, sura=sura, number_in_sura=i, text=f"ayah {i}") for i in (1, 2)]
+        surah = baker.make(Surah, id=1, name="الفاتحة", ayahs_count=2)
+        self.ayahs = [baker.make(Ayah, id=i, surah=surah, number_in_surah=i, text=f"ayah {i}") for i in (1, 2)]
         self.tafsir = baker.make(
             Asset,
             publisher=baker.make(Publisher, name="Review Publisher"),

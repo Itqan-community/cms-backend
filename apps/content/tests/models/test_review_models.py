@@ -13,7 +13,7 @@ from apps.content.models import (
 )
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import MemberLanguage, PublisherMember
-from apps.quran.models import Ayah, Sura
+from apps.quran.models import Ayah, Surah
 from apps.users.models import User
 
 
@@ -35,8 +35,8 @@ class AssetVersionChangeReviewModelTest(BaseTestCase):
             Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH, language="ar"
         )
         self.version = baker.make(AssetVersion, asset=self.asset)
-        self.sura = baker.make(Sura, id=1, name="الفاتحة", ayas_count=3)
-        self.ayah = baker.make(Ayah, id=1, sura=self.sura, number_in_sura=1, text="a")
+        self.surah = baker.make(Surah, id=1, name="الفاتحة", ayahs_count=3)
+        self.ayah = baker.make(Ayah, id=1, surah=self.surah, number_in_surah=1, text="a")
         self.change = baker.make(
             AssetVersionChange, version=self.version, ayah=self.ayah, change_type="added", new_text="x", order=1
         )

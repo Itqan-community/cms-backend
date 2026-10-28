@@ -24,7 +24,7 @@ from apps.core.ninja_utils.errors import ItqanError
 from apps.core.tests.base import BaseTestCase
 from apps.package_manager.services.package_registry import PackageRegistryService, PackageRequest
 from apps.publishers.models import Publisher
-from apps.quran.models import Ayah, Sura
+from apps.quran.models import Ayah, Surah
 
 
 def _make_asset(publisher: Publisher, *, slug: str) -> Asset:
@@ -64,7 +64,7 @@ def _make_version(
     # Published as committed, so the newest commit is what consumers get.
     publish(version)
     if with_file:
-        version.file_url = SimpleUploadedFile(name=f"{asset.slug}-{name}.csv", content=b"sura,text\n")
+        version.file_url = SimpleUploadedFile(name=f"{asset.slug}-{name}.csv", content=b"surah,text\n")
         version.save()
     return version
 
@@ -181,8 +181,8 @@ class PackageRegistryContentEligibilityTests(BaseTestCase):
         super().setUp()
         self.publisher = baker.make(Publisher)
         self.service = PackageRegistryService()
-        sura = baker.make(Sura, id=1, name="الفاتحة", ayas_count=1)
-        self.ayah = baker.make(Ayah, id=1, sura=sura, number_in_sura=1, text="a1")
+        surah = baker.make(Surah, id=1, name="الفاتحة", ayahs_count=1)
+        self.ayah = baker.make(Ayah, id=1, surah=surah, number_in_surah=1, text="a1")
 
     def test_resolve_single_where_newest_version_has_no_content_should_skip_it(self):
         # Arrange

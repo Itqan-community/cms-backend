@@ -4,19 +4,19 @@ Supported ayah shapes (both are the QuranEnc CSV export shapes present in the
 project's sample data):
 
 * Translation CSV: an optional multi-line comment/preamble row, then a header
-  row ``id,sura,aya,translation`` followed by one row per ayah.
+  row ``id,surah,ayah,translation`` followed by one row per ayah.
 * Tafsir CSV (Arabic QuranEnc): a header row that includes
-  ``رقم السورة`` (sura number), ``رقم الآية`` (ayah number) and ``المحتوى``
+  ``رقم السورة`` (surah number), ``رقم الآية`` (ayah number) and ``المحتوى``
   (content), plus import-only metadata columns.
 
 Every template is header-driven, so each tolerates column reordering without a
 per-category branch at the call site. Which columns are recognised depends on
 the asset's template (``UnitSpec``):
 
-* surah — a ``sura`` column + text.
-* ayah — ``sura`` + ``aya`` + text (unchanged from the original ayah-only
+* surah — a ``surah`` column + text.
+* ayah — ``surah`` + ``ayah`` + text (unchanged from the original ayah-only
   parser).
-* word — either a global ``word_id`` column, or the ``sura``/``aya``/``word``
+* word — either a global ``word_id`` column, or the ``surah``/``ayah``/``word``
   (position-in-ayah) triple, plus text. ``word_id`` takes precedence when
   present.
 * page — a ``page`` column + text.
@@ -31,7 +31,7 @@ the asset's template (``UnitSpec``):
 Every resolved row is validated against the template's real unit set
 (``UnitSpec.valid_unit_ids``, which is bounded by the candidates on the page —
 never the template's full unit set) before it is returned, so a surah file
-claiming sura 999 or a page file claiming page 700 against a shorter mushaf
+claiming surah 999 or a page file claiming page 700 against a shorter mushaf
 layout never reaches the database.
 """
 
@@ -44,10 +44,10 @@ import logging
 import sys
 
 from apps.content.columns import (
-    AYA_HEADERS,
+    AYAH_HEADERS,
     PAGE_HEADERS,
     RANGE_HEADERS_BY_TEMPLATE,
-    SURA_HEADERS,
+    SURAH_HEADERS,
     WORD_ID_HEADERS,
     WORD_POSITION_HEADERS,
 )
@@ -194,13 +194,13 @@ def _decode(raw: bytes) -> str:
 def _find_header_row(rows: list[list[str]], text_headers: TextHeaders) -> int:
     """Locate the header row, skipping any leading comment/preamble rows.
 
-    The header is the first row that contains recognisable sura + aya columns.
+    The header is the first row that contains recognisable surah + ayah columns.
     """
     for index, row in enumerate(rows):
         normalized = {cell.strip().lower() for cell in row}
-        if normalized & SURA_HEADERS and normalized & AYA_HEADERS:
+        if normalized & SURAH_HEADERS and normalized & AYAH_HEADERS:
             return index
-    raise AssetContentParseError("No recognisable header row (expected sura/aya + text columns).")
+    raise AssetContentParseError("No recognisable header row (expected surah/ayah + text columns).")
 
 
 def _column_map(header: list[str], text_headers: TextHeaders) -> dict[str, int]:
@@ -208,36 +208,36 @@ def _column_map(header: list[str], text_headers: TextHeaders) -> dict[str, int]:
     mapping: dict[str, int] = {}
     for index, cell in enumerate(header):
         key = cell.strip().lower()
-        if key in SURA_HEADERS and "sura" not in mapping:
-            mapping["sura"] = index
-        elif key in AYA_HEADERS and "aya" not in mapping:
-            mapping["aya"] = index
+        if key in SURAH_HEADERS and "surah" not in mapping:
+            mapping["surah"] = index
+        elif key in AYAH_HEADERS and "ayah" not in mapping:
+            mapping["ayah"] = index
 
     mapping.update(_text_column_map(header, text_headers))
-    missing = {"sura", "aya", "text"} - mapping.keys()
+    missing = {"surah", "ayah", "text"} - mapping.keys()
     if missing:
         raise AssetContentParseError(f"Header is missing required columns: {', '.join(sorted(missing))}.")
     return mapping
 
 
 def _find_surah_header_row(rows: list[list[str]], text_headers: TextHeaders) -> int:
-    """Locate the header row for a surah-template file: a sura + text column."""
+    """Locate the header row for a surah-template file: a surah + text column."""
     for index, row in enumerate(rows):
         normalized = {cell.strip().lower() for cell in row}
-        if normalized & SURA_HEADERS and normalized & _any_text_header(text_headers):
+        if normalized & SURAH_HEADERS and normalized & _any_text_header(text_headers):
             return index
-    raise AssetContentParseError("No recognisable header row (expected a sura + text column).")
+    raise AssetContentParseError("No recognisable header row (expected a surah + text column).")
 
 
 def _surah_column_map(header: list[str], text_headers: TextHeaders) -> dict[str, int]:
     mapping: dict[str, int] = {}
     for index, cell in enumerate(header):
         key = cell.strip().lower()
-        if key in SURA_HEADERS and "sura" not in mapping:
-            mapping["sura"] = index
+        if key in SURAH_HEADERS and "surah" not in mapping:
+            mapping["surah"] = index
 
     mapping.update(_text_column_map(header, text_headers))
-    missing = {"sura", "text"} - mapping.keys()
+    missing = {"surah", "text"} - mapping.keys()
     if missing:
         raise AssetContentParseError(f"Header is missing required columns: {', '.join(sorted(missing))}.")
     return mapping
@@ -269,18 +269,18 @@ def _page_column_map(header: list[str], text_headers: TextHeaders) -> dict[str, 
 def _find_word_header_row(rows: list[list[str]], text_headers: TextHeaders) -> int:
     """Locate the header row for a word-template file.
 
-    Accepts either a ``word_id`` column or the full ``sura``/``aya``/``word``
+    Accepts either a ``word_id`` column or the full ``surah``/``ayah``/``word``
     triple, plus text.
     """
     for index, row in enumerate(rows):
         normalized = {cell.strip().lower() for cell in row}
         has_word_id = bool(normalized & WORD_ID_HEADERS)
         has_triple = bool(
-            (normalized & SURA_HEADERS) and (normalized & AYA_HEADERS) and (normalized & WORD_POSITION_HEADERS)
+            (normalized & SURAH_HEADERS) and (normalized & AYAH_HEADERS) and (normalized & WORD_POSITION_HEADERS)
         )
         if (has_word_id or has_triple) and normalized & _any_text_header(text_headers):
             return index
-    raise AssetContentParseError("No recognisable header row (expected word_id, or sura + aya + word, plus text).")
+    raise AssetContentParseError("No recognisable header row (expected word_id, or surah + ayah + word, plus text).")
 
 
 def _word_column_map(header: list[str], text_headers: TextHeaders) -> dict[str, int]:
@@ -289,18 +289,18 @@ def _word_column_map(header: list[str], text_headers: TextHeaders) -> dict[str, 
         key = cell.strip().lower()
         if key in WORD_ID_HEADERS and "word_id" not in mapping:
             mapping["word_id"] = index
-        elif key in SURA_HEADERS and "sura" not in mapping:
-            mapping["sura"] = index
-        elif key in AYA_HEADERS and "aya" not in mapping:
-            mapping["aya"] = index
+        elif key in SURAH_HEADERS and "surah" not in mapping:
+            mapping["surah"] = index
+        elif key in AYAH_HEADERS and "ayah" not in mapping:
+            mapping["ayah"] = index
         elif key in WORD_POSITION_HEADERS and "word" not in mapping:
             mapping["word"] = index
 
     mapping.update(_text_column_map(header, text_headers))
     if "text" not in mapping:
         raise AssetContentParseError("Header is missing required columns: text.")
-    if "word_id" not in mapping and not {"sura", "aya", "word"} <= mapping.keys():
-        raise AssetContentParseError("Header is missing required columns: word_id, or sura + aya + word.")
+    if "word_id" not in mapping and not {"surah", "ayah", "word"} <= mapping.keys():
+        raise AssetContentParseError("Header is missing required columns: word_id, or surah + ayah + word.")
     return mapping
 
 
@@ -359,9 +359,9 @@ def _read_rows(raw: bytes) -> list[list[str]]:
 
 
 def _parse_ayah_entries(rows: list[list[str]], log: _RowLog, text_headers: TextHeaders) -> dict[tuple[int, int], Cells]:
-    """Parse an ayah-shaped file into {(sura, aya): text}. Unchanged from the
-    original ayah-only parser: rows with a non-integer sura/aya are skipped
-    (almost always stray preamble lines), and duplicate (sura, aya) pairs keep
+    """Parse an ayah-shaped file into {(surah, ayah): text}. Unchanged from the
+    original ayah-only parser: rows with a non-integer surah/ayah are skipped
+    (almost always stray preamble lines), and duplicate (surah, ayah) pairs keep
     the last occurrence."""
     header_index = _find_header_row(rows, text_headers)
     columns = _column_map(rows[header_index], text_headers)
@@ -373,14 +373,14 @@ def _parse_ayah_entries(rows: list[list[str]], log: _RowLog, text_headers: TextH
             log.unreadable(row, row_number)
             continue
         try:
-            sura = int(row[columns["sura"]].strip())
-            aya = int(row[columns["aya"]].strip())
+            surah = int(row[columns["surah"]].strip())
+            ayah = int(row[columns["ayah"]].strip())
         except (ValueError, AttributeError):
             log.unreadable(row, row_number)
             continue
 
         content = _row_cells(row, columns, text_headers)
-        log.read(entries, (sura, aya), content, row_number)
+        log.read(entries, (surah, ayah), content, row_number)
     return entries
 
 
@@ -395,13 +395,13 @@ def _parse_surah_entries(rows: list[list[str]], log: _RowLog, text_headers: Text
             log.unreadable(row, row_number)
             continue
         try:
-            sura = int(row[columns["sura"]].strip())
+            surah = int(row[columns["surah"]].strip())
         except (ValueError, AttributeError):
             log.unreadable(row, row_number)
             continue
 
         content = _row_cells(row, columns, text_headers)
-        log.read(entries, sura, content, row_number)
+        log.read(entries, surah, content, row_number)
     return entries
 
 
@@ -433,7 +433,7 @@ def _parse_word_entries(
 
     When the header carries a ``word_id`` column it takes precedence and
     ``entries`` is keyed by that raw id; otherwise ``entries`` is keyed by the
-    (sura, aya, word-position) triple.
+    (surah, ayah, word-position) triple.
     """
     header_index = _find_word_header_row(rows, text_headers)
     columns = _word_column_map(rows[header_index], text_headers)
@@ -462,14 +462,14 @@ def _parse_word_entries(
             log.unreadable(row, row_number)
             continue
         try:
-            sura = int(row[columns["sura"]].strip())
-            aya = int(row[columns["aya"]].strip())
+            surah = int(row[columns["surah"]].strip())
+            ayah = int(row[columns["ayah"]].strip())
             word = int(row[columns["word"]].strip())
         except (ValueError, AttributeError):
             log.unreadable(row, row_number)
             continue
         content = _row_cells(row, columns, text_headers)
-        log.read(by_triple, (sura, aya, word), content, row_number)
+        log.read(by_triple, (surah, ayah, word), content, row_number)
     return by_triple, False
 
 
@@ -508,9 +508,9 @@ def parse_content_file(
 
     if spec.template == AssetTemplateChoice.SURAH:
         entries = _parse_surah_entries(rows, log, text_headers)
-        for sura, text in entries.items():
-            resolved[sura] = sura
-            texts[sura] = text
+        for surah, text in entries.items():
+            resolved[surah] = surah
+            texts[surah] = text
 
     elif spec.template == AssetTemplateChoice.AYAH:
         entries = _parse_ayah_entries(rows, log, text_headers)
@@ -519,15 +519,15 @@ def parse_content_file(
         # By call time both modules are fully loaded.
         from apps.content.repositories.asset_content import AssetContentRepository
 
-        ayah_index = AssetContentRepository()._ayah_id_by_sura_aya()
-        for (sura, aya), text in entries.items():
-            ayah_id = ayah_index.get((sura, aya))
+        ayah_index = AssetContentRepository()._ayah_id_by_surah_ayah()
+        for (surah, ayah), text in entries.items():
+            ayah_id = ayah_index.get((surah, ayah))
             if ayah_id is None:
                 if any(text):
-                    log.problems[log.row_of[(sura, aya)]] = UNKNOWN_UNIT
+                    log.problems[log.row_of[(surah, ayah)]] = UNKNOWN_UNIT
                 continue
-            resolved[(sura, aya)] = ayah_id
-            texts[(sura, aya)] = text
+            resolved[(surah, ayah)] = ayah_id
+            texts[(surah, ayah)] = text
 
     elif spec.template == AssetTemplateChoice.WORD:
         entries, used_word_id = _parse_word_entries(rows, log, text_headers)
@@ -538,7 +538,7 @@ def parse_content_file(
         else:
             from apps.content.repositories.asset_content import AssetContentRepository
 
-            word_index = AssetContentRepository()._word_id_by_sura_aya_position()
+            word_index = AssetContentRepository()._word_id_by_surah_ayah_position()
             for triple, text in entries.items():
                 word_id = word_index.get(triple)
                 if word_id is None:
@@ -555,9 +555,9 @@ def parse_content_file(
 
         repo = AssetContentRepository()
         index = (
-            repo._ayah_id_by_sura_aya()
+            repo._ayah_id_by_surah_ayah()
             if spec.template == AssetTemplateChoice.AYAH_GROUP
-            else repo._word_id_by_sura_aya_position()
+            else repo._word_id_by_surah_ayah_position()
         )
         half = len(range_headers) // 2
         for key, text in entries.items():

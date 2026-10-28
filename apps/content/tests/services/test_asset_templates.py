@@ -12,14 +12,14 @@ class UnitSpecTests(QuranDataMixin, BaseTestCase):
         super().setUp()
         self.bake_quran()
 
-    def test_total_where_template_is_surah_should_return_baked_sura_count(self):
+    def test_total_where_template_is_surah_should_return_baked_surah_count(self):
         # Arrange
         asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.SURAH)
 
         # Act
         total = unit_spec_for(asset).total(asset)
 
-        # Assert — 2 suras baked by bake_quran, not the canonical 114
+        # Assert — 2 surahs baked by bake_quran, not the canonical 114
         self.assertEqual(total, 2)
 
     def test_total_where_template_is_ayah_should_return_baked_ayah_count(self):
@@ -58,8 +58,8 @@ class UnitSpecTests(QuranDataMixin, BaseTestCase):
         # Assert
         self.assertEqual(first.unit_id, 1)
         self.assertEqual(first.label, "1. Al-Fatiha")
-        self.assertEqual(first.sura, 1)
-        self.assertIsNone(first.aya)
+        self.assertEqual(first.surah, 1)
+        self.assertIsNone(first.ayah)
 
     def test_units_where_template_is_page_should_label_with_page_number(self):
         # Arrange
@@ -79,16 +79,16 @@ class UnitSpecTests(QuranDataMixin, BaseTestCase):
         self.assertEqual(rows[0].label, "Page 1")
         self.assertEqual(rows[0].reference_text, "")
 
-    def test_units_where_word_template_filtered_by_sura_should_only_return_that_sura(self):
+    def test_units_where_word_template_filtered_by_surah_should_only_return_that_surah(self):
         # Arrange
         asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.WORD)
 
         # Act
-        rows = unit_spec_for(asset).units(asset, sura=1)
+        rows = unit_spec_for(asset).units(asset, surah=1)
 
         # Assert
         self.assertTrue(rows)
-        self.assertTrue(all(row.sura == 1 for row in rows))
+        self.assertTrue(all(row.surah == 1 for row in rows))
 
     def test_unit_spec_for_where_asset_has_no_template_should_raise(self):
         # Arrange

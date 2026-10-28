@@ -14,7 +14,7 @@ from apps.content.models import (
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
-from apps.quran.models import Ayah, Sura
+from apps.quran.models import Ayah, Surah
 from apps.users.models import User
 
 CSV = b"surah,ayah,text\n1,1,in the name"
@@ -36,8 +36,8 @@ class VersionNumberingBaseTest(BaseTestCase):
         )
         self.user = User.objects.create_user(email="editor@example.com", name="Editor", is_staff=True)
         self.give_permission(self.user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES)
-        sura = baker.make(Sura, id=1, name="الفاتحة", ayas_count=7)
-        self.ayah = baker.make(Ayah, id=1, sura=sura, number_in_sura=1, text="a")
+        surah = baker.make(Surah, id=1, name="الفاتحة", ayahs_count=7)
+        self.ayah = baker.make(Ayah, id=1, surah=surah, number_in_surah=1, text="a")
 
     def upload(self, **data):
         return self.client.post(

@@ -10,7 +10,7 @@ from apps.quran.repositories.quran import QuranRepository
 if TYPE_CHECKING:
     from django.db.models import QuerySet
 
-    from apps.quran.models import Ayah, Sura, Word
+    from apps.quran.models import Ayah, Surah, Word
 
 
 class QuranService:
@@ -19,24 +19,24 @@ class QuranService:
     def __init__(self, repo: QuranRepository) -> None:
         self.repo = repo
 
-    def list_suras(self) -> QuerySet[Sura]:
-        return self.repo.list_suras()
+    def list_surahs(self) -> QuerySet[Surah]:
+        return self.repo.list_surahs()
 
-    def get_sura(self, sura_id: int) -> Sura:
-        sura = self.repo.get_sura(sura_id)
-        if sura is None:
+    def get_surah(self, surah_id: int) -> Surah:
+        surah = self.repo.get_surah(surah_id)
+        if surah is None:
             raise ItqanError(
-                error_name="sura_not_found",
-                message=_("Sura does not exist."),
+                error_name="surah_not_found",
+                message=_("Surah does not exist."),
                 status_code=404,
             )
-        return sura
+        return surah
 
-    def get_ayah(self, sura_id: int, number_in_sura: int) -> Ayah:
-        # Ensure the sura exists so a missing sura and a missing ayah are
+    def get_ayah(self, surah_id: int, number_in_surah: int) -> Ayah:
+        # Ensure the surah exists so a missing surah and a missing ayah are
         # reported distinctly.
-        self.get_sura(sura_id)
-        ayah = self.repo.get_ayah(sura_id, number_in_sura)
+        self.get_surah(surah_id)
+        ayah = self.repo.get_ayah(surah_id, number_in_surah)
         if ayah is None:
             raise ItqanError(
                 error_name="ayah_not_found",
@@ -45,19 +45,19 @@ class QuranService:
             )
         return ayah
 
-    def list_ayahs_for_sura(self, sura_id: int) -> QuerySet[Ayah]:
-        self.get_sura(sura_id)
-        return self.repo.list_ayahs_for_sura(sura_id)
+    def list_ayahs_for_surah(self, surah_id: int) -> QuerySet[Ayah]:
+        self.get_surah(surah_id)
+        return self.repo.list_ayahs_for_surah(surah_id)
 
-    def list_hierarchy_tree(self) -> QuerySet[Sura]:
+    def list_hierarchy_tree(self) -> QuerySet[Surah]:
         return self.repo.list_hierarchy_tree()
 
-    def list_surah_ayah_tree(self, sura_id: int) -> QuerySet[Ayah]:
-        self.get_sura(sura_id)
-        return self.repo.list_surah_ayah_tree(sura_id)
+    def list_surah_ayah_tree(self, surah_id: int) -> QuerySet[Ayah]:
+        self.get_surah(surah_id)
+        return self.repo.list_surah_ayah_tree(surah_id)
 
-    def get_ayah_words(self, sura_id: int, number_in_sura: int) -> QuerySet[Word]:
-        words = self.repo.get_ayah_words(sura_id, number_in_sura)
+    def get_ayah_words(self, surah_id: int, number_in_surah: int) -> QuerySet[Word]:
+        words = self.repo.get_ayah_words(surah_id, number_in_surah)
         if words is None:
             raise ItqanError(
                 error_name="ayah_not_found",

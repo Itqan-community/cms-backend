@@ -46,8 +46,8 @@ class EntryWriteTests(QuranDataMixin, BaseTestCase):
         version = baker.make(AssetVersion, asset=asset, state=VersionStateChoice.DRAFT)
         return asset, version
 
-    def test_patch_entries_where_surah_template_should_write_the_sura_column(self):
-        # sura id 2 is baked by bake_quran; 999 below is deliberately absent
+    def test_patch_entries_where_surah_template_should_write_the_surah_column(self):
+        # surah id 2 is baked by bake_quran; 999 below is deliberately absent
         # Arrange
         self.authenticate_user(self.user)
         asset, version = self._draft_for(AssetTemplateChoice.SURAH)
@@ -62,7 +62,7 @@ class EntryWriteTests(QuranDataMixin, BaseTestCase):
         # Assert
         self.assertEqual(response.status_code, 200, response.content)
         entry = AssetVersionEntry.objects.get(version=version)
-        self.assertEqual(entry.sura_id, 2)
+        self.assertEqual(entry.surah_id, 2)
         self.assertIsNone(entry.ayah_id)
         self.assertEqual(entry.text, "surah two")
 
@@ -125,7 +125,7 @@ class EntryWriteTests(QuranDataMixin, BaseTestCase):
         self.assertEqual(entry.ayah_id, 1)
 
     def test_patch_entries_where_word_template_should_write_the_word_column(self):
-        # word id 1 is baked by bake_quran (word1: sura 1, ayah 1, position 1, text "w1")
+        # word id 1 is baked by bake_quran (word1: surah 1, ayah 1, position 1, text "w1")
         # Arrange
         self.authenticate_user(self.user)
         asset, version = self._draft_for(AssetTemplateChoice.WORD)
@@ -146,7 +146,7 @@ class EntryWriteTests(QuranDataMixin, BaseTestCase):
         self.assertEqual("w1", row["reference_text"])
 
     def test_pending_diff_where_surah_template_should_label_the_unit(self):
-        # sura id 2 is baked by bake_quran as "Al-Baqara"
+        # surah id 2 is baked by bake_quran as "Al-Baqara"
         # Arrange
         self.authenticate_user(self.user)
         asset, version = self._draft_for(AssetTemplateChoice.SURAH)
@@ -185,7 +185,7 @@ class EntryWriteTests(QuranDataMixin, BaseTestCase):
         )
         ar_lang = asset.get_or_create_source_language()
         ar_version = baker.make(AssetVersion, asset=asset, asset_language=ar_lang, state=VersionStateChoice.PUBLISHED)
-        baker.make(AssetVersionEntry, version=ar_version, sura=self.sura1, text="sura one", order=1)
+        baker.make(AssetVersionEntry, version=ar_version, surah=self.surah1, text="surah one", order=1)
         AssetLanguage.objects.create(asset=asset, language="es")
 
         # Act
