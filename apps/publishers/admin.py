@@ -157,9 +157,10 @@ class PublisherMemberInvitationAdmin(AuditedModelAdmin):
 
 @admin.register(PublisherGroup)
 class PublisherGroupAdmin(admin.ModelAdmin):
-    list_display = ["name", "publisher", "group"]
+    list_display = ["name_en", "name_ar", "publisher", "group"]
     list_filter = ["publisher"]
-    search_fields = ["name", "publisher__name"]
+    search_fields = ["name_en", "name_ar", "publisher__name"]
+    fields = ["publisher", "group", "name_en", "name_ar"]
     raw_id_fields = ["group", "publisher"]
 
 

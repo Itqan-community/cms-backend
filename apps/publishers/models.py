@@ -60,7 +60,8 @@ class PublisherGroup(models.Model):
     """Ties a permission group (role) to the one publisher that owns it.
 
     ``auth.Group.name`` is globally unique, so the underlying group gets an opaque name and the
-    name admins see and edit lives here, unique per publisher. Groups without a PublisherGroup
+    name admins see and edit lives here, in English and Arabic (``name_en`` / ``name_ar``, via
+    modeltranslation), each unique per publisher. Groups without a PublisherGroup
     are global (e.g. Itqan Internal) and are never offered through the portal.
     """
 
@@ -71,7 +72,11 @@ class PublisherGroup(models.Model):
     name = models.CharField(max_length=150, help_text="Role name shown to the publisher's admins e.g. 'Editors'")
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=["publisher", "name"], name="unique_publisher_group_name")]
+        # ``name`` is translated (name_en / name_ar); each language is unique within a publisher.
+        constraints = [
+            models.UniqueConstraint(fields=["publisher", "name_en"], name="unique_publisher_group_name_en"),
+            models.UniqueConstraint(fields=["publisher", "name_ar"], name="unique_publisher_group_name_ar"),
+        ]
 
     def __str__(self):
         return f"PublisherGroup(name={self.name} publisher={self.publisher_id})"

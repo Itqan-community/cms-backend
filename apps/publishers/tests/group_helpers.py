@@ -27,13 +27,16 @@ def _grant(group: Group, permissions: tuple[PermissionChoice, ...]) -> Group:
     return group
 
 
-def publisher_role(publisher: Publisher, name: str, *permissions: PermissionChoice) -> Group:
-    """A role owned by ``publisher``, named ``name``, granted ``permissions`` (get-or-create)."""
-    existing = PublisherGroup.objects.filter(publisher=publisher, name=name).select_related("group").first()
+def publisher_role(
+    publisher: Publisher, name: str, *permissions: PermissionChoice, name_ar: str | None = None
+) -> Group:
+    """A role owned by ``publisher``, named ``name`` (English; Arabic defaults to the same),
+    granted ``permissions`` (get-or-create by English name)."""
+    existing = PublisherGroup.objects.filter(publisher=publisher, name_en=name).select_related("group").first()
     if existing is not None:
         return _grant(existing.group, permissions)
     group = Group.objects.create(name=f"publisher:{publisher.id}:{uuid.uuid4().hex}")
-    PublisherGroup.objects.create(group=group, publisher=publisher, name=name)
+    PublisherGroup.objects.create(group=group, publisher=publisher, name_en=name, name_ar=name_ar or name)
     return _grant(group, permissions)
 
 
