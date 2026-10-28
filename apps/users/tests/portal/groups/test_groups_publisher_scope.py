@@ -424,3 +424,60 @@ class PermissionCatalogueGroupsTest(BaseTestCase):
         names = [p["name"] for group in response.json() for p in group["permissions"]]
         self.assertFalse([name for name in names if "البوابة" in name])
         self.assertIn("لوحة التحكم - عرض الأدوار", names)
+
+
+class GroupPermissionCountTest(BaseTestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        self.publisher = baker.make(Publisher)
+        self.user = baker.make(User, email="counts@example.com", is_staff=True)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_GROUP)
+
+    def test_list_groups_where_roles_hold_permissions_should_return_each_count(self) -> None:
+        # Arrange
+        publisher_role(self.publisher, "Readers", PermissionChoice.PORTAL_READ_RECITER)
+        publisher_role(
+            self.publisher, "Editors", PermissionChoice.PORTAL_READ_RECITER, PermissionChoice.PORTAL_CREATE_RECITER
+        )
+        publisher_role(self.publisher, "Empty")
+        self.authenticate_user(self.user, HTTP_X_TENANT=str(self.publisher.id))
+
+        # Act
+        response = self.client.get("/portal/groups/", {"ordering": "name_en"})
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        counts = {item["name_en"]: item["permissions_count"] for item in response.json()["results"]}
+        self.assertEqual({"Editors": 2, "Empty": 0, "Readers": 1}, counts)
+
+    def test_list_groups_where_more_roles_should_keep_query_count(self) -> None:
+        # Arrange
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        def count() -> int:
+            with CaptureQueriesContext(connection) as ctx:
+                response = self.client.get("/portal/groups/")
+            self.assertEqual(200, response.status_code, response.content)
+            return len(ctx.captured_queries)
+
+        self.authenticate_user(self.user, HTTP_X_TENANT=str(self.publisher.id))
+        publisher_role(self.publisher, "One", PermissionChoice.PORTAL_READ_RECITER)
+        count()
+        one = count()
+        for name in ("Two", "Three", "Four"):
+            publisher_role(self.publisher, name, PermissionChoice.PORTAL_READ_RECITER)
+
+        # Act & Assert
+        self.assertEqual(one, count())
+
+    def test_retrieve_group_where_role_holds_permissions_should_return_count(self) -> None:
+        # Arrange
+        group = publisher_role(self.publisher, "Readers", PermissionChoice.PORTAL_READ_RECITER)
+        self.authenticate_user(self.user, HTTP_X_TENANT=str(self.publisher.id))
+
+        # Act
+        response = self.client.get(f"/portal/groups/{group.id}/")
+
+        # Assert
+        self.assertEqual(1, response.json()["permissions_count"])

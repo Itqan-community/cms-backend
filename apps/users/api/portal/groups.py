@@ -2,7 +2,7 @@ import logging
 from typing import Literal
 
 from django.contrib.auth.models import Group
-from django.db.models import F
+from django.db.models import Count, F, Q
 from django.utils.translation import gettext_lazy as _
 from ninja import Field, FilterSchema, Query, Schema
 from ninja.pagination import paginate
@@ -64,10 +64,19 @@ class GroupListOut(Schema):
     name: str
     name_en: str
     name_ar: str
+    permissions_count: int
 
     @staticmethod
     def resolve_name(obj: Group) -> str:
         return _publisher_group(obj).name
+
+    @staticmethod
+    def resolve_permissions_count(obj: Group) -> int:
+        # Annotated on the list query; detail endpoints have the permissions loaded already.
+        annotated = getattr(obj, "portal_permissions_count", None)
+        if annotated is not None:
+            return annotated
+        return sum(1 for perm in obj.permissions.all() if perm.codename in _PORTAL_CODENAMES)
 
     @staticmethod
     def resolve_name_en(obj: Group) -> str:
@@ -168,7 +177,13 @@ def list_groups(request: Request, filters: GroupFilter = Query(...)):
     qs = (
         _service()
         .assignable_groups_qs(_publisher_id(request))
-        .annotate(name_en=F("publisher_group__name_en"), name_ar=F("publisher_group__name_ar"))
+        .annotate(
+            name_en=F("publisher_group__name_en"),
+            name_ar=F("publisher_group__name_ar"),
+            portal_permissions_count=Count(
+                "permissions", filter=Q(permissions__codename__in=_PORTAL_CODENAMES), distinct=True
+            ),
+        )
     )
     qs = filters.filter(qs)
     return qs
