@@ -6,6 +6,7 @@ from django.utils import timezone
 from model_bakery import baker
 
 from apps.core.ninja_utils.errors import ItqanError
+from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher, PublisherMember, PublisherMemberInvitation
 from apps.publishers.services.publisher_member_invitation_service import PublisherMemberInvitationService
@@ -113,7 +114,10 @@ class InvitationServiceTest(BaseTestCase):
         mock_ack.assert_called_once()
 
     def test_accept_staff_activates_with_read_baseline_only(self):
-        member, inv, raw, _ = self._create(email="grunt@example.com", group=member_group())
+        member, inv, raw, _ = self._create(
+            email="grunt@example.com",
+            group=member_group(PermissionChoice.PORTAL_ACCESS, PermissionChoice.PORTAL_VIEW_PUBLISHER_MEMBERS),
+        )
         with (
             self.captureOnCommitCallbacks(execute=True),
             patch(
