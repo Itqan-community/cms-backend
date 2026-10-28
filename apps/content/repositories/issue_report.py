@@ -43,9 +43,12 @@ class IssueReportRepository:
 
         return qs
 
-    def get_issue_report_by_id(self, report_id: int) -> ContentIssueReport | None:
+    def get_issue_report_by_id(self, report_id: int, q_filter: Q | None = None) -> ContentIssueReport | None:
+        qs = ContentIssueReport.objects.select_related("reporter", "asset")
+        if q_filter:
+            qs = qs.filter(q_filter)
         try:
-            return ContentIssueReport.objects.select_related("reporter", "asset").get(id=report_id)
+            return qs.get(id=report_id)
         except ContentIssueReport.DoesNotExist:
             return None
 

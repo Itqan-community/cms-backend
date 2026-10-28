@@ -51,6 +51,33 @@ class UserProfileTestCase(BaseTestCase):
         self.assertIn("created_at", response_data)
         self.assertIn("updated_at", response_data)
         self.assertIsNone(response_data["phone"])  # Phone should be None initially
+        self.assertFalse(response_data["is_staff"])
+
+    def test_get_profile_where_user_is_staff_should_return_is_staff_true(self):
+        # Arrange
+        self.user.is_staff = True
+        self.user.save(update_fields=["is_staff"])
+        self.authenticate_user(user=self.user)
+
+        # Act
+        response = self.client.get("/cms-api/auth/profile/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertTrue(response.json()["is_staff"])
+
+    def test_update_profile_where_user_is_staff_should_return_is_staff_true(self):
+        # Arrange
+        self.user.is_staff = True
+        self.user.save(update_fields=["is_staff"])
+        self.authenticate_user(user=self.user)
+
+        # Act
+        response = self.client.put("/cms-api/auth/profile/", data={"bio": "Bio"}, format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertTrue(response.json()["is_staff"])
 
     def test_get_profile_where_unauthenticated_should_return_401(self):
         """Test profile retrieval without authentication returns error"""

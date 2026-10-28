@@ -26,6 +26,7 @@ class UserProfileSchema(Schema):
     preferred_language: LanguageChoice
     is_active: bool
     is_profile_completed: bool
+    is_staff: bool = False
     bio: str = ""
     project_summary: str = ""
     project_url: str = ""
@@ -84,6 +85,7 @@ def get_user_profile(request: Request):
         "job_title": user_developer_profile.job_title if user_developer_profile else "",
         "created_at": user.created_at,
         "updated_at": user.updated_at,
+        "is_staff": user.is_staff,
         "permissions": _get_user_permissions(user),
     }
 
@@ -140,5 +142,6 @@ def update_user_profile(request: Request, profile_data: UserUpdateSchema):
         "job_title": user_developer_profile.job_title if user_developer_profile else "",
         "created_at": user.created_at,
         "updated_at": user.updated_at,
+        "is_staff": user.is_staff,
         "permissions": _get_user_permissions(user),
     }

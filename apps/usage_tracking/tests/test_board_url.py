@@ -1,10 +1,11 @@
 from django.conf import settings
+from django.contrib.auth.models import Group
 from django.core.cache import cache
 from model_bakery import baker
 import pytest
 
 from apps.core.tests.base import BaseTestCase
-from apps.publishers.models import Publisher
+from apps.publishers.models import Publisher, PublisherMember
 from apps.users.models import User
 
 
@@ -18,6 +19,13 @@ class TestGetUsageBoardUrl(BaseTestCase):
         self.user = User.objects.create_user(email="user@test.com", password="x")
 
     def _get(self, publisher: Publisher | None):
+        if publisher:
+            PublisherMember.objects.create(
+                user=self.user,
+                publisher=publisher,
+                group=Group.objects.create(name=f"{publisher.id} role"),
+                status=PublisherMember.StatusChoice.ACTIVE,
+            )
         self.authenticate_user(self.user)
         headers = {"HTTP_X_TENANT": str(publisher.id)} if publisher else {}
         return self.client.get(self.URL, **headers)
@@ -50,3 +58,65 @@ class TestGetUsageBoardUrl(BaseTestCase):
         resp = self.client.get(self.URL)
 
         assert resp.status_code == 401
+
+
+class TestGetUsageBoardUrlPublisherId(BaseTestCase):
+    URL = "/portal/usage/board-url/"
+
+    def test_get_usage_board_url_where_staff_passes_publisher_id_should_return_that_publishers_board(self):
+        # Arrange
+        staff = User.objects.create_user(email="staff@test.com", password="x", is_staff=True)
+        publisher = baker.make(Publisher, mixpanel_board_url="https://eu.mixpanel.com/public/PICKED")
+        self.authenticate_user(staff)
+
+        # Act
+        resp = self.client.get(self.URL, {"publisher_id": publisher.id})
+
+        # Assert
+        self.assertEqual(200, resp.status_code, resp.content)
+        self.assertEqual("https://eu.mixpanel.com/public/PICKED", resp.json()["board_url"])
+
+    def test_get_usage_board_url_where_non_staff_passes_publisher_id_should_ignore_it(self):
+        # Arrange
+        user = User.objects.create_user(email="user@test.com", password="x")
+        other = baker.make(Publisher, mixpanel_board_url="https://eu.mixpanel.com/public/OTHER")
+        self.authenticate_user(user)
+
+        # Act
+        resp = self.client.get(self.URL, {"publisher_id": other.id})
+
+        # Assert
+        self.assertEqual(200, resp.status_code, resp.content)
+        self.assertIsNone(resp.json()["board_url"])
+
+    def test_get_usage_board_url_where_non_member_sends_other_publishers_tenant_should_return_null(self):
+        # Arrange
+        user = User.objects.create_user(email="user@test.com", password="x")
+        other = baker.make(Publisher, mixpanel_board_url="https://eu.mixpanel.com/public/OTHER")
+        self.authenticate_user(user, HTTP_X_TENANT=str(other.id))
+
+        # Act
+        resp = self.client.get(self.URL)
+
+        # Assert
+        self.assertEqual(200, resp.status_code, resp.content)
+        self.assertIsNone(resp.json()["board_url"])
+
+    def test_get_usage_board_url_where_member_sends_own_tenant_should_return_its_board(self):
+        # Arrange
+        user = User.objects.create_user(email="member@test.com", password="x")
+        publisher = baker.make(Publisher, mixpanel_board_url="https://eu.mixpanel.com/public/OWN")
+        PublisherMember.objects.create(
+            user=user,
+            publisher=publisher,
+            group=Group.objects.create(name="Own role"),
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
+        self.authenticate_user(user, HTTP_X_TENANT=str(publisher.id))
+
+        # Act
+        resp = self.client.get(self.URL)
+
+        # Assert
+        self.assertEqual(200, resp.status_code, resp.content)
+        self.assertEqual("https://eu.mixpanel.com/public/OWN", resp.json()["board_url"])
