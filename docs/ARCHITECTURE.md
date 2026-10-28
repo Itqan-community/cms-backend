@@ -449,6 +449,15 @@ from the parsed entries, so consumers download exactly what was reviewed.
   re-published a pruned commit). It reads only the cells those rows need, and caches
   the rows per served version. No access grant is needed; a language
   consumers can't see, or another category, is 404 `file_structure_unavailable`.
+  The other categories get their own anonymous samples, also without an access grant.
+  `assets/{id}/recitation-preview/` returns up to the first 3 tracks of a READY
+  recitation's default folder (while it is visible) with playable URLs, or 404
+  `recitation_preview_unavailable`. `assets/{id}/font-preview/?language=` returns a
+  READY font's published file (`font_url`, `file_name`, CSS `format`) and Al-Fatiha's
+  ayahs to set in it, or 404 `font_preview_unavailable`. A font uploaded as a zip has
+  its first font file (woff2, then woff, ttf, otf) extracted once to
+  `previews/fonts/<version id>/…` in storage. Both return CDN URLs for open-access
+  assets and signed, expiring links for restricted ones.
 - **Commit vs publish** — committing makes a version the *head* (newest wins; what
   the editor builds on, `is_active` in the version list) but does **not** make it
   visible. Consumers (downloads, samples, `available_languages`, subscriber emails,
