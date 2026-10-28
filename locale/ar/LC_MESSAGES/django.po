@@ -881,17 +881,17 @@ msgstr "لوحة التحكم - تعديل الناشرين"
 msgid "Portal - Delete Publishers"
 msgstr "لوحة التحكم - حذف الناشرين"
 
-msgid "Portal - View Groups"
-msgstr "لوحة التحكم - عرض المجموعات"
+msgid "Portal - View Roles"
+msgstr "لوحة التحكم - عرض الأدوار"
 
-msgid "Portal - Create Groups"
-msgstr "لوحة التحكم - إنشاء المجموعات"
+msgid "Portal - Create Roles"
+msgstr "لوحة التحكم - إنشاء الأدوار"
 
-msgid "Portal - Update Groups"
-msgstr "لوحة التحكم - تعديل المجموعات"
+msgid "Portal - Update Roles"
+msgstr "لوحة التحكم - تعديل الأدوار"
 
-msgid "Portal - Delete Groups"
-msgstr "لوحة التحكم - حذف المجموعات"
+msgid "Portal - Delete Roles"
+msgstr "لوحة التحكم - حذف الأدوار"
 
 msgid "Portal - View Publisher Members"
 msgstr "لوحة التحكم - عرض أعضاء الناشر"
@@ -940,6 +940,54 @@ msgstr "لوحة التحكم - إضافة لغة إلى الأصل"
 
 msgid "Portal - Manage Asset Columns"
 msgstr "لوحة التحكم - إدارة أعمدة الأصول"
+
+msgid "Control panel"
+msgstr "لوحة التحكم"
+
+msgid "Reciters"
+msgstr "القراء"
+
+msgid "Recitations"
+msgstr "التلاوات"
+
+msgid "Tafsirs"
+msgstr "التفاسير"
+
+msgid "Translations"
+msgstr "الترجمات"
+
+msgid "Mushafs"
+msgstr "المصاحف"
+
+msgid "Mushaf layouts"
+msgstr "تخطيطات المصاحف"
+
+msgid "Fonts"
+msgstr "الخطوط"
+
+msgid "Review and publishing"
+msgstr "المراجعة والنشر"
+
+msgid "Languages and columns"
+msgstr "اللغات والأعمدة"
+
+msgid "Publishers"
+msgstr "الناشرون"
+
+msgid "Members"
+msgstr "الأعضاء"
+
+msgid "Roles"
+msgstr "الأدوار"
+
+msgid "Access requests"
+msgstr "طلبات الوصول"
+
+msgid "Usage statistics"
+msgstr "إحصائيات الاستخدام"
+
+msgid "Packages"
+msgstr "الحزم"
 
 msgid "Created"
 msgstr "تم الإنشاء"
@@ -1798,6 +1846,18 @@ msgstr[3] "مدخلات"
 msgstr[4] "مدخلاً"
 msgstr[5] "مدخل"
 
+#~ msgid "Portal - View Groups"
+#~ msgstr "البوابة - عرض المجموعات"
+
+#~ msgid "Portal - Create Groups"
+#~ msgstr "البوابة - إنشاء المجموعات"
+
+#~ msgid "Portal - Update Groups"
+#~ msgstr "البوابة - تعديل المجموعات"
+
+#~ msgid "Portal - Delete Groups"
+#~ msgstr "البوابة - حذف المجموعات"
+
 #~ msgid "Write the group's text in at least one column."
 #~ msgstr "اكتب نص النطاق في عمود واحد على الأقل."
 
@@ -1868,5 +1928,6 @@ msgstr[5] "مدخل"
 
 #~ msgid "This asset has no version to sync the recitation data into."
 #~ msgstr "لا توجد نسخة لهذا المورد لمزامنة بيانات التلاوة إليها."
+
 #~ msgid "Cannot restore a revoked API key to an active state."
 #~ msgstr "لا يمكن استعادة مفتاح API ملغى إلى حالة نشطة."

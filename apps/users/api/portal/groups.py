@@ -15,7 +15,8 @@ from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
 from apps.core.permission_utils import permission_class
-from apps.core.permissions import PermissionChoice
+from apps.core.permissions import PERMISSION_GROUPS, PermissionChoice
+from apps.core.services.permissions import PermissionHierarchyService
 from apps.users.repositories.group import GroupRepository
 from apps.users.services.group import GroupService
 
@@ -101,11 +102,37 @@ class GroupPermissionsIn(Schema):
 # --- Permissions catalogue ---
 
 
-@router.get("groups/permissions/", response=list[PermissionOut])
+class CataloguePermissionOut(PermissionOut):
+    # Every permission this one brings with it (transitively), so the editor can show them as
+    # included when it is selected.
+    implies: list[str]
+
+
+class PermissionGroupOut(Schema):
+    key: str
+    name: str
+    permissions: list[CataloguePermissionOut]
+
+
+@router.get("groups/permissions/", response=list[PermissionGroupOut])
 @permission_required([permission_class(PermissionChoice.PORTAL_READ_GROUP)])
-def list_permissions(request: Request) -> list[dict[str, str]]:
-    """Every permission a role can hold, named in the request's language, for the role editor."""
-    return [_permission_out(choice.value) for choice in PermissionChoice]
+def list_permissions(request: Request) -> list[dict]:
+    """Every permission a role can hold, grouped by usage and named in the request's language."""
+    hierarchy = PermissionHierarchyService()
+    return [
+        {
+            "key": key,
+            "name": str(name),
+            "permissions": [
+                {
+                    **_permission_out(choice.value),
+                    "implies": sorted(p.value for p in hierarchy.with_implied([choice]) if p != choice),
+                }
+                for choice in choices
+            ],
+        }
+        for key, name, choices in PERMISSION_GROUPS
+    ]
 
 
 # --- Create ---

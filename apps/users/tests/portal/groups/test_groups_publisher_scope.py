@@ -353,7 +353,7 @@ class GroupsBilingualTest(BaseTestCase):
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
-        by_code = {item["code_name"]: item["name"] for item in response.json()}
+        by_code = {p["code_name"]: p["name"] for group in response.json() for p in group["permissions"]}
         self.assertEqual(set(PermissionChoice.values), set(by_code))
         self.assertEqual("لوحة التحكم - عرض القراء", by_code[PermissionChoice.PORTAL_READ_RECITER.value])
 
@@ -370,3 +370,57 @@ class GroupsBilingualTest(BaseTestCase):
         self.assertEqual(
             [{"code_name": "portal_read_reciter", "name": "لوحة التحكم - عرض القراء"}], response.json()["permissions"]
         )
+
+
+class PermissionCatalogueGroupsTest(BaseTestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        self.publisher = baker.make(Publisher)
+        self.user = baker.make(User, email="catalogue@example.com", is_staff=True)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_GROUP)
+
+    def _get(self, language: str):
+        self.authenticate_user(self.user, language=language, HTTP_X_TENANT=str(self.publisher.id))
+        return self.client.get("/portal/groups/permissions/")
+
+    def test_list_permissions_where_requested_should_group_every_permission_exactly_once(self) -> None:
+        # Arrange & Act
+        response = self._get("en")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        codes = [p["code_name"] for group in response.json() for p in group["permissions"]]
+        self.assertEqual(sorted(PermissionChoice.values), sorted(codes))
+
+    def test_list_permissions_where_arabic_should_name_groups_in_arabic(self) -> None:
+        # Arrange & Act
+        response = self._get("ar")
+
+        # Assert
+        names = {group["key"]: group["name"] for group in response.json()}
+        self.assertEqual("القراء", names["reciters"])
+        self.assertEqual("الأدوار", names["roles"])
+
+    def test_list_permissions_where_permission_implies_others_should_list_full_closure(self) -> None:
+        # Arrange & Act
+        response = self._get("en")
+
+        # Assert
+        implies = {p["code_name"]: set(p["implies"]) for group in response.json() for p in group["permissions"]}
+        self.assertEqual(
+            {"portal_read_reciter", "portal_create_reciter", "portal_update_reciter"}, implies["portal_delete_reciter"]
+        )
+        self.assertEqual(
+            {"portal_update_recitation", "portal_create_recitation", "portal_read_recitation"},
+            implies["portal_upload_timing"],
+        )
+        self.assertEqual(set(), implies["portal_access"])
+
+    def test_list_permissions_where_arabic_should_say_control_panel_never_portal(self) -> None:
+        # Arrange & Act
+        response = self._get("ar")
+
+        # Assert
+        names = [p["name"] for group in response.json() for p in group["permissions"]]
+        self.assertFalse([name for name in names if "البوابة" in name])
+        self.assertIn("لوحة التحكم - عرض الأدوار", names)
