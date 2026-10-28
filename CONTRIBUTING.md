@@ -38,6 +38,7 @@ Comment on an issue before you start so two people don't build the same thing. I
 
 ## Testing
 - Use `pytest` (not `manage.py test`)
+- Tests run with `config.settings.test` (development settings plus a fast password hasher), set in `pyproject.toml`
 - Follow Arrange–Act–Assert (AAA)
 - Name tests: `test_<function_name>_where<criteria>_should<expected_results>`
 
