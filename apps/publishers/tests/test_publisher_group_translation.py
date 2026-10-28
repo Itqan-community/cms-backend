@@ -10,7 +10,7 @@ from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher, PublisherGroup, PublisherMember
 from apps.users.models import User
 
-backfill = importlib.import_module("apps.publishers.migrations.0005_publishergroup_name_translations")
+backfill = importlib.import_module("apps.publishers.migrations.0006_backfill_publishergroup_name_translations")
 
 
 class PublisherGroupTranslationTest(BaseTestCase):
@@ -73,7 +73,7 @@ class PublisherGroupTranslationTest(BaseTestCase):
         # Arrange: the migration runs on historical models, which modeltranslation doesn't patch.
         state_apps = (
             MigrationExecutor(connection)
-            .loader.project_state(("publishers", "0005_publishergroup_name_translations"))
+            .loader.project_state(("publishers", "0006_backfill_publishergroup_name_translations"))
             .apps
         )
         role = self._role("Editors", "المحررون")
