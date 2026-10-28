@@ -39,7 +39,7 @@ class CreateGroupTest(GroupsApiTestCase):
         self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_GROUP)
 
         # Act
-        response = self.client.post(self.url, {"name": "Editors"}, format="json")
+        response = self.client.post(self.url, {"name_en": "Editors", "name_ar": "Editors"}, format="json")
 
         # Assert
         self.assertEqual(201, response.status_code, response.content)
@@ -54,7 +54,7 @@ class CreateGroupTest(GroupsApiTestCase):
         self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_GROUP)
 
         # Act
-        response = self.client.post(self.url, {"name": "   "}, format="json")
+        response = self.client.post(self.url, {"name_en": "   ", "name_ar": "   "}, format="json")
 
         # Assert
         self.assertEqual(400, response.status_code, response.content)
@@ -67,7 +67,7 @@ class CreateGroupTest(GroupsApiTestCase):
         self.make_group(name="Editors")
 
         # Act
-        response = self.client.post(self.url, {"name": "Editors"}, format="json")
+        response = self.client.post(self.url, {"name_en": "Editors", "name_ar": "Editors"}, format="json")
 
         # Assert
         self.assertEqual(400, response.status_code, response.content)
@@ -75,7 +75,7 @@ class CreateGroupTest(GroupsApiTestCase):
 
     def test_create_group_where_unauthenticated_should_return_401(self) -> None:
         # Arrange / Act
-        response = self.client.post(self.url, {"name": "Editors"}, format="json")
+        response = self.client.post(self.url, {"name_en": "Editors", "name_ar": "Editors"}, format="json")
 
         # Assert
         self.assertEqual(401, response.status_code, response.content)
@@ -85,7 +85,7 @@ class CreateGroupTest(GroupsApiTestCase):
         self.authenticate_user(self.user)
 
         # Act
-        response = self.client.post(self.url, {"name": "Editors"}, format="json")
+        response = self.client.post(self.url, {"name_en": "Editors", "name_ar": "Editors"}, format="json")
 
         # Assert
         self.assertEqual(403, response.status_code, response.content)
@@ -216,7 +216,9 @@ class UpdateGroupTest(GroupsApiTestCase):
 
         # Act
         response = self.client.put(
-            f"/portal/groups/{group.id}/", json.dumps({"name": "Senior Editors"}), content_type="application/json"
+            f"/portal/groups/{group.id}/",
+            json.dumps({"name_en": "Senior Editors", "name_ar": "Senior Editors"}),
+            content_type="application/json",
         )
 
         # Assert
@@ -233,7 +235,9 @@ class UpdateGroupTest(GroupsApiTestCase):
 
         # Act
         response = self.client.put(
-            f"/portal/groups/{group.id}/", json.dumps({"name": "Reviewers"}), content_type="application/json"
+            f"/portal/groups/{group.id}/",
+            json.dumps({"name_en": "Reviewers", "name_ar": "Reviewers"}),
+            content_type="application/json",
         )
 
         # Assert
@@ -246,7 +250,9 @@ class UpdateGroupTest(GroupsApiTestCase):
         self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_GROUP)
 
         # Act
-        response = self.client.put("/portal/groups/999999/", json.dumps({"name": "X"}), content_type="application/json")
+        response = self.client.put(
+            "/portal/groups/999999/", json.dumps({"name_en": "X", "name_ar": "X"}), content_type="application/json"
+        )
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
@@ -283,7 +289,7 @@ class SetGroupPermissionsTest(GroupsApiTestCase):
             PermissionChoice.PORTAL_READ_RECITER.value,
         }
         self.assertEqual(200, response.status_code, response.content)
-        self.assertEqual(expected, set(response.json()["permissions"]))
+        self.assertEqual(expected, {p["code_name"] for p in response.json()["permissions"]})
         stored = {perm.codename for perm in group.permissions.all()}
         self.assertEqual(expected, stored)
 
@@ -301,7 +307,7 @@ class SetGroupPermissionsTest(GroupsApiTestCase):
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual(
             {PermissionChoice.PORTAL_READ_TAFSIR.value},
-            set(response.json()["permissions"]),
+            {p["code_name"] for p in response.json()["permissions"]},
         )
 
     def test_set_permissions_where_empty_list_should_clear_permissions(self) -> None:

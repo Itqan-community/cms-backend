@@ -51,9 +51,9 @@ class GroupsPublisherScopeTest(BaseTestCase):
     def test_create_group_where_same_name_in_two_publishers_should_return_201(self) -> None:
         # Arrange
         self._as(self.user, self.publisher_a)
-        first = self.client.post("/portal/groups/", {"name": "Editors"}, format="json")
+        first = self.client.post("/portal/groups/", {"name_en": "Editors", "name_ar": "Editors"}, format="json")
         self._as(self.user, self.publisher_b)
-        second = self.client.post("/portal/groups/", {"name": "Editors"}, format="json")
+        second = self.client.post("/portal/groups/", {"name_en": "Editors", "name_ar": "Editors"}, format="json")
 
         # Act & Assert
         self.assertEqual(201, first.status_code, first.content)
@@ -65,7 +65,7 @@ class GroupsPublisherScopeTest(BaseTestCase):
         self._as(self.user, self.publisher_a)
 
         # Act
-        response = self.client.post("/portal/groups/", {"name": "Editors"}, format="json")
+        response = self.client.post("/portal/groups/", {"name_en": "Editors", "name_ar": "Editors"}, format="json")
 
         # Assert
         self.assertEqual(400, response.status_code, response.content)
@@ -76,7 +76,7 @@ class GroupsPublisherScopeTest(BaseTestCase):
         self._as(self.user, self.publisher_a)
 
         # Act
-        response = self.client.post("/portal/groups/", {"name": "Editors"}, format="json")
+        response = self.client.post("/portal/groups/", {"name_en": "Editors", "name_ar": "Editors"}, format="json")
 
         # Assert
         self.assertEqual(201, response.status_code, response.content)
@@ -92,7 +92,9 @@ class GroupsPublisherScopeTest(BaseTestCase):
         self._as(self.user, self.publisher_a)
 
         # Act
-        response = self.client.put(f"/portal/groups/{group.id}/", {"name": "Writers"}, format="json")
+        response = self.client.put(
+            f"/portal/groups/{group.id}/", {"name_en": "Writers", "name_ar": "Writers"}, format="json"
+        )
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -109,7 +111,7 @@ class GroupsPublisherScopeTest(BaseTestCase):
         # Act
         responses = [
             self.client.get(f"/portal/groups/{group.id}/"),
-            self.client.put(f"/portal/groups/{group.id}/", {"name": "X"}, format="json"),
+            self.client.put(f"/portal/groups/{group.id}/", {"name_en": "X", "name_ar": "X"}, format="json"),
             self._set_permissions(group.id, []),
             self.client.delete(f"/portal/groups/{group.id}/"),
         ]
@@ -249,3 +251,122 @@ class GroupsPublisherScopeTest(BaseTestCase):
         self.assertEqual(204, response.status_code, response.content)
         self.assertFalse(Group.objects.filter(id=group.id).exists())
         self.assertFalse(PublisherGroup.objects.filter(group_id=group.id).exists())
+
+
+class GroupsBilingualTest(BaseTestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        self.publisher = baker.make(Publisher)
+        self.user = baker.make(User, email="bilingual@example.com", is_staff=True)
+        for permission in (
+            PermissionChoice.PORTAL_CREATE_GROUP,
+            PermissionChoice.PORTAL_READ_GROUP,
+            PermissionChoice.PORTAL_UPDATE_GROUP,
+        ):
+            self.give_permission(self.user, permission)
+
+    def _as(self, language: str) -> None:
+        self.authenticate_user(self.user, language=language, HTTP_X_TENANT=str(self.publisher.id))
+
+    def test_create_group_where_both_names_given_should_return_them_and_localized_name(self) -> None:
+        # Arrange
+        self._as("ar")
+
+        # Act
+        response = self.client.post("/portal/groups/", {"name_en": "Editors", "name_ar": "المحررون"}, format="json")
+
+        # Assert
+        self.assertEqual(201, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(("المحررون", "Editors", "المحررون"), (body["name"], body["name_en"], body["name_ar"]))
+
+    def test_create_group_where_arabic_name_blank_should_return_400(self) -> None:
+        # Arrange
+        self._as("en")
+
+        # Act
+        response = self.client.post("/portal/groups/", {"name_en": "Editors", "name_ar": "  "}, format="json")
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("group_name_required", response.json()["error_name"])
+
+    def test_create_group_where_arabic_name_taken_in_publisher_should_return_400(self) -> None:
+        # Arrange
+        publisher_role(self.publisher, "Editors", name_ar="المحررون")
+        self._as("en")
+
+        # Act
+        response = self.client.post("/portal/groups/", {"name_en": "Writers", "name_ar": "المحررون"}, format="json")
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("group_already_exists", response.json()["error_name"])
+
+    def test_update_group_where_renamed_should_change_both_names(self) -> None:
+        # Arrange
+        group = publisher_role(self.publisher, "Editors", name_ar="المحررون")
+        self._as("en")
+
+        # Act
+        response = self.client.put(
+            f"/portal/groups/{group.id}/", {"name_en": "Writers", "name_ar": "الكتّاب"}, format="json"
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        role = PublisherGroup.objects.get(group=group)
+        self.assertEqual(("Writers", "الكتّاب"), (role.name_en, role.name_ar))
+
+    def test_list_groups_where_searching_arabic_name_should_match(self) -> None:
+        # Arrange
+        publisher_role(self.publisher, "Editors", name_ar="المحررون")
+        publisher_role(self.publisher, "Readers", name_ar="القراء")
+        self._as("ar")
+
+        # Act
+        response = self.client.get("/portal/groups/", {"search": "المحرر"})
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(["المحررون"], [item["name"] for item in response.json()["results"]])
+
+    def test_list_groups_where_ordered_by_arabic_name_should_sort_by_it(self) -> None:
+        # Arrange
+        publisher_role(self.publisher, "A role", name_ar="ي")
+        publisher_role(self.publisher, "B role", name_ar="أ")
+        self._as("ar")
+
+        # Act
+        response = self.client.get("/portal/groups/", {"ordering": "name_ar"})
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(["أ", "ي"], [item["name_ar"] for item in response.json()["results"]])
+
+    def test_list_permissions_where_arabic_should_return_arabic_labels(self) -> None:
+        # Arrange
+        self._as("ar")
+
+        # Act
+        response = self.client.get("/portal/groups/permissions/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        by_code = {item["code_name"]: item["name"] for item in response.json()}
+        self.assertEqual(set(PermissionChoice.values), set(by_code))
+        self.assertEqual("لوحة التحكم - عرض القراء", by_code[PermissionChoice.PORTAL_READ_RECITER.value])
+
+    def test_retrieve_group_where_arabic_should_return_permission_labels_in_arabic(self) -> None:
+        # Arrange
+        group = publisher_role(self.publisher, "Readers", PermissionChoice.PORTAL_READ_RECITER, name_ar="القراء")
+        self._as("ar")
+
+        # Act
+        response = self.client.get(f"/portal/groups/{group.id}/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(
+            [{"code_name": "portal_read_reciter", "name": "لوحة التحكم - عرض القراء"}], response.json()["permissions"]
+        )

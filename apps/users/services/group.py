@@ -54,14 +54,16 @@ class GroupService:
             )
         return group
 
-    def create(self, publisher_id: int, name: str) -> Group:
-        name = self.validate_name(name, publisher_id=publisher_id)
-        return self.repo.create_for_publisher(publisher_id, name)
+    def create(self, publisher_id: int, name_en: str, name_ar: str) -> Group:
+        name_en = self.validate_name(name_en, publisher_id=publisher_id, language="en")
+        name_ar = self.validate_name(name_ar, publisher_id=publisher_id, language="ar")
+        return self.repo.create_for_publisher(publisher_id, name_en, name_ar)
 
-    def rename(self, group_id: int, publisher_id: int, name: str) -> Group:
+    def rename(self, group_id: int, publisher_id: int, name_en: str, name_ar: str) -> Group:
         group = self._get_or_404(group_id, publisher_id)
-        name = self.validate_name(name, exclude_id=group_id, publisher_id=publisher_id)
-        return self.repo.rename(group, name)
+        name_en = self.validate_name(name_en, exclude_id=group_id, publisher_id=publisher_id, language="en")
+        name_ar = self.validate_name(name_ar, exclude_id=group_id, publisher_id=publisher_id, language="ar")
+        return self.repo.rename(group, name_en=name_en, name_ar=name_ar)
 
     def set_permissions(self, group_id: int, publisher_id: int, permissions: list[str], *, editor: User) -> Group:
         """Replace the group's permissions with the implied closure of ``permissions``.
@@ -90,14 +92,17 @@ class GroupService:
                 status_code=400,
             ) from exc
 
-    def validate_name(self, name: str, *, exclude_id: int | None = None, publisher_id: int | None = None) -> str:
+    def validate_name(
+        self, name: str, *, exclude_id: int | None = None, publisher_id: int | None = None, language: str = "en"
+    ) -> str:
         """Return the normalised ``name``, or raise :class:`ItqanError` if it is not usable.
 
-        Names are unique among ``publisher_id``'s roles, or among all groups when it is None
+        A role's name is unique among ``publisher_id``'s roles in ``language`` (each role has an
+        English and an Arabic name); with ``publisher_id`` None it is unique among all groups
         (the Django admin, which saves global groups through a ``ModelForm``).
         """
         name = self._validate_name(name)
-        if self.repo.name_exists(name, exclude_id=exclude_id, publisher_id=publisher_id):
+        if self.repo.name_exists(name, exclude_id=exclude_id, publisher_id=publisher_id, language=language):
             raise ItqanError(
                 error_name="group_already_exists",
                 message=_("A group with this name already exists."),
