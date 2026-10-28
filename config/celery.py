@@ -79,6 +79,16 @@ app.conf.beat_schedule = {
         "task": "apps.content.tasks.compute_personalized_recommendations_task",
         "schedule": crontab(minute=15, hour=2),
     },
+    # Scheduled weekly on Friday dawn at 04:00 (Asia/Riyadh timezone / 01:00 UTC)
+    "prune-audit-history": {
+        "task": "apps.core.tasks.prune_audit_history_task",
+        "schedule": crontab(minute=0, hour=4, day_of_week=5),
+    },
+    # Scheduled weekly on Friday dawn at 04:30 (Asia/Riyadh timezone / 01:30 UTC)
+    "clean-duplicate-history": {
+        "task": "apps.core.tasks.clean_duplicate_history_task",
+        "schedule": crontab(minute=30, hour=4, day_of_week=5),
+    },
 }
 
 

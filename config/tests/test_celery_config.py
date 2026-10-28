@@ -46,3 +46,25 @@ class TestCeleryConfig(SimpleTestCase):
                 entry["task"],
                 f"Beat schedule entry '{name}' has None task",
             )
+
+    def test_audit_history_scheduled_tasks(self):
+        """Audit history prune and deduplicate tasks must be scheduled for Friday dawn in Asia/Riyadh (01:00 UTC)."""
+        from config.celery import app
+
+        schedule = app.conf.beat_schedule
+        self.assertIn("prune-audit-history", schedule)
+        self.assertIn("clean-duplicate-history", schedule)
+
+        prune_entry = schedule["prune-audit-history"]
+        self.assertEqual(prune_entry["task"], "apps.core.tasks.prune_audit_history_task")
+        # crontab(minute=0, hour=4, day_of_week=5) -> Friday dawn 04:00 Asia/Riyadh (01:00 UTC)
+        self.assertEqual(prune_entry["schedule"].minute, {0})
+        self.assertEqual(prune_entry["schedule"].hour, {4})
+        self.assertEqual(prune_entry["schedule"].day_of_week, {5})
+
+        clean_entry = schedule["clean-duplicate-history"]
+        self.assertEqual(clean_entry["task"], "apps.core.tasks.clean_duplicate_history_task")
+        # crontab(minute=30, hour=4, day_of_week=5) -> Friday dawn 04:30 Asia/Riyadh (01:30 UTC)
+        self.assertEqual(clean_entry["schedule"].minute, {30})
+        self.assertEqual(clean_entry["schedule"].hour, {4})
+        self.assertEqual(clean_entry["schedule"].day_of_week, {5})
