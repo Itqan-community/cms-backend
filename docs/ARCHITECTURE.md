@@ -106,7 +106,8 @@ erDiagram
     PUBLISHERGROUP {
         int group_id
         int publisher_id
-        string name
+        string name_en
+        string name_ar
     }
 
     PUBLISHERMEMBER {
@@ -228,7 +229,10 @@ The **Publisher** represents an organization or individual who owns and uploads 
 - Can require approval for each usage request or enable auto-approval
 - Has members, each assigned a **role**: a permission group the publisher owns (`PublisherMember.group`, a Django `auth.Group` with a `PublisherGroup` row naming its publisher)
   - Roles are defined by the publisher's admins through `/portal/groups/` (with `X-Tenant`); nothing is hardcoded or seeded. Each publisher sees and assigns only its own roles, and role names are unique per publisher
-  - A role's `auth.Group.name` is opaque (`publisher:<id>:<uuid>`) because Django group names are globally unique; the name admins see and rename lives on `PublisherGroup.name`
+  - A role's `auth.Group.name` is opaque (`publisher:<id>:<uuid>`) because Django group names are globally unique; the names admins see live on `PublisherGroup`
+  - Each role has an English and an Arabic name (`name_en` / `name_ar`, modeltranslation), both required when creating or renaming and each unique within the publisher. Responses carry `name` in the request's language (`Accept-Language`) plus both names; the groups list searches either name and orders by `name_en` or `name_ar`
+  - Permissions are shown by name in the reader's language: `GET /portal/groups/permissions/` lists every permission (`code_name`, `name`) for the role editor, group detail returns its permissions the same way, and the Django admin's permission pickers use the translated names
+  - Invitation and welcome emails name the publisher and role in each recipient's preferred language
   - A new publisher starts with no roles: Itqan staff create its first admin role through the portal
   - An editor can only put permissions into a role that they hold at that publisher themselves (`permission_not_grantable`); staff are unrestricted. A role still assigned to members cannot be deleted (`group_in_use`)
   - Members are invited by `group_id`, which must be one of the inviting publisher's roles (`invalid_group` otherwise)
