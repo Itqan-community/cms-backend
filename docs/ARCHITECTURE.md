@@ -67,6 +67,8 @@ erDiagram
     Publisher ||--o{ Resource : "uploads"
     Publisher ||--o{ PublisherMember : "has members"
     User ||--o{ PublisherMember : "belongs to"
+    Publisher ||--o{ PublisherGroup : "owns roles"
+    PublisherGroup ||--|| Group : "names"
     Group ||--o{ PublisherMember : "grants permissions to"
 
     Resource ||--o{ ResourceVersion : "has versions"
@@ -99,6 +101,12 @@ erDiagram
         string slug
         string description
         boolean is_verified
+    }
+
+    PUBLISHERGROUP {
+        int group_id
+        int publisher_id
+        string name
     }
 
     PUBLISHERMEMBER {
@@ -218,13 +226,18 @@ The **Publisher** represents an organization or individual who owns and uploads 
 - Uploads **Resources** (original, unmodified content)
 - Manages licensing terms for their content
 - Can require approval for each usage request or enable auto-approval
-- Has members, each assigned a **permission group** (`PublisherMember.group`, a Django `auth.Group`)
-  - Members are invited by `group_id`; the group is chosen from `GET /portal/groups/`, not a fixed role list
-  - The group is applied to the user's `auth` groups on invitation acceptance, and drives runtime authorization
-  - Membership is per-publisher, so one user may hold a different group at each publisher they belong to
-  - `GET /portal/publishers/me/` (the portal's tenant picker) needs only `portal_access`: it lists the caller's own memberships (staff see every publisher)
-  - The `Itqan Internal` group holds every permission and is never listed or assignable through the portal APIs
-  - Publisher groups are not hardcoded or seeded: admins define them and their permissions through the portal groups APIs, and deploys never touch them. Only `Itqan Internal` is seeded, and it is reset to every permission on each `migrate`
+- Has members, each assigned a **role**: a permission group the publisher owns (`PublisherMember.group`, a Django `auth.Group` with a `PublisherGroup` row naming its publisher)
+  - Roles are defined by the publisher's admins through `/portal/groups/` (with `X-Tenant`); nothing is hardcoded or seeded. Each publisher sees and assigns only its own roles, and role names are unique per publisher
+  - A role's `auth.Group.name` is opaque (`publisher:<id>:<uuid>`) because Django group names are globally unique; the name admins see and rename lives on `PublisherGroup.name`
+  - A new publisher starts with no roles: Itqan staff create its first admin role through the portal
+  - An editor can only put permissions into a role that they hold at that publisher themselves (`permission_not_grantable`); staff are unrestricted. A role still assigned to members cannot be deleted (`group_in_use`)
+  - Members are invited by `group_id`, which must be one of the inviting publisher's roles (`invalid_group` otherwise)
+  - Membership is per-publisher, so one user may hold a different role at each publisher they belong to
+- **Authorization is per publisher.** A user's permissions at a publisher are their global permissions (direct user permissions and global groups such as Itqan Internal) plus the role on their ACTIVE membership there (`apps.publishers.services.effective_permissions`). Roles are never mirrored into `user.groups` and never count at another publisher
+  - Portal checks use the `X-Tenant` publisher. Without it only global permissions apply, plus `portal_access` for users with an active membership, so leaving the header out never combines a user's roles across publishers
+  - `GET /portal/publishers/me/` (the portal's tenant picker) needs only `portal_access`: it lists the caller's own memberships (staff see every publisher), each with the caller's effective `permissions` there. The portal gates its UI on the selected publisher's list
+  - The profile's `permissions` (`GET /cms-api/auth/profile/`) is the union across all memberships, kept for display compatibility only
+- The `Itqan Internal` group is global, holds every permission, and is never listed or assignable through the portal APIs. It is the only seeded group, reset to every permission on each `migrate`
 
 ### 2. Resource
 

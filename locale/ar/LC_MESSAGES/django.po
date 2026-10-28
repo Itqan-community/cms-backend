@@ -1251,6 +1251,9 @@ msgstr "الصلاحيات"
 msgid "API keys cannot be reverted from historical snapshots."
 msgstr "لا يمكن استرجاع مفاتيح API من اللقطات التاريخية."
 
+msgid "Select a publisher first."
+msgstr "اختر ناشرًا أولًا."
+
 #, python-brace-format
 msgid "Group with id {id} not found."
 msgstr "لم يتم العثور على المجموعة بالمعرّف {id}."
@@ -1329,8 +1332,15 @@ msgstr "اسم مفتاح API يجب ألا يتجاوز %(max)d حرفاً."
 msgid "Group with id {id} is not available for assignment."
 msgstr "المجموعة ذات المعرّف {id} غير متاحة للتعيين."
 
+msgid "This group is assigned to members and cannot be deleted."
+msgstr "هذه المجموعة مسندة إلى أعضاء ولا يمكن حذفها."
+
 msgid "A group with this name already exists."
 msgstr "توجد مجموعة بهذا الاسم بالفعل."
+
+#, python-brace-format
+msgid "You cannot grant permissions you do not hold: {permissions}."
+msgstr "لا يمكنك منح صلاحيات لا تملكها: {permissions}."
 
 msgid "Group name must not be empty."
 msgstr "اسم المجموعة لا يمكن أن يكون فارغاً."
