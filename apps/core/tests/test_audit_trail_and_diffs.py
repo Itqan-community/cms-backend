@@ -15,6 +15,7 @@ import pytest
 
 from apps.content.models import ContentIssueReport
 from apps.core.admin import AuditedModelAdmin
+from apps.core.tasks import clean_duplicate_history_task
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import APIKey, User
@@ -585,3 +586,55 @@ class AuditTrailAndDiffsTest(BaseTestCase):
         assert "True" in content
         assert "False" in content
         assert "(empty)" not in content
+
+    def _create_publisher_with_noop_save(self, slug: str) -> tuple[Publisher, int, int]:
+        publisher = Publisher.objects.create(name_en="Dedupe Publisher", name_ar="ناشر", slug=slug)
+        publisher.save()
+        newer, older = publisher.history.all()[:2]
+        return publisher, newer.pk, older.pk
+
+    def test_clean_duplicate_audit_history_where_same_actor_and_reason_should_delete_noop_snapshot(self):
+        # Arrange
+        publisher, newer_pk, older_pk = self._create_publisher_with_noop_save("dedupe-same-actor")
+
+        # Act
+        call_command("clean_duplicate_audit_history", "publishers.Publisher", stdout=StringIO())
+
+        # Assert
+        assert not Publisher.history.filter(pk=newer_pk).exists()
+        assert Publisher.history.filter(pk=older_pk).exists()
+
+    def test_clean_duplicate_audit_history_where_different_actor_should_keep_noop_snapshot(self):
+        # Arrange
+        publisher, newer_pk, older_pk = self._create_publisher_with_noop_save("dedupe-other-actor")
+        staff_user = User.objects.create(email="dedupe_staff@itqan.dev", name="Dedupe Staff")
+        Publisher.history.filter(pk=newer_pk).update(history_user_id=staff_user.pk)
+
+        # Act
+        call_command("clean_duplicate_audit_history", "publishers.Publisher", stdout=StringIO())
+
+        # Assert
+        assert Publisher.history.filter(pk=newer_pk).exists()
+        assert Publisher.history.filter(pk=older_pk).exists()
+
+    def test_clean_duplicate_audit_history_where_different_change_reason_should_keep_noop_snapshot(self):
+        # Arrange
+        publisher, newer_pk, older_pk = self._create_publisher_with_noop_save("dedupe-other-reason")
+        Publisher.history.filter(pk=newer_pk).update(history_change_reason="Re-verified by staff")
+
+        # Act
+        call_command("clean_duplicate_audit_history", "publishers.Publisher", stdout=StringIO())
+
+        # Assert
+        assert Publisher.history.filter(pk=newer_pk).exists()
+
+    def test_clean_duplicate_history_task_where_recent_noop_snapshot_should_delete_it_within_window(self):
+        # Arrange
+        publisher, newer_pk, older_pk = self._create_publisher_with_noop_save("dedupe-task-window")
+
+        # Act
+        clean_duplicate_history_task()
+
+        # Assert
+        assert not Publisher.history.filter(pk=newer_pk).exists()
+        assert Publisher.history.filter(pk=older_pk).exists()

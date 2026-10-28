@@ -366,7 +366,7 @@ Because `django-simple-history` writes a historical snapshot for every model cre
 |---|---|---|---|
 | **Tier 1: Sovereign Canonical Entities** | `Asset`, `AssetVersion`, `License`, `Publisher`, `User` | **Retain Indefinitely** | Critical for intellectual property provenance, licensing compliance, and canonical Quranic authenticity. Deletion snapshots must never be purged. |
 | **Tier 2: Operational & Ephemeral Data** | `AssetAccessRequest`, `ContentIssueReport`, `PublisherMemberInvitation`, `MemberLanguage` | **365-Day Window (1 Year)** | Transient workflows; historical records older than 1 year provide zero operational audit value and are pruned after closure (still-pending requests are protected). Association tables are pruned by age cutoff. Deletion tombstones (`history_type='-'`) are permanently preserved. |
-| **Tier 3: Consecutive Zero-Diff Noise** | All tracked models | **Continuous Deduplication** | Redundant historical snapshots generated without actual data field changes are cleaned via scheduled deduplication. |
+| **Tier 3: Consecutive Zero-Diff Noise** | All tracked models | **Continuous Deduplication** | Redundant update snapshots with no data field changes are cleaned via scheduled deduplication, but only when the same actor saved them with the same change reason. A no-op save by a different user, or with a different reason, is kept as its own audit event. |
 
 ### 2. Storage Separation Safeguards
 - Because all historical tables reside on the dedicated `audit` database (enforced by `AuditRouter`), historical record volume does **not** bloat operational PostgreSQL tables, vacuum buffers, or indexing trees on the `default` database.
@@ -377,10 +377,10 @@ Retention policies and zero-diff deduplication are executed automatically in pro
 
 #### A. Automated Celery Beat Schedules (`config/celery.py`)
 - **`prune-audit-history`**: Runs weekly on Friday dawn at 04:00 Asia/Riyadh time (01:00 UTC) (`apps.core.tasks.prune_audit_history_task`), automatically pruning Tier 2 records older than 365 days while strictly preserving still-pending workflow requests and deletion tombstones (`history_type='-'`).
-- **`clean-duplicate-history`**: Runs weekly on Friday dawn at 04:30 Asia/Riyadh time (01:30 UTC) (`apps.core.tasks.clean_duplicate_history_task`), cleaning zero-diff sequential duplicate snapshots across all tracked historical models.
+- **`clean-duplicate-history`**: Runs weekly on Friday dawn at 04:30 Asia/Riyadh time (01:30 UTC) (`apps.core.tasks.clean_duplicate_history_task`), running `clean_duplicate_audit_history` over the last 8 days of history. It deletes a zero-diff update snapshot only when the previous snapshot has the same `history_user_id` and `history_change_reason`; creation and deletion snapshots are never removed.
 
 > [!NOTE]
-> **Audit Database Routing**: All historical read and write operations inside `clean_duplicate_history` and `prune_audit_history` are automatically routed to the isolated `audit` database by `AuditRouter` (`apps/core/db_routers.py`). Therefore, manual `--using` flags are unnecessary; database separation is maintained natively.
+> **Audit Database Routing**: All historical read and write operations inside `clean_duplicate_audit_history` and `prune_audit_history` are automatically routed to the isolated `audit` database by `AuditRouter` (`apps/core/db_routers.py`). Therefore, manual `--using` flags are unnecessary; database separation is maintained natively.
 
 #### B. Manual CLI Execution (`manage.py`)
 ```bash
@@ -390,8 +390,10 @@ uv run python manage.py prune_audit_history --dry-run
 # 2. Prune records older than 180 days for a specific operational model
 uv run python manage.py prune_audit_history --days=180 --models=ContentIssueReport
 
-# 3. Clean zero-diff duplicates across all historical models (routed to audit DB via AuditRouter)
-uv run python manage.py clean_duplicate_history --auto
+# 3. Clean zero-diff duplicates (same actor and change reason only) across all historical models
+#    (routed to audit DB via AuditRouter). Add --minutes=N to scan only recent history.
+#    Avoid the stock clean_duplicate_history: it deletes no-op saves made by other users, losing audit events.
+uv run python manage.py clean_duplicate_audit_history --auto
 ```
 
 > [!NOTE]
