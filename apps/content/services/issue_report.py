@@ -71,17 +71,19 @@ class IssueReportService:
         if "status" in filters_dict:
             filters_dict["status__in"] = filters_dict.pop("status")
 
-        q_filter = Q()
+        return self.repo.list_issue_reports_qs(filters=filters_dict, q_filter=self._asset_scope(publisher_q))
 
-        if publisher_q:
-            from apps.content.models import Asset
+    def get_issue_report(self, report_id: int, publisher_q: Q | None = None) -> ContentIssueReport | None:
+        return self.repo.get_issue_report_by_id(report_id, q_filter=self._asset_scope(publisher_q))
 
-            q_filter &= Q(asset__in=Asset.objects.filter(publisher_q))
+    @staticmethod
+    def _asset_scope(publisher_q: Q | None) -> Q | None:
+        """Limit reports to assets matching ``publisher_q``; an empty Q (staff, no tenant) limits nothing."""
+        if not publisher_q:
+            return None
+        from apps.content.models import Asset
 
-        return self.repo.list_issue_reports_qs(filters=filters_dict, q_filter=q_filter)
-
-    def get_issue_report(self, report_id: int) -> ContentIssueReport | None:
-        return self.repo.get_issue_report_by_id(report_id)
+        return Q(asset__in=Asset.objects.filter(publisher_q))
 
     def update_issue_report(
         self,
@@ -89,8 +91,9 @@ class IssueReportService:
         user: User,
         description: str | None = None,
         status: ContentIssueReport.StatusChoice | None = None,
+        publisher_q: Q | None = None,
     ) -> ContentIssueReport:
-        report = self.repo.get_issue_report_by_id(report_id)
+        report = self.get_issue_report(report_id, publisher_q=publisher_q)
         if not report:
             raise ItqanError(
                 error_name="report_not_found",
@@ -140,8 +143,8 @@ class IssueReportService:
 
         return updated
 
-    def delete_issue_report(self, report_id: int, user: User) -> None:
-        report = self.repo.get_issue_report_by_id(report_id)
+    def delete_issue_report(self, report_id: int, user: User, publisher_q: Q | None = None) -> None:
+        report = self.get_issue_report(report_id, publisher_q=publisher_q)
         if not report:
             raise ItqanError(
                 error_name="report_not_found",

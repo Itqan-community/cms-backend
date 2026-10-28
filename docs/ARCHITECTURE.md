@@ -241,6 +241,7 @@ The **Publisher** represents an organization or individual who owns and uploads 
   - Portal checks use the `X-Tenant` publisher. Without it only global permissions apply, plus `portal_access` for users with an active membership, so leaving the header out never combines a user's roles across publishers
   - `GET /portal/publishers/me/` (the portal's tenant picker) needs only `portal_access`: it lists the caller's own memberships (staff see every publisher), each with the caller's effective `permissions` there. The portal gates its UI on the selected publisher's list
   - The profile's `permissions` (`GET /cms-api/auth/profile/`) is the union across all memberships, kept for display compatibility only
+  - Issue reports belong to their asset's publisher: list, retrieve, update and delete on `/portal/issue-reports/` and `/tenant/issue-reports/` see only reports in `request.publisher_q()` (404 `report_not_found` otherwise). Creating one stays open to any signed-in user, since the gallery reports on any asset without `X-Tenant`
   - The profile's `is_staff` tells the frontend the caller is Itqan staff; it unlocks the cross-publisher usage reports (`/portal/admin/usage/`) and lets the legacy board pick any publisher (`GET /portal/usage/board-url/?publisher_id=`)
 - The `Itqan Internal` group is global, holds every permission, and is never listed or assignable through the portal APIs. It is the only seeded group, reset to every permission on each `migrate`
 

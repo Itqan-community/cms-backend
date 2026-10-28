@@ -187,3 +187,44 @@ class IssueReportTenantApiTests(BaseTestCase):
 
         self.assertEqual(200, response.status_code)
         mock_notify.assert_not_called()
+
+    # --- Publisher scope ---
+
+    def test_get_issue_report_where_report_is_on_other_publisher_should_return_404(self):
+        # Arrange
+        report = self._create_report(asset=self.asset2)
+        self.authenticate_user(self.user, domain=self.domain)
+
+        # Act
+        response = self.client.get(f"/tenant/issue-reports/{report.id}/")
+
+        # Assert
+        self.assertEqual(404, response.status_code, response.content)
+        self.assertEqual("report_not_found", response.json()["error_name"])
+
+    def test_update_issue_report_where_report_is_on_other_publisher_should_return_404(self):
+        # Arrange
+        report = self._create_report(asset=self.asset2)
+        self.authenticate_user(self.user, domain=self.domain)
+
+        # Act
+        response = self.client.patch(
+            f"/tenant/issue-reports/{report.id}/", {"description": "Edited from another tenant."}, format="json"
+        )
+
+        # Assert
+        self.assertEqual(404, response.status_code, response.content)
+        self.assertEqual("report_not_found", response.json()["error_name"])
+
+    def test_delete_issue_report_where_report_is_on_other_publisher_should_return_404(self):
+        # Arrange
+        report = self._create_report(asset=self.asset2)
+        self.authenticate_user(self.user, domain=self.domain)
+
+        # Act
+        response = self.client.delete(f"/tenant/issue-reports/{report.id}/")
+
+        # Assert
+        self.assertEqual(404, response.status_code, response.content)
+        self.assertEqual("report_not_found", response.json()["error_name"])
+        self.assertTrue(ContentIssueReport.objects.filter(id=report.id).exists())
