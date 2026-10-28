@@ -30,7 +30,6 @@ class MemberGroupScopeTest(BaseTestCase):
         PublisherMember.objects.create(
             user=self.admin, publisher=self.publisher, group=self.editors, status=PublisherMember.StatusChoice.ACTIVE
         )
-        self.authenticate_user(self.admin, HTTP_X_TENANT=str(self.publisher.id))
 
     def _member(self, email: str) -> PublisherMember:
         return PublisherMember.objects.create(
@@ -40,7 +39,9 @@ class MemberGroupScopeTest(BaseTestCase):
             status=PublisherMember.StatusChoice.ACTIVE,
         )
 
-    def test_invite_with_other_publishers_group_is_400_invalid_group(self):
+    def test_invite_member_where_group_belongs_to_other_publisher_should_return_400(self):
+        # Arrange
+        self.authenticate_user(self.admin, HTTP_X_TENANT=str(self.publisher.id))
         with patch(
             "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_invitation_email.delay"
         ):
@@ -55,42 +56,56 @@ class MemberGroupScopeTest(BaseTestCase):
                 content_type="application/json",
             )
 
+        # Act & Assert
         self.assertEqual(400, resp.status_code, resp.content)
         self.assertEqual("invalid_group", resp.json()["error_name"])
 
-    def test_move_member_to_other_publishers_group_is_400_invalid_group(self):
+    def test_update_member_where_group_belongs_to_other_publisher_should_return_400(self):
+        # Arrange
+        self.authenticate_user(self.admin, HTTP_X_TENANT=str(self.publisher.id))
         member = self._member("m@example.com")
 
+        # Act
         resp = self.client.patch(
             f"/portal/members/{member.id}/", data={"group_id": self.foreign.id}, content_type="application/json"
         )
 
+        # Assert
         self.assertEqual(400, resp.status_code, resp.content)
         self.assertEqual("invalid_group", resp.json()["error_name"])
         member.refresh_from_db()
         self.assertEqual(self.editors.id, member.group_id)
 
-    def test_member_list_shows_display_name(self):
+    def test_list_members_where_role_named_should_return_display_name(self):
+        # Arrange
+        self.authenticate_user(self.admin, HTTP_X_TENANT=str(self.publisher.id))
         self._member("m@example.com")
 
+        # Act
         resp = self.client.get("/portal/members/")
 
+        # Assert
         self.assertEqual(200, resp.status_code, resp.content)
         self.assertEqual({"Editors"}, {item["group_name"] for item in resp.json()["results"]})
 
-    def test_member_list_query_count_does_not_grow_with_members(self):
+    def test_list_members_where_more_members_should_keep_query_count(self):
+        # Arrange
+        self.authenticate_user(self.admin, HTTP_X_TENANT=str(self.publisher.id))
+
         def count() -> int:
             with CaptureQueriesContext(connection) as ctx:
                 resp = self.client.get("/portal/members/")
             self.assertEqual(200, resp.status_code, resp.content)
             return len(ctx.captured_queries)
 
+        # Act
         self._member("m1@example.com")
         count()  # warm per-process caches (content types) so only per-row queries differ
         two = count()
         for i in range(4):
             self._member(f"more{i}@example.com")
 
+        # Assert
         self.assertEqual(two, count())
 
     def _invitation(self) -> PublisherMemberInvitation:
@@ -105,13 +120,17 @@ class MemberGroupScopeTest(BaseTestCase):
             expires_at=timezone.now() + timezone.timedelta(days=3),
         )
 
-    def test_invitation_email_uses_display_name(self):
+    def test_send_invitation_email_where_role_named_should_use_display_name(self):
+        # Arrange
         invitation = self._invitation()
 
+        # Act
         with patch("apps.publishers.services.publisher_member_notification_service.email_service.send_email") as send:
             PublisherMemberNotificationService().send_invitation_email(invitation.id, "raw-token")
 
+        # Assert
         self.assertEqual("Editors", send.call_args.kwargs["context"]["group_name"])
 
-    def test_invitation_group_name_uses_display_name(self):
+    def test_invitation_group_name_where_role_named_should_return_display_name(self):
+        # Arrange, Act & Assert
         self.assertEqual("Editors", self._invitation().group_name)

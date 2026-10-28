@@ -26,33 +26,43 @@ class PublisherScopedContentPermissionTest(AssetReviewApiBaseTest):
             user=self.member, publisher=publisher, group=group, status=PublisherMember.StatusChoice.ACTIVE
         )
 
-    def test_review_allowed_when_role_at_this_publisher_grants_it(self):
+    def test_list_changes_where_role_at_publisher_grants_review_should_return_200(self):
+        # Arrange
         membership = self._join(self.publisher, REVIEW)
         MemberLanguage.objects.create(member=membership, language="fr")
         self.authenticate_user(self.member, HTTP_X_TENANT=str(self.publisher.id))
 
+        # Act
         response = self.client.get(self._changes_url("?language=fr"))
 
+        # Assert
         self.assertEqual(200, response.status_code, response.content)
 
-    def test_review_denied_when_permission_held_only_at_other_publisher(self):
+    def test_list_changes_where_review_held_only_at_other_publisher_should_return_403(self):
+        # Arrange
         membership = self._join(self.publisher)
         MemberLanguage.objects.create(member=membership, language="fr")
         self._join(self.other, REVIEW)
         self.authenticate_user(self.member, HTTP_X_TENANT=str(self.publisher.id))
 
+        # Act
         response = self.client.get(self._changes_url("?language=fr"))
 
+        # Assert
         self.assertEqual(403, response.status_code, response.content)
 
-    def test_all_languages_access_applies_at_the_assets_publisher(self):
+    def test_allowed_languages_where_role_grants_all_languages_should_return_every_language(self):
+        # Arrange
         self._join(self.publisher, ALL_LANGUAGES)
 
+        # Act & Assert
         self.assertEqual({"ar", "fr"}, allowed_languages(self.member, self.asset))
 
-    def test_all_languages_access_is_per_publisher(self):
+    def test_allowed_languages_where_all_languages_held_at_other_publisher_should_return_assigned(self):
+        # Arrange
         membership = self._join(self.publisher)
         MemberLanguage.objects.create(member=membership, language="fr")
         self._join(self.other, ALL_LANGUAGES)
 
+        # Act & Assert
         self.assertEqual({"fr"}, allowed_languages(self.member, self.asset))

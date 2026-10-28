@@ -38,45 +38,58 @@ class EffectivePermissionsTest(BaseTestCase):
         self.publisher_b = baker.make(Publisher)
         self.user = baker.make(User, email="member@example.com")
 
-    def test_member_gets_only_their_group_at_that_publisher(self):
+    def test_effective_permissions_where_member_of_two_publishers_should_scope_each_role(self):
+        # Arrange
         join(self.user, self.publisher_a, role(self.publisher_a, INVITE))
         join(self.user, self.publisher_b, role(self.publisher_b, READ))
 
+        # Act & Assert
         self.assertIn(INVITE.value, effective_permissions(self.user, self.publisher_a))
         self.assertNotIn(INVITE.value, effective_permissions(self.user, self.publisher_b))
         self.assertIn(READ.value, effective_permissions(self.user, self.publisher_b.id))
 
-    def test_no_publisher_gives_global_plus_portal_access_only(self):
+    def test_effective_permissions_where_no_publisher_should_return_global_plus_portal_access(self):
+        # Arrange
         join(self.user, self.publisher_a, role(self.publisher_a, INVITE))
 
+        # Act & Assert
         self.assertEqual(frozenset({PermissionChoice.PORTAL_ACCESS.value}), effective_permissions(self.user, None))
 
-    def test_pending_membership_grants_nothing(self):
+    def test_effective_permissions_where_membership_pending_should_grant_nothing(self):
+        # Arrange
         join(self.user, self.publisher_a, role(self.publisher_a, INVITE), status=PublisherMember.StatusChoice.PENDING)
 
+        # Act & Assert
         self.assertEqual(frozenset(), effective_permissions(self.user, self.publisher_a))
         self.assertEqual(frozenset(), effective_permissions(self.user, None))
 
-    def test_publisher_role_in_user_groups_is_not_global(self):
+    def test_effective_permissions_where_role_in_user_groups_should_not_count_as_global(self):
+        # Arrange
         group = role(self.publisher_a, INVITE)
         self.user.groups.add(group)
 
+        # Act & Assert
         self.assertNotIn(INVITE.value, effective_permissions(self.user, self.publisher_b))
 
-    def test_itqan_internal_applies_at_every_publisher(self):
+    def test_effective_permissions_where_itqan_internal_should_apply_at_every_publisher(self):
+        # Arrange
         internal, _ = Group.objects.get_or_create(name=ITQAN_INTERNAL_GROUP)
         internal.permissions.set(Permission.objects.filter(codename__in=PermissionChoice.values))
         self.user.groups.add(internal)
 
+        # Act & Assert
         self.assertEqual(frozenset(PermissionChoice.values), effective_permissions(self.user, self.publisher_a))
         self.assertEqual(frozenset(PermissionChoice.values), effective_permissions(self.user, None))
 
-    def test_superuser_has_everything(self):
+    def test_effective_permissions_where_superuser_should_return_every_permission(self):
+        # Arrange
         superuser = baker.make(User, email="root@example.com", is_superuser=True)
 
+        # Act & Assert
         self.assertEqual(frozenset(PermissionChoice.values), effective_permissions(superuser, self.publisher_a))
 
-    def test_by_publisher_query_count_is_constant(self):
+    def test_effective_permissions_by_publisher_where_more_memberships_should_keep_query_count(self):
+        # Arrange
         def count_queries(n: int) -> int:
             user = baker.make(User)
             publishers = baker.make(Publisher, _quantity=n)
@@ -88,11 +101,14 @@ class EffectivePermissionsTest(BaseTestCase):
             self.assertEqual({p.id for p in publishers}, set(result))
             return len(ctx.captured_queries)
 
+        # Act & Assert
         self.assertEqual(count_queries(1), count_queries(5))
 
-    def test_check_permission_accepts_permission_choice_members(self):
+    def test_check_permission_where_permission_choice_given_should_scope_to_publisher(self):
+        # Arrange
         join(self.user, self.publisher_a, role(self.publisher_a, INVITE))
 
+        # Act & Assert
         self.assertTrue(check_permission(self.user, INVITE, publisher=self.publisher_a))
         self.assertFalse(check_permission(self.user, INVITE, publisher=self.publisher_b))
 
@@ -114,24 +130,33 @@ class PermissionClassTenantTest(BaseTestCase):
         self.target_a = join(baker.make(User, email="ta@example.com"), self.publisher_a, reader_role)
         self.target_b = join(baker.make(User, email="tb@example.com"), self.publisher_b, reader_role)
 
-    def test_permission_class_denies_without_tenant(self):
+    def test_permission_class_where_no_tenant_should_deny_role_permission(self):
+        # Arrange
         self.authenticate_user(self.user)
 
+        # Act
         resp = self.client.delete(f"/portal/members/{self.target_b.id}/")
 
+        # Assert
         self.assertEqual(403, resp.status_code, resp.content)
         self.assertTrue(PublisherMember.objects.filter(id=self.target_b.id).exists())
 
-    def test_permission_class_denies_at_tenant_where_role_lacks_it(self):
+    def test_permission_class_where_tenant_role_lacks_permission_should_deny(self):
+        # Arrange
         self.authenticate_user(self.user, HTTP_X_TENANT=str(self.publisher_b.id))
 
+        # Act
         resp = self.client.delete(f"/portal/members/{self.target_b.id}/")
 
+        # Assert
         self.assertEqual(403, resp.status_code, resp.content)
 
-    def test_permission_class_grants_from_membership_at_tenant(self):
+    def test_permission_class_where_tenant_role_has_permission_should_allow(self):
+        # Arrange
         self.authenticate_user(self.user, HTTP_X_TENANT=str(self.publisher_a.id))
 
+        # Act
         resp = self.client.delete(f"/portal/members/{self.target_a.id}/")
 
+        # Assert
         self.assertEqual(204, resp.status_code, resp.content)

@@ -27,20 +27,24 @@ class MyPublishersPermissionsTest(BaseTestCase):
             status=PublisherMember.StatusChoice.ACTIVE,
         )
 
-    def test_each_publisher_lists_its_own_permissions(self) -> None:
+    def test_list_my_publishers_where_roles_differ_should_return_each_publishers_permissions(self) -> None:
+        # Arrange
         self._join(self.publisher_a, INVITE)
         self._join(self.publisher_b)
         self.authenticate_user(self.user)
 
+        # Act
         response = self.client.get("/portal/publishers/me/")
 
+        # Assert
         self.assertEqual(200, response.status_code, response.content)
         by_name = {item["name"]: item["permissions"] for item in response.json()}
         self.assertIn(INVITE.value, by_name["A"])
         self.assertNotIn(INVITE.value, by_name["B"])
         self.assertEqual(sorted(by_name["A"]), by_name["A"])
 
-    def test_my_publishers_query_count_constant(self) -> None:
+    def test_list_my_publishers_where_more_memberships_should_keep_query_count(self) -> None:
+        # Arrange
         def count() -> int:
             self.authenticate_user(self.user)
             with CaptureQueriesContext(connection) as ctx:
@@ -48,21 +52,26 @@ class MyPublishersPermissionsTest(BaseTestCase):
             self.assertEqual(200, response.status_code, response.content)
             return len(ctx.captured_queries)
 
+        # Act
         self._join(self.publisher_a)
         count()  # warm per-process caches
         one = count()
         for publisher in baker.make(Publisher, _quantity=4):
             self._join(publisher, INVITE)
 
+        # Assert
         self.assertEqual(one, count())
 
-    def test_profile_permissions_still_union_of_memberships(self) -> None:
+    def test_get_profile_where_member_of_two_publishers_should_merge_permissions(self) -> None:
+        # Arrange
         self._join(self.publisher_a, INVITE)
         self._join(self.publisher_b)
         self.authenticate_user(self.user)
 
+        # Act
         response = self.client.get("/cms-api/auth/profile/")
 
+        # Assert
         self.assertEqual(200, response.status_code, response.content)
         codes = {p["code_name"] for p in response.json()["permissions"]}
         self.assertIn(INVITE.value, codes)

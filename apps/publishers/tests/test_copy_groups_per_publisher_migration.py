@@ -38,9 +38,11 @@ class CopyGroupsPerPublisherMigrationTest(BaseTestCase):
         )
         self.user_a.groups.add(self.shared)
 
-    def test_shared_group_is_copied_per_publisher(self):
+    def test_copy_groups_per_publisher_where_group_shared_should_copy_per_publisher(self):
+        # Arrange
         _run()
 
+        # Act & Assert
         self.member_a.refresh_from_db()
         self.member_b.refresh_from_db()
         copy_a = PublisherGroup.objects.get(publisher=self.publisher_a, name="Admin")
@@ -52,27 +54,35 @@ class CopyGroupsPerPublisherMigrationTest(BaseTestCase):
             self.assertEqual(ADMIN_PERMS, set(copy.group.permissions.values_list("codename", flat=True)))
             self.assertTrue(copy.group.name.startswith(f"publisher:{copy.publisher_id}:"))
 
-    def test_original_group_row_is_left_untouched(self):
+    def test_copy_groups_per_publisher_where_group_shared_should_leave_original_untouched(self):
+        # Arrange
         _run()
 
+        # Act & Assert
         self.shared.refresh_from_db()
         self.assertEqual("Admin", self.shared.name)
         self.assertEqual(ADMIN_PERMS, set(self.shared.permissions.values_list("codename", flat=True)))
         self.assertFalse(PublisherGroup.objects.filter(group=self.shared).exists())
 
-    def test_publisher_role_groups_removed_from_user_groups_but_internal_kept(self):
+    def test_copy_groups_per_publisher_where_user_in_role_and_internal_should_keep_only_internal(self):
+        # Arrange
         internal, _ = Group.objects.get_or_create(name=ITQAN_INTERNAL_GROUP)
         self.user_a.groups.add(internal)
 
+        # Act
         _run()
 
+        # Assert
         self.assertEqual([ITQAN_INTERNAL_GROUP], list(self.user_a.groups.values_list("name", flat=True)))
 
-    def test_migration_is_idempotent(self):
+    def test_copy_groups_per_publisher_where_run_twice_should_not_duplicate(self):
+        # Arrange
         _run()
         group_count = Group.objects.count()
 
+        # Act
         _run()
 
+        # Assert
         self.assertEqual(group_count, Group.objects.count())
         self.assertEqual(2, PublisherGroup.objects.count())
