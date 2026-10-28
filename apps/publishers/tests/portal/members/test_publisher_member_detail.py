@@ -21,19 +21,19 @@ class MemberDetailTest(BaseTestCase):
         PublisherMember.objects.create(
             user=self.admin,
             publisher=self.p1,
-            group=admin_group(),
+            group=admin_group(publisher=self.p1),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         self.p1_other = PublisherMember.objects.create(
             user=baker.make(User),
             publisher=self.p1,
-            group=member_group(),
+            group=member_group(publisher=self.p1),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         self.p2_member = PublisherMember.objects.create(
             user=baker.make(User),
             publisher=self.p2,
-            group=member_group(),
+            group=member_group(publisher=self.p1),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
 
@@ -94,17 +94,17 @@ class MemberDetailTest(BaseTestCase):
         # Act
         resp = self.client.patch(
             f"/portal/members/{self.p1_other.id}/",
-            data={"group_id": admin_group().id},
+            data={"group_id": admin_group(publisher=self.p1).id},
             content_type="application/json",
         )
 
         # Assert
         self.assertEqual(200, resp.status_code, resp.content)
-        self.assertEqual(admin_group().id, resp.json()["group_id"])
-        self.assertEqual(admin_group().name, resp.json()["group_name"])
+        self.assertEqual(admin_group(publisher=self.p1).id, resp.json()["group_id"])
+        self.assertEqual(admin_group(publisher=self.p1).publisher_group.name, resp.json()["group_name"])
         self.p1_other.refresh_from_db()
-        self.assertEqual(admin_group().id, self.p1_other.group_id)
-        self.assertTrue(self.p1_other.user.groups.filter(name="Publisher Member Admin").exists())
+        self.assertEqual(admin_group(publisher=self.p1).id, self.p1_other.group_id)
+        self.assertEqual(0, self.p1_other.user.groups.count())
 
     def test_update_member_where_group_is_itqan_internal_should_return_400(self):
         # Arrange
@@ -175,7 +175,7 @@ class MemberDetailTest(BaseTestCase):
         pending = PublisherMember.objects.create(
             user=baker.make(User, is_active=False),
             publisher=self.p1,
-            group=member_group(),
+            group=member_group(publisher=self.p1),
             status=PublisherMember.StatusChoice.PENDING,
         )
         inv = PublisherMemberInvitation.objects.create(
@@ -197,7 +197,7 @@ class MemberDetailTest(BaseTestCase):
         pending = PublisherMember.objects.create(
             user=baker.make(User, is_active=False),
             publisher=self.p1,
-            group=member_group(),
+            group=member_group(publisher=self.p1),
             status=PublisherMember.StatusChoice.PENDING,
         )
         old_inv = PublisherMemberInvitation.objects.create(

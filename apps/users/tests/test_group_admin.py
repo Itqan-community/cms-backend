@@ -95,7 +95,7 @@ class GroupAdminValidationTest(BaseTestCase):
 
         # Assert
         self.assertEqual(200, response.status_code)
-        self.assertContains(response, "A group with this name already exists.")
+        self.assertContains(response, "A role with this name already exists.")
         self.assertEqual(1, Group.objects.filter(name="Editors").count())
 
     def test_clean_name_where_blank_should_show_form_error_and_not_create(self) -> None:
@@ -162,3 +162,18 @@ class GroupAdminDeleteTest(BaseTestCase):
         # Assert
         self.assertEqual(302, response.status_code, response.content)
         self.assertFalse(Group.objects.filter(pk__in=[first.pk, second.pk]).exists())
+
+
+class GroupAdminFormLabelsTest(BaseTestCase):
+    def test_permissions_field_where_arabic_active_should_label_choices_in_arabic(self) -> None:
+        # Arrange
+        from django.utils import translation
+
+        from apps.users.admin import GroupAdminForm
+
+        # Act
+        with translation.override("ar"):
+            labels = {str(label) for _, label in GroupAdminForm().fields["permissions"].choices}
+
+        # Assert
+        self.assertIn("لوحة التحكم - عرض القراء", labels)

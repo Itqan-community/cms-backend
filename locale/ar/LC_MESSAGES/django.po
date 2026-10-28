@@ -846,16 +846,16 @@ msgid "Portal - Delete Mushafs"
 msgstr "لوحة التحكم - حذف المصاحف"
 
 msgid "Portal - View Mushaf Layouts"
-msgstr "البوابة - عرض تخطيطات المصاحف"
+msgstr "لوحة التحكم - عرض تخطيطات المصاحف"
 
 msgid "Portal - Create Mushaf Layouts"
-msgstr "البوابة - إنشاء تخطيطات المصاحف"
+msgstr "لوحة التحكم - إنشاء تخطيطات المصاحف"
 
 msgid "Portal - Update Mushaf Layouts"
-msgstr "البوابة - تعديل تخطيطات المصاحف"
+msgstr "لوحة التحكم - تعديل تخطيطات المصاحف"
 
 msgid "Portal - Delete Mushaf Layouts"
-msgstr "البوابة - حذف تخطيطات المصاحف"
+msgstr "لوحة التحكم - حذف تخطيطات المصاحف"
 
 msgid "Portal - View Fonts"
 msgstr "لوحة التحكم - عرض الخطوط"
@@ -870,52 +870,52 @@ msgid "Portal - Delete Fonts"
 msgstr "لوحة التحكم - حذف الخطوط"
 
 msgid "Portal - View Publishers"
-msgstr "البوابة - عرض الناشرين"
+msgstr "لوحة التحكم - عرض الناشرين"
 
 msgid "Portal - Create Publishers"
-msgstr "البوابة - إنشاء الناشرين"
+msgstr "لوحة التحكم - إنشاء الناشرين"
 
 msgid "Portal - Update Publishers"
-msgstr "البوابة - تعديل الناشرين"
+msgstr "لوحة التحكم - تعديل الناشرين"
 
 msgid "Portal - Delete Publishers"
-msgstr "البوابة - حذف الناشرين"
+msgstr "لوحة التحكم - حذف الناشرين"
 
-msgid "Portal - View Groups"
-msgstr "البوابة - عرض المجموعات"
+msgid "Portal - View Roles"
+msgstr "لوحة التحكم - عرض الأدوار"
 
-msgid "Portal - Create Groups"
-msgstr "البوابة - إنشاء المجموعات"
+msgid "Portal - Create Roles"
+msgstr "لوحة التحكم - إنشاء الأدوار"
 
-msgid "Portal - Update Groups"
-msgstr "البوابة - تعديل المجموعات"
+msgid "Portal - Update Roles"
+msgstr "لوحة التحكم - تعديل الأدوار"
 
-msgid "Portal - Delete Groups"
-msgstr "البوابة - حذف المجموعات"
+msgid "Portal - Delete Roles"
+msgstr "لوحة التحكم - حذف الأدوار"
 
 msgid "Portal - View Publisher Members"
-msgstr "البوابة - عرض أعضاء الناشر"
+msgstr "لوحة التحكم - عرض أعضاء الناشر"
 
 msgid "Portal - Invite Publisher Members"
-msgstr "البوابة - دعوة أعضاء الناشر"
+msgstr "لوحة التحكم - دعوة أعضاء الناشر"
 
 msgid "Portal - Update Publisher Members"
-msgstr "البوابة - تعديل أعضاء الناشر"
+msgstr "لوحة التحكم - تعديل أعضاء الناشر"
 
 msgid "Portal - Delete Publisher Members"
-msgstr "البوابة - حذف أعضاء الناشر"
+msgstr "لوحة التحكم - حذف أعضاء الناشر"
 
 msgid "Portal - View Access Requests"
-msgstr "البوابة - عرض طلبات الوصول"
+msgstr "لوحة التحكم - عرض طلبات الوصول"
 
 msgid "Portal - Accept or Reject Access Requests"
-msgstr "البوابة - قبول أو رفض طلبات الوصول"
+msgstr "لوحة التحكم - قبول أو رفض طلبات الوصول"
 
 msgid "Portal - Manage Access Requests Settings"
-msgstr "البوابة - إدارة إعدادات طلبات الوصول"
+msgstr "لوحة التحكم - إدارة إعدادات طلبات الوصول"
 
 msgid "Portal - View Usage Statistics"
-msgstr "البوابة - عرض إحصائيات الاستخدام"
+msgstr "لوحة التحكم - عرض إحصائيات الاستخدام"
 
 msgid "Portal - Review Content"
 msgstr "لوحة التحكم - مراجعة المحتوى"
@@ -924,7 +924,7 @@ msgid "Portal - Publish Content"
 msgstr "لوحة التحكم - نشر المحتوى"
 
 msgid "Portal - Remove Package Versions"
-msgstr "البوابة - إزالة إصدارات الحزم"
+msgstr "لوحة التحكم - إزالة إصدارات الحزم"
 
 msgid "Portal - Edit Translation Content"
 msgstr "لوحة التحكم - تحرير محتوى الترجمات"
@@ -939,7 +939,55 @@ msgid "Portal - Add Asset Language"
 msgstr "لوحة التحكم - إضافة لغة إلى الأصل"
 
 msgid "Portal - Manage Asset Columns"
-msgstr "البوابة - إدارة أعمدة الأصول"
+msgstr "لوحة التحكم - إدارة أعمدة الأصول"
+
+msgid "Control panel"
+msgstr "لوحة التحكم"
+
+msgid "Reciters"
+msgstr "القراء"
+
+msgid "Recitations"
+msgstr "التلاوات"
+
+msgid "Tafsirs"
+msgstr "التفاسير"
+
+msgid "Translations"
+msgstr "الترجمات"
+
+msgid "Mushafs"
+msgstr "المصاحف"
+
+msgid "Mushaf layouts"
+msgstr "تخطيطات المصاحف"
+
+msgid "Fonts"
+msgstr "الخطوط"
+
+msgid "Review and publishing"
+msgstr "المراجعة والنشر"
+
+msgid "Languages and columns"
+msgstr "اللغات والأعمدة"
+
+msgid "Publishers"
+msgstr "الناشرون"
+
+msgid "Members"
+msgstr "الأعضاء"
+
+msgid "Roles"
+msgstr "الأدوار"
+
+msgid "Access requests"
+msgstr "طلبات الوصول"
+
+msgid "Usage statistics"
+msgstr "إحصائيات الاستخدام"
+
+msgid "Packages"
+msgstr "الحزم"
 
 msgid "Created"
 msgstr "تم الإنشاء"
@@ -1251,9 +1299,12 @@ msgstr "الصلاحيات"
 msgid "API keys cannot be reverted from historical snapshots."
 msgstr "لا يمكن استرجاع مفاتيح API من اللقطات التاريخية."
 
+msgid "Select a publisher first."
+msgstr "اختر ناشرًا أولًا."
+
 #, python-brace-format
-msgid "Group with id {id} not found."
-msgstr "لم يتم العثور على المجموعة بالمعرّف {id}."
+msgid "Role with id {id} not found."
+msgstr "لم يتم العثور على الدور بالمعرّف {id}."
 
 msgid "The given email must be set"
 msgstr "يجب تحديد البريد الإلكتروني"
@@ -1326,18 +1377,25 @@ msgid "API key name must not exceed %(max)d characters."
 msgstr "اسم مفتاح API يجب ألا يتجاوز %(max)d حرفاً."
 
 #, python-brace-format
-msgid "Group with id {id} is not available for assignment."
-msgstr "المجموعة ذات المعرّف {id} غير متاحة للتعيين."
+msgid "Role with id {id} is not available for assignment."
+msgstr "الدور ذو المعرّف {id} غير متاح للتعيين."
 
-msgid "A group with this name already exists."
-msgstr "توجد مجموعة بهذا الاسم بالفعل."
+msgid "This role is assigned to members and cannot be deleted."
+msgstr "هذا الدور مسند إلى أعضاء ولا يمكن حذفه."
 
-msgid "Group name must not be empty."
-msgstr "اسم المجموعة لا يمكن أن يكون فارغاً."
+msgid "A role with this name already exists."
+msgstr "يوجد دور بهذا الاسم بالفعل."
+
+#, python-brace-format
+msgid "You cannot grant permissions you do not hold: {permissions}."
+msgstr "لا يمكنك منح صلاحيات لا تملكها: {permissions}."
+
+msgid "Role name must not be empty."
+msgstr "اسم الدور لا يمكن أن يكون فارغًا."
 
 #, python-format
-msgid "Group name must not exceed %(max)d characters."
-msgstr "اسم المجموعة يجب ألا يتجاوز %(max)d حرفاً."
+msgid "Role name must not exceed %(max)d characters."
+msgstr "اسم الدور يجب ألا يتجاوز %(max)d حرفًا."
 
 #, python-brace-format
 msgid "Unknown permissions: {permissions}."
@@ -1788,6 +1846,39 @@ msgstr[3] "مدخلات"
 msgstr[4] "مدخلاً"
 msgstr[5] "مدخل"
 
+#, python-brace-format
+#~ msgid "Group with id {id} not found."
+#~ msgstr "لم يتم العثور على المجموعة بالمعرّف {id}."
+
+#, python-brace-format
+#~ msgid "Group with id {id} is not available for assignment."
+#~ msgstr "المجموعة ذات المعرّف {id} غير متاحة للتعيين."
+
+#~ msgid "This group is assigned to members and cannot be deleted."
+#~ msgstr "هذه المجموعة مسندة إلى أعضاء ولا يمكن حذفها."
+
+#~ msgid "A group with this name already exists."
+#~ msgstr "توجد مجموعة بهذا الاسم بالفعل."
+
+#~ msgid "Group name must not be empty."
+#~ msgstr "اسم المجموعة لا يمكن أن يكون فارغاً."
+
+#, python-format
+#~ msgid "Group name must not exceed %(max)d characters."
+#~ msgstr "اسم المجموعة يجب ألا يتجاوز %(max)d حرفاً."
+
+#~ msgid "Portal - View Groups"
+#~ msgstr "البوابة - عرض المجموعات"
+
+#~ msgid "Portal - Create Groups"
+#~ msgstr "البوابة - إنشاء المجموعات"
+
+#~ msgid "Portal - Update Groups"
+#~ msgstr "البوابة - تعديل المجموعات"
+
+#~ msgid "Portal - Delete Groups"
+#~ msgstr "البوابة - حذف المجموعات"
+
 #~ msgid "Write the group's text in at least one column."
 #~ msgstr "اكتب نص النطاق في عمود واحد على الأقل."
 
@@ -1858,5 +1949,6 @@ msgstr[5] "مدخل"
 
 #~ msgid "This asset has no version to sync the recitation data into."
 #~ msgstr "لا توجد نسخة لهذا المورد لمزامنة بيانات التلاوة إليها."
+
 #~ msgid "Cannot restore a revoked API key to an active state."
 #~ msgstr "لا يمكن استعادة مفتاح API ملغى إلى حالة نشطة."

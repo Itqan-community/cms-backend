@@ -6,7 +6,7 @@ from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin import widgets
 from django.contrib.auth import admin as auth_admin, forms as admin_forms
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, Permission
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import QuerySet
 from django.forms import EmailField, ModelForm
@@ -18,10 +18,24 @@ from plain_permissions.utils import get_permissions_queryset
 
 from apps.core.admin import AuditedModelAdmin
 from apps.core.ninja_utils.errors import ItqanError
+from apps.core.permissions import PermissionChoice
 from apps.publishers.models import PublisherMember
 from apps.users.services.group import GroupService
 
 from .models import APIKey, Developer, User
+
+
+class PortalPermissionMultipleChoiceField(forms.ModelMultipleChoiceField):
+    """Labels each permission with its ``PermissionChoice`` name in the admin's language.
+
+    ``Permission.name`` is an English copy stored when permissions were synced, so it never
+    follows the active language.
+    """
+
+    def label_from_instance(self, obj: Permission) -> str:
+        if obj.codename in PermissionChoice.values:  # type: ignore[attr-defined]
+            return str(PermissionChoice(obj.codename).label)
+        return super().label_from_instance(obj)
 
 
 class PublisherMemberInline(admin.TabularInline):
@@ -38,7 +52,7 @@ class UserAdminChangeForm(admin_forms.UserChangeForm):
     # SelectFilter2.js prepends the widget it builds into that container -- landing it
     # before the label, so the label renders *after* the field. Wrapping restores the
     # structure `groups` gets, giving the JS its own parent to prepend into.
-    user_permissions = forms.ModelMultipleChoiceField(
+    user_permissions = PortalPermissionMultipleChoiceField(
         get_permissions_queryset(),
         label=_("Permissions"),
         required=False,
@@ -166,7 +180,7 @@ class GroupAdminForm(ModelForm):
 
     # Wrapped for the same reason as UserAdminChangeForm.user_permissions -- see the note
     # there. ``required=False`` keeps a group with no permissions valid.
-    permissions = forms.ModelMultipleChoiceField(
+    permissions = PortalPermissionMultipleChoiceField(
         get_permissions_queryset(),
         label=_("Permissions"),
         required=False,

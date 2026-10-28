@@ -17,7 +17,7 @@ class CreateMemberTest(BaseTestCase):
         PublisherMember.objects.create(
             user=self.admin,
             publisher=self.publisher,
-            group=admin_group(),
+            group=admin_group(publisher=self.publisher),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         self.url = "/portal/members/"
@@ -36,7 +36,9 @@ class CreateMemberTest(BaseTestCase):
     def test_invite_member_returns_201_and_sends_invite(self):
         self.authenticate_user(self.admin)
         self.give_permission(self.admin, PermissionChoice.PORTAL_INVITE_PUBLISHER_MEMBERS)
-        resp, mock_delay = self._post(name="New Staff", email="staff@example.com", group_id=member_group().id)
+        resp, mock_delay = self._post(
+            name="New Staff", email="staff@example.com", group_id=member_group(publisher=self.publisher).id
+        )
         self.assertEqual(201, resp.status_code, resp.content)
         body = resp.json()
         self.assertEqual("New Staff", body["name"])
@@ -53,7 +55,9 @@ class CreateMemberTest(BaseTestCase):
         self.authenticate_user(self.admin)
         self.give_permission(self.admin, PermissionChoice.PORTAL_INVITE_PUBLISHER_MEMBERS)
         existing = baker.make(User, email="existing@example.com", name="Original Name")
-        resp, _ = self._post(name="Different Name", email="existing@example.com", group_id=member_group().id)
+        resp, _ = self._post(
+            name="Different Name", email="existing@example.com", group_id=member_group(publisher=self.publisher).id
+        )
         self.assertEqual(201, resp.status_code, resp.content)
         existing.refresh_from_db()
         self.assertEqual("Original Name", existing.name)
@@ -61,19 +65,21 @@ class CreateMemberTest(BaseTestCase):
     def test_invite_member_where_admin_group_should_need_only_invite_perm(self):
         self.authenticate_user(self.admin)
         self.give_permission(self.admin, PermissionChoice.PORTAL_INVITE_PUBLISHER_MEMBERS)
-        resp, _ = self._post(name="Boss", email="boss@example.com", group_id=admin_group().id)
+        resp, _ = self._post(name="Boss", email="boss@example.com", group_id=admin_group(publisher=self.publisher).id)
         self.assertEqual(201, resp.status_code, resp.content)
 
     def test_invite_without_permission_returns_403(self):
         self.authenticate_user(self.admin)
-        resp, _ = self._post(name="X", email="x@example.com", group_id=member_group().id)
+        resp, _ = self._post(name="X", email="x@example.com", group_id=member_group(publisher=self.publisher).id)
         self.assertEqual(403, resp.status_code, resp.content)
 
     def test_admin_cannot_invite_in_other_publisher_returns_403(self):
         other = baker.make(Publisher)
         self.authenticate_user(self.admin)
         self.give_permission(self.admin, PermissionChoice.PORTAL_INVITE_PUBLISHER_MEMBERS)
-        resp, _ = self._post(publisher_id=other.id, name="X", email="x@example.com", group_id=member_group().id)
+        resp, _ = self._post(
+            publisher_id=other.id, name="X", email="x@example.com", group_id=member_group(publisher=self.publisher).id
+        )
         self.assertEqual(403, resp.status_code, resp.content)
 
     def test_invite_member_where_group_is_itqan_internal_should_return_400(self):
@@ -107,7 +113,7 @@ class CreateMemberTest(BaseTestCase):
         # Arrange
         self.authenticate_user(self.admin)
         self.give_permission(self.admin, PermissionChoice.PORTAL_INVITE_PUBLISHER_MEMBERS)
-        group = admin_group()
+        group = admin_group(publisher=self.publisher)
 
         # Act
         resp, _ = self._post(name="Boss", email="boss2@example.com", group_id=group.id)
@@ -116,7 +122,7 @@ class CreateMemberTest(BaseTestCase):
         self.assertEqual(201, resp.status_code, resp.content)
         body = resp.json()
         self.assertEqual(group.id, body["group_id"])
-        self.assertEqual(group.name, body["group_name"])
+        self.assertEqual(group.publisher_group.name, body["group_name"])
         self.assertEqual(group.id, PublisherMember.objects.get(id=body["id"]).group_id)
 
     def test_invite_member_where_group_id_missing_should_return_400(self):

@@ -39,9 +39,16 @@ class UserProfileSchema(Schema):
 
 
 def _get_user_permissions(user):
+    """Permissions across all of the user's memberships, merged.
+
+    Kept for frontends that gate on the profile; the portal should gate on the selected
+    publisher's ``permissions`` from ``GET /portal/publishers/me/`` instead, since roles are
+    enforced per publisher.
+    """
+    from apps.publishers.services.effective_permissions import permissions_across_memberships
+
     permissions = []
-    for perm_code in user.get_all_permissions():
-        code_name = perm_code.split(".")[-1]
+    for code_name in sorted(permissions_across_memberships(user)):
         if code_name in _PERMISSION_CODENAMES:
             perm_choice = PermissionChoice(code_name)
             permissions.append(

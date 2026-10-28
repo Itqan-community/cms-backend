@@ -1,6 +1,13 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from rest_framework import exceptions, permissions
 
 from apps.users.models import User
+
+if TYPE_CHECKING:
+    from apps.publishers.models import Publisher
 
 
 def permission_class(permission_code_name) -> type[permissions.BasePermission]:
@@ -12,8 +19,8 @@ def permission_class(permission_code_name) -> type[permissions.BasePermission]:
 
     class CustomPermission(permissions.BasePermission):
         def has_permission(self, request, view):
-            """Grant access when the request's user holds the wrapped permission."""
-            return check_permission(request.user, permission_code_name)
+            """Grant access when the request's user holds the wrapped permission at the request's publisher."""
+            return check_permission(request.user, permission_code_name, publisher=getattr(request, "publisher", None))
 
     CustomPermission.permission_code_name = permission_code_name
 
@@ -27,16 +34,27 @@ def permission_class(permission_code_name) -> type[permissions.BasePermission]:
     return CustomPermission
 
 
-def check_permission(user: User, permission: str, raise_exception: bool = False) -> bool:
-    """Return whether ``user`` holds ``permission``.
+def check_permission(
+    user: User,
+    permission: str,
+    raise_exception: bool = False,
+    *,
+    publisher: Publisher | int | None = None,
+) -> bool:
+    """Return whether ``user`` holds ``permission`` at ``publisher``.
 
-    Unauthenticated or inactive users never hold a permission. With ``raise_exception=True``
-    a PermissionDenied is raised instead of returning False.
+    Publisher roles count only at their own publisher; with ``publisher=None`` only global
+    permissions apply (see ``apps.publishers.services.effective_permissions``). Unauthenticated
+    or inactive users never hold a permission. With ``raise_exception=True`` a PermissionDenied
+    is raised instead of returning False.
     """
+    from apps.publishers.services.effective_permissions import effective_permissions
+
     if not (user and user.is_authenticated and user.is_active):
         return False
 
-    is_granted = user.has_perm(permission)
+    codename = str(getattr(permission, "value", permission)).rsplit(".", 1)[-1]
+    is_granted = codename in effective_permissions(user, publisher)
 
     if raise_exception and not is_granted:
         raise exceptions.PermissionDenied

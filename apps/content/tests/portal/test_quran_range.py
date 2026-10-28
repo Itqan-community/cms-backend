@@ -2,11 +2,14 @@ from unittest.mock import patch
 
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
+from model_bakery import baker
 
 from apps.content.api.portal import quran_range
 from apps.content.tests.group_quran_data import GroupQuranDataMixin
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
+from apps.publishers.models import Publisher, PublisherMember
+from apps.publishers.tests.services.test_effective_permissions import role
 from apps.users.models import User
 
 URL = "/portal/content/quran-range/"
@@ -48,6 +51,24 @@ class QuranRangeApiTests(GroupQuranDataMixin, BaseTestCase):
         )
         quran_queries = [q for q in queries.captured_queries if "quran_" in q["sql"]]
         self.assertLessEqual(len(quran_queries), 2)
+
+    def test_quran_range_where_tafsir_read_comes_from_publisher_role_should_return_200(self):
+        # Arrange
+        publisher = baker.make(Publisher)
+        member = User.objects.create_user(email="role-reader@example.com", name="Role Reader")
+        PublisherMember.objects.create(
+            user=member,
+            publisher=publisher,
+            group=role(publisher, PermissionChoice.PORTAL_ACCESS, PermissionChoice.PORTAL_READ_TAFSIR),
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
+        self.authenticate_user(member, HTTP_X_TENANT=str(publisher.id))
+
+        # Act
+        response = self.client.get(URL, {"from_surah": 1, "from_ayah": 3, "to_surah": 2, "to_ayah": 1})
+
+        # Assert
+        self.assertEqual(response.status_code, 200, response.content)
 
     def test_quran_range_where_ayah_range_should_return_ayahs(self):
         # Arrange

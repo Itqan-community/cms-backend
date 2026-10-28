@@ -59,10 +59,10 @@ class PermissionChoice(TextChoices):
     PORTAL_DELETE_PUBLISHER = "portal_delete_publisher", _("Portal - Delete Publishers")
 
     # Groups (role management)
-    PORTAL_READ_GROUP = "portal_read_group", _("Portal - View Groups")
-    PORTAL_CREATE_GROUP = "portal_create_group", _("Portal - Create Groups")
-    PORTAL_UPDATE_GROUP = "portal_update_group", _("Portal - Update Groups")
-    PORTAL_DELETE_GROUP = "portal_delete_group", _("Portal - Delete Groups")
+    PORTAL_READ_GROUP = "portal_read_group", _("Portal - View Roles")
+    PORTAL_CREATE_GROUP = "portal_create_group", _("Portal - Create Roles")
+    PORTAL_UPDATE_GROUP = "portal_update_group", _("Portal - Update Roles")
+    PORTAL_DELETE_GROUP = "portal_delete_group", _("Portal - Delete Roles")
 
     # Members
     PORTAL_VIEW_PUBLISHER_MEMBERS = "portal_view_publisher_members", _("Portal - View Publisher Members")
@@ -266,3 +266,99 @@ PERMISSION_IMPLICATIONS: dict[PermissionChoice, frozenset[PermissionChoice]] = {
     PermissionChoice.PORTAL_ACCEPT_OR_REJECT_ACCESS_REQUESTS: frozenset({PermissionChoice.PORTAL_VIEW_ACCESS_REQUESTS}),
     PermissionChoice.PORTAL_MANAGE_ACCESS_REQUESTS_SETTINGS: frozenset({PermissionChoice.PORTAL_VIEW_ACCESS_REQUESTS}),
 }
+
+
+P = PermissionChoice
+
+# Permissions grouped by what they are used for, in the order the role editor shows them.
+# Every PermissionChoice appears in exactly one group (enforced by a test).
+PERMISSION_GROUPS: list[tuple[str, str, list[PermissionChoice]]] = [
+    ("portal", _("Control panel"), [P.PORTAL_ACCESS]),
+    (
+        "reciters",
+        _("Reciters"),
+        [P.PORTAL_READ_RECITER, P.PORTAL_CREATE_RECITER, P.PORTAL_UPDATE_RECITER, P.PORTAL_DELETE_RECITER],
+    ),
+    (
+        "recitations",
+        _("Recitations"),
+        [
+            P.PORTAL_READ_RECITATION,
+            P.PORTAL_CREATE_RECITATION,
+            P.PORTAL_UPDATE_RECITATION,
+            P.PORTAL_DELETE_RECITATION,
+            P.PORTAL_UPLOAD_TIMING,
+        ],
+    ),
+    (
+        "tafsirs",
+        _("Tafsirs"),
+        [
+            P.PORTAL_READ_TAFSIR,
+            P.PORTAL_CREATE_TAFSIR,
+            P.PORTAL_UPDATE_TAFSIR,
+            P.PORTAL_DELETE_TAFSIR,
+            P.PORTAL_EDIT_TAFSIR_CONTENT,
+        ],
+    ),
+    (
+        "translations",
+        _("Translations"),
+        [
+            P.PORTAL_READ_TRANSLATION,
+            P.PORTAL_CREATE_TRANSLATION,
+            P.PORTAL_UPDATE_TRANSLATION,
+            P.PORTAL_DELETE_TRANSLATION,
+            P.PORTAL_EDIT_TRANSLATION_CONTENT,
+        ],
+    ),
+    (
+        "mushafs",
+        _("Mushafs"),
+        [P.PORTAL_READ_MUSHAF, P.PORTAL_CREATE_MUSHAF, P.PORTAL_UPDATE_MUSHAF, P.PORTAL_DELETE_MUSHAF],
+    ),
+    (
+        "mushaf_layouts",
+        _("Mushaf layouts"),
+        [
+            P.PORTAL_READ_MUSHAF_LAYOUT,
+            P.PORTAL_CREATE_MUSHAF_LAYOUT,
+            P.PORTAL_UPDATE_MUSHAF_LAYOUT,
+            P.PORTAL_DELETE_MUSHAF_LAYOUT,
+        ],
+    ),
+    ("fonts", _("Fonts"), [P.PORTAL_READ_FONT, P.PORTAL_CREATE_FONT, P.PORTAL_UPDATE_FONT, P.PORTAL_DELETE_FONT]),
+    ("review", _("Review and publishing"), [P.PORTAL_REVIEW_CONTENT, P.PORTAL_PUBLISH_CONTENT]),
+    (
+        "languages_columns",
+        _("Languages and columns"),
+        [P.PORTAL_ACCESS_ALL_LANGUAGES, P.PORTAL_ADD_ASSET_LANGUAGE, P.PORTAL_MANAGE_ASSET_COLUMNS],
+    ),
+    (
+        "publishers",
+        _("Publishers"),
+        [P.PORTAL_READ_PUBLISHER, P.PORTAL_CREATE_PUBLISHER, P.PORTAL_UPDATE_PUBLISHER, P.PORTAL_DELETE_PUBLISHER],
+    ),
+    (
+        "members",
+        _("Members"),
+        [
+            P.PORTAL_VIEW_PUBLISHER_MEMBERS,
+            P.PORTAL_INVITE_PUBLISHER_MEMBERS,
+            P.PORTAL_UPDATE_PUBLISHER_MEMBERS,
+            P.PORTAL_DELETE_PUBLISHER_MEMBERS,
+        ],
+    ),
+    ("roles", _("Roles"), [P.PORTAL_READ_GROUP, P.PORTAL_CREATE_GROUP, P.PORTAL_UPDATE_GROUP, P.PORTAL_DELETE_GROUP]),
+    (
+        "access_requests",
+        _("Access requests"),
+        [
+            P.PORTAL_VIEW_ACCESS_REQUESTS,
+            P.PORTAL_ACCEPT_OR_REJECT_ACCESS_REQUESTS,
+            P.PORTAL_MANAGE_ACCESS_REQUESTS_SETTINGS,
+        ],
+    ),
+    ("usage", _("Usage statistics"), [P.PORTAL_READ_USAGE]),
+    ("packages", _("Packages"), [P.PORTAL_REMOVE_PACKAGE_VERSION]),
+]

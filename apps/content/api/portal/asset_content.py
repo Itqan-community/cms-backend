@@ -98,7 +98,7 @@ def _resolve(category: str, request: Request, *, access: Access) -> CategoryChoi
             status_code=404,
         )
     resolved, permissions = config
-    check_permission(request.user, permissions[access], raise_exception=True)
+    check_permission(request.user, permissions[access], raise_exception=True, publisher=request.publisher)
     return resolved
 
 

@@ -46,7 +46,9 @@ class PublisherMemberInvitationRepository:
 
     def get_by_token_hash(self, token_hash: str) -> PublisherMemberInvitation | None:
         return (
-            self.model.objects.select_related("member", "member__user", "member__group", "publisher", "invited_by")
+            self.model.objects.select_related(
+                "member", "member__user", "member__group__publisher_group", "publisher", "invited_by"
+            )
             .filter(token_hash=token_hash)
             .first()
         )
@@ -82,5 +84,5 @@ class PublisherMemberInvitationRepository:
 
     def get_for_email(self, invitation_id: int) -> PublisherMemberInvitation:
         return self.model.objects.select_related(
-            "publisher", "invited_by", "member", "member__user", "member__group"
+            "publisher", "invited_by", "member", "member__user", "member__group__publisher_group"
         ).get(pk=invitation_id)

@@ -71,8 +71,12 @@ def _get_asset(request: Request, category: CategoryChoice, slug: str) -> Asset:
 
 
 def _require_manage_columns(request: Request) -> None:
-    check_permission(request.user, PermissionChoice.PORTAL_MANAGE_ASSET_COLUMNS, raise_exception=True)
-    check_permission(request.user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES, raise_exception=True)
+    check_permission(
+        request.user, PermissionChoice.PORTAL_MANAGE_ASSET_COLUMNS, raise_exception=True, publisher=request.publisher
+    )
+    check_permission(
+        request.user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES, raise_exception=True, publisher=request.publisher
+    )
 
 
 _ASSET_NOT_FOUND = (

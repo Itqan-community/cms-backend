@@ -1075,17 +1075,17 @@ class PipelineQuranTextAdmin(AuditedModelAdmin):
 
 @admin.register(AssetVersionEntry)
 class AssetVersionEntryAdmin(PipelineQuranTextAdmin):
-    list_display = ["version", "sura", "ayah", "order", "created_at"]
+    list_display = ["version", "surah", "ayah", "order", "created_at"]
     search_fields = ["version__name"]
-    list_filter = ["sura"]
+    list_filter = ["surah"]
     raw_id_fields = ["version"]
 
 
 @admin.register(AssetVersionChange)
 class AssetVersionChangeAdmin(PipelineQuranTextAdmin):
-    list_display = ["version", "change_type", "sura", "ayah", "order", "created_at"]
+    list_display = ["version", "change_type", "surah", "ayah", "order", "created_at"]
     search_fields = ["version__name"]
-    list_filter = ["change_type", "sura"]
+    list_filter = ["change_type", "surah"]
     raw_id_fields = ["version"]
 
 

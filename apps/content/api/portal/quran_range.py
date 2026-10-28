@@ -47,7 +47,9 @@ def quran_range(
     to_word: int | None = None,
 ):
     """The ayahs (or, with both word params, the words) of a range, in mushaf order."""
-    check_permission(request.user, PermissionChoice.PORTAL_READ_TAFSIR, raise_exception=True)
+    check_permission(
+        request.user, PermissionChoice.PORTAL_READ_TAFSIR, raise_exception=True, publisher=request.publisher
+    )
     words = from_word is not None or to_word is not None
     spec = unit_spec_for_template(AssetTemplateChoice.WORD_GROUP if words else AssetTemplateChoice.AYAH_GROUP)
     key = spec.key_for_range(
