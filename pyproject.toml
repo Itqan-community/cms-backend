@@ -17,7 +17,7 @@ dependencies = [
     "django-cors-headers>=4.7.0",
     "django-countries>=7.6",
     "django-extended-makemessages>=1.8.0",
-    "django-filter==25.2",
+    "django-filter==26.2",
     "django-modeltranslation==0.20.3",
     "django-ninja==1.5.1",
     "django-oauth-toolkit==3.4.1",
