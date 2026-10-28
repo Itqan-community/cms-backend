@@ -667,14 +667,14 @@ wheels = [
 
 [[package]]
 name = "django-extended-makemessages"
-version = "1.8.0"
+version = "1.12.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6e/57/984f4afdd3843d61bcdc4101deb759d34178ce552588f201c3eea4f68d47/django_extended_makemessages-1.8.0.tar.gz", hash = "sha256:854ccc4ae41869047dfde6fa9b1fb2af7d9a5227f9d501e0844da6842b6bc784", size = 12195, upload-time = "2026-04-03T20:37:13.75Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/19/5d/bdbf6d8c415508d1551bc34d2a69fe27f4b602abbba77f065325effeff48/django_extended_makemessages-1.12.0.tar.gz", hash = "sha256:c125aeb2196408228c14d29888257a65af6bba1e8da808d25d01944549f14b1b", size = 13184, upload-time = "2026-09-23T20:42:44.289Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a1/ff/cfbe6a66c24d9dcbd7ce221ba054aed70ce684c2ff0d0813443c1a57de97/django_extended_makemessages-1.8.0-py3-none-any.whl", hash = "sha256:6e28e384935a3bf0681b41c181233659044615421a9ff3c084631bd590405932", size = 13280, upload-time = "2026-04-03T20:37:12.472Z" },
+    { url = "https://files.pythonhosted.org/packages/fc/98/a6be29655179e1db9ea23834b405976ed6878493be617d04459f26e82da4/django_extended_makemessages-1.12.0-py3-none-any.whl", hash = "sha256:61f19a909004d1bfbfba89dafdc0039cf36e9ec20a5758fe7562e005632be33b", size = 14802, upload-time = "2026-09-23T20:42:43.048Z" },
 ]
 
 [[package]]
