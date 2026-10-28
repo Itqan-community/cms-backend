@@ -30,15 +30,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
         uv sync --frozen --no-install-project; \
     fi
 
-COPY . /app/
-
-# Sync project installation
-RUN --mount=type=cache,target=/root/.cache/uv \
-    if [ "$DEPENDENCY_GROUP" = "prod" ]; then \
-        uv sync --frozen --no-dev --no-default-groups --extra prod; \
-    else \
-        uv sync --frozen; \
-    fi
+# The project itself has no [build-system], so uv never installs it into the
+# venv: the builder only needs the dependencies, and the runtime stage copies
+# the source directly.
 
 FROM python:3.13-slim AS runtime
 
@@ -67,7 +61,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 COPY --from=ghcr.io/astral-sh/uv:0.10.6 /uv /uvx /bin/
 
-COPY --from=builder --chown=appuser:appgroup /app /app
+# Copy the venv and the source as separate layers: the venv only changes with
+# pyproject.toml/uv.lock, so its (large) layer stays cached across code changes.
+COPY --from=builder --chown=appuser:appgroup /app/.venv /app/.venv
+COPY --chown=appuser:appgroup . /app/
 
 COPY deployment/docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh \
