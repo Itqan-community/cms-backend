@@ -162,3 +162,18 @@ class GroupAdminDeleteTest(BaseTestCase):
         # Assert
         self.assertEqual(302, response.status_code, response.content)
         self.assertFalse(Group.objects.filter(pk__in=[first.pk, second.pk]).exists())
+
+
+class GroupAdminFormLabelsTest(BaseTestCase):
+    def test_permissions_field_where_arabic_active_should_label_choices_in_arabic(self) -> None:
+        # Arrange
+        from django.utils import translation
+
+        from apps.users.admin import GroupAdminForm
+
+        # Act
+        with translation.override("ar"):
+            labels = {str(label) for _, label in GroupAdminForm().fields["permissions"].choices}
+
+        # Assert
+        self.assertIn("لوحة التحكم - عرض القراء", labels)
