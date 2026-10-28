@@ -846,16 +846,16 @@ msgid "Portal - Delete Mushafs"
 msgstr "لوحة التحكم - حذف المصاحف"
 
 msgid "Portal - View Mushaf Layouts"
-msgstr "البوابة - عرض تخطيطات المصاحف"
+msgstr "لوحة التحكم - عرض تخطيطات المصاحف"
 
 msgid "Portal - Create Mushaf Layouts"
-msgstr "البوابة - إنشاء تخطيطات المصاحف"
+msgstr "لوحة التحكم - إنشاء تخطيطات المصاحف"
 
 msgid "Portal - Update Mushaf Layouts"
-msgstr "البوابة - تعديل تخطيطات المصاحف"
+msgstr "لوحة التحكم - تعديل تخطيطات المصاحف"
 
 msgid "Portal - Delete Mushaf Layouts"
-msgstr "البوابة - حذف تخطيطات المصاحف"
+msgstr "لوحة التحكم - حذف تخطيطات المصاحف"
 
 msgid "Portal - View Fonts"
 msgstr "لوحة التحكم - عرض الخطوط"
@@ -870,52 +870,52 @@ msgid "Portal - Delete Fonts"
 msgstr "لوحة التحكم - حذف الخطوط"
 
 msgid "Portal - View Publishers"
-msgstr "البوابة - عرض الناشرين"
+msgstr "لوحة التحكم - عرض الناشرين"
 
 msgid "Portal - Create Publishers"
-msgstr "البوابة - إنشاء الناشرين"
+msgstr "لوحة التحكم - إنشاء الناشرين"
 
 msgid "Portal - Update Publishers"
-msgstr "البوابة - تعديل الناشرين"
+msgstr "لوحة التحكم - تعديل الناشرين"
 
 msgid "Portal - Delete Publishers"
-msgstr "البوابة - حذف الناشرين"
+msgstr "لوحة التحكم - حذف الناشرين"
 
 msgid "Portal - View Groups"
-msgstr "البوابة - عرض المجموعات"
+msgstr "لوحة التحكم - عرض المجموعات"
 
 msgid "Portal - Create Groups"
-msgstr "البوابة - إنشاء المجموعات"
+msgstr "لوحة التحكم - إنشاء المجموعات"
 
 msgid "Portal - Update Groups"
-msgstr "البوابة - تعديل المجموعات"
+msgstr "لوحة التحكم - تعديل المجموعات"
 
 msgid "Portal - Delete Groups"
-msgstr "البوابة - حذف المجموعات"
+msgstr "لوحة التحكم - حذف المجموعات"
 
 msgid "Portal - View Publisher Members"
-msgstr "البوابة - عرض أعضاء الناشر"
+msgstr "لوحة التحكم - عرض أعضاء الناشر"
 
 msgid "Portal - Invite Publisher Members"
-msgstr "البوابة - دعوة أعضاء الناشر"
+msgstr "لوحة التحكم - دعوة أعضاء الناشر"
 
 msgid "Portal - Update Publisher Members"
-msgstr "البوابة - تعديل أعضاء الناشر"
+msgstr "لوحة التحكم - تعديل أعضاء الناشر"
 
 msgid "Portal - Delete Publisher Members"
-msgstr "البوابة - حذف أعضاء الناشر"
+msgstr "لوحة التحكم - حذف أعضاء الناشر"
 
 msgid "Portal - View Access Requests"
-msgstr "البوابة - عرض طلبات الوصول"
+msgstr "لوحة التحكم - عرض طلبات الوصول"
 
 msgid "Portal - Accept or Reject Access Requests"
-msgstr "البوابة - قبول أو رفض طلبات الوصول"
+msgstr "لوحة التحكم - قبول أو رفض طلبات الوصول"
 
 msgid "Portal - Manage Access Requests Settings"
-msgstr "البوابة - إدارة إعدادات طلبات الوصول"
+msgstr "لوحة التحكم - إدارة إعدادات طلبات الوصول"
 
 msgid "Portal - View Usage Statistics"
-msgstr "البوابة - عرض إحصائيات الاستخدام"
+msgstr "لوحة التحكم - عرض إحصائيات الاستخدام"
 
 msgid "Portal - Review Content"
 msgstr "لوحة التحكم - مراجعة المحتوى"
@@ -924,7 +924,7 @@ msgid "Portal - Publish Content"
 msgstr "لوحة التحكم - نشر المحتوى"
 
 msgid "Portal - Remove Package Versions"
-msgstr "البوابة - إزالة إصدارات الحزم"
+msgstr "لوحة التحكم - إزالة إصدارات الحزم"
 
 msgid "Portal - Edit Translation Content"
 msgstr "لوحة التحكم - تحرير محتوى الترجمات"
@@ -939,7 +939,7 @@ msgid "Portal - Add Asset Language"
 msgstr "لوحة التحكم - إضافة لغة إلى الأصل"
 
 msgid "Portal - Manage Asset Columns"
-msgstr "البوابة - إدارة أعمدة الأصول"
+msgstr "لوحة التحكم - إدارة أعمدة الأصول"
 
 msgid "Created"
 msgstr "تم الإنشاء"
