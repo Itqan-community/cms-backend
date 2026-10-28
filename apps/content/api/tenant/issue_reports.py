@@ -1,6 +1,7 @@
 import logging
 from typing import Annotated, Literal
 
+from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
@@ -46,6 +47,11 @@ def _get_service() -> IssueReportService:
     return IssueReportService(IssueReportRepository())
 
 
+def _publisher_scope(request: Request) -> Q:
+    """The tenant publisher's reports; none at all when the request resolved no tenant domain."""
+    return request.publisher_q() if request.publisher else Q(pk__in=[])
+
+
 @router.post("issue-reports/", response={201: IssueReportOut}, auth=internal_auth)
 def create_issue_report(request: Request, data: IssueReportCreateIn):
     logger.info(f"Creating issue report [asset_id={data.asset_id}, user_id={request.user.id}]")
@@ -63,7 +69,7 @@ def create_issue_report(request: Request, data: IssueReportCreateIn):
 @ordering(ordering_fields=["created_at", "status"])
 def list_issue_reports(request: Request, filters: IssueReportFilter = Query()):
     return _get_service().get_issue_reports(
-        publisher_q=request.publisher_q(),
+        publisher_q=_publisher_scope(request),
         filters=filters,
     )
 
@@ -73,7 +79,7 @@ def list_issue_reports(request: Request, filters: IssueReportFilter = Query()):
     response={200: IssueReportOut, 404: NinjaErrorResponse[Literal["report_not_found"]]},
 )
 def get_issue_report(request: Request, report_id: int):
-    report = _get_service().get_issue_report(report_id, publisher_q=request.publisher_q())
+    report = _get_service().get_issue_report(report_id, publisher_q=_publisher_scope(request))
     if not report:
         raise ItqanError(error_name="report_not_found", message=_("Issue report not found."), status_code=404)
     return report
@@ -89,7 +95,7 @@ def update_issue_report(request: Request, report_id: int, data: IssueReportUpdat
         report_id=report_id,
         user=request.user,
         description=data.description,
-        publisher_q=request.publisher_q(),
+        publisher_q=_publisher_scope(request),
     )
     logger.info(f"Issue report updated [report_id={report_id}, user_id={request.user.id}]")
     return report
@@ -102,6 +108,6 @@ def update_issue_report(request: Request, report_id: int, data: IssueReportUpdat
 )
 def delete_issue_report(request: Request, report_id: int):
     logger.info(f"Deleting issue report [report_id={report_id}, user_id={request.user.id}]")
-    _get_service().delete_issue_report(report_id=report_id, user=request.user, publisher_q=request.publisher_q())
+    _get_service().delete_issue_report(report_id=report_id, user=request.user, publisher_q=_publisher_scope(request))
     logger.info(f"Issue report deleted [report_id={report_id}, user_id={request.user.id}]")
     return 204, None

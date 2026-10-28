@@ -228,3 +228,28 @@ class IssueReportTenantApiTests(BaseTestCase):
         self.assertEqual(404, response.status_code, response.content)
         self.assertEqual("report_not_found", response.json()["error_name"])
         self.assertTrue(ContentIssueReport.objects.filter(id=report.id).exists())
+
+    def test_list_issue_reports_where_no_tenant_domain_should_return_nothing(self):
+        # Arrange
+        self._create_report()
+        self._create_report(asset=self.asset2)
+        self.authenticate_user(self.user)
+
+        # Act
+        response = self.client.get("/tenant/issue-reports/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual([], response.json()["results"])
+
+    def test_get_issue_report_where_no_tenant_domain_should_return_404(self):
+        # Arrange
+        report = self._create_report()
+        self.authenticate_user(self.user)
+
+        # Act
+        response = self.client.get(f"/tenant/issue-reports/{report.id}/")
+
+        # Assert
+        self.assertEqual(404, response.status_code, response.content)
+        self.assertEqual("report_not_found", response.json()["error_name"])
