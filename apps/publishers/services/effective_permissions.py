@@ -27,7 +27,7 @@ from apps.publishers.models import Publisher, PublisherMember
 if TYPE_CHECKING:
     from apps.users.models import User
 
-__all__ = ["effective_permissions", "effective_permissions_by_publisher"]
+__all__ = ["effective_permissions", "effective_permissions_by_publisher", "permissions_across_memberships"]
 
 _CACHE_ATTR = "_effective_perm_cache"
 _GLOBAL = "global"
@@ -75,6 +75,23 @@ def effective_permissions_by_publisher(user: User, publisher_ids: Iterable[int])
         for publisher_id, codenames in by_publisher.items():
             cache[publisher_id] = global_perms | frozenset(codenames)
     return {publisher_id: cache[publisher_id] for publisher_id in publisher_ids}
+
+
+def permissions_across_memberships(user: User) -> frozenset[str]:
+    """Global permissions plus every ACTIVE membership's role, merged.
+
+    Only for display compatibility (the profile's ``permissions``): it is the union the portal
+    showed before roles were scoped per publisher. Never use it to authorize a request.
+    """
+    if not _is_active_user(user):
+        return frozenset()
+    publisher_ids = PublisherMember.objects.filter(user=user, status=PublisherMember.StatusChoice.ACTIVE).values_list(
+        "publisher_id", flat=True
+    )
+    merged = set(effective_permissions(user, None))
+    for codenames in effective_permissions_by_publisher(user, publisher_ids).values():
+        merged |= codenames
+    return frozenset(merged)
 
 
 def _global_permissions(user: User) -> frozenset[str]:

@@ -18,6 +18,7 @@ from apps.core.permission_utils import permission_class
 from apps.core.permissions import PermissionChoice
 from apps.publishers.models import Publisher
 from apps.publishers.repositories.publisher import PublisherRepository
+from apps.publishers.services.effective_permissions import effective_permissions_by_publisher
 from apps.publishers.services.membership import enforce_publisher_membership
 from apps.publishers.services.publisher import PublisherService
 
@@ -95,6 +96,12 @@ class MyPublisherOut(Schema):
     name: str
     slug: str
     icon_url: AbsoluteUrl | None = None
+    # What the caller may do at this publisher; the portal gates its UI on the selected one.
+    permissions: list[str]
+
+    @staticmethod
+    def resolve_permissions(obj: Publisher) -> list[str]:
+        return sorted(obj.effective_permissions)
 
 
 @router.get("publishers/me/", response=list[MyPublisherOut])
@@ -102,7 +109,11 @@ class MyPublisherOut(Schema):
 def list_my_publishers(request: Request) -> list[Publisher]:
     """Returns all publishers the authenticated user is a member of. Needs only portal
     access: the portal shell picks its tenant from this list before anything else loads."""
-    return list(Publisher.objects.filter(request.publisher_q("id")).order_by("name"))
+    publishers = list(Publisher.objects.filter(request.publisher_q("id")).order_by("name"))
+    by_publisher = effective_permissions_by_publisher(request.user, [publisher.id for publisher in publishers])
+    for publisher in publishers:
+        publisher.effective_permissions = by_publisher[publisher.id]
+    return publishers
 
 
 # --- List Publishers ---
