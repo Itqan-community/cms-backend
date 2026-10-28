@@ -10,7 +10,7 @@ description = "Itqan CMS Backend"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "boto3==1.40.*",
+    "boto3==1.43.*",
     "celery==5.5.*",
     "django-allauth[mfa,socialaccount,headless,headless-spec]==65.16.1",
     "django-celery-beat==2.9.*",
