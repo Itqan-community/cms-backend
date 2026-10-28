@@ -224,7 +224,9 @@ def create_translation_version(
     # language is optional; omitting it targets the asset's source language.
     require_language(request.user, asset, data.language or asset.language)
     if data.pre_approved:
-        check_permission(request.user, PermissionChoice.PORTAL_REVIEW_CONTENT, raise_exception=True)
+        check_permission(
+            request.user, PermissionChoice.PORTAL_REVIEW_CONTENT, raise_exception=True, publisher=request.publisher
+        )
     version = service.create_translation_version(
         translation_slug,
         text=VersionText.from_data(data),
@@ -284,7 +286,12 @@ def update_translation_version_put(
     fields.pop("asset_id", None)
     if file:
         # Replacing the file changes the text; renaming or re-describing does not.
-        check_permission(request.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT, raise_exception=True)
+        check_permission(
+            request.user,
+            PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT,
+            raise_exception=True,
+            publisher=request.publisher,
+        )
         fields["file_url"] = file
 
     require_version_id(request.user, asset, version_id)
@@ -338,7 +345,12 @@ def update_translation_version_patch(
     fields.pop("asset_id", None)
     if file:
         # Replacing the file changes the text; renaming or re-describing does not.
-        check_permission(request.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT, raise_exception=True)
+        check_permission(
+            request.user,
+            PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT,
+            raise_exception=True,
+            publisher=request.publisher,
+        )
         fields["file_url"] = file
 
     require_version_id(request.user, asset, version_id)

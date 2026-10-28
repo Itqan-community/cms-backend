@@ -47,7 +47,9 @@ class RemoveIn(Schema):
 def remove_package_version(request: Request, version_id: int, data: RemoveIn):
     """Remove a version for good (Itqan admins): it is never installed or served
     again, and lockfiles pinned to it fail with ``version_removed``."""
-    check_permission(request.user, PermissionChoice.PORTAL_REMOVE_PACKAGE_VERSION, raise_exception=True)
+    check_permission(
+        request.user, PermissionChoice.PORTAL_REMOVE_PACKAGE_VERSION, raise_exception=True, publisher=request.publisher
+    )
     service = PackageRegistryService()
     version = service.get_portal_version(version_id, publisher_q=request.publisher_q("asset__publisher"))
     version: AssetVersion = service.remove_version(version, user=request.user, reason=data.reason.strip())
@@ -83,7 +85,9 @@ class ReinstateIn(Schema):
 def reinstate_package_version(request: Request, version_id: int, data: ReinstateIn):
     """Undo a removal (Itqan admins). The version returns to the status the
     publishing rules give it, so lockfiles pinned to it install again."""
-    check_permission(request.user, PermissionChoice.PORTAL_REMOVE_PACKAGE_VERSION, raise_exception=True)
+    check_permission(
+        request.user, PermissionChoice.PORTAL_REMOVE_PACKAGE_VERSION, raise_exception=True, publisher=request.publisher
+    )
     service = PackageRegistryService()
     version = service.get_portal_version(version_id, publisher_q=request.publisher_q("asset__publisher"))
     status = service.reinstate_version(version, reason=data.reason.strip())

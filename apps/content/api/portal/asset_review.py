@@ -106,7 +106,9 @@ def _resolve_review(category: str, request: Request) -> CategoryChoice:
             message=_("Unsupported content category: {category}").format(category=category),
             status_code=404,
         )
-    check_permission(request.user, PermissionChoice.PORTAL_REVIEW_CONTENT, raise_exception=True)
+    check_permission(
+        request.user, PermissionChoice.PORTAL_REVIEW_CONTENT, raise_exception=True, publisher=request.publisher
+    )
     return config[0]
 
 
