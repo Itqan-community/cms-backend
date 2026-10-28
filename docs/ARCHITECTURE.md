@@ -450,7 +450,7 @@ from the parsed entries, so consumers download exactly what was reviewed.
   the rows per served version. No access grant is needed; a language
   consumers can't see, or another category, is 404 `file_structure_unavailable`.
   The other categories get their own anonymous samples, also without an access grant.
-  `assets/{id}/recitation-preview/` returns the first 3 tracks of a READY
+  `assets/{id}/recitation-preview/` returns up to the first 3 tracks of a READY
   recitation's default folder (while it is visible) with playable URLs, or 404
   `recitation_preview_unavailable`. `assets/{id}/font-preview/?language=` returns a
   READY font's published file (`font_url`, `file_name`, CSS `format`) and Al-Fatiha's
