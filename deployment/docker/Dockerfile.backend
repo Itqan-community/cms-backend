@@ -30,15 +30,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
         uv sync --frozen --no-install-project; \
     fi
 
-COPY . /app/
-
-# Sync project installation
-RUN --mount=type=cache,target=/root/.cache/uv \
-    if [ "$DEPENDENCY_GROUP" = "prod" ]; then \
-        uv sync --frozen --no-dev --no-default-groups --extra prod; \
-    else \
-        uv sync --frozen; \
-    fi
+# The project itself has no [build-system], so uv never installs it into the
+# venv: the builder only needs the dependencies, and the runtime stage copies
+# the source directly.
 
 FROM python:3.13-slim AS runtime
 
