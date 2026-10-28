@@ -530,6 +530,12 @@ msgstr "تحتاج اللغة إلى إصدار منشور واحد على ال�
 msgid "You are not assigned to the language {language}."
 msgstr "لم يتم تعيينك للغة {language}."
 
+msgid "This recitation has no tracks to preview."
+msgstr "لا توجد مقاطع لمعاينة هذه التلاوة."
+
+msgid "This font has no file to preview in this language."
+msgstr "لا يوجد ملف لمعاينة هذا الخط بهذه اللغة."
+
 msgid "One or more changes were not found."
 msgstr "لم يتم العثور على تغيير واحد أو أكثر."
 
