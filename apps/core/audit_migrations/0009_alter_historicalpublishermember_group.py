@@ -8,8 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('auth', '0012_alter_user_first_name_max_length'),
-        ('simple_history', '0007_remove_historicalapikey_hashed_key_and_more'),
-        ('simple_history', '0007_rename_sura_to_surah'),
+        ('simple_history', '0008_merge_audit_0007'),
     ]
 
     operations = [
