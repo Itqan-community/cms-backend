@@ -1303,8 +1303,8 @@ msgid "Select a publisher first."
 msgstr "اختر ناشرًا أولًا."
 
 #, python-brace-format
-msgid "Group with id {id} not found."
-msgstr "لم يتم العثور على المجموعة بالمعرّف {id}."
+msgid "Role with id {id} not found."
+msgstr "لم يتم العثور على الدور بالمعرّف {id}."
 
 msgid "The given email must be set"
 msgstr "يجب تحديد البريد الإلكتروني"
@@ -1377,25 +1377,25 @@ msgid "API key name must not exceed %(max)d characters."
 msgstr "اسم مفتاح API يجب ألا يتجاوز %(max)d حرفاً."
 
 #, python-brace-format
-msgid "Group with id {id} is not available for assignment."
-msgstr "المجموعة ذات المعرّف {id} غير متاحة للتعيين."
+msgid "Role with id {id} is not available for assignment."
+msgstr "الدور ذو المعرّف {id} غير متاح للتعيين."
 
-msgid "This group is assigned to members and cannot be deleted."
-msgstr "هذه المجموعة مسندة إلى أعضاء ولا يمكن حذفها."
+msgid "This role is assigned to members and cannot be deleted."
+msgstr "هذا الدور مسند إلى أعضاء ولا يمكن حذفه."
 
-msgid "A group with this name already exists."
-msgstr "توجد مجموعة بهذا الاسم بالفعل."
+msgid "A role with this name already exists."
+msgstr "يوجد دور بهذا الاسم بالفعل."
 
 #, python-brace-format
 msgid "You cannot grant permissions you do not hold: {permissions}."
 msgstr "لا يمكنك منح صلاحيات لا تملكها: {permissions}."
 
-msgid "Group name must not be empty."
-msgstr "اسم المجموعة لا يمكن أن يكون فارغاً."
+msgid "Role name must not be empty."
+msgstr "اسم الدور لا يمكن أن يكون فارغًا."
 
 #, python-format
-msgid "Group name must not exceed %(max)d characters."
-msgstr "اسم المجموعة يجب ألا يتجاوز %(max)d حرفاً."
+msgid "Role name must not exceed %(max)d characters."
+msgstr "اسم الدور يجب ألا يتجاوز %(max)d حرفًا."
 
 #, python-brace-format
 msgid "Unknown permissions: {permissions}."
@@ -1845,6 +1845,27 @@ msgstr[2] "مدخلان"
 msgstr[3] "مدخلات"
 msgstr[4] "مدخلاً"
 msgstr[5] "مدخل"
+
+#, python-brace-format
+#~ msgid "Group with id {id} not found."
+#~ msgstr "لم يتم العثور على المجموعة بالمعرّف {id}."
+
+#, python-brace-format
+#~ msgid "Group with id {id} is not available for assignment."
+#~ msgstr "المجموعة ذات المعرّف {id} غير متاحة للتعيين."
+
+#~ msgid "This group is assigned to members and cannot be deleted."
+#~ msgstr "هذه المجموعة مسندة إلى أعضاء ولا يمكن حذفها."
+
+#~ msgid "A group with this name already exists."
+#~ msgstr "توجد مجموعة بهذا الاسم بالفعل."
+
+#~ msgid "Group name must not be empty."
+#~ msgstr "اسم المجموعة لا يمكن أن يكون فارغاً."
+
+#, python-format
+#~ msgid "Group name must not exceed %(max)d characters."
+#~ msgstr "اسم المجموعة يجب ألا يتجاوز %(max)d حرفاً."
 
 #~ msgid "Portal - View Groups"
 #~ msgstr "البوابة - عرض المجموعات"

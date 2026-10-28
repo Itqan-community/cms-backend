@@ -95,7 +95,7 @@ class GroupAdminValidationTest(BaseTestCase):
 
         # Assert
         self.assertEqual(200, response.status_code)
-        self.assertContains(response, "A group with this name already exists.")
+        self.assertContains(response, "A role with this name already exists.")
         self.assertEqual(1, Group.objects.filter(name="Editors").count())
 
     def test_clean_name_where_blank_should_show_form_error_and_not_create(self) -> None:

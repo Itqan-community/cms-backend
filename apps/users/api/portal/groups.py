@@ -197,7 +197,7 @@ def retrieve_group(request: Request, group_id: int) -> Group:
     if group is None:
         raise ItqanError(
             error_name="group_not_found",
-            message=_("Group with id {id} not found.").format(id=group_id),
+            message=_("Role with id {id} not found.").format(id=group_id),
             status_code=404,
         )
     return group

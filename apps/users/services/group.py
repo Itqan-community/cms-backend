@@ -49,7 +49,7 @@ class GroupService:
         if group is None:
             raise ItqanError(
                 error_name="invalid_group",
-                message=_("Group with id {id} is not available for assignment.").format(id=group_id),
+                message=_("Role with id {id} is not available for assignment.").format(id=group_id),
                 status_code=400,
             )
         return group
@@ -88,7 +88,7 @@ class GroupService:
         except ProtectedError as exc:
             raise ItqanError(
                 error_name="group_in_use",
-                message=_("This group is assigned to members and cannot be deleted."),
+                message=_("This role is assigned to members and cannot be deleted."),
                 status_code=400,
             ) from exc
 
@@ -105,7 +105,7 @@ class GroupService:
         if self.repo.name_exists(name, exclude_id=exclude_id, publisher_id=publisher_id, language=language):
             raise ItqanError(
                 error_name="group_already_exists",
-                message=_("A group with this name already exists."),
+                message=_("A role with this name already exists."),
                 status_code=400,
             )
         return name
@@ -145,7 +145,7 @@ class GroupService:
         if group is None:
             raise ItqanError(
                 error_name="group_not_found",
-                message=_("Group with id {id} not found.").format(id=group_id),
+                message=_("Role with id {id} not found.").format(id=group_id),
                 status_code=404,
             )
         return group
@@ -156,13 +156,13 @@ class GroupService:
         if not name:
             raise ItqanError(
                 error_name="group_name_required",
-                message=_("Group name must not be empty."),
+                message=_("Role name must not be empty."),
                 status_code=400,
             )
         if len(name) > _NAME_MAX_LENGTH:
             raise ItqanError(
                 error_name="group_name_too_long",
-                message=_("Group name must not exceed %(max)d characters.") % {"max": _NAME_MAX_LENGTH},
+                message=_("Role name must not exceed %(max)d characters.") % {"max": _NAME_MAX_LENGTH},
                 status_code=400,
             )
         return name
