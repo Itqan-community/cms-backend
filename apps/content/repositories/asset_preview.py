@@ -20,5 +20,5 @@ class AssetPreviewRepository:
     def consumer_rendition(self, asset: Asset, language: str) -> AssetLanguage | None:
         return AssetColumnRepository().consumer_rendition(asset, language)
 
-    def sura_ayahs(self, sura: int) -> list[Ayah]:
-        return list(Ayah.objects.filter(sura_id=sura).order_by("number_in_sura"))
+    def surah_ayahs(self, surah: int) -> list[Ayah]:
+        return list(Ayah.objects.filter(surah_id=surah).order_by("number_in_surah"))

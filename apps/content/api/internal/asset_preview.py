@@ -80,5 +80,5 @@ def asset_font_preview(request: Request, id: int, language: str | None = None):
         "font_url": preview.url,
         "file_name": preview.file_name,
         "format": preview.format,
-        "sample": [{"ayah": ayah.number_in_sura, "text": ayah.text} for ayah in preview.sample],
+        "sample": [{"ayah": ayah.number_in_surah, "text": ayah.text} for ayah in preview.sample],
     }

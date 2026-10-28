@@ -25,8 +25,8 @@ from apps.quran.models import Ayah
 logger = logging.getLogger(__name__)
 
 PREVIEW_TRACKS = 3
-# The sura whose ayahs a font preview is set in: Al-Fatiha.
-SAMPLE_SURA = 1
+# The surah whose ayahs a font preview is set in: Al-Fatiha.
+SAMPLE_SURAH = 1
 
 # CSS @font-face format per extension, in the order a zip's members are preferred.
 FONT_FORMATS = {".woff2": "woff2", ".woff": "woff", ".ttf": "truetype", ".otf": "opentype"}
@@ -96,7 +96,7 @@ class AssetPreviewService:
             url=self._file_url(asset, file, request),
             file_name=file_name,
             format=FONT_FORMATS[PurePosixPath(file_name).suffix.lower()],
-            sample=self.repo.sura_ayahs(SAMPLE_SURA),
+            sample=self.repo.surah_ayahs(SAMPLE_SURAH),
         )
 
     def _extracted_font(self, version: AssetVersion) -> str | None:
