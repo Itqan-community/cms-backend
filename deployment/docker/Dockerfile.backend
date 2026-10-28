@@ -67,7 +67,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 COPY --from=ghcr.io/astral-sh/uv:0.10.6 /uv /uvx /bin/
 
-COPY --from=builder --chown=appuser:appgroup /app /app
+# Copy the venv and the source as separate layers: the venv only changes with
+# pyproject.toml/uv.lock, so its (large) layer stays cached across code changes.
+COPY --from=builder --chown=appuser:appgroup /app/.venv /app/.venv
+COPY --chown=appuser:appgroup . /app/
 
 COPY deployment/docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh \
