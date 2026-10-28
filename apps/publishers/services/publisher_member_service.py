@@ -31,7 +31,7 @@ class PublisherMemberService:
         if new_group_id is not None and new_group_id != member.group_id:
             # The membership carries the role; permissions are resolved from it per publisher,
             # so user.groups is left alone.
-            self.repo.set_group(member, self.groups.resolve_assignable_group(new_group_id))
+            self.repo.set_group(member, self.groups.resolve_assignable_group(new_group_id, member.publisher_id))
         return member
 
     @transaction.atomic

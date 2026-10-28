@@ -21,12 +21,12 @@ class AcceptanceCriteriaTest(BaseTestCase):
         PublisherMember.objects.create(
             user=self.admin,
             publisher=self.p1,
-            group=admin_group(),
+            group=admin_group(publisher=self.p1),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
 
     def _invite_via_service(self, publisher, email, group=None):
-        group = group or member_group()
+        group = group or member_group(publisher=self.p1)
         with (
             patch(
                 "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_invitation_email.delay"
@@ -53,7 +53,7 @@ class AcceptanceCriteriaTest(BaseTestCase):
                     "publisher_id": self.p1.id,
                     "name": "E1",
                     "email": "e1@example.com",
-                    "group_id": member_group().id,
+                    "group_id": member_group(publisher=self.p1).id,
                 },
                 content_type="application/json",
             )
@@ -69,7 +69,9 @@ class AcceptanceCriteriaTest(BaseTestCase):
         member, inv, raw = self._invite_via_service(
             self.p1,
             "e2@example.com",
-            group=member_group(PermissionChoice.PORTAL_ACCESS, PermissionChoice.PORTAL_VIEW_PUBLISHER_MEMBERS),
+            group=member_group(
+                PermissionChoice.PORTAL_ACCESS, PermissionChoice.PORTAL_VIEW_PUBLISHER_MEMBERS, publisher=self.p1
+            ),
         )
         with (
             patch(
@@ -97,7 +99,9 @@ class AcceptanceCriteriaTest(BaseTestCase):
             self.p1,
             "boss@example.com",
             group=admin_group(
-                PermissionChoice.PORTAL_UPDATE_PUBLISHER_MEMBERS, PermissionChoice.PORTAL_DELETE_PUBLISHER_MEMBERS
+                PermissionChoice.PORTAL_UPDATE_PUBLISHER_MEMBERS,
+                PermissionChoice.PORTAL_DELETE_PUBLISHER_MEMBERS,
+                publisher=self.p1,
             ),
         )
         with (
@@ -119,7 +123,7 @@ class AcceptanceCriteriaTest(BaseTestCase):
         other = PublisherMember.objects.create(
             user=baker.make(User),
             publisher=p2,
-            group=member_group(),
+            group=member_group(publisher=self.p1),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         self.authenticate_user(self.admin)
@@ -133,7 +137,7 @@ class AcceptanceCriteriaTest(BaseTestCase):
         PublisherMember.objects.create(
             user=baker.make(User),
             publisher=p2,
-            group=member_group(),
+            group=member_group(publisher=self.p1),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         itqan = baker.make(User, is_staff=True)
@@ -175,6 +179,9 @@ class AcceptanceCriteriaTest(BaseTestCase):
             self.captureOnCommitCallbacks(execute=True),
         ):
             PublisherMemberInvitationService().create_invitation(
-                publisher=self.p1, email="active@example.com", group_id=member_group().id, invited_by=self.admin
+                publisher=self.p1,
+                email="active@example.com",
+                group_id=member_group(publisher=self.p1).id,
+                invited_by=self.admin,
             )
         self.assertEqual("already_a_member", ctx.exception.error_name)

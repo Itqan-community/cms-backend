@@ -23,7 +23,7 @@ class MemberServiceTest(BaseTestCase):
         return PublisherMember.objects.create(
             user=user or baker.make(User),
             publisher=publisher or self.publisher,
-            group=group or member_group(),
+            group=group or member_group(publisher=self.publisher),
             status=status,
         )
 
@@ -32,10 +32,10 @@ class MemberServiceTest(BaseTestCase):
 
     def test_update_member_where_group_changed_should_switch_permissions(self):
         # Arrange
-        member = self._member(group=member_group(READ))
+        member = self._member(group=member_group(READ, publisher=self.publisher))
 
         # Act
-        new_group = admin_group(UPDATE_MEMBERS)
+        new_group = admin_group(UPDATE_MEMBERS, publisher=self.publisher)
         self.service.update_member(member, fields={"group_id": new_group.id, "name": "Jane"})
 
         # Assert
@@ -49,7 +49,7 @@ class MemberServiceTest(BaseTestCase):
 
     def test_update_member_where_group_is_itqan_internal_should_reject(self):
         # Arrange
-        member = self._member(group=member_group())
+        member = self._member(group=member_group(publisher=self.publisher))
 
         # Act
         with self.assertRaises(ItqanError) as ctx:
@@ -58,26 +58,28 @@ class MemberServiceTest(BaseTestCase):
         # Assert
         self.assertEqual("invalid_group", ctx.exception.error_name)
         member.refresh_from_db()
-        self.assertEqual(member_group().id, member.group_id)
+        self.assertEqual(member_group(publisher=self.publisher).id, member.group_id)
 
     def test_update_member_where_member_pending_should_grant_nothing(self):
         # Arrange
-        member = self._member(group=member_group(), status=PublisherMember.StatusChoice.PENDING)
+        member = self._member(group=member_group(publisher=self.publisher), status=PublisherMember.StatusChoice.PENDING)
 
         # Act
-        self.service.update_member(member, fields={"group_id": admin_group(UPDATE_MEMBERS).id})
+        self.service.update_member(
+            member, fields={"group_id": admin_group(UPDATE_MEMBERS, publisher=self.publisher).id}
+        )
 
         # Assert: the group is recorded, but nothing is granted before acceptance.
         member.refresh_from_db()
-        self.assertEqual(admin_group().id, member.group_id)
+        self.assertEqual(admin_group(publisher=self.publisher).id, member.group_id)
         self.assertEqual(frozenset(), self._perms(member.user, self.publisher))
 
     def test_update_member_should_not_touch_user_groups(self):
         # Arrange
-        member = self._member(group=member_group())
+        member = self._member(group=member_group(publisher=self.publisher))
 
         # Act
-        self.service.update_member(member, fields={"group_id": admin_group().id})
+        self.service.update_member(member, fields={"group_id": admin_group(publisher=self.publisher).id})
 
         # Assert: the membership, not user.groups, carries the role.
         self.assertEqual(0, member.user.groups.count())
@@ -86,11 +88,13 @@ class MemberServiceTest(BaseTestCase):
         # Arrange: one user, two publishers.
         user = baker.make(User)
         other_publisher = baker.make(Publisher)
-        self._member(group=member_group(READ), publisher=other_publisher, user=user)
-        member = self._member(group=member_group(READ), user=user)
+        self._member(group=member_group(READ, publisher=self.publisher), publisher=other_publisher, user=user)
+        member = self._member(group=member_group(READ, publisher=self.publisher), user=user)
 
         # Act: change only this membership's group.
-        self.service.update_member(member, fields={"group_id": admin_group(UPDATE_MEMBERS).id})
+        self.service.update_member(
+            member, fields={"group_id": admin_group(UPDATE_MEMBERS, publisher=self.publisher).id}
+        )
 
         # Assert: the other publisher is unaffected, and this one's new role doesn't leak there.
         other_perms = self._perms(user, other_publisher)
@@ -99,7 +103,7 @@ class MemberServiceTest(BaseTestCase):
 
     def test_delete_member_where_only_membership_should_remove_permissions(self):
         # Arrange
-        member = self._member(group=member_group(READ))
+        member = self._member(group=member_group(READ, publisher=self.publisher))
         user = member.user
 
         # Act
@@ -112,8 +116,8 @@ class MemberServiceTest(BaseTestCase):
         # Arrange: same user and group across two publishers.
         user = baker.make(User)
         other_publisher = baker.make(Publisher)
-        self._member(group=member_group(READ), publisher=other_publisher, user=user)
-        target = self._member(group=member_group(READ), user=user)
+        self._member(group=member_group(READ, publisher=self.publisher), publisher=other_publisher, user=user)
+        target = self._member(group=member_group(READ, publisher=self.publisher), user=user)
 
         # Act
         self.service.delete_member(target)
@@ -134,8 +138,8 @@ class MemberServiceTest(BaseTestCase):
 
     def test_delete_active_admin_should_revoke_permissions(self):
         # Arrange
-        self._member(group=admin_group(UPDATE_MEMBERS))
-        target = self._member(group=admin_group(UPDATE_MEMBERS))
+        self._member(group=admin_group(UPDATE_MEMBERS, publisher=self.publisher))
+        target = self._member(group=admin_group(UPDATE_MEMBERS, publisher=self.publisher))
         user = target.user
 
         # Act

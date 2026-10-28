@@ -45,7 +45,7 @@ class PublisherMemberInvitationService:
         self, *, publisher: Publisher, email: str, group_id: int, invited_by: User, name: str = ""
     ) -> tuple[PublisherMember, PublisherMemberInvitation, str]:
         email = email.lower().strip()
-        group = self.members.groups.resolve_assignable_group(group_id)
+        group = self.members.groups.resolve_assignable_group(group_id, publisher.id)
 
         user = User.objects.filter(email=email).first()
         if user is None:

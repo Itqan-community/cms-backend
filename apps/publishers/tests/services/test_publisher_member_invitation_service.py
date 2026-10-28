@@ -25,7 +25,7 @@ class InvitationServiceTest(BaseTestCase):
 
     def _create(self, email="new@example.com", group=None, publisher=None):
         publisher = publisher or self.publisher
-        group = group or member_group()
+        group = group or member_group(publisher=self.publisher)
         with (
             patch(
                 "apps.publishers.services.publisher_member_invitation_service.send_publisher_member_invitation_email.delay"
@@ -50,7 +50,7 @@ class InvitationServiceTest(BaseTestCase):
         PublisherMember.objects.create(
             user=existing,
             publisher=self.publisher,
-            group=member_group(),
+            group=member_group(publisher=self.publisher),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         with self.assertRaises(ItqanError) as ctx:
@@ -63,7 +63,7 @@ class InvitationServiceTest(BaseTestCase):
         PublisherMember.objects.create(
             user=existing,
             publisher=other_pub,
-            group=member_group(),
+            group=member_group(publisher=self.publisher),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         member, inv, raw, mock_delay = self._create(email="multi@example.com")
@@ -96,7 +96,8 @@ class InvitationServiceTest(BaseTestCase):
 
     def test_accept_admin_activates_sets_password_and_grants_perms(self):
         member, inv, raw, _ = self._create(
-            email="newbie@example.com", group=admin_group(PermissionChoice.PORTAL_UPDATE_PUBLISHER_MEMBERS)
+            email="newbie@example.com",
+            group=admin_group(PermissionChoice.PORTAL_UPDATE_PUBLISHER_MEMBERS, publisher=self.publisher),
         )
         with (
             patch(
@@ -122,7 +123,9 @@ class InvitationServiceTest(BaseTestCase):
     def test_accept_staff_activates_with_read_baseline_only(self):
         member, inv, raw, _ = self._create(
             email="grunt@example.com",
-            group=member_group(PermissionChoice.PORTAL_ACCESS, PermissionChoice.PORTAL_VIEW_PUBLISHER_MEMBERS),
+            group=member_group(
+                PermissionChoice.PORTAL_ACCESS, PermissionChoice.PORTAL_VIEW_PUBLISHER_MEMBERS, publisher=self.publisher
+            ),
         )
         with (
             self.captureOnCommitCallbacks(execute=True),
@@ -171,16 +174,16 @@ class InvitationServiceTest(BaseTestCase):
 
     def test_create_invitation_where_member_pending_with_other_group_should_update_group(self):
         # Arrange
-        member, _, _, _ = self._create(email="changed@example.com", group=member_group())
-        self.assertEqual(member_group().id, member.group_id)
+        member, _, _, _ = self._create(email="changed@example.com", group=member_group(publisher=self.publisher))
+        self.assertEqual(member_group(publisher=self.publisher).id, member.group_id)
 
         # Act
-        updated, _, _, _ = self._create(email="changed@example.com", group=admin_group())
+        updated, _, _, _ = self._create(email="changed@example.com", group=admin_group(publisher=self.publisher))
 
         # Assert
         updated.refresh_from_db()
         self.assertEqual(member.id, updated.id)
-        self.assertEqual(admin_group().id, updated.group_id)
+        self.assertEqual(admin_group(publisher=self.publisher).id, updated.group_id)
 
     def test_accept_where_member_belongs_to_another_publisher_should_keep_both_roles(self):
         # Arrange: same user is already an active admin at another publisher.
@@ -189,11 +192,12 @@ class InvitationServiceTest(BaseTestCase):
         PublisherMember.objects.create(
             user=user,
             publisher=other_publisher,
-            group=admin_group(PermissionChoice.PORTAL_UPDATE_PUBLISHER_MEMBERS),
+            group=admin_group(PermissionChoice.PORTAL_UPDATE_PUBLISHER_MEMBERS, publisher=self.publisher),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         _, _, raw, _ = self._create(
-            email="multi2@example.com", group=member_group(PermissionChoice.PORTAL_READ_RECITER)
+            email="multi2@example.com",
+            group=member_group(PermissionChoice.PORTAL_READ_RECITER, publisher=self.publisher),
         )
 
         # Act

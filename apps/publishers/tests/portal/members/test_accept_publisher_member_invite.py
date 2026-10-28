@@ -26,7 +26,7 @@ class AcceptInviteTest(BaseTestCase):
             member, inv, raw = PublisherMemberInvitationService().create_invitation(
                 publisher=self.publisher,
                 email=email,
-                group_id=member_group().id,
+                group_id=member_group(publisher=self.publisher).id,
                 invited_by=baker.make(User),
             )
         return member, inv, raw
@@ -58,7 +58,7 @@ class AcceptInviteTest(BaseTestCase):
         self.assertEqual("acceptme@example.com", body["email"])
         self.assertEqual("pending", body["status"])
         # The accept page shows the group the invitee is being granted.
-        self.assertEqual(member_group().name, body["group_name"])
+        self.assertEqual(member_group(publisher=self.publisher).name, body["group_name"])
         self.assertNotIn("role", body)
 
     def test_get_invitation_details_invalid_token_returns_400(self):
