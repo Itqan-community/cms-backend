@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+from django.core import mail
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
@@ -7,7 +8,7 @@ from model_bakery import baker
 
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
-from apps.publishers.models import Publisher, PublisherMember, PublisherMemberInvitation
+from apps.publishers.models import Publisher, PublisherGroup, PublisherMember, PublisherMemberInvitation
 from apps.publishers.services.publisher_member_notification_service import PublisherMemberNotificationService
 from apps.publishers.tests.group_helpers import publisher_role
 from apps.users.models import User
@@ -130,6 +131,19 @@ class MemberGroupScopeTest(BaseTestCase):
 
         # Assert
         self.assertEqual("Editors", send.call_args.kwargs["context"]["group_name"])
+
+    def test_send_invitation_email_where_invitee_prefers_arabic_should_use_arabic_role_name(self):
+        # Arrange
+        PublisherGroup.objects.filter(group=self.editors).update(name_ar="المحررون")
+        invitation = self._invitation()
+        User.objects.filter(email="invited@example.com").update(preferred_language="ar")
+
+        # Act
+        PublisherMemberNotificationService().send_invitation_email(invitation.id, "raw-token")
+
+        # Assert
+        self.assertEqual(1, len(mail.outbox))
+        self.assertIn("المحررون", mail.outbox[0].alternatives[0][0])
 
     def test_invitation_group_name_where_role_named_should_return_display_name(self):
         # Arrange, Act & Assert
