@@ -47,19 +47,22 @@ def decode_group_key(key: int) -> tuple[int, int]:
     return divmod(key, GROUP_KEY_BASE)
 
 
-def unit_key_of(values: Sequence[int | None]) -> int:
+def unit_key_of(values: Sequence[int | None]) -> int | None:
     """The unit id of a row from its ``UNIT_VALUE_FIELDS`` values.
 
-    Tested explicitly against ``None`` rather than by truthiness, so a
-    legitimate zero would not fall through to the next unit.
+    ``None`` when no unit or complete range is set (an unsaved row). Tested
+    explicitly against ``None`` rather than by truthiness, so a legitimate
+    zero would not fall through to the next unit.
     """
     sura_id, ayah_id, word_id, page_no, from_ayah_id, to_ayah_id, from_word_id, to_word_id = values
     for unit in (sura_id, ayah_id, word_id, page_no):
         if unit is not None:
             return unit
-    if from_ayah_id is not None:
+    if from_ayah_id is not None and to_ayah_id is not None:
         return encode_group_key(from_ayah_id, to_ayah_id)
-    return encode_group_key(from_word_id, to_word_id)
+    if from_word_id is not None and to_word_id is not None:
+        return encode_group_key(from_word_id, to_word_id)
+    return None
 
 
 def _pair_key(prefix: str) -> F:

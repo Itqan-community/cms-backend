@@ -40,6 +40,28 @@ class GroupUnitModelTests(GroupQuranDataMixin, BaseTestCase):
         self.assertLess(encode_group_key(1, 5), encode_group_key(2, 2))
         self.assertLess(encode_group_key(1, 2), encode_group_key(1, 5))
 
+    def test_unit_id_where_unsaved_entry_has_no_unit_should_return_none(self):
+        # Arrange
+        entry = AssetVersionEntry(version=self.version, column=self.column, text="t")
+
+        # Act
+        unit_id = entry.unit_id
+
+        # Assert
+        self.assertIsNone(unit_id)
+
+    def test_unit_id_where_unsaved_change_has_half_a_range_should_return_none(self):
+        # Arrange
+        change = AssetVersionChange(
+            version=self.version, column=self.column, change_type=ChangeTypeChoice.ADDED, from_word_id=6
+        )
+
+        # Act
+        unit_id = change.unit_id
+
+        # Assert
+        self.assertIsNone(unit_id)
+
     def test_unit_id_where_ayah_range_entry_should_return_encoded_key(self):
         # Arrange
         entry = self._entry(from_ayah_id=1, to_ayah_id=3)
