@@ -703,15 +703,15 @@ wheels = [
 
 [[package]]
 name = "django-modeltranslation"
-version = "0.20.3"
+version = "0.20.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d1/db/a0c18e3053c97176a195ee05891ad2e673c531eba612c8aa09b51333d634/django_modeltranslation-0.20.3.tar.gz", hash = "sha256:53f5e33927b99e184f3100c965c45f306f370b7086c6b34e35468800be0916ea", size = 82061, upload-time = "2026-04-14T05:20:06.561Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a9/b7/049969e77ff4825836c78312b3b82bd58f94162ffe20bc46500f98391731/django_modeltranslation-0.20.6.tar.gz", hash = "sha256:29eb584f017206a0bea5e2a44ae5da514ad6ebf1e43536ff7fed7df67b795b0c", size = 82542, upload-time = "2026-09-07T12:03:24.651Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c0/40/addb85c32031945ebed0545842fffbd9a5604fdc16bd684583e538137cbd/django_modeltranslation-0.20.3-py3-none-any.whl", hash = "sha256:0e1aaf77ce3dcf80c7ec67a6d67821635d07f4849c90363bc0afedb237b014f0", size = 98703, upload-time = "2026-04-14T05:20:04.394Z" },
+    { url = "https://files.pythonhosted.org/packages/ab/55/dfd72b735f50bb633409326311598d9a5bc861ee81ae3d137844ab903add/django_modeltranslation-0.20.6-py3-none-any.whl", hash = "sha256:913658af75510a4f71573441f267b5831a6034c524f917f337adc666a60fe724", size = 99206, upload-time = "2026-09-07T12:03:23.238Z" },
 ]
 
 [[package]]
@@ -1278,7 +1278,7 @@ requires-dist = [
     { name = "django-countries", specifier = ">=7.6" },
     { name = "django-extended-makemessages", specifier = ">=1.8.0" },
     { name = "django-filter", specifier = "==26.2" },
-    { name = "django-modeltranslation", specifier = "==0.20.3" },
+    { name = "django-modeltranslation", specifier = "==0.20.6" },
     { name = "django-ninja", specifier = "==1.5.1" },
     { name = "django-oauth-toolkit", specifier = "==3.4.1" },
     { name = "django-phonenumber-field", extras = ["phonenumbers"], specifier = "==8.4.0" },
