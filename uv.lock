@@ -1054,16 +1054,16 @@ wheels = [
 
 [[package]]
 name = "djangorestframework-stubs"
-version = "3.16.8"
+version = "3.18.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django-stubs" },
     { name = "types-pyyaml" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/78/d5/87166a827833eb39703856ef957ca0fb4e9d15285331251186a2e738c20c/djangorestframework_stubs-3.16.8.tar.gz", hash = "sha256:f6d464b54fa2f929610e957446c04e6ac29558265418e0a2d9f653a4cdd410b5", size = 32312, upload-time = "2026-02-03T22:35:53.182Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/6b/71/a7727b07e0433da02fb1ea22994f492ecb437a1fe7be5bf952dbb545a0f5/djangorestframework_stubs-3.18.1.tar.gz", hash = "sha256:65ed4a9ea094616759a2cba4fe0ad85efe25b471b28281b790bfefb46704c64a", size = 32439, upload-time = "2026-08-25T22:49:27.506Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ea/e9/d9c363b08d07d975c21793fe821b2020dfd3627ac4ce19c5c12df94ce9d0/djangorestframework_stubs-3.16.8-py3-none-any.whl", hash = "sha256:c5bf61def0f330a071dd5f470f05710189d06c467b3f3e186b32c5a23d4952fb", size = 56517, upload-time = "2026-02-03T22:35:50.67Z" },
+    { url = "https://files.pythonhosted.org/packages/f7/1c/e266828fe2b78484651667976f8539e47b4e511a266424b890f613c6b7ad/djangorestframework_stubs-3.18.1-py3-none-any.whl", hash = "sha256:a2021f45f7759b493504c2a721f112ec4fd677753590c1ba346f4ebfb49a7f03", size = 55685, upload-time = "2026-08-25T22:49:26.178Z" },
 ]
 
 [[package]]
