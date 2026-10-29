@@ -35,7 +35,7 @@ dependencies = [
     "mutagen>=1.47.0",
     "ninja-keys>=1.0.1",
     "Pillow>=10.3.0",
-    "psycopg2-binary==2.9.11",
+    "psycopg2-binary==2.9.13",
     "pyjwt==2.15.*",
     "python-decouple==3.8",
     "pyyaml==6.0.*",
