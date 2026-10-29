@@ -219,7 +219,7 @@ def enforce_asset_access_on_public_api(
         )
 
 
-class AssetAccessStatus(str, Enum):
+class AssetAccessStatus(str, Enum):  # noqa: UP042 - StrEnum would change str() output
     NOT_REQUESTED = "not_requested"
     PENDING = "pending"
     APPROVED = "approved"

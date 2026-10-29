@@ -6,7 +6,6 @@ from ninja import Router
 from ninja.constants import NOT_SET, NOT_SET_TYPE
 from ninja.throttling import BaseThrottle
 from ninja.types import TCallable
-from ninja.utils import normalize_path
 
 __all__ = ["ItqanRouter"]
 
@@ -39,20 +38,3 @@ class ItqanRouter(Router):
             response=response,
             **kwargs,
         )
-
-    def build_routers(self, prefix: str) -> list[tuple[str, "Router"]]:
-        # This Code hide errors and show incorrect error
-
-        # if self.api is not None:
-        # from ninja.main import debug_server_url_reimport
-        #
-        # if not debug_server_url_reimport():
-        #     raise ConfigError(
-        #         f"Router@'{prefix}' has already been attached to API" f" {self.api.title}:{self.api.version} "
-        #     )
-        internal_routes = []
-
-        for inter_prefix, inter_router in self._routers:
-            _route = normalize_path(f"{prefix}/{inter_prefix}").lstrip("/")
-            internal_routes.extend(inter_router.build_routers(_route))
-        return [(prefix, self), *internal_routes]
