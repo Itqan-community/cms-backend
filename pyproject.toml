@@ -53,7 +53,7 @@ dev = [
     "django-debug-toolbar==8.0.0",
     "django-extensions==4.1",
     "django-stubs-ext>=5.2.8",
-    "django-stubs[compatible-mypy]==5.2.8",
+    "django-stubs[compatible-mypy]==6.1.2",
     "django-watchfiles>=1.4.0",
     "djangorestframework-stubs>=3.16.8",
     "djlint==1.47.1",
