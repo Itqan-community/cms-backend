@@ -21,7 +21,7 @@ dependencies = [
     "django-modeltranslation==0.20.6",
     "django-ninja==1.7.1",
     "django-oauth-toolkit==3.4.1",
-    "django-phonenumber-field[phonenumbers]==8.4.0",
+    "django-phonenumber-field[phonenumbers]==9.0.0",
     "django-plain-permissions==0.0.2",
     "django-redis==6.0.*",
     "django-simple-history>=3.13.0",
