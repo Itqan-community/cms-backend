@@ -67,7 +67,11 @@ COPY --from=builder --chown=appuser:appgroup /app/.venv /app/.venv
 COPY --chown=appuser:appgroup . /app/
 
 COPY deployment/docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh \
+# Compile the translation catalogs into the image. *.mo is gitignored, and a
+# compilemessages run in a one-off deploy container writes them nowhere the
+# web container can see, so without this every gettext string served English.
+RUN find /app/locale -name '*.po' -execdir sh -c 'for f; do msgfmt --check -o "${f%.po}.mo" "$f" || exit 1; done' _ {} + \
+    && chmod +x /entrypoint.sh \
     && mkdir -p /app/logs /app/staticfiles /app/media \
     && chown -R appuser:appgroup /app/logs /app/staticfiles /app/media
 
