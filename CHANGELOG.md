@@ -1,3 +1,67 @@
+## v0.25.0 (2026-10-29)
+
+### Feat
+
+- **gallery**: recitation and font preview endpoints
+- **users**: return is_staff in the profile
+- **groups**: return each role's permission count
+- **groups**: group the permission list by usage and include each permission's implications
+- **admin**: show permission names in the admin's language
+- **groups**: bilingual role names and translated permission names in the portal API
+- **publishers**: give each role an English and an Arabic name
+- **publishers**: return each publisher's effective permissions from publishers/me
+- **members**: assign only the publisher's own groups and show their display names
+- **groups**: scope portal groups to the request's publisher
+- **auth**: resolve portal permissions per publisher membership
+- **publishers**: give each publisher its own copy of the groups its members use
+- **publishers**: add PublisherGroup to scope permission groups to a publisher
+- **audit**: readable history trail, diffs, and retention policy (ITQ-36) (#434)
+- **content**: edit tafsir groups from the grid
+- **content**: add ayah-group and word-group tafsir templates
+- **usage**: recitation reports for publishers and staff
+- **users**: send emails in the user's preferred language
+
+### Fix
+
+- **gallery**: skip unreadable fonts in a zip instead of failing
+- **gallery**: follow the surah/ayah rename in the font preview
+- **content**: show no tenant issue reports when no tenant domain resolved
+- **usage**: only return the board of a publisher the caller may see
+- **content**: scope issue reports to the request's publisher
+- **usage**: let Itqan staff pick the legacy board's publisher
+- **content**: pass the publisher to the quran range permission check
+- **groups**: call them roles in user-facing messages
+- **i18n**: translate Portal as لوحة التحكم in every permission name
+- **audit**: order the PublisherMember history migration after the audit merge migration
+- **audit**: order the PublisherMember history migration after staging's audit migrations
+- **publishers**: split the role-name migration so it runs on tables with rows
+- **members**: name the publisher and role in each invitee's language
+- **groups**: only newly added permissions count against the grant ceiling
+- **auth**: scope inline permission checks to the request's publisher
+- **audit**: merge the two 0007 audit migrations
+- **content**: point the version entry/change admins at the renamed surah field
+- **audit**: keep no-op saves by other actors when deduplicating history
+- **content**: return None from unit_key_of when no complete unit is set
+- **i18n**: call tafsir groups نطاق in Arabic
+- **publishers**: stop re-seeding publisher groups on every migrate
+- **usage**: rebuild_traffic_rollups waits for the fold-in and maintenance jobs
+- **usage**: reject order=growth for the hour-of-week breakdown
+- **core**: log path-throttle bursts only for web page requests
+- **sentry**: drop Flower's rejected-request errors
+
+### Refactor
+
+- **publishers**: derive member permissions from the membership, not user.groups
+- rename sura/aya to surah/ayah (Marqoom naming)
+
+### Perf
+
+- **docker**: drop the builder's source copy and second uv sync
+- **docker**: copy the venv and the source as separate layers
+- **tests**: use a fast password hasher in tests
+- **content**: load snapshots only when the orphaned-groups check applies
+- **package-manager**: load the catalog's languages and versions per page
+
 ## v0.24.0 (2026-10-25)
 
 ### Feat
