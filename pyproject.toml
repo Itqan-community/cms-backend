@@ -29,7 +29,7 @@ dependencies = [
     "Django==5.2.*",
     "djangorestframework>=3.16.1",
     "djangosaml2idp>=0.7.2",
-    "flower==2.0.*",
+    "flower==2.2.*",
     "httpx==0.28.*",
     "mixpanel>=4.10.1",
     "mutagen>=1.47.0",
