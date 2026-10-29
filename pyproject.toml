@@ -56,7 +56,7 @@ dev = [
     "django-stubs[compatible-mypy]==5.2.8",
     "django-watchfiles>=1.4.0",
     "djangorestframework-stubs>=3.16.8",
-    "djlint==1.36.4",
+    "djlint==1.47.1",
     "freezegun>=1.5.5",
     "ipdb==0.13.13",
     "isort==7.0.*",
