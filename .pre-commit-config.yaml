@@ -55,7 +55,7 @@ repos:
         args: [ --py313-plus ]
 
   - repo: https://github.com/adamchainz/django-upgrade
-    rev: '1.30.0'
+    rev: '1.33.0'
     hooks:
       - id: django-upgrade
         args: ['--target-version', '5.2']
