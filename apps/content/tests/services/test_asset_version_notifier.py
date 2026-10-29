@@ -4,14 +4,14 @@ from model_bakery import baker
 from apps.content.models import Asset, AssetAccess, AssetAccessRequest, AssetVersion
 from apps.content.services.asset_version_notifier import AssetVersionNotifier
 from apps.core.tests.base import BaseTestCase
-from apps.users.models import User
+from apps.users.models import LanguageChoice, User
 
 
 class TestAssetVersionNotifier(BaseTestCase):
     def test_notify_new_version_with_subscribers_should_send_email(self):
         # Arrange
         asset = baker.make(Asset, name="Test Asset", category="mushaf", reciter=None, riwayah=None, qiraah=None)
-        user = baker.make(User, email="subscriber@example.com")
+        user = baker.make(User, email="subscriber@example.com", preferred_language=LanguageChoice.ENGLISH)
         request = baker.make(AssetAccessRequest, developer_user=user, asset=asset, status="approved")
         baker.make(AssetAccess, asset_access_request=request, user=user, asset=asset, effective_license="CC0")
         baker.make(AssetVersion, asset=asset, name="1.0.0")  # prior version so this is an update

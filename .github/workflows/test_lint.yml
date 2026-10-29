@@ -51,7 +51,11 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
+        with:
+          # The runner is thrown away after the job; removing the builder in
+          # the post step only cost time (7-30s).
+          cleanup: false
 
       - name: Create CI .env from example
         run: |
@@ -89,6 +93,10 @@ jobs:
           echo "Contents of .env:"
           cat .env
 
+      # Start the databases now so they boot while the image builds.
+      - name: Start services
+        run: docker compose -f docker-compose.local.yml up -d --no-build postgres audit-postgres redis
+
       - name: Build Django image with layer cache
         uses: docker/build-push-action@v7
         with:
@@ -100,25 +108,35 @@ jobs:
           cache-from: type=gha,scope=django-dev
           cache-to: type=gha,scope=django-dev,mode=max,compression=zstd
 
-      - name: Start services
-        run: docker compose -f docker-compose.local.yml up -d --no-build postgres audit-postgres redis
+      # --wait blocks until the healthchecks pass, so the runs below can use
+      # --no-deps and skip starting rabbitmq (CI points Celery at redis).
+      - name: Wait for services
+        run: docker compose -f docker-compose.local.yml up -d --wait --no-build postgres audit-postgres redis
 
-      - name: Check DB Migrations
-        run: docker compose -f docker-compose.local.yml run --rm django uv run python manage.py makemigrations --check
-      - name: Check Localization
-        run: docker compose -f docker-compose.local.yml run --rm django uv run manage.py extendedmakemessages --no-location --no-wrap --locale=ar --no-fuzzy-matching --keep-header --check
-      - name: Run DB Migrations
-        run: docker compose -f docker-compose.local.yml run --rm django uv run python manage.py migrate
-      - name: Run Audit DB Migrations
-        run: docker compose -f docker-compose.local.yml run --rm django uv run python manage.py migrate --database=audit
-
+      # One container for all three: each `compose run` costs ~5s to create
+      # the container plus Django start-up.
       # .mo files are gitignored, so the checkout has none. Tests that assert on
       # translated output need the catalog compiled first, same as the deploy does.
-      - name: Compile Translations
-        run: docker compose -f docker-compose.local.yml run --rm django uv run python manage.py compilemessages --locale ar
+      - name: Check DB Migrations and Localization, Compile Translations
+        run: |
+          docker compose -f docker-compose.local.yml run --rm --no-deps django bash -euo pipefail -c '
+            echo "::group::Check DB Migrations"
+            uv run python manage.py makemigrations --check
+            echo "::endgroup::"
+            echo "::group::Check Localization"
+            uv run manage.py extendedmakemessages --no-location --no-wrap --locale=ar --no-fuzzy-matching --keep-header --check
+            echo "::endgroup::"
+            echo "::group::Compile Translations"
+            uv run python manage.py compilemessages --locale ar
+            echo "::endgroup::"
+          '
 
+      # pytest builds its own test databases by running every migration (both
+      # the default and audit DBs), so no separate migrate step is needed.
+      # -n auto runs one xdist worker per physical core (2 on the 4-vCPU
+      # runner), each with its own test DB. -n logical (4 workers) was slower.
       - name: Run Django Tests
-        run: docker compose -f docker-compose.local.yml run --rm django uv run pytest
+        run: docker compose -f docker-compose.local.yml run --rm --no-deps django uv run pytest -n auto
 
       - name: Tear down the Stack
         run: docker compose -f docker-compose.local.yml down

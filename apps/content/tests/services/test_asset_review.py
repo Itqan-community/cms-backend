@@ -18,7 +18,7 @@ from apps.content.services.asset_review import AssetReviewService
 from apps.core.ninja_utils.errors import ItqanError
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import MemberLanguage, Publisher, PublisherMember
-from apps.quran.models import Ayah, Sura
+from apps.quran.models import Ayah, Surah
 from apps.users.models import User
 
 
@@ -37,8 +37,8 @@ class AssetReviewServiceTest(BaseTestCase):
         )
         self.fr = AssetLanguage.objects.create(asset=self.asset, language="fr")
         self.version = baker.make(AssetVersion, asset=self.asset, asset_language=self.fr, name="v1")
-        self.sura = baker.make(Sura, id=1, name="الفاتحة", ayas_count=3)
-        self.ayah = baker.make(Ayah, id=1, sura=self.sura, number_in_sura=1, text="a")
+        self.surah = baker.make(Surah, id=1, name="الفاتحة", ayahs_count=3)
+        self.ayah = baker.make(Ayah, id=1, surah=self.surah, number_in_surah=1, text="a")
         self.change = baker.make(
             AssetVersionChange, version=self.version, ayah=self.ayah, change_type="added", new_text="au nom", order=1
         )

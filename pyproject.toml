@@ -48,7 +48,7 @@ dependencies = [
 dev = [
     "commitizen==4.10.*",
     "boto3-stubs>=1.42.91",
-    "coverage==7.16.2",
+    "coverage==7.17.0",
     "django-coverage-plugin==3.1.1",
     "django-debug-toolbar==6.0.0",
     "django-extensions==4.1",
@@ -67,6 +67,7 @@ dev = [
     "pytest-cov>=6.3.0",
     "pytest-django==4.11.1",
     "pytest-sugar==1.1.1",
+    "pytest-xdist>=3.8.0",
     "pytest==8.4.2",
     "responses>=0.25.8",
     "ruff==0.14.*",
@@ -124,7 +125,7 @@ ninja-keys = { git = "https://github.com/hassaanalansary/ninja-keys.git" }
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "--ds=config.settings.development --reuse-db --import-mode=importlib"
+addopts = "--ds=config.settings.test --reuse-db --import-mode=importlib"
 filterwarnings = [
      "ignore::DeprecationWarning",
 ]

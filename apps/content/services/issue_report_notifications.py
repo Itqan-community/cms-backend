@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 
 from django.conf import settings
+from django.utils.text import format_lazy
+from django.utils.translation import gettext_lazy as _
 
 from apps.content.models import ContentIssueReport
 from apps.core.services.email import email_service
@@ -30,7 +32,11 @@ class IssueReportNotificationService:
         issue_url = f"{portal_base}/issues/{report_id}"
 
         email_service.send_email(
-            subject=f"Your issue status has been updated: {old_label} → {new_label}",
+            subject=format_lazy(
+                _("Your issue status has been updated: {old_status} → {new_status}"),
+                old_status=old_label,
+                new_status=new_label,
+            ),
             recipients=[reporter_email],
             template="emails/issue_status_update.html",
             context={

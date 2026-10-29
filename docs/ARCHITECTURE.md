@@ -67,6 +67,8 @@ erDiagram
     Publisher ||--o{ Resource : "uploads"
     Publisher ||--o{ PublisherMember : "has members"
     User ||--o{ PublisherMember : "belongs to"
+    Publisher ||--o{ PublisherGroup : "owns roles"
+    PublisherGroup ||--|| Group : "names"
     Group ||--o{ PublisherMember : "grants permissions to"
 
     Resource ||--o{ ResourceVersion : "has versions"
@@ -99,6 +101,13 @@ erDiagram
         string slug
         string description
         boolean is_verified
+    }
+
+    PUBLISHERGROUP {
+        int group_id
+        int publisher_id
+        string name_en
+        string name_ar
     }
 
     PUBLISHERMEMBER {
@@ -161,20 +170,28 @@ erDiagram
 
     ASSETVERSIONENTRY {
         int version_id
-        int sura_id
+        int surah_id
         int ayah_id
         int word_id
         int page_no
+        int from_ayah_id
+        int to_ayah_id
+        int from_word_id
+        int to_word_id
         text text
         int order
     }
 
     ASSETVERSIONCHANGE {
         int version_id
-        int sura_id
+        int surah_id
         int ayah_id
         int word_id
         int page_no
+        int from_ayah_id
+        int to_ayah_id
+        int from_word_id
+        int to_word_id
         string change_type
         text old_text
         text new_text
@@ -210,12 +227,23 @@ The **Publisher** represents an organization or individual who owns and uploads 
 - Uploads **Resources** (original, unmodified content)
 - Manages licensing terms for their content
 - Can require approval for each usage request or enable auto-approval
-- Has members, each assigned a **permission group** (`PublisherMember.group`, a Django `auth.Group`)
-  - Members are invited by `group_id`; the group is chosen from `GET /portal/groups/`, not a fixed role list
-  - The group is applied to the user's `auth` groups on invitation acceptance, and drives runtime authorization
-  - Membership is per-publisher, so one user may hold a different group at each publisher they belong to
-  - `GET /portal/publishers/me/` (the portal's tenant picker) needs only `portal_access`: it lists the caller's own memberships (staff see every publisher)
-  - The `Itqan Internal` group holds every permission and is never listed or assignable through the portal APIs
+- Has members, each assigned a **role**: a permission group the publisher owns (`PublisherMember.group`, a Django `auth.Group` with a `PublisherGroup` row naming its publisher)
+  - Roles are defined by the publisher's admins through `/portal/groups/` (with `X-Tenant`); nothing is hardcoded or seeded. Each publisher sees and assigns only its own roles, and role names are unique per publisher
+  - A role's `auth.Group.name` is opaque (`publisher:<id>:<uuid>`) because Django group names are globally unique; the names admins see live on `PublisherGroup`
+  - Each role has an English and an Arabic name (`name_en` / `name_ar`, modeltranslation), both required when creating or renaming and each unique within the publisher. Responses carry `name` in the request's language (`Accept-Language`) plus both names; the groups list searches either name and orders by `name_en` or `name_ar`
+  - Permissions are shown by name in the reader's language: `GET /portal/groups/permissions/` lists every permission (`code_name`, `name`) for the role editor, group detail returns its permissions the same way, and the Django admin's permission pickers use the translated names
+  - Invitation and welcome emails name the publisher and role in each recipient's preferred language
+  - A new publisher starts with no roles: Itqan staff create its first admin role through the portal
+  - An editor can only put permissions into a role that they hold at that publisher themselves (`permission_not_grantable`); staff are unrestricted. A role still assigned to members cannot be deleted (`group_in_use`)
+  - Members are invited by `group_id`, which must be one of the inviting publisher's roles (`invalid_group` otherwise)
+  - Membership is per-publisher, so one user may hold a different role at each publisher they belong to
+- **Authorization is per publisher.** A user's permissions at a publisher are their global permissions (direct user permissions and global groups such as Itqan Internal) plus the role on their ACTIVE membership there (`apps.publishers.services.effective_permissions`). Roles are never mirrored into `user.groups` and never count at another publisher
+  - Portal checks use the `X-Tenant` publisher. Without it only global permissions apply, plus `portal_access` for users with an active membership, so leaving the header out never combines a user's roles across publishers
+  - `GET /portal/publishers/me/` (the portal's tenant picker) needs only `portal_access`: it lists the caller's own memberships (staff see every publisher), each with the caller's effective `permissions` there. The portal gates its UI on the selected publisher's list
+  - The profile's `permissions` (`GET /cms-api/auth/profile/`) is the union across all memberships, kept for display compatibility only
+  - Issue reports belong to their asset's publisher: list, retrieve, update and delete on `/portal/issue-reports/` and `/tenant/issue-reports/` see only reports in `request.publisher_q()` (404 `report_not_found` otherwise); a tenant request without a resolved domain sees none. Creating one stays open to any signed-in user, since the gallery reports on any asset without `X-Tenant`
+  - The profile's `is_staff` tells the frontend the caller is Itqan staff; it unlocks the cross-publisher usage reports (`/portal/admin/usage/`) and lets the legacy board pick any publisher (`GET /portal/usage/board-url/?publisher_id=`)
+- The `Itqan Internal` group is global, holds every permission, and is never listed or assignable through the portal APIs. It is the only seeded group, reset to every permission on each `migrate`
 
 ### 2. Resource
 
@@ -266,9 +294,27 @@ An **Asset** is a **derivation** of a Resource. It represents content that has b
 - For recitation assets: linked to a **Reciter** and **Riwayah**, and owns one or more
   **RecitationFolder** variants (see [Recitation-Specific Components](#recitation-specific-components))
 - For text assets (translations and tafsirs): carries a **template** (`surah` / `ayah` /
-  `word` / `page`) that fixes the granularity its entries are keyed to — chosen at
-  creation and **immutable afterwards**. A `page`-template asset additionally links to
-  a **MushafLayout** (its pagination), which every other template leaves unset.
+  `word` / `page`, and for tafsirs only `ayah_group` / `word_group`) that fixes the
+  granularity its entries are keyed to — chosen at creation and **immutable afterwards**.
+  A `page`-template asset additionally links to a **MushafLayout** (its pagination),
+  which every other template leaves unset.
+- Group templates: each row covers a publisher-defined **range** — `from_ayah`..`to_ayah`
+  or `from_word`..`to_word` on the entry / change — for commentary that explains several
+  ayahs together or only part of an ayah. Ranges may overlap, leave gaps and cross ayah /
+  surah boundaries; one range appears once per column. Internally a range is keyed by one
+  integer, `from_id * 1_000_000 + to_id` (`apps/content/unit_keys.py`), so the content,
+  diff and review pipelines handle it like any unit id; changing a range is recorded as
+  the old range removed and the new one added. Only the source language adds, moves or
+  deletes groups (`POST/PUT/DELETE …/versions/{id}/groups/`, plus `POST …/groups/next/` — a
+  blank one-unit group right after the furthest unit any group reaches — and
+  `POST …/groups/{id}/extend/` with `by` ±1 to grow or shrink a group's end by one ayah / word);
+  a group may be added blank to a draft and is dropped at commit if still blank; a translated language lists
+  its source's ranges, may only write text for them (its uploads too), and cannot commit
+  text left on a range the source no longer has (`orphaned_groups`). The portal previews a
+  range's mushaf text with `GET /portal/content/quran-range/`. The CSV has one row per
+  range: `from_surah,from_ayah,to_surah,to_ayah` (ayah group) or
+  `from_surah,from_ayah,from_word,to_surah,to_ayah,to_word` (word group, word positions
+  within their ayah), then the text columns; group files are always imported strictly.
 
 ### 5. AssetVersion
 
@@ -280,7 +326,8 @@ Similar to ResourceVersion, **AssetVersion** tracks each uploaded file version o
 - For translations and tafsirs, an uploaded CSV is imported into per-unit entries. To
   guide uploaders the portal serves an empty fill-in CSV per template — one row per
   surah / ayah / word / page with a blank cell per text column (just `text` before the
-  asset exists), in the same columns as a version export, so a filled-in sheet imports as is:
+  asset exists; a group template has no rows to list, so its sheet is the header alone),
+  in the same columns as a version export, so a filled-in sheet imports as is:
   `GET /portal/content/{category}/csv-template/?template=&mushaf_layout_id=` (asset
   creation; `page` needs the layout) and `GET /portal/content/{category}/{slug}/csv-template/`
   (an existing asset's template).
@@ -404,6 +451,15 @@ from the parsed entries, so consumers download exactly what was reviewed.
   re-published a pruned commit). It reads only the cells those rows need, and caches
   the rows per served version. No access grant is needed; a language
   consumers can't see, or another category, is 404 `file_structure_unavailable`.
+  The other categories get their own anonymous samples, also without an access grant.
+  `assets/{id}/recitation-preview/` returns up to the first 3 tracks of a READY
+  recitation's default folder (while it is visible) with playable URLs, or 404
+  `recitation_preview_unavailable`. `assets/{id}/font-preview/?language=` returns a
+  READY font's published file (`font_url`, `file_name`, CSS `format`) and Al-Fatiha's
+  ayahs to set in it, or 404 `font_preview_unavailable`. A font uploaded as a zip has
+  its first font file (woff2, then woff, ttf, otf) extracted once to
+  `previews/fonts/<version id>/…` in storage. Both return CDN URLs for open-access
+  assets and signed, expiring links for restricted ones.
 - **Commit vs publish** — committing makes a version the *head* (newest wins; what
   the editor builds on, `is_active` in the version list) but does **not** make it
   visible. Consumers (downloads, samples, `available_languages`, subscriber emails,
@@ -472,15 +528,15 @@ from the parsed entries, so consumers download exactly what was reviewed.
   columns from before the first page of entries arrives.
 - **Reading entries** — the editor pages through
   `GET /portal/content/{category}/{slug}/versions/{id}/entries/` (`page`, `page_size`,
-  optional `sura`). Each row carries `cells` (every text column's cell, keyed by column key)
+  optional `surah`). Each row carries `cells` (every text column's cell, keyed by column key)
   and, for a translation, the source language's `source_cells`; `text` / `source_text` are
   the first column, for older clients. `PATCH` rows name their `column` (default: the first;
   unknown → `unknown_column`). Its optional `filters` param is the grid's AG Grid filter model as
   JSON, keyed by `cell__<key>` / `source__<key>` per text column (`text` / `source_text` are the
   first column; a column the asset lacks → `unknown_filter_column`), `reference_text` (text filters, case-insensitive and
   ignoring Arabic vocalization — harakat, Quranic marks, alef forms, and Uthmani dagger alefs —
-  so plain typing matches Uthmani text; a unit with no stored entry counts as empty) and `surah`, `sura`, `aya` (number filters,
-  `inRange` inclusive; `surah` is the unit column's surah-name dropdown and `sura` the
+  so plain typing matches Uthmani text; a unit with no stored entry counts as empty) and `unit_surah`, `surah`, `ayah` (number filters,
+  `inRange` inclusive; `unit_surah` is the unit column's surah-name dropdown and `surah` the
   surah-number column, both applied), each a single condition or two joined by `AND`/`OR`. Filters
   narrow the whole unit set before paging, so `count` is the filtered total; unknown
   columns or malformed conditions return 400 `validation_error`. Rows carry the cells of
@@ -604,6 +660,24 @@ the request and sends them to Mixpanel as `client_name` / `client_version`.
 The values are **unverified and purely diagnostic** — they never influence identity,
 authorization, or throttling. A malformed value is dropped rather than rejected, and the
 response carries an advisory `X-Itqan-Warning` header; a missing header is silent.
+
+---
+
+## Email Language
+
+Every user has a `preferred_language` (`en` or `ar`, default `ar`). Signup (email or
+social) stores the language of the signup request (`Accept-Language`); users change it
+through `PUT /cms-api/auth/profile/`, which also returns it.
+
+All emails render in the recipient's preferred language, whether they are sent in a
+request or a background task:
+- `apps.core.services.email.EmailService` looks up each recipient by email, groups
+  recipients by language and renders the subject and template once per language.
+  Addresses without an account (e.g. a publisher's `contact_email`) get the
+  `language` argument, or the active language when it is omitted. Callers pass the
+  subject as a lazy string (`format_lazy(gettext_lazy(...))`) so it is translated too.
+- allauth emails (`AccountAdapter.send_mail`) use the account owner's language, and
+  the request's language when the address has no account.
 
 ---
 
@@ -810,10 +884,11 @@ flowchart LR
 | Model | Holds |
 |---|---|
 | `TrafficEvent` | One row per edge request (Cloudflare `ray_id`, unique) for an asset file or a public-API route: kind (`audio_surah`, `audio_ayah`, `version_file`, `gallery_download`, `api_call`, `cli_install`, `view`), asset/surah/version/language, country, channel, platform, endpoint, path, status class, bytes, and HMAC identities (`listener_id` = IP + user agent, `install_id`, `end_user_id`). Raw IPs are never stored. Purged after `USAGE_EVENT_RETENTION_MONTHS` |
-| `TrafficHourly` / `TrafficDaily` | Per hour/day and dimension: `requests`, `bytes`, `sessions` (plays for audio, downloads for files, first install per install id and day, every call for API calls and views). Bots and 4xx/5xx are excluded |
+| `TrafficHourly` / `TrafficDaily` | Per hour/day and dimension: `requests`, `bytes`, `sessions` (plays for audio, downloads for files, first install per install id and day, every call for API calls and views), `listened_seconds` (audio bytes × the requested track's or ayah file's `duration_ms` ÷ `size_bytes`; 0 for unknown paths). Bots and 4xx/5xx are excluded. `manage.py rebuild_traffic_rollups --since YYYY-MM-DD` rebuilds every hour that still has events |
 | `TrafficMonthlyUniques` | Distinct listeners, downloaders, installs and end users per month for all traffic, each asset, publisher and app. Kept forever |
 | `R2ObjectReadsHourly` | R2 reads per object and hour beside the edge requests seen for it; the difference is traffic the edge never saw |
 | `LogFileImport` / `UsageImportState` | Imported Logpush files (idempotency; corrupt files recorded with `error`) and per-job watermark, last run and last error |
+| `SearchEvent` | One gallery search (`/cms-api/{assets,recitations,reciters}/?search=`, first page; written by `@track_search`): surface, normalised term, result count, HMAC searcher. A search deletes the same searcher's searches for a prefix of it from the last 30 s (search-as-you-type). Bots skipped; purged with traffic events |
 
 - **Import:** lists the day folders from the watermark day minus one, skips files already in
   `LogFileImport`, stores each file's events and its record (with the hours they touch) in one
@@ -847,7 +922,7 @@ flowchart LR
 
 One engine (`apps/usage_tracking/services/usage_reports.py`, queries in
 `repositories/usage_reports.py`) serves four scopes. Additive metrics (`plays`, `downloads`,
-`installs`, `api_calls`, `views`, `requests`, `bytes`) read `TrafficDaily` (`TrafficHourly` for
+`installs`, `api_calls`, `views`, `requests`, `bytes`, `listening_seconds`) read `TrafficDaily` (`TrafficHourly` for
 hourly series and hour-of-week); unique metrics (`unique_listeners`, `unique_downloaders`,
 `unique_end_users`) count distinct identities in `TrafficEvent`, or sum `TrafficMonthlyUniques`
 when the range starts before event retention (`uniques_basis`). Dates are inclusive UTC days
@@ -856,13 +931,13 @@ when the range starts before event retention (`uniques_basis`). Dates are inclus
 
 | Scope | Endpoints | Access |
 |---|---|---|
-| Publisher | `GET /portal/usage/{summary,timeseries,breakdown,export}/` | `PORTAL_READ_USAGE`; the X-Tenant publisher, else every publisher the member belongs to (staff without X-Tenant: all) |
-| Itqan admin | `GET /portal/admin/usage/{summary,timeseries,breakdown,leaderboard,reconciliation,export}/` | `is_staff`; optional `publisher_id`; includes traffic without an asset and `by=publisher` |
+| Publisher | `GET /portal/usage/{summary,timeseries,breakdown,export,listeners,cohorts,first-seen,search-terms,recitation-coverage}/` | `PORTAL_READ_USAGE`; the X-Tenant publisher, else every publisher the member belongs to (staff without X-Tenant: all) |
+| Itqan admin | `GET /portal/admin/usage/{summary,timeseries,breakdown,leaderboard,reconciliation,export,listeners,cohorts,first-seen,search-terms,recitation-coverage}/` | `is_staff`; optional `publisher_id`; includes traffic without an asset and `by=publisher` |
 | Developer | `GET /cms-api/developers/usage/{summary,timeseries,breakdown}/` | signed in; only the caller's `UsageApp`s; breakdown rows under 3 listeners return `"<3"` |
 | Public | `GET /cms-api/assets/{id}/usage-counts/` | anonymous; same visibility as `assets/{id}/`; 404 `usage_counts_disabled` unless `PUBLIC_USAGE_COUNTS_ENABLED`; cached 1 h |
 
 - **Filters:** `asset_id`, `category`, `kind`, `channel`, `platform`, `app`, `country`,
-  `language`, `version_id`, `surah`.
+  `language`, `version_id`, `surah`, `reciter_id`, `riwayah_id`, `qiraah_id`.
 - **summary:** every metric with previous-period value and change, integrating apps, whether
   unidentified apps were seen, `latest_version_share` (with `asset_id`), localized metric
   `definitions`, `disclaimers` (`lower_bound`, `uniques_estimated`, `hourly_delay`) and
@@ -870,14 +945,29 @@ when the range starts before event retention (`uniques_basis`). Dates are inclus
 - **timeseries:** zero-filled `hour|day|week|month` buckets (weeks start Monday); `split_by` keeps
   the top N (`top`, default 8) and folds the rest into the `__other__` series; `compare=previous_period` adds an
   aligned `previous` series.
-- **breakdown:** `by=asset|surah|country|channel|platform|app|version|language|kind|endpoint|hour_of_week`
-  (admin also `publisher`); `hour_of_week` keys are `<ISO weekday>-<hour>` in `tz`.
+- **breakdown:** `by=asset|surah|country|channel|platform|app|version|language|kind|endpoint|reciter|riwayah|qiraah|hour_of_week`
+  (admin also `publisher`); `hour_of_week` keys are `<ISO weekday>-<hour>` in `tz`. `order=growth`
+  ranks by the increase over the previous period (implies `compare`). Reciter, riwayah and qiraah
+  are also `split_by` values for timeseries.
+- **listeners / cohorts / first-seen** (recitations; events only): a listener's first seen is
+  their earliest counted audio event since the retention cutoff. `listeners` gives `new`,
+  `returning` and `cumulative` per day/week/month; `cohorts` weekly cohorts (≤ 182 days) with the
+  share active in each later week; `first-seen` the first play per country or app (`new` within
+  the range). Ranges starting before retention are clamped (`clamped_start`); ranges ending
+  before it return `range_before_retention`.
+- **search-terms:** gallery searches by every visitor (publishers see all of them, to show unmet
+  demand), terms with ≥ 3 distinct searchers only; `zero_results=true` keeps terms whose latest
+  search found nothing; each term is matched to one reciter, riwayah or qiraah when unambiguous.
+- **recitation-coverage:** recitations in scope with surahs in the default folder, the missing
+  ones (also ordered by platform-wide plays of the last 90 days) and the share of tracks with
+  ayah timings; `incomplete_only` (default) hides complete ones.
 - **export:** CSV of the additive metrics per period and asset (admin adds the publisher); names
   that start like a spreadsheet formula are prefixed with `'`.
 - **reconciliation:** R2 reads, edge requests and unseen (`max(reads − edge, 0)` per object-hour)
   in total, per asset and per day.
 - **Errors:** `invalid_range`, `range_too_large`, `invalid_metric_for_kind`, `invalid_dimension`,
-  `invalid_timezone`, `asset_not_found`, `app_not_found`, `usage_counts_disabled`.
+  `invalid_timezone`, `range_before_retention`, `asset_not_found`, `app_not_found`,
+  `usage_counts_disabled`.
 
 ### Folders (recitation variants)
 

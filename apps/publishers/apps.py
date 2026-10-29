@@ -12,7 +12,7 @@ class PublishersConfig(AppConfig):
 
         import apps.publishers.signals  # noqa: F401
 
-        post_migrate.connect(_seed_publisher_member_groups, sender=self)
+        post_migrate.connect(_seed_itqan_internal_group, sender=self)
 
 
 def _seed_group(group_name: str, codenames: list[str]) -> None:
@@ -32,15 +32,10 @@ def _seed_group(group_name: str, codenames: list[str]) -> None:
     group.permissions.set(perms)
 
 
-def _seed_publisher_member_groups(sender, **kwargs) -> None:
-    from apps.publishers.services.publisher_member_service import (
-        ITQAN_INTERNAL_GROUP,
-        PUBLISHER_ADMIN_GROUP,
-        PUBLISHER_ADMIN_GROUP_PERMS,
-        PUBLISHER_MEMBER_GROUP,
-        PUBLISHER_MEMBER_GROUP_PERMS,
-    )
+def _seed_itqan_internal_group(sender, **kwargs) -> None:
+    # Publisher roles are not seeded: each publisher's admins define their own groups in the
+    # portal, and re-seeding them here on every migrate would wipe those edits each release.
+    # Itqan Internal is safe to reset because the portal never exposes it for editing.
+    from apps.publishers.services.publisher_member_service import ITQAN_INTERNAL_GROUP
 
-    _seed_group(PUBLISHER_MEMBER_GROUP, PUBLISHER_MEMBER_GROUP_PERMS)
-    _seed_group(PUBLISHER_ADMIN_GROUP, PUBLISHER_ADMIN_GROUP_PERMS)
     _seed_group(ITQAN_INTERNAL_GROUP, PermissionChoice.values)  # type: ignore[attr-defined]

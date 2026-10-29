@@ -38,13 +38,13 @@ class SingleColumnCsvBytesTests(QuranDataMixin, BaseTestCase):
     def test_entries_to_csv_bytes_where_surah_single_text_column_should_match_staging_bytes(self):
         # Arrange
         version = self._version(AssetTemplateChoice.SURAH)
-        AssetVersionEntry.objects.create(version=version, sura=self.sura1, text="first", order=1)
+        AssetVersionEntry.objects.create(version=version, surah=self.surah1, text="first", order=1)
 
         # Act
         content = self.repo.entries_to_csv_bytes(version, unit_spec_for(version.asset))
 
         # Assert
-        self.assertEqual(content, b"sura,text\r\n1,first\r\n2,\r\n")
+        self.assertEqual(content, b"surah,text\r\n1,first\r\n2,\r\n")
 
     def test_entries_to_csv_bytes_where_ayah_lean_single_text_column_should_match_staging_bytes(self):
         # Arrange
@@ -81,7 +81,7 @@ class SingleColumnCsvBytesTests(QuranDataMixin, BaseTestCase):
         content = self.repo.entries_to_csv_bytes(version, unit_spec_for(version.asset))
 
         # Assert
-        self.assertEqual(content, b"word_id,sura,aya,word,text\r\n1,1,1,1,\r\n2,1,1,2,w\r\n")
+        self.assertEqual(content, b"word_id,surah,ayah,word,text\r\n1,1,1,1,\r\n2,1,1,2,w\r\n")
 
     def test_entries_to_csv_bytes_where_page_single_text_column_should_match_staging_bytes(self):
         # Arrange

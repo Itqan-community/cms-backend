@@ -28,8 +28,13 @@ from .models import (
     Asset,
     AssetAccess,
     AssetAccessRequest,
+    AssetColumn,
+    AssetLanguage,
     AssetPreview,
     AssetVersion,
+    AssetVersionChange,
+    AssetVersionChangeReview,
+    AssetVersionEntry,
     CategoryChoice,
     ContentIssueReport,
     EditorialRecommendation,
@@ -1041,3 +1046,66 @@ class EditorialRecommendationAdmin(AuditedModelAdmin):
     @admin.display(description="Assets")
     def assets_count(self, obj: EditorialRecommendation) -> int:
         return obj.recommendation_assets.count() if obj.pk else 0
+
+
+@admin.register(AssetLanguage)
+class AssetLanguageAdmin(AuditedModelAdmin):
+    list_display = ["asset", "language", "is_source", "status", "created_at"]
+    search_fields = ["asset__name", "language"]
+    list_filter = ["is_source", "status"]
+    raw_id_fields = ["asset"]
+
+
+class PipelineQuranTextAdmin(AuditedModelAdmin):
+    """Read-only AuditedModelAdmin for automated Quran pipeline artifacts.
+
+    Preserves full audit trail inspection while disallowing manual additions,
+    edits, and deletions in Django Admin to protect canonical text integrity.
+    """
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(AssetVersionEntry)
+class AssetVersionEntryAdmin(PipelineQuranTextAdmin):
+    list_display = ["version", "surah", "ayah", "order", "created_at"]
+    search_fields = ["version__name"]
+    list_filter = ["surah"]
+    raw_id_fields = ["version"]
+
+
+@admin.register(AssetVersionChange)
+class AssetVersionChangeAdmin(PipelineQuranTextAdmin):
+    list_display = ["version", "change_type", "surah", "ayah", "order", "created_at"]
+    search_fields = ["version__name"]
+    list_filter = ["change_type", "surah"]
+    raw_id_fields = ["version"]
+
+
+@admin.register(AssetVersionChangeReview)
+class AssetVersionChangeReviewAdmin(PipelineQuranTextAdmin):
+    list_display = ["change", "state", "reviewed_by", "reviewed_at", "created_at"]
+    search_fields = ["comment", "reviewed_by__email", "reviewed_by__name"]
+    list_filter = ["state"]
+    raw_id_fields = ["change", "reviewed_by"]
+
+
+@admin.register(EditorialRecommendationAsset)
+class EditorialRecommendationAssetAdmin(AuditedModelAdmin):
+    list_display = ["recommendation", "asset", "position", "created_at"]
+    search_fields = ["recommendation__title_en", "recommendation__title_ar", "asset__name"]
+    raw_id_fields = ["recommendation", "asset"]
+
+
+@admin.register(AssetColumn)
+class AssetColumnAdmin(AuditedModelAdmin):
+    list_display = ["asset", "key", "label", "order", "created_at"]
+    search_fields = ["asset__name", "key", "label"]
+    raw_id_fields = ["asset"]

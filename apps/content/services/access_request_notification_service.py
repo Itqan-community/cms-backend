@@ -4,7 +4,8 @@ from itertools import groupby
 import logging
 
 from django.conf import settings
-from django.utils.translation import gettext as _
+from django.utils.text import format_lazy
+from django.utils.translation import gettext_lazy as _
 
 from apps.content.models import AssetAccessRequest
 from apps.content.repositories.access_request import AssetAccessRequestRepository
@@ -30,14 +31,14 @@ class AccessRequestNotificationService:
 
         if req.status == AssetAccessRequest.StatusChoice.APPROVED:
             email_service.send_email(
-                subject=f"Your access request for {req.asset.name} was accepted",
+                subject=format_lazy(_("Your access request for {asset_name} was accepted"), asset_name=req.asset.name),
                 recipients=[recipient],
                 template="emails/access_request_accepted.html",
                 context={"asset_name": req.asset.name},
             )
         elif req.status == AssetAccessRequest.StatusChoice.REJECTED:
             email_service.send_email(
-                subject=f"Your access request for {req.asset.name} was rejected",
+                subject=format_lazy(_("Your access request for {asset_name} was rejected"), asset_name=req.asset.name),
                 recipients=[recipient],
                 template="emails/access_request_rejected.html",
                 context={"asset_name": req.asset.name, "rejection_reason": req.rejection_reason},
@@ -71,7 +72,7 @@ class AccessRequestNotificationService:
                     {
                         "asset_name": r.asset.name,
                         "developer_name": r.developer_user.name,
-                        "intended_use": r.get_intended_use_display(),
+                        "intended_use": AssetAccessRequest.IntendedUseChoice(r.intended_use).label,
                         "developer_access_reason": r.developer_access_reason,
                         "created_at": r.created_at,
                     }
@@ -81,7 +82,7 @@ class AccessRequestNotificationService:
             }
             try:
                 email_service.send_email(
-                    subject=_("You have {count} pending access request(s)").format(count=len(publisher_reqs)),
+                    subject=format_lazy(_("You have {count} pending access request(s)"), count=len(publisher_reqs)),
                     recipients=[publisher.contact_email],
                     template="emails/pending_access_requests_notification.html",
                     context=context,

@@ -8,6 +8,7 @@ from django.db.models import ProtectedError, Q
 from django.utils.translation import gettext as _
 
 from apps.content.models import (
+    GROUP_TEMPLATES,
     Asset as AssetModel,
     AssetTemplateChoice,
     AssetVersion,
@@ -131,6 +132,12 @@ class TranslationService:
         if not is_external:
             external_url = None
 
+        if template in GROUP_TEMPLATES:
+            raise ItqanError(
+                error_name="template_not_allowed",
+                message=_("Ayah-group and word-group templates are only available for tafsir."),
+                status_code=400,
+            )
         layout = self._resolve_layout(template, mushaf_layout_id)
 
         # No AI here: the portal sends the slug its Translate call returned (POST /portal/ai/translate/).

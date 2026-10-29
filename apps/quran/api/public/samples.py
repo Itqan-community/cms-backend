@@ -6,7 +6,7 @@ from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
-from apps.quran.models import Ayah, Sura
+from apps.quran.models import Ayah, Surah
 from apps.quran.repositories.quran import QuranRepository
 from apps.quran.services.quran import QuranService
 
@@ -16,14 +16,14 @@ DEFAULT_SAMPLE_SURAH = 1
 DEFAULT_SAMPLE_AYAH = 1
 
 
-class SuraSampleOut(Schema):
-    """Public sample payload describing a single sura (Al-Fatiha by default)."""
+class SurahSampleOut(Schema):
+    """Public sample payload describing a single surah (Al-Fatiha by default)."""
 
     id: int
     name: str
     transliterated_name: str
     english_name: str
-    ayas_count: int
+    ayahs_count: int
     revelation_type: str
     revelation_order: int
     rukus_count: int
@@ -41,19 +41,19 @@ class AyahSampleOut(Schema):
     hizb_quarter: int
 
 
-def serialize_sura(sura: Sura) -> dict:
-    """Map a ``Sura`` row onto the approved public contract field names."""
-    # Keys are the approved public contract; the model column is sura_id but the
+def serialize_surah(surah: Surah) -> dict:
+    """Map a ``Surah`` row onto the approved public contract field names."""
+    # Keys are the approved public contract; the model column is surah_id but the
     # API exposes surah_id, so ORM objects are not returned directly.
     return {
-        "id": sura.id,
-        "name": sura.name,
-        "transliterated_name": sura.transliterated_name,
-        "english_name": sura.english_name,
-        "ayas_count": sura.ayas_count,
-        "revelation_type": sura.revelation_type,
-        "revelation_order": sura.revelation_order,
-        "rukus_count": sura.rukus_count,
+        "id": surah.id,
+        "name": surah.name,
+        "transliterated_name": surah.transliterated_name,
+        "english_name": surah.english_name,
+        "ayahs_count": surah.ayahs_count,
+        "revelation_type": surah.revelation_type,
+        "revelation_order": surah.revelation_order,
+        "rukus_count": surah.rukus_count,
     }
 
 
@@ -61,8 +61,8 @@ def serialize_ayah(ayah: Ayah) -> dict:
     """Map an ``Ayah`` row onto the approved public contract (Uthmani text included)."""
     return {
         "id": ayah.id,
-        "surah_id": ayah.sura_id,
-        "number_in_surah": ayah.number_in_sura,
+        "surah_id": ayah.surah_id,
+        "number_in_surah": ayah.number_in_surah,
         "text_uthmani": ayah.text_uthmani,
         "juz": ayah.juz,
         "page": ayah.page,
@@ -73,22 +73,22 @@ def serialize_ayah(ayah: Ayah) -> dict:
 @router.get(
     "sample-data/surah/",
     response={
-        200: SuraSampleOut,
-        404: NinjaErrorResponse[Literal["sura_not_found"]],
+        200: SurahSampleOut,
+        404: NinjaErrorResponse[Literal["surah_not_found"]],
     },
     tags=[NinjaTag.SAMPLE_DATA],
 )
-def get_sura_sample(request: Request, surah: int = Query(DEFAULT_SAMPLE_SURAH, ge=1, le=114)):
-    """Return a sample sura by number (default: Al-Fatiha, sura 1)."""
+def get_surah_sample(request: Request, surah: int = Query(DEFAULT_SAMPLE_SURAH, ge=1, le=114)):
+    """Return a sample surah by number (default: Al-Fatiha, surah 1)."""
     service = QuranService(QuranRepository())
-    return serialize_sura(service.get_sura(surah))
+    return serialize_surah(service.get_surah(surah))
 
 
 @router.get(
     "sample-data/ayah/",
     response={
         200: AyahSampleOut,
-        404: NinjaErrorResponse[Literal["sura_not_found"]] | NinjaErrorResponse[Literal["ayah_not_found"]],
+        404: NinjaErrorResponse[Literal["surah_not_found"]] | NinjaErrorResponse[Literal["ayah_not_found"]],
     },
     tags=[NinjaTag.SAMPLE_DATA],
 )

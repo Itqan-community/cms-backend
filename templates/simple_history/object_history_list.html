@@ -1,0 +1,122 @@
+{% load i18n %}
+{% load url from simple_history_compat %}
+{% load admin_urls %}
+{% load getattribute from getattributes %}
+
+<table id="change-history" class="table table-bordered table-striped">
+  <thead>
+    <tr>
+      <th scope="col">{% trans 'Object' %}</th>
+      {% for column in history_list_display %}
+        <th scope="col">{% trans column %}</th>
+      {% endfor %}
+      <th scope="col">{% trans 'Date/time' %}</th>
+      <th scope="col">{% trans 'Action' %}</th>
+      <th scope="col">{% trans 'Changed by' %}</th>
+      <th scope="col">{% trans 'Change reason' %}</th>
+      <th scope="col">{% trans 'Changes' %}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for record in page_obj %}
+      <tr>
+        <td>
+          <a href="{% url opts|admin_urlname:'simple_history' object.pk record.pk %}">
+            {{ record.history_object }}
+          </a>
+        </td>
+        {% for column in history_list_display %}
+          <td>{{ record|getattribute:column }}</td>
+        {% endfor %}
+        <td>{{ record.history_date }}</td>
+        <td>
+          {% if record.history_type == "+" %}
+            <span class="badge badge-success" style="background-color: #28a745; color: white; padding: 2px 7px; border-radius: 4px; font-weight: bold; font-size: 0.85em; display: inline-block;">
+              {% trans "Created (+)" %}
+            </span>
+          {% elif record.history_type == "~" %}
+            <span class="badge badge-info" style="background-color: #17a2b8; color: white; padding: 2px 7px; border-radius: 4px; font-weight: bold; font-size: 0.85em; display: inline-block;">
+              {% trans "Changed (~)" %}
+            </span>
+          {% elif record.history_type == "-" %}
+            <span class="badge badge-danger" style="background-color: #dc3545; color: white; padding: 2px 7px; border-radius: 4px; font-weight: bold; font-size: 0.85em; display: inline-block;">
+              {% trans "Deleted (-)" %}
+            </span>
+          {% else %}
+            {{ record.get_history_type_display }}
+          {% endif %}
+        </td>
+        <td>
+          {% if record.history_user %}
+            {% url admin_user_view record.history_user_id as admin_user_url %}
+            {% if admin_user_url %}
+              <a href="{{ admin_user_url }}"><strong>{{ record.history_user }}</strong></a>
+            {% else %}
+              <strong>{{ record.history_user }}</strong>
+            {% endif %}
+          {% elif record.history_user_id %}
+            <span class="user-id-badge" title="{% trans 'Historical user ID' %}">
+              {% trans "User #" %}{{ record.history_user_id }}
+            </span>
+          {% else %}
+            <span class="text-muted" style="color: #6c757d; font-style: italic;">{% trans "System / Automated" %}</span>
+          {% endif %}
+        </td>
+        <td>
+          {{ record.history_change_reason|default:"" }}
+        </td>
+        <td>
+          {% block history_delta_changes %}
+            {% if record.history_delta_changes %}
+              <ul style="margin: 0; padding-inline-start: 16px; list-style-type: square;">
+                {% for change in record.history_delta_changes %}
+                  <li style="margin-bottom: 4px; line-height: 1.4;">
+                    <strong style="color: #495057;">{{ change.field }}:</strong>
+                    <span style="color: #721c24; background-color: #f8d7da; padding: 1px 4px; border-radius: 3px; text-decoration: line-through;">
+                      {% if change.old is not None and change.old != "" %}{{ change.old|truncatechars:100 }}{% else %}<em>({% trans "empty" %})</em>{% endif %}
+                    </span>
+                    &nbsp;&rarr;&nbsp;
+                    <span style="color: #155724; background-color: #d4edda; padding: 1px 4px; border-radius: 3px; font-weight: 500;">
+                      {% if change.new is not None and change.new != "" %}{{ change.new|truncatechars:100 }}{% else %}<em>({% trans "empty" %})</em>{% endif %}
+                    </span>
+                  </li>
+                {% endfor %}
+              </ul>
+            {% elif record.history_type == "+" %}
+              <span style="color: #28a745; font-style: italic; font-size: 0.9em;">
+                {% trans "Initial version created" %}
+              </span>
+            {% elif record.history_type == "-" %}
+              <span style="color: #dc3545; font-style: italic; font-size: 0.9em;">
+                {% trans "Record deleted" %}
+              </span>
+            {% elif record.history_delta_changes is not None %}
+              <span style="color: #6c757d; font-style: italic; font-size: 0.9em;">
+                {% trans "No tracked field changes" %}
+              </span>
+            {% else %}
+              <span style="color: #6c757d; font-style: italic; font-size: 0.9em;">
+                {% trans "Diff unavailable" %}
+              </span>
+            {% endif %}
+          {% endblock %}
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<p class="paginator" style="border-top: 0">
+  {% if pagination_required %}
+    {% for i in page_range %}
+      {% if i == page_obj.paginator.ELLIPSIS %}
+        {{ page_obj.paginator.ELLIPSIS }}
+      {% elif i == page_obj.number %}
+        <span class="this-page">{{ i }}</span>
+      {% else %}
+        <a href="?{{ page_var }}={{ i }}" {% if i == page_obj.paginator.num_pages %} class="end" {% endif %}>{{ i }}</a>
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+  {{ page_obj.paginator.count }} {% blocktranslate count counter=page_obj.paginator.count %}entry{% plural %}entries{% endblocktranslate %}
+</p>

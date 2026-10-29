@@ -11,6 +11,7 @@ from django.utils.translation import gettext_lazy as _
 from django_countries.fields import CountryField
 from simple_history.models import HistoricalRecords
 
+from apps.content.unit_keys import UNIT_VALUE_FIELDS, unit_key_of
 from apps.core.mixins.storage import DeleteFilesOnDeleteMixin
 from apps.core.models import BaseModel
 from apps.core.ninja_utils.errors import ItqanError
@@ -85,6 +86,13 @@ class AssetTemplateChoice(models.TextChoices):
     AYAH = "ayah", _("Ayah based")
     WORD = "word", _("Word based")
     PAGE = "page", _("Page based")
+    AYAH_GROUP = "ayah_group", _("Ayah-group based")
+    WORD_GROUP = "word_group", _("Word-group based")
+
+
+# Templates whose rows each cover a publisher-defined range of ayahs / words
+# rather than one canonical unit. Tafsir only.
+GROUP_TEMPLATES = frozenset({AssetTemplateChoice.AYAH_GROUP, AssetTemplateChoice.WORD_GROUP})
 
 
 class VersionStateChoice(models.TextChoices):
@@ -805,12 +813,31 @@ class AssetVersion(DeleteFilesOnDeleteMixin, BaseModel):
         return f"{s} {units[i]}"
 
 
+def _only_units_set(*names: str) -> models.Q:
+    """Exactly the given unit columns are set; every other unit column is null."""
+    columns = ("surah", "ayah", "word", "page_no", "from_ayah", "to_ayah", "from_word", "to_word")
+    return models.Q(**{f"{column}__isnull": column not in names for column in columns})
+
+
+# A row is keyed to exactly one unit: a single surah / ayah / word / page, or a
+# whole ayah range or word range (both ends set).
+_EXACTLY_ONE_UNIT = (
+    _only_units_set("surah")
+    | _only_units_set("ayah")
+    | _only_units_set("word")
+    | _only_units_set("page_no")
+    | _only_units_set("from_ayah", "to_ayah")
+    | _only_units_set("from_word", "to_word")
+)
+
+
 class AssetVersionEntry(BaseModel):
     """Per-unit content of a text-based asset version (translation / tafsir).
 
-    The unit is whichever one the asset's template names — a sura, an ayah, a
-    word, or a mushaf page — and exactly one of the four unit columns is set
-    per row (enforced by ``entry_exactly_one_unit``).
+    The unit is whichever one the asset's template names — a surah, an ayah, a
+    word, a mushaf page, or a range of ayahs / words (group templates) — and
+    exactly one unit (a range counts as one: both its ends) is set per row
+    (enforced by ``entry_exactly_one_unit``).
 
     Editing happens row-by-row against these entries rather than the version's
     uploaded file, so a single edit never rewrites a file. Coverage is sparse:
@@ -829,13 +856,13 @@ class AssetVersionEntry(BaseModel):
         related_name="entries",
         help_text="Asset version this entry belongs to",
     )
-    sura = models.ForeignKey(
-        "quran.Sura",
+    surah = models.ForeignKey(
+        "quran.Surah",
         on_delete=models.PROTECT,
         null=True,
         blank=True,
         related_name="+",
-        help_text="Canonical sura (1-114) — set only for surah-template assets",
+        help_text="Canonical surah (1-114) — set only for surah-template assets",
     )
     ayah = models.ForeignKey(
         "quran.Ayah",
@@ -858,6 +885,50 @@ class AssetVersionEntry(BaseModel):
         blank=True,
         help_text="Page within the asset's MushafLayout — set only for page-template assets",
     )
+    from_ayah = models.ForeignKey(
+        "quran.Ayah",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        # No index of its own: the range unique constraint covers lookups, and
+        # every non-group row would otherwise add an index entry.
+        db_index=False,
+        help_text="Range start — set only for ayah-group-template assets",
+    )
+    to_ayah = models.ForeignKey(
+        "quran.Ayah",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        # No index of its own: the range unique constraint covers lookups, and
+        # every non-group row would otherwise add an index entry.
+        db_index=False,
+        help_text="Range end — set only for ayah-group-template assets",
+    )
+    from_word = models.ForeignKey(
+        "quran.Word",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        # No index of its own: the range unique constraint covers lookups, and
+        # every non-group row would otherwise add an index entry.
+        db_index=False,
+        help_text="Range start — set only for word-group-template assets",
+    )
+    to_word = models.ForeignKey(
+        "quran.Word",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        # No index of its own: the range unique constraint covers lookups, and
+        # every non-group row would otherwise add an index entry.
+        db_index=False,
+        help_text="Range end — set only for word-group-template assets",
+    )
     column = models.ForeignKey(
         "content.AssetColumn",
         on_delete=models.CASCADE,
@@ -873,19 +944,34 @@ class AssetVersionEntry(BaseModel):
     class Meta:
         constraints = [
             models.CheckConstraint(
-                condition=(
-                    models.Q(sura__isnull=False, ayah__isnull=True, word__isnull=True, page_no__isnull=True)
-                    | models.Q(sura__isnull=True, ayah__isnull=False, word__isnull=True, page_no__isnull=True)
-                    | models.Q(sura__isnull=True, ayah__isnull=True, word__isnull=False, page_no__isnull=True)
-                    | models.Q(sura__isnull=True, ayah__isnull=True, word__isnull=True, page_no__isnull=False)
-                ),
+                condition=_EXACTLY_ONE_UNIT,
                 name="entry_exactly_one_unit",
             ),
             models.UniqueConstraint(fields=["version", "ayah", "column"], name="unique_entry_per_version_ayah_column"),
-            models.UniqueConstraint(fields=["version", "sura", "column"], name="unique_entry_per_version_sura_column"),
+            models.UniqueConstraint(
+                fields=["version", "surah", "column"], name="unique_entry_per_version_surah_column"
+            ),
             models.UniqueConstraint(fields=["version", "word", "column"], name="unique_entry_per_version_word_column"),
             models.UniqueConstraint(
                 fields=["version", "page_no", "column"], name="unique_entry_per_version_page_column"
+            ),
+            models.UniqueConstraint(
+                fields=["version", "from_ayah", "to_ayah", "column"],
+                condition=models.Q(from_ayah__isnull=False),
+                name="unique_entry_per_version_ayah_range_column",
+            ),
+            models.UniqueConstraint(
+                fields=["version", "from_word", "to_word", "column"],
+                condition=models.Q(from_word__isnull=False),
+                name="unique_entry_per_version_word_range_column",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(from_ayah__isnull=True) | models.Q(from_ayah__lte=models.F("to_ayah")),
+                name="entry_ayah_range_ordered",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(from_word__isnull=True) | models.Q(from_word__lte=models.F("to_word")),
+                name="entry_word_range_ordered",
             ),
         ]
         indexes = [
@@ -912,13 +998,7 @@ class AssetVersionEntry(BaseModel):
         persisted row. Tested explicitly rather than by truthiness, so a
         legitimate zero would not fall through to the next unit.
         """
-        if self.sura_id is not None:
-            return self.sura_id
-        if self.ayah_id is not None:
-            return self.ayah_id
-        if self.word_id is not None:
-            return self.word_id
-        return self.page_no
+        return unit_key_of([getattr(self, name) for name in UNIT_VALUE_FIELDS])
 
 
 class ChangeTypeChoice(models.TextChoices):
@@ -943,13 +1023,13 @@ class AssetVersionChange(BaseModel):
 
     version = models.ForeignKey(AssetVersion, on_delete=models.CASCADE, related_name="changes")
 
-    sura = models.ForeignKey(
-        "quran.Sura",
+    surah = models.ForeignKey(
+        "quran.Surah",
         on_delete=models.PROTECT,
         null=True,
         blank=True,
         related_name="+",
-        help_text="Canonical sura (1-114) — set only for surah-template assets",
+        help_text="Canonical surah (1-114) — set only for surah-template assets",
     )
     ayah = models.ForeignKey(
         "quran.Ayah",
@@ -972,6 +1052,50 @@ class AssetVersionChange(BaseModel):
         blank=True,
         help_text="Page within the asset's MushafLayout — set only for page-template assets",
     )
+    from_ayah = models.ForeignKey(
+        "quran.Ayah",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        # No index of its own: the range unique constraint covers lookups, and
+        # every non-group row would otherwise add an index entry.
+        db_index=False,
+        help_text="Range start — set only for ayah-group-template assets",
+    )
+    to_ayah = models.ForeignKey(
+        "quran.Ayah",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        # No index of its own: the range unique constraint covers lookups, and
+        # every non-group row would otherwise add an index entry.
+        db_index=False,
+        help_text="Range end — set only for ayah-group-template assets",
+    )
+    from_word = models.ForeignKey(
+        "quran.Word",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        # No index of its own: the range unique constraint covers lookups, and
+        # every non-group row would otherwise add an index entry.
+        db_index=False,
+        help_text="Range start — set only for word-group-template assets",
+    )
+    to_word = models.ForeignKey(
+        "quran.Word",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        # No index of its own: the range unique constraint covers lookups, and
+        # every non-group row would otherwise add an index entry.
+        db_index=False,
+        help_text="Range end — set only for word-group-template assets",
+    )
     column = models.ForeignKey(
         "content.AssetColumn",
         # RESTRICT, not PROTECT: deleting the whole asset still cascades through its
@@ -991,19 +1115,34 @@ class AssetVersionChange(BaseModel):
     class Meta:
         constraints = [
             models.CheckConstraint(
-                condition=(
-                    models.Q(sura__isnull=False, ayah__isnull=True, word__isnull=True, page_no__isnull=True)
-                    | models.Q(sura__isnull=True, ayah__isnull=False, word__isnull=True, page_no__isnull=True)
-                    | models.Q(sura__isnull=True, ayah__isnull=True, word__isnull=False, page_no__isnull=True)
-                    | models.Q(sura__isnull=True, ayah__isnull=True, word__isnull=True, page_no__isnull=False)
-                ),
+                condition=_EXACTLY_ONE_UNIT,
                 name="change_exactly_one_unit",
             ),
             models.UniqueConstraint(fields=["version", "ayah", "column"], name="unique_change_per_version_ayah_column"),
-            models.UniqueConstraint(fields=["version", "sura", "column"], name="unique_change_per_version_sura_column"),
+            models.UniqueConstraint(
+                fields=["version", "surah", "column"], name="unique_change_per_version_surah_column"
+            ),
             models.UniqueConstraint(fields=["version", "word", "column"], name="unique_change_per_version_word_column"),
             models.UniqueConstraint(
                 fields=["version", "page_no", "column"], name="unique_change_per_version_page_column"
+            ),
+            models.UniqueConstraint(
+                fields=["version", "from_ayah", "to_ayah", "column"],
+                condition=models.Q(from_ayah__isnull=False),
+                name="unique_change_per_version_ayah_range_column",
+            ),
+            models.UniqueConstraint(
+                fields=["version", "from_word", "to_word", "column"],
+                condition=models.Q(from_word__isnull=False),
+                name="unique_change_per_version_word_range_column",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(from_ayah__isnull=True) | models.Q(from_ayah__lte=models.F("to_ayah")),
+                name="change_ayah_range_ordered",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(from_word__isnull=True) | models.Q(from_word__lte=models.F("to_word")),
+                name="change_word_range_ordered",
             ),
         ]
         indexes = [
@@ -1028,13 +1167,7 @@ class AssetVersionChange(BaseModel):
         persisted row. Tested explicitly rather than by truthiness, so a
         legitimate zero would not fall through to the next unit.
         """
-        if self.sura_id is not None:
-            return self.sura_id
-        if self.ayah_id is not None:
-            return self.ayah_id
-        if self.word_id is not None:
-            return self.word_id
-        return self.page_no
+        return unit_key_of([getattr(self, name) for name in UNIT_VALUE_FIELDS])
 
 
 class ReviewStateChoice(models.TextChoices):

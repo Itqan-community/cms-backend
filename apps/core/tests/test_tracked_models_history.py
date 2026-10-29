@@ -9,7 +9,7 @@ Verifies:
    and restricts migrations to the "audit" database.
 4. The history_user_id field on all historical models is a scalar BigIntegerField
    (null=True) with no relational/foreign key constraints across databases.
-5. Explicitly excluded models (UsageEvent, Sura, Ayah, Word) do not have history enabled.
+5. Explicitly excluded models (UsageEvent, Surah, Ayah, Word) do not have history enabled.
 6. MIGRATION_MODULES points "simple_history" to "apps.core.audit_migrations".
 """
 
@@ -47,7 +47,7 @@ from apps.publishers.models import (
     PublisherMember,
     PublisherMemberInvitation,
 )
-from apps.quran.models import Ayah, Sura, Word
+from apps.quran.models import Ayah, Surah, Word
 from apps.users.models import APIKey, Developer, User
 
 TRACKED_MODELS = [
@@ -85,7 +85,7 @@ TRACKED_MODELS = [
 
 EXCLUDED_MODELS = [
     UsageEvent,
-    Sura,
+    Surah,
     Ayah,
     Word,
 ]
@@ -224,7 +224,7 @@ class TrackedModelsHistoryConfigurationTests(SimpleTestCase):
                 )
 
     def test_excluded_models_where_inspected_should_not_have_history_descriptor(self):
-        """Excluded models (UsageEvent, Sura, Ayah, Word) must not have history configured."""
+        """Excluded models (UsageEvent, Surah, Ayah, Word) must not have history configured."""
         for model in EXCLUDED_MODELS:
             # Arrange
             model_name = model._meta.label

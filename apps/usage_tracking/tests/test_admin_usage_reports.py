@@ -53,7 +53,7 @@ class TestAdminUsageReports(BaseTestCase):
 
         # Assert
         admin = [operation for path, item in paths.items() if "/admin/usage/" in path for operation in item.values()]
-        assert len(admin) == 6
+        assert len(admin) == 11
         assert all(403 in operation["responses"] for operation in admin)
 
     def test_summary_where_staff_should_include_every_publisher_and_unassigned_api_calls(self):

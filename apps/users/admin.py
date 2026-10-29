@@ -6,21 +6,36 @@ from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin import widgets
 from django.contrib.auth import admin as auth_admin, forms as admin_forms
-from django.contrib.auth.models import Group
-from django.core.exceptions import ValidationError
+from django.contrib.auth.models import Group, Permission
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import QuerySet
 from django.forms import EmailField, ModelForm
 from django.http import HttpRequest
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
+from ninja_keys.admin import APIKeyModelAdmin
 from plain_permissions.utils import get_permissions_queryset
 
 from apps.core.admin import AuditedModelAdmin
 from apps.core.ninja_utils.errors import ItqanError
+from apps.core.permissions import PermissionChoice
 from apps.publishers.models import PublisherMember
 from apps.users.services.group import GroupService
 
-from .models import User
+from .models import APIKey, Developer, User
+
+
+class PortalPermissionMultipleChoiceField(forms.ModelMultipleChoiceField):
+    """Labels each permission with its ``PermissionChoice`` name in the admin's language.
+
+    ``Permission.name`` is an English copy stored when permissions were synced, so it never
+    follows the active language.
+    """
+
+    def label_from_instance(self, obj: Permission) -> str:
+        if obj.codename in PermissionChoice.values:  # type: ignore[attr-defined]
+            return str(PermissionChoice(obj.codename).label)
+        return super().label_from_instance(obj)
 
 
 class PublisherMemberInline(admin.TabularInline):
@@ -37,7 +52,7 @@ class UserAdminChangeForm(admin_forms.UserChangeForm):
     # SelectFilter2.js prepends the widget it builds into that container -- landing it
     # before the label, so the label renders *after* the field. Wrapping restores the
     # structure `groups` gets, giving the JS its own parent to prepend into.
-    user_permissions = forms.ModelMultipleChoiceField(
+    user_permissions = PortalPermissionMultipleChoiceField(
         get_permissions_queryset(),
         label=_("Permissions"),
         required=False,
@@ -82,7 +97,7 @@ class UserAdmin(AuditedModelAdmin, auth_admin.UserAdmin):
     add_form = UserAdminCreationForm
     fieldsets = (
         (None, {"fields": ("email", "password")}),
-        (_("Personal info"), {"fields": ("name",)}),
+        (_("Personal info"), {"fields": ("name", "preferred_language")}),
         (
             _("Permissions"),
             {
@@ -165,7 +180,7 @@ class GroupAdminForm(ModelForm):
 
     # Wrapped for the same reason as UserAdminChangeForm.user_permissions -- see the note
     # there. ``required=False`` keeps a group with no permissions valid.
-    permissions = forms.ModelMultipleChoiceField(
+    permissions = PortalPermissionMultipleChoiceField(
         get_permissions_queryset(),
         label=_("Permissions"),
         required=False,
@@ -228,3 +243,33 @@ class GroupAdmin(admin.ModelAdmin):
         service = self.get_service()
         for group in queryset:
             service.delete_group(group)
+
+
+if admin.site.is_registered(APIKey):
+    admin.site.unregister(APIKey)
+
+
+@admin.register(APIKey)
+class AuditedAPIKeyAdmin(AuditedModelAdmin, APIKeyModelAdmin):
+    def revert_disabled(self, request, obj=None):
+        return True
+
+    def history_form_view(self, request: HttpRequest, object_id: str, version_id: str, extra_context=None):
+        if request.method == "POST":
+            raise PermissionDenied(_("API keys cannot be reverted from historical snapshots."))
+        return super().history_form_view(request, object_id, version_id, extra_context=extra_context)
+
+    def save_model(self, request: HttpRequest, obj: APIKey, form=None, change: bool = False) -> None:
+        obj._history_user = request.user
+        if not obj.pk:
+            APIKeyModelAdmin.save_model(self, request, obj, form, change)
+        else:
+            AuditedModelAdmin.save_model(self, request, obj, form, change)
+
+
+@admin.register(Developer)
+class DeveloperAdmin(AuditedModelAdmin):
+    list_display = ["user", "job_title", "profile_completed", "created_at"]
+    search_fields = ["user__email", "user__name", "job_title"]
+    list_filter = ["profile_completed"]
+    raw_id_fields = ["user"]

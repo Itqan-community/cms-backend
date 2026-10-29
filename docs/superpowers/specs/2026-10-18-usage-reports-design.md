@@ -436,3 +436,85 @@ tracking beyond the hashed identities above, revenue reporting, and email/schedu
     `app_not_found` and `usage_counts_disabled`.
 12. The developer page's app filter takes `UsageApp` ids; the options come from a breakdown by
     `app` (apps with traffic in the range).
+
+## 21. Recitation reports (brainstormed 2026-10-22)
+
+What a recitation publisher wants beyond §8: how far the content reaches, whether listeners come
+back, how it spreads, and what to publish next. Dropped in the brainstorm: completion and
+drop-off curves, replayed ayahs, usage modes (memorization/khatmah), cross-publisher benchmarks,
+404 and error-rate reports, surah-vs-ayah demand.
+
+### 21.1 Reports and where they live
+
+| Report | Asset tab (recitation) | Publisher dashboard | Source |
+|---|---|---|---|
+| Plays over time, Hijri axis option, spike flags (≥ 3× the trailing median) | ✓ | ✓ | timeseries (Hijri and spikes are computed in the frontend) |
+| Listening hours | ✓ | ✓ | new metric `listening_seconds` (§21.2) |
+| Top surahs | ✓ | ✓ | breakdown `by=surah` |
+| Countries, and a country filter on every report | ✓ | ✓ | existing `country` filter, honoured by every new endpoint |
+| Traffic per app | ✓ | ✓ | breakdown `by=app` |
+| New vs returning listeners, cumulative listeners, milestones | ✓ | ✓ | `listeners/` (§21.3) |
+| Weekly listener cohorts | ✓ | ✓ | `cohorts/` (§21.3) |
+| Spread: first-seen countries and apps | ✓ | ✓ | `first-seen/` (§21.3) |
+| Gallery funnel: views → downloads → plays | ✓ | ✓ | summary metrics (frontend) |
+| Top reciters; reciter / riwayah / qiraah filters | | ✓ | dimensions and filters (§21.2) |
+| Top content this week, with change and "rising" | | ✓ | breakdown `by=asset`, `compare`, `order=growth` |
+| Search terms and zero-result searches | | ✓ | `search-terms/` (§21.4) |
+| Incomplete recitations (fewer than 114 surahs) | badge | table | `recitation-coverage/` (§21.5) |
+
+The publisher-dashboard reports are also served under `/portal/admin/usage/` for Itqan staff.
+
+### 21.2 Engine changes
+
+- **Dimensions** `reciter`, `riwayah`, `qiraah` (from the event's asset, like `publisher`) for
+  breakdowns and splits in every scope; **filters** `reciter_id`, `riwayah_id`, `qiraah_id`.
+- **Metric `listening_seconds`**: seconds of audio delivered = bytes × track `duration_ms` ÷
+  track `size_bytes`, for each audio request whose path is a stored surah track or ayah file.
+  Requests for unknown paths add 0. Stored as a new rollup column `listened_seconds`, filled by
+  `rebuild_hour`; `manage.py rebuild_traffic_rollups --since <date>` backfills retained hours.
+  Labelled as an estimate: apps that buffer a whole file count its full length.
+- **Breakdown `order`**: `value` (default) or `growth` (current − previous, largest first; implies
+  `compare`).
+
+### 21.3 Listener growth, cohorts and spread (events only, within retention)
+
+A listener's **first seen** is their earliest counted audio event in the scope and filters, looking
+back to the retention cutoff (§20.3). Ranges that start before the cutoff are clamped to it and
+the response says so (`clamped_start`).
+
+- `usage/listeners/` — per bucket (`day`/`week`/`month`): `new` (first seen in the bucket),
+  `returning` (active in the bucket, first seen earlier) and `cumulative` (first seen up to the
+  bucket end, from the cutoff).
+- `usage/cohorts/` — weekly cohorts by first-seen week inside the range (at most 26), each with
+  `size` and the share active in week +0 … +N up to the range end.
+- `usage/first-seen/?by=country|app` — first-seen date per country or identified app, with plays
+  in range; rows first seen inside the range are flagged `new`.
+- Developer scope: not served (cohorts of a single app add little and complicate the privacy
+  floor).
+
+### 21.4 Gallery search terms
+
+- **Collection:** `SearchEvent(occurred_at, surface, term, results, listener_id)` written by a
+  `@track_search` decorator on the gallery list endpoints (`/cms-api/assets/`,
+  `/cms-api/recitations/`, `/cms-api/reciters/`), first page only, when `search` is non-empty.
+  `term` is normalised (lower case; Arabic diacritics and tatweel removed; أ إ آ → ا, ة → ه,
+  ى → ي; spaces collapsed; at most 100 characters). The reciters page searches as the user
+  types, so a search drops the same listener's searches from the last 30 seconds whose term is a
+  prefix of the new one. Bots (same list as §5.1) are skipped. Purged with traffic events.
+- **Report** `usage/search-terms/` (publisher and admin): top terms by distinct searchers, with
+  searches and the share that returned no results; `zero_results=true` lists terms whose latest
+  search returned nothing. Terms with fewer than 3 distinct searchers are never returned. Each
+  term is matched at report time against reciter, riwayah and qiraah names (normalised the same
+  way; exact match, or the term contained in a name when it has ≥ 3 characters, only when one
+  entity matches) and returned with `match: {type, id, label}`.
+- **Visibility:** publishers see every gallery search, not only searches that led to their assets.
+  Decided in the brainstorm: the point is to show unmet demand (reciters, riwayat, qira'at) a
+  publisher could supply.
+
+### 21.5 Recitation coverage
+
+`usage/recitation-coverage/` lists the recitation assets in scope with `surahs` (distinct surahs
+in the default folder), `missing` (the absent surah numbers), `timed_share` (tracks with ayah
+timings ÷ tracks) and `missing_by_demand`: the missing surahs ordered by platform-wide plays of
+that surah in the last 90 days, across every recitation (aggregate, no other publisher
+identified). `incomplete_only` (default true) hides complete recitations.

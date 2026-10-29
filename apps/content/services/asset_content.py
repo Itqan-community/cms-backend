@@ -11,6 +11,7 @@ reaches consumers only once its changes are approved and it is explicitly
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 import logging
 import re
@@ -22,6 +23,7 @@ from django.utils.translation import gettext as _
 
 from apps.content.columns import CellKey, Snapshot, requires_major_bump
 from apps.content.models import (
+    GROUP_TEMPLATES,
     REVIEWED_CATEGORIES,
     Asset,
     AssetLanguage,
@@ -40,8 +42,17 @@ from apps.content.services.asset_content_import import (
     AssetContentParseError,
     parse_content_file,
 )
-from apps.content.services.asset_templates import EntryFilters, UnitSpec, unit_spec_for
+from apps.content.services.asset_templates import (
+    EntryFilters,
+    QuranPosition,
+    UnitRow,
+    UnitSpec,
+    group_label,
+    range_invalid_error,
+    unit_spec_for,
+)
 from apps.content.tasks import notify_asset_version_created
+from apps.content.unit_keys import decode_group_key, encode_group_key
 from apps.content.version_text import VersionText
 from apps.core.ninja_utils.errors import ItqanError
 from apps.dependabot.tasks import dispatch_dependabot_updates_for_version
@@ -70,6 +81,17 @@ def cell_fields(unit_id: int, keys: list[str], cells: Snapshot, source_cells: Sn
         ),
         "source_text": source_cells.get((unit_id, first)) if source_cells is not None else None,
     }
+
+
+def group_fields(unit: UnitRow) -> dict:
+    """A group row's range ends (``{"surah", "ayah", "word"}``) and orphan flag; empty for other templates."""
+    if unit.group_from is None:
+        return {}
+
+    def position(ends: tuple[int, ...]) -> dict:
+        return {"surah": ends[0], "ayah": ends[1], "word": ends[2] if len(ends) > 2 else None}
+
+    return {"group_from": position(unit.group_from), "group_to": position(unit.group_to), "orphaned": unit.orphaned}
 
 
 def changed_fields(unit_id: int, keys: list[str], changed_cells: set[CellKey]) -> dict:
@@ -131,7 +153,9 @@ def import_uploaded_file_into_entries(version: AssetVersion, *, strict: bool = F
         return
     spec = unit_spec_for(version.asset)
     try:
-        parsed = parse_content_file(raw, spec, version.asset, strict=strict)
+        parsed = parse_content_file(
+            raw, spec, version.asset, strict=strict, allowed_unit_ids=source_group_keys(version)
+        )
     except AssetContentMissingColumnsError as exc:
         # Raised whatever `strict` says: a version missing a column would drop all its cells.
         logger.info(f"Uploaded file is missing columns [version_id={version.pk}, missing={exc.missing}]")
@@ -144,8 +168,9 @@ def import_uploaded_file_into_entries(version: AssetVersion, *, strict: bool = F
         raise ItqanError(
             error_name="content_file_invalid_rows",
             message=_(
-                "Some rows can't be used: they repeat a unit with different text, name a unit that doesn't "
-                "exist, or can't be read. Fix row(s) {rows} and upload again."
+                "Some rows can't be used: they repeat a unit or range, name a unit that doesn't exist, end "
+                "before they start, use a range the source language doesn't have, or can't be read. Fix "
+                "row(s) {rows} and upload again."
             ).format(rows=shown + (" …" if len(exc.rows) > 10 else "")),
             status_code=400,
             extra={"rows": {str(row): reason for row, reason in exc.rows.items()}},
@@ -161,6 +186,24 @@ def import_uploaded_file_into_entries(version: AssetVersion, *, strict: bool = F
         return
     entries_count = AssetContentRepository().replace_entries_from_parsed(version, spec, parsed)
     logger.info(f"Uploaded file imported into entries [version_id={version.pk}, entries={entries_count}]")
+
+
+def source_group_keys(version: AssetVersion) -> set[int] | None:
+    """The ranges a translated language of a group asset may use: its source head's.
+
+    ``None`` (no restriction) for any other version. With no committed source
+    version the set is empty, so every row is refused.
+    """
+    asset = version.asset
+    if asset.template not in GROUP_TEMPLATES or version.asset_language is None or version.asset_language.is_source:
+        return None
+    head = asset.get_latest_version(asset.language)
+    if head is None:
+        return set()
+    if head.entries.exists():
+        # The head keeps its full entries: read only the ranges, never the text.
+        return unit_spec_for(asset).stored_ranges(head, with_text=True)
+    return {unit_id for (unit_id, _key), text in AssetContentRepository().reconstruct_entries(head).items() if text}
 
 
 def missing_columns_error(exc: AssetContentMissingColumnsError) -> ItqanError:
@@ -481,7 +524,7 @@ class AssetContentService:
         *,
         offset: int,
         limit: int,
-        sura: int | None = None,
+        surah: int | None = None,
         filters: EntryFilters | None = None,
     ) -> tuple[list[dict], int]:
         """One page of the template's canonical units with stored text overlaid.
@@ -517,7 +560,7 @@ class AssetContentService:
             asset,
             offset=offset,
             limit=limit,
-            sura=sura,
+            surah=surah,
             filters=filters,
             version=version,
             source_version=source_version,
@@ -533,11 +576,12 @@ class AssetContentService:
                 "unit_id": unit.unit_id,
                 "label": unit.label,
                 "reference_text": unit.reference_text,
-                "sura": unit.sura,
-                "aya": unit.aya,
+                "surah": unit.surah,
+                "ayah": unit.ayah,
                 **cell_fields(unit.unit_id, keys, cells, source_cells),
                 "order": unit.order,
                 **changed_fields(unit.unit_id, keys, changed_cells),
+                **group_fields(unit),
             }
             for unit in units
         ]
@@ -691,9 +735,242 @@ class AssetContentService:
                 ),
                 status_code=400,
             )
+        allowed = source_group_keys(draft)
+        if allowed is not None:
+            outside = [unit_id for unit_id in candidates if unit_id not in allowed]
+            if outside:
+                raise ItqanError(
+                    error_name="group_not_in_source",
+                    message=_("A translation can only write text for the source language's groups."),
+                    status_code=400,
+                )
         changed = self.repo.upsert_entries(draft, spec, rows, columns=columns)
         logger.info(f"Draft entries upserted [version_id={draft.pk}, count={len(changed)}]")
         return changed
+
+    def _group_draft_or_400(
+        self, slug: str, category: CategoryChoice, version_id: int, publisher_q: Q | None
+    ) -> tuple[Asset, AssetVersion, UnitSpec]:
+        """The editable draft of a group-template asset."""
+        asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
+        draft = self._get_editable_draft_or_400(asset, version_id)
+        spec = unit_spec_for(asset)
+        if not spec.is_group:
+            raise ItqanError(
+                error_name="template_not_grouped",
+                message=_("Only ayah-group and word-group assets have groups."),
+                status_code=400,
+            )
+        return asset, draft, spec
+
+    @staticmethod
+    def _source_only_error() -> ItqanError:
+        return ItqanError(
+            error_name="group_ranges_source_only",
+            message=_("Groups are added, moved and deleted in the source language; translations follow them."),
+            status_code=400,
+        )
+
+    @staticmethod
+    def _group_exists_error() -> ItqanError:
+        return ItqanError(
+            error_name="group_exists",
+            message=_("This draft already has a group with exactly this range."),
+            status_code=400,
+        )
+
+    def _lock_draft(self, draft: AssetVersion) -> AssetVersion:
+        """Row-lock ``draft`` and re-check it is still a draft: a commit or discard
+        may have landed since it was loaded."""
+        locked = AssetVersion.objects.select_for_update().filter(pk=draft.pk).first()
+        if locked is None:
+            raise ItqanError(
+                error_name="version_not_found",
+                message=_("Version with id {id} not found.").format(id=draft.pk),
+                status_code=404,
+            )
+        self._require_draft(locked)
+        locked.asset = draft.asset
+        return locked
+
+    @staticmethod
+    def _require_group(draft: AssetVersion, spec: UnitSpec, unit_id: int) -> None:
+        if not draft.entries.filter(spec.entries_q([unit_id])).exists():
+            raise ItqanError(
+                error_name="group_not_found",
+                message=_("This draft has no such group."),
+                status_code=404,
+            )
+
+    def add_group(
+        self,
+        slug: str,
+        category: CategoryChoice,
+        version_id: int,
+        *,
+        start: QuranPosition,
+        end: QuranPosition,
+        cells: dict[str, str],
+        publisher_q: Q | None = None,
+    ) -> list[AssetVersionEntry]:
+        """Add a group to a source-language draft, with its first text if given.
+
+        With no text the group is a blank row in the draft's first column, to be
+        filled in the grid; committing drops it if it is still blank (a committed
+        group always has text).
+        """
+        asset, draft, spec = self._group_draft_or_400(slug, category, version_id, publisher_q)
+        if draft.asset_language_id and not draft.asset_language.is_source:
+            raise self._source_only_error()
+        key = spec.key_for_range(start, end)
+        columns = asset.ensure_text_columns()
+        unknown = sorted(set(cells) - {column.key for column in columns})
+        if unknown:
+            raise ItqanError(
+                error_name="unknown_column",
+                message=_("This asset has no column named {columns}.").format(columns=", ".join(unknown)),
+                status_code=400,
+            )
+        rows = [{"unit_id": key, "column": column, "text": text} for column, text in cells.items() if text.strip()]
+        if not rows:
+            rows = [{"unit_id": key, "column": columns[0].key, "text": ""}]
+        try:
+            with transaction.atomic():
+                locked = self._lock_draft(draft)
+                if locked.entries.filter(spec.entries_q([key])).exists():
+                    raise self._group_exists_error()
+                changed = self.repo.upsert_entries(locked, spec, rows, columns=columns)
+        except IntegrityError as exc:
+            # A concurrent add of the same range won the unique constraint.
+            raise self._group_exists_error() from exc
+        logger.info(f"Group added [version_id={draft.pk}, unit_id={key}]")
+        return changed
+
+    def append_group(
+        self, slug: str, category: CategoryChoice, version_id: int, publisher_q: Q | None = None
+    ) -> list[AssetVersionEntry]:
+        """Add a blank one-unit group right after the furthest unit any group of the
+        draft reaches (the first ayah / word when it has none): "continue writing"."""
+        asset, draft, spec = self._group_draft_or_400(slug, category, version_id, publisher_q)
+        if draft.asset_language_id and not draft.asset_language.is_source:
+            raise self._source_only_error()
+        columns = asset.ensure_text_columns()
+        try:
+            with transaction.atomic():
+                locked = self._lock_draft(draft)
+                ends = [decode_group_key(key)[1] for key in spec.stored_ranges(locked)]
+                start = max(ends) + 1 if ends else spec.first_unit_id()
+                key = encode_group_key(start, start) if start is not None else 0
+                if start is None or key not in spec.valid_unit_ids(asset, [key]):
+                    raise range_invalid_error()
+                changed = self.repo.upsert_entries(
+                    locked, spec, [{"unit_id": key, "column": columns[0].key, "text": ""}], columns=columns
+                )
+        except IntegrityError as exc:
+            raise self._group_exists_error() from exc
+        logger.info(f"Group appended [version_id={draft.pk}, unit_id={key}]")
+        return changed
+
+    def extend_group(
+        self,
+        slug: str,
+        category: CategoryChoice,
+        version_id: int,
+        unit_id: int,
+        *,
+        by: int,
+        publisher_q: Q | None = None,
+    ) -> list[AssetVersionEntry]:
+        """Grow (``by=1``) or shrink (``by=-1``) a group's end by one ayah / word,
+        keeping its text. Ids are in mushaf order, so the next unit is id + 1,
+        across ayah and surah boundaries."""
+        asset, draft, spec = self._group_draft_or_400(slug, category, version_id, publisher_q)
+        if draft.asset_language_id and not draft.asset_language.is_source:
+            raise self._source_only_error()
+        start, end = decode_group_key(unit_id)
+        new_key = encode_group_key(start, end + by)
+        if end + by < start or new_key not in spec.valid_unit_ids(asset, [new_key]):
+            raise range_invalid_error()
+        try:
+            with transaction.atomic():
+                locked = self._lock_draft(draft)
+                self._require_group(locked, spec, unit_id)
+                if locked.entries.filter(spec.entries_q([new_key])).exists():
+                    raise self._group_exists_error()
+                moved = self.repo.move_group_cells(locked, spec, unit_id, new_key)
+        except IntegrityError as exc:
+            raise self._group_exists_error() from exc
+        logger.info(f"Group resized [version_id={draft.pk}, from={unit_id}, to={new_key}]")
+        return moved
+
+    def move_group(
+        self,
+        slug: str,
+        category: CategoryChoice,
+        version_id: int,
+        unit_id: int,
+        *,
+        start: QuranPosition,
+        end: QuranPosition,
+        publisher_q: Q | None = None,
+    ) -> list[AssetVersionEntry]:
+        """Give a source-language draft's group a new range, keeping its text in every column."""
+        _asset, draft, spec = self._group_draft_or_400(slug, category, version_id, publisher_q)
+        if draft.asset_language_id and not draft.asset_language.is_source:
+            raise self._source_only_error()
+        new_key = spec.key_for_range(start, end)
+        try:
+            with transaction.atomic():
+                locked = self._lock_draft(draft)
+                self._require_group(locked, spec, unit_id)
+                if new_key == unit_id:
+                    return list(locked.entries.filter(spec.entries_q([unit_id])))
+                if locked.entries.filter(spec.entries_q([new_key])).exists():
+                    raise self._group_exists_error()
+                moved = self.repo.move_group_cells(locked, spec, unit_id, new_key)
+        except IntegrityError as exc:
+            raise self._group_exists_error() from exc
+        logger.info(f"Group moved [version_id={draft.pk}, from={unit_id}, to={new_key}]")
+        return moved
+
+    def delete_group(
+        self, slug: str, category: CategoryChoice, version_id: int, unit_id: int, publisher_q: Q | None = None
+    ) -> None:
+        """Delete a group's cells from a draft. A translated language may only
+        delete a group its source no longer has (an orphan)."""
+        _asset, draft, spec = self._group_draft_or_400(slug, category, version_id, publisher_q)
+        with transaction.atomic():
+            locked = self._lock_draft(draft)
+            self._require_group(locked, spec, unit_id)
+            allowed = source_group_keys(locked)
+            if allowed is not None and unit_id in allowed:
+                raise self._source_only_error()
+            self.repo.delete_group_cells(locked, spec, unit_id)
+        logger.info(f"Group deleted [version_id={draft.pk}, unit_id={unit_id}]")
+
+    def _forbid_orphaned_groups(self, version: AssetVersion, load_snapshot: Callable[[], Snapshot]) -> None:
+        """A translated language may not commit (or restore) text for ranges its source no longer has.
+
+        ``load_snapshot`` is only called when the check applies, so other assets never read their cells here.
+        """
+        allowed = source_group_keys(version)
+        if allowed is None:
+            return
+        spec = unit_spec_for(version.asset)
+        orphans = sorted(
+            unit_id for (unit_id, _key), text in load_snapshot().items() if text and unit_id not in allowed
+        )
+        if not orphans:
+            return
+        units = self.repo._units_by_id(spec, list(dict.fromkeys(orphans)))
+        labels = [group_label(*units[unit_id]) for unit_id in dict.fromkeys(orphans) if unit_id in units]
+        shown = ", ".join(labels[:10]) + (" …" if len(labels) > 10 else "")
+        raise ItqanError(
+            error_name="orphaned_groups",
+            message=_("Move or delete the text of groups the source no longer has: {groups}.").format(groups=shown),
+            status_code=400,
+            extra={"groups": labels},
+        )
 
     def import_file_into_version(self, version: AssetVersion, raw: bytes) -> int:
         """Parse an uploaded content file and replace the version's entries.
@@ -703,7 +980,7 @@ class AssetContentService:
         """
         spec = unit_spec_for(version.asset)
         try:
-            parsed = parse_content_file(raw, spec, version.asset)
+            parsed = parse_content_file(raw, spec, version.asset, allowed_unit_ids=source_group_keys(version))
         except AssetContentMissingColumnsError as exc:
             raise missing_columns_error(exc) from exc
         except AssetContentParseError as exc:
@@ -761,6 +1038,8 @@ class AssetContentService:
         with transaction.atomic():
             # Locked before the check, so a concurrent column reorder can't land between them.
             self.repo.lock_asset(asset)
+            # Under the asset lock: a source commit can't move a group between the check and this commit.
+            self._forbid_orphaned_groups(draft, lambda: self.repo._entries_map(draft))
             forbid_minor_after_column_reorder(asset, draft.asset_language.language, bump)
             draft.name = issue_version_number(asset, draft.asset_language.language, start=version_number, bump=bump)
             published = self.repo.publish_draft(draft)
@@ -804,8 +1083,17 @@ class AssetContentService:
         with transaction.atomic():
             self.repo.lock_asset(version.asset)
             forbid_minor_after_column_reorder(version.asset, language, bump)
+            snapshots: list[Snapshot] = []
+
+            def load_snapshot() -> Snapshot:
+                snapshots.append(self.repo.reconstruct_entries(version))
+                return snapshots[0]
+
+            self._forbid_orphaned_groups(version, load_snapshot)
             name = issue_version_number(version.asset, language, bump=bump)
-            restored = self.repo.restore_version(version, name=name, created_by_id=created_by_id)
+            restored = self.repo.restore_version(
+                version, name=name, created_by_id=created_by_id, snapshot=snapshots[0] if snapshots else None
+            )
         logger.info(f"Version restored [source_version_id={version.pk}, new_version_id={restored.pk}]")
         return restored
 

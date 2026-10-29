@@ -19,7 +19,7 @@ from apps.content.models import (
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
-from apps.quran.models import Ayah, Sura
+from apps.quran.models import Ayah, Surah
 from apps.users.models import User
 
 
@@ -47,9 +47,9 @@ class AssetContentBaseTest(BaseTestCase):
         # assignment bypass so they behave like the existing editor groups that the
         # rollout migration grants it to. Assignment itself is covered by its own tests.
         self.give_permission(self.user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES)
-        # A tiny corpus: sura 1 with 3 ayahs.
-        self.sura = baker.make(Sura, id=1, name="الفاتحة", ayas_count=3)
-        self.ayahs = [baker.make(Ayah, id=i, sura=self.sura, number_in_sura=i, text=f"ayah {i}") for i in (1, 2, 3)]
+        # A tiny corpus: surah 1 with 3 ayahs.
+        self.surah = baker.make(Surah, id=1, name="الفاتحة", ayahs_count=3)
+        self.ayahs = [baker.make(Ayah, id=i, surah=self.surah, number_in_surah=i, text=f"ayah {i}") for i in (1, 2, 3)]
 
 
 class GetOrCreateDraftTest(AssetContentBaseTest):
@@ -880,7 +880,7 @@ class VersionDiffTest(AssetContentBaseTest):
         self.assertEqual("a", row["old_text"])
         self.assertEqual("b", row["new_text"])
         self.assertEqual(self.ayahs[0].id, row["unit_id"])
-        self.assertEqual(f"{self.sura.id}:1", row["label"])
+        self.assertEqual(f"{self.surah.id}:1", row["label"])
 
     def test_diff_computed_for_legacy_commit(self):
         # Legacy: no stored changes, full entries on both versions.
@@ -1135,7 +1135,7 @@ class VersionUploadImportTest(AssetContentBaseTest):
             name="Tabari",
             slug="tabari-import",
         )
-        csv_bytes = b"sura,aya,text\n1,1,imported one\n1,2,imported two\n"
+        csv_bytes = b"surah,ayah,text\n1,1,imported one\n1,2,imported two\n"
         upload = SimpleUploadedFile("t.csv", csv_bytes, content_type="text/csv")
 
         # Act

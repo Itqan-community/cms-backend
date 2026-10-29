@@ -53,7 +53,7 @@ def allowed_languages(user: User, asset: Asset) -> set[str]:
     its own — what the user may DO in those languages is still decided by their
     ``PORTAL_EDIT_*_CONTENT`` / ``PORTAL_UPDATE_*`` / ``PORTAL_REVIEW_CONTENT`` permissions.
     """
-    if check_permission(user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES):
+    if check_permission(user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES, publisher=asset.publisher_id):
         return _asset_languages(asset)
     return member_languages(user, asset.publisher_id)
 

@@ -4,16 +4,21 @@ Tests for Django Allauth integration (adapters and forms)
 
 import secrets
 
+from allauth.core import context as allauth_context
 from allauth.socialaccount.models import SocialAccount, SocialApp, SocialLogin
+from django.contrib.auth.models import AnonymousUser
 from django.contrib.sites.models import Site
+from django.core import mail
 from django.test import RequestFactory
+from django.utils import translation
 from django.utils.crypto import get_random_string
 import pytest
 
 from apps.core.tests.base import BaseTestCase
+from apps.core.tests.test_email_templates import arabic_catalog_is_compiled
 from apps.users.adapters import AccountAdapter, SocialAccountAdapter
 from apps.users.forms import UserSignupForm, UserSocialSignupForm
-from apps.users.models import User
+from apps.users.models import LanguageChoice, User
 
 
 class AccountAdapterTestCase(BaseTestCase):
@@ -54,6 +59,42 @@ class AccountAdapterTestCase(BaseTestCase):
         self.assertEqual(saved_user.email, "noform@example.com")
         self.assertEqual(saved_user.name, "")  # Should be empty string
         self.assertTrue(User.objects.filter(email="noform@example.com").exists())
+
+    def test_new_user_where_request_accepts_english_should_prefer_english(self):
+        # Arrange
+        request = self.factory.get("/", HTTP_ACCEPT_LANGUAGE="en")
+
+        # Act
+        user = self.adapter.new_user(request)
+
+        # Assert
+        self.assertEqual(LanguageChoice.ENGLISH, user.preferred_language)
+
+    def test_new_user_where_request_accepts_arabic_should_prefer_arabic(self):
+        # Arrange
+        request = self.factory.get("/", HTTP_ACCEPT_LANGUAGE="ar")
+
+        # Act
+        user = self.adapter.new_user(request)
+
+        # Assert
+        self.assertEqual(LanguageChoice.ARABIC, user.preferred_language)
+
+    @pytest.mark.skipif(not arabic_catalog_is_compiled(), reason="run compilemessages first: django.mo is gitignored")
+    def test_send_mail_where_account_prefers_arabic_should_render_in_arabic_despite_english_request(self):
+        # Arrange
+        User.objects.create_user(email="arabic@example.com", preferred_language=LanguageChoice.ARABIC)
+        Site.objects.update_or_create(id=1, defaults={"domain": "example.com", "name": "example"})
+        request = self.factory.get("/")
+        request.user = AnonymousUser()
+
+        # Act
+        with allauth_context.request_context(request), translation.override(LanguageChoice.ENGLISH):
+            self.adapter.send_mail("account/email/password_changed", "arabic@example.com", {})
+
+        # Assert
+        self.assertEqual(1, len(mail.outbox))
+        self.assertIn("كلمة المرور تم تغييرها", mail.outbox[0].subject)
 
 
 class SocialAccountAdapterTestCase(BaseTestCase):

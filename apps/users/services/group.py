@@ -2,16 +2,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from django.db.models import ProtectedError
 from django.utils.translation import gettext_lazy as _
 
 from apps.core.ninja_utils.errors import ItqanError
 from apps.core.permissions import PermissionChoice
 from apps.core.services.permissions import PermissionHierarchyService
+from apps.publishers.services.effective_permissions import effective_permissions
 from apps.users.repositories.group import ITQAN_INTERNAL_GROUP, GroupRepository
 
 if TYPE_CHECKING:
     from django.contrib.auth.models import Group
     from django.db.models import QuerySet
+
+    from apps.users.models import User
 
 __all__ = ["ITQAN_INTERNAL_GROUP", "GroupService"]
 
@@ -27,78 +31,81 @@ class GroupService:
         self.repo = repo or GroupRepository()
         self.hierarchy = hierarchy or PermissionHierarchyService()
 
-    def assignable_groups_qs(self) -> QuerySet[Group]:
-        """Groups that may be listed or assigned through the portal APIs.
+    def assignable_groups_qs(self, publisher_id: int) -> QuerySet[Group]:
+        """The roles ``publisher_id`` owns, which are all that the portal lists or assigns.
 
-        Itqan Internal carries every permission in the system, so it is never offered
-        for assignment nor exposed in the groups listing.
+        Global groups (Itqan Internal and other staff-only groups) and other publishers' roles
+        are never offered.
         """
-        return self.repo.assignable_qs()
+        return self.repo.assignable_qs(publisher_id)
 
-    def resolve_assignable_group(self, group_id: int) -> Group:
-        """Look up a group by id, rejecting ids that do not exist or are not assignable.
+    def resolve_assignable_group(self, group_id: int, publisher_id: int) -> Group:
+        """Look up one of ``publisher_id``'s roles by id, rejecting any other id.
 
-        Both cases raise the same error so the endpoint never confirms whether the
-        Itqan Internal group exists or what its id is.
+        Missing ids, global groups and other publishers' roles all raise the same error so the
+        endpoint never confirms what exists outside the caller's publisher.
         """
-        group = self.repo.get_assignable_by_id(group_id)
+        group = self.repo.get_assignable_by_id(group_id, publisher_id)
         if group is None:
             raise ItqanError(
                 error_name="invalid_group",
-                message=_("Group with id {id} is not available for assignment.").format(id=group_id),
+                message=_("Role with id {id} is not available for assignment.").format(id=group_id),
                 status_code=400,
             )
         return group
 
-    def create(self, name: str) -> Group:
-        name = self._validate_name(name)
-        if self.repo.name_exists(name):
-            raise ItqanError(
-                error_name="group_already_exists",
-                message=_("A group with this name already exists."),
-                status_code=400,
-            )
-        return self.repo.create(name)
+    def create(self, publisher_id: int, name_en: str, name_ar: str) -> Group:
+        name_en = self.validate_name(name_en, publisher_id=publisher_id, language="en")
+        name_ar = self.validate_name(name_ar, publisher_id=publisher_id, language="ar")
+        return self.repo.create_for_publisher(publisher_id, name_en, name_ar)
 
-    def rename(self, group_id: int, name: str) -> Group:
-        group = self._get_or_404(group_id)
-        name = self._validate_name(name)
-        if self.repo.name_exists(name, exclude_id=group_id):
-            raise ItqanError(
-                error_name="group_already_exists",
-                message=_("A group with this name already exists."),
-                status_code=400,
-            )
-        return self.repo.rename(group, name)
+    def rename(self, group_id: int, publisher_id: int, name_en: str, name_ar: str) -> Group:
+        group = self._get_or_404(group_id, publisher_id)
+        name_en = self.validate_name(name_en, exclude_id=group_id, publisher_id=publisher_id, language="en")
+        name_ar = self.validate_name(name_ar, exclude_id=group_id, publisher_id=publisher_id, language="ar")
+        return self.repo.rename(group, name_en=name_en, name_ar=name_ar)
 
-    def set_permissions(self, group_id: int, permissions: list[str]) -> Group:
+    def set_permissions(self, group_id: int, publisher_id: int, permissions: list[str], *, editor: User) -> Group:
         """Replace the group's permissions with the implied closure of ``permissions``.
 
         Each submitted codename is validated against :class:`PermissionChoice`; unknown
         codenames are rejected. The hierarchy is applied (e.g. CREATE pulls in READ) before
-        the group's permission set is overwritten.
+        the group's permission set is overwritten. Unless ``editor`` is Itqan staff, every
+        permission this *adds* to the group must be one the editor holds at this publisher, so a
+        role can never be used to escalate beyond its editor's own rights. Permissions the group
+        already has (e.g. granted by staff) may be kept or removed.
         """
-        group = self._get_or_404(group_id)
+        group = self._get_or_404(group_id, publisher_id)
         choices = self._validate_permissions(permissions)
+        self._check_grantable(editor, publisher_id, group, choices)
         rows = self.hierarchy.implied_rows(choices)
         return self.repo.set_permissions(group, rows)
 
-    def delete(self, group_id: int) -> None:
-        group = self._get_or_404(group_id)
-        self.repo.delete(group)
+    def delete(self, group_id: int, publisher_id: int) -> None:
+        group = self._get_or_404(group_id, publisher_id)
+        try:
+            self.repo.delete(group)
+        except ProtectedError as exc:
+            raise ItqanError(
+                error_name="group_in_use",
+                message=_("This role is assigned to members and cannot be deleted."),
+                status_code=400,
+            ) from exc
 
-    def validate_name(self, name: str, *, exclude_id: int | None = None) -> str:
+    def validate_name(
+        self, name: str, *, exclude_id: int | None = None, publisher_id: int | None = None, language: str = "en"
+    ) -> str:
         """Return the normalised ``name``, or raise :class:`ItqanError` if it is not usable.
 
-        Same rules as :meth:`create` and :meth:`rename` apply, but without touching the
-        database. Callers that own their own persistence (e.g. the Django admin, which saves
-        through a ``ModelForm``) use this to validate ahead of the save.
+        A role's name is unique among ``publisher_id``'s roles in ``language`` (each role has an
+        English and an Arabic name); with ``publisher_id`` None it is unique among all groups
+        (the Django admin, which saves global groups through a ``ModelForm``).
         """
         name = self._validate_name(name)
-        if self.repo.name_exists(name, exclude_id=exclude_id):
+        if self.repo.name_exists(name, exclude_id=exclude_id, publisher_id=publisher_id, language=language):
             raise ItqanError(
                 error_name="group_already_exists",
-                message=_("A group with this name already exists."),
+                message=_("A role with this name already exists."),
                 status_code=400,
             )
         return name
@@ -117,12 +124,28 @@ class GroupService:
         """Delete an already-loaded ``group``, bypassing the id lookup of :meth:`delete`."""
         self.repo.delete(group)
 
-    def _get_or_404(self, group_id: int) -> Group:
-        group = self.repo.get_by_id(group_id)
+    def _check_grantable(self, editor: User, publisher_id: int, group: Group, choices: list[PermissionChoice]) -> None:
+        if editor.is_staff or editor.is_superuser:
+            return
+        held = group.permissions.filter(codename__in=PermissionChoice.values).values_list("codename", flat=True)
+        current = self.hierarchy.with_implied(held)
+        added = {permission.value for permission in self.hierarchy.with_implied(choices) - current}
+        not_held = added - effective_permissions(editor, publisher_id)
+        if not_held:
+            raise ItqanError(
+                error_name="permission_not_grantable",
+                message=_("You cannot grant permissions you do not hold: {permissions}.").format(
+                    permissions=", ".join(sorted(not_held))
+                ),
+                status_code=400,
+            )
+
+    def _get_or_404(self, group_id: int, publisher_id: int) -> Group:
+        group = self.repo.get_assignable_by_id(group_id, publisher_id)
         if group is None:
             raise ItqanError(
                 error_name="group_not_found",
-                message=_("Group with id {id} not found.").format(id=group_id),
+                message=_("Role with id {id} not found.").format(id=group_id),
                 status_code=404,
             )
         return group
@@ -133,13 +156,13 @@ class GroupService:
         if not name:
             raise ItqanError(
                 error_name="group_name_required",
-                message=_("Group name must not be empty."),
+                message=_("Role name must not be empty."),
                 status_code=400,
             )
         if len(name) > _NAME_MAX_LENGTH:
             raise ItqanError(
                 error_name="group_name_too_long",
-                message=_("Group name must not exceed %(max)d characters.") % {"max": _NAME_MAX_LENGTH},
+                message=_("Role name must not exceed %(max)d characters.") % {"max": _NAME_MAX_LENGTH},
                 status_code=400,
             )
         return name

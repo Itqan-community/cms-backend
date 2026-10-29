@@ -132,7 +132,9 @@ def create_mushaf_version(
         )
 
     if data.publish:
-        check_permission(request.user, PermissionChoice.PORTAL_PUBLISH_CONTENT, raise_exception=True)
+        check_permission(
+            request.user, PermissionChoice.PORTAL_PUBLISH_CONTENT, raise_exception=True, publisher=request.publisher
+        )
     version = service.create_mushaf_version(
         mushaf_slug,
         text=VersionText.from_data(data),

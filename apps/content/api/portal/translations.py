@@ -227,7 +227,8 @@ def list_translations(request: Request, filters: TranslationFilter = Query()):
         | NinjaErrorResponse[Literal["content_file_missing_columns"]]
         | NinjaErrorResponse[Literal["content_file_invalid_rows"]]
         | NinjaErrorResponse[Literal["mushaf_layout_required"]]
-        | NinjaErrorResponse[Literal["mushaf_layout_not_allowed"]],
+        | NinjaErrorResponse[Literal["mushaf_layout_not_allowed"]]
+        | NinjaErrorResponse[Literal["template_not_allowed"]],
         404: NinjaErrorResponse[Literal["publisher_not_found"]]
         | NinjaErrorResponse[Literal["mushaf_layout_not_found"]],
     },

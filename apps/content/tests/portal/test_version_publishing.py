@@ -25,7 +25,7 @@ from apps.content.repositories.asset_review import AssetReviewRepository
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import MemberLanguage, Publisher, PublisherMember
-from apps.quran.models import Ayah, Sura
+from apps.quran.models import Ayah, Surah
 from apps.users.models import User
 
 
@@ -45,9 +45,9 @@ class VersionPublishingBaseTest(BaseTestCase):
             slug="t1",
         )
         self.fr = AssetLanguage.objects.create(asset=self.asset, language="fr", status=StatusChoice.READY)
-        sura = baker.make(Sura, id=1, name="الفاتحة", ayas_count=7)
-        self.ayah1 = baker.make(Ayah, id=1, sura=sura, number_in_sura=1, text="a")
-        self.ayah2 = baker.make(Ayah, id=2, sura=sura, number_in_sura=2, text="b")
+        surah = baker.make(Surah, id=1, name="الفاتحة", ayahs_count=7)
+        self.ayah1 = baker.make(Ayah, id=1, surah=surah, number_in_surah=1, text="a")
+        self.ayah2 = baker.make(Ayah, id=2, surah=surah, number_in_surah=2, text="b")
         self.user = User.objects.create_user(email="pub@example.com", name="Pub", is_staff=True)
         self.membership = baker.make(
             PublisherMember, user=self.user, publisher=self.publisher, status=PublisherMember.StatusChoice.ACTIVE

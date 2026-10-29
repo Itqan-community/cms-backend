@@ -6,7 +6,7 @@ from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
 from apps.core.permissions import PermissionChoice
-from apps.users.models import Developer
+from apps.users.models import Developer, LanguageChoice
 
 _PERMISSION_CODENAMES: set[str] = set(PermissionChoice.values)
 
@@ -23,8 +23,10 @@ class UserProfileSchema(Schema):
     email: str
     name: str
     phone: str | None = None
+    preferred_language: LanguageChoice
     is_active: bool
     is_profile_completed: bool
+    is_staff: bool = False
     bio: str = ""
     project_summary: str = ""
     project_url: str = ""
@@ -38,9 +40,16 @@ class UserProfileSchema(Schema):
 
 
 def _get_user_permissions(user):
+    """Permissions across all of the user's memberships, merged.
+
+    Kept for frontends that gate on the profile; the portal should gate on the selected
+    publisher's ``permissions`` from ``GET /portal/publishers/me/`` instead, since roles are
+    enforced per publisher.
+    """
+    from apps.publishers.services.effective_permissions import permissions_across_memberships
+
     permissions = []
-    for perm_code in user.get_all_permissions():
-        code_name = perm_code.split(".")[-1]
+    for code_name in sorted(permissions_across_memberships(user)):
         if code_name in _PERMISSION_CODENAMES:
             perm_choice = PermissionChoice(code_name)
             permissions.append(
@@ -67,6 +76,7 @@ def get_user_profile(request: Request):
         "email": user.email,
         "name": user.name,
         "phone": str(user.phone) if user.phone else None,
+        "preferred_language": user.preferred_language,
         "is_active": user.is_active,
         "is_profile_completed": (user.developer_profile.profile_completed if user.developer_profile else False),
         "bio": user_developer_profile.bio if user_developer_profile else "",
@@ -75,12 +85,14 @@ def get_user_profile(request: Request):
         "job_title": user_developer_profile.job_title if user_developer_profile else "",
         "created_at": user.created_at,
         "updated_at": user.updated_at,
+        "is_staff": user.is_staff,
         "permissions": _get_user_permissions(user),
     }
 
 
 class UserUpdateSchema(Schema):
     name: str | None = None
+    preferred_language: LanguageChoice | None = None
     bio: str | None = None
     project_summary: str | None = None
     project_url: str | None = None
@@ -99,9 +111,16 @@ def update_user_profile(request: Request, profile_data: UserUpdateSchema):
     update_fields = profile_data.model_dump(exclude_unset=True)
 
     with transaction.atomic():
+        user_fields = []
         if "name" in update_fields:
             user.name = (update_fields.pop("name") or "").strip()
-            user.save(update_fields=["name"])
+            user_fields.append("name")
+        preferred_language = update_fields.pop("preferred_language", None)
+        if preferred_language:
+            user.preferred_language = preferred_language
+            user_fields.append("preferred_language")
+        if user_fields:
+            user.save(update_fields=user_fields)
 
         user_developer_profile, _ = Developer.objects.get_or_create(user=user)
         for field, value in update_fields.items():
@@ -114,6 +133,7 @@ def update_user_profile(request: Request, profile_data: UserUpdateSchema):
         "email": user.email,
         "name": user.name,
         "phone": str(user.phone) if user.phone else None,
+        "preferred_language": user.preferred_language,
         "is_active": user.is_active,
         "is_profile_completed": (user_developer_profile.profile_completed if user_developer_profile else False),
         "bio": user_developer_profile.bio if user_developer_profile else "",
@@ -122,5 +142,6 @@ def update_user_profile(request: Request, profile_data: UserUpdateSchema):
         "job_title": user_developer_profile.job_title if user_developer_profile else "",
         "created_at": user.created_at,
         "updated_at": user.updated_at,
+        "is_staff": user.is_staff,
         "permissions": _get_user_permissions(user),
     }

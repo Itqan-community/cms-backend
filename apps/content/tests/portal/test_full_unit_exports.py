@@ -19,7 +19,7 @@ from apps.content.services.asset_templates import unit_spec_for
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
-from apps.quran.models import Ayah, Sura, Word
+from apps.quran.models import Ayah, Surah, Word
 from apps.users.models import User
 
 
@@ -34,16 +34,16 @@ class FullUnitExportTests(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.publisher = baker.make(Publisher, name="Export Publisher")
-        self.sura1 = baker.make(Sura, id=1, name="الفاتحة", ayas_count=2)
-        self.sura2 = baker.make(Sura, id=2, name="البقرة", ayas_count=1)
+        self.surah1 = baker.make(Surah, id=1, name="الفاتحة", ayahs_count=2)
+        self.surah2 = baker.make(Surah, id=2, name="البقرة", ayahs_count=1)
         self.ayahs = [
-            baker.make(Ayah, id=1, sura=self.sura1, number_in_sura=1, text="a1"),
-            baker.make(Ayah, id=2, sura=self.sura1, number_in_sura=2, text="a2"),
-            baker.make(Ayah, id=3, sura=self.sura2, number_in_sura=1, text="a3"),
+            baker.make(Ayah, id=1, surah=self.surah1, number_in_surah=1, text="a1"),
+            baker.make(Ayah, id=2, surah=self.surah1, number_in_surah=2, text="a2"),
+            baker.make(Ayah, id=3, surah=self.surah2, number_in_surah=1, text="a3"),
         ]
         self.words = [
-            baker.make(Word, id=1, sura=self.sura1, ayah=self.ayahs[0], position_in_ayah=1, text="w1"),
-            baker.make(Word, id=2, sura=self.sura1, ayah=self.ayahs[0], position_in_ayah=2, text="w2"),
+            baker.make(Word, id=1, surah=self.surah1, ayah=self.ayahs[0], position_in_ayah=1, text="w1"),
+            baker.make(Word, id=2, surah=self.surah1, ayah=self.ayahs[0], position_in_ayah=2, text="w2"),
         ]
         self.repo = AssetContentRepository()
 
@@ -79,13 +79,13 @@ class FullUnitExportTests(BaseTestCase):
     def test_entries_to_csv_bytes_where_surah_version_is_partial_should_list_every_surah(self):
         # Arrange
         version = self._version(AssetTemplateChoice.SURAH)
-        baker.make(AssetVersionEntry, version=version, sura=self.sura2, text="about al-baqara", order=2)
+        baker.make(AssetVersionEntry, version=version, surah=self.surah2, text="about al-baqara", order=2)
 
         # Act
         rows = _rows(self.repo.entries_to_csv_bytes(version, unit_spec_for(version.asset)))
 
         # Assert
-        self.assertEqual(rows, [["sura", "text"], ["1", ""], ["2", "about al-baqara"]])
+        self.assertEqual(rows, [["surah", "text"], ["1", ""], ["2", "about al-baqara"]])
 
     def test_entries_to_csv_bytes_where_word_version_is_empty_should_list_every_word(self):
         # Arrange
@@ -96,7 +96,7 @@ class FullUnitExportTests(BaseTestCase):
 
         # Assert
         self.assertEqual(
-            rows, [["word_id", "sura", "aya", "word", "text"], ["1", "1", "1", "1", ""], ["2", "1", "1", "2", ""]]
+            rows, [["word_id", "surah", "ayah", "word", "text"], ["1", "1", "1", "1", ""], ["2", "1", "1", "2", ""]]
         )
 
     def test_snapshot_to_csv_bytes_where_page_snapshot_is_partial_should_list_every_page(self):

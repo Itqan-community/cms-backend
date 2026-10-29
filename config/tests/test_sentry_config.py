@@ -1,8 +1,9 @@
 """Tests for Sentry tracing configuration."""
 
 from django.test import SimpleTestCase
+from tornado.web import HTTPError
 
-from config.helpers.sentry import traces_sampler
+from config.helpers.sentry import before_send, traces_sampler
 
 
 def wsgi_context(path: str) -> dict:
@@ -105,3 +106,66 @@ class TestTracesSampler(SimpleTestCase):
 
         # Assert
         self.assertEqual(rate, 1.0)
+
+
+def raised(exc: BaseException) -> tuple:
+    try:
+        raise exc
+    except BaseException as caught:
+        return (type(caught), caught, caught.__traceback__)
+
+
+class TestBeforeSend(SimpleTestCase):
+    """Flower's web server reports every rejected request; those are not our errors."""
+
+    def test_before_send_where_flower_rejects_login_should_drop_event(self):
+        # Arrange
+        hint = {"exc_info": raised(HTTPError(401))}
+
+        # Act
+        result = before_send({"level": "error"}, hint)
+
+        # Assert
+        self.assertIsNone(result)
+
+    def test_before_send_where_flower_page_is_not_found_should_drop_event(self):
+        # Arrange
+        hint = {"exc_info": raised(HTTPError(404))}
+
+        # Act
+        result = before_send({"level": "error"}, hint)
+
+        # Assert
+        self.assertIsNone(result)
+
+    def test_before_send_where_flower_fails_with_server_error_should_keep_event(self):
+        # Arrange
+        event = {"level": "error"}
+        hint = {"exc_info": raised(HTTPError(500))}
+
+        # Act
+        result = before_send(event, hint)
+
+        # Assert
+        self.assertIs(result, event)
+
+    def test_before_send_where_exception_is_ours_should_keep_event(self):
+        # Arrange
+        event = {"level": "error"}
+        hint = {"exc_info": raised(ValueError("boom"))}
+
+        # Act
+        result = before_send(event, hint)
+
+        # Assert
+        self.assertIs(result, event)
+
+    def test_before_send_where_event_has_no_exception_should_keep_event(self):
+        # Arrange
+        event = {"level": "error", "message": "logged"}
+
+        # Act
+        result = before_send(event, {})
+
+        # Assert
+        self.assertIs(result, event)

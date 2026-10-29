@@ -3,33 +3,33 @@
 from model_bakery import baker
 
 from apps.core.tests.base import BaseTestCase
-from apps.quran.models import Ayah, Sura
+from apps.quran.models import Ayah, Surah
 
 
 class QuranSamplesTest(BaseTestCase):
     """Tests for /sample-data/surah/ and /sample-data/ayah/ endpoints."""
 
     def setUp(self) -> None:
-        """Seed both suras and their ayahs so every lookup below is deterministic."""
-        self.sura1 = baker.make(
-            Sura,
+        """Seed both surahs and their ayahs so every lookup below is deterministic."""
+        self.surah1 = baker.make(
+            Surah,
             id=1,
             name="الفاتحة",
             transliterated_name="Al-Faatiha",
             english_name="The Opening",
-            ayas_count=7,
+            ayahs_count=7,
             start_offset=0,
             revelation_type="Meccan",
             revelation_order=5,
             rukus_count=1,
         )
-        self.sura2 = baker.make(
-            Sura,
+        self.surah2 = baker.make(
+            Surah,
             id=2,
             name="البقرة",
             transliterated_name="Al-Baqara",
             english_name="The Cow",
-            ayas_count=286,
+            ayahs_count=286,
             start_offset=7,
             revelation_type="Medinan",
             revelation_order=87,
@@ -38,8 +38,8 @@ class QuranSamplesTest(BaseTestCase):
         self.ayah11 = baker.make(
             Ayah,
             id=1,
-            sura=self.sura1,
-            number_in_sura=1,
+            surah=self.surah1,
+            number_in_surah=1,
             text="بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِيمِ",
             juz=1,
             hizb_quarter=1,
@@ -48,8 +48,8 @@ class QuranSamplesTest(BaseTestCase):
         self.ayah12 = baker.make(
             Ayah,
             id=2,
-            sura=self.sura1,
-            number_in_sura=2,
+            surah=self.surah1,
+            number_in_surah=2,
             text="ٱلۡحَمۡدُ لِلَّهِ رَبِّ ٱلۡعَـٰلَمِينَ",
             juz=1,
             hizb_quarter=1,
@@ -67,10 +67,10 @@ class QuranSamplesTest(BaseTestCase):
         self.assertEqual("الفاتحة", data["name"])
         self.assertEqual("Al-Faatiha", data["transliterated_name"])
         self.assertEqual("The Opening", data["english_name"])
-        self.assertEqual(7, data["ayas_count"])
+        self.assertEqual(7, data["ayahs_count"])
 
     def test_get_surah_sample_with_explicit_surah_should_return_that_surah(self):
-        """?surah=2 selects that exact sura rather than the default."""
+        """?surah=2 selects that exact surah rather than the default."""
         # Act
         response = self.client.get("/sample-data/surah/", {"surah": 2})
         # Assert
@@ -80,14 +80,14 @@ class QuranSamplesTest(BaseTestCase):
         self.assertEqual("البقرة", data["name"])
 
     def test_get_surah_sample_where_surah_does_not_exist_should_return_404(self):
-        """An in-range but absent sura yields the canonical sura_not_found error."""
+        """An in-range but absent surah yields the canonical surah_not_found error."""
         # Arrange
-        Sura.objects.filter(id=3).delete()
+        Surah.objects.filter(id=3).delete()
         # Act
         response = self.client.get("/sample-data/surah/", {"surah": 3})
         # Assert
         self.assertEqual(404, response.status_code)
-        self.assertEqual("sura_not_found", response.json()["error_name"])
+        self.assertEqual("surah_not_found", response.json()["error_name"])
 
     def test_get_surah_sample_where_surah_out_of_range_should_return_validation_error(self):
         """surah beyond 114 violates the declared bounds -> 400 validation_error."""
@@ -141,13 +141,13 @@ class QuranSamplesTest(BaseTestCase):
         self.assertEqual(404, response.status_code)
         self.assertEqual("ayah_not_found", response.json()["error_name"])
 
-    def test_get_ayah_sample_where_surah_does_not_exist_should_return_sura_not_found(self):
-        """Anchor-first: an unknown sura reports sura_not_found even with ayah=1."""
+    def test_get_ayah_sample_where_surah_does_not_exist_should_return_surah_not_found(self):
+        """Anchor-first: an unknown surah reports surah_not_found even with ayah=1."""
         # Act
         response = self.client.get("/sample-data/ayah/", {"surah": 114, "ayah": 1})
         # Assert
         self.assertEqual(404, response.status_code)
-        self.assertEqual("sura_not_found", response.json()["error_name"])
+        self.assertEqual("surah_not_found", response.json()["error_name"])
 
     def test_get_ayah_sample_where_ayah_below_allowed_minimum_should_return_validation_error(self):
         """ayah=0 violates ge=1 -> 400 validation_error."""

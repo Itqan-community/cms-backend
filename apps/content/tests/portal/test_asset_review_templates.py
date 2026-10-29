@@ -18,15 +18,15 @@ from apps.content.models import (
 from apps.content.tests.quran_data import QuranDataMixin
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
-from apps.quran.models import Sura
+from apps.quran.models import Surah
 from apps.users.models import User
 
 
 class ReviewTemplateTests(QuranDataMixin, BaseTestCase):
     """Every unit kind must render on the review surface without raising.
 
-    Before Task 7A, ``ReviewChangeOut`` resolved ``obj.ayah.sura_id`` /
-    ``obj.ayah.number_in_sura`` / ``obj.ayah.sura.name`` unconditionally, so a
+    Before Task 7A, ``ReviewChangeOut`` resolved ``obj.ayah.surah_id`` /
+    ``obj.ayah.number_in_surah`` / ``obj.ayah.surah.name`` unconditionally, so a
     surah/word/page change row (``ayah`` is null on those) raised
     ``AttributeError`` -> a 500. See the surah test below, which is the one
     recorded (pre-fix) as failing with exactly that error.
@@ -60,12 +60,12 @@ class ReviewTemplateTests(QuranDataMixin, BaseTestCase):
         self.give_permission(self.user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES)
 
     def test_review_changes_where_surah_template_should_not_raise_and_should_label_the_unit(self):
-        # Arrange — QuranDataMixin bakes sura 2 with transliterated_name "Al-Baqara"
+        # Arrange — QuranDataMixin bakes surah 2 with transliterated_name "Al-Baqara"
         self._authenticate_reviewer()
         asset, version = self._draft_for(AssetTemplateChoice.SURAH)
         AssetVersionChange.objects.create(
             version=version,
-            sura_id=self.sura2.id,
+            surah_id=self.surah2.id,
             change_type=ChangeTypeChoice.ADDED,
             old_text="",
             new_text="cow",
@@ -79,11 +79,11 @@ class ReviewTemplateTests(QuranDataMixin, BaseTestCase):
         self.assertEqual(response.status_code, 200, response.content)
         row = response.json()["results"][0]
         self.assertEqual(row["unit_type"], "surah")
-        self.assertEqual(row["unit_id"], self.sura2.id)
+        self.assertEqual(row["unit_id"], self.surah2.id)
         self.assertEqual(row["label"], "2. Al-Baqara")
 
     def test_review_changes_where_ayah_template_should_keep_the_colon_label(self):
-        # Arrange — ayah1 is sura 1, number_in_sura 1 (see QuranDataMixin)
+        # Arrange — ayah1 is surah 1, number_in_surah 1 (see QuranDataMixin)
         self._authenticate_reviewer()
         asset, version = self._draft_for(AssetTemplateChoice.AYAH)
         AssetVersionChange.objects.create(
@@ -105,8 +105,8 @@ class ReviewTemplateTests(QuranDataMixin, BaseTestCase):
         self.assertEqual(row["unit_id"], self.ayah1.id)
         self.assertEqual(row["label"], "1:1")
 
-    def test_review_changes_where_word_template_should_include_sura_ayah_and_position_in_the_label(self):
-        # Arrange — word1 is sura 1, ayah 1 (number_in_sura 1), position_in_ayah 1
+    def test_review_changes_where_word_template_should_include_surah_ayah_and_position_in_the_label(self):
+        # Arrange — word1 is surah 1, ayah 1 (number_in_surah 1), position_in_ayah 1
         self._authenticate_reviewer()
         asset, version = self._draft_for(AssetTemplateChoice.WORD)
         AssetVersionChange.objects.create(
@@ -192,30 +192,30 @@ class ReviewDedupAndBaselineTests(QuranDataMixin, BaseTestCase):
         self.give_permission(self.user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES)
 
     def test_review_changes_where_multiple_surah_changes_should_return_all_units_not_just_one(self):
-        # Arrange — three DIFFERENT suras changed in the same asset/version.
-        # QuranDataMixin only bakes 2 suras, so bake a third explicitly.
+        # Arrange — three DIFFERENT surahs changed in the same asset/version.
+        # QuranDataMixin only bakes 2 surahs, so bake a third explicitly.
         self._authenticate_reviewer()
-        sura3 = baker.make(
-            Sura,
+        surah3 = baker.make(
+            Surah,
             id=3,
             name="آل عمران",
             transliterated_name="Aal-E-Imran",
             english_name="The Family of Imran",
-            ayas_count=1,
+            ayahs_count=1,
             start_offset=3,
             revelation_type="Medinan",
             revelation_order=89,
             rukus_count=1,
         )
         asset, version = self._draft_for(AssetTemplateChoice.SURAH)
-        for sura in (self.sura1, self.sura2, sura3):
+        for surah in (self.surah1, self.surah2, surah3):
             AssetVersionChange.objects.create(
                 version=version,
-                sura_id=sura.id,
+                surah_id=surah.id,
                 change_type=ChangeTypeChoice.ADDED,
                 old_text="",
-                new_text=f"text-{sura.id}",
-                order=sura.id,
+                new_text=f"text-{surah.id}",
+                order=surah.id,
             )
 
         # Act
@@ -225,7 +225,7 @@ class ReviewDedupAndBaselineTests(QuranDataMixin, BaseTestCase):
         self.assertEqual(response.status_code, 200, response.content)
         results = response.json()["results"]
         self.assertEqual(len(results), 3)
-        self.assertEqual({row["unit_id"] for row in results}, {self.sura1.id, self.sura2.id, sura3.id})
+        self.assertEqual({row["unit_id"] for row in results}, {self.surah1.id, self.surah2.id, surah3.id})
         self.assertEqual(
             {row["label"] for row in results},
             {"1. Al-Fatiha", "2. Al-Baqara", "3. Aal-E-Imran"},
@@ -238,11 +238,11 @@ class ReviewDedupAndBaselineTests(QuranDataMixin, BaseTestCase):
         asset, v1 = self._draft_for(AssetTemplateChoice.SURAH)
         change1 = AssetVersionChange.objects.create(
             version=v1,
-            sura_id=self.sura2.id,
+            surah_id=self.surah2.id,
             change_type=ChangeTypeChoice.ADDED,
             old_text="",
             new_text="approved cow",
-            order=self.sura2.id,
+            order=self.surah2.id,
         )
         AssetVersionChangeReview.objects.create(
             change=change1, state=ReviewStateChoice.APPROVED, reviewed_by=self.user, reviewed_at=timezone.now()
@@ -251,11 +251,11 @@ class ReviewDedupAndBaselineTests(QuranDataMixin, BaseTestCase):
         AssetVersion.objects.filter(pk=v2.pk).update(created_at=timezone.now() + timedelta(hours=1))
         AssetVersionChange.objects.create(
             version=v2,
-            sura_id=self.sura2.id,
+            surah_id=self.surah2.id,
             change_type=ChangeTypeChoice.MODIFIED,
             old_text="approved cow",
             new_text="revised cow",
-            order=self.sura2.id,
+            order=self.surah2.id,
         )
 
         # Act

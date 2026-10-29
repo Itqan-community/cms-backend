@@ -144,8 +144,8 @@ msgstr "لا توجد تلاوة متاحة"
 msgid "No recitation track available for surah {surah}."
 msgstr "لا يوجد مقطع تلاوة متاح للسورة {surah}."
 
-msgid "A column key must start with a lowercase English letter (a-z), use only a-z, 0-9 and underscores (at most 64), and must not be a unit name such as sura or ayah."
-msgstr "يجب أن يبدأ مفتاح العمود بحرف إنجليزي صغير (a-z)، وأن يتكوّن من a-z و0-9 والشرطة السفلية فقط (64 حرفًا على الأكثر)، وألا يكون اسم وحدة مثل sura أو ayah."
+msgid "A column key must start with a lowercase English letter (a-z), use only a-z, 0-9 and underscores (at most 64), and must not be a unit name such as surah or ayah."
+msgstr "يجب أن يبدأ مفتاح العمود بحرف إنجليزي صغير (a-z)، وأن يتكوّن من a-z و0-9 والشرطة السفلية فقط (64 حرفًا على الأكثر)، وألا يكون اسم وحدة مثل surah أو ayah."
 
 msgid "Please select at least one file."
 msgstr "يرجى اختيار ملف واحد على الأقل."
@@ -220,6 +220,12 @@ msgstr "حسب الكلمة"
 msgid "Page based"
 msgstr "حسب الصفحة"
 
+msgid "Ayah-group based"
+msgstr "حسب نطاقات الآيات"
+
+msgid "Word-group based"
+msgstr "حسب نطاقات الكلمات"
+
 msgid "Published"
 msgstr "منشور"
 
@@ -291,6 +297,14 @@ msgstr "لا يمكن أن يتجاوز الوصف 2000 حرف."
 
 msgid "There are no changes to publish."
 msgstr "لا توجد تغييرات للنشر."
+
+#, python-brace-format
+msgid "Your access request for {asset_name} was accepted"
+msgstr "تم قبول طلب وصولك إلى {asset_name}"
+
+#, python-brace-format
+msgid "Your access request for {asset_name} was rejected"
+msgstr "تم رفض طلب وصولك إلى {asset_name}"
 
 #, python-brace-format
 msgid "You have {count} pending access request(s)"
@@ -415,8 +429,8 @@ msgid "The uploaded file could not be read."
 msgstr "تعذّرت قراءة الملف المرفوع."
 
 #, python-brace-format
-msgid "Some rows can't be used: they repeat a unit with different text, name a unit that doesn't exist, or can't be read. Fix row(s) {rows} and upload again."
-msgstr "بعض الصفوف غير صالحة للاستخدام: إمّا أنها تكرّر وحدة بنص مختلف، أو تشير إلى وحدة غير موجودة، أو تتعذّر قراءتها. صحّح الصف/الصفوف {rows} ثم ارفع الملف مجددًا."
+msgid "Some rows can't be used: they repeat a unit or range, name a unit that doesn't exist, end before they start, use a range the source language doesn't have, or can't be read. Fix row(s) {rows} and upload again."
+msgstr "بعض الصفوف غير صالحة: تكرر وحدة أو نطاقًا، أو تشير إلى وحدة غير موجودة، أو تنتهي قبل أن تبدأ، أو تستخدم نطاقًا غير موجود في اللغة الأصلية، أو تتعذر قراءتها. صحّح الصف/الصفوف {rows} ثم ارفع الملف مرة أخرى."
 
 msgid "The uploaded file could not be parsed into content entries."
 msgstr "تعذّر تحليل الملف المرفوع إلى إدخالات محتوى."
@@ -459,6 +473,25 @@ msgstr "لا يحتوي هذا الأصل على عمود باسم {columns}."
 msgid "Units {units} are not part of this asset's template."
 msgstr "الوحدات {units} ليست جزءًا من قالب هذه المادة."
 
+msgid "A translation can only write text for the source language's groups."
+msgstr "لا يمكن للترجمة كتابة نص إلا لنطاقات اللغة الأصلية."
+
+msgid "Only ayah-group and word-group assets have groups."
+msgstr "النطاقات متاحة فقط للمواد القائمة على نطاقات الآيات أو نطاقات الكلمات."
+
+msgid "Groups are added, moved and deleted in the source language; translations follow them."
+msgstr "تُضاف النطاقات وتُنقل وتُحذف في اللغة الأصلية، وتتبعها الترجمات."
+
+msgid "This draft already has a group with exactly this range."
+msgstr "تحتوي هذه المسودة بالفعل على هذا النطاق نفسه تمامًا."
+
+msgid "This draft has no such group."
+msgstr "لا تحتوي هذه المسودة على هذا النطاق."
+
+#, python-brace-format
+msgid "Move or delete the text of groups the source no longer has: {groups}."
+msgstr "انقل أو احذف نص النطاقات التي لم تعد موجودة في اللغة الأصلية: {groups}."
+
 #, python-brace-format
 msgid "Could not parse the uploaded content file: {reason}"
 msgstr "تعذر تحليل ملف المحتوى المرفوع: {reason}"
@@ -497,6 +530,12 @@ msgstr "تحتاج اللغة إلى إصدار منشور واحد على ال�
 msgid "You are not assigned to the language {language}."
 msgstr "لم يتم تعيينك للغة {language}."
 
+msgid "This recitation has no tracks to preview."
+msgstr "لا توجد مقاطع لمعاينة هذه التلاوة."
+
+msgid "This font has no file to preview in this language."
+msgstr "لا يوجد ملف لمعاينة هذا الخط بهذه اللغة."
+
 msgid "One or more changes were not found."
 msgstr "لم يتم العثور على تغيير واحد أو أكثر."
 
@@ -513,8 +552,15 @@ msgstr "التعليق مطلوب عند طلب إجراء تعديلات."
 msgid "The package name (slug) is not valid for this asset."
 msgstr "اسم الحزمة (المعرّف) غير صالح لهذا الأصل."
 
+msgid "This range doesn't exist in the Quran, or it ends before it starts."
+msgstr "هذا النطاق غير موجود في القرآن، أو ينتهي قبل أن يبدأ."
+
 msgid "This asset has no content template."
 msgstr "هذه المادة ليس لها قالب محتوى."
+
+#, python-brace-format
+msgid "New Update for {asset_name}"
+msgstr "تحديث جديد لـ {asset_name}"
 
 #, python-brace-format
 msgid "Publisher with id {id} not found."
@@ -552,6 +598,10 @@ msgstr "يمكنك فقط حذف تقارير المشكلات الخاصة بك
 
 msgid "You can only delete pending issue reports."
 msgstr "يمكنك فقط حذف تقارير المشكلات المعلقة."
+
+#, python-brace-format
+msgid "Your issue status has been updated: {old_status} → {new_status}"
+msgstr "تم تحديث حالة بلاغك: {old_status} ← {new_status}"
 
 msgid "Mushaf name (Arabic or English) is required."
 msgstr "اسم المصحف (بالعربية أو الإنجليزية) مطلوب."
@@ -692,6 +742,9 @@ msgstr "الإصدار ذو المعرف {id} غير موجود للتفسير {
 msgid "Translation name (Arabic or English) is required."
 msgstr "اسم الترجمة (بالعربية أو الإنجليزية) مطلوب."
 
+msgid "Ayah-group and word-group templates are only available for tafsir."
+msgstr "قوالب نطاقات الآيات ونطاقات الكلمات متاحة للتفسير فقط."
+
 msgid "Cannot delete Translation because they are referenced through other objects"
 msgstr "لا يمكن حذف الترجمة لأن هناك بيانات أخرى مرتبطة بها"
 
@@ -799,16 +852,16 @@ msgid "Portal - Delete Mushafs"
 msgstr "لوحة التحكم - حذف المصاحف"
 
 msgid "Portal - View Mushaf Layouts"
-msgstr "البوابة - عرض تخطيطات المصاحف"
+msgstr "لوحة التحكم - عرض تخطيطات المصاحف"
 
 msgid "Portal - Create Mushaf Layouts"
-msgstr "البوابة - إنشاء تخطيطات المصاحف"
+msgstr "لوحة التحكم - إنشاء تخطيطات المصاحف"
 
 msgid "Portal - Update Mushaf Layouts"
-msgstr "البوابة - تعديل تخطيطات المصاحف"
+msgstr "لوحة التحكم - تعديل تخطيطات المصاحف"
 
 msgid "Portal - Delete Mushaf Layouts"
-msgstr "البوابة - حذف تخطيطات المصاحف"
+msgstr "لوحة التحكم - حذف تخطيطات المصاحف"
 
 msgid "Portal - View Fonts"
 msgstr "لوحة التحكم - عرض الخطوط"
@@ -823,52 +876,52 @@ msgid "Portal - Delete Fonts"
 msgstr "لوحة التحكم - حذف الخطوط"
 
 msgid "Portal - View Publishers"
-msgstr "البوابة - عرض الناشرين"
+msgstr "لوحة التحكم - عرض الناشرين"
 
 msgid "Portal - Create Publishers"
-msgstr "البوابة - إنشاء الناشرين"
+msgstr "لوحة التحكم - إنشاء الناشرين"
 
 msgid "Portal - Update Publishers"
-msgstr "البوابة - تعديل الناشرين"
+msgstr "لوحة التحكم - تعديل الناشرين"
 
 msgid "Portal - Delete Publishers"
-msgstr "البوابة - حذف الناشرين"
+msgstr "لوحة التحكم - حذف الناشرين"
 
-msgid "Portal - View Groups"
-msgstr "البوابة - عرض المجموعات"
+msgid "Portal - View Roles"
+msgstr "لوحة التحكم - عرض الأدوار"
 
-msgid "Portal - Create Groups"
-msgstr "البوابة - إنشاء المجموعات"
+msgid "Portal - Create Roles"
+msgstr "لوحة التحكم - إنشاء الأدوار"
 
-msgid "Portal - Update Groups"
-msgstr "البوابة - تعديل المجموعات"
+msgid "Portal - Update Roles"
+msgstr "لوحة التحكم - تعديل الأدوار"
 
-msgid "Portal - Delete Groups"
-msgstr "البوابة - حذف المجموعات"
+msgid "Portal - Delete Roles"
+msgstr "لوحة التحكم - حذف الأدوار"
 
 msgid "Portal - View Publisher Members"
-msgstr "البوابة - عرض أعضاء الناشر"
+msgstr "لوحة التحكم - عرض أعضاء الناشر"
 
 msgid "Portal - Invite Publisher Members"
-msgstr "البوابة - دعوة أعضاء الناشر"
+msgstr "لوحة التحكم - دعوة أعضاء الناشر"
 
 msgid "Portal - Update Publisher Members"
-msgstr "البوابة - تعديل أعضاء الناشر"
+msgstr "لوحة التحكم - تعديل أعضاء الناشر"
 
 msgid "Portal - Delete Publisher Members"
-msgstr "البوابة - حذف أعضاء الناشر"
+msgstr "لوحة التحكم - حذف أعضاء الناشر"
 
 msgid "Portal - View Access Requests"
-msgstr "البوابة - عرض طلبات الوصول"
+msgstr "لوحة التحكم - عرض طلبات الوصول"
 
 msgid "Portal - Accept or Reject Access Requests"
-msgstr "البوابة - قبول أو رفض طلبات الوصول"
+msgstr "لوحة التحكم - قبول أو رفض طلبات الوصول"
 
 msgid "Portal - Manage Access Requests Settings"
-msgstr "البوابة - إدارة إعدادات طلبات الوصول"
+msgstr "لوحة التحكم - إدارة إعدادات طلبات الوصول"
 
 msgid "Portal - View Usage Statistics"
-msgstr "البوابة - عرض إحصائيات الاستخدام"
+msgstr "لوحة التحكم - عرض إحصائيات الاستخدام"
 
 msgid "Portal - Review Content"
 msgstr "لوحة التحكم - مراجعة المحتوى"
@@ -877,7 +930,7 @@ msgid "Portal - Publish Content"
 msgstr "لوحة التحكم - نشر المحتوى"
 
 msgid "Portal - Remove Package Versions"
-msgstr "البوابة - إزالة إصدارات الحزم"
+msgstr "لوحة التحكم - إزالة إصدارات الحزم"
 
 msgid "Portal - Edit Translation Content"
 msgstr "لوحة التحكم - تحرير محتوى الترجمات"
@@ -892,7 +945,55 @@ msgid "Portal - Add Asset Language"
 msgstr "لوحة التحكم - إضافة لغة إلى الأصل"
 
 msgid "Portal - Manage Asset Columns"
-msgstr "البوابة - إدارة أعمدة الأصول"
+msgstr "لوحة التحكم - إدارة أعمدة الأصول"
+
+msgid "Control panel"
+msgstr "لوحة التحكم"
+
+msgid "Reciters"
+msgstr "القراء"
+
+msgid "Recitations"
+msgstr "التلاوات"
+
+msgid "Tafsirs"
+msgstr "التفاسير"
+
+msgid "Translations"
+msgstr "الترجمات"
+
+msgid "Mushafs"
+msgstr "المصاحف"
+
+msgid "Mushaf layouts"
+msgstr "تخطيطات المصاحف"
+
+msgid "Fonts"
+msgstr "الخطوط"
+
+msgid "Review and publishing"
+msgstr "المراجعة والنشر"
+
+msgid "Languages and columns"
+msgstr "اللغات والأعمدة"
+
+msgid "Publishers"
+msgstr "الناشرون"
+
+msgid "Members"
+msgstr "الأعضاء"
+
+msgid "Roles"
+msgstr "الأدوار"
+
+msgid "Access requests"
+msgstr "طلبات الوصول"
+
+msgid "Usage statistics"
+msgstr "إحصائيات الاستخدام"
+
+msgid "Packages"
+msgstr "الحزم"
 
 msgid "Created"
 msgstr "تم الإنشاء"
@@ -1057,7 +1158,18 @@ msgstr "هذه الدعوة لم تعد صالحة."
 msgid "Only pending invitations can be cancelled."
 msgstr "يمكن إلغاء الدعوات المعلقة فقط."
 
-msgid "Sura does not exist."
+#, python-brace-format
+msgid "You're invited to {publisher_name}"
+msgstr "تمت دعوتك إلى {publisher_name}"
+
+msgid "An administrator"
+msgstr "أحد المسؤولين"
+
+#, python-brace-format
+msgid "Welcome to {publisher_name}"
+msgstr "مرحبًا بك في {publisher_name}"
+
+msgid "Surah does not exist."
 msgstr "السورة غير موجودة."
 
 msgid "Ayah does not exist."
@@ -1109,6 +1221,9 @@ msgstr "الأجهزة والشبكات المختلفة التي نزّلت ا�
 msgid "Distinct end users reported by apps through the X-External-User-Id header."
 msgstr "المستخدمون النهائيون المختلفون الذين أبلغت عنهم التطبيقات عبر الترويسة X-External-User-Id."
 
+msgid "Seconds of audio delivered, from the bytes sent and each file's length (estimate). Apps that download a whole file before playing count its full length."
+msgstr "ثوانٍ من الصوت المُرسَل، محسوبة من البايتات المرسلة وطول كل ملف (تقدير). التطبيقات التي تنزّل الملف كاملًا قبل تشغيله تُحتسب بطوله الكامل."
+
 msgid "Counts are lower bounds: apps and browsers cache files locally and some content is re-hosted, so that usage never reaches Itqan."
 msgstr "الأرقام حد أدنى: تحفظ التطبيقات والمتصفحات الملفات محليًا ويُعاد استضافة بعض المحتوى، فلا يصل ذلك الاستخدام إلى إتقان."
 
@@ -1146,6 +1261,17 @@ msgstr "التطبيق غير موجود."
 msgid "This report cannot be split by {name}."
 msgstr "لا يمكن تقسيم هذا التقرير حسب {name}."
 
+msgid "The hour-of-week breakdown cannot be ordered by growth."
+msgstr "لا يمكن ترتيب التوزيع حسب ساعات الأسبوع بحسب النمو."
+
+#, python-brace-format
+msgid "Listener reports only cover the last {months} months."
+msgstr "تقارير المستمعين تغطي آخر {months} شهرًا فقط."
+
+#, python-brace-format
+msgid "Cohort reports are limited to {days} days."
+msgstr "تقارير الدفعات محدودة بـ {days} يومًا."
+
 msgid "Itqan Community"
 msgstr "مجتمع اتقان"
 
@@ -1176,9 +1302,15 @@ msgstr "اللغات المعيّنة (لكل ناشر)"
 msgid "permissions"
 msgstr "الصلاحيات"
 
+msgid "API keys cannot be reverted from historical snapshots."
+msgstr "لا يمكن استرجاع مفاتيح API من اللقطات التاريخية."
+
+msgid "Select a publisher first."
+msgstr "اختر ناشرًا أولًا."
+
 #, python-brace-format
-msgid "Group with id {id} not found."
-msgstr "لم يتم العثور على المجموعة بالمعرّف {id}."
+msgid "Role with id {id} not found."
+msgstr "لم يتم العثور على الدور بالمعرّف {id}."
 
 msgid "The given email must be set"
 msgstr "يجب تحديد البريد الإلكتروني"
@@ -1189,6 +1321,12 @@ msgstr "يجب أن يكون للمستخدم المتميز is_staff=True."
 msgid "Superuser must have is_superuser=True."
 msgstr "يجب أن يكون للمستخدم المتميز is_superuser=True."
 
+msgid "English"
+msgstr "الإنجليزية"
+
+msgid "Arabic"
+msgstr "العربية"
+
 msgid "Name of User"
 msgstr "اسم المستخدم"
 
@@ -1197,6 +1335,12 @@ msgstr "البريد الإلكتروني"
 
 msgid "Phone Number"
 msgstr "رقم الهاتف"
+
+msgid "Preferred Language"
+msgstr "اللغة المفضلة"
+
+msgid "Language of the emails sent to this user."
+msgstr "لغة الرسائل البريدية المرسلة إلى هذا المستخدم."
 
 msgid "A name for the API key. 50 characters max."
 msgstr "اسم لمفتاح API. 50 حرفاً كحد أقصى."
@@ -1239,18 +1383,25 @@ msgid "API key name must not exceed %(max)d characters."
 msgstr "اسم مفتاح API يجب ألا يتجاوز %(max)d حرفاً."
 
 #, python-brace-format
-msgid "Group with id {id} is not available for assignment."
-msgstr "المجموعة ذات المعرّف {id} غير متاحة للتعيين."
+msgid "Role with id {id} is not available for assignment."
+msgstr "الدور ذو المعرّف {id} غير متاح للتعيين."
 
-msgid "A group with this name already exists."
-msgstr "توجد مجموعة بهذا الاسم بالفعل."
+msgid "This role is assigned to members and cannot be deleted."
+msgstr "هذا الدور مسند إلى أعضاء ولا يمكن حذفه."
 
-msgid "Group name must not be empty."
-msgstr "اسم المجموعة لا يمكن أن يكون فارغاً."
+msgid "A role with this name already exists."
+msgstr "يوجد دور بهذا الاسم بالفعل."
+
+#, python-brace-format
+msgid "You cannot grant permissions you do not hold: {permissions}."
+msgstr "لا يمكنك منح صلاحيات لا تملكها: {permissions}."
+
+msgid "Role name must not be empty."
+msgstr "اسم الدور لا يمكن أن يكون فارغًا."
 
 #, python-format
-msgid "Group name must not exceed %(max)d characters."
-msgstr "اسم المجموعة يجب ألا يتجاوز %(max)d حرفاً."
+msgid "Role name must not exceed %(max)d characters."
+msgstr "اسم الدور يجب ألا يتجاوز %(max)d حرفًا."
 
 #, python-brace-format
 msgid "Unknown permissions: {permissions}."
@@ -1641,6 +1792,106 @@ msgstr "مرحبًا بك في نظام إتقان لإدارة المحتوى!"
 msgid "This is a test email to verify the email service is working correctly."
 msgstr "هذه رسالة اختبارية للتأكد من عمل خدمة البريد الإلكتروني بشكل صحيح."
 
+msgid "Object"
+msgstr "الكائن"
+
+msgid "Date/time"
+msgstr "التاريخ/الوقت"
+
+msgid "Action"
+msgstr "الإجراء"
+
+msgid "Changed by"
+msgstr "عُدِّل بواسطة"
+
+msgid "Change reason"
+msgstr "سبب التعديل"
+
+msgid "Changes"
+msgstr "التغييرات"
+
+msgid "Created (+)"
+msgstr "إنشاء (+)"
+
+msgid "Changed (~)"
+msgstr "تعديل (~)"
+
+msgid "Deleted (-)"
+msgstr "حذف (-)"
+
+msgid "Historical user ID"
+msgstr "معرّف المستخدم التاريخي"
+
+msgid "User #"
+msgstr "مستخدم رقم #"
+
+msgid "System / Automated"
+msgstr "النظام / آلي"
+
+msgid "empty"
+msgstr "فارغ"
+
+msgid "Initial version created"
+msgstr "تم إنشاء النسخة الأولى"
+
+msgid "Record deleted"
+msgstr "تم حذف السجل"
+
+msgid "No tracked field changes"
+msgstr "لا توجد تغييرات في الحقول المتتبعة"
+
+msgid "Diff unavailable"
+msgstr "الفروقات غير متوفرة"
+
+msgid "entry"
+msgid_plural "entries"
+msgstr[0] "مدخل"
+msgstr[1] "مدخل واحد"
+msgstr[2] "مدخلان"
+msgstr[3] "مدخلات"
+msgstr[4] "مدخلاً"
+msgstr[5] "مدخل"
+
+#, python-brace-format
+#~ msgid "Group with id {id} not found."
+#~ msgstr "لم يتم العثور على المجموعة بالمعرّف {id}."
+
+#, python-brace-format
+#~ msgid "Group with id {id} is not available for assignment."
+#~ msgstr "المجموعة ذات المعرّف {id} غير متاحة للتعيين."
+
+#~ msgid "This group is assigned to members and cannot be deleted."
+#~ msgstr "هذه المجموعة مسندة إلى أعضاء ولا يمكن حذفها."
+
+#~ msgid "A group with this name already exists."
+#~ msgstr "توجد مجموعة بهذا الاسم بالفعل."
+
+#~ msgid "Group name must not be empty."
+#~ msgstr "اسم المجموعة لا يمكن أن يكون فارغاً."
+
+#, python-format
+#~ msgid "Group name must not exceed %(max)d characters."
+#~ msgstr "اسم المجموعة يجب ألا يتجاوز %(max)d حرفاً."
+
+#~ msgid "Portal - View Groups"
+#~ msgstr "البوابة - عرض المجموعات"
+
+#~ msgid "Portal - Create Groups"
+#~ msgstr "البوابة - إنشاء المجموعات"
+
+#~ msgid "Portal - Update Groups"
+#~ msgstr "البوابة - تعديل المجموعات"
+
+#~ msgid "Portal - Delete Groups"
+#~ msgstr "البوابة - حذف المجموعات"
+
+#~ msgid "Write the group's text in at least one column."
+#~ msgstr "اكتب نص النطاق في عمود واحد على الأقل."
+
+#, python-brace-format
+#~ msgid "Some rows can't be used: they repeat a unit with different text, name a unit that doesn't exist, or can't be read. Fix row(s) {rows} and upload again."
+#~ msgstr "بعض الصفوف غير صالحة للاستخدام: إمّا أنها تكرّر وحدة بنص مختلف، أو تشير إلى وحدة غير موجودة، أو تتعذّر قراءتها. صحّح الصف/الصفوف {rows} ثم ارفع الملف مجددًا."
+
 #, python-brace-format
 #~ msgid "Statistics are limited to {days} days per request."
 #~ msgstr "الإحصائيات محدودة بـ {days} يومًا لكل طلب."
@@ -1704,3 +1955,6 @@ msgstr "هذه رسالة اختبارية للتأكد من عمل خدمة ا�
 
 #~ msgid "This asset has no version to sync the recitation data into."
 #~ msgstr "لا توجد نسخة لهذا المورد لمزامنة بيانات التلاوة إليها."
+
+#~ msgid "Cannot restore a revoked API key to an active state."
+#~ msgstr "لا يمكن استعادة مفتاح API ملغى إلى حالة نشطة."

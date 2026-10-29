@@ -13,6 +13,8 @@ from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.usage_tracking.decorators.track_search import track_search
+from apps.usage_tracking.models import SearchSurface
 
 router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
 
@@ -66,6 +68,7 @@ class RecitationFilter(FilterSchema):
 
 
 @router.get("recitations/", response=list[RecitationListOut])
+@track_search(SearchSurface.RECITATIONS)
 @paginate
 @ordering(ordering_fields=["name", "created_at", "updated_at"])
 @searching(

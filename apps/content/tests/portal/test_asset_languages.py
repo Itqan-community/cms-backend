@@ -14,7 +14,7 @@ from apps.content.tests.publishing import publish
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
-from apps.quran.models import Ayah, Sura
+from apps.quran.models import Ayah, Surah
 from apps.users.models import User
 
 
@@ -37,8 +37,8 @@ class AssetLanguagesApiTest(BaseTestCase):
         # assignment bypass so they behave like the existing editor groups that the
         # rollout migration grants it to. Assignment itself is covered by its own tests.
         self.give_permission(self.user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES)
-        self.sura = baker.make(Sura, id=1, name="الفاتحة", ayas_count=3)
-        self.ayahs = [baker.make(Ayah, id=i, sura=self.sura, number_in_sura=i, text=f"ayah {i}") for i in (1, 2, 3)]
+        self.surah = baker.make(Surah, id=1, name="الفاتحة", ayahs_count=3)
+        self.ayahs = [baker.make(Ayah, id=i, surah=self.surah, number_in_surah=i, text=f"ayah {i}") for i in (1, 2, 3)]
 
     def test_list_languages_returns_source_first(self):
         self.authenticate_user(self.user)

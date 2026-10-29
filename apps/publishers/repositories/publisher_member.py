@@ -31,19 +31,8 @@ class PublisherMemberRepository:
         member.save(update_fields=["group", "updated_at"])
         return member
 
-    def other_active_membership_group_ids(
-        self, *, user_id: int, exclude_member_id: int | None, publisher_id: int
-    ) -> list[int]:
-        """Group ids from this user's other ACTIVE memberships, excluding the given one."""
-        qs = self.model.objects.filter(user_id=user_id, status=PublisherMember.StatusChoice.ACTIVE)
-        if exclude_member_id is not None:
-            qs = qs.exclude(id=exclude_member_id)
-        else:
-            qs = qs.exclude(publisher_id=publisher_id)
-        return list(qs.values_list("group_id", flat=True))
-
     def delete_member(self, member: PublisherMember) -> None:
         member.delete()
 
     def get_with_relations(self, member_id: int) -> PublisherMember:
-        return self.model.objects.select_related("user", "publisher", "group").get(pk=member_id)
+        return self.model.objects.select_related("user", "publisher", "group__publisher_group").get(pk=member_id)

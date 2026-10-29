@@ -13,11 +13,17 @@ from apps.core.models import BaseModel
 from .managers import UserManager
 
 
+class LanguageChoice(models.TextChoices):
+    ENGLISH = "en", _("English")
+    ARABIC = "ar", _("Arabic")
+
+
 class User(BaseModel, AbstractUser):
     history = HistoricalRecords(
         app="simple_history",
         use_base_model_db=False,
         history_user_id_field=models.BigIntegerField(null=True),
+        excluded_fields=["password"],
     )
 
     # The First and last name do not cover name patterns around the globe
@@ -28,6 +34,13 @@ class User(BaseModel, AbstractUser):
     name = CharField(_("Name of User"), blank=True, max_length=255)
     email = EmailField(_("email address"), db_index=True, unique=True)
     phone = PhoneNumberField(_("Phone Number"), blank=True, null=True)
+    preferred_language = CharField(
+        _("Preferred Language"),
+        max_length=10,
+        choices=LanguageChoice,
+        default=LanguageChoice.ARABIC,
+        help_text=_("Language of the emails sent to this user."),
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
@@ -52,6 +65,7 @@ class APIKey(AbstractAPIKey):
         app="simple_history",
         use_base_model_db=False,
         history_user_id_field=models.BigIntegerField(null=True),
+        excluded_fields=["hashed_key"],
     )
 
     objects: ClassVar[APIKeyManager] = APIKeyManager()

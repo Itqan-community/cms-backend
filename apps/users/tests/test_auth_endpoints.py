@@ -1,7 +1,7 @@
 from django.utils.crypto import get_random_string
 
 from apps.core.tests.base import BaseTestCase
-from apps.users.models import Developer, User
+from apps.users.models import Developer, LanguageChoice, User
 
 
 class AuthEndpointsTestCase(BaseTestCase):
@@ -51,6 +51,33 @@ class UserProfileTestCase(BaseTestCase):
         self.assertIn("created_at", response_data)
         self.assertIn("updated_at", response_data)
         self.assertIsNone(response_data["phone"])  # Phone should be None initially
+        self.assertFalse(response_data["is_staff"])
+
+    def test_get_profile_where_user_is_staff_should_return_is_staff_true(self):
+        # Arrange
+        self.user.is_staff = True
+        self.user.save(update_fields=["is_staff"])
+        self.authenticate_user(user=self.user)
+
+        # Act
+        response = self.client.get("/cms-api/auth/profile/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertTrue(response.json()["is_staff"])
+
+    def test_update_profile_where_user_is_staff_should_return_is_staff_true(self):
+        # Arrange
+        self.user.is_staff = True
+        self.user.save(update_fields=["is_staff"])
+        self.authenticate_user(user=self.user)
+
+        # Act
+        response = self.client.put("/cms-api/auth/profile/", data={"bio": "Bio"}, format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertTrue(response.json()["is_staff"])
 
     def test_get_profile_where_unauthenticated_should_return_401(self):
         """Test profile retrieval without authentication returns error"""
@@ -164,6 +191,48 @@ class UserProfileTestCase(BaseTestCase):
 
         self.user.developer_profile.refresh_from_db()
         self.assertEqual("", self.user.developer_profile.job_title)
+
+    def test_get_profile_where_user_has_default_language_should_return_arabic(self):
+        # Arrange
+        self.authenticate_user(user=self.user)
+
+        # Act
+        response = self.client.get("/cms-api/auth/profile/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(LanguageChoice.ARABIC, response.json()["preferred_language"])
+
+    def test_update_profile_where_preferred_language_given_should_save_it(self):
+        # Arrange
+        self.authenticate_user(user=self.user)
+        self.user.name = "Initial Name"
+        self.user.save(update_fields=["name"])
+
+        # Act
+        response = self.client.put(
+            "/cms-api/auth/profile/", data={"preferred_language": LanguageChoice.ENGLISH}, format="json"
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(LanguageChoice.ENGLISH, response.json()["preferred_language"])
+        self.user.refresh_from_db()
+        self.assertEqual(LanguageChoice.ENGLISH, self.user.preferred_language)
+        self.assertEqual("Initial Name", self.user.name)
+
+    def test_update_profile_where_preferred_language_is_unsupported_should_return_400(self):
+        # Arrange
+        self.authenticate_user(user=self.user)
+
+        # Act
+        response = self.client.put("/cms-api/auth/profile/", data={"preferred_language": "fr"}, format="json")
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("validation_error", response.json()["error_name"])
+        self.user.refresh_from_db()
+        self.assertEqual(LanguageChoice.ARABIC, self.user.preferred_language)
 
     def test_update_profile_where_unauthenticated_should_return_401(self):
         """Test profile update without authentication returns error"""
