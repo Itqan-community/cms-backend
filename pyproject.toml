@@ -63,7 +63,7 @@ dev = [
     "model-bakery>=1.20.5",
     "moto>=5.1.11",
     "mypy==1.17.1",
-    "pre-commit==4.5.1",
+    "pre-commit==4.7.0",
     "pytest-cov>=6.3.0",
     "pytest-django==4.11.1",
     "pytest-sugar==1.1.1",
