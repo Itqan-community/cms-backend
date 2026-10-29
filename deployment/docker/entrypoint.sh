@@ -13,10 +13,11 @@ if [ -n "${DB_HOST}" ]; then
     echo "Database is ready!"
 fi
 
-# NOTE: migrate, collectstatic and compilemessages are intentionally NOT run here.
+# NOTE: migrate and collectstatic are intentionally NOT run here, and translations
+# are compiled into the image at build time (see Dockerfile.backend).
 #
 # They are slow, and we don't want a new container to be considered "ready" until
-# they're done. So the deploy pipeline runs all three as blocking one-off steps
+# they're done. So the deploy pipeline runs both as blocking one-off steps
 # (`docker compose run --rm web ...`) BEFORE the web/celery containers are
 # recreated. The old container keeps serving while they run; the new container
 # then starts with only gunicorn, so it boots fast and is ready almost immediately.
@@ -38,9 +39,6 @@ if [ "${RUN_PREP:-0}" = "1" ]; then
 
     echo "Collecting static files..."
     python manage.py collectstatic --noinput
-
-    echo "Compiling translations..."
-    python manage.py compilemessages --locale ar
 fi
 
 echo "Starting Gunicorn (WSGI, gthread workers)..."
