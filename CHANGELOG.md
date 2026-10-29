@@ -1,3 +1,9 @@
+## v0.25.1 (2026-10-29)
+
+### Fix
+
+- **deploy**: compile translations into the image (#579)
+
 ## v0.25.0 (2026-10-29)
 
 ### Feat
