@@ -29,6 +29,9 @@ class ApiKeyOutSchema(Schema):
 
     @staticmethod
     def resolve_app_slug(obj) -> str | None:
+        # django-ninja >= 1.6 also runs resolvers when the schema is built from kwargs (obj is a dict).
+        if isinstance(obj, dict):
+            return obj.get("app_slug")
         return UsageApp.objects.filter(api_key_id=obj.id).values_list("slug", flat=True).first()
 
 
