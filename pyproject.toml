@@ -110,7 +110,7 @@ indent_size = 2
 prod = [
     "gunicorn>=21.2,<26.3",
     "uvicorn[standard]==0.54.*",
-    "sentry-sdk[django]==2.53.0",
+    "sentry-sdk[django]==2.73.0",
 ]
 
 [tool.uv]
