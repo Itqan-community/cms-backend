@@ -5,14 +5,14 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from model_bakery import baker
 
-from apps.content.cache import DEFAULT_FOLDER_CACHE_TOKEN, recitation_ayah_response_cache_key
+from apps.content.cache import DEFAULT_QUALITY_CACHE_TOKEN, recitation_ayah_response_cache_key
 from apps.content.models import (
     Asset,
     AssetAccess,
     AssetAccessRequest,
     CategoryChoice,
     RecitationAyahTiming,
-    RecitationFolder,
+    RecitationQuality,
     RecitationSurahTrack,
     StatusChoice,
 )
@@ -39,11 +39,11 @@ class RecitationAyahAudioPublicApiTest(BaseTestCase):
             reciter=baker.make("content.Reciter", name="Test Reciter"),
             riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
         )
-        self.default_folder = self.asset.recitation_folders.get(is_default=True)
+        self.default_quality = self.asset.recitation_qualities.get(is_default=True)
         self.track = baker.make(
             RecitationSurahTrack,
             asset=self.asset,
-            folder=self.default_folder,
+            quality=self.default_quality,
             surah_number=2,
             duration_ms=40000,
             size_bytes=640000,
@@ -88,15 +88,15 @@ class RecitationAyahAudioPublicApiTest(BaseTestCase):
         self.assertEqual(15000, data["duration_ms"])
         # Estimated size: 640000 * 15000 // 40000 = 240000
         self.assertEqual(240000, data["size_bytes"])
-        expected_suffix = f"uploads/assets/{self.asset.id}/recitations/{self.default_folder.id}/002/ayah_255.mp3"
+        expected_suffix = f"uploads/assets/{self.asset.id}/recitations/{self.default_quality.id}/002/ayah_255.mp3"
         self.assertTrue(data["audio_url"].endswith(expected_suffix))
         self.assertEqual("public, max-age=300, s-maxage=300", response.headers.get("Cache-Control"))
 
-    def test_get_ayah_audio_where_folder_param_provided_should_resolve_variant_folder(self):
-        """Verify that passing folder parameter resolves the variant folder's audio slice."""
-        # Arrange - variant folder
-        echo_folder = baker.make(
-            RecitationFolder,
+    def test_get_ayah_audio_where_quality_param_provided_should_resolve_variant_quality(self):
+        """Verify that passing quality parameter resolves the variant quality's audio slice."""
+        # Arrange - variant quality
+        echo_quality = baker.make(
+            RecitationQuality,
             asset=self.asset,
             name="With Echo",
             name_en="With Echo",
@@ -107,7 +107,7 @@ class RecitationAyahAudioPublicApiTest(BaseTestCase):
         echo_track = baker.make(
             RecitationSurahTrack,
             asset=self.asset,
-            folder=echo_folder,
+            quality=echo_quality,
             surah_number=2,
             duration_ms=42000,
             size_bytes=650000,
@@ -123,29 +123,29 @@ class RecitationAyahAudioPublicApiTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get(f"/recitations/{self.asset.id}/ayah/2:255/?folder=with-echo")
+        response = self.client.get(f"/recitations/{self.asset.id}/ayah/2:255/?quality=with-echo")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         data = response.json()
-        expected_suffix = f"uploads/assets/{self.asset.id}/recitations/{echo_folder.id}/002/ayah_255.mp3"
+        expected_suffix = f"uploads/assets/{self.asset.id}/recitations/{echo_quality.id}/002/ayah_255.mp3"
         self.assertTrue(data["audio_url"].endswith(expected_suffix))
         self.assertEqual(16000, data["duration_ms"])
 
-    def test_get_ayah_audio_where_folder_not_found_should_return_404_folder_not_found(self):
-        """Verify that requesting an unresolvable folder returns 404 folder_not_found."""
+    def test_get_ayah_audio_where_quality_not_found_should_return_404_quality_not_found(self):
+        """Verify that requesting an unresolvable quality returns 404 quality_not_found."""
         # Act
-        response = self.client.get(f"/recitations/{self.asset.id}/ayah/2:255/?folder=nonexistent-folder")
+        response = self.client.get(f"/recitations/{self.asset.id}/ayah/2:255/?quality=nonexistent-quality")
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
-        self.assertEqual("folder_not_found", response.json().get("error_name"))
+        self.assertEqual("quality_not_found", response.json().get("error_name"))
 
-    def test_get_ayah_audio_where_variant_folder_is_hidden_should_return_404_folder_not_found(self):
-        """Verify that requesting a hidden variant folder returns 404 folder_not_found."""
-        # Arrange - hidden variant folder
-        hidden_folder = baker.make(
-            RecitationFolder,
+    def test_get_ayah_audio_where_variant_quality_is_hidden_should_return_404_quality_not_found(self):
+        """Verify that requesting a hidden variant quality returns 404 quality_not_found."""
+        # Arrange - hidden variant quality
+        hidden_quality = baker.make(
+            RecitationQuality,
             asset=self.asset,
             name="Hidden Variant",
             name_en="Hidden Variant",
@@ -156,7 +156,7 @@ class RecitationAyahAudioPublicApiTest(BaseTestCase):
         hidden_track = baker.make(
             RecitationSurahTrack,
             asset=self.asset,
-            folder=hidden_folder,
+            quality=hidden_quality,
             surah_number=2,
             duration_ms=40000,
             size_bytes=640000,
@@ -171,24 +171,24 @@ class RecitationAyahAudioPublicApiTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get(f"/recitations/{self.asset.id}/ayah/2:255/?folder=hidden-variant")
+        response = self.client.get(f"/recitations/{self.asset.id}/ayah/2:255/?quality=hidden-variant")
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
-        self.assertEqual("folder_not_found", response.json().get("error_name"))
+        self.assertEqual("quality_not_found", response.json().get("error_name"))
 
-    def test_get_ayah_audio_where_default_folder_is_hidden_should_return_404_folder_not_found(self):
-        """Verify that requesting default ayah audio when the default folder is hidden returns 404."""
+    def test_get_ayah_audio_where_default_quality_is_hidden_should_return_404_quality_not_found(self):
+        """Verify that requesting default ayah audio when the default quality is hidden returns 404."""
         # Arrange
-        self.default_folder.is_visible = False
-        self.default_folder.save(update_fields=["is_visible"])
+        self.default_quality.is_visible = False
+        self.default_quality.save(update_fields=["is_visible"])
 
         # Act
         response = self.client.get(f"/recitations/{self.asset.id}/ayah/2:255/")
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
-        self.assertEqual("folder_not_found", response.json().get("error_name"))
+        self.assertEqual("quality_not_found", response.json().get("error_name"))
 
     def test_get_ayah_audio_where_asset_not_found_should_return_404_asset_not_found(self):
         """Verify that requesting a non-existent asset ID returns 404 asset_not_found."""
@@ -284,7 +284,7 @@ class RecitationAyahAudioPublicApiTest(BaseTestCase):
         self.assertEqual(200, first_resp.status_code, first_resp.content)
 
         # Verify cached bytes exist
-        cache_key = recitation_ayah_response_cache_key(self.asset.id, DEFAULT_FOLDER_CACHE_TOKEN, "2:255")
+        cache_key = recitation_ayah_response_cache_key(self.asset.id, DEFAULT_QUALITY_CACHE_TOKEN, "2:255")
         cached_raw = cache.get(cache_key)
         self.assertIsNotNone(cached_raw)
         cached_json = json.loads(cached_raw)

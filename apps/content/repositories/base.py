@@ -37,15 +37,15 @@ class BaseRecitationRepository(ABC):
         asset_id: int,
         publisher_q: Q | None,
         prefetch_timings: bool = False,
-        folder_id: int | None = None,
+        quality_id: int | None = None,
     ) -> QuerySet[RecitationSurahTrack]:
         """
         Returns a list of tracks for a given asset ID.
 
-        Tracks belong to a folder (variant), so results are always scoped to one:
-        the folder identified by ``folder_id``, or the asset's default folder when
+        Tracks belong to a quality (variant), so results are always scoped to one:
+        the quality identified by ``quality_id``, or the asset's default quality when
         it is None. Callers resolve a user-supplied slug-or-name into an id first
-        (see ``find_folder_by_token``).
+        (see ``find_quality_by_token``).
         """
         pass
 

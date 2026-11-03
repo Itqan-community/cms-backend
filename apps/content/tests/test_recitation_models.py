@@ -7,7 +7,7 @@ from apps.content.models import (
     Asset,
     CategoryChoice,
     RecitationAyahTiming,
-    RecitationFolder,
+    RecitationQuality,
     RecitationSurahTrack,
     StatusChoice,
 )
@@ -32,7 +32,7 @@ class RecitationModelsTest(BaseTestCase):
             reciter=baker.make("content.Reciter", name="Test Reciter"),
             riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
         )
-        folder = RecitationFolder.objects.get(asset=asset, is_default=True)
+        quality = RecitationQuality.objects.get(asset=asset, is_default=True)
         mp3 = SimpleUploadedFile("t.mp3", b"fake-mp3-bytes")
 
         # Monkeypatch duration helper to avoid decoding real MP3
@@ -42,7 +42,7 @@ class RecitationModelsTest(BaseTestCase):
             # Act
             track = RecitationSurahTrack.objects.create(
                 asset=asset,
-                folder=folder,
+                quality=quality,
                 surah_number=2,
                 audio_file=mp3,
             )
@@ -67,9 +67,9 @@ class RecitationModelsTest(BaseTestCase):
             reciter=baker.make("content.Reciter", name="Test Reciter"),
             riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
         )
-        folder = RecitationFolder.objects.get(asset=asset, is_default=True)
+        quality = RecitationQuality.objects.get(asset=asset, is_default=True)
         track = RecitationSurahTrack.objects.create(
-            asset=asset, folder=folder, surah_number=1, audio_file=SimpleUploadedFile("t.mp3", b"x")
+            asset=asset, quality=quality, surah_number=1, audio_file=SimpleUploadedFile("t.mp3", b"x")
         )
 
         # Act

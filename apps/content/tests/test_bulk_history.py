@@ -14,7 +14,7 @@ from apps.content.models import (
     ContentIssueReport,
     Qiraah,
     RecitationAyahTiming,
-    RecitationFolder,
+    RecitationQuality,
     RecitationSurahTrack,
     Reciter,
     VersionStateChoice,
@@ -25,7 +25,7 @@ from apps.content.services.admin.asset_recitation_ayah_timestamps_upload_service
 )
 from apps.content.services.asset_content_import import ParsedEntry
 from apps.content.services.asset_templates import unit_spec_for
-from apps.content.services.recitation_folder import RecitationFolderService
+from apps.content.services.recitation_quality import RecitationQualityService
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.quran.models import Ayah, Surah
@@ -270,8 +270,8 @@ class ContentBulkHistoryTest(BaseTestCase):
         assert h2.status == ContentIssueReport.StatusChoice.UNDER_REVIEW
         assert h2.history_user_id == self.user.id
 
-    def test_recitation_folder_promote_to_default_where_demotes_other_should_write_history(self):
-        # Arrange: recitation asset with two folders
+    def test_recitation_quality_promote_to_default_where_demotes_other_should_write_history(self):
+        # Arrange: recitation asset with two qualities
         reciter = Reciter.objects.create(name="Reciter 1", name_en="Reciter 1", name_ar="القارئ 1", slug="reciter-1")
         qiraah = Qiraah.objects.create(name="Qiraah 1", name_en="Qiraah 1", name_ar="القراءة 1", slug="qiraah-1")
         rec_asset = Asset.objects.create(
@@ -284,26 +284,26 @@ class ContentBulkHistoryTest(BaseTestCase):
             qiraah=qiraah,
             slug="rec-asset",
         )
-        folder1 = RecitationFolder.objects.get(asset=rec_asset, is_default=True)
-        folder2 = RecitationFolder.objects.create(asset=rec_asset, name="Folder 2", slug="f2", is_default=False)
-        initial_h1_count = folder1.history.count()
+        quality1 = RecitationQuality.objects.get(asset=rec_asset, is_default=True)
+        quality2 = RecitationQuality.objects.create(asset=rec_asset, name="Quality 2", slug="f2", is_default=False)
+        initial_h1_count = quality1.history.count()
 
-        service = RecitationFolderService()
+        service = RecitationQualityService()
 
-        # Act: promote folder 2 to default
-        service._promote_to_default(folder2)
+        # Act: promote quality 2 to default
+        service._promote_to_default(quality2)
 
-        # Assert: folder1 demoted and folder2 promoted
-        folder1.refresh_from_db()
-        folder2.refresh_from_db()
-        assert folder1.is_default is False
-        assert folder2.is_default is True
+        # Assert: quality1 demoted and quality2 promoted
+        quality1.refresh_from_db()
+        quality2.refresh_from_db()
+        assert quality1.is_default is False
+        assert quality2.is_default is True
 
-        # Assert: folder1 has update history record in audit DB
-        latest_h1 = folder1.history.order_by("-history_date").first()
+        # Assert: quality1 has update history record in audit DB
+        latest_h1 = quality1.history.order_by("-history_date").first()
         assert latest_h1.history_type == "~"
         assert latest_h1.is_default is False
-        assert folder1.history.count() == initial_h1_count + 1
+        assert quality1.history.count() == initial_h1_count + 1
 
     def test_bulk_upload_recitation_ayah_timestamps_where_new_and_existing_should_preserve_history(self):
         # Arrange: create recitation asset, track, and timing payload
@@ -323,10 +323,10 @@ class ContentBulkHistoryTest(BaseTestCase):
             qiraah=qiraah,
             slug="rec-timings-asset",
         )
-        folder = RecitationFolder.objects.get(asset=rec_asset, is_default=True)
+        quality = RecitationQuality.objects.get(asset=rec_asset, is_default=True)
         track = RecitationSurahTrack.objects.create(
             asset=rec_asset,
-            folder=folder,
+            quality=quality,
             surah_number=1,
             audio_file=SimpleUploadedFile("001.mp3", b"dummy audio"),
         )
@@ -338,7 +338,9 @@ class ContentBulkHistoryTest(BaseTestCase):
             return SimpleUploadedFile("001.json", payload, content_type="application/json")
 
         # Act 1: Initial upload (triggers bulk_create_with_history)
-        bulk_upload_recitation_ayah_timestamps(asset_id=rec_asset.id, files=[make_file(0.5, 1.5)], folder_id=folder.id)
+        bulk_upload_recitation_ayah_timestamps(
+            asset_id=rec_asset.id, files=[make_file(0.5, 1.5)], quality_id=quality.id
+        )
 
         # Assert 1: timing created with '+' history
         timing = RecitationAyahTiming.objects.get(track=track, ayah_key="1:1")
@@ -350,7 +352,9 @@ class ContentBulkHistoryTest(BaseTestCase):
         assert h1.start_ms == 500
 
         # Act 2: Second upload with modified timestamp (triggers bulk_update_with_history)
-        bulk_upload_recitation_ayah_timestamps(asset_id=rec_asset.id, files=[make_file(0.7, 2.0)], folder_id=folder.id)
+        bulk_upload_recitation_ayah_timestamps(
+            asset_id=rec_asset.id, files=[make_file(0.7, 2.0)], quality_id=quality.id
+        )
 
         # Assert 2: timing updated with '~' history
         timing.refresh_from_db()

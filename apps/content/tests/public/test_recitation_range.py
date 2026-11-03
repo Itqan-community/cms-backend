@@ -49,11 +49,11 @@ class RecitationRangeTest(BaseTestCase):
             reciter=baker.make("content.Reciter", name="Test Reciter"),
             riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
         )
-        self.folder = self.asset.recitation_folders.get(is_default=True)
+        self.quality = self.asset.recitation_qualities.get(is_default=True)
         self.track = baker.make(
             RecitationSurahTrack,
             asset=self.asset,
-            folder=self.folder,
+            quality=self.quality,
             surah_number=1,
             duration_ms=3000,
             size_bytes=512,
@@ -98,7 +98,7 @@ class RecitationRangeTest(BaseTestCase):
         return audio_url.rsplit("/", 1)[-1]
 
     def _surah_dir_keys(self) -> list[str]:
-        prefix = f"media/uploads/assets/{self.asset.id}/recitations/{self.folder.id}/001"
+        prefix = f"media/uploads/assets/{self.asset.id}/recitations/{self.quality.id}/001"
         keys: list[str] = []
         for page in self.s3.get_paginator("list_objects_v2").paginate(Bucket=self.bucket_name, Prefix=f"{prefix}/"):
             for obj in page.get("Contents", []) or []:
@@ -196,42 +196,42 @@ class RecitationRangeTest(BaseTestCase):
         # Assert
         self.assertEqual(404, response.status_code, response.content)
 
-    def test_get_range_where_folder_unknown_should_return_404(self):
+    def test_get_range_where_quality_unknown_should_return_404(self):
         # Arrange
         self.authenticate_client(self.app)
 
         # Act
-        response = self.client.get(self._url(query="from=1&to=2&folder=nope"))
+        response = self.client.get(self._url(query="from=1&to=2&quality=nope"))
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
-        self.assertEqual("folder_not_found", response.json()["error_name"])
+        self.assertEqual("quality_not_found", response.json()["error_name"])
 
-    def test_get_range_where_default_folder_hidden_and_no_folder_param_should_return_404(self):
-        # Arrange: hide the default folder with a direct save -- the portal
+    def test_get_range_where_default_quality_hidden_and_no_quality_param_should_return_404(self):
+        # Arrange: hide the default quality with a direct save -- the portal
         # forbids hiding the default variant, but admin/imports/shell can, and
         # the public endpoint must still refuse to serve it (CWE-862).
-        self.folder.is_visible = False
-        self.folder.save(update_fields=["is_visible", "updated_at"])
+        self.quality.is_visible = False
+        self.quality.save(update_fields=["is_visible", "updated_at"])
 
-        # Act: no ?folder, so the default variant would be resolved implicitly.
+        # Act: no ?quality, so the default variant would be resolved implicitly.
         response = self.client.get(self._url())
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
-        self.assertEqual("folder_not_found", response.json()["error_name"])
+        self.assertEqual("quality_not_found", response.json()["error_name"])
 
-    def test_get_range_where_hidden_folder_requested_explicitly_should_return_404(self):
+    def test_get_range_where_hidden_quality_requested_explicitly_should_return_404(self):
         # Arrange: same hidden default, requested by slug this time.
-        self.folder.is_visible = False
-        self.folder.save(update_fields=["is_visible", "updated_at"])
+        self.quality.is_visible = False
+        self.quality.save(update_fields=["is_visible", "updated_at"])
 
         # Act
-        response = self.client.get(self._url(query=f"from=1&to=2&folder={self.folder.slug}"))
+        response = self.client.get(self._url(query=f"from=1&to=2&quality={self.quality.slug}"))
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
-        self.assertEqual("folder_not_found", response.json()["error_name"])
+        self.assertEqual("quality_not_found", response.json()["error_name"])
 
     @override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=True)
     def test_get_range_where_private_and_anonymous_should_require_auth(self):
@@ -341,7 +341,7 @@ class RecitationRangeTest(BaseTestCase):
         first = self.client.get(self._url())
         self.assertEqual(200, first.status_code, first.content)
         first_leaf = self._leaf(first.json()["audio_url"])
-        first_full = f"media/uploads/assets/{self.asset.id}/recitations/{self.folder.id}/001/{first_leaf}"
+        first_full = f"media/uploads/assets/{self.asset.id}/recitations/{self.quality.id}/001/{first_leaf}"
 
         # Edit a timing via raw .save() (mirrors the timing upload's direct-DB
         # writes) and bust the response cache so the next request rebuilds.
@@ -353,7 +353,7 @@ class RecitationRangeTest(BaseTestCase):
         second = self.client.get(self._url())
         self.assertEqual(200, second.status_code, second.content)
         second_leaf = self._leaf(second.json()["audio_url"])
-        second_full = f"media/uploads/assets/{self.asset.id}/recitations/{self.folder.id}/001/{second_leaf}"
+        second_full = f"media/uploads/assets/{self.asset.id}/recitations/{self.quality.id}/001/{second_leaf}"
 
         # Same logical range but different content hash → different key.
         self.assertNotEqual(first_leaf, second_leaf)
@@ -364,7 +364,7 @@ class RecitationRangeTest(BaseTestCase):
 
     def test_get_range_where_legacy_unversioned_clip_exists_should_prune_it(self):
         # Seed a pre-versioning unversioned clip for the same range.
-        legacy_full = f"media/uploads/assets/{self.asset.id}/recitations/{self.folder.id}/001/range_001_002.mp3"
+        legacy_full = f"media/uploads/assets/{self.asset.id}/recitations/{self.quality.id}/001/range_001_002.mp3"
         self.s3.put_object(Bucket=self.bucket_name, Key=legacy_full, Body=b"legacy")
         self.assertIn(legacy_full, self._surah_dir_keys())
 
@@ -396,7 +396,7 @@ class RecitationRangeTest(BaseTestCase):
         subset = list(track.ayah_timings.filter(ayah_key__in=["1:1", "1:2"]).order_by("start_ms"))
         service = RecitationRangeService()
         version = service._source_version(track, subset)
-        key = service.build_range_key(track.asset_id, self.folder.id, 1, 1, 2, version)
+        key = service.build_range_key(track.asset_id, self.quality.id, 1, 1, 2, version)
         return service, track, subset, key
 
     def test_concurrent_miss_where_winner_builds_should_serve_without_reencoding(self):
@@ -424,7 +424,7 @@ class RecitationRangeTest(BaseTestCase):
             ):
                 mock_run.side_effect = AssertionError("duplicate encode on loser path")
                 # Act
-                result = service.get_or_build_range_audio(track, self.folder, 1, 1, 2, 0, 2000, subset)
+                result = service.get_or_build_range_audio(track, self.quality, 1, 1, 2, 0, 2000, subset)
         finally:
             winner.join()
 
@@ -444,7 +444,7 @@ class RecitationRangeTest(BaseTestCase):
             patch("apps.content.services.recitation_range.RANGE_BUILD_MAX_WAIT_SECONDS", 3),
             patch("apps.content.services.recitation_range.RANGE_BUILD_POLL_SECONDS", 0.2),
         ):
-            result = service.get_or_build_range_audio(track, self.folder, 1, 1, 2, 0, 2000, subset)
+            result = service.get_or_build_range_audio(track, self.quality, 1, 1, 2, 0, 2000, subset)
 
         # Assert
         self.assertIn(key, result["audio_url"])
@@ -463,7 +463,7 @@ class RecitationRangeTest(BaseTestCase):
             patch("apps.content.services.recitation_range.RANGE_BUILD_POLL_SECONDS", 0.2),
             self.assertRaises(ItqanError) as ctx,
         ):
-            service.get_or_build_range_audio(track, self.folder, 1, 1, 2, 0, 2000, subset)
+            service.get_or_build_range_audio(track, self.quality, 1, 1, 2, 0, 2000, subset)
         self.assertEqual("storage_error", ctx.exception.error_name)
         self.assertEqual(503, ctx.exception.status_code)
 

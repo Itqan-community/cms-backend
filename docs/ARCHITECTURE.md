@@ -297,7 +297,7 @@ An **Asset** is a **derivation** of a Resource. It represents content that has b
   hides it (gallery, public, tenant and developer APIs, the itqan CLI, recommendations), and
   publishing one of its versions neither emails subscribers nor runs Dependabot.
 - For recitation assets: linked to a **Reciter** and **Riwayah**, and owns one or more
-  **RecitationFolder** variants (see [Recitation-Specific Components](#recitation-specific-components))
+  **RecitationQuality** variants (see [Recitation-Specific Components](#recitation-specific-components))
 - For text assets (translations and tafsirs): carries a **template** (`surah` / `ayah` /
   `word` / `page`, and for tafsirs only `ayah_group` / `word_group`) that fixes the
   granularity its entries are keyed to — chosen at creation and **immutable afterwards**.
@@ -458,7 +458,7 @@ from the parsed entries, so consumers download exactly what was reviewed.
   consumers can't see, or another category, is 404 `file_structure_unavailable`.
   The other categories get their own anonymous samples, also without an access grant.
   `assets/{id}/recitation-preview/` returns up to the first 3 tracks of a READY
-  recitation's default folder (while it is visible) with playable URLs, or 404
+  recitation's default quality (while it is visible) with playable URLs, or 404
   `recitation_preview_unavailable`. `assets/{id}/font-preview/?language=` returns a
   READY font's published file (`font_url`, `file_name`, CSS `format`) and Al-Fatiha's
   ayahs to set in it, or 404 `font_preview_unavailable`. A font uploaded as a zip has
@@ -853,8 +853,8 @@ For recitation-type assets, the system provides specialized tracking:
 
 ```mermaid
 erDiagram
-    Asset ||--o{ RecitationFolder : "has variants"
-    RecitationFolder ||--o{ RecitationSurahTrack : "contains"
+    Asset ||--o{ RecitationQuality : "has variants"
+    RecitationQuality ||--o{ RecitationSurahTrack : "contains"
     Asset ||--o{ RecitationSurahTrack : "owns (denormalized)"
     RecitationSurahTrack ||--o{ RecitationAyahTiming : "has timings"
     Asset }o--|| Reciter : "performed by"
@@ -870,7 +870,7 @@ erDiagram
         string slug
     }
 
-    RECITATIONFOLDER {
+    RECITATIONQUALITY {
         string name
         string slug
         bool is_default
@@ -984,7 +984,7 @@ when the range starts before event retention (`uniques_basis`). Dates are inclus
 - **search-terms:** gallery searches by every visitor (publishers see all of them, to show unmet
   demand), terms with ≥ 3 distinct searchers only; `zero_results=true` keeps terms whose latest
   search found nothing; each term is matched to one reciter, riwayah or qiraah when unambiguous.
-- **recitation-coverage:** recitations in scope with surahs in the default folder, the missing
+- **recitation-coverage:** recitations in scope with surahs in the default quality, the missing
   ones (also ordered by platform-wide plays of the last 90 days) and the share of tracks with
   ayah timings; `incomplete_only` (default) hides complete ones.
 - **export:** CSV of the additive metrics per period and asset (admin adds the publisher); names
@@ -995,68 +995,68 @@ when the range starts before event retention (`uniques_basis`). Dates are inclus
   `invalid_timezone`, `range_before_retention`, `asset_not_found`, `app_not_found`,
   `usage_counts_disabled`.
 
-### Folders (recitation variants)
+### Qualities (recitation variants)
 
-A **RecitationFolder** sits between `Asset` and `RecitationSurahTrack`. It lets one
+A **RecitationQuality** sits between `Asset` and `RecitationSurahTrack`. It lets one
 recitation be published in several forms — clear sound, with echo and delay, 128kbps,
 320kbps, video — without splitting it into separate Assets, so the recitation keeps a
 single page.
 
-- Each folder holds its own set of up to 114 surah tracks.
-- Uniqueness is `(folder, surah_number)`, **not** `(asset, surah_number)`: the same
+- Each quality holds its own set of up to 114 surah tracks.
+- Uniqueness is `(quality, surah_number)`, **not** `(asset, surah_number)`: the same
   surah exists once per variant.
-- Ayah timings hang off the track, so they are per-folder automatically — which matters
+- Ayah timings hang off the track, so they are per-quality automatically — which matters
   because echo/delay variants have genuinely different offsets.
-- Every recitation Asset gets exactly one folder flagged `is_default`, created by a
+- Every recitation Asset gets exactly one quality flagged `is_default`, created by a
   `post_save` signal on `Asset` so the invariant also holds for assets made through
   Django admin, fixtures, or data imports.
-- `Asset` is kept as a denormalized FK on the track alongside `folder`, because
+- `Asset` is kept as a denormalized FK on the track alongside `quality`, because
   publisher scoping (`asset__publisher`) and most queries filter by asset. A model-level
-  check rejects any track whose `folder.asset_id` disagrees with its `asset_id`.
+  check rejects any track whose `quality.asset_id` disagrees with its `asset_id`.
 
 **API surface.** No new top-level resources were added.
 
-- Every recitation **track** endpoint accepts an optional `?folder=` filter, resolved by
-  `find_folder_by_token`: the value may be a folder's slug **or** its name (matched
+- Every recitation **track** endpoint accepts an optional `?quality=` filter, resolved by
+  `find_quality_by_token`: the value may be a quality's slug **or** its name (matched
   case-insensitively across `name`, `name_ar`, `name_en`). Slug wins when both could
-  match, since it is unique per asset. Names are not unique — two folders called "Clear"
-  get slugs `clear` and `clear-1` — so an ambiguous name resolves to the default folder
-  if present, otherwise the oldest. Omitting the parameter serves the default folder, so
-  callers written before folders existed are unaffected. An unresolvable value returns
-  `404 folder_not_found` rather than an empty list, so a typo is distinguishable from a
+  match, since it is unique per asset. Names are not unique — two qualities called "Clear"
+  get slugs `clear` and `clear-1` — so an ambiguous name resolves to the default quality
+  if present, otherwise the oldest. Omitting the parameter serves the default quality, so
+  callers written before qualities existed are unaffected. An unresolvable value returns
+  `404 quality_not_found` rather than an empty list, so a typo is distinguishable from a
   variant that has no tracks yet.
-- The public track endpoint's cache key embeds the **requested** `?folder=` value, not the
-  resolved folder, so a warm cache still serves without a DB read. Because that value is
-  user input, `folder_cache_token` sanitizes it first — slug-shaped values pass through for
+- The public track endpoint's cache key embeds the **requested** `?quality=` value, not the
+  resolved quality, so a warm cache still serves without a DB read. Because that value is
+  user input, `quality_cache_token` sanitizes it first — slug-shaped values pass through for
   readability, anything else (spaces, Arabic, overlong input) is hashed, and case is folded
   so equivalent names share one entry.
-- Every recitation **list** endpoint (public, tenant, internal) returns a `folders` array
+- Every recitation **list** endpoint (public, tenant, internal) returns a `qualities` array
   per row — name, slug, `is_default`, default first — so a consumer can discover the valid
-  `?folder=` values. Only the portal API has a recitation *detail* endpoint; it carries the
-  same array. The list queryset prefetches `recitation_folders`, so this costs one extra
+  `?quality=` values. Only the portal API has a recitation *detail* endpoint; it carries the
+  same array. The list queryset prefetches `recitation_qualities`, so this costs one extra
   query per page rather than one per row.
-- Folder CRUD is nested under the existing portal recitations resource at
-  `/portal/recitations/{slug}/folders/`. The default folder cannot be deleted
-  (`400 cannot_delete_default_folder`), since every other endpoint falls back to it.
-- Renaming a folder deliberately does **not** change its slug: the slug is the public
-  `?folder=` value, and moving it would break existing links and cached responses.
+- Quality CRUD is nested under the existing portal recitations resource at
+  `/portal/recitations/{slug}/qualities/`. The default quality cannot be deleted
+  (`400 cannot_delete_default_quality`), since every other endpoint falls back to it.
+- Renaming a quality deliberately does **not** change its slug: the slug is the public
+  `?quality=` value, and moving it would break existing links and cached responses.
 
 **Storage.** New uploads are keyed
-`uploads/assets/{asset_id}/recitations/{folder_id}/{surah:03}.mp3`. Tracks uploaded
-before folders existed keep their original flat keys — nothing in R2 was moved, and each
+`uploads/assets/{asset_id}/recitations/{quality_id}/{surah:03}.mp3`. Tracks uploaded
+before qualities existed keep their original flat keys — nothing in R2 was moved, and each
 row stores its own full key, so both layouts coexist permanently.
 
 Portal audio and ayah-timing uploads resolve the target recitation through the caller's
 publisher scope. Multipart sign, completion, and abort operations also parse the supplied
 storage key, require it to round-trip through the canonical key builder, and verify that
-both its asset and folder belong to that scope before mutating object storage.
+both its asset and quality belong to that scope before mutating object storage.
 
 **Ayah-timing exports.** `sync_asset_recitations_json_file` writes one `AssetVersion`
-per folder, named after the folder slug, so variants do not overwrite each other's JSON.
+per quality, named after the quality slug, so variants do not overwrite each other's JSON.
 
 **Ayah-by-ayah sliced audio.** Per-ayah audio files are generated by the audio slicing
 pipeline (`RecitationAudioSlicingService`) and stored deterministically under
-`uploads/assets/{asset_id}/recitations/{folder_id}/{surah_number:03}/ayah_{ayah_number:03}.mp3`.
+`uploads/assets/{asset_id}/recitations/{quality_id}/{surah_number:03}/ayah_{ayah_number:03}.mp3`.
 The resulting storage key and exact byte size are recorded directly on `RecitationAyahTiming`
 (`audio_file` and `size_bytes`). The model uses `DeleteFilesOnDeleteMixin` to ensure that
 associated per-ayah audio files in storage are deleted when a timing record is removed.

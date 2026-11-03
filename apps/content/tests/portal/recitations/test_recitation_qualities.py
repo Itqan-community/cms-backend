@@ -5,7 +5,7 @@ from apps.content.models import (
     Asset,
     CategoryChoice,
     Qiraah,
-    RecitationFolder,
+    RecitationQuality,
     RecitationSurahTrack,
     Reciter,
     Riwayah,
@@ -17,18 +17,20 @@ from apps.publishers.models import Publisher
 from apps.users.models import User
 
 
-class RecitationFoldersPortalAPITest(BaseTestCase):
+class RecitationQualitiesPortalAPITest(BaseTestCase):
     def setUp(self):
         super().setUp()
-        self.staff_user = User.objects.create_user(email="folders-staff@example.com", name="Staff User", is_staff=True)
+        self.staff_user = User.objects.create_user(
+            email="qualities-staff@example.com", name="Staff User", is_staff=True
+        )
         self.non_staff_user = User.objects.create_user(
-            email="folders-user@example.com", name="Regular User", is_staff=False
+            email="qualities-user@example.com", name="Regular User", is_staff=False
         )
 
-        self.publisher = baker.make(Publisher, name="Folders Publisher")
-        self.reciter = baker.make(Reciter, name="Folders Reciter")
-        self.qiraah = baker.make(Qiraah, name="Folders Qiraah")
-        self.riwayah = baker.make(Riwayah, name="Folders Riwayah", qiraah=self.qiraah)
+        self.publisher = baker.make(Publisher, name="Qualities Publisher")
+        self.reciter = baker.make(Reciter, name="Qualities Reciter")
+        self.qiraah = baker.make(Qiraah, name="Qualities Qiraah")
+        self.riwayah = baker.make(Riwayah, name="Qualities Riwayah", qiraah=self.qiraah)
 
         self.asset = baker.make(
             Asset,
@@ -38,20 +40,20 @@ class RecitationFoldersPortalAPITest(BaseTestCase):
             reciter=self.reciter,
             qiraah=self.qiraah,
             riwayah=self.riwayah,
-            name="Folders Recitation",
+            name="Qualities Recitation",
         )
-        self.default_folder = self.asset.recitation_folders.get(is_default=True)
-        self.url = f"/portal/recitations/{self.asset.slug}/folders/"
+        self.default_quality = self.asset.recitation_qualities.get(is_default=True)
+        self.url = f"/portal/recitations/{self.asset.slug}/qualities/"
 
     # --- list ---
 
-    def test_list_folders_where_permitted_should_return_default_first_with_track_counts(self):
+    def test_list_qualities_where_permitted_should_return_default_first_with_track_counts(self):
         # Arrange
         self.authenticate_user(self.staff_user)
         self.give_permission(self.staff_user, PermissionChoice.PORTAL_READ_RECITATION)
-        echo = RecitationFolder.objects.create(asset=self.asset, name="With echo", name_en="With echo")
+        echo = RecitationQuality.objects.create(asset=self.asset, name="With echo", name_en="With echo")
         RecitationSurahTrack.objects.create(
-            asset=self.asset, folder=echo, surah_number=1, audio_file=SimpleUploadedFile("001.mp3", b"x")
+            asset=self.asset, quality=echo, surah_number=1, audio_file=SimpleUploadedFile("001.mp3", b"x")
         )
 
         # Act
@@ -66,7 +68,7 @@ class RecitationFoldersPortalAPITest(BaseTestCase):
         self.assertEqual("with-echo", body[1]["slug"])
         self.assertEqual(1, body[1]["tracks_count"])
 
-    def test_list_folders_where_missing_permission_should_return_403(self):
+    def test_list_qualities_where_missing_permission_should_return_403(self):
         # Arrange
         self.authenticate_user(self.non_staff_user)
 
@@ -77,13 +79,13 @@ class RecitationFoldersPortalAPITest(BaseTestCase):
         self.assertEqual(403, response.status_code, response.content)
         self.assertEqual("permission_denied", response.json()["error_name"])
 
-    def test_list_folders_where_recitation_unknown_should_return_404(self):
+    def test_list_qualities_where_recitation_unknown_should_return_404(self):
         # Arrange
         self.authenticate_user(self.staff_user)
         self.give_permission(self.staff_user, PermissionChoice.PORTAL_READ_RECITATION)
 
         # Act
-        response = self.client.get("/portal/recitations/does-not-exist/folders/")
+        response = self.client.get("/portal/recitations/does-not-exist/qualities/")
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
@@ -91,7 +93,7 @@ class RecitationFoldersPortalAPITest(BaseTestCase):
 
     # --- create ---
 
-    def test_create_folder_where_valid_should_return_201_and_derive_slug(self):
+    def test_create_quality_where_valid_should_return_201_and_derive_slug(self):
         # Arrange
         self.authenticate_user(self.staff_user)
         self.give_permission(self.staff_user, PermissionChoice.PORTAL_CREATE_RECITATION)
@@ -104,9 +106,9 @@ class RecitationFoldersPortalAPITest(BaseTestCase):
         body = response.json()
         self.assertEqual("with-echo", body["slug"])
         self.assertFalse(body["is_default"])
-        self.assertEqual(2, RecitationFolder.objects.filter(asset=self.asset).count())
+        self.assertEqual(2, RecitationQuality.objects.filter(asset=self.asset).count())
 
-    def test_create_folder_where_names_blank_should_return_400_folder_name_required(self):
+    def test_create_quality_where_names_blank_should_return_400_quality_name_required(self):
         # Arrange
         self.authenticate_user(self.staff_user)
         self.give_permission(self.staff_user, PermissionChoice.PORTAL_CREATE_RECITATION)
@@ -116,9 +118,9 @@ class RecitationFoldersPortalAPITest(BaseTestCase):
 
         # Assert
         self.assertEqual(400, response.status_code, response.content)
-        self.assertEqual("folder_name_required", response.json()["error_name"])
+        self.assertEqual("quality_name_required", response.json()["error_name"])
 
-    def test_create_folder_where_missing_permission_should_return_403(self):
+    def test_create_quality_where_missing_permission_should_return_403(self):
         # Arrange
         self.authenticate_user(self.non_staff_user)
 
@@ -131,22 +133,22 @@ class RecitationFoldersPortalAPITest(BaseTestCase):
 
     # --- update ---
 
-    def test_update_folder_where_renamed_should_keep_slug_and_return_200(self):
+    def test_update_quality_where_renamed_should_keep_slug_and_return_200(self):
         # Arrange
         self.authenticate_user(self.staff_user)
         self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPDATE_RECITATION)
-        RecitationFolder.objects.create(asset=self.asset, name="With echo", name_en="With echo")
+        RecitationQuality.objects.create(asset=self.asset, name="With echo", name_en="With echo")
 
         # Act
         response = self.client.patch(f"{self.url}with-echo/", {"name_en": "Echo and delay"}, format="json")
 
-        # Assert - slug is the public ?folder= value and must survive a rename
+        # Assert - slug is the public ?quality= value and must survive a rename
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
         self.assertEqual("with-echo", body["slug"])
         self.assertEqual("Echo and delay", body["name_en"])
 
-    def test_update_folder_where_folder_unknown_should_return_404_folder_not_found(self):
+    def test_update_quality_where_quality_unknown_should_return_404_quality_not_found(self):
         # Arrange
         self.authenticate_user(self.staff_user)
         self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPDATE_RECITATION)
@@ -156,17 +158,17 @@ class RecitationFoldersPortalAPITest(BaseTestCase):
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
-        self.assertEqual("folder_not_found", response.json()["error_name"])
+        self.assertEqual("quality_not_found", response.json()["error_name"])
 
     # --- delete ---
 
-    def test_delete_folder_where_variant_should_return_204_and_remove_tracks(self):
+    def test_delete_quality_where_variant_should_return_204_and_remove_tracks(self):
         # Arrange
         self.authenticate_user(self.staff_user)
         self.give_permission(self.staff_user, PermissionChoice.PORTAL_DELETE_RECITATION)
-        echo = RecitationFolder.objects.create(asset=self.asset, name="With echo", name_en="With echo")
+        echo = RecitationQuality.objects.create(asset=self.asset, name="With echo", name_en="With echo")
         RecitationSurahTrack.objects.create(
-            asset=self.asset, folder=echo, surah_number=1, audio_file=SimpleUploadedFile("001.mp3", b"x")
+            asset=self.asset, quality=echo, surah_number=1, audio_file=SimpleUploadedFile("001.mp3", b"x")
         )
 
         # Act
@@ -174,26 +176,26 @@ class RecitationFoldersPortalAPITest(BaseTestCase):
 
         # Assert
         self.assertEqual(204, response.status_code, response.content)
-        self.assertFalse(RecitationFolder.objects.filter(id=echo.id).exists())
-        self.assertEqual(0, RecitationSurahTrack.objects.filter(folder_id=echo.id).count())
+        self.assertFalse(RecitationQuality.objects.filter(id=echo.id).exists())
+        self.assertEqual(0, RecitationSurahTrack.objects.filter(quality_id=echo.id).count())
 
-    def test_delete_folder_where_default_should_return_400_cannot_delete_default_folder(self):
+    def test_delete_quality_where_default_should_return_400_cannot_delete_default_quality(self):
         # Arrange
         self.authenticate_user(self.staff_user)
         self.give_permission(self.staff_user, PermissionChoice.PORTAL_DELETE_RECITATION)
 
         # Act
-        response = self.client.delete(f"{self.url}{self.default_folder.slug}/")
+        response = self.client.delete(f"{self.url}{self.default_quality.slug}/")
 
-        # Assert - every API falls back to the default folder, so it must stay
+        # Assert - every API falls back to the default quality, so it must stay
         self.assertEqual(400, response.status_code, response.content)
-        self.assertEqual("cannot_delete_default_folder", response.json()["error_name"])
-        self.assertTrue(RecitationFolder.objects.filter(id=self.default_folder.id).exists())
+        self.assertEqual("cannot_delete_default_quality", response.json()["error_name"])
+        self.assertTrue(RecitationQuality.objects.filter(id=self.default_quality.id).exists())
 
-    def test_delete_folder_where_missing_permission_should_return_403(self):
+    def test_delete_quality_where_missing_permission_should_return_403(self):
         # Arrange
         self.authenticate_user(self.non_staff_user)
-        RecitationFolder.objects.create(asset=self.asset, name="With echo", name_en="With echo")
+        RecitationQuality.objects.create(asset=self.asset, name="With echo", name_en="With echo")
 
         # Act
         response = self.client.delete(f"{self.url}with-echo/")
@@ -202,10 +204,10 @@ class RecitationFoldersPortalAPITest(BaseTestCase):
         self.assertEqual(403, response.status_code, response.content)
         self.assertEqual("permission_denied", response.json()["error_name"])
 
-    def test_update_folder_where_hidden_should_return_200_with_is_visible(self):
+    def test_update_quality_where_hidden_should_return_200_with_is_visible(self):
         self.authenticate_user(self.staff_user)
         self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPDATE_RECITATION)
-        echo = RecitationFolder.objects.create(asset=self.asset, name="With echo", name_en="With echo")
+        echo = RecitationQuality.objects.create(asset=self.asset, name="With echo", name_en="With echo")
 
         response = self.client.patch(f"{self.url}with-echo/", {"is_visible": False}, format="json")
 
@@ -214,36 +216,36 @@ class RecitationFoldersPortalAPITest(BaseTestCase):
         echo.refresh_from_db()
         self.assertFalse(echo.is_visible)
 
-    def test_update_folder_where_default_hidden_should_return_400(self):
+    def test_update_quality_where_default_hidden_should_return_400(self):
         self.authenticate_user(self.staff_user)
         self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPDATE_RECITATION)
 
         response = self.client.patch(
-            f"{self.url}{self.default_folder.slug}/",
+            f"{self.url}{self.default_quality.slug}/",
             {"is_visible": False},
             format="json",
         )
 
         self.assertEqual(400, response.status_code, response.content)
-        self.assertEqual("cannot_hide_default_folder", response.json()["error_name"])
+        self.assertEqual("cannot_hide_default_quality", response.json()["error_name"])
 
-    def test_update_folder_where_set_default_should_promote_variant(self):
+    def test_update_quality_where_set_default_should_promote_variant(self):
         self.authenticate_user(self.staff_user)
         self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPDATE_RECITATION)
-        echo = RecitationFolder.objects.create(asset=self.asset, name="With echo", name_en="With echo")
+        echo = RecitationQuality.objects.create(asset=self.asset, name="With echo", name_en="With echo")
 
         response = self.client.patch(f"{self.url}with-echo/", {"is_default": True}, format="json")
 
         self.assertEqual(200, response.status_code, response.content)
         self.assertTrue(response.json()["is_default"])
-        self.default_folder.refresh_from_db()
+        self.default_quality.refresh_from_db()
         echo.refresh_from_db()
-        self.assertFalse(self.default_folder.is_default)
+        self.assertFalse(self.default_quality.is_default)
         self.assertTrue(echo.is_default)
 
 
-class RecitationFoldersPortalScopingTest(BaseTestCase):
-    """Folders must never be reachable through another publisher's recitation."""
+class RecitationQualitiesPortalScopingTest(BaseTestCase):
+    """Qualities must never be reachable through another publisher's recitation."""
 
     def setUp(self):
         super().setUp()
@@ -273,36 +275,36 @@ class RecitationFoldersPortalScopingTest(BaseTestCase):
             name="Other Recitation",
         )
 
-    def test_create_folder_where_slug_belongs_to_other_recitation_should_not_leak(self):
-        # Arrange - a folder slug that exists under the *other* recitation
+    def test_create_quality_where_slug_belongs_to_other_recitation_should_not_leak(self):
+        # Arrange - a quality slug that exists under the *other* recitation
         self.authenticate_user(self.staff_user)
         self.give_permission(self.staff_user, PermissionChoice.PORTAL_UPDATE_RECITATION)
-        RecitationFolder.objects.create(asset=self.other_asset, name="Secret", name_en="Secret")
+        RecitationQuality.objects.create(asset=self.other_asset, name="Secret", name_en="Secret")
 
         # Act - ask for it through our own recitation
         response = self.client.patch(
-            f"/portal/recitations/{self.own_asset.slug}/folders/secret/",
+            f"/portal/recitations/{self.own_asset.slug}/qualities/secret/",
             {"name_en": "Renamed"},
             format="json",
         )
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
-        self.assertEqual("folder_not_found", response.json()["error_name"])
+        self.assertEqual("quality_not_found", response.json()["error_name"])
 
-    def test_create_folder_where_same_name_on_two_recitations_should_allow_both(self):
+    def test_create_quality_where_same_name_on_two_recitations_should_allow_both(self):
         # Arrange
         self.authenticate_user(self.staff_user)
         self.give_permission(self.staff_user, PermissionChoice.PORTAL_CREATE_RECITATION)
 
         # Act
         first = self.client.post(
-            f"/portal/recitations/{self.own_asset.slug}/folders/",
+            f"/portal/recitations/{self.own_asset.slug}/qualities/",
             {"name_en": "With echo"},
             format="json",
         )
         second = self.client.post(
-            f"/portal/recitations/{self.other_asset.slug}/folders/",
+            f"/portal/recitations/{self.other_asset.slug}/qualities/",
             {"name_en": "With echo"},
             format="json",
         )

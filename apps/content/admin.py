@@ -42,7 +42,7 @@ from .models import (
     MushafLayout,
     Qiraah,
     RecitationAyahTiming,
-    RecitationFolder,
+    RecitationQuality,
     RecitationSurahTrack,
     Reciter,
     Riwayah,
@@ -60,16 +60,16 @@ class AssetVersionInline(admin.TabularInline):
     readonly_fields = ["created_at"]
 
 
-class RecitationFolderInline(admin.TabularInline):
+class RecitationQualityInline(admin.TabularInline):
     """Variants of a recitation, shown inline on the Asset page."""
 
-    model = RecitationFolder
+    model = RecitationQuality
     extra = 0
     fields = ["name_ar", "name_en", "slug", "is_default", "tracks_count"]
     readonly_fields = ["slug", "tracks_count"]
 
     @admin.display(description="Tracks")
-    def tracks_count(self, obj: RecitationFolder) -> int:
+    def tracks_count(self, obj: RecitationQuality) -> int:
         return obj.tracks.count() if obj.pk else 0
 
     def get_queryset(self, request):
@@ -104,10 +104,10 @@ class AssetAdmin(AuditedModelAdmin):
     inlines = [AssetVersionInline]
 
     def get_inlines(self, request, obj=None):
-        # Folders only mean something for recitations, so keep them off other categories.
+        # Qualities only mean something for recitations, so keep them off other categories.
         inlines = list(super().get_inlines(request, obj))
         if obj and obj.category == CategoryChoice.RECITATION:
-            inlines.append(RecitationFolderInline)
+            inlines.append(RecitationQualityInline)
         return inlines
 
     # Custom change form for actions for recitation assets
@@ -314,14 +314,14 @@ class AssetAdmin(AuditedModelAdmin):
             return redirect(reverse("admin:content_asset_change", args=[asset_id]))
 
         try:
-            # No folder given: syncs the default folder. Other variants are synced
-            # from the portal API, which passes an explicit folder_id.
+            # No quality given: syncs the default quality. Other variants are synced
+            # from the portal API, which passes an explicit quality_id.
             _version, filename = sync_asset_recitations_json_file(asset_id=asset_id)
         except Exception as e:
             self.message_user(request, f"Sync failed: {e}", level="ERROR")
             return redirect(reverse("admin:content_asset_change", args=[asset_id]))
 
-        self.message_user(request, f"Default folder JSON synced successfully ({filename}).")
+        self.message_user(request, f"Default quality JSON synced successfully ({filename}).")
         return redirect(reverse("admin:content_asset_change", args=[asset_id]))
 
     def bulk_upload_ayahs_timestamps_view(self, request, asset_id: int):
@@ -546,13 +546,13 @@ class AssetAdmin(AuditedModelAdmin):
                     surah_number = extract_surah_number_from_mp3_filename(filename)
 
                     # Check if track already exists in database. Scoped to the default
-                    # folder, which is where admin uploads land -- an asset-wide check
+                    # quality, which is where admin uploads land -- an asset-wide check
                     # would report "exists" for a surah only present in another variant.
                     exists = False
                     if asset_id:
                         exists = RecitationSurahTrack.objects.filter(
                             asset_id=int(asset_id),
-                            folder__is_default=True,
+                            quality__is_default=True,
                             surah_number=surah_number,
                         ).exists()
 
@@ -859,15 +859,15 @@ class RiwayahAdmin(AuditedModelAdmin):
     )
 
 
-@admin.register(RecitationFolder)
-class RecitationFolderAdmin(AuditedModelAdmin):
+@admin.register(RecitationQuality)
+class RecitationQualityAdmin(AuditedModelAdmin):
     list_display = ["id", "asset", "name", "slug", "is_default", "tracks_count", "created_at"]
     list_filter = ["is_default", "created_at"]
     search_fields = ["name", "slug", "asset__name"]
     readonly_fields = ["slug", "created_at", "updated_at"]
 
     @admin.display(description="Tracks")
-    def tracks_count(self, obj: RecitationFolder) -> int:
+    def tracks_count(self, obj: RecitationQuality) -> int:
         return obj.tracks.count()
 
     def get_queryset(self, request):
@@ -879,7 +879,7 @@ class RecitationSurahTrackAdmin(AuditedModelAdmin):
     list_display = [
         "id",
         "asset",
-        "folder",
+        "quality",
         "surah_number",
         "surah_name",
         "surah_name_en",
@@ -887,9 +887,9 @@ class RecitationSurahTrackAdmin(AuditedModelAdmin):
         "size_bytes",
         "created_at",
     ]
-    list_filter = ["asset", "folder__is_default", "created_at"]
-    search_fields = ["asset__name", "folder__name", "folder__slug"]
-    raw_id_fields = ["folder"]
+    list_filter = ["asset", "quality__is_default", "created_at"]
+    search_fields = ["asset__name", "quality__name", "quality__slug"]
+    raw_id_fields = ["quality"]
     readonly_fields = [
         "surah_name",
         "surah_name_en",
@@ -912,7 +912,7 @@ class RecitationSurahTrackAdmin(AuditedModelAdmin):
             return QURAN_SURAHS[obj.surah_number]["name_en"]
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related("asset", "folder")
+        return super().get_queryset(request).select_related("asset", "quality")
 
 
 @admin.register(RecitationAyahTiming)

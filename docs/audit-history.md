@@ -107,7 +107,7 @@ All mutable business and content entities are tracked in the audit trail:
 | Category | Models |
 |----------|--------|
 | **Core Assets & Versions** | `Asset`, `AssetColumn`, `AssetLanguage`, `AssetVersion`, `AssetVersionEntry`, `AssetVersionChange`, `AssetVersionChangeReview`, `AssetPreview`, `AssetAccessRequest`, `AssetAccess` |
-| **Recitation & Metadata** | `Reciter`, `Qiraah`, `Riwayah`, `MushafLayout`, `RecitationFolder`, `RecitationSurahTrack`, `RecitationAyahTiming` |
+| **Recitation & Metadata** | `Reciter`, `Qiraah`, `Riwayah`, `MushafLayout`, `RecitationQuality`, `RecitationSurahTrack`, `RecitationAyahTiming` |
 | **Editorial & Reports** | `ContentIssueReport`, `EditorialRecommendation`, `EditorialRecommendationAsset` |
 
 ---

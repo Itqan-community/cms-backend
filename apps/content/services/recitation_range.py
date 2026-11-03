@@ -24,7 +24,7 @@ from apps.core.ninja_utils.errors import ItqanError
 from config.settings.base import CLOUDFLARE_R2_PUBLIC_BASE_URL
 
 if TYPE_CHECKING:
-    from apps.content.models import RecitationAyahTiming, RecitationFolder, RecitationSurahTrack
+    from apps.content.models import RecitationAyahTiming, RecitationQuality, RecitationSurahTrack
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +80,7 @@ class RecitationRangeService:
         s3: Any,
         *,
         asset_id: int,
-        folder_id: int,
+        quality_id: int,
         surah_number: int,
         from_ayah: int,
         to_ayah: int,
@@ -92,7 +92,7 @@ class RecitationRangeService:
         # pay for it. Leaf tokens rotate, so pruning never races a valid hit on
         # a different version: a concurrent miss simply rebuilds its own key.
         bucket = settings.CLOUDFLARE_R2_BUCKET
-        dir_key = self._to_r2_key(f"uploads/assets/{asset_id}/recitations/{folder_id}/{surah_number:03}")
+        dir_key = self._to_r2_key(f"uploads/assets/{asset_id}/recitations/{quality_id}/{surah_number:03}")
         expected_leaf = f"range_{from_ayah:03}_{to_ayah:03}"
         current_full = self._to_r2_key(current_key)
         stale: list[str] = []
@@ -159,19 +159,19 @@ class RecitationRangeService:
     def build_range_key(
         self,
         asset_id: int,
-        folder_id: int,
+        quality_id: int,
         surah_number: int,
         from_ayah: int,
         to_ayah: int,
         version: str,
     ) -> str:
         # Deterministic key mirroring the slice grammar
-        # (uploads/assets/{id}/recitations/...): folder segment keeps variants
+        # (uploads/assets/{id}/recitations/...): quality segment keeps variants
         # apart, surah dir + range leaf never collides with the track file.
         # The leaf version token (build + content hash) rotates on any input
         # change so persisted clips can never go stale.
         return (
-            f"uploads/assets/{asset_id}/recitations/{folder_id}/"
+            f"uploads/assets/{asset_id}/recitations/{quality_id}/"
             f"{surah_number:03}/range_{from_ayah:03}_{to_ayah:03}_b{BUILD_VERSION}_{version}.mp3"
         )
 
@@ -199,7 +199,7 @@ class RecitationRangeService:
     def get_or_build_range_audio(
         self,
         track: RecitationSurahTrack,
-        folder: RecitationFolder,
+        quality: RecitationQuality,
         surah_number: int,
         from_ayah: int,
         to_ayah: int,
@@ -219,7 +219,7 @@ class RecitationRangeService:
                 status_code=503,
             )
         version = self._source_version(track, subset)
-        key = self.build_range_key(track.asset_id, folder.id, surah_number, from_ayah, to_ayah, version)
+        key = self.build_range_key(track.asset_id, quality.id, surah_number, from_ayah, to_ayah, version)
         existing = self.range_exists(key)
         if existing is not None:
             return {
@@ -251,14 +251,14 @@ class RecitationRangeService:
                     status_code=503,
                 )
         try:
-            return self._build_range_audio(track, folder, surah_number, from_ayah, to_ayah, start_ms, end_ms, key)
+            return self._build_range_audio(track, quality, surah_number, from_ayah, to_ayah, start_ms, end_ms, key)
         finally:
             django_cache.delete(lock_key)
 
     def _build_range_audio(
         self,
         track: RecitationSurahTrack,
-        folder: RecitationFolder,
+        quality: RecitationQuality,
         surah_number: int,
         from_ayah: int,
         to_ayah: int,
@@ -325,7 +325,7 @@ class RecitationRangeService:
             self._prune_stale_range_clips(
                 s3,
                 asset_id=track.asset_id,
-                folder_id=folder.id,
+                quality_id=quality.id,
                 surah_number=surah_number,
                 from_ayah=from_ayah,
                 to_ayah=to_ayah,

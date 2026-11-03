@@ -50,7 +50,7 @@ curl "{{API_BASE}}/recitations/?reciter_id=12&reciter_id=15"
 
 | Parameter | Type | Description |
 |---|---|---|
-| `folder` | string | Select an audio variant by **slug or name** (names match case-insensitively, Arabic or English). Omit for the recitation's default rendering. Prefer the slug — it is unique per recitation. See [Folders](/docs/guides/recitations-ayah-timings#folders-audio-variants). |
+| `quality` | string | Select an audio variant by **slug or name** (names match case-insensitively, Arabic or English). Omit for the recitation's default rendering. Prefer the slug — it is unique per recitation. See [Qualities](/docs/guides/recitations-ayah-timings#qualities-audio-variants). |
 
 ## Ordering (`ordering=`)
 

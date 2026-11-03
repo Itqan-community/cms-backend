@@ -39,7 +39,7 @@ from typing import Any
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from apps.content.models import Asset, CategoryChoice, RecitationAyahTiming, RecitationFolder, RecitationSurahTrack
+from apps.content.models import Asset, CategoryChoice, RecitationAyahTiming, RecitationQuality, RecitationSurahTrack
 from apps.content.services.admin.recitation_audio_slicing_service import timing_eligibility_reason
 
 # Decimal GB for cost math: Cloudflare R2 prices are quoted per decimal GB.
@@ -49,7 +49,7 @@ DECIMAL_GB_BYTES = 1_000_000_000
 def estimate_slicing_size() -> dict[str, Any]:
     """Compute the ayah-slicing sizing estimate from current database rows."""
     asset_count = Asset.objects.filter(category=CategoryChoice.RECITATION).count()
-    folder_count = RecitationFolder.objects.count()
+    quality_count = RecitationQuality.objects.count()
     track_count = RecitationSurahTrack.objects.count()
     timing_count = RecitationAyahTiming.objects.count()
 
@@ -137,7 +137,7 @@ def estimate_slicing_size() -> dict[str, Any]:
 
     return {
         "asset_count": asset_count,
-        "folder_count": folder_count,
+        "quality_count": quality_count,
         "track_count": track_count,
         "timing_count": timing_count,
         "invalid_timing_count": invalid_timing_count,
@@ -176,7 +176,7 @@ class Command(BaseCommand):
 
         out.write(self.style.SUCCESS("Recitation ayah-slicing storage sizing estimate"))
         line("Recitation assets:", str(report["asset_count"]))
-        line("Recitation folders:", str(report["folder_count"]))
+        line("Recitation qualities:", str(report["quality_count"]))
         line("Surah tracks:", str(report["track_count"]))
         line("Ayah timing rows (raw):", str(report["timing_count"]))
         if report["invalid_timing_count"]:

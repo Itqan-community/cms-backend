@@ -11,13 +11,13 @@ from apps.content.models import (
     Asset,
     CategoryChoice,
     LicenseChoice,
-    RecitationFolder,
+    RecitationQuality,
     Riwayah,
     StatusChoice,
     VersionStateChoice,
 )
 from apps.content.services.recitation import RecitationService
-from apps.content.services.recitation_folder_resolution import sorted_asset_folders
+from apps.content.services.recitation_quality_resolution import sorted_asset_qualities
 from apps.core.mixins.storage import absolute_file_url
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
@@ -61,7 +61,7 @@ class PublisherRef(Schema):
     name: str
 
 
-class FolderOut(Schema):
+class QualityOut(Schema):
     id: int
     name: str
     slug: str
@@ -119,7 +119,7 @@ class RecitationDetailOut(Schema):
     created_at: AwareDatetime
     updated_at: AwareDatetime
     ayah_timings_url: AbsoluteUrl | None = None
-    folders: list[FolderOut] = []
+    qualities: list[QualityOut] = []
 
     @staticmethod
     def resolve_thumbnail_url(obj: Asset) -> str | None:
@@ -128,22 +128,22 @@ class RecitationDetailOut(Schema):
         return None
 
     @staticmethod
-    def resolve_folders(obj: Asset) -> list[RecitationFolder]:
-        return sorted_asset_folders(obj)
+    def resolve_qualities(obj: Asset) -> list[RecitationQuality]:
+        return sorted_asset_qualities(obj)
 
     @staticmethod
     def resolve_ayah_timings_url(obj: Asset, context: dict) -> str | None:
-        # Each folder now has its own AssetVersion, named after the folder slug.
-        # This top-level field keeps pointing at the default folder's export so the
-        # existing contract is unchanged; per-folder URLs come from the folders list.
-        default_folder = next((f for f in obj.recitation_folders.all() if f.is_default), None)
+        # Each quality now has its own AssetVersion, named after the quality slug.
+        # This top-level field keeps pointing at the default quality's export so the
+        # existing contract is unchanged; per-quality URLs come from the qualities list.
+        default_quality = next((f for f in obj.recitation_qualities.all() if f.is_default), None)
         versions = list(obj.versions.filter(state=VersionStateChoice.PUBLISHED))
 
         version = None
-        if default_folder and default_folder.is_visible:
-            version = next((v for v in versions if v.name == default_folder.slug), None)
+        if default_quality and default_quality.is_visible:
+            version = next((v for v in versions if v.name == default_quality.slug), None)
         if version is None:
-            # Recitations created before folders may still have a legacy version row.
+            # Recitations created before qualities may still have a legacy version row.
             version = versions[0] if versions else None
 
         return absolute_file_url(context["request"], version.file_url) if version else None
@@ -349,7 +349,7 @@ def retrieve_recitation(request: Request, recitation_slug: str) -> Asset:
     try:
         return (
             Asset.objects.select_related("publisher", "reciter", "riwayah", "qiraah")
-            .prefetch_related("versions", "recitation_folders")
+            .prefetch_related("versions", "recitation_qualities")
             .filter(request.publisher_q())
             .get(slug=recitation_slug, category=CategoryChoice.RECITATION)
         )
