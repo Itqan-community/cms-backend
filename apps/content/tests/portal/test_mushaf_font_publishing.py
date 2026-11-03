@@ -348,7 +348,7 @@ class PublishedMushafVersionGuardTests(MushafPublishingBaseTest):
         self._authorize(PermissionChoice.PORTAL_DELETE_MUSHAF)
 
         # Act
-        response = self.client.delete(f"/portal/mushafs/m1/versions/{published.pk}/")
+        response = self.client.delete(f"/portal/mushafs/m1/versions/{published.pk}/?confirm_unpublish=true")
 
         # Assert — consumers no longer see the mushaf
         self.assertEqual(204, response.status_code, response.content)
@@ -357,6 +357,47 @@ class PublishedMushafVersionGuardTests(MushafPublishingBaseTest):
         self.assertIsNone(rendition.published_version_id)
         self.assertEqual(StatusChoice.DRAFT, rendition.status)
         self.assertFalse(Asset.objects.filter(consumer_visible_q(), pk=self.mushaf.pk).exists())
+
+    def test_delete_mushaf_version_where_published_only_version_not_confirmed_should_return_409(self):
+        # Arrange — e.g. published by another admin after this one's list loaded
+        published = publish(self._commit("1.0"))
+        self._authorize(PermissionChoice.PORTAL_DELETE_MUSHAF)
+
+        # Act
+        response = self.client.delete(f"/portal/mushafs/m1/versions/{published.pk}/")
+
+        # Assert — nothing is deleted or unpublished
+        self.assertEqual(409, response.status_code, response.content)
+        self.assertEqual("unpublish_not_confirmed", response.json()["error_name"])
+        self.assertEqual(published, self.mushaf.get_published_version())
+
+    def test_upload_mushaf_version_where_sole_version_was_deleted_should_make_mushaf_visible_again(self):
+        # Arrange
+        published = publish(self._commit("1.0"))
+        self._authorize(
+            PermissionChoice.PORTAL_DELETE_MUSHAF,
+            PermissionChoice.PORTAL_CREATE_MUSHAF,
+            PermissionChoice.PORTAL_PUBLISH_CONTENT,
+        )
+        self.client.delete(f"/portal/mushafs/m1/versions/{published.pk}/?confirm_unpublish=true")
+
+        # Act — with no versions left, the upload numbers itself afresh
+        response = self.client.post(
+            "/portal/mushafs/m1/versions/",
+            data={
+                "asset_id": self.mushaf.id,
+                "summary_en": "Replacement",
+                "file": SimpleUploadedFile("mushaf.pdf", b"content", content_type="application/pdf"),
+                "publish": True,
+                "version_number": "1.0",
+            },
+        )
+
+        # Assert — mushafs have no availability switch, so publishing restores it
+        self.assertEqual(201, response.status_code, response.content)
+        rendition = AssetLanguage.objects.get(asset=self.mushaf, is_source=True)
+        self.assertEqual(StatusChoice.READY, rendition.status)
+        self.assertTrue(Asset.objects.filter(consumer_visible_q(), pk=self.mushaf.pk).exists())
 
     def test_delete_font_version_where_older_version_should_return_400(self):
         # Arrange
@@ -383,7 +424,7 @@ class PublishedMushafVersionGuardTests(MushafPublishingBaseTest):
         self._authorize(PermissionChoice.PORTAL_DELETE_FONT)
 
         # Act
-        response = self.client.delete(f"/portal/fonts/f1/versions/{published.pk}/")
+        response = self.client.delete(f"/portal/fonts/f1/versions/{published.pk}/?confirm_unpublish=true")
 
         # Assert
         self.assertEqual(204, response.status_code, response.content)

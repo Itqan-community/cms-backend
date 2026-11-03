@@ -23,6 +23,7 @@ from simple_history.utils import bulk_create_with_history, bulk_update_with_hist
 from apps.content.columns import Snapshot, csv_header
 from apps.content.models import (
     DEFAULT_COLUMN_KEY,
+    REVIEWED_CATEGORIES,
     Asset,
     AssetColumn,
     AssetLanguage,
@@ -714,7 +715,13 @@ class AssetContentRepository:
                 withdrawn.withdrawal_reason = reason
                 withdrawn.save(update_fields=["withdrawal_reason", "updated_at"])
         rendition.published_version = version
-        rendition.save(update_fields=["published_version", "updated_at"])
+        update_fields = ["published_version", "updated_at"]
+        if version.asset.category not in REVIEWED_CATEGORIES and rendition.status != StatusChoice.READY:
+            # Mushafs and fonts have no availability switch: a language is available
+            # while it has a published version (``unpublish_version`` marks it DRAFT).
+            rendition.status = StatusChoice.READY
+            update_fields.append("status")
+        rendition.save(update_fields=update_fields)
         version.asset.file_size = version.human_readable_size
         version.asset.save(update_fields=["file_size", "updated_at"])
         return rendition

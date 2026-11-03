@@ -1,7 +1,7 @@
 from typing import Literal
 
 from django.utils.translation import gettext_lazy as _
-from ninja import File, Form, Schema, UploadedFile
+from ninja import File, Form, Query, Schema, UploadedFile
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
@@ -248,13 +248,18 @@ def update_font_version_patch(
     response={
         204: None,
         400: NinjaErrorResponse[Literal["version_is_published"]] | NinjaErrorResponse[Literal["version_not_latest"]],
+        409: NinjaErrorResponse[Literal["unpublish_not_confirmed"]],
         404: NinjaErrorResponse[Literal["font_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
 )
 @permission_required([permission_class(PermissionChoice.PORTAL_DELETE_FONT)])
-def delete_font_version(request: Request, font_slug: str, version_id: int) -> tuple[int, None]:
+def delete_font_version(
+    request: Request, font_slug: str, version_id: int, confirm_unpublish: bool = Query(False)
+) -> tuple[int, None]:
     service = FontService()
-    service.delete_font_version(font_slug, version_id, publisher_q=request.publisher_q())
+    service.delete_font_version(
+        font_slug, version_id, publisher_q=request.publisher_q(), confirm_unpublish=confirm_unpublish
+    )
     return 204, None
 
 

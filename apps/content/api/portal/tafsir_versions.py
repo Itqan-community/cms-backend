@@ -2,7 +2,7 @@ from typing import Literal
 
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
-from ninja import File, Form, Schema, UploadedFile
+from ninja import File, Form, Query, Schema, UploadedFile
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
@@ -347,11 +347,14 @@ def update_tafsir_version_patch(
     response={
         204: None,
         400: NinjaErrorResponse[Literal["version_is_published"]] | NinjaErrorResponse[Literal["version_not_latest"]],
+        409: NinjaErrorResponse[Literal["unpublish_not_confirmed"]],
         404: NinjaErrorResponse[Literal["tafsir_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
 )
 @permission_required([permission_class(PermissionChoice.PORTAL_DELETE_TAFSIR)])
-def delete_tafsir_version(request: Request, tafsir_slug: str, version_id: int) -> tuple[int, None]:
+def delete_tafsir_version(
+    request: Request, tafsir_slug: str, version_id: int, confirm_unpublish: bool = Query(False)
+) -> tuple[int, None]:
     service = TafsirService()
     try:
         asset = Asset.objects.filter(request.publisher_q()).get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
@@ -362,5 +365,7 @@ def delete_tafsir_version(request: Request, tafsir_slug: str, version_id: int) -
             status_code=404,
         ) from exc
     require_version_id(request.user, asset, version_id)
-    service.delete_tafsir_version(tafsir_slug, version_id, publisher_q=request.publisher_q())
+    service.delete_tafsir_version(
+        tafsir_slug, version_id, publisher_q=request.publisher_q(), confirm_unpublish=confirm_unpublish
+    )
     return 204, None

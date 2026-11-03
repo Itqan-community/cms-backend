@@ -1,7 +1,7 @@
 from typing import Literal
 
 from django.utils.translation import gettext_lazy as _
-from ninja import File, Form, Schema, UploadedFile
+from ninja import File, Form, Query, Schema, UploadedFile
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
@@ -248,13 +248,18 @@ def update_mushaf_version_patch(
     response={
         204: None,
         400: NinjaErrorResponse[Literal["version_is_published"]] | NinjaErrorResponse[Literal["version_not_latest"]],
+        409: NinjaErrorResponse[Literal["unpublish_not_confirmed"]],
         404: NinjaErrorResponse[Literal["mushaf_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
 )
 @permission_required([permission_class(PermissionChoice.PORTAL_DELETE_MUSHAF)])
-def delete_mushaf_version(request: Request, mushaf_slug: str, version_id: int) -> tuple[int, None]:
+def delete_mushaf_version(
+    request: Request, mushaf_slug: str, version_id: int, confirm_unpublish: bool = Query(False)
+) -> tuple[int, None]:
     service = MushafService()
-    service.delete_mushaf_version(mushaf_slug, version_id, publisher_q=request.publisher_q())
+    service.delete_mushaf_version(
+        mushaf_slug, version_id, publisher_q=request.publisher_q(), confirm_unpublish=confirm_unpublish
+    )
     return 204, None
 
 

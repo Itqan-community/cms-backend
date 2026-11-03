@@ -448,6 +448,9 @@ msgstr "هذا الإصدار منشور. انشر إصدارًا آخر أول�
 msgid "Only the newest version can be changed or deleted, because later versions are built on it."
 msgstr "لا يمكن تعديل أو حذف إلا أحدث إصدار، لأن الإصدارات اللاحقة مبنية عليه."
 
+msgid "This version is published. Deleting it unpublishes the asset, so confirm the deletion first."
+msgstr "هذا الإصدار منشور، وحذفه يلغي نشر الأصل، لذا أكّد الحذف أولًا."
+
 msgid "A starting version number is required for the first version."
 msgstr "رقم الإصدار الابتدائي مطلوب للإصدار الأول."
 

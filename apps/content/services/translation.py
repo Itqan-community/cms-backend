@@ -377,13 +377,15 @@ class TranslationService:
         logger.info(f"Translation version updated [version_id={version_id}, asset_slug={translation_slug}]")
         return updated
 
-    def delete_translation_version(self, translation_slug: str, version_id: int, publisher_q: Q | None = None) -> None:
+    def delete_translation_version(
+        self, translation_slug: str, version_id: int, publisher_q: Q | None = None, *, confirm_unpublish: bool = False
+    ) -> None:
         """
         Business Logic: Delete a translation version.
         """
         version = self._get_translation_version_or_404(translation_slug, version_id, publisher_q=publisher_q)
         with transaction.atomic():
-            version = lock_version_for_delete(version)
+            version = lock_version_for_delete(version, confirm_unpublish=confirm_unpublish)
             was_published = AssetContentRepository().unpublish_version(version)
             self.repo.delete_translation_version(version)
         logger.info(
