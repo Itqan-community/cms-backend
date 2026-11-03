@@ -31,7 +31,10 @@ class FontRepository:
         external_url: str | None = None,
         thumbnail_url: Any | None = None,
         is_open_access: bool = False,
-        restricted_for_tenant: bool = False,
+        in_gallery: bool = True,
+        in_public_api: bool = True,
+        in_cli: bool = True,
+        in_tenants: bool = True,
         status: StatusChoice = StatusChoice.READY,
         slug: str = "",
     ) -> Asset:
@@ -60,7 +63,10 @@ class FontRepository:
                 external_url=external_url,
                 thumbnail_url=thumbnail_url,
                 is_open_access=is_open_access,
-                restricted_for_tenant=restricted_for_tenant,
+                in_gallery=in_gallery,
+                in_public_api=in_public_api,
+                in_cli=in_cli,
+                in_tenants=in_tenants,
             )
 
         return asset

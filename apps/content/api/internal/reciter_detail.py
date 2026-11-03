@@ -50,7 +50,11 @@ def get_reciter(request: Request, reciter_slug: str):
         return Reciter.objects.annotate(
             recitations_count=Count(
                 "assets",
-                filter=Q(assets__category=CategoryChoice.RECITATION, assets__status=StatusChoice.READY),
+                filter=Q(
+                    assets__category=CategoryChoice.RECITATION,
+                    assets__status=StatusChoice.READY,
+                    assets__in_gallery=True,
+                ),
                 distinct=True,
             )
         ).get(slug=reciter_slug, is_active=True)

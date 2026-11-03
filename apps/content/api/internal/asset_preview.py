@@ -42,7 +42,7 @@ class FontPreviewOut(Schema):
 
 
 def _gallery_asset(request: Request, id: int) -> Asset:
-    return get_object_or_404(Asset, request.publisher_q("publisher"), restricted_for_tenant=False, id=id)
+    return get_object_or_404(Asset, request.publisher_q("publisher"), in_gallery=True, id=id)
 
 
 @router.get(

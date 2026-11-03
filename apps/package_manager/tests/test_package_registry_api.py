@@ -110,12 +110,17 @@ class PackageSingleResolveAPITests(BaseTestCase):
         body = response.json()
         self.assertEqual("unsatisfiable_version_constraint", body["error_name"])
 
-    def test_resolve_single_where_restricted_for_tenant_returns_404(self):
-        self._create_asset_with_versions("tenant-only", ["1.0.0"], restricted_for_tenant=True)
+    def test_resolve_single_where_not_in_cli_returns_404(self):
+        self._create_asset_with_versions("tenant-only", ["1.0.0"], in_cli=False)
         response = self.client.get("/packages/resolve/tenant-only/?version=1.0.0")
         self.assertEqual(404, response.status_code, response.content)
         body = response.json()
         self.assertEqual("asset_not_found", body["error_name"])
+
+    def test_resolve_single_where_other_channels_off_returns_200(self):
+        self._create_asset_with_versions("cli-only", ["1.0.0"], in_gallery=False, in_public_api=False, in_tenants=False)
+        response = self.client.get("/packages/resolve/cli-only/?version=1.0.0")
+        self.assertEqual(200, response.status_code, response.content)
 
     def test_resolve_single_where_open_access_anonymous_returns_200(self):
         self._create_asset_with_versions("open-pkg", ["1.0.0"], is_open_access=True)

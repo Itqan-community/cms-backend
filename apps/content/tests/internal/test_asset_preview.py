@@ -40,7 +40,7 @@ class RecitationPreviewTests(BaseTestCase):
             category=CategoryChoice.RECITATION,
             reciter=baker.make("content.Reciter"),
             riwayah=baker.make("content.Riwayah"),
-            **{"status": StatusChoice.READY, "restricted_for_tenant": False, "is_open_access": True, **kwargs},
+            **{"status": StatusChoice.READY, "in_gallery": True, "is_open_access": True, **kwargs},
         )
 
     def _track(self, asset: Asset, surah: int, quality: RecitationQuality | None = None) -> RecitationSurahTrack:
@@ -120,9 +120,9 @@ class RecitationPreviewTests(BaseTestCase):
         self.assertEqual(response.status_code, 404, response.content)
         self.assertEqual(response.json()["error_name"], "recitation_preview_unavailable")
 
-    def test_recitation_preview_where_asset_restricted_for_tenant_should_return_404(self):
+    def test_recitation_preview_where_asset_not_in_gallery_should_return_404(self):
         # Arrange
-        asset = self._recitation(restricted_for_tenant=True)
+        asset = self._recitation(in_gallery=False)
         self._track(asset, 1)
 
         # Act
@@ -143,7 +143,7 @@ class FontPreviewTests(QuranDataMixin, BaseTestCase):
             category=CategoryChoice.FONT,
             status=StatusChoice.READY,
             language="ar",
-            restricted_for_tenant=False,
+            in_gallery=True,
             is_open_access=True,
         )
         self.url = f"/cms-api/assets/{self.asset.id}/font-preview/"

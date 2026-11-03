@@ -94,6 +94,6 @@ def asset_usage_counts(request: Request, id: int):
     if not settings.PUBLIC_USAGE_COUNTS_ENABLED:
         raise ItqanError("usage_counts_disabled", _("Usage counts are not available."), 404)
     # Same visibility as the gallery detail endpoint (`assets/{id}/`).
-    if not Asset.objects.filter(request.publisher_q("publisher"), restricted_for_tenant=False, id=id).exists():
+    if not Asset.objects.filter(request.publisher_q("publisher"), in_gallery=True, id=id).exists():
         raise ItqanError("asset_not_found", _("Asset does not exist."), 404)
     return usage_reports.public_counts(id)

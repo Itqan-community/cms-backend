@@ -67,6 +67,14 @@ def dispatch_dependabot_updates_for_version(asset_version_id: int) -> dict[str, 
         )
         return {"status": "skipped", "reason": "missing_slug", "dispatched_count": 0}
 
+    if not asset_version.asset.in_cli:
+        logger.info(
+            "dispatch_dependabot_updates: asset is not in the CLI channel [asset_version_id=%d, asset_id=%d]",
+            asset_version_id,
+            asset_version.asset_id,
+        )
+        return {"status": "skipped", "reason": "not_in_cli", "dispatched_count": 0}
+
     parsed = _parse_candidate_version(asset_version.name)
     if parsed is None:
         logger.info(

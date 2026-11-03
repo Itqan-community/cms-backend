@@ -83,7 +83,7 @@ def get_similar_recommendations(request: Request, asset_id: int):
     source_exists = Asset.objects.filter(
         id=asset_id,
         status=StatusChoice.READY,
-        restricted_for_tenant=False,
+        in_public_api=True,
     ).exists()
     if not source_exists:
         raise Http404(str(_("No asset matches the given query.")))

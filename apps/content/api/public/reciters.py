@@ -45,6 +45,7 @@ def list_reciters(request: Request, filters: ReciterFilter = Query()):
     recitation_filter = Q(
         assets__category=CategoryChoice.RECITATION,
         assets__status=StatusChoice.READY,
+        assets__in_public_api=True,
     )
 
     qs = (

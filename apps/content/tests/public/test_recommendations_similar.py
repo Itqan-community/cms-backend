@@ -45,7 +45,7 @@ class SimilarRecommendationsEndpointTest(BaseTestCase):
             Asset,
             category=CategoryChoice.RECITATION,
             status=StatusChoice.READY,
-            restricted_for_tenant=False,
+            in_public_api=True,
             publisher=self.publisher,
             reciter=self.reciter,
             riwayah=self.riwayah,
@@ -55,7 +55,7 @@ class SimilarRecommendationsEndpointTest(BaseTestCase):
             Asset,
             category=CategoryChoice.RECITATION,
             status=StatusChoice.READY,
-            restricted_for_tenant=False,
+            in_public_api=True,
             publisher=self.publisher,
             reciter=self.reciter,
             riwayah=self.riwayah,
@@ -97,7 +97,7 @@ class SimilarRecommendationsEndpointTest(BaseTestCase):
             Asset,
             category=CategoryChoice.MUSHAF,
             status=StatusChoice.READY,
-            restricted_for_tenant=False,
+            in_public_api=True,
             publisher=self.publisher,
             reciter=None,
             riwayah=None,
@@ -123,7 +123,7 @@ class SimilarRecommendationsEndpointTest(BaseTestCase):
             Asset,
             category=CategoryChoice.RECITATION,
             status=StatusChoice.DRAFT,
-            restricted_for_tenant=False,
+            in_public_api=True,
             publisher=self.publisher,
             reciter=self.reciter,
             riwayah=self.riwayah,
@@ -140,7 +140,7 @@ class SimilarRecommendationsEndpointTest(BaseTestCase):
             Asset,
             category=CategoryChoice.RECITATION,
             status=StatusChoice.READY,
-            restricted_for_tenant=True,
+            in_public_api=False,
             publisher=self.publisher,
             reciter=self.reciter,
             riwayah=self.riwayah,
@@ -148,7 +148,7 @@ class SimilarRecommendationsEndpointTest(BaseTestCase):
         )
         compute_similar_recommendations()
 
-        # Recompute happens while restricted_for_tenant=True, so it's never scored in
+        # Recompute happens while in_public_api=False, so it's never scored in
         # the first place -- confirms the source-side filter, not just hydration-time
         # filtering.
         self.authenticate_client(self.app)

@@ -37,7 +37,7 @@ class AssetFileStructureOut(Schema):
 def asset_file_structure(request: Request, id: int, language: str | None = None):
     """The download's format, its columns (keys and labels) and its first rows, for
     one language (default: the source). Translations and tafsirs only."""
-    asset = get_object_or_404(Asset, request.publisher_q("publisher"), restricted_for_tenant=False, id=id)
+    asset = get_object_or_404(Asset, request.publisher_q("publisher"), in_gallery=True, id=id)
     preview = FileStructureService().preview(asset, language)
     return {
         "template": preview.structure.template,

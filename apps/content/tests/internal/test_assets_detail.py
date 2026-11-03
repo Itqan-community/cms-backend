@@ -354,7 +354,7 @@ class DetailAssetTest(BaseTestCase):
         self.assertIn("is_open_access", body)
         self.assertTrue(body["is_open_access"])
 
-    def test_detail_assets_where_restricted_for_tenant_should_return_404(self):
+    def test_detail_assets_where_not_in_gallery_should_return_404(self):
         # Arrange
         asset = baker.make(
             Asset,
@@ -364,7 +364,7 @@ class DetailAssetTest(BaseTestCase):
             template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC0,
             status=StatusChoice.READY,
-            restricted_for_tenant=True,
+            in_gallery=False,
         )
 
         # Act

@@ -60,7 +60,7 @@ def download_asset(request: Request, id: int, language: str | None = None):
     when omitted the asset's source language is served (backward compatible).
     """
     # Get the asset
-    asset = get_object_or_404(Asset, request.publisher_q("publisher"), restricted_for_tenant=False, id=id)
+    asset = get_object_or_404(Asset, request.publisher_q("publisher"), in_gallery=True, id=id)
 
     # Check if user has access using the service function
     if not user_has_access(request.user, asset):

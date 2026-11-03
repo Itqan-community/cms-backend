@@ -71,7 +71,7 @@ class RecommendationsServiceTest(BaseTestCase):
         defaults = {
             "category": CategoryChoice.RECITATION,
             "status": StatusChoice.READY,
-            "restricted_for_tenant": False,
+            "in_public_api": True,
             "qiraah": self.qiraah,
         }
         defaults.update(kwargs)
@@ -112,7 +112,7 @@ class RecommendationsServiceTest(BaseTestCase):
             category=CategoryChoice.TAFSIR,
             template=AssetTemplateChoice.AYAH,
             status=StatusChoice.READY,
-            restricted_for_tenant=False,
+            in_public_api=True,
             reciter=None,
             riwayah=None,
             qiraah=None,
@@ -126,13 +126,26 @@ class RecommendationsServiceTest(BaseTestCase):
     def test_draft_and_restricted_assets_excluded_from_scoring(self):
         source = self._make_recitation(reciter=self.reciter_1, riwayah=self.riwayah_a)
         draft = self._make_recitation(reciter=self.reciter_1, riwayah=self.riwayah_a, status=StatusChoice.DRAFT)
-        restricted = self._make_recitation(reciter=self.reciter_1, riwayah=self.riwayah_a, restricted_for_tenant=True)
+        restricted = self._make_recitation(reciter=self.reciter_1, riwayah=self.riwayah_a, in_public_api=False)
 
         compute_similar_recommendations()
         result = get_similar_asset_ids(source.id)
 
         self.assertNotIn(draft.id, result)
         self.assertNotIn(restricted.id, result)
+
+    def test_compute_similar_where_other_channels_off_should_still_recommend(self):
+        # Arrange
+        source = self._make_recitation(reciter=self.reciter_1, riwayah=self.riwayah_a)
+        sibling = self._make_recitation(
+            reciter=self.reciter_1, riwayah=self.riwayah_a, in_gallery=False, in_cli=False, in_tenants=False
+        )
+
+        # Act
+        compute_similar_recommendations()
+
+        # Assert
+        self.assertEqual([sibling.id], get_similar_asset_ids(source.id))
 
     def test_recompute_clears_stale_entries(self):
         """An asset that used to have a match but no longer does (e.g. sibling asset
@@ -165,7 +178,7 @@ class RecommendationsServiceTest(BaseTestCase):
 
         # Simulate the asset having become restricted after the nightly run computed it.
         ordered_ids = [now_restricted.id, visible.id]
-        now_restricted.restricted_for_tenant = True
+        now_restricted.in_public_api = False
         now_restricted.save()
 
         hydrated = hydrate_visible_assets_in_order(ordered_ids)
@@ -210,7 +223,7 @@ class TrendingRecommendationsServiceTest(BaseTestCase):
         defaults = {
             "category": CategoryChoice.MUSHAF,
             "status": StatusChoice.READY,
-            "restricted_for_tenant": False,
+            "in_public_api": True,
         }
         defaults.update(kwargs)
         asset = baker.make(Asset, **defaults)
@@ -240,7 +253,7 @@ class TrendingRecommendationsServiceTest(BaseTestCase):
     def test_draft_and_restricted_assets_excluded(self):
         draft = self._make_asset(status=StatusChoice.DRAFT)
         _make_usage_event(self.user, draft, UsageEvent.UsageKindChoice.VIEW)
-        restricted = self._make_asset(restricted_for_tenant=True)
+        restricted = self._make_asset(in_public_api=False)
         _make_usage_event(self.user, restricted, UsageEvent.UsageKindChoice.VIEW)
 
         compute_trending_recommendations()
@@ -305,7 +318,7 @@ class PersonalizedRecommendationsServiceTest(BaseTestCase):
         defaults = {
             "category": CategoryChoice.RECITATION,
             "status": StatusChoice.READY,
-            "restricted_for_tenant": False,
+            "in_public_api": True,
         }
         defaults.update(kwargs)
         return baker.make(Asset, **defaults)
@@ -368,7 +381,7 @@ class EditorialRecommendationsServiceTest(BaseTestCase):
         defaults = {
             "category": CategoryChoice.MUSHAF,
             "status": StatusChoice.READY,
-            "restricted_for_tenant": False,
+            "in_public_api": True,
         }
         defaults.update(kwargs)
         return baker.make(Asset, **defaults)
@@ -404,7 +417,7 @@ class EditorialRecommendationsServiceTest(BaseTestCase):
             recommendation=collection, asset=self._make_asset(status=StatusChoice.DRAFT)
         )
         EditorialRecommendationAsset.objects.create(
-            recommendation=collection, asset=self._make_asset(restricted_for_tenant=True)
+            recommendation=collection, asset=self._make_asset(in_public_api=False)
         )
 
         self.assertEqual([], list_active_editorial_recommendations())

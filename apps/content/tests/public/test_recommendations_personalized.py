@@ -39,7 +39,7 @@ class PersonalizedRecommendationsEndpointTest(BaseTestCase):
                 Asset,
                 category=CategoryChoice.MUSHAF,
                 status=StatusChoice.READY,
-                restricted_for_tenant=False,
+                in_public_api=True,
                 publisher=self.publisher,
             )
         )
@@ -48,7 +48,7 @@ class PersonalizedRecommendationsEndpointTest(BaseTestCase):
                 Asset,
                 category=CategoryChoice.MUSHAF,
                 status=StatusChoice.READY,
-                restricted_for_tenant=False,
+                in_public_api=True,
                 publisher=self.publisher,
             )
         )

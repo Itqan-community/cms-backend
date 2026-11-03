@@ -342,7 +342,7 @@ class TestAssetDownload(BaseTestCase):
         # Note: IP address capture depends on Django test client configuration
         # In real requests, this would capture the client IP
 
-    def test_download_asset_where_restricted_for_tenant_should_return_404(self):
+    def test_download_asset_where_not_in_gallery_should_return_404(self):
         # Arrange
         tenant_only_asset = baker.make(
             Asset,
@@ -352,7 +352,7 @@ class TestAssetDownload(BaseTestCase):
             template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC0,
             status=StatusChoice.READY,
-            restricted_for_tenant=True,
+            in_gallery=False,
         )
 
         # Act

@@ -16,7 +16,7 @@ Design notes:
   same reciter, riwayah, qiraah, or category, rather than scanning the whole catalog.
 - Riwayah/qiraah don't double-count: a qiraah-match point is only awarded when the
   riwayah doesn't already match, since (per Asset.save()) riwayah implies its qiraah.
-- Only READY assets that are visible on public surfaces (restricted_for_tenant=False)
+- Only READY assets that are visible on public surfaces (in_public_api=True)
   are considered as candidates or sources, so recommendations never surface or point at
   content that shouldn't appear on the public developers API.
 - similar/trending/personalized results are written to Redis as sorted sets (see
@@ -94,7 +94,7 @@ def _visible_asset_values() -> list[dict]:
     return list(
         Asset.objects.filter(
             status=StatusChoice.READY,
-            restricted_for_tenant=False,
+            in_public_api=True,
         )
         .filter(consumer_visible_q())
         .values("id", "category", "reciter_id", "riwayah_id", "qiraah_id")
@@ -264,7 +264,7 @@ def hydrate_visible_assets_in_order(asset_ids: list[int]) -> list[Asset]:
         Asset.objects.filter(
             id__in=asset_ids,
             status=StatusChoice.READY,
-            restricted_for_tenant=False,
+            in_public_api=True,
         )
         .filter(consumer_visible_q())
         .select_related("publisher", "reciter", "riwayah", "qiraah")
@@ -456,7 +456,7 @@ def list_active_editorial_recommendations() -> list[dict]:
         assets = [
             ra.asset
             for ra in collection.recommendation_assets.all()
-            if ra.asset.status == StatusChoice.READY and not ra.asset.restricted_for_tenant
+            if ra.asset.status == StatusChoice.READY and ra.asset.in_public_api
         ]
         if not assets:
             continue

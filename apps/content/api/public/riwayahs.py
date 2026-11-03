@@ -42,6 +42,7 @@ def list_riwayahs(request: Request):
         assets__category=CategoryChoice.RECITATION,
         assets__riwayah__isnull=False,
         assets__status=StatusChoice.READY,
+        assets__in_public_api=True,
     )
 
     qs = (
