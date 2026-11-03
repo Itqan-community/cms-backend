@@ -556,11 +556,21 @@ from the parsed entries, so consumers download exactly what was reviewed.
   approved), each with `baseline_text` — the last text approved before its commit.
   With `version=<id>` it lists the changes that make up that version (the latest
   change per unit up to it), which is exactly what decides its approval;
-  `GET .../review/versions/` lists the versions to pick from.
+  `GET .../review/versions/` lists the versions to pick from. Each change carries
+  its unit's `surah` and `ayah` numbers (a range by its start; null for pages).
+  The optional `filters` param is the review grid's AG Grid filter model as JSON:
+  `unit_surah` / `surah` / `ayah` (number filters on the unit's surah and ayah
+  numbers), `text` (the change's text before **or** after it; a negated condition
+  or `blank` must hold on both), and `change_type`, `column` (the column key),
+  `commit_ref`, `edited_by`, `reviewed_by`, `comment` (text filters). Text filters
+  match like the editor's (case- and vocalization-insensitive); they apply after
+  `version` picks the changes that make it up, and before paging, so `count` is the
+  filtered total. Unknown keys return 400 `validation_error`.
   `POST .../review/changes/bulk-approve/` approves many at once: the given
   `change_ids` (all must belong to the language, `change_not_found` otherwise), or
-  without them every change matching the same `state`/`version` filter across all
-  pages; already-approved changes keep their auditing. An upload can also be
+  without them every change matching the same `state`/`version`/`filters` across
+  all pages (sending `change_ids` with any of those is a 400 `validation_error`);
+  already-approved changes keep their auditing. An upload can also be
   approved as it lands: `pre_approved=true` on the version upload approves its
   recorded changes under the uploader, who must also hold `PORTAL_REVIEW_CONTENT`
   (403 otherwise; replacing a file always goes back to review). Approval gates

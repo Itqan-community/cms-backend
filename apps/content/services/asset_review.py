@@ -16,7 +16,7 @@ from apps.content.models import (
     ReviewStateChoice,
     StatusChoice,
 )
-from apps.content.repositories.asset_review import AssetReviewRepository, change_language
+from apps.content.repositories.asset_review import AssetReviewRepository, ReviewFilters, change_language
 from apps.content.services.asset_language_access import allowed_languages, require_language
 from apps.core.ninja_utils.errors import ItqanError
 
@@ -65,14 +65,16 @@ class AssetReviewService:
         user,
         state: str | None,
         version_id: int | None = None,
+        filters: ReviewFilters | None = None,
         publisher_q: Q | None = None,
     ) -> QuerySet[AssetVersionChange]:
         """Every change of the language, or — with ``version_id`` — the changes
-        that make up that committed version (see ``AssetReviewRepository.changes_for``)."""
+        that make up that committed version (see ``AssetReviewRepository.changes_for``),
+        narrowed by the grid's column ``filters``."""
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
         self._require_assigned(user, asset, language)
         as_of = self._committed_version_or_404(asset, language, version_id)
-        return self.repo.changes_for(asset, language, state=state, as_of=as_of)
+        return self.repo.changes_for(asset, language, state=state, as_of=as_of, filters=filters)
 
     def _committed_version_or_404(self, asset: Asset, language: str, version_id: int | None) -> AssetVersion | None:
         if version_id is None:
@@ -96,13 +98,14 @@ class AssetReviewService:
         change_ids: list[int] | None,
         state: str | None = None,
         version_id: int | None = None,
+        filters: ReviewFilters | None = None,
         publisher_q: Q | None = None,
     ) -> int:
         """Approve many of the language's changes at once; returns how many were approved.
 
         With ``change_ids``: exactly those changes, all of which must belong to the
         language. Without: every change ``list_changes`` returns for the same
-        ``state`` / ``version_id`` filter, across all pages.
+        ``state`` / ``version_id`` / ``filters``, across all pages.
         """
         asset = self._get_asset_or_404(slug, category, publisher_q=publisher_q)
         self._require_assigned(user, asset, language)
@@ -116,7 +119,7 @@ class AssetReviewService:
                 )
         else:
             as_of = self._committed_version_or_404(asset, language, version_id)
-            changes = self.repo.changes_for(asset, language, state=state, as_of=as_of)
+            changes = self.repo.changes_for(asset, language, state=state, as_of=as_of, filters=filters)
         with transaction.atomic():
             approved = self.repo.approve_changes(changes, user)
         logger.info(
