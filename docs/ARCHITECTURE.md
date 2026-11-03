@@ -535,9 +535,10 @@ from the parsed entries, so consumers download exactly what was reviewed.
   JSON, keyed by `cell__<key>` / `source__<key>` per text column (`text` / `source_text` are the
   first column; a column the asset lacks → `unknown_filter_column`), `reference_text` (text filters, case-insensitive and
   ignoring Arabic vocalization — harakat, Quranic marks, alef forms, and Uthmani dagger alefs —
-  so plain typing matches Uthmani text; a unit with no stored entry counts as empty) and `unit_surah`, `surah`, `ayah` (number filters,
+  so plain typing matches Uthmani text; a unit with no stored entry counts as empty) and `unit_surah`, `unit_page`, `surah`, `ayah` (number filters,
   `inRange` inclusive; `unit_surah` is the unit column's surah-name dropdown and `surah` the
-  surah-number column, both applied), each a single condition or two joined by `AND`/`OR`. Filters
+  surah-number column, both applied; `unit_page` is the page template's page number, which no
+  other template's units have), each a single condition or two joined by `AND`/`OR`. Filters
   narrow the whole unit set before paging, so `count` is the filtered total; unknown
   columns or malformed conditions return 400 `validation_error`. Rows carry the cells of
   the viewed version's own columns (`column_keys`), so an older commit shows its own
