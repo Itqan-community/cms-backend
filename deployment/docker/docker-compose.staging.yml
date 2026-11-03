@@ -32,6 +32,10 @@ services:
       - "443:443"
     environment:
       SITE_DOMAIN: ${SITE_DOMAIN}
+      # No Cloudflare Origin CA cert on the staging box: comment out the
+      # Caddyfile's default `tls /data/cf-origin/...` line so Caddy uses
+      # Let's Encrypt instead of crash-looping on the missing files.
+      CADDY_TLS: "#"
     volumes:
       # Mount the directory, not the file: git checkout/reset replaces files
       # with new inodes, which orphans a single-file bind mount from the live
