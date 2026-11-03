@@ -89,6 +89,6 @@ def list_recitations(request: Request, filters: RecitationFilter = Query()):
     service = RecitationService(repo)
 
     publisher_q = request.publisher_q("publisher")
-    qs = service.get_all_recitations(publisher_q & Q(restricted_for_tenant=False), filters)
+    qs = service.get_all_recitations(publisher_q & Q(in_gallery=True), filters)
 
     return qs

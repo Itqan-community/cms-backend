@@ -10,7 +10,7 @@ from django.utils.translation import gettext as _
 from apps.content.models import Asset as AssetModel, AssetVersion, CategoryChoice, LicenseChoice, StatusChoice
 from apps.content.repositories.asset_content import AssetContentRepository
 from apps.content.repositories.font import FontRepository
-from apps.content.services.asset_access import guard_restrict_for_tenant
+from apps.content.services.asset_access import guard_channel_changes
 from apps.content.services.asset_content import (
     AssetContentService,
     VersionBump,
@@ -62,7 +62,10 @@ class FontService:
         external_url: str | None = None,
         thumbnail_url: Any | None = None,
         is_open_access: bool = False,
-        restricted_for_tenant: bool = False,
+        in_gallery: bool = True,
+        in_public_api: bool = True,
+        in_cli: bool = True,
+        in_tenants: bool = True,
         status: StatusChoice = StatusChoice.READY,
         slug: str | None = None,
     ) -> Asset:
@@ -125,7 +128,10 @@ class FontService:
             external_url=external_url,
             thumbnail_url=thumbnail_url,
             is_open_access=is_open_access,
-            restricted_for_tenant=restricted_for_tenant,
+            in_gallery=in_gallery,
+            in_public_api=in_public_api,
+            in_cli=in_cli,
+            in_tenants=in_tenants,
             status=status,
         )
         logger.info(f"Font created [asset_id={font.pk}, publisher_id={publisher_id}, language={language}]")
@@ -172,8 +178,7 @@ class FontService:
         """
         asset = self._get_font_or_404(font_slug, publisher_q=publisher_q)
 
-        if fields.get("restricted_for_tenant") and not asset.restricted_for_tenant:
-            guard_restrict_for_tenant(asset)
+        guard_channel_changes(asset, fields)
 
         # Validate name fields if user is trying to update them
         if "name_ar" in fields or "name_en" in fields:

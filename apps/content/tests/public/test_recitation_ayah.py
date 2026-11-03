@@ -35,7 +35,7 @@ class RecitationAyahAudioPublicApiTest(BaseTestCase):
             publisher=self.publisher,
             status=StatusChoice.READY,
             is_open_access=True,
-            restricted_for_tenant=False,
+            in_public_api=True,
             reciter=baker.make("content.Reciter", name="Test Reciter"),
             riwayah=baker.make("content.Riwayah", name="Test Riwayah"),
         )
@@ -217,11 +217,11 @@ class RecitationAyahAudioPublicApiTest(BaseTestCase):
             self.assertEqual(404, response.status_code, f"Expected 404 for key {key}, got {response.status_code}")
             self.assertEqual("ayah_not_found", response.json().get("error_name"))
 
-    def test_get_ayah_audio_where_asset_restricted_for_tenant_should_return_404_asset_not_found(self):
+    def test_get_ayah_audio_where_asset_not_in_public_api_should_return_404_asset_not_found(self):
         """Verify that tenant-restricted assets return 404 asset_not_found on public API."""
         # Arrange
-        self.asset.restricted_for_tenant = True
-        self.asset.save(update_fields=["restricted_for_tenant"])
+        self.asset.in_public_api = False
+        self.asset.save(update_fields=["in_public_api"])
 
         # Act
         response = self.client.get(f"/recitations/{self.asset.id}/ayah/2:255/")

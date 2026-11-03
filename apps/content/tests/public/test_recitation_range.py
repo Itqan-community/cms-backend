@@ -276,9 +276,9 @@ class RecitationRangeTest(BaseTestCase):
         #    asset metadata, otherwise the warm path keeps serving the stale
         #    cached response even though fresh requests 404 (CWE-862).
         #    The bust is deferred to on_commit, so execute the callbacks.
-        self.asset.restricted_for_tenant = True
+        self.asset.in_public_api = False
         with self.captureOnCommitCallbacks(execute=True):
-            self.asset.save(update_fields=["restricted_for_tenant", "updated_at"])
+            self.asset.save(update_fields=["in_public_api", "updated_at"])
 
         # 3. Anonymous request must be rebuilt from the DB and miss the tenant filter.
         response = self.client.get(self._url())

@@ -102,7 +102,7 @@ class PackageCatalogApiTests(BaseTestCase):
         # Arrange
         self._version(self._asset("installable"), "1.0")
         self._version(self._asset("draft-asset", status=StatusChoice.DRAFT), "1.0")
-        self._version(self._asset("tenant-only", restricted_for_tenant=True), "1.0")
+        self._version(self._asset("tenant-only", in_cli=False), "1.0")
         self._version(self._asset("no-content"), "1.0", with_file=False)
         hidden = self._asset("hidden-language", language="fr")
         source = hidden.get_or_create_source_language()
@@ -116,6 +116,17 @@ class PackageCatalogApiTests(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual(["installable"], [r["slug"] for r in response.json()["results"]])
+
+    def test_list_packages_where_other_channels_off_should_still_list_asset(self):
+        # Arrange
+        self._version(self._asset("cli-only", in_gallery=False, in_public_api=False, in_tenants=False), "1.0")
+
+        # Act
+        response = self.client.get("/packages/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(["cli-only"], [r["slug"] for r in response.json()["results"]])
 
     def test_list_packages_where_language_has_no_semver_version_should_omit_that_language(self):
         # Arrange

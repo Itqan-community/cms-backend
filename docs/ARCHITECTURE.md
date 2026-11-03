@@ -136,6 +136,11 @@ erDiagram
         string license
         string format
         string template
+        boolean is_open_access
+        boolean in_gallery
+        boolean in_public_api
+        boolean in_cli
+        boolean in_tenants
     }
 
     ASSETVERSION {
@@ -601,7 +606,8 @@ Publishers control how developers access their content through a **request-appro
 Developers submit requests through the CMS API at
 `/cms-api/assets/{asset_id}/request-access/`. Repeated submissions reuse the latest
 pending or approved request. A rejected request remains in the history and allows
-a new submission.
+a new submission. Access only matters on the surfaces where the asset is visible: each
+surface also requires its [distribution channel](#distribution-channels) flag.
 
 ```mermaid
 sequenceDiagram
@@ -711,16 +717,33 @@ request or a background task:
 
 ## Distribution Channels
 
-Every published `AssetVersion` is delivered through all channels; there is no per-channel opt-in:
+Every `Asset` carries four booleans, all `true` by default, that decide on which consumer surface it is visible. They are per asset (not per version) and independent of each other and of `is_open_access` and access requests, which still govern *who* may use an asset where it is visible:
+
+| Flag | Surface | Where it is enforced |
+| --- | --- | --- |
+| `in_gallery` | CMS website (`/cms-api/`) | assets list, detail, download, previews, file structure, recitation list/tracks, reciter list/detail, request-access, usage counts |
+| `in_public_api` | Developers API (`/`) | recitation list/detail/ayah/range/tracks, reciter and riwayah counts, samples, recommendations (similar, trending, personalized, editorial, and their precompute) |
+| `in_cli` | `itqan` CLI registry (`/packages/`) | catalog, resolve, download, and Dependabot dispatch |
+| `in_tenants` | Tenant API (`/tenant/`) | recitation list, recitation tracks, reciter/riwayah/qiraah lists |
 
 ```mermaid
 flowchart TB
-    AV["AssetVersion (published)"]
+    AV["Asset (+ published AssetVersion)"]
 
-    AV --> D1["File download<br/>Direct file download"]
-    AV --> D2["API<br/>Programmatic access"]
-    AV --> D3["Package manager<br/>itqan install (requires a SemVer version name)"]
+    AV -->|in_gallery| D1["CMS website<br/>list, detail, download"]
+    AV -->|in_public_api| D2["Developers API<br/>programmatic access, recommendations"]
+    AV -->|in_cli| D3["Package manager<br/>itqan install (requires a SemVer version name)"]
+    AV -->|in_tenants| D4["Tenant API<br/>publisher domains"]
 ```
+
+Turning a flag from on to off while developers depend on the asset is guarded
+(`guard_channel_changes` in `apps/content/services/asset_access.py`). When a portal create/update
+(`/portal/{tafsirs,translations,mushafs,fonts,recitations}/`) flips any flag to `false` and the asset
+has `PENDING` or `APPROVED` access requests, it answers 409 `channel_has_active_consumers` with
+`extra: {approved_count, pending_count, channels}` (the flag names being turned off). Sending
+`confirm_channel_change: true` allows the change (it is logged and never stored). Turning a flag on,
+or an asset with no pending/approved requests, needs no confirmation. Changing any flag also busts
+the cached recitation metadata of the public API.
 
 See [`ASSET_MANIFEST.md`](./ASSET_MANIFEST.md) for how the package manager selects versions.
 

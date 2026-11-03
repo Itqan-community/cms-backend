@@ -60,13 +60,13 @@ def list_recitation_tracks(request: Request, asset_id: int, quality: str | None 
     repo = RecitationRepository()
     service = RecitationService(repo)
 
-    asset_publisher_q = request.publisher_q("publisher") & Q(restricted_for_tenant=False)
+    asset_publisher_q = request.publisher_q("publisher") & Q(in_gallery=True)
 
     asset = repo.get_asset_object(asset_id, asset_publisher_q)
     if not asset:
         raise Http404(str(_("No asset matches the given query.")))
 
-    track_publisher_q = request.publisher_q("publisher") & Q(asset__restricted_for_tenant=False)
+    track_publisher_q = request.publisher_q("publisher") & Q(asset__in_gallery=True)
     tracks = service.get_asset_tracks(asset_id, track_publisher_q, quality=quality)
 
     return tracks

@@ -65,6 +65,6 @@ def list_reciters(request: Request, filters: ReciterFilter = Query()):
     service = RecitationService(repo)
 
     publisher_q = request.publisher_q("assets__publisher")
-    qs = service.get_all_reciters(publisher_q & Q(assets__restricted_for_tenant=False), filters)
+    qs = service.get_all_reciters(publisher_q & Q(assets__in_gallery=True), filters)
 
     return qs.order_by(F("name_ar").asc(nulls_last=True))

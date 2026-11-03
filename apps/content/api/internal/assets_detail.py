@@ -127,7 +127,7 @@ def detail_assets(request: Request, id: int):
     asset = get_object_or_404(
         Asset.objects.select_related("publisher", "reciter", "mushaf_layout").prefetch_related("previews"),
         request.publisher_q("publisher"),
-        restricted_for_tenant=False,
+        in_gallery=True,
         id=id,
     )
     asset.access_status = get_access_status(request.user, asset)

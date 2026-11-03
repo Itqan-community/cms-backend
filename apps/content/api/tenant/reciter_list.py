@@ -1,5 +1,6 @@
 from typing import Annotated
 
+from django.db.models import Q
 from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import Field
@@ -47,7 +48,7 @@ def list_reciters(request: Request, filters: ReciterFilter = Query()):
     repo = RecitationRepository()
     service = RecitationService(repo)
 
-    publisher_q = request.publisher_q("assets__publisher")
+    publisher_q = request.publisher_q("assets__publisher") & Q(assets__in_tenants=True)
     qs = service.get_all_reciters(publisher_q, filters)
 
     return qs

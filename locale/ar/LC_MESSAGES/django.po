@@ -396,8 +396,8 @@ msgstr "لا يمكن تنفيذ الإجراء على طلب بحالة '{statu
 msgid "Rejection reason is required."
 msgstr "سبب الرفض مطلوب."
 
-msgid "This asset has open or granted access requests from public consumers and cannot be restricted to your tenant. Please contact Itqan team."
-msgstr "يحتوي هذا الأصل على طلبات وصول مفتوحة أو ممنوحة من مستهلكين عموميين، ولا يمكن حصره على موقعك. يرجى التواصل مع فريق إتقان."
+msgid "This asset has developers with pending or approved access requests. Turning off its distribution channels may break their integrations. Confirm the change to proceed."
+msgstr "لدى هذا الأصل مطورون لديهم طلبات وصول معلقة أو موافق عليها. قد يؤدي إيقاف قنوات توزيعه إلى تعطيل تكاملاتهم. أكّد التغيير للمتابعة."
 
 msgid "An API key is required to access this asset's content."
 msgstr "مطلوب مفتاح API للوصول إلى محتوى هذا الأصل."
@@ -1857,6 +1857,9 @@ msgstr[2] "مدخلان"
 msgstr[3] "مدخلات"
 msgstr[4] "مدخلاً"
 msgstr[5] "مدخل"
+
+#~ msgid "This asset has open or granted access requests from public consumers and cannot be restricted to your tenant. Please contact Itqan team."
+#~ msgstr "يحتوي هذا الأصل على طلبات وصول مفتوحة أو ممنوحة من مستهلكين عموميين، ولا يمكن حصره على موقعك. يرجى التواصل مع فريق إتقان."
 
 #, python-brace-format
 #~ msgid "Group with id {id} not found."

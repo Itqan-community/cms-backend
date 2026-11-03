@@ -204,7 +204,7 @@ class RecitationPortalTest(BaseTestCase):
         self.assertEqual(self.publisher.id, asset.publisher_id)
         self.assertEqual(self.reciter.id, asset.reciter_id)
 
-    def test_create_recitation_defaults_visibility_flags_to_false(self):
+    def test_create_recitation_defaults_visibility_flags_to_false_and_channels_to_true(self):
         # Arrange
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_RECITATION)
@@ -223,12 +223,13 @@ class RecitationPortalTest(BaseTestCase):
         self.assertEqual(201, response.status_code, response.content)
         body = response.json()
         self.assertFalse(body["is_open_access"])
-        self.assertFalse(body["restricted_for_tenant"])
         asset = Asset.objects.get(id=body["id"])
         self.assertFalse(asset.is_open_access)
-        self.assertFalse(asset.restricted_for_tenant)
+        for flag in ("in_gallery", "in_public_api", "in_cli", "in_tenants"):
+            self.assertTrue(body[flag], flag)
+            self.assertTrue(getattr(asset, flag), flag)
 
-    def test_create_recitation_sets_visibility_flags(self):
+    def test_create_recitation_sets_visibility_and_channel_flags(self):
         # Arrange
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_RECITATION)
@@ -239,7 +240,10 @@ class RecitationPortalTest(BaseTestCase):
             "qiraah_id": self.qiraah.id,
             "license": "CC0",
             "is_open_access": True,
-            "restricted_for_tenant": True,
+            "in_gallery": False,
+            "in_public_api": False,
+            "in_cli": False,
+            "in_tenants": True,
         }
 
         # Act
@@ -249,12 +253,34 @@ class RecitationPortalTest(BaseTestCase):
         self.assertEqual(201, response.status_code, response.content)
         body = response.json()
         self.assertTrue(body["is_open_access"])
-        self.assertTrue(body["restricted_for_tenant"])
+        self.assertEqual(
+            (False, False, False, True), (body["in_gallery"], body["in_public_api"], body["in_cli"], body["in_tenants"])
+        )
         asset = Asset.objects.get(id=body["id"])
         self.assertTrue(asset.is_open_access)
-        self.assertTrue(asset.restricted_for_tenant)
+        self.assertEqual(
+            (False, False, False, True), (asset.in_gallery, asset.in_public_api, asset.in_cli, asset.in_tenants)
+        )
 
-    def test_patch_recitation_updates_visibility_flags(self):
+    def _make_recitation_with_consumer(self, status=AssetAccessRequest.StatusChoice.APPROVED):
+        asset = baker.make(
+            Asset,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
+            reciter=self.reciter,
+            qiraah=self.qiraah,
+        )
+        AssetAccessRequest.objects.create(
+            developer_user=baker.make(User),
+            asset=asset,
+            status=status,
+            developer_access_reason="reason",
+            intended_use=AssetAccessRequest.IntendedUseChoice.NON_COMMERCIAL,
+        )
+        return asset
+
+    def test_patch_recitation_updates_visibility_and_channel_flags(self):
         # Arrange
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_RECITATION)
@@ -266,13 +292,12 @@ class RecitationPortalTest(BaseTestCase):
             reciter=self.reciter,
             qiraah=self.qiraah,
             is_open_access=False,
-            restricted_for_tenant=False,
         )
 
         # Act
         response = self.client.patch(
             f"/portal/recitations/{asset.slug}/",
-            data={"is_open_access": True, "restricted_for_tenant": True},
+            data={"is_open_access": True, "in_cli": False, "in_tenants": False},
             content_type="application/json",
         )
 
@@ -280,12 +305,74 @@ class RecitationPortalTest(BaseTestCase):
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
         self.assertTrue(body["is_open_access"])
-        self.assertTrue(body["restricted_for_tenant"])
+        self.assertEqual(
+            (True, True, False, False), (body["in_gallery"], body["in_public_api"], body["in_cli"], body["in_tenants"])
+        )
         asset.refresh_from_db()
         self.assertTrue(asset.is_open_access)
-        self.assertTrue(asset.restricted_for_tenant)
+        self.assertEqual(
+            (True, True, False, False), (asset.in_gallery, asset.in_public_api, asset.in_cli, asset.in_tenants)
+        )
 
-    def test_patch_restrict_for_tenant_blocked_when_access_requests_exist(self):
+    def test_patch_recitation_channel_off_where_consumers_exist_should_return_409_with_counts(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_RECITATION)
+        asset = self._make_recitation_with_consumer()
+
+        # Act
+        response = self.client.patch(
+            f"/portal/recitations/{asset.slug}/",
+            data={"in_cli": False, "in_gallery": False},
+            content_type="application/json",
+        )
+
+        # Assert
+        self.assertEqual(409, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("channel_has_active_consumers", body["error_name"])
+        self.assertEqual({"approved_count": 1, "pending_count": 0, "channels": ["in_gallery", "in_cli"]}, body["extra"])
+        asset.refresh_from_db()
+        self.assertTrue(asset.in_cli)
+        self.assertTrue(asset.in_gallery)
+
+    def test_patch_recitation_channel_off_where_confirmed_should_return_200_and_not_store_flag(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_RECITATION)
+        asset = self._make_recitation_with_consumer(AssetAccessRequest.StatusChoice.PENDING)
+
+        # Act
+        response = self.client.patch(
+            f"/portal/recitations/{asset.slug}/",
+            data={"in_public_api": False, "confirm_channel_change": True},
+            content_type="application/json",
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        asset.refresh_from_db()
+        self.assertFalse(asset.in_public_api)
+        self.assertTrue(asset.in_cli)
+
+    def test_patch_recitation_channel_on_where_consumers_exist_should_not_need_confirm(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_RECITATION)
+        asset = self._make_recitation_with_consumer()
+        Asset.objects.filter(pk=asset.pk).update(in_cli=False)
+
+        # Act
+        response = self.client.patch(
+            f"/portal/recitations/{asset.slug}/", data={"in_cli": True}, content_type="application/json"
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        asset.refresh_from_db()
+        self.assertTrue(asset.in_cli)
+
+    def test_patch_recitation_channel_off_where_no_consumers_should_return_200(self):
         # Arrange
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_RECITATION)
@@ -296,29 +383,17 @@ class RecitationPortalTest(BaseTestCase):
             status=StatusChoice.READY,
             reciter=self.reciter,
             qiraah=self.qiraah,
-            restricted_for_tenant=False,
-        )
-        developer = baker.make(User)
-        AssetAccessRequest.objects.create(
-            developer_user=developer,
-            asset=asset,
-            status=AssetAccessRequest.StatusChoice.APPROVED,
-            developer_access_reason="reason",
-            intended_use=AssetAccessRequest.IntendedUseChoice.NON_COMMERCIAL,
         )
 
         # Act
         response = self.client.patch(
-            f"/portal/recitations/{asset.slug}/",
-            data={"restricted_for_tenant": True},
-            content_type="application/json",
+            f"/portal/recitations/{asset.slug}/", data={"in_tenants": False}, content_type="application/json"
         )
 
         # Assert
-        self.assertEqual(409, response.status_code, response.content)
-        self.assertEqual("restricted_for_tenant_conflict", response.json()["error_name"])
+        self.assertEqual(200, response.status_code, response.content)
         asset.refresh_from_db()
-        self.assertFalse(asset.restricted_for_tenant)
+        self.assertFalse(asset.in_tenants)
 
     def test_update_recitation_put_should_return_200(self):
         # Arrange

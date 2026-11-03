@@ -47,9 +47,9 @@ class TestPublicUsageCounts(BaseTestCase):
         self.assertEqual(404, response.status_code, response.content)
         self.assertEqual("usage_counts_disabled", response.json()["error_name"])
 
-    def test_usage_counts_where_asset_restricted_for_tenant_should_return_404(self):
+    def test_usage_counts_where_asset_not_in_gallery_should_return_404(self):
         # Arrange
-        Asset.objects.filter(id=self.asset.id).update(restricted_for_tenant=True)
+        Asset.objects.filter(id=self.asset.id).update(in_gallery=False)
 
         # Act
         response = self.client.get(f"/cms-api/assets/{self.asset.id}/usage-counts/")

@@ -114,6 +114,11 @@ class VersionStateChoice(models.TextChoices):
 SLUG_CONFLICT_RETRIES = 3
 
 
+# Per-asset distribution channels (all default True). Each flag decides whether the
+# asset is visible on one consumer surface; they never affect other surfaces.
+ASSET_CHANNEL_FIELDS: tuple[str, ...] = ("in_gallery", "in_public_api", "in_cli", "in_tenants")
+
+
 class Asset(DeleteFilesOnDeleteMixin, BaseModel):
     class MaddLevelChoice(models.TextChoices):
 
@@ -250,14 +255,21 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         default=True,
         help_text="Flag to allow consuming the asset directly without the access-request cycle (default enabled).",
     )
-    restricted_for_tenant = models.BooleanField(
-        default=False,
-        help_text=(
-            "If true, the asset is restricted to the publisher's tenant surface "
-            "(their own website/API) and is hidden from public surfaces "
-            "(the CMS assets website and the public developers API). "
-            "If false (default), the asset is available everywhere."
-        ),
+    in_gallery = models.BooleanField(
+        default=True,
+        help_text="Distribution channel: shown on the CMS website (assets gallery, detail, download).",
+    )
+    in_public_api = models.BooleanField(
+        default=True,
+        help_text="Distribution channel: served by the public developers API (and its recommendations).",
+    )
+    in_cli = models.BooleanField(
+        default=True,
+        help_text="Distribution channel: published in the itqan CLI package registry.",
+    )
+    in_tenants = models.BooleanField(
+        default=True,
+        help_text="Distribution channel: served by the publisher tenant API.",
     )
 
     class Meta:

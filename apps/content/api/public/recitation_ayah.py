@@ -102,7 +102,7 @@ def get_recitation_ayah(
         asset_id=asset_id,
         ayah_key=ayah_key,
         quality=quality,
-        publisher_q=Q(restricted_for_tenant=False),
+        publisher_q=Q(in_public_api=True),
         require_visible_quality=True,
     )
 

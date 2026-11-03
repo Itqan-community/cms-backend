@@ -7,6 +7,7 @@ from ninja import Field, FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime
 
+from apps.content.channel_schemas import ChannelConflictResponse
 from apps.content.models import (
     Asset,
     CategoryChoice,
@@ -83,7 +84,10 @@ class RecitationListOut(Schema):
     year: int | None = None
     license: LicenseChoice
     is_open_access: bool
-    restricted_for_tenant: bool
+    in_gallery: bool
+    in_public_api: bool
+    in_cli: bool
+    in_tenants: bool
     status: StatusChoice
     thumbnail_url: str | None = None
     created_at: AwareDatetime
@@ -114,7 +118,10 @@ class RecitationDetailOut(Schema):
     year: int | None = None
     license: LicenseChoice
     is_open_access: bool
-    restricted_for_tenant: bool
+    in_gallery: bool
+    in_public_api: bool
+    in_cli: bool
+    in_tenants: bool
     status: StatusChoice
     created_at: AwareDatetime
     updated_at: AwareDatetime
@@ -166,8 +173,12 @@ class RecitationCreateIn(Schema):
     year: int | None = None
     license: LicenseChoice
     is_open_access: bool = False
-    restricted_for_tenant: bool = False
+    in_gallery: bool = True
+    in_public_api: bool = True
+    in_cli: bool = True
+    in_tenants: bool = True
     status: StatusChoice = StatusChoice.READY
+    confirm_channel_change: bool = False
     slug: str | None = Field(
         default=None,
         description="Package name from `POST /portal/ai/translate/` (`slug_for`); built from the names when omitted.",
@@ -188,8 +199,12 @@ class RecitationPutIn(Schema):
     year: int | None = None
     license: LicenseChoice
     is_open_access: bool = False
-    restricted_for_tenant: bool = False
+    in_gallery: bool = True
+    in_public_api: bool = True
+    in_cli: bool = True
+    in_tenants: bool = True
     status: StatusChoice = StatusChoice.READY
+    confirm_channel_change: bool = False
 
 
 class RecitationPatchIn(Schema):
@@ -206,8 +221,12 @@ class RecitationPatchIn(Schema):
     year: int | None = None
     license: LicenseChoice | None = None
     is_open_access: bool | None = None
-    restricted_for_tenant: bool | None = None
+    in_gallery: bool | None = None
+    in_public_api: bool | None = None
+    in_cli: bool | None = None
+    in_tenants: bool | None = None
     status: StatusChoice | None = None
+    confirm_channel_change: bool = False
 
 
 # --- Filter Schema ---
@@ -329,7 +348,10 @@ def create_recitation(
         meem_behaviour=data.meem_behaviour,
         year=data.year,
         is_open_access=data.is_open_access,
-        restricted_for_tenant=data.restricted_for_tenant,
+        in_gallery=data.in_gallery,
+        in_public_api=data.in_public_api,
+        in_cli=data.in_cli,
+        in_tenants=data.in_tenants,
         status=data.status,
         slug=data.slug,
     )
@@ -367,6 +389,7 @@ def retrieve_recitation(request: Request, recitation_slug: str) -> Asset:
         200: RecitationDetailOut,
         400: NinjaErrorResponse[Literal["recitation_name_required"]]
         | NinjaErrorResponse[Literal["invalid_riwayah_qiraah_combo"]],
+        409: ChannelConflictResponse,
         404: NinjaErrorResponse[Literal["recitation_not_found"]]
         | NinjaErrorResponse[Literal["publisher_not_found"]]
         | NinjaErrorResponse[Literal["reciter_not_found"]]
@@ -396,6 +419,7 @@ def update_recitation_put(
         200: RecitationDetailOut,
         400: NinjaErrorResponse[Literal["recitation_name_required"]]
         | NinjaErrorResponse[Literal["invalid_riwayah_qiraah_combo"]],
+        409: ChannelConflictResponse,
         404: NinjaErrorResponse[Literal["recitation_not_found"]]
         | NinjaErrorResponse[Literal["publisher_not_found"]]
         | NinjaErrorResponse[Literal["reciter_not_found"]]

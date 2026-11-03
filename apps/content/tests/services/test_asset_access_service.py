@@ -9,7 +9,7 @@ from apps.content.repositories.access_request import AssetAccessRequestRepositor
 from apps.content.services.asset_access import (
     AssetAccessRequestService,
     get_access_status,
-    guard_restrict_for_tenant,
+    guard_channel_changes,
     user_has_access,
 )
 from apps.core.ninja_utils.errors import ItqanError
@@ -314,47 +314,100 @@ class UserHasAccessPublicAssetTests(BaseTestCase):
         self.assertTrue(user_has_access(self.user, asset))
 
 
-class GuardRestrictForTenantTests(BaseTestCase):
+class GuardChannelChangesTests(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.publisher = baker.make(Publisher)
         self.developer = baker.make(User)
 
-    def _make_request(self, asset, status):
+    def _make_request(self, asset, status, developer=None):
         return AssetAccessRequest.objects.create(
-            developer_user=self.developer,
+            developer_user=developer or self.developer,
             asset=asset,
             status=status,
             developer_access_reason="reason",
             intended_use=AssetAccessRequest.IntendedUseChoice.NON_COMMERCIAL,
         )
 
-    def test_no_requests_passes(self):
+    def test_guard_channel_changes_where_no_requests_should_pass(self):
+        # Arrange
         asset = _make_asset(self.publisher)
-        guard_restrict_for_tenant(asset)  # does not raise
+        fields = {"in_cli": False}
+        # Act / Assert
+        guard_channel_changes(asset, fields)  # does not raise
 
-    def test_pending_request_blocks(self):
+    def test_guard_channel_changes_where_pending_request_should_raise_with_counts(self):
+        # Arrange
         asset = _make_asset(self.publisher)
         self._make_request(asset, AssetAccessRequest.StatusChoice.PENDING)
-
+        # Act
         with self.assertRaises(ItqanError) as ctx:
-            guard_restrict_for_tenant(asset)
-        self.assertEqual("restricted_for_tenant_conflict", ctx.exception.error_name)
+            guard_channel_changes(asset, {"in_cli": False, "in_gallery": False, "in_tenants": True})
+        # Assert
+        self.assertEqual("channel_has_active_consumers", ctx.exception.error_name)
         self.assertEqual(409, ctx.exception.status_code)
-        self.assertIn("Itqan team", str(ctx.exception.message))
+        self.assertEqual(
+            {"approved_count": 0, "pending_count": 1, "channels": ["in_gallery", "in_cli"]},
+            ctx.exception.extra,
+        )
 
-    def test_approved_request_blocks(self):
+    def test_guard_channel_changes_where_approved_and_pending_requests_should_count_both(self):
+        # Arrange
         asset = _make_asset(self.publisher)
         self._make_request(asset, AssetAccessRequest.StatusChoice.APPROVED)
-
+        self._make_request(asset, AssetAccessRequest.StatusChoice.PENDING, developer=baker.make(User))
+        # Act
         with self.assertRaises(ItqanError) as ctx:
-            guard_restrict_for_tenant(asset)
-        self.assertEqual("restricted_for_tenant_conflict", ctx.exception.error_name)
+            guard_channel_changes(asset, {"in_public_api": False})
+        # Assert
+        self.assertEqual(1, ctx.exception.extra["approved_count"])
+        self.assertEqual(1, ctx.exception.extra["pending_count"])
+        self.assertEqual(["in_public_api"], ctx.exception.extra["channels"])
 
-    def test_rejected_request_passes(self):
+    def test_guard_channel_changes_where_confirmed_should_allow_and_strip_flag(self):
+        # Arrange
+        asset = _make_asset(self.publisher)
+        self._make_request(asset, AssetAccessRequest.StatusChoice.APPROVED)
+        fields = {"in_cli": False, "confirm_channel_change": True}
+        # Act
+        guard_channel_changes(asset, fields)
+        # Assert
+        self.assertNotIn("confirm_channel_change", fields)
+        self.assertEqual({"in_cli": False}, fields)
+
+    def test_guard_channel_changes_where_turning_flag_on_should_not_need_confirm(self):
+        # Arrange
+        asset = _make_asset(self.publisher)
+        Asset.objects.filter(pk=asset.pk).update(in_cli=False)
+        asset.refresh_from_db()
+        self._make_request(asset, AssetAccessRequest.StatusChoice.APPROVED)
+        # Act / Assert
+        guard_channel_changes(asset, {"in_cli": True})  # does not raise
+
+    def test_guard_channel_changes_where_flag_already_off_should_not_raise(self):
+        # Arrange
+        asset = _make_asset(self.publisher)
+        Asset.objects.filter(pk=asset.pk).update(in_cli=False)
+        asset.refresh_from_db()
+        self._make_request(asset, AssetAccessRequest.StatusChoice.APPROVED)
+        # Act / Assert
+        guard_channel_changes(asset, {"in_cli": False})  # unchanged, does not raise
+
+    def test_guard_channel_changes_where_request_rejected_should_pass(self):
+        # Arrange
         asset = _make_asset(self.publisher)
         self._make_request(asset, AssetAccessRequest.StatusChoice.REJECTED)
-        guard_restrict_for_tenant(asset)  # does not raise
+        # Act / Assert
+        guard_channel_changes(asset, {"in_gallery": False})  # does not raise
+
+    def test_guard_channel_changes_where_null_flag_sent_should_drop_it_from_fields(self):
+        # Arrange
+        asset = _make_asset(self.publisher)
+        fields = {"in_gallery": None}
+        # Act
+        guard_channel_changes(asset, fields)
+        # Assert
+        self.assertEqual({}, fields)
 
 
 _OUTCOME_TASK = "apps.content.tasks.send_access_request_outcome_email"

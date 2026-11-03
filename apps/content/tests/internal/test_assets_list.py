@@ -397,7 +397,7 @@ class ListAssetTest(BaseTestCase):
         self.assertEqual("Open Access Tafsir", response_body["results"][0]["name"])
         self.assertTrue(response_body["results"][0]["is_open_access"])
 
-    def test_list_assets_where_restricted_for_tenant_should_be_excluded(self):
+    def test_list_assets_where_not_in_gallery_should_be_excluded(self):
         # Arrange
         make_visible(
             baker.make(
@@ -406,7 +406,7 @@ class ListAssetTest(BaseTestCase):
                 category=CategoryChoice.TAFSIR,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
-                restricted_for_tenant=False,
+                in_gallery=True,
             )
         )
         make_visible(
@@ -416,7 +416,7 @@ class ListAssetTest(BaseTestCase):
                 category=CategoryChoice.TAFSIR,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
-                restricted_for_tenant=True,
+                in_gallery=False,
             )
         )
 
