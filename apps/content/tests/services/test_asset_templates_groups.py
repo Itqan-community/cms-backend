@@ -16,6 +16,7 @@ from apps.content.services.asset_templates import (
     REFERENCE_TEXT_LIMIT,
     ColumnFilter,
     EntryFilters,
+    NumberCondition,
     TextCondition,
     unit_spec_for,
 )
@@ -156,6 +157,19 @@ class GroupUnitSpecTests(GroupQuranDataMixin, BaseTestCase):
         # Assert
         self.assertEqual(total, 2)
         self.assertEqual([row.unit_id for row in rows], [encode_group_key(3, 3)])
+
+    def test_units_page_where_unit_page_filter_should_match_no_group(self):
+        # Arrange — ranges carry no page number.
+        asset = self._asset(AssetTemplateChoice.AYAH_GROUP)
+        version = self._version(asset, {(1, 1): "a", (2, 2): "b"})
+        filters = EntryFilters(unit_page=ColumnFilter(conditions=(NumberCondition("equals", 1),)))
+
+        # Act
+        rows, total = unit_spec_for(asset).units_page(asset, offset=0, limit=10, filters=filters, version=version)
+
+        # Assert
+        self.assertEqual(total, 0)
+        self.assertEqual(rows, [])
 
     def test_units_page_where_page_of_groups_should_use_constant_queries(self):
         # Arrange

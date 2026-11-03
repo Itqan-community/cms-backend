@@ -500,7 +500,8 @@ class EntriesFilterModelIn(Schema):
     Text columns are ``cell__<key>`` (the version's own cells) and
     ``source__<key>`` (the source language's); ``text`` / ``source_text`` name
     the first column. ``unit_surah`` is the unit column's surah-name dropdown and
-    ``surah`` the surah-number column; both filter the surah number. Unknown
+    ``surah`` the surah-number column; both filter the surah number.
+    ``unit_page`` is the page template's unit column (the page number). Unknown
     grid columns are rejected so a typo surfaces as a 400 instead of silently
     returning unfiltered rows; an unknown text column is rejected by the
     service (``unknown_filter_column``), which knows the asset's columns.
@@ -512,6 +513,7 @@ class EntriesFilterModelIn(Schema):
     reference_text: GridTextFilterIn | None = None
     source_text: GridTextFilterIn | None = None
     unit_surah: GridNumberFilterIn | None = None
+    unit_page: GridNumberFilterIn | None = None
     surah: GridNumberFilterIn | None = None
     ayah: GridNumberFilterIn | None = None
     cells: dict[str, GridTextFilterIn] = Field(default_factory=dict)
@@ -549,6 +551,7 @@ class EntriesFilterModelIn(Schema):
             reference_text=_column_filter(self.reference_text),
             source_cells=source_cells,
             unit_surah=_column_filter(self.unit_surah),
+            unit_page=_column_filter(self.unit_page),
             surah=_column_filter(self.surah),
             ayah=_column_filter(self.ayah),
         )
