@@ -365,16 +365,17 @@ class TafsirService:
         logger.info(f"Tafsir version updated [version_id={version_id}, asset_slug={tafsir_slug}]")
         return updated
 
-    def delete_tafsir_version(self, tafsir_slug: str, version_id: int, publisher_q: Q | None = None) -> None:
+    def delete_tafsir_version(
+        self, tafsir_slug: str, version_id: int, publisher_q: Q | None = None, *, confirm_unpublish: bool = False
+    ) -> None:
         """
         Business Logic: Delete a tafsir version.
         """
         version = self._get_tafsir_version_or_404(tafsir_slug, version_id, publisher_q=publisher_q)
         with transaction.atomic():
-            version = lock_version_for_delete(version)
+            version = lock_version_for_delete(version, confirm_unpublish=confirm_unpublish)
             was_published = AssetContentRepository().unpublish_version(version)
             self.repo.delete_tafsir_version(version)
         logger.info(
-            f"Tafsir version deleted [version_id={version_id}, asset_slug={tafsir_slug}, "
-            f"was_published={was_published}]"
+            f"Tafsir version deleted [version_id={version_id}, asset_slug={tafsir_slug}, was_published={was_published}]"
         )

@@ -539,7 +539,9 @@ class TranslationVersionDeleteTest(TranslationVersionBaseTest):
         )
 
         # Act
-        response = self.client.delete(f"/portal/translations/{self.translation.slug}/versions/{version.id}/")
+        response = self.client.delete(
+            f"/portal/translations/{self.translation.slug}/versions/{version.id}/?confirm_unpublish=true"
+        )
 
         # Assert — nothing is left to serve, so the language is no longer available
         self.assertEqual(204, response.status_code, response.content)

@@ -305,14 +305,16 @@ def lock_version_for_content_change(version: AssetVersion) -> AssetVersion:
     return locked
 
 
-def lock_version_for_delete(version: AssetVersion) -> AssetVersion:
+def lock_version_for_delete(version: AssetVersion, *, confirm_unpublish: bool = False) -> AssetVersion:
     """Lock ``version``'s row and check it may be deleted.
 
     Must run inside a transaction. Only the newest version of a language can be
     deleted (``forbid_history_rewrite``). A published version can be deleted only
-    when it is its language's first and only version; the caller then unpublishes
-    the language (``AssetContentRepository.unpublish_version``). Any other
-    published version stays until another one is published.
+    when it is its language's first and only version, and only with
+    ``confirm_unpublish`` (the portal warns first; it may have been published since
+    the list loaded); the caller then unpublishes the language
+    (``AssetContentRepository.unpublish_version``). Any other published version
+    stays until another one is published.
     """
     locked = AssetVersion.objects.select_for_update().get(pk=version.pk)
     forbid_history_rewrite(locked)
@@ -323,6 +325,12 @@ def lock_version_for_delete(version: AssetVersion) -> AssetVersion:
     )
     if has_other_versions:
         forbid_published_version_change(locked)
+    elif not confirm_unpublish and AssetLanguage.objects.filter(published_version=locked).exists():
+        raise ItqanError(
+            error_name="unpublish_not_confirmed",
+            message=_("This version is published. Deleting it unpublishes the asset, so confirm the deletion first."),
+            status_code=409,
+        )
     return locked
 
 
