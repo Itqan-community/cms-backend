@@ -8,6 +8,7 @@ from django.db.models import ProtectedError, Q
 from django.utils.translation import gettext as _
 
 from apps.content.models import Asset as AssetModel, AssetVersion, CategoryChoice, LicenseChoice
+from apps.content.repositories.asset_content import AssetContentRepository
 from apps.content.repositories.mushaf import MushafRepository
 from apps.content.services.asset_access import guard_restrict_for_tenant
 from apps.content.services.asset_content import (
@@ -15,6 +16,7 @@ from apps.content.services.asset_content import (
     VersionBump,
     forbid_published_version_change,
     issue_version_number,
+    lock_version_for_delete,
 )
 from apps.content.services.asset_slug import AssetSlugService
 from apps.content.version_text import VersionText
@@ -294,6 +296,11 @@ class MushafService:
         Business Logic: Delete a mushaf version.
         """
         version = self._get_mushaf_version_or_404(mushaf_slug, version_id, publisher_q=publisher_q)
-        forbid_published_version_change(version)
-        self.repo.delete_mushaf_version(version)
-        logger.info(f"Mushaf version deleted [version_id={version_id}, asset_slug={mushaf_slug}]")
+        with transaction.atomic():
+            version = lock_version_for_delete(version)
+            was_published = AssetContentRepository().unpublish_version(version)
+            self.repo.delete_mushaf_version(version)
+        logger.info(
+            f"Mushaf version deleted [version_id={version_id}, asset_slug={mushaf_slug}, "
+            f"was_published={was_published}]"
+        )

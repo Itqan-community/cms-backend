@@ -9,6 +9,7 @@ from pydantic import AwareDatetime, Field
 from apps.content.api.portal.asset_content import VersionTextIn, VersionTextOut
 from apps.content.api.portal.asset_review import change_counts, pending_review_count, with_change_counts
 from apps.content.models import Asset, AssetLanguage, AssetVersion, CategoryChoice, ChangeTypeChoice, VersionStateChoice
+from apps.content.services.asset_content import VersionDeleteBlockedReason, version_delete_blocked_reason
 from apps.content.services.asset_language_access import (
     filter_versions_to_allowed,
     require_language,
@@ -38,6 +39,10 @@ class TafsirVersionListOut(VersionTextOut, PackageStatusOut):
     is_active: bool
     # The version consumers are served for its language.
     is_published: bool
+    # Why the version cannot be deleted (the error a delete would return), or null.
+    # Only the newest version of a language can be deleted; a published one only
+    # while it is the language's first and only version.
+    delete_blocked_reason: VersionDeleteBlockedReason | None
     # Publishing it goes back to an earlier version, which needs a reason.
     publishing_rolls_back: bool
     # Every change in it is approved, so it may be published.
@@ -106,6 +111,10 @@ class TafsirVersionListOut(VersionTextOut, PackageStatusOut):
     def resolve_change_counts(obj: AssetVersion) -> dict | None:
         counts = {change_type: change_counts(obj)[f"{change_type}_changes"] for change_type in ChangeTypeChoice.values}
         return counts if any(counts.values()) else None
+
+    @staticmethod
+    def resolve_delete_blocked_reason(obj: AssetVersion, context: dict) -> VersionDeleteBlockedReason | None:
+        return version_delete_blocked_reason(obj, context["request"].__dict__.setdefault("_version_delete_reasons", {}))
 
     @staticmethod
     def resolve_file_url(obj: AssetVersion, context: dict) -> str | None:
