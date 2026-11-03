@@ -5,7 +5,7 @@ import logging
 from django.utils.text import format_lazy
 from django.utils.translation import gettext_lazy as _
 
-from apps.content.models import AssetAccess, AssetVersion, VersionStateChoice
+from apps.content.models import AssetAccess, AssetVersion, StatusChoice, VersionStateChoice
 from apps.core.services.email import email_service
 
 logger = logging.getLogger(__name__)
@@ -19,6 +19,10 @@ class AssetVersionNotifier:
             asset_version = AssetVersion.objects.select_related("asset").get(pk=asset_version_id)
         except AssetVersion.DoesNotExist:
             logger.warning(f"AssetVersion not found, skipping email [asset_version_id={asset_version_id}]")
+            return
+
+        if asset_version.asset.status != StatusChoice.READY:
+            logger.info(f"Asset is a draft, skipping notification [asset_version_id={asset_version_id}]")
             return
 
         is_first_version = (

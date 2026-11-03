@@ -32,6 +32,7 @@ class MushafRepository:
         thumbnail_url: Any | None = None,
         is_open_access: bool = False,
         restricted_for_tenant: bool = False,
+        status: StatusChoice = StatusChoice.READY,
         slug: str = "",
     ) -> Asset:
         """
@@ -41,7 +42,7 @@ class MushafRepository:
             asset = self.asset_model.objects.create(
                 slug=slug,
                 publisher_id=publisher_id,
-                status=StatusChoice.READY,
+                status=status,
                 category=CategoryChoice.MUSHAF,
                 name=name,
                 name_ar=name_ar,

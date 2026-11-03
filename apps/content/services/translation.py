@@ -53,7 +53,7 @@ class TranslationService:
             qs = AssetModel.objects.all()
             if publisher_q is not None:
                 qs = qs.filter(publisher_q)
-            return qs.get(slug=translation_slug, category=CategoryChoice.TRANSLATION, status=StatusChoice.READY)
+            return qs.get(slug=translation_slug, category=CategoryChoice.TRANSLATION)
         except AssetModel.DoesNotExist as exc:
             raise ItqanError(
                 error_name="translation_not_found",
@@ -97,6 +97,7 @@ class TranslationService:
         external_url: str | None = None,
         is_open_access: bool = False,
         restricted_for_tenant: bool = False,
+        status: StatusChoice = StatusChoice.READY,
         slug: str | None = None,
     ) -> Asset:
         """
@@ -168,6 +169,7 @@ class TranslationService:
             external_url=external_url,
             is_open_access=is_open_access,
             restricted_for_tenant=restricted_for_tenant,
+            status=status,
         )
         logger.info(
             f"Translation created [asset_id={translation.pk}, publisher_id={publisher_id}, language={language}]"

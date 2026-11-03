@@ -291,6 +291,11 @@ An **Asset** is a **derivation** of a Resource. It represents content that has b
     retried with a suffix in `Asset.save()`. Assets created outside these services (admin, fixtures)
     get the model's plain slugify fallback.
 - Can have multiple preview images
+- Has a **status**, `draft` or `ready` (`Asset.status`). Every type's portal create, PUT and
+  PATCH take `status` (create defaults to `ready`), so a publisher can mark any asset as a
+  draft. A draft stays listed, viewable and editable in the portal, but every consumer surface
+  hides it (gallery, public, tenant and developer APIs, the itqan CLI, recommendations), and
+  publishing one of its versions neither emails subscribers nor runs Dependabot.
 - For recitation assets: linked to a **Reciter** and **Riwayah**, and owns one or more
   **RecitationFolder** variants (see [Recitation-Specific Components](#recitation-specific-components))
 - For text assets (translations and tafsirs): carries a **template** (`surah` / `ayah` /
