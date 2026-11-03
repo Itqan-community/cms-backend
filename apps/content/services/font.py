@@ -26,7 +26,6 @@ from apps.publishers.models import Publisher
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-
     from apps.content.models import Asset
 
 
@@ -289,15 +288,17 @@ class FontService:
         logger.info(f"Font version updated [version_id={version_id}, asset_slug={font_slug}]")
         return updated
 
-    def delete_font_version(self, font_slug: str, version_id: int, publisher_q: Q | None = None) -> None:
+    def delete_font_version(
+        self, font_slug: str, version_id: int, publisher_q: Q | None = None, *, confirm_unpublish: bool = False
+    ) -> None:
         """
         Business Logic: Delete a font version.
         """
         version = self._get_font_version_or_404(font_slug, version_id, publisher_q=publisher_q)
         with transaction.atomic():
-            version = lock_version_for_delete(version)
+            version = lock_version_for_delete(version, confirm_unpublish=confirm_unpublish)
             was_published = AssetContentRepository().unpublish_version(version)
             self.repo.delete_font_version(version)
         logger.info(
-            f"Font version deleted [version_id={version_id}, asset_slug={font_slug}, " f"was_published={was_published}]"
+            f"Font version deleted [version_id={version_id}, asset_slug={font_slug}, was_published={was_published}]"
         )

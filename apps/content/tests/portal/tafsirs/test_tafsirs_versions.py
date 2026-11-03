@@ -683,7 +683,9 @@ class TafsirVersionDeleteTest(TafsirVersionBaseTest):
         AssetLanguage.objects.filter(asset=self.tafsir).update(published_version=version, status=StatusChoice.READY)
 
         # Act
-        response = self.client.delete(f"/portal/tafsirs/{self.tafsir.slug}/versions/{version.id}/")
+        response = self.client.delete(
+            f"/portal/tafsirs/{self.tafsir.slug}/versions/{version.id}/?confirm_unpublish=true"
+        )
 
         # Assert — nothing is left to serve, so the language is no longer available
         self.assertEqual(204, response.status_code, response.content)
