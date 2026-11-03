@@ -83,9 +83,9 @@ def list_assets(request: Request, filters: AssetFilter = Query()):
         .exclude(status=StatusChoice.DRAFT)
         .filter(consumer_visible_q())
         .annotate(
-            # Only folders consumers can see count; a hidden folder's timings are withdrawn.
+            # Only qualities consumers can see count; a hidden quality's timings are withdrawn.
             has_ayah_timings=Exists(
-                RecitationAyahTiming.objects.filter(track__asset=OuterRef("pk"), track__folder__is_visible=True)
+                RecitationAyahTiming.objects.filter(track__asset=OuterRef("pk"), track__quality__is_visible=True)
             )
         )
     )

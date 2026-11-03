@@ -10,13 +10,14 @@ from ninja import Query, Schema
 from apps.content.cache import (
     RECITATION_ASSET_META_CACHE_TTL,
     RECITATION_RESPONSE_CACHE_TTL,
-    folder_cache_token,
+    quality_cache_token,
     recitation_asset_meta_cache_key,
     recitation_range_cache_key,
 )
 from apps.content.repositories.recitation import RecitationRepository
 from apps.content.services.asset_access import enforce_asset_access_on_public_api
 from apps.content.services.recitation import RecitationService
+from apps.content.services.recitation_quality_resolution import reject_renamed_folder_param
 from apps.content.services.recitation_range import RecitationRangeService
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
@@ -46,7 +47,7 @@ class RecitationRangeOut(Schema):
     surah_number: int
     from_ayah: int
     to_ayah: int
-    folder: str
+    quality: str
     audio_url: str
     duration_ms: int
     size_bytes: int
@@ -56,10 +57,11 @@ class RecitationRangeOut(Schema):
 @router.get(
     "recitations/{asset_id}/{surah_number}/range/",
     response={
+        400: NinjaErrorResponse[Literal["folder_param_renamed"]],
         200: RecitationRangeOut,
         401: NinjaErrorResponse[Literal["authentication_required"]],
         403: NinjaErrorResponse[Literal["access_denied"]],
-        404: NinjaErrorResponse[Literal["not_found"]] | NinjaErrorResponse[Literal["folder_not_found"]],
+        404: NinjaErrorResponse[Literal["not_found"]] | NinjaErrorResponse[Literal["quality_not_found"]],
         422: NinjaErrorResponse[Literal["validation_error"]],
     },
 )
@@ -70,12 +72,13 @@ def get_recitation_range(
     surah_number: int,
     from_ayah: int = Query(..., alias="from", ge=1),
     to_ayah: int = Query(..., alias="to", ge=1),
-    folder: str | None = Query(None),
+    quality: str | None = Query(None),
 ):
-    # Key on the *requested* folder (not the resolved one) so the warm path
-    # needs no DB read; folder_cache_token keeps raw names safe in the key.
+    reject_renamed_folder_param(request)
+    # Key on the *requested* quality (not the resolved one) so the warm path
+    # needs no DB read; quality_cache_token keeps raw names safe in the key.
     # "from" is a Python keyword, hence the from_ayah alias above.
-    _resp_key = recitation_range_cache_key(asset_id, surah_number, from_ayah, to_ayah, folder_cache_token(folder))
+    _resp_key = recitation_range_cache_key(asset_id, surah_number, from_ayah, to_ayah, quality_cache_token(quality))
     _meta_key = recitation_asset_meta_cache_key(asset_id)
 
     cached_resp: bytes | None = cache.get(_resp_key)
@@ -140,21 +143,21 @@ def get_recitation_range(
         to_ayah=to_ayah,
     )
 
-    # Validate the range (422 on bad order/bounds/gaps) and resolve track+folder.
-    track, resolved_folder, subset, start_ms, end_ms = service.get_range_segment(
+    # Validate the range (422 on bad order/bounds/gaps) and resolve track+quality.
+    track, resolved_quality, subset, start_ms, end_ms = service.get_range_segment(
         asset_id,
         surah_number,
         from_ayah,
         to_ayah,
-        folder=folder,
-        require_visible_folder=True,
+        quality=quality,
+        require_visible_quality=True,
     )
 
     # Serve the persisted clip when present; otherwise cut once from the surah
     # track (fades only at outer boundaries) and upload it under a
     # deterministic key so the next identical request is a cache/R2 hit.
     built = RecitationRangeService().get_or_build_range_audio(
-        track, resolved_folder, surah_number, from_ayah, to_ayah, start_ms, end_ms, subset
+        track, resolved_quality, surah_number, from_ayah, to_ayah, start_ms, end_ms, subset
     )
 
     payload = {
@@ -162,7 +165,7 @@ def get_recitation_range(
         "surah_number": surah_number,
         "from_ayah": from_ayah,
         "to_ayah": to_ayah,
-        "folder": resolved_folder.slug,
+        "quality": resolved_quality.slug,
         "audio_url": built["audio_url"],
         "duration_ms": built["duration_ms"],
         "size_bytes": built["size_bytes"],

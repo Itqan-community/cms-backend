@@ -5,11 +5,11 @@ from django.core.cache import cache
 
 from apps.core.ninja_utils.paginations import DEFAULT_PAGE_SIZE, PUBLIC_RECITATION_MAX_PAGE_SIZE
 
-# Stands in for "caller did not name a folder" in cache keys, so the default-folder
+# Stands in for "caller did not name a quality" in cache keys, so the default-quality
 # response gets its own entry without a DB lookup to resolve the real slug.
-DEFAULT_FOLDER_CACHE_TOKEN = "__default__"
+DEFAULT_QUALITY_CACHE_TOKEN = "__default__"
 
-# Slug-shaped tokens are safe to embed in a cache key verbatim; see folder_cache_token.
+# Slug-shaped tokens are safe to embed in a cache key verbatim; see quality_cache_token.
 _SAFE_CACHE_TOKEN_RE = re.compile(r"^[a-z0-9_.-]{1,64}$")
 
 RECITATION_TRACKS_CACHE_TTL = 60 * 5  # 5 minutes
@@ -26,45 +26,47 @@ def recitation_asset_meta_cache_key(asset_id: int) -> str:
     return f"public_recitation_asset_meta:{asset_id}"
 
 
-def folder_cache_token(folder: str | None) -> str:
+def quality_cache_token(quality: str | None) -> str:
     """
-    Turn a raw ``?folder=`` value into a safe, stable cache-key component.
+    Turn a raw ``?quality=`` value into a safe, stable cache-key component.
 
-    The value is user input and may be a folder *name*, so it can carry spaces,
+    The value is user input and may be a quality *name*, so it can carry spaces,
     Arabic, or arbitrary length -- none of which belong in a cache key (memcached
     rejects such keys outright, and Django warns on every request under any backend).
 
     Slug-shaped values pass through unchanged so keys stay readable in Redis;
-    anything else is hashed. Case is folded first because folder-name matching is
-    case-insensitive: "With echo" and "WITH ECHO" resolve to the same folder and so
+    anything else is hashed. Case is folded first because quality-name matching is
+    case-insensitive: "With echo" and "WITH ECHO" resolve to the same quality and so
     must share one cache entry rather than duplicating it.
     """
-    if folder is None:
-        return DEFAULT_FOLDER_CACHE_TOKEN
+    if quality is None:
+        return DEFAULT_QUALITY_CACHE_TOKEN
 
-    normalized = folder.strip().casefold()
+    normalized = quality.strip().casefold()
     if _SAFE_CACHE_TOKEN_RE.match(normalized):
         return normalized
     return hashlib.blake2b(normalized.encode("utf-8"), digest_size=8).hexdigest()
 
 
-def recitation_response_cache_key(asset_id: int, page: int, page_size: int, folder_slug: str) -> str:
-    # The folder is part of the key: two variants of the same recitation share an
+def recitation_response_cache_key(asset_id: int, page: int, page_size: int, quality_slug: str) -> str:
+    # The quality is part of the key: two variants of the same recitation share an
     # asset_id, so omitting it would serve one variant's audio for the other.
-    return f"public_recitation_resp:{asset_id}:{folder_slug}:{page}:{page_size}"
+    return f"public_recitation_resp:{asset_id}:{quality_slug}:{page}:{page_size}"
 
 
-def recitation_range_cache_key(asset_id: int, surah_number: int, from_ayah: int, to_ayah: int, folder_slug: str) -> str:
-    # Combined ayah-range clip for one surah/folder variant. Keyed on the full
+def recitation_range_cache_key(
+    asset_id: int, surah_number: int, from_ayah: int, to_ayah: int, quality_slug: str
+) -> str:
+    # Combined ayah-range clip for one surah/quality variant. Keyed on the full
     # range identity so repeat requests for the same passage hit Django cache
     # (and R2, see RecitationRangeService) instead of re-running ffmpeg.
     # Shares RECITATION_RESPONSE_CACHE_TTL with the track-list responses.
-    return f"public_recitation_range:{asset_id}:{surah_number}:{from_ayah}:{to_ayah}:{folder_slug}"
+    return f"public_recitation_range:{asset_id}:{surah_number}:{from_ayah}:{to_ayah}:{quality_slug}"
 
 
-def recitation_ayah_response_cache_key(asset_id: int, folder_token: str, ayah_key: str) -> str:
+def recitation_ayah_response_cache_key(asset_id: int, quality_token: str, ayah_key: str) -> str:
     """Build the Redis cache key for a single ayah audio public response."""
-    return f"public_recitation_ayah_resp:{asset_id}:{folder_token}:{ayah_key}"
+    return f"public_recitation_ayah_resp:{asset_id}:{quality_token}:{ayah_key}"
 
 
 def invalidate_recitation_tracks_cache(asset_id: int) -> None:
@@ -75,7 +77,7 @@ def invalidate_recitation_tracks_cache(asset_id: int) -> None:
     # The same holds for ayah-range clips: the range view also requires its range
     # resp key AND this meta key, so clearing meta busts range responses too while
     # per-range bytes expire naturally. The persisted R2 range objects are
-    # deterministic (asset/folder/surah/from/to) and safe to keep: rebuilt timings
+    # deterministic (asset/quality/surah/from/to) and safe to keep: rebuilt timings
     # produce the same key only when the underlying audio offsets are unchanged.
     cache.delete_many(
         [
@@ -85,20 +87,20 @@ def invalidate_recitation_tracks_cache(asset_id: int) -> None:
     )
 
 
-def invalidate_recitation_folder_cache(asset_id: int, folder) -> None:
+def invalidate_recitation_quality_cache(asset_id: int, quality) -> None:
     """
-    Bust public recitation caches after a folder's visibility or default status changes.
+    Bust public recitation caches after a quality's visibility or default status changes.
 
-    Per-folder response keys for every page size cannot be enumerated cheaply, so the
-    asset meta key is cleared to force rebuilds; known folder tokens are deleted when
+    Per-quality response keys for every page size cannot be enumerated cheaply, so the
+    asset meta key is cleared to force rebuilds; known quality tokens are deleted when
     present so the common first-page case is immediate.
     """
     invalidate_recitation_tracks_cache(asset_id)
 
-    tokens = {folder.slug, folder_cache_token(folder.slug)}
-    for name in (folder.name, folder.name_ar, folder.name_en):
+    tokens = {quality.slug, quality_cache_token(quality.slug)}
+    for name in (quality.name, quality.name_ar, quality.name_en):
         if name:
-            tokens.add(folder_cache_token(name))
+            tokens.add(quality_cache_token(name))
 
     for token in tokens:
         for page in (1,):

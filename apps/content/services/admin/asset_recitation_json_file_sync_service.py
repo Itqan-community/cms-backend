@@ -8,16 +8,16 @@ from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 
 from apps.content.api.public.recitation_track_list import RecitationAyahTimingOut, RecitationSurahTrackOut
-from apps.content.models import Asset, AssetVersion, RecitationFolder, RecitationSurahTrack
+from apps.content.models import Asset, AssetVersion, RecitationQuality, RecitationSurahTrack
 from apps.core.mixins.constants import QURAN_SURAHS
 from config.settings.base import CLOUDFLARE_R2_PUBLIC_BASE_URL
 
 logger = logging.getLogger(__name__)
 
 
-def _build_recitations_json(asset: Asset, folder: RecitationFolder) -> tuple[str, str]:
+def _build_recitations_json(asset: Asset, quality: RecitationQuality) -> tuple[str, str]:
     tracks = (
-        RecitationSurahTrack.objects.filter(asset=asset, folder=folder)
+        RecitationSurahTrack.objects.filter(asset=asset, quality=quality)
         .prefetch_related("ayah_timings")
         .order_by("surah_number")
         .only("surah_number", "audio_file", "duration_ms", "size_bytes")
@@ -56,55 +56,55 @@ def _build_recitations_json(asset: Asset, folder: RecitationFolder) -> tuple[str
 
     payload = json.dumps([i.model_dump() for i in result], ensure_ascii=False, indent=2)
     reciter_slug = asset.reciter.slug if getattr(asset, "reciter", None) else ""
-    # The folder slug is part of the filename so variants (clear, with-echo, ...)
+    # The quality slug is part of the filename so variants (clear, with-echo, ...)
     # each get their own export instead of overwriting one another.
     parts = [f"asset_{asset.id}"]
     if reciter_slug:
         parts.append(reciter_slug)
-    parts.append(folder.slug)
+    parts.append(quality.slug)
     filename = "_".join(parts) + "_recitations.json"
     return payload, filename
 
 
-def sync_asset_recitations_json_file(asset_id: int, folder_id: int | None = None) -> tuple[AssetVersion, str]:
+def sync_asset_recitations_json_file(asset_id: int, quality_id: int | None = None) -> tuple[AssetVersion, str]:
     """
-    Build the recitation JSON for one folder of the Asset and save it to an AssetVersion.
+    Build the recitation JSON for one quality of the Asset and save it to an AssetVersion.
 
-    Each folder (variant) gets its own AssetVersion, named after the folder slug, because
+    Each quality (variant) gets its own AssetVersion, named after the quality slug, because
     echo/delay variants have genuinely different ayah offsets and must not overwrite each
-    other's export. ``folder_id`` defaults to the asset's default folder.
+    other's export. ``quality_id`` defaults to the asset's default quality.
 
-    - Raises ValueError if the Asset or the folder does not exist.
+    - Raises ValueError if the Asset or the quality does not exist.
     - Returns (asset_version, filename) on success.
     """
-    logger.info(f"Recitation JSON sync started [asset_id={asset_id}, folder_id={folder_id}]")
+    logger.info(f"Recitation JSON sync started [asset_id={asset_id}, quality_id={quality_id}]")
 
     asset: Asset | None = Asset.objects.filter(pk=asset_id).first()
     if not asset:
         raise ValueError(_("Asset {asset_id} not found").format(asset_id=asset_id))
 
-    if folder_id is not None:
-        folder: RecitationFolder | None = RecitationFolder.objects.filter(pk=folder_id, asset_id=asset_id).first()
+    if quality_id is not None:
+        quality: RecitationQuality | None = RecitationQuality.objects.filter(pk=quality_id, asset_id=asset_id).first()
     else:
-        folder = RecitationFolder.objects.filter(asset_id=asset_id, is_default=True).first()
+        quality = RecitationQuality.objects.filter(asset_id=asset_id, is_default=True).first()
 
-    if not folder:
+    if not quality:
         raise ValueError(
-            _("Folder {folder_id} not found for asset {asset_id}").format(folder_id=folder_id, asset_id=asset_id)
+            _("Quality {quality_id} not found for asset {asset_id}").format(quality_id=quality_id, asset_id=asset_id)
         )
 
-    # One version per folder, identified by the folder slug. Looking it up by name
+    # One version per quality, identified by the quality slug. Looking it up by name
     # keeps repeated syncs of the same variant updating a single row.
-    version_name = folder.slug
+    version_name = quality.slug
     version: AssetVersion | None = AssetVersion.objects.filter(asset=asset, name=version_name).first()
     if not version:
         version = AssetVersion.objects.create(asset=asset, name=version_name)
 
-    payload, filename = _build_recitations_json(asset, folder)
+    payload, filename = _build_recitations_json(asset, quality)
     payload_bytes = payload.encode("utf-8")
     track_count = payload.count('"surah_number"')
 
-    # Atomic write to this folder's version file
+    # Atomic write to this quality's version file
     with transaction.atomic():
         content = ContentFile(payload_bytes)
         version.file_url.save(filename, content, save=False)
@@ -112,7 +112,7 @@ def sync_asset_recitations_json_file(asset_id: int, folder_id: int | None = None
         version.save(update_fields=["file_url", "size_bytes", "updated_at"])
 
     logger.info(
-        f"Recitation JSON sync complete [asset_id={asset_id}, folder_id={folder.pk}, version_id={version.pk}, "
+        f"Recitation JSON sync complete [asset_id={asset_id}, quality_id={quality.pk}, version_id={version.pk}, "
         f"tracks={track_count}, size_bytes={len(payload_bytes)}, filename={filename}]"
     )
     return version, filename

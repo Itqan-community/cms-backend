@@ -12,14 +12,14 @@ Sync audio to text at ayah resolution.
 
 ```
 Recitation (GET /recitations/)
-  └─ Folder / variant  (?folder=<slug>)
+  └─ Quality / variant  (?quality=<slug>)
        └─ Surah Tracks (GET /recitations/{id}/)
             └─ Ayah Timings (embedded in each track)
 ```
 
 A **Recitation** is a complete recorded reading by a specific reciter in a specific narration (riwayah/qiraah). Each recitation has one or more **Surah Tracks** — one per chapter of the Quran. Each track carries an embedded array of **Ayah Timings** that map individual verses to millisecond offsets within the audio file.
 
-A recitation may also be published in more than one **folder** — alternative renderings of the same reading, such as clear sound versus a version with echo and delay. Each folder holds its own complete set of surah tracks and its own ayah timings, since the offsets differ between renderings. See [Folders (Audio Variants)](#folders-audio-variants).
+A recitation may also be published in more than one **quality** — alternative renderings of the same reading, such as clear sound versus a version with echo and delay. Each quality holds its own complete set of surah tracks and its own ayah timings, since the offsets differ between renderings. See [Qualities (Audio Variants)](#qualities-audio-variants).
 
 ## Listing Recitations
 
@@ -42,7 +42,7 @@ curl {{API_BASE}}/recitations/
       "riwayah": { "id": 1, "name": "Hafs" },
       "qiraah": { "id": 2, "name": "Asim", "bio": "One of the seven canonical readers." },
       "surahs_count": 114,
-      "folders": [
+      "qualities": [
         { "name": "Default", "slug": "default", "is_default": true },
         { "name": "With echo", "slug": "with-echo", "is_default": false }
       ]
@@ -51,9 +51,9 @@ curl {{API_BASE}}/recitations/
 }
 ```
 
-`surahs_count` tells you how many surah tracks are available for this recitation, counted from its default folder.
+`surahs_count` tells you how many surah tracks are available for this recitation, counted from its default quality.
 
-`folders` lists the audio variants this recitation is published in, default first. Use a folder's `slug` as the `?folder=` value when fetching tracks — see [Folders (Audio Variants)](#folders-audio-variants). Most recitations return a single default folder.
+`qualities` lists the audio variants this recitation is published in, default first. Use a quality's `slug` as the `?quality=` value when fetching tracks — see [Qualities (Audio Variants)](#qualities-audio-variants). Most recitations return a single default quality.
 
 See [Related Object Embeds](/docs/guides/related-resources) for how the embedded `publisher`, `reciter`, `riwayah`, and `qiraah` objects work.
 
@@ -119,48 +119,61 @@ curl {{API_BASE}}/recitations/7/
 
 Timings within a track are sorted by `ayah_key` (surah number first, then ayah number).
 
-## Folders (Audio Variants)
+## Qualities (Audio Variants)
 
-Some recitations are published in several renderings of the same reading — for example a clear recording and one with echo and delay. Each rendering is a **folder**, identified by a slug, and holds its own full set of surah tracks.
+Some recitations are published in several renderings of the same reading — for example a clear recording and one with echo and delay. Each rendering is a **quality**, identified by a slug, and holds its own full set of surah tracks.
 
-`GET /recitations/` returns a `folders` array on every recitation, so you can discover which slugs are available before fetching tracks:
+`GET /recitations/` returns a `qualities` array on every recitation, so you can discover which slugs are available before fetching tracks:
 
 ```json
-"folders": [
+"qualities": [
   { "name": "Default",   "slug": "default",   "is_default": true },
   { "name": "With echo", "slug": "with-echo", "is_default": false }
 ]
 ```
 
-Pass `?folder=` to `GET /recitations/{id}/` to choose one. The value accepts either the folder's **slug** or its **name**:
+Pass `?quality=` to `GET /recitations/{id}/` to choose one. The value accepts either the quality's **slug** or its **name**:
 
 ```bash
 # The recitation's default rendering
 curl {{API_BASE}}/recitations/7/
 
 # By slug
-curl {{API_BASE}}/recitations/7/?folder=with-echo
+curl {{API_BASE}}/recitations/7/?quality=with-echo
 
 # By name (URL-encoded); Arabic names work too
-curl {{API_BASE}}/recitations/7/?folder=With%20echo
+curl {{API_BASE}}/recitations/7/?quality=With%20echo
 ```
 
 | Behaviour | Result |
 |---|---|
-| `folder` omitted | Returns the recitation's **default** folder. This is what every recitation returned before folders existed, so existing integrations need no change. |
-| `folder` matches a slug | Returns only that folder's tracks, with that folder's ayah timings. |
-| `folder` matches a name | Same, matched case-insensitively against the Arabic and English names. |
-| `folder` matches nothing | `404` with `error_name: "folder_not_found"`. |
-| Folder exists but has no tracks yet | `200` with an empty `results` array. |
+| `quality` omitted | Returns the recitation's **default** quality. This is what every recitation returned before qualities existed, so existing integrations need no change. |
+| `quality` matches a slug | Returns only that quality's tracks, with that quality's ayah timings. |
+| `quality` matches a name | Same, matched case-insensitively against the Arabic and English names. |
+| `quality` matches nothing | `404` with `error_name: "quality_not_found"`. |
+| Old `?folder=` parameter sent | `400` with `error_name: "folder_param_renamed"`. Use `?quality=`. |
+| Quality exists but has no tracks yet | `200` with an empty `results` array. |
 
 :::tip
-**Prefer the slug.** It is unique within a recitation, so it always identifies exactly one folder. Names are not guaranteed unique — if two folders share a name, the value resolves to the default one, or the oldest when neither is default. Slugs are returned in the `folders` array, so you never need to guess one.
+**Prefer the slug.** It is unique within a recitation, so it always identifies exactly one quality. Names are not guaranteed unique — if two qualities share a name, the value resolves to the default one, or the oldest when neither is default. Slugs are returned in the `qualities` array, so you never need to guess one.
 :::
 
-Because timings belong to the track, a variant's `ayahs_timings` reflect **that** rendering's offsets. Do not reuse timings fetched from one folder against another folder's audio.
+Because timings belong to the track, a variant's `ayahs_timings` reflect **that** rendering's offsets. Do not reuse timings fetched from one quality against another quality's audio.
+
+:::warning Breaking change: `folder` is now `quality`
+This concept used to be called a **folder**. It was renamed with no backwards-compatible aliases, so integrations written against the old names must update:
+
+| Before | Now |
+|---|---|
+| `?folder=` query parameter | `?quality=` |
+| `folders` array on each recitation | `qualities` |
+| `error_name: "folder_not_found"` | `error_name: "quality_not_found"` |
+
+Requests that still send `?folder=` are rejected with `400` and `error_name: "folder_param_renamed"`, so an old integration fails loudly instead of silently getting the default quality.
+:::
 
 :::note
-Most recitations have only a default folder. Unless you specifically need an alternative rendering, you can ignore the `folder` parameter entirely.
+Most recitations have only a default quality. Unless you specifically need an alternative rendering, you can ignore the `quality` parameter entirely.
 :::
 
 ## Worked Example: Ayah-Synchronized Player

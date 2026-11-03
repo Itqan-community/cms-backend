@@ -51,7 +51,7 @@ def _gallery_asset(request: Request, id: int) -> Asset:
     auth=None,
 )
 def asset_recitation_preview(request: Request, id: int):
-    """The first few surahs of a recitation's default folder, to play in the gallery."""
+    """The first few surahs of a recitation's default quality, to play in the gallery."""
     tracks = AssetPreviewService().recitation_tracks(_gallery_asset(request, id), request)
     return {
         "tracks": [

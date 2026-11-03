@@ -18,7 +18,7 @@ from django.utils.translation import gettext_lazy as _
 
 from apps.content.repositories.recitation_track import RecitationTrackRepository
 from apps.content.services.recitation import RecitationService
-from apps.content.services.recitation_folder_resolution import resolve_folder_for_asset
+from apps.content.services.recitation_quality_resolution import resolve_quality_for_asset
 from apps.core.ninja_utils.errors import ItqanError
 from apps.mixins.recitations_helpers import extract_surah_number_from_mp3_filename, get_mp3_duration_ms
 
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 @dataclass(frozen=True)
 class RecitationUploadKeyParts:
     asset_id: int
-    folder_id: int
+    quality_id: int
     surah_number: int
 
 
@@ -37,7 +37,7 @@ class AssetRecitationAudioTracksDirectUploadService:
     _DOWNLOAD_CHUNK_SIZE = 1024 * 1024
     _UPLOAD_KEY_RE = re.compile(
         r"^uploads/assets/(?P<asset_id>[1-9]\d{0,18})/recitations/"
-        r"(?P<folder_id>[1-9]\d{0,18})/(?P<surah_number>\d{3})\.mp3$"
+        r"(?P<quality_id>[1-9]\d{0,18})/(?P<surah_number>\d{3})\.mp3$"
     )
 
     def _get_s3_client(self):
@@ -50,16 +50,16 @@ class AssetRecitationAudioTracksDirectUploadService:
             config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
         )
 
-    def _build_key(self, asset_id: int, folder_id: int, surah_number: int) -> str:
+    def _build_key(self, asset_id: int, quality_id: int, surah_number: int) -> str:
         """
         Build the storage key for a track.
 
-        The folder segment is what keeps two variants of the same surah from
-        overwriting each other in R2. Tracks uploaded before folders existed keep
+        The quality segment is what keeps two variants of the same surah from
+        overwriting each other in R2. Tracks uploaded before qualities existed keep
         their old flat keys (`.../recitations/001.mp3`) — those objects are never
         moved, and each row stores its own full key, so both layouts coexist.
         """
-        return f"uploads/assets/{asset_id}/recitations/{folder_id}/{surah_number:03}.mp3"
+        return f"uploads/assets/{asset_id}/recitations/{quality_id}/{surah_number:03}.mp3"
 
     def parse_key(self, key: str) -> RecitationUploadKeyParts | None:
         """Parse a canonical key, rejecting anything that does not round-trip through _build_key."""
@@ -69,15 +69,15 @@ class AssetRecitationAudioTracksDirectUploadService:
 
         parts = RecitationUploadKeyParts(
             asset_id=int(match.group("asset_id")),
-            folder_id=int(match.group("folder_id")),
+            quality_id=int(match.group("quality_id")),
             surah_number=int(match.group("surah_number")),
         )
-        if parts.asset_id > self._MAX_BIGINT_ID or parts.folder_id > self._MAX_BIGINT_ID:
+        if parts.asset_id > self._MAX_BIGINT_ID or parts.quality_id > self._MAX_BIGINT_ID:
             return None
 
         expected_key = self._build_key(
             asset_id=parts.asset_id,
-            folder_id=parts.folder_id,
+            quality_id=parts.quality_id,
             surah_number=parts.surah_number,
         )
         if key != expected_key:
@@ -90,7 +90,7 @@ class AssetRecitationAudioTracksDirectUploadService:
         publisher_q: Q,
         expected_asset_id: int | None = None,
     ) -> RecitationUploadKeyParts:
-        """Authorize a canonical multipart key against its asset and folder."""
+        """Authorize a canonical multipart key against its asset and quality."""
         parts = self.parse_key(key)
         if parts is None or (expected_asset_id is not None and parts.asset_id != expected_asset_id):
             missing_asset_id = expected_asset_id or (parts.asset_id if parts is not None else 0)
@@ -101,7 +101,7 @@ class AssetRecitationAudioTracksDirectUploadService:
             )
 
         RecitationService().get_recitation_for_upload(parts.asset_id, publisher_q=publisher_q)
-        resolve_folder_for_asset(parts.asset_id, parts.folder_id)
+        resolve_quality_for_asset(parts.asset_id, parts.quality_id)
         return parts
 
     def _to_r2_key(self, key: str) -> str:
@@ -109,16 +109,16 @@ class AssetRecitationAudioTracksDirectUploadService:
         _MEDIA_PREFIX = "media/"
         return key if key.startswith(_MEDIA_PREFIX) else f"{_MEDIA_PREFIX}{key}"
 
-    def _resolve_folder_id(self, asset_id: int, folder_id: int | None) -> int:
-        """Resolve the folder an upload targets, falling back to the asset's default."""
-        return resolve_folder_for_asset(asset_id, folder_id).id
+    def _resolve_quality_id(self, asset_id: int, quality_id: int | None) -> int:
+        """Resolve the quality an upload targets, falling back to the asset's default."""
+        return resolve_quality_for_asset(asset_id, quality_id).id
 
-    def start_upload(self, asset_id: int, filename: str, folder_id: int | None = None) -> dict[str, Any]:
+    def start_upload(self, asset_id: int, filename: str, quality_id: int | None = None) -> dict[str, Any]:
         s3 = self._get_s3_client()
         surah_number = extract_surah_number_from_mp3_filename(filename)
-        resolved_folder_id = self._resolve_folder_id(asset_id, folder_id)
+        resolved_quality_id = self._resolve_quality_id(asset_id, quality_id)
 
-        key = self._build_key(asset_id, resolved_folder_id, surah_number)  # DB/storage name (no "media/" prefix)
+        key = self._build_key(asset_id, resolved_quality_id, surah_number)  # DB/storage name (no "media/" prefix)
         r2_key = self._to_r2_key(key)  # R2 object key with "media/" prefix
 
         try:
@@ -143,7 +143,7 @@ class AssetRecitationAudioTracksDirectUploadService:
             "contentType": "audio/mpeg",
             "surahNumber": surah_number,
             "assetId": asset_id,
-            "folderId": resolved_folder_id,
+            "qualityId": resolved_quality_id,
             "filename": filename,
         }
 
@@ -172,11 +172,11 @@ class AssetRecitationAudioTracksDirectUploadService:
         filename: str,
         duration_ms: int | None = None,
         size_bytes: int | None = None,
-        folder_id: int | None = None,
+        quality_id: int | None = None,
     ) -> dict[str, Any]:
         s3 = self._get_s3_client()
         r2_key = self._to_r2_key(key)
-        resolved_folder_id = self._resolve_folder_id(asset_id, folder_id)
+        resolved_quality_id = self._resolve_quality_id(asset_id, quality_id)
 
         s3.complete_multipart_upload(
             Bucket=settings.CLOUDFLARE_R2_BUCKET,
@@ -217,7 +217,7 @@ class AssetRecitationAudioTracksDirectUploadService:
             with transaction.atomic():
                 track = repo.create_recitation_track(
                     asset_id=asset_id,
-                    folder_id=resolved_folder_id,
+                    quality_id=resolved_quality_id,
                     surah_number=surah_number,
                     audio_file=key,
                     original_filename=filename,
@@ -233,20 +233,20 @@ class AssetRecitationAudioTracksDirectUploadService:
 
             raise ItqanError(
                 error_name="duplicate_track",
-                message=_("A track for surah {surah_number} already exists in folder {folder_id}.").format(
-                    surah_number=surah_number, folder_id=resolved_folder_id
+                message=_("A track for surah {surah_number} already exists in quality {quality_id}.").format(
+                    surah_number=surah_number, quality_id=resolved_quality_id
                 ),
                 status_code=409,
             ) from exc
 
         logger.info(
-            f"Multipart upload complete [asset_id={asset_id}, folder_id={resolved_folder_id}, "
+            f"Multipart upload complete [asset_id={asset_id}, quality_id={resolved_quality_id}, "
             f"surah_number={surah_number}, track_id={track.id}, size_bytes={track.size_bytes}]"
         )
         return {
             "trackId": track.id,
             "assetId": track.asset_id,
-            "folderId": track.folder_id,
+            "qualityId": track.quality_id,
             "surahNumber": track.surah_number,
             "sizeBytes": track.size_bytes,
             "finishedAt": track.upload_finished_at.isoformat(),

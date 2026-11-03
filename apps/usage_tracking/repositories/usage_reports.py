@@ -513,10 +513,10 @@ def first_seen(
 
 
 def recitation_coverage(assets: QuerySet) -> list[dict[str, Any]]:
-    """Per recitation asset: name, surahs in its default folder, and tracks with / without ayah timings."""
+    """Per recitation asset: name, surahs in its default quality, and tracks with / without ayah timings."""
     timed = RecitationAyahTiming.objects.filter(track=OuterRef("pk"))
     tracks = (
-        RecitationSurahTrack.objects.filter(asset__in=assets, folder__is_default=True)
+        RecitationSurahTrack.objects.filter(asset__in=assets, quality__is_default=True)
         .annotate(timed=Exists(timed))
         .values("asset_id")
         .annotate(

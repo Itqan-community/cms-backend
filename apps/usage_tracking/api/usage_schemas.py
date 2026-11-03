@@ -325,7 +325,7 @@ class CoverageQuery(Schema):
 class CoverageItemOut(Schema):
     asset_id: int
     name: str
-    surahs: int = Field(..., description="Surahs in the default folder.")
+    surahs: int = Field(..., description="Surahs in the default quality.")
     missing: list[int]
     missing_by_demand: list[int] = Field(
         ..., description="Missing surahs, most played across every recitation (last `demand_days`) first."

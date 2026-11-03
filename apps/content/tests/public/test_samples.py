@@ -15,7 +15,7 @@ from apps.content.models import (
     CategoryChoice,
     Qiraah,
     RecitationAyahTiming,
-    RecitationFolder,
+    RecitationQuality,
     RecitationSurahTrack,
     Reciter,
     Riwayah,
@@ -109,13 +109,13 @@ class ContentSamplesTest(BaseTestCase):
         )
 
         # The post_save signal has already provisioned the asset's default
-        # folder -- creating another here would violate one-default-per-asset.
-        folder = asset.recitation_folders.get(is_default=True)
+        # quality -- creating another here would violate one-default-per-asset.
+        quality = asset.recitation_qualities.get(is_default=True)
 
         # Create a track for surah 1 using ContentFile for the FileField
         track = RecitationSurahTrack.objects.create(
             asset=asset,
-            folder=folder,
+            quality=quality,
             surah_number=1,
             audio_file=ContentFile(b"\x00", name="test.mp3"),
             duration_ms=15000,
@@ -407,7 +407,7 @@ class ContentSamplesTest(BaseTestCase):
         self.assertEqual("translation_not_found", data["error_name"])
 
     def test_get_recitation_sample_where_complete_asset_exists_should_return_media_player_payload(self):
-        """Full player payload: identities plus default-folder track metadata."""
+        """Full player payload: identities plus default-quality track metadata."""
         # Arrange
         recitation_asset = self._create_test_recitation_with_timing()
         track = RecitationSurahTrack.objects.get(asset=recitation_asset, surah_number=1)
@@ -467,7 +467,7 @@ class ContentSamplesTest(BaseTestCase):
         baker.make(
             RecitationSurahTrack,
             asset=recitation_asset,
-            folder=RecitationFolder.objects.get(asset=recitation_asset, is_default=True),
+            quality=RecitationQuality.objects.get(asset=recitation_asset, is_default=True),
             surah_number=2,
             audio_file=ContentFile(b"\x00", name="test-2.mp3"),
             duration_ms=42000,
@@ -563,11 +563,11 @@ class ContentSamplesTest(BaseTestCase):
             CategoryChoice.TRANSLATION, "Translation nested", {"2": {"255": "Allah, there is no god but He"}}
         )
         recitation_asset = self._create_test_recitation_with_timing()
-        folder = recitation_asset.recitation_folders.get(is_default=True)
+        quality = recitation_asset.recitation_qualities.get(is_default=True)
         baker.make(
             RecitationSurahTrack,
             asset=recitation_asset,
-            folder=folder,
+            quality=quality,
             surah_number=2,
             audio_file=ContentFile(b"\x00", name="test-2.mp3"),
             duration_ms=42000,

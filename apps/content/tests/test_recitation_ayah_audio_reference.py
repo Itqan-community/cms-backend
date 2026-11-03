@@ -24,7 +24,7 @@ from apps.content.models import (
     Asset,
     CategoryChoice,
     RecitationAyahTiming,
-    RecitationFolder,
+    RecitationQuality,
     RecitationSurahTrack,
     Reciter,
     Riwayah,
@@ -49,10 +49,10 @@ class TestSlicingServicePersistsAyahAudioReference(BaseTestCase):
             reciter=baker.make(Reciter, name="Slicer Reciter", slug="slicer-reciter"),
             riwayah=baker.make(Riwayah, name="Slicer Riwayah"),
         )
-        self.folder = RecitationFolder.objects.get(asset=self.asset, is_default=True)
+        self.quality = RecitationQuality.objects.get(asset=self.asset, is_default=True)
         self.track = RecitationSurahTrack.objects.create(
             asset=self.asset,
-            folder=self.folder,
+            quality=self.quality,
             surah_number=1,
             audio_file=SimpleUploadedFile("001.mp3", b"x"),
             duration_ms=5000,
@@ -86,7 +86,7 @@ class TestSlicingServicePersistsAyahAudioReference(BaseTestCase):
 
         # Assert - timing row updated with the R2 key and exact byte count
         self.timing.refresh_from_db()
-        expected_key = f"uploads/assets/{self.asset.id}/recitations/{self.folder.id}/001/ayah_001.mp3"
+        expected_key = f"uploads/assets/{self.asset.id}/recitations/{self.quality.id}/001/ayah_001.mp3"
         self.assertEqual(expected_key, self.timing.audio_file.name)
         self.assertEqual(len(ayah_bytes), self.timing.size_bytes)
 
@@ -153,10 +153,10 @@ class TestGetAyahAudioDataSizeBytes(BaseTestCase):
             reciter=baker.make(Reciter, name="Service Reciter", slug="service-reciter"),
             riwayah=baker.make(Riwayah, name="Service Riwayah"),
         )
-        self.folder = RecitationFolder.objects.get(asset=self.asset, is_default=True)
+        self.quality = RecitationQuality.objects.get(asset=self.asset, is_default=True)
         self.track = RecitationSurahTrack.objects.create(
             asset=self.asset,
-            folder=self.folder,
+            quality=self.quality,
             surah_number=2,
             audio_file=SimpleUploadedFile("002.mp3", b"x"),
             duration_ms=10000,
@@ -241,10 +241,10 @@ class TestRecitationAyahTimingDeleteFilesOnDeleteMixin(BaseTestCase):
             reciter=baker.make(Reciter, name="Del Reciter", slug="del-reciter"),
             riwayah=baker.make(Riwayah, name="Del Riwayah"),
         )
-        folder = RecitationFolder.objects.get(asset=asset, is_default=True)
+        quality = RecitationQuality.objects.get(asset=asset, is_default=True)
         track = RecitationSurahTrack.objects.create(
             asset=asset,
-            folder=folder,
+            quality=quality,
             surah_number=3,
             audio_file=SimpleUploadedFile("003.mp3", b"x"),
             duration_ms=2000,

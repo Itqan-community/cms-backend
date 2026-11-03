@@ -1497,17 +1497,17 @@ class MushafLayout(BaseModel):
         return f"MushafLayout(name={self.name}, pages={self.page_count})"
 
 
-class RecitationFolder(BaseModel):
+class RecitationQuality(BaseModel):
     """
     A variant of a recitation Asset holding its own full set of surah tracks.
 
     The same recitation by the same reciter may be published in several forms
     (clear sound, with echo and delay, 128kbps, 320kbps, video). Each form is a
-    folder under the one Asset, so the recitation keeps a single page instead of
+    quality under the one Asset, so the recitation keeps a single page instead of
     being split across separate Assets.
 
-    Every Asset has exactly one folder flagged ``is_default``, which is what the
-    APIs serve when the caller does not name a folder.
+    Every Asset has exactly one quality flagged ``is_default``, which is what the
+    APIs serve when the caller does not name a quality.
     """
 
     DEFAULT_NAME_AR = "افتراضي"
@@ -1518,33 +1518,34 @@ class RecitationFolder(BaseModel):
     asset = models.ForeignKey(
         Asset,
         on_delete=models.CASCADE,
-        related_name="recitation_folders",
+        related_name="recitation_qualities",
         help_text="Parent Asset representing the recitation set",
     )
-    name = models.CharField(max_length=255, help_text="Folder/variant name e.g. 'Clear', 'With echo', '128kbps'")
+    name = models.CharField(max_length=255, help_text="Quality/variant name e.g. 'Clear', 'With echo', '128kbps'")
     slug = models.SlugField(
         allow_unicode=True,
         db_index=True,
         default="",
-        help_text="URL-friendly slug, unique per asset. Used as the ?folder= API query value.",
+        help_text="URL-friendly slug, unique per asset. Used as the ?quality= API query value.",
     )
     is_default = models.BooleanField(
         default=False,
-        help_text="The folder served when the API caller does not specify one. Exactly one per asset.",
+        help_text="The quality served when the API caller does not specify one. Exactly one per asset.",
     )
     is_visible = models.BooleanField(
         default=True,
         db_index=True,
-        help_text="When false, the folder is omitted from public/tenant APIs and its timings export is withdrawn.",
+        help_text="When false, the quality is omitted from public/tenant APIs and its timings export is withdrawn.",
     )
 
     class Meta:
+        verbose_name_plural = "recitation qualities"
         constraints = [
-            models.UniqueConstraint(fields=["asset", "slug"], name="folder_unique_slug_per_asset"),
+            models.UniqueConstraint(fields=["asset", "slug"], name="quality_unique_slug_per_asset"),
             models.UniqueConstraint(
                 fields=["asset"],
                 condition=models.Q(is_default=True),
-                name="folder_one_default_per_asset",
+                name="quality_one_default_per_asset",
             ),
         ]
         indexes = [
@@ -1552,7 +1553,7 @@ class RecitationFolder(BaseModel):
         ]
 
     def __str__(self) -> str:
-        return f"RecitationFolder(asset={self.asset_id}, name={self.name})"
+        return f"RecitationQuality(asset={self.asset_id}, name={self.name})"
 
     def save(self, *args, **kwargs) -> None:
         if not self.slug:
@@ -1582,11 +1583,11 @@ class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
         help_text="Parent Asset representing the recitation set",
     )
 
-    folder = models.ForeignKey(
-        RecitationFolder,
+    quality = models.ForeignKey(
+        RecitationQuality,
         on_delete=models.CASCADE,
         related_name="tracks",
-        help_text="Folder (variant) this track belongs to",
+        help_text="Quality (variant) this track belongs to",
     )
     surah_number = models.PositiveSmallIntegerField(
         help_text="Surah number (1..114)",
@@ -1613,31 +1614,31 @@ class RecitationSurahTrack(DeleteFilesOnDeleteMixin, BaseModel):
     upload_finished_at = models.DateTimeField(null=True, blank=True, help_text="When audio file upload was completed")
 
     class Meta:
-        # Uniqueness is per folder, not per asset: an asset may publish the same surah
+        # Uniqueness is per quality, not per asset: an asset may publish the same surah
         # once in each of its variants (clear, with echo, 128kbps, ...).
-        unique_together = [["folder", "surah_number"]]
+        unique_together = [["quality", "surah_number"]]
         indexes = [
-            models.Index(fields=["folder", "surah_number"]),
+            models.Index(fields=["quality", "surah_number"]),
             models.Index(fields=["asset", "surah_number"]),
         ]
 
     def __str__(self) -> str:
-        return f"RecitationSurahTrack(asset={self.asset_id}, folder={self.folder_id}, surah={self.surah_number})"
+        return f"RecitationSurahTrack(asset={self.asset_id}, quality={self.quality_id}, surah={self.surah_number})"
 
     def save(self, *args, **kwargs) -> None:
-        # No folder named: fall back to the asset's default variant, mirroring what the
-        # APIs do when a caller omits ?folder. Keeps callers that predate folders working.
-        if not self.folder_id and self.asset_id:
-            default_folder = RecitationFolder.objects.filter(asset_id=self.asset_id, is_default=True).first()
-            if default_folder is None:
-                raise ValueError(f"Asset {self.asset_id} has no default RecitationFolder to place this track in.")
-            self.folder_id = default_folder.id
+        # No quality named: fall back to the asset's default variant, mirroring what the
+        # APIs do when a caller omits ?quality. Keeps callers that predate qualities working.
+        if not self.quality_id and self.asset_id:
+            default_quality = RecitationQuality.objects.filter(asset_id=self.asset_id, is_default=True).first()
+            if default_quality is None:
+                raise ValueError(f"Asset {self.asset_id} has no default RecitationQuality to place this track in.")
+            self.quality_id = default_quality.id
 
-        # A track must never end up under a folder belonging to a different Asset: asset is
+        # A track must never end up under a quality belonging to a different Asset: asset is
         # kept denormalized here (queries scope by asset__publisher), so the two must agree.
-        if self.folder_id and self.folder.asset_id != self.asset_id:
+        if self.quality_id and self.quality.asset_id != self.asset_id:
             raise ValueError(
-                f"RecitationSurahTrack.folder belongs to asset {self.folder.asset_id}, "
+                f"RecitationSurahTrack.quality belongs to asset {self.quality.asset_id}, "
                 f"but the track is assigned to asset {self.asset_id}."
             )
 

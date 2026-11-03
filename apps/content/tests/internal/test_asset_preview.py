@@ -12,7 +12,7 @@ from apps.content.models import (
     Asset,
     AssetVersion,
     CategoryChoice,
-    RecitationFolder,
+    RecitationQuality,
     RecitationSurahTrack,
     StatusChoice,
 )
@@ -43,11 +43,11 @@ class RecitationPreviewTests(BaseTestCase):
             **{"status": StatusChoice.READY, "restricted_for_tenant": False, "is_open_access": True, **kwargs},
         )
 
-    def _track(self, asset: Asset, surah: int, folder: RecitationFolder | None = None) -> RecitationSurahTrack:
+    def _track(self, asset: Asset, surah: int, quality: RecitationQuality | None = None) -> RecitationSurahTrack:
         return baker.make(
             RecitationSurahTrack,
             asset=asset,
-            folder=folder or asset.recitation_folders.get(is_default=True),
+            quality=quality or asset.recitation_qualities.get(is_default=True),
             surah_number=surah,
             audio_file=SimpleUploadedFile(f"{surah:03}.mp3", b"audio"),
             duration_ms=1000 * surah,
@@ -83,10 +83,10 @@ class RecitationPreviewTests(BaseTestCase):
         self.assertEqual(response.status_code, 200, response.content)
         self.assertFalse(response.json()["tracks"][0]["audio_url"].startswith(CDN))
 
-    def test_recitation_preview_where_tracks_only_in_other_folder_should_return_404(self):
+    def test_recitation_preview_where_tracks_only_in_other_quality_should_return_404(self):
         # Arrange
         asset = self._recitation()
-        self._track(asset, 1, folder=baker.make(RecitationFolder, asset=asset, name="Echo"))
+        self._track(asset, 1, quality=baker.make(RecitationQuality, asset=asset, name="Echo"))
 
         # Act
         response = self.client.get(f"/cms-api/assets/{asset.id}/recitation-preview/")
@@ -95,11 +95,11 @@ class RecitationPreviewTests(BaseTestCase):
         self.assertEqual(response.status_code, 404, response.content)
         self.assertEqual(response.json()["error_name"], "recitation_preview_unavailable")
 
-    def test_recitation_preview_where_default_folder_hidden_should_return_404(self):
+    def test_recitation_preview_where_default_quality_hidden_should_return_404(self):
         # Arrange
         asset = self._recitation()
         self._track(asset, 1)
-        asset.recitation_folders.filter(is_default=True).update(is_visible=False)
+        asset.recitation_qualities.filter(is_default=True).update(is_visible=False)
 
         # Act
         response = self.client.get(f"/cms-api/assets/{asset.id}/recitation-preview/")

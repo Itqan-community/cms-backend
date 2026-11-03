@@ -95,8 +95,8 @@ msgid "Asset with slug {slug} not found."
 msgstr "المورد ذو المعرف {slug} غير موجود."
 
 #, python-brace-format
-msgid "Folder {folder} not found."
-msgstr "لم يتم العثور على المجلد {folder}."
+msgid "Quality {quality} not found."
+msgstr "لم يتم العثور على الجودة {quality}."
 
 msgid "Some track IDs are invalid or do not exist."
 msgstr "بعض معرّفات المقاطع غير صالحة أو غير موجودة."
@@ -319,8 +319,8 @@ msgid "Failed to initiate upload (R2 error: {error_code})."
 msgstr "فشل بدء الرفع (خطأ R2: {error_code})."
 
 #, python-brace-format
-msgid "A track for surah {surah_number} already exists in folder {folder_id}."
-msgstr "يوجد بالفعل مقطع للسورة {surah_number} في المجلد {folder_id}."
+msgid "A track for surah {surah_number} already exists in quality {quality_id}."
+msgstr "يوجد بالفعل مقطع للسورة {surah_number} في الجودة {quality_id}."
 
 msgid "Missing surah_id in uploaded JSON"
 msgstr "الحقل surah_id مفقود في ملف JSON المرفوع"
@@ -330,16 +330,16 @@ msgid "Invalid timing for ayah {ayah_number}: end < start"
 msgstr "توقيت غير صالح للآية {ayah_number}: النهاية قبل البداية"
 
 #, python-brace-format
-msgid "Folder {folder_id} not found for asset {asset_id}."
-msgstr "لم يتم العثور على المجلد {folder_id} للأصل {asset_id}."
+msgid "Quality {quality_id} not found for asset {asset_id}."
+msgstr "لم يتم العثور على الجودة {quality_id} للأصل {asset_id}."
 
 #, python-brace-format
 msgid "Asset {asset_id} not found"
 msgstr "الأصل {asset_id} غير موجود"
 
 #, python-brace-format
-msgid "Folder {folder_id} not found for asset {asset_id}"
-msgstr "لم يتم العثور على المجلد {folder_id} للأصل {asset_id}"
+msgid "Quality {quality_id} not found for asset {asset_id}"
+msgstr "لم يتم العثور على الجودة {quality_id} للأصل {asset_id}"
 
 #, python-brace-format
 msgid "Recitation track {track_id} not found."
@@ -660,8 +660,8 @@ msgid "No track for surah {surah} on this recitation."
 msgstr "لا يوجد مقطع للسورة {surah} في هذه التلاوة."
 
 #, python-brace-format
-msgid "Default folder for asset {id} not found."
-msgstr "لم يتم العثور على المجلد الافتراضي للمورد {id}."
+msgid "Default quality for asset {id} not found."
+msgstr "لم يتم العثور على الجودة الافتراضية للمورد {id}."
 
 #, python-brace-format
 msgid "Ayah {surah}:{ayah} has no timing on this track."
@@ -676,30 +676,33 @@ msgid "Ayah {ayah_key} not found."
 msgstr "لم يتم العثور على الآية {ayah_key}."
 
 #, python-brace-format
-msgid "Folder with slug {slug} not found."
-msgstr "لم يتم العثور على مجلد بالمعرف {slug}."
+msgid "Quality with slug {slug} not found."
+msgstr "لم يتم العثور على جودة بالمعرف {slug}."
 
-msgid "This recitation has no default folder."
-msgstr "لا يحتوي هذا التسجيل على مجلد افتراضي."
+msgid "This recitation has no default quality."
+msgstr "لا تحتوي هذه التلاوة على جودة افتراضية."
 
-msgid "Folder name (Arabic or English) is required."
-msgstr "اسم المجلد (بالعربية أو الإنجليزية) مطلوب."
+msgid "Quality name (Arabic or English) is required."
+msgstr "اسم الجودة (بالعربية أو الإنجليزية) مطلوب."
 
-msgid "Use another folder's set-default action instead of clearing the default flag."
-msgstr "استخدم إجراء تعيين الافتراضي لمجلد آخر بدلاً من إلغاء علامة الافتراضي."
+msgid "Use another quality's set-default action instead of clearing the default flag."
+msgstr "استخدم إجراء تعيين الافتراضي لجودة أخرى بدلاً من إلغاء علامة الافتراضي."
 
-msgid "The default folder cannot be hidden."
-msgstr "لا يمكن إخفاء المجلد الافتراضي."
+msgid "The default quality cannot be hidden."
+msgstr "لا يمكن إخفاء الجودة الافتراضية."
 
-msgid "A hidden folder cannot be set as the default."
-msgstr "لا يمكن تعيين مجلد مخفي كمجلد افتراضي."
+msgid "A hidden quality cannot be set as the default."
+msgstr "لا يمكن تعيين جودة مخفية كجودة افتراضية."
 
-msgid "The default folder cannot be deleted."
-msgstr "لا يمكن حذف المجلد الافتراضي."
+msgid "The default quality cannot be deleted."
+msgstr "لا يمكن حذف الجودة الافتراضية."
+
+msgid "The folder parameter was renamed to quality. Use ?quality= instead."
+msgstr "تمت إعادة تسمية المعامل folder إلى quality. استخدم ?quality= بدلًا منه."
 
 #, python-brace-format
-msgid "Folder {folder_id} does not belong to asset {asset_id}."
-msgstr "المجلد {folder_id} لا ينتمي إلى الأصل {asset_id}."
+msgid "Quality {quality_id} does not belong to asset {asset_id}."
+msgstr "الجودة {quality_id} لا تنتمي إلى الأصل {asset_id}."
 
 msgid "Audio storage is not configured."
 msgstr "التخزين الصوتي غير مُعد."

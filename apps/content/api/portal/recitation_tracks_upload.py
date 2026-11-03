@@ -9,7 +9,7 @@ from apps.content.services.admin.asset_recitation_audio_tracks_direct_upload_ser
 )
 from apps.content.services.admin.asset_recitation_json_file_sync_service import sync_asset_recitations_json_file
 from apps.content.services.recitation import RecitationService
-from apps.content.services.recitation_folder_resolution import resolve_folder_for_asset
+from apps.content.services.recitation_quality_resolution import resolve_quality_for_asset
 from apps.content.services.validate_recitation_tracks_upload_service import ValidateRecitationTracksUploadService
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.permission_required import permission_required
@@ -30,12 +30,12 @@ class ValidateFileOut(Schema):
 class ValidateUploadIn(Schema):
     asset_id: int
     filenames: list[str]
-    folder_id: int | None = None
+    quality_id: int | None = None
 
 
 class ValidateUploadOut(Schema):
     asset_id: int
-    folder_id: int
+    quality_id: int
     status: Literal["valid", "invalid"]
     message: str
     files: list[ValidateFileOut]
@@ -48,7 +48,7 @@ class ValidateUploadOut(Schema):
         400: NinjaErrorResponse[Literal["validation_error"]],
         401: NinjaErrorResponse[Literal["authentication_error"]],
         403: NinjaErrorResponse[Literal["permission_denied"]],
-        404: NinjaErrorResponse[Literal["asset_not_found"]] | NinjaErrorResponse[Literal["folder_not_found"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]] | NinjaErrorResponse[Literal["quality_not_found"]],
     },
 )
 @permission_required(
@@ -59,14 +59,14 @@ class ValidateUploadOut(Schema):
 )
 def validate_upload(request: Request, data: ValidateUploadIn):
     asset = RecitationService().get_recitation_for_upload(data.asset_id, publisher_q=request.publisher_q())
-    folder = resolve_folder_for_asset(asset.id, data.folder_id)
+    quality = resolve_quality_for_asset(asset.id, data.quality_id)
 
     service = ValidateRecitationTracksUploadService()
-    result = service.validate(asset_id=asset.id, filenames=data.filenames, folder_id=folder.id)
+    result = service.validate(asset_id=asset.id, filenames=data.filenames, quality_id=quality.id)
 
     return ValidateUploadOut(
         asset_id=result.asset_id,
-        folder_id=folder.id,
+        quality_id=quality.id,
         status=result.status,
         message=result.message,
         files=[ValidateFileOut(filename=f.filename, status=f.status) for f in result.files],
@@ -78,7 +78,7 @@ class UploadStartIn(Schema):
     filename: str
     duration_ms: int | None = None
     size_bytes: int | None = None
-    folder_id: int | None = None
+    quality_id: int | None = None
 
 
 class UploadStartOut(Schema):
@@ -86,7 +86,7 @@ class UploadStartOut(Schema):
     upload_id: str
     content_type: str
     surah_number: int
-    folder_id: int
+    quality_id: int
 
 
 @router.post(
@@ -98,7 +98,7 @@ class UploadStartOut(Schema):
         | NinjaErrorResponse[Literal["invalid_surah_number"]],
         401: NinjaErrorResponse[Literal["authentication_error"]],
         403: NinjaErrorResponse[Literal["permission_denied"]],
-        404: NinjaErrorResponse[Literal["asset_not_found"]] | NinjaErrorResponse[Literal["folder_not_found"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]] | NinjaErrorResponse[Literal["quality_not_found"]],
         409: NinjaErrorResponse[Literal["duplicate_track"]],
     },
 )
@@ -112,14 +112,14 @@ def start_upload(request: Request, data: UploadStartIn):
     asset = RecitationService().get_recitation_for_upload(data.asset_id, publisher_q=request.publisher_q())
 
     service = AssetRecitationAudioTracksDirectUploadService()
-    result = service.start_upload(asset_id=asset.id, filename=data.filename, folder_id=data.folder_id)
+    result = service.start_upload(asset_id=asset.id, filename=data.filename, quality_id=data.quality_id)
 
     return UploadStartOut(
         key=result["key"],
         upload_id=result["uploadId"],
         content_type=result["contentType"],
         surah_number=result["surahNumber"],
-        folder_id=result["folderId"],
+        quality_id=result["qualityId"],
     )
 
 
@@ -139,7 +139,7 @@ class UploadSignPartOut(Schema):
         200: UploadSignPartOut,
         401: NinjaErrorResponse[Literal["authentication_error"]],
         403: NinjaErrorResponse[Literal["permission_denied"]],
-        404: NinjaErrorResponse[Literal["asset_not_found"]] | NinjaErrorResponse[Literal["folder_not_found"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]] | NinjaErrorResponse[Literal["quality_not_found"]],
     },
 )
 @permission_required(
@@ -170,13 +170,13 @@ class UploadFinishIn(Schema):
     parts: list[UploadPartIn]
     duration_ms: int | None = None
     size_bytes: int | None = None
-    folder_id: int | None = None
+    quality_id: int | None = None
 
 
 class UploadFinishOut(Schema):
     track_id: int
     asset_id: int
-    folder_id: int
+    quality_id: int
     surah_number: int
     size_bytes: int
     finished_at: datetime
@@ -192,7 +192,7 @@ class UploadFinishOut(Schema):
         | NinjaErrorResponse[Literal["invalid_surah_number"]],
         401: NinjaErrorResponse[Literal["authentication_error"]],
         403: NinjaErrorResponse[Literal["permission_denied"]],
-        404: NinjaErrorResponse[Literal["asset_not_found"]] | NinjaErrorResponse[Literal["folder_not_found"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]] | NinjaErrorResponse[Literal["quality_not_found"]],
         409: NinjaErrorResponse[Literal["duplicate_track"]],
     },
 )
@@ -220,15 +220,15 @@ def finish_upload(request: Request, data: UploadFinishIn):
         filename=data.filename,
         duration_ms=data.duration_ms,
         size_bytes=data.size_bytes,
-        folder_id=data.folder_id,
+        quality_id=data.quality_id,
     )
 
-    sync_asset_recitations_json_file(asset.id, folder_id=result["folderId"])
+    sync_asset_recitations_json_file(asset.id, quality_id=result["qualityId"])
 
     return UploadFinishOut(
         track_id=result["trackId"],
         asset_id=result["assetId"],
-        folder_id=result["folderId"],
+        quality_id=result["qualityId"],
         surah_number=result["surahNumber"],
         size_bytes=result["sizeBytes"],
         finished_at=result["finishedAt"],
@@ -253,7 +253,7 @@ class UploadAbortOut(Schema):
         200: UploadAbortOut,
         401: NinjaErrorResponse[Literal["authentication_error"]],
         403: NinjaErrorResponse[Literal["permission_denied"]],
-        404: NinjaErrorResponse[Literal["asset_not_found"]] | NinjaErrorResponse[Literal["folder_not_found"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]] | NinjaErrorResponse[Literal["quality_not_found"]],
     },
 )
 @permission_required(

@@ -6,7 +6,7 @@ from ninja.pagination import paginate
 from apps.content.models import Asset
 from apps.content.repositories.recitation import RecitationRepository
 from apps.content.services.recitation import RecitationService
-from apps.content.services.recitation_folder_resolution import visible_asset_folders
+from apps.content.services.recitation_quality_resolution import visible_asset_qualities
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -32,7 +32,7 @@ class RecitationQiraahOut(Schema):
     bio: str
 
 
-class RecitationFolderOut(Schema):
+class RecitationQualityOut(Schema):
     name: str
     slug: str
     is_default: bool
@@ -49,12 +49,12 @@ class RecitationListOut(Schema):
     riwayah: RecitationRiwayahOut | None = None
     qiraah: RecitationQiraahOut
     is_open_access: bool
-    folders: list[RecitationFolderOut] = []
+    qualities: list[RecitationQualityOut] = []
 
     @staticmethod
-    def resolve_folders(obj):
-        # Lets a consumer discover which ?folder= values this recitation accepts.
-        return visible_asset_folders(obj)
+    def resolve_qualities(obj):
+        # Lets a consumer discover which ?quality= values this recitation accepts.
+        return visible_asset_qualities(obj)
 
 
 class RecitationFilter(FilterSchema):

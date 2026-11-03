@@ -11,7 +11,7 @@ from apps.content.models import (
     Asset,
     CategoryChoice,
     RecitationAyahTiming,
-    RecitationFolder,
+    RecitationQuality,
     RecitationSurahTrack,
     Reciter,
     Riwayah,
@@ -28,13 +28,13 @@ class EstimateAyahSlicingSizeCommandTest(BaseTestCase):
             reciter=baker.make(Reciter, name="Test Reciter", slug="test-reciter"),
             riwayah=baker.make(Riwayah, name="Test Riwayah"),
         )
-        self.default_folder = RecitationFolder.objects.get(asset=self.asset, is_default=True)
-        self.echo_folder = RecitationFolder.objects.create(asset=self.asset, name="Echo", slug="echo")
+        self.default_quality = RecitationQuality.objects.get(asset=self.asset, is_default=True)
+        self.echo_quality = RecitationQuality.objects.create(asset=self.asset, name="Echo", slug="echo")
 
-    def _make_track(self, folder, surah_number, size_bytes, duration_ms) -> RecitationSurahTrack:
+    def _make_track(self, quality, surah_number, size_bytes, duration_ms) -> RecitationSurahTrack:
         return RecitationSurahTrack.objects.create(
             asset=self.asset,
-            folder=folder,
+            quality=quality,
             surah_number=surah_number,
             audio_file="",
             size_bytes=size_bytes,
@@ -54,10 +54,10 @@ class EstimateAyahSlicingSizeCommandTest(BaseTestCase):
         call_command("estimate_ayah_slicing_size", stdout=out)
         return out.getvalue()
 
-    def test_counts_across_multiple_folders_and_tracks(self):
-        # Arrange - one asset, two folders, one track each, three timings total
-        clear_track = self._make_track(self.default_folder, 1, size_bytes=32000, duration_ms=4000)
-        echo_track = self._make_track(self.echo_folder, 1, size_bytes=64000, duration_ms=8000)
+    def test_counts_across_multiple_qualities_and_tracks(self):
+        # Arrange - one asset, two qualities, one track each, three timings total
+        clear_track = self._make_track(self.default_quality, 1, size_bytes=32000, duration_ms=4000)
+        echo_track = self._make_track(self.echo_quality, 1, size_bytes=64000, duration_ms=8000)
         self._make_timing(clear_track, 1, start_ms=0, end_ms=1000)
         self._make_timing(clear_track, 2, start_ms=1000, end_ms=2000)
         self._make_timing(echo_track, 1, start_ms=0, end_ms=1500)
@@ -67,13 +67,13 @@ class EstimateAyahSlicingSizeCommandTest(BaseTestCase):
 
         # Assert - every count comes from current DB rows
         self.assertEqual(1, report["asset_count"])
-        self.assertEqual(2, report["folder_count"])
+        self.assertEqual(2, report["quality_count"])
         self.assertEqual(2, report["track_count"])
         self.assertEqual(3, report["timing_count"])
 
     def test_expected_object_count_equals_valid_timing_row_count(self):
         # Arrange - all rows valid, so raw == valid == expected
-        track = self._make_track(self.default_folder, 1, size_bytes=32000, duration_ms=4000)
+        track = self._make_track(self.default_quality, 1, size_bytes=32000, duration_ms=4000)
         self._make_timing(track, 1, start_ms=0, end_ms=1000)
         self._make_timing(track, 2, start_ms=1000, end_ms=2000)
 
@@ -86,8 +86,8 @@ class EstimateAyahSlicingSizeCommandTest(BaseTestCase):
     def test_rejected_track_rows_are_excluded_from_estimate_and_reported(self):
         # Arrange - Track A has one valid + one of each rejected row shape and is
         # rejected as a whole; Track B is fully valid and is the only contributor
-        track_a = self._make_track(self.default_folder, 1, size_bytes=32000, duration_ms=4000)
-        track_b = self._make_track(self.echo_folder, 1, size_bytes=32000, duration_ms=4000)
+        track_a = self._make_track(self.default_quality, 1, size_bytes=32000, duration_ms=4000)
+        track_b = self._make_track(self.echo_quality, 1, size_bytes=32000, duration_ms=4000)
         self._make_timing(track_a, 1, start_ms=0, end_ms=1000)
         RecitationAyahTiming.objects.create(track=track_a, ayah_key="1:2", start_ms=1000, end_ms=1000)
         RecitationAyahTiming.objects.create(track=track_a, ayah_key="1:3", start_ms=2000, end_ms=1500)
@@ -118,7 +118,7 @@ class EstimateAyahSlicingSizeCommandTest(BaseTestCase):
     def test_track_with_one_invalid_timing_produces_zero_objects(self):
         # Arrange - regression: one valid + one invalid timing on the SAME track
         # means the slicer rejects the whole track, so zero objects are expected
-        track = self._make_track(self.default_folder, 1, size_bytes=32000, duration_ms=4000)
+        track = self._make_track(self.default_quality, 1, size_bytes=32000, duration_ms=4000)
         self._make_timing(track, 1, start_ms=0, end_ms=1000)
         RecitationAyahTiming.objects.create(track=track, ayah_key="1:2", start_ms=2000, end_ms=5000)
 
@@ -137,8 +137,8 @@ class EstimateAyahSlicingSizeCommandTest(BaseTestCase):
     @override_settings(AYAH_SLICING_WARN_OBJECT_COUNT=1)
     def test_object_threshold_uses_only_fully_valid_tracks(self):
         # Arrange - Track A rejected as a whole (1 valid + 1 invalid), Track B fully valid
-        track_a = self._make_track(self.default_folder, 1, size_bytes=32000, duration_ms=4000)
-        track_b = self._make_track(self.echo_folder, 1, size_bytes=32000, duration_ms=4000)
+        track_a = self._make_track(self.default_quality, 1, size_bytes=32000, duration_ms=4000)
+        track_b = self._make_track(self.echo_quality, 1, size_bytes=32000, duration_ms=4000)
         self._make_timing(track_a, 1, start_ms=0, end_ms=1000)
         RecitationAyahTiming.objects.create(track=track_a, ayah_key="1:2", start_ms=1000, end_ms=1000)
         self._make_timing(track_b, 1, start_ms=0, end_ms=1000)
@@ -156,8 +156,8 @@ class EstimateAyahSlicingSizeCommandTest(BaseTestCase):
     @override_settings(AYAH_SLICING_ESTIMATED_OUTPUT_BITRATE=64000)
     def test_fallback_usage_excludes_rejected_tracks(self):
         # Arrange - Track A rejected as a whole; Track B valid but underivable (no size)
-        track_a = self._make_track(self.default_folder, 1, size_bytes=32000, duration_ms=4000)
-        track_b = self._make_track(self.echo_folder, 1, size_bytes=0, duration_ms=4000)
+        track_a = self._make_track(self.default_quality, 1, size_bytes=32000, duration_ms=4000)
+        track_b = self._make_track(self.echo_quality, 1, size_bytes=0, duration_ms=4000)
         self._make_timing(track_a, 1, start_ms=0, end_ms=1000)
         RecitationAyahTiming.objects.create(track=track_a, ayah_key="1:2", start_ms=2000, end_ms=5000)
         self._make_timing(track_b, 1, start_ms=0, end_ms=1000)
@@ -175,8 +175,8 @@ class EstimateAyahSlicingSizeCommandTest(BaseTestCase):
 
     def test_unestimated_counts_exclude_rejected_tracks(self):
         # Arrange - Track A rejected as a whole; Track B valid but underivable, no fallback
-        track_a = self._make_track(self.default_folder, 1, size_bytes=32000, duration_ms=4000)
-        track_b = self._make_track(self.echo_folder, 1, size_bytes=0, duration_ms=4000)
+        track_a = self._make_track(self.default_quality, 1, size_bytes=32000, duration_ms=4000)
+        track_b = self._make_track(self.echo_quality, 1, size_bytes=0, duration_ms=4000)
         self._make_timing(track_a, 1, start_ms=0, end_ms=1000)
         RecitationAyahTiming.objects.create(track=track_a, ayah_key="1:2", start_ms=2000, end_ms=5000)
         self._make_timing(track_b, 1, start_ms=0, end_ms=1000)
@@ -191,15 +191,15 @@ class EstimateAyahSlicingSizeCommandTest(BaseTestCase):
 
     def test_total_source_bytes_are_summed(self):
         # Arrange
-        self._make_track(self.default_folder, 1, size_bytes=32000, duration_ms=4000)
-        self._make_track(self.echo_folder, 1, size_bytes=64000, duration_ms=8000)
+        self._make_track(self.default_quality, 1, size_bytes=32000, duration_ms=4000)
+        self._make_track(self.echo_quality, 1, size_bytes=64000, duration_ms=8000)
 
         # Act / Assert
         self.assertEqual(96000, estimate_slicing_size()["total_source_bytes"])
 
     def test_derived_bitrate_math(self):
         # Arrange - 32000 bytes over 4000 ms -> 64 bits per ms; a 1000 ms slice -> 8000 bytes
-        track = self._make_track(self.default_folder, 1, size_bytes=32000, duration_ms=4000)
+        track = self._make_track(self.default_quality, 1, size_bytes=32000, duration_ms=4000)
         self._make_timing(track, 1, start_ms=0, end_ms=1000)
 
         # Act
@@ -214,7 +214,7 @@ class EstimateAyahSlicingSizeCommandTest(BaseTestCase):
     @override_settings(AYAH_SLICING_ESTIMATED_OUTPUT_BITRATE=64000)
     def test_fallback_bitrate_when_derivation_impossible(self):
         # Arrange - usable duration but no source size -> no derived bitrate; 64000 bps fallback
-        track = self._make_track(self.default_folder, 1, size_bytes=0, duration_ms=4000)
+        track = self._make_track(self.default_quality, 1, size_bytes=0, duration_ms=4000)
         self._make_timing(track, 1, start_ms=0, end_ms=1000)
 
         # Act
@@ -229,7 +229,7 @@ class EstimateAyahSlicingSizeCommandTest(BaseTestCase):
 
     def test_missing_fallback_reports_unestimated_timings(self):
         # Arrange - no fallback configured and the track has no usable size (but a valid duration)
-        track = self._make_track(self.default_folder, 1, size_bytes=0, duration_ms=4000)
+        track = self._make_track(self.default_quality, 1, size_bytes=0, duration_ms=4000)
         self._make_timing(track, 1, start_ms=0, end_ms=1000)
 
         # Act
@@ -249,7 +249,7 @@ class EstimateAyahSlicingSizeCommandTest(BaseTestCase):
     )
     def test_threshold_exceeded_warning(self):
         # Arrange - 3 timings and 8000 estimated bytes against thresholds of 2 and 100
-        track = self._make_track(self.default_folder, 1, size_bytes=32000, duration_ms=4000)
+        track = self._make_track(self.default_quality, 1, size_bytes=32000, duration_ms=4000)
         self._make_timing(track, 1, start_ms=0, end_ms=1000)
         self._make_timing(track, 2, start_ms=1000, end_ms=2000)
         self._make_timing(track, 3, start_ms=2000, end_ms=3000)
@@ -270,7 +270,7 @@ class EstimateAyahSlicingSizeCommandTest(BaseTestCase):
     )
     def test_threshold_not_exceeded(self):
         # Arrange
-        track = self._make_track(self.default_folder, 1, size_bytes=32000, duration_ms=4000)
+        track = self._make_track(self.default_quality, 1, size_bytes=32000, duration_ms=4000)
         self._make_timing(track, 1, start_ms=0, end_ms=1000)
 
         # Act
@@ -284,7 +284,7 @@ class EstimateAyahSlicingSizeCommandTest(BaseTestCase):
 
     def test_cost_omitted_when_pricing_unset(self):
         # Arrange
-        track = self._make_track(self.default_folder, 1, size_bytes=32000, duration_ms=4000)
+        track = self._make_track(self.default_quality, 1, size_bytes=32000, duration_ms=4000)
         self._make_timing(track, 1, start_ms=0, end_ms=1000)
 
         # Act
@@ -302,7 +302,7 @@ class EstimateAyahSlicingSizeCommandTest(BaseTestCase):
     )
     def test_cost_calculated_when_pricing_configured(self):
         # Arrange - 800000000 estimated bytes -> 0.8 decimal GB
-        track = self._make_track(self.default_folder, 1, size_bytes=3200000000, duration_ms=4000)
+        track = self._make_track(self.default_quality, 1, size_bytes=3200000000, duration_ms=4000)
         self._make_timing(track, 1, start_ms=0, end_ms=1000)
 
         # Act
@@ -321,11 +321,11 @@ class EstimateAyahSlicingSizeCommandTest(BaseTestCase):
 
     def test_command_performs_no_writes(self):
         # Arrange
-        track = self._make_track(self.default_folder, 1, size_bytes=32000, duration_ms=4000)
+        track = self._make_track(self.default_quality, 1, size_bytes=32000, duration_ms=4000)
         self._make_timing(track, 1, start_ms=0, end_ms=1000)
         before = {
             "assets": Asset.objects.count(),
-            "folders": RecitationFolder.objects.count(),
+            "qualities": RecitationQuality.objects.count(),
             "tracks": RecitationSurahTrack.objects.count(),
             "timings": RecitationAyahTiming.objects.count(),
             "timing_pks": list(RecitationAyahTiming.objects.values_list("pk", flat=True)),
@@ -336,7 +336,7 @@ class EstimateAyahSlicingSizeCommandTest(BaseTestCase):
 
         # Assert - read-only: every count and row set is untouched
         self.assertEqual(before["assets"], Asset.objects.count())
-        self.assertEqual(before["folders"], RecitationFolder.objects.count())
+        self.assertEqual(before["qualities"], RecitationQuality.objects.count())
         self.assertEqual(before["tracks"], RecitationSurahTrack.objects.count())
         self.assertEqual(before["timings"], RecitationAyahTiming.objects.count())
         self.assertEqual(before["timing_pks"], list(RecitationAyahTiming.objects.values_list("pk", flat=True)))
