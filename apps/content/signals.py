@@ -38,7 +38,7 @@ def clear_public_recitation_cache_on_access_policy_change(
     """
     if instance.category != CategoryChoice.RECITATION:
         return
-    if update_fields is not None and not ({"is_open_access", "restricted_for_tenant"} & set(update_fields)):
+    if update_fields is not None and not ({"is_open_access", "restricted_for_tenant", "status"} & set(update_fields)):
         return
     transaction.on_commit(lambda asset_id=instance.id: invalidate_recitation_tracks_cache(asset_id))
 

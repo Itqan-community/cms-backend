@@ -14,7 +14,6 @@ from apps.content.models import (
     AssetVersionChangeReview,
     CategoryChoice,
     ReviewStateChoice,
-    StatusChoice,
 )
 from apps.content.repositories.asset_review import AssetReviewRepository, ReviewFilters, change_language
 from apps.content.services.asset_language_access import allowed_languages, require_language
@@ -37,7 +36,7 @@ class AssetReviewService:
         if publisher_q is not None:
             qs = qs.filter(publisher_q)
         try:
-            return qs.get(slug=slug, category=category, status=StatusChoice.READY)
+            return qs.get(slug=slug, category=category)
         except Asset.DoesNotExist as exc:
             raise ItqanError(
                 error_name=_NOT_FOUND_ERROR[category],

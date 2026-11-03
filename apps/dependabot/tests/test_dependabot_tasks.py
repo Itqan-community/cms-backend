@@ -14,7 +14,14 @@ from unittest.mock import MagicMock, patch
 from django.test import TestCase, override_settings
 import pytest
 
-from apps.content.models import Asset, AssetTemplateChoice, AssetVersion, CategoryChoice, VersionStateChoice
+from apps.content.models import (
+    Asset,
+    AssetTemplateChoice,
+    AssetVersion,
+    CategoryChoice,
+    StatusChoice,
+    VersionStateChoice,
+)
 from apps.core.ninja_utils.errors import ItqanError
 from apps.dependabot.models import WatchedRepository
 from apps.dependabot.services.pr_updater import UpdateResult
@@ -39,6 +46,7 @@ class DependabotTasksTest(TestCase):
             name_en="The Holy Quran - Hafs",
             category=CategoryChoice.MUSHAF,
             slug="quran-hafs",
+            status=StatusChoice.READY,
         )
         self.published_version = AssetVersion.objects.create(
             asset=self.asset,
@@ -105,6 +113,20 @@ class DependabotTasksTest(TestCase):
                 assert res["status"] == "skipped"
                 assert res["reason"] == "dependabot_disabled"
                 mock_apply.assert_not_called()
+
+    def test_dispatch_where_asset_is_draft_should_skip(self):
+        # Arrange
+        Asset.objects.filter(pk=self.asset.pk).update(status=StatusChoice.DRAFT)
+
+        # Act
+        with self._settings():
+            with patch.object(process_repository_dependabot_update, "apply_async") as mock_apply:
+                res = dispatch_dependabot_updates_for_version(self.published_version.id)
+
+        # Assert — a draft asset is hidden from consumers, so nobody is told about it
+        assert res["status"] == "skipped"
+        assert res["reason"] == "asset_draft"
+        mock_apply.assert_not_called()
 
     def test_dispatch_skips_when_version_is_not_published(self):
         with self._settings():

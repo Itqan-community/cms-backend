@@ -1,7 +1,7 @@
 from django.core import mail
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetAccess, AssetAccessRequest, AssetVersion
+from apps.content.models import Asset, AssetAccess, AssetAccessRequest, AssetVersion, StatusChoice
 from apps.content.services.asset_version_notifier import AssetVersionNotifier
 from apps.core.tests.base import BaseTestCase
 from apps.users.models import LanguageChoice, User
@@ -10,7 +10,15 @@ from apps.users.models import LanguageChoice, User
 class TestAssetVersionNotifier(BaseTestCase):
     def test_notify_new_version_with_subscribers_should_send_email(self):
         # Arrange
-        asset = baker.make(Asset, name="Test Asset", category="mushaf", reciter=None, riwayah=None, qiraah=None)
+        asset = baker.make(
+            Asset,
+            name="Test Asset",
+            category="mushaf",
+            status=StatusChoice.READY,
+            reciter=None,
+            riwayah=None,
+            qiraah=None,
+        )
         user = baker.make(User, email="subscriber@example.com", preferred_language=LanguageChoice.ENGLISH)
         request = baker.make(AssetAccessRequest, developer_user=user, asset=asset, status="approved")
         baker.make(AssetAccess, asset_access_request=request, user=user, asset=asset, effective_license="CC0")
@@ -26,6 +34,29 @@ class TestAssetVersionNotifier(BaseTestCase):
         self.assertIn("subscriber@example.com", recipients)
         found = any("New Update for Test Asset" in m.subject for m in mail.outbox)
         self.assertTrue(found)
+
+    def test_notify_new_version_where_asset_is_draft_should_not_send_email(self):
+        # Arrange
+        asset = baker.make(
+            Asset,
+            name="Test Asset",
+            category="mushaf",
+            status=StatusChoice.DRAFT,
+            reciter=None,
+            riwayah=None,
+            qiraah=None,
+        )
+        user = baker.make(User, email="subscriber@example.com")
+        request = baker.make(AssetAccessRequest, developer_user=user, asset=asset, status="approved")
+        baker.make(AssetAccess, asset_access_request=request, user=user, asset=asset, effective_license="CC0")
+        baker.make(AssetVersion, asset=asset, name="1.0.0")
+        version = baker.make(AssetVersion, asset=asset, name="2.0.0")
+
+        # Act
+        AssetVersionNotifier().notify_new_version(version.pk)
+
+        # Assert — consumers can't see a draft asset, so they aren't told about it
+        self.assertEqual(len(mail.outbox), 0)
 
     def test_notify_new_version_without_subscribers_should_not_send_email(self):
         # Arrange

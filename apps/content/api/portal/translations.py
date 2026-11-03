@@ -57,6 +57,7 @@ class TranslationListOut(Schema):
     is_external: bool
     is_open_access: bool
     restricted_for_tenant: bool
+    status: StatusChoice
     thumbnail_url: str | None = None
     template: AssetTemplateChoice | None = None
     mushaf_layout: MushafLayoutBriefOut | None = None
@@ -94,6 +95,7 @@ class TranslationDetailOut(Schema):
     external_url: str | None = None
     is_open_access: bool
     restricted_for_tenant: bool
+    status: StatusChoice
     template: AssetTemplateChoice | None = None
     mushaf_layout: MushafLayoutBriefOut | None = None
     versions: list[TranslationVersionOut]
@@ -127,6 +129,7 @@ class TranslationCreateIn(Schema):
     external_url: str | None = None
     is_open_access: bool = False
     restricted_for_tenant: bool = False
+    status: StatusChoice = StatusChoice.READY
     version_label_en: str = Field(default="", max_length=255)
     version_label_ar: str = Field(default="", max_length=255)
     # Starting version number ("major.minor") — required when a file is uploaded.
@@ -155,6 +158,7 @@ class TranslationPutIn(Schema):
     external_url: str | None = None
     is_open_access: bool = False
     restricted_for_tenant: bool = False
+    status: StatusChoice = StatusChoice.READY
 
 
 class TranslationPatchIn(Schema):
@@ -171,6 +175,7 @@ class TranslationPatchIn(Schema):
     external_url: str | None = None
     is_open_access: bool | None = None
     restricted_for_tenant: bool | None = None
+    status: StatusChoice | None = None
 
 
 # --- Filter Schema ---
@@ -196,7 +201,6 @@ def list_translations(request: Request, filters: TranslationFilter = Query()):
     qs = Asset.objects.select_related("publisher", "mushaf_layout").filter(
         request.publisher_q(),
         category=CategoryChoice.TRANSLATION,
-        status=StatusChoice.READY,
     )
 
     filters_dict = filters.model_dump(exclude_none=True)
@@ -262,6 +266,7 @@ def create_translation(
         external_url=data.external_url,
         is_open_access=data.is_open_access,
         restricted_for_tenant=data.restricted_for_tenant,
+        status=data.status,
         slug=data.slug,
         template=data.template,
         mushaf_layout_id=data.mushaf_layout_id,
@@ -287,7 +292,6 @@ def retrieve_translation(request: Request, translation_slug: str) -> Asset:
             .get(
                 slug=translation_slug,
                 category=CategoryChoice.TRANSLATION,
-                status=StatusChoice.READY,
             )
         )
     except Asset.DoesNotExist as exc:

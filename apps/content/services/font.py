@@ -7,7 +7,7 @@ from django.db import transaction
 from django.db.models import ProtectedError, Q
 from django.utils.translation import gettext as _
 
-from apps.content.models import Asset as AssetModel, AssetVersion, CategoryChoice, LicenseChoice
+from apps.content.models import Asset as AssetModel, AssetVersion, CategoryChoice, LicenseChoice, StatusChoice
 from apps.content.repositories.asset_content import AssetContentRepository
 from apps.content.repositories.font import FontRepository
 from apps.content.services.asset_access import guard_restrict_for_tenant
@@ -63,6 +63,7 @@ class FontService:
         thumbnail_url: Any | None = None,
         is_open_access: bool = False,
         restricted_for_tenant: bool = False,
+        status: StatusChoice = StatusChoice.READY,
         slug: str | None = None,
     ) -> Asset:
         """
@@ -125,6 +126,7 @@ class FontService:
             thumbnail_url=thumbnail_url,
             is_open_access=is_open_access,
             restricted_for_tenant=restricted_for_tenant,
+            status=status,
         )
         logger.info(f"Font created [asset_id={font.pk}, publisher_id={publisher_id}, language={language}]")
         return font

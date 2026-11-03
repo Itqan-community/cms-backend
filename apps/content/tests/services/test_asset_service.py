@@ -1,7 +1,7 @@
 from django.core import mail
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetAccess, AssetAccessRequest, AssetVersion
+from apps.content.models import Asset, AssetAccess, AssetAccessRequest, AssetVersion, StatusChoice
 from apps.content.services.asset import AssetService
 from apps.core.tests.base import BaseTestCase
 from apps.users.models import LanguageChoice, User
@@ -14,6 +14,7 @@ class TestAssetService(BaseTestCase):
             Asset,
             name="Test Asset",
             category="mushaf",
+            status=StatusChoice.READY,
             reciter=None,
             riwayah=None,
             qiraah=None,

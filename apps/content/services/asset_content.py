@@ -31,7 +31,6 @@ from apps.content.models import (
     AssetVersion,
     AssetVersionEntry,
     CategoryChoice,
-    StatusChoice,
     VersionStateChoice,
 )
 from apps.content.repositories.asset_content import AssetContentRepository
@@ -454,7 +453,7 @@ class AssetContentService:
         if publisher_q is not None:
             qs = qs.filter(publisher_q)
         try:
-            return qs.get(slug=slug, category=category, status=StatusChoice.READY)
+            return qs.get(slug=slug, category=category)
         except Asset.DoesNotExist as exc:
             raise ItqanError(
                 error_name=_NOT_FOUND_ERROR[category],

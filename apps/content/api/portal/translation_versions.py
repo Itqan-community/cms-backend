@@ -14,7 +14,6 @@ from apps.content.models import (
     AssetVersion,
     CategoryChoice,
     ChangeTypeChoice,
-    StatusChoice,
     VersionStateChoice,
 )
 from apps.content.services.asset_content import VersionDeleteBlockedReason, version_delete_blocked_reason
@@ -165,7 +164,7 @@ class TranslationVersionPatchIn(Schema):
 def list_translation_versions(request: Request, translation_slug: str, language: str | None = None):
     try:
         asset = Asset.objects.filter(request.publisher_q()).get(
-            slug=translation_slug, category=CategoryChoice.TRANSLATION, status=StatusChoice.READY
+            slug=translation_slug, category=CategoryChoice.TRANSLATION
         )
     except Asset.DoesNotExist as exc:
         raise ItqanError(
@@ -213,7 +212,7 @@ def create_translation_version(
     service = TranslationService()
     try:
         asset = Asset.objects.filter(request.publisher_q()).get(
-            slug=translation_slug, category=CategoryChoice.TRANSLATION, status=StatusChoice.READY
+            slug=translation_slug, category=CategoryChoice.TRANSLATION
         )
     except Asset.DoesNotExist as exc:
         raise ItqanError(
@@ -274,7 +273,7 @@ def update_translation_version_put(
     service = TranslationService()
     try:
         asset = Asset.objects.filter(request.publisher_q()).get(
-            slug=translation_slug, category=CategoryChoice.TRANSLATION, status=StatusChoice.READY
+            slug=translation_slug, category=CategoryChoice.TRANSLATION
         )
     except Asset.DoesNotExist as exc:
         raise ItqanError(
@@ -333,7 +332,7 @@ def update_translation_version_patch(
     service = TranslationService()
     try:
         asset = Asset.objects.filter(request.publisher_q()).get(
-            slug=translation_slug, category=CategoryChoice.TRANSLATION, status=StatusChoice.READY
+            slug=translation_slug, category=CategoryChoice.TRANSLATION
         )
     except Asset.DoesNotExist as exc:
         raise ItqanError(
@@ -384,7 +383,7 @@ def delete_translation_version(
     service = TranslationService()
     try:
         asset = Asset.objects.filter(request.publisher_q()).get(
-            slug=translation_slug, category=CategoryChoice.TRANSLATION, status=StatusChoice.READY
+            slug=translation_slug, category=CategoryChoice.TRANSLATION
         )
     except Asset.DoesNotExist as exc:
         raise ItqanError(
