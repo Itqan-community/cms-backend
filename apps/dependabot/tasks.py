@@ -11,7 +11,7 @@ from typing import Any
 
 from celery import shared_task
 
-from apps.content.models import AssetVersion, VersionStateChoice
+from apps.content.models import AssetVersion, StatusChoice, VersionStateChoice
 from apps.core.ninja_utils.errors import ItqanError
 from apps.dependabot.models import WatchedRepository
 from apps.dependabot.services.github_token import load_github_app_config
@@ -50,6 +50,14 @@ def dispatch_dependabot_updates_for_version(asset_version_id: int) -> dict[str, 
             asset_version.state,
         )
         return {"status": "skipped", "reason": "not_published", "dispatched_count": 0}
+
+    if asset_version.asset.status != StatusChoice.READY:
+        logger.info(
+            "dispatch_dependabot_updates: asset is a draft [asset_version_id=%d, asset_id=%d]",
+            asset_version_id,
+            asset_version.asset_id,
+        )
+        return {"status": "skipped", "reason": "asset_draft", "dispatched_count": 0}
 
     if not asset_version.asset.slug:
         logger.warning(

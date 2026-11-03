@@ -40,6 +40,23 @@ class ListAssetTest(BaseTestCase):
         self.assertEqual(1, len(response_body["results"]))
         self.assertEqual("Tafsir Ibn Katheer", response_body["results"][0]["name"])
 
+    def test_list_asset_where_asset_marked_draft_should_hide_it(self):
+        # Arrange — a publisher switched a published mushaf back to draft in the portal
+        visible = make_visible(
+            baker.make(Asset, name="Visible", category=CategoryChoice.MUSHAF, status=StatusChoice.READY)
+        )
+        drafted = make_visible(
+            baker.make(Asset, name="Drafted", category=CategoryChoice.MUSHAF, status=StatusChoice.READY)
+        )
+        Asset.objects.filter(pk=drafted.pk).update(status=StatusChoice.DRAFT)
+
+        # Act
+        response = self.client.get("/cms-api/assets/", format="json")
+
+        # Assert
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual([visible.id], [row["id"] for row in response.json()["results"]])
+
     def test_list_asset_filter_by_license_code_should_return_filtered_assets(self):
         # Arrange
         make_visible(

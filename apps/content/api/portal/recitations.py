@@ -84,6 +84,7 @@ class RecitationListOut(Schema):
     license: LicenseChoice
     is_open_access: bool
     restricted_for_tenant: bool
+    status: StatusChoice
     thumbnail_url: str | None = None
     created_at: AwareDatetime
 
@@ -114,6 +115,7 @@ class RecitationDetailOut(Schema):
     license: LicenseChoice
     is_open_access: bool
     restricted_for_tenant: bool
+    status: StatusChoice
     created_at: AwareDatetime
     updated_at: AwareDatetime
     ayah_timings_url: AbsoluteUrl | None = None
@@ -165,6 +167,7 @@ class RecitationCreateIn(Schema):
     license: LicenseChoice
     is_open_access: bool = False
     restricted_for_tenant: bool = False
+    status: StatusChoice = StatusChoice.READY
     slug: str | None = Field(
         default=None,
         description="Package name from `POST /portal/ai/translate/` (`slug_for`); built from the names when omitted.",
@@ -186,6 +189,7 @@ class RecitationPutIn(Schema):
     license: LicenseChoice
     is_open_access: bool = False
     restricted_for_tenant: bool = False
+    status: StatusChoice = StatusChoice.READY
 
 
 class RecitationPatchIn(Schema):
@@ -203,6 +207,7 @@ class RecitationPatchIn(Schema):
     license: LicenseChoice | None = None
     is_open_access: bool | None = None
     restricted_for_tenant: bool | None = None
+    status: StatusChoice | None = None
 
 
 # --- Filter Schema ---
@@ -256,7 +261,6 @@ def list_recitations(request: Request, filters: RecitationFilter = Query()):
     qs = Asset.objects.select_related("publisher", "reciter", "riwayah", "qiraah").filter(
         request.publisher_q(),
         category=CategoryChoice.RECITATION,
-        status=StatusChoice.READY,
     )
 
     filters_dict = filters.model_dump(exclude_none=True)
@@ -326,6 +330,7 @@ def create_recitation(
         year=data.year,
         is_open_access=data.is_open_access,
         restricted_for_tenant=data.restricted_for_tenant,
+        status=data.status,
         slug=data.slug,
     )
     logger.info(f"Recitation created [recitation_id={recitation.id}, user_id={request.user.id}]")

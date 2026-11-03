@@ -58,6 +58,7 @@ class TafsirListOut(Schema):
     is_external: bool
     is_open_access: bool
     restricted_for_tenant: bool
+    status: StatusChoice
     thumbnail_url: str | None = None
     template: AssetTemplateChoice | None = None
     mushaf_layout: MushafLayoutBriefOut | None = None
@@ -99,6 +100,7 @@ class TafsirDetailOut(Schema):
     external_url: str | None = None
     is_open_access: bool
     restricted_for_tenant: bool
+    status: StatusChoice
     template: AssetTemplateChoice | None = None
     mushaf_layout: MushafLayoutBriefOut | None = None
     versions: list[TafsirVersionOut]
@@ -132,6 +134,7 @@ class TafsirCreateIn(Schema):
     external_url: str | None = None
     is_open_access: bool = False
     restricted_for_tenant: bool = False
+    status: StatusChoice = StatusChoice.READY
     version_label_en: str = Field(default="", max_length=255)
     version_label_ar: str = Field(default="", max_length=255)
     # Starting version number ("major.minor") — required when a file is uploaded.
@@ -160,6 +163,7 @@ class TafsirPutIn(Schema):
     external_url: str | None = None
     is_open_access: bool = False
     restricted_for_tenant: bool = False
+    status: StatusChoice = StatusChoice.READY
 
 
 class TafsirPatchIn(Schema):
@@ -176,6 +180,7 @@ class TafsirPatchIn(Schema):
     external_url: str | None = None
     is_open_access: bool | None = None
     restricted_for_tenant: bool | None = None
+    status: StatusChoice | None = None
 
 
 # --- Filter Schema ---
@@ -211,7 +216,6 @@ def list_tafsirs(request: Request, filters: TafsirFilter = Query()):
     qs = Asset.objects.select_related("publisher", "mushaf_layout").filter(
         request.publisher_q(),
         category=CategoryChoice.TAFSIR,
-        status=StatusChoice.READY,
     )
 
     filters_dict = filters.model_dump(exclude_none=True)
@@ -279,6 +283,7 @@ def create_tafsir(
         thumbnail_url=thumbnail,
         is_open_access=data.is_open_access,
         restricted_for_tenant=data.restricted_for_tenant,
+        status=data.status,
         slug=data.slug,
         template=data.template,
         mushaf_layout_id=data.mushaf_layout_id,

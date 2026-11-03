@@ -44,6 +44,7 @@ class MushafListOut(Schema):
     is_external: bool
     is_open_access: bool
     restricted_for_tenant: bool
+    status: StatusChoice
     thumbnail_url: str | None = None
     created_at: AwareDatetime
 
@@ -83,6 +84,7 @@ class MushafDetailOut(Schema):
     external_url: str | None = None
     is_open_access: bool
     restricted_for_tenant: bool
+    status: StatusChoice
     versions: list[MushafVersionOut]
     created_at: AwareDatetime
 
@@ -114,6 +116,7 @@ class MushafCreateIn(Schema):
     external_url: str | None = None
     is_open_access: bool = False
     restricted_for_tenant: bool = False
+    status: StatusChoice = StatusChoice.READY
     version_label_en: str = Field(default="", max_length=255)
     version_label_ar: str = Field(default="", max_length=255)
     # Starting version number ("major.minor") — required when a file is uploaded.
@@ -140,6 +143,7 @@ class MushafPutIn(Schema):
     external_url: str | None = None
     is_open_access: bool = False
     restricted_for_tenant: bool = False
+    status: StatusChoice = StatusChoice.READY
 
 
 class MushafPatchIn(Schema):
@@ -156,6 +160,7 @@ class MushafPatchIn(Schema):
     external_url: str | None = None
     is_open_access: bool | None = None
     restricted_for_tenant: bool | None = None
+    status: StatusChoice | None = None
 
 
 # --- Filter Schema ---
@@ -190,7 +195,6 @@ def list_mushafs(request: Request, filters: MushafFilter = Query()):
     qs = Asset.objects.select_related("publisher").filter(
         request.publisher_q(),
         category=CategoryChoice.MUSHAF,
-        status=StatusChoice.READY,
     )
 
     filters_dict = filters.model_dump(exclude_none=True)
@@ -248,6 +252,7 @@ def create_mushaf(
         thumbnail_url=thumbnail,
         is_open_access=data.is_open_access,
         restricted_for_tenant=data.restricted_for_tenant,
+        status=data.status,
         slug=data.slug,
     )
     logger.info(f"Mushaf created [mushaf_id={mushaf.id}, user_id={request.user.id}]")

@@ -64,6 +64,7 @@ class TranslationRepository:
         external_url: str | None = None,
         is_open_access: bool = False,
         restricted_for_tenant: bool = False,
+        status: StatusChoice = StatusChoice.READY,
         slug: str = "",
     ) -> Asset:
         """
@@ -73,7 +74,7 @@ class TranslationRepository:
             asset = self.asset_model.objects.create(
                 slug=slug,
                 publisher_id=publisher_id,
-                status=StatusChoice.READY,
+                status=status,
                 category=CategoryChoice.TRANSLATION,
                 template=template,
                 mushaf_layout=mushaf_layout,

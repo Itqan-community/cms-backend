@@ -43,14 +43,15 @@ class FontListTest(BaseTestCase):
             language="en",
         )
 
-        # Font that should NOT be returned (draft)
-        baker.make(
+        # A draft stays listed in the portal (consumers don't see it)
+        self.draft = baker.make(
             Asset,
             category=CategoryChoice.FONT,
-            publisher=self.publisher1,
+            publisher=baker.make(Publisher, name="Publisher Three"),
             status=StatusChoice.DRAFT,
+            license="CC-BY-ND",
             name="Draft Font",
-            description="Should not appear",
+            description="Hidden from consumers",
         )
 
         # Non-font asset that should NOT be returned
@@ -65,7 +66,7 @@ class FontListTest(BaseTestCase):
 
         self.user = User.objects.create_user(email="testuser@example.com", name="Test User", is_staff=True)
 
-    def test_list_fonts_where_assets_are_ready_should_return_only_ready_font_assets(self):
+    def test_list_fonts_should_return_ready_and_draft_assets_with_status(self):
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_READ_FONT)
         response = self.client.get("/portal/fonts/")
@@ -74,7 +75,9 @@ class FontListTest(BaseTestCase):
         body = response.json()
         items = body["results"]
 
-        self.assertEqual(2, len(items))
+        self.assertEqual(3, len(items))
+        statuses = {item["id"]: item["status"] for item in items}
+        self.assertEqual("draft", statuses[self.draft.id])
         returned_ids = {item["id"] for item in items}
         self.assertIn(self.font1.id, returned_ids)
         self.assertIn(self.font2.id, returned_ids)
@@ -196,7 +199,7 @@ class FontListTest(BaseTestCase):
         body = response.json()
 
         self.assertEqual(1, len(body["results"]))
-        self.assertEqual(2, body["count"])
+        self.assertEqual(3, body["count"])
 
     def test_list_fonts_where_unauthenticated_should_return_401(self):
         response = self.client.get("/portal/fonts/")
