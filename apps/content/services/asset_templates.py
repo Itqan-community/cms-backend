@@ -253,12 +253,14 @@ class EntryFilters:
     language's, both keyed by text column and treating a missing cell as "".
     ``unit_surah`` and ``surah`` both filter the surah number — the grid's
     surah-name dropdown and its surah-number column — and must both match.
+    ``unit_page`` filters the page number of page-template units.
     """
 
     cells: Mapping[str, ColumnFilter] = field(default_factory=dict)
     reference_text: ColumnFilter | None = None
     source_cells: Mapping[str, ColumnFilter] = field(default_factory=dict)
     unit_surah: ColumnFilter | None = None
+    unit_page: ColumnFilter | None = None
     surah: ColumnFilter | None = None
     ayah: ColumnFilter | None = None
 
@@ -288,7 +290,7 @@ class EntryFilters:
     @property
     def active(self) -> bool:
         return bool(self.cells or self.source_cells) or any(
-            f is not None for f in (self.reference_text, self.unit_surah, self.surah, self.ayah)
+            f is not None for f in (self.reference_text, self.unit_surah, self.unit_page, self.surah, self.ayah)
         )
 
 
@@ -458,6 +460,9 @@ class UnitSpec:
         )
         own = {key: self._group_texts(version, key) for key in (filters.cells if filters else {})}
         source = {key: self._group_texts(source_version, key) for key in (filters.source_cells if filters else {})}
+        # Ranges carry no page number.
+        if filters is not None and filters.unit_page is not None and not filters.unit_page.matches(None):
+            return []
         kept = []
         for key in keys:
             start = starts.get(decode_group_key(key)[0])
@@ -614,6 +619,9 @@ class UnitSpec:
         source_version: AssetVersion | None,
     ) -> QuerySet:
         """Narrow a surah/ayah/word queryset by the grid's column filters."""
+        # Surahs, ayahs and words carry no page number.
+        if filters.unit_page is not None and not filters.unit_page.matches(None):
+            return qs.none()
         for index, (key, cell_filter) in enumerate(filters.cells.items()):
             name = f"_cell_{index}"
             qs = qs.annotate(**{name: _normalized(self._entry_text(version, key))}).filter(cell_filter.q(name))
@@ -661,6 +669,8 @@ class UnitSpec:
         source = texts(source_version, list(filters.source_cells))
         kept = []
         for page in pages:
+            if filters.unit_page is not None and not filters.unit_page.matches(page):
+                continue
             if any(not f.matches(own.get((page, key), "")) for key, f in filters.cells.items()):
                 continue
             if any(not f.matches(source.get((page, key), "")) for key, f in filters.source_cells.items()):

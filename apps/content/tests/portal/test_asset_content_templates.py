@@ -314,6 +314,63 @@ class EntriesFilterTests(QuranDataMixin, BaseTestCase):
         self.assertEqual(count, 1)
         self.assertEqual(unit_ids, [3])
 
+    def test_list_entries_where_unit_page_equals_should_return_that_page(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        layout = baker.make(MushafLayout, name="Small", page_count=5)
+        asset, version = self._draft_for(AssetTemplateChoice.PAGE, layout=layout)
+
+        # Act
+        count, unit_ids = self._list(
+            asset,
+            version,
+            _filters({"unit_page": {"filterType": "number", "type": "equals", "filter": 3}}),
+        )
+
+        # Assert
+        self.assertEqual(count, 1)
+        self.assertEqual(unit_ids, [3])
+
+    def test_list_entries_where_unit_page_in_range_and_text_filter_should_match_both(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        layout = baker.make(MushafLayout, name="Small", page_count=5)
+        asset, version = self._draft_for(AssetTemplateChoice.PAGE, layout=layout)
+        for page_no in (1, 3, 5):
+            AssetVersionEntry.objects.create(version=version, page_no=page_no, text="x", order=page_no)
+
+        # Act
+        count, unit_ids = self._list(
+            asset,
+            version,
+            _filters(
+                {
+                    "unit_page": {"filterType": "number", "type": "inRange", "filter": 2, "filterTo": 5},
+                    "text": {"filterType": "text", "type": "notBlank"},
+                }
+            ),
+        )
+
+        # Assert
+        self.assertEqual(count, 2)
+        self.assertEqual(unit_ids, [3, 5])
+
+    def test_list_entries_where_unit_page_on_ayah_asset_should_match_nothing(self):
+        # Arrange — ayahs carry no page number, as pages carry no surah number.
+        self.authenticate_user(self.user)
+        asset, version = self._draft_for(AssetTemplateChoice.AYAH)
+
+        # Act
+        count, unit_ids = self._list(
+            asset,
+            version,
+            _filters({"unit_page": {"filterType": "number", "type": "equals", "filter": 1}}),
+        )
+
+        # Assert
+        self.assertEqual(count, 0)
+        self.assertEqual(unit_ids, [])
+
     def test_list_entries_where_page_text_not_blank_and_offset_should_slice_the_filtered_pages(self):
         # Arrange
         self.authenticate_user(self.user)
