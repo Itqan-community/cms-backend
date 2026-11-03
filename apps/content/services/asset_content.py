@@ -305,6 +305,63 @@ def lock_version_for_content_change(version: AssetVersion) -> AssetVersion:
     return locked
 
 
+def lock_version_for_delete(version: AssetVersion) -> AssetVersion:
+    """Lock ``version``'s row and check it may be deleted.
+
+    Must run inside a transaction. Only the newest version of a language can be
+    deleted (``forbid_history_rewrite``). A published version can be deleted only
+    when it is its language's first and only version; the caller then unpublishes
+    the language (``AssetContentRepository.unpublish_version``). Any other
+    published version stays until another one is published.
+    """
+    locked = AssetVersion.objects.select_for_update().get(pk=version.pk)
+    forbid_history_rewrite(locked)
+    has_other_versions = (
+        AssetVersion.objects.filter(asset_id=locked.asset_id, asset_language_id=locked.asset_language_id)
+        .exclude(pk=locked.pk)
+        .exists()
+    )
+    if has_other_versions:
+        forbid_published_version_change(locked)
+    return locked
+
+
+VersionDeleteBlockedReason = Literal["version_not_latest", "version_is_published"]
+
+
+def version_delete_blocked_reason(version: AssetVersion, memo: dict) -> VersionDeleteBlockedReason | None:
+    """Why ``lock_version_for_delete`` would refuse ``version`` (its error name), or
+    ``None`` when it may be deleted.
+
+    Lets the portal disable the delete action and say why. ``memo`` is kept for the
+    request, so a version list runs one query per language, not per row.
+    """
+    key = (version.asset_id, version.asset_language_id)
+    if key not in memo:
+        versions = list(
+            AssetVersion.objects.filter(asset_id=version.asset_id, asset_language_id=version.asset_language_id)
+            .order_by("created_at", "id")
+            .values_list("id", "state")
+        )
+        committed = [pk for pk, state in versions if state == VersionStateChoice.PUBLISHED]
+        newest = committed[-1] if committed else None
+        published = set(
+            AssetLanguage.objects.filter(published_version_id__in=committed).values_list(
+                "published_version_id", flat=True
+            )
+        )
+        reasons: dict[int, VersionDeleteBlockedReason | None] = {}
+        for pk, state in versions:
+            if state == VersionStateChoice.PUBLISHED and pk != newest:
+                reasons[pk] = "version_not_latest"
+            elif pk in published and len(versions) > 1:
+                reasons[pk] = "version_is_published"
+            else:
+                reasons[pk] = None
+        memo[key] = reasons
+    return memo[key].get(version.pk)
+
+
 def set_version_language(version: AssetVersion, language: str | None) -> None:
     """Tag an uploaded version with a specific (already-registered) language.
 

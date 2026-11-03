@@ -21,6 +21,7 @@ from apps.content.models import (
     CategoryChoice,
     ReviewStateChoice,
     StatusChoice,
+    consumer_visible_q,
 )
 from apps.content.repositories.asset_content import AssetContentRepository
 from apps.content.services import tafsir as tafsir_service
@@ -657,11 +658,13 @@ class TafsirVersionDeleteTest(TafsirVersionBaseTest):
         self.assertEqual(403, response.status_code)
         self.assertEqual("permission_denied", response.json()["error_name"])
 
-    def test_delete_version_where_published_should_return_400(self):
+    def test_delete_version_where_published_and_has_older_version_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TAFSIR)
-        version = baker.make(AssetVersion, asset=self.tafsir)
+        older = baker.make(AssetVersion, asset=self.tafsir, name="v1")
+        version = baker.make(AssetVersion, asset=self.tafsir, name="v2")
+        AssetVersion.objects.filter(pk=version.pk).update(created_at=older.created_at + timezone.timedelta(hours=1))
         AssetLanguage.objects.filter(asset=self.tafsir).update(published_version=version)
 
         # Act
@@ -671,6 +674,24 @@ class TafsirVersionDeleteTest(TafsirVersionBaseTest):
         self.assertEqual(400, response.status_code, response.content)
         self.assertEqual("version_is_published", response.json()["error_name"])
         self.assertTrue(AssetVersion.objects.filter(id=version.id).exists())
+
+    def test_delete_version_where_published_only_version_should_unpublish_language_and_return_204(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TAFSIR)
+        version = baker.make(AssetVersion, asset=self.tafsir, name="v1")
+        AssetLanguage.objects.filter(asset=self.tafsir).update(published_version=version, status=StatusChoice.READY)
+
+        # Act
+        response = self.client.delete(f"/portal/tafsirs/{self.tafsir.slug}/versions/{version.id}/")
+
+        # Assert — nothing is left to serve, so the language is no longer available
+        self.assertEqual(204, response.status_code, response.content)
+        self.assertFalse(AssetVersion.objects.filter(id=version.id).exists())
+        rendition = AssetLanguage.objects.get(asset=self.tafsir, is_source=True)
+        self.assertIsNone(rendition.published_version_id)
+        self.assertEqual(StatusChoice.DRAFT, rendition.status)
+        self.assertFalse(Asset.objects.filter(consumer_visible_q(), pk=self.tafsir.pk).exists())
 
 
 class TafsirVersionFileReplaceTest(TafsirVersionBaseTest):

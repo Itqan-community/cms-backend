@@ -8,6 +8,8 @@ from django.apps import apps as django_apps
 from django.core.cache import cache
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from model_bakery import baker
 
@@ -298,9 +300,10 @@ class MushafSetPublishedTests(MushafPublishingBaseTest):
 
 
 class PublishedMushafVersionGuardTests(MushafPublishingBaseTest):
-    def test_delete_mushaf_version_where_published_should_return_400(self):
+    def test_delete_mushaf_version_where_published_and_has_older_version_should_return_400(self):
         # Arrange
-        published = publish(self._commit("1.0"))
+        self._commit("1.0")
+        published = publish(self._commit("1.1"))
         self._authorize(PermissionChoice.PORTAL_DELETE_MUSHAF)
 
         # Act
@@ -309,6 +312,83 @@ class PublishedMushafVersionGuardTests(MushafPublishingBaseTest):
         # Assert
         self.assertEqual(400, response.status_code, response.content)
         self.assertEqual("version_is_published", response.json()["error_name"])
+        self.assertTrue(AssetVersion.objects.filter(pk=published.pk).exists())
+
+    def test_delete_mushaf_version_where_older_version_should_return_400(self):
+        # Arrange
+        older = publish(self._commit("1.0"))
+        self._commit("1.1")
+        self._authorize(PermissionChoice.PORTAL_DELETE_MUSHAF)
+
+        # Act
+        response = self.client.delete(f"/portal/mushafs/m1/versions/{older.pk}/")
+
+        # Assert — later versions are built on it
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("version_not_latest", response.json()["error_name"])
+        self.assertTrue(AssetVersion.objects.filter(pk=older.pk).exists())
+
+    def test_delete_mushaf_version_where_newest_unpublished_version_should_return_204(self):
+        # Arrange
+        published = publish(self._commit("1.0"))
+        staged = self._commit("1.1")
+        self._authorize(PermissionChoice.PORTAL_DELETE_MUSHAF)
+
+        # Act
+        response = self.client.delete(f"/portal/mushafs/m1/versions/{staged.pk}/")
+
+        # Assert
+        self.assertEqual(204, response.status_code, response.content)
+        self.assertFalse(AssetVersion.objects.filter(pk=staged.pk).exists())
+        self.assertEqual(published, self.mushaf.get_published_version())
+
+    def test_delete_mushaf_version_where_published_only_version_should_unpublish_and_return_204(self):
+        # Arrange
+        published = publish(self._commit("1.0"))
+        self._authorize(PermissionChoice.PORTAL_DELETE_MUSHAF)
+
+        # Act
+        response = self.client.delete(f"/portal/mushafs/m1/versions/{published.pk}/")
+
+        # Assert — consumers no longer see the mushaf
+        self.assertEqual(204, response.status_code, response.content)
+        self.assertFalse(AssetVersion.objects.filter(pk=published.pk).exists())
+        rendition = AssetLanguage.objects.get(asset=self.mushaf, is_source=True)
+        self.assertIsNone(rendition.published_version_id)
+        self.assertEqual(StatusChoice.DRAFT, rendition.status)
+        self.assertFalse(Asset.objects.filter(consumer_visible_q(), pk=self.mushaf.pk).exists())
+
+    def test_delete_font_version_where_older_version_should_return_400(self):
+        # Arrange
+        font = baker.make(
+            Asset, category=CategoryChoice.FONT, publisher=self.publisher, status=StatusChoice.READY, slug="f1"
+        )
+        older = publish(self._commit("1.0", asset=font))
+        self._commit("1.1", asset=font)
+        self._authorize(PermissionChoice.PORTAL_DELETE_FONT)
+
+        # Act
+        response = self.client.delete(f"/portal/fonts/f1/versions/{older.pk}/")
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("version_not_latest", response.json()["error_name"])
+
+    def test_delete_font_version_where_published_only_version_should_unpublish_and_return_204(self):
+        # Arrange
+        font = baker.make(
+            Asset, category=CategoryChoice.FONT, publisher=self.publisher, status=StatusChoice.READY, slug="f1"
+        )
+        published = publish(self._commit("1.0", asset=font))
+        self._authorize(PermissionChoice.PORTAL_DELETE_FONT)
+
+        # Act
+        response = self.client.delete(f"/portal/fonts/f1/versions/{published.pk}/")
+
+        # Assert
+        self.assertEqual(204, response.status_code, response.content)
+        self.assertIsNone(font.get_published_version())
+        self.assertFalse(Asset.objects.filter(consumer_visible_q(), pk=font.pk).exists())
 
     def test_update_mushaf_version_where_published_and_file_replaced_should_return_400(self):
         # Arrange
@@ -339,3 +419,68 @@ class PublishedMushafVersionGuardTests(MushafPublishingBaseTest):
         self.assertEqual(200, response.status_code, response.content)
         rows = {row["id"]: (row["is_published"], row["publishing_rolls_back"]) for row in response.json()["results"]}
         self.assertEqual({older.pk: (False, True), published.pk: (True, False), staged.pk: (False, False)}, rows)
+
+    def test_list_mushaf_versions_should_give_why_older_versions_are_not_deletable(self):
+        # Arrange
+        older = self._commit("1.0")
+        published = publish(self._commit("1.1"))
+        staged = self._commit("1.2")
+        self._authorize(PermissionChoice.PORTAL_READ_MUSHAF)
+
+        # Act
+        response = self.client.get("/portal/mushafs/m1/versions/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        rows = {row["id"]: row["delete_blocked_reason"] for row in response.json()["results"]}
+        self.assertEqual({older.pk: "version_not_latest", published.pk: "version_not_latest", staged.pk: None}, rows)
+
+    def test_list_mushaf_versions_where_newest_is_published_should_give_published_reason(self):
+        # Arrange
+        older = self._commit("1.0")
+        published = publish(self._commit("1.1"))
+        self._authorize(PermissionChoice.PORTAL_READ_MUSHAF)
+
+        # Act
+        response = self.client.get("/portal/mushafs/m1/versions/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        rows = {row["id"]: row["delete_blocked_reason"] for row in response.json()["results"]}
+        self.assertEqual({older.pk: "version_not_latest", published.pk: "version_is_published"}, rows)
+
+    def test_list_mushaf_versions_where_published_only_version_should_flag_it_deletable(self):
+        # Arrange
+        published = publish(self._commit("1.0"))
+        self._authorize(PermissionChoice.PORTAL_READ_MUSHAF)
+
+        # Act
+        response = self.client.get("/portal/mushafs/m1/versions/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        rows = [(r["id"], r["delete_blocked_reason"]) for r in response.json()["results"]]
+        self.assertEqual([(published.pk, None)], rows)
+
+    def test_list_mushaf_versions_should_check_deletability_once_per_language(self):
+        # Arrange
+        for number in ("1.0", "1.1", "1.2"):
+            self._commit(number)
+        self._authorize(PermissionChoice.PORTAL_READ_MUSHAF)
+        self.client.get("/portal/mushafs/m1/versions/")  # warm up auth/session queries
+        self._commit("1.3")
+
+        # Act
+        with CaptureQueriesContext(connection) as four_rows:
+            self.client.get("/portal/mushafs/m1/versions/")
+        self._commit("1.4")
+        with CaptureQueriesContext(connection) as five_rows:
+            self.client.get("/portal/mushafs/m1/versions/")
+
+        # Assert — an extra row adds no deletability query
+        deletable_queries = [
+            [q["sql"] for q in ctx.captured_queries if '"published_version_id" IN' in q["sql"]]
+            for ctx in (four_rows, five_rows)
+        ]
+        self.assertEqual(1, len(deletable_queries[0]))
+        self.assertEqual(1, len(deletable_queries[1]))

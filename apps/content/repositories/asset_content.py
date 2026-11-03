@@ -31,6 +31,7 @@ from apps.content.models import (
     AssetVersionChange,
     AssetVersionEntry,
     ChangeTypeChoice,
+    StatusChoice,
     VersionStateChoice,
 )
 from apps.content.services.asset_content_import import AssetContentParseError, ParsedEntry, parse_content_file
@@ -717,6 +718,20 @@ class AssetContentRepository:
         version.asset.file_size = version.human_readable_size
         version.asset.save(update_fields=["file_size", "updated_at"])
         return rendition
+
+    def unpublish_version(self, version: AssetVersion) -> bool:
+        """Stop serving ``version`` to consumers before it is deleted.
+
+        The language it was published for is left with no published version, so
+        it is marked pending (DRAFT): a language is only available while it has
+        one. Returns whether ``version`` was published.
+        """
+        renditions = list(AssetLanguage.objects.filter(published_version=version))
+        for rendition in renditions:
+            rendition.published_version = None
+            rendition.status = StatusChoice.DRAFT
+            rendition.save(update_fields=["published_version", "status", "updated_at"])
+        return bool(renditions)
 
     @transaction.atomic
     def publish_draft(self, draft: AssetVersion) -> AssetVersion:
