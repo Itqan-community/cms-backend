@@ -11,7 +11,7 @@ from .models import (
     EditorialRecommendation,
     MushafLayout,
     Qiraah,
-    RecitationFolder,
+    RecitationQuality,
     Reciter,
     Riwayah,
 )
@@ -53,8 +53,8 @@ class QiraahTranslationOptions(TranslationOptions):
     fields = ("name", "bio")
 
 
-@register(RecitationFolder)
-class RecitationFolderTranslationOptions(TranslationOptions):
+@register(RecitationQuality)
+class RecitationQualityTranslationOptions(TranslationOptions):
     fields = ("name",)
 
 
@@ -77,7 +77,7 @@ for _translated_model in (
     Reciter,
     Riwayah,
     Qiraah,
-    RecitationFolder,
+    RecitationQuality,
     EditorialRecommendation,
     MushafLayout,
 ):

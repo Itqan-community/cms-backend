@@ -9,6 +9,7 @@ from pydantic import Field
 from apps.content.models import RecitationSurahTrack
 from apps.content.repositories.recitation import RecitationRepository
 from apps.content.services.recitation import RecitationService
+from apps.content.services.recitation_quality_resolution import reject_renamed_folder_param
 from apps.core.mixins.constants import QURAN_SURAHS
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
@@ -47,12 +48,14 @@ class RecitationSurahTrackOut(Schema):
 @router.get(
     "recitation-tracks/{asset_id}/",
     response={
+        400: NinjaErrorResponse[Literal["folder_param_renamed"]],
         200: list[RecitationSurahTrackOut],
-        404: NinjaErrorResponse[Literal["not_found"]] | NinjaErrorResponse[Literal["folder_not_found"]],
+        404: NinjaErrorResponse[Literal["not_found"]] | NinjaErrorResponse[Literal["quality_not_found"]],
     },
 )
 @paginate
-def list_recitation_tracks(request: Request, asset_id: int, folder: str | None = Query(None)):
+def list_recitation_tracks(request: Request, asset_id: int, quality: str | None = Query(None)):
+    reject_renamed_folder_param(request)
     repo = RecitationRepository()
     service = RecitationService(repo)
 
@@ -63,7 +66,7 @@ def list_recitation_tracks(request: Request, asset_id: int, folder: str | None =
         raise Http404(str(_("No asset matches the given query.")))
 
     tracks = service.get_asset_tracks(
-        asset_id, request.publisher_q("asset__publisher"), folder=folder, require_visible_folder=True
+        asset_id, request.publisher_q("asset__publisher"), quality=quality, require_visible_quality=True
     )
 
     return tracks

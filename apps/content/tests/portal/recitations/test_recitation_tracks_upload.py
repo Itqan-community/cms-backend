@@ -52,8 +52,8 @@ class RecitationTracksUploadAPITest(BaseTestCase):
             riwayah=self.riwayah,
             name="Portal Recitation",
         )
-        self.upload_folder = self.recitation_asset.recitation_folders.get(is_default=True)
-        self.upload_key = f"uploads/assets/{self.recitation_asset.id}/recitations/{self.upload_folder.id}/002.mp3"
+        self.upload_quality = self.recitation_asset.recitation_qualities.get(is_default=True)
+        self.upload_key = f"uploads/assets/{self.recitation_asset.id}/recitations/{self.upload_quality.id}/002.mp3"
 
         self.non_recitation_asset = baker.make(
             Asset,
@@ -69,7 +69,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
         self.existing_track = baker.make(
             RecitationSurahTrack,
             asset=self.recitation_asset,
-            folder=self.recitation_asset.recitation_folders.get(is_default=True),
+            quality=self.recitation_asset.recitation_qualities.get(is_default=True),
             surah_number=1,
             audio_file=f"uploads/assets/{self.recitation_asset.id}/recitations/001.mp3",
             original_filename="001.mp3",
@@ -319,7 +319,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
             return_value={
                 "key": "uploads/assets/1/recitations/002.mp3",
                 "uploadId": "upload-123",
-                "folderId": self.recitation_asset.recitation_folders.get(is_default=True).id,
+                "qualityId": self.recitation_asset.recitation_qualities.get(is_default=True).id,
                 "contentType": "audio/mpeg",
                 "surahNumber": 2,
             },
@@ -344,11 +344,11 @@ class RecitationTracksUploadAPITest(BaseTestCase):
                 "upload_id": "upload-123",
                 "content_type": "audio/mpeg",
                 "surah_number": 2,
-                "folder_id": self.recitation_asset.recitation_folders.get(is_default=True).id,
+                "quality_id": self.recitation_asset.recitation_qualities.get(is_default=True).id,
             },
             response.json(),
         )
-        start_upload.assert_called_once_with(asset_id=self.recitation_asset.id, filename="002.mp3", folder_id=None)
+        start_upload.assert_called_once_with(asset_id=self.recitation_asset.id, filename="002.mp3", quality_id=None)
 
     def test_start_upload_where_service_raises_should_propagate_itqan_error(self):
         # Arrange
@@ -404,7 +404,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
             "apps.content.api.portal.recitation_tracks_upload.AssetRecitationAudioTracksDirectUploadService.finish_upload",
             return_value={
                 "trackId": 55,
-                "folderId": self.recitation_asset.recitation_folders.get(is_default=True).id,
+                "qualityId": self.recitation_asset.recitation_qualities.get(is_default=True).id,
                 "assetId": self.recitation_asset.id,
                 "surahNumber": 2,
                 "sizeBytes": 777,
@@ -441,7 +441,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
             filename="002.mp3",
             duration_ms=2000,
             size_bytes=777,
-            folder_id=None,
+            quality_id=None,
         )
 
     def test_finish_upload_where_upload_succeeds_should_sync_recitations_json_file(self):
@@ -455,7 +455,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
                 AssetRecitationAudioTracksDirectUploadService.finish_upload.__name__,
                 return_value={
                     "trackId": 55,
-                    "folderId": self.recitation_asset.recitation_folders.get(is_default=True).id,
+                    "qualityId": self.recitation_asset.recitation_qualities.get(is_default=True).id,
                     "assetId": self.recitation_asset.id,
                     "surahNumber": 2,
                     "sizeBytes": 777,
@@ -487,7 +487,7 @@ class RecitationTracksUploadAPITest(BaseTestCase):
         self.assertEqual(200, response.status_code, response.content)
         sync_json.assert_called_once_with(
             self.recitation_asset.id,
-            folder_id=self.recitation_asset.recitation_folders.get(is_default=True).id,
+            quality_id=self.recitation_asset.recitation_qualities.get(is_default=True).id,
         )
 
     def test_abort_upload_should_return_aborted_payload(self):
@@ -554,6 +554,6 @@ class RecitationTracksUploadAPITest(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual("legacy-upload-1", response.json()["uploadId"])
-        # The Django admin upload view has no folder picker; it omits folder_id and
-        # the service falls back to the asset's default folder.
+        # The Django admin upload view has no quality picker; it omits quality_id and
+        # the service falls back to the asset's default quality.
         start_upload.assert_called_once_with(asset_id=self.recitation_asset.id, filename="002.mp3")

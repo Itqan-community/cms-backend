@@ -15,7 +15,7 @@ from apps.content.models import (
     Asset,
     CategoryChoice,
     RecitationAyahTiming,
-    RecitationFolder,
+    RecitationQuality,
     RecitationSurahTrack,
     Reciter,
     Riwayah,
@@ -36,10 +36,10 @@ class TestRecitationAudioSlicingService(BaseTestCase):
             reciter=baker.make(Reciter, name="Test Reciter", slug="test-reciter"),
             riwayah=baker.make(Riwayah, name="Test Riwayah"),
         )
-        self.default_folder = RecitationFolder.objects.get(asset=self.asset, is_default=True)
+        self.default_quality = RecitationQuality.objects.get(asset=self.asset, is_default=True)
         self.track = RecitationSurahTrack.objects.create(
             asset=self.asset,
-            folder=self.default_folder,
+            quality=self.default_quality,
             surah_number=1,
             audio_file=SimpleUploadedFile("001.mp3", b"x"),
             duration_ms=5000,
@@ -134,8 +134,8 @@ class TestRecitationAudioSlicingService(BaseTestCase):
             result = self.service.slice_track(self.track.id)
 
         expected_keys = [
-            f"uploads/assets/{self.asset.id}/recitations/{self.default_folder.id}/001/ayah_001.mp3",
-            f"uploads/assets/{self.asset.id}/recitations/{self.default_folder.id}/001/ayah_002.mp3",
+            f"uploads/assets/{self.asset.id}/recitations/{self.default_quality.id}/001/ayah_001.mp3",
+            f"uploads/assets/{self.asset.id}/recitations/{self.default_quality.id}/001/ayah_002.mp3",
         ]
 
         # Assert - deterministic keys, one object per ayah, mp3 content type
@@ -208,27 +208,27 @@ class TestRecitationAudioSlicingService(BaseTestCase):
         fade = cmd[cmd.index("-af") + 1]
         self.assertEqual("afade=t=in:st=0:d=0.015,afade=t=out:st=0.015:d=0.015", fade)
 
-    def test_build_slice_key_where_two_folders_should_produce_distinct_storage_keys(self):
+    def test_build_slice_key_where_two_qualities_should_produce_distinct_storage_keys(self):
         # Arrange
-        echo_folder = RecitationFolder.objects.create(asset=self.asset, name="With echo", name_en="With echo")
+        echo_quality = RecitationQuality.objects.create(asset=self.asset, name="With echo", name_en="With echo")
 
         # Act
-        default_key = self.service._build_slice_key(self.asset.id, self.default_folder.id, 1, 1)
-        echo_key = self.service._build_slice_key(self.asset.id, echo_folder.id, 1, 1)
+        default_key = self.service._build_slice_key(self.asset.id, self.default_quality.id, 1, 1)
+        echo_key = self.service._build_slice_key(self.asset.id, echo_quality.id, 1, 1)
 
-        # Assert - the folder segment stops variants from overwriting each other
+        # Assert - the quality segment stops variants from overwriting each other
         self.assertNotEqual(default_key, echo_key)
         self.assertEqual(
-            f"uploads/assets/{self.asset.id}/recitations/{self.default_folder.id}/001/ayah_001.mp3", default_key
+            f"uploads/assets/{self.asset.id}/recitations/{self.default_quality.id}/001/ayah_001.mp3", default_key
         )
-        self.assertEqual(f"uploads/assets/{self.asset.id}/recitations/{echo_folder.id}/001/ayah_001.mp3", echo_key)
+        self.assertEqual(f"uploads/assets/{self.asset.id}/recitations/{echo_quality.id}/001/ayah_001.mp3", echo_key)
 
-    def test_slice_track_where_same_surah_exists_in_two_folders_should_write_distinct_objects(self):
+    def test_slice_track_where_same_surah_exists_in_two_qualities_should_write_distinct_objects(self):
         # Arrange
-        echo_folder = RecitationFolder.objects.create(asset=self.asset, name="With echo", name_en="With echo")
+        echo_quality = RecitationQuality.objects.create(asset=self.asset, name="With echo", name_en="With echo")
         echo_track = RecitationSurahTrack.objects.create(
             asset=self.asset,
-            folder=echo_folder,
+            quality=echo_quality,
             surah_number=1,
             audio_file=SimpleUploadedFile("001-echo.mp3", b"x"),
             duration_ms=5000,

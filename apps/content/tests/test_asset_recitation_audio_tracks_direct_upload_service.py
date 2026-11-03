@@ -8,7 +8,7 @@ from django.conf import settings
 from django.utils import timezone
 from model_bakery import baker
 
-from apps.content.models import Asset, CategoryChoice, RecitationFolder, RecitationSurahTrack, Reciter, Riwayah
+from apps.content.models import Asset, CategoryChoice, RecitationQuality, RecitationSurahTrack, Reciter, Riwayah
 from apps.content.services.admin import asset_recitation_audio_tracks_direct_upload_service
 from apps.content.services.admin.asset_recitation_audio_tracks_direct_upload_service import (
     AssetRecitationAudioTracksDirectUploadService,
@@ -19,8 +19,8 @@ from apps.core.tests.base import BaseTestCase
 
 class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
 
-    def _make_asset_with_default_folder(self) -> tuple[Asset, RecitationFolder]:
-        """Build a recitation asset plus the default folder every recitation now has."""
+    def _make_asset_with_default_quality(self) -> tuple[Asset, RecitationQuality]:
+        """Build a recitation asset plus the default quality every recitation now has."""
         asset = baker.make(
             Asset,
             name="test",
@@ -28,13 +28,13 @@ class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
             reciter=baker.make(Reciter, name="Test Reciter"),
             riwayah=baker.make(Riwayah, name="Test Riwayah"),
         )
-        folder = RecitationFolder.objects.get(asset=asset, is_default=True)
-        return asset, folder
+        quality = RecitationQuality.objects.get(asset=asset, is_default=True)
+        return asset, quality
 
     def test_parse_key_where_key_was_built_by_service_should_return_parts(self):
         # Arrange
         service = AssetRecitationAudioTracksDirectUploadService()
-        key = service._build_key(asset_id=12, folder_id=34, surah_number=5)
+        key = service._build_key(asset_id=12, quality_id=34, surah_number=5)
 
         # Act
         parts = service.parse_key(key)
@@ -42,7 +42,7 @@ class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
         # Assert
         self.assertIsNotNone(parts)
         self.assertEqual(12, parts.asset_id)
-        self.assertEqual(34, parts.folder_id)
+        self.assertEqual(34, parts.quality_id)
         self.assertEqual(5, parts.surah_number)
 
     def test_parse_key_where_key_is_not_canonical_should_return_none(self):
@@ -66,18 +66,18 @@ class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
     def test_parse_key_where_key_is_canonical_should_round_trip_through_build_key(self):
         # Arrange
         service = AssetRecitationAudioTracksDirectUploadService()
-        key = service._build_key(asset_id=987, folder_id=654, surah_number=114)
+        key = service._build_key(asset_id=987, quality_id=654, surah_number=114)
 
         # Act
         parts = service.parse_key(key)
-        rebuilt_key = service._build_key(parts.asset_id, parts.folder_id, parts.surah_number)
+        rebuilt_key = service._build_key(parts.asset_id, parts.quality_id, parts.surah_number)
 
         # Assert
         self.assertEqual(key, rebuilt_key)
 
     def test_start_upload_where_valid_input_should_create_multipart_and_return_payload(self):
         # Arrange
-        asset, folder = self._make_asset_with_default_folder()
+        asset, quality = self._make_asset_with_default_quality()
         s3 = Mock()
         s3.create_multipart_upload.return_value = {"UploadId": "upload-1"}
         service = AssetRecitationAudioTracksDirectUploadService()
@@ -88,7 +88,7 @@ class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
             result = service.start_upload(asset_id=asset.id, filename=filename)
 
         # Assert
-        self.assertEqual(f"uploads/assets/{asset.id}/recitations/{folder.id}/001.mp3", result["key"])
+        self.assertEqual(f"uploads/assets/{asset.id}/recitations/{quality.id}/001.mp3", result["key"])
         self.assertEqual("upload-1", result["uploadId"])
         self.assertEqual("audio/mpeg", result["contentType"])
         self.assertEqual(1, result["surahNumber"])
@@ -100,7 +100,7 @@ class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
 
     def test_start_upload_where_valid_filename_should_return_key_and_filename(self):
         # Arrange
-        asset, folder = self._make_asset_with_default_folder()
+        asset, quality = self._make_asset_with_default_quality()
         s3 = Mock()
         s3.create_multipart_upload.return_value = {"UploadId": "upload-1"}
         service = AssetRecitationAudioTracksDirectUploadService()
@@ -111,7 +111,7 @@ class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
             result = service.start_upload(asset_id=asset.id, filename=filename)
 
         # Assert
-        self.assertEqual(result["key"], f"uploads/assets/{asset.id}/recitations/{folder.id}/001.mp3")
+        self.assertEqual(result["key"], f"uploads/assets/{asset.id}/recitations/{quality.id}/001.mp3")
         self.assertEqual(result["filename"], filename)
 
         # No DB row created
@@ -119,7 +119,7 @@ class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
 
     def test_start_upload_where_valid_input_should_create_multipart_and_return_payload_with_asset_and_filename(self):
         # Arrange
-        asset, folder = self._make_asset_with_default_folder()
+        asset, quality = self._make_asset_with_default_quality()
         s3 = Mock()
         s3.create_multipart_upload.return_value = {"UploadId": "upload-2"}
         service = AssetRecitationAudioTracksDirectUploadService()
@@ -139,8 +139,8 @@ class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
         # Frontend sends size_bytes and duration_ms — server must use them directly,
         # not compute them from the filesystem or R2.
         # Arrange
-        asset, folder = self._make_asset_with_default_folder()
-        key = f"uploads/assets/{asset.id}/recitations/{folder.id}/001.mp3"
+        asset, quality = self._make_asset_with_default_quality()
+        key = f"uploads/assets/{asset.id}/recitations/{quality.id}/001.mp3"
         filename = "anything_001.mp3"
         s3 = Mock()
         s3.complete_multipart_upload.return_value = {}
@@ -187,8 +187,8 @@ class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
         # Frontend omits size_bytes and duration_ms — server falls back to head_object for
         # size and mutagen (via get_object) for duration.
         # Arrange
-        asset, folder = self._make_asset_with_default_folder()
-        key = f"uploads/assets/{asset.id}/recitations/{folder.id}/001.mp3"
+        asset, quality = self._make_asset_with_default_quality()
+        key = f"uploads/assets/{asset.id}/recitations/{quality.id}/001.mp3"
         filename = "anything_001.mp3"
         s3 = Mock()
         s3.complete_multipart_upload.return_value = {}
@@ -237,12 +237,12 @@ class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
         # A duplicate finish_upload for the same asset+surah must delete the newly uploaded R2
         # object (to avoid orphaned storage) and raise ItqanError with status 409.
         # Arrange
-        asset, folder = self._make_asset_with_default_folder()
-        key = f"uploads/assets/{asset.id}/recitations/{folder.id}/001.mp3"
+        asset, quality = self._make_asset_with_default_quality()
+        key = f"uploads/assets/{asset.id}/recitations/{quality.id}/001.mp3"
         filename = "anything_001.mp3"
 
         # Pre-create a track so the second insert trips the unique constraint
-        baker.make(RecitationSurahTrack, asset=asset, folder=folder, surah_number=1, audio_file=key)
+        baker.make(RecitationSurahTrack, asset=asset, quality=quality, surah_number=1, audio_file=key)
 
         s3 = Mock()
         s3.complete_multipart_upload.return_value = {}
@@ -274,8 +274,8 @@ class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
 
     def test_abort_upload_should_abort_r2_multipart(self):
         # Arrange
-        asset, folder = self._make_asset_with_default_folder()
-        r2_key = f"media/uploads/assets/{asset.id}/recitations/{folder.id}/001.mp3"
+        asset, quality = self._make_asset_with_default_quality()
+        r2_key = f"media/uploads/assets/{asset.id}/recitations/{quality.id}/001.mp3"
 
         s3 = Mock()
         service = AssetRecitationAudioTracksDirectUploadService()

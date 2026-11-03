@@ -11,7 +11,7 @@ from apps.content.models import CategoryChoice, LicenseChoice, Qiraah, Reciter, 
 from apps.content.repositories.recitation import RecitationRepository
 from apps.content.services.asset_access import guard_restrict_for_tenant
 from apps.content.services.asset_slug import AssetSlugService
-from apps.content.services.recitation_folder_resolution import find_folder_by_token
+from apps.content.services.recitation_quality_resolution import find_quality_by_token
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.models import Publisher
 from config.settings.base import CLOUDFLARE_R2_PUBLIC_BASE_URL
@@ -245,34 +245,34 @@ class RecitationService:
         asset_id: int,
         publisher_q: Q,
         prefetch_timings: bool = False,
-        folder: str | None = None,
-        require_visible_folder: bool = False,
+        quality: str | None = None,
+        require_visible_quality: bool = False,
     ) -> QuerySet[RecitationSurahTrack]:
         """
         Business Logic: Retrieve tracks for a specific asset if it belongs to the publisher.
 
-        Results are scoped to one folder (variant): the one identified by ``folder``,
-        which accepts either the folder's slug or its name, or the asset's default
-        folder when it is None. An unresolvable value raises ``folder_not_found``
+        Results are scoped to one quality (variant): the one identified by ``quality``,
+        which accepts either the quality's slug or its name, or the asset's default
+        quality when it is None. An unresolvable value raises ``quality_not_found``
         rather than returning an empty list, so callers can tell a typo apart from a
-        folder that has no tracks yet.
+        quality that has no tracks yet.
         """
-        folder_id = None
-        if folder is not None:
-            matched = find_folder_by_token(asset_id, folder, require_visible=require_visible_folder)
+        quality_id = None
+        if quality is not None:
+            matched = find_quality_by_token(asset_id, quality, require_visible=require_visible_quality)
             if matched is None:
                 raise ItqanError(
-                    error_name="folder_not_found",
-                    message=_("Folder {folder} not found.").format(folder=folder),
+                    error_name="quality_not_found",
+                    message=_("Quality {quality} not found.").format(quality=quality),
                     status_code=404,
                 )
-            folder_id = matched.id
+            quality_id = matched.id
 
         return self.repo.list_recitation_tracks_for_asset(
             asset_id,
             publisher_q=publisher_q,
             prefetch_timings=prefetch_timings,
-            folder_id=folder_id,
+            quality_id=quality_id,
         )
 
     def get_all_reciters(self, publisher_q: Q, filters: Any = None) -> QuerySet:
@@ -291,7 +291,7 @@ class RecitationService:
 
     def get_sample_track(self, asset_id: int, surah_number: int) -> RecitationSurahTrack | None:
         """
-        Business Logic: The default-folder track covering one surah of the
+        Business Logic: The default-quality track covering one surah of the
         sample recitation, with ayah timings prefetched in playback order.
         """
         return self.repo.get_default_track_for_surah(asset_id, surah_number)
@@ -302,11 +302,11 @@ class RecitationService:
         surah_number: int,
         from_ayah: int,
         to_ayah: int,
-        folder: str | None = None,
-        require_visible_folder: bool = True,
+        quality: str | None = None,
+        require_visible_quality: bool = True,
     ) -> tuple[RecitationSurahTrack, Any, list[Any], int, int]:
         # Resolve and validate one contiguous ayah range within a single surah.
-        # Returns (track, folder, timings_subset, start_ms, end_ms) where the
+        # Returns (track, quality, timings_subset, start_ms, end_ms) where the
         # subset covers every ayah in [from_ayah, to_ayah] in playback order.
         # Range problems (order, bounds, gaps) raise 422 validation_error so
         # clients can tell bad input apart from a missing track (404).
@@ -342,29 +342,29 @@ class RecitationService:
                 status_code=422,
             )
 
-        folder_id = None
-        matched_folder = None
+        quality_id = None
+        matched_quality = None
 
-        if folder is not None:
-            matched_folder = find_folder_by_token(
+        if quality is not None:
+            matched_quality = find_quality_by_token(
                 asset_id,
-                folder,
-                require_visible=require_visible_folder,
+                quality,
+                require_visible=require_visible_quality,
             )
 
-            if matched_folder is None:
+            if matched_quality is None:
                 raise ItqanError(
-                    error_name="folder_not_found",
-                    message=_("Folder {folder} not found.").format(folder=folder),
+                    error_name="quality_not_found",
+                    message=_("Quality {quality} not found.").format(quality=quality),
                     status_code=404,
                 )
 
-            folder_id = matched_folder.id
+            quality_id = matched_quality.id
 
         track = self.repo.get_single_track(
             asset_id,
             surah_number,
-            folder_id=folder_id,
+            quality_id=quality_id,
         )
 
         if track is None:
@@ -374,17 +374,17 @@ class RecitationService:
                 status_code=404,
             )
 
-        if matched_folder is None:
-            matched_folder = track.folder
-            if require_visible_folder and not matched_folder.is_visible:
-                # The omitted-folder path resolves the default variant without
+        if matched_quality is None:
+            matched_quality = track.quality
+            if require_visible_quality and not matched_quality.is_visible:
+                # The omitted-quality path resolves the default variant without
                 # consulting visibility (the repo lookup filters is_default
                 # only). A hidden default must 404 like an explicitly requested
-                # hidden folder -- otherwise its audio stays publicly servable
-                # (CWE-862). track.folder is select_related, so this adds no query.
+                # hidden quality -- otherwise its audio stays publicly servable
+                # (CWE-862). track.quality is select_related, so this adds no query.
                 raise ItqanError(
-                    error_name="folder_not_found",
-                    message=_("Default folder for asset {id} not found.").format(id=asset_id),
+                    error_name="quality_not_found",
+                    message=_("Default quality for asset {id} not found.").format(id=asset_id),
                     status_code=404,
                 )
 
@@ -420,15 +420,15 @@ class RecitationService:
                 status_code=422,
             )
 
-        return track, matched_folder, subset, start_ms, end_ms
+        return track, matched_quality, subset, start_ms, end_ms
 
     def get_ayah_audio_data(
         self,
         asset_id: int,
         ayah_key: str,
-        folder: str | None = None,
+        quality: str | None = None,
         publisher_q: Q | None = None,
-        require_visible_folder: bool = False,
+        require_visible_quality: bool = False,
     ) -> dict[str, Any]:
         """
         Business Logic: Retrieve audio URL and metadata for a single ayah of an asset.
@@ -436,12 +436,12 @@ class RecitationService:
         Args:
             asset_id: The ID of the asset.
             ayah_key: Canonical ayah identifier (e.g. '2:255').
-            folder: Optional folder slug or name variant.
+            quality: Optional quality slug or name variant.
             publisher_q: Optional publisher access constraint filter.
-            require_visible_folder: When True, rejects hidden folders (is_visible=False).
+            require_visible_quality: When True, rejects hidden qualities (is_visible=False).
 
         Returns:
-            Dict containing asset, folder, timing metadata, and Cloudflare R2 audio URL.
+            Dict containing asset, quality, timing metadata, and Cloudflare R2 audio URL.
         """
         parts = ayah_key.strip().split(":")
 
@@ -481,31 +481,31 @@ class RecitationService:
                 status_code=404,
             )
 
-        if folder is not None:
-            folder_obj = find_folder_by_token(
+        if quality is not None:
+            quality_obj = find_quality_by_token(
                 asset_id,
-                folder,
-                require_visible=require_visible_folder,
+                quality,
+                require_visible=require_visible_quality,
             )
 
-            if folder_obj is None:
+            if quality_obj is None:
                 raise ItqanError(
-                    error_name="folder_not_found",
-                    message=_("Folder {folder} not found.").format(folder=folder),
+                    error_name="quality_not_found",
+                    message=_("Quality {quality} not found.").format(quality=quality),
                     status_code=404,
                 )
         else:
-            default_qs = asset.recitation_folders.filter(is_default=True)
+            default_qs = asset.recitation_qualities.filter(is_default=True)
 
-            if require_visible_folder:
+            if require_visible_quality:
                 default_qs = default_qs.filter(is_visible=True)
 
-            folder_obj = default_qs.first()
+            quality_obj = default_qs.first()
 
-            if folder_obj is None:
+            if quality_obj is None:
                 raise ItqanError(
-                    error_name="folder_not_found",
-                    message=_("Default folder for asset {id} not found.").format(id=asset_id),
+                    error_name="quality_not_found",
+                    message=_("Default quality for asset {id} not found.").format(id=asset_id),
                     status_code=404,
                 )
 
@@ -513,7 +513,7 @@ class RecitationService:
 
         timing = self.repo.get_ayah_timing_for_asset(
             asset_id=asset_id,
-            folder_id=folder_obj.id,
+            quality_id=quality_obj.id,
             surah_number=surah_number,
             ayah_key=normalized_ayah_key,
         )
@@ -535,7 +535,9 @@ class RecitationService:
             CLOUDFLARE_R2_PUBLIC_BASE_URL,
         ).rstrip("/")
 
-        slice_key = f"uploads/assets/{asset_id}/recitations/{folder_obj.id}/{surah_number:03}/ayah_{ayah_number:03}.mp3"
+        slice_key = (
+            f"uploads/assets/{asset_id}/recitations/{quality_obj.id}/{surah_number:03}/ayah_{ayah_number:03}.mp3"
+        )
 
         audio_url = f"{base_url}/media/{slice_key}"
 
@@ -551,7 +553,7 @@ class RecitationService:
 
         return {
             "asset": asset,
-            "folder": folder_obj,
+            "quality": quality_obj,
             "surah_number": surah_number,
             "ayah_number": ayah_number,
             "ayah_key": normalized_ayah_key,

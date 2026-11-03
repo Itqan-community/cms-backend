@@ -9,10 +9,10 @@ class AssetPreviewRepository:
     """Reads behind the gallery's recitation and font previews."""
 
     def first_default_tracks(self, asset: Asset, limit: int) -> list[RecitationSurahTrack]:
-        """The first ``limit`` uploaded tracks (by surah) of the asset's default folder,
-        while that folder is visible to consumers."""
+        """The first ``limit`` uploaded tracks (by surah) of the asset's default quality,
+        while that quality is visible to consumers."""
         return list(
-            RecitationSurahTrack.objects.filter(asset=asset, folder__is_default=True, folder__is_visible=True)
+            RecitationSurahTrack.objects.filter(asset=asset, quality__is_default=True, quality__is_visible=True)
             .exclude(audio_file="")
             .order_by("surah_number")[:limit]
         )

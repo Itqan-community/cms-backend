@@ -77,7 +77,7 @@ class RecitationAudioSlicingService:
     ffmpeg run or upload, so invalid input never touches storage. Runtime
     failures are not rolled back - a failure partway through the loop leaves the
     already-written ayah objects in place. Those objects are deterministic
-    (asset/folder/surah/ayah), so re-running the track overwrites them in place
+    (asset/quality/surah/ayah), so re-running the track overwrites them in place
     and converges to the full set; partial slices never accumulate.
     """
 
@@ -96,17 +96,17 @@ class RecitationAudioSlicingService:
         _MEDIA_PREFIX = "media/"
         return key if key.startswith(_MEDIA_PREFIX) else f"{_MEDIA_PREFIX}{key}"
 
-    def _build_slice_key(self, asset_id: int, folder_id: int, surah_number: int, ayah_number: int) -> str:
+    def _build_slice_key(self, asset_id: int, quality_id: int, surah_number: int, ayah_number: int) -> str:
         """
         Deterministic storage key for one sliced ayah.
 
         Mirrors the track key grammar (uploads/assets/{asset_id}/recitations/...)
         used by ``upload_to_recitation_surah_track_files`` and the direct-upload
-        service's ``_build_key``: the folder segment keeps variants (clear, echo)
+        service's ``_build_key``: the quality segment keeps variants (clear, echo)
         from overwriting each other, and the per-surah directory plus ayah leaf
         keeps slices from colliding with the track file itself.
         """
-        return f"uploads/assets/{asset_id}/recitations/{folder_id}/{surah_number:03}/ayah_{ayah_number:03}.mp3"
+        return f"uploads/assets/{asset_id}/recitations/{quality_id}/{surah_number:03}/ayah_{ayah_number:03}.mp3"
 
     def slice_track(self, track_id: int) -> dict[str, Any]:
         """Slice every ayah of one track; returns track/asset ids, sliced count and generated keys."""
@@ -162,7 +162,7 @@ class RecitationAudioSlicingService:
 
             for timing in timings:
                 ayah_number = self._parse_ayah_number(timing.ayah_key, track.surah_number)
-                key = self._build_slice_key(track.asset_id, track.folder_id, track.surah_number, ayah_number)
+                key = self._build_slice_key(track.asset_id, track.quality_id, track.surah_number, ayah_number)
                 output_path = temp_dir / f"{track.surah_number:03}_{ayah_number:03}.mp3"
                 self._run_ffmpeg(source_path, output_path, timing.start_ms, timing.end_ms, audio_params)
                 file_size = output_path.stat().st_size

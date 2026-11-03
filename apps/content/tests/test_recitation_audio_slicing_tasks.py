@@ -9,7 +9,7 @@ from django.test import override_settings
 from model_bakery import baker
 
 from apps.content.cache import recitation_asset_meta_cache_key, recitation_tracks_cache_key
-from apps.content.models import Asset, CategoryChoice, RecitationFolder, RecitationSurahTrack, Reciter, Riwayah
+from apps.content.models import Asset, CategoryChoice, RecitationQuality, RecitationSurahTrack, Reciter, Riwayah
 from apps.content.tasks import slice_all_recitation_tracks_task, slice_recitation_track_task
 from apps.core.ninja_utils.errors import ItqanError
 from apps.core.tests.base import BaseTestCase
@@ -28,10 +28,10 @@ class TestRecitationAudioSlicingTasks(BaseTestCase):
             reciter=baker.make(Reciter, name="Test Reciter", slug="test-reciter"),
             riwayah=baker.make(Riwayah, name="Test Riwayah"),
         )
-        self.folder = RecitationFolder.objects.get(asset=self.asset, is_default=True)
+        self.quality = RecitationQuality.objects.get(asset=self.asset, is_default=True)
         self.track = RecitationSurahTrack.objects.create(
             asset=self.asset,
-            folder=self.folder,
+            quality=self.quality,
             surah_number=1,
             audio_file=SimpleUploadedFile("001.mp3", b"x"),
             duration_ms=5000,
@@ -47,8 +47,8 @@ class TestRecitationAudioSlicingTasks(BaseTestCase):
             "asset_id": self.asset.id,
             "sliced": 2,
             "keys": [
-                f"uploads/assets/{self.asset.id}/recitations/{self.folder.id}/001/ayah_001.mp3",
-                f"uploads/assets/{self.asset.id}/recitations/{self.folder.id}/001/ayah_002.mp3",
+                f"uploads/assets/{self.asset.id}/recitations/{self.quality.id}/001/ayah_001.mp3",
+                f"uploads/assets/{self.asset.id}/recitations/{self.quality.id}/001/ayah_002.mp3",
             ],
         }
 
@@ -127,7 +127,7 @@ class TestRecitationAudioSlicingTasks(BaseTestCase):
         for surah_number in (2, 3):
             RecitationSurahTrack.objects.create(
                 asset=self.asset,
-                folder=self.folder,
+                quality=self.quality,
                 surah_number=surah_number,
                 audio_file=SimpleUploadedFile(f"{surah_number:03}.mp3", b"x"),
                 duration_ms=1000,

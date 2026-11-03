@@ -6,7 +6,7 @@ from ninja.pagination import paginate
 
 from apps.content.repositories.recitation import RecitationRepository
 from apps.content.services.recitation import RecitationService
-from apps.content.services.recitation_folder_resolution import visible_asset_folders
+from apps.content.services.recitation_quality_resolution import visible_asset_qualities
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.searching_base import searching
@@ -37,7 +37,7 @@ class RecitationQiraahOut(Schema):
     bio: str
 
 
-class RecitationFolderOut(Schema):
+class RecitationQualityOut(Schema):
     name: str
     slug: str
     is_default: bool
@@ -52,7 +52,7 @@ class RecitationListOut(Schema):
     riwayah: RecitationRiwayahOut | None = None
     qiraah: RecitationQiraahOut | None = None
     surahs_count: int
-    folders: list[RecitationFolderOut] = []
+    qualities: list[RecitationQualityOut] = []
 
     @staticmethod
     def resolve_publisher(obj):
@@ -75,9 +75,9 @@ class RecitationListOut(Schema):
         return getattr(obj, "surahs_count", 0)
 
     @staticmethod
-    def resolve_folders(obj):
-        # Lets a consumer discover which ?folder= values this recitation accepts.
-        return visible_asset_folders(obj)
+    def resolve_qualities(obj):
+        # Lets a consumer discover which ?quality= values this recitation accepts.
+        return visible_asset_qualities(obj)
 
 
 class RecitationFilter(FilterSchema):

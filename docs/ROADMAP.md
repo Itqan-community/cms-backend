@@ -125,7 +125,7 @@ surah track. The offsets are there; nothing serves per-ayah audio yet.
   boundaries.
 
 > ⚠️ **Storage sizing must be re-validated before committing to full precompute.** With
-> Recitation folders (§3), the object count becomes `folders × 114 surahs × ayahs-per-surah`,
+> Recitation qualities (§3), the object count becomes `qualities × 114 surahs × ayahs-per-surah`,
 > not one variant. Slicing must also **invalidate the recitation response cache**, or stale
 > audio gets served after a re-slice.
 
@@ -141,7 +141,7 @@ surah track. The offsets are there; nothing serves per-ayah audio yet.
 
 ---
 
-## 3. Recitation folders 📋 — Medium-high priority
+## 3. Recitation qualities 📋 — Medium-high priority
 
 ### Problem
 
@@ -151,30 +151,30 @@ through extra clicks to find the version they want.
 
 ### Direction
 
-Insert a **folder** layer in the hierarchy: `Asset → RecitationFolder → RecitationSurahTrack`.
-Each folder is one variant of the same recitation and holds all 114 surahs.
+Insert a **quality** layer in the hierarchy: `Asset → RecitationQuality → RecitationSurahTrack`.
+Each quality is one variant of the same recitation and holds all 114 surahs.
 
 ### Decisions
 
-- **Exactly one default folder per asset**, enforced by a partial unique constraint.
-  Serving rule: **no filter → default folder; filter → that exact folder.**
-- **Each folder carries its own ayah timings.** Echo and delay shift where each ayah
+- **Exactly one default quality per asset**, enforced by a partial unique constraint.
+  Serving rule: **no filter → default quality; filter → that exact quality.**
+- **Each quality carries its own ayah timings.** Echo and delay shift where each ayah
   starts, so variants cannot share a timing set. Since `RecitationAyahTiming` FKs to
-  `track`, timings become per-folder automatically once tracks are re-parented — the real
-  deliverable is **admin-supplied independent timings per folder**. Automatic re-timing
+  `track`, timings become per-quality automatically once tracks are re-parented — the real
+  deliverable is **admin-supplied independent timings per quality**. Automatic re-timing
   (forced alignment) is an explicit follow-on, not in scope.
-- **Cache keys must include the folder dimension** so default and echo don't collide.
+- **Cache keys must include the quality dimension** so default and echo don't collide.
 
 ### Issues
 
 | # | Task |
 | --- | --- |
-| [#418](https://github.com/Itqan-community/cms-backend/issues/418) | Add `RecitationFolder` model between Asset and track (+ default flag) |
-| [#419](https://github.com/Itqan-community/cms-backend/issues/419) | Migration + backfill: wrap existing tracks in a default folder |
-| [#420](https://github.com/Itqan-community/cms-backend/issues/420) | Re-scope ayah timings per folder |
-| [#421](https://github.com/Itqan-community/cms-backend/issues/421) | Serve folders in public + tenant APIs |
-| [#424](https://github.com/Itqan-community/cms-backend/issues/424) | Folder-aware portal upload endpoints |
-| [cms-frontend#208](https://github.com/Itqan-community/cms-frontend/issues/208) | Content-admin UI: folder switcher + set default |
+| [#418](https://github.com/Itqan-community/cms-backend/issues/418) | Add `RecitationQuality` model between Asset and track (+ default flag) |
+| [#419](https://github.com/Itqan-community/cms-backend/issues/419) | Migration + backfill: wrap existing tracks in a default quality |
+| [#420](https://github.com/Itqan-community/cms-backend/issues/420) | Re-scope ayah timings per quality |
+| [#421](https://github.com/Itqan-community/cms-backend/issues/421) | Serve qualities in public + tenant APIs |
+| [#424](https://github.com/Itqan-community/cms-backend/issues/424) | Quality-aware portal upload endpoints |
+| [cms-frontend#208](https://github.com/Itqan-community/cms-frontend/issues/208) | Content-admin UI: quality switcher + set default |
 
 ---
 
@@ -236,7 +236,7 @@ There is no record of who changed what, and no way to reverse an action after th
   what rules out DB triggers (they can't cross a database boundary) and mandates
   application-level writes. `history_user` is stored as a plain `history_user_id` since
   FKs can't cross databases.
-- **Tracked:** all `content` app models (plus the forthcoming `RecitationFolder`), all
+- **Tracked:** all `content` app models (plus the forthcoming `RecitationQuality`), all
   `users` models, all `publishers` models.
   **Excluded:** `UsageEvent` (obsolete, being deleted) and the `quran` app (immutable
   reference data).
@@ -310,8 +310,8 @@ patterns) dashboards, once the per-user identifier flows through usage tracking.
 1. **Finish the MVP** (§0) — unblocks everything downstream.
 2. **Self-identifying auth** (§1) — highest leverage: unblocks integrations that otherwise
    won't happen, and gives publishers the transparency they're asking for.
-3. **Recitation folders** (§3) — lands before ayah slicing, because slicing must be
-   folder-aware and per-folder timings change the slicing math.
+3. **Recitation qualities** (§3) — lands before ayah slicing, because slicing must be
+   quality-aware and per-quality timings change the slicing math.
 4. **Ayah-by-ayah recitation** (§2) — concrete and scoped; builds on timing data that
    already exists.
 5. **Dependabot & package manager** (§4) — benefits from §1 landing first so pipeline

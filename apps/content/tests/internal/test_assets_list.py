@@ -10,7 +10,7 @@ from apps.content.models import (
     LicenseChoice,
     MushafLayout,
     RecitationAyahTiming,
-    RecitationFolder,
+    RecitationQuality,
     RecitationSurahTrack,
     StatusChoice,
 )
@@ -685,11 +685,11 @@ class ListAssetTest(BaseTestCase):
             )
         )
 
-    def _add_timing(self, folder: RecitationFolder) -> None:
+    def _add_timing(self, quality: RecitationQuality) -> None:
         track = baker.make(
             RecitationSurahTrack,
-            asset=folder.asset,
-            folder=folder,
+            asset=quality.asset,
+            quality=quality,
             surah_number=1,
             audio_file=SimpleUploadedFile("s001.mp3", b"dummy-track-content"),
             duration_ms=1000,
@@ -700,7 +700,7 @@ class ListAssetTest(BaseTestCase):
     def test_list_asset_where_recitation_has_ayah_timings_should_report_has_ayah_timings_true(self):
         # Arrange
         asset = self._make_recitation("Timed Recitation")
-        self._add_timing(asset.recitation_folders.get(is_default=True))
+        self._add_timing(asset.recitation_qualities.get(is_default=True))
 
         # Act
         response = self.client.get("/cms-api/assets/", format="json")
@@ -717,7 +717,7 @@ class ListAssetTest(BaseTestCase):
         baker.make(
             RecitationSurahTrack,
             asset=asset,
-            folder=asset.recitation_folders.get(is_default=True),
+            quality=asset.recitation_qualities.get(is_default=True),
             surah_number=1,
             audio_file=SimpleUploadedFile("s001.mp3", b"dummy-track-content"),
             duration_ms=1000,
@@ -733,11 +733,11 @@ class ListAssetTest(BaseTestCase):
         self.assertEqual(1, len(body["results"]))
         self.assertFalse(body["results"][0]["has_ayah_timings"])
 
-    def test_list_asset_where_ayah_timings_only_in_hidden_folder_should_report_has_ayah_timings_false(self):
+    def test_list_asset_where_ayah_timings_only_in_hidden_quality_should_report_has_ayah_timings_false(self):
         # Arrange
         asset = self._make_recitation("Hidden Timings Recitation")
-        hidden_folder = baker.make(RecitationFolder, asset=asset, name="Hidden", is_visible=False)
-        self._add_timing(hidden_folder)
+        hidden_quality = baker.make(RecitationQuality, asset=asset, name="Hidden", is_visible=False)
+        self._add_timing(hidden_quality)
 
         # Act
         response = self.client.get("/cms-api/assets/", format="json")
@@ -770,12 +770,12 @@ class ListAssetTest(BaseTestCase):
     def test_list_asset_where_many_timed_recitations_should_not_add_queries_per_asset(self):
         # Arrange
         asset = self._make_recitation("Timed Recitation 1")
-        self._add_timing(asset.recitation_folders.get(is_default=True))
+        self._add_timing(asset.recitation_qualities.get(is_default=True))
         with CaptureQueriesContext(connection) as single:
             self.client.get("/cms-api/assets/", format="json")
         for index in range(2, 5):
             asset = self._make_recitation(f"Timed Recitation {index}")
-            self._add_timing(asset.recitation_folders.get(is_default=True))
+            self._add_timing(asset.recitation_qualities.get(is_default=True))
 
         # Act
         with CaptureQueriesContext(connection) as many:

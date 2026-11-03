@@ -9,13 +9,14 @@ from ninja import Query, Schema
 from apps.content.cache import (
     RECITATION_ASSET_META_CACHE_TTL,
     RECITATION_AYAH_RESPONSE_CACHE_TTL,
-    folder_cache_token,
+    quality_cache_token,
     recitation_asset_meta_cache_key,
     recitation_ayah_response_cache_key,
 )
 from apps.content.repositories.recitation import RecitationRepository
 from apps.content.services.asset_access import enforce_asset_access_on_public_api
 from apps.content.services.recitation import RecitationService
+from apps.content.services.recitation_quality_resolution import reject_renamed_folder_param
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -39,11 +40,12 @@ class RecitationAyahAudioOut(Schema):
 @router.get(
     "recitations/{asset_id}/ayah/{ayah_key}/",
     response={
+        400: NinjaErrorResponse[Literal["folder_param_renamed"]],
         200: RecitationAyahAudioOut,
         401: NinjaErrorResponse[Literal["authentication_required"]],
         403: NinjaErrorResponse[Literal["access_denied"]],
         404: NinjaErrorResponse[Literal["asset_not_found"]]
-        | NinjaErrorResponse[Literal["folder_not_found"]]
+        | NinjaErrorResponse[Literal["quality_not_found"]]
         | NinjaErrorResponse[Literal["ayah_not_found"]],
     },
 )
@@ -52,15 +54,16 @@ def get_recitation_ayah(
     request: Request,
     asset_id: int,
     ayah_key: str,
-    folder: str | None = Query(None),
+    quality: str | None = Query(None),
 ):
     """
     Public developers API endpoint to return audio URL and metadata for a single Ayah.
     """
-    # Key on the requested folder token rather than the resolved folder: resolving it
+    reject_renamed_folder_param(request)
+    # Key on the requested quality token rather than the resolved quality: resolving it
     # requires a DB read before the cache lookup, defeating the warm-cache zero-query
     # guarantee. Matches the established pattern in recitation_track_list.
-    token = folder_cache_token(folder)
+    token = quality_cache_token(quality)
     _resp_key = recitation_ayah_response_cache_key(asset_id, token, ayah_key)
     _meta_key = recitation_asset_meta_cache_key(asset_id)
 
@@ -84,7 +87,7 @@ def get_recitation_ayah(
             entity_names=[cached_meta["name_ar"]],
             publisher_ids=[cached_meta["publisher_id"]] if cached_meta["publisher_id"] else [],
             publisher_names=[cached_meta["publisher_name"]] if cached_meta["publisher_id"] else [],
-            folder=folder,
+            quality=quality,
             ayah_key=ayah_key,
         )
         resp = HttpResponse(cached_resp, content_type="application/json")
@@ -98,9 +101,9 @@ def get_recitation_ayah(
     data = service.get_ayah_audio_data(
         asset_id=asset_id,
         ayah_key=ayah_key,
-        folder=folder,
+        quality=quality,
         publisher_q=Q(restricted_for_tenant=False),
-        require_visible_folder=True,
+        require_visible_quality=True,
     )
 
     asset = data["asset"]
@@ -122,7 +125,7 @@ def get_recitation_ayah(
         entity_names=[asset.name_ar],
         publisher_ids=[asset.publisher_id] if asset.publisher_id else [],
         publisher_names=[publisher_name] if asset.publisher_id else [],
-        folder=folder,
+        quality=quality,
         ayah_key=data["ayah_key"],
     )
 

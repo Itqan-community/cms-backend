@@ -32,7 +32,7 @@ class RecitationTracksTest(BaseTestCase):
         baker.make(
             RecitationSurahTrack,
             asset=self.asset,
-            folder=self.asset.recitation_folders.get(is_default=True),
+            quality=self.asset.recitation_qualities.get(is_default=True),
             surah_number=2,
             duration_ms=2000,
             size_bytes=1024,
@@ -41,7 +41,7 @@ class RecitationTracksTest(BaseTestCase):
         baker.make(
             RecitationSurahTrack,
             asset=self.asset,
-            folder=self.asset.recitation_folders.get(is_default=True),
+            quality=self.asset.recitation_qualities.get(is_default=True),
             surah_number=1,
             duration_ms=1000,
             size_bytes=512,
@@ -73,7 +73,7 @@ class RecitationTracksTest(BaseTestCase):
         baker.make(
             RecitationSurahTrack,
             asset=self.asset,
-            folder=self.asset.recitation_folders.get(is_default=True),
+            quality=self.asset.recitation_qualities.get(is_default=True),
             surah_number=2,
             duration_ms=2000,
             size_bytes=1024,
@@ -82,7 +82,7 @@ class RecitationTracksTest(BaseTestCase):
         baker.make(
             RecitationSurahTrack,
             asset=self.asset,
-            folder=self.asset.recitation_folders.get(is_default=True),
+            quality=self.asset.recitation_qualities.get(is_default=True),
             surah_number=1,
             duration_ms=1000,
             size_bytes=512,
@@ -106,7 +106,7 @@ class RecitationTracksTest(BaseTestCase):
         baker.make(
             RecitationSurahTrack,
             asset=asset2,
-            folder=asset2.recitation_folders.get(is_default=True),
+            quality=asset2.recitation_qualities.get(is_default=True),
             surah_number=3,
             duration_ms=3000,
             size_bytes=2048,
@@ -135,7 +135,7 @@ class RecitationTracksTest(BaseTestCase):
         baker.make(
             RecitationSurahTrack,
             asset=self.asset,
-            folder=self.asset.recitation_folders.get(is_default=True),
+            quality=self.asset.recitation_qualities.get(is_default=True),
             surah_number=1,
             duration_ms=1000,
             size_bytes=512,

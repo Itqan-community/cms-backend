@@ -10,7 +10,7 @@ from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 from simple_history.utils import bulk_create_with_history, bulk_update_with_history
 
-from apps.content.models import Asset, RecitationAyahTiming, RecitationFolder, RecitationSurahTrack
+from apps.content.models import Asset, RecitationAyahTiming, RecitationQuality, RecitationSurahTrack
 from apps.core.ninja_utils.errors import ItqanError
 
 logger = logging.getLogger(__name__)
@@ -82,11 +82,11 @@ class ResultDict(TypedDict):
     file_errors: list[str]
 
 
-def bulk_upload_recitation_ayah_timestamps(asset_id: int, files: Iterable, folder_id: int | None = None) -> ResultDict:
+def bulk_upload_recitation_ayah_timestamps(asset_id: int, files: Iterable, quality_id: int | None = None) -> ResultDict:
     """
-    Import ayah timings JSON files for one folder (variant) of a given asset.
+    Import ayah timings JSON files for one quality (variant) of a given asset.
     - files: iterable of UploadedFile objects (each file for a surah)
-    - folder_id: the variant these timings belong to; defaults to the asset's default folder
+    - quality_id: the variant these timings belong to; defaults to the asset's default quality
     Behavior:
     - Create new timings when missing
     - Update existing timings only when values differ
@@ -96,26 +96,26 @@ def bulk_upload_recitation_ayah_timestamps(asset_id: int, files: Iterable, folde
     """
     asset = Asset.objects.get(pk=asset_id)
 
-    if folder_id is not None:
-        folder = RecitationFolder.objects.filter(pk=folder_id, asset_id=asset_id).first()
+    if quality_id is not None:
+        quality = RecitationQuality.objects.filter(pk=quality_id, asset_id=asset_id).first()
     else:
-        folder = RecitationFolder.objects.filter(asset_id=asset_id, is_default=True).first()
+        quality = RecitationQuality.objects.filter(asset_id=asset_id, is_default=True).first()
 
-    if not folder:
+    if not quality:
         raise ItqanError(
-            error_name="folder_not_found",
-            message=_("Folder {folder_id} not found for asset {asset_id}.").format(
-                folder_id=folder_id, asset_id=asset_id
+            error_name="quality_not_found",
+            message=_("Quality {quality_id} not found for asset {asset_id}.").format(
+                quality_id=quality_id, asset_id=asset_id
             ),
             status_code=404,
         )
 
-    logger.info(f"Ayah timestamps upload started [asset_id={asset_id}, folder_id={folder.pk}]")
+    logger.info(f"Ayah timestamps upload started [asset_id={asset_id}, quality_id={quality.pk}]")
 
-    # Preload tracks for this folder only. Scoping by asset would collapse the
+    # Preload tracks for this quality only. Scoping by asset would collapse the
     # per-surah map across variants and write the timings to an arbitrary one --
     # echo/delay variants have genuinely different offsets.
-    tracks = RecitationSurahTrack.objects.filter(asset=asset, folder=folder).only("id", "surah_number")
+    tracks = RecitationSurahTrack.objects.filter(asset=asset, quality=quality).only("id", "surah_number")
     track_by_surah = {t.surah_number: t for t in tracks}
 
     created_total = 0

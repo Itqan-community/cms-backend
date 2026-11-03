@@ -10,13 +10,14 @@ from ninja import Query, Schema
 from apps.content.cache import (
     RECITATION_ASSET_META_CACHE_TTL,
     RECITATION_RESPONSE_CACHE_TTL,
-    folder_cache_token,
+    quality_cache_token,
     recitation_asset_meta_cache_key,
     recitation_response_cache_key,
 )
 from apps.content.repositories.recitation import RecitationRepository
 from apps.content.services.asset_access import enforce_asset_access_on_public_api
 from apps.content.services.recitation import RecitationService
+from apps.content.services.recitation_quality_resolution import reject_renamed_folder_param
 from apps.core.mixins.constants import QURAN_SURAHS
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.paginations import DEFAULT_PAGE_SIZE, PUBLIC_RECITATION_MAX_PAGE_SIZE
@@ -52,10 +53,11 @@ class RecitationSurahTrackOut(Schema):
 @router.get(
     "recitations/{asset_id}/",
     response={
+        400: NinjaErrorResponse[Literal["folder_param_renamed"]],
         200: list[RecitationSurahTrackOut],
         401: NinjaErrorResponse[Literal["authentication_required"]],
         403: NinjaErrorResponse[Literal["access_denied"]],
-        404: NinjaErrorResponse[Literal["not_found"]] | NinjaErrorResponse[Literal["folder_not_found"]],
+        404: NinjaErrorResponse[Literal["not_found"]] | NinjaErrorResponse[Literal["quality_not_found"]],
     },
 )
 @track_usage()
@@ -64,14 +66,15 @@ def list_recitation_tracks(
     asset_id: int,
     page: int = Query(1, ge=1, le=114),
     page_size: int = Query(DEFAULT_PAGE_SIZE, ge=1),
-    folder: str | None = Query(None),
+    quality: str | None = Query(None),
 ):
+    reject_renamed_folder_param(request)
     page_size = min(page_size, PUBLIC_RECITATION_MAX_PAGE_SIZE)
 
-    # Key on the *requested* folder rather than the resolved one: resolving it would
+    # Key on the *requested* quality rather than the resolved one: resolving it would
     # need a DB read before the cache lookup, defeating the warm-cache no-query
-    # guarantee. folder_cache_token keeps the raw value safe to embed in a key.
-    _resp_key = recitation_response_cache_key(asset_id, page, page_size, folder_cache_token(folder))
+    # guarantee. quality_cache_token keeps the raw value safe to embed in a key.
+    _resp_key = recitation_response_cache_key(asset_id, page, page_size, quality_cache_token(quality))
     _meta_key = recitation_asset_meta_cache_key(asset_id)
 
     cached_resp: bytes | None = cache.get(_resp_key)
@@ -132,8 +135,8 @@ def list_recitation_tracks(
         asset_id,
         Q(asset__restricted_for_tenant=False),
         prefetch_timings=True,
-        folder=folder,
-        require_visible_folder=True,
+        quality=quality,
+        require_visible_quality=True,
     )
 
     all_results = []

@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 
 class RecitationRepository(BaseRecitationRepository):
-    """ORM access for recitation assets, folders, tracks and timings."""
+    """ORM access for recitation assets, qualities, tracks and timings."""
 
     def __init__(self) -> None:
         self.asset_model = Asset
@@ -40,9 +40,9 @@ class RecitationRepository(BaseRecitationRepository):
         """
         qs = (
             self.asset_model.objects.select_related("publisher", "reciter", "riwayah", "qiraah")
-            # Folders are serialized on every list row, so prefetch them: the list is
+            # Qualities are serialized on every list row, so prefetch them: the list is
             # paginated and resolving them lazily would be one extra query per row.
-            .prefetch_related("recitation_folders").filter(
+            .prefetch_related("recitation_qualities").filter(
                 category=CategoryChoice.RECITATION,
                 status=StatusChoice.READY,
             )
@@ -76,13 +76,13 @@ class RecitationRepository(BaseRecitationRepository):
                 qs = qs.filter(license__in=license_codes)
 
         if annotate_surahs_count:
-            # Count the default folder's tracks only. Counting every folder would
+            # Count the default quality's tracks only. Counting every quality would
             # report 228 for a recitation published in two variants, when what the
             # caller wants is "how many surahs does this recitation cover".
             qs = qs.annotate(
                 surahs_count=Count(
                     "recitation_tracks",
-                    filter=Q(recitation_tracks__folder__is_default=True),
+                    filter=Q(recitation_tracks__quality__is_default=True),
                     distinct=True,
                 )
             )
@@ -102,7 +102,7 @@ class RecitationRepository(BaseRecitationRepository):
         """
         try:
             qs = self.asset_model.objects.select_related("publisher", "reciter", "riwayah", "qiraah").prefetch_related(
-                "versions", "recitation_folders"
+                "versions", "recitation_qualities"
             )
             if publisher_q is not None:
                 qs = qs.filter(publisher_q)
@@ -170,7 +170,7 @@ class RecitationRepository(BaseRecitationRepository):
                 is_open_access=is_open_access,
                 restricted_for_tenant=restricted_for_tenant,
             )
-            # The default folder is created by the post_save signal on Asset
+            # The default quality is created by the post_save signal on Asset
             # (apps/content/signals.py), which keeps the invariant true for assets
             # created outside this repository too.
 
@@ -271,31 +271,31 @@ class RecitationRepository(BaseRecitationRepository):
 
     def get_default_track_for_surah(self, asset_id: int, surah_number: int) -> RecitationSurahTrack | None:
         """
-        The default-folder track covering one surah, with its ayah timings
+        The default-quality track covering one surah, with its ayah timings
         prefetched in playback order -- the media-player sample needs both in
         a single query round-trip.
         """
         return (
-            self.track_model.objects.select_related("folder")
+            self.track_model.objects.select_related("quality")
             .prefetch_related(Prefetch("ayah_timings", queryset=RecitationAyahTiming.objects.order_by("start_ms")))
-            .filter(asset_id=asset_id, folder__is_default=True, surah_number=surah_number)
+            .filter(asset_id=asset_id, quality__is_default=True, surah_number=surah_number)
             .first()
         )
 
     def get_single_track(
-        self, asset_id: int, surah_number: int, folder_id: int | None = None
+        self, asset_id: int, surah_number: int, quality_id: int | None = None
     ) -> RecitationSurahTrack | None:
         # Single-surah track for the ayah-range endpoint, with timings prefetched
-        # in playback order. folder_id None serves the default variant (same
+        # in playback order. quality_id None serves the default variant (same
         # convention as list_recitation_tracks_for_asset) so callers that omit
-        # ?folder keep working without resolving the folder first.
+        # ?quality keep working without resolving the quality first.
         query = Q(asset_id=asset_id, surah_number=surah_number)
-        if folder_id is None:
-            query &= Q(folder__is_default=True)
+        if quality_id is None:
+            query &= Q(quality__is_default=True)
         else:
-            query &= Q(folder_id=folder_id)
+            query &= Q(quality_id=quality_id)
         return (
-            self.track_model.objects.select_related("folder")
+            self.track_model.objects.select_related("quality")
             .prefetch_related(Prefetch("ayah_timings", queryset=RecitationAyahTiming.objects.order_by("start_ms")))
             .filter(query)
             .first()
@@ -306,24 +306,24 @@ class RecitationRepository(BaseRecitationRepository):
         asset_id: int,
         publisher_q: Q | None,
         prefetch_timings: bool = False,
-        folder_id: int | None = None,
+        quality_id: int | None = None,
     ) -> QuerySet[RecitationSurahTrack]:
         """
-        Tracks for one asset ordered by surah, optionally scoped to a folder and
+        Tracks for one asset ordered by surah, optionally scoped to a quality and
         with ayah timings prefetched in playback order.
         """
         query = Q(asset_id=asset_id)
         if publisher_q is not None:
             query &= publisher_q
 
-        if folder_id is None:
-            # No folder requested: serve the default one so callers that predate the
-            # folder feature keep seeing exactly one track per surah.
-            query &= Q(folder__is_default=True)
+        if quality_id is None:
+            # No quality requested: serve the default one so callers that predate the
+            # quality feature keep seeing exactly one track per surah.
+            query &= Q(quality__is_default=True)
         else:
-            query &= Q(folder_id=folder_id)
+            query &= Q(quality_id=quality_id)
 
-        qs = self.track_model.objects.select_related("asset__reciter", "folder").filter(query).order_by("surah_number")
+        qs = self.track_model.objects.select_related("asset__reciter", "quality").filter(query).order_by("surah_number")
         if prefetch_timings:
             qs = qs.prefetch_related(
                 Prefetch(
@@ -454,14 +454,14 @@ class RecitationRepository(BaseRecitationRepository):
         return qs
 
     def get_ayah_timing_for_asset(
-        self, asset_id: int, folder_id: int, surah_number: int, ayah_key: str
+        self, asset_id: int, quality_id: int, surah_number: int, ayah_key: str
     ) -> RecitationAyahTiming | None:
-        """Fetch the timing record for a specific ayah scoped by asset, folder, and surah."""
+        """Fetch the timing record for a specific ayah scoped by asset, quality, and surah."""
         return (
-            self.timing_model.objects.select_related("track", "track__asset", "track__folder")
+            self.timing_model.objects.select_related("track", "track__asset", "track__quality")
             .filter(
                 track__asset_id=asset_id,
-                track__folder_id=folder_id,
+                track__quality_id=quality_id,
                 track__surah_number=surah_number,
                 ayah_key=ayah_key,
             )
