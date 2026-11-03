@@ -3,11 +3,16 @@ from typing import Literal
 from django.db.models import Count, IntegerField, OuterRef, Q, QuerySet, Subquery
 from django.db.models.functions import Coalesce
 from django.utils.translation import gettext_lazy as _
-from ninja import Schema
+from ninja import Query, Schema
 from ninja.pagination import paginate
-from pydantic import AwareDatetime
+from pydantic import AwareDatetime, ConfigDict, Json, model_validator
 
-from apps.content.api.portal.asset_content import _CATEGORY_CONFIG
+from apps.content.api.portal.asset_content import (
+    _CATEGORY_CONFIG,
+    GridNumberFilterIn,
+    GridTextFilterIn,
+    _column_filter,
+)
 from apps.content.models import (
     AssetTemplateChoice,
     AssetVersion,
@@ -16,7 +21,7 @@ from apps.content.models import (
     CategoryChoice,
     ChangeTypeChoice,
 )
-from apps.content.repositories.asset_review import AssetReviewRepository
+from apps.content.repositories.asset_review import AssetReviewRepository, ReviewFilters
 from apps.content.services.asset_review import AssetReviewService
 from apps.content.services.asset_templates import group_label
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
@@ -117,6 +122,10 @@ class ReviewChangeOut(Schema):
     unit_type: AssetTemplateChoice
     unit_id: int
     label: str
+    # The unit's surah number and ayah-in-surah number (a range by its start);
+    # null where the unit has none (a page; a surah unit has no ayah).
+    surah: int | None
+    ayah: int | None
     # The text column of the changed cell, with its display labels.
     column: str
     column_label_en: str
@@ -141,6 +150,22 @@ class ReviewChangeOut(Schema):
     @staticmethod
     def resolve_unit_id(obj: AssetVersionChange) -> int:
         return obj.unit_id
+
+    @staticmethod
+    def resolve_surah(obj: AssetVersionChange) -> int | None:
+        if obj.surah_id is not None:
+            return obj.surah_id
+        unit = obj.ayah or obj.word or obj.from_ayah or obj.from_word
+        return unit.surah_id if unit is not None else None
+
+    @staticmethod
+    def resolve_ayah(obj: AssetVersionChange) -> int | None:
+        if obj.ayah_id is not None:
+            return obj.ayah.number_in_surah
+        if obj.from_ayah_id is not None:
+            return obj.from_ayah.number_in_surah
+        word = obj.word or obj.from_word
+        return word.ayah.number_in_surah if word is not None else None
 
     @staticmethod
     def resolve_column(obj: AssetVersionChange) -> str:
@@ -208,6 +233,44 @@ class ReviewChangeOut(Schema):
         return review.reviewed_at if review is not None else None
 
 
+class ReviewFilterModelIn(Schema):
+    """The review grid's AG Grid filter model, keyed by column id.
+
+    ``unit_surah`` (the unit column's surah dropdown) and ``surah`` filter the
+    unit's surah number, ``ayah`` its ayah number; ``text`` the change's text
+    before or after it; the rest the field of the same name (``column`` is the
+    column key). Unknown keys are rejected (400) so a typo never silently
+    returns unfiltered rows.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    unit_surah: GridNumberFilterIn | None = None
+    surah: GridNumberFilterIn | None = None
+    ayah: GridNumberFilterIn | None = None
+    text: GridTextFilterIn | None = None
+    change_type: GridTextFilterIn | None = None
+    column: GridTextFilterIn | None = None
+    commit_ref: GridTextFilterIn | None = None
+    edited_by: GridTextFilterIn | None = None
+    reviewed_by: GridTextFilterIn | None = None
+    comment: GridTextFilterIn | None = None
+
+    def to_filters(self) -> ReviewFilters:
+        texts = {
+            key: _column_filter(getattr(self, key))
+            for key in ("change_type", "column", "commit_ref", "edited_by", "reviewed_by", "comment")
+            if getattr(self, key) is not None
+        }
+        return ReviewFilters(
+            text=_column_filter(self.text),
+            texts=texts,
+            unit_surah=_column_filter(self.unit_surah),
+            surah=_column_filter(self.surah),
+            ayah=_column_filter(self.ayah),
+        )
+
+
 class ReviewStateIn(Schema):
     state: Literal["approved", "commented", "unreviewed"]
     comment: str = ""
@@ -262,9 +325,11 @@ def list_review_changes(
     language: str,
     state: str | None = None,
     version: int | None = None,
+    filters: Json[ReviewFilterModelIn] | None = Query(None),
 ):
     """Every change of the language, newest commit first — or, with ``version``,
-    the changes that make up that version (what decides whether it is approved)."""
+    the changes that make up that version (what decides whether it is approved).
+    ``filters`` is the grid's filter model (see ``ReviewFilterModelIn``)."""
     resolved = _resolve_review(category, request)
     return AssetReviewService().list_changes(
         slug,
@@ -273,6 +338,7 @@ def list_review_changes(
         user=request.user,
         state=state,
         version_id=version,
+        filters=filters.to_filters() if filters is not None else None,
         publisher_q=request.publisher_q(),
     )
 
@@ -283,6 +349,13 @@ class BulkApproveIn(Schema):
     change_ids: list[int] | None = None
     state: Literal["unreviewed", "commented"] | None = None
     version: int | None = None
+    filters: ReviewFilterModelIn | None = None
+
+    @model_validator(mode="after")
+    def _filters_or_ids(self) -> "BulkApproveIn":
+        if self.change_ids is not None and (self.state, self.version, self.filters) != (None, None, None):
+            raise ValueError("Pass either `change_ids` or the `state` / `version` / `filters` they would match.")
+        return self
 
 
 class BulkApproveOut(Schema):
@@ -310,6 +383,7 @@ def bulk_approve_changes(request: Request, category: str, slug: str, data: BulkA
         change_ids=data.change_ids,
         state=data.state,
         version_id=data.version,
+        filters=data.filters.to_filters() if data.filters is not None else None,
         publisher_q=request.publisher_q(),
     )
     return {"approved": approved}
