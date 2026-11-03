@@ -8,6 +8,7 @@ from django.db.models import ProtectedError, Q
 from django.utils.translation import gettext as _
 
 from apps.content.models import Asset as AssetModel, AssetVersion, CategoryChoice, LicenseChoice
+from apps.content.repositories.asset_content import AssetContentRepository
 from apps.content.repositories.font import FontRepository
 from apps.content.services.asset_access import guard_restrict_for_tenant
 from apps.content.services.asset_content import (
@@ -15,6 +16,7 @@ from apps.content.services.asset_content import (
     VersionBump,
     forbid_published_version_change,
     issue_version_number,
+    lock_version_for_delete,
 )
 from apps.content.services.asset_slug import AssetSlugService
 from apps.content.version_text import VersionText
@@ -292,6 +294,10 @@ class FontService:
         Business Logic: Delete a font version.
         """
         version = self._get_font_version_or_404(font_slug, version_id, publisher_q=publisher_q)
-        forbid_published_version_change(version)
-        self.repo.delete_font_version(version)
-        logger.info(f"Font version deleted [version_id={version_id}, asset_slug={font_slug}]")
+        with transaction.atomic():
+            version = lock_version_for_delete(version)
+            was_published = AssetContentRepository().unpublish_version(version)
+            self.repo.delete_font_version(version)
+        logger.info(
+            f"Font version deleted [version_id={version_id}, asset_slug={font_slug}, " f"was_published={was_published}]"
+        )

@@ -477,8 +477,11 @@ from the parsed entries, so consumers download exactly what was reviewed.
   version is *approved* when, for every unit, its latest change at or before that
   version is approved (units with no change rows predate tracking and count as
   approved); the version list exposes `is_published`, `is_approved`,
-  `pending_review_count` and `publishing_rolls_back` (publishing it would need a reason). The published version cannot be deleted or have its file
-  replaced (`version_is_published`), and is never pruned when a newer commit lands;
+  `pending_review_count`, `publishing_rolls_back` (publishing it would need a reason) and
+  `delete_blocked_reason` (the error a delete would return, or null). The published version cannot have its file replaced, and cannot be
+  deleted (`version_is_published`) unless it is its language's first and only version:
+  deleting that one leaves the language with no published version, so it is set back
+  to DRAFT and consumers no longer see it. It is never pruned when a newer commit lands;
   publishing a pruned version rebuilds its file. History is append-only: only the
   newest committed version of a language can be deleted or have its file replaced
   (`version_not_latest`), since later versions are stored as changes against it.
@@ -491,8 +494,11 @@ from the parsed entries, so consumers download exactly what was reviewed.
   (`PORTAL_PUBLISH_CONTENT`; going back needs a `reason`). An upload is published right
   away with `publish=true` (also needs `PORTAL_PUBLISH_CONTENT`), otherwise it is staged
   until published; the first version created with the asset is published with it.
-  Subscribers are emailed and Dependabot runs on publish, not on upload, and the
-  published version can't be deleted or have its file replaced (`version_is_published`).
+  Subscribers are emailed and Dependabot runs on publish, not on upload. The same
+  delete rules apply as for translations and tafsirs: only the newest version
+  (`version_not_latest`), and the published one only while it is the only version
+  (`version_is_published` otherwise; deleting it unpublishes the language). The
+  published version can't have its file replaced (`version_is_published`).
   Migration `0007` pinned each mushaf / font language to its newest version.
 - **Package removal** — an Itqan admin (`PORTAL_REMOVE_PACKAGE_VERSION`) may *remove* a
   version (`POST /portal/packages/versions/{id}/remove/`, reason required): it is then never

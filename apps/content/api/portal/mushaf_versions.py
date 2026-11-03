@@ -7,7 +7,11 @@ from pydantic import AwareDatetime, Field
 
 from apps.content.api.portal.asset_content import SetPublishedIn, VersionTextIn, VersionTextOut
 from apps.content.models import Asset, AssetLanguage, AssetVersion, CategoryChoice
-from apps.content.services.asset_content import AssetContentService
+from apps.content.services.asset_content import (
+    AssetContentService,
+    VersionDeleteBlockedReason,
+    version_delete_blocked_reason,
+)
 from apps.content.services.mushaf import MushafService
 from apps.content.version_text import VersionText
 from apps.core.mixins.storage import absolute_file_url
@@ -29,6 +33,10 @@ class MushafVersionListOut(VersionTextOut, PackageStatusOut):
     asset_id: int
     # The version consumers are served.
     is_published: bool
+    # Why the version cannot be deleted (the error a delete would return), or null.
+    # Only the newest version of a language can be deleted; a published one only
+    # while it is the language's first and only version.
+    delete_blocked_reason: VersionDeleteBlockedReason | None
     # Publishing it goes back to an earlier version, which needs a reason.
     publishing_rolls_back: bool
     # Version number ("major.minor"), issued by the server; ``label_*`` is the version name.
@@ -45,6 +53,10 @@ class MushafVersionListOut(VersionTextOut, PackageStatusOut):
     @staticmethod
     def resolve_publishing_rolls_back(obj: AssetVersion) -> bool:
         return obj.publishing_rolls_back()
+
+    @staticmethod
+    def resolve_delete_blocked_reason(obj: AssetVersion, context: dict) -> VersionDeleteBlockedReason | None:
+        return version_delete_blocked_reason(obj, context["request"].__dict__.setdefault("_version_delete_reasons", {}))
 
     @staticmethod
     def resolve_file_url(obj: AssetVersion, context: dict) -> str | None:
@@ -235,7 +247,7 @@ def update_mushaf_version_patch(
     "mushafs/{mushaf_slug}/versions/{version_id}/",
     response={
         204: None,
-        400: NinjaErrorResponse[Literal["version_is_published"]],
+        400: NinjaErrorResponse[Literal["version_is_published"]] | NinjaErrorResponse[Literal["version_not_latest"]],
         404: NinjaErrorResponse[Literal["mushaf_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
 )

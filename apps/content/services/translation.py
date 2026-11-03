@@ -28,6 +28,7 @@ from apps.content.services.asset_content import (
     import_uploaded_file_into_entries,
     issue_version_number,
     lock_version_for_content_change,
+    lock_version_for_delete,
     set_version_language,
 )
 from apps.content.services.asset_slug import AssetSlugService
@@ -382,6 +383,10 @@ class TranslationService:
         """
         version = self._get_translation_version_or_404(translation_slug, version_id, publisher_q=publisher_q)
         with transaction.atomic():
-            version = lock_version_for_content_change(version)
+            version = lock_version_for_delete(version)
+            was_published = AssetContentRepository().unpublish_version(version)
             self.repo.delete_translation_version(version)
-        logger.info(f"Translation version deleted [version_id={version_id}, asset_slug={translation_slug}]")
+        logger.info(
+            f"Translation version deleted [version_id={version_id}, asset_slug={translation_slug}, "
+            f"was_published={was_published}]"
+        )
