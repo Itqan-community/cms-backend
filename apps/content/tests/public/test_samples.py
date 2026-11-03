@@ -259,7 +259,7 @@ class ContentSamplesTest(BaseTestCase):
             template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
-            restricted_for_tenant=True,
+            in_public_api=False,
             name="Restricted Tafsir",
             language="ar",
         )
@@ -278,7 +278,7 @@ class ContentSamplesTest(BaseTestCase):
             template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
-            restricted_for_tenant=True,
+            in_public_api=False,
             name="Restricted Translation",
             language="en",
         )

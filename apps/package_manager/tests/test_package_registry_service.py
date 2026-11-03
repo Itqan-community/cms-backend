@@ -27,7 +27,7 @@ def _make_asset(
     publisher: Publisher,
     *,
     slug: str = "test-asset",
-    restricted_for_tenant: bool = False,
+    in_cli: bool = True,
 ) -> Asset:
     return Asset.objects.create(
         status=StatusChoice.READY,
@@ -40,7 +40,7 @@ def _make_asset(
         format="pdf",
         description="desc",
         language="en",
-        restricted_for_tenant=restricted_for_tenant,
+        in_cli=in_cli,
     )
 
 
@@ -103,8 +103,8 @@ class PackageRegistryRepositoryTests(BaseTestCase):
         result = self.repo.get_asset_by_slug("my-asset")
         self.assertIsNone(result)
 
-    def test_get_asset_by_slug_where_restricted_for_tenant_should_be_excluded(self):
-        _make_asset(self.publisher, slug="tenant-only", restricted_for_tenant=True)
+    def test_get_asset_by_slug_where_not_in_cli_should_be_excluded(self):
+        _make_asset(self.publisher, slug="tenant-only", in_cli=False)
         result = self.repo.get_asset_by_slug("tenant-only")
         self.assertIsNone(result)
 
@@ -559,10 +559,10 @@ class ResolveSingleTests(BaseTestCase):
         self.assertNotIn("1.2.0", msg)
         self.assertIn("collision-leak", msg)
 
-    # --- restricted_for_tenant ---
+    # --- in_cli channel ---
 
-    def test_resolve_where_restricted_for_tenant_returns_404(self):
-        asset = _make_asset(self.publisher, slug="tenant-only", restricted_for_tenant=True)
+    def test_resolve_where_not_in_cli_returns_404(self):
+        asset = _make_asset(self.publisher, slug="tenant-only", in_cli=False)
         _make_version(asset, name="1.0.0")
         with self.assertRaises(ItqanError) as ctx:
             self.service.resolve_single("tenant-only", "1.0.0")
@@ -765,8 +765,8 @@ class ResolveManifestTests(BaseTestCase):
             self.service.resolve_manifest(_requests({"exact-slug": "1.0.0"}))
         self.assertEqual("asset_not_found", ctx.exception.error_name)
 
-    def test_resolve_manifest_restricted_for_tenant_entry_returns_404(self):
-        asset = _make_asset(self.publisher, slug="tenant-only", restricted_for_tenant=True)
+    def test_resolve_manifest_not_in_cli_entry_returns_404(self):
+        asset = _make_asset(self.publisher, slug="tenant-only", in_cli=False)
         _make_version(asset, name="1.0.0")
         with self.assertRaises(ItqanError) as ctx:
             self.service.resolve_manifest(_requests({"tenant-only": "1.0.0", "other": "1.0.0"}))

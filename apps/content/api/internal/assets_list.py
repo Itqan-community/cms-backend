@@ -79,7 +79,7 @@ def list_assets(request: Request, filters: AssetFilter = Query()):
     assets = (
         Asset.objects.select_related("publisher", "reciter", "mushaf_layout")
         .filter(request.publisher_q("publisher"))
-        .filter(restricted_for_tenant=False)
+        .filter(in_gallery=True)
         .exclude(status=StatusChoice.DRAFT)
         .filter(consumer_visible_q())
         .annotate(

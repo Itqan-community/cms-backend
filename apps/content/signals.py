@@ -3,7 +3,7 @@ from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
 from apps.content.cache import invalidate_recitation_tracks_cache
-from apps.content.models import Asset, CategoryChoice, RecitationQuality, RecitationSurahTrack
+from apps.content.models import ASSET_CHANNEL_FIELDS, Asset, CategoryChoice, RecitationQuality, RecitationSurahTrack
 
 
 @receiver(post_save, sender=RecitationSurahTrack)
@@ -20,7 +20,7 @@ def clear_public_recitation_cache_on_access_policy_change(
     Bust the public recitation caches whenever the access policy may have changed.
 
     Both warm paths (track-list and range) authorize from the cached asset
-    metadata, so a flip of ``is_open_access`` or ``restricted_for_tenant``
+    metadata, so a flip of ``is_open_access`` or the channel flags
     must drop it -- otherwise the warm path keeps serving a stale allow/deny
     decision for up to the meta TTL (CWE-862/863).
 
@@ -38,7 +38,7 @@ def clear_public_recitation_cache_on_access_policy_change(
     """
     if instance.category != CategoryChoice.RECITATION:
         return
-    if update_fields is not None and not ({"is_open_access", "restricted_for_tenant", "status"} & set(update_fields)):
+    if update_fields is not None and not ({"is_open_access", "status", *ASSET_CHANNEL_FIELDS} & set(update_fields)):
         return
     transaction.on_commit(lambda asset_id=instance.id: invalidate_recitation_tracks_cache(asset_id))
 

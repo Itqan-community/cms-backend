@@ -38,7 +38,7 @@ class TranslationRepository:
             category=CategoryChoice.TRANSLATION,
             status=StatusChoice.READY,
             template=AssetTemplateChoice.AYAH,
-            restricted_for_tenant=False,
+            in_public_api=True,
         )
         if publisher_q is not None:
             qs = qs.filter(publisher_q)
@@ -63,7 +63,10 @@ class TranslationRepository:
         is_external: bool = False,
         external_url: str | None = None,
         is_open_access: bool = False,
-        restricted_for_tenant: bool = False,
+        in_gallery: bool = True,
+        in_public_api: bool = True,
+        in_cli: bool = True,
+        in_tenants: bool = True,
         status: StatusChoice = StatusChoice.READY,
         slug: str = "",
     ) -> Asset:
@@ -93,7 +96,10 @@ class TranslationRepository:
                 is_external=is_external,
                 external_url=external_url,
                 is_open_access=is_open_access,
-                restricted_for_tenant=restricted_for_tenant,
+                in_gallery=in_gallery,
+                in_public_api=in_public_api,
+                in_cli=in_cli,
+                in_tenants=in_tenants,
             )
 
         return asset

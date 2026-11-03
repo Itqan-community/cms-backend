@@ -30,7 +30,7 @@ class AssetFileStructureTests(QuranDataMixin, BaseTestCase):
             template=AssetTemplateChoice.AYAH,
             status=StatusChoice.READY,
             language="ar",
-            restricted_for_tenant=False,
+            in_gallery=True,
             is_open_access=False,
         )
         self.url = f"/cms-api/assets/{self.asset.id}/file-structure/"

@@ -50,7 +50,7 @@ class TranslationCreateTest(BaseTestCase):
         self.assertEqual(StatusChoice.READY, asset.status)
         self.assertEqual("en", asset.language)
 
-    def test_create_translation_defaults_visibility_flags_to_false(self):
+    def test_create_translation_defaults_visibility_flags_to_false_and_channels_to_true(self):
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
         response = self.client.post(
@@ -68,12 +68,14 @@ class TranslationCreateTest(BaseTestCase):
         self.assertEqual(201, response.status_code, response.content)
         body = response.json()
         self.assertFalse(body["is_open_access"])
-        self.assertFalse(body["restricted_for_tenant"])
+        for flag in ("in_gallery", "in_public_api", "in_cli", "in_tenants"):
+            self.assertTrue(body[flag], flag)
         asset = Asset.objects.get(id=body["id"])
         self.assertFalse(asset.is_open_access)
-        self.assertFalse(asset.restricted_for_tenant)
+        for flag in ("in_gallery", "in_public_api", "in_cli", "in_tenants"):
+            self.assertTrue(getattr(asset, flag), flag)
 
-    def test_create_translation_sets_visibility_flags(self):
+    def test_create_translation_sets_visibility_and_channel_flags(self):
         self.authenticate_user(self.user)
         self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
         response = self.client.post(
@@ -86,17 +88,26 @@ class TranslationCreateTest(BaseTestCase):
                 "template": "ayah",
                 "is_external": False,
                 "is_open_access": True,
-                "restricted_for_tenant": True,
+                "in_gallery": False,
+                "in_public_api": False,
+                "in_cli": False,
+                "in_tenants": True,
             },
         )
 
         self.assertEqual(201, response.status_code, response.content)
         body = response.json()
         self.assertTrue(body["is_open_access"])
-        self.assertTrue(body["restricted_for_tenant"])
+        self.assertEqual(
+            (False, False, False, True),
+            (body["in_gallery"], body["in_public_api"], body["in_cli"], body["in_tenants"]),
+        )
         asset = Asset.objects.get(id=body["id"])
         self.assertTrue(asset.is_open_access)
-        self.assertTrue(asset.restricted_for_tenant)
+        self.assertEqual(
+            (False, False, False, True),
+            (asset.in_gallery, asset.in_public_api, asset.in_cli, asset.in_tenants),
+        )
 
     def test_create_translation_where_publisher_not_found_should_return_404(self):
         self.authenticate_user(self.user)

@@ -87,7 +87,10 @@ class AssetAdmin(AuditedModelAdmin):
         "format",
         "license",
         "is_open_access",
-        "restricted_for_tenant",
+        "in_gallery",
+        "in_public_api",
+        "in_cli",
+        "in_tenants",
         "created_at",
     ]
     list_filter = [
@@ -95,7 +98,10 @@ class AssetAdmin(AuditedModelAdmin):
         "status",
         "license",
         "is_open_access",
-        "restricted_for_tenant",
+        "in_gallery",
+        "in_public_api",
+        "in_cli",
+        "in_tenants",
         "publisher",
         "format",
         "created_at",
@@ -157,7 +163,13 @@ class AssetAdmin(AuditedModelAdmin):
         (
             "Licensing",
             {
-                "fields": ("license", "is_external", "external_url", "is_open_access", "restricted_for_tenant"),
+                "fields": ("license", "is_external", "external_url", "is_open_access"),
+            },
+        ),
+        (
+            "Distribution channels",
+            {
+                "fields": ("in_gallery", "in_public_api", "in_cli", "in_tenants"),
             },
         ),
         (

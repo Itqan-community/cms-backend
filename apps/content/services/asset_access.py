@@ -2,21 +2,21 @@ from __future__ import annotations
 
 from enum import Enum
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.utils.translation import gettext_lazy as _
 
-from apps.content.models import Asset, AssetAccess, AssetAccessRequest
+from apps.content.models import ASSET_CHANNEL_FIELDS, Asset, AssetAccess, AssetAccessRequest
 from apps.content.repositories.access_request import AssetAccessRequestRepository
 from apps.core.ninja_utils.errors import ItqanError
 from apps.publishers.repositories.publisher import PublisherRepository
 from apps.publishers.services.membership import get_user_member_publisher_ids
 
 if TYPE_CHECKING:
-    from django.db.models import QuerySet
+    from django.db.models import Count, QuerySet
 
     from apps.users.models import User
 
@@ -136,32 +136,56 @@ class AssetAccessRequestService:
         return {"publisher_id": publisher.id, "auto_accept_access_requests": value}
 
 
-def guard_restrict_for_tenant(asset: Asset) -> None:
-    """Block restricting an asset to its tenant surface while public consumers rely on it.
+def guard_channel_changes(asset: Asset, fields: dict[str, Any]) -> None:
+    """Block turning a distribution channel off while developers depend on the asset.
 
-    Setting restricted_for_tenant=True removes the asset from public surfaces (the CMS
-    assets library and the public developers API). If developers already hold a granted
-    grant or have an open request, hiding it would break their integrations, so refuse
-    and ask the publisher to coordinate with Itqan team.
+    Runs on update when any of the four channel flags goes from True to False. If the
+    asset has PENDING or APPROVED access requests, the change is refused with a 409
+    carrying the counts and the channel names, unless the request set
+    ``confirm_channel_change``. Turning a flag on never needs confirmation.
+
+    ``confirm_channel_change`` is not a model field, so it is always removed from
+    ``fields`` here, before the repository writes the fields generically.
     """
-    has_active_consumers = AssetAccessRequest.objects.filter(
-        asset=asset,
-        status__in=[
-            AssetAccessRequest.StatusChoice.PENDING,
-            AssetAccessRequest.StatusChoice.APPROVED,
-        ],
-    ).exists()
-    if not has_active_consumers:
+    confirmed = bool(fields.pop("confirm_channel_change", False))
+    for name in ASSET_CHANNEL_FIELDS:
+        if name in fields and fields[name] is None:
+            del fields[name]  # PATCH sent null: leave the flag as it is
+    turned_off = [name for name in ASSET_CHANNEL_FIELDS if fields.get(name) is False and getattr(asset, name)]
+    if not turned_off:
         return
 
-    logger.warning(f"Blocked restricting asset to tenant — open or granted access requests exist [asset_id={asset.pk}]")
+    counts = AssetAccessRequest.objects.filter(
+        asset=asset,
+        status__in=[AssetAccessRequest.StatusChoice.PENDING, AssetAccessRequest.StatusChoice.APPROVED],
+    ).aggregate(
+        approved=Count("pk", filter=Q(status=AssetAccessRequest.StatusChoice.APPROVED)),
+        pending=Count("pk", filter=Q(status=AssetAccessRequest.StatusChoice.PENDING)),
+    )
+    approved_count, pending_count = counts["approved"], counts["pending"]
+    if not approved_count and not pending_count:
+        return
+
+    if confirmed:
+        logger.warning(
+            f"Distribution channels turned off with confirmation [asset_id={asset.pk}, channels={turned_off}, "
+            f"approved_count={approved_count}, pending_count={pending_count}]"
+        )
+        return
+
+    logger.warning(
+        f"Blocked turning channels off — open or granted access requests exist "
+        f"[asset_id={asset.pk}, channels={turned_off}]"
+    )
     raise ItqanError(
-        "restricted_for_tenant_conflict",
+        "channel_has_active_consumers",
         _(
-            "This asset has open or granted access requests from public consumers and "
-            "cannot be restricted to your tenant. Please contact Itqan team."
+            "This asset has developers with pending or approved access requests. "
+            "Turning off its distribution channels may break their integrations. "
+            "Confirm the change to proceed."
         ),
         status_code=409,
+        extra={"approved_count": approved_count, "pending_count": pending_count, "channels": turned_off},
     )
 
 

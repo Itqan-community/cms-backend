@@ -6,6 +6,7 @@ from ninja import Field, File, FilterLookup, FilterSchema, Form, Query, Schema, 
 from ninja.pagination import paginate
 from pydantic import AwareDatetime
 
+from apps.content.channel_schemas import ChannelConflictResponse
 from apps.content.models import Asset, AssetVersion, CategoryChoice, LicenseChoice, StatusChoice
 from apps.content.services.font import FontService
 from apps.content.version_text import VersionText
@@ -43,7 +44,10 @@ class FontListOut(Schema):
     language: str
     is_external: bool
     is_open_access: bool
-    restricted_for_tenant: bool
+    in_gallery: bool
+    in_public_api: bool
+    in_cli: bool
+    in_tenants: bool
     status: StatusChoice
     thumbnail_url: str | None = None
     created_at: AwareDatetime
@@ -83,7 +87,10 @@ class FontDetailOut(Schema):
     is_external: bool
     external_url: str | None = None
     is_open_access: bool
-    restricted_for_tenant: bool
+    in_gallery: bool
+    in_public_api: bool
+    in_cli: bool
+    in_tenants: bool
     status: StatusChoice
     versions: list[FontVersionOut]
     created_at: AwareDatetime
@@ -115,8 +122,12 @@ class FontCreateIn(Schema):
     is_external: bool = False
     external_url: str | None = None
     is_open_access: bool = False
-    restricted_for_tenant: bool = False
+    in_gallery: bool = True
+    in_public_api: bool = True
+    in_cli: bool = True
+    in_tenants: bool = True
     status: StatusChoice = StatusChoice.READY
+    confirm_channel_change: bool = False
     version_label_en: str = Field(default="", max_length=255)
     version_label_ar: str = Field(default="", max_length=255)
     # Starting version number ("major.minor") — required when a file is uploaded.
@@ -142,8 +153,12 @@ class FontPutIn(Schema):
     is_external: bool = False
     external_url: str | None = None
     is_open_access: bool = False
-    restricted_for_tenant: bool = False
+    in_gallery: bool = True
+    in_public_api: bool = True
+    in_cli: bool = True
+    in_tenants: bool = True
     status: StatusChoice = StatusChoice.READY
+    confirm_channel_change: bool = False
 
 
 class FontPatchIn(Schema):
@@ -159,8 +174,12 @@ class FontPatchIn(Schema):
     is_external: bool | None = None
     external_url: str | None = None
     is_open_access: bool | None = None
-    restricted_for_tenant: bool | None = None
+    in_gallery: bool | None = None
+    in_public_api: bool | None = None
+    in_cli: bool | None = None
+    in_tenants: bool | None = None
     status: StatusChoice | None = None
+    confirm_channel_change: bool = False
 
 
 # --- Filter Schema ---
@@ -251,7 +270,10 @@ def create_font(
         external_url=data.external_url,
         thumbnail_url=thumbnail,
         is_open_access=data.is_open_access,
-        restricted_for_tenant=data.restricted_for_tenant,
+        in_gallery=data.in_gallery,
+        in_public_api=data.in_public_api,
+        in_cli=data.in_cli,
+        in_tenants=data.in_tenants,
         status=data.status,
         slug=data.slug,
     )
@@ -288,6 +310,7 @@ def retrieve_font(request: Request, font_slug: str) -> Asset:
     response={
         200: FontDetailOut,
         400: NinjaErrorResponse[Literal["font_name_required"]] | NinjaErrorResponse[Literal["external_url_required"]],
+        409: ChannelConflictResponse,
         404: NinjaErrorResponse[Literal["font_not_found"]],
     },
 )
@@ -315,6 +338,7 @@ def update_font_put(
     response={
         200: FontDetailOut,
         400: NinjaErrorResponse[Literal["font_name_required"]] | NinjaErrorResponse[Literal["external_url_required"]],
+        409: ChannelConflictResponse,
         404: NinjaErrorResponse[Literal["font_not_found"]],
     },
 )

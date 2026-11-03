@@ -646,7 +646,7 @@ Expected: FAIL.
 ```python
 # assets_download.py — signature and resolution
 def download_asset(request: Request, id: int, language: str | None = None):
-    asset = get_object_or_404(Asset, request.publisher_q("publisher"), restricted_for_tenant=False, id=id)
+    asset = get_object_or_404(Asset, request.publisher_q("publisher"), in_gallery=True, id=id)
     if not user_has_access(request.user, asset):
         raise PermissionDenied(_("You do not have access to this asset"))
     if language is not None and not asset.languages.filter(language=language).exists():

@@ -115,7 +115,7 @@ def get_recitation_range(
     repo = RecitationRepository()
     service = RecitationService(repo)
 
-    asset = repo.get_asset_object(asset_id, Q(restricted_for_tenant=False))
+    asset = repo.get_asset_object(asset_id, Q(in_public_api=True))
     if not asset:
         raise Http404(str(_("No asset matches the given query.")))
 

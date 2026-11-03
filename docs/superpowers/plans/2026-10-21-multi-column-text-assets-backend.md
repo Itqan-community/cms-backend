@@ -326,7 +326,7 @@
   - `@dataclass(frozen=True) VersionStructure(template: str, header: list[str], columns: list[ColumnInfo])` and `ColumnInfo(key, label_en, label_ar)`, both in `apps/content/services/asset_columns.py`.
   - `version_structure(version: AssetVersion) -> VersionStructure`: keys from `resolved_column_keys`, labels from the asset's current `AssetColumn`s, and header from `csv_header(template, keys)` (lean).
   - `GET /cms-api/assets/{id}/file-structure/?language=<code>`, `auth=None`. The response is `AssetFileStructureOut{format: "csv", template, header, columns: list[ColumnInfoOut], rows: list[list[str]]}`.
-  - The asset lookup is the same as in `detail_assets`: `request.publisher_q("publisher")`, `restricted_for_tenant=False`.
+  - The asset lookup is the same as in `detail_assets`: `request.publisher_q("publisher")`, `in_gallery=True`.
   - Only translation/tafsir with `status=READY`. The language must be READY with a `published_version`; otherwise 404 `file_structure_unavailable`. `language` defaults to the source rendition.
   - `rows`: the first `3` units of the published version (by entry `order`, then unit) that have any non-empty cell, rendered like CSV rows (unit header values + cells). A published version without entries (legacy file-only) gives `rows=[]`.
   - Query budget: at most 6 queries (assert with `assertNumQueries`).

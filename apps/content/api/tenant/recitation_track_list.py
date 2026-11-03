@@ -1,5 +1,6 @@
 from typing import Literal
 
+from django.db.models import Q
 from django.http import Http404
 from django.utils.translation import gettext_lazy as _
 from ninja import Query, Schema
@@ -61,12 +62,15 @@ def list_recitation_tracks(request: Request, asset_id: int, quality: str | None 
 
     # The service check handles presence and publisher ownership
     # For now, we use a helper to maintain the 404 behavior
-    asset = repo.get_asset_object(asset_id, request.publisher_q("publisher"))
+    asset = repo.get_asset_object(asset_id, request.publisher_q("publisher") & Q(in_tenants=True))
     if not asset:
         raise Http404(str(_("No asset matches the given query.")))
 
     tracks = service.get_asset_tracks(
-        asset_id, request.publisher_q("asset__publisher"), quality=quality, require_visible_quality=True
+        asset_id,
+        request.publisher_q("asset__publisher") & Q(asset__in_tenants=True),
+        quality=quality,
+        require_visible_quality=True,
     )
 
     return tracks

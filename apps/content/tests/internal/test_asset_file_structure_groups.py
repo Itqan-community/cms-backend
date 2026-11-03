@@ -28,7 +28,7 @@ class GroupFileStructureTests(GroupQuranDataMixin, BaseTestCase):
             template=AssetTemplateChoice.AYAH_GROUP,
             status=StatusChoice.READY,
             language="ar",
-            restricted_for_tenant=False,
+            in_gallery=True,
         )
         rendition = asset.get_or_create_source_language()
         column = asset.ensure_text_columns()[0]

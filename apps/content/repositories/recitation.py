@@ -138,7 +138,10 @@ class RecitationRepository(BaseRecitationRepository):
         meem_behaviour: Asset.MeemBehaviourChoice | None,
         year: int | None,
         is_open_access: bool = False,
-        restricted_for_tenant: bool = False,
+        in_gallery: bool = True,
+        in_public_api: bool = True,
+        in_cli: bool = True,
+        in_tenants: bool = True,
         status: StatusChoice = StatusChoice.READY,
         slug: str = "",
     ) -> Asset:
@@ -168,7 +171,10 @@ class RecitationRepository(BaseRecitationRepository):
                 meem_behaviour=meem_behaviour,
                 year=year,
                 is_open_access=is_open_access,
-                restricted_for_tenant=restricted_for_tenant,
+                in_gallery=in_gallery,
+                in_public_api=in_public_api,
+                in_cli=in_cli,
+                in_tenants=in_tenants,
             )
             # The default quality is created by the post_save signal on Asset
             # (apps/content/signals.py), which keeps the invariant true for assets
@@ -258,7 +264,7 @@ class RecitationRepository(BaseRecitationRepository):
             .filter(
                 category=CategoryChoice.RECITATION,
                 status=StatusChoice.READY,
-                restricted_for_tenant=False,
+                in_public_api=True,
                 reciter__isnull=False,
                 qiraah__isnull=False,
                 riwayah__isnull=False,

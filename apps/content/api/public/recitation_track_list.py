@@ -106,7 +106,7 @@ def list_recitation_tracks(
     repo = RecitationRepository()
     service = RecitationService(repo)
 
-    asset = repo.get_asset_object(asset_id, Q(restricted_for_tenant=False))
+    asset = repo.get_asset_object(asset_id, Q(in_public_api=True))
     if not asset:
         raise Http404(str(_("No asset matches the given query.")))
 
@@ -133,7 +133,7 @@ def list_recitation_tracks(
 
     tracks = service.get_asset_tracks(
         asset_id,
-        Q(asset__restricted_for_tenant=False),
+        Q(asset__in_public_api=True),
         prefetch_timings=True,
         quality=quality,
         require_visible_quality=True,

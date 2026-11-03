@@ -1,3 +1,4 @@
+from django.db.models import Q
 from ninja import FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import Field
@@ -51,6 +52,6 @@ def list_riwayahs(request: Request, filters: RiwayahFilter = Query()):
     """
     repo = RecitationRepository()
     service = RiwayahService(repo)
-    return service.get_all_riwayahs(publisher_q=request.publisher_q("assets__publisher"), filters=filters).order_by(
-        "id"
-    )
+    return service.get_all_riwayahs(
+        publisher_q=request.publisher_q("assets__publisher") & Q(assets__in_tenants=True), filters=filters
+    ).order_by("id")

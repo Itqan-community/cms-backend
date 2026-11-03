@@ -9,7 +9,7 @@ from django.utils.translation import gettext as _
 
 from apps.content.models import CategoryChoice, LicenseChoice, Qiraah, Reciter, Riwayah, StatusChoice
 from apps.content.repositories.recitation import RecitationRepository
-from apps.content.services.asset_access import guard_restrict_for_tenant
+from apps.content.services.asset_access import guard_channel_changes
 from apps.content.services.asset_slug import AssetSlugService
 from apps.content.services.recitation_quality_resolution import find_quality_by_token
 from apps.core.ninja_utils.errors import ItqanError
@@ -75,7 +75,10 @@ class RecitationService:
         meem_behaviour: Asset.MeemBehaviourChoice | None,
         year: int | None,
         is_open_access: bool = False,
-        restricted_for_tenant: bool = False,
+        in_gallery: bool = True,
+        in_public_api: bool = True,
+        in_cli: bool = True,
+        in_tenants: bool = True,
         status: StatusChoice = StatusChoice.READY,
         slug: str | None = None,
     ) -> Asset:
@@ -135,7 +138,10 @@ class RecitationService:
             meem_behaviour=meem_behaviour,
             year=year,
             is_open_access=is_open_access,
-            restricted_for_tenant=restricted_for_tenant,
+            in_gallery=in_gallery,
+            in_public_api=in_public_api,
+            in_cli=in_cli,
+            in_tenants=in_tenants,
             status=status,
         )
         logger.info(
@@ -154,8 +160,7 @@ class RecitationService:
         """
         asset = self._get_recitation_or_404(recitation_slug, publisher_q=publisher_q)
 
-        if fields.get("restricted_for_tenant") and not asset.restricted_for_tenant:
-            guard_restrict_for_tenant(asset)
+        guard_channel_changes(asset, fields)
 
         # Trim input fields if present
         for field in ["name_ar", "name_en", "description_ar", "description_en"]:

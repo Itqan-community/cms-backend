@@ -20,7 +20,7 @@ from apps.content.models import (
 from apps.content.repositories.asset_content import AssetContentRepository
 from apps.content.repositories.asset_review import AssetReviewRepository
 from apps.content.repositories.translation import TranslationRepository
-from apps.content.services.asset_access import guard_restrict_for_tenant
+from apps.content.services.asset_access import guard_channel_changes
 from apps.content.services.asset_content import (
     VersionBump,
     adopt_current_columns,
@@ -96,7 +96,10 @@ class TranslationService:
         is_external: bool = False,
         external_url: str | None = None,
         is_open_access: bool = False,
-        restricted_for_tenant: bool = False,
+        in_gallery: bool = True,
+        in_public_api: bool = True,
+        in_cli: bool = True,
+        in_tenants: bool = True,
         status: StatusChoice = StatusChoice.READY,
         slug: str | None = None,
     ) -> Asset:
@@ -168,7 +171,10 @@ class TranslationService:
             is_external=is_external,
             external_url=external_url,
             is_open_access=is_open_access,
-            restricted_for_tenant=restricted_for_tenant,
+            in_gallery=in_gallery,
+            in_public_api=in_public_api,
+            in_cli=in_cli,
+            in_tenants=in_tenants,
             status=status,
         )
         logger.info(
@@ -223,8 +229,7 @@ class TranslationService:
                 status_code=400,
             )
 
-        if fields.get("restricted_for_tenant") and not asset.restricted_for_tenant:
-            guard_restrict_for_tenant(asset)
+        guard_channel_changes(asset, fields)
 
         # Validate name fields if user is trying to update them
         if "name_ar" in fields or "name_en" in fields:

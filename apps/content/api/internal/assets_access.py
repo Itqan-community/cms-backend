@@ -47,7 +47,7 @@ def request_asset_access(request: Request, asset_id: int, data: RequestAccessIn)
     logger.info(
         f"Access requested for asset [asset_id={asset_id}, user_id={request.user.id}, intended_use={data.intended_use}]"
     )
-    asset = get_object_or_404(Asset, request.publisher_q("publisher"), id=asset_id)
+    asset = get_object_or_404(Asset, request.publisher_q("publisher"), in_gallery=True, id=asset_id)
 
     # Validation is now handled by the schema using IntendedUseChoice
     # No need for manual validation since Django Ninja will validate the enum

@@ -47,7 +47,7 @@ class PackageRegistryRepository:
             .filter(
                 slug=slug,
                 status=StatusChoice.READY,
-                restricted_for_tenant=False,
+                in_cli=True,
             )
             .first()
         )
@@ -83,7 +83,7 @@ class PackageRegistryRepository:
                 Exists(installable_version),
                 consumer_visible_q(),
                 status=StatusChoice.READY,
-                restricted_for_tenant=False,
+                in_cli=True,
             )
         )
         if open_access is not None:
@@ -225,7 +225,7 @@ class PackageRegistryRepository:
                 pk=asset_version_id,
                 state=VersionStateChoice.PUBLISHED,
                 asset__status=StatusChoice.READY,
-                asset__restricted_for_tenant=False,
+                asset__in_cli=True,
                 asset_language__status=StatusChoice.READY,
             )
             .filter(_has_content_q())
