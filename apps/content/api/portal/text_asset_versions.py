@@ -212,7 +212,7 @@ def create_text_asset_version(
     if data.asset_id != asset.id:
         raise ItqanError(
             error_name="asset_id_mismatch",
-            message=_("Provided asset_id {asset_id} does not match text asset asset id {expected_id}.").format(
+            message=_("Provided asset_id {asset_id} does not match text asset id {expected_id}.").format(
                 asset_id=data.asset_id, expected_id=asset.id
             ),
             status_code=400,
@@ -271,7 +271,7 @@ def update_text_asset_version_put(
     if data.asset_id != asset.id:
         raise ItqanError(
             error_name="asset_id_mismatch",
-            message=_("Provided asset_id {asset_id} does not match text asset asset id {expected_id}.").format(
+            message=_("Provided asset_id {asset_id} does not match text asset id {expected_id}.").format(
                 asset_id=data.asset_id, expected_id=asset.id
             ),
             status_code=400,
@@ -328,7 +328,7 @@ def update_text_asset_version_patch(
     if data.asset_id is not None and data.asset_id != asset.id:
         raise ItqanError(
             error_name="asset_id_mismatch",
-            message=_("Provided asset_id {asset_id} does not match text asset asset id {expected_id}.").format(
+            message=_("Provided asset_id {asset_id} does not match text asset id {expected_id}.").format(
                 asset_id=data.asset_id, expected_id=asset.id
             ),
             status_code=400,
