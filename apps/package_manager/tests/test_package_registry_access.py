@@ -34,7 +34,7 @@ class PackageCatalogAccessTests(BaseTestCase):
             name=slug.title(),
             slug=slug,
             publisher=self.publisher,
-            category="tafsir",
+            category="text",
             template=AssetTemplateChoice.AYAH,
             license="CC0",
             file_size="1 MB",

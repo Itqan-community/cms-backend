@@ -564,6 +564,7 @@ class PackageRegistryService:
         *,
         open_access: bool | None = None,
         category: str | None = None,
+        tag: str | None = None,
         user: User | AnonymousUser | None = None,
     ) -> QuerySet[Asset]:
         """Installable assets, annotated with ``user``'s access to each (see
@@ -572,6 +573,7 @@ class PackageRegistryService:
             self.repo.list_installable_assets(
                 open_access=open_access,
                 category=category,
+                tag=tag,
                 exclude_categories=NON_INSTALLABLE_CATEGORIES,
                 user=user,
             )

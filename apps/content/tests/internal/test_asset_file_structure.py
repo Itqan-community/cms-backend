@@ -26,7 +26,7 @@ class AssetFileStructureTests(QuranDataMixin, BaseTestCase):
         self.bake_quran()
         self.asset = baker.make(
             Asset,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             status=StatusChoice.READY,
             language="ar",

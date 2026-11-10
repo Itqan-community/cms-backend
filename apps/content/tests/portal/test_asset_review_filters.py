@@ -265,7 +265,7 @@ class ReviewFiltersTest(AssetReviewApiBaseTest):
 
         # Act
         response = self.client.post(
-            f"/portal/content/translations/{self.asset.slug}/review/changes/bulk-approve/",
+            f"/portal/content/text-assets/{self.asset.slug}/review/changes/bulk-approve/",
             data=body,
             content_type="application/json",
         )
@@ -283,7 +283,7 @@ class ReviewFiltersTest(AssetReviewApiBaseTest):
 
         # Act
         response = self.client.post(
-            f"/portal/content/translations/{self.asset.slug}/review/changes/bulk-approve/",
+            f"/portal/content/text-assets/{self.asset.slug}/review/changes/bulk-approve/",
             data=body,
             content_type="application/json",
         )

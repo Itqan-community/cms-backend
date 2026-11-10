@@ -42,7 +42,7 @@ class WithdrawalBaseTest(BaseTestCase):
         self.publisher = baker.make(Publisher, name="P")
         self.asset = baker.make(
             Asset,
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
@@ -101,7 +101,7 @@ class WithdrawalBaseTest(BaseTestCase):
         """Publish ``version`` through the portal, as a publisher rolling back does."""
         self._authorize_publisher()
         return self.client.post(
-            f"/portal/content/translations/t1/versions/{version.pk}/set-published/",
+            f"/portal/content/text-assets/t1/versions/{version.pk}/set-published/",
             data={"reason": reason},
             content_type="application/json",
         )
@@ -115,7 +115,7 @@ class WithdrawalBaseTest(BaseTestCase):
 
     def _authorize_publisher(self) -> None:
         self.give_permission(self.user, PermissionChoice.PORTAL_PUBLISH_CONTENT)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
         MemberLanguage.objects.get_or_create(member=self.membership, language="fr")
         self.authenticate_user(self.user)
 
@@ -161,7 +161,7 @@ class RollbackTests(WithdrawalBaseTest):
         self._roll_back(v1)
 
         # Act
-        response = self.client.post(f"/portal/content/translations/t1/versions/{v2.pk}/set-published/")
+        response = self.client.post(f"/portal/content/text-assets/t1/versions/{v2.pk}/set-published/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -175,7 +175,7 @@ class RollbackTests(WithdrawalBaseTest):
         self._authorize_publisher()
 
         # Act
-        response = self.client.post(f"/portal/content/translations/t1/versions/{v2.pk}/set-published/")
+        response = self.client.post(f"/portal/content/text-assets/t1/versions/{v2.pk}/set-published/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -259,7 +259,7 @@ class RollbackTests(WithdrawalBaseTest):
         self._roll_back(v1, reason="Errors in Surah 2")
 
         # Act
-        response = self.client.get("/portal/translations/t1/versions/?language=fr")
+        response = self.client.get("/portal/text-assets/t1/versions/?language=fr")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -277,7 +277,7 @@ class RollbackTests(WithdrawalBaseTest):
         self._authorize_publisher()
 
         # Act
-        response = self.client.get("/portal/translations/t1/versions/?language=fr")
+        response = self.client.get("/portal/text-assets/t1/versions/?language=fr")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -338,7 +338,7 @@ class RemovedVersionServingTests(WithdrawalBaseTest):
         self._authorize_publisher()
 
         # Act
-        response = self.client.post(f"/portal/content/translations/t1/versions/{removed.pk}/set-published/")
+        response = self.client.post(f"/portal/content/text-assets/t1/versions/{removed.pk}/set-published/")
 
         # Assert
         self.assertEqual(400, response.status_code, response.content)
@@ -350,7 +350,7 @@ class RemovedVersionServingTests(WithdrawalBaseTest):
         self._authorize_publisher()
 
         # Act
-        response = self.client.post(f"/portal/content/translations/t1/versions/{version.pk}/set-published/")
+        response = self.client.post(f"/portal/content/text-assets/t1/versions/{version.pk}/set-published/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)

@@ -23,7 +23,7 @@ class QuranRangeApiTests(GroupQuranDataMixin, BaseTestCase):
 
     def _reader(self) -> None:
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
 
     def test_quran_range_where_word_range_crosses_ayah_should_return_words_in_order(self):
         # Arrange
@@ -59,7 +59,7 @@ class QuranRangeApiTests(GroupQuranDataMixin, BaseTestCase):
         PublisherMember.objects.create(
             user=member,
             publisher=publisher,
-            group=role(publisher, PermissionChoice.PORTAL_ACCESS, PermissionChoice.PORTAL_READ_TAFSIR),
+            group=role(publisher, PermissionChoice.PORTAL_ACCESS, PermissionChoice.PORTAL_READ_TEXT_ASSET),
             status=PublisherMember.StatusChoice.ACTIVE,
         )
         self.authenticate_user(member, HTTP_X_TENANT=str(publisher.id))

@@ -14,7 +14,7 @@ from apps.content.models import (
     VersionStateChoice,
 )
 from apps.content.services.asset_columns import AssetColumnService
-from apps.content.services.tafsir import TafsirService
+from apps.content.services.text_asset import TextAssetService
 from apps.content.tests.quran_data import QuranDataMixin
 from apps.core.ninja_utils.errors import ItqanError
 from apps.core.tests.base import BaseTestCase
@@ -26,7 +26,7 @@ class UploadCommitColumnTests(QuranDataMixin, BaseTestCase):
         self.bake_quran()
         self.asset = baker.make(
             Asset,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             status=StatusChoice.READY,
             language="ar",
@@ -35,7 +35,7 @@ class UploadCommitColumnTests(QuranDataMixin, BaseTestCase):
         self.answer = AssetColumn.objects.create(asset=self.asset, key="answer", order=1)
 
     def _upload(self, content: str, *, version_number: str | None = "1.0", bump: str = "minor") -> AssetVersion:
-        return TafsirService().create_tafsir_version(
+        return TextAssetService().create_text_asset_version(
             self.asset.slug,
             file=SimpleUploadedFile("qa.csv", content.encode()),
             version_number=version_number,
@@ -91,7 +91,7 @@ class AssetDeletionTests(QuranDataMixin, BaseTestCase):
         # (PROTECT, as on staging); the column FK must not add a blocker of its own.
         self.bake_quran()
         asset = baker.make(
-            Asset, category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.AYAH, status=StatusChoice.READY
+            Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH, status=StatusChoice.READY
         )
         version = baker.make(AssetVersion, asset=asset, state=VersionStateChoice.PUBLISHED)
         change = AssetVersionChange.objects.create(version=version, ayah=self.ayah1, change_type="added", new_text="x")
@@ -106,7 +106,7 @@ class AssetDeletionTests(QuranDataMixin, BaseTestCase):
     def test_delete_where_text_asset_has_columns_and_no_versions_should_delete_its_columns(self):
         # Arrange
         asset = baker.make(
-            Asset, category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.AYAH, status=StatusChoice.READY
+            Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH, status=StatusChoice.READY
         )
         asset.ensure_text_columns()
 
@@ -122,7 +122,7 @@ class AssetDeletionTests(QuranDataMixin, BaseTestCase):
 
         self.bake_quran()
         asset = baker.make(
-            Asset, category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.AYAH, status=StatusChoice.READY
+            Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH, status=StatusChoice.READY
         )
         version = baker.make(AssetVersion, asset=asset, state=VersionStateChoice.PUBLISHED)
         change = AssetVersionChange.objects.create(version=version, ayah=self.ayah1, change_type="added", new_text="x")

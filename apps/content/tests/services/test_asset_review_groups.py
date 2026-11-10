@@ -26,7 +26,7 @@ class GroupReviewTests(GroupQuranDataMixin, BaseTestCase):
         self.bake_group_quran()
         self.asset = baker.make(
             Asset,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             status=StatusChoice.READY,
             template=AssetTemplateChoice.AYAH_GROUP,
             language="ar",
@@ -65,7 +65,7 @@ class GroupReviewTests(GroupQuranDataMixin, BaseTestCase):
         self._change(1, 3)
 
         # Act
-        response = self.client.get(f"/portal/content/tafsirs/{self.asset.slug}/review/changes/?language=ar")
+        response = self.client.get(f"/portal/content/text-assets/{self.asset.slug}/review/changes/?language=ar")
 
         # Assert
         self.assertEqual(response.status_code, 200, response.content)

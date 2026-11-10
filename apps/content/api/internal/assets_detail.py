@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404
 from ninja import Schema
 from pydantic import Field
 
+from apps.content.asset_tag_schemas import AssetTagOut
 from apps.content.models import (
     PUBLISHED_VERSION_CATEGORIES,
     Asset,
@@ -65,6 +66,7 @@ class DetailAssetPackageOut(Schema):
 class DetailAssetOut(Schema):
     id: int
     category: str
+    tags: list[AssetTagOut]
     name: str
     description: str
     long_description: str

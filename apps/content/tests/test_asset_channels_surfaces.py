@@ -187,7 +187,7 @@ class AssetChannelsSurfacesTest(BaseTestCase):
         tafsir = baker.make(
             Asset,
             publisher=self.publisher,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC0,
             status=StatusChoice.READY,
@@ -238,7 +238,7 @@ class AssetChannelsSurfacesTest(BaseTestCase):
         tafsir = baker.make(
             Asset,
             publisher=self.publisher,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             status=StatusChoice.READY,
             in_cli=False,

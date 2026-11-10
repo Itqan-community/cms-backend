@@ -27,6 +27,7 @@ from apps.content.services.recommendations import (
 )
 from apps.content.services.recommendations_redis import similar_key
 from apps.content.tests.publishing import make_visible
+from apps.content.tests.tagging import tagged
 from apps.core.tests.base import BaseTestCase
 from apps.users.models import User
 
@@ -107,15 +108,18 @@ class RecommendationsServiceTest(BaseTestCase):
 
     def test_unrelated_category_asset_is_not_a_candidate(self):
         source = self._make_recitation(reciter=self.reciter_1, riwayah=self.riwayah_a)
-        unrelated = baker.make(
-            Asset,
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            status=StatusChoice.READY,
-            in_public_api=True,
-            reciter=None,
-            riwayah=None,
-            qiraah=None,
+        unrelated = tagged(
+            baker.make(
+                Asset,
+                category=CategoryChoice.TEXT,
+                template=AssetTemplateChoice.AYAH,
+                status=StatusChoice.READY,
+                in_public_api=True,
+                reciter=None,
+                riwayah=None,
+                qiraah=None,
+            ),
+            "tafsir",
         )
 
         compute_similar_recommendations()
@@ -264,13 +268,13 @@ class TrendingRecommendationsServiceTest(BaseTestCase):
         mushaf = self._make_asset(category=CategoryChoice.MUSHAF)
         _make_usage_event(self.user, mushaf, UsageEvent.UsageKindChoice.VIEW)
         # A tafsir is listed only once it has a published, available language.
-        tafsir = self._make_asset(category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.AYAH)
+        tafsir = self._make_asset(category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH)
         _make_usage_event(self.user, tafsir, UsageEvent.UsageKindChoice.VIEW)
 
         compute_trending_recommendations()
 
         self.assertEqual([mushaf.id], get_trending_asset_ids(category=CategoryChoice.MUSHAF))
-        self.assertEqual([tafsir.id], get_trending_asset_ids(category=CategoryChoice.TAFSIR))
+        self.assertEqual([tafsir.id], get_trending_asset_ids(category=CategoryChoice.TEXT))
         self.assertCountEqual([mushaf.id, tafsir.id], get_trending_asset_ids())
 
     def test_recompute_clears_stale_entries(self):
@@ -286,14 +290,14 @@ class TrendingRecommendationsServiceTest(BaseTestCase):
 
     def test_tafsir_without_a_visible_language_should_not_be_recommended(self):
         # Arrange — a tafsir whose only language has nothing published
-        tafsir = self._make_asset(category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.AYAH, visible=False)
+        tafsir = self._make_asset(category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH, visible=False)
         _make_usage_event(self.user, tafsir, UsageEvent.UsageKindChoice.VIEW)
 
         # Act
         compute_trending_recommendations()
 
         # Assert
-        self.assertEqual([], get_trending_asset_ids(category=CategoryChoice.TAFSIR))
+        self.assertEqual([], get_trending_asset_ids(category=CategoryChoice.TEXT))
 
 
 class PersonalizedRecommendationsServiceTest(BaseTestCase):
@@ -327,7 +331,7 @@ class PersonalizedRecommendationsServiceTest(BaseTestCase):
         watched = self._make_recitation(reciter=self.reciter, riwayah=self.riwayah)
         _make_usage_event(self.user, watched, UsageEvent.UsageKindChoice.VIEW)
         matching = self._make_recitation(reciter=self.reciter, riwayah=self.riwayah)
-        unrelated = self._make_recitation(category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.AYAH)
+        unrelated = self._make_recitation(category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH)
 
         compute_personalized_recommendations()
         result = get_personalized_asset_ids(self.user.id)

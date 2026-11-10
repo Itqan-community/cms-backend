@@ -1,8 +1,7 @@
 from model_bakery import baker
 
 from apps.content.models import Asset, AssetTemplateChoice, LicenseChoice, MushafLayout, StatusChoice
-from apps.content.services.tafsir import TafsirService
-from apps.content.services.translation import TranslationService
+from apps.content.services.text_asset import TextAssetService
 from apps.core.ninja_utils.errors import ItqanError
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
@@ -20,6 +19,7 @@ class TranslationTemplateCreateTests(BaseTestCase):
             "language": "en",
             "publisher_id": publisher.id,
             "template": AssetTemplateChoice.AYAH.value,
+            "tags": "translation",
         }
         payload.update(overrides)
         return payload
@@ -28,11 +28,11 @@ class TranslationTemplateCreateTests(BaseTestCase):
         # Arrange
         self.user = User.objects.create_user(email="admin@example.com", name="Admin", is_staff=True)
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TEXT_ASSET)
 
         # Act
         response = self.client.post(
-            "/portal/translations/",
+            "/portal/text-assets/",
             data=self._payload(template=AssetTemplateChoice.PAGE.value),
         )
 
@@ -44,12 +44,12 @@ class TranslationTemplateCreateTests(BaseTestCase):
         # Arrange
         self.user = User.objects.create_user(email="admin@example.com", name="Admin", is_staff=True)
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TEXT_ASSET)
         layout = baker.make(MushafLayout, name="Madani 604", page_count=604)
 
         # Act
         response = self.client.post(
-            "/portal/translations/",
+            "/portal/text-assets/",
             data=self._payload(mushaf_layout_id=layout.id),
         )
 
@@ -61,11 +61,11 @@ class TranslationTemplateCreateTests(BaseTestCase):
         # Arrange
         self.user = User.objects.create_user(email="admin@example.com", name="Admin", is_staff=True)
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TEXT_ASSET)
 
         # Act
         response = self.client.post(
-            "/portal/translations/",
+            "/portal/text-assets/",
             data=self._payload(template=AssetTemplateChoice.PAGE.value, mushaf_layout_id=999999),
         )
 
@@ -77,12 +77,12 @@ class TranslationTemplateCreateTests(BaseTestCase):
         # Arrange
         self.user = User.objects.create_user(email="admin@example.com", name="Admin", is_staff=True)
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TEXT_ASSET)
         layout = baker.make(MushafLayout, name="Madani 604", page_count=604)
 
         # Act
         response = self.client.post(
-            "/portal/translations/",
+            "/portal/text-assets/",
             data=self._payload(template=AssetTemplateChoice.PAGE.value, mushaf_layout_id=layout.id),
         )
 
@@ -97,10 +97,10 @@ class TranslationTemplateCreateTests(BaseTestCase):
         # Arrange
         self.user = User.objects.create_user(email="admin@example.com", name="Admin", is_staff=True)
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
         asset = baker.make(
             Asset,
-            category="translation",
+            category="text",
             template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC0,
             status=StatusChoice.READY,
@@ -108,7 +108,7 @@ class TranslationTemplateCreateTests(BaseTestCase):
 
         # Act
         response = self.client.put(
-            f"/portal/translations/{asset.slug}/",
+            f"/portal/text-assets/{asset.slug}/",
             data={
                 "name_en": "Renamed",
                 "license": LicenseChoice.CC0.value,
@@ -116,7 +116,7 @@ class TranslationTemplateCreateTests(BaseTestCase):
                 "publisher_id": asset.publisher_id,
                 "template": AssetTemplateChoice.WORD.value,
             },
-            content_type="application/json",
+            format="multipart",
         )
 
         # Assert
@@ -128,17 +128,17 @@ class TranslationTemplateCreateTests(BaseTestCase):
         # Arrange
         self.user = User.objects.create_user(email="admin@example.com", name="Admin", is_staff=True)
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
         asset = baker.make(
             Asset,
-            category="translation",
+            category="text",
             template=AssetTemplateChoice.WORD,
             license=LicenseChoice.CC0,
             status=StatusChoice.READY,
         )
 
         # Act
-        response = self.client.get(f"/portal/translations/{asset.slug}/")
+        response = self.client.get(f"/portal/text-assets/{asset.slug}/")
 
         # Assert
         self.assertEqual(response.json()["template"], "word")
@@ -148,7 +148,7 @@ class TranslationTemplateCreateTests(BaseTestCase):
         # Arrange
         asset = baker.make(
             Asset,
-            category="translation",
+            category="text",
             template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC0,
             status=StatusChoice.READY,
@@ -156,7 +156,7 @@ class TranslationTemplateCreateTests(BaseTestCase):
 
         # Act & Assert
         with self.assertRaises(ItqanError) as ctx:
-            TranslationService().update_translation(asset.slug, fields={"template": AssetTemplateChoice.WORD})
+            TextAssetService().update_text_asset(asset.slug, fields={"template": AssetTemplateChoice.WORD})
         self.assertEqual(ctx.exception.error_name, "asset_template_immutable")
         self.assertEqual(ctx.exception.status_code, 400)
 
@@ -164,7 +164,7 @@ class TranslationTemplateCreateTests(BaseTestCase):
         # Arrange
         asset = baker.make(
             Asset,
-            category="translation",
+            category="text",
             template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC0,
             status=StatusChoice.READY,
@@ -173,7 +173,7 @@ class TranslationTemplateCreateTests(BaseTestCase):
 
         # Act & Assert
         with self.assertRaises(ItqanError) as ctx:
-            TranslationService().update_translation(asset.slug, fields={"mushaf_layout_id": layout.id})
+            TextAssetService().update_text_asset(asset.slug, fields={"mushaf_layout_id": layout.id})
         self.assertEqual(ctx.exception.error_name, "asset_template_immutable")
         self.assertEqual(ctx.exception.status_code, 400)
 
@@ -195,11 +195,12 @@ class GroupTemplateCreateTests(BaseTestCase):
         # Arrange
         user = User.objects.create_user(email="admin@example.com", name="Admin", is_staff=True)
         self.authenticate_user(user)
-        self.give_permission(user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
+        self.give_permission(user, PermissionChoice.PORTAL_CREATE_TEXT_ASSET)
 
         # Act
         response = self.client.post(
-            "/portal/translations/", data=self._payload(template=AssetTemplateChoice.AYAH_GROUP.value)
+            "/portal/text-assets/",
+            data=self._payload(template=AssetTemplateChoice.AYAH_GROUP.value, tags="translation"),
         )
 
         # Assert
@@ -211,11 +212,11 @@ class GroupTemplateCreateTests(BaseTestCase):
         # Arrange
         user = User.objects.create_user(email="admin@example.com", name="Admin", is_staff=True)
         self.authenticate_user(user)
-        self.give_permission(user, PermissionChoice.PORTAL_CREATE_TAFSIR)
+        self.give_permission(user, PermissionChoice.PORTAL_CREATE_TEXT_ASSET)
 
         # Act
         response = self.client.post(
-            "/portal/tafsirs/", data=self._payload(template=AssetTemplateChoice.WORD_GROUP.value)
+            "/portal/text-assets/", data=self._payload(template=AssetTemplateChoice.WORD_GROUP.value, tags="tafsir")
         )
 
         # Assert
@@ -233,6 +234,7 @@ class TafsirTemplateCreateTests(BaseTestCase):
             "language": "ar",
             "publisher_id": publisher.id,
             "template": AssetTemplateChoice.AYAH.value,
+            "tags": "tafsir",
         }
         payload.update(overrides)
         return payload
@@ -241,11 +243,11 @@ class TafsirTemplateCreateTests(BaseTestCase):
         # Arrange
         self.user = User.objects.create_user(email="admin@example.com", name="Admin", is_staff=True)
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TEXT_ASSET)
 
         # Act
         response = self.client.post(
-            "/portal/tafsirs/",
+            "/portal/text-assets/",
             data=self._payload(template=AssetTemplateChoice.PAGE.value),
         )
 
@@ -257,12 +259,12 @@ class TafsirTemplateCreateTests(BaseTestCase):
         # Arrange
         self.user = User.objects.create_user(email="admin@example.com", name="Admin", is_staff=True)
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TEXT_ASSET)
         layout = baker.make(MushafLayout, name="Madani 604", page_count=604)
 
         # Act
         response = self.client.post(
-            "/portal/tafsirs/",
+            "/portal/text-assets/",
             data=self._payload(mushaf_layout_id=layout.id),
         )
 
@@ -274,11 +276,11 @@ class TafsirTemplateCreateTests(BaseTestCase):
         # Arrange
         self.user = User.objects.create_user(email="admin@example.com", name="Admin", is_staff=True)
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TEXT_ASSET)
 
         # Act
         response = self.client.post(
-            "/portal/tafsirs/",
+            "/portal/text-assets/",
             data=self._payload(template=AssetTemplateChoice.PAGE.value, mushaf_layout_id=999999),
         )
 
@@ -290,12 +292,12 @@ class TafsirTemplateCreateTests(BaseTestCase):
         # Arrange
         self.user = User.objects.create_user(email="admin@example.com", name="Admin", is_staff=True)
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TEXT_ASSET)
         layout = baker.make(MushafLayout, name="Madani 604", page_count=604)
 
         # Act
         response = self.client.post(
-            "/portal/tafsirs/",
+            "/portal/text-assets/",
             data=self._payload(template=AssetTemplateChoice.PAGE.value, mushaf_layout_id=layout.id),
         )
 
@@ -310,10 +312,10 @@ class TafsirTemplateCreateTests(BaseTestCase):
         # Arrange
         self.user = User.objects.create_user(email="admin@example.com", name="Admin", is_staff=True)
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
         asset = baker.make(
             Asset,
-            category="tafsir",
+            category="text",
             template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC0,
             status=StatusChoice.READY,
@@ -321,7 +323,7 @@ class TafsirTemplateCreateTests(BaseTestCase):
 
         # Act
         response = self.client.put(
-            f"/portal/tafsirs/{asset.slug}/",
+            f"/portal/text-assets/{asset.slug}/",
             data={
                 "name_en": "Renamed",
                 "license": LicenseChoice.CC0.value,
@@ -340,17 +342,17 @@ class TafsirTemplateCreateTests(BaseTestCase):
         # Arrange
         self.user = User.objects.create_user(email="admin@example.com", name="Admin", is_staff=True)
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
         asset = baker.make(
             Asset,
-            category="tafsir",
+            category="text",
             template=AssetTemplateChoice.WORD,
             license=LicenseChoice.CC0,
             status=StatusChoice.READY,
         )
 
         # Act
-        response = self.client.get(f"/portal/tafsirs/{asset.slug}/")
+        response = self.client.get(f"/portal/text-assets/{asset.slug}/")
 
         # Assert
         self.assertEqual(response.json()["template"], "word")
@@ -360,7 +362,7 @@ class TafsirTemplateCreateTests(BaseTestCase):
         # Arrange
         asset = baker.make(
             Asset,
-            category="tafsir",
+            category="text",
             template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC0,
             status=StatusChoice.READY,
@@ -368,7 +370,7 @@ class TafsirTemplateCreateTests(BaseTestCase):
 
         # Act & Assert
         with self.assertRaises(ItqanError) as ctx:
-            TafsirService().update_tafsir(asset.slug, fields={"template": AssetTemplateChoice.WORD})
+            TextAssetService().update_text_asset(asset.slug, fields={"template": AssetTemplateChoice.WORD})
         self.assertEqual(ctx.exception.error_name, "asset_template_immutable")
         self.assertEqual(ctx.exception.status_code, 400)
 
@@ -376,7 +378,7 @@ class TafsirTemplateCreateTests(BaseTestCase):
         # Arrange
         asset = baker.make(
             Asset,
-            category="tafsir",
+            category="text",
             template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC0,
             status=StatusChoice.READY,
@@ -385,6 +387,6 @@ class TafsirTemplateCreateTests(BaseTestCase):
 
         # Act & Assert
         with self.assertRaises(ItqanError) as ctx:
-            TafsirService().update_tafsir(asset.slug, fields={"mushaf_layout_id": layout.id})
+            TextAssetService().update_text_asset(asset.slug, fields={"mushaf_layout_id": layout.id})
         self.assertEqual(ctx.exception.error_name, "asset_template_immutable")
         self.assertEqual(ctx.exception.status_code, 400)

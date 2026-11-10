@@ -3,10 +3,9 @@ from typing import Literal
 from django.utils.translation import gettext_lazy as _
 from ninja import Query, Schema
 
-from apps.content.models import Asset, RecitationSurahTrack
+from apps.content.models import TAG_TAFSIR, TAG_TRANSLATION, Asset, RecitationSurahTrack
 from apps.content.repositories.recitation import RecitationRepository
-from apps.content.repositories.tafsir import TafsirRepository
-from apps.content.repositories.translation import TranslationRepository
+from apps.content.repositories.text_asset import TextAssetRepository
 from apps.content.services.asset_verse_text import extract_verse_text
 from apps.content.services.recitation import RecitationService
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
@@ -142,7 +141,7 @@ def get_tafsir_sample(
     ayah: int = Query(DEFAULT_SAMPLE_AYAH, ge=1),
 ):
     """Sample tafsir verse, read from the asset's latest version file (never fabricated)."""
-    asset = TafsirRepository().get_ready_asset()
+    asset = TextAssetRepository().get_ready_asset(TAG_TAFSIR)
     if asset is None:
         raise ItqanError(
             error_name="tafsir_not_found",
@@ -177,7 +176,7 @@ def get_translation_sample(
     ayah: int = Query(DEFAULT_SAMPLE_AYAH, ge=1),
 ):
     """Sample translation verse, read from the asset's latest version file (never fabricated)."""
-    asset = TranslationRepository().get_ready_asset()
+    asset = TextAssetRepository().get_ready_asset(TAG_TRANSLATION)
     if asset is None:
         raise ItqanError(
             error_name="translation_not_found",
@@ -306,8 +305,8 @@ def get_joined_ayah(
     ayah_obj = QuranService(QuranRepository()).get_ayah(surah, ayah)
     surah_obj = ayah_obj.surah
 
-    tafsir_asset = TafsirRepository().get_ready_asset()
-    translation_asset = TranslationRepository().get_ready_asset()
+    tafsir_asset = TextAssetRepository().get_ready_asset(TAG_TAFSIR)
+    translation_asset = TextAssetRepository().get_ready_asset(TAG_TRANSLATION)
 
     recitation_service = RecitationService(RecitationRepository())
     recitation_asset = recitation_service.get_sample_recitation()

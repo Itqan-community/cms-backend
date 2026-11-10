@@ -13,12 +13,12 @@ from apps.content.models import (
     VersionStateChoice,
 )
 from apps.content.repositories.asset_content import AssetContentRepository
-from apps.content.repositories.tafsir import TafsirRepository
-from apps.content.repositories.translation import TranslationRepository
+from apps.content.repositories.text_asset import TextAssetRepository
 from apps.content.services.asset_content import AssetContentService
 from apps.content.services.asset_templates import unit_spec_for
 from apps.content.services.asset_verse_text import extract_verse_text
 from apps.content.tests.quran_data import QuranDataMixin
+from apps.content.tests.tagging import tagged
 from apps.core.tests.base import BaseTestCase
 
 
@@ -31,7 +31,9 @@ class EntriesToCsvTemplateTests(QuranDataMixin, BaseTestCase):
 
     def test_entries_to_csv_where_surah_template_should_emit_a_surah_column(self):
         # Arrange
-        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.SURAH)
+        asset = tagged(
+            baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.SURAH), "translation"
+        )
         version = baker.make(AssetVersion, asset=asset)
         AssetVersionEntry.objects.create(version=version, surah_id=1, text="opening", order=1)
         repo = AssetContentRepository()
@@ -46,7 +48,9 @@ class EntriesToCsvTemplateTests(QuranDataMixin, BaseTestCase):
 
     def test_entries_to_csv_where_word_template_should_emit_word_columns(self):
         # Arrange
-        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.WORD)
+        asset = tagged(
+            baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.WORD), "translation"
+        )
         version = baker.make(AssetVersion, asset=asset)
         AssetVersionEntry.objects.create(version=version, word_id=self.word1.id, text="the", order=1)
         repo = AssetContentRepository()
@@ -62,11 +66,14 @@ class EntriesToCsvTemplateTests(QuranDataMixin, BaseTestCase):
     def test_entries_to_csv_where_page_template_should_emit_a_page_column(self):
         # Arrange
         layout = baker.make(MushafLayout, name="Madani 604", page_count=604)
-        asset = baker.make(
-            Asset,
-            category=CategoryChoice.TRANSLATION,
-            template=AssetTemplateChoice.PAGE,
-            mushaf_layout=layout,
+        asset = tagged(
+            baker.make(
+                Asset,
+                category=CategoryChoice.TEXT,
+                template=AssetTemplateChoice.PAGE,
+                mushaf_layout=layout,
+            ),
+            "translation",
         )
         version = baker.make(AssetVersion, asset=asset)
         AssetVersionEntry.objects.create(version=version, page_no=3, text="third", order=3)
@@ -85,11 +92,14 @@ class EntriesToCsvTemplateTests(QuranDataMixin, BaseTestCase):
         # the `order_by("order", "id")` tiebreak (not insertion/pk order) is what
         # this actually proves.
         layout = baker.make(MushafLayout, name="Madani 604", page_count=604)
-        asset = baker.make(
-            Asset,
-            category=CategoryChoice.TRANSLATION,
-            template=AssetTemplateChoice.PAGE,
-            mushaf_layout=layout,
+        asset = tagged(
+            baker.make(
+                Asset,
+                category=CategoryChoice.TEXT,
+                template=AssetTemplateChoice.PAGE,
+                mushaf_layout=layout,
+            ),
+            "translation",
         )
         version = baker.make(AssetVersion, asset=asset)
         AssetVersionEntry.objects.create(version=version, page_no=5, text="fifth", order=5)
@@ -107,7 +117,9 @@ class EntriesToCsvTemplateTests(QuranDataMixin, BaseTestCase):
     def test_entries_to_csv_where_ayah_template_should_keep_its_columns_and_list_every_ayah(self):
         # Arrange — the ayah exporter's lean/verbose columns are unchanged since
         # before other templates existed; every ayah is listed, blank where empty.
-        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH)
+        asset = tagged(
+            baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH), "translation"
+        )
         version = baker.make(AssetVersion, asset=asset)
         AssetVersionEntry.objects.create(version=version, ayah=self.ayah1, text="in the name of...", order=1)
         repo = AssetContentRepository()
@@ -142,7 +154,9 @@ class SnapshotToCsvTemplateTests(QuranDataMixin, BaseTestCase):
         # surah id 1 and ayah id 1 coincide (QuranDataMixin bakes both as id=1),
         # so the old ayah-only lookup would silently resolve this to ayah 1's
         # data instead of erroring — a worse failure than a crash.
-        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.SURAH)
+        asset = tagged(
+            baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.SURAH), "translation"
+        )
         version = baker.make(AssetVersion, asset=asset, state=VersionStateChoice.PUBLISHED)
         baker.make(
             AssetVersionChange,
@@ -166,7 +180,9 @@ class SnapshotToCsvTemplateTests(QuranDataMixin, BaseTestCase):
 
     def test_snapshot_to_csv_where_word_template_should_resolve_via_word_model(self):
         # Arrange
-        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.WORD)
+        asset = tagged(
+            baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.WORD), "translation"
+        )
         version = baker.make(AssetVersion, asset=asset, state=VersionStateChoice.PUBLISHED)
         baker.make(
             AssetVersionChange,
@@ -191,7 +207,9 @@ class SnapshotToCsvTemplateTests(QuranDataMixin, BaseTestCase):
         # Arrange — a published, pruned ayah-template commit spanning all 3 baked
         # ayahs across 2 surahs, so a per-row `.surah` lazy-load (the N+1 this
         # regression-tests against) would show up as more than one query.
-        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH)
+        asset = tagged(
+            baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH), "translation"
+        )
         version = baker.make(AssetVersion, asset=asset, state=VersionStateChoice.PUBLISHED)
         for ayah, text in ((self.ayah1, "one"), (self.ayah2, "two"), (self.ayah3, "three")):
             baker.make(
@@ -228,13 +246,16 @@ class PublishNonAyahDraftTests(QuranDataMixin, BaseTestCase):
 
     def test_publish_draft_where_surah_template_should_publish_and_generate_csv(self):
         # Arrange
-        asset = baker.make(
-            Asset,
-            category=CategoryChoice.TRANSLATION,
-            template=AssetTemplateChoice.SURAH,
-            status=StatusChoice.READY,
-            slug="surah-translation",
-            language="ar",
+        asset = tagged(
+            baker.make(
+                Asset,
+                category=CategoryChoice.TEXT,
+                template=AssetTemplateChoice.SURAH,
+                status=StatusChoice.READY,
+                slug="surah-translation",
+                language="ar",
+            ),
+            "translation",
         )
         draft = baker.make(AssetVersion, asset=asset, state=VersionStateChoice.DRAFT, content_edited=True)
         AssetVersionEntry.objects.create(version=draft, surah_id=1, text="opening", order=1)
@@ -242,7 +263,7 @@ class PublishNonAyahDraftTests(QuranDataMixin, BaseTestCase):
 
         # Act
         published = service.publish_draft(
-            asset.slug, CategoryChoice.TRANSLATION, draft.id, summary_en="first surah commit", version_number="1.0"
+            asset.slug, CategoryChoice.TEXT, draft.id, summary_en="first surah commit", version_number="1.0"
         )
 
         # Assert
@@ -257,13 +278,16 @@ class PublishNonAyahDraftTests(QuranDataMixin, BaseTestCase):
 
     def test_publish_draft_where_word_template_should_publish_and_generate_csv(self):
         # Arrange
-        asset = baker.make(
-            Asset,
-            category=CategoryChoice.TRANSLATION,
-            template=AssetTemplateChoice.WORD,
-            status=StatusChoice.READY,
-            slug="word-translation",
-            language="ar",
+        asset = tagged(
+            baker.make(
+                Asset,
+                category=CategoryChoice.TEXT,
+                template=AssetTemplateChoice.WORD,
+                status=StatusChoice.READY,
+                slug="word-translation",
+                language="ar",
+            ),
+            "translation",
         )
         draft = baker.make(AssetVersion, asset=asset, state=VersionStateChoice.DRAFT, content_edited=True)
         AssetVersionEntry.objects.create(version=draft, word_id=self.word1.id, text="the", order=1)
@@ -271,7 +295,7 @@ class PublishNonAyahDraftTests(QuranDataMixin, BaseTestCase):
 
         # Act
         published = service.publish_draft(
-            asset.slug, CategoryChoice.TRANSLATION, draft.id, summary_en="first word commit", version_number="1.0"
+            asset.slug, CategoryChoice.TEXT, draft.id, summary_en="first word commit", version_number="1.0"
         )
 
         # Assert
@@ -286,14 +310,17 @@ class PublishNonAyahDraftTests(QuranDataMixin, BaseTestCase):
     def test_publish_draft_where_page_template_should_publish_and_generate_csv(self):
         # Arrange
         layout = baker.make(MushafLayout, name="Madani 604", page_count=604)
-        asset = baker.make(
-            Asset,
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.PAGE,
-            mushaf_layout=layout,
-            status=StatusChoice.READY,
-            slug="page-tafsir",
-            language="ar",
+        asset = tagged(
+            baker.make(
+                Asset,
+                category=CategoryChoice.TEXT,
+                template=AssetTemplateChoice.PAGE,
+                mushaf_layout=layout,
+                status=StatusChoice.READY,
+                slug="page-tafsir",
+                language="ar",
+            ),
+            "tafsir",
         )
         draft = baker.make(AssetVersion, asset=asset, state=VersionStateChoice.DRAFT, content_edited=True)
         AssetVersionEntry.objects.create(version=draft, page_no=1, text="first page", order=1)
@@ -301,7 +328,7 @@ class PublishNonAyahDraftTests(QuranDataMixin, BaseTestCase):
 
         # Act
         published = service.publish_draft(
-            asset.slug, CategoryChoice.TAFSIR, draft.id, summary_en="first page commit", version_number="1.0"
+            asset.slug, CategoryChoice.TEXT, draft.id, summary_en="first page commit", version_number="1.0"
         )
 
         # Assert
@@ -322,7 +349,9 @@ class ExtractVerseTextTemplateGuardTests(QuranDataMixin, BaseTestCase):
 
     def test_extract_verse_text_where_asset_is_word_based_should_return_none(self):
         # Arrange
-        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.WORD)
+        asset = tagged(
+            baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.WORD), "translation"
+        )
 
         # Act
         result = extract_verse_text(asset, surah=1, ayah=1)
@@ -332,7 +361,9 @@ class ExtractVerseTextTemplateGuardTests(QuranDataMixin, BaseTestCase):
 
     def test_extract_verse_text_where_asset_is_surah_based_should_return_none(self):
         # Arrange
-        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.SURAH)
+        asset = tagged(
+            baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.SURAH), "translation"
+        )
 
         # Act
         result = extract_verse_text(asset, surah=1, ayah=1)
@@ -343,8 +374,9 @@ class ExtractVerseTextTemplateGuardTests(QuranDataMixin, BaseTestCase):
     def test_extract_verse_text_where_asset_is_page_based_should_return_none(self):
         # Arrange
         layout = baker.make(MushafLayout, name="Madani 604", page_count=604)
-        asset = baker.make(
-            Asset, category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.PAGE, mushaf_layout=layout
+        asset = tagged(
+            baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.PAGE, mushaf_layout=layout),
+            "tafsir",
         )
 
         # Act
@@ -367,28 +399,42 @@ class SamplePickerTemplateFilterTests(QuranDataMixin, BaseTestCase):
         # Arrange — the word asset is created first (lower id); get_ready_asset
         # orders by id, so returning the ayah one proves the template filter is
         # doing the work, not id ordering happening to agree with it.
-        baker.make(
-            Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.WORD, status=StatusChoice.READY
+        tagged(
+            baker.make(
+                Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.WORD, status=StatusChoice.READY
+            ),
+            "translation",
         )
-        ayah_asset = baker.make(
-            Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH, status=StatusChoice.READY
+        ayah_asset = tagged(
+            baker.make(
+                Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH, status=StatusChoice.READY
+            ),
+            "translation",
         )
 
         # Act
-        result = TranslationRepository().get_ready_asset()
+        result = TextAssetRepository().get_ready_asset("translation")
 
         # Assert
         self.assertEqual(ayah_asset.id, result.id)
 
     def test_get_ready_tafsir_where_word_and_ayah_both_ready_should_return_the_ayah_one(self):
         # Arrange — same shape as the translation repository, for the tafsir one.
-        baker.make(Asset, category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.WORD, status=StatusChoice.READY)
-        ayah_asset = baker.make(
-            Asset, category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.AYAH, status=StatusChoice.READY
+        tagged(
+            baker.make(
+                Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.WORD, status=StatusChoice.READY
+            ),
+            "tafsir",
+        )
+        ayah_asset = tagged(
+            baker.make(
+                Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH, status=StatusChoice.READY
+            ),
+            "tafsir",
         )
 
         # Act
-        result = TafsirRepository().get_ready_asset()
+        result = TextAssetRepository().get_ready_asset("tafsir")
 
         # Assert
         self.assertEqual(ayah_asset.id, result.id)

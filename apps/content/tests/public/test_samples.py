@@ -23,6 +23,7 @@ from apps.content.models import (
 )
 from apps.content.services import asset_verse_text
 from apps.content.tests.publishing import publish
+from apps.content.tests.tagging import tagged
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.quran.models import Ayah, Surah
@@ -72,23 +73,26 @@ class ContentSamplesTest(BaseTestCase):
         )
         return surah, ayah
 
-    def _seed_versioned_asset(self, category, name: str, payload: dict):
+    def _seed_versioned_asset(self, tag: str, name: str, payload: dict):
         """Create a READY asset whose latest version carries the given JSON payload."""
-        asset = baker.make(
-            Asset,
-            category=category,
-            template=AssetTemplateChoice.AYAH,
-            publisher=self.publisher,
-            status=StatusChoice.READY,
-            name=name,
-            language="ar",
+        asset = tagged(
+            baker.make(
+                Asset,
+                category=CategoryChoice.TEXT,
+                template=AssetTemplateChoice.AYAH,
+                publisher=self.publisher,
+                status=StatusChoice.READY,
+                name=name,
+                language="ar",
+            ),
+            tag,
         )
         publish(
             baker.make(
                 AssetVersion,
                 asset=asset,
                 name="v1",
-                file_url=ContentFile(json.dumps(payload, ensure_ascii=False).encode("utf-8"), name=f"{category}.json"),
+                file_url=ContentFile(json.dumps(payload, ensure_ascii=False).encode("utf-8"), name=f"{tag}.json"),
             )
         )
         return asset
@@ -136,15 +140,18 @@ class ContentSamplesTest(BaseTestCase):
     def test_get_tafsir_sample_where_ready_asset_has_verse_file_should_return_real_text(self):
         """Text equals the uploaded JSON value byte-for-byte; structure matches the contract."""
         # Arrange
-        tafsir_asset = baker.make(
-            Asset,
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            publisher=self.publisher,
-            status=StatusChoice.READY,
-            name="Tafsir al-Tabari",
-            language="ar",
-            license="CC-BY-4.0",
+        tafsir_asset = tagged(
+            baker.make(
+                Asset,
+                category=CategoryChoice.TEXT,
+                template=AssetTemplateChoice.AYAH,
+                publisher=self.publisher,
+                status=StatusChoice.READY,
+                name="Tafsir al-Tabari",
+                language="ar",
+                license="CC-BY-4.0",
+            ),
+            "tafsir",
         )
         verse_text = "نص التفسير الحقيقي للآية"
         payload = json.dumps({"1:1": verse_text}, ensure_ascii=False).encode("utf-8")
@@ -166,14 +173,17 @@ class ContentSamplesTest(BaseTestCase):
     def test_get_tafsir_sample_with_explicit_query_should_read_nested_shape(self):
         """Nested {"<surah>": {"<ayah>": ...}} payloads resolve via ?surah=&ayah=."""
         # Arrange
-        tafsir_asset = baker.make(
-            Asset,
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            publisher=self.publisher,
-            status=StatusChoice.READY,
-            name="تفسير الطبري",
-            language="ar",
+        tafsir_asset = tagged(
+            baker.make(
+                Asset,
+                category=CategoryChoice.TEXT,
+                template=AssetTemplateChoice.AYAH,
+                publisher=self.publisher,
+                status=StatusChoice.READY,
+                name="تفسير الطبري",
+                language="ar",
+            ),
+            "tafsir",
         )
         verse_text = "تفسير آية البقرة"
         payload = json.dumps({"2": {"255": verse_text}}, ensure_ascii=False).encode("utf-8")
@@ -189,14 +199,17 @@ class ContentSamplesTest(BaseTestCase):
     def test_get_tafsir_sample_where_only_group_tafsir_exists_should_return_404(self):
         """A group tafsir has no per-ayah text, so it is never picked as the sample."""
         # Arrange
-        tafsir_asset = baker.make(
-            Asset,
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH_GROUP,
-            publisher=self.publisher,
-            status=StatusChoice.READY,
-            name="Grouped Tafsir",
-            language="ar",
+        tafsir_asset = tagged(
+            baker.make(
+                Asset,
+                category=CategoryChoice.TEXT,
+                template=AssetTemplateChoice.AYAH_GROUP,
+                publisher=self.publisher,
+                status=StatusChoice.READY,
+                name="Grouped Tafsir",
+                language="ar",
+            ),
+            "tafsir",
         )
         payload = json.dumps({"1:1": "نص"}, ensure_ascii=False).encode("utf-8")
         publish(
@@ -213,14 +226,17 @@ class ContentSamplesTest(BaseTestCase):
     def test_get_tafsir_sample_where_latest_version_lacks_the_verse_should_return_404(self):
         """A READY asset whose file omits the requested verse fails honestly (typed 404)."""
         # Arrange - READY asset whose file only carries a different ayah
-        tafsir_asset = baker.make(
-            Asset,
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            publisher=self.publisher,
-            status=StatusChoice.READY,
-            name="Partial Tafsir",
-            language="ar",
+        tafsir_asset = tagged(
+            baker.make(
+                Asset,
+                category=CategoryChoice.TEXT,
+                template=AssetTemplateChoice.AYAH,
+                publisher=self.publisher,
+                status=StatusChoice.READY,
+                name="Partial Tafsir",
+                language="ar",
+            ),
+            "tafsir",
         )
         payload = json.dumps({"2:255": "غير موجودة هنا"}).encode("utf-8")
         publish(
@@ -235,14 +251,17 @@ class ContentSamplesTest(BaseTestCase):
     def test_get_tafsir_sample_where_asset_has_no_version_file_should_return_404(self):
         """Metadata-only assets can never provide verse text."""
         # Arrange - metadata-only asset: no version file can ever carry the text
-        baker.make(
-            Asset,
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            publisher=self.publisher,
-            status=StatusChoice.READY,
-            name="Metadata-only Tafsir",
-            language="ar",
+        tagged(
+            baker.make(
+                Asset,
+                category=CategoryChoice.TEXT,
+                template=AssetTemplateChoice.AYAH,
+                publisher=self.publisher,
+                status=StatusChoice.READY,
+                name="Metadata-only Tafsir",
+                language="ar",
+            ),
+            "tafsir",
         )
         # Act
         response = self.client.get("/sample-data/tafsir/")
@@ -253,15 +272,18 @@ class ContentSamplesTest(BaseTestCase):
     def test_get_tafsir_sample_where_only_restricted_asset_exists_should_return_404(self):
         """Tenant-restricted tafsirs are invisible to the public sample surface."""
         # Arrange - READY but tenant-restricted tafsir must never surface publicly
-        baker.make(
-            Asset,
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            publisher=self.publisher,
-            status=StatusChoice.READY,
-            in_public_api=False,
-            name="Restricted Tafsir",
-            language="ar",
+        tagged(
+            baker.make(
+                Asset,
+                category=CategoryChoice.TEXT,
+                template=AssetTemplateChoice.AYAH,
+                publisher=self.publisher,
+                status=StatusChoice.READY,
+                in_public_api=False,
+                name="Restricted Tafsir",
+                language="ar",
+            ),
+            "tafsir",
         )
         # Act
         response = self.client.get("/sample-data/tafsir/")
@@ -272,15 +294,18 @@ class ContentSamplesTest(BaseTestCase):
     def test_get_translation_sample_where_only_restricted_asset_exists_should_return_404(self):
         """Same restriction guard enforced for translations."""
         # Arrange
-        baker.make(
-            Asset,
-            category=CategoryChoice.TRANSLATION,
-            template=AssetTemplateChoice.AYAH,
-            publisher=self.publisher,
-            status=StatusChoice.READY,
-            in_public_api=False,
-            name="Restricted Translation",
-            language="en",
+        tagged(
+            baker.make(
+                Asset,
+                category=CategoryChoice.TEXT,
+                template=AssetTemplateChoice.AYAH,
+                publisher=self.publisher,
+                status=StatusChoice.READY,
+                in_public_api=False,
+                name="Restricted Translation",
+                language="en",
+            ),
+            "translation",
         )
         # Act
         response = self.client.get("/sample-data/translation/")
@@ -291,14 +316,17 @@ class ContentSamplesTest(BaseTestCase):
     def test_get_tafsir_sample_where_version_file_is_malformed_json_should_return_404(self):
         """Corrupt payloads degrade to honest unavailability instead of garbage output."""
         # Arrange - corrupt payload must degrade honestly, never surface garbage
-        tafsir_asset = baker.make(
-            Asset,
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            publisher=self.publisher,
-            status=StatusChoice.READY,
-            name="Corrupt Tafsir",
-            language="ar",
+        tafsir_asset = tagged(
+            baker.make(
+                Asset,
+                category=CategoryChoice.TEXT,
+                template=AssetTemplateChoice.AYAH,
+                publisher=self.publisher,
+                status=StatusChoice.READY,
+                name="Corrupt Tafsir",
+                language="ar",
+            ),
+            "tafsir",
         )
         publish(
             baker.make(
@@ -317,14 +345,17 @@ class ContentSamplesTest(BaseTestCase):
     def test_get_tafsir_sample_where_version_file_is_pdf_should_return_404(self):
         """Binary formats are never fetched or parsed for verses."""
         # Arrange - binary formats can never yield verses and are never fetched
-        tafsir_asset = baker.make(
-            Asset,
-            category=CategoryChoice.TAFSIR,
-            template=AssetTemplateChoice.AYAH,
-            publisher=self.publisher,
-            status=StatusChoice.READY,
-            name="Pdf Tafsir",
-            language="ar",
+        tafsir_asset = tagged(
+            baker.make(
+                Asset,
+                category=CategoryChoice.TEXT,
+                template=AssetTemplateChoice.AYAH,
+                publisher=self.publisher,
+                status=StatusChoice.READY,
+                name="Pdf Tafsir",
+                language="ar",
+            ),
+            "tafsir",
         )
         publish(
             baker.make(
@@ -350,15 +381,18 @@ class ContentSamplesTest(BaseTestCase):
     def test_get_translation_sample_where_ready_asset_has_verse_file_should_return_real_text(self):
         """Translation text comes from the uploaded JSON, never fabricated."""
         # Arrange
-        translation_asset = baker.make(
-            Asset,
-            category=CategoryChoice.TRANSLATION,
-            template=AssetTemplateChoice.AYAH,
-            publisher=self.publisher,
-            status=StatusChoice.READY,
-            name="Saheeh International",
-            language="en",
-            license="CC-BY-4.0",
+        translation_asset = tagged(
+            baker.make(
+                Asset,
+                category=CategoryChoice.TEXT,
+                template=AssetTemplateChoice.AYAH,
+                publisher=self.publisher,
+                status=StatusChoice.READY,
+                name="Saheeh International",
+                language="en",
+                license="CC-BY-4.0",
+            ),
+            "translation",
         )
         verse_text = "In the name of Allah, the Entirely Merciful, the Especially Merciful."
         payload = json.dumps({"1:1": verse_text}).encode("utf-8")
@@ -381,14 +415,17 @@ class ContentSamplesTest(BaseTestCase):
     def test_get_translation_sample_where_asset_has_no_version_file_should_return_404(self):
         """Metadata-only translation assets report unavailable."""
         # Arrange - metadata-only asset
-        baker.make(
-            Asset,
-            category=CategoryChoice.TRANSLATION,
-            template=AssetTemplateChoice.AYAH,
-            publisher=self.publisher,
-            status=StatusChoice.READY,
-            name="Metadata-only Translation",
-            language="en",
+        tagged(
+            baker.make(
+                Asset,
+                category=CategoryChoice.TEXT,
+                template=AssetTemplateChoice.AYAH,
+                publisher=self.publisher,
+                status=StatusChoice.READY,
+                name="Metadata-only Translation",
+                language="en",
+            ),
+            "translation",
         )
         # Act
         response = self.client.get("/sample-data/translation/")
@@ -524,8 +561,8 @@ class ContentSamplesTest(BaseTestCase):
     def test_get_joined_ayah_with_default_query_should_return_full_1_1_payload(self):
         """Defaults assemble the full 1:1 payload across all five domains."""
         # Arrange
-        self._seed_versioned_asset(CategoryChoice.TAFSIR, "Tafsir al-Tabari", {"1:1": "نص التفسير"})
-        self._seed_versioned_asset(CategoryChoice.TRANSLATION, "Saheeh International", {"1:1": "In the name of Allah"})
+        self._seed_versioned_asset("tafsir", "Tafsir al-Tabari", {"1:1": "نص التفسير"})
+        self._seed_versioned_asset("translation", "Saheeh International", {"1:1": "In the name of Allah"})
         self._create_test_recitation_with_timing()
         # Act
         response = self.client.get("/sample-data/joined-ayah/")
@@ -558,10 +595,8 @@ class ContentSamplesTest(BaseTestCase):
         """?surah=2&ayah=255 anchors every section to that exact verse."""
         # Arrange - everything anchored to 2:255
         self._seed_quran_location(2, 255)
-        self._seed_versioned_asset(CategoryChoice.TAFSIR, "Tafsir 2-255", {"2:255": "تفسير الكرسي"})
-        self._seed_versioned_asset(
-            CategoryChoice.TRANSLATION, "Translation nested", {"2": {"255": "Allah, there is no god but He"}}
-        )
+        self._seed_versioned_asset("tafsir", "Tafsir 2-255", {"2:255": "تفسير الكرسي"})
+        self._seed_versioned_asset("translation", "Translation nested", {"2": {"255": "Allah, there is no god but He"}})
         recitation_asset = self._create_test_recitation_with_timing()
         quality = recitation_asset.recitation_qualities.get(is_default=True)
         baker.make(
@@ -626,15 +661,18 @@ class ContentSamplesTest(BaseTestCase):
     def test_get_joined_ayah_where_content_cannot_provide_verse_should_null_sections(self):
         """Sections unable to serve the anchored verse degrade to null (no fabrication)."""
         # Arrange - tafsir file lacks 1:1; translation has no file at all
-        self._seed_versioned_asset(CategoryChoice.TAFSIR, "Partial Tafsir", {"2:255": "غير هنا"})
-        baker.make(
-            Asset,
-            category=CategoryChoice.TRANSLATION,
-            template=AssetTemplateChoice.AYAH,
-            publisher=self.publisher,
-            status=StatusChoice.READY,
-            name="Metadata-only Translation",
-            language="en",
+        self._seed_versioned_asset("tafsir", "Partial Tafsir", {"2:255": "غير هنا"})
+        tagged(
+            baker.make(
+                Asset,
+                category=CategoryChoice.TEXT,
+                template=AssetTemplateChoice.AYAH,
+                publisher=self.publisher,
+                status=StatusChoice.READY,
+                name="Metadata-only Translation",
+                language="en",
+            ),
+            "translation",
         )
         self._create_test_recitation_with_timing()
         # Act
@@ -649,8 +687,8 @@ class ContentSamplesTest(BaseTestCase):
     def test_get_joined_ayah_where_no_recitation_exists_should_return_null_recitation(self):
         """Recitation section alone degrades while content sections stay populated."""
         # Arrange
-        self._seed_versioned_asset(CategoryChoice.TAFSIR, "Tafsir al-Tabari", {"1:1": "نص التفسير"})
-        self._seed_versioned_asset(CategoryChoice.TRANSLATION, "Saheeh International", {"1:1": "In the name of Allah"})
+        self._seed_versioned_asset("tafsir", "Tafsir al-Tabari", {"1:1": "نص التفسير"})
+        self._seed_versioned_asset("translation", "Saheeh International", {"1:1": "In the name of Allah"})
         # Act
         response = self.client.get("/sample-data/joined-ayah/")
         # Assert
@@ -672,7 +710,7 @@ class ContentSamplesTest(BaseTestCase):
         """Two distinct ayahs from one version open/parse the stored file exactly once."""
         # Arrange - one version carrying two valid verses
         self._seed_versioned_asset(
-            CategoryChoice.TAFSIR,
+            "tafsir",
             "Multi-verse Tafsir",
             {"1:1": "نص الآية الأولى", "1:2": "نص الآية الثانية"},
         )
@@ -701,7 +739,7 @@ class ContentSamplesTest(BaseTestCase):
     def test_get_tafsir_sample_where_version_file_updated_in_place_should_return_fresh_text_immediately(self):
         """In-place updates go through full Model.save(), bumping updated_at -> key rotates."""
         # Arrange - first request caches the original text for this version
-        tafsir_asset = self._seed_versioned_asset(CategoryChoice.TAFSIR, "Cached Tafsir", {"1:1": "النص الأصلي"})
+        tafsir_asset = self._seed_versioned_asset("tafsir", "Cached Tafsir", {"1:1": "النص الأصلي"})
         first = self.client.get("/sample-data/tafsir/")
         # Act - mirror the real portal update flow (repo assigns the file then
         # calls the FULL model save), so auto_now bumps updated_at and the
@@ -720,7 +758,7 @@ class ContentSamplesTest(BaseTestCase):
     def test_get_tafsir_sample_where_newer_version_is_published_should_serve_its_text(self):
         """Scenario A: publishing a new AssetVersion row rotates the key via its pk."""
         # Arrange - v1 text read and cached
-        tafsir_asset = self._seed_versioned_asset(CategoryChoice.TAFSIR, "Versioned Tafsir", {"1:1": "الإصدار الأول"})
+        tafsir_asset = self._seed_versioned_asset("tafsir", "Versioned Tafsir", {"1:1": "الإصدار الأول"})
         before = self.client.get("/sample-data/tafsir/")
         # Act - a NEW row is published (get_published_version follows the pointer)
         publish(
@@ -742,7 +780,7 @@ class ContentSamplesTest(BaseTestCase):
     def test_get_tafsir_sample_where_verse_missing_should_serve_negative_cache_without_rereading_file(self):
         """Negative caching: the repeated 404 is served without touching storage."""
         # Arrange - file exists but lacks 1:1 -> negative result gets cached
-        self._seed_versioned_asset(CategoryChoice.TAFSIR, "Late Tafsir", {"2:255": "غير ذات صلة"})
+        self._seed_versioned_asset("tafsir", "Late Tafsir", {"2:255": "غير ذات صلة"})
         before = self.client.get("/sample-data/tafsir/")
         # Act - second request must be served from the negative-cache sentinel;
         # any attempt to re-read/parse the stored file fails the test loudly.
@@ -760,7 +798,7 @@ class ContentSamplesTest(BaseTestCase):
     def test_get_tafsir_sample_where_new_version_row_contains_verse_should_overcome_previous_unavailable(self):
         """Scenario B: a negative-cached miss must not outlive its own version row."""
         # Arrange - v1 exists but lacks 1:1 -> negative entry cached under v1's identity
-        tafsir_asset = self._seed_versioned_asset(CategoryChoice.TAFSIR, "Late Tafsir", {"2:255": "غير ذات صلة"})
+        tafsir_asset = self._seed_versioned_asset("tafsir", "Late Tafsir", {"2:255": "غير ذات صلة"})
         before = self.client.get("/sample-data/tafsir/")
         # Act - a NEW version row carries the verse (different pk -> different key)
         publish(
@@ -782,8 +820,8 @@ class ContentSamplesTest(BaseTestCase):
     def test_get_joined_ayah_where_available_should_match_individual_endpoints_responses(self):
         """Every joined section equals its dedicated endpoint response byte-for-byte."""
         # Arrange
-        self._seed_versioned_asset(CategoryChoice.TAFSIR, "Tafsir al-Tabari", {"1:1": "نص التفسير"})
-        self._seed_versioned_asset(CategoryChoice.TRANSLATION, "Saheeh International", {"1:1": "In the name of Allah"})
+        self._seed_versioned_asset("tafsir", "Tafsir al-Tabari", {"1:1": "نص التفسير"})
+        self._seed_versioned_asset("translation", "Saheeh International", {"1:1": "In the name of Allah"})
         self._create_test_recitation_with_timing()
         # Act
         surah_resp = self.client.get("/sample-data/surah/")

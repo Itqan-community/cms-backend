@@ -122,7 +122,7 @@ class RecitationTracksTest(BaseTestCase):
         # Asset with wrong category should also 404 due to queryset filter
         non_recitation_asset = baker.make(
             Asset,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,

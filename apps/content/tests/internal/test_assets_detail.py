@@ -29,7 +29,7 @@ class DetailAssetTest(BaseTestCase):
                 "This is a detailed explanation of the Quran by Ibn Katheer, covering various aspects of "
                 "Islamic interpretation."
             ),
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC_BY_SA,
             thumbnail_url="thumbnails/tafseer.png",
@@ -44,7 +44,7 @@ class DetailAssetTest(BaseTestCase):
         body = response.json()
         self.assertEqual(asset.id, body["id"])
         self.assertEqual("Tafsir Ibn Katheer", body["name"])
-        self.assertEqual("tafsir", body["category"])
+        self.assertEqual("text", body["category"])
         self.assertEqual("A comprehensive tafsir of the Quran", body["description"])
         self.assertIn("publisher", body)
         self.assertIn("id", body["publisher"])  # Publisher structure
@@ -100,7 +100,7 @@ class DetailAssetTest(BaseTestCase):
                 Asset,
                 name="Tafsir Asset",
                 description="desc",
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 license=LicenseChoice.CC0,
                 thumbnail_url="thumbs/tafsir.png",
@@ -130,7 +130,7 @@ class DetailAssetTest(BaseTestCase):
 
         # Act + Assert
         for expected_category, expected_thumb, target in [
-            ("tafsir", "thumbs/tafsir.png", assets[0]),
+            ("text", "thumbs/tafsir.png", assets[0]),
             ("recitation", "thumbs/recitation.png", assets[1]),
             ("mushaf", "thumbs/mushaf.png", assets[2]),
         ]:
@@ -151,7 +151,7 @@ class DetailAssetTest(BaseTestCase):
             name="اسم الأصل",
             description="وصف عربي",
             long_description="وصف عربي مطول",
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC0,
             thumbnail_url="thumbs/localized.png",
@@ -233,7 +233,7 @@ class DetailAssetTest(BaseTestCase):
             Asset,
             name="Usage Event Test Asset",
             description="Test asset for usage event tracking",
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC_BY,
             thumbnail_url="thumbnails/test.png",
@@ -338,7 +338,7 @@ class DetailAssetTest(BaseTestCase):
             Asset,
             name="Open Access Asset",
             description="An open access asset",
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC0,
             status=StatusChoice.READY,
@@ -360,7 +360,7 @@ class DetailAssetTest(BaseTestCase):
             Asset,
             name="Tenant Only Asset",
             description="A tenant-only asset",
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC0,
             status=StatusChoice.READY,
@@ -384,7 +384,7 @@ class DetailAssetTest(BaseTestCase):
             name="Asset Without Thumbnail",
             description="Test asset without thumbnail",
             long_description="This asset has no thumbnail URL to test optional field",
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC0,
             thumbnail_url=None,  # Test the optional field
@@ -411,7 +411,7 @@ class DetailAssetTest(BaseTestCase):
             Asset,
             name="Access Status Asset",
             description="desc",
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC_BY_SA,
             status=StatusChoice.READY,
@@ -452,7 +452,7 @@ class DetailAssetTest(BaseTestCase):
             Asset,
             name="Tafsir Asset",
             description="desc",
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC0,
             status=StatusChoice.READY,
@@ -471,7 +471,7 @@ class DetailAssetTest(BaseTestCase):
             Asset,
             name="Ayah Tafsir",
             description="desc",
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC0,
             status=StatusChoice.READY,
@@ -493,7 +493,7 @@ class DetailAssetTest(BaseTestCase):
             Asset,
             name="Page Tafsir",
             description="desc",
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.PAGE,
             mushaf_layout=layout,
             license=LicenseChoice.CC0,
@@ -546,7 +546,7 @@ class DetailAssetAvailableLanguagesTest(BaseTestCase):
             Asset,
             publisher=self.publisher,
             name="Multi Tafsir",
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC0,
             status=StatusChoice.READY,

@@ -31,6 +31,7 @@ from .models import (
     AssetColumn,
     AssetLanguage,
     AssetPreview,
+    AssetTag,
     AssetVersion,
     AssetVersionChange,
     AssetVersionChangeReview,
@@ -74,6 +75,25 @@ class RecitationQualityInline(admin.TabularInline):
 
     def get_queryset(self, request):
         return super().get_queryset(request).order_by("-is_default", "name")
+
+
+@admin.register(AssetTag)
+class AssetTagAdmin(AuditedModelAdmin):
+    """Itqan staff manage the tag list here. A tag in use can't be deleted: assets would lose their kind."""
+
+    list_display = ["slug", "name", "is_builtin"]
+    search_fields = ["slug", "name"]
+    readonly_fields = ["is_builtin"]
+    actions = None
+
+    def has_delete_permission(self, request: HttpRequest, obj: AssetTag | None = None) -> bool:
+        if obj is not None and (obj.is_builtin or obj.assets.exists()):
+            return False
+        return super().has_delete_permission(request, obj)
+
+    def get_readonly_fields(self, request: HttpRequest, obj: AssetTag | None = None) -> list[str]:
+        # The code relies on the built-in slugs (group templates, sample data).
+        return ["slug", "is_builtin"] if obj is not None and obj.is_builtin else ["is_builtin"]
 
 
 @admin.register(Asset)

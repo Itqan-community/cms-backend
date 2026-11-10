@@ -25,11 +25,12 @@ class AiSlugFor(Schema):
     reciter_id: int | None = None
     riwayah_id: int | None = None
     year: int | None = None
+    tag: str | None = Field(default=None, description="Text assets: the tag that prefixes the package name.")
 
 
 class AiTranslateIn(Schema):
     mode: Literal["translate", "web"]
-    category: Literal["mushaf", "tafsir", "translation", "font", "recitation", "reciter"]
+    category: Literal["mushaf", "text", "font", "recitation", "reciter"]
     fields: dict[FieldKey, str] = Field(..., description="Arabic values keyed by field name.")
     context: dict[Literal["reciter", "riwayah"], str] = Field(
         default_factory=dict, description="Optional extra context, e.g. the selected reciter and riwayah names."
@@ -60,8 +61,7 @@ class AiTranslateOut(Schema):
 @permission_required(
     [
         permission_class(PermissionChoice.PORTAL_CREATE_MUSHAF)
-        | permission_class(PermissionChoice.PORTAL_CREATE_TAFSIR)
-        | permission_class(PermissionChoice.PORTAL_CREATE_TRANSLATION)
+        | permission_class(PermissionChoice.PORTAL_CREATE_TEXT_ASSET)
         | permission_class(PermissionChoice.PORTAL_CREATE_FONT)
         | permission_class(PermissionChoice.PORTAL_CREATE_RECITATION)
         | permission_class(PermissionChoice.PORTAL_CREATE_RECITER)

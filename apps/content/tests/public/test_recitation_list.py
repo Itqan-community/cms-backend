@@ -71,7 +71,7 @@ class RecitationsListTest(BaseTestCase):
         )
         baker.make(
             Asset,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             publisher=self.publisher1,
             status=StatusChoice.READY,

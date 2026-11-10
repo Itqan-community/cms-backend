@@ -734,7 +734,7 @@ def _run_tafsir_bump(manifest: str, lockfile: str, structure) -> dict:
         token_service=StubTokenService(),
     )
     version = _make_asset_and_version(name="1.3.0")
-    version.asset.category = CategoryChoice.TAFSIR
+    version.asset.category = CategoryChoice.TEXT
     with patch.object(pr_updater_module, version_structure.__name__, return_value=structure):
         result = _make_updater(client).process_repository(_make_watched_repo(), version)
     assert result.action == "created"

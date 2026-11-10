@@ -261,8 +261,8 @@ class UserProfileTestCase(BaseTestCase):
 
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
-        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TEXT_ASSET)
 
         # Act
         response = self.client.get("/cms-api/auth/profile/")
@@ -273,10 +273,10 @@ class UserProfileTestCase(BaseTestCase):
         self.assertEqual(2, len(permissions))
 
         permission_codes = [p["code_name"] for p in permissions]
-        self.assertIn(PermissionChoice.PORTAL_READ_TAFSIR, permission_codes)
-        self.assertIn(PermissionChoice.PORTAL_CREATE_TAFSIR, permission_codes)
+        self.assertIn(PermissionChoice.PORTAL_READ_TEXT_ASSET, permission_codes)
+        self.assertIn(PermissionChoice.PORTAL_CREATE_TEXT_ASSET, permission_codes)
         # Should not include unassigned permissions
-        self.assertNotIn(PermissionChoice.PORTAL_DELETE_TAFSIR, permission_codes)
+        self.assertNotIn(PermissionChoice.PORTAL_DELETE_TEXT_ASSET, permission_codes)
 
     def test_get_profile_where_user_has_group_permissions_should_return_them(self):
         from django.contrib.auth.models import Group, Permission
@@ -286,7 +286,7 @@ class UserProfileTestCase(BaseTestCase):
         # Arrange
         self.authenticate_user(self.user)
         group = Group.objects.create(name="Editors")
-        group.permissions.add(Permission.objects.get(codename=PermissionChoice.PORTAL_UPDATE_TRANSLATION))
+        group.permissions.add(Permission.objects.get(codename=PermissionChoice.PORTAL_UPDATE_TEXT_ASSET))
         self.user.groups.add(group)
 
         # Act
@@ -298,7 +298,7 @@ class UserProfileTestCase(BaseTestCase):
         self.assertEqual(1, len(permissions))
 
         permission_codes = [p["code_name"] for p in permissions]
-        self.assertIn(PermissionChoice.PORTAL_UPDATE_TRANSLATION, permission_codes)
+        self.assertIn(PermissionChoice.PORTAL_UPDATE_TEXT_ASSET, permission_codes)
 
     def test_get_profile_where_permissions_should_not_include_django_builtin_permissions(self):
         from django.contrib.auth.models import Permission

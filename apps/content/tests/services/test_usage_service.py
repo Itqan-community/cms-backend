@@ -27,7 +27,7 @@ class TestUsageService(BaseTestCase):
             Asset,
             publisher=self.publisher,
             name="Holy Quran Tafsir",
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             file_size="15.5 MB",
             format="mp3",

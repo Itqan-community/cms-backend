@@ -25,8 +25,8 @@ class GroupContentApiTests(GroupQuranDataMixin, BaseTestCase):
         self.bake_group_quran()
         self.user = User.objects.create_user(email="editor@example.com", name="Editor", is_staff=True)
         for permission in (
-            PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT,
-            PermissionChoice.PORTAL_READ_TAFSIR,
+            PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT,
+            PermissionChoice.PORTAL_READ_TEXT_ASSET,
             PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES,
         ):
             self.give_permission(self.user, permission)
@@ -35,7 +35,7 @@ class GroupContentApiTests(GroupQuranDataMixin, BaseTestCase):
     def _asset(self, template: str, slug: str = "grouped") -> Asset:
         asset = baker.make(
             Asset,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             status=StatusChoice.READY,
             template=template,
             language="ar",
@@ -64,13 +64,15 @@ class GroupContentApiTests(GroupQuranDataMixin, BaseTestCase):
     def _draft(self, language: str = "ar", *, asset: Asset | None = None) -> int:
         asset = asset or self.asset
         response = self.client.post(
-            f"/portal/content/tafsirs/{asset.slug}/draft/", data={"language": language}, content_type="application/json"
+            f"/portal/content/text-assets/{asset.slug}/draft/",
+            data={"language": language},
+            content_type="application/json",
         )
         self.assertEqual(response.status_code, 200, response.content)
         return response.json()["id"]
 
     def _url(self, draft_id: int, tail: str = "groups/", *, asset: Asset | None = None) -> str:
-        return f"/portal/content/tafsirs/{(asset or self.asset).slug}/versions/{draft_id}/{tail}"
+        return f"/portal/content/text-assets/{(asset or self.asset).slug}/versions/{draft_id}/{tail}"
 
     def _add(self, draft_id: int, start: dict, end: dict, cells: dict | None = None, **kwargs):
         return self.client.post(

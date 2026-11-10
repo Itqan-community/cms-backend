@@ -7,6 +7,7 @@ from django.db.models import Q
 
 from apps.content.models import (
     Asset,
+    AssetTag,
     AssetTemplateChoice,
     AssetVersion,
     CategoryChoice,
@@ -17,17 +18,17 @@ from apps.content.models import (
 from apps.content.version_text import VersionText
 
 
-class TranslationRepository:
-    """ORM access for translation assets and their versions (read + write)."""
+class TextAssetRepository:
+    """ORM access for text asset assets and their versions (read + write)."""
 
     def __init__(self) -> None:
         self.asset_model = Asset
         self.asset_version_model = AssetVersion
 
-    def get_ready_asset(self, publisher_q: Q | None = None) -> Asset | None:
+    def get_ready_asset(self, tag: str, publisher_q: Q | None = None) -> Asset | None:
         """
-        First READY, ayah-template translation asset (lowest id), optionally
-        scoped by publisher membership.
+        First READY, ayah-template text asset asset (lowest id), optionally scoped by
+        publisher membership.
 
         Feeds the public verse sampler, which reads a "surah:ayah"-keyed payload
         that only an ayah-template asset produces — a surah/word/page asset is
@@ -35,7 +36,8 @@ class TranslationRepository:
         caller to filter it out downstream.
         """
         qs = self.asset_model.objects.select_related("publisher").filter(
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
+            tags__slug=tag,
             status=StatusChoice.READY,
             template=AssetTemplateChoice.AYAH,
             in_public_api=True,
@@ -44,7 +46,10 @@ class TranslationRepository:
             qs = qs.filter(publisher_q)
         return qs.order_by("id").first()
 
-    def create_translation(
+    def get_tags(self, slugs: list[str]) -> list[AssetTag]:
+        return list(AssetTag.objects.filter(slug__in=slugs))
+
+    def create_text_asset(
         self,
         *,
         publisher_id: int,
@@ -59,9 +64,11 @@ class TranslationRepository:
         license: LicenseChoice,
         language: str,
         template: AssetTemplateChoice,
+        tags: list[AssetTag],
         mushaf_layout: MushafLayout | None = None,
         is_external: bool = False,
         external_url: str | None = None,
+        thumbnail_url: Any | None = None,
         is_open_access: bool = False,
         in_gallery: bool = True,
         in_public_api: bool = True,
@@ -71,14 +78,14 @@ class TranslationRepository:
         slug: str = "",
     ) -> Asset:
         """
-        Create an Asset for a new Translation.
+        Create an Asset for a new Text asset.
         """
         with transaction.atomic():
             asset = self.asset_model.objects.create(
                 slug=slug,
                 publisher_id=publisher_id,
                 status=status,
-                category=CategoryChoice.TRANSLATION,
+                category=CategoryChoice.TEXT,
                 template=template,
                 mushaf_layout=mushaf_layout,
                 name=name,
@@ -95,22 +102,25 @@ class TranslationRepository:
                 format="",
                 is_external=is_external,
                 external_url=external_url,
+                thumbnail_url=thumbnail_url,
                 is_open_access=is_open_access,
                 in_gallery=in_gallery,
                 in_public_api=in_public_api,
                 in_cli=in_cli,
                 in_tenants=in_tenants,
             )
+            asset.tags.set(tags)
 
         return asset
 
-    def update_translation(
+    def update_text_asset(
         self,
         asset: Asset,
         fields: dict[str, Any],
     ) -> Asset:
         """
-        Update translation asset fields.
+        Update text asset asset fields. Handles translation fields via modeltranslation
+        by setting localized fields only.
         """
         translation_fields = {
             "name_ar",
@@ -121,6 +131,7 @@ class TranslationRepository:
             "long_description_en",
         }
 
+        tags = fields.pop("tags", None)
         with transaction.atomic():
             for field, value in fields.items():
                 if field not in translation_fields:
@@ -128,29 +139,30 @@ class TranslationRepository:
 
             for field in translation_fields:
                 if field in fields:
-                    value = fields[field]
-                    if value == "":
-                        continue
-                    setattr(asset, field, value)
+                    setattr(asset, field, fields[field])
 
             asset.save()
+            if tags is not None:
+                asset.tags.set(tags)
 
         return asset
 
-    def delete_translation(self, asset: Asset) -> None:
+    def delete_text_asset(self, asset: Asset) -> None:
         """
-        Delete the translation asset.
+        Delete the text asset asset.
         """
         asset.delete()
 
-    def get_translation_version(self, asset: Asset, version_id: int) -> AssetVersion | None:
-        """Fetch one version of a translation asset, or None when it does not exist."""
+    def get_text_asset_version(self, asset: Asset, version_id: int) -> AssetVersion | None:
+        """
+        Fetch a single AssetVersion belonging to the asset.
+        """
         try:
             return self.asset_version_model.objects.get(asset=asset, id=version_id)
         except self.asset_version_model.DoesNotExist:
             return None
 
-    def create_translation_version(
+    def create_text_asset_version(
         self,
         asset: Asset,
         *,
@@ -184,7 +196,7 @@ class TranslationRepository:
 
         return asset_version
 
-    def update_translation_version(
+    def update_text_asset_version(
         self,
         version: AssetVersion,
         fields: dict[str, Any],
@@ -218,7 +230,7 @@ class TranslationRepository:
 
         return version
 
-    def delete_translation_version(self, version: AssetVersion) -> None:
+    def delete_text_asset_version(self, version: AssetVersion) -> None:
         """
         Delete the AssetVersion.
         """

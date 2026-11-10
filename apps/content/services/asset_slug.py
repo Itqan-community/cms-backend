@@ -5,7 +5,7 @@ names, so it is set once when the asset is created and never regenerated.
 
 Templates:
     recitation   recitation-<reciter>-<riwayah>
-    translation  translation-<language>-<words>
+    text assets  <first tag>-<words> (translation-<language>-<words> when the first tag is translation)
     others       <category>-<words>
 
 This service never calls AI. The words come from the same Gemini call that
@@ -21,7 +21,7 @@ import re
 
 from django.utils.translation import gettext_lazy as _
 
-from apps.content.models import CategoryChoice
+from apps.content.models import TAG_TRANSLATION, CategoryChoice
 from apps.content.repositories.asset_slug import AssetSlugRepository
 from apps.core.ninja_utils.errors import ItqanError
 from apps.core.slugs import slugify_text
@@ -74,17 +74,17 @@ class AssetSlugService:
         return f"{SLUG_WORDS_HINT}\nName for the slug: {name_en.strip() or '-'} / {name_ar.strip() or '-'}"
 
     def slug_from_words(
-        self, *, category: str, words: object, language: str = "", year: int | None = None
+        self, *, category: str, words: object, language: str = "", year: int | None = None, prefix: str | None = None
     ) -> str | None:
         """Unique template slug from AI ``slug_words``; ``None`` when no usable word is left."""
         if not isinstance(words, list):
             return None
         limit = MAX_RECITATION_WORDS if category == CategoryChoice.RECITATION else MAX_WORDS
         cleaned = [w for w in "-".join(slugify_text(str(w), max_length=30) for w in words).split("-") if w]
-        cleaned = [w for w in cleaned if w != category][:limit]
+        cleaned = [w for w in cleaned if w != (prefix or category)][:limit]
         if not cleaned:
             return None
-        slug = self._template(category, cleaned, language, year)
+        slug = self._template(prefix or category, cleaned, language, year)
         logger.info("asset_slug: suggested [category=%s, slug=%s]", category, slug)
         return slug
 
@@ -98,14 +98,15 @@ class AssetSlugService:
         reciter_id: int | None = None,
         riwayah_id: int | None = None,
         year: int | None = None,
+        prefix: str | None = None,
     ) -> str:
         """Plain-names fallback (no AI) for creates that send no slug."""
         if category == CategoryChoice.RECITATION:
             words = self._recitation_words(reciter_id, riwayah_id)
         else:
             words = self._name_words(name_en, name_ar)
-        words = [w for w in words if w != category]
-        return self._template(category, words, language, year)
+        words = [w for w in words if w != (prefix or category)]
+        return self._template(prefix or category, words, language, year)
 
     def resolve_slug(
         self,
@@ -118,6 +119,7 @@ class AssetSlugService:
         reciter_id: int | None = None,
         riwayah_id: int | None = None,
         year: int | None = None,
+        prefix: str | None = None,
     ) -> str:
         """Slug for a new asset: the validated ``requested`` one (made unique), else the plain-names template."""
         if not requested:
@@ -129,12 +131,14 @@ class AssetSlugService:
                 reciter_id=reciter_id,
                 riwayah_id=riwayah_id,
                 year=year,
+                prefix=prefix,
             )
         requested = requested.strip()
+        expected = prefix or category
         if (
             len(requested) > MAX_SLUG_LENGTH
             or not SLUG_PATTERN.match(requested)
-            or not (requested == category or requested.startswith(f"{category}-"))
+            or not (requested == expected or requested.startswith(f"{expected}-"))
         ):
             raise ItqanError(
                 error_name="asset_slug_invalid",
@@ -147,7 +151,7 @@ class AssetSlugService:
         return self._unique(self._join(requested.split("-")), year if category == CategoryChoice.RECITATION else None)
 
     def _template(self, category: str, words: list[str], language: str, year: int | None) -> str:
-        if category == CategoryChoice.TRANSLATION and slugify_text(language):
+        if category == TAG_TRANSLATION and slugify_text(language):
             words = [slugify_text(language), *words]
         base = self._join([category, *words])
         return self._unique(base, year if category == CategoryChoice.RECITATION else None)

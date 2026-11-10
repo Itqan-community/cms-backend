@@ -32,7 +32,7 @@ class VersionTextBaseTest(BaseTestCase):
         self.publisher = baker.make(Publisher, name="Test Publisher")
         self.translation = baker.make(
             Asset,
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
@@ -46,7 +46,7 @@ class VersionTextBaseTest(BaseTestCase):
         self.ayah = baker.make(Ayah, id=1, surah=surah, number_in_surah=1, text="a")
 
     def _versions_url(self, suffix=""):
-        return f"/portal/translations/{self.translation.slug}/versions/{suffix}"
+        return f"/portal/text-assets/{self.translation.slug}/versions/{suffix}"
 
     def _make_version(self, name="1.0", **kwargs) -> AssetVersion:
         return baker.make(
@@ -62,7 +62,7 @@ class VersionTextApiTest(VersionTextBaseTest):
     def test_create_version_where_both_languages_given_should_store_and_return_both(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
         file = SimpleUploadedFile("t.csv", CSV, content_type="text/csv")
 
         # Act
@@ -81,7 +81,7 @@ class VersionTextApiTest(VersionTextBaseTest):
     def test_patch_version_where_one_language_sent_should_keep_the_other(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
         version = self._make_version(**TEXT)
 
         # Act
@@ -99,7 +99,7 @@ class VersionTextApiTest(VersionTextBaseTest):
     def test_list_versions_where_only_one_language_set_should_return_empty_for_the_other(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
         self._make_version(label_ar="نسخة", summary_ar="ملخص")
 
         # Act
@@ -115,7 +115,7 @@ class VersionTextApiTest(VersionTextBaseTest):
     def test_list_versions_where_searching_arabic_summary_should_find_it(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
         found = self._make_version(summary_ar="تصحيح الأخطاء")
         self._make_version(name="1.1", summary_en="Unrelated")
 
@@ -129,17 +129,18 @@ class VersionTextApiTest(VersionTextBaseTest):
     def test_create_translation_where_version_text_given_should_store_it_on_the_first_version(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TEXT_ASSET)
 
         # Act
         response = self.client.post(
-            "/portal/translations/",
+            "/portal/text-assets/",
             data={
                 "name_en": "New Translation",
                 "license": "CC-BY",
                 "language": "ar",
                 "publisher_id": self.publisher.id,
                 "template": "ayah",
+                "tags": "tafsir",
                 "version_number": "1.0",
                 "version_label_en": "First edition",
                 "version_label_ar": "الطبعة الأولى",
@@ -159,12 +160,12 @@ class VersionTextApiTest(VersionTextBaseTest):
     def test_add_language_where_version_label_given_should_name_its_first_version(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
         self.give_permission(self.user, PermissionChoice.PORTAL_ADD_ASSET_LANGUAGE)
 
         # Act
         response = self.client.post(
-            f"/portal/content/translations/{self.translation.slug}/languages/",
+            f"/portal/content/text-assets/{self.translation.slug}/languages/",
             data={
                 "language": "fr",
                 "file": SimpleUploadedFile("fr.csv", CSV, content_type="text/csv"),
@@ -191,7 +192,7 @@ class VersionTextDraftTest(VersionTextBaseTest):
 
     def _commit(self, draft: AssetVersion, **data):
         return self.client.post(
-            f"/portal/content/translations/{self.translation.slug}/versions/{draft.id}/publish/",
+            f"/portal/content/text-assets/{self.translation.slug}/versions/{draft.id}/publish/",
             data={"version_number": "1.0", **data},
             content_type="application/json",
         )
@@ -199,12 +200,12 @@ class VersionTextDraftTest(VersionTextBaseTest):
     def test_get_or_create_draft_where_published_exists_should_carry_both_languages(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
         self._make_version(**TEXT)
 
         # Act
         response = self.client.post(
-            f"/portal/content/translations/{self.translation.slug}/draft/",
+            f"/portal/content/text-assets/{self.translation.slug}/draft/",
             data={"language": "ar"},
             content_type="application/json",
         )
@@ -217,7 +218,7 @@ class VersionTextDraftTest(VersionTextBaseTest):
     def test_publish_draft_where_only_arabic_summary_should_commit_it(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
         draft = self._draft()
 
         # Act
@@ -234,7 +235,7 @@ class VersionTextDraftTest(VersionTextBaseTest):
     def test_publish_draft_where_no_summary_in_either_language_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
         draft = self._draft()
 
         # Act
@@ -247,7 +248,7 @@ class VersionTextDraftTest(VersionTextBaseTest):
     def test_restore_version_should_copy_both_languages(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
         old = self._make_version("1.0", **TEXT)
         baker.make(AssetVersionEntry, version=old, ayah=self.ayah, text="old")
         head = self._make_version("1.1")
@@ -255,7 +256,7 @@ class VersionTextDraftTest(VersionTextBaseTest):
 
         # Act
         response = self.client.post(
-            f"/portal/content/translations/{self.translation.slug}/versions/{old.id}/restore/",
+            f"/portal/content/text-assets/{self.translation.slug}/versions/{old.id}/restore/",
             data={},
             content_type="application/json",
         )

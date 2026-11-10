@@ -22,8 +22,7 @@ from apps.core.ninja_utils.errors import ItqanError
 logger = logging.getLogger(__name__)
 
 _NOT_FOUND_ERROR = {
-    CategoryChoice.TRANSLATION: "translation_not_found",
-    CategoryChoice.TAFSIR: "tafsir_not_found",
+    CategoryChoice.TEXT: "text_asset_not_found",
 }
 
 
