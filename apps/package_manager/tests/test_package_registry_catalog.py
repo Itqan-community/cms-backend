@@ -16,6 +16,7 @@ from apps.content.models import (
     VersionStateChoice,
 )
 from apps.content.tests.publishing import publish
+from apps.content.tests.tagging import tagged
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 
@@ -26,11 +27,12 @@ class PackageCatalogApiTests(BaseTestCase):
         self.publisher = baker.make(Publisher, name="Publisher")
 
     def _asset(self, slug: str, **kwargs) -> Asset:
+        tags = kwargs.pop("tags", ("tafsir",))
         defaults = {
             "name": slug.title(),
             "slug": slug,
             "publisher": self.publisher,
-            "category": "tafsir",
+            "category": "text",
             "template": AssetTemplateChoice.AYAH,
             "license": "CC0",
             "file_size": "1 MB",
@@ -39,7 +41,10 @@ class PackageCatalogApiTests(BaseTestCase):
             "language": "ar",
             "status": StatusChoice.READY,
         }
-        return Asset.objects.create(**(defaults | kwargs))
+        asset = Asset.objects.create(**(defaults | kwargs))
+        if asset.category == "text":
+            tagged(asset, *tags)
+        return asset
 
     def _version(
         self, asset: Asset, name: str, *, language: AssetLanguage | None = None, with_file: bool = True
@@ -85,7 +90,8 @@ class PackageCatalogApiTests(BaseTestCase):
             {
                 "slug": "tafsir",
                 "name": "Tafsir",
-                "category": "tafsir",
+                "category": "text",
+                "tags": [{"slug": "tafsir", "name": "Tafsir"}],
                 "is_open_access": True,
                 "access": "open",
                 "access_request_url": None,
@@ -185,7 +191,7 @@ class PackageCatalogApiTests(BaseTestCase):
 
     def test_list_packages_where_category_given_should_list_only_that_category(self):
         # Arrange
-        self._version(self._asset("tafsir-a", category="tafsir"), "1.0")
+        self._version(self._asset("tafsir-a", category="text"), "1.0")
         self._version(self._asset("mushaf-a", category="mushaf", template=None), "1.0")
 
         # Act
@@ -228,7 +234,8 @@ class PackageCatalogApiTests(BaseTestCase):
         self.assertEqual([], recitations.json()["results"])
 
     def _catalog_asset(self, slug: str, category: str) -> Asset:
-        template = AssetTemplateChoice.AYAH if category == "tafsir" else None
+        category = "text" if category == "tafsir" else category
+        template = AssetTemplateChoice.AYAH if category == "text" else None
         asset = self._asset(slug, category=category, template=template)
         self._version(asset, "1.0")
         self._version(asset, "1.1")

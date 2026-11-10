@@ -12,15 +12,14 @@ from ninja import File, Form, Schema, UploadedFile
 from pydantic import Field
 
 from apps.content.api.portal.asset_content import _resolve
-from apps.content.models import AssetLanguage, CategoryChoice, StatusChoice
+from apps.content.models import AssetLanguage, StatusChoice
 from apps.content.services.asset_language import AssetLanguageService
 from apps.content.services.asset_language_access import (
     allowed_languages,
     assign_language_to_member,
     require_language,
 )
-from apps.content.services.tafsir import TafsirService
-from apps.content.services.translation import TranslationService
+from apps.content.services.text_asset import TextAssetService
 from apps.content.version_text import VersionText
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.permission_required import permission_required
@@ -30,7 +29,7 @@ from apps.core.ninja_utils.tags import NinjaTag
 from apps.core.permission_utils import permission_class
 from apps.core.permissions import PermissionChoice
 
-router = ItqanRouter(tags=[NinjaTag.TRANSLATIONS])
+router = ItqanRouter(tags=[NinjaTag.TEXT_ASSETS])
 
 
 class LanguageOut(Schema):
@@ -59,8 +58,7 @@ class LanguageAvailabilityIn(Schema):
     "content/{category}/{slug}/languages/",
     response={
         200: list[LanguageOut],
-        404: NinjaErrorResponse[Literal["translation_not_found"]]
-        | NinjaErrorResponse[Literal["tafsir_not_found"]]
+        404: NinjaErrorResponse[Literal["text_asset_not_found"]]
         | NinjaErrorResponse[Literal["unsupported_content_category"]],
     },
 )
@@ -87,8 +85,7 @@ def list_languages(request: Request, category: str, slug: str) -> list[AssetLang
         | NinjaErrorResponse[Literal["content_file_invalid_rows"]]
         | NinjaErrorResponse[Literal["version_number_required"]]
         | NinjaErrorResponse[Literal["version_number_invalid"]],
-        404: NinjaErrorResponse[Literal["translation_not_found"]]
-        | NinjaErrorResponse[Literal["tafsir_not_found"]]
+        404: NinjaErrorResponse[Literal["text_asset_not_found"]]
         | NinjaErrorResponse[Literal["unsupported_content_category"]],
     },
 )
@@ -122,26 +119,15 @@ def add_language(
         )
         assign_language_to_member(request.user, asset_language.asset, data.language)
         if file is not None:
-            if resolved == CategoryChoice.TAFSIR:
-                TafsirService().create_tafsir_version(
-                    slug,
-                    text=VersionText.from_data(data, prefix="version_"),
-                    version_number=data.version_number,
-                    file=file,
-                    language=data.language,
-                    created_by_id=request.user.id,
-                    publisher_q=publisher_q,
-                )
-            else:
-                TranslationService().create_translation_version(
-                    slug,
-                    text=VersionText.from_data(data, prefix="version_"),
-                    version_number=data.version_number,
-                    file=file,
-                    language=data.language,
-                    created_by_id=request.user.id,
-                    publisher_q=publisher_q,
-                )
+            TextAssetService().create_text_asset_version(
+                slug,
+                text=VersionText.from_data(data, prefix="version_"),
+                version_number=data.version_number,
+                file=file,
+                language=data.language,
+                created_by_id=request.user.id,
+                publisher_q=publisher_q,
+            )
     return asset_language
 
 
@@ -150,8 +136,7 @@ def add_language(
     response={
         200: LanguageOut,
         400: NinjaErrorResponse[Literal["language_has_no_published_version"]],
-        404: NinjaErrorResponse[Literal["translation_not_found"]]
-        | NinjaErrorResponse[Literal["tafsir_not_found"]]
+        404: NinjaErrorResponse[Literal["text_asset_not_found"]]
         | NinjaErrorResponse[Literal["language_not_available"]]
         | NinjaErrorResponse[Literal["unsupported_content_category"]],
     },

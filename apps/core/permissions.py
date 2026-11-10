@@ -22,17 +22,11 @@ class PermissionChoice(TextChoices):
     # Timing Upload
     PORTAL_UPLOAD_TIMING = "portal_upload_timing", _("Portal - Upload Recitation Timings")
 
-    # Tafsirs
-    PORTAL_READ_TAFSIR = "portal_read_tafsir", _("Portal - View Tafsirs")
-    PORTAL_CREATE_TAFSIR = "portal_create_tafsir", _("Portal - Create Tafsirs")
-    PORTAL_UPDATE_TAFSIR = "portal_update_tafsir", _("Portal - Update Tafsirs")
-    PORTAL_DELETE_TAFSIR = "portal_delete_tafsir", _("Portal - Delete Tafsirs")
-
-    # Translations
-    PORTAL_READ_TRANSLATION = "portal_read_translation", _("Portal - View Translations")
-    PORTAL_CREATE_TRANSLATION = "portal_create_translation", _("Portal - Create Translations")
-    PORTAL_UPDATE_TRANSLATION = "portal_update_translation", _("Portal - Update Translations")
-    PORTAL_DELETE_TRANSLATION = "portal_delete_translation", _("Portal - Delete Translations")
+    # Text assets
+    PORTAL_READ_TEXT_ASSET = "portal_read_text_asset", _("Portal - View Text Assets")
+    PORTAL_CREATE_TEXT_ASSET = "portal_create_text_asset", _("Portal - Create Text Assets")
+    PORTAL_UPDATE_TEXT_ASSET = "portal_update_text_asset", _("Portal - Update Text Assets")
+    PORTAL_DELETE_TEXT_ASSET = "portal_delete_text_asset", _("Portal - Delete Text Assets")
 
     # Mushafs
     PORTAL_READ_MUSHAF = "portal_read_mushaf", _("Portal - View Mushafs")
@@ -94,8 +88,7 @@ class PermissionChoice(TextChoices):
 
     # Content editing: changing an asset's text (the content editor, uploading or
     # restoring a version). Separate from PORTAL_UPDATE_*, which covers metadata only.
-    PORTAL_EDIT_TRANSLATION_CONTENT = "portal_edit_translation_content", _("Portal - Edit Translation Content")
-    PORTAL_EDIT_TAFSIR_CONTENT = "portal_edit_tafsir_content", _("Portal - Edit Tafsir Content")
+    PORTAL_EDIT_TEXT_ASSET_CONTENT = "portal_edit_text_asset_content", _("Portal - Edit Text Asset Content")
 
     # Asset languages
     # ACCESS_ALL_LANGUAGES bypasses per-member language assignment: the holder is treated as
@@ -155,37 +148,22 @@ PERMISSION_IMPLICATIONS: dict[PermissionChoice, frozenset[PermissionChoice]] = {
     ),
     # Uploading timings mutates an existing recitation, so it requires being able to update it.
     PermissionChoice.PORTAL_UPLOAD_TIMING: frozenset({PermissionChoice.PORTAL_UPDATE_RECITATION}),
-    # Tafsirs
-    PermissionChoice.PORTAL_CREATE_TAFSIR: frozenset(
-        {PermissionChoice.PORTAL_READ_TAFSIR, PermissionChoice.PORTAL_UPDATE_TAFSIR}
+    # Text assets
+    PermissionChoice.PORTAL_CREATE_TEXT_ASSET: frozenset(
+        {PermissionChoice.PORTAL_READ_TEXT_ASSET, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET}
     ),
-    PermissionChoice.PORTAL_UPDATE_TAFSIR: frozenset(
-        {PermissionChoice.PORTAL_READ_TAFSIR, PermissionChoice.PORTAL_CREATE_TAFSIR}
+    PermissionChoice.PORTAL_UPDATE_TEXT_ASSET: frozenset(
+        {PermissionChoice.PORTAL_READ_TEXT_ASSET, PermissionChoice.PORTAL_CREATE_TEXT_ASSET}
     ),
-    PermissionChoice.PORTAL_DELETE_TAFSIR: frozenset(
+    PermissionChoice.PORTAL_DELETE_TEXT_ASSET: frozenset(
         {
-            PermissionChoice.PORTAL_READ_TAFSIR,
-            PermissionChoice.PORTAL_UPDATE_TAFSIR,
-            PermissionChoice.PORTAL_CREATE_TAFSIR,
+            PermissionChoice.PORTAL_READ_TEXT_ASSET,
+            PermissionChoice.PORTAL_UPDATE_TEXT_ASSET,
+            PermissionChoice.PORTAL_CREATE_TEXT_ASSET,
         }
     ),
     # Editing an asset's text requires reading the asset, not editing its metadata.
-    PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT: frozenset({PermissionChoice.PORTAL_READ_TAFSIR}),
-    PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT: frozenset({PermissionChoice.PORTAL_READ_TRANSLATION}),
-    # Translations
-    PermissionChoice.PORTAL_CREATE_TRANSLATION: frozenset(
-        {PermissionChoice.PORTAL_READ_TRANSLATION, PermissionChoice.PORTAL_UPDATE_TRANSLATION}
-    ),
-    PermissionChoice.PORTAL_UPDATE_TRANSLATION: frozenset(
-        {PermissionChoice.PORTAL_READ_TRANSLATION, PermissionChoice.PORTAL_CREATE_TRANSLATION}
-    ),
-    PermissionChoice.PORTAL_DELETE_TRANSLATION: frozenset(
-        {
-            PermissionChoice.PORTAL_READ_TRANSLATION,
-            PermissionChoice.PORTAL_UPDATE_TRANSLATION,
-            PermissionChoice.PORTAL_CREATE_TRANSLATION,
-        }
-    ),
+    PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT: frozenset({PermissionChoice.PORTAL_READ_TEXT_ASSET}),
     # Mushafs
     PermissionChoice.PORTAL_CREATE_MUSHAF: frozenset(
         {PermissionChoice.PORTAL_READ_MUSHAF, PermissionChoice.PORTAL_UPDATE_MUSHAF}
@@ -259,9 +237,7 @@ PERMISSION_IMPLICATIONS: dict[PermissionChoice, frozenset[PermissionChoice]] = {
     PermissionChoice.PORTAL_UPDATE_PUBLISHER_MEMBERS: frozenset({PermissionChoice.PORTAL_VIEW_PUBLISHER_MEMBERS}),
     PermissionChoice.PORTAL_DELETE_PUBLISHER_MEMBERS: frozenset({PermissionChoice.PORTAL_VIEW_PUBLISHER_MEMBERS}),
     # Asset columns
-    PermissionChoice.PORTAL_MANAGE_ASSET_COLUMNS: frozenset(
-        {PermissionChoice.PORTAL_READ_TAFSIR, PermissionChoice.PORTAL_READ_TRANSLATION}
-    ),
+    PermissionChoice.PORTAL_MANAGE_ASSET_COLUMNS: frozenset({PermissionChoice.PORTAL_READ_TEXT_ASSET}),
     # Access Requests
     PermissionChoice.PORTAL_ACCEPT_OR_REJECT_ACCESS_REQUESTS: frozenset({PermissionChoice.PORTAL_VIEW_ACCESS_REQUESTS}),
     PermissionChoice.PORTAL_MANAGE_ACCESS_REQUESTS_SETTINGS: frozenset({PermissionChoice.PORTAL_VIEW_ACCESS_REQUESTS}),
@@ -291,25 +267,14 @@ PERMISSION_GROUPS: list[tuple[str, str, list[PermissionChoice]]] = [
         ],
     ),
     (
-        "tafsirs",
-        _("Tafsirs"),
+        "text_assets",
+        _("Text assets"),
         [
-            P.PORTAL_READ_TAFSIR,
-            P.PORTAL_CREATE_TAFSIR,
-            P.PORTAL_UPDATE_TAFSIR,
-            P.PORTAL_DELETE_TAFSIR,
-            P.PORTAL_EDIT_TAFSIR_CONTENT,
-        ],
-    ),
-    (
-        "translations",
-        _("Translations"),
-        [
-            P.PORTAL_READ_TRANSLATION,
-            P.PORTAL_CREATE_TRANSLATION,
-            P.PORTAL_UPDATE_TRANSLATION,
-            P.PORTAL_DELETE_TRANSLATION,
-            P.PORTAL_EDIT_TRANSLATION_CONTENT,
+            P.PORTAL_READ_TEXT_ASSET,
+            P.PORTAL_CREATE_TEXT_ASSET,
+            P.PORTAL_UPDATE_TEXT_ASSET,
+            P.PORTAL_DELETE_TEXT_ASSET,
+            P.PORTAL_EDIT_TEXT_ASSET_CONTENT,
         ],
     ),
     (

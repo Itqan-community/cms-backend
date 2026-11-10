@@ -15,7 +15,7 @@ from apps.content.services.asset_language_access import (
     require_language,
     require_version_id,
 )
-from apps.content.services.tafsir import TafsirService
+from apps.content.services.text_asset import TextAssetService
 from apps.content.version_text import VersionText
 from apps.core.mixins.storage import absolute_file_url
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
@@ -28,10 +28,10 @@ from apps.core.permission_utils import check_permission, permission_class
 from apps.core.permissions import PermissionChoice
 from apps.package_manager.api.schemas import PackageStatusOut
 
-router = ItqanRouter(tags=[NinjaTag.TAFSIRS])
+router = ItqanRouter(tags=[NinjaTag.TEXT_ASSETS])
 
 
-class TafsirVersionListOut(VersionTextOut, PackageStatusOut):
+class TextAssetVersionListOut(VersionTextOut, PackageStatusOut):
     id: int
     asset_id: int
     language: str
@@ -121,7 +121,7 @@ class TafsirVersionListOut(VersionTextOut, PackageStatusOut):
         return absolute_file_url(context["request"], obj.file_url)
 
 
-class TafsirVersionCreateIn(VersionTextIn):
+class TextAssetVersionCreateIn(VersionTextIn):
     asset_id: int
     # Starts the language's number sequence; ignored once it has a version.
     version_number: str | None = Field(default=None, max_length=20)
@@ -132,11 +132,11 @@ class TafsirVersionCreateIn(VersionTextIn):
 
 
 # The version number (``name``) is fixed once issued, so updates can't change it.
-class TafsirVersionPutIn(VersionTextIn):
+class TextAssetVersionPutIn(VersionTextIn):
     asset_id: int
 
 
-class TafsirVersionPatchIn(Schema):
+class TextAssetVersionPatchIn(Schema):
     asset_id: int | None = None
     label_en: str | None = Field(default=None, max_length=255)
     label_ar: str | None = Field(default=None, max_length=255)
@@ -145,22 +145,22 @@ class TafsirVersionPatchIn(Schema):
 
 
 @router.get(
-    "tafsirs/{tafsir_slug}/versions/",
+    "text-assets/{text_asset_slug}/versions/",
     response={
-        200: list[TafsirVersionListOut],
-        404: NinjaErrorResponse[Literal["tafsir_not_found"]],
+        200: list[TextAssetVersionListOut],
+        404: NinjaErrorResponse[Literal["text_asset_not_found"]],
     },
 )
-@permission_required([permission_class(PermissionChoice.PORTAL_READ_TAFSIR)])
+@permission_required([permission_class(PermissionChoice.PORTAL_READ_TEXT_ASSET)])
 @paginate
 @searching(search_fields=["name", "label_en", "label_ar", "summary_en", "summary_ar"])
-def list_tafsir_versions(request: Request, tafsir_slug: str, language: str | None = None):
+def list_text_asset_versions(request: Request, text_asset_slug: str, language: str | None = None):
     try:
-        asset = Asset.objects.filter(request.publisher_q()).get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
+        asset = Asset.objects.filter(request.publisher_q()).get(slug=text_asset_slug, category=CategoryChoice.TEXT)
     except Asset.DoesNotExist as exc:
         raise ItqanError(
-            error_name="tafsir_not_found",
-            message=_("Tafsir with slug {slug} not found.").format(slug=tafsir_slug),
+            error_name="text_asset_not_found",
+            message=_("Text asset with slug {slug} not found.").format(slug=text_asset_slug),
             status_code=404,
         ) from exc
     versions = AssetVersion.objects.filter(asset=asset, state=VersionStateChoice.PUBLISHED).select_related(
@@ -180,39 +180,39 @@ def list_tafsir_versions(request: Request, tafsir_slug: str, language: str | Non
 
 
 @router.post(
-    "tafsirs/{tafsir_slug}/versions/",
+    "text-assets/{text_asset_slug}/versions/",
     response={
-        201: TafsirVersionListOut,
+        201: TextAssetVersionListOut,
         400: NinjaErrorResponse[Literal["asset_id_mismatch"]]
         | NinjaErrorResponse[Literal["content_file_unparseable"]]
         | NinjaErrorResponse[Literal["content_file_missing_columns"]]
         | NinjaErrorResponse[Literal["content_file_invalid_rows"]]
         | NinjaErrorResponse[Literal["version_number_required"]]
         | NinjaErrorResponse[Literal["version_number_invalid"]],
-        404: NinjaErrorResponse[Literal["tafsir_not_found"]],
+        404: NinjaErrorResponse[Literal["text_asset_not_found"]],
     },
 )
 # Uploading a version changes the asset's text, so it needs the content permission.
-@permission_required([permission_class(PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)])
-def create_tafsir_version(
+@permission_required([permission_class(PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)])
+def create_text_asset_version(
     request: Request,
-    tafsir_slug: str,
-    data: Form[TafsirVersionCreateIn],
+    text_asset_slug: str,
+    data: Form[TextAssetVersionCreateIn],
     file: UploadedFile = File(...),
 ) -> tuple[int, AssetVersion]:
-    service = TafsirService()
+    service = TextAssetService()
     try:
-        asset = Asset.objects.filter(request.publisher_q()).get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
+        asset = Asset.objects.filter(request.publisher_q()).get(slug=text_asset_slug, category=CategoryChoice.TEXT)
     except Asset.DoesNotExist as exc:
         raise ItqanError(
-            error_name="tafsir_not_found",
-            message=_("Tafsir with slug {slug} not found.").format(slug=tafsir_slug),
+            error_name="text_asset_not_found",
+            message=_("Text asset with slug {slug} not found.").format(slug=text_asset_slug),
             status_code=404,
         ) from exc
     if data.asset_id != asset.id:
         raise ItqanError(
             error_name="asset_id_mismatch",
-            message=_("Provided asset_id {asset_id} does not match tafsir asset id {expected_id}.").format(
+            message=_("Provided asset_id {asset_id} does not match text asset asset id {expected_id}.").format(
                 asset_id=data.asset_id, expected_id=asset.id
             ),
             status_code=400,
@@ -224,8 +224,8 @@ def create_tafsir_version(
         check_permission(
             request.user, PermissionChoice.PORTAL_REVIEW_CONTENT, raise_exception=True, publisher=request.publisher
         )
-    version = service.create_tafsir_version(
-        tafsir_slug,
+    version = service.create_text_asset_version(
+        text_asset_slug,
         text=VersionText.from_data(data),
         version_number=data.version_number,
         bump=data.bump,
@@ -239,39 +239,39 @@ def create_tafsir_version(
 
 
 @router.put(
-    "tafsirs/{tafsir_slug}/versions/{version_id}/",
+    "text-assets/{text_asset_slug}/versions/{version_id}/",
     response={
-        200: TafsirVersionListOut,
+        200: TextAssetVersionListOut,
         400: NinjaErrorResponse[Literal["asset_id_mismatch"]]
         | NinjaErrorResponse[Literal["version_is_published"]]
         | NinjaErrorResponse[Literal["version_not_latest"]]
         | NinjaErrorResponse[Literal["content_file_unparseable"]]
         | NinjaErrorResponse[Literal["content_file_missing_columns"]]
         | NinjaErrorResponse[Literal["content_file_invalid_rows"]],
-        404: NinjaErrorResponse[Literal["tafsir_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
+        404: NinjaErrorResponse[Literal["text_asset_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
 )
-@permission_required([permission_class(PermissionChoice.PORTAL_UPDATE_TAFSIR)])
-def update_tafsir_version_put(
+@permission_required([permission_class(PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)])
+def update_text_asset_version_put(
     request: Request,
-    tafsir_slug: str,
+    text_asset_slug: str,
     version_id: int,
-    data: Form[TafsirVersionPutIn],
+    data: Form[TextAssetVersionPutIn],
     file: UploadedFile | None = File(None),
 ) -> AssetVersion:
-    service = TafsirService()
+    service = TextAssetService()
     try:
-        asset = Asset.objects.filter(request.publisher_q()).get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
+        asset = Asset.objects.filter(request.publisher_q()).get(slug=text_asset_slug, category=CategoryChoice.TEXT)
     except Asset.DoesNotExist as exc:
         raise ItqanError(
-            error_name="tafsir_not_found",
-            message=_("Tafsir with slug {slug} not found.").format(slug=tafsir_slug),
+            error_name="text_asset_not_found",
+            message=_("Text asset with slug {slug} not found.").format(slug=text_asset_slug),
             status_code=404,
         ) from exc
     if data.asset_id != asset.id:
         raise ItqanError(
             error_name="asset_id_mismatch",
-            message=_("Provided asset_id {asset_id} does not match tafsir asset id {expected_id}.").format(
+            message=_("Provided asset_id {asset_id} does not match text asset asset id {expected_id}.").format(
                 asset_id=data.asset_id, expected_id=asset.id
             ),
             status_code=400,
@@ -282,48 +282,53 @@ def update_tafsir_version_put(
     if file:
         # Replacing the file changes the text; renaming or re-describing does not.
         check_permission(
-            request.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT, raise_exception=True, publisher=request.publisher
+            request.user,
+            PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT,
+            raise_exception=True,
+            publisher=request.publisher,
         )
         fields["file_url"] = file
 
     require_version_id(request.user, asset, version_id)
-    return service.update_tafsir_version(tafsir_slug, version_id, fields=fields, publisher_q=request.publisher_q())
+    return service.update_text_asset_version(
+        text_asset_slug, version_id, fields=fields, publisher_q=request.publisher_q()
+    )
 
 
 @router.patch(
-    "tafsirs/{tafsir_slug}/versions/{version_id}/",
+    "text-assets/{text_asset_slug}/versions/{version_id}/",
     response={
-        200: TafsirVersionListOut,
+        200: TextAssetVersionListOut,
         400: NinjaErrorResponse[Literal["asset_id_mismatch"]]
         | NinjaErrorResponse[Literal["version_is_published"]]
         | NinjaErrorResponse[Literal["version_not_latest"]]
         | NinjaErrorResponse[Literal["content_file_unparseable"]]
         | NinjaErrorResponse[Literal["content_file_missing_columns"]]
         | NinjaErrorResponse[Literal["content_file_invalid_rows"]],
-        404: NinjaErrorResponse[Literal["tafsir_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
+        404: NinjaErrorResponse[Literal["text_asset_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
 )
-@permission_required([permission_class(PermissionChoice.PORTAL_UPDATE_TAFSIR)])
-def update_tafsir_version_patch(
+@permission_required([permission_class(PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)])
+def update_text_asset_version_patch(
     request: Request,
-    tafsir_slug: str,
+    text_asset_slug: str,
     version_id: int,
-    data: Form[TafsirVersionPatchIn],
+    data: Form[TextAssetVersionPatchIn],
     file: UploadedFile | None = File(None),
 ) -> AssetVersion:
-    service = TafsirService()
+    service = TextAssetService()
     try:
-        asset = Asset.objects.filter(request.publisher_q()).get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
+        asset = Asset.objects.filter(request.publisher_q()).get(slug=text_asset_slug, category=CategoryChoice.TEXT)
     except Asset.DoesNotExist as exc:
         raise ItqanError(
-            error_name="tafsir_not_found",
-            message=_("Tafsir with slug {slug} not found.").format(slug=tafsir_slug),
+            error_name="text_asset_not_found",
+            message=_("Text asset with slug {slug} not found.").format(slug=text_asset_slug),
             status_code=404,
         ) from exc
     if data.asset_id is not None and data.asset_id != asset.id:
         raise ItqanError(
             error_name="asset_id_mismatch",
-            message=_("Provided asset_id {asset_id} does not match tafsir asset id {expected_id}.").format(
+            message=_("Provided asset_id {asset_id} does not match text asset asset id {expected_id}.").format(
                 asset_id=data.asset_id, expected_id=asset.id
             ),
             status_code=400,
@@ -334,38 +339,43 @@ def update_tafsir_version_patch(
     if file:
         # Replacing the file changes the text; renaming or re-describing does not.
         check_permission(
-            request.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT, raise_exception=True, publisher=request.publisher
+            request.user,
+            PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT,
+            raise_exception=True,
+            publisher=request.publisher,
         )
         fields["file_url"] = file
 
     require_version_id(request.user, asset, version_id)
-    return service.update_tafsir_version(tafsir_slug, version_id, fields=fields, publisher_q=request.publisher_q())
+    return service.update_text_asset_version(
+        text_asset_slug, version_id, fields=fields, publisher_q=request.publisher_q()
+    )
 
 
 @router.delete(
-    "tafsirs/{tafsir_slug}/versions/{version_id}/",
+    "text-assets/{text_asset_slug}/versions/{version_id}/",
     response={
         204: None,
         400: NinjaErrorResponse[Literal["version_is_published"]] | NinjaErrorResponse[Literal["version_not_latest"]],
         409: NinjaErrorResponse[Literal["unpublish_not_confirmed"]],
-        404: NinjaErrorResponse[Literal["tafsir_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
+        404: NinjaErrorResponse[Literal["text_asset_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
 )
-@permission_required([permission_class(PermissionChoice.PORTAL_DELETE_TAFSIR)])
-def delete_tafsir_version(
-    request: Request, tafsir_slug: str, version_id: int, confirm_unpublish: bool = Query(False)
+@permission_required([permission_class(PermissionChoice.PORTAL_DELETE_TEXT_ASSET)])
+def delete_text_asset_version(
+    request: Request, text_asset_slug: str, version_id: int, confirm_unpublish: bool = Query(False)
 ) -> tuple[int, None]:
-    service = TafsirService()
+    service = TextAssetService()
     try:
-        asset = Asset.objects.filter(request.publisher_q()).get(slug=tafsir_slug, category=CategoryChoice.TAFSIR)
+        asset = Asset.objects.filter(request.publisher_q()).get(slug=text_asset_slug, category=CategoryChoice.TEXT)
     except Asset.DoesNotExist as exc:
         raise ItqanError(
-            error_name="tafsir_not_found",
-            message=_("Tafsir with slug {slug} not found.").format(slug=tafsir_slug),
+            error_name="text_asset_not_found",
+            message=_("Text asset with slug {slug} not found.").format(slug=text_asset_slug),
             status_code=404,
         ) from exc
     require_version_id(request.user, asset, version_id)
-    service.delete_tafsir_version(
-        tafsir_slug, version_id, publisher_q=request.publisher_q(), confirm_unpublish=confirm_unpublish
+    service.delete_text_asset_version(
+        text_asset_slug, version_id, publisher_q=request.publisher_q(), confirm_unpublish=confirm_unpublish
     )
     return 204, None

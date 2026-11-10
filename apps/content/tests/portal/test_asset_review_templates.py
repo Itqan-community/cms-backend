@@ -42,7 +42,7 @@ class ReviewTemplateTests(QuranDataMixin, BaseTestCase):
     ) -> tuple[Asset, AssetVersion]:
         asset = baker.make(
             Asset,
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             status=StatusChoice.READY,
             template=template,
             language="en",
@@ -52,7 +52,7 @@ class ReviewTemplateTests(QuranDataMixin, BaseTestCase):
         return asset, version
 
     def _changes_url(self, asset: Asset) -> str:
-        return f"/portal/content/translations/{asset.slug}/review/changes/?language=en"
+        return f"/portal/content/text-assets/{asset.slug}/review/changes/?language=en"
 
     def _authenticate_reviewer(self) -> None:
         self.authenticate_user(self.user)
@@ -175,7 +175,7 @@ class ReviewDedupAndBaselineTests(QuranDataMixin, BaseTestCase):
     def _draft_for(self, template: AssetTemplateChoice) -> tuple[Asset, AssetVersion]:
         asset = baker.make(
             Asset,
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             status=StatusChoice.READY,
             template=template,
             language="en",
@@ -184,7 +184,7 @@ class ReviewDedupAndBaselineTests(QuranDataMixin, BaseTestCase):
         return asset, version
 
     def _changes_url(self, asset: Asset) -> str:
-        return f"/portal/content/translations/{asset.slug}/review/changes/?language=en"
+        return f"/portal/content/text-assets/{asset.slug}/review/changes/?language=en"
 
     def _authenticate_reviewer(self) -> None:
         self.authenticate_user(self.user)

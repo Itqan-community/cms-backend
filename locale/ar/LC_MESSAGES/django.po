@@ -102,23 +102,15 @@ msgid "Some track IDs are invalid or do not exist."
 msgstr "بعض معرّفات المقاطع غير صالحة أو غير موجودة."
 
 #, python-brace-format
-msgid "Tafsir with slug {slug} not found."
-msgstr "لم يتم العثور على التفسير بالمعرّف {slug}."
+msgid "Text asset with slug {slug} not found."
+msgstr "الأصل النصي ذو المعرّف {slug} غير موجود."
 
 #, python-brace-format
-msgid "Provided asset_id {asset_id} does not match tafsir asset id {expected_id}."
-msgstr "المعرّف asset_id {asset_id} المُقدَّم لا يطابق معرّف أصل التفسير {expected_id}."
+msgid "Provided asset_id {asset_id} does not match text asset id {expected_id}."
+msgstr "معرّف الأصل {asset_id} لا يطابق معرّف الأصل النصي {expected_id}."
 
 msgid "One or more timing files could not be processed."
 msgstr "تعذر معالجة ملف توقيت واحد أو أكثر."
-
-#, python-brace-format
-msgid "Translation with slug {slug} not found."
-msgstr "لم يتم العثور على الترجمة بالمعرّف {slug}."
-
-#, python-brace-format
-msgid "Provided asset_id {asset_id} does not match translation asset id {expected_id}."
-msgstr "المعرّف asset_id {asset_id} المُقدَّم لا يطابق معرّف أصل الترجمة {expected_id}."
 
 msgid "You must be signed in to get personalized recommendations."
 msgstr "يجب تسجيل الدخول للحصول على التوصيات الشخصية."
@@ -143,6 +135,10 @@ msgstr "لا توجد تلاوة متاحة"
 #, python-brace-format
 msgid "No recitation track available for surah {surah}."
 msgstr "لا يوجد مقطع تلاوة متاح للسورة {surah}."
+
+#, python-brace-format
+msgid "The {value} category is now the {tag} tag: use category=text&tag={tag}."
+msgstr "أصبحت فئة {value} وسمًا باسم {tag}: استخدم category=text&tag={tag}."
 
 msgid "A column key must start with a lowercase English letter (a-z), use only a-z, 0-9 and underscores (at most 64), and must not be a unit name such as surah or ayah."
 msgstr "يجب أن يبدأ مفتاح العمود بحرف إنجليزي صغير (a-z)، وأن يتكوّن من a-z و0-9 والشرطة السفلية فقط (64 حرفًا على الأكثر)، وألا يكون اسم وحدة مثل surah أو ayah."
@@ -181,17 +177,14 @@ msgstr "تلاوة"
 msgid "Mushaf"
 msgstr "مصحف"
 
-msgid "Tafsir"
-msgstr "تفسير"
-
 msgid "Program"
 msgstr "برنامج"
 
 msgid "Linguistic"
 msgstr "لغوي"
 
-msgid "Translation"
-msgstr "ترجمة"
+msgid "Text"
+msgstr "نص"
 
 msgid "Font"
 msgstr "خط"
@@ -228,6 +221,9 @@ msgstr "حسب نطاقات الكلمات"
 
 msgid "Published"
 msgstr "منشور"
+
+msgid "Use lowercase letters, digits and single hyphens."
+msgstr "استخدم حروفًا إنجليزية صغيرة وأرقامًا وشرطات مفردة."
 
 msgid "Twassut"
 msgstr "توسط"
@@ -735,28 +731,25 @@ msgstr "المادة المبنية على الصفحات تتطلب تخطيط 
 msgid "Only page-based assets can have a mushaf layout."
 msgstr "تخطيط المصحف متاح فقط للمواد المبنية على الصفحات."
 
-msgid "Tafsir name (Arabic or English) is required."
-msgstr "اسم التفسير (بالعربية أو الإنجليزية) مطلوب."
-
-msgid "Cannot delete Tafsir because they are referenced through other objects"
-msgstr "لا يمكن حذف التفسير لأن مرتبط به بيانات أخرى"
+msgid "Choose at least one tag for the text asset."
+msgstr "اختر وسمًا واحدًا على الأقل للأصل النصي."
 
 #, python-brace-format
-msgid "Version with id {id} not found for tafsir {slug}."
-msgstr "الإصدار ذو المعرف {id} غير موجود للتفسير {slug}."
+msgid "Unknown tag: {slug}."
+msgstr "وسم غير معروف: {slug}."
 
-msgid "Translation name (Arabic or English) is required."
-msgstr "اسم الترجمة (بالعربية أو الإنجليزية) مطلوب."
+msgid "Ayah-group and word-group templates are only available for assets tagged tafsir."
+msgstr "قوالب مجموعات الآيات ومجموعات الكلمات متاحة فقط للأصول الموسومة بالتفسير."
 
-msgid "Ayah-group and word-group templates are only available for tafsir."
-msgstr "قوالب نطاقات الآيات ونطاقات الكلمات متاحة للتفسير فقط."
+msgid "Text asset name (Arabic or English) is required."
+msgstr "اسم الأصل النصي (بالعربية أو الإنجليزية) مطلوب."
 
-msgid "Cannot delete Translation because they are referenced through other objects"
-msgstr "لا يمكن حذف الترجمة لأن هناك بيانات أخرى مرتبطة بها"
+msgid "Cannot delete Text asset because they are referenced through other objects"
+msgstr "لا يمكن حذف الأصل النصي لأنه مرتبط بعناصر أخرى"
 
 #, python-brace-format
-msgid "Version with id {id} not found for translation {slug}."
-msgstr "الإصدار ذو المعرف {id} غير موجود للترجمة {slug}."
+msgid "Version with id {id} not found for text asset {slug}."
+msgstr "الإصدار ذو المعرّف {id} غير موجود للأصل النصي {slug}."
 
 msgid "The external user identifier cannot be empty."
 msgstr "لا يمكن أن يكون معرّف المستخدم الخارجي فارغاً."
@@ -821,29 +814,17 @@ msgstr "لوحة التحكم - حذف التلاوات"
 msgid "Portal - Upload Recitation Timings"
 msgstr "لوحة التحكم - تحميل أوقات التلاوات"
 
-msgid "Portal - View Tafsirs"
-msgstr "لوحة التحكم - عرض التفاسير"
+msgid "Portal - View Text Assets"
+msgstr "لوحة التحكم - عرض الأصول النصية"
 
-msgid "Portal - Create Tafsirs"
-msgstr "لوحة التحكم - إنشاء تفاسير"
+msgid "Portal - Create Text Assets"
+msgstr "لوحة التحكم - إنشاء الأصول النصية"
 
-msgid "Portal - Update Tafsirs"
-msgstr "لوحة التحكم - تحديث التفاسير"
+msgid "Portal - Update Text Assets"
+msgstr "لوحة التحكم - تعديل الأصول النصية"
 
-msgid "Portal - Delete Tafsirs"
-msgstr "لوحة التحكم - حذف التفاسير"
-
-msgid "Portal - View Translations"
-msgstr "لوحة التحكم - عرض الترجمات"
-
-msgid "Portal - Create Translations"
-msgstr "لوحة التحكم - إنشاء ترجمات"
-
-msgid "Portal - Update Translations"
-msgstr "لوحة التحكم - تحديث الترجمات"
-
-msgid "Portal - Delete Translations"
-msgstr "لوحة التحكم - حذف الترجمات"
+msgid "Portal - Delete Text Assets"
+msgstr "لوحة التحكم - حذف الأصول النصية"
 
 msgid "Portal - View Mushafs"
 msgstr "لوحة التحكم - عرض المصاحف"
@@ -938,11 +919,8 @@ msgstr "لوحة التحكم - نشر المحتوى"
 msgid "Portal - Remove Package Versions"
 msgstr "لوحة التحكم - إزالة إصدارات الحزم"
 
-msgid "Portal - Edit Translation Content"
-msgstr "لوحة التحكم - تحرير محتوى الترجمات"
-
-msgid "Portal - Edit Tafsir Content"
-msgstr "لوحة التحكم - تحرير محتوى التفاسير"
+msgid "Portal - Edit Text Asset Content"
+msgstr "لوحة التحكم - تحرير محتوى الأصول النصية"
 
 msgid "Portal - Access All Languages"
 msgstr "لوحة التحكم - الوصول إلى جميع اللغات"
@@ -962,11 +940,8 @@ msgstr "القراء"
 msgid "Recitations"
 msgstr "التلاوات"
 
-msgid "Tafsirs"
-msgstr "التفاسير"
-
-msgid "Translations"
-msgstr "الترجمات"
+msgid "Text assets"
+msgstr "الأصول النصية"
 
 msgid "Mushafs"
 msgstr "المصاحف"
@@ -1857,6 +1832,87 @@ msgstr[2] "مدخلان"
 msgstr[3] "مدخلات"
 msgstr[4] "مدخلاً"
 msgstr[5] "مدخل"
+
+#, python-brace-format
+#~ msgid "Tafsir with slug {slug} not found."
+#~ msgstr "لم يتم العثور على التفسير بالمعرّف {slug}."
+
+#, python-brace-format
+#~ msgid "Provided asset_id {asset_id} does not match tafsir asset id {expected_id}."
+#~ msgstr "المعرّف asset_id {asset_id} المُقدَّم لا يطابق معرّف أصل التفسير {expected_id}."
+
+#, python-brace-format
+#~ msgid "Translation with slug {slug} not found."
+#~ msgstr "لم يتم العثور على الترجمة بالمعرّف {slug}."
+
+#, python-brace-format
+#~ msgid "Provided asset_id {asset_id} does not match translation asset id {expected_id}."
+#~ msgstr "المعرّف asset_id {asset_id} المُقدَّم لا يطابق معرّف أصل الترجمة {expected_id}."
+
+#~ msgid "Tafsir"
+#~ msgstr "تفسير"
+
+#~ msgid "Translation"
+#~ msgstr "ترجمة"
+
+#~ msgid "Tafsir name (Arabic or English) is required."
+#~ msgstr "اسم التفسير (بالعربية أو الإنجليزية) مطلوب."
+
+#~ msgid "Cannot delete Tafsir because they are referenced through other objects"
+#~ msgstr "لا يمكن حذف التفسير لأن مرتبط به بيانات أخرى"
+
+#, python-brace-format
+#~ msgid "Version with id {id} not found for tafsir {slug}."
+#~ msgstr "الإصدار ذو المعرف {id} غير موجود للتفسير {slug}."
+
+#~ msgid "Translation name (Arabic or English) is required."
+#~ msgstr "اسم الترجمة (بالعربية أو الإنجليزية) مطلوب."
+
+#~ msgid "Ayah-group and word-group templates are only available for tafsir."
+#~ msgstr "قوالب نطاقات الآيات ونطاقات الكلمات متاحة للتفسير فقط."
+
+#~ msgid "Cannot delete Translation because they are referenced through other objects"
+#~ msgstr "لا يمكن حذف الترجمة لأن هناك بيانات أخرى مرتبطة بها"
+
+#, python-brace-format
+#~ msgid "Version with id {id} not found for translation {slug}."
+#~ msgstr "الإصدار ذو المعرف {id} غير موجود للترجمة {slug}."
+
+#~ msgid "Portal - View Tafsirs"
+#~ msgstr "لوحة التحكم - عرض التفاسير"
+
+#~ msgid "Portal - Create Tafsirs"
+#~ msgstr "لوحة التحكم - إنشاء تفاسير"
+
+#~ msgid "Portal - Update Tafsirs"
+#~ msgstr "لوحة التحكم - تحديث التفاسير"
+
+#~ msgid "Portal - Delete Tafsirs"
+#~ msgstr "لوحة التحكم - حذف التفاسير"
+
+#~ msgid "Portal - View Translations"
+#~ msgstr "لوحة التحكم - عرض الترجمات"
+
+#~ msgid "Portal - Create Translations"
+#~ msgstr "لوحة التحكم - إنشاء ترجمات"
+
+#~ msgid "Portal - Update Translations"
+#~ msgstr "لوحة التحكم - تحديث الترجمات"
+
+#~ msgid "Portal - Delete Translations"
+#~ msgstr "لوحة التحكم - حذف الترجمات"
+
+#~ msgid "Portal - Edit Translation Content"
+#~ msgstr "لوحة التحكم - تحرير محتوى الترجمات"
+
+#~ msgid "Portal - Edit Tafsir Content"
+#~ msgstr "لوحة التحكم - تحرير محتوى التفاسير"
+
+#~ msgid "Tafsirs"
+#~ msgstr "التفاسير"
+
+#~ msgid "Translations"
+#~ msgstr "الترجمات"
 
 #~ msgid "This asset has open or granted access requests from public consumers and cannot be restricted to your tenant. Please contact Itqan team."
 #~ msgstr "يحتوي هذا الأصل على طلبات وصول مفتوحة أو ممنوحة من مستهلكين عموميين، ولا يمكن حصره على موقعك. يرجى التواصل مع فريق إتقان."

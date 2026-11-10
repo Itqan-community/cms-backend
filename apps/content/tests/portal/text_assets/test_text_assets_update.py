@@ -8,21 +8,21 @@ from apps.publishers.models import Publisher
 from apps.users.models import User
 
 
-class TafsirUpdateTest(BaseTestCase):
+class TextAssetUpdateTest(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.publisher1 = baker.make(Publisher, name="Publisher One")
         self.publisher2 = baker.make(Publisher, name="Publisher Two")
 
-        self.tafsir = baker.make(
+        self.text_asset = baker.make(
             Asset,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             publisher=self.publisher1,
             status=StatusChoice.READY,
-            name="Original Tafsir",
+            name="Original Text asset",
             name_ar="تفسير أصلي",
-            name_en="Original Tafsir",
+            name_en="Original Text asset",
             description="Original description",
             description_ar="وصف أصلي",
             description_en="Original description",
@@ -34,17 +34,17 @@ class TafsirUpdateTest(BaseTestCase):
 
         self.user = User.objects.create_user(email="testuser@example.com", name="Test User", is_staff=True)
 
-    def test_update_tafsir_where_put_updates_all_fields_should_return_200(self):
+    def test_update_text_asset_where_put_updates_all_fields_should_return_200(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
 
         # Act
         response = self.client.put(
-            f"/portal/tafsirs/{self.tafsir.slug}/",
+            f"/portal/text-assets/{self.text_asset.slug}/",
             data={
                 "name_ar": "تفسير محدث",
-                "name_en": "Updated Tafsir",
+                "name_en": "Updated Text asset",
                 "description_ar": "وصف محدث",
                 "description_en": "Updated description",
                 "long_description_ar": "شرح طويل جديد",
@@ -62,7 +62,7 @@ class TafsirUpdateTest(BaseTestCase):
         body = response.json()
 
         self.assertEqual("تفسير محدث", body["name_ar"])
-        self.assertEqual("Updated Tafsir", body["name_en"])
+        self.assertEqual("Updated Text asset", body["name_en"])
         self.assertEqual("وصف محدث", body["description_ar"])
         self.assertEqual("Updated description", body["description_en"])
         self.assertEqual("شرح طويل جديد", body["long_description_ar"])
@@ -71,20 +71,20 @@ class TafsirUpdateTest(BaseTestCase):
         self.assertEqual("en", body["language"])
 
         # Verify in database
-        updated_asset = Asset.objects.get(id=self.tafsir.id)
+        updated_asset = Asset.objects.get(id=self.text_asset.id)
         self.assertEqual("تفسير محدث", updated_asset.name_ar)
-        self.assertEqual("Updated Tafsir", updated_asset.name_en)
+        self.assertEqual("Updated Text asset", updated_asset.name_en)
         self.assertEqual("CC-BY", updated_asset.license)
         self.assertEqual("en", updated_asset.language)
 
-    def test_update_tafsir_where_patch_updates_partial_fields_should_return_200(self):
+    def test_update_text_asset_where_patch_updates_partial_fields_should_return_200(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
 
         # Act
         response = self.client.patch(
-            f"/portal/tafsirs/{self.tafsir.slug}/",
+            f"/portal/text-assets/{self.text_asset.slug}/",
             data={
                 "name_en": "Patched English Name",
                 "description_ar": "وصف معدل",
@@ -105,17 +105,17 @@ class TafsirUpdateTest(BaseTestCase):
         self.assertEqual("Original description", body["description_en"])
         self.assertEqual("ar", body["language"])
 
-    def test_update_tafsir_where_put_missing_required_field_should_return_400(self):
+    def test_update_text_asset_where_put_missing_required_field_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
 
         # Act
         response = self.client.put(
-            f"/portal/tafsirs/{self.tafsir.slug}/",
+            f"/portal/text-assets/{self.text_asset.slug}/",
             data={
                 "name_ar": "تفسير",
-                "name_en": "Tafsir",
+                "name_en": "Text asset",
                 # Missing license
                 "language": "ar",
                 "publisher_id": self.publisher1.id,
@@ -127,14 +127,14 @@ class TafsirUpdateTest(BaseTestCase):
         # Assert
         self.assertEqual(400, response.status_code, response.content)
 
-    def test_update_tafsir_where_patch_with_invalid_name_should_return_400(self):
+    def test_update_text_asset_where_patch_with_invalid_name_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
 
         # Act
         response = self.client.patch(
-            f"/portal/tafsirs/{self.tafsir.slug}/",
+            f"/portal/text-assets/{self.text_asset.slug}/",
             data={
                 "name_ar": "",
                 "name_en": "",  # Both names empty
@@ -144,16 +144,16 @@ class TafsirUpdateTest(BaseTestCase):
 
         self.assertEqual(400, response.status_code, response.content)
         body = response.json()
-        self.assertEqual("tafsir_name_required", body["error_name"])
+        self.assertEqual("text_asset_name_required", body["error_name"])
 
-    def test_update_tafsir_where_not_found_should_return_404(self):
+    def test_update_text_asset_where_not_found_should_return_404(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
 
         # Act
         response = self.client.patch(
-            "/portal/tafsirs/nonexistent-slug/",
+            "/portal/text-assets/nonexistent-slug/",
             data={
                 "name_en": "Updated",
             },
@@ -163,14 +163,14 @@ class TafsirUpdateTest(BaseTestCase):
         # Assert
         self.assertEqual(404, response.status_code, response.content)
         body = response.json()
-        self.assertEqual("tafsir_not_found", body["error_name"])
+        self.assertEqual("text_asset_not_found", body["error_name"])
 
-    def test_update_tafsir_where_unauthenticated_should_return_401(self):
+    def test_update_text_asset_where_unauthenticated_should_return_401(self):
         # Arrange
 
         # Act
         response = self.client.patch(
-            f"/portal/tafsirs/{self.tafsir.slug}/",
+            f"/portal/text-assets/{self.text_asset.slug}/",
             data={
                 "name_en": "Updated",
             },
@@ -182,15 +182,15 @@ class TafsirUpdateTest(BaseTestCase):
         body = response.json()
         self.assertEqual("authentication_error", body["error_name"])
 
-    def test_update_tafsir_where_thumbnail_provided_should_upload_and_return_url(self):
+    def test_update_text_asset_where_thumbnail_provided_should_upload_and_return_url(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
         image = SimpleUploadedFile("thumb.jpg", b"file_content", content_type="image/jpeg")
 
         # Act
         response = self.client.patch(
-            f"/portal/tafsirs/{self.tafsir.slug}/",
+            f"/portal/text-assets/{self.text_asset.slug}/",
             data={
                 "name_en": "Updated Name",
                 "thumbnail": image,
@@ -205,21 +205,21 @@ class TafsirUpdateTest(BaseTestCase):
         self.assertTrue(body["thumbnail_url"].endswith(".jpg"))
 
         # Verify persisted in database
-        self.tafsir.refresh_from_db()
-        self.assertTrue(bool(self.tafsir.thumbnail_url))
-        self.assertTrue(self.tafsir.thumbnail_url.name.endswith(".jpg"))
+        self.text_asset.refresh_from_db()
+        self.assertTrue(bool(self.text_asset.thumbnail_url))
+        self.assertTrue(self.text_asset.thumbnail_url.name.endswith(".jpg"))
 
         # Clean up uploaded file
-        self.tafsir.thumbnail_url.delete()
+        self.text_asset.thumbnail_url.delete()
 
-    def test_update_tafsir_where_is_external_true_and_url_present_should_return_200(self):
+    def test_update_text_asset_where_is_external_true_and_url_present_should_return_200(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
 
         # Act
         response = self.client.patch(
-            f"/portal/tafsirs/{self.tafsir.slug}/",
+            f"/portal/text-assets/{self.text_asset.slug}/",
             data={
                 "is_external": True,
                 "external_url": "https://example.com/updated",
@@ -233,14 +233,14 @@ class TafsirUpdateTest(BaseTestCase):
         self.assertTrue(body["is_external"])
         self.assertEqual("https://example.com/updated", body["external_url"])
 
-    def test_update_tafsir_where_is_external_true_and_no_url_should_return_400(self):
+    def test_update_text_asset_where_is_external_true_and_no_url_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
 
         # Act
         response = self.client.patch(
-            f"/portal/tafsirs/{self.tafsir.slug}/",
+            f"/portal/text-assets/{self.text_asset.slug}/",
             data={
                 "is_external": True,
                 "external_url": "",  # explicitly missing URL
@@ -253,19 +253,19 @@ class TafsirUpdateTest(BaseTestCase):
         body = response.json()
         self.assertEqual("external_url_required", body["error_name"])
 
-    def test_update_tafsir_where_is_external_false_forces_url_null_should_return_200(self):
+    def test_update_text_asset_where_is_external_false_forces_url_null_should_return_200(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
         # first make it external
-        self.tafsir.is_external = True
-        self.tafsir.external_url = "https://example.com/original"
-        self.tafsir.save()
+        self.text_asset.is_external = True
+        self.text_asset.external_url = "https://example.com/original"
+        self.text_asset.save()
 
         # Act
         # turning it false, the external url should be set to None natively
         response = self.client.patch(
-            f"/portal/tafsirs/{self.tafsir.slug}/",
+            f"/portal/text-assets/{self.text_asset.slug}/",
             data={
                 "is_external": False,
                 "external_url": "",  # what client might pass
@@ -280,11 +280,11 @@ class TafsirUpdateTest(BaseTestCase):
         self.assertIsNone(body["external_url"])
 
         # Check db
-        self.tafsir.refresh_from_db()
-        self.assertFalse(self.tafsir.is_external)
-        self.assertIsNone(self.tafsir.external_url)
+        self.text_asset.refresh_from_db()
+        self.assertFalse(self.text_asset.is_external)
+        self.assertIsNone(self.text_asset.external_url)
 
-    def test_update_tafsir_where_user_lacks_permission_should_return_403(self):
+    def test_update_text_asset_where_user_lacks_permission_should_return_403(self):
         # Arrange
         user_without_permission = User.objects.create_user(
             email="noperm@example.com", name="No Permission User", is_staff=True
@@ -293,7 +293,7 @@ class TafsirUpdateTest(BaseTestCase):
 
         # Act
         response = self.client.patch(
-            f"/portal/tafsirs/{self.tafsir.slug}/",
+            f"/portal/text-assets/{self.text_asset.slug}/",
             data={"name_en": "Updated"},
             format="multipart",
         )

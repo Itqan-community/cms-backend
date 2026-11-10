@@ -24,8 +24,8 @@ class GroupInlineEditingApiTests(GroupQuranDataMixin, BaseTestCase):
         self.bake_group_quran()
         self.user = User.objects.create_user(email="editor@example.com", name="Editor", is_staff=True)
         for permission in (
-            PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT,
-            PermissionChoice.PORTAL_READ_TAFSIR,
+            PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT,
+            PermissionChoice.PORTAL_READ_TEXT_ASSET,
             PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES,
         ):
             self.give_permission(self.user, permission)
@@ -34,7 +34,7 @@ class GroupInlineEditingApiTests(GroupQuranDataMixin, BaseTestCase):
     def _asset(self, template: str, slug: str = "grouped") -> Asset:
         asset = baker.make(
             Asset,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             status=StatusChoice.READY,
             template=template,
             language="ar",
@@ -47,7 +47,7 @@ class GroupInlineEditingApiTests(GroupQuranDataMixin, BaseTestCase):
         """A source draft (opened through the API) holding the given ranges."""
         asset = asset or self.asset
         response = self.client.post(
-            f"/portal/content/tafsirs/{asset.slug}/draft/", data={"language": "ar"}, content_type="application/json"
+            f"/portal/content/text-assets/{asset.slug}/draft/", data={"language": "ar"}, content_type="application/json"
         )
         draft_id = response.json()["id"]
         column = asset.ensure_text_columns()[0]
@@ -63,7 +63,7 @@ class GroupInlineEditingApiTests(GroupQuranDataMixin, BaseTestCase):
         return draft_id
 
     def _url(self, draft_id: int, tail: str, *, asset: Asset | None = None) -> str:
-        return f"/portal/content/tafsirs/{(asset or self.asset).slug}/versions/{draft_id}/{tail}"
+        return f"/portal/content/text-assets/{(asset or self.asset).slug}/versions/{draft_id}/{tail}"
 
     def _ranges(self, draft_id: int) -> set[tuple[int, int, str]]:
         return set(
@@ -160,7 +160,7 @@ class GroupInlineEditingApiTests(GroupQuranDataMixin, BaseTestCase):
         self.authenticate_user(self.user)
         AssetLanguage.objects.create(asset=self.asset, language="en")
         response = self.client.post(
-            f"/portal/content/tafsirs/{self.asset.slug}/draft/",
+            f"/portal/content/text-assets/{self.asset.slug}/draft/",
             data={"language": "en"},
             content_type="application/json",
         )

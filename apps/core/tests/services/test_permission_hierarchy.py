@@ -96,7 +96,7 @@ class PermissionHierarchyWithImpliedTests(BaseTestCase):
 
     def test_with_implied_where_given_raw_string_codename_should_resolve_choice(self):
         # Arrange
-        permissions = ["portal_create_tafsir"]
+        permissions = ["portal_create_text_asset"]
 
         # Act
         expanded = self.service.with_implied(permissions)
@@ -105,9 +105,9 @@ class PermissionHierarchyWithImpliedTests(BaseTestCase):
         self.assertEqual(
             expanded,
             {
-                PermissionChoice.PORTAL_CREATE_TAFSIR,
-                PermissionChoice.PORTAL_UPDATE_TAFSIR,
-                PermissionChoice.PORTAL_READ_TAFSIR,
+                PermissionChoice.PORTAL_CREATE_TEXT_ASSET,
+                PermissionChoice.PORTAL_UPDATE_TEXT_ASSET,
+                PermissionChoice.PORTAL_READ_TEXT_ASSET,
             },
         )
 
@@ -240,7 +240,7 @@ class PermissionHierarchyGrantTests(BaseTestCase):
     def test_grant_to_group_where_update_granted_should_assign_read_and_create(self):
         # Arrange
         group = Group.objects.create(name="editors")
-        permissions = [PermissionChoice.PORTAL_UPDATE_TRANSLATION]
+        permissions = [PermissionChoice.PORTAL_UPDATE_TEXT_ASSET]
 
         # Act
         self.service.grant_to_group(group, permissions)
@@ -251,9 +251,9 @@ class PermissionHierarchyGrantTests(BaseTestCase):
         self.assertEqual(
             codenames,
             {
-                PermissionChoice.PORTAL_UPDATE_TRANSLATION.value,
-                PermissionChoice.PORTAL_CREATE_TRANSLATION.value,
-                PermissionChoice.PORTAL_READ_TRANSLATION.value,
+                PermissionChoice.PORTAL_UPDATE_TEXT_ASSET.value,
+                PermissionChoice.PORTAL_CREATE_TEXT_ASSET.value,
+                PermissionChoice.PORTAL_READ_TEXT_ASSET.value,
             },
         )
 
@@ -337,10 +337,10 @@ class PermissionHierarchyRevokeTests(BaseTestCase):
     def test_revoke_from_group_where_read_revoked_should_remove_whole_group(self):
         # Arrange
         group = Group.objects.create(name="editors")
-        self.service.grant_to_group(group, [PermissionChoice.PORTAL_DELETE_TRANSLATION])
+        self.service.grant_to_group(group, [PermissionChoice.PORTAL_DELETE_TEXT_ASSET])
 
         # Act
-        self.service.revoke_from_group(group, [PermissionChoice.PORTAL_READ_TRANSLATION])
+        self.service.revoke_from_group(group, [PermissionChoice.PORTAL_READ_TEXT_ASSET])
 
         # Assert
         self.assertEqual(group.permissions.count(), 0)

@@ -51,7 +51,7 @@ class FullUnitExportTests(BaseTestCase):
         asset = baker.make(
             Asset,
             publisher=self.publisher,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=template,
             status=StatusChoice.READY,
             language="ar",
@@ -116,13 +116,13 @@ class FullUnitExportTests(BaseTestCase):
         # Arrange
         user = User.objects.create_user(email="exporter@example.com", name="Exporter", is_staff=True)
         self.give_permission(user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES)
-        self.give_permission(user, PermissionChoice.PORTAL_READ_TAFSIR)
+        self.give_permission(user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
         version = self._version(AssetTemplateChoice.AYAH, slug="partial-tafsir")
         baker.make(AssetVersionEntry, version=version, ayah=self.ayahs[0], text="first", order=1)
         self.authenticate_user(user)
 
         # Act
-        response = self.client.get(f"/portal/content/tafsirs/partial-tafsir/versions/{version.id}/export/")
+        response = self.client.get(f"/portal/content/text-assets/partial-tafsir/versions/{version.id}/export/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)

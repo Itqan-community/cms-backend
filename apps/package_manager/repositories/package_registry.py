@@ -57,6 +57,7 @@ class PackageRegistryRepository:
         *,
         open_access: bool | None = None,
         category: str | None = None,
+        tag: str | None = None,
         exclude_categories: Collection[str] = (),
         user: User | AnonymousUser | None = None,
     ) -> QuerySet[Asset]:
@@ -78,7 +79,7 @@ class PackageRegistryRepository:
         # `columns`: the catalog describes each language's file layout (`structure`).
         qs = (
             Asset.objects.select_related("publisher")
-            .prefetch_related("columns")
+            .prefetch_related("columns", "tags")
             .filter(
                 Exists(installable_version),
                 consumer_visible_q(),
@@ -90,9 +91,12 @@ class PackageRegistryRepository:
             qs = qs.filter(is_open_access=open_access)
         if category is not None:
             qs = qs.filter(category=category)
+        if tag is not None:
+            qs = qs.filter(tags__slug=tag)
         if exclude_categories:
             qs = qs.exclude(category__in=exclude_categories)
-        return self._annotate_caller_access(qs, user).order_by("slug")
+        # A tag filter or tag search joins the tags: an asset must still list once.
+        return self._annotate_caller_access(qs.distinct(), user).order_by("slug")
 
     def _annotate_caller_access(self, qs: QuerySet[Asset], user: User | AnonymousUser | None) -> QuerySet[Asset]:
         if user is None or not user.is_authenticated:

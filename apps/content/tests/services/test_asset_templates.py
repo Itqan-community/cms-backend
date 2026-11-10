@@ -14,7 +14,7 @@ class UnitSpecTests(QuranDataMixin, BaseTestCase):
 
     def test_total_where_template_is_surah_should_return_baked_surah_count(self):
         # Arrange
-        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.SURAH)
+        asset = baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.SURAH)
 
         # Act
         total = unit_spec_for(asset).total(asset)
@@ -24,7 +24,7 @@ class UnitSpecTests(QuranDataMixin, BaseTestCase):
 
     def test_total_where_template_is_ayah_should_return_baked_ayah_count(self):
         # Arrange
-        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH)
+        asset = baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH)
 
         # Act
         total = unit_spec_for(asset).total(asset)
@@ -37,7 +37,7 @@ class UnitSpecTests(QuranDataMixin, BaseTestCase):
         layout = baker.make(MushafLayout, name="Madani 604", page_count=604)
         asset = baker.make(
             Asset,
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.PAGE,
             mushaf_layout=layout,
         )
@@ -50,7 +50,7 @@ class UnitSpecTests(QuranDataMixin, BaseTestCase):
 
     def test_units_where_template_is_surah_should_label_with_number_and_name(self):
         # Arrange
-        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.SURAH)
+        asset = baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.SURAH)
 
         # Act
         first = unit_spec_for(asset).units(asset)[0]
@@ -66,7 +66,7 @@ class UnitSpecTests(QuranDataMixin, BaseTestCase):
         layout = baker.make(MushafLayout, name="Small", page_count=3)
         asset = baker.make(
             Asset,
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.PAGE,
             mushaf_layout=layout,
         )
@@ -81,7 +81,7 @@ class UnitSpecTests(QuranDataMixin, BaseTestCase):
 
     def test_units_where_word_template_filtered_by_surah_should_only_return_that_surah(self):
         # Arrange
-        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.WORD)
+        asset = baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.WORD)
 
         # Act
         rows = unit_spec_for(asset).units(asset, surah=1)
@@ -101,7 +101,7 @@ class UnitSpecTests(QuranDataMixin, BaseTestCase):
 
     def test_units_page_where_offset_given_should_return_that_window(self):
         # Arrange
-        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH)
+        asset = baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH)
 
         # Act
         rows, total = unit_spec_for(asset).units_page(asset, offset=1, limit=5)
@@ -115,7 +115,7 @@ class UnitSpecTests(QuranDataMixin, BaseTestCase):
         layout = baker.make(MushafLayout, name="Madani 604", page_count=604)
         asset = baker.make(
             Asset,
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.PAGE,
             mushaf_layout=layout,
         )

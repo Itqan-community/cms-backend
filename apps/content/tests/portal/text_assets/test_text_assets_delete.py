@@ -7,59 +7,62 @@ from apps.publishers.models import Publisher
 from apps.users.models import User
 
 
-class TranslationDeleteTest(BaseTestCase):
+class TextAssetDeleteTest(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.publisher = baker.make(Publisher, name="Test Publisher")
-        self.translation = baker.make(
+        self.text_asset = baker.make(
             Asset,
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
-            name="Translation to Delete",
+            name="Text asset to Delete",
             description="Will be deleted",
         )
 
         self.user = User.objects.create_user(email="testuser@example.com", name="Test User", is_staff=True)
 
-    def test_delete_translation_where_valid_slug_should_return_204(self):
+    def test_delete_text_asset_where_valid_slug_should_return_204(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TRANSLATION)
-        translation_slug = self.translation.slug
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TEXT_ASSET)
+        text_asset_slug = self.text_asset.slug
 
-        response = self.client.delete(f"/portal/translations/{translation_slug}/")
+        response = self.client.delete(f"/portal/text-assets/{text_asset_slug}/")
 
         self.assertEqual(204, response.status_code)
 
         # Verify asset was deleted
-        self.assertFalse(Asset.objects.filter(slug=translation_slug).exists())
+        self.assertFalse(Asset.objects.filter(slug=text_asset_slug).exists())
 
-    def test_delete_translation_where_not_found_should_return_404(self):
+    def test_delete_text_asset_where_not_found_should_return_404(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TRANSLATION)
-        response = self.client.delete("/portal/translations/nonexistent-slug/")
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TEXT_ASSET)
+        response = self.client.delete("/portal/text-assets/nonexistent-slug/")
 
         self.assertEqual(404, response.status_code, response.content)
         body = response.json()
-        self.assertEqual("translation_not_found", body["error_name"])
+        self.assertEqual("text_asset_not_found", body["error_name"])
 
-    def test_delete_translation_where_unauthenticated_should_return_401(self):
-        response = self.client.delete(f"/portal/translations/{self.translation.slug}/")
+    def test_delete_text_asset_where_unauthenticated_should_return_401(self):
+        response = self.client.delete(f"/portal/text-assets/{self.text_asset.slug}/")
 
         self.assertEqual(401, response.status_code, response.content)
 
         # Verify nothing was deleted
-        self.assertTrue(Asset.objects.filter(slug=self.translation.slug).exists())
+        self.assertTrue(Asset.objects.filter(slug=self.text_asset.slug).exists())
 
-    def test_delete_translation_where_user_lacks_permission_should_return_403(self):
+    def test_delete_text_asset_where_user_lacks_permission_should_return_403(self):
+        # Arrange
         user_without_permission = User.objects.create_user(
             email="noperm@example.com", name="No Permission User", is_staff=True
         )
         self.authenticate_user(user_without_permission)
-        response = self.client.delete(f"/portal/translations/{self.translation.slug}/")
+
+        # Act
+        response = self.client.delete(f"/portal/text-assets/{self.text_asset.slug}/")
+
+        # Assert
         self.assertEqual(403, response.status_code)
         self.assertEqual("permission_denied", response.json()["error_name"])
-
-        # Verify nothing was deleted
-        self.assertTrue(Asset.objects.filter(slug=self.translation.slug).exists())
+        self.assertTrue(Asset.objects.filter(slug=self.text_asset.slug).exists())

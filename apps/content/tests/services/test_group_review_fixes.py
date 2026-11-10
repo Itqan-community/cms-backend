@@ -37,7 +37,7 @@ class GroupReviewFixTests(GroupQuranDataMixin, BaseTestCase):
         self.bake_group_quran()
         self.asset = baker.make(
             Asset,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             status=StatusChoice.READY,
             template=AssetTemplateChoice.AYAH_GROUP,
             language="ar",
@@ -89,7 +89,7 @@ class GroupReviewFixTests(GroupQuranDataMixin, BaseTestCase):
 
         # Act
         with self.assertRaises(ItqanError) as raised:
-            self.service.restore_version(self.asset.slug, CategoryChoice.TAFSIR, old.pk)
+            self.service.restore_version(self.asset.slug, CategoryChoice.TEXT, old.pk)
 
         # Assert
         self.assertEqual(raised.exception.error_name, "orphaned_groups")
@@ -102,7 +102,7 @@ class GroupReviewFixTests(GroupQuranDataMixin, BaseTestCase):
 
         # Act
         with patch.object(repo, repo.reconstruct_entries.__name__, wraps=repo.reconstruct_entries) as reconstruct:
-            AssetContentService(repo).restore_version(self.asset.slug, CategoryChoice.TAFSIR, old.pk)
+            AssetContentService(repo).restore_version(self.asset.slug, CategoryChoice.TEXT, old.pk)
 
         # Assert
         self.assertEqual([call.args[0] for call in reconstruct.call_args_list].count(old), 1)
@@ -116,7 +116,7 @@ class GroupReviewFixTests(GroupQuranDataMixin, BaseTestCase):
 
         # Act
         with patch.object(repo, repo.reconstruct_entries.__name__, wraps=repo.reconstruct_entries) as reconstruct:
-            AssetContentService(repo).restore_version(self.asset.slug, CategoryChoice.TAFSIR, old.pk)
+            AssetContentService(repo).restore_version(self.asset.slug, CategoryChoice.TEXT, old.pk)
 
         # Assert
         self.assertEqual([call.args[0] for call in reconstruct.call_args_list].count(old), 1)
@@ -136,7 +136,7 @@ class GroupReviewFixTests(GroupQuranDataMixin, BaseTestCase):
         ):
             self.service.add_group(
                 self.asset.slug,
-                CategoryChoice.TAFSIR,
+                CategoryChoice.TEXT,
                 draft.pk,
                 start=QuranPosition(1, 1),
                 end=QuranPosition(1, 2),
@@ -167,7 +167,7 @@ class GroupReviewFixTests(GroupQuranDataMixin, BaseTestCase):
             self.assertRaises(ItqanError) as raised,
         ):
             AssetContentService(repo).publish_draft(
-                self.asset.slug, CategoryChoice.TAFSIR, draft.pk, summary_en="commit", version_number="1.0"
+                self.asset.slug, CategoryChoice.TEXT, draft.pk, summary_en="commit", version_number="1.0"
             )
 
         # Assert
@@ -176,7 +176,7 @@ class GroupReviewFixTests(GroupQuranDataMixin, BaseTestCase):
     def test_units_page_where_reference_filter_matches_a_later_word_should_keep_group(self):
         # Arrange
         asset = baker.make(
-            Asset, category=CategoryChoice.TAFSIR, status=StatusChoice.READY, template=AssetTemplateChoice.WORD_GROUP
+            Asset, category=CategoryChoice.TEXT, status=StatusChoice.READY, template=AssetTemplateChoice.WORD_GROUP
         )
         column = asset.ensure_text_columns()[0]
         version = baker.make(AssetVersion, asset=asset, state=VersionStateChoice.PUBLISHED)

@@ -301,12 +301,12 @@ class SetGroupPermissionsTest(GroupsApiTestCase):
         self._set_permissions(group.id, [PermissionChoice.PORTAL_DELETE_RECITER.value])
 
         # Act
-        response = self._set_permissions(group.id, [PermissionChoice.PORTAL_READ_TAFSIR.value])
+        response = self._set_permissions(group.id, [PermissionChoice.PORTAL_READ_TEXT_ASSET.value])
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual(
-            {PermissionChoice.PORTAL_READ_TAFSIR.value},
+            {PermissionChoice.PORTAL_READ_TEXT_ASSET.value},
             {p["code_name"] for p in response.json()["permissions"]},
         )
 

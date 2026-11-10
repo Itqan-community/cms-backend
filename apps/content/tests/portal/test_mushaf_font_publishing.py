@@ -108,7 +108,7 @@ class PublishNewestMushafAndFontVersionsMigrationTests(MushafPublishingBaseTest)
 
     def test_publish_newest_versions_where_tafsir_should_leave_it_alone(self):
         # Arrange
-        tafsir = baker.make(Asset, category=CategoryChoice.TAFSIR, template="ayah", status=StatusChoice.READY)
+        tafsir = baker.make(Asset, category=CategoryChoice.TEXT, template="ayah", status=StatusChoice.READY)
         self._commit("1.0", asset=tafsir)
 
         # Act

@@ -4,7 +4,7 @@ import re
 from typing import Any
 
 from django.conf import settings
-from django.core.validators import FileExtensionValidator, MaxValueValidator, MinValueValidator
+from django.core.validators import FileExtensionValidator, MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import IntegrityError, models, transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -50,10 +50,9 @@ class LicenseChoice(models.TextChoices):
 class CategoryChoice(models.TextChoices):
     RECITATION = "recitation", _("Recitation")
     MUSHAF = "mushaf", _("Mushaf")
-    TAFSIR = "tafsir", _("Tafsir")
     PROGRAM = "program", _("Program")
     LINGUISTIC = "linguistic", _("Linguistic")
-    TRANSLATION = "translation", _("Translation")
+    TEXT = "text", _("Text")
     FONT = "font", _("Font")
     SEARCH = "search", _("Search")
     TAJWEED = "tajweed", _("Tajweed")
@@ -66,7 +65,7 @@ class StatusChoice(models.TextChoices):
 
 # Categories whose content changes are reviewed: a version is visible to
 # consumers only once fully approved and explicitly published.
-REVIEWED_CATEGORIES = frozenset({CategoryChoice.TRANSLATION, CategoryChoice.TAFSIR})
+REVIEWED_CATEGORIES = frozenset({CategoryChoice.TEXT})
 
 # Categories whose consumers are served an explicitly published version
 # (``AssetLanguage.published_version``) rather than the newest commit, so a
@@ -91,7 +90,7 @@ class AssetTemplateChoice(models.TextChoices):
 
 
 # Templates whose rows each cover a publisher-defined range of ayahs / words
-# rather than one canonical unit. Tafsir only.
+# rather than one canonical unit. Only for assets tagged tafsir.
 GROUP_TEMPLATES = frozenset({AssetTemplateChoice.AYAH_GROUP, AssetTemplateChoice.WORD_GROUP})
 
 
@@ -117,6 +116,31 @@ SLUG_CONFLICT_RETRIES = 3
 # Per-asset distribution channels (all default True). Each flag decides whether the
 # asset is visible on one consumer surface; they never affect other surfaces.
 ASSET_CHANNEL_FIELDS: tuple[str, ...] = ("in_gallery", "in_public_api", "in_cli", "in_tenants")
+
+# The built-in text asset tags, seeded by migration and protected from deletion.
+TAG_TAFSIR = "tafsir"
+TAG_TRANSLATION = "translation"
+
+
+class AssetTag(BaseModel):
+    """What kind of text a text asset holds. Itqan staff manage the list; publishers pick from it."""
+
+    slug = models.SlugField(
+        max_length=30,
+        unique=True,
+        validators=[
+            RegexValidator(r"^[a-z0-9]+(-[a-z0-9]+)*$", _("Use lowercase letters, digits and single hyphens."))
+        ],
+        help_text="Stable identifier used in API filters and as the prefix of new package names",
+    )
+    name = models.CharField(max_length=100, help_text="Display name")
+    is_builtin = models.BooleanField(default=False, editable=False, help_text="Built-in tags cannot be deleted")
+
+    class Meta:
+        ordering = ["slug"]
+
+    def __str__(self) -> str:
+        return self.slug
 
 
 class Asset(DeleteFilesOnDeleteMixin, BaseModel):
@@ -255,6 +279,12 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         default=True,
         help_text="Flag to allow consuming the asset directly without the access-request cycle (default enabled).",
     )
+    tags = models.ManyToManyField(
+        AssetTag,
+        blank=True,
+        related_name="assets",
+        help_text="Text assets only: what kind of text this asset holds",
+    )
     in_gallery = models.BooleanField(
         default=True,
         help_text="Distribution channel: shown on the CMS website (assets gallery, detail, download).",
@@ -293,11 +323,11 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
             ),
             models.CheckConstraint(
                 condition=models.Q(
-                    category__in=[CategoryChoice.TRANSLATION, CategoryChoice.TAFSIR],
+                    category=CategoryChoice.TEXT,
                     template__isnull=False,
                 )
                 | models.Q(
-                    ~models.Q(category__in=[CategoryChoice.TRANSLATION, CategoryChoice.TAFSIR]),
+                    ~models.Q(category=CategoryChoice.TEXT),
                     template__isnull=True,
                 ),
                 name="asset_template_required_for_text",

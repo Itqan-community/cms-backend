@@ -24,7 +24,7 @@ from apps.content.models import (
     consumer_visible_q,
 )
 from apps.content.repositories.asset_content import AssetContentRepository
-from apps.content.services import tafsir as tafsir_service
+from apps.content.services import text_asset as text_asset_service
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
@@ -35,18 +35,18 @@ from apps.users.models import User
 CSV = b"surah,ayah,text\n1,1,in the name"
 
 
-class TafsirVersionBaseTest(BaseTestCase):
+class TextAssetVersionBaseTest(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.publisher = baker.make(Publisher, name="Test Publisher")
-        self.tafsir = baker.make(
+        self.text_asset = baker.make(
             Asset,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
-            name="Tafsir Al-Tabari",
-            slug="tafsir-al-tabari",
+            name="Text asset Al-Tabari",
+            slug="text_asset-al-tabari",
         )
         self.user = User.objects.create_user(email="testuser@example.com", name="Test User", is_staff=True)
         # These suites exercise editing, not language assignment: give the user the
@@ -57,16 +57,16 @@ class TafsirVersionBaseTest(BaseTestCase):
         self.ayah = baker.make(Ayah, id=1, surah=surah, number_in_surah=1, text="a")
 
 
-class TafsirVersionListTest(TafsirVersionBaseTest):
+class TextAssetVersionListTest(TextAssetVersionBaseTest):
     def test_list_versions_where_valid_slug_should_return_versions(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
-        baker.make(AssetVersion, asset=self.tafsir, name="V1")
-        baker.make(AssetVersion, asset=self.tafsir, name="V2")
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
+        baker.make(AssetVersion, asset=self.text_asset, name="V1")
+        baker.make(AssetVersion, asset=self.text_asset, name="V2")
 
         # Act
-        response = self.client.get(f"/portal/tafsirs/{self.tafsir.slug}/versions/")
+        response = self.client.get(f"/portal/text-assets/{self.text_asset.slug}/versions/")
 
         # Assert
         self.assertEqual(200, response.status_code)
@@ -77,14 +77,14 @@ class TafsirVersionListTest(TafsirVersionBaseTest):
     def test_list_versions_filtered_by_language(self):
         # Arrange — one source-language version and one French version
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
-        source = self.tafsir.get_or_create_source_language()
-        fr = AssetLanguage.objects.create(asset=self.tafsir, language="fr")
-        baker.make(AssetVersion, asset=self.tafsir, asset_language=source, name="SRC1")
-        baker.make(AssetVersion, asset=self.tafsir, asset_language=fr, name="FR1")
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
+        source = self.text_asset.get_or_create_source_language()
+        fr = AssetLanguage.objects.create(asset=self.text_asset, language="fr")
+        baker.make(AssetVersion, asset=self.text_asset, asset_language=source, name="SRC1")
+        baker.make(AssetVersion, asset=self.text_asset, asset_language=fr, name="FR1")
 
         # Act
-        response = self.client.get(f"/portal/tafsirs/{self.tafsir.slug}/versions/?language=fr")
+        response = self.client.get(f"/portal/text-assets/{self.text_asset.slug}/versions/?language=fr")
 
         # Assert — only the French version, and each row exposes its language
         self.assertEqual(200, response.status_code, response.content)
@@ -97,13 +97,15 @@ class TafsirVersionListTest(TafsirVersionBaseTest):
         # Legacy rows predate multi-language and can carry a null asset_language;
         # they belong to the source language and must appear when it is filtered.
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
-        source = self.tafsir.get_or_create_source_language()
-        baker.make(AssetVersion, asset=self.tafsir, asset_language=source, name="SRC1")
-        legacy = baker.make(AssetVersion, asset=self.tafsir, name="LEGACY")
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
+        source = self.text_asset.get_or_create_source_language()
+        baker.make(AssetVersion, asset=self.text_asset, asset_language=source, name="SRC1")
+        legacy = baker.make(AssetVersion, asset=self.text_asset, name="LEGACY")
         AssetVersion.objects.filter(pk=legacy.pk).update(asset_language=None)
 
-        response = self.client.get(f"/portal/tafsirs/{self.tafsir.slug}/versions/?language={self.tafsir.language}")
+        response = self.client.get(
+            f"/portal/text-assets/{self.text_asset.slug}/versions/?language={self.text_asset.language}"
+        )
 
         self.assertEqual(200, response.status_code, response.content)
         names = {row["name"] for row in response.json()["results"]}
@@ -112,11 +114,11 @@ class TafsirVersionListTest(TafsirVersionBaseTest):
 
     def test_list_versions_exposes_author_and_change_counts(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
-        version = baker.make(AssetVersion, asset=self.tafsir, name="v1", created_by=self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
+        version = baker.make(AssetVersion, asset=self.text_asset, name="v1", created_by=self.user)
         baker.make(AssetVersionChange, version=version, ayah=self.ayah, change_type="added", new_text="x", order=1)
 
-        response = self.client.get(f"/portal/tafsirs/{self.tafsir.slug}/versions/")
+        response = self.client.get(f"/portal/text-assets/{self.text_asset.slug}/versions/")
 
         self.assertEqual(200, response.status_code, response.content)
         row = response.json()["results"][0]
@@ -126,8 +128,8 @@ class TafsirVersionListTest(TafsirVersionBaseTest):
     def test_list_versions_where_changes_reviewed_should_count_types_and_comments(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
-        version = baker.make(AssetVersion, asset=self.tafsir, name="1.0")
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
+        version = baker.make(AssetVersion, asset=self.text_asset, name="1.0")
         ayahs = [self.ayah] + [baker.make(Ayah, id=i, surah=self.ayah.surah, number_in_surah=i) for i in (2, 3)]
         added, modified, _ = (
             baker.make(AssetVersionChange, version=version, ayah=ayah, change_type=change_type, order=ayah.id)
@@ -137,7 +139,7 @@ class TafsirVersionListTest(TafsirVersionBaseTest):
         baker.make(AssetVersionChangeReview, change=modified, state=ReviewStateChoice.APPROVED, comment="")
 
         # Act
-        response = self.client.get(f"/portal/tafsirs/{self.tafsir.slug}/versions/")
+        response = self.client.get(f"/portal/text-assets/{self.text_asset.slug}/versions/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -148,10 +150,10 @@ class TafsirVersionListTest(TafsirVersionBaseTest):
     def test_list_versions_where_version_has_more_changes_should_count_them_in_the_database(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
-        version = baker.make(AssetVersion, asset=self.tafsir, name="1.0")
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
+        version = baker.make(AssetVersion, asset=self.text_asset, name="1.0")
         baker.make(AssetVersionChange, version=version, ayah=self.ayah, change_type="added", order=1)
-        url = f"/portal/tafsirs/{self.tafsir.slug}/versions/"
+        url = f"/portal/text-assets/{self.text_asset.slug}/versions/"
         with CaptureQueriesContext(connection) as few_changes:
             self.client.get(url)
         for i in range(2, 22):
@@ -172,19 +174,19 @@ class TafsirVersionListTest(TafsirVersionBaseTest):
         ]
         self.assertEqual([], loaded_rows)
 
-    def test_list_versions_where_tafsir_not_found_should_return_404(self):
+    def test_list_versions_where_text_asset_not_found_should_return_404(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
 
         # Act
-        response = self.client.get("/portal/tafsirs/non-existent/versions/")
+        response = self.client.get("/portal/text-assets/non-existent/versions/")
 
         # Assert
         self.assertEqual(404, response.status_code)
 
     def test_list_versions_where_unauthenticated_should_return_401(self):
-        response = self.client.get(f"/portal/tafsirs/{self.tafsir.slug}/versions/")
+        response = self.client.get(f"/portal/text-assets/{self.text_asset.slug}/versions/")
         self.assertEqual(401, response.status_code)
 
     def test_list_versions_where_user_lacks_permission_should_return_403(self):
@@ -195,25 +197,25 @@ class TafsirVersionListTest(TafsirVersionBaseTest):
         self.authenticate_user(user_without_permission)
 
         # Act
-        response = self.client.get(f"/portal/tafsirs/{self.tafsir.slug}/versions/")
+        response = self.client.get(f"/portal/text-assets/{self.text_asset.slug}/versions/")
 
         # Assert
         self.assertEqual(403, response.status_code)
         self.assertEqual("permission_denied", response.json()["error_name"])
 
 
-class TafsirVersionCreateTest(TafsirVersionBaseTest):
+class TextAssetVersionCreateTest(TextAssetVersionBaseTest):
     def test_create_version_where_valid_data_should_return_201(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
-        file = SimpleUploadedFile("tafsir.csv", CSV, content_type="text/csv")
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
+        file = SimpleUploadedFile("text_asset.csv", CSV, content_type="text/csv")
 
         # Act
         response = self.client.post(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/",
+            f"/portal/text-assets/{self.text_asset.slug}/versions/",
             data={
-                "asset_id": self.tafsir.id,
+                "asset_id": self.text_asset.id,
                 "label_en": "New Version",
                 "version_number": "7.0",
                 "summary_en": "This is a new version",
@@ -231,7 +233,7 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
 
         # Verify DB
         version = AssetVersion.objects.get(id=body["id"])
-        self.assertEqual(self.tafsir, version.asset)
+        self.assertEqual(self.text_asset, version.asset)
         # The stored file is generated from the parsed entries (what gets reviewed).
         with version.file_url.open("rb") as handle:
             stored = handle.read().decode("utf-8")
@@ -243,18 +245,18 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         self.assertEqual("Test User", body["created_by"])
 
     def test_create_version_with_language_tags_the_version(self):
-        # Arrange — register a French language on the tafsir
+        # Arrange — register a French language on the text_asset
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
-        self.tafsir.get_or_create_source_language()
-        AssetLanguage.objects.create(asset=self.tafsir, language="fr")
-        file = SimpleUploadedFile("tafsir-fr.csv", b"surah,ayah,text\n1,1,au nom", content_type="text/csv")
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
+        self.text_asset.get_or_create_source_language()
+        AssetLanguage.objects.create(asset=self.text_asset, language="fr")
+        file = SimpleUploadedFile("text_asset-fr.csv", b"surah,ayah,text\n1,1,au nom", content_type="text/csv")
 
         # Act
         response = self.client.post(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/",
+            f"/portal/text-assets/{self.text_asset.slug}/versions/",
             data={
-                "asset_id": self.tafsir.id,
+                "asset_id": self.text_asset.id,
                 "label_en": "French v1",
                 "version_number": "7.0",
                 "summary_en": "",
@@ -271,11 +273,11 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
     def test_create_version_where_asset_id_mismatch_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
 
         # Act
         response = self.client.post(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/",
+            f"/portal/text-assets/{self.text_asset.slug}/versions/",
             data={
                 "asset_id": 99999,
                 "label_en": "New Version",
@@ -289,7 +291,7 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         self.assertEqual("asset_id_mismatch", response.json()["error_name"])
 
     def test_create_version_where_unauthenticated_should_return_401(self):
-        response = self.client.post(f"/portal/tafsirs/{self.tafsir.slug}/versions/", data={})
+        response = self.client.post(f"/portal/text-assets/{self.text_asset.slug}/versions/", data={})
         self.assertEqual(401, response.status_code)
 
     def test_create_version_where_user_lacks_permission_should_return_403(self):
@@ -298,12 +300,12 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
             email="noperm@example.com", name="No Permission User", is_staff=True
         )
         self.authenticate_user(user_without_permission)
-        file = SimpleUploadedFile("tafsir.pdf", b"content", content_type="application/pdf")
+        file = SimpleUploadedFile("text_asset.pdf", b"content", content_type="application/pdf")
 
         # Act
         response = self.client.post(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/",
-            data={"asset_id": self.tafsir.id, "label_en": "V1", "version_number": "1.0", "file": file},
+            f"/portal/text-assets/{self.text_asset.slug}/versions/",
+            data={"asset_id": self.text_asset.id, "label_en": "V1", "version_number": "1.0", "file": file},
         )
 
         # Assert
@@ -313,25 +315,27 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
     def test_create_version_with_subscribers_should_not_send_email_before_publishing(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
-        baker.make(AssetVersion, asset=self.tafsir, name="1.0.0")
-        subscriber = baker.make(User, email="tafsir-subscriber@example.com")
-        access_request = baker.make(AssetAccessRequest, developer_user=subscriber, asset=self.tafsir, status="approved")
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
+        baker.make(AssetVersion, asset=self.text_asset, name="1.0.0")
+        subscriber = baker.make(User, email="text_asset-subscriber@example.com")
+        access_request = baker.make(
+            AssetAccessRequest, developer_user=subscriber, asset=self.text_asset, status="approved"
+        )
         baker.make(
             AssetAccess,
             asset_access_request=access_request,
             user=subscriber,
-            asset=self.tafsir,
+            asset=self.text_asset,
             effective_license="CC0",
         )
-        file = SimpleUploadedFile("tafsir.csv", CSV, content_type="text/csv")
+        file = SimpleUploadedFile("text_asset.csv", CSV, content_type="text/csv")
 
         # Act
         with self.captureOnCommitCallbacks(execute=True):
             response = self.client.post(
-                f"/portal/tafsirs/{self.tafsir.slug}/versions/",
+                f"/portal/text-assets/{self.text_asset.slug}/versions/",
                 data={
-                    "asset_id": self.tafsir.id,
+                    "asset_id": self.text_asset.id,
                     "label_en": "2.0.0",
                     "version_number": "1.0",
                     "summary_en": "New release",
@@ -343,19 +347,19 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         self.assertEqual(201, response.status_code, response.content)
         # Assert — an upload is not visible to consumers until it is published
         recipients = [email for m in mail.outbox for email in m.to]
-        self.assertNotIn("tafsir-subscriber@example.com", recipients)
+        self.assertNotIn("text_asset-subscriber@example.com", recipients)
 
     def test_create_version_without_subscribers_should_not_send_email(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
-        baker.make(AssetVersion, asset=self.tafsir, name="1.0.0")  # prior version so this is an update
-        file = SimpleUploadedFile("tafsir.csv", CSV, content_type="text/csv")
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
+        baker.make(AssetVersion, asset=self.text_asset, name="1.0.0")  # prior version so this is an update
+        file = SimpleUploadedFile("text_asset.csv", CSV, content_type="text/csv")
 
         # Act
         response = self.client.post(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/",
-            data={"asset_id": self.tafsir.id, "label_en": "2.0.0", "version_number": "1.0", "file": file},
+            f"/portal/text-assets/{self.text_asset.slug}/versions/",
+            data={"asset_id": self.text_asset.id, "label_en": "2.0.0", "version_number": "1.0", "file": file},
         )
 
         # Assert
@@ -365,31 +369,31 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
     def test_create_version_where_file_unparseable_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
-        file = SimpleUploadedFile("tafsir.pdf", b"content", content_type="application/pdf")
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
+        file = SimpleUploadedFile("text_asset.pdf", b"content", content_type="application/pdf")
 
         # Act
         response = self.client.post(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/",
-            data={"asset_id": self.tafsir.id, "label_en": "v2", "version_number": "1.0", "file": file},
+            f"/portal/text-assets/{self.text_asset.slug}/versions/",
+            data={"asset_id": self.text_asset.id, "label_en": "v2", "version_number": "1.0", "file": file},
         )
 
         # Assert — content that cannot be split into units cannot be reviewed
         self.assertEqual(400, response.status_code, response.content)
         self.assertEqual("content_file_unparseable", response.json()["error_name"])
-        self.assertFalse(AssetVersion.objects.filter(asset=self.tafsir, name="v2").exists())
+        self.assertFalse(AssetVersion.objects.filter(asset=self.text_asset, name="v2").exists())
 
     def test_create_version_where_rows_would_be_dropped_should_return_400_naming_them(self):
         # Arrange — row 3 repeats 1:1 with different text, row 4 names a missing ayah
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
         content = b"surah,ayah,text\n1,1,in the name\n1,1,hidden text\n1,99,more hidden\n"
-        file = SimpleUploadedFile("tafsir.csv", content, content_type="text/csv")
+        file = SimpleUploadedFile("text_asset.csv", content, content_type="text/csv")
 
         # Act
         response = self.client.post(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/",
-            data={"asset_id": self.tafsir.id, "label_en": "v2", "version_number": "1.0", "file": file},
+            f"/portal/text-assets/{self.text_asset.slug}/versions/",
+            data={"asset_id": self.text_asset.id, "label_en": "v2", "version_number": "1.0", "file": file},
         )
 
         # Assert — nothing whose text would be dropped (and so never reviewed) is accepted
@@ -397,19 +401,19 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         body = response.json()
         self.assertEqual("content_file_invalid_rows", body["error_name"])
         self.assertEqual({"3": "duplicate", "4": "unknown_unit"}, body["extra"]["rows"])
-        self.assertFalse(AssetVersion.objects.filter(asset=self.tafsir, name="v2").exists())
+        self.assertFalse(AssetVersion.objects.filter(asset=self.text_asset, name="v2").exists())
 
     def test_create_version_where_extra_columns_should_store_only_the_reviewed_content(self):
         # Arrange — an extra column the parser ignores, so reviewers never see it
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
         content = b"surah,ayah,text,notes\n1,1,in the name,secret note\n"
-        file = SimpleUploadedFile("tafsir.csv", content, content_type="text/csv")
+        file = SimpleUploadedFile("text_asset.csv", content, content_type="text/csv")
 
         # Act
         response = self.client.post(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/",
-            data={"asset_id": self.tafsir.id, "label_en": "v2", "version_number": "1.0", "file": file},
+            f"/portal/text-assets/{self.text_asset.slug}/versions/",
+            data={"asset_id": self.text_asset.id, "label_en": "v2", "version_number": "1.0", "file": file},
         )
 
         # Assert — consumers download a file generated from the reviewed entries
@@ -423,15 +427,15 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
     def test_create_version_where_content_differs_should_record_changes_for_review(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
-        previous = baker.make(AssetVersion, asset=self.tafsir, name="v1")
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
+        previous = baker.make(AssetVersion, asset=self.text_asset, name="v1")
         baker.make(AssetVersionEntry, version=previous, ayah=self.ayah, text="old text", order=1)
-        file = SimpleUploadedFile("tafsir.csv", CSV, content_type="text/csv")
+        file = SimpleUploadedFile("text_asset.csv", CSV, content_type="text/csv")
 
         # Act
         response = self.client.post(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/",
-            data={"asset_id": self.tafsir.id, "label_en": "v2", "version_number": "1.0", "file": file},
+            f"/portal/text-assets/{self.text_asset.slug}/versions/",
+            data={"asset_id": self.text_asset.id, "label_en": "v2", "version_number": "1.0", "file": file},
         )
 
         # Assert
@@ -448,14 +452,14 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
     def test_create_version_where_pre_approved_by_reviewer_should_approve_its_changes(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
         self.give_permission(self.user, PermissionChoice.PORTAL_REVIEW_CONTENT)
-        file = SimpleUploadedFile("tafsir.csv", CSV, content_type="text/csv")
+        file = SimpleUploadedFile("text_asset.csv", CSV, content_type="text/csv")
 
         # Act
         response = self.client.post(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/",
-            data={"asset_id": self.tafsir.id, "version_number": "1.0", "pre_approved": True, "file": file},
+            f"/portal/text-assets/{self.text_asset.slug}/versions/",
+            data={"asset_id": self.text_asset.id, "version_number": "1.0", "pre_approved": True, "file": file},
         )
 
         # Assert
@@ -470,31 +474,31 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
     def test_create_version_where_pre_approved_without_review_permission_should_return_403(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
-        file = SimpleUploadedFile("tafsir.csv", CSV, content_type="text/csv")
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
+        file = SimpleUploadedFile("text_asset.csv", CSV, content_type="text/csv")
 
         # Act
         response = self.client.post(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/",
-            data={"asset_id": self.tafsir.id, "version_number": "1.0", "pre_approved": True, "file": file},
+            f"/portal/text-assets/{self.text_asset.slug}/versions/",
+            data={"asset_id": self.text_asset.id, "version_number": "1.0", "pre_approved": True, "file": file},
         )
 
         # Assert — no version is created
         self.assertEqual(403, response.status_code, response.content)
-        self.assertFalse(AssetVersion.objects.filter(asset=self.tafsir).exists())
+        self.assertFalse(AssetVersion.objects.filter(asset=self.text_asset).exists())
 
     def test_create_version_where_identical_to_previous_should_record_no_changes(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
-        previous = baker.make(AssetVersion, asset=self.tafsir, name="v1")
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
+        previous = baker.make(AssetVersion, asset=self.text_asset, name="v1")
         baker.make(AssetVersionEntry, version=previous, ayah=self.ayah, text="in the name", order=1)
-        file = SimpleUploadedFile("tafsir.csv", CSV, content_type="text/csv")
+        file = SimpleUploadedFile("text_asset.csv", CSV, content_type="text/csv")
 
         # Act
         response = self.client.post(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/",
-            data={"asset_id": self.tafsir.id, "label_en": "v2", "version_number": "1.0", "file": file},
+            f"/portal/text-assets/{self.text_asset.slug}/versions/",
+            data={"asset_id": self.text_asset.id, "label_en": "v2", "version_number": "1.0", "file": file},
         )
 
         # Assert — nothing new to review
@@ -503,26 +507,26 @@ class TafsirVersionCreateTest(TafsirVersionBaseTest):
         self.assertTrue(response.json()["is_approved"])
 
 
-class TafsirVersionUpdateTest(TafsirVersionBaseTest):
+class TextAssetVersionUpdateTest(TextAssetVersionBaseTest):
     def setUp(self):
         super().setUp()
-        self.version = baker.make(AssetVersion, asset=self.tafsir, name="Old Name")
+        self.version = baker.make(AssetVersion, asset=self.text_asset, name="Old Name")
 
     def test_put_version_where_valid_data_should_return_200(self):
         from urllib.parse import urlencode
 
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
         payload = {
-            "asset_id": self.tafsir.id,
+            "asset_id": self.text_asset.id,
             "label_en": "Updated Name",
             "summary_en": "Updated Summary",
         }
 
         # Act
         response = self.client.put(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/{self.version.id}/",
+            f"/portal/text-assets/{self.text_asset.slug}/versions/{self.version.id}/",
             data=urlencode(payload),
             content_type="application/x-www-form-urlencoded",
         )
@@ -539,7 +543,7 @@ class TafsirVersionUpdateTest(TafsirVersionBaseTest):
     def test_patch_version_where_partial_data_should_return_200(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
         from urllib.parse import urlencode
 
         payload = {
@@ -548,7 +552,7 @@ class TafsirVersionUpdateTest(TafsirVersionBaseTest):
 
         # Act
         response = self.client.patch(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/{self.version.id}/",
+            f"/portal/text-assets/{self.text_asset.slug}/versions/{self.version.id}/",
             data=urlencode(payload),
             content_type="application/x-www-form-urlencoded",
         )
@@ -562,14 +566,14 @@ class TafsirVersionUpdateTest(TafsirVersionBaseTest):
     def test_patch_version_where_version_has_changes_should_return_their_counts(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
         from urllib.parse import urlencode
 
         baker.make(AssetVersionChange, version=self.version, ayah=self.ayah, change_type="modified", order=1)
 
         # Act
         response = self.client.patch(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/{self.version.id}/",
+            f"/portal/text-assets/{self.text_asset.slug}/versions/{self.version.id}/",
             data=urlencode({"label_en": "Patched Name"}),
             content_type="application/x-www-form-urlencoded",
         )
@@ -584,11 +588,11 @@ class TafsirVersionUpdateTest(TafsirVersionBaseTest):
 
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
 
         # Act
         response = self.client.patch(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/{self.version.id}/",
+            f"/portal/text-assets/{self.text_asset.slug}/versions/{self.version.id}/",
             data=urlencode({"name": "9.9", "label_en": "Renamed"}),
             content_type="application/x-www-form-urlencoded",
         )
@@ -600,7 +604,7 @@ class TafsirVersionUpdateTest(TafsirVersionBaseTest):
         self.assertEqual("Renamed", self.version.label)
 
     def test_update_version_where_unauthenticated_should_return_401(self):
-        response = self.client.patch(f"/portal/tafsirs/{self.tafsir.slug}/versions/{self.version.id}/", data={})
+        response = self.client.patch(f"/portal/text-assets/{self.text_asset.slug}/versions/{self.version.id}/", data={})
         self.assertEqual(401, response.status_code)
 
     def test_update_version_where_user_lacks_permission_should_return_403(self):
@@ -614,7 +618,7 @@ class TafsirVersionUpdateTest(TafsirVersionBaseTest):
 
         # Act
         response = self.client.patch(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/{self.version.id}/",
+            f"/portal/text-assets/{self.text_asset.slug}/versions/{self.version.id}/",
             data=urlencode({"label_en": "X"}),
             content_type="application/x-www-form-urlencoded",
         )
@@ -624,35 +628,35 @@ class TafsirVersionUpdateTest(TafsirVersionBaseTest):
         self.assertEqual("permission_denied", response.json()["error_name"])
 
 
-class TafsirVersionDeleteTest(TafsirVersionBaseTest):
+class TextAssetVersionDeleteTest(TextAssetVersionBaseTest):
     def test_delete_version_should_return_204(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TAFSIR)
-        version = baker.make(AssetVersion, asset=self.tafsir)
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TEXT_ASSET)
+        version = baker.make(AssetVersion, asset=self.text_asset)
 
         # Act
-        response = self.client.delete(f"/portal/tafsirs/{self.tafsir.slug}/versions/{version.id}/")
+        response = self.client.delete(f"/portal/text-assets/{self.text_asset.slug}/versions/{version.id}/")
 
         # Assert
         self.assertEqual(204, response.status_code)
         self.assertFalse(AssetVersion.objects.filter(id=version.id).exists())
 
     def test_delete_version_where_unauthenticated_should_return_401(self):
-        version = baker.make(AssetVersion, asset=self.tafsir)
-        response = self.client.delete(f"/portal/tafsirs/{self.tafsir.slug}/versions/{version.id}/")
+        version = baker.make(AssetVersion, asset=self.text_asset)
+        response = self.client.delete(f"/portal/text-assets/{self.text_asset.slug}/versions/{version.id}/")
         self.assertEqual(401, response.status_code)
 
     def test_delete_version_where_user_lacks_permission_should_return_403(self):
         # Arrange
-        version = baker.make(AssetVersion, asset=self.tafsir)
+        version = baker.make(AssetVersion, asset=self.text_asset)
         user_without_permission = User.objects.create_user(
             email="noperm@example.com", name="No Permission User", is_staff=True
         )
         self.authenticate_user(user_without_permission)
 
         # Act
-        response = self.client.delete(f"/portal/tafsirs/{self.tafsir.slug}/versions/{version.id}/")
+        response = self.client.delete(f"/portal/text-assets/{self.text_asset.slug}/versions/{version.id}/")
 
         # Assert
         self.assertEqual(403, response.status_code)
@@ -661,14 +665,14 @@ class TafsirVersionDeleteTest(TafsirVersionBaseTest):
     def test_delete_version_where_published_and_has_older_version_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TAFSIR)
-        older = baker.make(AssetVersion, asset=self.tafsir, name="v1")
-        version = baker.make(AssetVersion, asset=self.tafsir, name="v2")
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TEXT_ASSET)
+        older = baker.make(AssetVersion, asset=self.text_asset, name="v1")
+        version = baker.make(AssetVersion, asset=self.text_asset, name="v2")
         AssetVersion.objects.filter(pk=version.pk).update(created_at=older.created_at + timezone.timedelta(hours=1))
-        AssetLanguage.objects.filter(asset=self.tafsir).update(published_version=version)
+        AssetLanguage.objects.filter(asset=self.text_asset).update(published_version=version)
 
         # Act
-        response = self.client.delete(f"/portal/tafsirs/{self.tafsir.slug}/versions/{version.id}/")
+        response = self.client.delete(f"/portal/text-assets/{self.text_asset.slug}/versions/{version.id}/")
 
         # Assert
         self.assertEqual(400, response.status_code, response.content)
@@ -678,37 +682,37 @@ class TafsirVersionDeleteTest(TafsirVersionBaseTest):
     def test_delete_version_where_published_only_version_should_unpublish_language_and_return_204(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TAFSIR)
-        version = baker.make(AssetVersion, asset=self.tafsir, name="v1")
-        AssetLanguage.objects.filter(asset=self.tafsir).update(published_version=version, status=StatusChoice.READY)
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TEXT_ASSET)
+        version = baker.make(AssetVersion, asset=self.text_asset, name="v1")
+        AssetLanguage.objects.filter(asset=self.text_asset).update(published_version=version, status=StatusChoice.READY)
 
         # Act
         response = self.client.delete(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/{version.id}/?confirm_unpublish=true"
+            f"/portal/text-assets/{self.text_asset.slug}/versions/{version.id}/?confirm_unpublish=true"
         )
 
         # Assert — nothing is left to serve, so the language is no longer available
         self.assertEqual(204, response.status_code, response.content)
         self.assertFalse(AssetVersion.objects.filter(id=version.id).exists())
-        rendition = AssetLanguage.objects.get(asset=self.tafsir, is_source=True)
+        rendition = AssetLanguage.objects.get(asset=self.text_asset, is_source=True)
         self.assertIsNone(rendition.published_version_id)
         self.assertEqual(StatusChoice.DRAFT, rendition.status)
-        self.assertFalse(Asset.objects.filter(consumer_visible_q(), pk=self.tafsir.pk).exists())
+        self.assertFalse(Asset.objects.filter(consumer_visible_q(), pk=self.text_asset.pk).exists())
 
 
-class TafsirVersionFileReplaceTest(TafsirVersionBaseTest):
+class TextAssetVersionFileReplaceTest(TextAssetVersionBaseTest):
     def test_patch_version_where_file_replaced_on_published_version_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
-        version = baker.make(AssetVersion, asset=self.tafsir, name="v1")
-        AssetLanguage.objects.filter(asset=self.tafsir).update(published_version=version)
-        file = SimpleUploadedFile("tafsir.csv", CSV, content_type="text/csv")
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
+        version = baker.make(AssetVersion, asset=self.text_asset, name="v1")
+        AssetLanguage.objects.filter(asset=self.text_asset).update(published_version=version)
+        file = SimpleUploadedFile("text_asset.csv", CSV, content_type="text/csv")
 
         # Act
         response = self.client.patch(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/{version.id}/",
+            f"/portal/text-assets/{self.text_asset.slug}/versions/{version.id}/",
             data={"file": file},
         )
 
@@ -719,17 +723,17 @@ class TafsirVersionFileReplaceTest(TafsirVersionBaseTest):
     def test_patch_version_where_file_replaced_should_rerecord_changes_for_review(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
-        previous = baker.make(AssetVersion, asset=self.tafsir, name="v1")
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
+        previous = baker.make(AssetVersion, asset=self.text_asset, name="v1")
         baker.make(AssetVersionEntry, version=previous, ayah=self.ayah, text="old text", order=1)
-        version = baker.make(AssetVersion, asset=self.tafsir, name="v2")
+        version = baker.make(AssetVersion, asset=self.text_asset, name="v2")
         baker.make(AssetVersionEntry, version=version, ayah=self.ayah, text="old text", order=1)
-        file = SimpleUploadedFile("tafsir.csv", CSV, content_type="text/csv")
+        file = SimpleUploadedFile("text_asset.csv", CSV, content_type="text/csv")
 
         # Act
         response = self.client.patch(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/{version.id}/",
+            f"/portal/text-assets/{self.text_asset.slug}/versions/{version.id}/",
             data={"file": file},
         )
 
@@ -739,23 +743,23 @@ class TafsirVersionFileReplaceTest(TafsirVersionBaseTest):
         self.assertEqual("in the name", change.new_text)
 
     def _committed_with_question_column(self) -> AssetVersion:
-        AssetColumn.objects.create(asset=self.tafsir, key="question", order=0)
-        version = baker.make(AssetVersion, asset=self.tafsir, name="v1")
+        AssetColumn.objects.create(asset=self.text_asset, key="question", order=0)
+        version = baker.make(AssetVersion, asset=self.text_asset, name="v1")
         self.assertEqual(["question"], version.column_keys)
         return version
 
     def test_patch_version_where_column_added_since_commit_should_take_the_new_layout(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
         version = self._committed_with_question_column()
-        AssetColumn.objects.create(asset=self.tafsir, key="answer", order=1)
-        file = SimpleUploadedFile("tafsir.csv", b"surah,ayah,question,answer\n1,1,Q,A", content_type="text/csv")
+        AssetColumn.objects.create(asset=self.text_asset, key="answer", order=1)
+        file = SimpleUploadedFile("text_asset.csv", b"surah,ayah,question,answer\n1,1,Q,A", content_type="text/csv")
 
         # Act
         response = self.client.patch(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/{version.id}/",
+            f"/portal/text-assets/{self.text_asset.slug}/versions/{version.id}/",
             data={"file": file},
         )
 
@@ -773,18 +777,18 @@ class TafsirVersionFileReplaceTest(TafsirVersionBaseTest):
     def test_patch_version_where_columns_reordered_since_commit_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
         version = self._committed_with_question_column()
-        AssetColumn.objects.create(asset=self.tafsir, key="answer", order=1)
+        AssetColumn.objects.create(asset=self.text_asset, key="answer", order=1)
         AssetVersion.objects.filter(pk=version.pk).update(column_keys=["question", "answer"])
         version.refresh_from_db()
-        AssetColumn.objects.filter(asset=self.tafsir, key="question").update(order=2)
-        file = SimpleUploadedFile("tafsir.csv", b"surah,ayah,answer,question\n1,1,A,Q", content_type="text/csv")
+        AssetColumn.objects.filter(asset=self.text_asset, key="question").update(order=2)
+        file = SimpleUploadedFile("text_asset.csv", b"surah,ayah,answer,question\n1,1,A,Q", content_type="text/csv")
 
         # Act
         response = self.client.patch(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/{version.id}/",
+            f"/portal/text-assets/{self.text_asset.slug}/versions/{version.id}/",
             data={"file": file},
         )
 
@@ -795,12 +799,12 @@ class TafsirVersionFileReplaceTest(TafsirVersionBaseTest):
     def test_patch_version_where_file_replaced_should_lock_the_version_before_the_asset(self):
         # Arrange — publishing locks the version, then writes the asset: the same order can't deadlock
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
-        version = baker.make(AssetVersion, asset=self.tafsir, name="v1")
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
+        version = baker.make(AssetVersion, asset=self.text_asset, name="v1")
         file = SimpleUploadedFile("file.csv", CSV, content_type="text/csv")
         calls: list[str] = []
-        lock_version = tafsir_service.lock_version_for_content_change
+        lock_version = text_asset_service.lock_version_for_content_change
         lock_asset = AssetContentRepository.lock_asset
 
         def locking_version(locked):
@@ -813,11 +817,11 @@ class TafsirVersionFileReplaceTest(TafsirVersionBaseTest):
 
         # Act
         with (
-            patch.object(tafsir_service, "lock_version_for_content_change", side_effect=locking_version),
+            patch.object(text_asset_service, "lock_version_for_content_change", side_effect=locking_version),
             patch.object(AssetContentRepository, "lock_asset", autospec=True, side_effect=locking_asset),
         ):
             response = self.client.patch(
-                f"/portal/tafsirs/{self.tafsir.slug}/versions/{version.id}/", data={"file": file}
+                f"/portal/text-assets/{self.text_asset.slug}/versions/{version.id}/", data={"file": file}
             )
 
         # Assert
@@ -825,26 +829,26 @@ class TafsirVersionFileReplaceTest(TafsirVersionBaseTest):
         self.assertEqual(["version", "asset"], calls[:2])
 
 
-class TafsirVersionHistoryIsAppendOnlyTest(TafsirVersionBaseTest):
+class TextAssetVersionHistoryIsAppendOnlyTest(TextAssetVersionBaseTest):
     """Later versions build on earlier ones, so only the newest may change."""
 
     def _two_versions(self) -> tuple[AssetVersion, AssetVersion]:
-        older = baker.make(AssetVersion, asset=self.tafsir, name="v1")
-        newer = baker.make(AssetVersion, asset=self.tafsir, name="v2")
+        older = baker.make(AssetVersion, asset=self.text_asset, name="v1")
+        newer = baker.make(AssetVersion, asset=self.text_asset, name="v2")
         AssetVersion.objects.filter(pk=newer.pk).update(created_at=older.created_at + timezone.timedelta(hours=1))
         return older, newer
 
     def test_patch_version_where_file_replaced_on_older_version_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
         older, _newer = self._two_versions()
-        file = SimpleUploadedFile("tafsir.csv", CSV, content_type="text/csv")
+        file = SimpleUploadedFile("text_asset.csv", CSV, content_type="text/csv")
 
         # Act
         response = self.client.patch(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/{older.id}/",
+            f"/portal/text-assets/{self.text_asset.slug}/versions/{older.id}/",
             data={"file": file},
         )
 
@@ -855,11 +859,11 @@ class TafsirVersionHistoryIsAppendOnlyTest(TafsirVersionBaseTest):
     def test_delete_version_where_older_version_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TEXT_ASSET)
         older, _newer = self._two_versions()
 
         # Act
-        response = self.client.delete(f"/portal/tafsirs/{self.tafsir.slug}/versions/{older.id}/")
+        response = self.client.delete(f"/portal/text-assets/{self.text_asset.slug}/versions/{older.id}/")
 
         # Assert — kept: the newer version's changes are relative to it
         self.assertEqual(400, response.status_code, response.content)
@@ -869,11 +873,11 @@ class TafsirVersionHistoryIsAppendOnlyTest(TafsirVersionBaseTest):
     def test_delete_version_where_newest_version_should_return_204(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TEXT_ASSET)
         _older, newer = self._two_versions()
 
         # Act
-        response = self.client.delete(f"/portal/tafsirs/{self.tafsir.slug}/versions/{newer.id}/")
+        response = self.client.delete(f"/portal/text-assets/{self.text_asset.slug}/versions/{newer.id}/")
 
         # Assert
         self.assertEqual(204, response.status_code, response.content)

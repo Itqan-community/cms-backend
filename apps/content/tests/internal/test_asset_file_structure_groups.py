@@ -24,7 +24,7 @@ class GroupFileStructureTests(GroupQuranDataMixin, BaseTestCase):
         # Arrange
         asset = baker.make(
             Asset,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH_GROUP,
             status=StatusChoice.READY,
             language="ar",

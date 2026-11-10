@@ -33,7 +33,7 @@ def _make_asset(publisher: Publisher, *, slug: str) -> Asset:
         name="Test Asset",
         slug=slug,
         publisher=publisher,
-        category="translation",
+        category="text",
         template=AssetTemplateChoice.AYAH,
         license="CC0",
         file_size="1 MB",

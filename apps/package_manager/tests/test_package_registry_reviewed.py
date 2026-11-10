@@ -40,7 +40,7 @@ class ReviewedPackageTests(BaseTestCase):
         self.publisher = baker.make(Publisher, name="P")
         self.asset = baker.make(
             Asset,
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,

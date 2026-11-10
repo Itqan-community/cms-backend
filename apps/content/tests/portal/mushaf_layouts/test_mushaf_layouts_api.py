@@ -131,7 +131,7 @@ class MushafLayoutsApiTests(BaseTestCase):
         layout = baker.make(MushafLayout, name="Madani 604", page_count=604)
         baker.make(
             Asset,
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.PAGE,
             mushaf_layout=layout,
         )

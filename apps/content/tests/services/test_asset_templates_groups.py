@@ -34,7 +34,7 @@ class GroupUnitSpecTests(GroupQuranDataMixin, BaseTestCase):
     def _asset(self, template: str) -> Asset:
         return baker.make(
             Asset,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             status=StatusChoice.READY,
             template=template,
             language="ar",

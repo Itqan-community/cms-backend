@@ -31,7 +31,7 @@ class SingleColumnCsvBytesTests(QuranDataMixin, BaseTestCase):
 
     def _version(self, template, **asset_fields):
         asset = baker.make(
-            Asset, category=CategoryChoice.TAFSIR, template=template, status=StatusChoice.READY, **asset_fields
+            Asset, category=CategoryChoice.TEXT, template=template, status=StatusChoice.READY, **asset_fields
         )
         return baker.make(AssetVersion, asset=asset)
 
@@ -103,7 +103,7 @@ class MultiColumnContentTests(QuranDataMixin, BaseTestCase):
         self.repo = AssetContentRepository()
         self.asset = baker.make(
             Asset,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             status=StatusChoice.READY,
             language="ar",

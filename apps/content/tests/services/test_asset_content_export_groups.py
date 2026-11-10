@@ -27,7 +27,7 @@ class GroupCsvExportTests(GroupQuranDataMixin, BaseTestCase):
         self.repo = AssetContentRepository()
 
     def _version(self, template: str, groups: dict, *, keys: tuple[str, ...] = ("text",)) -> AssetVersion:
-        asset = baker.make(Asset, category=CategoryChoice.TAFSIR, status=StatusChoice.READY, template=template)
+        asset = baker.make(Asset, category=CategoryChoice.TEXT, status=StatusChoice.READY, template=template)
         for order, key in enumerate(keys):
             baker.make(AssetColumn, asset=asset, key=key, order=order)
         columns = {column.key: column for column in asset.ensure_text_columns()}

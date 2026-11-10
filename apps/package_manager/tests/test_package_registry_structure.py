@@ -14,6 +14,7 @@ from apps.content.models import (
     VersionStateChoice,
 )
 from apps.content.tests.publishing import publish
+from apps.content.tests.tagging import tagged
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 
@@ -23,13 +24,13 @@ class PackageStructureTests(BaseTestCase):
         super().setUp()
         self.publisher = baker.make(Publisher, name="Publisher")
 
-    def _asset(self, slug: str, category: str = "tafsir", columns: list[tuple[str, str, str]] | None = None) -> Asset:
+    def _asset(self, slug: str, category: str = "text", columns: list[tuple[str, str, str]] | None = None) -> Asset:
         asset = Asset.objects.create(
             name=slug.title(),
             slug=slug,
             publisher=self.publisher,
             category=category,
-            template=AssetTemplateChoice.AYAH if category in ("tafsir", "translation") else None,
+            template=AssetTemplateChoice.AYAH if category == "text" else None,
             license="CC0",
             file_size="1 MB",
             format="csv",
@@ -37,6 +38,8 @@ class PackageStructureTests(BaseTestCase):
             language="ar",
             status=StatusChoice.READY,
         )
+        if category == "text":
+            tagged(asset, "tafsir")
         for order, (key, label_en, label_ar) in enumerate(columns or []):
             AssetColumn.objects.create(asset=asset, key=key, label_en=label_en, label_ar=label_ar, order=order)
         return asset
