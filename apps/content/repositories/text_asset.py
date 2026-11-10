@@ -19,7 +19,7 @@ from apps.content.version_text import VersionText
 
 
 class TextAssetRepository:
-    """ORM access for text asset assets and their versions (read + write)."""
+    """ORM access for text assets and their versions (read + write)."""
 
     def __init__(self) -> None:
         self.asset_model = Asset
@@ -27,7 +27,7 @@ class TextAssetRepository:
 
     def get_ready_asset(self, tag: str, publisher_q: Q | None = None) -> Asset | None:
         """
-        First READY, ayah-template text asset asset (lowest id), optionally scoped by
+        First READY, ayah-template text asset (lowest id), optionally scoped by
         publisher membership.
 
         Feeds the public verse sampler, which reads a "surah:ayah"-keyed payload
@@ -119,7 +119,7 @@ class TextAssetRepository:
         fields: dict[str, Any],
     ) -> Asset:
         """
-        Update text asset asset fields. Handles translation fields via modeltranslation
+        Update text asset fields. Handles translation fields via modeltranslation
         by setting localized fields only.
         """
         translation_fields = {
@@ -149,7 +149,7 @@ class TextAssetRepository:
 
     def delete_text_asset(self, asset: Asset) -> None:
         """
-        Delete the text asset asset.
+        Delete the text asset.
         """
         asset.delete()
 
