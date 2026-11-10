@@ -13,7 +13,7 @@ class TextAssetListTest(BaseTestCase):
         self.publisher1 = baker.make(Publisher, name="Publisher One")
         self.publisher2 = baker.make(Publisher, name="Publisher Two")
 
-        # Valid text asset assets
+        # Valid text assets
         self.text_asset1 = baker.make(
             Asset,
             category=CategoryChoice.TEXT,
