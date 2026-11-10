@@ -28,13 +28,13 @@ class VersionReviewCommentsTests(BaseTestCase):
         self.user = User.objects.create_user(email="history-reader@example.com", name="Reader", is_staff=True)
         self.reviewer = User.objects.create_user(email="reviewer@example.com", name="Aisha", is_staff=True)
         self.give_permission(self.user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
         surah = baker.make(Surah, id=1, name="الفاتحة", ayahs_count=2)
         self.ayahs = [baker.make(Ayah, id=i, surah=surah, number_in_surah=i, text=f"ayah {i}") for i in (1, 2)]
         self.tafsir = baker.make(
             Asset,
             publisher=baker.make(Publisher, name="Review Publisher"),
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             status=StatusChoice.READY,
             slug="reviewed-tafsir",
@@ -76,7 +76,7 @@ class VersionReviewCommentsTests(BaseTestCase):
         self.authenticate_user(self.user)
 
         # Act
-        response = self.client.get(f"/portal/content/tafsirs/{self.tafsir.slug}/versions/{self.version.id}/diff/")
+        response = self.client.get(f"/portal/content/text-assets/{self.tafsir.slug}/versions/{self.version.id}/diff/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -92,7 +92,7 @@ class VersionReviewCommentsTests(BaseTestCase):
         self.authenticate_user(self.user)
 
         # Act
-        response = self.client.get(f"/portal/content/tafsirs/{self.tafsir.slug}/versions/{self.version.id}/diff/")
+        response = self.client.get(f"/portal/content/text-assets/{self.tafsir.slug}/versions/{self.version.id}/diff/")
 
         # Assert
         rows = {row["unit_id"]: row for row in response.json()["results"]}
@@ -113,7 +113,7 @@ class VersionReviewCommentsTests(BaseTestCase):
         )
 
         # Act
-        response = self.client.get(f"/portal/tafsirs/{self.tafsir.slug}/versions/")
+        response = self.client.get(f"/portal/text-assets/{self.tafsir.slug}/versions/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)

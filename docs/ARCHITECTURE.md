@@ -50,7 +50,7 @@ The system serves **four distinct API surfaces**, each with their own audience a
 The portal also exposes `POST /portal/ai/translate/` for the create forms: it translates the
 Arabic name/description/bio fields to English with the Gemini free tier (`mode=translate`), or
 writes the description fields from the matching Arabic / English Wikipedia articles and returns their `sources`
-(`mode=web`). It needs any portal create permission for mushafs, tafsirs, translations, fonts,
+(`mode=web`). It needs any portal create permission for mushafs, text assets, fonts,
 recitations or reciters, and returns `ai_translate_empty` (400), `ai_rate_limited` (429, a per-minute
 limit: retry shortly), `ai_quota_exceeded` (429, the free daily limit) or `ai_unavailable` (503).
 With `slug_for` (asset create forms) the same call also returns the new asset's suggested `slug`
@@ -81,6 +81,7 @@ erDiagram
     Asset ||--o{ AssetLanguage : "provides languages"
     AssetLanguage }o--o| AssetVersion : "publishes (published_version)"
     Asset ||--o{ AssetColumn : "has text columns"
+    Asset }o--o{ AssetTag : "tagged (text assets)"
     AssetVersion ||--o{ AssetVersionEntry : "holds cells"
     AssetVersion ||--o{ AssetVersionChange : "records per-cell deltas"
     AssetColumn ||--o{ AssetVersionEntry : "holds"
@@ -141,6 +142,12 @@ erDiagram
         boolean in_public_api
         boolean in_cli
         boolean in_tenants
+    }
+
+    ASSETTAG {
+        string slug
+        string name
+        boolean is_builtin
     }
 
     ASSETVERSION {
@@ -255,7 +262,7 @@ The **Publisher** represents an organization or individual who owns and uploads 
 A **Resource** is the **original, authoritative content** uploaded by a Publisher. It acts as the **source of truth** and remains unmodified.
 
 - Belongs to a single Publisher
-- Has a **Category**: `recitation`, `mushaf`, or `tafsir`
+- Has a **Category**: `recitation`, `mushaf`, or `text`
 - Has a **License** (Creative Commons variants)
 - Has a **Status**: `draft` or `ready`
 
@@ -278,9 +285,11 @@ An **Asset** is a **derivation** of a Resource. It represents content that has b
 - Has a globally unique **slug** — the itqan CLI package name (`itqan add <slug>`) and the
   prefix of downloaded file names. It is set **once, when the asset is created**, and never
   changes afterwards. It follows a fixed template per category:
-  `recitation-<reciter>-<riwayah>`, `translation-<language>-<words>`, and
-  `<category>-<words>` for mushafs, tafsirs and fonts (e.g. `tafsir-ibn-kathir`,
-  `translation-en-sahih-international`, `recitation-mishary-alafasy-hafs`).
+  `recitation-<reciter>-<riwayah>`, `<first tag>-<words>` for text assets
+  (`translation-<language>-<words>` when the first tag is `translation`), and
+  `<category>-<words>` for mushafs and fonts (e.g. `tafsir-ibn-kathir`,
+  `translation-en-sahih-international`, `recitation-mishary-alafasy-hafs`). Slugs of assets
+  created before the text-asset merge keep their old `tafsir-` / `translation-` prefix.
   - **Suggested, not computed at create.** When the admin clicks Translate on a create form, the
     same `POST /portal/ai/translate/` call (`slug_for`) returns `slug_words`: 1–4 English words
     the Gemini free tier derives from the name (transliterating Arabic), or the reciter and
@@ -289,7 +298,7 @@ An **Asset** is a **derivation** of a Resource. It represents content that has b
     When the call fails the admin types it instead.
   - **Creating never calls AI** (`AssetSlugService.resolve_slug`), so the request does not wait on
     Gemini. A sent slug must be `[a-z0-9-]`, ≤ 50 characters and carry the category prefix
-    (`asset_slug_invalid`, 400); without one (non-portal callers), the template is built from the
+    (the first tag for a text asset; `asset_slug_invalid`, 400); without one (non-portal callers), the template is built from the
     slugified names.
   - Collisions get `-<year>` (recitations) and then `-2`, `-3`, …, including a suggested slug taken
     since it was suggested; one taken by a concurrent create between the check and the insert is
@@ -303,8 +312,16 @@ An **Asset** is a **derivation** of a Resource. It represents content that has b
   publishing one of its versions neither emails subscribers nor runs Dependabot.
 - For recitation assets: linked to a **Reciter** and **Riwayah**, and owns one or more
   **RecitationQuality** variants (see [Recitation-Specific Components](#recitation-specific-components))
-- For text assets (translations and tafsirs): carries a **template** (`surah` / `ayah` /
-  `word` / `page`, and for tafsirs only `ayah_group` / `word_group`) that fixes the
+- **Text assets** (category `text`) hold tafsirs, translations and any other per-unit Quran
+  text. What kind of text an asset holds is its **tags** (`Asset.tags` → `AssetTag`). Itqan
+  staff manage the tag list in Django admin; the built-in `tafsir` and `translation` tags (and any
+  tag in use) can't be deleted. A text asset needs at least one tag (`text_asset_tag_required`,
+  unknown slugs `asset_tag_not_found`); the first one prefixes its slug. `GET /cms-api/asset-tags/`
+  lists them. Consumers filter with `?category=text&tag=<slug>` on the gallery and the CLI catalog
+  (`/packages/`); a tag filter narrows text assets only, so other categories picked alongside stay
+  listed. The pre-merge `category=tafsir` / `category=translation` answer 400 `category_renamed`.
+- For text assets: carries a **template** (`surah` / `ayah` /
+  `word` / `page`, and for assets tagged `tafsir` only `ayah_group` / `word_group`) that fixes the
   granularity its entries are keyed to — chosen at creation and **immutable afterwards**.
   A `page`-template asset additionally links to a **MushafLayout** (its pagination),
   which every other template leaves unset.
@@ -399,7 +416,7 @@ flowchart LR
 
 ### Multi-language content, availability & review
 
-Text assets (translations & tafsirs) hold one source-language rendition plus any
+Text assets hold one source-language rendition plus any
 number of translation renditions (`AssetLanguage`), each with its own version
 history. Languages are stored as codes (`ar`, `en`) on `Asset.language`,
 `AssetLanguage.language` and `MemberLanguage.language`, which are compared with each
@@ -526,8 +543,8 @@ from the parsed entries, so consumers download exactly what was reviewed.
   language). A version pruned to deltas has its entries rebuilt on first view; the
   next commit prunes it again, along with the head it supersedes.
 - **Editing** — changing a text asset's content (the content editor, uploading a
-  version file, restoring a version) needs the per-category
-  `PORTAL_EDIT_TRANSLATION_CONTENT` / `PORTAL_EDIT_TAFSIR_CONTENT`; `PORTAL_UPDATE_*`
+  version file, restoring a version) needs
+  `PORTAL_EDIT_TEXT_ASSET_CONTENT`; `PORTAL_UPDATE_*`
   covers metadata only (names, descriptions, license, version label/summary,
   language availability). Both are limited to the member's assigned languages.
 - **Columns** — `GET /portal/content/{category}/{slug}/columns/` lists an asset's text
@@ -738,7 +755,7 @@ flowchart TB
 
 Turning a flag from on to off while developers depend on the asset is guarded
 (`guard_channel_changes` in `apps/content/services/asset_access.py`). When a portal create/update
-(`/portal/{tafsirs,translations,mushafs,fonts,recitations}/`) flips any flag to `false` and the asset
+(`/portal/{text-assets,mushafs,fonts,recitations}/`) flips any flag to `false` and the asset
 has `PENDING` or `APPROVED` access requests, it answers 409 `channel_has_active_consumers` with
 `extra: {approved_count, pending_count, channels}` (the flag names being turned off). Sending
 `confirm_channel_change: true` allows the change (it is logged and never stored). Turning a flag on,

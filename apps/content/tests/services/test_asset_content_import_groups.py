@@ -34,7 +34,7 @@ class GroupImportTests(GroupQuranDataMixin, BaseTestCase):
 
     def _asset(self, template: str = AssetTemplateChoice.AYAH_GROUP) -> Asset:
         return baker.make(
-            Asset, category=CategoryChoice.TAFSIR, status=StatusChoice.READY, template=template, language="ar"
+            Asset, category=CategoryChoice.TEXT, status=StatusChoice.READY, template=template, language="ar"
         )
 
     def _parse(self, raw: bytes, template: str = AssetTemplateChoice.AYAH_GROUP, **kwargs) -> dict:
@@ -162,7 +162,7 @@ class GroupTranslationUploadTests(GroupQuranDataMixin, BaseTestCase):
         self.bake_group_quran()
         self.tafsir = baker.make(
             Asset,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             status=StatusChoice.READY,
             template=AssetTemplateChoice.AYAH_GROUP,
             language="ar",
@@ -182,7 +182,7 @@ class GroupTranslationUploadTests(GroupQuranDataMixin, BaseTestCase):
         )
         AssetLanguage.objects.create(asset=self.tafsir, language="en")
         self.user = User.objects.create_user(email="editor@example.com", name="Editor", is_staff=True)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
         self.give_permission(self.user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES)
 
     def test_create_tafsir_version_where_translation_language_uses_unknown_range_should_return_400(self):
@@ -194,7 +194,7 @@ class GroupTranslationUploadTests(GroupQuranDataMixin, BaseTestCase):
 
         # Act
         response = self.client.post(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/",
+            f"/portal/text-assets/{self.tafsir.slug}/versions/",
             data={"asset_id": self.tafsir.id, "version_number": "1.0", "language": "en", "file": file},
         )
 

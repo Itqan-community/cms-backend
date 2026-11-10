@@ -4,6 +4,7 @@ from django.http import Http404
 from django.utils.translation import gettext_lazy as _
 from ninja import Schema
 
+from apps.content.asset_tag_schemas import AssetTagOut
 from apps.content.models import Asset, StatusChoice
 from apps.content.services.recommendations import (
     get_personalized_asset_ids,
@@ -41,6 +42,7 @@ class RecommendedAssetOut(Schema):
     name: str
     slug: str
     category: str
+    tags: list[AssetTagOut]
     publisher: RecommendationPublisherOut
     reciter: RecommendationReciterOut | None = None
     riwayah: RecommendationRiwayahOut | None = None

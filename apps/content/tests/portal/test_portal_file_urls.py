@@ -25,7 +25,7 @@ class PortalFileUrlTests(BaseTestCase):
             Asset,
             publisher=self.publisher,
             category=category,
-            template=AssetTemplateChoice.AYAH if category == CategoryChoice.TAFSIR else None,
+            template=AssetTemplateChoice.AYAH if category == CategoryChoice.TEXT else None,
             status=StatusChoice.READY,
             slug=slug,
             language="ar",
@@ -41,11 +41,11 @@ class PortalFileUrlTests(BaseTestCase):
     def test_list_versions_where_file_stored_locally_should_return_absolute_file_url(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
-        asset = self._asset_with_file(CategoryChoice.TAFSIR, "local-file-tafsir")
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
+        asset = self._asset_with_file(CategoryChoice.TEXT, "local-file-tafsir")
 
         # Act
-        response = self.client.get(f"/portal/tafsirs/{asset.slug}/versions/")
+        response = self.client.get(f"/portal/text-assets/{asset.slug}/versions/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)

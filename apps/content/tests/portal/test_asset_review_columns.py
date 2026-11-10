@@ -28,7 +28,7 @@ class MultiColumnReviewTests(QuranDataMixin, BaseTestCase):
         self.bake_quran()
         self.asset = baker.make(
             Asset,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             status=StatusChoice.READY,
             language="ar",
@@ -78,7 +78,7 @@ class MultiColumnReviewTests(QuranDataMixin, BaseTestCase):
         self._approve(version, self.question)
         user = User.objects.create_user(email="pub@example.com", name="Publisher", is_staff=True)
         for permission in (
-            PermissionChoice.PORTAL_READ_TAFSIR,
+            PermissionChoice.PORTAL_READ_TEXT_ASSET,
             PermissionChoice.PORTAL_PUBLISH_CONTENT,
             PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES,
         ):
@@ -87,7 +87,7 @@ class MultiColumnReviewTests(QuranDataMixin, BaseTestCase):
 
         # Act
         response = self.client.post(
-            f"/portal/content/tafsirs/{self.asset.slug}/versions/{version.id}/set-published/",
+            f"/portal/content/text-assets/{self.asset.slug}/versions/{version.id}/set-published/",
             data={},
             content_type="application/json",
         )
@@ -125,7 +125,7 @@ class MultiColumnReviewTests(QuranDataMixin, BaseTestCase):
         self._commit({(self.ayah1, self.answer): "A"}, "1.0")
         user = User.objects.create_user(email="rev@example.com", name="Reviewer", is_staff=True)
         for permission in (
-            PermissionChoice.PORTAL_READ_TAFSIR,
+            PermissionChoice.PORTAL_READ_TEXT_ASSET,
             PermissionChoice.PORTAL_REVIEW_CONTENT,
             PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES,
         ):
@@ -133,7 +133,7 @@ class MultiColumnReviewTests(QuranDataMixin, BaseTestCase):
         self.authenticate_user(user)
 
         # Act
-        response = self.client.get(f"/portal/content/tafsirs/{self.asset.slug}/review/changes/?language=ar")
+        response = self.client.get(f"/portal/content/text-assets/{self.asset.slug}/review/changes/?language=ar")
 
         # Assert
         self.assertEqual(response.status_code, 200, response.content)

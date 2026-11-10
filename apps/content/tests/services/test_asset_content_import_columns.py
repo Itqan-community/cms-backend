@@ -19,7 +19,7 @@ class MultiColumnImportTests(QuranDataMixin, BaseTestCase):
         super().setUp()
         self.bake_quran()
         self.asset = baker.make(
-            Asset, category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.AYAH, status=StatusChoice.READY
+            Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH, status=StatusChoice.READY
         )
         self.spec = unit_spec_for(self.asset)
 
@@ -79,7 +79,7 @@ class MultiColumnImportTests(QuranDataMixin, BaseTestCase):
     def test_parse_content_file_where_word_template_two_columns_should_parse_by_word_id(self):
         # Arrange
         asset = baker.make(
-            Asset, category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.WORD, status=StatusChoice.READY
+            Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.WORD, status=StatusChoice.READY
         )
         raw = b"word_id,surah,ayah,word,question,answer\n2,1,1,2,Q,A\n"
 

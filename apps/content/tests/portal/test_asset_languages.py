@@ -24,7 +24,7 @@ class AssetLanguagesApiTest(BaseTestCase):
         self.publisher = baker.make(Publisher, name="Test Publisher")
         self.translation = baker.make(
             Asset,
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
@@ -42,10 +42,10 @@ class AssetLanguagesApiTest(BaseTestCase):
 
     def test_list_languages_returns_source_first(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
         AssetLanguage.objects.create(asset=self.translation, language="es")
 
-        response = self.client.get(f"/portal/content/translations/{self.translation.slug}/languages/")
+        response = self.client.get(f"/portal/content/text-assets/{self.translation.slug}/languages/")
 
         self.assertEqual(200, response.status_code, response.content)
         body = response.json()
@@ -58,11 +58,11 @@ class AssetLanguagesApiTest(BaseTestCase):
 
     def test_add_language_creates_non_source_pending(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
         self.give_permission(self.user, PermissionChoice.PORTAL_ADD_ASSET_LANGUAGE)
 
         response = self.client.post(
-            f"/portal/content/translations/{self.translation.slug}/languages/",
+            f"/portal/content/text-assets/{self.translation.slug}/languages/",
             data={"language": "es"},
         )
 
@@ -75,11 +75,11 @@ class AssetLanguagesApiTest(BaseTestCase):
 
     def test_mark_language_available_requires_published_version(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
         AssetLanguage.objects.create(asset=self.translation, language="es")
 
         response = self.client.patch(
-            f"/portal/content/translations/{self.translation.slug}/languages/es/availability/",
+            f"/portal/content/text-assets/{self.translation.slug}/languages/es/availability/",
             data={"available": True},
             content_type="application/json",
         )
@@ -89,13 +89,13 @@ class AssetLanguagesApiTest(BaseTestCase):
 
     def test_mark_language_available_then_pending(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
         es = AssetLanguage.objects.create(asset=self.translation, language="es")
         publish(baker.make(AssetVersion, asset=self.translation, asset_language=es, state=VersionStateChoice.PUBLISHED))
 
         # Mark available
         response = self.client.patch(
-            f"/portal/content/translations/{self.translation.slug}/languages/es/availability/",
+            f"/portal/content/text-assets/{self.translation.slug}/languages/es/availability/",
             data={"available": True},
             content_type="application/json",
         )
@@ -106,7 +106,7 @@ class AssetLanguagesApiTest(BaseTestCase):
 
         # Mark pending again
         response = self.client.patch(
-            f"/portal/content/translations/{self.translation.slug}/languages/es/availability/",
+            f"/portal/content/text-assets/{self.translation.slug}/languages/es/availability/",
             data={"available": False},
             content_type="application/json",
         )
@@ -118,13 +118,13 @@ class AssetLanguagesApiTest(BaseTestCase):
     def test_mark_language_available_where_version_committed_but_not_published_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
         es = AssetLanguage.objects.create(asset=self.translation, language="es")
         baker.make(AssetVersion, asset=self.translation, asset_language=es, state=VersionStateChoice.PUBLISHED)
 
         # Act
         response = self.client.patch(
-            f"/portal/content/translations/{self.translation.slug}/languages/es/availability/",
+            f"/portal/content/text-assets/{self.translation.slug}/languages/es/availability/",
             data={"available": True},
             content_type="application/json",
         )
@@ -135,11 +135,11 @@ class AssetLanguagesApiTest(BaseTestCase):
 
     def test_mark_language_available_without_permission_returns_403(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
         AssetLanguage.objects.create(asset=self.translation, language="es")
 
         response = self.client.patch(
-            f"/portal/content/translations/{self.translation.slug}/languages/es/availability/",
+            f"/portal/content/text-assets/{self.translation.slug}/languages/es/availability/",
             data={"available": True},
             content_type="application/json",
         )
@@ -148,12 +148,12 @@ class AssetLanguagesApiTest(BaseTestCase):
 
     def test_add_duplicate_language_returns_400(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
         self.give_permission(self.user, PermissionChoice.PORTAL_ADD_ASSET_LANGUAGE)
         AssetLanguage.objects.create(asset=self.translation, language="es")
 
         response = self.client.post(
-            f"/portal/content/translations/{self.translation.slug}/languages/",
+            f"/portal/content/text-assets/{self.translation.slug}/languages/",
             data={"language": "es"},
         )
 
@@ -162,10 +162,10 @@ class AssetLanguagesApiTest(BaseTestCase):
 
     def test_add_language_without_permission_returns_403(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
 
         response = self.client.post(
-            f"/portal/content/translations/{self.translation.slug}/languages/",
+            f"/portal/content/text-assets/{self.translation.slug}/languages/",
             data={"language": "es"},
         )
 
@@ -173,12 +173,12 @@ class AssetLanguagesApiTest(BaseTestCase):
 
     def test_add_language_with_file_creates_first_version_and_entries(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
         self.give_permission(self.user, PermissionChoice.PORTAL_ADD_ASSET_LANGUAGE)
         csv = SimpleUploadedFile("es.csv", b"surah,ayah,text\n1,1,en el nombre\n1,2,alabado", content_type="text/csv")
 
         response = self.client.post(
-            f"/portal/content/translations/{self.translation.slug}/languages/",
+            f"/portal/content/text-assets/{self.translation.slug}/languages/",
             data={"language": "es", "file": csv, "version_label_en": "Primera", "version_number": "3.0"},
         )
 
@@ -198,12 +198,12 @@ class AssetLanguagesApiTest(BaseTestCase):
         # content_file_unparseable) and must not leave the language registered
         # without its requested version.
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
         self.give_permission(self.user, PermissionChoice.PORTAL_ADD_ASSET_LANGUAGE)
         bad = SimpleUploadedFile("es.csv", b"not,a,valid\nheaderless garbage", content_type="text/csv")
 
         response = self.client.post(
-            f"/portal/content/translations/{self.translation.slug}/languages/",
+            f"/portal/content/text-assets/{self.translation.slug}/languages/",
             data={"language": "es", "file": bad},
         )
 

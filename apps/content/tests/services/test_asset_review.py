@@ -28,7 +28,7 @@ class AssetReviewServiceTest(BaseTestCase):
         self.publisher = baker.make(Publisher)
         self.asset = baker.make(
             Asset,
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
@@ -56,7 +56,7 @@ class AssetReviewServiceTest(BaseTestCase):
         # Act
         change = AssetReviewService().set_review_state(
             "t1",
-            CategoryChoice.TRANSLATION,
+            CategoryChoice.TEXT,
             change_id=self.change.id,
             user=self.reviewer,
             state="approved",
@@ -73,7 +73,7 @@ class AssetReviewServiceTest(BaseTestCase):
         with self.assertRaises(ItqanError) as ctx:
             AssetReviewService().set_review_state(
                 "t1",
-                CategoryChoice.TRANSLATION,
+                CategoryChoice.TEXT,
                 change_id=self.change.id,
                 user=self.reviewer,
                 state="commented",
@@ -93,7 +93,7 @@ class AssetReviewServiceTest(BaseTestCase):
         with self.assertRaises(ItqanError) as ctx:
             AssetReviewService().set_review_state(
                 "t1",
-                CategoryChoice.TRANSLATION,
+                CategoryChoice.TEXT,
                 change_id=src_change.id,
                 user=self.reviewer,
                 state="approved",
@@ -106,13 +106,13 @@ class AssetReviewServiceTest(BaseTestCase):
         # Arrange
         svc = AssetReviewService()
         svc.set_review_state(
-            "t1", CategoryChoice.TRANSLATION, change_id=self.change.id, user=self.reviewer, state="approved", comment=""
+            "t1", CategoryChoice.TEXT, change_id=self.change.id, user=self.reviewer, state="approved", comment=""
         )
 
         # Act
         svc.set_review_state(
             "t1",
-            CategoryChoice.TRANSLATION,
+            CategoryChoice.TEXT,
             change_id=self.change.id,
             user=self.reviewer,
             state="unreviewed",
@@ -124,7 +124,7 @@ class AssetReviewServiceTest(BaseTestCase):
 
     def test_list_review_languages_should_return_intersection_of_assigned_and_asset(self):
         # Act
-        langs = AssetReviewService().list_review_languages("t1", CategoryChoice.TRANSLATION, user=self.reviewer)
+        langs = AssetReviewService().list_review_languages("t1", CategoryChoice.TEXT, user=self.reviewer)
 
         # Assert — only 'fr' (assigned), even though the asset also has 'ar'
         self.assertEqual(["fr"], langs)
@@ -132,7 +132,7 @@ class AssetReviewServiceTest(BaseTestCase):
     def test_list_changes_where_unreviewed_filter_should_return_pending_change(self):
         # Act
         qs = AssetReviewService().list_changes(
-            "t1", CategoryChoice.TRANSLATION, language="fr", user=self.reviewer, state="unreviewed"
+            "t1", CategoryChoice.TEXT, language="fr", user=self.reviewer, state="unreviewed"
         )
 
         # Assert
@@ -141,9 +141,7 @@ class AssetReviewServiceTest(BaseTestCase):
     def test_list_changes_where_language_not_assigned_should_raise_403(self):
         # Act / Assert
         with self.assertRaises(ItqanError) as ctx:
-            AssetReviewService().list_changes(
-                "t1", CategoryChoice.TRANSLATION, language="ar", user=self.reviewer, state=None
-            )
+            AssetReviewService().list_changes("t1", CategoryChoice.TEXT, language="ar", user=self.reviewer, state=None)
         self.assertEqual("language_not_assigned", ctx.exception.error_name)
 
     def test_list_changes_where_assignment_is_for_another_publisher_should_raise_403(self):
@@ -161,9 +159,7 @@ class AssetReviewServiceTest(BaseTestCase):
 
         # Act / Assert
         with self.assertRaises(ItqanError) as ctx:
-            AssetReviewService().list_changes(
-                "t1", CategoryChoice.TRANSLATION, language="fr", user=self.reviewer, state=None
-            )
+            AssetReviewService().list_changes("t1", CategoryChoice.TEXT, language="fr", user=self.reviewer, state=None)
         self.assertEqual("language_not_assigned", ctx.exception.error_name)
 
     def _approve_then_revise(self) -> tuple[AssetVersion, AssetVersionChange]:
@@ -193,9 +189,7 @@ class AssetReviewServiceTest(BaseTestCase):
 
         # Act
         qs = list(
-            AssetReviewService().list_changes(
-                "t1", CategoryChoice.TRANSLATION, language="fr", user=self.reviewer, state=None
-            )
+            AssetReviewService().list_changes("t1", CategoryChoice.TEXT, language="fr", user=self.reviewer, state=None)
         )
 
         # Assert — the replaced change stays listed (so its version can be approved);
@@ -211,7 +205,7 @@ class AssetReviewServiceTest(BaseTestCase):
         as_of_v1 = list(
             AssetReviewService().list_changes(
                 "t1",
-                CategoryChoice.TRANSLATION,
+                CategoryChoice.TEXT,
                 language="fr",
                 user=self.reviewer,
                 state=None,
@@ -220,7 +214,7 @@ class AssetReviewServiceTest(BaseTestCase):
         )
         as_of_v2 = list(
             AssetReviewService().list_changes(
-                "t1", CategoryChoice.TRANSLATION, language="fr", user=self.reviewer, state=None, version_id=v2.id
+                "t1", CategoryChoice.TEXT, language="fr", user=self.reviewer, state=None, version_id=v2.id
             )
         )
 
@@ -235,6 +229,6 @@ class AssetReviewServiceTest(BaseTestCase):
         # Act / Assert
         with self.assertRaises(ItqanError) as ctx:
             AssetReviewService().list_changes(
-                "t1", CategoryChoice.TRANSLATION, language="fr", user=self.reviewer, state=None, version_id=other.id
+                "t1", CategoryChoice.TEXT, language="fr", user=self.reviewer, state=None, version_id=other.id
             )
         self.assertEqual("version_not_found", ctx.exception.error_name)

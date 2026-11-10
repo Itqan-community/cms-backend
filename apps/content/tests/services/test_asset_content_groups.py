@@ -25,7 +25,7 @@ class GroupContentRepositoryTests(GroupQuranDataMixin, BaseTestCase):
         self.repo = AssetContentRepository()
         self.asset = baker.make(
             Asset,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             status=StatusChoice.READY,
             template=AssetTemplateChoice.AYAH_GROUP,
             language="ar",

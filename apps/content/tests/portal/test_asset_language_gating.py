@@ -29,7 +29,7 @@ class AssetLanguageGatingTest(BaseTestCase):
         self.publisher = baker.make(Publisher, name="Test Publisher")
         self.translation = baker.make(
             Asset,
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
@@ -61,10 +61,10 @@ class AssetLanguageGatingTest(BaseTestCase):
 
     def _authorise(self):
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
-        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_DELETE_TEXT_ASSET)
 
     def _assert_language_not_assigned(self, response):
         self.assertEqual(403, response.status_code, response.content)
@@ -75,7 +75,7 @@ class AssetLanguageGatingTest(BaseTestCase):
         self._authorise()
 
         # Act
-        response = self.client.get(f"/portal/content/translations/{self.translation.slug}/languages/")
+        response = self.client.get(f"/portal/content/text-assets/{self.translation.slug}/languages/")
 
         # Assert — 'ar' (source) and 'es' are filtered out
         self.assertEqual(200, response.status_code, response.content)
@@ -87,7 +87,7 @@ class AssetLanguageGatingTest(BaseTestCase):
         self.give_permission(self.user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES)
 
         # Act
-        response = self.client.get(f"/portal/content/translations/{self.translation.slug}/languages/")
+        response = self.client.get(f"/portal/content/text-assets/{self.translation.slug}/languages/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -99,7 +99,7 @@ class AssetLanguageGatingTest(BaseTestCase):
 
         # Act
         response = self.client.post(
-            f"/portal/content/translations/{self.translation.slug}/draft/",
+            f"/portal/content/text-assets/{self.translation.slug}/draft/",
             data={"language": "es"},
             content_type="application/json",
         )
@@ -113,7 +113,7 @@ class AssetLanguageGatingTest(BaseTestCase):
 
         # Act
         response = self.client.post(
-            f"/portal/content/translations/{self.translation.slug}/draft/",
+            f"/portal/content/text-assets/{self.translation.slug}/draft/",
             data={"language": "ar"},
             content_type="application/json",
         )
@@ -127,7 +127,7 @@ class AssetLanguageGatingTest(BaseTestCase):
 
         # Act
         response = self.client.post(
-            f"/portal/content/translations/{self.translation.slug}/draft/",
+            f"/portal/content/text-assets/{self.translation.slug}/draft/",
             data={"language": "fr"},
             content_type="application/json",
         )
@@ -142,7 +142,7 @@ class AssetLanguageGatingTest(BaseTestCase):
 
         # Act
         response = self.client.get(
-            f"/portal/content/translations/{self.translation.slug}/versions/{self.es_version.id}/entries/"
+            f"/portal/content/text-assets/{self.translation.slug}/versions/{self.es_version.id}/entries/"
         )
 
         # Assert
@@ -154,7 +154,7 @@ class AssetLanguageGatingTest(BaseTestCase):
 
         # Act
         response = self.client.get(
-            f"/portal/content/translations/{self.translation.slug}/versions/{self.es_version.id}/diff/"
+            f"/portal/content/text-assets/{self.translation.slug}/versions/{self.es_version.id}/diff/"
         )
 
         # Assert
@@ -166,7 +166,7 @@ class AssetLanguageGatingTest(BaseTestCase):
 
         # Act
         response = self.client.get(
-            f"/portal/content/translations/{self.translation.slug}/versions/{self.es_version.id}/export/"
+            f"/portal/content/text-assets/{self.translation.slug}/versions/{self.es_version.id}/export/"
         )
 
         # Assert
@@ -178,7 +178,7 @@ class AssetLanguageGatingTest(BaseTestCase):
 
         # Act
         response = self.client.patch(
-            f"/portal/content/translations/{self.translation.slug}/versions/{self.es_version.id}/entries/",
+            f"/portal/content/text-assets/{self.translation.slug}/versions/{self.es_version.id}/entries/",
             data={"rows": [{"unit_id": self.ayah.id, "text": "x"}]},
             content_type="application/json",
         )
@@ -193,7 +193,7 @@ class AssetLanguageGatingTest(BaseTestCase):
 
         # Act
         response = self.client.get(
-            f"/portal/content/translations/{self.translation.slug}/versions/{self.es_version.id}/entries/"
+            f"/portal/content/text-assets/{self.translation.slug}/versions/{self.es_version.id}/entries/"
         )
 
         # Assert
@@ -205,7 +205,7 @@ class AssetLanguageGatingTest(BaseTestCase):
 
         # Act
         response = self.client.patch(
-            f"/portal/content/translations/{self.translation.slug}/languages/es/availability/",
+            f"/portal/content/text-assets/{self.translation.slug}/languages/es/availability/",
             data={"available": True},
             content_type="application/json",
         )
@@ -225,7 +225,7 @@ class AssetLanguageGatingTest(BaseTestCase):
         )
 
         # Act
-        response = self.client.get(f"/portal/translations/{self.translation.slug}/versions/")
+        response = self.client.get(f"/portal/text-assets/{self.translation.slug}/versions/")
 
         # Assert — the 'es' version is not listed
         self.assertEqual(200, response.status_code, response.content)
@@ -236,7 +236,7 @@ class AssetLanguageGatingTest(BaseTestCase):
         self._authorise()
 
         # Act
-        response = self.client.get(f"/portal/translations/{self.translation.slug}/versions/?language=es")
+        response = self.client.get(f"/portal/text-assets/{self.translation.slug}/versions/?language=es")
 
         # Assert
         self._assert_language_not_assigned(response)
@@ -246,7 +246,7 @@ class AssetLanguageGatingTest(BaseTestCase):
         self._authorise()
 
         # Act
-        response = self.client.delete(f"/portal/translations/{self.translation.slug}/versions/{self.es_version.id}/")
+        response = self.client.delete(f"/portal/text-assets/{self.translation.slug}/versions/{self.es_version.id}/")
 
         # Assert
         self._assert_language_not_assigned(response)
@@ -258,7 +258,7 @@ class AddAssetLanguagePermissionTest(BaseTestCase):
         self.publisher = baker.make(Publisher, name="Test Publisher")
         self.translation = baker.make(
             Asset,
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
@@ -276,12 +276,12 @@ class AddAssetLanguagePermissionTest(BaseTestCase):
     def test_add_language_where_only_edit_permission_should_return_403(self):
         # Arrange — editing content no longer implies starting a new language
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
 
         # Act
         response = self.client.post(
-            f"/portal/content/translations/{self.translation.slug}/languages/",
+            f"/portal/content/text-assets/{self.translation.slug}/languages/",
             data={"language": "es"},
         )
 
@@ -292,12 +292,12 @@ class AddAssetLanguagePermissionTest(BaseTestCase):
     def test_add_language_where_permitted_should_assign_it_to_the_creator(self):
         # Arrange — no edit permission at all, only read + the add permission
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
         self.give_permission(self.user, PermissionChoice.PORTAL_ADD_ASSET_LANGUAGE)
 
         # Act
         response = self.client.post(
-            f"/portal/content/translations/{self.translation.slug}/languages/",
+            f"/portal/content/text-assets/{self.translation.slug}/languages/",
             data={"language": "es"},
         )
 

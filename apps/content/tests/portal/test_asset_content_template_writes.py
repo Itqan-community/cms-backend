@@ -33,13 +33,13 @@ class EntryWriteTests(QuranDataMixin, BaseTestCase):
         super().setUp()
         self.bake_quran()
         self.user = User.objects.create_user(email="editor@example.com", name="Editor", is_staff=True)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
         self.give_permission(self.user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES)
 
     def _draft_for(self, template):
         asset = baker.make(
             Asset,
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             status=StatusChoice.READY,
             template=template,
         )
@@ -54,7 +54,7 @@ class EntryWriteTests(QuranDataMixin, BaseTestCase):
 
         # Act
         response = self.client.patch(
-            f"/portal/content/translations/{asset.slug}/versions/{version.id}/entries/",
+            f"/portal/content/text-assets/{asset.slug}/versions/{version.id}/entries/",
             data={"rows": [{"unit_id": 2, "text": "surah two"}]},
             content_type="application/json",
         )
@@ -72,7 +72,7 @@ class EntryWriteTests(QuranDataMixin, BaseTestCase):
         layout = baker.make("content.MushafLayout", name="Madani 604", page_count=604)
         asset = baker.make(
             Asset,
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             status=StatusChoice.READY,
             template=AssetTemplateChoice.PAGE,
             mushaf_layout=layout,
@@ -81,7 +81,7 @@ class EntryWriteTests(QuranDataMixin, BaseTestCase):
 
         # Act
         response = self.client.patch(
-            f"/portal/content/translations/{asset.slug}/versions/{version.id}/entries/",
+            f"/portal/content/text-assets/{asset.slug}/versions/{version.id}/entries/",
             data={"rows": [{"unit_id": 7, "text": "page seven"}]},
             content_type="application/json",
         )
@@ -98,7 +98,7 @@ class EntryWriteTests(QuranDataMixin, BaseTestCase):
 
         # Act
         response = self.client.patch(
-            f"/portal/content/translations/{asset.slug}/versions/{version.id}/entries/",
+            f"/portal/content/text-assets/{asset.slug}/versions/{version.id}/entries/",
             data={"rows": [{"unit_id": 999, "text": "nope"}]},
             content_type="application/json",
         )
@@ -114,7 +114,7 @@ class EntryWriteTests(QuranDataMixin, BaseTestCase):
 
         # Act
         response = self.client.patch(
-            f"/portal/content/translations/{asset.slug}/versions/{version.id}/entries/",
+            f"/portal/content/text-assets/{asset.slug}/versions/{version.id}/entries/",
             data={"rows": [{"unit_id": 1, "text": "bismillah"}]},
             content_type="application/json",
         )
@@ -132,7 +132,7 @@ class EntryWriteTests(QuranDataMixin, BaseTestCase):
 
         # Act
         response = self.client.patch(
-            f"/portal/content/translations/{asset.slug}/versions/{version.id}/entries/",
+            f"/portal/content/text-assets/{asset.slug}/versions/{version.id}/entries/",
             data={"rows": [{"unit_id": 1, "text": "word one gloss"}]},
             content_type="application/json",
         )
@@ -151,13 +151,13 @@ class EntryWriteTests(QuranDataMixin, BaseTestCase):
         self.authenticate_user(self.user)
         asset, version = self._draft_for(AssetTemplateChoice.SURAH)
         self.client.patch(
-            f"/portal/content/translations/{asset.slug}/versions/{version.id}/entries/",
+            f"/portal/content/text-assets/{asset.slug}/versions/{version.id}/entries/",
             data={"rows": [{"unit_id": 2, "text": "cow"}]},
             content_type="application/json",
         )
 
         # Act
-        response = self.client.get(f"/portal/content/translations/{asset.slug}/versions/{version.id}/pending-diff/")
+        response = self.client.get(f"/portal/content/text-assets/{asset.slug}/versions/{version.id}/pending-diff/")
 
         # Assert
         self.assertEqual(response.status_code, 200, response.content)
@@ -179,7 +179,7 @@ class EntryWriteTests(QuranDataMixin, BaseTestCase):
         self.authenticate_user(self.user)
         asset = baker.make(
             Asset,
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             status=StatusChoice.READY,
             template=AssetTemplateChoice.SURAH,
         )
@@ -190,7 +190,7 @@ class EntryWriteTests(QuranDataMixin, BaseTestCase):
 
         # Act
         response = self.client.post(
-            f"/portal/content/translations/{asset.slug}/draft/",
+            f"/portal/content/text-assets/{asset.slug}/draft/",
             data={"language": "es"},
             content_type="application/json",
         )

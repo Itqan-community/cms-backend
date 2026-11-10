@@ -23,7 +23,7 @@ class AssetAccessTest(BaseTestCase):
             publisher=self.publisher,
             name="Test Asset",
             description="Test asset description",
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             license=LicenseChoice.CC_BY_SA,
             status=StatusChoice.READY,

@@ -25,7 +25,7 @@ class ListAssetTest(BaseTestCase):
             baker.make(
                 Asset,
                 name="Tafsir Ibn Katheer",
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
             )
@@ -64,7 +64,7 @@ class ListAssetTest(BaseTestCase):
                 Asset,
                 name="Tafsir Al-Jalalayn",
                 license=LicenseChoice.CC_BY_SA,
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
             )
@@ -74,7 +74,7 @@ class ListAssetTest(BaseTestCase):
                 Asset,
                 name="Tafsir Ibn Katheer",
                 license=LicenseChoice.CC_BY_NC,
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
             )
@@ -95,7 +95,7 @@ class ListAssetTest(BaseTestCase):
             baker.make(
                 Asset,
                 name="Tafsir Al-Jalalayn",
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
             )
@@ -132,7 +132,7 @@ class ListAssetTest(BaseTestCase):
             baker.make(
                 Asset,
                 name="Tafsir Al-Jalalayn",
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
             )
@@ -158,7 +158,7 @@ class ListAssetTest(BaseTestCase):
 
         # Act
         response = self.client.get(
-            f"/cms-api/assets/?category={CategoryChoice.RECITATION}&category={CategoryChoice.TAFSIR}",
+            f"/cms-api/assets/?category={CategoryChoice.RECITATION}&category={CategoryChoice.TEXT}",
             format="json",
         )
 
@@ -174,7 +174,7 @@ class ListAssetTest(BaseTestCase):
             baker.make(
                 Asset,
                 name="A",
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
             )
@@ -183,7 +183,7 @@ class ListAssetTest(BaseTestCase):
             baker.make(
                 Asset,
                 name="C",
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
             )
@@ -192,7 +192,7 @@ class ListAssetTest(BaseTestCase):
             baker.make(
                 Asset,
                 name="B",
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
             )
@@ -215,7 +215,7 @@ class ListAssetTest(BaseTestCase):
             baker.make(
                 Asset,
                 name="A",
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
             )
@@ -224,7 +224,7 @@ class ListAssetTest(BaseTestCase):
             baker.make(
                 Asset,
                 name="C",
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
             )
@@ -233,7 +233,7 @@ class ListAssetTest(BaseTestCase):
             baker.make(
                 Asset,
                 name="B",
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
             )
@@ -256,7 +256,7 @@ class ListAssetTest(BaseTestCase):
             baker.make(
                 Asset,
                 name="A",
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
             )
@@ -275,7 +275,7 @@ class ListAssetTest(BaseTestCase):
             baker.make(
                 Asset,
                 name="B",
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
             )
@@ -288,8 +288,8 @@ class ListAssetTest(BaseTestCase):
         self.assertEqual(200, response.status_code, response.content)
         response_body = response.json()
         self.assertEqual(3, len(response_body["results"]))
-        self.assertEqual(CategoryChoice.TAFSIR, response_body["results"][0]["category"])
-        self.assertEqual(CategoryChoice.TAFSIR, response_body["results"][1]["category"])
+        self.assertEqual(CategoryChoice.TEXT, response_body["results"][0]["category"])
+        self.assertEqual(CategoryChoice.TEXT, response_body["results"][1]["category"])
         self.assertEqual(CategoryChoice.RECITATION, response_body["results"][2]["category"])
 
     def test_list_assets_when_search_should_return_filtered_assets_by_multiple_fields(
@@ -302,7 +302,7 @@ class ListAssetTest(BaseTestCase):
                 Asset,
                 name="Tafsir Al-Jalalayn",
                 description="This is a tafsir book",
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
             )
@@ -348,7 +348,7 @@ class ListAssetTest(BaseTestCase):
             baker.make(
                 Asset,
                 name="Open Access Tafsir",
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
                 is_open_access=True,
@@ -370,7 +370,7 @@ class ListAssetTest(BaseTestCase):
             baker.make(
                 Asset,
                 name="Open Access Tafsir",
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
                 is_open_access=True,
@@ -380,7 +380,7 @@ class ListAssetTest(BaseTestCase):
             baker.make(
                 Asset,
                 name="Restricted Tafsir",
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
                 is_open_access=False,
@@ -403,7 +403,7 @@ class ListAssetTest(BaseTestCase):
             baker.make(
                 Asset,
                 name="Public Asset",
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
                 in_gallery=True,
@@ -413,7 +413,7 @@ class ListAssetTest(BaseTestCase):
             baker.make(
                 Asset,
                 name="Tenant Only Asset",
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
                 in_gallery=False,
@@ -437,7 +437,7 @@ class ListAssetTest(BaseTestCase):
             baker.make(
                 Asset,
                 _quantity=25,
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
             )
@@ -459,7 +459,7 @@ class ListAssetTest(BaseTestCase):
             baker.make(
                 Asset,
                 _quantity=25,
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
             )
@@ -480,7 +480,7 @@ class ListAssetTest(BaseTestCase):
             baker.make(
                 Asset,
                 _quantity=25,
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
             )
@@ -501,7 +501,7 @@ class ListAssetTest(BaseTestCase):
             baker.make(
                 Asset,
                 _quantity=5,
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
             )
@@ -547,7 +547,7 @@ class ListAssetTest(BaseTestCase):
             baker.make(
                 Asset,
                 name="Tafsir Asset",
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
             )
@@ -605,7 +605,7 @@ class ListAssetTest(BaseTestCase):
             baker.make(
                 Asset,
                 name="Ayah Tafsir",
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
             )
@@ -628,7 +628,7 @@ class ListAssetTest(BaseTestCase):
             baker.make(
                 Asset,
                 name="Page Tafsir",
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.PAGE,
                 mushaf_layout=layout,
                 status=StatusChoice.READY,
@@ -754,7 +754,7 @@ class ListAssetTest(BaseTestCase):
             baker.make(
                 Asset,
                 name="Tafsir Asset",
-                category=CategoryChoice.TAFSIR,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 status=StatusChoice.READY,
             )

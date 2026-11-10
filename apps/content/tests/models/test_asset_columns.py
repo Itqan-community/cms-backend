@@ -20,7 +20,7 @@ class AssetColumnModelTests(QuranDataMixin, BaseTestCase):
     def setUp(self):
         super().setUp()
         self.bake_quran()
-        self.asset = baker.make(Asset, category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.AYAH)
+        self.asset = baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH)
 
     def test_text_columns_where_tafsir_has_none_should_read_default_without_saving(self):
         # Arrange — a fresh tafsir has no column rows

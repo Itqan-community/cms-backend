@@ -22,7 +22,7 @@ class BackfillFirstPublishedAtTests(BaseTestCase):
         # Arrange
         asset = baker.make(
             Asset,
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             status=StatusChoice.READY,
             language="ar",
@@ -47,7 +47,7 @@ class BackfillFirstPublishedAtTests(BaseTestCase):
         # Arrange
         asset = baker.make(
             Asset,
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             status=StatusChoice.READY,
             language="ar",

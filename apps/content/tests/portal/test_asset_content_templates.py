@@ -30,13 +30,13 @@ class EntriesEnumerationTests(QuranDataMixin, BaseTestCase):
         self.bake_quran()
         self.user = User.objects.create_user(email="editor@example.com", name="Editor", is_staff=True)
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
         self.give_permission(self.user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES)
 
     def _draft_for(self, template, layout=None):
         asset = baker.make(
             Asset,
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             status=StatusChoice.READY,
             template=template,
             mushaf_layout=layout,
@@ -50,7 +50,7 @@ class EntriesEnumerationTests(QuranDataMixin, BaseTestCase):
 
         # Act
         response = self.client.get(
-            f"/portal/content/translations/{asset.slug}/versions/{version.id}/entries/?page_size=200"
+            f"/portal/content/text-assets/{asset.slug}/versions/{version.id}/entries/?page_size=200"
         )
 
         # Assert
@@ -68,7 +68,7 @@ class EntriesEnumerationTests(QuranDataMixin, BaseTestCase):
 
         # Act
         response = self.client.get(
-            f"/portal/content/translations/{asset.slug}/versions/{version.id}/entries/?page_size=200"
+            f"/portal/content/text-assets/{asset.slug}/versions/{version.id}/entries/?page_size=200"
         )
 
         # Assert
@@ -83,7 +83,7 @@ class EntriesEnumerationTests(QuranDataMixin, BaseTestCase):
 
         # Act
         response = self.client.get(
-            f"/portal/content/translations/{asset.slug}/versions/{version.id}/entries/?page_size=5"
+            f"/portal/content/text-assets/{asset.slug}/versions/{version.id}/entries/?page_size=5"
         )
 
         # Assert
@@ -98,7 +98,7 @@ class EntriesEnumerationTests(QuranDataMixin, BaseTestCase):
 
         # Act
         response = self.client.get(
-            f"/portal/content/translations/{asset.slug}/versions/{version.id}/entries/?page_size=10&surah=1"
+            f"/portal/content/text-assets/{asset.slug}/versions/{version.id}/entries/?page_size=10&surah=1"
         )
 
         # Assert
@@ -112,7 +112,7 @@ class EntriesEnumerationTests(QuranDataMixin, BaseTestCase):
 
         # Act
         response = self.client.get(
-            f"/portal/content/translations/{asset.slug}/versions/{version.id}/entries/?page_size=1"
+            f"/portal/content/text-assets/{asset.slug}/versions/{version.id}/entries/?page_size=1"
         )
 
         # Assert
@@ -132,7 +132,7 @@ class EntriesEnumerationTests(QuranDataMixin, BaseTestCase):
         asset, version = self._draft_for(AssetTemplateChoice.SURAH)
 
         # Act
-        response = self.client.get(f"/portal/content/translations/{asset.slug}/versions/{version.id}/entries/?page=0")
+        response = self.client.get(f"/portal/content/text-assets/{asset.slug}/versions/{version.id}/entries/?page=0")
 
         # Assert
         self.assertEqual(response.status_code, 400)
@@ -146,7 +146,7 @@ class EntriesEnumerationTests(QuranDataMixin, BaseTestCase):
 
         # Act
         response = self.client.get(
-            f"/portal/content/translations/{asset.slug}/versions/{version.id}/entries/?page=2&page_size=5"
+            f"/portal/content/text-assets/{asset.slug}/versions/{version.id}/entries/?page=2&page_size=5"
         )
 
         # Assert
@@ -162,13 +162,13 @@ class EntriesFilterTests(QuranDataMixin, BaseTestCase):
         super().setUp()
         self.bake_quran()
         self.user = User.objects.create_user(email="filter@example.com", name="Editor", is_staff=True)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
         self.give_permission(self.user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES)
 
     def _draft_for(self, template, layout=None):
         asset = baker.make(
             Asset,
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             status=StatusChoice.READY,
             template=template,
             mushaf_layout=layout,
@@ -178,7 +178,7 @@ class EntriesFilterTests(QuranDataMixin, BaseTestCase):
 
     def _list(self, asset, version, query):
         response = self.client.get(
-            f"/portal/content/translations/{asset.slug}/versions/{version.id}/entries/?page_size=50&{query}"
+            f"/portal/content/text-assets/{asset.slug}/versions/{version.id}/entries/?page_size=50&{query}"
         )
         self.assertEqual(response.status_code, 200, response.content)
         body = response.json()
@@ -381,7 +381,7 @@ class EntriesFilterTests(QuranDataMixin, BaseTestCase):
 
         # Act
         response = self.client.get(
-            f"/portal/content/translations/{asset.slug}/versions/{version.id}/entries/"
+            f"/portal/content/text-assets/{asset.slug}/versions/{version.id}/entries/"
             "?page=2&page_size=2&" + _filters({"text": {"filterType": "text", "type": "notBlank"}})
         )
 
@@ -397,7 +397,7 @@ class EntriesFilterTests(QuranDataMixin, BaseTestCase):
 
         # Act
         response = self.client.get(
-            f"/portal/content/translations/{asset.slug}/versions/{version.id}/entries/?"
+            f"/portal/content/text-assets/{asset.slug}/versions/{version.id}/entries/?"
             + _filters({"text": {"filterType": "text", "type": "regex", "filter": "a"}})
         )
 
@@ -455,7 +455,7 @@ class EntriesFilterTests(QuranDataMixin, BaseTestCase):
 
         # Act
         response = self.client.get(
-            f"/portal/content/translations/{asset.slug}/versions/{version.id}/entries/?"
+            f"/portal/content/text-assets/{asset.slug}/versions/{version.id}/entries/?"
             + _filters({"label": {"filterType": "text", "type": "contains", "filter": "1"}})
         )
 
@@ -470,7 +470,7 @@ class EntriesFilterTests(QuranDataMixin, BaseTestCase):
 
         # Act
         response = self.client.get(
-            f"/portal/content/translations/{asset.slug}/versions/{version.id}/entries/?"
+            f"/portal/content/text-assets/{asset.slug}/versions/{version.id}/entries/?"
             + _filters({"ayah": {"filterType": "number", "type": "inRange", "filter": 1}})
         )
 

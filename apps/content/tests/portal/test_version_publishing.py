@@ -37,7 +37,7 @@ class VersionPublishingBaseTest(BaseTestCase):
         self.publisher = baker.make(Publisher, name="P")
         self.asset = baker.make(
             Asset,
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
@@ -91,7 +91,7 @@ class VersionPublishingBaseTest(BaseTestCase):
         )
 
     def _publish_url(self, version: AssetVersion) -> str:
-        return f"/portal/content/translations/{self.asset.slug}/versions/{version.id}/set-published/"
+        return f"/portal/content/text-assets/{self.asset.slug}/versions/{version.id}/set-published/"
 
     def _authorize(self) -> None:
         self.give_permission(self.user, PermissionChoice.PORTAL_PUBLISH_CONTENT)
@@ -327,12 +327,12 @@ class VersionListApprovalFieldsTest(VersionPublishingBaseTest):
         self._review(v1, self.ayah1)
         v2 = self._commit("v2", {self.ayah2: ("added", "y")})
         AssetLanguage.objects.filter(pk=self.fr.pk).update(published_version=v1)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
         MemberLanguage.objects.create(member=self.membership, language="fr")
         self.authenticate_user(self.user)
 
         # Act
-        response = self.client.get(f"/portal/translations/{self.asset.slug}/versions/?language=fr")
+        response = self.client.get(f"/portal/text-assets/{self.asset.slug}/versions/?language=fr")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -373,12 +373,12 @@ class VersionViewerTest(VersionPublishingBaseTest):
     """The read-only version viewer: any committed version, pruned or not."""
 
     def _authorize_read(self) -> None:
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
         MemberLanguage.objects.create(member=self.membership, language="fr")
 
     def _entries(self, version: AssetVersion) -> dict[str, str]:
         response = self.client.get(
-            f"/portal/content/translations/{self.asset.slug}/versions/{version.id}/entries/?page_size=50"
+            f"/portal/content/text-assets/{self.asset.slug}/versions/{version.id}/entries/?page_size=50"
         )
         self.assertEqual(200, response.status_code, response.content)
         return {row["label"]: row["text"] for row in response.json()["results"]}
@@ -390,7 +390,7 @@ class VersionViewerTest(VersionPublishingBaseTest):
         self.authenticate_user(self.user)
 
         # Act
-        response = self.client.get(f"/portal/content/translations/{self.asset.slug}/versions/{v1.id}/")
+        response = self.client.get(f"/portal/content/text-assets/{self.asset.slug}/versions/{v1.id}/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -450,13 +450,13 @@ class SourceLanguageVisibilityTest(VersionPublishingBaseTest):
     def test_set_availability_where_source_language_should_hide_it(self):
         # Arrange
         source = self.asset.get_or_create_source_language()
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
         MemberLanguage.objects.create(member=self.membership, language="ar")
         self.authenticate_user(self.user)
 
         # Act
         response = self.client.patch(
-            f"/portal/content/translations/{self.asset.slug}/languages/ar/availability/",
+            f"/portal/content/text-assets/{self.asset.slug}/languages/ar/availability/",
             data={"available": False},
             content_type="application/json",
         )

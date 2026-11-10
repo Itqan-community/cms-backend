@@ -100,8 +100,7 @@ def changed_fields(unit_id: int, keys: list[str], changed_cells: set[CellKey]) -
 
 
 _NOT_FOUND_ERROR = {
-    CategoryChoice.TRANSLATION: "translation_not_found",
-    CategoryChoice.TAFSIR: "tafsir_not_found",
+    CategoryChoice.TEXT: "text_asset_not_found",
     CategoryChoice.MUSHAF: "mushaf_not_found",
     CategoryChoice.FONT: "font_not_found",
 }

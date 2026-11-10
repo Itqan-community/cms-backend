@@ -25,7 +25,7 @@ class AssetReviewApiBaseTest(BaseTestCase):
         self.publisher = baker.make(Publisher, name="P")
         self.asset = baker.make(
             Asset,
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
@@ -48,7 +48,7 @@ class AssetReviewApiBaseTest(BaseTestCase):
         )
 
     def _changes_url(self, query=""):
-        return f"/portal/content/translations/{self.asset.slug}/review/changes/{query}"
+        return f"/portal/content/text-assets/{self.asset.slug}/review/changes/{query}"
 
 
 class ReviewPermissionTest(AssetReviewApiBaseTest):
@@ -85,7 +85,7 @@ class ReviewAssignmentTest(AssetReviewApiBaseTest):
         MemberLanguage.objects.create(member=self.membership, language="fr")
 
         # Act
-        response = self.client.get(f"/portal/content/translations/{self.asset.slug}/review/languages/")
+        response = self.client.get(f"/portal/content/text-assets/{self.asset.slug}/review/languages/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -99,7 +99,7 @@ class ReviewActionTest(AssetReviewApiBaseTest):
         MemberLanguage.objects.create(member=self.membership, language="fr")
 
     def _patch_url(self, change_id):
-        return f"/portal/content/translations/{self.asset.slug}/review/changes/{change_id}/"
+        return f"/portal/content/text-assets/{self.asset.slug}/review/changes/{change_id}/"
 
     def test_approve_change_where_assigned_should_set_state_and_auditing(self):
         # Arrange
@@ -205,7 +205,7 @@ class ReviewVersionFilterTest(AssetReviewApiBaseTest):
         AssetVersion.objects.filter(pk=v2.pk).update(created_at=timezone.now() + timezone.timedelta(hours=1))
 
         # Act
-        response = self.client.get(f"/portal/content/translations/{self.asset.slug}/review/versions/?language=fr")
+        response = self.client.get(f"/portal/content/text-assets/{self.asset.slug}/review/versions/?language=fr")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -217,7 +217,7 @@ class ReviewVersionFilterTest(AssetReviewApiBaseTest):
         self.give_permission(self.user, PermissionChoice.PORTAL_REVIEW_CONTENT)
 
         # Act
-        response = self.client.get(f"/portal/content/translations/{self.asset.slug}/review/versions/?language=fr")
+        response = self.client.get(f"/portal/content/text-assets/{self.asset.slug}/review/versions/?language=fr")
 
         # Assert
         self.assertEqual(403, response.status_code, response.content)
@@ -260,7 +260,7 @@ class ReviewBulkApproveTest(AssetReviewApiBaseTest):
         MemberLanguage.objects.create(member=self.membership, language="fr")
 
     def _bulk_url(self):
-        return f"/portal/content/translations/{self.asset.slug}/review/changes/bulk-approve/"
+        return f"/portal/content/text-assets/{self.asset.slug}/review/changes/bulk-approve/"
 
     def test_bulk_approve_where_change_ids_given_should_approve_only_those(self):
         # Arrange

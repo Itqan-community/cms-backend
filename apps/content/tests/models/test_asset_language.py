@@ -15,9 +15,7 @@ from apps.core.tests.base import BaseTestCase
 class AssetLanguageModelTest(BaseTestCase):
     def setUp(self):
         super().setUp()
-        self.asset = baker.make(
-            Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH, language="ar"
-        )
+        self.asset = baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH, language="ar")
 
     def test_unique_language_per_asset(self):
         AssetLanguage.objects.create(asset=self.asset, language="es")
@@ -33,9 +31,7 @@ class AssetLanguageModelTest(BaseTestCase):
 class GetLatestVersionByLanguageTest(BaseTestCase):
     def setUp(self):
         super().setUp()
-        self.asset = baker.make(
-            Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH, language="ar"
-        )
+        self.asset = baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH, language="ar")
         self.ar = AssetLanguage.objects.create(asset=self.asset, language="ar", is_source=True)
         self.es = AssetLanguage.objects.create(asset=self.asset, language="es")
 

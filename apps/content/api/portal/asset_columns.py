@@ -21,7 +21,7 @@ from apps.core.ninja_utils.tags import NinjaTag
 from apps.core.permission_utils import check_permission
 from apps.core.permissions import PermissionChoice
 
-router = ItqanRouter(tags=[NinjaTag.TRANSLATIONS])
+router = ItqanRouter(tags=[NinjaTag.TEXT_ASSETS])
 
 
 class AssetColumnOut(Schema):
@@ -80,9 +80,7 @@ def _require_manage_columns(request: Request) -> None:
 
 
 _ASSET_NOT_FOUND = (
-    NinjaErrorResponse[Literal["translation_not_found"]]
-    | NinjaErrorResponse[Literal["tafsir_not_found"]]
-    | NinjaErrorResponse[Literal["unsupported_content_category"]]
+    NinjaErrorResponse[Literal["text_asset_not_found"]] | NinjaErrorResponse[Literal["unsupported_content_category"]]
 )
 
 

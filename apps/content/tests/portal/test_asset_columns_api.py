@@ -19,11 +19,11 @@ class AssetColumnsApiTests(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.asset = baker.make(
-            Asset, category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.AYAH, status=StatusChoice.READY
+            Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH, status=StatusChoice.READY
         )
-        self.url = f"/portal/content/tafsirs/{self.asset.slug}/columns/"
+        self.url = f"/portal/content/text-assets/{self.asset.slug}/columns/"
         self.user = User.objects.create_user(email="columns@example.com", name="Columns", is_staff=True)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
 
     def test_list_columns_where_read_permission_should_return_default_column(self):
         # Arrange
@@ -191,7 +191,7 @@ class AssetColumnsApiTests(BaseTestCase):
         )
         for permission in (
             PermissionChoice.PORTAL_ACCESS,
-            PermissionChoice.PORTAL_READ_TAFSIR,
+            PermissionChoice.PORTAL_READ_TEXT_ASSET,
             PermissionChoice.PORTAL_MANAGE_ASSET_COLUMNS,
             PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES,
         ):
@@ -203,5 +203,5 @@ class AssetColumnsApiTests(BaseTestCase):
 
         # Assert
         self.assertEqual(response.status_code, 404, response.content)
-        self.assertEqual(response.json()["error_name"], "tafsir_not_found")
+        self.assertEqual(response.json()["error_name"], "text_asset_not_found")
         self.assertFalse(AssetColumn.objects.filter(asset=self.asset, key="answer").exists())

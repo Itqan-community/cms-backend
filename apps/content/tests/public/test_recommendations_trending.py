@@ -77,7 +77,7 @@ class TrendingRecommendationsEndpointTest(BaseTestCase):
         compute_trending_recommendations()
         self.authenticate_client(self.app)
 
-        response = self.client.get(f"/recommendations/trending/?category={CategoryChoice.TAFSIR}")
+        response = self.client.get(f"/recommendations/trending/?category={CategoryChoice.TEXT}")
 
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual([], response.json())

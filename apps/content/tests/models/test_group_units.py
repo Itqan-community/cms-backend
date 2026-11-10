@@ -21,7 +21,7 @@ class GroupUnitModelTests(GroupQuranDataMixin, BaseTestCase):
     def setUp(self):
         super().setUp()
         self.bake_group_quran()
-        self.asset = baker.make(Asset, category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.AYAH_GROUP)
+        self.asset = baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH_GROUP)
         self.version = baker.make(AssetVersion, asset=self.asset, state=VersionStateChoice.DRAFT)
         self.column = self.asset.ensure_text_columns()[0]
 

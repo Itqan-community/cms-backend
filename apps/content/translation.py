@@ -7,6 +7,7 @@ from apps.core.audit import AuditHistoricalRecords
 from .models import (
     Asset,
     AssetColumn,
+    AssetTag,
     AssetVersion,
     EditorialRecommendation,
     MushafLayout,
@@ -24,6 +25,11 @@ class AssetTranslationOptions(TranslationOptions):
         "description",
         "long_description",
     )
+
+
+@register(AssetTag)
+class AssetTagTranslationOptions(TranslationOptions):
+    fields = ("name",)
 
 
 @register(AssetVersion)
@@ -73,6 +79,7 @@ class MushafLayoutTranslationOptions(TranslationOptions):
 for _translated_model in (
     Asset,
     AssetColumn,
+    AssetTag,
     AssetVersion,
     Reciter,
     Riwayah,
