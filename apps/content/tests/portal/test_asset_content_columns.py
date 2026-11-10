@@ -32,14 +32,14 @@ class MultiColumnEditorApiTests(QuranDataMixin, BaseTestCase):
         self.bake_quran()
         self.user = User.objects.create_user(email="qa@example.com", name="Editor", is_staff=True)
         for permission in (
-            PermissionChoice.PORTAL_READ_TAFSIR,
-            PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT,
+            PermissionChoice.PORTAL_READ_TEXT_ASSET,
+            PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT,
             PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES,
         ):
             self.give_permission(self.user, permission)
         self.asset = baker.make(
             Asset,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             status=StatusChoice.READY,
             language="ar",
@@ -50,7 +50,7 @@ class MultiColumnEditorApiTests(QuranDataMixin, BaseTestCase):
         self.draft = baker.make(
             AssetVersion, asset=self.asset, asset_language=self.source, state=VersionStateChoice.DRAFT
         )
-        self.base = f"/portal/content/tafsirs/{self.asset.slug}/versions/{self.draft.id}/"
+        self.base = f"/portal/content/text-assets/{self.asset.slug}/versions/{self.draft.id}/"
 
     def _rows(self, response) -> dict[int, dict]:
         return {row["unit_id"]: row for row in response.json()["results"]}
@@ -83,7 +83,9 @@ class MultiColumnEditorApiTests(QuranDataMixin, BaseTestCase):
         self.authenticate_user(self.user)
 
         # Act
-        response = self.client.get(f"/portal/content/tafsirs/{self.asset.slug}/versions/{old.id}/entries/?page_size=10")
+        response = self.client.get(
+            f"/portal/content/text-assets/{self.asset.slug}/versions/{old.id}/entries/?page_size=10"
+        )
 
         # Assert
         self.assertEqual(response.status_code, 200, response.content)
@@ -200,7 +202,7 @@ class MultiColumnEditorApiTests(QuranDataMixin, BaseTestCase):
         self.authenticate_user(self.user)
 
         # Act
-        response = self.client.get(f"/portal/content/tafsirs/{self.asset.slug}/versions/{draft.id}/entries/")
+        response = self.client.get(f"/portal/content/text-assets/{self.asset.slug}/versions/{draft.id}/entries/")
 
         # Assert
         self.assertEqual(response.status_code, 200, response.content)
@@ -227,7 +229,7 @@ class MultiColumnEditorApiTests(QuranDataMixin, BaseTestCase):
 
         # Act
         response = self.client.get(
-            f"/portal/content/tafsirs/{self.asset.slug}/versions/{draft.id}/entries/?{_filters(model)}"
+            f"/portal/content/text-assets/{self.asset.slug}/versions/{draft.id}/entries/?{_filters(model)}"
         )
 
         # Assert
@@ -264,7 +266,7 @@ class MultiColumnEditorApiTests(QuranDataMixin, BaseTestCase):
         self.authenticate_user(self.user)
 
         # Act
-        response = self.client.get(f"/portal/content/tafsirs/{self.asset.slug}/csv-template/")
+        response = self.client.get(f"/portal/content/text-assets/{self.asset.slug}/csv-template/")
 
         # Assert
         self.assertEqual(response.status_code, 200)

@@ -24,7 +24,7 @@ class AssetColumnServiceTests(QuranDataMixin, BaseTestCase):
         super().setUp()
         self.bake_quran()
         self.asset = baker.make(
-            Asset, category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.AYAH, status=StatusChoice.READY
+            Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH, status=StatusChoice.READY
         )
         self.service = AssetColumnService()
 

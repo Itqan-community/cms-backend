@@ -32,8 +32,8 @@ class ContentEditPermissionTests(BaseTestCase):
             "status": StatusChoice.READY,
             "language": "ar",
         }
-        self.translation = baker.make(Asset, category=CategoryChoice.TRANSLATION, slug="perm-translation", **common)
-        self.tafsir = baker.make(Asset, category=CategoryChoice.TAFSIR, slug="perm-tafsir", **common)
+        self.translation = baker.make(Asset, category=CategoryChoice.TEXT, slug="perm-translation", **common)
+        self.tafsir = baker.make(Asset, category=CategoryChoice.TEXT, slug="perm-tafsir", **common)
         self.user = User.objects.create_user(email="perm-editor@example.com", name="Editor", is_staff=True)
         self.give_permission(self.user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES)
 
@@ -47,10 +47,10 @@ class ContentEditPermissionTests(BaseTestCase):
     def test_get_or_create_draft_where_user_has_only_metadata_update_should_return_403(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
 
         # Act
-        response = self._open_draft("translations", self.translation.slug)
+        response = self._open_draft("text-assets", self.translation.slug)
 
         # Assert
         self.assertEqual(403, response.status_code, response.content)
@@ -59,36 +59,24 @@ class ContentEditPermissionTests(BaseTestCase):
     def test_get_or_create_draft_where_user_can_edit_translation_content_should_return_200(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
 
         # Act
-        response = self._open_draft("translations", self.translation.slug)
+        response = self._open_draft("text-assets", self.translation.slug)
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
 
-    def test_get_or_create_draft_where_permission_is_for_other_category_should_return_403(self):
-        # Arrange
-        self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
-
-        # Act
-        response = self._open_draft("tafsirs", self.tafsir.slug)
-
-        # Assert
-        self.assertEqual(403, response.status_code, response.content)
-        self.assertEqual("permission_denied", response.json()["error_name"])
-
     def test_restore_version_where_user_has_only_metadata_update_should_return_403(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
         source = self.tafsir.get_or_create_source_language()
         version = baker.make(AssetVersion, asset=self.tafsir, asset_language=source, state=VersionStateChoice.PUBLISHED)
 
         # Act
         response = self.client.post(
-            f"/portal/content/tafsirs/{self.tafsir.slug}/versions/{version.id}/restore/",
+            f"/portal/content/text-assets/{self.tafsir.slug}/versions/{version.id}/restore/",
             data={},
             content_type="application/json",
         )
@@ -100,11 +88,11 @@ class ContentEditPermissionTests(BaseTestCase):
     def test_create_version_where_user_has_only_metadata_permissions_should_return_403(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TEXT_ASSET)
 
         # Act
         response = self.client.post(
-            f"/portal/translations/{self.translation.slug}/versions/",
+            f"/portal/text-assets/{self.translation.slug}/versions/",
             data={
                 "asset_id": self.translation.id,
                 "label_en": "v2",
@@ -121,13 +109,13 @@ class ContentEditPermissionTests(BaseTestCase):
     def test_create_version_where_user_can_edit_content_should_return_201(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
         surah = baker.make(Surah, id=1, name="الفاتحة", ayahs_count=7)
         baker.make(Ayah, id=1, surah=surah, number_in_surah=1, text="a")
 
         # Act
         response = self.client.post(
-            f"/portal/translations/{self.translation.slug}/versions/",
+            f"/portal/text-assets/{self.translation.slug}/versions/",
             data={
                 "asset_id": self.translation.id,
                 "label_en": "v2",
@@ -143,12 +131,12 @@ class ContentEditPermissionTests(BaseTestCase):
     def test_patch_version_where_file_replaced_with_only_metadata_update_should_return_403(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
         version = baker.make(AssetVersion, asset=self.tafsir, name="v1", summary="s")
 
         # Act
         response = self.client.patch(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/{version.id}/",
+            f"/portal/text-assets/{self.tafsir.slug}/versions/{version.id}/",
             data={"file": SimpleUploadedFile("new.pdf", b"new", content_type="application/pdf")},
         )
 
@@ -159,12 +147,12 @@ class ContentEditPermissionTests(BaseTestCase):
     def test_patch_version_where_only_label_changes_should_need_metadata_update_only(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
         version = baker.make(AssetVersion, asset=self.tafsir, name="v1", summary="s")
 
         # Act
         response = self.client.patch(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/{version.id}/",
+            f"/portal/text-assets/{self.tafsir.slug}/versions/{version.id}/",
             data=urlencode({"label_en": "Renamed"}),
             content_type="application/x-www-form-urlencoded",
         )
@@ -178,8 +166,8 @@ class ContentEditPermissionTests(BaseTestCase):
         service = PermissionHierarchyService()
 
         # Act
-        implied = service.with_implied([PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT])
+        implied = service.with_implied([PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT])
 
         # Assert
-        self.assertIn(PermissionChoice.PORTAL_READ_TAFSIR, implied)
-        self.assertNotIn(PermissionChoice.PORTAL_UPDATE_TAFSIR, implied)
+        self.assertIn(PermissionChoice.PORTAL_READ_TEXT_ASSET, implied)
+        self.assertNotIn(PermissionChoice.PORTAL_UPDATE_TEXT_ASSET, implied)

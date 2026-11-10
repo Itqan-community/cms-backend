@@ -6,7 +6,8 @@ from django.utils.translation import gettext_lazy as _
 from ninja import Field, Query, Schema
 from ninja.pagination import paginate
 
-from apps.content.models import REVIEWED_CATEGORIES, Asset, AssetVersion, CategoryChoice
+from apps.content.asset_tag_schemas import AssetTagOut, CategoryFilter
+from apps.content.models import REVIEWED_CATEGORIES, Asset, AssetVersion
 from apps.content.services.asset_access import enforce_asset_access_on_public_api
 from apps.content.services.asset_columns import version_structure
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
@@ -97,6 +98,7 @@ class PackageCatalogOut(Schema):
     slug: str
     name: str
     category: str
+    tags: list[AssetTagOut] = Field(default_factory=list, description="Text assets only: what kind of text it holds.")
     is_open_access: bool
     access: CatalogAccess = Field(
         ...,
@@ -223,13 +225,14 @@ def _resolve_package_to_schema(request: Request, result: ResolvedPackage) -> Pac
 
 @router.get("packages/", response=list[PackageCatalogOut])
 @paginate
-@searching(search_fields=["name", "slug", "description", "publisher__name"])
+@searching(search_fields=["name", "slug", "description", "publisher__name", "tags__slug", "tags__name"])
 def list_packages(
     request: Request,
     open_access: bool | None = Query(
         None, description="Only assets that need no API key (true) or only gated ones (false)."
     ),
-    category: CategoryChoice | None = Query(None, description="Only assets of this category."),
+    category: CategoryFilter | None = Query(None, description="Only assets of this category."),
+    tag: str | None = Query(None, description="Only text assets with this tag, such as `tafsir`."),
 ):
     """Installable assets and their language renditions.
 
@@ -239,7 +242,7 @@ def list_packages(
     `itqan init` and `itqan browse` use it.
     """
     return PackageRegistryService().list_installable_assets(
-        open_access=open_access, category=category, user=request.user
+        open_access=open_access, category=category, tag=tag, user=request.user
     )
 
 

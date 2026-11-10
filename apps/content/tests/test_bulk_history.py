@@ -42,7 +42,7 @@ class ContentBulkHistoryTest(BaseTestCase):
             name="Test Translation",
             name_en="Test Translation",
             name_ar="ترجمة تجريبية",
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             slug="test-trans",
             language="en",
@@ -84,7 +84,7 @@ class ContentBulkHistoryTest(BaseTestCase):
             name_en="Source Mushaf",
             name_ar="المصحف المصدر",
             # Entries only exist on text assets: the "mushaf" here is a source-language tafsir.
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             slug="source-mushaf",
         )

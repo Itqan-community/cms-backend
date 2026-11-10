@@ -13,7 +13,7 @@ URL = "/portal/ai/translate/"
 
 
 class AiTranslateApiTests(BaseTestCase):
-    def _admin(self, permission: PermissionChoice = PermissionChoice.PORTAL_CREATE_TAFSIR) -> User:
+    def _admin(self, permission: PermissionChoice = PermissionChoice.PORTAL_CREATE_TEXT_ASSET) -> User:
         user = User.objects.create_user(email="admin@example.com", name="Admin", is_staff=True)
         self.give_permission(user, permission)
         return user
@@ -23,7 +23,7 @@ class AiTranslateApiTests(BaseTestCase):
         self.authenticate_user(self._admin())
         payload = {
             "mode": "translate",
-            "category": "tafsir",
+            "category": "text",
             "fields": {"name": "تفسير ابن كثير", "description": "تفسير"},
         }
 
@@ -102,7 +102,7 @@ class AiTranslateApiTests(BaseTestCase):
     def test_ai_translate_where_wikipedia_finds_nothing_should_translate_without_notes(self):
         # Arrange
         self.authenticate_user(self._admin())
-        payload = {"mode": "web", "category": "tafsir", "fields": {"name": "تفسير", "description": "وصف"}}
+        payload = {"mode": "web", "category": "text", "fields": {"name": "تفسير", "description": "وصف"}}
 
         # Act
         with (
@@ -145,7 +145,7 @@ class AiTranslateApiTests(BaseTestCase):
         with patch.object(GeminiClient, GeminiClient.generate_json.__name__) as ai:
             response = self.client.post(
                 URL,
-                data={"mode": "translate", "category": "tafsir", "fields": {"name": "  "}},
+                data={"mode": "translate", "category": "text", "fields": {"name": "  "}},
                 content_type="application/json",
             )
 
@@ -162,7 +162,7 @@ class AiTranslateApiTests(BaseTestCase):
         with patch.object(GeminiClient, GeminiClient.generate_json.__name__, side_effect=GeminiQuotaExceeded("x")):
             response = self.client.post(
                 URL,
-                data={"mode": "translate", "category": "tafsir", "fields": {"name": "تفسير"}},
+                data={"mode": "translate", "category": "text", "fields": {"name": "تفسير"}},
                 content_type="application/json",
             )
 
@@ -178,7 +178,7 @@ class AiTranslateApiTests(BaseTestCase):
         with patch.object(GeminiClient, GeminiClient.generate_json.__name__, side_effect=GeminiRateLimited("x")):
             response = self.client.post(
                 URL,
-                data={"mode": "translate", "category": "tafsir", "fields": {"name": "تفسير"}},
+                data={"mode": "translate", "category": "text", "fields": {"name": "تفسير"}},
                 content_type="application/json",
             )
 
@@ -194,7 +194,7 @@ class AiTranslateApiTests(BaseTestCase):
         with patch.object(GeminiClient, GeminiClient.generate_json.__name__, side_effect=GeminiUnavailable("x")):
             response = self.client.post(
                 URL,
-                data={"mode": "translate", "category": "tafsir", "fields": {"name": "تفسير"}},
+                data={"mode": "translate", "category": "text", "fields": {"name": "تفسير"}},
                 content_type="application/json",
             )
 
@@ -216,7 +216,7 @@ class AiTranslateApiTests(BaseTestCase):
                 URL,
                 data={
                     "mode": "translate",
-                    "category": "tafsir",
+                    "category": "text",
                     "fields": {"name": "تفسير السعدي", "description": "وصف"},
                 },
                 content_type="application/json",
@@ -233,7 +233,7 @@ class AiTranslateApiTests(BaseTestCase):
         # Act
         response = self.client.post(
             URL,
-            data={"mode": "translate", "category": "tafsir", "fields": {"password": "x"}},
+            data={"mode": "translate", "category": "text", "fields": {"password": "x"}},
             content_type="application/json",
         )
 
@@ -249,7 +249,7 @@ class AiTranslateApiTests(BaseTestCase):
         # Act
         response = self.client.post(
             URL,
-            data={"mode": "translate", "category": "tafsir", "fields": {"name": "تفسير"}},
+            data={"mode": "translate", "category": "text", "fields": {"name": "تفسير"}},
             content_type="application/json",
         )
 
@@ -262,9 +262,9 @@ class AiTranslateApiTests(BaseTestCase):
         self.authenticate_user(self._admin())
         payload = {
             "mode": "translate",
-            "category": "tafsir",
+            "category": "text",
             "fields": {"name": "تفسير ابن كثير"},
-            "slug_for": {"name_ar": "تفسير ابن كثير", "name_en": ""},
+            "slug_for": {"name_ar": "تفسير ابن كثير", "name_en": "", "tag": "tafsir"},
         }
 
         # Act
@@ -284,12 +284,17 @@ class AiTranslateApiTests(BaseTestCase):
 
     def test_ai_translate_where_only_slug_needed_should_make_one_call_for_it(self):
         # Arrange
-        self.authenticate_user(self._admin(PermissionChoice.PORTAL_CREATE_TRANSLATION))
+        self.authenticate_user(self._admin(PermissionChoice.PORTAL_CREATE_TEXT_ASSET))
         payload = {
             "mode": "translate",
-            "category": "translation",
+            "category": "text",
             "fields": {},
-            "slug_for": {"name_ar": "صحيح انترناشونال", "name_en": "Sahih International", "language": "en"},
+            "slug_for": {
+                "tag": "translation",
+                "name_ar": "صحيح انترناشونال",
+                "name_en": "Sahih International",
+                "language": "en",
+            },
         }
 
         # Act
@@ -335,7 +340,7 @@ class AiTranslateApiTests(BaseTestCase):
         self.authenticate_user(self._admin())
         payload = {
             "mode": "translate",
-            "category": "tafsir",
+            "category": "text",
             "fields": {"name": "تفسير"},
             "slug_for": {"name_ar": "تفسير"},
         }
@@ -358,7 +363,7 @@ class AiTranslateApiTests(BaseTestCase):
         with patch.object(GeminiClient, GeminiClient.generate_json.__name__) as ai:
             response = self.client.post(
                 URL,
-                data={"mode": "translate", "category": "tafsir", "fields": {}, "slug_for": {"name_ar": " "}},
+                data={"mode": "translate", "category": "text", "fields": {}, "slug_for": {"name_ar": " "}},
                 content_type="application/json",
             )
 
@@ -393,7 +398,7 @@ class AiTranslateApiTests(BaseTestCase):
         self.authenticate_user(self._admin())
 
         # Act
-        response = self.client.post("/portal/ai/slug/", data={"category": "tafsir"}, content_type="application/json")
+        response = self.client.post("/portal/ai/slug/", data={"category": "text"}, content_type="application/json")
 
         # Assert
         self.assertEqual(404, response.status_code)

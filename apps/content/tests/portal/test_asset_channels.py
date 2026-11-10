@@ -10,11 +10,10 @@ CHANNELS = ("in_gallery", "in_public_api", "in_cli", "in_tenants")
 
 # category, URL prefix, update permission, extra asset kwargs
 ASSET_TYPES = [
-    (CategoryChoice.TAFSIR, "tafsirs", PermissionChoice.PORTAL_UPDATE_TAFSIR, {"template": AssetTemplateChoice.AYAH}),
     (
-        CategoryChoice.TRANSLATION,
-        "translations",
-        PermissionChoice.PORTAL_UPDATE_TRANSLATION,
+        CategoryChoice.TEXT,
+        "text-assets",
+        PermissionChoice.PORTAL_UPDATE_TEXT_ASSET,
         {"template": AssetTemplateChoice.AYAH},
     ),
     (CategoryChoice.MUSHAF, "mushafs", PermissionChoice.PORTAL_UPDATE_MUSHAF, {}),
@@ -23,7 +22,7 @@ ASSET_TYPES = [
 
 
 class AssetChannelsPortalTests(BaseTestCase):
-    """Channel flags + the channel_has_active_consumers guard on tafsir/translation/mushaf/font.
+    """Channel flags + the channel_has_active_consumers guard on text assets, mushafs and fonts.
 
     Recitations (JSON API) are covered in portal/recitations/test_recitations.py.
     """
@@ -56,9 +55,6 @@ class AssetChannelsPortalTests(BaseTestCase):
         )
 
     def _patch(self, prefix, asset, data):
-        # Translations take JSON on PUT/PATCH; the other types take multipart forms.
-        if prefix == "translations":
-            return self.client.patch(f"/portal/{prefix}/{asset.slug}/", data=data, content_type="application/json")
         return self.client.patch(f"/portal/{prefix}/{asset.slug}/", data=data, format="multipart")
 
     def test_patch_channels_where_flags_sent_should_round_trip_on_all_types(self):
@@ -99,12 +95,7 @@ class AssetChannelsPortalTests(BaseTestCase):
                 }
 
                 # Act
-                if prefix == "translations":
-                    response = self.client.put(
-                        f"/portal/{prefix}/{asset.slug}/", data=payload, content_type="application/json"
-                    )
-                else:
-                    response = self.client.put(f"/portal/{prefix}/{asset.slug}/", data=payload, format="multipart")
+                response = self.client.put(f"/portal/{prefix}/{asset.slug}/", data=payload, format="multipart")
 
                 # Assert
                 self.assertEqual(200, response.status_code, response.content)

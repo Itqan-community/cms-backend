@@ -12,7 +12,7 @@ class AssetSlugFromWordsTests(BaseTestCase):
         service = AssetSlugService()
 
         # Act
-        slug = service.slug_from_words(category=CategoryChoice.TAFSIR, words=["Ibn", "Kathir"])
+        slug = service.slug_from_words(category=CategoryChoice.TEXT, prefix="tafsir", words=["Ibn", "Kathir"])
 
         # Assert
         self.assertEqual("tafsir-ibn-kathir", slug)
@@ -22,7 +22,7 @@ class AssetSlugFromWordsTests(BaseTestCase):
         service = AssetSlugService()
 
         # Act
-        slug = service.slug_from_words(category=CategoryChoice.TAFSIR, words=["tafsir", "ibn", "kathir"])
+        slug = service.slug_from_words(category=CategoryChoice.TEXT, prefix="tafsir", words=["tafsir", "ibn", "kathir"])
 
         # Assert
         self.assertEqual("tafsir-ibn-kathir", slug)
@@ -33,7 +33,7 @@ class AssetSlugFromWordsTests(BaseTestCase):
 
         # Act
         slug = service.slug_from_words(
-            category=CategoryChoice.TRANSLATION, words=["sahih", "international"], language="EN"
+            category=CategoryChoice.TEXT, prefix="translation", words=["sahih", "international"], language="EN"
         )
 
         # Assert
@@ -137,7 +137,7 @@ class AssetSlugPromptTests(BaseTestCase):
 
         # Act
         prompt = service.slug_prompt(
-            category=CategoryChoice.TAFSIR, name_ar="تفسير ابن كثير", name_en="Tafsir Ibn Kathir"
+            category=CategoryChoice.TEXT, name_ar="تفسير ابن كثير", name_en="Tafsir Ibn Kathir"
         )
 
         # Assert
@@ -191,7 +191,7 @@ class AssetSlugResolveTests(BaseTestCase):
 
         # Act
         slug = service.resolve_slug(
-            category=CategoryChoice.TAFSIR, requested=None, name_en="Tafsir Al Saadi", name_ar=""
+            category=CategoryChoice.TEXT, prefix="tafsir", requested=None, name_en="Tafsir Al Saadi", name_ar=""
         )
 
         # Assert
@@ -203,7 +203,7 @@ class AssetSlugResolveTests(BaseTestCase):
 
         # Act
         slug = service.resolve_slug(
-            category=CategoryChoice.TAFSIR, requested="tafsir-ibn-kathir", name_en="", name_ar="تفسير"
+            category=CategoryChoice.TEXT, prefix="tafsir", requested="tafsir-ibn-kathir", name_en="", name_ar="تفسير"
         )
 
         # Assert
@@ -216,7 +216,7 @@ class AssetSlugResolveTests(BaseTestCase):
 
         # Act
         slug = service.resolve_slug(
-            category=CategoryChoice.TAFSIR, requested="tafsir-ibn-kathir", name_en="", name_ar="تفسير"
+            category=CategoryChoice.TEXT, prefix="tafsir", requested="tafsir-ibn-kathir", name_en="", name_ar="تفسير"
         )
 
         # Assert
@@ -231,7 +231,9 @@ class AssetSlugResolveTests(BaseTestCase):
             with self.subTest(requested=requested):
                 # Act / Assert
                 with self.assertRaises(ItqanError) as ctx:
-                    service.resolve_slug(category=CategoryChoice.TAFSIR, requested=requested, name_en="", name_ar="x")
+                    service.resolve_slug(
+                        category=CategoryChoice.TEXT, prefix="tafsir", requested=requested, name_en="", name_ar="x"
+                    )
                 self.assertEqual("asset_slug_invalid", ctx.exception.error_name)
 
     def test_resolve_slug_where_requested_slug_has_other_category_prefix_should_raise_asset_slug_invalid(self):

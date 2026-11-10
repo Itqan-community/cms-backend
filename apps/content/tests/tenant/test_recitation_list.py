@@ -85,14 +85,14 @@ class RecitationsListTest(BaseTestCase):
         )
         self.asset3 = baker.make(
             Asset,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             publisher=self.publisher1,
             status=StatusChoice.READY,
         )
         baker.make(
             Asset,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             publisher=self.publisher1,
             status=StatusChoice.READY,

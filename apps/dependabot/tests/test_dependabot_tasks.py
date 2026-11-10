@@ -231,7 +231,7 @@ class DependabotTasksTest(TestCase):
         translation = Asset.objects.create(
             publisher=self.publisher,
             name="Translation",
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             slug="translation-en",
         )

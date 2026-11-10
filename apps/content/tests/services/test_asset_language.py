@@ -16,7 +16,7 @@ class AssetLanguageServiceTest(BaseTestCase):
         self.publisher = baker.make(Publisher, name="Test Publisher")
         self.translation = baker.make(
             Asset,
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
@@ -31,33 +31,33 @@ class AssetLanguageServiceTest(BaseTestCase):
     def test_list_languages_creates_and_returns_source_first(self):
         AssetLanguage.objects.create(asset=self.translation, language="es")
 
-        languages = AssetLanguageService().list_languages(self.translation.slug, CategoryChoice.TRANSLATION)
+        languages = AssetLanguageService().list_languages(self.translation.slug, CategoryChoice.TEXT)
 
         self.assertTrue(languages[0].is_source)
         self.assertEqual("ar", languages[0].language)
         self.assertEqual({"ar", "es"}, {lang.language for lang in languages})
 
     def test_add_language_creates_non_source_row(self):
-        lang = AssetLanguageService().add_language(self.translation.slug, CategoryChoice.TRANSLATION, language="es")
+        lang = AssetLanguageService().add_language(self.translation.slug, CategoryChoice.TEXT, language="es")
 
         self.assertFalse(lang.is_source)
         self.assertEqual("es", lang.language)
 
     def test_add_duplicate_language_raises(self):
-        AssetLanguageService().add_language(self.translation.slug, CategoryChoice.TRANSLATION, language="es")
+        AssetLanguageService().add_language(self.translation.slug, CategoryChoice.TEXT, language="es")
 
         with self.assertRaises(ItqanError):
-            AssetLanguageService().add_language(self.translation.slug, CategoryChoice.TRANSLATION, language="es")
+            AssetLanguageService().add_language(self.translation.slug, CategoryChoice.TEXT, language="es")
 
     def test_draft_is_per_language(self):
         svc = AssetContentService()
-        AssetLanguageService().add_language(self.translation.slug, CategoryChoice.TRANSLATION, language="es")
+        AssetLanguageService().add_language(self.translation.slug, CategoryChoice.TEXT, language="es")
 
         ar_draft = svc.get_or_create_draft(
-            self.translation.slug, CategoryChoice.TRANSLATION, language="ar", created_by_id=self.user.id
+            self.translation.slug, CategoryChoice.TEXT, language="ar", created_by_id=self.user.id
         )
         es_draft = svc.get_or_create_draft(
-            self.translation.slug, CategoryChoice.TRANSLATION, language="es", created_by_id=self.user.id
+            self.translation.slug, CategoryChoice.TEXT, language="es", created_by_id=self.user.id
         )
 
         self.assertNotEqual(ar_draft.id, es_draft.id)
@@ -67,5 +67,5 @@ class AssetLanguageServiceTest(BaseTestCase):
     def test_get_or_create_draft_unknown_language_raises(self):
         with self.assertRaises(ItqanError):
             AssetContentService().get_or_create_draft(
-                self.translation.slug, CategoryChoice.TRANSLATION, language="zz", created_by_id=self.user.id
+                self.translation.slug, CategoryChoice.TEXT, language="zz", created_by_id=self.user.id
             )

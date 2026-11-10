@@ -37,7 +37,7 @@ class ParseContentFileTest(QuranDataMixin, BaseTestCase):
     def setUp(self):
         super().setUp()
         self.bake_quran()
-        self.asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH)
+        self.asset = baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH)
         self.spec = unit_spec_for(self.asset)
 
     def test_parse_where_translation_format_should_map_text(self):
@@ -79,7 +79,7 @@ class StrictParseTest(QuranDataMixin, BaseTestCase):
     def setUp(self):
         super().setUp()
         self.bake_quran()
-        self.asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH)
+        self.asset = baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH)
         self.spec = unit_spec_for(self.asset)
 
     def _parse_strict(self, content: bytes) -> list:

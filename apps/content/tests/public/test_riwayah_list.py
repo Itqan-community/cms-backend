@@ -72,7 +72,7 @@ class RiwayahsListTest(BaseTestCase):
         # Asset with non-RECITATION category – should not count
         baker.make(
             Asset,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,

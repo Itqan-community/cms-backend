@@ -41,8 +41,8 @@ class AssetCreateSlugTests(BaseTestCase):
     def _grant_all(self) -> None:
         for permission in (
             PermissionChoice.PORTAL_CREATE_MUSHAF,
-            PermissionChoice.PORTAL_CREATE_TAFSIR,
-            PermissionChoice.PORTAL_CREATE_TRANSLATION,
+            PermissionChoice.PORTAL_CREATE_TEXT_ASSET,
+            PermissionChoice.PORTAL_CREATE_TEXT_ASSET,
             PermissionChoice.PORTAL_CREATE_FONT,
             PermissionChoice.PORTAL_CREATE_RECITATION,
         ):
@@ -72,13 +72,13 @@ class AssetCreateSlugTests(BaseTestCase):
         cases = [
             ("/portal/mushafs/", _text_asset(self.publisher, name_en="Warsh Mushaf"), "mushaf-warsh"),
             (
-                "/portal/tafsirs/",
-                _text_asset(self.publisher, name_en="Tafsir Al Saadi", template="ayah"),
+                "/portal/text-assets/",
+                _text_asset(self.publisher, name_en="Tafsir Al Saadi", template="ayah", tags="tafsir"),
                 "tafsir-al-saadi",
             ),
             (
-                "/portal/translations/",
-                _text_asset(self.publisher, name_en="Hamidullah", language="fr", template="ayah"),
+                "/portal/text-assets/",
+                _text_asset(self.publisher, name_en="Hamidullah", language="fr", template="ayah", tags="translation"),
                 "translation-fr-hamidullah",
             ),
             ("/portal/fonts/", _text_asset(self.publisher, name_en="Warsh Font"), "font-warsh"),
@@ -101,10 +101,19 @@ class AssetCreateSlugTests(BaseTestCase):
         self._grant_all()
         cases = [
             ("/portal/mushafs/", _text_asset(self.publisher, slug="mushaf-madinah-hafs")),
-            ("/portal/tafsirs/", _text_asset(self.publisher, template="ayah", slug="tafsir-ibn-kathir")),
             (
-                "/portal/translations/",
-                _text_asset(self.publisher, language="en", template="ayah", slug="translation-en-sahih-international"),
+                "/portal/text-assets/",
+                _text_asset(self.publisher, template="ayah", tags="tafsir", slug="tafsir-ibn-kathir"),
+            ),
+            (
+                "/portal/text-assets/",
+                _text_asset(
+                    self.publisher,
+                    language="en",
+                    template="ayah",
+                    tags="translation",
+                    slug="translation-en-sahih-international",
+                ),
             ),
             ("/portal/fonts/", _text_asset(self.publisher, slug="font-uthmanic-hafs")),
             ("/portal/recitations/", self._recitation(slug="recitation-saad-al-ghamdi-hafs")),
@@ -123,11 +132,12 @@ class AssetCreateSlugTests(BaseTestCase):
     def test_create_tafsir_where_slug_invalid_should_return_400_asset_slug_invalid(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TEXT_ASSET)
 
         # Act
         response = self.client.post(
-            "/portal/tafsirs/", data=_text_asset(self.publisher, template="ayah", slug="mushaf-not-a-tafsir")
+            "/portal/text-assets/",
+            data=_text_asset(self.publisher, template="ayah", tags="tafsir", slug="mushaf-not-a-tafsir"),
         )
 
         # Assert

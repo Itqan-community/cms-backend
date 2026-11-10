@@ -13,7 +13,7 @@ class TemplateImportTests(QuranDataMixin, BaseTestCase):
         self.bake_quran()
 
     def _spec(self, template, layout=None):
-        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=template, mushaf_layout=layout)
+        asset = baker.make(Asset, category=CategoryChoice.TEXT, template=template, mushaf_layout=layout)
         return unit_spec_for(asset), asset
 
     def test_parse_where_surah_file_should_key_by_surah_number(self):

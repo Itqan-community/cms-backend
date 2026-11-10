@@ -1,11 +1,12 @@
 import logging
 from typing import Annotated
 
-from django.db.models import Exists, OuterRef
+from django.db.models import Exists, OuterRef, Q
 from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import Field
 
+from apps.content.asset_tag_schemas import AssetTagOut, CategoryFilter
 from apps.content.models import (
     Asset,
     AssetTemplateChoice,
@@ -46,6 +47,7 @@ class AssetMushafLayoutOut(Schema):
 class ListAssetOut(Schema):
     id: int
     category: str
+    tags: list[AssetTagOut]
     name: str
     description: str
     publisher: ListAssetPublisherOut = Field(alias="publisher")
@@ -58,18 +60,26 @@ class ListAssetOut(Schema):
 
 
 class AssetFilter(FilterSchema):
-    category: Annotated[list[CategoryChoice] | None, FilterLookup(q="category__in")] = None
+    category: Annotated[list[CategoryFilter] | None, FilterLookup(q="category__in")] = None
+    tag: list[str] | None = None
     license_code: Annotated[list[str] | None, FilterLookup(q="license__in")] = None
     publisher_id: Annotated[int | None, FilterLookup(q="publisher")] = None
     reciter_id: Annotated[int | None, FilterLookup(q="reciter")] = None
     is_open_access: Annotated[bool | None, FilterLookup(q="is_open_access")] = None
+
+    def filter_tag(self, value: list[str] | None) -> Q:
+        """Narrow the text assets to these tags and leave other categories alone, so
+        ``category=recitation&category=text&tag=tafsir`` lists recitations and tafsirs."""
+        if not value:
+            return Q()
+        return ~Q(category=CategoryChoice.TEXT) | Q(tags__slug__in=value)
 
 
 @router.get("assets/", response=list[ListAssetOut], auth=None)
 @track_search(SearchSurface.ASSETS)
 @paginate
 @ordering(ordering_fields=["name", "category"])
-@searching(search_fields=["name", "description", "publisher__name", "category"])
+@searching(search_fields=["name", "description", "publisher__name", "category", "tags__slug", "tags__name"])
 def list_assets(request: Request, filters: AssetFilter = Query()):
     """
     Retrieve a paginated list of assets for the internal CMS.
@@ -78,6 +88,7 @@ def list_assets(request: Request, filters: AssetFilter = Query()):
     logger.info("Assets list requested")
     assets = (
         Asset.objects.select_related("publisher", "reciter", "mushaf_layout")
+        .prefetch_related("tags")
         .filter(request.publisher_q("publisher"))
         .filter(in_gallery=True)
         .exclude(status=StatusChoice.DRAFT)
@@ -90,4 +101,6 @@ def list_assets(request: Request, filters: AssetFilter = Query()):
         )
     )
     assets = filters.filter(assets)
-    return assets
+    # Tag filters and tag search join the tags, so an asset with two matching tags would
+    # otherwise list twice.
+    return assets.distinct()

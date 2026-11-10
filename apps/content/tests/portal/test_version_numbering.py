@@ -26,7 +26,7 @@ class VersionNumberingBaseTest(BaseTestCase):
         self.publisher = baker.make(Publisher, name="Test Publisher")
         self.tafsir = baker.make(
             Asset,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,
@@ -41,7 +41,7 @@ class VersionNumberingBaseTest(BaseTestCase):
 
     def upload(self, **data):
         return self.client.post(
-            f"/portal/tafsirs/{self.tafsir.slug}/versions/",
+            f"/portal/text-assets/{self.tafsir.slug}/versions/",
             data={
                 "asset_id": self.tafsir.id,
                 "file": SimpleUploadedFile("t.csv", CSV, content_type="text/csv"),
@@ -67,7 +67,7 @@ class UploadNumberingTest(VersionNumberingBaseTest):
     def test_create_version_where_first_without_number_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
 
         # Act
         response = self.upload(label_en="First")
@@ -80,7 +80,7 @@ class UploadNumberingTest(VersionNumberingBaseTest):
     def test_create_version_where_number_malformed_should_return_400(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
 
         # Act
         response = self.upload(version_number="7")
@@ -92,7 +92,7 @@ class UploadNumberingTest(VersionNumberingBaseTest):
     def test_create_version_where_first_with_number_should_start_sequence_there(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
 
         # Act
         response = self.upload(version_number="07.00", label_en="First edition")
@@ -105,7 +105,7 @@ class UploadNumberingTest(VersionNumberingBaseTest):
     def test_create_version_where_sequence_exists_should_bump_minor_and_ignore_start(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
         self.make_version("7.0")
         self.make_version("7.1")
 
@@ -119,7 +119,7 @@ class UploadNumberingTest(VersionNumberingBaseTest):
     def test_create_version_where_bump_major_should_start_next_major(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
         self.make_version("7.3")
 
         # Act
@@ -132,7 +132,7 @@ class UploadNumberingTest(VersionNumberingBaseTest):
     def test_create_version_where_other_language_numbered_should_start_own_sequence(self):
         # Arrange — the source language is at 7.0; French has no versions yet
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
         self.make_version("7.0")
         AssetLanguage.objects.create(asset=self.tafsir, language="fr")
 
@@ -148,17 +148,18 @@ class UploadNumberingTest(VersionNumberingBaseTest):
     def test_create_tafsir_where_file_uploaded_should_number_first_version(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TEXT_ASSET)
 
         # Act
         response = self.client.post(
-            "/portal/tafsirs/",
+            "/portal/text-assets/",
             data={
                 "name_en": "New Tafsir",
                 "license": "CC-BY",
                 "language": "ar",
                 "publisher_id": self.publisher.id,
                 "template": "ayah",
+                "tags": "tafsir",
                 "version_label_en": "Original",
                 "version_number": "3.0",
                 "file": SimpleUploadedFile("t.csv", CSV, content_type="text/csv"),
@@ -180,7 +181,7 @@ class CommitNumberingTest(VersionNumberingBaseTest):
 
     def commit(self, draft: AssetVersion, **data):
         return self.client.post(
-            f"/portal/content/tafsirs/{self.tafsir.slug}/versions/{draft.id}/publish/",
+            f"/portal/content/text-assets/{self.tafsir.slug}/versions/{draft.id}/publish/",
             data={"summary_en": "commit", **data},
             content_type="application/json",
         )
@@ -188,7 +189,7 @@ class CommitNumberingTest(VersionNumberingBaseTest):
     def test_publish_draft_where_sequence_exists_should_issue_next_minor_and_set_label(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
         self.make_version("7.0")
         draft = self.make_draft()
 
@@ -204,7 +205,7 @@ class CommitNumberingTest(VersionNumberingBaseTest):
     def test_publish_draft_where_bump_major_should_issue_next_major(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
         self.make_version("7.4")
         draft = self.make_draft()
 
@@ -218,7 +219,7 @@ class CommitNumberingTest(VersionNumberingBaseTest):
     def test_publish_draft_where_first_without_number_should_return_400_and_stay_draft(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
         draft = self.make_draft()
 
         # Act
@@ -233,7 +234,7 @@ class CommitNumberingTest(VersionNumberingBaseTest):
     def test_publish_draft_where_first_with_number_should_start_sequence_there(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
         draft = self.make_draft()
 
         # Act
@@ -246,7 +247,7 @@ class CommitNumberingTest(VersionNumberingBaseTest):
     def test_restore_version_where_bump_major_should_issue_next_major(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
         old = self.make_version("7.0", label="Original")
         baker.make(AssetVersionEntry, version=old, ayah=self.ayah, text="old")
         head = self.make_version("7.1")
@@ -254,7 +255,7 @@ class CommitNumberingTest(VersionNumberingBaseTest):
 
         # Act
         response = self.client.post(
-            f"/portal/content/tafsirs/{self.tafsir.slug}/versions/{old.id}/restore/",
+            f"/portal/content/text-assets/{self.tafsir.slug}/versions/{old.id}/restore/",
             data={"bump": "major"},
             content_type="application/json",
         )

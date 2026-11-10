@@ -39,7 +39,7 @@ class RecitersListTest(BaseTestCase):
         # Asset with non-RECITATION category should NOT be counted
         self.other_category_asset = baker.make(
             Asset,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             publisher=self.publisher,
             status=StatusChoice.READY,

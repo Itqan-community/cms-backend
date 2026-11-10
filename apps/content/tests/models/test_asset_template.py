@@ -9,7 +9,7 @@ class AssetTemplateConstraintTests(BaseTestCase):
     def test_asset_where_translation_has_no_template_should_raise_integrity_error(self):
         # Arrange / Act / Assert
         with self.assertRaises(IntegrityError):
-            baker.make(Asset, category=CategoryChoice.TRANSLATION, template=None)
+            baker.make(Asset, category=CategoryChoice.TEXT, template=None)
 
     def test_asset_where_font_has_a_template_should_raise_integrity_error(self):
         # Arrange / Act / Assert
@@ -21,7 +21,7 @@ class AssetTemplateConstraintTests(BaseTestCase):
         with self.assertRaises(IntegrityError):
             baker.make(
                 Asset,
-                category=CategoryChoice.TRANSLATION,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.PAGE,
                 mushaf_layout=None,
             )
@@ -34,7 +34,7 @@ class AssetTemplateConstraintTests(BaseTestCase):
         with self.assertRaises(IntegrityError):
             baker.make(
                 Asset,
-                category=CategoryChoice.TRANSLATION,
+                category=CategoryChoice.TEXT,
                 template=AssetTemplateChoice.AYAH,
                 mushaf_layout=layout,
             )
@@ -46,7 +46,7 @@ class AssetTemplateConstraintTests(BaseTestCase):
         # Act
         asset = baker.make(
             Asset,
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.PAGE,
             mushaf_layout=layout,
         )

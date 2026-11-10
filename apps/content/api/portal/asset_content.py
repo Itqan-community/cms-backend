@@ -54,30 +54,21 @@ from apps.core.permission_utils import check_permission
 from apps.core.permissions import PermissionChoice
 from apps.quran.models import Ayah, Surah, Word
 
-router = ItqanRouter(tags=[NinjaTag.TRANSLATIONS])
+router = ItqanRouter(tags=[NinjaTag.TEXT_ASSETS])
 
 # What a caller needs to do with the asset: read it, change its metadata, change
 # its text, or choose which approved version consumers see. Text edits have their
-# own per-category permission; publishing is one permission for both categories.
+# own permission.
 Access = Literal["read", "metadata", "content", "publish"]
 
 # Path segment -> (category, {access: permission}).
 _CATEGORY_CONFIG: dict[str, tuple[CategoryChoice, dict[str, PermissionChoice]]] = {
-    "translations": (
-        CategoryChoice.TRANSLATION,
+    "text-assets": (
+        CategoryChoice.TEXT,
         {
-            "read": PermissionChoice.PORTAL_READ_TRANSLATION,
-            "metadata": PermissionChoice.PORTAL_UPDATE_TRANSLATION,
-            "content": PermissionChoice.PORTAL_EDIT_TRANSLATION_CONTENT,
-            "publish": PermissionChoice.PORTAL_PUBLISH_CONTENT,
-        },
-    ),
-    "tafsirs": (
-        CategoryChoice.TAFSIR,
-        {
-            "read": PermissionChoice.PORTAL_READ_TAFSIR,
-            "metadata": PermissionChoice.PORTAL_UPDATE_TAFSIR,
-            "content": PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT,
+            "read": PermissionChoice.PORTAL_READ_TEXT_ASSET,
+            "metadata": PermissionChoice.PORTAL_UPDATE_TEXT_ASSET,
+            "content": PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT,
             "publish": PermissionChoice.PORTAL_PUBLISH_CONTENT,
         },
     ),
@@ -87,8 +78,8 @@ _CATEGORY_CONFIG: dict[str, tuple[CategoryChoice, dict[str, PermissionChoice]]] 
 def _resolve(category: str, request: Request, *, access: Access) -> CategoryChoice:
     """Resolve the category path segment and enforce the matching permission.
 
-    One endpoint serves both translations and tafsirs, so the correct
-    per-category permission is enforced here rather than by a static decorator.
+    The permission depends on the access asked for, so it is enforced here
+    rather than by a static decorator.
     """
     config = _CATEGORY_CONFIG.get(category)
     if config is None:
@@ -409,8 +400,7 @@ class DraftIn(Schema):
     "content/{category}/{slug}/draft/",
     response={
         200: DraftVersionOut,
-        404: NinjaErrorResponse[Literal["translation_not_found"]]
-        | NinjaErrorResponse[Literal["tafsir_not_found"]]
+        404: NinjaErrorResponse[Literal["text_asset_not_found"]]
         | NinjaErrorResponse[Literal["language_not_available"]]
         | NinjaErrorResponse[Literal["unsupported_content_category"]],
     },
@@ -570,8 +560,7 @@ class EntriesPageOut(Schema):
         200: EntriesPageOut,
         400: NinjaErrorResponse[Literal["asset_template_missing"]]
         | NinjaErrorResponse[Literal["unknown_filter_column"]],
-        404: NinjaErrorResponse[Literal["translation_not_found"]]
-        | NinjaErrorResponse[Literal["tafsir_not_found"]]
+        404: NinjaErrorResponse[Literal["text_asset_not_found"]]
         | NinjaErrorResponse[Literal["version_not_found"]]
         | NinjaErrorResponse[Literal["unsupported_content_category"]],
     },
@@ -608,8 +597,7 @@ def list_entries(
         | NinjaErrorResponse[Literal["unknown_column"]]
         | NinjaErrorResponse[Literal["asset_template_missing"]]
         | NinjaErrorResponse[Literal["group_not_in_source"]],
-        404: NinjaErrorResponse[Literal["translation_not_found"]]
-        | NinjaErrorResponse[Literal["tafsir_not_found"]]
+        404: NinjaErrorResponse[Literal["text_asset_not_found"]]
         | NinjaErrorResponse[Literal["version_not_found"]]
         | NinjaErrorResponse[Literal["unsupported_content_category"]],
     },
@@ -631,8 +619,7 @@ _GROUP_400 = (
     | NinjaErrorResponse[Literal["group_exists"]]
 )
 _GROUP_404 = (
-    NinjaErrorResponse[Literal["translation_not_found"]]
-    | NinjaErrorResponse[Literal["tafsir_not_found"]]
+    NinjaErrorResponse[Literal["text_asset_not_found"]]
     | NinjaErrorResponse[Literal["version_not_found"]]
     | NinjaErrorResponse[Literal["unsupported_content_category"]]
 )
@@ -731,8 +718,7 @@ def delete_group(request: Request, category: str, slug: str, version_id: int, un
     "content/{category}/{slug}/versions/{version_id}/diff/",
     response={
         200: list[ChangeOut],
-        404: NinjaErrorResponse[Literal["translation_not_found"]]
-        | NinjaErrorResponse[Literal["tafsir_not_found"]]
+        404: NinjaErrorResponse[Literal["text_asset_not_found"]]
         | NinjaErrorResponse[Literal["version_not_found"]]
         | NinjaErrorResponse[Literal["unsupported_content_category"]],
     },
@@ -749,8 +735,7 @@ def version_diff(request: Request, category: str, slug: str, version_id: int):
     response={
         200: list[ChangeOut],
         400: NinjaErrorResponse[Literal["version_not_editable"]],
-        404: NinjaErrorResponse[Literal["translation_not_found"]]
-        | NinjaErrorResponse[Literal["tafsir_not_found"]]
+        404: NinjaErrorResponse[Literal["text_asset_not_found"]]
         | NinjaErrorResponse[Literal["version_not_found"]]
         | NinjaErrorResponse[Literal["unsupported_content_category"]],
     },
@@ -765,8 +750,7 @@ def pending_diff(request: Request, category: str, slug: str, version_id: int):
     "content/{category}/{slug}/versions/{version_id}/",
     response={
         200: DraftVersionOut,
-        404: NinjaErrorResponse[Literal["translation_not_found"]]
-        | NinjaErrorResponse[Literal["tafsir_not_found"]]
+        404: NinjaErrorResponse[Literal["text_asset_not_found"]]
         | NinjaErrorResponse[Literal["version_not_found"]]
         | NinjaErrorResponse[Literal["unsupported_content_category"]],
     },
@@ -788,8 +772,7 @@ def get_version(request: Request, category: str, slug: str, version_id: int) -> 
         | NinjaErrorResponse[Literal["version_number_required"]]
         | NinjaErrorResponse[Literal["version_number_invalid"]]
         | NinjaErrorResponse[Literal["orphaned_groups"]],
-        404: NinjaErrorResponse[Literal["translation_not_found"]]
-        | NinjaErrorResponse[Literal["tafsir_not_found"]]
+        404: NinjaErrorResponse[Literal["text_asset_not_found"]]
         | NinjaErrorResponse[Literal["version_not_found"]]
         | NinjaErrorResponse[Literal["unsupported_content_category"]],
     },
@@ -816,8 +799,7 @@ def publish_draft(request: Request, category: str, slug: str, version_id: int, d
     response={
         204: None,
         400: NinjaErrorResponse[Literal["version_not_editable"]],
-        404: NinjaErrorResponse[Literal["translation_not_found"]]
-        | NinjaErrorResponse[Literal["tafsir_not_found"]]
+        404: NinjaErrorResponse[Literal["text_asset_not_found"]]
         | NinjaErrorResponse[Literal["version_not_found"]]
         | NinjaErrorResponse[Literal["unsupported_content_category"]],
     },
@@ -834,8 +816,7 @@ def discard_draft(request: Request, category: str, slug: str, version_id: int) -
     response={
         200: DraftVersionOut,
         400: NinjaErrorResponse[Literal["version_not_restorable"]] | NinjaErrorResponse[Literal["major_bump_required"]],
-        404: NinjaErrorResponse[Literal["translation_not_found"]]
-        | NinjaErrorResponse[Literal["tafsir_not_found"]]
+        404: NinjaErrorResponse[Literal["text_asset_not_found"]]
         | NinjaErrorResponse[Literal["version_not_found"]]
         | NinjaErrorResponse[Literal["unsupported_content_category"]],
     },
@@ -861,8 +842,7 @@ def restore_version(request: Request, category: str, slug: str, version_id: int,
         | NinjaErrorResponse[Literal["version_not_approved"]]
         | NinjaErrorResponse[Literal["version_removed"]]
         | NinjaErrorResponse[Literal["rollback_reason_required"]],
-        404: NinjaErrorResponse[Literal["translation_not_found"]]
-        | NinjaErrorResponse[Literal["tafsir_not_found"]]
+        404: NinjaErrorResponse[Literal["text_asset_not_found"]]
         | NinjaErrorResponse[Literal["version_not_found"]]
         | NinjaErrorResponse[Literal["unsupported_content_category"]],
     },
@@ -881,8 +861,7 @@ def set_published_version(
 @router.get(
     "content/{category}/{slug}/versions/{version_id}/export/",
     response={
-        404: NinjaErrorResponse[Literal["translation_not_found"]]
-        | NinjaErrorResponse[Literal["tafsir_not_found"]]
+        404: NinjaErrorResponse[Literal["text_asset_not_found"]]
         | NinjaErrorResponse[Literal["version_not_found"]]
         | NinjaErrorResponse[Literal["unsupported_content_category"]],
     },
@@ -974,8 +953,7 @@ def download_csv_template(
     "content/{category}/{slug}/csv-template/",
     response={
         400: NinjaErrorResponse[Literal["asset_template_missing"]],
-        404: NinjaErrorResponse[Literal["translation_not_found"]]
-        | NinjaErrorResponse[Literal["tafsir_not_found"]]
+        404: NinjaErrorResponse[Literal["text_asset_not_found"]]
         | NinjaErrorResponse[Literal["unsupported_content_category"]],
     },
 )

@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 WEB_FIELDS = {"description", "long_description", "bio"}
 # A reciter is not an asset: it has no package slug.
-SLUG_CATEGORIES = {"mushaf", "tafsir", "translation", "font", "recitation"}
+SLUG_CATEGORIES = {"mushaf", "text", "font", "recitation"}
 FIELD_HINTS = {
     "name": "the asset or person name: transliterate proper names, translate generic words",
     "description": "a short description (1-3 sentences)",
@@ -132,6 +132,7 @@ class AiTranslationService:
                 words=result.get("slug_words"),
                 language=slug_for.get("language") or "",
                 year=slug_for.get("year"),
+                prefix=slug_for.get("tag"),
             )
             if wants_slug and slug_for
             else None

@@ -24,7 +24,7 @@ from apps.quran.models import Ayah, Surah
 # (`template` lives two tables away). Even so, each kwargs set below is pinned
 # to the template that matches the unit column its tests actually write, so
 # the fixture reads as a realistic asset rather than a mismatched one.
-_SURAH_ASSET_KWARGS = {"asset__category": CategoryChoice.TRANSLATION, "asset__template": AssetTemplateChoice.SURAH}
+_SURAH_ASSET_KWARGS = {"asset__category": CategoryChoice.TEXT, "asset__template": AssetTemplateChoice.SURAH}
 # The "no unit" / "two units" constraint tests don't write a real unit column,
 # so any valid template kwargs works; surah is used arbitrarily for those.
 _VALID_ASSET_KWARGS = _SURAH_ASSET_KWARGS
@@ -68,7 +68,7 @@ class EntryUnitConstraintTests(BaseTestCase):
         layout = baker.make("content.MushafLayout", page_count=604)
         version = baker.make(
             AssetVersion,
-            asset__category=CategoryChoice.TRANSLATION,
+            asset__category=CategoryChoice.TEXT,
             asset__template=AssetTemplateChoice.PAGE,
             asset__mushaf_layout=layout,
         )

@@ -18,10 +18,10 @@ class DownloadCsvTemplateTest(AssetContentBaseTest):
     def test_download_csv_template_where_ayah_should_list_every_ayah_with_blank_text(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
 
         # Act
-        response = self.client.get("/portal/content/translations/csv-template/?template=ayah")
+        response = self.client.get("/portal/content/text-assets/csv-template/?template=ayah")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -34,10 +34,10 @@ class DownloadCsvTemplateTest(AssetContentBaseTest):
     def test_download_csv_template_where_page_without_layout_should_raise(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
 
         # Act
-        response = self.client.get("/portal/content/tafsirs/csv-template/?template=page")
+        response = self.client.get("/portal/content/text-assets/csv-template/?template=page")
 
         # Assert
         self.assertEqual(400, response.status_code, response.content)
@@ -46,11 +46,13 @@ class DownloadCsvTemplateTest(AssetContentBaseTest):
     def test_download_csv_template_where_page_with_layout_should_list_its_pages(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
         layout = baker.make(MushafLayout, name="Tiny Mushaf", page_count=3)
 
         # Act
-        response = self.client.get(f"/portal/content/tafsirs/csv-template/?template=page&mushaf_layout_id={layout.id}")
+        response = self.client.get(
+            f"/portal/content/text-assets/csv-template/?template=page&mushaf_layout_id={layout.id}"
+        )
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -60,10 +62,10 @@ class DownloadCsvTemplateTest(AssetContentBaseTest):
     def test_download_csv_template_where_layout_missing_should_raise(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TAFSIR)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
 
         # Act
-        response = self.client.get("/portal/content/tafsirs/csv-template/?template=page&mushaf_layout_id=999999")
+        response = self.client.get("/portal/content/text-assets/csv-template/?template=page&mushaf_layout_id=999999")
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
@@ -85,7 +87,7 @@ class DownloadCsvTemplateTest(AssetContentBaseTest):
         self.authenticate_user(self.user)
 
         # Act
-        response = self.client.get("/portal/content/translations/csv-template/?template=ayah")
+        response = self.client.get("/portal/content/text-assets/csv-template/?template=ayah")
 
         # Assert
         self.assertEqual(403, response.status_code, response.content)
@@ -93,8 +95,8 @@ class DownloadCsvTemplateTest(AssetContentBaseTest):
     def test_download_csv_template_where_filled_in_should_import(self):
         # Arrange — a user fills the downloaded sheet's text column
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
-        rows = _rows(self.client.get("/portal/content/translations/csv-template/?template=ayah"))
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
+        rows = _rows(self.client.get("/portal/content/text-assets/csv-template/?template=ayah"))
         rows[1][4] = "first"
         rows[3][4] = "third"
         buffer = io.StringIO()
@@ -111,12 +113,12 @@ class DownloadAssetCsvTemplateTest(AssetContentBaseTest):
     def test_download_asset_csv_template_where_asset_exists_should_use_its_template(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
         self.translation.name_en = "French Rashid"
         self.translation.save(update_fields=["name_en"])
 
         # Act
-        response = self.client.get(f"/portal/content/translations/{self.translation.slug}/csv-template/")
+        response = self.client.get(f"/portal/content/text-assets/{self.translation.slug}/csv-template/")
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
@@ -128,11 +130,11 @@ class DownloadAssetCsvTemplateTest(AssetContentBaseTest):
     def test_download_asset_csv_template_where_asset_missing_should_raise(self):
         # Arrange
         self.authenticate_user(self.user)
-        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TRANSLATION)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
 
         # Act
-        response = self.client.get("/portal/content/translations/no-such-slug/csv-template/")
+        response = self.client.get("/portal/content/text-assets/no-such-slug/csv-template/")
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
-        self.assertEqual("translation_not_found", response.json()["error_name"])
+        self.assertEqual("text_asset_not_found", response.json()["error_name"])

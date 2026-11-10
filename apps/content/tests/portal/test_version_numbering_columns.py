@@ -42,14 +42,14 @@ class ColumnReorderVersioningTests(QuranDataMixin, BaseTestCase):
         self.bake_quran()
         self.user = User.objects.create_user(email="committer@example.com", name="Committer", is_staff=True)
         for permission in (
-            PermissionChoice.PORTAL_READ_TAFSIR,
-            PermissionChoice.PORTAL_EDIT_TAFSIR_CONTENT,
+            PermissionChoice.PORTAL_READ_TEXT_ASSET,
+            PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT,
             PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES,
         ):
             self.give_permission(self.user, permission)
         self.asset = baker.make(
             Asset,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.AYAH,
             status=StatusChoice.READY,
             language="ar",
@@ -78,7 +78,7 @@ class ColumnReorderVersioningTests(QuranDataMixin, BaseTestCase):
 
     def _publish(self, draft: AssetVersion, bump: str):
         return self.client.post(
-            f"/portal/content/tafsirs/{self.asset.slug}/versions/{draft.id}/publish/",
+            f"/portal/content/text-assets/{self.asset.slug}/versions/{draft.id}/publish/",
             data={"summary_en": "change", "bump": bump},
             content_type="application/json",
         )
@@ -129,7 +129,7 @@ class ColumnReorderVersioningTests(QuranDataMixin, BaseTestCase):
         self.authenticate_user(self.user)
 
         # Act
-        response = self.client.get(f"/portal/content/tafsirs/{self.asset.slug}/versions/{draft.id}/")
+        response = self.client.get(f"/portal/content/text-assets/{self.asset.slug}/versions/{draft.id}/")
 
         # Assert
         self.assertEqual(response.status_code, 200, response.content)
@@ -175,7 +175,7 @@ class ColumnReorderVersioningTests(QuranDataMixin, BaseTestCase):
         # Act
         with patches[0], patches[1]:
             AssetContentService().restore_version(
-                self.asset.slug, CategoryChoice.TAFSIR, committed.id, created_by_id=self.user.id
+                self.asset.slug, CategoryChoice.TEXT, committed.id, created_by_id=self.user.id
             )
 
         # Assert

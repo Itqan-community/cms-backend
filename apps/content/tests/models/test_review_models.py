@@ -31,9 +31,7 @@ class MemberLanguageModelTest(BaseTestCase):
 class AssetVersionChangeReviewModelTest(BaseTestCase):
     def setUp(self):
         super().setUp()
-        self.asset = baker.make(
-            Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH, language="ar"
-        )
+        self.asset = baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH, language="ar")
         self.version = baker.make(AssetVersion, asset=self.asset)
         self.surah = baker.make(Surah, id=1, name="الفاتحة", ayahs_count=3)
         self.ayah = baker.make(Ayah, id=1, surah=self.surah, number_in_surah=1, text="a")

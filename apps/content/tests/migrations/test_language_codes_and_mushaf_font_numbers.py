@@ -95,7 +95,7 @@ class NumberMushafFontVersionsTests(BaseTestCase):
         # Arrange
         tafsir = baker.make(
             Asset,
-            category=CategoryChoice.TAFSIR,
+            category=CategoryChoice.TEXT,
             status=StatusChoice.READY,
             language="ar",
             template=AssetTemplateChoice.AYAH,

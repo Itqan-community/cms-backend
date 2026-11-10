@@ -26,21 +26,9 @@ class BackfillAssetColumnsTests(BaseTestCase):
     def _run(self) -> None:
         migration.backfill(django_apps, SimpleNamespace(connection=connection))
 
-    def test_backfill_where_text_asset_has_no_column_should_create_text_column(self):
-        # Arrange
-        tafsir = baker.make(Asset, category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.AYAH)
-        mushaf = baker.make(Asset, category=CategoryChoice.MUSHAF)
-
-        # Act
-        self._run()
-
-        # Assert
-        self.assertEqual(list(AssetColumn.objects.filter(asset=tafsir).values_list("key", flat=True)), ["text"])
-        self.assertFalse(AssetColumn.objects.filter(asset=mushaf).exists())
-
     def test_backfill_where_asset_already_has_columns_should_not_add_text(self):
         # Arrange
-        tafsir = baker.make(Asset, category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.AYAH)
+        tafsir = baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH)
         AssetColumn.objects.create(asset=tafsir, key="question", order=0)
 
         # Act
@@ -51,7 +39,7 @@ class BackfillAssetColumnsTests(BaseTestCase):
 
     def test_backfill_where_committed_version_has_no_keys_should_freeze_text(self):
         # Arrange
-        tafsir = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH)
+        tafsir = baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH)
         committed = baker.make(AssetVersion, asset=tafsir, state=VersionStateChoice.PUBLISHED)
         draft = baker.make(AssetVersion, asset=tafsir, state=VersionStateChoice.DRAFT)
 
@@ -70,7 +58,7 @@ class RequireAssetColumnsMigrationTests(QuranDataMixin, BaseTestCase):
         # Arrange — moving a cell to another column queues a deferred FK check, as the
         # catch-up backfill does for rows the previous release wrote mid-deploy
         self.bake_quran()
-        tafsir = baker.make(Asset, category=CategoryChoice.TAFSIR, template=AssetTemplateChoice.AYAH)
+        tafsir = baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH)
         text = AssetColumn.objects.create(asset=tafsir, key="text", order=0)
         other = AssetColumn.objects.create(asset=tafsir, key="other", order=1)
         version = baker.make(AssetVersion, asset=tafsir)

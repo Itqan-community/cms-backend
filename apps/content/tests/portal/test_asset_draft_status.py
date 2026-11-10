@@ -13,12 +13,11 @@ from apps.users.models import User
 FORM_TYPES = {
     "mushafs": (CategoryChoice.MUSHAF, "MUSHAF", {}),
     "fonts": (CategoryChoice.FONT, "FONT", {}),
-    "tafsirs": (CategoryChoice.TAFSIR, "TAFSIR", {"template": "ayah"}),
-    "translations": (CategoryChoice.TRANSLATION, "TRANSLATION", {"template": "ayah"}),
+    "text-assets": (CategoryChoice.TEXT, "TEXT_ASSET", {"template": "ayah", "tags": "tafsir"}),
 }
 
-# The translation PATCH endpoint reads JSON; the others read a form.
-JSON_PATCH_TYPES = frozenset({"translations"})
+# Every form endpoint reads a form on PATCH.
+JSON_PATCH_TYPES: frozenset[str] = frozenset()
 
 
 class AssetDraftStatusTest(BaseTestCase):
@@ -89,7 +88,7 @@ class AssetDraftStatusTest(BaseTestCase):
                     category=category,
                     publisher=self.publisher,
                     status=StatusChoice.DRAFT,
-                    template="ayah" if kind in ("tafsirs", "translations") else None,
+                    template="ayah" if kind in ("text-assets", "text-assets") else None,
                     name=f"Draft {kind}",
                     license="CC-BY",
                 )

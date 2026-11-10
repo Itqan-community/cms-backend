@@ -8,7 +8,7 @@ from apps.core.tests.base import BaseTestCase
 class AssetTemplateImmutabilityTests(BaseTestCase):
     def test_save_where_template_changed_should_raise_itqan_error(self):
         # Arrange
-        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH)
+        asset = baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH)
         reloaded = Asset.objects.get(pk=asset.pk)
         reloaded.template = AssetTemplateChoice.SURAH
 
@@ -23,7 +23,7 @@ class AssetTemplateImmutabilityTests(BaseTestCase):
         second = baker.make(MushafLayout, name="Indo-Pak 611", page_count=611)
         asset = baker.make(
             Asset,
-            category=CategoryChoice.TRANSLATION,
+            category=CategoryChoice.TEXT,
             template=AssetTemplateChoice.PAGE,
             mushaf_layout=first,
         )
@@ -37,7 +37,7 @@ class AssetTemplateImmutabilityTests(BaseTestCase):
 
     def test_save_where_template_unchanged_should_save_other_fields(self):
         # Arrange
-        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH)
+        asset = baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH)
         reloaded = Asset.objects.get(pk=asset.pk)
         reloaded.description = "updated"
 
@@ -49,14 +49,14 @@ class AssetTemplateImmutabilityTests(BaseTestCase):
 
     def test_save_where_asset_is_new_should_not_raise(self):
         # Arrange / Act
-        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.WORD)
+        asset = baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.WORD)
 
         # Assert
         self.assertEqual(asset.template, AssetTemplateChoice.WORD)
 
     def test_from_db_where_only_defers_template_should_not_recurse(self):
         # Arrange
-        baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH)
+        baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH)
 
         # Act
         assets = list(Asset.objects.only("id", "name"))
@@ -66,7 +66,7 @@ class AssetTemplateImmutabilityTests(BaseTestCase):
 
     def test_from_db_where_defer_excludes_template_should_not_recurse(self):
         # Arrange
-        baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH)
+        baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH)
 
         # Act
         assets = list(Asset.objects.defer("template"))
@@ -76,7 +76,7 @@ class AssetTemplateImmutabilityTests(BaseTestCase):
 
     def test_save_where_deferred_instance_edits_unrelated_field_should_not_raise(self):
         # Arrange
-        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH)
+        asset = baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH)
         deferred = Asset.objects.only("id", "name", "description").get(pk=asset.pk)
         deferred.description = "touched via deferred instance"
 
@@ -88,7 +88,7 @@ class AssetTemplateImmutabilityTests(BaseTestCase):
 
     def test_save_where_refreshed_after_external_update_should_not_raise(self):
         # Arrange
-        asset = baker.make(Asset, category=CategoryChoice.TRANSLATION, template=AssetTemplateChoice.AYAH)
+        asset = baker.make(Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH)
         instance = Asset.objects.get(pk=asset.pk)
         Asset.objects.filter(pk=asset.pk).update(template=AssetTemplateChoice.SURAH)
         instance.refresh_from_db()

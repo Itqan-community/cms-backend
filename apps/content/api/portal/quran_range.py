@@ -15,7 +15,7 @@ from apps.core.permission_utils import check_permission
 from apps.core.permissions import PermissionChoice
 from apps.quran.models import Ayah, Word
 
-router = ItqanRouter(tags=[NinjaTag.TRANSLATIONS])
+router = ItqanRouter(tags=[NinjaTag.TEXT_ASSETS])
 
 # Units returned for one range; a longer range is cut here and flagged `truncated`.
 QURAN_RANGE_LIMIT = 1000
@@ -48,7 +48,7 @@ def quran_range(
 ):
     """The ayahs (or, with both word params, the words) of a range, in mushaf order."""
     check_permission(
-        request.user, PermissionChoice.PORTAL_READ_TAFSIR, raise_exception=True, publisher=request.publisher
+        request.user, PermissionChoice.PORTAL_READ_TEXT_ASSET, raise_exception=True, publisher=request.publisher
     )
     words = from_word is not None or to_word is not None
     spec = unit_spec_for_template(AssetTemplateChoice.WORD_GROUP if words else AssetTemplateChoice.AYAH_GROUP)

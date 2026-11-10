@@ -91,7 +91,7 @@ _USAGE_KIND_WEIGHT = {
 
 def _visible_asset_values() -> list[dict]:
     """READY, publicly-visible assets, as plain dicts for cheap in-memory scoring."""
-    return list(
+    assets = list(
         Asset.objects.filter(
             status=StatusChoice.READY,
             in_public_api=True,
@@ -99,6 +99,14 @@ def _visible_asset_values() -> list[dict]:
         .filter(consumer_visible_q())
         .values("id", "category", "reciter_id", "riwayah_id", "qiraah_id")
     )
+    tag_ids: dict[int, set[int]] = defaultdict(set)
+    rows = Asset.tags.through.objects.filter(asset_id__in=[a["id"] for a in assets])
+    for asset_id, tag_id in rows.values_list("asset_id", "assettag_id"):
+        tag_ids[asset_id].add(tag_id)
+    for a in assets:
+        # A tafsir is similar to other tafsirs, not to every text asset: text assets match by tag.
+        a["kinds"] = frozenset(tag_ids[a["id"]]) if a["category"] == CategoryChoice.TEXT else frozenset({a["category"]})
+    return assets
 
 
 def _build_facet_index(assets: list[dict]):
@@ -106,7 +114,7 @@ def _build_facet_index(assets: list[dict]):
     by_reciter: dict[int, set[int]] = defaultdict(set)
     by_riwayah: dict[int, set[int]] = defaultdict(set)
     by_qiraah: dict[int, set[int]] = defaultdict(set)
-    by_category: dict[str, set[int]] = defaultdict(set)
+    by_category: dict[str | int, set[int]] = defaultdict(set)
     asset_by_id: dict[int, dict] = {}
 
     for a in assets:
@@ -117,7 +125,8 @@ def _build_facet_index(assets: list[dict]):
             by_riwayah[a["riwayah_id"]].add(a["id"])
         if a["qiraah_id"]:
             by_qiraah[a["qiraah_id"]].add(a["id"])
-        by_category[a["category"]].add(a["id"])
+        for kind in a["kinds"]:
+            by_category[kind].add(a["id"])
 
     return by_reciter, by_riwayah, by_qiraah, by_category, asset_by_id
 
@@ -131,7 +140,8 @@ def _candidate_ids(a: dict, by_reciter, by_riwayah, by_qiraah, by_category) -> s
         candidates |= by_riwayah[a["riwayah_id"]]
     if a["qiraah_id"]:
         candidates |= by_qiraah[a["qiraah_id"]]
-    candidates |= by_category[a["category"]]
+    for kind in a["kinds"]:
+        candidates |= by_category[kind]
     return candidates
 
 
@@ -146,7 +156,7 @@ def _pair_score(a: dict, other: dict) -> int:
         score += _WEIGHT_RIWAYAH
     elif a["qiraah_id"] and a["qiraah_id"] == other["qiraah_id"]:
         score += _WEIGHT_QIRAAH
-    if a["category"] == other["category"]:
+    if a["kinds"] & other["kinds"]:
         score += _WEIGHT_CATEGORY
 
     return score
@@ -268,6 +278,7 @@ def hydrate_visible_assets_in_order(asset_ids: list[int]) -> list[Asset]:
         )
         .filter(consumer_visible_q())
         .select_related("publisher", "reciter", "riwayah", "qiraah")
+        .prefetch_related("tags")
     )
 
     by_id = {a.id: a for a in qs}
