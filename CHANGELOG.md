@@ -1,3 +1,29 @@
+## v1.0.0 (2026-11-13)
+
+### BREAKING CHANGE
+
+- restricted_for_tenant is removed. The migration turns every
+channel on for every asset, so assets that were limited to their publisher's
+tenant become visible on all surfaces.
+- ?folder= is no longer accepted on the public, tenant and
+internal recitation endpoints; it returns 400 folder_param_renamed. The
+folders field on recitation lists is now qualities, and folder_not_found is
+now quality_not_found.
+
+### Feat
+
+- **content**: choose each asset's distribution channels
+- **content**: rename recitation folders to qualities
+- **portal**: let publishers mark any asset as a draft
+- **content**: allow deleting a sole published version and say why others can't
+- **content**: filter page-template entries by page number
+- **review**: filter review changes by the grid's column filters (#582)
+
+### Fix
+
+- **deploy**: stop staging caddy crash-looping on prod-only origin cert
+- **content**: address review on version deletion
+
 ## v0.25.1 (2026-10-29)
 
 ### Fix
