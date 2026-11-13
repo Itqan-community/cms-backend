@@ -1005,7 +1005,7 @@ One engine (`apps/usage_tracking/services/usage_reports.py`, queries in
 hourly series and hour-of-week); unique metrics (`unique_listeners`, `unique_downloaders`,
 `unique_end_users`) count distinct identities in `TrafficEvent`, or sum `TrafficMonthlyUniques`
 when the range starts before event retention (`uniques_basis`). Dates are inclusive UTC days
-(≤ 3660 days; hourly ≤ 31). Responses are cached per scope, language and parameters for
+(≤ 3660 days; hourly ≤ 31; daily series ≤ 186, else `invalid_granularity`). Responses are cached per scope, language and parameters for
 `USAGE_REPORTS_CACHE_SECONDS` (600).
 
 | Scope | Endpoints | Access |
@@ -1021,7 +1021,9 @@ when the range starts before event retention (`uniques_basis`). Dates are inclus
   unidentified apps were seen, `latest_version_share` (with `asset_id`), localized metric
   `definitions`, `disclaimers` (`lower_bound`, `uniques_estimated`, `hourly_delay`) and
   `data_updated_at` (newest error-free Logpush or fold-in run).
-- **timeseries:** zero-filled `hour|day|week|month` buckets (weeks start Monday); `split_by` keeps
+- **timeseries:** zero-filled `hour|day|week|month` buckets, truncated in the database (ISO weeks,
+  Monday to Sunday); `partial_buckets` lists the first/last week or month the range only partly
+  covers, and the query count does not change with the granularity. `split_by` keeps
   the top N (`top`, default 8) and folds the rest into the `__other__` series; `compare=previous_period` adds an
   aligned `previous` series.
 - **breakdown:** `by=asset|surah|country|channel|platform|app|version|language|kind|endpoint|reciter|riwayah|qiraah|hour_of_week`
@@ -1030,7 +1032,7 @@ when the range starts before event retention (`uniques_basis`). Dates are inclus
   are also `split_by` values for timeseries.
 - **listeners / cohorts / first-seen** (recitations; events only): a listener's first seen is
   their earliest counted audio event since the retention cutoff. `listeners` gives `new`,
-  `returning` and `cumulative` per day/week/month; `cohorts` weekly cohorts (≤ 182 days) with the
+  `returning` and `cumulative` per day/week/month (with `partial_buckets`); `cohorts` weekly cohorts (≤ 182 days) with the
   share active in each later week; `first-seen` the first play per country or app (`new` within
   the range). Ranges starting before retention are clamped (`clamped_start`); ranges ending
   before it return `range_before_retention`.
@@ -1043,8 +1045,8 @@ when the range starts before event retention (`uniques_basis`). Dates are inclus
 - **export:** CSV of the additive metrics per period and asset (admin adds the publisher); names
   that start like a spreadsheet formula are prefixed with `'`.
 - **reconciliation:** R2 reads, edge requests and unseen (`max(reads − edge, 0)` per object-hour)
-  in total, per asset and per day.
-- **Errors:** `invalid_range`, `range_too_large`, `invalid_metric_for_kind`, `invalid_dimension`,
+  in total, per asset and per `granularity` bucket (`day|week|month`, in `days`, with `partial_buckets`).
+- **Errors:** `invalid_range`, `range_too_large`, `invalid_granularity`, `invalid_metric_for_kind`, `invalid_dimension`,
   `invalid_timezone`, `range_before_retention`, `asset_not_found`, `app_not_found`,
   `usage_counts_disabled`.
 

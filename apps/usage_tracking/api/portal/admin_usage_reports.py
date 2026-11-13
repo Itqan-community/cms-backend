@@ -127,7 +127,11 @@ def admin_usage_leaderboard(
 )
 def admin_usage_reconciliation(request: Request, params: ReconciliationQuery = Query(...)):
     return usage_reports.reconciliation(
-        _scope(request, params.publisher_id), params.start_date, params.end_date, params.limit
+        _scope(request, params.publisher_id),
+        params.start_date,
+        params.end_date,
+        params.limit,
+        granularity=params.granularity,
     )
 
 
