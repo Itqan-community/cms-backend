@@ -14,6 +14,8 @@ from apps.core.permissions import PermissionChoice
 router = ItqanRouter(tags=[NinjaTag.AI])
 
 FieldKey = Literal["name", "description", "long_description", "bio", "version_name", "version_summary"]
+# Fields "Write from the web" can also write in Arabic.
+WebFieldKey = Literal["description", "long_description", "bio"]
 # Caps a single request well inside the free-tier token budget.
 MAX_FIELD_LENGTH = 8000
 
@@ -39,10 +41,21 @@ class AiTranslateIn(Schema):
         default=None,
         description="When set (asset create forms), the same call also suggests the new asset's package slug.",
     )
+    reference: dict[FieldKey, str] = Field(
+        default_factory=dict,
+        description="Arabic values of fields whose English is already filled: context only, never returned.",
+    )
+    fill_arabic: list[WebFieldKey] = Field(
+        default_factory=list,
+        description="`web` mode only: fields whose Arabic is empty, to write in Arabic too (see `fields_ar`).",
+    )
 
 
 class AiTranslateOut(Schema):
     fields: dict[str, str] = Field(..., description="English values for the requested fields.")
+    fields_ar: dict[str, str] = Field(
+        ..., description="Arabic values written in `web` mode for the requested `fill_arabic` fields."
+    )
     sources: list[str] = Field(..., description="Web pages used in `web` mode.")
     slug: str | None = Field(
         ..., description="Suggested package slug for `slug_for`; send it back as `slug` when creating the asset."
@@ -68,13 +81,24 @@ class AiTranslateOut(Schema):
     ]
 )
 def ai_translate(request: Request, data: AiTranslateIn):
-    """Translate Arabic asset metadata to English with the free-tier Gemini API (create forms only)."""
+    """Translate Arabic asset metadata to English with the free-tier Gemini API (create forms only).
+
+    `web` mode can also write empty Arabic description fields (`fill_arabic` → `fields_ar`).
+    """
     fields = {key: value[:MAX_FIELD_LENGTH] for key, value in data.fields.items()}
+    reference = {key: value[:MAX_FIELD_LENGTH] for key, value in data.reference.items()}
     result = AiTranslationService().translate(
         mode=data.mode,
         category=data.category,
         fields=fields,
         context=dict(data.context),
         slug_for=data.slug_for.model_dump() if data.slug_for else None,
+        reference=reference,
+        fill_arabic=list(data.fill_arabic),
     )
-    return 200, {"fields": result.fields, "sources": result.sources, "slug": result.slug}
+    return 200, {
+        "fields": result.fields,
+        "fields_ar": result.fields_ar,
+        "sources": result.sources,
+        "slug": result.slug,
+    }
