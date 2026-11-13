@@ -1885,10 +1885,6 @@ msgstr[4] "مدخلاً"
 msgstr[5] "مدخل"
 
 #, python-brace-format
-#~ msgid "Provided asset_id {asset_id} does not match text asset id {expected_id}."
-#~ msgstr "معرّف الأصل {asset_id} لا يطابق معرّف الأصل النصي {expected_id}."
-
-#, python-brace-format
 #~ msgid "Tafsir with slug {slug} not found."
 #~ msgstr "لم يتم العثور على التفسير بالمعرّف {slug}."
 
