@@ -43,7 +43,11 @@ class IssueReportPortalApiTests(BaseTestCase):
 
     def test_create_issue_report_with_correct_data_should_return_201(self):
         self.authenticate_user(self.staff_user)
-        payload = {"asset_id": self.asset.id, "description": "API Test Issue Report"}
+        payload = {
+            "asset_id": self.asset.id,
+            "description": "API Test Issue Report",
+            "context": {"surah": 1, "ayah": 1},
+        }
 
         response = self.client.post("/portal/issue-reports/", payload, format="json")
 
@@ -300,7 +304,11 @@ class IssueReportPortalPublisherScopeTests(BaseTestCase):
     def test_create_issue_report_where_no_tenant_should_allow_any_publishers_asset(self):
         # Arrange — gallery consumers report on any asset without X-Tenant
         self.authenticate_user(self.member)
-        payload = {"asset_id": self.other_report.asset_id, "description": "Consumer report from the gallery."}
+        payload = {
+            "asset_id": self.other_report.asset_id,
+            "description": "Consumer report from the gallery.",
+            "context": {"surah": 1, "ayah": 1},
+        }
 
         # Act
         response = self.client.post("/portal/issue-reports/", payload, format="json")
