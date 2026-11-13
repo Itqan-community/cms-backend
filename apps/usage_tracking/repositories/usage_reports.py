@@ -169,23 +169,24 @@ def rollup_totals(
 def unique_totals(
     base_q: Q, periods: dict[str, Period], metrics: dict[str, tuple[Sequence[str], Sequence[str], str]]
 ) -> dict[str, dict[str, int]]:
-    """Per period: each unique metric's distinct identities, from traffic events."""
-    if not periods or not metrics:
-        return {name: {} for name in periods}
-    annotations = {
-        f"{period_name}__{metric}": Count(
-            identity, distinct=True, filter=period.events_q() & _unique_q(kinds, statuses, identity)
-        )
-        for period_name, period in periods.items()
-        for metric, (kinds, statuses, identity) in metrics.items()
-    }
-    start = min(period.start for period in periods.values())
-    end = max(period.end for period in periods.values())
-    row = TrafficEvent.objects.filter(base_q, Period(start, end).events_q(), is_bot=False).aggregate(**annotations)
+    """Per period: each unique metric's distinct identities, from traffic events.
+
+    One query per metric, with its kinds, statuses and identity in the WHERE clause: API calls are
+    almost every event, so a query narrowed only by time reads the whole table (minutes in production).
+    `traffic_event_kind_time_idx` and `traffic_event_end_user_idx` serve these filters.
+    """
     result: dict[str, dict[str, int]] = {name: {} for name in periods}
-    for key, value in row.items():
-        period_name, metric = key.split("__", 1)
-        result[period_name][metric] = int(value or 0)
+    if not periods or not metrics:
+        return result
+    span = Period(min(period.start for period in periods.values()), max(period.end for period in periods.values()))
+    for metric, (kinds, statuses, identity) in metrics.items():
+        row = TrafficEvent.objects.filter(
+            base_q, span.events_q(), _unique_q(kinds, statuses, identity), is_bot=False
+        ).aggregate(
+            **{name: Count(identity, distinct=True, filter=period.events_q()) for name, period in periods.items()}
+        )
+        for name, value in row.items():
+            result[name][metric] = int(value or 0)
     return result
 
 
