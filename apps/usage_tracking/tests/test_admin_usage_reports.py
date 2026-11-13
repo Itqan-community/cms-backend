@@ -132,6 +132,57 @@ class TestAdminUsageReports(BaseTestCase):
         }
         assert body["days"][2] == {"t": "2026-10-12", "reads": 13, "edge_requests": 7, "unseen": 8}
         assert len(body["days"]) == 7
+        assert body["granularity"] == "day"
+        assert body["partial_buckets"] == []
+
+    def test_reconciliation_where_weekly_should_sum_each_iso_week_and_flag_partial_weeks(self):
+        # Arrange
+        self.authenticate_user(self.staff)
+        R2ObjectReadsHourly.objects.create(
+            hour=datetime(2026, 10, 10, 3, tzinfo=UTC),
+            object_key="a/1",
+            asset_id=self.asset.id,
+            reads=4,
+            edge_requests=0,
+        )
+        R2ObjectReadsHourly.objects.create(
+            hour=datetime(2026, 10, 12, 3, tzinfo=UTC),
+            object_key="a/1",
+            asset_id=self.asset.id,
+            reads=6,
+            edge_requests=0,
+        )
+        R2ObjectReadsHourly.objects.create(
+            hour=datetime(2026, 10, 16, 23, tzinfo=UTC),
+            object_key="a/1",
+            asset_id=self.asset.id,
+            reads=1,
+            edge_requests=0,
+        )
+
+        # Act
+        response = self.client.get(f"{BASE}/reconciliation/?{RANGE}&granularity=week")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        assert body["granularity"] == "week"
+        assert body["days"] == [
+            {"t": "2026-10-05", "reads": 4, "edge_requests": 0, "unseen": 4},
+            {"t": "2026-10-12", "reads": 7, "edge_requests": 0, "unseen": 7},
+        ]
+        assert body["partial_buckets"] == ["2026-10-05", "2026-10-12"]
+
+    def test_reconciliation_where_daily_over_a_year_should_return_400(self):
+        # Arrange
+        self.authenticate_user(self.staff)
+
+        # Act
+        response = self.client.get(f"{BASE}/reconciliation/?start_date=2025-10-17&end_date=2026-10-16")
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("invalid_granularity", response.json()["error_name"])
 
     def test_export_where_staff_should_include_publisher_columns(self):
         # Arrange

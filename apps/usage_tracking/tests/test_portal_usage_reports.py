@@ -228,3 +228,56 @@ class TestPortalUsageReports(BaseTestCase):
 
         # Assert
         assert counts[0] == counts[1]
+
+    def test_timeseries_where_daily_over_a_year_should_return_400(self):
+        # Arrange
+        self._allow()
+
+        # Act
+        response = self._get("timeseries/?start_date=2025-10-17&end_date=2026-10-16&granularity=day")
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("invalid_granularity", body["error_name"])
+        assert "186" in body["message"]
+
+    def test_timeseries_where_granularity_is_unknown_should_return_400(self):
+        # Arrange
+        self._allow()
+
+        # Act
+        response = self._get(f"timeseries/?{RANGE}&granularity=fortnight")
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("validation_error", response.json()["error_name"])
+
+    def test_timeseries_where_weekly_should_bucket_by_iso_week_and_flag_partial_weeks(self):
+        # Arrange
+        self._allow()
+
+        # Act
+        response = self._get(f"timeseries/?{RANGE}&metric=plays&granularity=week")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        assert body["granularity"] == "week"
+        assert body["series"][0]["points"] == [{"t": "2026-10-05", "value": 0}, {"t": "2026-10-12", "value": 5}]
+        assert body["partial_buckets"] == ["2026-10-05", "2026-10-12"]
+
+    def test_timeseries_where_daily_over_a_year_in_arabic_should_localize_the_message(self):
+        # Arrange
+        self.authenticate_user(self.user, language="ar")
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_USAGE)
+
+        # Act
+        response = self._get("timeseries/?start_date=2025-10-17&end_date=2026-10-16&granularity=day")
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("invalid_granularity", body["error_name"])
+        assert "186" in body["message"]
+        assert "Daily" not in body["message"]

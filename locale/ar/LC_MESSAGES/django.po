@@ -1273,6 +1273,10 @@ msgid "Hourly reports are limited to {days} days."
 msgstr "التقارير بالساعة محدودة بـ {days} يومًا."
 
 #, python-brace-format
+msgid "Daily series are limited to {days} days. Choose weekly or monthly buckets."
+msgstr "السلاسل اليومية محدودة بـ {days} يومًا. اختر التجميع الأسبوعي أو الشهري."
+
+#, python-brace-format
 msgid "The metric {metric} does not apply to {kind} traffic."
 msgstr "المقياس {metric} لا ينطبق على حركة {kind}."
 
@@ -1879,6 +1883,10 @@ msgstr[2] "مدخلان"
 msgstr[3] "مدخلات"
 msgstr[4] "مدخلاً"
 msgstr[5] "مدخل"
+
+#, python-brace-format
+#~ msgid "Provided asset_id {asset_id} does not match text asset id {expected_id}."
+#~ msgstr "معرّف الأصل {asset_id} لا يطابق معرّف الأصل النصي {expected_id}."
 
 #, python-brace-format
 #~ msgid "Tafsir with slug {slug} not found."
