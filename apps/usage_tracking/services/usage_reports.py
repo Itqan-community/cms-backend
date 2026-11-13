@@ -53,9 +53,13 @@ Metric = Literal[
     "listening_seconds",
 ]
 Granularity = Literal["hour", "day", "week", "month"]
+# Buckets of the charts that never go hourly (listener growth, unseen traffic).
+SeriesGranularity = Literal["day", "week", "month"]
 
 MAX_RANGE_DAYS = 3660
 MAX_HOURLY_DAYS = 31
+# Longer daily series are unreadable; weekly or monthly buckets cover them.
+MAX_DAILY_DAYS = 186
 EARLIEST_START_DATE = date(2000, 1, 1)
 # Leaves room for "end of day" / "next month" arithmetic without overflowing `date.max`.
 LATEST_END_DATE = date(9999, 11, 30)
@@ -175,6 +179,16 @@ def validate_filters(filters: ReportFilters, *, granularity: str = "day") -> Non
         )
 
 
+def check_granularity(filters: ReportFilters, granularity: str) -> None:
+    """Reject series buckets too fine for the range (the CSV export accepts any day range)."""
+    if granularity == "day" and range_days(filters.start_date, filters.end_date) > MAX_DAILY_DAYS:
+        raise ItqanError(
+            "invalid_granularity",
+            _("Daily series are limited to {days} days. Choose weekly or monthly buckets.").format(days=MAX_DAILY_DAYS),
+            400,
+        )
+
+
 def metric_kinds(metric: str) -> tuple[str, ...] | None:
     if metric in UNIQUE_METRICS:
         return UNIQUE_METRICS[metric].kinds
@@ -280,7 +294,7 @@ def cached(namespace: str, identity: list[Any], compute: Callable[[], Any], seco
     if seconds <= 0:
         return compute()
     raw = json.dumps([namespace, get_language(), identity], default=str, sort_keys=True)
-    key = f"usage-report:v1:{namespace}:{hashlib.sha256(raw.encode()).hexdigest()}"
+    key = f"usage-report:v2:{namespace}:{hashlib.sha256(raw.encode()).hexdigest()}"
     value = cache.get(key)
     if value is None:
         value = compute()
@@ -505,6 +519,24 @@ def bucket_starts(start: date, end: date, granularity: str) -> list[Bucket]:
     return buckets
 
 
+def partial_buckets(start: date, end: date, granularity: str, buckets: list[Bucket]) -> list[str]:
+    """Week (ISO, Monday to Sunday) and month buckets the range cuts: only the first and last can be."""
+    if granularity not in ("week", "month") or not buckets:
+        return []
+    if granularity == "week":
+        first_cut = start.weekday() != 0
+        last_cut = end.weekday() != 6
+    else:
+        first_cut = start.day != 1
+        last_cut = (end + timedelta(days=1)).day != 1
+    partial = []
+    if first_cut:
+        partial.append(buckets[0].isoformat())
+    if last_cut and (len(buckets) > 1 or not first_cut):
+        partial.append(buckets[-1].isoformat())
+    return partial
+
+
 def _points(buckets: list[Bucket], values: dict[Any, int | None]) -> list[dict[str, Any]]:
     return [{"t": bucket.isoformat(), "value": values.get(bucket, 0)} for bucket in buckets]
 
@@ -596,6 +628,7 @@ def timeseries(
     compare: bool = False,
 ) -> dict[str, Any]:
     validate_filters(filters, granularity=granularity)
+    check_granularity(filters, granularity)
     check_metric_kind(metric, filters)
     check_dimension(scope, split_by, scope.dimensions - {"hour_of_week"})
     check_scope(scope, filters)
@@ -619,6 +652,7 @@ def timeseries(
         return {
             "metric": metric,
             "granularity": granularity,
+            "partial_buckets": partial_buckets(period.start, period.end, granularity, buckets),
             "series": series,
             "previous": previous,
             "data_updated_at": repo.data_updated_at(),
@@ -775,6 +809,7 @@ def listeners(scope: ReportScope, filters: ReportFilters, *, granularity: str = 
     First seen counts from the retention cutoff, so listeners active before it look new.
     """
     validate_filters(filters)
+    check_granularity(filters, granularity)
     check_scope(scope, filters)
 
     def compute() -> dict[str, Any]:
@@ -802,6 +837,7 @@ def listeners(scope: ReportScope, filters: ReportFilters, *, granularity: str = 
             )
         return {
             "granularity": granularity,
+            "partial_buckets": partial_buckets(period.start, period.end, granularity, buckets),
             "points": points,
             "clamped_start": clamped,
             "data_updated_at": repo.data_updated_at(),
@@ -1034,17 +1070,22 @@ def export_csv(scope: ReportScope, filters: ReportFilters, granularity: str = "d
 # ---------------------------------------------------------------------------------------------
 
 
-def reconciliation(scope: ReportScope, start_date: date, end_date: date, limit: int = 20) -> dict[str, Any]:
-    validate_filters(ReportFilters(start_date=start_date, end_date=end_date))
+def reconciliation(
+    scope: ReportScope, start_date: date, end_date: date, limit: int = 20, granularity: str = "day"
+) -> dict[str, Any]:
+    filters = ReportFilters(start_date=start_date, end_date=end_date)
+    validate_filters(filters)
+    check_granularity(filters, granularity)
 
     def compute() -> dict[str, Any]:
         period = Period(start_date, end_date)
-        data = repo.reconciliation(scope.q(), period, limit)
+        data = repo.reconciliation(scope.q(), period, limit, granularity)
 
         def numbers(row: dict[str, Any]) -> dict[str, int]:
             return {"reads": int(row["m_reads"]), "edge_requests": int(row["m_edge"]), "unseen": int(row["m_unseen"])}
 
-        by_day = {row["bucket"].date(): numbers(row) for row in data["days"]}
+        by_bucket = {row["bucket"].date(): numbers(row) for row in data["days"]}
+        buckets = bucket_starts(start_date, end_date, granularity)
         zero = {"reads": 0, "edge_requests": 0, "unseen": 0}
         names = _labels("asset", [str(row["asset_id"]) for row in data["assets"] if row["asset_id"] is not None])
         return {
@@ -1057,13 +1098,14 @@ def reconciliation(scope: ReportScope, start_date: date, end_date: date, limit: 
                 }
                 for row in data["assets"]
             ],
-            "days": [
-                {"t": day.isoformat(), **by_day.get(day, zero)} for day in bucket_starts(start_date, end_date, "day")
-            ],
+            "granularity": granularity,
+            "partial_buckets": partial_buckets(start_date, end_date, granularity, buckets),
+            "days": [{"t": bucket.isoformat(), **by_bucket.get(bucket, zero)} for bucket in buckets],
             "data_updated_at": repo.data_updated_at(),
         }
 
-    return _cached(scope, "reconciliation", {"start": start_date, "end": end_date, "limit": limit}, compute)
+    params = {"start": start_date, "end": end_date, "limit": limit, "g": granularity}
+    return _cached(scope, "reconciliation", params, compute)
 
 
 # ---------------------------------------------------------------------------------------------

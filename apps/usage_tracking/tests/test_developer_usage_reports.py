@@ -152,3 +152,29 @@ class TestDeveloperUsageReports(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         assert response.json()["series"][0]["points"][2] == {"t": "2026-10-12", "value": 42}
+
+    def test_timeseries_where_monthly_should_return_own_monthly_buckets(self):
+        # Arrange
+        self.authenticate_user(self.user)
+
+        # Act
+        response = self.client.get(
+            f"{BASE}/timeseries/?start_date=2026-09-15&end_date=2026-10-31&metric=api_calls&granularity=month"
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        assert body["series"][0]["points"] == [{"t": "2026-09-01", "value": 0}, {"t": "2026-10-01", "value": 42}]
+        assert body["partial_buckets"] == ["2026-09-01"]
+
+    def test_timeseries_where_daily_over_a_year_should_return_400(self):
+        # Arrange
+        self.authenticate_user(self.user)
+
+        # Act
+        response = self.client.get(f"{BASE}/timeseries/?start_date=2025-10-17&end_date=2026-10-16&granularity=day")
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("invalid_granularity", response.json()["error_name"])

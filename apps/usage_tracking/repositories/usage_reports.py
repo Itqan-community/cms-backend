@@ -21,7 +21,6 @@ from django.db.models.functions import (
     ExtractIsoWeekDay,
     Greatest,
     Trunc,
-    TruncDay,
     TruncMonth,
     TruncWeek,
 )
@@ -353,7 +352,7 @@ def export_rows(
 _UNSEEN = Greatest(F("reads") - F("edge_requests"), Value(0))
 
 
-def reconciliation(asset_q: Q, period: Period, limit: int) -> dict[str, Any]:
+def reconciliation(asset_q: Q, period: Period, limit: int, granularity: str = "day") -> dict[str, Any]:
     queryset = R2ObjectReadsHourly.objects.filter(asset_q, period.hourly_q())
     metrics = {
         "m_reads": Coalesce(Sum("reads"), 0),
@@ -362,7 +361,9 @@ def reconciliation(asset_q: Q, period: Period, limit: int) -> dict[str, Any]:
     }
     total = queryset.aggregate(**metrics)
     assets = list(queryset.values("asset_id").annotate(**metrics).order_by("-m_unseen", "asset_id")[:limit])
-    days = list(queryset.annotate(bucket=TruncDay("hour", tzinfo=UTC)).values("bucket").annotate(**metrics).order_by())
+    days = list(
+        queryset.annotate(bucket=Trunc("hour", granularity, tzinfo=UTC)).values("bucket").annotate(**metrics).order_by()
+    )
     return {"total": total, "assets": assets, "days": days}
 
 
