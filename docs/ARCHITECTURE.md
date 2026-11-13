@@ -56,6 +56,15 @@ limit: retry shortly), `ai_quota_exceeded` (429, the free daily limit) or `ai_un
 With `slug_for` (asset create forms) the same call also returns the new asset's suggested `slug`
 (see Asset below), so each click is one Gemini call.
 
+`GET /portal/asset-counts/` feeds the portal home: for each asset type that has a portal list
+(text, mushaf, font, recitation) and whose read permission the caller holds at the `X-Tenant`
+publisher, it returns `total` (drafts included) and `drafts`, and for text assets a per-tag
+breakdown (an asset with two tags counts under both). It needs `portal_access` and is scoped like
+the lists (`request.publisher_q()`). It runs two `GROUP BY` queries whatever the number of assets,
+cached per scope and language with the usage reports' `cached()` helper for 60 seconds. Saving
+(category, status or publisher), deleting or retagging an asset bumps a version in the cache key,
+so the change shows on the next request.
+
 ---
 
 ## Core Domain Models
