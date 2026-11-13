@@ -248,6 +248,12 @@ class TrafficEvent(_TrafficDimensions):
                 fields=["listener_id", "asset_id", "kind", "surah", "asset_version_id", "occurred_at"],
                 name="traffic_event_session_idx",
             ),
+            # Unique-metric reports: kinds other than API calls are a small slice of the events.
+            models.Index(fields=["kind", "occurred_at"], name="traffic_event_kind_time_idx"),
+            # End-user uniques: only API calls from apps that send an end-user id have one.
+            models.Index(
+                fields=["occurred_at"], name="traffic_event_end_user_idx", condition=~models.Q(end_user_id="")
+            ),
         ]
 
 

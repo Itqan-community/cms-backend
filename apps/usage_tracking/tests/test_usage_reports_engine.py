@@ -116,6 +116,25 @@ class TestUsageReportsEngine(BaseTestCase):
         assert result["metrics"]["unique_downloaders"]["value"] == 1
         assert result["uniques_basis"] == "events"
 
+    @override_settings(USAGE_REPORTS_CACHE_SECONDS=0)
+    def test_summary_uniques_should_filter_events_by_kind_so_an_index_applies(self):
+        # Arrange: API calls are ~98% of events; a scan filtered only by time reads all of them.
+        event(at(12), "L1")
+
+        # Act
+        with CaptureQueriesContext(connection) as queries:
+            summary(admin_scope(None), WEEK)
+
+        # Assert: the main WHERE (not just an aggregate FILTER) narrows every events query to a kind.
+        event_queries = [
+            query["sql"].split('FROM "usage_tracking_trafficevent"', 1)[1]
+            for query in queries.captured_queries
+            if 'FROM "usage_tracking_trafficevent"' in query["sql"]
+        ]
+        assert len(event_queries) == 3
+        for where in event_queries:
+            assert '"usage_tracking_trafficevent"."kind"' in where, where
+
     def test_summary_where_asset_filtered_should_report_latest_version_share(self):
         # Arrange
         language = baker.make(AssetLanguage, asset=self.asset, language="ar")
@@ -429,8 +448,8 @@ class TestUsageReportsEngine(BaseTestCase):
             daily(date(2026, 10, day), sessions=day, app_id=day)
             event(at(day), f"L{day}")
 
-        # Act
-        with self.assertNumQueries(3):
+        # Act: rollup totals, one distinct count per unique metric, and the data freshness.
+        with self.assertNumQueries(5):
             result = summary(admin_scope(None), WEEK)
 
         # Assert
