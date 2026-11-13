@@ -50,7 +50,10 @@ The system serves **four distinct API surfaces**, each with their own audience a
 The portal also exposes `POST /portal/ai/translate/` for the create forms: it translates the
 Arabic name/description/bio fields to English with the Gemini free tier (`mode=translate`), or
 writes the description fields from the matching Arabic / English Wikipedia articles and returns their `sources`
-(`mode=web`). It needs any portal create permission for mushafs, text assets, fonts,
+(`mode=web`). Arabic values whose English is already filled go in `reference`: they are prompt
+context only (e.g. the Arabic description helps name the asset) and are never returned. In `web`
+mode, `fill_arabic` names description/long_description/bio fields whose Arabic is empty; the same
+call writes them in Arabic and returns them in `fields_ar`. It needs any portal create permission for mushafs, text assets, fonts,
 recitations or reciters, and returns `ai_translate_empty` (400), `ai_rate_limited` (429, a per-minute
 limit: retry shortly), `ai_quota_exceeded` (429, the free daily limit) or `ai_unavailable` (503).
 With `slug_for` (asset create forms) the same call also returns the new asset's suggested `slug`
