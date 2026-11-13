@@ -150,7 +150,7 @@ the category template with the slugified name (e.g. `mushaf-warsh`) and the tran
 `ai_unavailable` (503). Tests always run with the key blanked (`BaseTestCase`). Free-tier prompts
 may be used by Google to improve its products, so only public catalog metadata is sent.
 "Write from the web" reads the intro of the matching Arabic and English Wikipedia articles (public API,
-no key); Google Search grounding is not part of the free tier for new projects.
+no key) and fills the empty Arabic and English description fields from them; Google Search grounding is not part of the free tier for new projects.
 
 | Variable | Default | Meaning |
 |---|---|---|

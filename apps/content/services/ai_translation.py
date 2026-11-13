@@ -5,6 +5,12 @@ returns the words of the new asset's package slug (one call per click).
 ``web`` mode: the same call, plus the intro of the matching Arabic / English
 Wikipedia articles as reference notes (free; Google Search grounding is not on
 the Gemini free tier for new projects). Nothing found → plain translation.
+``web`` mode also writes the Arabic of description-like fields the admin left
+empty (``fill_arabic``), so both languages come from the same notes.
+
+``reference`` holds Arabic values whose English is already filled: they go in
+the prompt as context (e.g. the Arabic description helps name the asset) but are
+never returned.
 """
 
 from dataclasses import dataclass, field
@@ -35,7 +41,9 @@ SYSTEM_PROMPT = (
     "fonts, recitations, reciters) into clear English for a developer catalog. Transliterate names of "
     "people, books, riwayahs and qiraahs using their common English spelling (e.g. 'Mishary Rashid "
     "Alafasy', 'Hafs an Asim', 'Tafsir Ibn Kathir', 'Al-Muyassar'), never translate them literally. "
-    "Keep standard Islamic terms transliterated (tafsir, riwayah, qiraah, mushaf). Do not invent facts."
+    "Keep standard Islamic terms transliterated (tafsir, riwayah, qiraah, mushaf). Do not invent facts. "
+    "When asked for Arabic values (keys ending in _ar), write them in clear Modern Standard Arabic; the Arabic "
+    "and English values of the same field must state the same facts."
 )
 
 
@@ -44,6 +52,7 @@ class TranslationResult:
     fields: dict[str, str]
     sources: list[str] = field(default_factory=list)
     slug: str | None = None
+    fields_ar: dict[str, str] = field(default_factory=dict)
 
 
 class AiTranslationService:
@@ -65,8 +74,21 @@ class AiTranslationService:
         fields: dict[str, str],
         context: dict[str, str],
         slug_for: dict | None = None,
+        reference: dict[str, str] | None = None,
+        fill_arabic: list[str] | None = None,
     ) -> TranslationResult:
         source = {k: (v or "").strip() for k, v in fields.items() if k in FIELD_HINTS and (v or "").strip()}
+        known = {
+            k: (v or "").strip()
+            for k, v in (reference or {}).items()
+            if k in FIELD_HINTS and k not in source and (v or "").strip()
+        }
+        # Only empty Arabic fields are written, and only from the web.
+        arabic_targets = (
+            {k for k in fill_arabic or [] if k in WEB_FIELDS and k not in source and k not in known}
+            if mode == "web"
+            else set()
+        )
         slug_for = slug_for if category in SLUG_CATEGORIES else None
         wants_slug = bool(
             slug_for
@@ -76,20 +98,24 @@ class AiTranslationService:
                 or slug_for.get("reciter_id")
             )
         )
-        if not source and not wants_slug:
+        # Web mode also writes description-like fields the admin left empty in Arabic.
+        targets = set(source) | ({k for k in fields if k in WEB_FIELDS} if mode == "web" else set())
+        if not wants_slug and (not (source or known) or not (targets or arabic_targets)):
             raise ItqanError(
                 error_name="ai_translate_empty",
                 message=_("Fill in at least one Arabic field to translate."),
                 status_code=400,
             )
-        # Web mode also writes description-like fields the admin left empty in Arabic.
-        targets = set(source) | ({k for k in fields if k in WEB_FIELDS} if mode == "web" else set())
         described = "\n".join(f"{k} (Arabic): {v}" for k, v in source.items())
+        given = "\n".join(f"{k} (Arabic): {v}" for k, v in known.items())
         extra = "\n".join(f"{k}: {v.strip()}" for k, v in context.items() if (v or "").strip())
         # A recitation's own title is generic ("تلاوة ..."): the reciter is what Wikipedia knows.
         subject = (context.get("reciter") or "").strip() if category == "recitation" else ""
-        articles = self.wikipedia.lookup(subject or source.get("name", "")) if mode == "web" else []
+        name = source.get("name") or known.get("name", "")
+        articles = self.wikipedia.lookup(subject or name) if mode == "web" else []
         properties: dict[str, dict] = {k: {"type": "STRING", "description": FIELD_HINTS[k]} for k in sorted(targets)}
+        for k in sorted(arabic_targets):
+            properties[f"{k}_ar"] = {"type": "STRING", "description": f"{FIELD_HINTS[k]}, in Arabic"}
         slug_hint = ""
         if wants_slug and slug_for:
             properties["slug_words"] = {"type": "ARRAY", "items": {"type": "STRING"}}
@@ -103,7 +129,7 @@ class AiTranslationService:
         try:
             result = self.client.generate_json(
                 system=SYSTEM_PROMPT,
-                prompt=self._prompt(category, described, extra, targets, articles, slug_hint),
+                prompt=self._prompt(category, described, given, extra, targets, arabic_targets, articles, slug_hint),
                 schema={"type": "OBJECT", "properties": properties, "required": list(properties)},
             )
         except GeminiQuotaExceeded:
@@ -126,6 +152,11 @@ class AiTranslationService:
                 status_code=503,
             ) from None
         translated = {k: str(v).strip() for k, v in result.items() if k in targets and v is not None and str(v).strip()}
+        written_ar = {
+            k: str(value).strip()
+            for k in arabic_targets
+            if (value := result.get(f"{k}_ar")) is not None and str(value).strip()
+        }
         slug = (
             self.slugs.slug_from_words(
                 category=category,
@@ -138,15 +169,31 @@ class AiTranslationService:
             else None
         )
         logger.info(
-            "ai_translation: done [mode=%s, category=%s, fields=%s, slug=%s]", mode, category, sorted(translated), slug
+            "ai_translation: done [mode=%s, category=%s, fields=%s, fields_ar=%s, slug=%s]",
+            mode,
+            category,
+            sorted(translated),
+            sorted(written_ar),
+            slug,
         )
-        return TranslationResult(fields=translated, sources=[article.url for article in articles], slug=slug)
+        return TranslationResult(
+            fields=translated, sources=[article.url for article in articles], slug=slug, fields_ar=written_ar
+        )
 
     @staticmethod
     def _prompt(
-        category: str, described: str, extra: str, targets: set[str], articles: list[WikiArticle], slug_hint: str
+        category: str,
+        described: str,
+        given: str,
+        extra: str,
+        targets: set[str],
+        arabic_targets: set[str],
+        articles: list[WikiArticle],
+        slug_hint: str,
     ) -> str:
         lines = [f"Category: {category}", described] if described else [f"Category: {category}"]
+        if given:
+            lines.append(f"Already written in English (Arabic shown for context only; do not return these):\n{given}")
         if extra:
             lines.append(f"Context:\n{extra}")
         if articles:
@@ -157,6 +204,9 @@ class AiTranslationService:
             )
         if targets:
             lines.append(f"Return English values for: {', '.join(sorted(targets))}.")
+        if arabic_targets:
+            keys = ", ".join(f"{k}_ar" for k in sorted(arabic_targets))
+            lines.append(f"Also write Arabic values (Modern Standard Arabic) for: {keys}.")
         if slug_hint:
             lines.append(slug_hint)
         return "\n\n".join(lines)
