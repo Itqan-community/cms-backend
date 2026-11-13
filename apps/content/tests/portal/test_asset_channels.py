@@ -78,6 +78,26 @@ class AssetChannelsPortalTests(BaseTestCase):
                 asset.refresh_from_db()
                 self.assertEqual((False, True, True, False), tuple(getattr(asset, c) for c in CHANNELS))
 
+    def test_patch_channels_where_publisher_has_no_website_should_accept_in_tenants_on_all_types(self):
+        # The "Publisher website" checkbox is hidden for publishers without a domain, but the API
+        # still accepts and stores in_tenants as sent: no 4xx and no silent flip.
+        self.assertFalse(self.publisher.domains.exists())
+        for category, prefix, permission, kwargs in ASSET_TYPES:
+            with self.subTest(prefix):
+                # Arrange
+                self.authenticate_user(self.user)
+                self.give_permission(self.user, permission)
+                asset = self._asset(category, kwargs)
+                Asset.objects.filter(pk=asset.pk).update(in_tenants=False)
+
+                # Act
+                response = self._patch(prefix, asset, {"in_tenants": True})
+
+                # Assert
+                self.assertEqual(200, response.status_code, response.content)
+                asset.refresh_from_db()
+                self.assertTrue(asset.in_tenants)
+
     def test_put_channels_where_flags_omitted_should_default_to_true_on_all_types(self):
         for category, prefix, permission, kwargs in ASSET_TYPES:
             with self.subTest(prefix):

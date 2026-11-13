@@ -1,8 +1,10 @@
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from model_bakery import baker
 
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
-from apps.publishers.models import Publisher, PublisherMember
+from apps.publishers.models import Domain, Publisher, PublisherMember
 from apps.publishers.tests.group_helpers import admin_group, member_group
 from apps.users.models import User
 
@@ -186,3 +188,70 @@ class ListMyPublishersTest(BaseTestCase):
         for field in ("id", "name", "slug", "icon_url"):
             self.assertIn(field, pub)
         self.assertNotIn("domains", pub)
+
+    def _join(self, publisher: Publisher) -> None:
+        baker.make(
+            PublisherMember,
+            user=self.user,
+            publisher=publisher,
+            group=admin_group(),
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
+
+    def test_list_my_publishers_where_publisher_has_a_domain_should_return_has_website_true(self) -> None:
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_ACCESS)
+        with_site = baker.make(Publisher, name="Aaa With Site", slug="aaa-with-site")
+        without_site = baker.make(Publisher, name="Bbb No Site", slug="bbb-no-site")
+        self._join(with_site)
+        self._join(without_site)
+        baker.make(Domain, publisher=with_site, domain="with-site.example.com")
+        baker.make(Domain, publisher=with_site, domain="www2.with-site.example.com")
+
+        # Act
+        response = self.client.get(self.url)
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(
+            {"aaa-with-site": True, "bbb-no-site": False},
+            {p["slug"]: p["has_website"] for p in response.json()},
+        )
+
+    def test_list_my_publishers_where_only_domain_is_inactive_should_return_has_website_true(self) -> None:
+        # Arrange: an inactive domain is a site closed for maintenance, not a missing site
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_ACCESS)
+        publisher = baker.make(Publisher, slug="paused-site")
+        self._join(publisher)
+        baker.make(Domain, publisher=publisher, domain="paused.example.com", is_active=False)
+
+        # Act
+        response = self.client.get(self.url)
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertTrue(response.json()[0]["has_website"])
+
+    def test_list_my_publishers_where_more_publishers_have_domains_should_not_add_queries(self) -> None:
+        # Arrange
+        staff = baker.make(User, is_staff=True)
+        self.authenticate_user(staff)
+        self.give_permission(staff, PermissionChoice.PORTAL_ACCESS)
+        first = baker.make(Publisher, slug="pub-first")
+        baker.make(Domain, publisher=first, domain="first.example.com")
+        with CaptureQueriesContext(connection) as one_publisher:
+            self.client.get(self.url)
+        for index in range(5):
+            publisher = baker.make(Publisher, slug=f"pub-more-{index}")
+            baker.make(Domain, publisher=publisher, domain=f"more-{index}.example.com")
+
+        # Act
+        with CaptureQueriesContext(connection) as six_publishers:
+            response = self.client.get(self.url)
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(6, len(response.json()))
+        self.assertEqual(len(one_publisher.captured_queries), len(six_publishers.captured_queries))
