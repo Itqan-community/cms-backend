@@ -1,12 +1,15 @@
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 import itertools
 from unittest.mock import patch
 
 from django.core.cache import cache
+from django.db import connection
 from django.test import override_settings
+from django.test.utils import CaptureQueriesContext
 from model_bakery import baker
 
 from apps.content.models import Asset, AssetLanguage, AssetVersion, CategoryChoice, VersionStateChoice
+from apps.core.ninja_utils.errors import ItqanError
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.usage_tracking.models import (
@@ -189,7 +192,103 @@ class TestUsageReportsEngine(BaseTestCase):
 
         # Assert
         assert weekly["series"][0]["points"] == [{"t": "2026-10-05", "value": 0}, {"t": "2026-10-12", "value": 5}]
+        assert weekly["partial_buckets"] == ["2026-10-05", "2026-10-12"]
         assert monthly["series"][0]["points"] == [{"t": "2026-10-01", "value": 5}]
+        assert monthly["partial_buckets"] == ["2026-10-01"]
+
+    def test_timeseries_where_range_covers_whole_weeks_and_months_should_report_no_partial_bucket(self):
+        # Arrange
+        weeks = ReportFilters(start_date=date(2026, 10, 5), end_date=date(2026, 10, 18))
+        months = ReportFilters(start_date=date(2026, 8, 1), end_date=date(2026, 9, 30))
+
+        # Act
+        weekly = timeseries(admin_scope(None), weeks, metric="plays", granularity="week")
+        monthly = timeseries(admin_scope(None), months, metric="plays", granularity="month")
+
+        # Assert
+        assert weekly["partial_buckets"] == []
+        assert monthly["partial_buckets"] == []
+        assert [point["t"] for point in monthly["series"][0]["points"]] == ["2026-08-01", "2026-09-01"]
+
+    def test_timeseries_where_weekly_over_months_should_sum_days_and_zero_fill_empty_weeks(self):
+        # Arrange
+        daily(date(2026, 8, 3), sessions=2)  # Monday
+        daily(date(2026, 8, 9), sessions=3)  # Sunday, same ISO week
+        daily(date(2026, 8, 24), sessions=4)
+        filters = ReportFilters(start_date=date(2026, 8, 1), end_date=date(2026, 8, 31))
+
+        # Act
+        result = timeseries(admin_scope(None), filters, metric="plays", granularity="week")
+
+        # Assert
+        assert result["series"][0]["points"] == [
+            {"t": "2026-07-27", "value": 0},
+            {"t": "2026-08-03", "value": 5},
+            {"t": "2026-08-10", "value": 0},
+            {"t": "2026-08-17", "value": 0},
+            {"t": "2026-08-24", "value": 4},
+            {"t": "2026-08-31", "value": 0},
+        ]
+        assert result["partial_buckets"] == ["2026-07-27", "2026-08-31"]
+
+    def test_timeseries_where_daily_range_exceeds_limit_should_reject(self):
+        # Arrange
+        filters = ReportFilters(start_date=date(2026, 1, 1), end_date=date(2026, 7, 6))  # 187 days
+
+        # Act
+        with self.assertRaises(ItqanError) as raised:
+            timeseries(admin_scope(None), filters, metric="plays", granularity="day")
+
+        # Assert
+        assert raised.exception.error_name == "invalid_granularity"
+        assert raised.exception.status_code == 400
+
+    def test_timeseries_where_daily_range_is_at_limit_should_return_every_day(self):
+        # Arrange
+        filters = ReportFilters(start_date=date(2026, 1, 1), end_date=date(2026, 7, 5))  # 186 days
+
+        # Act
+        result = timeseries(admin_scope(None), filters, metric="plays", granularity="day")
+
+        # Assert
+        assert len(result["series"][0]["points"]) == 186
+
+    def test_timeseries_where_granularity_changes_should_not_serve_the_other_granularity_from_cache(self):
+        # Arrange
+        daily(date(2026, 10, 14), sessions=5)
+        timeseries(admin_scope(None), WEEK, metric="plays", granularity="day")
+
+        # Act
+        weekly = timeseries(admin_scope(None), WEEK, metric="plays", granularity="week")
+
+        # Assert
+        assert weekly["granularity"] == "week"
+        assert len(weekly["series"][0]["points"]) == 2
+
+    @override_settings(USAGE_REPORTS_CACHE_SECONDS=0)
+    def test_timeseries_where_granularity_is_day_week_or_month_should_use_the_same_queries(self):
+        # Arrange
+        UsageImportState.objects.create(key="logpush", last_run_at=at(16))
+        filters = ReportFilters(start_date=date(2026, 8, 1), end_date=date(2026, 10, 16))
+        counts: dict[tuple[str, str, int], int] = {}
+        for rows in (1, 40):
+            for index in range(rows):
+                daily(date(2026, 8, 1) + timedelta(days=index), sessions=1, country=f"C{rows % 7}")
+                event(datetime(2026, 8, 1, tzinfo=UTC) + timedelta(days=index), f"L{rows}-{index}")
+            for metric in ("plays", "unique_listeners"):
+                for granularity in ("day", "week", "month"):
+                    # Act
+                    with (
+                        patch.object(
+                            usage_reports, usage_reports.retention_cutoff.__name__, return_value=date(2026, 1, 1)
+                        ),
+                        CaptureQueriesContext(connection) as queries,
+                    ):
+                        timeseries(admin_scope(None), filters, metric=metric, granularity=granularity, compare=True)
+                    counts[(metric, granularity, rows)] = len(queries)
+
+        # Assert
+        assert len(set(counts.values())) == 1, counts
 
     def test_timeseries_where_hourly_should_read_hourly_rollups(self):
         # Arrange

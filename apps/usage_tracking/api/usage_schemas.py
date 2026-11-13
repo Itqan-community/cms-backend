@@ -9,7 +9,7 @@ from pydantic import AwareDatetime
 from apps.content.models import CategoryChoice
 from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.usage_tracking.models import TrafficChannel, TrafficKind, TrafficPlatform
-from apps.usage_tracking.services.usage_reports import Granularity, Metric, ReportFilters
+from apps.usage_tracking.services.usage_reports import Granularity, Metric, ReportFilters, SeriesGranularity
 
 SplitDimension = Literal[
     "asset",
@@ -33,6 +33,7 @@ AdminBreakdownDimension = BreakdownDimension | Literal["publisher"]
 REPORT_ERRORS = {
     400: NinjaErrorResponse[Literal["invalid_range"]]
     | NinjaErrorResponse[Literal["range_too_large"]]
+    | NinjaErrorResponse[Literal["invalid_granularity"]]
     | NinjaErrorResponse[Literal["invalid_metric_for_kind"]]
     | NinjaErrorResponse[Literal["invalid_dimension"]]
     | NinjaErrorResponse[Literal["invalid_timezone"]],
@@ -41,6 +42,7 @@ REPORT_ERRORS = {
 LISTENER_ERRORS = {
     400: NinjaErrorResponse[Literal["invalid_range"]]
     | NinjaErrorResponse[Literal["range_too_large"]]
+    | NinjaErrorResponse[Literal["invalid_granularity"]]
     | NinjaErrorResponse[Literal["range_before_retention"]],
     404: NinjaErrorResponse[Literal["asset_not_found"]] | NinjaErrorResponse[Literal["app_not_found"]],
 }
@@ -89,7 +91,10 @@ class ReportQuery(Schema):
 
 class TimeseriesQuery(ReportQuery):
     metric: Metric = "plays"
-    granularity: Granularity = Field("day", description="`hour` is limited to 31 days.")
+    granularity: Granularity = Field(
+        "day",
+        description="`hour` is limited to 31 days and `day` to 186. Weeks are ISO weeks (Monday to Sunday).",
+    )
     split_by: SplitDimension | None = None
     top: int = Field(8, ge=1, le=20, description="Series kept when splitting; the rest are summed into `other`.")
     compare: Literal["previous_period"] | None = None
@@ -130,6 +135,9 @@ class ReconciliationQuery(Schema):
     end_date: date
     publisher_id: int | None = None
     limit: int = Field(20, ge=1, le=200)
+    granularity: SeriesGranularity = Field(
+        "day", description="Buckets of `days`: `day` is limited to 186 days; weeks start on Monday."
+    )
 
 
 class ReconciliationNumbersOut(Schema):
@@ -147,10 +155,15 @@ class ReconciliationDayOut(ReconciliationNumbersOut):
     t: str
 
 
+PARTIAL_BUCKETS_HELP = "Bucket starts (`t`) of the weeks or months the range only partly covers: the first and last."
+
+
 class ReconciliationOut(Schema):
     total: ReconciliationNumbersOut
     assets: list[ReconciliationAssetOut]
-    days: list[ReconciliationDayOut]
+    granularity: str
+    partial_buckets: list[str] = Field(..., description=PARTIAL_BUCKETS_HELP)
+    days: list[ReconciliationDayOut] = Field(..., description="One row per bucket of `granularity`.")
     data_updated_at: AwareDatetime | None
 
 
@@ -203,6 +216,7 @@ class SeriesOut(Schema):
 class TimeseriesOut(Schema):
     metric: str
     granularity: str
+    partial_buckets: list[str] = Field(..., description=PARTIAL_BUCKETS_HELP)
     series: list[SeriesOut]
     previous: list[PointOut] | None
     data_updated_at: AwareDatetime | None
@@ -236,7 +250,7 @@ class PublicUsageCountsOut(Schema):
 
 
 class ListenersQuery(ReportQuery):
-    granularity: Literal["day", "week", "month"] = "day"
+    granularity: SeriesGranularity = Field("day", description="`day` is limited to 186 days; weeks start on Monday.")
 
 
 class ListenerPointOut(Schema):
@@ -248,6 +262,7 @@ class ListenerPointOut(Schema):
 
 class ListenersOut(Schema):
     granularity: str
+    partial_buckets: list[str] = Field(..., description=PARTIAL_BUCKETS_HELP)
     points: list[ListenerPointOut]
     clamped_start: date | None = Field(
         ..., description="Set when the range started before the events kept; the report starts here instead."

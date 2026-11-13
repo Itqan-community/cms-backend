@@ -318,6 +318,18 @@ class TestListenerGrowth(_ReportTestCase):
             ("2026-10-12", 1, 1, 3),
         ]
         assert response.json()["clamped_start"] is None
+        assert response.json()["partial_buckets"] == []
+
+    def test_listeners_where_daily_over_a_year_should_return_400(self):
+        # Arrange
+        self._allow()
+
+        # Act
+        response = self._get("listeners/?start_date=2025-10-17&end_date=2026-10-16&granularity=day")
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("invalid_granularity", response.json()["error_name"])
 
     def test_cohorts_where_listener_returns_next_week_should_report_retention(self):
         # Arrange
@@ -370,6 +382,7 @@ class TestListenerGrowth(_ReportTestCase):
         body = response.json()
         assert body["clamped_start"] == "2026-10-01"
         assert [(p["t"], p["new"]) for p in body["points"]] == [("2026-10-01", 2)]
+        assert body["partial_buckets"] == ["2026-10-01"]
 
     def test_first_seen_where_by_country_should_flag_countries_new_in_range(self):
         # Arrange
