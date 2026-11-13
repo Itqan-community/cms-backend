@@ -1,5 +1,6 @@
 import hashlib
 import re
+import time
 
 from django.core.cache import cache
 
@@ -106,3 +107,19 @@ def invalidate_recitation_quality_cache(asset_id: int, quality) -> None:
         for page in (1,):
             for page_size in (DEFAULT_PAGE_SIZE, PUBLIC_RECITATION_MAX_PAGE_SIZE):
                 cache.delete(recitation_response_cache_key(asset_id, page, page_size, token))
+
+
+# Portal home asset counts. Every asset write bumps the version, so a new or deleted asset
+# shows on the next request; the short TTL covers writes that skip signals (`QuerySet.update`).
+PORTAL_ASSET_COUNTS_CACHE_TTL = 60  # 1 minute
+_PORTAL_ASSET_COUNTS_VERSION_KEY = "portal_asset_counts:version"
+
+
+def portal_asset_counts_version() -> int:
+    """The current generation of the cached portal asset counts (0 until the first write)."""
+    return cache.get(_PORTAL_ASSET_COUNTS_VERSION_KEY, 0)
+
+
+def invalidate_portal_asset_counts() -> None:
+    """Retire every cached portal asset count: the next request recomputes under a new key."""
+    cache.set(_PORTAL_ASSET_COUNTS_VERSION_KEY, time.time_ns(), None)
