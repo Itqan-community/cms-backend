@@ -1804,6 +1804,15 @@ class ContentIssueReport(BaseModel):
         help_text="Description of the issue (10-2000 characters)",
     )
 
+    context = models.JSONField(
+        null=True,
+        blank=True,
+        help_text=(
+            "Where in the asset the issue is, by category: {surah, ayah} for recitations and text assets, "
+            "{page} for mushafs, {page, glyph} for fonts. Validated by apps.content.services.issue_context."
+        ),
+    )
+
     status = models.CharField(
         max_length=20,
         choices=StatusChoice,
@@ -1826,6 +1835,17 @@ class ContentIssueReport(BaseModel):
     @property
     def asset_name(self) -> str:
         return self.asset.name
+
+    @property
+    def asset_category(self) -> str | None:
+        return self.asset.category if self.asset else None
+
+    @property
+    def context_label(self) -> str:
+        """The context in words, e.g. "Al-Baqarah 2:255" or "Page 12"; empty when there is none."""
+        from apps.content.services.issue_context import format_issue_context
+
+        return format_issue_context(self.context)
 
     def clean(self):
         """Validate the model before saving"""

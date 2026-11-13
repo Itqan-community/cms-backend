@@ -27,6 +27,9 @@ msgstr "طلب POST مطلوب"
 msgid "An unexpected error occurred"
 msgstr "حدث خطأ غير متوقع"
 
+msgid "Location"
+msgstr "الموضع"
+
 msgid "You do not have access to this asset"
 msgstr "ليس لديك صلاحية الوصول إلى هذا المورد"
 
@@ -577,6 +580,47 @@ msgstr "لا يمكن حذف الخط لأن هناك بيانات أخرى مر
 #, python-brace-format
 msgid "Version with id {id} not found for font {slug}."
 msgstr "الإصدار ذو المعرف {id} غير موجود للخط {slug}."
+
+msgid "Surah must be between 1 and 114."
+msgstr "يجب أن يكون رقم السورة بين 1 و114."
+
+#, python-brace-format
+msgid "Ayah must be between 1 and {count} for surah {surah}."
+msgstr "يجب أن يكون رقم الآية بين 1 و{count} في السورة {surah}."
+
+#, python-brace-format
+msgid "Page must be between 1 and {count}."
+msgstr "يجب أن يكون رقم الصفحة بين 1 و{count}."
+
+msgid "Choose the surah and ayah."
+msgstr "اختر السورة والآية."
+
+msgid "Enter the page."
+msgstr "أدخل رقم الصفحة."
+
+msgid "Enter the page or the glyph."
+msgstr "أدخل رقم الصفحة أو الحرف."
+
+msgid "The issue location must be an object."
+msgstr "يجب أن يكون موضع المشكلة كائنًا."
+
+msgid "This asset type does not take an issue location."
+msgstr "لا يقبل هذا النوع من الأصول تحديد موضع للمشكلة."
+
+msgid "The issue location does not fit this asset type."
+msgstr "موضع المشكلة لا يناسب نوع هذا الأصل."
+
+#, python-brace-format
+msgid "Glyph cannot exceed {count} characters."
+msgstr "يجب ألا يتجاوز الحرف {count} رمزًا."
+
+#, python-brace-format
+msgid "Page {page}"
+msgstr "صفحة {page}"
+
+#, python-brace-format
+msgid "Glyph “{glyph}”"
+msgstr "الحرف «{glyph}»"
 
 #, python-brace-format
 msgid "Asset with ID {asset_id} not found."
@@ -1687,6 +1731,9 @@ msgstr "تم تحديث حالة البلاغ الخاص بك"
 #, python-format
 msgid "The status of your issue report for <strong>%(asset_name)s</strong> (Issue #%(report_id)s) has changed."
 msgstr "تغيّرت حالة بلاغك بخصوص <strong>%(asset_name)s</strong> (البلاغ رقم %(report_id)s)."
+
+msgid "Location:"
+msgstr "الموضع:"
 
 msgid "Status change:"
 msgstr "تغيير الحالة:"

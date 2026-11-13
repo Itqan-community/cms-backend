@@ -121,6 +121,7 @@ class IssueReportUnitTests(BaseTestCase):
             reporter=self.user,
             asset_id=self.asset.id,
             description="<p>Unsafe description</p> but valid length.",
+            context={"surah": 1, "ayah": 1},
         )
         self.assertEqual("Unsafe description but valid length.", report.description)
         self.assertEqual(self.asset, report.asset)
@@ -145,7 +146,9 @@ class IssueReportUnitTests(BaseTestCase):
 
     def test_service_update_by_reporter(self):
         """Reporter can update description of their own pending report"""
-        report = self.service.create_issue_report(self.user, self.asset.id, "Original description text.")
+        report = self.service.create_issue_report(
+            self.user, self.asset.id, "Original description text.", context={"surah": 1, "ayah": 1}
+        )
 
         updated = self.service.update_issue_report(
             report_id=report.id,
@@ -157,7 +160,9 @@ class IssueReportUnitTests(BaseTestCase):
 
     def test_service_update_status_by_reporter_is_ignored(self):
         """Reporters cannot change status — the field is silently ignored"""
-        report = self.service.create_issue_report(self.user, self.asset.id, "Original description text.")
+        report = self.service.create_issue_report(
+            self.user, self.asset.id, "Original description text.", context={"surah": 1, "ayah": 1}
+        )
 
         updated = self.service.update_issue_report(
             report_id=report.id,
@@ -168,7 +173,9 @@ class IssueReportUnitTests(BaseTestCase):
 
     def test_service_update_non_pending_report_by_reporter_raises_itqan_error(self):
         """Reporters cannot update non-pending reports"""
-        report = self.service.create_issue_report(self.user, self.asset.id, "Original description text.")
+        report = self.service.create_issue_report(
+            self.user, self.asset.id, "Original description text.", context={"surah": 1, "ayah": 1}
+        )
         self.repo.update_issue_report(report, status=ContentIssueReport.StatusChoice.UNDER_REVIEW)
 
         with self.assertRaises(ItqanError) as ctx:
@@ -183,7 +190,9 @@ class IssueReportUnitTests(BaseTestCase):
     def test_service_update_other_users_report_raises_itqan_error(self):
         """Reporter cannot update another reporter's report"""
         other_user = User.objects.create_user(email="other@example.com", password="password123")
-        report = self.service.create_issue_report(self.user, self.asset.id, "Original description text.")
+        report = self.service.create_issue_report(
+            self.user, self.asset.id, "Original description text.", context={"surah": 1, "ayah": 1}
+        )
 
         with self.assertRaises(ItqanError) as ctx:
             self.service.update_issue_report(
@@ -196,7 +205,9 @@ class IssueReportUnitTests(BaseTestCase):
 
     def test_service_update_by_staff_can_change_status(self):
         """Staff can update status and description on any report"""
-        report = self.service.create_issue_report(self.user, self.asset.id, "Original description text.")
+        report = self.service.create_issue_report(
+            self.user, self.asset.id, "Original description text.", context={"surah": 1, "ayah": 1}
+        )
         self.repo.update_issue_report(report, status=ContentIssueReport.StatusChoice.UNDER_REVIEW)
 
         updated = self.service.update_issue_report(
@@ -210,13 +221,17 @@ class IssueReportUnitTests(BaseTestCase):
 
     def test_service_delete_by_reporter(self):
         """Reporter can delete their own pending report"""
-        report = self.service.create_issue_report(self.user, self.asset.id, "Report to be deleted.")
+        report = self.service.create_issue_report(
+            self.user, self.asset.id, "Report to be deleted.", context={"surah": 1, "ayah": 1}
+        )
         self.service.delete_issue_report(report_id=report.id, user=self.user)
         self.assertIsNone(self.repo.get_issue_report_by_id(report.id))
 
     def test_service_delete_non_pending_report_by_reporter_raises_itqan_error(self):
         """Reporter cannot delete non-pending reports"""
-        report = self.service.create_issue_report(self.user, self.asset.id, "Original description text.")
+        report = self.service.create_issue_report(
+            self.user, self.asset.id, "Original description text.", context={"surah": 1, "ayah": 1}
+        )
         self.repo.update_issue_report(report, status=ContentIssueReport.StatusChoice.RESOLVED)
 
         with self.assertRaises(ItqanError) as ctx:
@@ -227,7 +242,9 @@ class IssueReportUnitTests(BaseTestCase):
     def test_service_delete_other_users_report_raises_itqan_error(self):
         """Reporter cannot delete another reporter's report"""
         other_user = User.objects.create_user(email="other2@example.com", password="password123")
-        report = self.service.create_issue_report(self.user, self.asset.id, "Original description text.")
+        report = self.service.create_issue_report(
+            self.user, self.asset.id, "Original description text.", context={"surah": 1, "ayah": 1}
+        )
 
         with self.assertRaises(ItqanError) as ctx:
             self.service.delete_issue_report(report_id=report.id, user=other_user)
@@ -236,7 +253,9 @@ class IssueReportUnitTests(BaseTestCase):
 
     def test_service_delete_by_staff(self):
         """Staff can delete any report regardless of status"""
-        report = self.service.create_issue_report(self.user, self.asset.id, "Report to be deleted.")
+        report = self.service.create_issue_report(
+            self.user, self.asset.id, "Report to be deleted.", context={"surah": 1, "ayah": 1}
+        )
         self.repo.update_issue_report(report, status=ContentIssueReport.StatusChoice.RESOLVED)
 
         self.service.delete_issue_report(report_id=report.id, user=self.staff_user)
@@ -256,8 +275,12 @@ class IssueReportUnitTests(BaseTestCase):
             qiraah=self.qiraah,
         )
 
-        report1 = self.service.create_issue_report(self.user, self.asset.id, "Report 1 desc")
-        report2 = self.service.create_issue_report(self.user, asset2.id, "Report 2 desc")
+        report1 = self.service.create_issue_report(
+            self.user, self.asset.id, "Report 1 desc", context={"surah": 1, "ayah": 1}
+        )
+        report2 = self.service.create_issue_report(
+            self.user, asset2.id, "Report 2 desc", context={"surah": 1, "ayah": 1}
+        )
 
         qs = self.service.get_issue_reports(publisher_q=Q(publisher=self.publisher))
         self.assertEqual(1, qs.count())
