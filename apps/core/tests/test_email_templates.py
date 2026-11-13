@@ -53,6 +53,7 @@ EMAIL_TEMPLATES = {
     "emails/issue_status_update.html": {
         "report_id": 7,
         "asset_name": "Hafs Mushaf",
+        "context_label": "Page 12",
         "old_status": "Pending",
         "new_status": "Resolved",
         "issue_url": "https://example.com/issues/7",

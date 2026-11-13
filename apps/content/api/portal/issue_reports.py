@@ -1,10 +1,10 @@
 import logging
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from django.utils.translation import gettext_lazy as _
 from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
-from pydantic import AwareDatetime
+from pydantic import AwareDatetime, Field
 
 from apps.content.models import ContentIssueReport
 from apps.content.repositories.issue_report import IssueReportRepository
@@ -29,7 +29,12 @@ class IssueReportOut(Schema):
     reporter: IssueReportOutReporter
     asset_id: int
     asset_name: str
+    asset_category: str | None
     description: str
+    context: dict[str, Any] | None = Field(
+        None, description="Where in the asset the issue is; the shape depends on the asset category"
+    )
+    context_label: str = Field(description='The context in words, e.g. "Al-Baqarah 2:255"; empty when none')
     status: str
     created_at: AwareDatetime
     updated_at: AwareDatetime
@@ -38,11 +43,26 @@ class IssueReportOut(Schema):
 class IssueReportCreateIn(Schema):
     asset_id: int
     description: str
+    context: dict[str, Any] | None = Field(
+        None,
+        description=(
+            "Where in the asset the issue is. Required by category: {surah, ayah} for recitation and text, "
+            "{page} for mushaf, {page?, glyph?} with at least one for font; other categories take none "
+            "(omit or null)"
+        ),
+    )
 
 
 class IssueReportUpdateIn(Schema):
     description: str | None = None
     status: ContentIssueReport.StatusChoice | None = None
+    context: dict[str, Any] | None = Field(
+        None,
+        description=(
+            "Omit to keep the context. When sent it must be complete for the asset's category "
+            "(see create); null is accepted only for categories that take no location"
+        ),
+    )
 
 
 class IssueReportFilter(FilterSchema):
@@ -54,7 +74,14 @@ def _get_service() -> IssueReportService:
     return IssueReportService(IssueReportRepository())
 
 
-@router.post("issue-reports/", response={201: IssueReportOut})
+@router.post(
+    "issue-reports/",
+    response={
+        201: IssueReportOut,
+        400: NinjaErrorResponse[Literal["invalid_issue_context"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]],
+    },
+)
 def create_issue_report(request: Request, data: IssueReportCreateIn):
     logger.info(f"Creating issue report [asset_id={data.asset_id}, user_id={request.user.id}]")
     service = _get_service()
@@ -62,6 +89,7 @@ def create_issue_report(request: Request, data: IssueReportCreateIn):
         reporter=request.user,
         asset_id=data.asset_id,
         description=data.description,
+        context=data.context,
     )
     logger.info(f"Issue report created [report_id={report.id}, user_id={request.user.id}]")
     return 201, report
@@ -87,7 +115,11 @@ def get_issue_report(request: Request, report_id: int):
 
 @router.patch(
     "issue-reports/{report_id}/",
-    response={200: IssueReportOut, 404: NinjaErrorResponse[Literal["report_not_found"]]},
+    response={
+        200: IssueReportOut,
+        400: NinjaErrorResponse[Literal["invalid_issue_context"]],
+        404: NinjaErrorResponse[Literal["report_not_found"]],
+    },
 )
 def update_issue_report(request: Request, report_id: int, data: IssueReportUpdateIn):
     logger.info(f"Updating issue report [report_id={report_id}, user_id={request.user.id}]")
@@ -96,6 +128,8 @@ def update_issue_report(request: Request, report_id: int, data: IssueReportUpdat
         user=request.user,
         description=data.description,
         status=data.status,
+        context=data.context,
+        update_context="context" in data.model_fields_set,
         publisher_q=request.publisher_q(),
     )
     logger.info(f"Issue report updated [report_id={report_id}, user_id={request.user.id}]")

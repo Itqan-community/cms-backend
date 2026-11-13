@@ -1,11 +1,11 @@
 import logging
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
-from pydantic import AwareDatetime
+from pydantic import AwareDatetime, Field
 
 from apps.content.repositories.issue_report import IssueReportRepository
 from apps.content.services.issue_report import IssueReportService
@@ -24,7 +24,12 @@ class IssueReportOut(Schema):
     id: int
     asset_id: int
     asset_name: str
+    asset_category: str | None
     description: str
+    context: dict[str, Any] | None = Field(
+        None, description="Where in the asset the issue is; the shape depends on the asset category"
+    )
+    context_label: str = Field(description='The context in words, e.g. "Al-Baqarah 2:255"; empty when none')
     status: str
     created_at: AwareDatetime
     updated_at: AwareDatetime
@@ -33,10 +38,25 @@ class IssueReportOut(Schema):
 class IssueReportCreateIn(Schema):
     asset_id: int
     description: str
+    context: dict[str, Any] | None = Field(
+        None,
+        description=(
+            "Where in the asset the issue is. Required by category: {surah, ayah} for recitation and text, "
+            "{page} for mushaf, {page?, glyph?} with at least one for font; other categories take none "
+            "(omit or null)"
+        ),
+    )
 
 
 class IssueReportUpdateIn(Schema):
     description: str
+    context: dict[str, Any] | None = Field(
+        None,
+        description=(
+            "Omit to keep the context. When sent it must be complete for the asset's category "
+            "(see create); null is accepted only for categories that take no location"
+        ),
+    )
 
 
 class IssueReportFilter(FilterSchema):
@@ -52,13 +72,22 @@ def _publisher_scope(request: Request) -> Q:
     return request.publisher_q() if request.publisher else Q(pk__in=[])
 
 
-@router.post("issue-reports/", response={201: IssueReportOut}, auth=internal_auth)
+@router.post(
+    "issue-reports/",
+    response={
+        201: IssueReportOut,
+        400: NinjaErrorResponse[Literal["invalid_issue_context"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]],
+    },
+    auth=internal_auth,
+)
 def create_issue_report(request: Request, data: IssueReportCreateIn):
     logger.info(f"Creating issue report [asset_id={data.asset_id}, user_id={request.user.id}]")
     report = _get_service().create_issue_report(
         reporter=request.user,
         asset_id=data.asset_id,
         description=data.description,
+        context=data.context,
     )
     logger.info(f"Issue report created [report_id={report.id}, user_id={request.user.id}]")
     return 201, report
@@ -87,7 +116,11 @@ def get_issue_report(request: Request, report_id: int):
 
 @router.patch(
     "issue-reports/{report_id}/",
-    response={200: IssueReportOut, 404: NinjaErrorResponse[Literal["report_not_found"]]},
+    response={
+        200: IssueReportOut,
+        400: NinjaErrorResponse[Literal["invalid_issue_context"]],
+        404: NinjaErrorResponse[Literal["report_not_found"]],
+    },
 )
 def update_issue_report(request: Request, report_id: int, data: IssueReportUpdateIn):
     logger.info(f"Updating issue report [report_id={report_id}, user_id={request.user.id}]")
@@ -96,6 +129,8 @@ def update_issue_report(request: Request, report_id: int, data: IssueReportUpdat
         user=request.user,
         description=data.description,
         publisher_q=_publisher_scope(request),
+        context=data.context,
+        update_context="context" in data.model_fields_set,
     )
     logger.info(f"Issue report updated [report_id={report_id}, user_id={request.user.id}]")
     return report
