@@ -3,10 +3,12 @@ from __future__ import annotations
 import logging
 
 from django.conf import settings
+from django.utils.functional import lazy
 from django.utils.text import format_lazy
 from django.utils.translation import gettext_lazy as _
 
 from apps.content.models import ContentIssueReport
+from apps.content.services.issue_context import format_issue_context
 from apps.core.services.email import email_service
 
 logger = logging.getLogger(__name__)
@@ -42,6 +44,8 @@ class IssueReportNotificationService:
             context={
                 "report_id": report_id,
                 "asset_name": asset_name,
+                # Lazy, so it renders in each recipient's language.
+                "context_label": lazy(format_issue_context, str)(report.context) if report.context else "",
                 "old_status": old_label,
                 "new_status": new_label,
                 "issue_url": issue_url,

@@ -978,12 +978,15 @@ class ContentIssueReportAdmin(AuditedModelAdmin):
         "id",
         "reporter",
         "asset",
+        "context_display",
         "status",
         "created_at",
     ]
     list_filter = ["status", "created_at"]
     search_fields = ["reporter__email", "description", "asset__name"]
     readonly_fields = [
+        "context_display",
+        "context",
         "created_at",
         "updated_at",
     ]
@@ -999,7 +1002,7 @@ class ContentIssueReportAdmin(AuditedModelAdmin):
                 )
             },
         ),
-        ("Description", {"fields": ("description",)}),
+        ("Description", {"fields": ("description", "context_display", "context")}),
         ("Status", {"fields": ("status",)}),
         (
             "Timestamps",
@@ -1011,6 +1014,10 @@ class ContentIssueReportAdmin(AuditedModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("reporter", "asset")
+
+    @admin.display(description=_("Location"))
+    def context_display(self, obj: ContentIssueReport) -> str:
+        return obj.context_label or "-"
 
     def save_model(self, request, obj, form, change):
         old_status = form.initial.get("status") if change and "status" in form.changed_data else None

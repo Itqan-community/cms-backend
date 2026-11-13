@@ -8,6 +8,8 @@
 {% block content %}
 <p style="margin:0 0 24px;">{% blocktrans %}The status of your issue report for <strong>{{ asset_name }}</strong> (Issue #{{ report_id }}) has changed.{% endblocktrans %}</p>
 
+{% if context_label %}<p style="margin:0 0 24px;"><strong>{% trans "Location:" %}</strong> {{ context_label }}</p>
+{% endif %}
 <p style="margin:0 0 24px;"><strong>{% trans "Status change:" %}</strong> {{ old_status }} → {{ new_status }}</p>
 
 <p style="margin:0 0 24px; text-align:center;">

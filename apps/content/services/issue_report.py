@@ -9,6 +9,7 @@ from django.utils.translation import gettext as _
 
 from apps.content.models import ContentIssueReport
 from apps.content.repositories.issue_report import IssueReportRepository
+from apps.content.services.issue_context import validate_issue_context
 from apps.core.ninja_utils.errors import ItqanError
 
 logger = logging.getLogger(__name__)
@@ -28,6 +29,7 @@ class IssueReportService:
         reporter: User,
         asset_id: int,
         description: str,
+        context: dict[str, Any] | None = None,
     ) -> ContentIssueReport:
         clean_description = strip_tags(description).strip()
 
@@ -52,11 +54,14 @@ class IssueReportService:
                 status_code=404,
             )
 
+        clean_context = validate_issue_context(asset, context)
+
         report = self.repo.create_issue_report(
             reporter=reporter,
             asset=asset,
             description=clean_description,
             status=ContentIssueReport.StatusChoice.PENDING,
+            context=clean_context,
         )
         logger.info(f"Issue report created [report_id={report.pk}, reporter_id={reporter.pk}, asset_id={asset_id}]")
         return report
@@ -92,7 +97,10 @@ class IssueReportService:
         description: str | None = None,
         status: ContentIssueReport.StatusChoice | None = None,
         publisher_q: Q | None = None,
+        context: dict[str, Any] | None = None,
+        update_context: bool = False,
     ) -> ContentIssueReport:
+        """Update a report; ``context`` is applied only when ``update_context`` (so an explicit null clears it)."""
         report = self.get_issue_report(report_id, publisher_q=publisher_q)
         if not report:
             raise ItqanError(
@@ -132,8 +140,14 @@ class IssueReportService:
                 )
             description = clean_description
 
+        # Only a context that is sent is checked, so an older report without one can still change status.
+        if update_context:
+            context = validate_issue_context(report.asset, context) if report.asset else None
+
         old_status = report.status
-        updated = self.repo.update_issue_report(report, description=description, status=status)
+        updated = self.repo.update_issue_report(
+            report, description=description, status=status, context=context, update_context=update_context
+        )
         logger.info(f"Issue report updated [report_id={report_id}, updated_by={user.pk}]")
 
         if status is not None and status != old_status:

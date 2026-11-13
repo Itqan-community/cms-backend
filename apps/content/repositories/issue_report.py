@@ -14,7 +14,8 @@ if TYPE_CHECKING:
 
 class IssueReportRepository:
     def get_asset_by_id(self, asset_id: int) -> Asset | None:
-        return Asset.objects.filter(id=asset_id).first()
+        # The mushaf layout bounds a page in the report's context.
+        return Asset.objects.select_related("mushaf_layout").filter(id=asset_id).first()
 
     def create_issue_report(
         self,
@@ -22,12 +23,14 @@ class IssueReportRepository:
         asset: Asset,
         description: str,
         status: ContentIssueReport.StatusChoice = ContentIssueReport.StatusChoice.PENDING,
+        context: dict[str, Any] | None = None,
     ) -> ContentIssueReport:
         return ContentIssueReport.objects.create(
             reporter=reporter,
             asset=asset,
             description=description,
             status=status,
+            context=context,
         )
 
     def list_issue_reports_qs(
@@ -44,7 +47,7 @@ class IssueReportRepository:
         return qs
 
     def get_issue_report_by_id(self, report_id: int, q_filter: Q | None = None) -> ContentIssueReport | None:
-        qs = ContentIssueReport.objects.select_related("reporter", "asset")
+        qs = ContentIssueReport.objects.select_related("reporter", "asset", "asset__mushaf_layout")
         if q_filter:
             qs = qs.filter(q_filter)
         try:
@@ -57,8 +60,13 @@ class IssueReportRepository:
         report: ContentIssueReport,
         description: str | None = None,
         status: ContentIssueReport.StatusChoice | None = None,
+        context: dict[str, Any] | None = None,
+        update_context: bool = False,
     ) -> ContentIssueReport:
         update_fields = ["updated_at"]
+        if update_context:
+            report.context = context
+            update_fields.append("context")
         if description is not None:
             report.description = description
             update_fields.append("description")

@@ -53,7 +53,7 @@ class IssueReportTenantApiTests(BaseTestCase):
 
     def test_create_issue_report_tenant_with_correct_data_should_return_201(self):
         self.authenticate_user(self.user, domain=self.domain)
-        payload = {"asset_id": self.asset.id, "description": "Tenant API Report"}
+        payload = {"asset_id": self.asset.id, "description": "Tenant API Report", "context": {"surah": 1, "ayah": 1}}
 
         response = self.client.post("/tenant/issue-reports/", payload, format="json")
 
@@ -62,9 +62,30 @@ class IssueReportTenantApiTests(BaseTestCase):
         self.assertEqual("Tenant API Report", data["description"])
         self.assertEqual(self.asset.id, data["asset_id"])
 
+    def test_create_issue_report_tenant_where_context_given_should_validate_and_return_it(self):
+        # Arrange
+        self.authenticate_user(self.user, domain=self.domain)
+        valid = {"asset_id": self.asset.id, "description": "Tenant API Report", "context": {"surah": 2, "ayah": 255}}
+        invalid = {"asset_id": self.asset.id, "description": "Tenant API Report", "context": {"surah": 2, "ayah": 287}}
+        missing = {"asset_id": self.asset.id, "description": "Tenant API Report"}
+
+        # Act
+        created = self.client.post("/tenant/issue-reports/", valid, format="json")
+        rejected = self.client.post("/tenant/issue-reports/", invalid, format="json")
+        unlocated = self.client.post("/tenant/issue-reports/", missing, format="json")
+
+        # Assert
+        self.assertEqual(201, created.status_code)
+        self.assertEqual({"surah": 2, "ayah": 255}, created.json()["context"])
+        self.assertEqual("Al-Baqarah 2:255", created.json()["context_label"])
+        self.assertEqual(400, rejected.status_code)
+        self.assertEqual("invalid_issue_context", rejected.json()["error_name"])
+        self.assertEqual(400, unlocated.status_code)
+        self.assertEqual("invalid_issue_context", unlocated.json()["error_name"])
+
     def test_create_unauthenticated_returns_401(self):
         self.authenticate_user(None, domain=self.domain)
-        payload = {"asset_id": self.asset.id, "description": "Anon Report"}
+        payload = {"asset_id": self.asset.id, "description": "Anon Report", "context": {"surah": 1, "ayah": 1}}
 
         response = self.client.post("/tenant/issue-reports/", payload, format="json")
 
