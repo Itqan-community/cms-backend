@@ -41,7 +41,12 @@ class AiTranslateApiTests(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual(
-            {"fields": {"name": "Tafsir Ibn Kathir", "description": "A tafsir."}, "sources": [], "slug": None},
+            {
+                "fields": {"name": "Tafsir Ibn Kathir", "description": "A tafsir."},
+                "fields_ar": {},
+                "sources": [],
+                "slug": None,
+            },
             response.json(),
         )
         self.assertEqual({"name", "description"}, set(ai.call_args.kwargs["schema"]["properties"]))
@@ -307,7 +312,10 @@ class AiTranslateApiTests(BaseTestCase):
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
-        self.assertEqual({"fields": {}, "sources": [], "slug": "translation-en-sahih-international"}, response.json())
+        self.assertEqual(
+            {"fields": {}, "fields_ar": {}, "sources": [], "slug": "translation-en-sahih-international"},
+            response.json(),
+        )
         self.assertEqual(["slug_words"], ai.call_args.kwargs["schema"]["required"])
 
     def test_ai_translate_where_recitation_slug_should_use_reciter_and_riwayah(self):
@@ -392,6 +400,184 @@ class AiTranslateApiTests(BaseTestCase):
         self.assertEqual(200, response.status_code, response.content)
         self.assertIsNone(response.json()["slug"])
         self.assertNotIn("slug_words", ai.call_args.kwargs["schema"]["properties"])
+
+    def test_ai_translate_where_reference_given_should_add_it_to_prompt_as_context_only(self):
+        # Arrange
+        self.authenticate_user(self._admin())
+        payload = {
+            "mode": "translate",
+            "category": "text",
+            "fields": {"name": "تفسير السعدي"},
+            "reference": {"description": "تفسير ميسر للشيخ عبد الرحمن السعدي"},
+        }
+
+        # Act
+        with patch.object(
+            GeminiClient,
+            GeminiClient.generate_json.__name__,
+            return_value={"name": "Tafsir Al-Saadi", "description": "Not asked for"},
+        ) as ai:
+            response = self.client.post(URL, data=payload, content_type="application/json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual({"name": "Tafsir Al-Saadi"}, response.json()["fields"])
+        self.assertEqual({}, response.json()["fields_ar"])
+        prompt = ai.call_args.kwargs["prompt"]
+        self.assertIn("description (Arabic): تفسير ميسر للشيخ عبد الرحمن السعدي", prompt)
+        self.assertIn("do not return these", prompt)
+        self.assertIn("Return English values for: name.", prompt)
+        self.assertEqual(["name"], ai.call_args.kwargs["schema"]["required"])
+
+    def test_ai_translate_where_only_reference_and_nothing_to_fill_should_return_400_ai_translate_empty(self):
+        # Arrange
+        self.authenticate_user(self._admin())
+        payload = {"mode": "translate", "category": "text", "fields": {}, "reference": {"description": "وصف"}}
+
+        # Act
+        with patch.object(GeminiClient, GeminiClient.generate_json.__name__) as ai:
+            response = self.client.post(URL, data=payload, content_type="application/json")
+
+        # Assert
+        self.assertEqual(400, response.status_code)
+        self.assertEqual("ai_translate_empty", response.json()["error_name"])
+        ai.assert_not_called()
+
+    def test_ai_translate_where_web_mode_fill_arabic_should_return_arabic_fields_from_the_same_call(self):
+        # Arrange
+        self.authenticate_user(self._admin())
+        payload = {
+            "mode": "web",
+            "category": "text",
+            "fields": {"description": "", "long_description": ""},
+            "reference": {"name": "تفسير ابن كثير"},
+            "fill_arabic": ["description", "long_description"],
+        }
+        articles = [WikiArticle(url="https://ar.wikipedia.org/wiki/A", extract="تفسير القرآن العظيم لابن كثير.")]
+
+        # Act
+        with (
+            patch.object(WikipediaClient, WikipediaClient.lookup.__name__, return_value=articles) as wiki,
+            patch.object(
+                GeminiClient,
+                GeminiClient.generate_json.__name__,
+                return_value={
+                    "description": "A classic tafsir.",
+                    "long_description": "Long text.",
+                    "description_ar": "تفسير مشهور.",
+                    "long_description_ar": "  ",
+                    "name": "Not asked for",
+                },
+            ) as ai,
+        ):
+            response = self.client.post(URL, data=payload, content_type="application/json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual({"description": "A classic tafsir.", "long_description": "Long text."}, body["fields"])
+        self.assertEqual({"description": "تفسير مشهور."}, body["fields_ar"])
+        wiki.assert_called_once_with("تفسير ابن كثير")
+        schema = ai.call_args.kwargs["schema"]
+        self.assertEqual(
+            ["description", "long_description", "description_ar", "long_description_ar"], schema["required"]
+        )
+        prompt = ai.call_args.kwargs["prompt"]
+        self.assertIn("name (Arabic): تفسير ابن كثير", prompt)
+        self.assertIn(
+            "Also write Arabic values (Modern Standard Arabic) for: description_ar, long_description_ar.", prompt
+        )
+
+    def test_ai_translate_where_web_mode_fill_arabic_only_should_write_arabic_without_english_targets(self):
+        # Arrange
+        self.authenticate_user(self._admin(PermissionChoice.PORTAL_CREATE_RECITER))
+        payload = {
+            "mode": "web",
+            "category": "reciter",
+            "fields": {},
+            "reference": {"name": "مشاري العفاسي"},
+            "fill_arabic": ["bio"],
+        }
+
+        # Act
+        with (
+            patch.object(WikipediaClient, WikipediaClient.lookup.__name__, return_value=[]),
+            patch.object(
+                GeminiClient, GeminiClient.generate_json.__name__, return_value={"bio_ar": "قارئ كويتي."}
+            ) as ai,
+        ):
+            response = self.client.post(URL, data=payload, content_type="application/json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(
+            {"fields": {}, "fields_ar": {"bio": "قارئ كويتي."}, "sources": [], "slug": None}, response.json()
+        )
+        self.assertEqual(["bio_ar"], ai.call_args.kwargs["schema"]["required"])
+        self.assertNotIn("Return English values", ai.call_args.kwargs["prompt"])
+
+    def test_ai_translate_where_fill_arabic_names_a_filled_arabic_field_should_not_rewrite_it(self):
+        # Arrange
+        self.authenticate_user(self._admin())
+        payload = {
+            "mode": "web",
+            "category": "text",
+            "fields": {"name": "تفسير", "description": "وصف موجود"},
+            "reference": {"long_description": "شرح موجود"},
+            "fill_arabic": ["description", "long_description"],
+        }
+
+        # Act
+        with (
+            patch.object(WikipediaClient, WikipediaClient.lookup.__name__, return_value=[]),
+            patch.object(
+                GeminiClient,
+                GeminiClient.generate_json.__name__,
+                return_value={"name": "Tafsir", "description": "x", "description_ar": "مكتوب"},
+            ) as ai,
+        ):
+            response = self.client.post(URL, data=payload, content_type="application/json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual({}, response.json()["fields_ar"])
+        self.assertNotIn("description_ar", ai.call_args.kwargs["schema"]["properties"])
+        self.assertNotIn("Arabic values", ai.call_args.kwargs["prompt"])
+
+    def test_ai_translate_where_translate_mode_fill_arabic_should_ignore_it(self):
+        # Arrange
+        self.authenticate_user(self._admin())
+        payload = {
+            "mode": "translate",
+            "category": "text",
+            "fields": {"name": "تفسير"},
+            "fill_arabic": ["description"],
+        }
+
+        # Act
+        with patch.object(
+            GeminiClient,
+            GeminiClient.generate_json.__name__,
+            return_value={"name": "Tafsir", "description_ar": "مكتوب"},
+        ) as ai:
+            response = self.client.post(URL, data=payload, content_type="application/json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual({}, response.json()["fields_ar"])
+        self.assertEqual(["name"], ai.call_args.kwargs["schema"]["required"])
+
+    def test_ai_translate_where_fill_arabic_names_a_non_web_field_should_return_400_validation_error(self):
+        # Arrange
+        self.authenticate_user(self._admin())
+        payload = {"mode": "web", "category": "text", "fields": {"name": "تفسير"}, "fill_arabic": ["name"]}
+
+        # Act
+        response = self.client.post(URL, data=payload, content_type="application/json")
+
+        # Assert
+        self.assertEqual(400, response.status_code)
+        self.assertEqual("validation_error", response.json()["error_name"])
 
     def test_ai_slug_endpoint_where_called_should_no_longer_exist(self):
         # Arrange
