@@ -1,8 +1,8 @@
 from django.db import transaction
-from django.db.models.signals import post_delete, post_save
+from django.db.models.signals import m2m_changed, post_delete, post_save
 from django.dispatch import receiver
 
-from apps.content.cache import invalidate_recitation_tracks_cache
+from apps.content.cache import invalidate_portal_asset_counts, invalidate_recitation_tracks_cache
 from apps.content.models import ASSET_CHANNEL_FIELDS, Asset, CategoryChoice, RecitationQuality, RecitationSurahTrack
 
 
@@ -66,3 +66,27 @@ def create_default_recitation_quality(sender, instance: Asset, created: bool, **
             "slug": RecitationQuality.DEFAULT_SLUG,
         },
     )
+
+
+# The fields the portal home counts group or filter by.
+_PORTAL_ASSET_COUNT_FIELDS = frozenset({"category", "status", "publisher", "publisher_id"})
+
+
+@receiver(post_save, sender=Asset)
+def clear_portal_asset_counts_on_save(sender, instance: Asset, created: bool, update_fields=None, **kwargs) -> None:
+    """Drop the cached portal home counts when a save may change them (after commit, like the recitation cache)."""
+    if not created and update_fields is not None and not (_PORTAL_ASSET_COUNT_FIELDS & set(update_fields)):
+        return
+    transaction.on_commit(invalidate_portal_asset_counts)
+
+
+@receiver(post_delete, sender=Asset)
+def clear_portal_asset_counts_on_delete(sender, instance: Asset, **kwargs) -> None:
+    transaction.on_commit(invalidate_portal_asset_counts)
+
+
+@receiver(m2m_changed, sender=Asset.tags.through)
+def clear_portal_asset_counts_on_tags_change(sender, action: str, **kwargs) -> None:
+    """The text tile breaks its count down by tag."""
+    if action in {"post_add", "post_remove", "post_clear"}:
+        transaction.on_commit(invalidate_portal_asset_counts)
