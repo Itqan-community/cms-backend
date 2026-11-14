@@ -6,7 +6,7 @@ from .ninja_api import assert_all_itqan_routers, create_ninja_api
 
 # Internal CMS API (mounted at /cms-api/)
 portal_api = create_ninja_api(
-    title="Itqan CMS Internal API for admins to controls assets",
+    title="Fanar Internal API for admins to controls assets",
     description="Internal APIs for CMS frontend, this API is meant for admins to controls assets",
     docs_base_path="/portal",
     urls_namespace="portal",
@@ -29,7 +29,7 @@ auto_discover_ninja_routers(portal_api, "api/portal")
 # Safety check: ensure routers are of type ItqanRouter
 assert_all_itqan_routers(portal_api)
 portal_auth_api = create_ninja_api(
-    title="Itqan CMS Internal Auth API",
+    title="Fanar Internal Auth API",
     description="Internal APIs for CMS frontend",
     docs_base_path="/portal/auth",
     urls_namespace="portal-auth",
