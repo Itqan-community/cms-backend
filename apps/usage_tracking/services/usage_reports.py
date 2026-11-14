@@ -23,7 +23,7 @@ from django.http import HttpResponse
 from django.utils.http import content_disposition_header
 from django.utils.translation import get_language, gettext_lazy as _
 
-from apps.content.models import Asset, CategoryChoice
+from apps.content.models import Asset, AssetAccessRequest, CategoryChoice
 from apps.core.ninja_utils.errors import ItqanError
 from apps.usage_tracking.models import (
     AUDIO_KINDS,
@@ -46,6 +46,7 @@ Metric = Literal[
     "installs",
     "updates",
     "api_calls",
+    "public_api_calls",
     "usage",
     "requests",
     "bytes",
@@ -99,6 +100,7 @@ ROLLUP_METRICS: dict[str, RollupMetric] = {
     "installs": RollupMetric("sessions", (TrafficKind.CLI_INSTALL,)),
     "updates": RollupMetric("sessions", (TrafficKind.CLI_UPDATE,)),
     "api_calls": RollupMetric("sessions", (TrafficKind.API_CALL,)),
+    "public_api_calls": RollupMetric("sessions", (TrafficKind.API_CALL,), exclude=REGISTRY_CALLS),
     # Every use of the content once: a CLI install's registry calls and file are part of the install.
     "usage": RollupMetric("sessions", None, exclude=REGISTRY_CALLS | CLI_FILE_DOWNLOADS),
     "views": RollupMetric("sessions", (TrafficKind.VIEW,)),
@@ -133,6 +135,7 @@ METRIC_DEFINITIONS = {
         "once per installation, version and day."
     ),
     "api_calls": _("Successful public API calls for this content, including responses served from the CDN cache."),
+    "public_api_calls": _("Public API calls, without the itqan CLI's package registry calls."),
     "usage": _(
         "Every use of the content: plays, downloads, CLI installs and updates, public API calls and gallery views."
     ),
@@ -1039,6 +1042,86 @@ def recitation_coverage(
         "limit": limit,
     }
     return _cached(scope, "recitation_coverage", params, compute)
+
+
+# ---------------------------------------------------------------------------------------------
+# Text-asset reports: CLI installs and updates per version, access requests
+# ---------------------------------------------------------------------------------------------
+
+ACCESS_REQUEST_TOP_ASSETS = 10
+
+
+def cli_versions(scope: ReportScope, filters: ReportFilters, *, limit: int = 50) -> dict[str, Any]:
+    """CLI installs and updates per asset version in the range, most used first."""
+    validate_filters(filters)
+    check_scope(scope, filters)
+
+    def compute() -> dict[str, Any]:
+        rows = repo.install_versions(_base_q(scope, filters), Period(filters.start_date, filters.end_date), limit)
+        versions = repo.version_details(row["asset_version_id"] for row in rows)
+        assets = _labels("asset", [str(row["asset_id"]) for row in rows if row["asset_id"] is not None])
+        items = []
+        for row in rows:
+            version = versions.get(row["asset_version_id"], {})
+            items.append(
+                {
+                    "asset_id": row["asset_id"],
+                    "asset": assets.get(str(row["asset_id"])),
+                    "version_id": row["asset_version_id"],
+                    "version": version.get("name"),
+                    "language": version.get("asset_language__language"),
+                    "installs": int(row["installs"]),
+                    "updates": int(row["updates"]),
+                }
+            )
+        return {"items": items, "data_updated_at": repo.data_updated_at()}
+
+    return _cached(scope, "cli_versions", {**asdict(filters), "limit": limit}, compute)
+
+
+def _access_request_q(scope: ReportScope, filters: ReportFilters) -> Q:
+    q = Q()
+    if scope.assets is not None:
+        q &= Q(asset_id__in=scope.assets.values("id"))
+    if filters.asset_id is not None:
+        q &= Q(asset_id=filters.asset_id)
+    if filters.category:
+        q &= Q(asset__category=filters.category)
+    return q
+
+
+def access_requests(scope: ReportScope, filters: ReportFilters, *, granularity: str = "day") -> dict[str, Any]:
+    """Access requests created in the range: total vs the previous period, statuses, buckets and top assets.
+
+    Only the dates, asset and category apply: requests have no channel, platform, app or country.
+    """
+    validate_filters(filters)
+    check_granularity(filters, granularity)
+    check_scope(scope, filters)
+
+    def compute() -> dict[str, Any]:
+        asset_q = _access_request_q(scope, filters)
+        period = Period(filters.start_date, filters.end_date)
+        periods = {"current": period, "previous": Period(*previous_period(period.start, period.end))}
+        counts = repo.access_request_counts(asset_q, periods)
+        buckets = bucket_starts(period.start, period.end, granularity)
+        series = repo.access_request_series(asset_q, period, granularity)
+        value, before = counts["current"], counts["previous"]
+        top = repo.access_request_assets(asset_q, period, ACCESS_REQUEST_TOP_ASSETS)
+        names = _labels("asset", [str(row["asset_id"]) for row in top])
+        return {
+            "total": {"value": value, "previous": before, "change": _change(value, before)},
+            "statuses": {status: counts[f"status_{status}"] for status in AssetAccessRequest.StatusChoice.values},
+            "granularity": granularity,
+            "partial_buckets": partial_buckets(period.start, period.end, granularity, buckets),
+            "points": _points(buckets, series),
+            "assets": [
+                {"key": str(row["asset_id"]), "label": names.get(str(row["asset_id"])), "value": row["v"]}
+                for row in top
+            ],
+        }
+
+    return _cached(scope, "access_requests", {**asdict(filters), "g": granularity}, compute)
 
 
 # ---------------------------------------------------------------------------------------------
