@@ -638,3 +638,44 @@ class AuditTrailAndDiffsTest(BaseTestCase):
         # Assert
         assert not Publisher.history.filter(pk=newer_pk).exists()
         assert Publisher.history.filter(pk=older_pk).exists()
+
+
+class TestCleanDuplicateAuditHistoryWindow(BaseTestCase):
+    def _publisher_with_noop_save(self, slug: str) -> tuple[int, int]:
+        publisher = Publisher.objects.create(name_en=f"Window {slug}", name_ar="ناشر", slug=slug)
+        publisher.save()
+        newer, older = publisher.history.all()[:2]
+        return newer.pk, older.pk
+
+    def test_clean_duplicate_audit_history_where_noop_follows_snapshot_before_window_should_delete_it(self):
+        # Arrange: the creation snapshot is older than the window, the no-op save is inside it.
+        newer_pk, older_pk = self._publisher_with_noop_save("window-before")
+        Publisher.history.filter(pk=older_pk).update(history_date=timezone.now() - timedelta(days=30))
+
+        # Act
+        call_command("clean_duplicate_audit_history", "publishers.Publisher", minutes=60, stdout=StringIO())
+
+        # Assert
+        assert not Publisher.history.filter(pk=newer_pk).exists()
+        assert Publisher.history.filter(pk=older_pk).exists()
+
+    def test_clean_duplicate_audit_history_where_more_objects_should_read_history_in_same_queries(self):
+        # Arrange
+        from django.db import connections
+        from django.test.utils import CaptureQueriesContext
+
+        def history_reads() -> int:
+            with CaptureQueriesContext(connections["audit"]) as queries:
+                call_command("clean_duplicate_audit_history", "publishers.Publisher", minutes=60, stdout=StringIO())
+            return sum(1 for query in queries.captured_queries if query["sql"].lstrip().upper().startswith("SELECT"))
+
+        self._publisher_with_noop_save("window-one")
+        one = history_reads()
+        for index in range(3):
+            self._publisher_with_noop_save(f"window-more-{index}")
+
+        # Act
+        many = history_reads()
+
+        # Assert
+        assert many == one
