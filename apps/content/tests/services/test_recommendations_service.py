@@ -32,9 +32,8 @@ from apps.core.tests.base import BaseTestCase
 from apps.users.models import User
 
 # Dev settings run the Django cache on LocMemCache (see config/settings/development.py),
-# so get_recommendations_redis() would resolve to None there -- exactly like
-# apps.usage_tracking.tasks._get_tracking_redis. usage_tracking's tests mock that
-# resolver with a MagicMock; here we point it at a real Redis test DB instead, so the
+# so get_recommendations_redis() would resolve to None there. Here we point it at a
+# real Redis test DB instead, so the
 # scoring assertions below exercise genuine ZADD/ZRANGE/ZSCORE semantics rather than a
 # mock's recorded calls. DB 15 is reserved for tests and flushed before/after each test.
 _GET_REDIS = "apps.content.services.recommendations.get_recommendations_redis"

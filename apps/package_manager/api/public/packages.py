@@ -23,7 +23,6 @@ from apps.package_manager.services.package_registry import (
     PackageRequest,
     ResolvedPackage,
 )
-from apps.usage_tracking.decorators.track_usage import track_extra, track_usage
 from apps.usage_tracking.services.install_events import record_installs
 
 router = ItqanRouter(tags=[NinjaTag.PACKAGES])
@@ -350,7 +349,6 @@ def request_package_access(request: Request, slug: str, data: PackageAccessReque
         | NinjaErrorResponse[Literal["category_not_installable"]],
     },
 )
-@track_usage(entity_type="package")
 def resolve_package_manifest(request: Request, body: PackageManifestEntryIn):
     service = PackageRegistryService()
 
@@ -370,31 +368,6 @@ def resolve_package_manifest(request: Request, body: PackageManifestEntryIn):
     results = service.resolve_manifest(package_requests, assets=pre_fetched_assets)
     record_installs(request, results)
 
-    entity_ids: list[int] = []
-    entity_names: list[str] = []
-    publisher_ids: list[int] = []
-    publisher_names: list[str] = []
-    seen_publishers: set[int] = set()
-    seen_assets: set[int] = set()
-    for r in results:
-        if r.asset.id in seen_assets:
-            continue
-        seen_assets.add(r.asset.id)
-        entity_ids.append(r.asset.id)
-        entity_names.append(r.asset.name)
-        pub_id = r.asset.publisher_id
-        if pub_id is not None and pub_id not in seen_publishers:
-            seen_publishers.add(pub_id)
-            publisher_ids.append(pub_id)
-            publisher_names.append(r.asset.publisher.name)
-
-    track_extra(
-        request,
-        entity_ids=entity_ids,
-        entity_names=entity_names,
-        publisher_ids=publisher_ids,
-        publisher_names=publisher_names,
-    )
     return 200, PackageManifestOut(results=[_resolve_package_to_schema(request, r) for r in results])
 
 
@@ -415,7 +388,6 @@ def resolve_package_manifest(request: Request, body: PackageManifestEntryIn):
         | NinjaErrorResponse[Literal["category_not_installable"]],
     },
 )
-@track_usage(entity_type="package")
 def resolve_package_single(
     request: Request,
     slug: str,
@@ -428,14 +400,6 @@ def resolve_package_single(
     enforce_asset_access_on_public_api(getattr(request, "user", None), asset)
     result = service.resolve_single(slug, version, language=language, asset=asset)
     record_installs(request, [result])
-
-    track_extra(
-        request,
-        entity_ids=[result.asset.id],
-        entity_names=[result.asset.name],
-        publisher_ids=[result.asset.publisher_id] if result.asset.publisher_id else [],
-        publisher_names=[result.asset.publisher.name] if result.asset.publisher_id else [],
-    )
 
     return 200, PackageSingleOut(result=_resolve_package_to_schema(request, result))
 

@@ -17,7 +17,6 @@ from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
-from apps.usage_tracking.decorators.track_usage import track_usage
 
 router = ItqanRouter(tags=[NinjaTag.RECOMMENDATIONS])
 
@@ -67,7 +66,6 @@ class RecommendedAssetOut(Schema):
         404: NinjaErrorResponse[Literal["not_found"]],
     },
 )
-@track_usage(entity_type="recommendation_similar")
 def get_similar_recommendations(request: Request, asset_id: int):
     """
     "Users who liked this also liked" — assets sharing reciter/riwayah/qiraah/category
@@ -98,7 +96,6 @@ def get_similar_recommendations(request: Request, asset_id: int):
     "recommendations/trending/",
     response={200: list[RecommendedAssetOut]},
 )
-@track_usage(entity_type="recommendation_trending")
 def get_trending_recommendations(request: Request, category: str | None = None):
     """
     Currently popular content, ranked by recent usage weighted by event kind (a
@@ -122,7 +119,6 @@ def get_trending_recommendations(request: Request, category: str | None = None):
         401: NinjaErrorResponse[Literal["authentication_required"]],
     },
 )
-@track_usage(entity_type="recommendation_personalized")
 def get_personalized_recommendations(request: Request):
     """
     Suggestions based on the authenticated user's own download/view history (see
@@ -159,7 +155,6 @@ class EditorialRecommendationOut(Schema):
     "recommendations/editorial/",
     response={200: list[EditorialRecommendationOut]},
 )
-@track_usage(entity_type="recommendation_editorial")
 def get_editorial_recommendations(request: Request):
     """
     Admin-curated featured collections (e.g. seasonal spotlights) currently in their
