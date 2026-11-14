@@ -998,8 +998,9 @@ flowchart LR
   `GALLERY_DOWNLOADS_VIA_CDN`), skips events recorded with Caddy's internal address (before the
   client-IP fix or from old workers mid-deploy), and rebuilds every hour that gained Django rows
   (plus the next hour when an event sits inside the session window of its end). Hours are rebuilt
-  1,000 traffic rows at a time, saving the cursor after each batch, and a run stops after a
-  10-minute budget (soft limit 15), so a large backlog is worked off over several runs. Django events
+  1,000 traffic rows at a time, saving the cursor after each batch (an hour is rebuilt once per
+  run, however many batches touch it), and a run stops after a 10-minute budget (soft limit 15),
+  saving the rows whose hours it finished, so a large backlog is worked off over several runs. Django events
   record the client IP from `X-Forwarded-For` (Caddy forwards `CF-Connecting-IP`).
 - **File URLs:** consumer-facing links to open-access files use the storage custom domain
   (`public_media_url`), so the edge caches and counts them; this covers the `itqan` CLI's package

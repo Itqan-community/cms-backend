@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 import ipaddress
+from itertools import takewhile
 import logging
 from time import monotonic
 
@@ -123,20 +124,27 @@ def fold_in_django_events(
         top_traffic = TrafficEvent.objects.aggregate(top=Max("id"))["top"] or 0
         play_window = timedelta(minutes=settings.ASSET_DOWNLOAD_PLAY_WINDOW_MINUTES)
         deadline = monotonic() + time_budget_seconds
+        # Hours rebuilt by this run. The whole backlog was copied above, so a rebuilt hour already
+        # counts every row of later batches and is not rebuilt again for them.
+        done: set[datetime] = set()
         while traffic_cursor < top_traffic:
             batch = list(
                 TrafficEvent.objects.filter(source=TrafficSource.DJANGO, id__gt=traffic_cursor, id__lte=top_traffic)
                 .order_by("id")
                 .values_list("id", "occurred_at")[:_TRAFFIC_BATCH]
             )
-            hours: set[datetime] = set()
-            for _, at in batch:
-                hours.add(floor_hour(at))
-                # An event near the end of an hour is context for the next hour's sessions.
-                hours.add(floor_hour(at + play_window))
-            rebuilt = repo.rebuild_hours(hours, play_window, deadline)
+            # An event near the end of an hour is context for the next hour's sessions.
+            row_hours = [(row_id, {floor_hour(at), floor_hour(at + play_window)}) for row_id, at in batch]
+            rebuilt = repo.rebuild_hours(set().union(*(hours for _, hours in row_hours)) - done, play_window, deadline)
             hours_rebuilt += len(rebuilt)
-            if len(rebuilt) < len(hours):
+            done.update(rebuilt)
+            finished = list(takewhile(lambda row: row[1] <= done, row_hours))
+            if len(finished) < len(row_hours):
+                # Out of time: keep the rows whose hours were all rebuilt, so the next run starts
+                # after them instead of redoing this batch's committed days.
+                if finished:
+                    traffic_cursor = finished[-1][0]
+                    repo.set_cursor(DJANGO_FOLDIN_JOB, cursor, traffic_cursor=traffic_cursor)
                 logger.info(
                     "fold_in_django_events: time budget spent; the next run resumes after id %d", traffic_cursor
                 )
