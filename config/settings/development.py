@@ -52,8 +52,10 @@ CORS_ALLOW_ALL_ORIGINS = True  # Dev only
 CORS_ALLOW_CREDENTIALS = True
 
 CSRF_TRUSTED_ORIGINS = [
+    "https://staging.fanar.itqan.dev",
     "https://staging.cms.itqan.dev",
     "https://staging--itqan-cms.netlify.app",
+    "https://fanar.itqan.dev",
     "https://cms.itqan.dev",
     "https://itqan-cms.netlify.app",
     "http://localhost:3000",
