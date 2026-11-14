@@ -14,7 +14,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     build-essential \
     git \
     libpq-dev \
-    libxmlsec1-dev \
     libxml2-dev \
     pkg-config
 
@@ -52,7 +51,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     postgresql-client \
     libpq5 \
     gettext \
-    xmlsec1 \
     libxml2 \
     curl \
     ffmpeg \

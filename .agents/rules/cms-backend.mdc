@@ -134,7 +134,7 @@ As the **last step of every task**, check whether the change made any documentat
 
 ### Where the docs live
 - `docs/ARCHITECTURE.md` — domain models, the ER diagram, API surfaces, access control and content lifecycle. Update when you add/remove/rename a model or field, change how authorization works, or change what an API surface is for.
-- `docs/AUTHENTICATION.md` — auth flows (allauth, OAuth2, JWT, SAML) and their error codes. Update when you touch login, tokens, scopes, or auth-related error responses.
+- `docs/AUTHENTICATION.md` — auth flows (allauth, OAuth2, JWT) and their error codes. Update when you touch login, tokens, scopes, or auth-related error responses.
 - `README.md` / `CONTRIBUTING.md` — setup, dependencies, commands, workflow. Update when you change how the project is installed, configured, or run.
 - `docs-website/docs/` — the **public developer API** site (Docusaurus). Only covers `developers_api`. Update when you change a public endpoint's request/response shape, pagination, filtering, or error contract. **Portal/tenant/internal-only changes do not belong here.**
 
