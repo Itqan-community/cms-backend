@@ -7,8 +7,9 @@ from ninja import Field, Query, Schema
 from ninja.pagination import paginate
 
 from apps.content.asset_tag_schemas import AssetTagOut, CategoryFilter
-from apps.content.models import REVIEWED_CATEGORIES, Asset, AssetVersion
-from apps.content.services.asset_access import enforce_asset_access_on_public_api
+from apps.content.models import REVIEWED_CATEGORIES, Asset, AssetAccessRequest, AssetVersion
+from apps.content.repositories.access_request import AssetAccessRequestRepository
+from apps.content.services.asset_access import AssetAccessRequestService, enforce_asset_access_on_public_api
 from apps.content.services.asset_columns import version_structure
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
@@ -261,6 +262,75 @@ def get_package_account(request: Request):
             status_code=401,
         )
     return 200, PackageAccountOut(name=user.name, email=user.email)
+
+
+class PackageAccessRequestIn(Schema):
+    intended_use: AssetAccessRequest.IntendedUseChoice = Field(
+        ..., description="`commercial` or `non-commercial`; the publisher sees it with the request."
+    )
+    purpose: str = Field(
+        "Requested with the itqan CLI.", max_length=2000, description="Why the developer needs the asset."
+    )
+
+
+class PackageAccessRequestOut(Schema):
+    slug: str
+    request_id: int
+    status: str = Field(..., description="`pending`, `approved` (auto-approved publishers) or `rejected`.")
+    created: bool = Field(..., description="False when an earlier request was returned instead of a new one.")
+    access_request_url: str | None = Field(
+        None, description="CMS page of the asset, where the request can be followed."
+    )
+
+
+@router.post(
+    "packages/{slug}/request-access/",
+    response={
+        200: PackageAccessRequestOut,
+        401: NinjaErrorResponse[Literal["authentication_required"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]],
+        409: NinjaErrorResponse[Literal["access_not_required"]],
+        422: NinjaErrorResponse[Literal["validation_error"]],
+    },
+)
+def request_package_access(request: Request, slug: str, data: PackageAccessRequestIn):
+    """Ask the publisher for access to a gated package; needs an API key.
+
+    Follows the same rules as the gallery: a pending or approved request is returned
+    as it is (`created: false`) instead of a duplicate, a rejected one can be
+    re-requested, and publishers with auto-accept switched on approve it at once.
+    Open assets need no request (409 `access_not_required`).
+    """
+    user = request.user
+    if not user.is_authenticated:
+        raise ItqanError(
+            error_name="authentication_required",
+            message=_("A valid API key is required."),
+            status_code=401,
+        )
+    purpose = data.purpose.strip()
+    if not purpose:
+        raise ItqanError(error_name="validation_error", message=_("Purpose can't be empty."), status_code=422)
+
+    asset = PackageRegistryService().find_asset(slug)
+    if PackageRegistryService.catalog_access(asset) == CatalogAccess.OPEN:
+        raise ItqanError(
+            error_name="access_not_required",
+            message=_("{slug} is open access; no request is needed.").format(slug=slug),
+            status_code=409,
+        )
+
+    existing = AssetAccessRequestRepository().get_existing(developer_user=user, asset=asset)
+    access_request, _grant = AssetAccessRequestService(AssetAccessRequestRepository()).request_access(
+        user=user, asset=asset, purpose=purpose, intended_use=data.intended_use
+    )
+    return 200, PackageAccessRequestOut(
+        slug=asset.slug,
+        request_id=access_request.pk,
+        status=access_request.status,
+        created=existing is None or existing.pk != access_request.pk,
+        access_request_url=PackageRegistryService.access_request_url(asset),
+    )
 
 
 @router.post(
