@@ -404,6 +404,12 @@ msgstr "مطلوب مفتاح API للوصول إلى محتوى هذا الأص
 msgid "You don't have an approved access request for this asset."
 msgstr "ليس لديك طلب وصول مُوافَق عليه لهذا الأصل."
 
+msgid "An API key is required to access the content of these assets."
+msgstr "مطلوب مفتاح API للوصول إلى محتوى هذه الأصول."
+
+msgid "You don't have an approved access request for these assets."
+msgstr "ليس لديك طلب وصول مُوافَق عليه لهذه الأصول."
+
 #, python-brace-format
 msgid "Column {key} not found."
 msgstr "العمود {key} غير موجود."
@@ -563,6 +569,29 @@ msgstr "هذه المادة ليس لها قالب محتوى."
 #, python-brace-format
 msgid "New Update for {asset_name}"
 msgstr "تحديث جديد لـ {asset_name}"
+
+#, python-brace-format
+msgid "The range must end at or after its first ayah, within the same surah, and cover at most {max} ayahs."
+msgstr "يجب أن ينتهي النطاق عند آيته الأولى أو بعدها، وفي السورة نفسها، وألّا يتجاوز {max} آية."
+
+msgid "List the text assets to return in the assets parameter, e.g. ?assets=slug-1,slug-2."
+msgstr "حدّد الأصول النصية المطلوبة في المعامل assets، مثل ?assets=slug-1,slug-2."
+
+#, python-brace-format
+msgid "At most {max} assets can be requested at once."
+msgstr "يمكن طلب {max} أصلًا على الأكثر في المرة الواحدة."
+
+#, python-brace-format
+msgid "These assets were not found: {slugs}."
+msgstr "لم يتم العثور على هذه الأصول: {slugs}."
+
+#, python-brace-format
+msgid "Only text assets (such as tafsirs and translations) can be requested: {slugs}."
+msgstr "يمكن طلب الأصول النصية فقط (مثل التفاسير والترجمات): {slugs}."
+
+#, python-brace-format
+msgid "These assets are not organised by ayah or word, so they can't be read per ayah: {slugs}."
+msgstr "هذه الأصول غير مرتّبة بالآية أو الكلمة، فلا يمكن قراءتها لكل آية: {slugs}."
 
 #, python-brace-format
 msgid "Publisher with id {id} not found."

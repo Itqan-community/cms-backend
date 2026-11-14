@@ -70,6 +70,19 @@ def recitation_ayah_response_cache_key(asset_id: int, quality_token: str, ayah_k
     return f"public_recitation_ayah_resp:{asset_id}:{quality_token}:{ayah_key}"
 
 
+AYAH_TEXT_RESPONSE_CACHE_TTL = 60 * 5  # 5 minutes, like the recitation responses
+
+
+def ayah_text_response_cache_key(surah: int, from_ayah: int, to_ayah: int, slugs: list[str]) -> str:
+    """Cache key of one ``GET /ayahs/{ayah_key}/`` response.
+
+    Slugs are free text and their order is the response's order, so the ordered
+    list is hashed rather than embedded.
+    """
+    digest = hashlib.blake2b(",".join(slugs).encode("utf-8"), digest_size=12).hexdigest()
+    return f"public_ayah_text_resp:{surah}:{from_ayah}:{to_ayah}:{digest}"
+
+
 def invalidate_recitation_tracks_cache(asset_id: int) -> None:
     # Deleting meta is sufficient: the view requires both resp AND meta for a cache hit,
     # so clearing meta forces a full DB rebuild on the next request. Stale resp bytes
