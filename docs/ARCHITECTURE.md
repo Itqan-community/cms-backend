@@ -1108,6 +1108,14 @@ publisher scope. Multipart sign, completion, and abort operations also parse the
 storage key, require it to round-trip through the canonical key builder, and verify that
 both its asset and quality belong to that scope before mutating object storage.
 
+**Ayah-timing coverage (portal).** The portal recitation list, quality list and track list
+return `ayahs_count`, `timed_ayahs_count` and `timing_status` (`none` / `partial` / `full`)
+per row, built in SQL by `apps/content/timing_coverage.py`. Coverage is counted in ayahs:
+a track counts its timing rows, capped at its surah's ayah count, against that ayah count,
+so a half-timed surah shows as partial. The denominator is only the surahs that have
+tracks (missing surahs are a separate gap). The recitation list sums every quality, so an
+untimed variant makes the recitation partial; the quality list shows each variant on its own.
+
 **Ayah-timing exports.** `sync_asset_recitations_json_file` writes one `AssetVersion`
 per quality, named after the quality slug, so variants do not overwrite each other's JSON.
 
