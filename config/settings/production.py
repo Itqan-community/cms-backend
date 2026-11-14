@@ -14,7 +14,9 @@ from .base import *  # noqa: F401, F403
 DEBUG = False
 
 ALLOWED_HOSTS = [
-    "api.cms.itqan.dev",  # Production API domain
+    "api.fanar.itqan.dev",  # Production API domain (Fanar)
+    "staging.api.fanar.itqan.dev",  # Staging environment (Fanar)
+    "api.cms.itqan.dev",  # Production API domain (legacy, kept during migration)
     "staging.api.cms.itqan.dev",  # Staging environment
     "localhost",  # For local Docker development
 ]
@@ -39,7 +41,8 @@ X_FRAME_OPTIONS = "DENY"
 # ============================================================
 
 CORS_ALLOWED_ORIGINS = [
-    "https://cms.itqan.dev",
+    "https://fanar.itqan.dev",
+    "https://cms.itqan.dev",  # legacy, kept during migration
     "https://docs.cms.itqan.dev",  # Docs site "Try it" API calls
     "https://saudi-recitation-center.netlify.app",
     # Local frontend development
@@ -99,8 +102,10 @@ CELERY_TASK_ALWAYS_EAGER = False
 # ============================================================
 
 CSRF_TRUSTED_ORIGINS = [
+    "https://api.fanar.itqan.dev",
+    "https://fanar.itqan.dev",
     "https://api.cms.itqan.dev",
-    "https://cms.itqan.dev",
+    "https://cms.itqan.dev",  # legacy, kept during migration
     "https://docs.cms.itqan.dev",  # Docs site "Try it" API calls
     "https://saudi-recitation-center.netlify.app",
     "http://localhost:4200",
