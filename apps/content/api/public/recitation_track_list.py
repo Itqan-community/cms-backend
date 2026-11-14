@@ -24,7 +24,6 @@ from apps.core.ninja_utils.paginations import DEFAULT_PAGE_SIZE, PUBLIC_RECITATI
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
-from apps.usage_tracking.decorators.track_usage import track_extra, track_usage
 from config.settings.base import CLOUDFLARE_R2_PUBLIC_BASE_URL
 
 router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
@@ -60,7 +59,6 @@ class RecitationSurahTrackOut(Schema):
         404: NinjaErrorResponse[Literal["not_found"]] | NinjaErrorResponse[Literal["quality_not_found"]],
     },
 )
-@track_usage()
 def list_recitation_tracks(
     request: Request,
     asset_id: int,
@@ -89,15 +87,6 @@ def list_recitation_tracks(
                 is_open_access=is_open_access,
             )
 
-        track_extra(
-            request,
-            entity_type="recitation_track",
-            accessed_entity_name=cached_meta["name_ar"],
-            entity_ids=[asset_id],
-            entity_names=[cached_meta["name_ar"]],
-            publisher_ids=[cached_meta["publisher_id"]] if cached_meta["publisher_id"] else [],
-            publisher_names=[cached_meta["publisher_name"]] if cached_meta["publisher_id"] else [],
-        )
         resp = HttpResponse(cached_resp, content_type="application/json")
         resp["Cache-Control"] = "public, max-age=300, s-maxage=300" if is_open_access else "private, no-cache"
         return resp
@@ -120,16 +109,6 @@ def list_recitation_tracks(
         "publisher_name": publisher_name,
         "is_open_access": asset.is_open_access,
     }
-
-    track_extra(
-        request,
-        entity_type="recitation",
-        accessed_entity_name=asset.name_ar,
-        entity_ids=[asset.id],
-        entity_names=[asset.name_ar],
-        publisher_ids=[asset.publisher_id] if asset.publisher_id else [],
-        publisher_names=[publisher_name] if asset.publisher_id else [],
-    )
 
     tracks = service.get_asset_tracks(
         asset_id,
