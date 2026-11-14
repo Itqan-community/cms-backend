@@ -28,7 +28,7 @@ mushaf) and **Developers** consume it through a public API. Core pieces already 
 | Developer auth (OAuth2 client-credentials) | ✅ Shipped | Requires a confidential backend client. See [AUTHENTICATION.md](./AUTHENTICATION.md) |
 | API keys (`X-API-Key` via ninja-keys) | ✅ Shipped | Becomes the app-identity mechanism in §1 |
 | Canonical Quran reference data (`apps/quran`) | ✅ Shipped | Surah/Ayah/Word — 114 / 6,236 / 77,432 rows + internal read API |
-| Per-request usage tracking → Mixpanel | ✅ Shipped | `@track_usage` decorator, publisher + entity context |
+| First-party usage tracking (Logpush/R2 → `TrafficEvent`) | ✅ Shipped | Replaced the Mixpanel pipeline, which was removed |
 | Tafsir & translation text editing (MVP) | 🚧 In progress | Portal CRUD + versioning |
 | Ayah-level recitation timing | 🚧 Data exists | `start_ms`/`end_ms` per ayah stored; not yet served |
 
@@ -95,7 +95,7 @@ need downstream usage visibility without Itqan holding end-user PII.
 | [#407](https://github.com/Itqan-community/cms-backend/issues/407) | Reframe API key as a non-secret public identifier (semantics + docs) |
 | [#409](https://github.com/Itqan-community/cms-backend/issues/409) | Adjust API-key auth path for non-secret public keys (CORS, exposure) |
 | [#410](https://github.com/Itqan-community/cms-backend/issues/410) | Add per-end-user identifier: validation + request wiring |
-| [#411](https://github.com/Itqan-community/cms-backend/issues/411) | Wire app + per-user identifiers into usage tracking (Mixpanel) |
+| [#411](https://github.com/Itqan-community/cms-backend/issues/411) | Wire app + per-user identifiers into usage tracking |
 | [cms-frontend#209](https://github.com/Itqan-community/cms-frontend/issues/209) | Present API key as an embeddable public identifier |
 
 ---
@@ -293,8 +293,7 @@ Publisher-facing (impact + unfair-usage visibility) and developer-facing (own ap
 patterns) dashboards, once the per-user identifier flows through usage tracking.
 
 > ⚠️ **Blocked on a decision owned by [#411](https://github.com/Itqan-community/cms-backend/issues/411):**
-> whether the per-user identifier is persisted first-party (`UsageEvent`) or queried from
-> Mixpanel. "Unique end-users served" can't be built until that's settled.
+> whether the per-user identifier is persisted first-party (`UsageEvent`). "Unique end-users served" can't be built until that's settled.
 
 ### Issues
 
