@@ -196,6 +196,66 @@ class TestFoldIn(BaseTestCase):
         assert "RuntimeError" in result.error
         assert UsageImportState.objects.get(key="django_foldin").traffic_cursor == first_id < second_id
 
+    def _event_at(self, at) -> UsageEvent:
+        event = self._event("view")
+        UsageEvent.objects.filter(pk=event.pk).update(created_at=at)
+        return event
+
+    def test_fold_in_where_batches_share_an_hour_should_rebuild_it_once(self):
+        # Arrange
+        from datetime import UTC, datetime
+        from unittest.mock import patch
+
+        from apps.usage_tracking.repositories.traffic import TrafficRepository
+        from apps.usage_tracking.services import django_foldin
+
+        fold_in_django_events()
+        for minute in (1, 2, 3):
+            self._event_at(datetime(2026, 10, 1, 10, minute, tzinfo=UTC))
+        rebuilt: list[datetime] = []
+
+        # Act
+        with (
+            patch.object(django_foldin, "_TRAFFIC_BATCH", 1),
+            patch.object(
+                TrafficRepository,
+                TrafficRepository._rebuild_hourly.__name__,
+                lambda repo, hour, window: rebuilt.append(hour),
+            ),
+        ):
+            fold_in_django_events()
+
+        # Assert
+        assert rebuilt == [datetime(2026, 10, 1, 10, tzinfo=UTC)]
+
+    def test_fold_in_where_time_runs_out_after_first_day_should_save_that_day_and_finish_next_run(self):
+        # Arrange
+        from datetime import UTC, datetime
+        from unittest.mock import patch
+
+        from apps.usage_tracking.models import UsageImportState
+        from apps.usage_tracking.repositories import traffic
+
+        fold_in_django_events()
+        self._event_at(datetime(2026, 10, 1, 10, tzinfo=UTC))
+        self._event_at(datetime(2026, 10, 2, 10, tzinfo=UTC))
+
+        # Act: the clock passes the deadline once the first day is rebuilt.
+        with patch.object(traffic, traffic.monotonic.__name__, side_effect=[0.0, float("inf")]):
+            stopped = fold_in_django_events()
+        after_stop = UsageImportState.objects.get(key="django_foldin").traffic_cursor
+        resumed = fold_in_django_events()
+
+        # Assert
+        first_id, second_id = TrafficEvent.objects.order_by("id").values_list("id", flat=True)
+        assert after_stop == first_id
+        assert (stopped.error, resumed.error) == ("", "")
+        assert UsageImportState.objects.get(key="django_foldin").traffic_cursor >= second_id
+        assert set(TrafficHourly.objects.values_list("hour__date", flat=True).distinct()) >= {
+            datetime(2026, 10, 1).date(),
+            datetime(2026, 10, 2).date(),
+        }
+
 
 class TestFoldInCutoverMigration(BaseTestCase):
     def test_initialize_cursor_where_no_state_should_start_after_existing_rows(self):
