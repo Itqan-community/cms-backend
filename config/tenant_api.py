@@ -8,7 +8,7 @@ from .ninja_api import assert_all_itqan_routers, create_ninja_api
 
 # Tenant API (mounted at /tenant/)
 tenant_api = create_ninja_api(
-    title="Itqan CMS Tenant API",
+    title="Fanar Tenant API",
     description="APIs for Tenant-specific operations",
     docs_base_path="/tenant",
     urls_namespace="tenant",
