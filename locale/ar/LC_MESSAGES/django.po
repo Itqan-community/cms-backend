@@ -858,17 +858,17 @@ msgstr "لوحة التحكم - حذف التلاوات"
 msgid "Portal - Upload Recitation Timings"
 msgstr "لوحة التحكم - تحميل أوقات التلاوات"
 
-msgid "Portal - View Text Assets"
-msgstr "لوحة التحكم - عرض الأصول النصية"
+msgid "Portal - View Tafsirs, Translations and Quranic Sciences"
+msgstr "لوحة التحكم - عرض التفاسير والتراجم وعلوم القرآن"
 
-msgid "Portal - Create Text Assets"
-msgstr "لوحة التحكم - إنشاء الأصول النصية"
+msgid "Portal - Create Tafsirs, Translations and Quranic Sciences"
+msgstr "لوحة التحكم - إنشاء التفاسير والتراجم وعلوم القرآن"
 
-msgid "Portal - Update Text Assets"
-msgstr "لوحة التحكم - تعديل الأصول النصية"
+msgid "Portal - Update Tafsirs, Translations and Quranic Sciences"
+msgstr "لوحة التحكم - تعديل التفاسير والتراجم وعلوم القرآن"
 
-msgid "Portal - Delete Text Assets"
-msgstr "لوحة التحكم - حذف الأصول النصية"
+msgid "Portal - Delete Tafsirs, Translations and Quranic Sciences"
+msgstr "لوحة التحكم - حذف التفاسير والتراجم وعلوم القرآن"
 
 msgid "Portal - View Mushafs"
 msgstr "لوحة التحكم - عرض المصاحف"
@@ -963,8 +963,8 @@ msgstr "لوحة التحكم - نشر المحتوى"
 msgid "Portal - Remove Package Versions"
 msgstr "لوحة التحكم - إزالة إصدارات الحزم"
 
-msgid "Portal - Edit Text Asset Content"
-msgstr "لوحة التحكم - تحرير محتوى الأصول النصية"
+msgid "Portal - Edit Content of Tafsirs, Translations and Quranic Sciences"
+msgstr "لوحة التحكم - تحرير محتوى التفاسير والتراجم وعلوم القرآن"
 
 msgid "Portal - Access All Languages"
 msgstr "لوحة التحكم - الوصول إلى جميع اللغات"
@@ -984,8 +984,8 @@ msgstr "القراء"
 msgid "Recitations"
 msgstr "التلاوات"
 
-msgid "Text assets"
-msgstr "الأصول النصية"
+msgid "Tafsirs, translations and Quranic sciences"
+msgstr "التفاسير والتراجم وعلوم القرآن"
 
 msgid "Mushafs"
 msgstr "المصاحف"
