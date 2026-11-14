@@ -377,7 +377,7 @@ Retention policies and zero-diff deduplication are executed automatically in pro
 
 #### A. Automated Celery Beat Schedules (`config/celery.py`)
 - **`prune-audit-history`**: Runs weekly on Friday dawn at 04:00 Asia/Riyadh time (01:00 UTC) (`apps.core.tasks.prune_audit_history_task`), automatically pruning Tier 2 records older than 365 days while strictly preserving still-pending workflow requests and deletion tombstones (`history_type='-'`).
-- **`clean-duplicate-history`**: Runs weekly on Friday dawn at 04:30 Asia/Riyadh time (01:30 UTC) (`apps.core.tasks.clean_duplicate_history_task`), running `clean_duplicate_audit_history` over the last 8 days of history. It deletes a zero-diff update snapshot only when the previous snapshot has the same `history_user_id` and `history_change_reason`; creation and deletion snapshots are never removed.
+- **`clean-duplicate-history`**: Runs weekly on Friday dawn at 04:30 Asia/Riyadh time (01:30 UTC) (`apps.core.tasks.clean_duplicate_history_task`), running `clean_duplicate_audit_history` over the last 8 days of history. It deletes a zero-diff update snapshot only when the previous snapshot has the same `history_user_id` and `history_change_reason`; creation and deletion snapshots are never removed. The windowed run reads history 1,000 objects at a time (three queries per chunk rather than per object). Both weekly tasks have a 25-minute soft time limit.
 
 > [!NOTE]
 > **Audit Database Routing**: All historical read and write operations inside `clean_duplicate_audit_history` and `prune_audit_history` are automatically routed to the isolated `audit` database by `AuditRouter` (`apps/core/db_routers.py`). Therefore, manual `--using` flags are unnecessary; database separation is maintained natively.
