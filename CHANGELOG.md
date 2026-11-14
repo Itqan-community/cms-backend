@@ -1,3 +1,20 @@
+## v2.0.0 (2026-11-14)
+
+### Feat
+
+- **publishers**: tell the portal whether a publisher has a website
+- **usage**: bucket usage series by day, week or month
+- **content**: require an asset location on issue reports
+- **content**: give the AI buttons the Arabic fields and write Arabic descriptions
+- **portal**: count the publisher's assets per type
+- **content**: merge translations and tafsirs into tagged text assets
+
+### Fix
+
+- **usage**: count report uniques per metric so the summary stops timing out
+- **i18n**: drop an obsolete duplicate of the text-asset id message
+- **content**: drop the doubled word in the text-asset id mismatch message
+
 ## v1.0.0 (2026-11-13)
 
 ### BREAKING CHANGE
