@@ -246,12 +246,18 @@ class TestImportLogpush(BaseTestCase):
 
     def test_import_logpush_where_rollup_fails_mid_run_should_rebuild_on_next_run(self):
         # Arrange
+        from apps.usage_tracking.models import LogFileImport
+
         files = {f"{PREFIX}20261018/a.log.gz": gzip.compress(_line("r1"))}
+        # The catch-up rollup before importing finds nothing; the rollup after the file is stored fails.
         with (
             self._patch_client(files),
-            patch.object(TrafficRepository, TrafficRepository.rebuild_hours.__name__, side_effect=RuntimeError("db")),
+            patch.object(
+                TrafficRepository, TrafficRepository.rebuild_hours.__name__, side_effect=[[], RuntimeError("db")]
+            ),
         ):
             first = import_logpush(NOW)
+        stored_unrolled = list(LogFileImport.objects.values_list("rolled_up", flat=True))
 
         # Act
         with self._patch_client(files):
@@ -259,6 +265,7 @@ class TestImportLogpush(BaseTestCase):
 
         # Assert
         assert "RuntimeError" in first.error
+        assert (first.files_imported, stored_unrolled) == (1, [False])
         assert TrafficHourly.objects.get(hour=datetime(2026, 10, 18, 10, tzinfo=UTC)).sessions == 1
 
     def test_import_logpush_where_time_budget_spent_should_leave_files_for_next_run(self):
