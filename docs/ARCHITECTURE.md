@@ -752,7 +752,7 @@ Every `Asset` carries four booleans, all `true` by default, that decide on which
 | Flag | Surface | Where it is enforced |
 | --- | --- | --- |
 | `in_gallery` | CMS website (`/cms-api/`) | assets list, detail, download, previews, file structure, recitation list/tracks, reciter list/detail, request-access, usage counts |
-| `in_public_api` | Developers API (`/`) | recitation list/detail/ayah/range/tracks, reciter and riwayah counts, samples, recommendations (similar, trending, personalized, editorial, and their precompute) |
+| `in_public_api` | Developers API (`/`) | recitation list/detail/ayah/range/tracks, ayah text (`/ayahs/{ayah_key}/`), reciter and riwayah counts, samples, recommendations (similar, trending, personalized, editorial, and their precompute) |
 | `in_cli` | `itqan` CLI registry (`/packages/`) | catalog, resolve, download, and Dependabot dispatch |
 | `in_tenants` | Tenant API (`/tenant/`) | recitation list, recitation tracks, reciter/riwayah/qiraah lists |
 
@@ -997,7 +997,10 @@ flowchart LR
   downloads (`/packages/resolve/…`, `/packages/download/…`). Restricted assets keep presigned
   bucket URLs, which the edge never sees. Rules: `.agents/rules/cms-backend.mdc` → "Serving file URLs".
 - **Routes:** public-API paths are matched against the developer API's own OpenAPI schema;
-  portal, CMS and OAuth paths are dropped.
+  portal, CMS and OAuth paths are dropped. The asset comes from the path (`{asset_id}` /
+  `{slug}`), so `GET /ayahs/{ayah_key}/`, which names several text assets in `?assets=`, is
+  recorded as an API call with no asset; its per-asset usage is in the `track_usage` event
+  (`entity_type=text`, one `entity_ids` entry per served asset).
 
 ### Usage reports: API
 

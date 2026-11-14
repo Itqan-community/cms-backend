@@ -59,6 +59,14 @@ class AssetAccessRequestRepository:
     def get_access(self, *, developer_user: User, asset: Asset) -> AssetAccess | None:
         return AssetAccess.objects.filter(user=developer_user, asset=asset).first()
 
+    def active_access_asset_ids(self, *, user: User, asset_ids: list[int]) -> set[int]:
+        """Which of ``asset_ids`` ``user`` holds an active (unexpired) grant for, in one query."""
+        return set(
+            AssetAccess.objects.filter(user=user, asset_id__in=asset_ids)
+            .filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))
+            .values_list("asset_id", flat=True)
+        )
+
     def create_request(
         self, *, developer_user: User, asset: Asset, developer_access_reason: str, intended_use: str
     ) -> AssetAccessRequest:

@@ -38,6 +38,7 @@ const sidebars: SidebarsConfig = {
         'guides/localization',
         'guides/related-resources',
         'guides/recitations-ayah-timings',
+        'guides/ayah-text',
         'guides/search-filter-order',
         'guides/errors',
         'guides/client-version',
