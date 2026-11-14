@@ -167,6 +167,40 @@ class TestUsageReportsEngine(BaseTestCase):
         assert result["metrics"]["updates"]["value"] == 3
         assert result["definitions"]["updates"]
 
+    def test_summary_where_every_kind_used_should_total_usage_without_cli_plumbing(self):
+        # Arrange
+        day = date(2026, 10, 12)
+        daily(day, asset_id=self.asset.id, kind="audio_surah", sessions=10)
+        daily(day, asset_id=self.asset.id, kind="version_file", channel="web", sessions=5)
+        daily(day, asset_id=self.asset.id, kind="version_file", channel="cli", sessions=2)  # the install's file
+        daily(day, asset_id=self.asset.id, kind="cli_install", channel="cli", sessions=2)
+        daily(day, asset_id=self.asset.id, kind="cli_update", channel="cli", sessions=1)
+        daily(day, asset_id=self.asset.id, kind="view", sessions=7)
+        daily(day, asset_id=self.asset.id, kind="api_call", endpoint="/recitations/{asset_id}/", sessions=6)
+        daily(day, asset_id=self.asset.id, kind="api_call", endpoint="/packages/resolve/{slug}/", sessions=9)
+
+        # Act
+        result = summary(admin_scope(None), WEEK)
+
+        # Assert
+        assert result["metrics"]["usage"]["value"] == 10 + 5 + 2 + 1 + 7 + 6
+        assert result["metrics"]["api_calls"]["value"] == 15
+
+    def test_timeseries_where_usage_metric_should_sum_every_kind_per_bucket(self):
+        # Arrange
+        daily(date(2026, 10, 11), asset_id=self.asset.id, kind="audio_surah", sessions=2)
+        daily(date(2026, 10, 11), asset_id=self.asset.id, kind="view", sessions=3)
+        daily(date(2026, 10, 12), asset_id=self.asset.id, kind="cli_install", channel="cli", sessions=1)
+
+        # Act
+        result = timeseries(admin_scope(None), WEEK, metric="usage", split_by="kind")
+        total = timeseries(admin_scope(None), WEEK, metric="usage")
+
+        # Assert
+        values = {point["t"]: point["value"] for point in total["series"][0]["points"]}
+        assert (values["2026-10-11"], values["2026-10-12"]) == (5, 1)
+        assert {series["key"] for series in result["series"]} == {"audio_surah", "view", "cli_install"}
+
     def test_summary_where_range_before_retention_should_use_monthly_uniques(self):
         # Arrange
         filters = ReportFilters(start_date=date(2020, 1, 1), end_date=date(2020, 2, 29))

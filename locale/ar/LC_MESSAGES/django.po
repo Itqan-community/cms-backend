@@ -1235,6 +1235,9 @@ msgstr "تثبيتات بأداة itqan لسطر الأوامر لإصدار غ�
 msgid "Successful public API calls for this content, including responses served from the CDN cache."
 msgstr "طلبات الواجهة البرمجية العامة الناجحة لهذا المحتوى، بما فيها الردود المقدَّمة من ذاكرة شبكة توزيع المحتوى المؤقتة."
 
+msgid "Every use of the content: plays, downloads, CLI installs and updates, public API calls and gallery views."
+msgstr "كل استخدام للمحتوى: مرات الاستماع والتنزيلات وتثبيتات أداة سطر الأوامر وتحديثاتها واستدعاءات الواجهة البرمجية العامة ومشاهدات المعرض."
+
 msgid "Asset pages opened by signed-in users in the gallery."
 msgstr "صفحات الموارد التي فتحها المستخدمون المسجَّلون في المعرض."
 

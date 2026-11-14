@@ -96,7 +96,8 @@ class Period:
         return Q(occurred_at__gte=day_start(self.start), occurred_at__lt=day_start(self.end + timedelta(days=1)))
 
 
-def _kinds_q(kinds: Sequence[str] | None) -> Q:
+def kinds_q(kinds: Sequence[str] | None) -> Q:
+    """Rows of these kinds (every kind for None): the usual filter of an additive metric."""
     return Q(kind__in=list(kinds)) if kinds is not None else Q()
 
 
@@ -139,15 +140,15 @@ def dimension_key(row: dict[str, Any], fields: Sequence[str]) -> Key:
 def rollup_totals(
     base_q: Q,
     periods: dict[str, Period],
-    metrics: dict[str, tuple[str, Sequence[str] | None]],
+    metrics: dict[str, tuple[str, Q]],
     app_kinds: Sequence[str],
     unidentified_channel: str,
 ) -> dict[str, dict[str, int]]:
-    """Per period: each metric's sum, identified integrating apps and unidentified-app sessions."""
+    """Per period: each metric's sum (column, rows), identified integrating apps and unidentified-app sessions."""
     annotations: dict[str, Any] = {}
     for period_name, period in periods.items():
-        for metric, (field, kinds) in metrics.items():
-            annotations[f"{period_name}__{metric}"] = Coalesce(Sum(field, filter=period.daily_q() & _kinds_q(kinds)), 0)
+        for metric, (field, metric_q) in metrics.items():
+            annotations[f"{period_name}__{metric}"] = Coalesce(Sum(field, filter=period.daily_q() & metric_q), 0)
         annotations[f"{period_name}__apps"] = Count(
             "app_id",
             distinct=True,
@@ -214,15 +215,15 @@ def rollup_series(
     base_q: Q,
     period: Period,
     field: str,
-    kinds: Sequence[str] | None,
+    metric_q: Q,
     granularity: str,
     dimension: str | None,
 ) -> list[tuple[Any, Key, int]]:
     """(bucket, dimension key or "", value) rows; hourly rows read `TrafficHourly`."""
     if granularity == "hour":
-        queryset = TrafficHourly.objects.filter(base_q, period.hourly_q(), _kinds_q(kinds))
+        queryset = TrafficHourly.objects.filter(base_q, period.hourly_q(), metric_q)
     else:
-        queryset = TrafficDaily.objects.filter(base_q, period.daily_q(), _kinds_q(kinds))
+        queryset = TrafficDaily.objects.filter(base_q, period.daily_q(), metric_q)
     fields: list[str] = []
     if dimension:
         queryset, fields = _with_dimension(queryset, dimension, "hour" if granularity == "hour" else "day", UTC)
@@ -274,14 +275,14 @@ def unique_series(
 
 
 def rollup_groups(
-    base_q: Q, period: Period, field: str, kinds: Sequence[str] | None, dimension: str, tz: tzinfo
+    base_q: Q, period: Period, field: str, metric_q: Q, dimension: str, tz: tzinfo
 ) -> dict[Key, tuple[Any, int]]:
     """Dimension key -> (raw value of the first column, sum). Hour-of-week reads hourly rollups."""
     if dimension == "hour_of_week":
-        queryset = TrafficHourly.objects.filter(base_q, period.hourly_q(), _kinds_q(kinds))
+        queryset = TrafficHourly.objects.filter(base_q, period.hourly_q(), metric_q)
         time_field = "hour"
     else:
-        queryset = TrafficDaily.objects.filter(base_q, period.daily_q(), _kinds_q(kinds))
+        queryset = TrafficDaily.objects.filter(base_q, period.daily_q(), metric_q)
         time_field = "day"
     queryset, fields = _with_dimension(queryset, dimension, time_field, tz)
     rows = queryset.values(*fields).annotate(v=Sum(field)).order_by()
@@ -328,9 +329,7 @@ _ALL_KINDS: tuple[str, ...] = tuple(choice for choice, _ in TrafficEvent._meta.g
 # -- export --------------------------------------------------------------------------------------
 
 
-def export_rows(
-    base_q: Q, period: Period, granularity: str, metrics: dict[str, tuple[str, Sequence[str] | None]]
-) -> list[dict[str, Any]]:
+def export_rows(base_q: Q, period: Period, granularity: str, metrics: dict[str, tuple[str, Q]]) -> list[dict[str, Any]]:
     """Additive metrics per bucket and asset, ordered by bucket then asset."""
     queryset = (
         TrafficHourly.objects.filter(base_q, period.hourly_q())
@@ -338,7 +337,7 @@ def export_rows(
         else TrafficDaily.objects.filter(base_q, period.daily_q())
     )
     annotations = {
-        f"m_{metric}": Coalesce(Sum(field, filter=_kinds_q(kinds)), 0) for metric, (field, kinds) in metrics.items()
+        f"m_{metric}": Coalesce(Sum(field, filter=metric_q), 0) for metric, (field, metric_q) in metrics.items()
     }
     return list(
         queryset.annotate(bucket=_rollup_bucket(granularity))

@@ -1025,8 +1025,9 @@ flowchart LR
 
 One engine (`apps/usage_tracking/services/usage_reports.py`, queries in
 `repositories/usage_reports.py`) serves four scopes. Additive metrics (`plays`, `downloads`,
-`installs`, `updates`, `api_calls`, `views`, `requests`, `bytes`, `listening_seconds`) read `TrafficDaily` (`TrafficHourly` for
-hourly series and hour-of-week); unique metrics (`unique_listeners`, `unique_downloaders`,
+`installs`, `updates`, `api_calls`, `views`, `usage`, `requests`, `bytes`, `listening_seconds`) read `TrafficDaily` (`TrafficHourly` for
+hourly series and hour-of-week); `usage` sums the sessions of every kind except the itqan CLI's
+registry calls (`/packages/…`) and the files a CLI install downloads, so each use counts once; unique metrics (`unique_listeners`, `unique_downloaders`,
 `unique_end_users`) count distinct identities in `TrafficEvent`, or sum `TrafficMonthlyUniques`
 when the range starts before event retention (`uniques_basis`). Dates are inclusive UTC days
 (≤ 3660 days; hourly ≤ 31; daily series ≤ 186, else `invalid_granularity`). Responses are cached per scope, language and parameters for
