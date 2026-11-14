@@ -17,6 +17,7 @@ from apps.usage_tracking.models import (
     COUNTED_STATUSES,
     EVENT_COUNTED_KINDS,
     FILE_SESSION_KINDS,
+    INSTALL_KINDS,
     SESSION_STATUSES,
     TRAFFIC_DIMENSIONS,
     LogFileImport,
@@ -87,7 +88,7 @@ WHERE occurred_at >= %(start)s AND (previous_at IS NULL OR occurred_at - previou
 GROUP BY {_DIMENSION_COLUMNS}
 """  # nosec B608 — only constant identifiers are interpolated
 
-# An install counts once per install id, asset version and UTC day, in the hour of its first event.
+# An install (or update) counts once per install id, asset version and UTC day, in the hour of its first event.
 # Requests without an install id (opted out) count individually.
 _INSTALL_SESSIONS_SQL = f"""
 SELECT {_DIMENSION_COLUMNS}, COUNT(*)
@@ -95,7 +96,7 @@ FROM (
     SELECT DISTINCT ON (COALESCE(NULLIF(install_id, ''), ray_id), asset_version_id) *
     FROM {{table}}
     WHERE occurred_at >= %(day_start)s AND occurred_at < %(end)s AND NOT is_bot
-      AND kind = %(kind)s AND status_class = ANY(%(statuses)s)
+      AND kind = ANY(%(kinds)s) AND status_class = ANY(%(statuses)s)
     ORDER BY COALESCE(NULLIF(install_id, ''), ray_id), asset_version_id, occurred_at, ray_id
 ) first_of_day
 WHERE occurred_at >= %(start)s
@@ -125,7 +126,7 @@ _UNIQUE_MEASURES: dict[str, tuple[tuple[str, ...], tuple[str, ...], str]] = {
         "e.listener_id",
     ),
     UniqueMeasure.INSTALLS: (
-        (TrafficKind.CLI_INSTALL,),
+        INSTALL_KINDS,
         COUNTED_STATUSES,
         "COALESCE(NULLIF(e.install_id, ''), e.ray_id)",
     ),
@@ -304,7 +305,7 @@ class TrafficRepository:
                     "day_start": datetime.combine(hour.date(), time.min, tzinfo=UTC),
                     "start": hour,
                     "end": end,
-                    "kind": TrafficKind.CLI_INSTALL.value,
+                    "kinds": list(INSTALL_KINDS),
                     "statuses": list(COUNTED_STATUSES),
                 },
             )

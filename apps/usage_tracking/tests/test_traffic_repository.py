@@ -165,6 +165,25 @@ class TestStoreAndRebuild(BaseTestCase):
         assert TrafficHourly.objects.get(hour=H10).sessions == 1
         assert TrafficHourly.objects.get(hour=H11).sessions == 0
 
+    def test_rebuild_hour_where_update_repeats_same_day_should_count_once_as_update(self):
+        # Arrange
+        cli = {
+            "kind": TrafficKind.CLI_UPDATE,
+            "surah": None,
+            "asset_version_id": 8,
+            "install_id": "i" * 64,
+            "channel": TrafficChannel.CLI,
+            "platform": TrafficPlatform.DESKTOP,
+        }
+        self._store(_event("u1", H10, **cli), _event("u2", H10 + timedelta(minutes=20), **cli))
+
+        # Act
+        self.repo.rebuild_hour(H10, WINDOW)
+
+        # Assert
+        row = TrafficHourly.objects.get(hour=H10)
+        assert (row.kind, row.requests, row.sessions) == (TrafficKind.CLI_UPDATE, 2, 1)
+
     def test_rebuild_hour_where_run_twice_should_replace_not_add(self):
         # Arrange
         self._store(_event("r1", H10))

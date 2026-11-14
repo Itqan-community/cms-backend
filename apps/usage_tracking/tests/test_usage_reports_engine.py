@@ -154,6 +154,19 @@ class TestUsageReportsEngine(BaseTestCase):
         # Assert
         assert result["latest_version_share"] == 0.75
 
+    def test_summary_where_cli_updates_should_count_apart_from_installs(self):
+        # Arrange
+        daily(date(2026, 10, 12), asset_id=self.asset.id, kind="cli_install", sessions=4)
+        daily(date(2026, 10, 12), asset_id=self.asset.id, kind="cli_update", sessions=3)
+
+        # Act
+        result = summary(admin_scope(None), WEEK)
+
+        # Assert
+        assert result["metrics"]["installs"]["value"] == 4
+        assert result["metrics"]["updates"]["value"] == 3
+        assert result["definitions"]["updates"]
+
     def test_summary_where_range_before_retention_should_use_monthly_uniques(self):
         # Arrange
         filters = ReportFilters(start_date=date(2020, 1, 1), end_date=date(2020, 2, 29))

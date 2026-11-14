@@ -28,6 +28,7 @@ from apps.core.ninja_utils.errors import ItqanError
 from apps.usage_tracking.models import (
     AUDIO_KINDS,
     COUNTED_STATUSES,
+    INSTALL_KINDS,
     SESSION_STATUSES,
     TrafficChannel,
     TrafficKind,
@@ -43,6 +44,7 @@ Metric = Literal[
     "plays",
     "downloads",
     "installs",
+    "updates",
     "api_calls",
     "requests",
     "bytes",
@@ -85,6 +87,7 @@ ROLLUP_METRICS: dict[str, RollupMetric] = {
     "plays": RollupMetric("sessions", tuple(AUDIO_KINDS)),
     "downloads": RollupMetric("sessions", DOWNLOAD_KINDS),
     "installs": RollupMetric("sessions", (TrafficKind.CLI_INSTALL,)),
+    "updates": RollupMetric("sessions", (TrafficKind.CLI_UPDATE,)),
     "api_calls": RollupMetric("sessions", (TrafficKind.API_CALL,)),
     "views": RollupMetric("sessions", (TrafficKind.VIEW,)),
     "requests": RollupMetric("requests", None),
@@ -109,7 +112,14 @@ METRIC_DEFINITIONS = {
         "Seeking and buffering inside a play are not counted again."
     ),
     "downloads": _("Version files and gallery downloads, counted like plays: repeats within 5 minutes count once."),
-    "installs": _("Packages installed with the itqan CLI, once per installation, version and day."),
+    "installs": _(
+        "Packages installed with the itqan CLI, once per installation, version and day. "
+        "Installs of another version than the installation had before count as updates."
+    ),
+    "updates": _(
+        "itqan CLI installs of another version than the installation had before, "
+        "once per installation, version and day."
+    ),
     "api_calls": _("Successful public API calls for this content, including responses served from the CDN cache."),
     "views": _("Asset pages opened by signed-in users in the gallery."),
     "requests": _("Every successful request for an asset file or API route, including partial requests."),
@@ -484,7 +494,7 @@ def _latest_version_share(base_q: Q, filters: ReportFilters, category: str | Non
         return None
     latest = repo.latest_version_ids(filters.asset_id, category)
     sessions = repo.version_sessions(
-        base_q, Period(filters.start_date, filters.end_date), (*DOWNLOAD_KINDS, TrafficKind.CLI_INSTALL)
+        base_q, Period(filters.start_date, filters.end_date), (*DOWNLOAD_KINDS, *INSTALL_KINDS)
     )
     total = sum(value for version, value in sessions.items() if version is not None)
     if not total:
@@ -1020,7 +1030,17 @@ def recitation_coverage(
 # CSV export
 # ---------------------------------------------------------------------------------------------
 
-EXPORT_METRICS = ("plays", "downloads", "installs", "api_calls", "views", "requests", "bytes", "listening_seconds")
+EXPORT_METRICS = (
+    "plays",
+    "downloads",
+    "installs",
+    "api_calls",
+    "views",
+    "requests",
+    "bytes",
+    "listening_seconds",
+    "updates",  # last, so the earlier columns keep their positions
+)
 _FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
 
 
@@ -1132,7 +1152,7 @@ def public_counts(asset_id: int) -> dict[str, Any]:
             {"all": Period(EARLIEST_START_DATE, LATEST_END_DATE)},
             {
                 "plays": ("sessions", tuple(AUDIO_KINDS)),
-                "downloads": ("sessions", (*DOWNLOAD_KINDS, TrafficKind.CLI_INSTALL)),
+                "downloads": ("sessions", (*DOWNLOAD_KINDS, *INSTALL_KINDS)),
             },
             APP_KINDS,
             TrafficChannel.APP_UNIDENTIFIED,
