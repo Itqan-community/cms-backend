@@ -8,7 +8,7 @@ introduced it.
 
 The values are attached to the request, published on a context variable for
 logging (see :mod:`apps.core.logging_filters`), and tagged onto the Sentry
-scope. ``apps.usage_tracking`` reads them off the request for Mixpanel.
+scope.
 
 Neither header can ever fail a request. A value that does not match the
 expected shape is dropped and the response carries an ``X-Itqan-Warning``
@@ -38,7 +38,7 @@ WARNING_HEADER = "X-Itqan-Warning"
 MAX_CLIENT_NAME_LENGTH = 64
 MAX_CLIENT_VERSION_LENGTH = 32
 
-# Deliberately narrow: these values become Sentry tags and Mixpanel properties, so the
+# Deliberately narrow: these values become Sentry tags and log fields, so the
 # charset is restricted to keep cardinality and log/header injection under control.
 CLIENT_NAME_PATTERN = re.compile(rf"\A[A-Za-z0-9._-]{{1,{MAX_CLIENT_NAME_LENGTH}}}\Z")
 # ``+`` and ``-`` allow semver pre-release and build metadata, e.g. 2.4.1-beta.3+build.77.
