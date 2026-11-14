@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Quickstart
 
-The **Itqan CMS API** gives you authentic Quranic recitation data — reciters, recitations, riwayahs, qiraat, and ayah-level audio timings — from verified publishers, over a clean REST/JSON interface.
+The **Fanar API** gives you authentic Quranic recitation data — reciters, recitations, riwayahs, qiraat, and ayah-level audio timings — from verified publishers, over a clean REST/JSON interface.
 
 ## Your first request
 

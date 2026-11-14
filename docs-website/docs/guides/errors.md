@@ -6,7 +6,7 @@ description: The unified error envelope, full error catalog, and client-side han
 
 # Error Handling
 
-Every non-2xx response from the Itqan CMS API uses the same envelope. Build your error handling once and it covers every endpoint.
+Every non-2xx response from the Fanar API uses the same envelope. Build your error handling once and it covers every endpoint.
 
 ## Error Envelope
 
