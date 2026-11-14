@@ -10,7 +10,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 import ipaddress
+from itertools import takewhile
 import logging
+from time import monotonic
 
 from django.conf import settings
 from django.db.models import Max
@@ -24,6 +26,11 @@ from apps.usage_tracking.services.traffic_identity import listener_id_for
 logger = logging.getLogger(__name__)
 
 _BATCH = 5000
+# Traffic rows whose hours are rolled up before the cursor is saved.
+_TRAFFIC_BATCH = 1000
+# Stop starting new days well before the task's 900s soft limit: a limit that fires inside a
+# transaction can leave the worker's database connection unusable for every later task.
+_TIME_BUDGET_SECONDS = 600
 # Private ranges only: `ipaddress.is_private` also covers documentation and other public-looking blocks.
 _PROXY_NETWORKS = tuple(
     ipaddress.ip_network(net) for net in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7")
@@ -77,7 +84,9 @@ def _copy(event: UsageEvent) -> TrafficEvent | None:
     )
 
 
-def fold_in_django_events(now: datetime | None = None) -> FoldInResult:
+def fold_in_django_events(
+    now: datetime | None = None, time_budget_seconds: float = _TIME_BUDGET_SECONDS
+) -> FoldInResult:
     now = now or datetime.now(UTC)
     repo = TrafficRepository()
     if not repo.try_lock(DJANGO_FOLDIN_JOB):
@@ -106,22 +115,42 @@ def fold_in_django_events(now: datetime | None = None) -> FoldInResult:
                 cursor = events[-1].id
             if len(events) < _BATCH:
                 break
+        traffic_cursor = state.traffic_cursor or 0
+        repo.set_cursor(DJANGO_FOLDIN_JOB, cursor, traffic_cursor=traffic_cursor)
         # Every hour that gained Django-sourced rows since the last run (fold-in and CLI installs),
-        # up to a fixed id: rows written while hours rebuild stay for the next run.
+        # up to a fixed id: rows written while hours rebuild stay for the next run. Rolled up a
+        # batch of rows at a time, saving the cursor after each, so a backlog bigger than one run
+        # (a long outage, a data import) is worked off over several runs instead of never.
         top_traffic = TrafficEvent.objects.aggregate(top=Max("id"))["top"] or 0
-        new_rows = TrafficEvent.objects.filter(
-            source=TrafficSource.DJANGO, id__gt=state.traffic_cursor or 0, id__lte=top_traffic
-        )
         play_window = timedelta(minutes=settings.ASSET_DOWNLOAD_PLAY_WINDOW_MINUTES)
-        hours: set[datetime] = set()
-        for at in new_rows.values_list("occurred_at", flat=True):
-            hours.add(floor_hour(at))
+        deadline = monotonic() + time_budget_seconds
+        # Hours rebuilt by this run. The whole backlog was copied above, so a rebuilt hour already
+        # counts every row of later batches and is not rebuilt again for them.
+        done: set[datetime] = set()
+        while traffic_cursor < top_traffic:
+            batch = list(
+                TrafficEvent.objects.filter(source=TrafficSource.DJANGO, id__gt=traffic_cursor, id__lte=top_traffic)
+                .order_by("id")
+                .values_list("id", "occurred_at")[:_TRAFFIC_BATCH]
+            )
             # An event near the end of an hour is context for the next hour's sessions.
-            hours.add(floor_hour(at + play_window))
-        for hour in sorted(hours):
-            repo.rebuild_hour(hour, play_window)
-        hours_rebuilt = len(hours)
-        repo.set_cursor(DJANGO_FOLDIN_JOB, cursor, traffic_cursor=max(top_traffic, state.traffic_cursor or 0))
+            row_hours = [(row_id, {floor_hour(at), floor_hour(at + play_window)}) for row_id, at in batch]
+            rebuilt = repo.rebuild_hours(set().union(*(hours for _, hours in row_hours)) - done, play_window, deadline)
+            hours_rebuilt += len(rebuilt)
+            done.update(rebuilt)
+            finished = list(takewhile(lambda row: row[1] <= done, row_hours))
+            if len(finished) < len(row_hours):
+                # Out of time: keep the rows whose hours were all rebuilt, so the next run starts
+                # after them instead of redoing this batch's committed days.
+                if finished:
+                    traffic_cursor = finished[-1][0]
+                    repo.set_cursor(DJANGO_FOLDIN_JOB, cursor, traffic_cursor=traffic_cursor)
+                logger.info(
+                    "fold_in_django_events: time budget spent; the next run resumes after id %d", traffic_cursor
+                )
+                break
+            traffic_cursor = batch[-1][0] if len(batch) == _TRAFFIC_BATCH else top_traffic
+            repo.set_cursor(DJANGO_FOLDIN_JOB, cursor, traffic_cursor=traffic_cursor)
     except Exception as exc:  # noqa: BLE001 — record, alert, and let the next run resume
         error = f"{type(exc).__name__}: {exc}"
         logger.exception("fold_in_django_events: run failed")

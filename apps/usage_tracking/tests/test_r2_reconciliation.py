@@ -76,6 +76,26 @@ class TestReconcile(BaseTestCase):
         assert result.error == ""
         assert result.hours == 24  # refresh window: the 24 complete hours ending 3 h before now
 
+    def test_reconcile_r2_reads_where_many_hours_should_read_edge_counts_in_one_query(self):
+        # Arrange
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        client = MagicMock(spec=R2ReadsClient)
+        client.fetch_reads.return_value = ({}, False)
+
+        # Act
+        with (
+            patch.object(r2_reconciliation, r2_reconciliation._build_client.__name__, return_value=client),
+            CaptureQueriesContext(connection) as queries,
+        ):
+            result = reconcile_r2_reads(NOW)
+
+        # Assert
+        event_reads = [q for q in queries.captured_queries if 'FROM "usage_tracking_trafficevent"' in q["sql"]]
+        assert result.hours == 24
+        assert len(event_reads) == 1
+
     def test_reconcile_r2_reads_where_disabled_should_do_nothing(self):
         # Act
         with self.settings(ENABLE_USAGE_R2_RECONCILIATION=False):

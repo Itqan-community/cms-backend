@@ -477,7 +477,7 @@ class Asset(DeleteFilesOnDeleteMixin, BaseModel):
         lang = language or self.language
         return (
             self.versions.filter(state=VersionStateChoice.PUBLISHED, asset_language__language=lang)
-            .order_by("-created_at")
+            .order_by("-created_at", "-id")
             .first()
         )
 

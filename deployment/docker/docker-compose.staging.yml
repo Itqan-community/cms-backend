@@ -113,11 +113,12 @@ services:
       DJANGO_SETTINGS_MODULE: config.settings.staging
       PYTHONUNBUFFERED: "1"
     ports:
-      - "${FLOWER_PORT:-5555}:5555"
+      # Localhost only: reach it over an SSH tunnel (ssh -L 5555:localhost:5555 <host>).
+      - "127.0.0.1:${FLOWER_PORT:-5555}:5555"
     depends_on:
       rabbitmq:
         condition: service_healthy
-    command: celery -A config flower --port=5555 --basic_auth=${FLOWER_USER:-admin}:${FLOWER_PASS:-flower} --broker_api=http://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:15672/api/
+    command: celery -A config flower --port=5555 --basic_auth=${FLOWER_USER:?FLOWER_USER must be set}:${FLOWER_PASS:?FLOWER_PASS must be set} --broker_api=http://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:15672/api/
     restart: unless-stopped
 
 volumes:

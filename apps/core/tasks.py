@@ -5,13 +5,14 @@ from django.core.management import call_command
 DUPLICATE_HISTORY_WINDOW_MINUTES = 8 * 24 * 60
 
 
-@shared_task
+# Weekly jobs over a week of history: the 60s default soft limit is far too short for them.
+@shared_task(soft_time_limit=1500, time_limit=1560)
 def prune_audit_history_task():
     """Weekly automated pruning of expired operational audit history."""
     call_command("prune_audit_history")
 
 
-@shared_task
+@shared_task(soft_time_limit=1500, time_limit=1560)
 def clean_duplicate_history_task():
     """Weekly automated deduplication of redundant zero-diff historical snapshots.
 

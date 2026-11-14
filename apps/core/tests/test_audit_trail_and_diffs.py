@@ -638,3 +638,72 @@ class AuditTrailAndDiffsTest(BaseTestCase):
         # Assert
         assert not Publisher.history.filter(pk=newer_pk).exists()
         assert Publisher.history.filter(pk=older_pk).exists()
+
+
+class TestCleanDuplicateAuditHistoryWindow(BaseTestCase):
+    def _publisher_with_noop_save(self, slug: str) -> tuple[int, int]:
+        publisher = Publisher.objects.create(name_en=f"Window {slug}", name_ar="ناشر", slug=slug)
+        publisher.save()
+        newer, older = publisher.history.all()[:2]
+        return newer.pk, older.pk
+
+    def test_clean_duplicate_audit_history_where_noop_follows_snapshot_before_window_should_delete_it(self):
+        # Arrange: the creation snapshot is older than the window, the no-op save is inside it.
+        newer_pk, older_pk = self._publisher_with_noop_save("window-before")
+        Publisher.history.filter(pk=older_pk).update(history_date=timezone.now() - timedelta(days=30))
+
+        # Act
+        call_command("clean_duplicate_audit_history", "publishers.Publisher", minutes=60, stdout=StringIO())
+
+        # Assert
+        assert not Publisher.history.filter(pk=newer_pk).exists()
+        assert Publisher.history.filter(pk=older_pk).exists()
+
+    def test_clean_duplicate_audit_history_where_more_objects_should_read_history_in_same_queries(self):
+        # Arrange
+        from django.db import connections
+        from django.test.utils import CaptureQueriesContext
+
+        def history_reads() -> int:
+            with CaptureQueriesContext(connections["audit"]) as queries:
+                call_command("clean_duplicate_audit_history", "publishers.Publisher", minutes=60, stdout=StringIO())
+            return sum(1 for query in queries.captured_queries if query["sql"].lstrip().upper().startswith("SELECT"))
+
+        self._publisher_with_noop_save("window-one")
+        one = history_reads()
+        for index in range(3):
+            self._publisher_with_noop_save(f"window-more-{index}")
+
+        # Act
+        many = history_reads()
+
+        # Assert
+        assert many == one
+
+    def test_clean_duplicate_audit_history_where_object_has_several_snapshots_should_process_it_once(self):
+        # Arrange: three snapshots of one object, one object per chunk.
+        from unittest.mock import patch
+
+        from apps.core.management.commands import clean_duplicate_audit_history
+        from apps.core.management.commands.clean_duplicate_audit_history import Command
+
+        publisher = Publisher.objects.create(name_en="Window several", name_ar="ناشر", slug="window-several")
+        publisher.name_en = "Window several renamed"
+        publisher.save()
+        publisher.save()
+        original = Command._process_chunk
+        chunks: list[list] = []
+
+        def record(command, history_model, pk_name, object_ids, stop_date, dry_run):
+            chunks.append(list(object_ids))
+            return original(command, history_model, pk_name, object_ids, stop_date, dry_run)
+
+        # Act
+        with (
+            patch.object(clean_duplicate_audit_history, "_CHUNK", 1),
+            patch.object(Command, Command._process_chunk.__name__, record),
+        ):
+            call_command("clean_duplicate_audit_history", "publishers.Publisher", minutes=60, stdout=StringIO())
+
+        # Assert
+        assert chunks == [[publisher.pk]]
