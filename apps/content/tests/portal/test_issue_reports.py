@@ -64,6 +64,49 @@ class IssueReportPortalApiTests(BaseTestCase):
 
         self.assertEqual(404, response.status_code)
 
+    def test_create_issue_report_where_asset_belongs_to_another_publisher_should_return_404(self):
+        # Arrange
+        other_publisher = Publisher.objects.create(name="Other Publisher")
+        other_asset = Asset.objects.create(
+            name="Other Asset",
+            publisher=other_publisher,
+            status=StatusChoice.READY,
+            category=CategoryChoice.RECITATION,
+            file_size="10 MB",
+            format="mp3",
+            reciter=self.reciter,
+            qiraah=self.qiraah,
+        )
+        self.authenticate_user(self.staff_user, HTTP_X_TENANT=str(self.publisher.id))
+        payload = {
+            "asset_id": other_asset.id,
+            "description": "Report on a foreign asset",
+            "context": {"surah": 1, "ayah": 1},
+        }
+
+        # Act
+        response = self.client.post("/portal/issue-reports/", payload, format="json")
+
+        # Assert
+        self.assertEqual(404, response.status_code)
+        self.assertEqual("asset_not_found", response.json()["error_name"])
+        self.assertFalse(ContentIssueReport.objects.filter(asset=other_asset).exists())
+
+    def test_create_issue_report_where_asset_belongs_to_selected_publisher_should_return_201(self):
+        # Arrange
+        self.authenticate_user(self.staff_user, HTTP_X_TENANT=str(self.publisher.id))
+        payload = {
+            "asset_id": self.asset.id,
+            "description": "Report on an own asset",
+            "context": {"surah": 1, "ayah": 1},
+        }
+
+        # Act
+        response = self.client.post("/portal/issue-reports/", payload, format="json")
+
+        # Assert
+        self.assertEqual(201, response.status_code)
+
     # --- List ---
 
     def test_list_issue_reports(self):
