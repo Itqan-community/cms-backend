@@ -964,7 +964,7 @@ flowchart LR
 
 | Model | Holds |
 |---|---|
-| `TrafficEvent` | One row per edge request (Cloudflare `ray_id`, unique) for an asset file or a public-API route: kind (`audio_surah`, `audio_ayah`, `version_file`, `gallery_download`, `api_call`, `cli_install`, `view`), asset/surah/version/language, country, channel, platform, endpoint, path, status class, bytes, and HMAC identities (`listener_id` = IP + user agent, `install_id`, `end_user_id`). Raw IPs are never stored. Purged after `USAGE_EVENT_RETENTION_MONTHS` |
+| `TrafficEvent` | One row per edge request (Cloudflare `ray_id`, unique) for an asset file or a public-API route: kind (`audio_surah`, `audio_ayah`, `version_file`, `gallery_download`, `api_call`, `cli_install`, `cli_update`, `view`), asset/surah/version/language, country, channel, platform, endpoint, path, status class, bytes, and HMAC identities (`listener_id` = IP + user agent, `install_id`, `end_user_id`). Raw IPs are never stored. Purged after `USAGE_EVENT_RETENTION_MONTHS` |
 | `TrafficHourly` / `TrafficDaily` | Per hour/day and dimension: `requests`, `bytes`, `sessions` (plays for audio, downloads for files, first install per install id and day, every call for API calls and views), `listened_seconds` (audio bytes × the requested track's or ayah file's `duration_ms` ÷ `size_bytes`; 0 for unknown paths). Bots and 4xx/5xx are excluded. `manage.py rebuild_traffic_rollups --since YYYY-MM-DD` rebuilds every hour that still has events |
 | `TrafficMonthlyUniques` | Distinct listeners, downloaders, installs and end users per month for all traffic, each asset, publisher and app. Kept forever |
 | `R2ObjectReadsHourly` | R2 reads per object and hour beside the edge requests seen for it; the difference is traffic the edge never saw |
@@ -985,8 +985,11 @@ flowchart LR
   the key is deleted). `AppTaggingMiddleware` adds `?c=<slug>` to storage URLs in API-key JSON
   responses, sets `X-Itqan-App: <slug>` (captured by a Logpush custom response-header field) and
   makes caching private. The importer maps `c` / `x-itqan-app` to `UsageApp` ids.
-- **Django-side events:** package resolves write one `cli_install` traffic event per package
-  (`source=django`). `fold_in_django_events_task` (minute 15) copies gallery views and presigned
+- **Django-side events:** package resolves write one `cli_install` or `cli_update` traffic event
+  per package (`source=django`). `cli_update`: the installation (`X-Itqan-Install-Id`) last got
+  another version of the same asset and language, looked up in the events still kept
+  (`traffic_event_install_idx`); first installs, repeats and clients without an install id are
+  `cli_install`. `fold_in_django_events_task` (minute 15) copies gallery views and presigned
   downloads from `content.UsageEvent` (CDN downloads are counted at the edge, behind
   `GALLERY_DOWNLOADS_VIA_CDN`), skips events recorded with Caddy's internal address (before the
   client-IP fix or from old workers mid-deploy), and rebuilds every hour that gained Django rows
@@ -1003,8 +1006,10 @@ flowchart LR
 
 One engine (`apps/usage_tracking/services/usage_reports.py`, queries in
 `repositories/usage_reports.py`) serves four scopes. Additive metrics (`plays`, `downloads`,
-`installs`, `api_calls`, `views`, `requests`, `bytes`, `listening_seconds`) read `TrafficDaily` (`TrafficHourly` for
-hourly series and hour-of-week); unique metrics (`unique_listeners`, `unique_downloaders`,
+`installs`, `updates`, `api_calls`, `public_api_calls`, `views`, `usage`, `requests`, `bytes`, `listening_seconds`) read `TrafficDaily` (`TrafficHourly` for
+hourly series and hour-of-week); `usage` sums the sessions of every kind except the itqan CLI's
+registry calls (`/packages/…`) and the files a CLI install downloads, so each use counts once;
+`public_api_calls` is `api_calls` without those registry calls; unique metrics (`unique_listeners`, `unique_downloaders`,
 `unique_end_users`) count distinct identities in `TrafficEvent`, or sum `TrafficMonthlyUniques`
 when the range starts before event retention (`uniques_basis`). Dates are inclusive UTC days
 (≤ 3660 days; hourly ≤ 31; daily series ≤ 186, else `invalid_granularity`). Responses are cached per scope, language and parameters for
@@ -1012,8 +1017,8 @@ when the range starts before event retention (`uniques_basis`). Dates are inclus
 
 | Scope | Endpoints | Access |
 |---|---|---|
-| Publisher | `GET /portal/usage/{summary,timeseries,breakdown,export,listeners,cohorts,first-seen,search-terms,recitation-coverage}/` | `PORTAL_READ_USAGE`; the X-Tenant publisher, else every publisher the member belongs to (staff without X-Tenant: all) |
-| Itqan admin | `GET /portal/admin/usage/{summary,timeseries,breakdown,leaderboard,reconciliation,export,listeners,cohorts,first-seen,search-terms,recitation-coverage}/` | `is_staff`; optional `publisher_id`; includes traffic without an asset and `by=publisher` |
+| Publisher | `GET /portal/usage/{summary,timeseries,breakdown,export,listeners,cohorts,first-seen,search-terms,recitation-coverage,cli-versions,access-requests}/` | `PORTAL_READ_USAGE`; the X-Tenant publisher, else every publisher the member belongs to (staff without X-Tenant: all) |
+| Itqan admin | `GET /portal/admin/usage/{summary,timeseries,breakdown,leaderboard,reconciliation,export,listeners,cohorts,first-seen,search-terms,recitation-coverage,cli-versions,access-requests}/` | `is_staff`; optional `publisher_id`; includes traffic without an asset and `by=publisher` |
 | Developer | `GET /cms-api/developers/usage/{summary,timeseries,breakdown}/` | signed in; only the caller's `UsageApp`s; breakdown rows under 3 listeners return `"<3"` |
 | Public | `GET /cms-api/assets/{id}/usage-counts/` | anonymous; same visibility as `assets/{id}/`; 404 `usage_counts_disabled` unless `PUBLIC_USAGE_COUNTS_ENABLED`; cached 1 h |
 
@@ -1044,6 +1049,12 @@ when the range starts before event retention (`uniques_basis`). Dates are inclus
 - **recitation-coverage:** recitations in scope with surahs in the default quality, the missing
   ones (also ordered by platform-wide plays of the last 90 days) and the share of tracks with
   ayah timings; `incomplete_only` (default) hides complete ones.
+- **cli-versions** (text-asset reports): CLI `installs` and `updates` per asset version in the
+  range, most used first (`limit`, default 50).
+- **access-requests** (text-asset reports): access requests made in the range (only the dates,
+  `asset_id` and `category` apply) with the previous period and change, the current status of
+  each (`pending`, `approved`, `rejected`), a zero-filled `day|week|month` series with
+  `partial_buckets`, and the top 10 assets.
 - **export:** CSV of the additive metrics per period and asset (admin adds the publisher); names
   that start like a spreadsheet formula are prefixed with `'`.
 - **reconciliation:** R2 reads, edge requests and unseen (`max(reads − edge, 0)` per object-hour)

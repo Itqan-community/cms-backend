@@ -15,12 +15,17 @@ from apps.core.permission_utils import permission_class
 from apps.core.permissions import PermissionChoice
 from apps.publishers.models import Publisher
 from apps.usage_tracking.api.usage_schemas import (
+    ACCESS_REQUEST_ERRORS,
     COVERAGE_ERRORS,
     LISTENER_ERRORS,
     REPORT_ERRORS,
     SEARCH_TERMS_ERRORS,
+    AccessRequestsOut,
+    AccessRequestsQuery,
     BreakdownOut,
     BreakdownQuery,
+    CliVersionsOut,
+    CliVersionsQuery,
     CohortsOut,
     CoverageOut,
     CoverageQuery,
@@ -162,3 +167,23 @@ def usage_search_terms(request: Request, params: SearchTermsQuery = Query(...)):
 @permission_required(_READ_USAGE)
 def usage_recitation_coverage(request: Request, params: CoverageQuery = Query(...)):
     return usage_reports.recitation_coverage(_scope(request), **params.dict())
+
+
+@router.get(
+    "usage/cli-versions/",
+    response={200: CliVersionsOut, **REPORT_ERRORS},
+    description="itqan CLI installs and updates per asset version, most used first.",
+)
+@permission_required(_READ_USAGE)
+def usage_cli_versions(request: Request, params: CliVersionsQuery = Query(...)):
+    return usage_reports.cli_versions(_scope(request), params.filters(), limit=params.limit)
+
+
+@router.get(
+    "usage/access-requests/",
+    response={200: AccessRequestsOut, **ACCESS_REQUEST_ERRORS},
+    description="Access requests made in the range, against the previous period, by status, bucket and asset.",
+)
+@permission_required(_READ_USAGE)
+def usage_access_requests(request: Request, params: AccessRequestsQuery = Query(...)):
+    return usage_reports.access_requests(_scope(request), params.filters(), granularity=params.granularity)

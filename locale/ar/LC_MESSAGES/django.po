@@ -1222,11 +1222,20 @@ msgstr "أول طلب يرسله المستمع لملف صوتي بعد 5 دق�
 msgid "Version files and gallery downloads, counted like plays: repeats within 5 minutes count once."
 msgstr "ملفات الإصدارات وتنزيلات المعرض، وتُحتسب مثل مرات التشغيل: التكرار خلال 5 دقائق يُحتسب مرة واحدة."
 
-msgid "Packages installed with the itqan CLI, once per installation, version and day."
-msgstr "الحزم المثبتة بأداة itqan لسطر الأوامر، مرة واحدة لكل تثبيت وإصدار ويوم."
+msgid "Packages installed with the itqan CLI, once per installation, version and day. Installs of another version than the installation had before count as updates."
+msgstr "الحزم المثبتة بأداة itqan لسطر الأوامر، مرة واحدة لكل تثبيت وإصدار ويوم. يُحسب تثبيت إصدار غير الذي كان لدى التثبيت من قبل تحديثًا."
+
+msgid "itqan CLI installs of another version than the installation had before, once per installation, version and day."
+msgstr "تثبيتات بأداة itqan لسطر الأوامر لإصدار غير الذي كان لدى التثبيت من قبل، مرة واحدة لكل تثبيت وإصدار ويوم."
 
 msgid "Successful public API calls for this content, including responses served from the CDN cache."
 msgstr "طلبات الواجهة البرمجية العامة الناجحة لهذا المحتوى، بما فيها الردود المقدَّمة من ذاكرة شبكة توزيع المحتوى المؤقتة."
+
+msgid "Public API calls, without the itqan CLI's package registry calls."
+msgstr "استدعاءات الواجهة البرمجية العامة، دون استدعاءات سجل الحزم التي تجريها أداة itqan لسطر الأوامر."
+
+msgid "Every use of the content: plays, downloads, CLI installs and updates, public API calls and gallery views."
+msgstr "كل استخدام للمحتوى: مرات الاستماع والتنزيلات وتثبيتات أداة سطر الأوامر وتحديثاتها واستدعاءات الواجهة البرمجية العامة ومشاهدات المعرض."
 
 msgid "Asset pages opened by signed-in users in the gallery."
 msgstr "صفحات الموارد التي فتحها المستخدمون المسجَّلون في المعرض."

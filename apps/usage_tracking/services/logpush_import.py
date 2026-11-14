@@ -17,7 +17,7 @@ import zlib
 from django.conf import settings
 
 from apps.content.models import Asset, AssetVersion
-from apps.usage_tracking.models import TrafficEvent, TrafficKind, TrafficSource
+from apps.usage_tracking.models import INSTALL_KINDS, TrafficEvent, TrafficSource
 from apps.usage_tracking.repositories.traffic import LOGPUSH_JOB, TrafficRepository, floor_hour
 from apps.usage_tracking.services.logpush_parser import ParsedRequest, parse_lines
 from apps.usage_tracking.services.r2_logs_client import R2LogsClient
@@ -123,7 +123,7 @@ def touched_hours(events: Iterable[TrafficEvent], play_window: timedelta) -> set
     for event in events:
         hour = floor_hour(event.occurred_at)
         hours.add(hour)
-        if event.kind == TrafficKind.CLI_INSTALL:
+        if event.kind in INSTALL_KINDS:
             # An earlier install moves "first of the day" out of later hours of the same day.
             day_end = datetime.combine(hour.date() + timedelta(days=1), time.min, tzinfo=UTC)
             next_hour = hour + _HOUR

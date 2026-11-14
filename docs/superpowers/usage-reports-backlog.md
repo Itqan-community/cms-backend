@@ -101,3 +101,18 @@ Instead, sign links on our own domain and let Cloudflare check them at the edge:
 - [ ] **Check for suffixed track names (unverified).** If any track is stored under a name with a
       storage suffix (`001_ab12cd.mp3`), the path regex does not parse it as a surah file, so its
       plays and listening seconds are lost. Check prod `audio_file` names; fix `_SURAH_RE` if any.
+
+## From the text-asset reports (B10)
+
+- [ ] **Installs before the update split stay installs.** `cli_update` is decided when a package
+      is resolved, so every CLI resolve recorded before the deploy counts as an install. Fix if
+      wanted: a one-off command that reclassifies old `cli_install` events per install id, asset
+      and language (a `LAG` over `occurred_at`), then rebuilds the touched hours.
+- [ ] **Updates are only seen within event retention.** The previous version is looked up in
+      `TrafficEvent`, which is purged after `USAGE_EVENT_RETENTION_MONTHS`; an update after a longer
+      gap counts as an install.
+- [ ] **Public API calls per surah need attributable routes.** The Logpush parser takes the asset
+      and surah from path parameters (`{asset_id}` or `{slug}`, `{surah_number}`). The text-asset
+      public API (A6/A7) must name one asset and surah in the path, or the parser must fan a
+      multi-asset call (`?assets=a,b`) out into one event per asset; until then the surah panel
+      of text assets stays empty.

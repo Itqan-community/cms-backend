@@ -14,14 +14,19 @@ from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
 from apps.usage_tracking.api.usage_schemas import (
+    ACCESS_REQUEST_ERRORS,
     COVERAGE_ERRORS,
     LISTENER_ERRORS,
     REPORT_ERRORS,
     SEARCH_TERMS_ERRORS,
+    AccessRequestsOut,
+    AccessRequestsQuery,
     AdminBreakdownQuery,
     AdminScopeQuery,
     AdminTimeseriesQuery,
     BreakdownOut,
+    CliVersionsOut,
+    CliVersionsQuery,
     CohortsOut,
     CoverageOut,
     CoverageQuery,
@@ -196,3 +201,27 @@ def admin_usage_recitation_coverage(
     request: Request, params: CoverageQuery = Query(...), scope: AdminScopeQuery = Query(...)
 ):
     return usage_reports.recitation_coverage(_scope(request, scope.publisher_id), **params.dict())
+
+
+@router.get(
+    "admin/usage/cli-versions/",
+    response={200: CliVersionsOut, **ADMIN_ERRORS},
+    description="itqan CLI installs and updates per asset version across every publisher (Itqan staff).",
+)
+def admin_usage_cli_versions(
+    request: Request, params: CliVersionsQuery = Query(...), scope: AdminScopeQuery = Query(...)
+):
+    return usage_reports.cli_versions(_scope(request, scope.publisher_id), params.filters(), limit=params.limit)
+
+
+@router.get(
+    "admin/usage/access-requests/",
+    response={200: AccessRequestsOut, **ACCESS_REQUEST_ERRORS, **_DENIED},
+    description="Access requests made in the range across every publisher (Itqan staff).",
+)
+def admin_usage_access_requests(
+    request: Request, params: AccessRequestsQuery = Query(...), scope: AdminScopeQuery = Query(...)
+):
+    return usage_reports.access_requests(
+        _scope(request, scope.publisher_id), params.filters(), granularity=params.granularity
+    )

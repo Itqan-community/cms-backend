@@ -130,6 +130,8 @@ class TrafficKind(models.TextChoices):
     GALLERY_DOWNLOAD = "gallery_download"
     API_CALL = "api_call"
     CLI_INSTALL = "cli_install"
+    # A CLI install of another version than the installation had before (see services/install_events.py).
+    CLI_UPDATE = "cli_update"
     VIEW = "view"
 
 
@@ -177,6 +179,8 @@ class UniqueMeasure(models.TextChoices):
 
 
 AUDIO_KINDS = (TrafficKind.AUDIO_SURAH, TrafficKind.AUDIO_AYAH)
+# Kinds whose sessions count once per installation, version and day.
+INSTALL_KINDS = (TrafficKind.CLI_INSTALL, TrafficKind.CLI_UPDATE)
 # Kinds whose sessions follow the play rule (same listener + same file within the window = one).
 FILE_SESSION_KINDS = (*AUDIO_KINDS, TrafficKind.VERSION_FILE, TrafficKind.GALLERY_DOWNLOAD)
 # Kinds where every counted request is one session.
@@ -253,6 +257,12 @@ class TrafficEvent(_TrafficDimensions):
             # End-user uniques: only API calls from apps that send an end-user id have one.
             models.Index(
                 fields=["occurred_at"], name="traffic_event_end_user_idx", condition=~models.Q(end_user_id="")
+            ),
+            # Install or update: the versions an installation got before (CLI events only, a small slice).
+            models.Index(
+                fields=["install_id", "asset_id", "occurred_at"],
+                name="traffic_event_install_idx",
+                condition=models.Q(kind__in=INSTALL_KINDS),
             ),
         ]
 

@@ -23,11 +23,12 @@ from django.http import HttpResponse
 from django.utils.http import content_disposition_header
 from django.utils.translation import get_language, gettext_lazy as _
 
-from apps.content.models import Asset, CategoryChoice
+from apps.content.models import Asset, AssetAccessRequest, CategoryChoice
 from apps.core.ninja_utils.errors import ItqanError
 from apps.usage_tracking.models import (
     AUDIO_KINDS,
     COUNTED_STATUSES,
+    INSTALL_KINDS,
     SESSION_STATUSES,
     TrafficChannel,
     TrafficKind,
@@ -43,7 +44,10 @@ Metric = Literal[
     "plays",
     "downloads",
     "installs",
+    "updates",
     "api_calls",
+    "public_api_calls",
+    "usage",
     "requests",
     "bytes",
     "unique_listeners",
@@ -65,12 +69,21 @@ EARLIEST_START_DATE = date(2000, 1, 1)
 LATEST_END_DATE = date(9999, 11, 30)
 
 DOWNLOAD_KINDS: tuple[str, ...] = (TrafficKind.VERSION_FILE, TrafficKind.GALLERY_DOWNLOAD)
+# The itqan CLI's package registry: the calls behind an install, counted by `installs`/`updates`.
+REGISTRY_CALLS = Q(kind=TrafficKind.API_CALL, endpoint__startswith="/packages/")
+# The file a CLI install downloads after resolving it.
+CLI_FILE_DOWNLOADS = Q(kind=TrafficKind.VERSION_FILE, channel=TrafficChannel.CLI)
 
 
 @dataclass(frozen=True, slots=True)
 class RollupMetric:
     field: str  # TrafficHourly/TrafficDaily column summed
     kinds: tuple[str, ...] | None  # None: every kind
+    exclude: Q | None = None  # rows of those kinds left out
+
+    def q(self) -> Q:
+        q = repo.kinds_q(self.kinds)
+        return q & ~self.exclude if self.exclude is not None else q
 
 
 @dataclass(frozen=True, slots=True)
@@ -85,7 +98,11 @@ ROLLUP_METRICS: dict[str, RollupMetric] = {
     "plays": RollupMetric("sessions", tuple(AUDIO_KINDS)),
     "downloads": RollupMetric("sessions", DOWNLOAD_KINDS),
     "installs": RollupMetric("sessions", (TrafficKind.CLI_INSTALL,)),
+    "updates": RollupMetric("sessions", (TrafficKind.CLI_UPDATE,)),
     "api_calls": RollupMetric("sessions", (TrafficKind.API_CALL,)),
+    "public_api_calls": RollupMetric("sessions", (TrafficKind.API_CALL,), exclude=REGISTRY_CALLS),
+    # Every use of the content once: a CLI install's registry calls and file are part of the install.
+    "usage": RollupMetric("sessions", None, exclude=REGISTRY_CALLS | CLI_FILE_DOWNLOADS),
     "views": RollupMetric("sessions", (TrafficKind.VIEW,)),
     "requests": RollupMetric("requests", None),
     "bytes": RollupMetric("bytes", None),
@@ -109,8 +126,19 @@ METRIC_DEFINITIONS = {
         "Seeking and buffering inside a play are not counted again."
     ),
     "downloads": _("Version files and gallery downloads, counted like plays: repeats within 5 minutes count once."),
-    "installs": _("Packages installed with the itqan CLI, once per installation, version and day."),
+    "installs": _(
+        "Packages installed with the itqan CLI, once per installation, version and day. "
+        "Installs of another version than the installation had before count as updates."
+    ),
+    "updates": _(
+        "itqan CLI installs of another version than the installation had before, "
+        "once per installation, version and day."
+    ),
     "api_calls": _("Successful public API calls for this content, including responses served from the CDN cache."),
+    "public_api_calls": _("Public API calls, without the itqan CLI's package registry calls."),
+    "usage": _(
+        "Every use of the content: plays, downloads, CLI installs and updates, public API calls and gallery views."
+    ),
     "views": _("Asset pages opened by signed-in users in the gallery."),
     "requests": _("Every successful request for an asset file or API route, including partial requests."),
     "bytes": _("Bytes delivered to clients."),
@@ -449,7 +477,7 @@ def summary(scope: ReportScope, filters: ReportFilters) -> dict[str, Any]:
         totals = repo.rollup_totals(
             base_q,
             periods,
-            {metric: (spec.field, spec.kinds) for metric, spec in ROLLUP_METRICS.items()},
+            {metric: (spec.field, spec.q()) for metric, spec in ROLLUP_METRICS.items()},
             APP_KINDS,
             TrafficChannel.APP_UNIDENTIFIED,
         )
@@ -484,7 +512,7 @@ def _latest_version_share(base_q: Q, filters: ReportFilters, category: str | Non
         return None
     latest = repo.latest_version_ids(filters.asset_id, category)
     sessions = repo.version_sessions(
-        base_q, Period(filters.start_date, filters.end_date), (*DOWNLOAD_KINDS, TrafficKind.CLI_INSTALL)
+        base_q, Period(filters.start_date, filters.end_date), (*DOWNLOAD_KINDS, *INSTALL_KINDS)
     )
     total = sum(value for version, value in sessions.items() if version is not None)
     if not total:
@@ -556,7 +584,7 @@ def _total_values(
 ) -> dict[Any, int | None]:
     if metric not in UNIQUE_METRICS:
         spec = ROLLUP_METRICS[metric]
-        rows = repo.rollup_series(base_q, period, spec.field, spec.kinds, granularity, None)
+        rows = repo.rollup_series(base_q, period, spec.field, spec.q(), granularity, None)
         return {bucket: value for bucket, _key, value in rows}
     # Unique metrics: exact distincts inside retention; monthly uniques (month buckets) or None before.
     cutoff = retention_cutoff()
@@ -602,7 +630,7 @@ def _split_series(
                 by_key[OTHER_KEY][bucket] = value
     else:
         rollup = ROLLUP_METRICS[metric]
-        rows = repo.rollup_series(base_q, period, rollup.field, rollup.kinds, granularity, split_by)
+        rows = repo.rollup_series(base_q, period, rollup.field, rollup.q(), granularity, split_by)
         totals: dict[str, int] = defaultdict(int)
         for _bucket, key, value in rows:
             totals[key] += value
@@ -679,7 +707,7 @@ def _groups(
     if metric in UNIQUE_METRICS:
         return repo.unique_groups(base_q, period, _unique_spec(metric), by, zone, limit=limit, only_keys=only_keys)
     spec = ROLLUP_METRICS[metric]
-    groups = repo.rollup_groups(base_q, period, spec.field, spec.kinds, by, zone)
+    groups = repo.rollup_groups(base_q, period, spec.field, spec.q(), by, zone)
     if only_keys is not None:
         wanted = set(only_keys)
         groups = {key: value for key, value in groups.items() if value[0] in wanted}
@@ -893,7 +921,7 @@ def first_seen(scope: ReportScope, filters: ReportFilters, *, by: str, limit: in
         base_q = _base_q(scope, filters)
         period, clamped = _clamp_to_retention(filters)
         rows = repo.first_seen(base_q, retention_cutoff(), period.end, _LISTENERS.kinds, _LISTENERS.statuses, by, limit)
-        plays = repo.rollup_groups(base_q, period, "sessions", tuple(AUDIO_KINDS), by, UTC)
+        plays = repo.rollup_groups(base_q, period, "sessions", ROLLUP_METRICS["plays"].q(), by, UTC)
         label_map = _labels(by, [str(raw) for raw, _first in rows])
         return {
             "by": by,
@@ -1017,10 +1045,100 @@ def recitation_coverage(
 
 
 # ---------------------------------------------------------------------------------------------
+# Text-asset reports: CLI installs and updates per version, access requests
+# ---------------------------------------------------------------------------------------------
+
+ACCESS_REQUEST_TOP_ASSETS = 10
+
+
+def cli_versions(scope: ReportScope, filters: ReportFilters, *, limit: int = 50) -> dict[str, Any]:
+    """CLI installs and updates per asset version in the range, most used first."""
+    validate_filters(filters)
+    check_scope(scope, filters)
+
+    def compute() -> dict[str, Any]:
+        rows = repo.install_versions(_base_q(scope, filters), Period(filters.start_date, filters.end_date), limit)
+        versions = repo.version_details(row["asset_version_id"] for row in rows)
+        assets = _labels("asset", [str(row["asset_id"]) for row in rows if row["asset_id"] is not None])
+        items = []
+        for row in rows:
+            version = versions.get(row["asset_version_id"], {})
+            items.append(
+                {
+                    "asset_id": row["asset_id"],
+                    "asset": assets.get(str(row["asset_id"])),
+                    "version_id": row["asset_version_id"],
+                    "version": version.get("name"),
+                    "language": version.get("asset_language__language"),
+                    "installs": int(row["installs"]),
+                    "updates": int(row["updates"]),
+                }
+            )
+        return {"items": items, "data_updated_at": repo.data_updated_at()}
+
+    return _cached(scope, "cli_versions", {**asdict(filters), "limit": limit}, compute)
+
+
+def _access_request_q(scope: ReportScope, filters: ReportFilters) -> Q:
+    q = Q()
+    if scope.assets is not None:
+        q &= Q(asset_id__in=scope.assets.values("id"))
+    if filters.asset_id is not None:
+        q &= Q(asset_id=filters.asset_id)
+    if filters.category:
+        q &= Q(asset__category=filters.category)
+    return q
+
+
+def access_requests(scope: ReportScope, filters: ReportFilters, *, granularity: str = "day") -> dict[str, Any]:
+    """Access requests created in the range: total vs the previous period, statuses, buckets and top assets.
+
+    Only the dates, asset and category apply: requests have no channel, platform, app or country.
+    """
+    validate_filters(filters)
+    check_granularity(filters, granularity)
+    check_scope(scope, filters)
+
+    def compute() -> dict[str, Any]:
+        asset_q = _access_request_q(scope, filters)
+        period = Period(filters.start_date, filters.end_date)
+        periods = {"current": period, "previous": Period(*previous_period(period.start, period.end))}
+        counts = repo.access_request_counts(asset_q, periods)
+        buckets = bucket_starts(period.start, period.end, granularity)
+        series = repo.access_request_series(asset_q, period, granularity)
+        value, before = counts["current"], counts["previous"]
+        top = repo.access_request_assets(asset_q, period, ACCESS_REQUEST_TOP_ASSETS)
+        names = _labels("asset", [str(row["asset_id"]) for row in top])
+        return {
+            "total": {"value": value, "previous": before, "change": _change(value, before)},
+            "statuses": {status: counts[f"status_{status}"] for status in AssetAccessRequest.StatusChoice.values},
+            "granularity": granularity,
+            "partial_buckets": partial_buckets(period.start, period.end, granularity, buckets),
+            "points": _points(buckets, series),
+            "assets": [
+                {"key": str(row["asset_id"]), "label": names.get(str(row["asset_id"])), "value": row["v"]}
+                for row in top
+            ],
+        }
+
+    return _cached(scope, "access_requests", {**asdict(filters), "g": granularity}, compute)
+
+
+# ---------------------------------------------------------------------------------------------
 # CSV export
 # ---------------------------------------------------------------------------------------------
 
-EXPORT_METRICS = ("plays", "downloads", "installs", "api_calls", "views", "requests", "bytes", "listening_seconds")
+EXPORT_METRICS = (
+    "plays",
+    "downloads",
+    "installs",
+    "api_calls",
+    "views",
+    "requests",
+    "bytes",
+    "listening_seconds",
+    "updates",  # last, so the earlier columns keep their positions
+)
 _FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
 
 
@@ -1038,7 +1156,7 @@ def export_csv(scope: ReportScope, filters: ReportFilters, granularity: str = "d
         _base_q(scope, filters),
         Period(filters.start_date, filters.end_date),
         granularity,
-        {metric: (ROLLUP_METRICS[metric].field, ROLLUP_METRICS[metric].kinds) for metric in EXPORT_METRICS},
+        {metric: (ROLLUP_METRICS[metric].field, ROLLUP_METRICS[metric].q()) for metric in EXPORT_METRICS},
     )
     details = repo.asset_details(row["asset_id"] for row in rows)
     with_publisher = scope.name == "admin"
@@ -1131,8 +1249,8 @@ def public_counts(asset_id: int) -> dict[str, Any]:
             Q(asset_id=asset_id),
             {"all": Period(EARLIEST_START_DATE, LATEST_END_DATE)},
             {
-                "plays": ("sessions", tuple(AUDIO_KINDS)),
-                "downloads": ("sessions", (*DOWNLOAD_KINDS, TrafficKind.CLI_INSTALL)),
+                "plays": ("sessions", ROLLUP_METRICS["plays"].q()),
+                "downloads": ("sessions", repo.kinds_q((*DOWNLOAD_KINDS, *INSTALL_KINDS))),
             },
             APP_KINDS,
             TrafficChannel.APP_UNIDENTIFIED,
