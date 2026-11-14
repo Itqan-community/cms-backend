@@ -7,6 +7,7 @@ from pydantic import AwareDatetime
 
 from apps.content.models import Asset, CategoryChoice
 from apps.content.services.recitation_quality import RecitationQualityService
+from apps.content.timing_coverage import TimingCoverageOut
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.permission_required import permission_required
 from apps.core.ninja_utils.request import Request
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 # --- Schemas ---
 
 
-class QualityOut(Schema):
+class QualityOut(TimingCoverageOut):
     id: int
     name: str
     name_ar: str | None = None
