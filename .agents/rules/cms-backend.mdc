@@ -87,8 +87,8 @@ Use exactly this shape when converting inputs:
 
 
 ## Environments & URLs
-- Production: `https://cms.itqan.dev`
-- Staging: `https://staging.cms.itqan.dev`
+- Production: `https://fanar.itqan.dev` (legacy `https://cms.itqan.dev` still served during migration)
+- Staging: `https://staging.fanar.itqan.dev` (legacy `https://staging.cms.itqan.dev`)
 
 ## Dependencies docs
 - ninja docs: https://django-ninja.dev/
