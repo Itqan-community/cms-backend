@@ -1269,8 +1269,8 @@ msgstr "المستخدمون النهائيون المختلفون الذين أ
 msgid "Seconds of audio delivered, from the bytes sent and each file's length (estimate). Apps that download a whole file before playing count its full length."
 msgstr "ثوانٍ من الصوت المُرسَل، محسوبة من البايتات المرسلة وطول كل ملف (تقدير). التطبيقات التي تنزّل الملف كاملًا قبل تشغيله تُحتسب بطوله الكامل."
 
-msgid "Counts are lower bounds: apps and browsers cache files locally and some content is re-hosted, so that usage never reaches Itqan."
-msgstr "الأرقام حد أدنى: تحفظ التطبيقات والمتصفحات الملفات محليًا ويُعاد استضافة بعض المحتوى، فلا يصل ذلك الاستخدام إلى إتقان."
+msgid "Counts are lower bounds: apps and browsers cache files locally and some content is re-hosted, so that usage never reaches Fanar."
+msgstr "الأرقام حد أدنى: تحفظ التطبيقات والمتصفحات الملفات محليًا ويُعاد استضافة بعض المحتوى، فلا يصل ذلك الاستخدام إلى فنار."
 
 msgid "Unique counts are estimates: people sharing a network may count as one, and one person on several networks may count more than once."
 msgstr "أعداد المستخدمين الفريدين تقديرية: قد يُحتسب من يتشاركون شبكة واحدة شخصًا واحدًا، وقد يُحتسب الشخص الواحد على عدة شبكات أكثر من مرة."
@@ -1743,8 +1743,8 @@ msgstr "ملخص التغييرات:"
 msgid "You are receiving this email because you have access to this asset."
 msgstr "تصلك هذه الرسالة لأن لديك صلاحية الوصول إلى هذا الأصل."
 
-msgid "Thank you for using Itqan!"
-msgstr "شكرًا لاستخدامك إتقان!"
+msgid "Thank you for using Fanar!"
+msgstr "شكرًا لاستخدامك فنار!"
 
 msgid "Issue Status Updated"
 msgstr "تم تحديث حالة البلاغ"
@@ -1804,8 +1804,8 @@ msgstr "تم تفعيل الحساب"
 msgid "Welcome to %(publisher_name)s"
 msgstr "مرحبًا بك في %(publisher_name)s"
 
-msgid "Your account is now active. You can sign in to the Itqan portal."
-msgstr "أصبح حسابك نشطًا الآن. يمكنك تسجيل الدخول إلى لوحة تحكم إتقان."
+msgid "Your account is now active. You can sign in to the Fanar portal."
+msgstr "أصبح حسابك نشطًا الآن. يمكنك تسجيل الدخول إلى لوحة تحكم فنار."
 
 #, python-format
 msgid "Your temporary password is: <strong>%(password)s</strong>"
@@ -1825,8 +1825,8 @@ msgid "You've been invited to %(publisher_name)s"
 msgstr "لقد تمت دعوتك للانضمام إلى %(publisher_name)s"
 
 #, python-format
-msgid "%(invited_by_name)s invited you to join <strong>%(publisher_name)s</strong> on the Itqan portal as %(group_name)s."
-msgstr "دعاك %(invited_by_name)s للانضمام إلى <strong>%(publisher_name)s</strong> في لوحة تحكم إتقان بصفة %(group_name)s."
+msgid "%(invited_by_name)s invited you to join <strong>%(publisher_name)s</strong> on the Fanar portal as %(group_name)s."
+msgstr "دعاك %(invited_by_name)s للانضمام إلى <strong>%(publisher_name)s</strong> في لوحة تحكم فنار بصفة %(group_name)s."
 
 msgid "Accept your invitation"
 msgstr "اقبل الدعوة"
@@ -1838,8 +1838,8 @@ msgstr "تنتهي صلاحية هذه الدعوة في %(expires_at)s."
 msgid "Welcome"
 msgstr "مرحبًا"
 
-msgid "Welcome to Itqan CMS!"
-msgstr "مرحبًا بك في نظام إتقان لإدارة المحتوى!"
+msgid "Welcome to Fanar!"
+msgstr "مرحبًا بك في فنار!"
 
 msgid "This is a test email to verify the email service is working correctly."
 msgstr "هذه رسالة اختبارية للتأكد من عمل خدمة البريد الإلكتروني بشكل صحيح."
