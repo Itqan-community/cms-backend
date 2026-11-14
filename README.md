@@ -1,4 +1,4 @@
-## Itqan CMS — Quranic Content Management System
+## Fanar — Quranic Content Management System
 
 [![CI](https://github.com/Itqan-community/cms-backend/actions/workflows/test_lint.yml/badge.svg)](https://github.com/Itqan-community/cms-backend/actions/workflows/test_lint.yml)
 [![CI/CD](https://github.com/Itqan-community/cms-backend/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/Itqan-community/cms-backend/actions/workflows/ci-cd.yml)
@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/github/license/Itqan-community/cms-backend)](LICENSE)
 
 
-Itqan CMS helps Quranic data publishers distribute high-quality, licensed content while enabling developers to integrate it reliably across apps and platforms.
+Fanar helps Quranic data publishers distribute high-quality, licensed content while enabling developers to integrate it reliably across apps and platforms.
 
 ## Goals
 - Empower publishers to upload, manage, and govern Quranic resources with versioning and clear licensing.
@@ -38,7 +38,7 @@ Itqan CMS helps Quranic data publishers distribute high-quality, licensed conten
 
 ## API Architecture
 
-Itqan CMS exposes **four distinct APIs**, each serving a different audience and purpose. All APIs are built with Django Ninja.
+Fanar exposes **four distinct APIs**, each serving a different audience and purpose. All APIs are built with Django Ninja.
 
 ### 1. CMS API (Internal API)
 
