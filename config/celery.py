@@ -20,7 +20,14 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 # Auto-discover tasks from all Django apps
 app.autodiscover_tasks()
 
+from celery.signals import task_prerun  # noqa: E402
 from django.conf import settings  # noqa: E402
+
+from apps.core.celery_db import reset_stuck_transactions_before_task  # noqa: E402
+
+# Connected before Celery's own Django fixup (installed at worker start), so a connection left
+# inside a transaction by an interrupted task is dropped before the fixup closes connections.
+task_prerun.connect(reset_stuck_transactions_before_task, weak=False)
 
 # Periodic tasks (active entries only - commented-out licensing tasks removed)
 app.conf.beat_schedule = {
