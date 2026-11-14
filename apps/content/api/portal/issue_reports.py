@@ -6,13 +6,14 @@ from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
-from apps.content.models import ContentIssueReport
+from apps.content.models import Asset, ContentIssueReport
 from apps.content.repositories.issue_report import IssueReportRepository
 from apps.content.services.issue_report import IssueReportService
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
+from apps.core.ninja_utils.searching_base import searching
 from apps.core.ninja_utils.tags import NinjaTag
 from apps.publishers.middlewares.publisher_middleware import get_portal_publisher
 
@@ -71,8 +72,31 @@ class IssueReportFilter(FilterSchema):
     reporter_id: Annotated[int | None, FilterLookup(q="reporter_id")] = None
 
 
+class IssueReportAssetMushafLayoutOut(Schema):
+    page_count: int
+
+
+class IssueReportAssetOut(Schema):
+    id: int
+    name: str
+    category: str
+    mushaf_layout: IssueReportAssetMushafLayoutOut | None = None
+
+
 def _get_service() -> IssueReportService:
     return IssueReportService(IssueReportRepository())
+
+
+@router.get("issue-report-assets/", response=list[IssueReportAssetOut])
+@paginate
+@ordering(ordering_fields=["name"])
+@searching(search_fields=["name"])
+def list_issue_report_assets(request: Request):
+    """The assets a report can be filed against from the portal: the selected publisher's (`X-Tenant`).
+
+    Unlike the gallery list, drafts and assets outside the gallery are included.
+    """
+    return Asset.objects.select_related("mushaf_layout").filter(request.publisher_q()).order_by("name", "id")
 
 
 @router.post(
