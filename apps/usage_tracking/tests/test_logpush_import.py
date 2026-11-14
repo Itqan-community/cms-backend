@@ -249,7 +249,7 @@ class TestImportLogpush(BaseTestCase):
         files = {f"{PREFIX}20261018/a.log.gz": gzip.compress(_line("r1"))}
         with (
             self._patch_client(files),
-            patch.object(TrafficRepository, TrafficRepository.rebuild_hour.__name__, side_effect=RuntimeError("db")),
+            patch.object(TrafficRepository, TrafficRepository.rebuild_hours.__name__, side_effect=RuntimeError("db")),
         ):
             first = import_logpush(NOW)
 
@@ -259,6 +259,42 @@ class TestImportLogpush(BaseTestCase):
 
         # Assert
         assert "RuntimeError" in first.error
+        assert TrafficHourly.objects.get(hour=datetime(2026, 10, 18, 10, tzinfo=UTC)).sessions == 1
+
+    def test_import_logpush_where_time_budget_spent_should_leave_files_for_next_run(self):
+        # Arrange
+        files = {
+            f"{PREFIX}20261017/a.log.gz": gzip.compress(_line("r1", at="2026-10-17T10:00:00Z")),
+            f"{PREFIX}20261018/b.log.gz": gzip.compress(_line("r2")),
+        }
+
+        # Act
+        with self._patch_client(files):
+            stopped = import_logpush(NOW, time_budget_seconds=0)
+            resumed = import_logpush(NOW)
+
+        # Assert
+        assert (stopped.files_imported, stopped.error) == (0, "")
+        assert resumed.files_imported == 2
+        assert TrafficHourly.objects.get(hour=datetime(2026, 10, 18, 10, tzinfo=UTC)).sessions == 1
+
+    def test_import_logpush_where_rollup_stopped_by_budget_should_keep_files_pending(self):
+        # Arrange
+        files = {f"{PREFIX}20261018/a.log.gz": gzip.compress(_line("r1"))}
+        with (
+            self._patch_client(files),
+            patch.object(TrafficRepository, TrafficRepository.rebuild_hours.__name__, return_value=[]),
+        ):
+            first = import_logpush(NOW)
+
+        # Act
+        with self._patch_client(files):
+            second = import_logpush(NOW)
+
+        # Assert
+        assert (first.files_imported, first.error) == (1, "")
+        assert second.files_imported == 0
+        assert LogFileImport.objects.get().rolled_up
         assert TrafficHourly.objects.get(hour=datetime(2026, 10, 18, 10, tzinfo=UTC)).sessions == 1
 
     def test_import_logpush_where_read_times_out_should_leave_file_pending(self):

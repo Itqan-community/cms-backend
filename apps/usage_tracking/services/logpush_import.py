@@ -12,6 +12,7 @@ from datetime import UTC, date, datetime, time, timedelta
 import gzip
 import logging
 import re
+from time import monotonic
 import zlib
 
 from django.conf import settings
@@ -33,6 +34,8 @@ _RELIST_DAYS = 1
 _DAY_FOLDER_RE = re.compile(r"^\d{8}/$")
 # Logpush pushes every few minutes; a day folder with nothing newer than this means it stopped.
 _STALE_DAYS = 1
+# Stop starting new work well before the task's 1500s soft limit (see `django_foldin`).
+_TIME_BUDGET_SECONDS = 1200
 
 
 @dataclass(frozen=True, slots=True)
@@ -149,11 +152,14 @@ def _folder_day(key: str) -> date:
     return datetime.strptime(key[len(settings.USAGE_LOGS_PREFIX) :][:8], "%Y%m%d").date()
 
 
-def _rollup_pending(repo: TrafficRepository, play_window: timedelta) -> None:
+def _rollup_pending(repo: TrafficRepository, play_window: timedelta, deadline: float | None = None) -> bool:
+    """Rebuild the hours of files not rolled up yet; False when `deadline` stopped it first
+    (the files stay pending for the next run)."""
     file_ids, hours = repo.pending_rollups()
-    for hour in sorted(hours):
-        repo.rebuild_hour(hour, play_window)
+    if len(repo.rebuild_hours(hours, play_window, deadline)) < len(hours):
+        return False
     repo.mark_rolled_up(file_ids)
+    return True
 
 
 def _pending_keys(
@@ -176,7 +182,7 @@ def _pending_keys(
     return folders, pending
 
 
-def import_logpush(now: datetime | None = None) -> ImportResult:
+def import_logpush(now: datetime | None = None, time_budget_seconds: float = _TIME_BUDGET_SECONDS) -> ImportResult:
     if not settings.ENABLE_USAGE_LOGPUSH_IMPORT:
         logger.info("import_logpush: disabled via ENABLE_USAGE_LOGPUSH_IMPORT; skipping")
         return ImportResult(0, 0, 0, "")
@@ -195,12 +201,17 @@ def import_logpush(now: datetime | None = None) -> ImportResult:
     files = events_total = skipped_total = 0
     error = ""
     play_window = timedelta(minutes=settings.ASSET_DOWNLOAD_PLAY_WINDOW_MINUTES)
+    deadline = monotonic() + time_budget_seconds
     try:
-        _rollup_pending(repo, play_window)  # finish files a previous run stored but did not roll up
+        # Finish files a previous run stored but did not roll up before importing more.
+        caught_up = _rollup_pending(repo, play_window, deadline)
         client = _build_client()
         folders, pending = _pending_keys(client, repo, repo.get_watermark(LOGPUSH_JOB))
-        batch = pending[: settings.USAGE_LOGPUSH_MAX_FILES_PER_RUN]
+        batch = pending[: settings.USAGE_LOGPUSH_MAX_FILES_PER_RUN] if caught_up else []
         for key in batch:
+            if monotonic() >= deadline:
+                logger.info("import_logpush: time budget spent after %d file(s); the next run continues", files)
+                break
             try:
                 parsed, skipped = parse_lines(client.iter_lines(key))
             # Truncated or non-gzip file. Network errors (timeouts are OSErrors too) propagate
@@ -212,11 +223,13 @@ def import_logpush(now: datetime | None = None) -> ImportResult:
                 continue
             events = build_events(parsed)
             repo.store_file(key, events, hours=touched_hours(events, play_window))
-            _rollup_pending(repo, play_window)
             files += 1
             events_total += len(events)
             skipped_total += skipped
-        remaining = pending[len(batch) :]
+            if not _rollup_pending(repo, play_window, deadline):
+                break
+        # Every file before `files` is stored (unreadable ones too); the rest wait for the next run.
+        remaining = pending[files:]
         if remaining:
             watermark_day = _folder_day(remaining[0])
         elif folders:
