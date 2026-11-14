@@ -9,7 +9,12 @@ from pydantic import AwareDatetime, Field
 from apps.content.api.portal.asset_content import VersionTextIn, VersionTextOut
 from apps.content.api.portal.asset_review import change_counts, pending_review_count, with_change_counts
 from apps.content.models import Asset, AssetLanguage, AssetVersion, CategoryChoice, ChangeTypeChoice, VersionStateChoice
-from apps.content.services.asset_content import VersionDeleteBlockedReason, version_delete_blocked_reason
+from apps.content.services.asset_content import (
+    VersionDeleteBlockedReason,
+    is_first_version,
+    is_head_version,
+    version_delete_blocked_reason,
+)
 from apps.content.services.asset_language_access import (
     filter_versions_to_allowed,
     require_language,
@@ -66,10 +71,8 @@ class TextAssetVersionListOut(VersionTextOut, PackageStatusOut):
         return obj.asset_language.language if obj.asset_language_id else obj.asset.language
 
     @staticmethod
-    def resolve_is_active(obj: AssetVersion) -> bool:
-        language = obj.asset_language.language if obj.asset_language_id else obj.asset.language
-        latest = obj.asset.get_latest_version(language)
-        return latest is not None and latest.id == obj.id
+    def resolve_is_active(obj: AssetVersion, context: dict) -> bool:
+        return is_head_version(obj, context["request"].__dict__.setdefault("_committed_versions", {}))
 
     @staticmethod
     def resolve_is_published(obj: AssetVersion) -> bool:
@@ -82,13 +85,8 @@ class TextAssetVersionListOut(VersionTextOut, PackageStatusOut):
         return obj.publishing_rolls_back()
 
     @staticmethod
-    def resolve_is_first(obj: AssetVersion) -> bool:
-        return not AssetVersion.objects.filter(
-            asset_id=obj.asset_id,
-            asset_language_id=obj.asset_language_id,
-            state=VersionStateChoice.PUBLISHED,
-            created_at__lt=obj.created_at,
-        ).exists()
+    def resolve_is_first(obj: AssetVersion, context: dict) -> bool:
+        return is_first_version(obj, context["request"].__dict__.setdefault("_committed_versions", {}))
 
     @staticmethod
     def resolve_is_approved(obj: AssetVersion, context: dict) -> bool:
