@@ -964,7 +964,7 @@ flowchart LR
 
 | Model | Holds |
 |---|---|
-| `TrafficEvent` | One row per edge request (Cloudflare `ray_id`, unique) for an asset file or a public-API route: kind (`audio_surah`, `audio_ayah`, `version_file`, `gallery_download`, `api_call`, `cli_install`, `view`), asset/surah/version/language, country, channel, platform, endpoint, path, status class, bytes, and HMAC identities (`listener_id` = IP + user agent, `install_id`, `end_user_id`). Raw IPs are never stored. Purged after `USAGE_EVENT_RETENTION_MONTHS` |
+| `TrafficEvent` | One row per edge request (Cloudflare `ray_id`, unique) for an asset file or a public-API route: kind (`audio_surah`, `audio_ayah`, `version_file`, `gallery_download`, `api_call`, `cli_install`, `cli_update`, `view`), asset/surah/version/language, country, channel, platform, endpoint, path, status class, bytes, and HMAC identities (`listener_id` = IP + user agent, `install_id`, `end_user_id`). Raw IPs are never stored. Purged after `USAGE_EVENT_RETENTION_MONTHS` |
 | `TrafficHourly` / `TrafficDaily` | Per hour/day and dimension: `requests`, `bytes`, `sessions` (plays for audio, downloads for files, first install per install id and day, every call for API calls and views), `listened_seconds` (audio bytes × the requested track's or ayah file's `duration_ms` ÷ `size_bytes`; 0 for unknown paths). Bots and 4xx/5xx are excluded. `manage.py rebuild_traffic_rollups --since YYYY-MM-DD` rebuilds every hour that still has events |
 | `TrafficMonthlyUniques` | Distinct listeners, downloaders, installs and end users per month for all traffic, each asset, publisher and app. Kept forever |
 | `R2ObjectReadsHourly` | R2 reads per object and hour beside the edge requests seen for it; the difference is traffic the edge never saw |
@@ -985,8 +985,11 @@ flowchart LR
   the key is deleted). `AppTaggingMiddleware` adds `?c=<slug>` to storage URLs in API-key JSON
   responses, sets `X-Itqan-App: <slug>` (captured by a Logpush custom response-header field) and
   makes caching private. The importer maps `c` / `x-itqan-app` to `UsageApp` ids.
-- **Django-side events:** package resolves write one `cli_install` traffic event per package
-  (`source=django`). `fold_in_django_events_task` (minute 15) copies gallery views and presigned
+- **Django-side events:** package resolves write one `cli_install` or `cli_update` traffic event
+  per package (`source=django`). `cli_update`: the installation (`X-Itqan-Install-Id`) last got
+  another version of the same asset and language, looked up in the events still kept
+  (`traffic_event_install_idx`); first installs, repeats and clients without an install id are
+  `cli_install`. `fold_in_django_events_task` (minute 15) copies gallery views and presigned
   downloads from `content.UsageEvent` (CDN downloads are counted at the edge, behind
   `GALLERY_DOWNLOADS_VIA_CDN`), skips events recorded with Caddy's internal address (before the
   client-IP fix or from old workers mid-deploy), and rebuilds every hour that gained Django rows
@@ -1003,7 +1006,7 @@ flowchart LR
 
 One engine (`apps/usage_tracking/services/usage_reports.py`, queries in
 `repositories/usage_reports.py`) serves four scopes. Additive metrics (`plays`, `downloads`,
-`installs`, `api_calls`, `views`, `requests`, `bytes`, `listening_seconds`) read `TrafficDaily` (`TrafficHourly` for
+`installs`, `updates`, `api_calls`, `views`, `requests`, `bytes`, `listening_seconds`) read `TrafficDaily` (`TrafficHourly` for
 hourly series and hour-of-week); unique metrics (`unique_listeners`, `unique_downloaders`,
 `unique_end_users`) count distinct identities in `TrafficEvent`, or sum `TrafficMonthlyUniques`
 when the range starts before event retention (`uniques_basis`). Dates are inclusive UTC days
