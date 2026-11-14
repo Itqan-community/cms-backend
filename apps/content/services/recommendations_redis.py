@@ -1,18 +1,16 @@
 """Dedicated Redis client + key helpers for the content recommendation engine.
 
 Recommendation scores are precomputed nightly (see apps.content.tasks) and stored as
-Redis sorted sets so reads at request time are O(log N) with no DB round trip. This
-mirrors apps.usage_tracking.tasks' `_build_tracking_redis` pattern: reuse the `default`
-django-redis connection's host/port/auth/TLS, but swap to a dedicated DB so recommendation
-keys can't be evicted by the Django cache's eviction policy and don't collide with the
-tracking buffer (DB 2).
+Redis sorted sets so reads at request time are O(log N) with no DB round trip. Reuse the
+`default` django-redis connection's host/port/auth/TLS, but swap to a dedicated DB so
+recommendation keys can't be evicted by the Django cache's eviction policy.
 """
 
 from __future__ import annotations
 
 import redis
 
-# Separate Redis DB from the Django cache (DB 1) and the usage-tracking buffer (DB 2).
+# Separate Redis DB from the Django cache (DB 1).
 _RECOMMENDATIONS_REDIS_DB = 3
 
 # Sentinel distinguishing "not resolved yet" from a resolved-to-None client (no Redis,

@@ -23,7 +23,6 @@ from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
-from apps.usage_tracking.decorators.track_usage import track_extra, track_usage
 
 router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
 
@@ -65,7 +64,6 @@ class RecitationRangeOut(Schema):
         422: NinjaErrorResponse[Literal["validation_error"]],
     },
 )
-@track_usage()
 def get_recitation_range(
     request: Request,
     asset_id: int,
@@ -95,18 +93,6 @@ def get_recitation_range(
                 is_open_access=is_open_access,
             )
 
-        track_extra(
-            request,
-            entity_type="recitation_range",
-            accessed_entity_name=cached_meta["name_ar"],
-            entity_ids=[asset_id],
-            entity_names=[cached_meta["name_ar"]],
-            publisher_ids=[cached_meta["publisher_id"]] if cached_meta["publisher_id"] else [],
-            publisher_names=[cached_meta["publisher_name"]] if cached_meta["publisher_id"] else [],
-            surah_number=surah_number,
-            from_ayah=from_ayah,
-            to_ayah=to_ayah,
-        )
         resp = HttpResponse(cached_resp, content_type="application/json")
         resp["Cache-Control"] = "public, max-age=300, s-maxage=300" if is_open_access else "private, no-cache"
         return resp
@@ -129,19 +115,6 @@ def get_recitation_range(
         "publisher_name": publisher_name,
         "is_open_access": asset.is_open_access,
     }
-
-    track_extra(
-        request,
-        entity_type="recitation_range",
-        accessed_entity_name=asset.name_ar,
-        entity_ids=[asset.id],
-        entity_names=[asset.name_ar],
-        publisher_ids=[asset.publisher_id] if asset.publisher_id else [],
-        publisher_names=[publisher_name] if asset.publisher_id else [],
-        surah_number=surah_number,
-        from_ayah=from_ayah,
-        to_ayah=to_ayah,
-    )
 
     # Validate the range (422 on bad order/bounds/gaps) and resolve track+quality.
     track, resolved_quality, subset, start_ms, end_ms = service.get_range_segment(
