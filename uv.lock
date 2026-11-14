@@ -1528,7 +1528,6 @@ dependencies = [
     { name = "djangosaml2idp" },
     { name = "flower" },
     { name = "httpx" },
-    { name = "mixpanel" },
     { name = "mutagen" },
     { name = "ninja-keys" },
     { name = "pillow" },
@@ -1601,7 +1600,6 @@ requires-dist = [
     { name = "flower", specifier = "==2.2.*" },
     { name = "gunicorn", marker = "extra == 'prod'", specifier = ">=21.2,<26.3" },
     { name = "httpx", specifier = "==0.28.*" },
-    { name = "mixpanel", specifier = ">=4.10.1" },
     { name = "mutagen", specifier = ">=1.47.0" },
     { name = "ninja-keys", git = "https://github.com/hassaanalansary/ninja-keys.git" },
     { name = "pillow", specifier = ">=10.3.0" },
@@ -1922,21 +1920,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/bd/c0/9f7c9a46090390368a4d7bcb76bb87a4a36c421e4c0792cdb53486ffac7a/matplotlib_inline-0.2.2.tar.gz", hash = "sha256:72f3fe8fce36b70d4a5b612f899090cd0401deddc4ea90e1572b9f4bfb058c79", size = 8150, upload-time = "2026-05-08T17:33:33.49Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/41/09/5b161152e2d90f7b87f781c2e1267494aef9c32498df793f73ad0a0a494a/matplotlib_inline-0.2.2-py3-none-any.whl", hash = "sha256:3c821cf1c209f59fb2d2d64abbf5b23b67bcb2210d663f9918dd851c6da1fcf6", size = 9534, upload-time = "2026-05-08T17:33:32.055Z" },
-]
-
-[[package]]
-name = "mixpanel"
-version = "5.0.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "asgiref" },
-    { name = "httpx" },
-    { name = "pydantic" },
-    { name = "requests" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/2c/1e/d2a733cb35b380942e0f1791427d23afa1bc1c37b8ce7089b2c691176d0f/mixpanel-5.0.0.tar.gz", hash = "sha256:ef78b7b36150fbf24796972bf44871515c6d1381a69be683eb26a65d44b84bb5", size = 21083, upload-time = "2025-11-04T22:10:23.502Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/cd/05/248580e987b203c24e4cce53f5e5d60ea749550af5c756c770196d549f96/mixpanel-5.0.0-py3-none-any.whl", hash = "sha256:5c5fee75a304bd2940828a08a31f74fae7f02d5fe81914a851ed87e8884096ec", size = 23848, upload-time = "2025-11-04T22:10:22.233Z" },
 ]
 
 [[package]]
