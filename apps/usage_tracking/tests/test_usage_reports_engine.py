@@ -184,6 +184,7 @@ class TestUsageReportsEngine(BaseTestCase):
 
         # Assert
         assert result["metrics"]["usage"]["value"] == 10 + 5 + 2 + 1 + 7 + 6
+        assert result["metrics"]["public_api_calls"]["value"] == 6
         assert result["metrics"]["api_calls"]["value"] == 15
 
     def test_timeseries_where_usage_metric_should_sum_every_kind_per_bucket(self):
@@ -200,6 +201,20 @@ class TestUsageReportsEngine(BaseTestCase):
         values = {point["t"]: point["value"] for point in total["series"][0]["points"]}
         assert (values["2026-10-11"], values["2026-10-12"]) == (5, 1)
         assert {series["key"] for series in result["series"]} == {"audio_surah", "view", "cli_install"}
+
+    def test_breakdown_where_public_api_calls_by_surah_should_skip_registry_calls(self):
+        # Arrange
+        day = date(2026, 10, 12)
+        daily(day, asset_id=self.asset.id, kind="api_call", surah=2, endpoint="/ayahs/{surah_number}/", sessions=4)
+        daily(day, asset_id=self.asset.id, kind="api_call", surah=1, endpoint="/ayahs/{surah_number}/", sessions=1)
+        daily(day, asset_id=self.asset.id, kind="api_call", endpoint="/packages/resolve/{slug}/", sessions=9)
+
+        # Act
+        result = breakdown(admin_scope(None), WEEK, metric="public_api_calls", by="surah")
+
+        # Assert
+        assert [(item["key"], item["value"]) for item in result["items"]] == [("2", 4), ("1", 1)]
+        assert result["total"] == 5
 
     def test_summary_where_range_before_retention_should_use_monthly_uniques(self):
         # Arrange

@@ -28,6 +28,7 @@ from django.db.models.functions import (
 from apps.content.models import (
     PUBLISHED_VERSION_CATEGORIES,
     Asset,
+    AssetAccessRequest,
     AssetLanguage,
     AssetVersion,
     Qiraah,
@@ -41,6 +42,7 @@ from apps.publishers.models import Publisher
 from apps.usage_tracking.models import (
     AUDIO_KINDS,
     COUNTED_STATUSES,
+    INSTALL_KINDS,
     R2ObjectReadsHourly,
     TrafficDaily,
     TrafficEvent,
@@ -94,6 +96,9 @@ class Period:
 
     def events_q(self) -> Q:
         return Q(occurred_at__gte=day_start(self.start), occurred_at__lt=day_start(self.end + timedelta(days=1)))
+
+    def created_q(self) -> Q:
+        return Q(created_at__gte=day_start(self.start), created_at__lt=day_start(self.end + timedelta(days=1)))
 
 
 def kinds_q(kinds: Sequence[str] | None) -> Q:
@@ -545,3 +550,59 @@ def surah_plays(since: date) -> dict[int, int]:
         .order_by()
     )
     return {row["surah"]: int(row["v"] or 0) for row in rows}
+
+
+# -- text-asset reports --------------------------------------------------------------------------
+
+
+def install_versions(base_q: Q, period: Period, limit: int) -> list[dict[str, Any]]:
+    """CLI installs and updates per (asset, version), most used first."""
+    install, update = INSTALL_KINDS
+    return list(
+        TrafficDaily.objects.filter(base_q, period.daily_q(), kind__in=INSTALL_KINDS, asset_version_id__isnull=False)
+        .values("asset_id", "asset_version_id")
+        .annotate(
+            installs=Coalesce(Sum("sessions", filter=Q(kind=install)), 0),
+            updates=Coalesce(Sum("sessions", filter=Q(kind=update)), 0),
+        )
+        .annotate(total=F("installs") + F("updates"))
+        .order_by("-total", "asset_id", "-asset_version_id")[:limit]
+    )
+
+
+def version_details(version_ids: Iterable[int]) -> dict[int, dict[str, Any]]:
+    """Version id -> name and language."""
+    return {
+        row["id"]: row
+        for row in AssetVersion.objects.filter(id__in=set(version_ids)).values("id", "name", "asset_language__language")
+    }
+
+
+def access_request_counts(asset_q: Q, periods: dict[str, Period]) -> dict[str, int]:
+    """Requests created in each period (`<name>`) and, for `current`, per status (`status_<value>`)."""
+    current = periods["current"]
+    annotations: dict[str, Any] = {name: Count("id", filter=period.created_q()) for name, period in periods.items()}
+    for status in AssetAccessRequest.StatusChoice.values:
+        annotations[f"status_{status}"] = Count("id", filter=current.created_q() & Q(status=status))
+    span = Period(min(p.start for p in periods.values()), max(p.end for p in periods.values()))
+    return AssetAccessRequest.objects.filter(asset_q, span.created_q()).aggregate(**annotations)
+
+
+def access_request_series(asset_q: Q, period: Period, granularity: str) -> dict[date, int]:
+    rows = (
+        AssetAccessRequest.objects.filter(asset_q, period.created_q())
+        .annotate(bucket=Trunc("created_at", granularity, tzinfo=UTC))
+        .values("bucket")
+        .annotate(v=Count("id"))
+        .order_by()
+    )
+    return {row["bucket"].date(): row["v"] for row in rows}
+
+
+def access_request_assets(asset_q: Q, period: Period, limit: int) -> list[dict[str, Any]]:
+    return list(
+        AssetAccessRequest.objects.filter(asset_q, period.created_q())
+        .values("asset_id")
+        .annotate(v=Count("id"))
+        .order_by("-v", "asset_id")[:limit]
+    )
