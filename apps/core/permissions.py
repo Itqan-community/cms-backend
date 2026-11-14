@@ -23,10 +23,19 @@ class PermissionChoice(TextChoices):
     PORTAL_UPLOAD_TIMING = "portal_upload_timing", _("Portal - Upload Recitation Timings")
 
     # Text assets
-    PORTAL_READ_TEXT_ASSET = "portal_read_text_asset", _("Portal - View Text Assets")
-    PORTAL_CREATE_TEXT_ASSET = "portal_create_text_asset", _("Portal - Create Text Assets")
-    PORTAL_UPDATE_TEXT_ASSET = "portal_update_text_asset", _("Portal - Update Text Assets")
-    PORTAL_DELETE_TEXT_ASSET = "portal_delete_text_asset", _("Portal - Delete Text Assets")
+    PORTAL_READ_TEXT_ASSET = "portal_read_text_asset", _("Portal - View Tafsirs, Translations and Quranic Sciences")
+    PORTAL_CREATE_TEXT_ASSET = (
+        "portal_create_text_asset",
+        _("Portal - Create Tafsirs, Translations and Quranic Sciences"),
+    )
+    PORTAL_UPDATE_TEXT_ASSET = (
+        "portal_update_text_asset",
+        _("Portal - Update Tafsirs, Translations and Quranic Sciences"),
+    )
+    PORTAL_DELETE_TEXT_ASSET = (
+        "portal_delete_text_asset",
+        _("Portal - Delete Tafsirs, Translations and Quranic Sciences"),
+    )
 
     # Mushafs
     PORTAL_READ_MUSHAF = "portal_read_mushaf", _("Portal - View Mushafs")
@@ -88,7 +97,10 @@ class PermissionChoice(TextChoices):
 
     # Content editing: changing an asset's text (the content editor, uploading or
     # restoring a version). Separate from PORTAL_UPDATE_*, which covers metadata only.
-    PORTAL_EDIT_TEXT_ASSET_CONTENT = "portal_edit_text_asset_content", _("Portal - Edit Text Asset Content")
+    PORTAL_EDIT_TEXT_ASSET_CONTENT = (
+        "portal_edit_text_asset_content",
+        _("Portal - Edit Content of Tafsirs, Translations and Quranic Sciences"),
+    )
 
     # Asset languages
     # ACCESS_ALL_LANGUAGES bypasses per-member language assignment: the holder is treated as
@@ -268,7 +280,7 @@ PERMISSION_GROUPS: list[tuple[str, str, list[PermissionChoice]]] = [
     ),
     (
         "text_assets",
-        _("Text assets"),
+        _("Tafsirs, translations and Quranic sciences"),
         [
             P.PORTAL_READ_TEXT_ASSET,
             P.PORTAL_CREATE_TEXT_ASSET,
