@@ -409,6 +409,9 @@ Each result lists the asset's installable languages, source first, with the newe
 ### 9.1b. API key check (`GET /packages/me/`)
 Returns the owner of the API key sent in `X-API-Key` (`{"name": "…", "email": "…"}`), or `401 authentication_required` when the key is missing, unknown or revoked. `itqan login` calls it to check a key before saving it.
 
+### 9.1c. Request access (`POST /packages/{slug}/request-access/`)
+Asks the publisher for access to a gated asset, with the caller's API key. Body: `{"intended_use": "commercial" | "non-commercial", "purpose": "…"}` (`purpose` is optional). It uses the same service and rules as the gallery's request-access endpoint, so a pending or approved request is returned as it is (`created: false`) rather than duplicated, a rejected request can be requested again, and publishers with auto-accept on approve it at once. Response: `{"slug", "request_id", "status", "created", "access_request_url"}`. Errors: `401 authentication_required` (no or bad key), `404 asset_not_found` (unknown slug, or not on the CLI channel), `409 access_not_required` (open asset). `itqan request-access` calls it.
+
 ### 9.2. Evolution of `itqan-assets.lock` (Lockfile V2 Path)
 In `docs/ASSET_MANIFEST.md` §5, `itqan-assets.lock` was defined with `lockfile_version: 1` without checksums because artifact identity was deferred to this specification.
 

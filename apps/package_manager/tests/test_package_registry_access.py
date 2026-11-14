@@ -180,3 +180,135 @@ class PackageAccountTests(BaseTestCase):
         # Assert
         self.assertEqual(401, response.status_code, response.content)
         self.assertEqual("authentication_required", response.json()["error_name"])
+
+
+@override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=True, FRONTEND_BASE_URL="https://cms.example")
+class PackageRequestAccessTests(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.publisher = baker.make(Publisher, name="Publisher", auto_accept_access_requests=False)
+        self.user = User.objects.create_user(email="dev@example.com", name="Dev")
+        _, self.raw_key = APIKey.objects.create_key(name="cli", user=self.user)
+        self.asset = baker.make(
+            Asset,
+            slug="gated",
+            publisher=self.publisher,
+            status=StatusChoice.READY,
+            category="text",
+            template=AssetTemplateChoice.AYAH,
+            is_open_access=False,
+            in_cli=True,
+        )
+
+    def _post(self, slug="gated", *, key=True, body=None):
+        return self.client.post(
+            f"/packages/{slug}/request-access/",
+            body if body is not None else {"intended_use": "non-commercial", "purpose": "A study app"},
+            content_type="application/json",
+            headers={"x-api-key": self.raw_key} if key else {},
+        )
+
+    def test_request_access_where_gated_asset_should_create_pending_request(self):
+        # Act
+        response = self._post()
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        data = response.json()
+        self.assertEqual("pending", data["status"])
+        self.assertTrue(data["created"])
+        self.assertEqual(f"https://cms.example/gallery/asset/{self.asset.pk}", data["access_request_url"])
+        request = AssetAccessRequest.objects.get(developer_user=self.user, asset=self.asset)
+        self.assertEqual("A study app", request.developer_access_reason)
+        self.assertEqual("non-commercial", request.intended_use)
+
+    def test_request_access_where_already_pending_should_return_same_request(self):
+        # Arrange
+        first = self._post().json()
+
+        # Act
+        second = self._post().json()
+
+        # Assert
+        self.assertFalse(second["created"])
+        self.assertEqual(first["request_id"], second["request_id"])
+        self.assertEqual(1, AssetAccessRequest.objects.filter(asset=self.asset).count())
+
+    def test_request_access_where_publisher_auto_accepts_should_approve_and_grant(self):
+        # Arrange
+        self.publisher.auto_accept_access_requests = True
+        self.publisher.save()
+
+        # Act
+        response = self._post()
+
+        # Assert
+        self.assertEqual("approved", response.json()["status"])
+        self.assertTrue(AssetAccess.objects.filter(user=self.user, asset=self.asset).exists())
+
+    def test_request_access_where_previously_rejected_should_create_new_request(self):
+        # Arrange
+        old = baker.make(
+            AssetAccessRequest,
+            developer_user=self.user,
+            asset=self.asset,
+            status=AssetAccessRequest.StatusChoice.REJECTED,
+        )
+
+        # Act
+        data = self._post().json()
+
+        # Assert
+        self.assertTrue(data["created"])
+        self.assertNotEqual(old.pk, data["request_id"])
+        self.assertEqual("pending", data["status"])
+
+    def test_request_access_where_no_api_key_should_return_401(self):
+        response = self._post(key=False)
+
+        self.assertEqual(401, response.status_code)
+        self.assertEqual("authentication_required", response.json()["error_name"])
+
+    def test_request_access_where_asset_open_should_return_409(self):
+        # Arrange
+        baker.make(
+            Asset,
+            slug="open-one",
+            category="text",
+            template=AssetTemplateChoice.AYAH,
+            status=StatusChoice.READY,
+            is_open_access=True,
+            in_cli=True,
+        )
+
+        # Act
+        response = self._post("open-one")
+
+        # Assert
+        self.assertEqual(409, response.status_code)
+        self.assertEqual("access_not_required", response.json()["error_name"])
+
+    def test_request_access_where_slug_unknown_or_not_on_cli_should_return_404(self):
+        baker.make(
+            Asset,
+            slug="no-cli",
+            category="text",
+            template=AssetTemplateChoice.AYAH,
+            status=StatusChoice.READY,
+            is_open_access=False,
+            in_cli=False,
+        )
+
+        self.assertEqual(404, self._post("missing").status_code)
+        self.assertEqual(404, self._post("no-cli").status_code)
+
+    def test_request_access_where_intended_use_invalid_or_purpose_blank_should_be_rejected(self):
+        self.assertEqual(400, self._post(body={"intended_use": "hobby"}).status_code)
+        self.assertEqual(422, self._post(body={"intended_use": "commercial", "purpose": "  "}).status_code)
+
+    def test_request_access_where_purpose_omitted_should_use_default(self):
+        response = self._post(body={"intended_use": "commercial"})
+
+        self.assertEqual(200, response.status_code, response.content)
+        request = AssetAccessRequest.objects.get(asset=self.asset)
+        self.assertEqual("Requested with the itqan CLI.", request.developer_access_reason)
