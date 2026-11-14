@@ -381,19 +381,27 @@ class TrafficRepository:
     # -- reconciliation -------------------------------------------------------
     def edge_requests_by_object(self, hour: datetime) -> dict[str, int]:
         hour = floor_hour(hour)
+        return self.edge_requests_by_hour_and_object(hour, hour + _HOUR).get(hour, {})
+
+    def edge_requests_by_hour_and_object(self, start: datetime, end: datetime) -> dict[datetime, dict[str, int]]:
+        """Edge file requests per hour and path from `start`'s hour to `end`, in one query."""
         rows = (
             TrafficEvent.objects.filter(
                 source=TrafficSource.EDGE,
-                occurred_at__gte=hour,
-                occurred_at__lt=hour + _HOUR,
+                occurred_at__gte=floor_hour(start),
+                occurred_at__lt=end,
                 kind__in=FILE_SESSION_KINDS,
                 status_class__in=(*SESSION_STATUSES, TrafficStatusClass.SUCCESS),
             )
-            .values("path")
+            .annotate(hour=TruncHour("occurred_at", tzinfo=UTC))
+            .values("hour", "path")
             .annotate(total=Count("id"))
             .order_by()
         )
-        return {row["path"]: row["total"] for row in rows}
+        counts: dict[datetime, dict[str, int]] = defaultdict(dict)
+        for row in rows:
+            counts[row["hour"]][row["path"]] = row["total"]
+        return counts
 
     def replace_r2_reads(self, hour: datetime, rows: list[R2ObjectReadsHourly]) -> None:
         hour = floor_hour(hour)
