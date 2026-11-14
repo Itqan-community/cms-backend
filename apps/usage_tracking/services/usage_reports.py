@@ -158,7 +158,7 @@ METRIC_DEFINITIONS = {
 DISCLAIMERS = {
     "lower_bound": _(
         "Counts are lower bounds: apps and browsers cache files locally and some content is re-hosted, "
-        "so that usage never reaches Itqan."
+        "so that usage never reaches Fanar."
     ),
     "uniques_estimated": _(
         "Unique counts are estimates: people sharing a network may count as one, "

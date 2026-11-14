@@ -90,7 +90,7 @@ class EmailTemplateRenderTest(SimpleTestCase):
                 html = render_to_string(template, context)
 
                 self.assertIn("background-color:#f4f8f6", html)
-                self.assertIn("Thank you for using Itqan!", html)
+                self.assertIn("Thank you for using Fanar!", html)
                 self.assertIn('<html lang="en" dir="ltr">', html)
                 # The old bare markup had no shell; make sure it is really gone.
                 self.assertNotIn("Best regards,", html)
@@ -108,7 +108,7 @@ class EmailTemplateRenderTest(SimpleTestCase):
                     # Assert
                     self.assertIn('<html lang="ar" dir="rtl">', html)
                     self.assertIn("text-align:right", html)
-                    self.assertIn("شكرًا لاستخدامك إتقان!", html)
+                    self.assertIn("شكرًا لاستخدامك فنار!", html)
 
     def test_render_where_stripped_to_plain_text_should_not_leak_markup(self):
         # The email service derives the plain-text part with strip_tags, so any raw
