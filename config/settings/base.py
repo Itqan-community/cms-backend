@@ -641,22 +641,13 @@ DATA_UPLOAD_MAX_NUMBER_FILES = 114
 
 LOGOUT_REDIRECT_URL = "/accounts/login"
 
-# Usage tracking (Mixpanel)
-MIXPANEL_ENABLED = config("MIXPANEL_ENABLED", default=False, cast=bool)
-MIXPANEL_PROJECT_TOKEN = config("MIXPANEL_PROJECT_TOKEN", default="")
-MIXPANEL_PROJECT_ID = config("MIXPANEL_PROJECT_ID", default="")
-MIXPANEL_INGEST_HOST = config("MIXPANEL_INGEST_HOST", default="api-eu.mixpanel.com")
-
-# Always installed: holds the asset download statistics tables, which do not depend on
-# Mixpanel. Mixpanel behaviour stays gated by MIXPANEL_ENABLED inside the app.
+# Always installed: holds the asset download statistics and usage report tables.
 LOCAL_APPS.append("apps.usage_tracking")
 
-# Audio usage sync from Cloudflare to Mixpanel
+# Cloudflare analytics access, shared by the asset download sync and the usage reports.
 CF_ZONE_ID = config("CF_ZONE_ID", default="")
 CF_API_TOKEN = config("CF_API_TOKEN", default="")
 CF_R2_CUSTOM_DOMAIN = config("CF_R2_CUSTOM_DOMAIN", default="")
-ENABLE_AUDIO_USAGE_SYNC = config("ENABLE_AUDIO_USAGE_SYNC", default=False, cast=bool)
-AUDIO_USAGE_SYNC_WINDOW_HOURS = config("AUDIO_USAGE_SYNC_WINDOW_HOURS", default=6, cast=int)
 
 # Asset download statistics from Cloudflare edge analytics (reuses CF_ZONE_ID,
 # CF_API_TOKEN and CF_R2_CUSTOM_DOMAIN). All optional.

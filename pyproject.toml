@@ -31,7 +31,6 @@ dependencies = [
     "djangosaml2idp>=0.7.2",
     "flower==2.2.*",
     "httpx==0.28.*",
-    "mixpanel>=4.10.1",
     "mutagen>=1.47.0",
     "ninja-keys>=1.0.1",
     "Pillow>=10.3.0",
