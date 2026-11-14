@@ -109,7 +109,8 @@ services:
       DJANGO_SETTINGS_MODULE: config.settings.production
       PYTHONUNBUFFERED: "1"
     ports:
-      - "${FLOWER_PORT:-5555}:5555"
+      # Localhost only: reach it over an SSH tunnel (ssh -L 5555:localhost:5555 <host>).
+      - "127.0.0.1:${FLOWER_PORT:-5555}:5555"
     depends_on:
       rabbitmq:
         condition: service_healthy

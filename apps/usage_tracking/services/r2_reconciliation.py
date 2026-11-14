@@ -58,11 +58,14 @@ def reconcile_r2_reads(now: datetime | None = None) -> ReconcileResult:
         end = floor_hour(now - _LAG)
         watermark = repo.get_watermark(R2_RECONCILIATION_JOB)
         hour = min(watermark, end - _REFRESH) if watermark else end - _REFRESH
+        # One query for the run's edge counts, not one per hour.
+        edge_by_hour = repo.edge_requests_by_hour_and_object(hour, min(end, hour + _MAX_HOURS_PER_RUN * _HOUR))
         while hour < end and hours < _MAX_HOURS_PER_RUN:
+            # Cloudflare stays one call per hour: each is a page with its own group limit.
             reads, truncated = client.fetch_reads(settings.CLOUDFLARE_R2_BUCKET, hour, hour + _HOUR)
             if truncated:
                 logger.error("reconcile_r2_reads: hour %s hit the page limit; counts are partial", hour)
-            edge = repo.edge_requests_by_object(hour)
+            edge = edge_by_hour.get(hour, {})
             rows = []
             for key, count in reads.items():
                 file = parse_download_path("/" + key)

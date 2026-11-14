@@ -975,7 +975,14 @@ flowchart LR
   `LogFileImport`, stores each file's events and its record (with the hours they touch) in one
   transaction, then rebuilds those hours (plus the next hour when a play may continue into it)
   and marks the file rolled up. Files left un-rolled-up by a failed run are finished first by
-  the next run. Only `GET` requests count (CORS preflights and `HEAD` probes are dropped).
+  the next run. A run stops taking new files after a 20-minute budget (the task's soft limit is
+  25), leaving the rest for the next run. Only `GET` requests count (CORS preflights and `HEAD`
+  probes are dropped).
+- **Rollup rebuilds** (`TrafficRepository.rebuild_hours`, shared by the import, the fold-in and
+  `rebuild_traffic_rollups`): one transaction per day rebuilds that day's hours and then the day
+  once, holding a transaction-level advisory lock on the day, so two jobs rebuilding the same day
+  take turns instead of inserting the same rollup rows twice. Jobs pass a deadline and stop
+  between days once it has passed.
   Network errors leave a file pending; only corrupt gzip files are recorded with `error`.
 - **Channel** (first match): `gallery` (`?download=` links), `cli` (`itqan-cli/` user agent or
   install header), `app_identified` (a known app slug), `web` (browsers), `app_unidentified`
@@ -990,7 +997,9 @@ flowchart LR
   downloads from `content.UsageEvent` (CDN downloads are counted at the edge, behind
   `GALLERY_DOWNLOADS_VIA_CDN`), skips events recorded with Caddy's internal address (before the
   client-IP fix or from old workers mid-deploy), and rebuilds every hour that gained Django rows
-  (plus the next hour when an event sits inside the session window of its end). Django events
+  (plus the next hour when an event sits inside the session window of its end). Hours are rebuilt
+  1,000 traffic rows at a time, saving the cursor after each batch, and a run stops after a
+  10-minute budget (soft limit 15), so a large backlog is worked off over several runs. Django events
   record the client IP from `X-Forwarded-For` (Caddy forwards `CF-Connecting-IP`).
 - **File URLs:** consumer-facing links to open-access files use the storage custom domain
   (`public_media_url`), so the edge caches and counts them; this covers the `itqan` CLI's package

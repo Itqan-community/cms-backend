@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 import logging
 import re
 from typing import Literal
@@ -366,6 +367,50 @@ def version_delete_blocked_reason(version: AssetVersion, memo: dict) -> VersionD
                 reasons[pk] = None
         memo[key] = reasons
     return memo[key].get(version.pk)
+
+
+@dataclass(frozen=True, slots=True)
+class _CommittedVersionIndex:
+    # The newest committed version of each language code (what `Asset.get_latest_version` returns).
+    head_by_language: dict[str, int]
+    # The oldest commit time per `asset_language_id` (None groups legacy untagged versions).
+    first_created_at: dict[int | None, datetime]
+
+
+def _committed_version_index(asset_id: int, memo: dict) -> _CommittedVersionIndex:
+    if asset_id not in memo:
+        heads: dict[str, int] = {}
+        firsts: dict[int | None, datetime] = {}
+        rows = (
+            AssetVersion.objects.filter(asset_id=asset_id, state=VersionStateChoice.PUBLISHED)
+            .order_by("created_at", "id")
+            .values_list("id", "asset_language_id", "asset_language__language", "created_at")
+        )
+        for pk, asset_language_id, language, created_at in rows:
+            firsts.setdefault(asset_language_id, created_at)
+            if language is not None:
+                heads[language] = pk
+        memo[asset_id] = _CommittedVersionIndex(heads, firsts)
+    return memo[asset_id]
+
+
+def is_head_version(version: AssetVersion, memo: dict) -> bool:
+    """Whether ``version`` is its language's newest committed version (the editor's head).
+
+    Same answer as ``asset.get_latest_version(version.resolved_language)``, but ``memo``
+    (kept for the request) makes a version list run one query per asset, not per row.
+    """
+    index = _committed_version_index(version.asset_id, memo)
+    return index.head_by_language.get(version.resolved_language) == version.pk
+
+
+def is_first_version(version: AssetVersion, memo: dict) -> bool:
+    """Whether no committed version of the same ``asset_language`` is older than ``version``.
+
+    ``memo`` is kept for the request (see :func:`is_head_version`).
+    """
+    first = _committed_version_index(version.asset_id, memo).first_created_at.get(version.asset_language_id)
+    return first is None or version.created_at <= first
 
 
 def set_version_language(version: AssetVersion, language: str | None) -> None:

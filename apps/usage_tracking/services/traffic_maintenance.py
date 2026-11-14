@@ -60,8 +60,7 @@ def rebuild_rollups(since: date) -> int | None:
             held.append(job)
         play_window = timedelta(minutes=settings.ASSET_DOWNLOAD_PLAY_WINDOW_MINUTES)
         hours = repo.event_hours_since(datetime.combine(since, time.min, tzinfo=UTC))
-        for hour in hours:
-            repo.rebuild_hour(hour, play_window)
+        repo.rebuild_hours(hours, play_window)
         logger.info("rebuild_rollups: rebuilt %d hour(s) since %s", len(hours), since)
         return len(hours)
     finally:

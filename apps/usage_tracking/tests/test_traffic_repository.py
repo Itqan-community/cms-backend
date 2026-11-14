@@ -1,5 +1,9 @@
 from datetime import UTC, date, datetime, timedelta
+from time import monotonic
+from unittest.mock import patch
 
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from model_bakery import baker
 
 from apps.content.models import Asset, CategoryChoice
@@ -19,7 +23,7 @@ from apps.usage_tracking.models import (
     UniqueMeasure,
     UniqueScope,
 )
-from apps.usage_tracking.repositories.traffic import LOGPUSH_JOB, TrafficRepository
+from apps.usage_tracking.repositories.traffic import _ROLLUP_DAY_LOCK_BASE, LOGPUSH_JOB, TrafficRepository
 
 H10 = datetime(2026, 10, 18, 10, tzinfo=UTC)
 H11 = H10 + timedelta(hours=1)
@@ -185,6 +189,44 @@ class TestStoreAndRebuild(BaseTestCase):
         # Assert
         daily = TrafficDaily.objects.get(day=date(2026, 10, 18))
         assert (daily.requests, daily.sessions, daily.bytes) == (2, 2, 200)
+
+    def test_rebuild_hours_where_hours_share_a_day_should_rebuild_the_day_once_under_its_lock(self):
+        # Arrange
+        self._store(_event("r1", H10), _event("r2", H11 + timedelta(minutes=30)), _event("r3", H10 + timedelta(days=1)))
+
+        # Act
+        with (
+            patch.object(
+                TrafficRepository,
+                TrafficRepository._rebuild_day.__name__,
+                autospec=True,
+                side_effect=TrafficRepository._rebuild_day,
+            ) as rebuild_day,
+            CaptureQueriesContext(connection) as queries,
+        ):
+            rebuilt = self.repo.rebuild_hours([H11, H10, H10, H10 + timedelta(days=1)], WINDOW)
+
+        # Assert
+        assert rebuilt == [H10, H11, H10 + timedelta(days=1)]
+        assert [call.args[1] for call in rebuild_day.call_args_list] == [date(2026, 10, 18), date(2026, 10, 19)]
+        locks = [query["sql"] for query in queries.captured_queries if "pg_advisory_xact_lock" in query["sql"]]
+        assert locks == [
+            f"SELECT pg_advisory_xact_lock({_ROLLUP_DAY_LOCK_BASE + date(2026, 10, 18).toordinal()})",
+            f"SELECT pg_advisory_xact_lock({_ROLLUP_DAY_LOCK_BASE + date(2026, 10, 19).toordinal()})",
+        ]
+        daily = TrafficDaily.objects.get(day=date(2026, 10, 18))
+        assert (daily.requests, daily.sessions) == (2, 2)
+
+    def test_rebuild_hours_where_deadline_passed_should_stop_before_the_next_day(self):
+        # Arrange
+        self._store(_event("r1", H10))
+
+        # Act
+        rebuilt = self.repo.rebuild_hours([H10], WINDOW, deadline=monotonic() - 1)
+
+        # Assert
+        assert rebuilt == []
+        assert not TrafficHourly.objects.exists()
 
 
 class TestMonthlyUniques(BaseTestCase):

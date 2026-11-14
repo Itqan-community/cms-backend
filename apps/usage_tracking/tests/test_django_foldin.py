@@ -91,7 +91,7 @@ class TestFoldIn(BaseTestCase):
         fold_in_django_events()
         self._event("view")
         late: list[TrafficEvent] = []
-        original = TrafficRepository.rebuild_hour
+        original = TrafficRepository._rebuild_hourly
 
         def rebuild_and_write(repo, hour, window):
             if not late:
@@ -103,7 +103,7 @@ class TestFoldIn(BaseTestCase):
             return original(repo, hour, window)
 
         # Act
-        with patch.object(TrafficRepository, "rebuild_hour", rebuild_and_write):
+        with patch.object(TrafficRepository, TrafficRepository._rebuild_hourly.__name__, rebuild_and_write):
             fold_in_django_events()
 
         # Assert
@@ -123,7 +123,11 @@ class TestFoldIn(BaseTestCase):
         rebuilt: list[datetime] = []
 
         # Act
-        with patch.object(TrafficRepository, "rebuild_hour", lambda repo, hour, window: rebuilt.append(hour)):
+        with patch.object(
+            TrafficRepository,
+            TrafficRepository._rebuild_hourly.__name__,
+            lambda repo, hour, window: rebuilt.append(hour),
+        ):
             fold_in_django_events()
 
         # Assert
@@ -141,6 +145,56 @@ class TestFoldIn(BaseTestCase):
         rays = set(TrafficEvent.objects.values_list("ray_id", flat=True))
         assert rays == {f"django:view:{visitor.pk}"}
         assert f"django:view:{proxied.pk}" not in rays
+
+    def test_fold_in_where_time_budget_spent_should_copy_events_and_leave_hours_for_next_run(self):
+        # Arrange
+        from apps.usage_tracking.models import UsageImportState
+
+        fold_in_django_events()
+        before = UsageImportState.objects.get(key="django_foldin").traffic_cursor
+        self._event("view")
+
+        # Act
+        stopped = fold_in_django_events(time_budget_seconds=0)
+        resumed = fold_in_django_events()
+
+        # Assert
+        assert (stopped.events, stopped.hours, stopped.error) == (1, 0, "")
+        assert resumed.hours > 0
+        assert UsageImportState.objects.get(key="django_foldin").traffic_cursor > before
+        assert TrafficHourly.objects.filter(kind=TrafficKind.VIEW).exists()
+
+    def test_fold_in_where_rollup_fails_after_first_batch_should_keep_the_first_batch_cursor(self):
+        # Arrange
+        from unittest.mock import patch
+
+        from apps.usage_tracking.models import UsageImportState
+        from apps.usage_tracking.repositories.traffic import TrafficRepository
+        from apps.usage_tracking.services import django_foldin
+
+        fold_in_django_events()
+        self._event("view")
+        self._event("view")
+        original = TrafficRepository.rebuild_hours
+        calls: list[int] = []
+
+        def fail_on_second_batch(repo, hours, window, deadline=None):
+            calls.append(1)
+            if len(calls) > 1:
+                raise RuntimeError("db")
+            return original(repo, hours, window, deadline)
+
+        # Act
+        with (
+            patch.object(django_foldin, "_TRAFFIC_BATCH", 1),
+            patch.object(TrafficRepository, TrafficRepository.rebuild_hours.__name__, fail_on_second_batch),
+        ):
+            result = fold_in_django_events()
+
+        # Assert
+        first_id, second_id = TrafficEvent.objects.order_by("id").values_list("id", flat=True)
+        assert "RuntimeError" in result.error
+        assert UsageImportState.objects.get(key="django_foldin").traffic_cursor == first_id < second_id
 
 
 class TestFoldInCutoverMigration(BaseTestCase):
