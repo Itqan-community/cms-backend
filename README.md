@@ -1,5 +1,11 @@
 ## Itqan CMS — Quranic Content Management System
 
+[![CI](https://github.com/Itqan-community/cms-backend/actions/workflows/test_lint.yml/badge.svg)](https://github.com/Itqan-community/cms-backend/actions/workflows/test_lint.yml)
+[![CI/CD](https://github.com/Itqan-community/cms-backend/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/Itqan-community/cms-backend/actions/workflows/ci-cd.yml)
+[![Release](https://img.shields.io/github/v/release/Itqan-community/cms-backend)](https://github.com/Itqan-community/cms-backend/releases/latest)
+[![Python](https://img.shields.io/badge/python-3.13%2B-blue)](pyproject.toml)
+[![License: MIT](https://img.shields.io/github/license/Itqan-community/cms-backend)](LICENSE)
+
 
 Itqan CMS helps Quranic data publishers distribute high-quality, licensed content while enabling developers to integrate it reliably across apps and platforms.
 
