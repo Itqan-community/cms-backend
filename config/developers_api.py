@@ -10,7 +10,8 @@ from .ninja_api import assert_all_itqan_routers, create_ninja_api
 # so the data blurb and the authentication guidance live together here.
 _DEVELOPERS_API_DESCRIPTION = """\
 REST API for Quranic recitation data — reciters, recitations, riwayat, qira'at, \
-and ayah-level audio timings from verified publishers.
+and ayah-level audio timings — plus the text of tafsirs and translations per ayah, \
+from verified publishers.
 
 # Authentication
 

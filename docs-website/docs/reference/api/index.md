@@ -9,7 +9,7 @@ hide_title: false
 
 # API Reference
 
-The Quranic CMS API is a REST API for Quranic recitation data — reciters, recitations, riwayat, qira'at, and ayah-level audio timings from verified publishers. Base URL: `{{API_BASE}}`.
+The Quranic CMS API is a REST API for Quranic recitation data — reciters, recitations, riwayat, qira'at, and ayah-level audio timings — plus the text of tafsirs and translations per ayah, from verified publishers. Base URL: `{{API_BASE}}`.
 
 ## Quick links
 
@@ -33,6 +33,8 @@ The Quranic CMS API is a REST API for Quranic recitation data — reciters, reci
 **Recitations** — Full recitation records linking a reciter, riwayah, qiraah, and publisher. Each includes surah-level track counts. Start with [List Recitations](/docs/reference/api/apps-content-api-public-recitation-list-list-recitations).
 
 **Recitation Tracks** — Surah-level audio track entries for a given recitation, including ayah timings. Start with [List Recitation Tracks](/docs/reference/api/apps-content-api-public-recitation-track-list-list-recitation-tracks).
+
+**Text Assets** — Tafsirs, translations and other text assets for one ayah or a short range, several assets per call. Start with [Get Ayah Text](/docs/reference/api/apps-content-api-public-ayah-text-get-ayah-text) and the [Ayah Text guide](/docs/guides/ayah-text).
 
 **Riwayahs** — Narration chains (e.g. Hafs an Asim, Warsh). Start with [List Riwayahs](/docs/reference/api/apps-content-api-public-riwayahs-list-riwayahs).
 
