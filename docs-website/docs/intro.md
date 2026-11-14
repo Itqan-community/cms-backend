@@ -6,7 +6,7 @@ sidebar_label: Developer Docs
 
 # Quranic CMS - Developer Docs
 
-The **Itqan CMS API** is a REST API for Quranic recitation data — reciters, recitations, riwayahs, qiraat, and full ayah-level audio timings — published by verified publishers.
+The **Itqan CMS API** is a REST API for Quranic recitation data — reciters, recitations, riwayahs, qiraat, and full ayah-level audio timings — plus the text of tafsirs and translations per ayah, published by verified publishers.
 
 Resource IDs are stable integers — safe to persist, cite, and build against across API versions.
 
