@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
+from dataclasses import dataclass
 from enum import Enum
 import logging
 from typing import TYPE_CHECKING, Any
@@ -240,6 +242,50 @@ def enforce_asset_access_on_public_api(
             "access_denied",
             _("You don't have an approved access request for this asset."),
             status_code=403,
+        )
+
+
+@dataclass(frozen=True)
+class PublicAssetRef:
+    """The fields the public-API access check needs about one served asset."""
+
+    id: int
+    slug: str
+    is_open_access: bool
+
+
+def enforce_assets_access_on_public_api(user: User | None, assets: Sequence[PublicAssetRef]) -> None:
+    """:func:`enforce_asset_access_on_public_api` for several assets served in one response.
+
+    Same rules — open assets are free, restricted ones need an API key (401) and an
+    approved, unexpired grant (403) — checked with one query whatever the number of
+    assets. The error's ``extra.assets`` lists the slugs that failed the check.
+    """
+    if not settings.ENFORCE_ASSET_ACCESS_ON_PUBLIC_API:
+        return
+
+    restricted = [asset for asset in assets if not asset.is_open_access]
+    if not restricted:
+        return
+
+    if not (user and user.is_authenticated):
+        raise ItqanError(
+            "authentication_required",
+            _("An API key is required to access the content of these assets."),
+            status_code=401,
+            extra={"assets": [asset.slug for asset in restricted]},
+        )
+
+    granted = AssetAccessRequestRepository().active_access_asset_ids(
+        user=user, asset_ids=[asset.id for asset in restricted]
+    )
+    denied = [asset.slug for asset in restricted if asset.id not in granted]
+    if denied:
+        raise ItqanError(
+            "access_denied",
+            _("You don't have an approved access request for these assets."),
+            status_code=403,
+            extra={"assets": denied},
         )
 
 
