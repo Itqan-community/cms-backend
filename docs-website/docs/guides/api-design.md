@@ -1,12 +1,12 @@
 ---
 sidebar_position: 1
 title: Design Principles
-description: The conventions and design decisions behind the Itqan CMS API surface.
+description: The conventions and design decisions behind the Fanar API surface.
 ---
 
 # Design Principles
 
-This page documents the design decisions behind the Itqan CMS API. Understanding these principles helps you build integrations that are correct, maintainable, and ready for future expansion.
+This page documents the design decisions behind the Fanar API. Understanding these principles helps you build integrations that are correct, maintainable, and ready for future expansion.
 
 ## REST and JSON
 

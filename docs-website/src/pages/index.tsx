@@ -382,7 +382,7 @@ function BuildItqanCMS(): ReactNode {
         </Heading>
         <p className={styles.sectionLede}>
           <Translate id="homepage.cta.lede">
-            Itqan CMS is open source and community-driven. Every contribution helps trusted Quranic data reach builders worldwide — earning you reward beyond the codebase.
+            Fanar is open source and community-driven. Every contribution helps trusted Quranic data reach builders worldwide — earning you reward beyond the codebase.
           </Translate>
         </p>
         <div className={styles.ctaButtons}>
