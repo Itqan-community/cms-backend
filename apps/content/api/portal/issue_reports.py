@@ -14,6 +14,7 @@ from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
+from apps.publishers.middlewares.publisher_middleware import get_portal_publisher
 
 router = ItqanRouter(tags=[NinjaTag.ISSUE_REPORTS])
 logger = logging.getLogger(__name__)
@@ -85,11 +86,15 @@ def _get_service() -> IssueReportService:
 def create_issue_report(request: Request, data: IssueReportCreateIn):
     logger.info(f"Creating issue report [asset_id={data.asset_id}, user_id={request.user.id}]")
     service = _get_service()
+    # With a publisher selected (X-Tenant) the asset must be that publisher's; a consumer reporting
+    # from the gallery sends no tenant and may report any asset.
+    portal_publisher = get_portal_publisher(request)
     report = service.create_issue_report(
         reporter=request.user,
         asset_id=data.asset_id,
         description=data.description,
         context=data.context,
+        publisher_id=portal_publisher.id if portal_publisher else None,
     )
     logger.info(f"Issue report created [report_id={report.id}, user_id={request.user.id}]")
     return 201, report

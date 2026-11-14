@@ -30,7 +30,9 @@ class IssueReportService:
         asset_id: int,
         description: str,
         context: dict[str, Any] | None = None,
+        publisher_id: int | None = None,
     ) -> ContentIssueReport:
+        """File a report; when ``publisher_id`` is given (the portal's selected publisher) the asset must be its."""
         clean_description = strip_tags(description).strip()
 
         if len(clean_description) < 10:
@@ -47,7 +49,7 @@ class IssueReportService:
             )
 
         asset = self.repo.get_asset_by_id(asset_id)
-        if not asset:
+        if not asset or (publisher_id is not None and asset.publisher_id != publisher_id):
             raise ItqanError(
                 error_name="asset_not_found",
                 message=_("Asset with ID {asset_id} not found.").format(asset_id=asset_id),
