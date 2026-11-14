@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from django.db.models import Count, Q
+from django.db.models import Count, OuterRef, Q
 
 from apps.content.models import RecitationQuality
+from apps.content.timing_coverage import timing_coverage_subqueries
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
@@ -18,7 +19,7 @@ class RecitationQualityRepository:
         """Return an asset's qualities, default first then alphabetically."""
         qs = self.model.objects.filter(asset_id=asset_id)
         if annotate_tracks_count:
-            qs = qs.annotate(tracks_count=Count("tracks"))
+            qs = qs.annotate(tracks_count=Count("tracks"), **timing_coverage_subqueries(Q(quality=OuterRef("pk"))))
         return qs.order_by("-is_default", "name")
 
     def get_by_slug(self, asset_id: int, slug: str, publisher_q: Q | None = None) -> RecitationQuality | None:

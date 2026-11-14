@@ -7,6 +7,7 @@ from ninja.pagination import paginate
 from apps.content.models import Asset, CategoryChoice, RecitationSurahTrack
 from apps.content.repositories.recitation_track import RecitationTrackRepository
 from apps.content.services.recitation_quality_resolution import find_quality_by_token
+from apps.content.timing_coverage import TimingCoverageOut, with_track_timing_coverage
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.permission_required import permission_required
 from apps.core.ninja_utils.request import Request
@@ -18,7 +19,7 @@ from apps.core.permissions import PermissionChoice
 router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
 
 
-class RecitationTrackOut(Schema):
+class RecitationTrackOut(TimingCoverageOut):
     id: int
     surah_number: int
     audio_url: str | None
@@ -75,7 +76,7 @@ def list_tracks(request: Request, recitation_slug: str, quality: str | None = Qu
     else:
         quality_filter = {"quality__is_default": True}
 
-    return (
+    return with_track_timing_coverage(
         RecitationSurahTrack.objects.filter(asset_id=asset.id, **quality_filter)
         .select_related("quality")
         .order_by("surah_number")

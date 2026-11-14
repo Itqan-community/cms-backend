@@ -1,7 +1,7 @@
 import logging
 from typing import Annotated, Literal
 
-from django.db.models import F, Q
+from django.db.models import F, OuterRef, Q
 from django.utils.translation import gettext_lazy as _
 from ninja import Field, FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
@@ -19,6 +19,7 @@ from apps.content.models import (
 )
 from apps.content.services.recitation import RecitationService
 from apps.content.services.recitation_quality_resolution import sorted_asset_qualities
+from apps.content.timing_coverage import TimingCoverageOut, timing_coverage_subqueries
 from apps.core.mixins.storage import absolute_file_url
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
@@ -70,7 +71,7 @@ class QualityOut(Schema):
     is_visible: bool
 
 
-class RecitationListOut(Schema):
+class RecitationListOut(TimingCoverageOut):
     id: int
     slug: str
     name: str
@@ -307,8 +308,12 @@ def list_recitations(request: Request, filters: RecitationFilter = Query()):
         reciter_name=F("reciter__name"),
         qiraah_name=F("qiraah__name"),
         riwayah_name=F("riwayah__name"),
+        # Across every quality: a quality without timings is a gap staff should see.
+        **timing_coverage_subqueries(Q(asset=OuterRef("pk"))),
     )
-    return qs.distinct()
+    # No multi-valued joins here, so no DISTINCT: it would force the coverage subqueries
+    # onto every recitation (and the count) instead of only the rows of the page.
+    return qs
 
 
 @router.post(
