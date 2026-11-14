@@ -1025,9 +1025,10 @@ flowchart LR
 
 One engine (`apps/usage_tracking/services/usage_reports.py`, queries in
 `repositories/usage_reports.py`) serves four scopes. Additive metrics (`plays`, `downloads`,
-`installs`, `updates`, `api_calls`, `views`, `usage`, `requests`, `bytes`, `listening_seconds`) read `TrafficDaily` (`TrafficHourly` for
+`installs`, `updates`, `api_calls`, `public_api_calls`, `views`, `usage`, `requests`, `bytes`, `listening_seconds`) read `TrafficDaily` (`TrafficHourly` for
 hourly series and hour-of-week); `usage` sums the sessions of every kind except the itqan CLI's
-registry calls (`/packages/…`) and the files a CLI install downloads, so each use counts once; unique metrics (`unique_listeners`, `unique_downloaders`,
+registry calls (`/packages/…`) and the files a CLI install downloads, so each use counts once;
+`public_api_calls` is `api_calls` without those registry calls; unique metrics (`unique_listeners`, `unique_downloaders`,
 `unique_end_users`) count distinct identities in `TrafficEvent`, or sum `TrafficMonthlyUniques`
 when the range starts before event retention (`uniques_basis`). Dates are inclusive UTC days
 (≤ 3660 days; hourly ≤ 31; daily series ≤ 186, else `invalid_granularity`). Responses are cached per scope, language and parameters for
@@ -1035,8 +1036,8 @@ when the range starts before event retention (`uniques_basis`). Dates are inclus
 
 | Scope | Endpoints | Access |
 |---|---|---|
-| Publisher | `GET /portal/usage/{summary,timeseries,breakdown,export,listeners,cohorts,first-seen,search-terms,recitation-coverage}/` | `PORTAL_READ_USAGE`; the X-Tenant publisher, else every publisher the member belongs to (staff without X-Tenant: all) |
-| Itqan admin | `GET /portal/admin/usage/{summary,timeseries,breakdown,leaderboard,reconciliation,export,listeners,cohorts,first-seen,search-terms,recitation-coverage}/` | `is_staff`; optional `publisher_id`; includes traffic without an asset and `by=publisher` |
+| Publisher | `GET /portal/usage/{summary,timeseries,breakdown,export,listeners,cohorts,first-seen,search-terms,recitation-coverage,cli-versions,access-requests}/` | `PORTAL_READ_USAGE`; the X-Tenant publisher, else every publisher the member belongs to (staff without X-Tenant: all) |
+| Itqan admin | `GET /portal/admin/usage/{summary,timeseries,breakdown,leaderboard,reconciliation,export,listeners,cohorts,first-seen,search-terms,recitation-coverage,cli-versions,access-requests}/` | `is_staff`; optional `publisher_id`; includes traffic without an asset and `by=publisher` |
 | Developer | `GET /cms-api/developers/usage/{summary,timeseries,breakdown}/` | signed in; only the caller's `UsageApp`s; breakdown rows under 3 listeners return `"<3"` |
 | Public | `GET /cms-api/assets/{id}/usage-counts/` | anonymous; same visibility as `assets/{id}/`; 404 `usage_counts_disabled` unless `PUBLIC_USAGE_COUNTS_ENABLED`; cached 1 h |
 
@@ -1067,6 +1068,12 @@ when the range starts before event retention (`uniques_basis`). Dates are inclus
 - **recitation-coverage:** recitations in scope with surahs in the default quality, the missing
   ones (also ordered by platform-wide plays of the last 90 days) and the share of tracks with
   ayah timings; `incomplete_only` (default) hides complete ones.
+- **cli-versions** (text-asset reports): CLI `installs` and `updates` per asset version in the
+  range, most used first (`limit`, default 50).
+- **access-requests** (text-asset reports): access requests made in the range (only the dates,
+  `asset_id` and `category` apply) with the previous period and change, the current status of
+  each (`pending`, `approved`, `rejected`), a zero-filled `day|week|month` series with
+  `partial_buckets`, and the top 10 assets.
 - **export:** CSV of the additive metrics per period and asset (admin adds the publisher); names
   that start like a spreadsheet formula are prefixed with `'`.
 - **reconciliation:** R2 reads, edge requests and unseen (`max(reads − edge, 0)` per object-hour)

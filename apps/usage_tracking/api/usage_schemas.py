@@ -50,6 +50,12 @@ SEARCH_TERMS_ERRORS = {
     400: NinjaErrorResponse[Literal["invalid_range"]] | NinjaErrorResponse[Literal["range_too_large"]],
 }
 COVERAGE_ERRORS = {404: NinjaErrorResponse[Literal["asset_not_found"]]}
+ACCESS_REQUEST_ERRORS = {
+    400: NinjaErrorResponse[Literal["invalid_range"]]
+    | NinjaErrorResponse[Literal["range_too_large"]]
+    | NinjaErrorResponse[Literal["invalid_granularity"]],
+    404: NinjaErrorResponse[Literal["asset_not_found"]],
+}
 
 
 class ReportQuery(Schema):
@@ -352,3 +358,62 @@ class CoverageOut(Schema):
     items: list[CoverageItemOut]
     demand_days: int
     data_updated_at: AwareDatetime | None
+
+
+# -- text-asset reports --------------------------------------------------------------------------
+
+
+class CliVersionsQuery(ReportQuery):
+    limit: int = Field(50, ge=1, le=200)
+
+
+class CliVersionOut(Schema):
+    asset_id: int | None
+    asset: str | None
+    version_id: int
+    version: str | None = Field(..., description="Null when the version no longer exists.")
+    language: str | None
+    installs: int = Field(..., description="CLI installs (first installs and repeats of the same version).")
+    updates: int = Field(..., description="CLI installs of another version than the installation had before.")
+
+
+class CliVersionsOut(Schema):
+    items: list[CliVersionOut]
+    data_updated_at: AwareDatetime | None
+
+
+class AccessRequestsQuery(Schema):
+    start_date: date = Field(..., description="First UTC day, inclusive.")
+    end_date: date = Field(..., description="Last UTC day, inclusive.")
+    asset_id: int | None = None
+    category: CategoryChoice | None = None
+    granularity: SeriesGranularity = Field("day", description="`day` is limited to 186 days; weeks start on Monday.")
+
+    def filters(self) -> ReportFilters:
+        return ReportFilters(
+            start_date=self.start_date,
+            end_date=self.end_date,
+            asset_id=self.asset_id,
+            category=self.category.value if self.category else None,
+        )
+
+
+class AccessRequestStatusesOut(Schema):
+    pending: int
+    approved: int
+    rejected: int
+
+
+class AccessRequestAssetOut(Schema):
+    key: str
+    label: str | None
+    value: int
+
+
+class AccessRequestsOut(Schema):
+    total: MetricValueOut
+    statuses: AccessRequestStatusesOut = Field(..., description="Current status of the requests made in the range.")
+    granularity: str
+    partial_buckets: list[str] = Field(..., description=PARTIAL_BUCKETS_HELP)
+    points: list[PointOut] = Field(..., description="Requests made per bucket of `granularity`.")
+    assets: list[AccessRequestAssetOut] = Field(..., description="The assets with the most requests (top 10).")
