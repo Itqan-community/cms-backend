@@ -27,7 +27,10 @@ class Command(CleanDuplicateHistoryCommand):
         for model, history_model in to_process:
             pk_name = model._meta.pk.attname
             object_ids = list(
-                history_model.objects.filter(history_date__gte=stop_date).values_list(pk_name, flat=True).distinct()
+                history_model.objects.filter(history_date__gte=stop_date)
+                .order_by()
+                .values_list(pk_name, flat=True)
+                .distinct()
             )
             manager = model._base_manager if self.base_manager else model._default_manager
             deleted = 0

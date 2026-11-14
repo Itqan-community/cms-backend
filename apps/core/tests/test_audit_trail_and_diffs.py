@@ -679,3 +679,31 @@ class TestCleanDuplicateAuditHistoryWindow(BaseTestCase):
 
         # Assert
         assert many == one
+
+    def test_clean_duplicate_audit_history_where_object_has_several_snapshots_should_process_it_once(self):
+        # Arrange: three snapshots of one object, one object per chunk.
+        from unittest.mock import patch
+
+        from apps.core.management.commands import clean_duplicate_audit_history
+        from apps.core.management.commands.clean_duplicate_audit_history import Command
+
+        publisher = Publisher.objects.create(name_en="Window several", name_ar="ناشر", slug="window-several")
+        publisher.name_en = "Window several renamed"
+        publisher.save()
+        publisher.save()
+        original = Command._process_chunk
+        chunks: list[list] = []
+
+        def record(command, history_model, pk_name, object_ids, stop_date, dry_run):
+            chunks.append(list(object_ids))
+            return original(command, history_model, pk_name, object_ids, stop_date, dry_run)
+
+        # Act
+        with (
+            patch.object(clean_duplicate_audit_history, "_CHUNK", 1),
+            patch.object(Command, Command._process_chunk.__name__, record),
+        ):
+            call_command("clean_duplicate_audit_history", "publishers.Publisher", minutes=60, stdout=StringIO())
+
+        # Assert
+        assert chunks == [[publisher.pk]]
