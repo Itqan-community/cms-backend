@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Iterable
 from datetime import UTC, date, datetime, time, timedelta
+from time import monotonic
 
 from django.db import connection, transaction
 from django.db.models import Count, Sum
@@ -44,6 +45,8 @@ _LOCK_IDS = {
     MAINTENANCE_JOB: 7_340_212_029,
     DJANGO_FOLDIN_JOB: 7_340_212_030,
 }
+# Transaction-level advisory lock per rolled-up day: this base plus the day's ordinal.
+_ROLLUP_DAY_LOCK_BASE = 7_340_300_000_000
 _HOUR = timedelta(hours=1)
 # Storage URLs are `<CDN host>/media/<file name>` (see `public_media_url`).
 _MEDIA_PREFIX = "/media/"
@@ -172,36 +175,64 @@ class TrafficRepository:
     # -- rollups -------------------------------------------------------------
     def rebuild_hour(self, hour: datetime, play_window: timedelta) -> None:
         """Replace the hour's rollup rows (and its day's) from events, atomically."""
-        hour = floor_hour(hour)
-        end = hour + _HOUR
-        with transaction.atomic():
-            metrics: dict[DimensionKey, list[int]] = defaultdict(lambda: [0, 0, 0, 0])
-            for row in self._totals(hour, end):
-                entry = metrics[tuple(row[dimension] for dimension in TRAFFIC_DIMENSIONS)]
-                entry[0] += row["total_requests"]
-                entry[1] += row["total_bytes"] or 0
-                if row["kind"] in EVENT_COUNTED_KINDS:
-                    entry[2] += row["total_requests"]
-            for key, sessions in self._sessions(hour, end, play_window).items():
-                metrics[key][2] += sessions
-            for key, seconds in self._listened_seconds(hour, end).items():
-                metrics[key][3] += seconds
+        self.rebuild_hours([hour], play_window)
 
-            TrafficHourly.objects.filter(hour=hour).delete()
-            TrafficHourly.objects.bulk_create(
-                [
-                    TrafficHourly(
-                        hour=hour,
-                        **dict(zip(TRAFFIC_DIMENSIONS, key, strict=True)),
-                        requests=requests,
-                        bytes=bytes_,
-                        sessions=sessions,
-                        listened_seconds=listened,
-                    )
-                    for key, (requests, bytes_, sessions, listened) in metrics.items()
-                ]
-            )
-            self._rebuild_day(hour.date())
+    def rebuild_hours(
+        self, hours: Iterable[datetime], play_window: timedelta, deadline: float | None = None
+    ) -> list[datetime]:
+        """Replace the rollup rows of `hours` and of their days from events; returns the hours rebuilt.
+
+        One transaction per day: its hours, then the day once (not once per hour). The transaction
+        holds that day's advisory lock, so jobs rebuilding the same day (Logpush import, fold-in,
+        `rebuild_rollups`) take turns instead of inserting the same rollup rows twice. Once
+        `deadline` (a `time.monotonic()` value) passes, stops before the next day.
+        """
+        by_day: dict[date, set[datetime]] = defaultdict(set)
+        for hour in hours:
+            hour = floor_hour(hour)
+            by_day[hour.date()].add(hour)
+        rebuilt: list[datetime] = []
+        for day in sorted(by_day):
+            if deadline is not None and monotonic() >= deadline:
+                break
+            day_hours = sorted(by_day[day])
+            with transaction.atomic():
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT pg_advisory_xact_lock(%s)", [_ROLLUP_DAY_LOCK_BASE + day.toordinal()])
+                for hour in day_hours:
+                    self._rebuild_hourly(hour, play_window)
+                self._rebuild_day(day)
+            rebuilt.extend(day_hours)
+        return rebuilt
+
+    def _rebuild_hourly(self, hour: datetime, play_window: timedelta) -> None:
+        end = hour + _HOUR
+        metrics: dict[DimensionKey, list[int]] = defaultdict(lambda: [0, 0, 0, 0])
+        for row in self._totals(hour, end):
+            entry = metrics[tuple(row[dimension] for dimension in TRAFFIC_DIMENSIONS)]
+            entry[0] += row["total_requests"]
+            entry[1] += row["total_bytes"] or 0
+            if row["kind"] in EVENT_COUNTED_KINDS:
+                entry[2] += row["total_requests"]
+        for key, sessions in self._sessions(hour, end, play_window).items():
+            metrics[key][2] += sessions
+        for key, seconds in self._listened_seconds(hour, end).items():
+            metrics[key][3] += seconds
+
+        TrafficHourly.objects.filter(hour=hour).delete()
+        TrafficHourly.objects.bulk_create(
+            [
+                TrafficHourly(
+                    hour=hour,
+                    **dict(zip(TRAFFIC_DIMENSIONS, key, strict=True)),
+                    requests=requests,
+                    bytes=bytes_,
+                    sessions=sessions,
+                    listened_seconds=listened,
+                )
+                for key, (requests, bytes_, sessions, listened) in metrics.items()
+            ]
+        )
 
     def _totals(self, start: datetime, end: datetime):
         return (
