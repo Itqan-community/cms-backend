@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import BinaryIO
 from unittest.mock import Mock, patch
+from urllib.parse import unquote
 
 from django.conf import settings
 from django.utils import timezone
@@ -134,6 +135,40 @@ class TestAssetRecitationAudioTracksDirectUploadService(BaseTestCase):
         self.assertEqual(filename, result["filename"])
         self.assertEqual(2, result["surahNumber"])
         s3.create_multipart_upload.assert_called_once()
+
+    def test_start_upload_where_filename_is_arabic_should_store_ascii_encoded_original_filename_metadata(self):
+        # Arrange
+        asset, _quality = self._make_asset_with_default_quality()
+        s3 = Mock()
+        s3.create_multipart_upload.return_value = {"UploadId": "upload-1"}
+        service = AssetRecitationAudioTracksDirectUploadService()
+        filename = "مشاري (الفاتحة) 001.mp3"
+
+        # Act
+        with patch.object(service, "_get_s3_client", return_value=s3):
+            service.start_upload(asset_id=asset.id, filename=filename)
+
+        # Assert
+        metadata = s3.create_multipart_upload.call_args.kwargs["Metadata"]
+        encoded = metadata["original-filename"]
+        self.assertTrue(encoded.isascii())
+        self.assertEqual(filename, unquote(encoded))
+        self.assertTrue(s3.create_multipart_upload.call_args.kwargs["Key"].endswith("/001.mp3"))
+
+    def test_start_upload_where_encoded_filename_is_too_long_should_skip_metadata(self):
+        # Arrange
+        asset, _quality = self._make_asset_with_default_quality()
+        s3 = Mock()
+        s3.create_multipart_upload.return_value = {"UploadId": "upload-1"}
+        service = AssetRecitationAudioTracksDirectUploadService()
+        filename = "ا" * 300 + "_001.mp3"
+
+        # Act
+        with patch.object(service, "_get_s3_client", return_value=s3):
+            service.start_upload(asset_id=asset.id, filename=filename)
+
+        # Assert
+        self.assertEqual({}, s3.create_multipart_upload.call_args.kwargs["Metadata"])
 
     def test_finish_upload_where_frontend_provides_size_and_duration_should_create_track_without_fallbacks(self):
         # Frontend sends size_bytes and duration_ms — server must use them directly,
