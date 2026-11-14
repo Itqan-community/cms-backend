@@ -6,6 +6,7 @@ import logging
 import re
 from tempfile import TemporaryFile
 from typing import Any
+from urllib.parse import quote
 
 import boto3
 from botocore.config import Config
@@ -35,6 +36,10 @@ class RecitationUploadKeyParts:
 class AssetRecitationAudioTracksDirectUploadService:
     _MAX_BIGINT_ID = 2**63 - 1
     _DOWNLOAD_CHUNK_SIZE = 1024 * 1024
+    # Name of the R2 object metadata entry holding the uploader's file name (sent as x-amz-meta-original-filename).
+    ORIGINAL_FILENAME_METADATA_KEY = "original-filename"
+    # S3 caps all user metadata at 2 KB; keep the encoded name well under that.
+    _MAX_ENCODED_FILENAME_LEN = 1024
     _UPLOAD_KEY_RE = re.compile(
         r"^uploads/assets/(?P<asset_id>[1-9]\d{0,18})/recitations/"
         r"(?P<quality_id>[1-9]\d{0,18})/(?P<surah_number>\d{3})\.mp3$"
@@ -104,6 +109,19 @@ class AssetRecitationAudioTracksDirectUploadService:
         resolve_quality_for_asset(parts.asset_id, parts.quality_id)
         return parts
 
+    def _build_object_metadata(self, filename: str) -> dict[str, str]:
+        """
+        Archival metadata for the R2 object. The key stays `{surah:03}.mp3`; the uploader's
+        file name rides along as metadata. S3 metadata must be ASCII, so the name is
+        percent-encoded (UTF-8): decode with urllib.parse.unquote. Names that would not fit
+        in the metadata size limit are skipped (the DB row still has the full name).
+        """
+        encoded = quote(filename, safe="")
+        if not encoded or len(encoded) > self._MAX_ENCODED_FILENAME_LEN:
+            logger.warning("Original filename not stored as R2 metadata (empty or too long once encoded)")
+            return {}
+        return {self.ORIGINAL_FILENAME_METADATA_KEY: encoded}
+
     def _to_r2_key(self, key: str) -> str:
         """R2 object keys must be prefixed with "media/" to work with our bucket configuration"""
         _MEDIA_PREFIX = "media/"
@@ -126,6 +144,7 @@ class AssetRecitationAudioTracksDirectUploadService:
                 Bucket=settings.CLOUDFLARE_R2_BUCKET,
                 Key=r2_key,
                 ContentType="audio/mpeg",
+                Metadata=self._build_object_metadata(filename),
             )
         except ClientError as exc:
             error_code = exc.response.get("Error", {}).get("Code", "")
