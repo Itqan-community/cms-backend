@@ -6,6 +6,7 @@ from django.db.models import Q
 from django.http import Http404, HttpResponse
 from django.utils.translation import gettext_lazy as _
 from ninja import Query, Schema
+from pydantic import Field
 
 from apps.content.cache import (
     RECITATION_ASSET_META_CACHE_TTL,
@@ -50,11 +51,17 @@ class RecitationSurahTrackOut(Schema):
     ayahs_timings: list[RecitationAyahTimingOut]
 
 
+class RecitationSurahTrackPageOut(Schema):
+    # The view writes pre-serialized bytes, so this only documents the shape it sends.
+    results: list[RecitationSurahTrackOut]
+    count: int = Field(..., description="Number of surah tracks in the recitation, across all pages.")
+
+
 @router.get(
     "recitations/{asset_id}/",
     response={
         400: NinjaErrorResponse[Literal["folder_param_renamed"]],
-        200: list[RecitationSurahTrackOut],
+        200: RecitationSurahTrackPageOut,
         401: NinjaErrorResponse[Literal["authentication_required"]],
         403: NinjaErrorResponse[Literal["access_denied"]],
         404: NinjaErrorResponse[Literal["not_found"]] | NinjaErrorResponse[Literal["quality_not_found"]],
