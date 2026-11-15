@@ -1,3 +1,5 @@
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from model_bakery import baker
 from oauth2_provider.models import Application
 
@@ -19,7 +21,7 @@ class EditorialRecommendationsEndpointTest(BaseTestCase):
         self.publisher = baker.make(Publisher)
         self.asset = baker.make(
             Asset,
-            category=CategoryChoice.MUSHAF,
+            category=CategoryChoice.PROGRAM,
             status=StatusChoice.READY,
             in_public_api=True,
             publisher=self.publisher,
@@ -74,3 +76,68 @@ class EditorialRecommendationsEndpointTest(BaseTestCase):
         self.assertIn(response.status_code, (200, 401))
         if response.status_code == 401:
             self.assertNotEqual("access_denied", response.json().get("error_name"))
+
+    def test_get_editorial_recommendations_where_collection_has_many_assets_should_not_query_per_asset(self):
+        # Arrange
+        collection = EditorialRecommendation.objects.create(title="Ramadan Picks")
+        EditorialRecommendationAsset.objects.create(recommendation=collection, asset=self.asset, position=0)
+        self.client.get("/recommendations/editorial/")  # warm up per-process lookups
+        with CaptureQueriesContext(connection) as one_asset:
+            self.client.get("/recommendations/editorial/")
+        for position in range(1, 6):
+            extra = baker.make(
+                Asset,
+                category=CategoryChoice.PROGRAM,
+                status=StatusChoice.READY,
+                in_public_api=True,
+                publisher=self.publisher,
+            )
+            EditorialRecommendationAsset.objects.create(recommendation=collection, asset=extra, position=position)
+
+        # Act
+        with CaptureQueriesContext(connection) as six_assets:
+            response = self.client.get("/recommendations/editorial/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(6, len(response.json()[0]["assets"]))
+        self.assertEqual(len(one_asset), len(six_assets))
+
+    def test_get_editorial_recommendations_where_asset_has_no_visible_language_should_leave_it_out(self):
+        # Arrange - a mushaf is listed only while one of its languages is READY and published
+        hidden_mushaf = baker.make(
+            Asset,
+            category=CategoryChoice.MUSHAF,
+            status=StatusChoice.READY,
+            in_public_api=True,
+            publisher=self.publisher,
+        )
+        collection = EditorialRecommendation.objects.create(title="Ramadan Picks")
+        EditorialRecommendationAsset.objects.create(recommendation=collection, asset=self.asset, position=1)
+        EditorialRecommendationAsset.objects.create(recommendation=collection, asset=hidden_mushaf, position=2)
+
+        # Act
+        response = self.client.get("/recommendations/editorial/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual([self.asset.id], [a["id"] for a in response.json()[0]["assets"]])
+
+    def test_get_editorial_recommendations_where_every_asset_is_hidden_should_omit_the_collection(self):
+        # Arrange
+        hidden_mushaf = baker.make(
+            Asset,
+            category=CategoryChoice.MUSHAF,
+            status=StatusChoice.READY,
+            in_public_api=True,
+            publisher=self.publisher,
+        )
+        collection = EditorialRecommendation.objects.create(title="Hidden only")
+        EditorialRecommendationAsset.objects.create(recommendation=collection, asset=hidden_mushaf)
+
+        # Act
+        response = self.client.get("/recommendations/editorial/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual([], response.json())

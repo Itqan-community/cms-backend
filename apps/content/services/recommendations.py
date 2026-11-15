@@ -30,13 +30,14 @@ from collections import defaultdict
 from datetime import timedelta
 import logging
 
-from django.db.models import Count, Q
+from django.db.models import Count, Prefetch, Q
 from django.utils import timezone
 
 from apps.content.models import (
     Asset,
     CategoryChoice,
     EditorialRecommendation,
+    EditorialRecommendationAsset,
     StatusChoice,
     UsageEvent,
     consumer_visible_q,
@@ -450,25 +451,29 @@ def list_active_editorial_recommendations() -> list[dict]:
     omitted entirely rather than served empty.
     """
     now = timezone.now()
+    # Same visibility as hydrate_visible_assets_in_order, so an asset hidden from the
+    # other recommendation surfaces (e.g. every language hidden) is hidden here too.
+    visible_assets = Asset.objects.filter(status=StatusChoice.READY, in_public_api=True).filter(consumer_visible_q())
     collections = (
         EditorialRecommendation.objects.filter(is_active=True)
         .filter(Q(starts_at__isnull=True) | Q(starts_at__lte=now))
         .filter(Q(ends_at__isnull=True) | Q(ends_at__gte=now))
         .prefetch_related(
-            "recommendation_assets__asset__publisher",
-            "recommendation_assets__asset__reciter",
-            "recommendation_assets__asset__riwayah",
+            Prefetch(
+                "recommendation_assets",
+                queryset=EditorialRecommendationAsset.objects.filter(asset__in=visible_assets).select_related(
+                    "asset__publisher", "asset__reciter", "asset__riwayah"
+                ),
+            ),
+            # Serialized on every asset; without it each one costs a query.
+            "recommendation_assets__asset__tags",
         )
         .order_by("-created_at")
     )
 
     results = []
     for collection in collections:
-        assets = [
-            ra.asset
-            for ra in collection.recommendation_assets.all()
-            if ra.asset.status == StatusChoice.READY and ra.asset.in_public_api
-        ]
+        assets = [ra.asset for ra in collection.recommendation_assets.all()]
         if not assets:
             continue
         results.append(
