@@ -64,6 +64,49 @@ class IssueReportPortalApiTests(BaseTestCase):
 
         self.assertEqual(404, response.status_code)
 
+    def test_create_issue_report_where_asset_belongs_to_another_publisher_should_return_404(self):
+        # Arrange
+        other_publisher = Publisher.objects.create(name="Other Publisher")
+        other_asset = Asset.objects.create(
+            name="Other Asset",
+            publisher=other_publisher,
+            status=StatusChoice.READY,
+            category=CategoryChoice.RECITATION,
+            file_size="10 MB",
+            format="mp3",
+            reciter=self.reciter,
+            qiraah=self.qiraah,
+        )
+        self.authenticate_user(self.staff_user, HTTP_X_TENANT=str(self.publisher.id))
+        payload = {
+            "asset_id": other_asset.id,
+            "description": "Report on a foreign asset",
+            "context": {"surah": 1, "ayah": 1},
+        }
+
+        # Act
+        response = self.client.post("/portal/issue-reports/", payload, format="json")
+
+        # Assert
+        self.assertEqual(404, response.status_code)
+        self.assertEqual("asset_not_found", response.json()["error_name"])
+        self.assertFalse(ContentIssueReport.objects.filter(asset=other_asset).exists())
+
+    def test_create_issue_report_where_asset_belongs_to_selected_publisher_should_return_201(self):
+        # Arrange
+        self.authenticate_user(self.staff_user, HTTP_X_TENANT=str(self.publisher.id))
+        payload = {
+            "asset_id": self.asset.id,
+            "description": "Report on an own asset",
+            "context": {"surah": 1, "ayah": 1},
+        }
+
+        # Act
+        response = self.client.post("/portal/issue-reports/", payload, format="json")
+
+        # Assert
+        self.assertEqual(201, response.status_code)
+
     # --- List ---
 
     def test_list_issue_reports(self):
@@ -315,3 +358,68 @@ class IssueReportPortalPublisherScopeTests(BaseTestCase):
 
         # Assert
         self.assertEqual(201, response.status_code, response.content)
+
+
+class IssueReportAssetSearchTests(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.publisher = Publisher.objects.create(name="Own Publisher")
+        self.other_publisher = Publisher.objects.create(name="Other Publisher")
+        self.member = User.objects.create_user(email="member@example.com", password="password123")
+        PublisherMember.objects.create(
+            user=self.member,
+            publisher=self.publisher,
+            group=Group.objects.create(name="Own Publisher role"),
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
+        reciter = Reciter.objects.create(name="Test Reciter")
+        qiraah = Qiraah.objects.create(name="Test Qiraah")
+        self.own = self._asset("Own Warsh", self.publisher, reciter, qiraah)
+        self.own_draft = self._asset("Own Draft", self.publisher, reciter, qiraah, status=StatusChoice.DRAFT)
+        self.other = self._asset("Other Warsh", self.other_publisher, reciter, qiraah)
+
+    @staticmethod
+    def _asset(name, publisher, reciter, qiraah, status=StatusChoice.READY) -> Asset:
+        return Asset.objects.create(
+            name=name,
+            publisher=publisher,
+            status=status,
+            category=CategoryChoice.RECITATION,
+            file_size="10 MB",
+            format="mp3",
+            reciter=reciter,
+            qiraah=qiraah,
+        )
+
+    def test_list_issue_report_assets_where_member_selects_publisher_should_return_only_its_assets(self):
+        # Arrange
+        self.authenticate_user(self.member, HTTP_X_TENANT=str(self.publisher.id))
+
+        # Act
+        response = self.client.get("/portal/issue-report-assets/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual({self.own.id, self.own_draft.id}, {row["id"] for row in response.json()["results"]})
+
+    def test_list_issue_report_assets_where_searching_should_filter_by_name_within_publisher(self):
+        # Arrange
+        self.authenticate_user(self.member, HTTP_X_TENANT=str(self.publisher.id))
+
+        # Act
+        response = self.client.get("/portal/issue-report-assets/?search=Warsh")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual([self.own.id], [row["id"] for row in response.json()["results"]])
+
+    def test_list_issue_report_assets_where_member_selects_foreign_publisher_should_return_nothing(self):
+        # Arrange
+        self.authenticate_user(self.member, HTTP_X_TENANT=str(self.other_publisher.id))
+
+        # Act
+        response = self.client.get("/portal/issue-report-assets/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual([], response.json()["results"])
