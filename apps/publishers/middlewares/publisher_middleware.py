@@ -79,6 +79,10 @@ def get_portal_publisher(request: HttpRequest) -> Publisher | None:
     return domain.publisher if domain else None
 
 
+# Cached for a host that matches no Domain. A plain string, so any cache backend can store it.
+_NO_DOMAIN = "__no_domain__"
+
+
 def get_publisher_domain(request: HttpRequest, header_name: str) -> Domain | None:
     """
     Retrieve a domain based on the Host header
@@ -91,11 +95,15 @@ def get_publisher_domain(request: HttpRequest, header_name: str) -> Domain | Non
 
     host: str = remove_www(referer.split(":")[0])
     if host:
-        result = cache.get(f"x_tenant-{host}")
-        if not result:
+        cache_key = f"x_tenant-{host}"
+        result = cache.get(cache_key)
+        if result is None:
             result = Domain.objects.filter(domain=host).select_related("publisher").first()
-            cache.set(f"x_tenant-{host}", result, timeout=60 * 5)
-        return result
+            # Remember misses too: most public-API traffic sends an Origin that is no
+            # tenant's, and caching None would look like a miss and query every time.
+            # Saving or deleting a Domain clears the key (publishers.signals).
+            cache.set(cache_key, result or _NO_DOMAIN, timeout=60 * 5)
+        return None if result == _NO_DOMAIN else result
     return None
 
 

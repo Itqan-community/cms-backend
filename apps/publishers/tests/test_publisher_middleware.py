@@ -1,9 +1,12 @@
+from django.db import connection
 from django.db.models import Q
+from django.test import RequestFactory
+from django.test.utils import CaptureQueriesContext
 from model_bakery import baker
 
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
-from apps.publishers.middlewares.publisher_middleware import portal_publisher_q
+from apps.publishers.middlewares.publisher_middleware import get_publisher_domain, portal_publisher_q
 from apps.publishers.models import Domain, Publisher, PublisherMember
 from apps.publishers.tests.group_helpers import admin_group, member_group
 from apps.users.models import User
@@ -272,3 +275,57 @@ class XTenantHeaderScopingTest(BaseTestCase):
         # Assert
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual(3, response.json()["count"])
+
+
+class PublisherDomainLookupCacheTest(BaseTestCase):
+    def _request(self, origin: str):
+        return RequestFactory().get("/reciters/", HTTP_ORIGIN=origin)
+
+    def test_get_publisher_domain_where_host_matches_no_domain_should_query_only_once(self) -> None:
+        # Arrange
+        get_publisher_domain(self._request("https://no-tenant-once.example"), "Origin")
+
+        # Act
+        with CaptureQueriesContext(connection) as queries:
+            result = get_publisher_domain(self._request("https://no-tenant-once.example"), "Origin")
+
+        # Assert
+        self.assertIsNone(result)
+        self.assertEqual(0, len(queries))
+
+    def test_get_publisher_domain_where_domain_is_added_after_a_miss_should_resolve_it(self) -> None:
+        # Arrange
+        self.assertIsNone(get_publisher_domain(self._request("https://late-tenant.example"), "Origin"))
+        publisher = baker.make(Publisher)
+        domain = Domain.objects.create(domain="late-tenant.example", publisher=publisher, is_active=True)
+
+        # Act
+        result = get_publisher_domain(self._request("https://late-tenant.example"), "Origin")
+
+        # Assert
+        self.assertEqual(domain.pk, result.pk)
+
+    def test_get_publisher_domain_where_domain_is_deleted_should_stop_resolving_it(self) -> None:
+        # Arrange
+        domain = Domain.objects.create(domain="gone-tenant.example", publisher=baker.make(Publisher), is_active=True)
+        self.assertEqual(domain.pk, get_publisher_domain(self._request("https://gone-tenant.example"), "Origin").pk)
+        domain.delete()
+
+        # Act
+        result = get_publisher_domain(self._request("https://gone-tenant.example"), "Origin")
+
+        # Assert
+        self.assertIsNone(result)
+
+    def test_get_publisher_domain_where_host_matches_should_return_cached_domain_without_query(self) -> None:
+        # Arrange
+        domain = Domain.objects.create(domain="hit-tenant.example", publisher=baker.make(Publisher), is_active=True)
+        get_publisher_domain(self._request("https://hit-tenant.example"), "Origin")
+
+        # Act
+        with CaptureQueriesContext(connection) as queries:
+            result = get_publisher_domain(self._request("https://hit-tenant.example"), "Origin")
+
+        # Assert
+        self.assertEqual(domain.pk, result.pk)
+        self.assertEqual(0, len(queries))
