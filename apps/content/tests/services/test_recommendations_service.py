@@ -379,11 +379,11 @@ class EditorialRecommendationsServiceTest(BaseTestCase):
         super().setUp()
 
     def _make_asset(self, **kwargs):
-        # MUSHAF (not RECITATION) by default: RECITATION assets require reciter+qiraah
-        # per the asset_recitation_fields_consistency DB constraint, which these
-        # editorial tests don't care about (they only care about visibility).
+        # PROGRAM by default: RECITATION assets require reciter+qiraah per the
+        # asset_recitation_fields_consistency DB constraint, and a MUSHAF is only
+        # visible with a published language; these tests only care about status.
         defaults = {
-            "category": CategoryChoice.MUSHAF,
+            "category": CategoryChoice.PROGRAM,
             "status": StatusChoice.READY,
             "in_public_api": True,
         }
