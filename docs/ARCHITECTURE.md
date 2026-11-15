@@ -1,12 +1,12 @@
-# Itqan CMS — System Architecture
+# Fanar — System Architecture
 
-This document provides an overview of the Itqan CMS system architecture from a product perspective, showing the main components, their responsibilities, how they interact, and where the system boundaries lie.
+This document provides an overview of the Fanar system architecture from a product perspective, showing the main components, their responsibilities, how they interact, and where the system boundaries lie.
 
 ---
 
 ## Overview
 
-Itqan CMS is a **Quranic Content Management System** designed to help **Publishers** distribute high-quality, licensed content while enabling **Developers** to integrate it into their applications.
+Fanar is a **Quranic Content Management System** designed to help **Publishers** distribute high-quality, licensed content while enabling **Developers** to integrate it into their applications.
 
 ```mermaid
 flowchart TB
@@ -16,7 +16,7 @@ flowchart TB
         STAFF["Internal Staff"]
     end
 
-    subgraph ItqanCMS["Itqan CMS Platform"]
+    subgraph ItqanCMS["Fanar Platform"]
         CMS_API["CMS API<br/>(Internal Frontend)<br/>cms-api/"]
         DEV_API["Public API<br/>(Developers' API)<br/>/"]
         TENANT_API["Tenant API<br/>(Publisher SaaS)<br/>tenant/"]
@@ -644,7 +644,7 @@ sequenceDiagram
     participant Dev as Developer
     participant CMS as CMS API
     participant API as Developers API
-    participant System as Itqan CMS
+    participant System as Fanar
     participant Pub as Publisher
 
     Dev->>CMS: Request access to Asset

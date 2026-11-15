@@ -48,7 +48,7 @@ class WikipediaClientTests(BaseTestCase):
         )
         self.assertEqual("مشاري العفاسي", seen[0].url.params["gsrsearch"])
         self.assertEqual("Mishary Rashid Alafasy", seen[1].url.params["titles"])
-        self.assertIn("ItqanCMS", seen[0].headers["user-agent"])
+        self.assertIn("Fanar", seen[0].headers["user-agent"])
 
     def test_lookup_where_no_english_link_should_return_arabic_only(self):
         # Arrange

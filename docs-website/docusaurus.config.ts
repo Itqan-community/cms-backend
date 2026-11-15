@@ -14,7 +14,7 @@ const assetLibraryUrl = docsEnv === 'staging'
 const config: Config = {
   title: 'Quranic CMS - Developer Docs',
   customFields: {assetLibraryUrl},
-  tagline: 'Build with the Itqan CMS API',
+  tagline: 'Build with the Fanar API',
   favicon: 'img/itqan-logo.png',
 
   future: {

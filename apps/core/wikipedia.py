@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 API_URL = "https://{lang}.wikipedia.org/w/api.php"
 # Wikimedia asks API clients to identify themselves.
-USER_AGENT = "ItqanCMS/1.0 (https://cms.itqan.dev; admin metadata helper)"
+USER_AGENT = "Fanar/1.0 (https://fanar.itqan.dev; admin metadata helper)"
 TIMEOUT_SECONDS = 8.0
 MAX_EXTRACT_LENGTH = 3000
 PAGE_PROPS = {

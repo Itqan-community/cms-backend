@@ -1,7 +1,7 @@
 ---
 sidebar_position: 2
 title: هيكل الاستجابة
-description: كيف تُهيكَل استجابات القوائم والمورد الواحد في Itqan CMS API.
+description: كيف تُهيكَل استجابات القوائم والمورد الواحد في Fanar API.
 ---
 
 # هيكل الاستجابة

@@ -1,4 +1,4 @@
-# Itqan CMS — Product Roadmap (1448 Q1 & Q2)
+# Fanar — Product Roadmap (1448 Q1 & Q2)
 
 This document tracks planned work beyond the current MVP. It captures **what** we want
 to build and **why**, not implementation detail — see the linked GitHub issues for
@@ -19,7 +19,7 @@ audio, docs) and [`cms-frontend`](https://github.com/Itqan-community/cms-fronten
 
 ## Where we are today
 
-Itqan CMS lets **Publishers** upload Quranic content (tafsir, translation, recitation,
+Fanar lets **Publishers** upload Quranic content (tafsir, translation, recitation,
 mushaf) and **Developers** consume it through a public API. Core pieces already in place:
 
 | Area | Status | Notes |
