@@ -3,7 +3,9 @@
 Recommendation scores are precomputed nightly (see apps.content.tasks) and stored as
 Redis sorted sets so reads at request time are O(log N) with no DB round trip. Reuse the
 `default` django-redis connection's host/port/auth/TLS, but swap to a dedicated DB so
-recommendation keys can't be evicted by the Django cache's eviction policy.
+recommendation keys stay apart from the Django cache's keys. A logical DB doesn't isolate
+eviction: the instance's maxmemory policy applies to every DB, so under an `allkeys-*`
+policy these keys can still be evicted. Only a separate Redis instance would prevent that.
 """
 
 from __future__ import annotations
