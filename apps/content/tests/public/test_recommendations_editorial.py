@@ -1,3 +1,5 @@
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from model_bakery import baker
 from oauth2_provider.models import Application
 
@@ -74,3 +76,29 @@ class EditorialRecommendationsEndpointTest(BaseTestCase):
         self.assertIn(response.status_code, (200, 401))
         if response.status_code == 401:
             self.assertNotEqual("access_denied", response.json().get("error_name"))
+
+    def test_get_editorial_recommendations_where_collection_has_many_assets_should_not_query_per_asset(self):
+        # Arrange
+        collection = EditorialRecommendation.objects.create(title="Ramadan Picks")
+        EditorialRecommendationAsset.objects.create(recommendation=collection, asset=self.asset, position=0)
+        self.client.get("/recommendations/editorial/")  # warm up per-process lookups
+        with CaptureQueriesContext(connection) as one_asset:
+            self.client.get("/recommendations/editorial/")
+        for position in range(1, 6):
+            extra = baker.make(
+                Asset,
+                category=CategoryChoice.MUSHAF,
+                status=StatusChoice.READY,
+                in_public_api=True,
+                publisher=self.publisher,
+            )
+            EditorialRecommendationAsset.objects.create(recommendation=collection, asset=extra, position=position)
+
+        # Act
+        with CaptureQueriesContext(connection) as six_assets:
+            response = self.client.get("/recommendations/editorial/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(6, len(response.json()[0]["assets"]))
+        self.assertEqual(len(one_asset), len(six_assets))
