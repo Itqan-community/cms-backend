@@ -194,7 +194,7 @@ def slice_recitation_track_task(self, track_id: int) -> dict:
     so the repository-wide 60s soft limit does not apply. The longest surah
     (Al-Baqarah, 286 ayahs) at a generous ~5s per slice takes ~24 minutes;
     soft_time_limit=1500 (25 min) / time_limit=1800 (30 min) keep the same
-    20% headroom convention as sync_audio_usage_task (300/360).
+    20% headroom convention.
 
     Args:
         track_id: RecitationSurahTrack primary key.
@@ -244,8 +244,8 @@ def compute_similar_recommendations_task() -> dict:
     apps.content.services.recommendations for the scoring design.
 
     Runs nightly at 2:00 via Celery beat (config/celery.py). Catalog-sized workloads
-    are expected to finish well within the 5-minute soft limit; the limits mirror
-    sync_audio_usage_task's 20%-headroom convention (300s soft / 360s hard).
+    are expected to finish well within the 5-minute soft limit; the limits keep a
+    20% headroom (300s soft / 360s hard).
     """
     logger.info("Task started [task=compute_similar_recommendations_task]")
     from apps.content.services.recommendations import compute_similar_recommendations

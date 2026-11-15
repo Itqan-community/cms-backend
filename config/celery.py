@@ -32,18 +32,9 @@ app.conf.beat_schedule = {
         "task": "apps.publishers.tasks.expire_publisher_member_invitations",
         "schedule": crontab(minute=0, hour=0),
     },
-    "flush-tracking-buffer": {
-        "task": "apps.usage_tracking.tasks.flush_tracking_buffer_task",
-        "schedule": timedelta(seconds=30),
-    },
-    "sync-audio-usage": {
-        "task": "apps.usage_tracking.tasks.sync_audio_usage_task",
-        "schedule": crontab(minute=5, hour=f"*/{settings.AUDIO_USAGE_SYNC_WINDOW_HOURS}"),
-        "kwargs": {"window_hours": settings.AUDIO_USAGE_SYNC_WINDOW_HOURS},
-    },
     "sync-asset-downloads": {
         "task": "apps.usage_tracking.tasks.sync_asset_downloads_task",
-        # Minute 20: after the 15-minute Cloudflare lag, offset from sync-audio-usage (minute 5).
+        # Minute 20: after the 15-minute Cloudflare lag.
         "schedule": crontab(minute=20),
     },
     "import-logpush": {

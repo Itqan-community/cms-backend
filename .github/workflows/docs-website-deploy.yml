@@ -58,19 +58,16 @@ jobs:
         # under the shared `base` settings, NOT a deployment env (staging/production). Only the
         # deploy step below is env-specific.
         #
-        # base.py's eager secret reads are gated by feature flags. Both auth subsystems are
-        # irrelevant to a static schema dump, so we turn them off — same pattern already used
-        # for SAML, not a workaround:
-        #   - ENABLE_ALLAUTH=false   -> skips read_file("ALLAUTH_JWT_PRIVATE_KEY") (base.py:377).
-        #                               allauth apps stay in INSTALLED_APPS (ungated), so the
-        #                               emitted spec is byte-identical.
-        #   - SAML_IDP_ENABLED=false -> skips the SAML key/cert reads (base.py:429-430).
+        # base.py's eager secret read is gated by a feature flag that is irrelevant to a static
+        # schema dump, so we turn it off, not a workaround:
+        #   - ENABLE_ALLAUTH=false -> skips read_file("ALLAUTH_JWT_PRIVATE_KEY"). allauth apps stay
+        #                             in INSTALLED_APPS (ungated), so the emitted spec is
+        #                             byte-identical.
         # base.py's DB settings are defaults and no DB connection is opened during export, so
         # NO database creds or other secrets are required. No dummy/fake values anywhere.
         env:
           DJANGO_SETTINGS_MODULE: config.settings.base
           ENABLE_ALLAUTH: "false"
-          SAML_IDP_ENABLED: "false"
         run: uv run manage.py export_public_openapi --out docs-website/openapi/public.json
 
       # ---------- Frontend build ----------

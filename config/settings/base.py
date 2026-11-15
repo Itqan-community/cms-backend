@@ -23,7 +23,6 @@ ALLOWED_HOSTS: list[str] = []
 ENABLE_OAUTH2 = config("ENABLE_OAUTH2", cast=bool, default=False)
 ENABLE_API_KEY_AUTH = config("ENABLE_API_KEY_AUTH", cast=bool, default=True)
 ENABLE_ANONYMOUS_TRAFFIC = config("ENABLE_ANONYMOUS_TRAFFIC", cast=bool, default=True)
-SAML_IDP_ENABLED = config("SAML_IDP_ENABLED", cast=bool, default=True)
 ENFORCE_ASSET_ACCESS_ON_PUBLIC_API = config("ENFORCE_ASSET_ACCESS_ON_PUBLIC_API", cast=bool, default=True)
 
 # Application definition
@@ -59,7 +58,6 @@ THIRD_PARTY_APPS = [
     *(["django_watchfiles"] if DEBUG else []),
     "plain_permissions",
     "ninja_keys",
-    *(["djangosaml2idp"] if SAML_IDP_ENABLED else []),
     "simple_history",
 ]
 
@@ -397,15 +395,6 @@ def read_file(file_name: str) -> str:
     return private_key
 
 
-def write_temp_file(content: str, suffix: str = "") -> str:
-    """Write content to a temp file and return its path. The file persists for the process lifetime."""
-    import tempfile
-
-    with tempfile.NamedTemporaryFile(mode="w", suffix=suffix, delete=False) as f:
-        f.write(content)
-        return f.name
-
-
 HEADLESS_JWT_PRIVATE_KEY = read_file("ALLAUTH_JWT_PRIVATE_KEY")
 # Create Private key from here https://docs.allauth.org/en/latest/headless/token-strategies/jwt-tokens.html
 
@@ -473,63 +462,6 @@ GEMINI_API_KEY = config("GEMINI_API_KEY", default="")
 GEMINI_FAST_MODEL = config("GEMINI_FAST_MODEL", default="gemini-3.5-flash-lite")
 # Free-tier latency varies (4-11s observed); only Translate clicks wait on it, never asset creation.
 GEMINI_TIMEOUT_SECONDS = config("GEMINI_TIMEOUT_SECONDS", cast=float, default=20.0)
-
-# ========================
-# SAML IDP (djangosaml2idp)
-# ========================
-if SAML_IDP_ENABLED:
-    from saml2.sigver import get_xmlsec_binary
-
-    MIDDLEWARE += ["apps.users.saml_processor.SamlIdpReloadMiddleware"]
-
-    SAML_IDP_KEY_FILE = write_temp_file(read_file("SAML_IDP_KEY_FILE"), suffix=".key")
-    SAML_IDP_CERT_FILE = write_temp_file(read_file("SAML_IDP_CERT_FILE"), suffix=".crt")
-    SAML_IDP_BASE_URL = config("SAML_IDP_BASE_URL", default="https://cms.itqan.dev")
-
-    SAML_IDP_CONFIG = {
-        "debug": DEBUG,
-        "xmlsec_binary": get_xmlsec_binary([config("XMLSEC_BINARY", default="/usr/bin/xmlsec1"), "/opt/local/bin"]),
-        "entityid": f"{SAML_IDP_BASE_URL}/idp/metadata/",
-        "service": {
-            "idp": {
-                "name": "Itqan CMS IDP",
-                "endpoints": {
-                    "single_sign_on_service": [
-                        (f"{SAML_IDP_BASE_URL}/idp/sso/post/", "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"),
-                        (
-                            f"{SAML_IDP_BASE_URL}/idp/sso/redirect/",
-                            "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
-                        ),
-                    ],
-                    "single_logout_service": [
-                        (f"{SAML_IDP_BASE_URL}/idp/slo/post/", "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"),
-                        (
-                            f"{SAML_IDP_BASE_URL}/idp/slo/redirect/",
-                            "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
-                        ),
-                    ],
-                },
-                "sign_response": True,
-                "sign_assertion": True,
-                "policy": {
-                    "default": {
-                        "name_form": "urn:oasis:names:tc:SAML:2.0:attrname-format:basic",
-                    },
-                },
-            },
-        },
-        "key_file": SAML_IDP_KEY_FILE,
-        "cert_file": SAML_IDP_CERT_FILE,
-        "metadata": {"local": []},
-        "attribute_map_dir": str(BASE_DIR / "saml" / "attributemaps"),
-    }
-
-    # Use email as the NameID (Mixpanel expects email)
-    SAML_IDP_DJANGO_USERNAME_FIELD = "email"
-
-    # RSA-SHA256 signing (required by Mixpanel)
-    SAML_AUTHN_SIGN_ALG = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"
-    SAML_AUTHN_DIGEST_ALG = "http://www.w3.org/2001/04/xmlenc#sha256"
 
 # Email Configuration
 EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
@@ -641,22 +573,13 @@ DATA_UPLOAD_MAX_NUMBER_FILES = 114
 
 LOGOUT_REDIRECT_URL = "/accounts/login"
 
-# Usage tracking (Mixpanel)
-MIXPANEL_ENABLED = config("MIXPANEL_ENABLED", default=False, cast=bool)
-MIXPANEL_PROJECT_TOKEN = config("MIXPANEL_PROJECT_TOKEN", default="")
-MIXPANEL_PROJECT_ID = config("MIXPANEL_PROJECT_ID", default="")
-MIXPANEL_INGEST_HOST = config("MIXPANEL_INGEST_HOST", default="api-eu.mixpanel.com")
-
-# Always installed: holds the asset download statistics tables, which do not depend on
-# Mixpanel. Mixpanel behaviour stays gated by MIXPANEL_ENABLED inside the app.
+# Always installed: holds the asset download statistics and usage report tables.
 LOCAL_APPS.append("apps.usage_tracking")
 
-# Audio usage sync from Cloudflare to Mixpanel
+# Cloudflare analytics access, shared by the asset download sync and the usage reports.
 CF_ZONE_ID = config("CF_ZONE_ID", default="")
 CF_API_TOKEN = config("CF_API_TOKEN", default="")
 CF_R2_CUSTOM_DOMAIN = config("CF_R2_CUSTOM_DOMAIN", default="")
-ENABLE_AUDIO_USAGE_SYNC = config("ENABLE_AUDIO_USAGE_SYNC", default=False, cast=bool)
-AUDIO_USAGE_SYNC_WINDOW_HOURS = config("AUDIO_USAGE_SYNC_WINDOW_HOURS", default=6, cast=int)
 
 # Asset download statistics from Cloudflare edge analytics (reuses CF_ZONE_ID,
 # CF_API_TOKEN and CF_R2_CUSTOM_DOMAIN). All optional.

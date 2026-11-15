@@ -334,8 +334,6 @@ media/
 .idea/
 .vscode/settings.json
 /private_key.pem
-/saml/idp_private.key
-/saml/idp_certificate.cert
 /.vscode/launch.json
 .ProjectMgmt/
 .chief/
@@ -343,7 +341,6 @@ media/
 .kilo/
 /temp/*
 /CLAUDE.md
-scripts/.mixpanel_traffic.env
 
 # Docusaurus
 docs-website/build/

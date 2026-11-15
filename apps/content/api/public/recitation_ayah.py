@@ -21,7 +21,6 @@ from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
-from apps.usage_tracking.decorators.track_usage import track_extra, track_usage
 
 router = ItqanRouter(tags=[NinjaTag.RECITATIONS])
 
@@ -49,7 +48,6 @@ class RecitationAyahAudioOut(Schema):
         | NinjaErrorResponse[Literal["ayah_not_found"]],
     },
 )
-@track_usage(entity_type="recitation")
 def get_recitation_ayah(
     request: Request,
     asset_id: int,
@@ -79,17 +77,6 @@ def get_recitation_ayah(
                 is_open_access=is_open_access,
             )
 
-        track_extra(
-            request,
-            entity_type="recitation",
-            accessed_entity_name=cached_meta["name_ar"],
-            entity_ids=[asset_id],
-            entity_names=[cached_meta["name_ar"]],
-            publisher_ids=[cached_meta["publisher_id"]] if cached_meta["publisher_id"] else [],
-            publisher_names=[cached_meta["publisher_name"]] if cached_meta["publisher_id"] else [],
-            quality=quality,
-            ayah_key=ayah_key,
-        )
         resp = HttpResponse(cached_resp, content_type="application/json")
         resp["Cache-Control"] = "public, max-age=300, s-maxage=300" if is_open_access else "private, no-cache"
         return resp
@@ -116,18 +103,6 @@ def get_recitation_ayah(
         "publisher_name": publisher_name,
         "is_open_access": asset.is_open_access,
     }
-
-    track_extra(
-        request,
-        entity_type="recitation",
-        accessed_entity_name=asset.name_ar,
-        entity_ids=[asset.id],
-        entity_names=[asset.name_ar],
-        publisher_ids=[asset.publisher_id] if asset.publisher_id else [],
-        publisher_names=[publisher_name] if asset.publisher_id else [],
-        quality=quality,
-        ayah_key=data["ayah_key"],
-    )
 
     result_payload = {
         "ayah_key": data["ayah_key"],

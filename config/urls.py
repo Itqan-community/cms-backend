@@ -45,11 +45,6 @@ urlpatterns = [
     path("cms-api/auth/", cms_auth_api.urls),  # just to show documentation
 ]
 
-if settings.SAML_IDP_ENABLED:
-    urlpatterns += [
-        path("idp/", include("djangosaml2idp.urls")),
-    ]
-
 # Serve media files in development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
