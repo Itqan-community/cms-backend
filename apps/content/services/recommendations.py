@@ -458,6 +458,8 @@ def list_active_editorial_recommendations() -> list[dict]:
             "recommendation_assets__asset__publisher",
             "recommendation_assets__asset__reciter",
             "recommendation_assets__asset__riwayah",
+            # Serialized on every asset; without it each one costs a query.
+            "recommendation_assets__asset__tags",
         )
         .order_by("-created_at")
     )
