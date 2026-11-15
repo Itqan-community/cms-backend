@@ -34,6 +34,8 @@ Every non-2xx response from the Itqan CMS API uses the same envelope. Build your
 | 401 | `token_not_valid` | Expired or revoked JWT token | `null` |
 | 403 | `permission_denied` | Authenticated but not authorized | `null` |
 | 404 | `not_found` | Resource does not exist | `null` |
+| 422 | `validation_error` | The request is well-formed but its values don't make sense together, e.g. an ayah range whose `from` is after `to` or past the end of the surah. `message` says what is wrong | `{}` |
+| 429 | `throttled` | Rate limit exceeded (see [Rate Limits](#rate-limits)) | `null` |
 | 4xx/5xx | `http_error` | Generic HTTP error path | `null` |
 | 500 | `internal_error` | Unhandled server exception | `null` |
 | varies | *(custom)* | Business logic error via `ItqanError` | Per-endpoint; documented in the endpoint's Reference page |
@@ -125,7 +127,26 @@ def api_fetch(url):
 - **Branch on `error_name`**, not `message` or HTTP status.
 - **Display `message` to users** — it is already localized via `Accept-Language`.
 - **Treat unknown `error_name` as `internal_error`** — the API may add new error names; your client must not crash on them.
-- **Retry with backoff on 5xx only** — 4xx errors are client errors and won't resolve on retry.
+- **Retry with backoff on 5xx and 429 only** — other 4xx errors are client errors and won't resolve on retry. On 429, wait for the `Retry-After` header first.
+
+## Rate Limits
+
+Each client has one request budget shared by all public endpoints:
+
+- **With an API key**, the budget belongs to the key's account.
+- **Without one**, it belongs to your IP address, and it is much smaller. Send an API key for production traffic.
+
+Going over the budget returns `429` with `error_name: "throttled"` and a `Retry-After` header that gives the number of seconds to wait:
+
+```http
+HTTP/1.1 429 Too Many Requests
+Retry-After: 12
+Content-Type: application/json
+
+{"error_name": "throttled", "message": "Request was throttled. Too many requests.", "extra": null}
+```
+
+Wait at least `Retry-After` seconds before retrying.
 
 ## Custom Endpoint Errors
 
