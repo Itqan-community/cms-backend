@@ -386,13 +386,32 @@ def labels(dimension: str, raw_keys: Iterable[Any]) -> dict[Any, str]:
     if dimension == "publisher":
         return dict(Publisher.objects.filter(id__in=ids).values_list("id", "name"))
     if dimension == "version":
-        return dict(AssetVersion.objects.filter(id__in=ids).values_list("id", "name"))
+        return _version_labels(ids)
     if dimension in _NAMED_MODELS:
         return dict(_NAMED_MODELS[dimension].objects.filter(id__in=ids).values_list("id", "name"))
     return {}
 
 
 _NAMED_MODELS = {"reciter": Reciter, "riwayah": Riwayah, "qiraah": Qiraah}
+
+
+def _version_labels(ids: list[Any]) -> dict[Any, str]:
+    """
+    Version names repeat across assets and languages (every asset starts at "1.0"), so the label
+    adds the asset name when the rows span several assets and the language when they span several.
+    """
+    rows = list(AssetVersion.objects.filter(id__in=ids).values("id", "name", "asset__name", "asset_language__language"))
+    many_assets = len({row["asset__name"] for row in rows}) > 1
+    many_languages = len({row["asset_language__language"] for row in rows}) > 1
+    labels = {}
+    for row in rows:
+        label = row["name"]
+        if many_languages and row["asset_language__language"]:
+            label = f"{label} ({row['asset_language__language']})"
+        if many_assets:
+            label = f"{row['asset__name']} · {label}"
+        labels[row["id"]] = label
+    return labels
 
 
 def asset_details(asset_ids: Iterable[int | None]) -> dict[int, dict[str, Any]]:
