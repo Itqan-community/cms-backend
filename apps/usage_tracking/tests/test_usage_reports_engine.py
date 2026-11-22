@@ -476,6 +476,42 @@ class TestUsageReportsEngine(BaseTestCase):
         # Assert
         assert result["items"][0] == {"key": str(app.id), "label": "Quran Companion", "value": 4, "previous": None}
 
+    def test_breakdown_where_by_version_should_tell_same_named_versions_apart(self):
+        # Arrange: three versions named "1.0": two languages of one asset, and another asset.
+        other = baker.make(Asset, publisher=self.publisher, name="Font B", category=CategoryChoice.FONT)
+        arabic = baker.make(AssetLanguage, asset=self.asset, language="ar")
+        german = baker.make(AssetLanguage, asset=self.asset, language="de")
+        other_arabic = baker.make(AssetLanguage, asset=other, language="ar")
+        versions = [
+            baker.make(AssetVersion, asset=asset, asset_language=language, name="1.0")
+            for asset, language in ((self.asset, arabic), (self.asset, german), (other, other_arabic))
+        ]
+        for sessions, version in enumerate(versions, start=1):
+            daily(date(2026, 10, 11), asset_id=version.asset_id, asset_version_id=version.id, sessions=sessions)
+
+        # Act
+        result = breakdown(admin_scope(None), WEEK, metric="plays", by="version")
+
+        # Assert
+        assert [item["label"] for item in result["items"]] == [
+            "Font B · 1.0 (ar)",
+            f"{self.asset.name} · 1.0 (de)",
+            f"{self.asset.name} · 1.0 (ar)",
+        ]
+
+    def test_breakdown_where_one_asset_and_language_should_label_version_by_name(self):
+        # Arrange
+        language = baker.make(AssetLanguage, asset=self.asset, language="ar")
+        old, new = (baker.make(AssetVersion, asset=self.asset, asset_language=language, name=n) for n in ("1.0", "1.1"))
+        daily(date(2026, 10, 11), asset_id=self.asset.id, asset_version_id=old.id, sessions=2)
+        daily(date(2026, 10, 11), asset_id=self.asset.id, asset_version_id=new.id, sessions=5)
+
+        # Act
+        result = breakdown(admin_scope(None), WEEK, metric="plays", by="version")
+
+        # Assert
+        assert [item["label"] for item in result["items"]] == ["1.1", "1.0"]
+
     def test_breakdown_where_unique_metric_should_count_distinct_per_row(self):
         # Arrange
         event(at(11), "L1", country="SA")
