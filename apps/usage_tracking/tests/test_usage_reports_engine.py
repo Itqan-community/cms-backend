@@ -175,6 +175,9 @@ class TestUsageReportsEngine(BaseTestCase):
         daily(day, asset_id=self.asset.id, kind="version_file", channel="cli", sessions=2)  # the install's file
         daily(day, asset_id=self.asset.id, kind="cli_install", channel="cli", sessions=2)
         daily(day, asset_id=self.asset.id, kind="cli_update", channel="cli", sessions=1)
+        # A script resolving through the registry and downloading the file: one use, by its file.
+        daily(day, asset_id=self.asset.id, kind="cli_install", channel="script", sessions=3)
+        daily(day, asset_id=self.asset.id, kind="version_file", channel="script", sessions=3)
         daily(day, asset_id=self.asset.id, kind="view", sessions=7)
         daily(day, asset_id=self.asset.id, kind="api_call", endpoint="/recitations/{asset_id}/", sessions=6)
         daily(day, asset_id=self.asset.id, kind="api_call", endpoint="/packages/resolve/{slug}/", sessions=9)
@@ -183,7 +186,7 @@ class TestUsageReportsEngine(BaseTestCase):
         result = summary(admin_scope(None), WEEK)
 
         # Assert
-        assert result["metrics"]["usage"]["value"] == 10 + 5 + 2 + 1 + 7 + 6
+        assert result["metrics"]["usage"]["value"] == 10 + 5 + 2 + 1 + 3 + 7 + 6
         assert result["metrics"]["public_api_calls"]["value"] == 6
         assert result["metrics"]["api_calls"]["value"] == 15
 
