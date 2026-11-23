@@ -14,7 +14,6 @@ from ninja.pagination import paginate
 from ninja.schema import DjangoGetter
 from pydantic import AwareDatetime, ConfigDict, Field, Json, model_validator
 
-from apps.content.columns import validate_column_key
 from apps.content.models import (
     GROUP_TEMPLATES,
     AssetTemplateChoice,
@@ -24,6 +23,7 @@ from apps.content.models import (
     MushafLayout,
     VersionStateChoice,
 )
+from apps.content.services.asset_columns import AssetColumnService
 from apps.content.services.asset_content import (
     AssetContentService,
     PatchResponseContext,
@@ -913,7 +913,9 @@ def _csv_template_response(content: bytes, filename: str) -> HttpResponse:
 @router.get(
     "content/{category}/csv-template/",
     response={
-        400: NinjaErrorResponse[Literal["mushaf_layout_required"]] | NinjaErrorResponse[Literal["column_key_invalid"]],
+        400: NinjaErrorResponse[Literal["mushaf_layout_required"]]
+        | NinjaErrorResponse[Literal["column_key_invalid"]]
+        | NinjaErrorResponse[Literal["column_key_taken"]],
         404: NinjaErrorResponse[Literal["mushaf_layout_not_found"]]
         | NinjaErrorResponse[Literal["unsupported_content_category"]],
     },
@@ -930,8 +932,8 @@ def download_csv_template(
     (``columns``, the keys the create form will send; ``text`` when omitted).
     A page template needs the mushaf layout, which sets the number of pages."""
     _resolve(category, request, access="read")
-    for key in columns or []:
-        validate_column_key(key)
+    # Same keys the create form will send, so the sheet never has a header it would reject.
+    AssetColumnService.validate_new_keys(columns or [])
     page_count = None
     filename = f"{template}-template.csv"
     if template == AssetTemplateChoice.PAGE:

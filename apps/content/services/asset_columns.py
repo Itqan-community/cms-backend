@@ -102,6 +102,20 @@ class AssetColumnService:
             raise self._key_taken_error(key)
 
     @staticmethod
+    def validate_new_keys(keys: list[str]) -> None:
+        """Keys for an asset that doesn't exist yet: each usable, none repeated."""
+        seen: set[str] = set()
+        for key in keys:
+            validate_column_key(key)
+            if key in seen:
+                raise ItqanError(
+                    error_name="column_key_taken",
+                    message=_("The key {key} is used for more than one column.").format(key=key),
+                    status_code=400,
+                )
+            seen.add(key)
+
+    @staticmethod
     def _key_taken_error(key: str) -> ItqanError:
         return ItqanError(
             error_name="column_key_taken",
@@ -144,12 +158,7 @@ class AssetColumnService:
         """
         if not columns:
             raise self._last_column_error()
-        seen: set[str] = set()
-        for column in columns:
-            validate_column_key(column.key)
-            if column.key in seen:
-                raise self._key_taken_error(column.key)
-            seen.add(column.key)
+        self.validate_new_keys([column.key for column in columns])
         asset = self.repo.lock_asset(asset)
         created = [
             self.repo.create(
@@ -157,7 +166,7 @@ class AssetColumnService:
             )
             for order, column in enumerate(columns)
         ]
-        logger.info(f"Asset columns created on asset creation [asset_id={asset.pk}, keys={sorted(seen)}]")
+        logger.info(f"Asset columns created on asset creation [asset_id={asset.pk}, keys={[c.key for c in created]}]")
         return created
 
     @transaction.atomic
