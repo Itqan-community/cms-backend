@@ -1,3 +1,10 @@
+## v2.1.0 (2026-11-23)
+
+### Feat
+
+- **content**: show recitation ayah-timing coverage in the portal
+- **i18n**: rename text assets to tafsirs, translations and Quranic sciences
+
 ## v2.0.0 (2026-11-14)
 
 ### Feat
