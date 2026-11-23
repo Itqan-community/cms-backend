@@ -1078,6 +1078,13 @@ msgstr "رقم السورة خارج النطاق 1..114: {num}"
 msgid "A valid API key is required."
 msgstr "يلزم مفتاح API صالح."
 
+msgid "Purpose can't be empty."
+msgstr "لا يمكن أن يكون الغرض فارغًا."
+
+#, python-brace-format
+msgid "{slug} is open access; no request is needed."
+msgstr "{slug} متاح للجميع؛ لا حاجة إلى طلب."
+
 #, python-brace-format
 msgid "Language {language} is not available for asset {slug}."
 msgstr "اللغة {language} غير متاحة للمورد {slug}."
