@@ -70,13 +70,17 @@ def _get_asset(request: Request, category: CategoryChoice, slug: str) -> Asset:
     return AssetContentService()._get_asset_or_404(slug, category, publisher_q=request.publisher_q())
 
 
-def require_manage_columns(request: Request) -> None:
-    """Adding or changing an asset's columns: a column applies to all of its languages."""
+def require_manage_columns(request: Request, publisher_id: int | None = None) -> None:
+    """Adding or changing an asset's columns: a column applies to all of its languages.
+
+    Checked at ``publisher_id`` (the asset's publisher, when it isn't the request's yet).
+    """
+    publisher = publisher_id if publisher_id is not None else request.publisher
     check_permission(
-        request.user, PermissionChoice.PORTAL_MANAGE_ASSET_COLUMNS, raise_exception=True, publisher=request.publisher
+        request.user, PermissionChoice.PORTAL_MANAGE_ASSET_COLUMNS, raise_exception=True, publisher=publisher
     )
     check_permission(
-        request.user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES, raise_exception=True, publisher=request.publisher
+        request.user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES, raise_exception=True, publisher=publisher
     )
 
 

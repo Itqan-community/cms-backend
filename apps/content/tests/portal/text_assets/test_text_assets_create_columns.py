@@ -7,6 +7,7 @@ from apps.content.models import Asset, AssetColumn, AssetVersion
 from apps.core.permissions import PermissionChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
+from apps.publishers.tests.services.test_effective_permissions import join, role
 from apps.quran.models import Ayah, Surah
 from apps.users.models import User
 
@@ -98,6 +99,31 @@ class TextAssetCreateColumnsTest(BaseTestCase):
         # Arrange
         self.give_permission(self.user, PermissionChoice.PORTAL_MANAGE_ASSET_COLUMNS)
         self.authenticate_user(self.user)
+
+        # Act
+        response = self.post(columns=json.dumps(QA_COLUMNS))
+
+        # Assert
+        self.assertEqual(403, response.status_code, response.content)
+        self.assertEqual("permission_denied", response.json()["error_name"])
+        self.assertFalse(Asset.objects.exists())
+
+    def test_create_text_asset_where_column_permissions_only_at_tenant_should_return_403(self):
+        # Arrange
+        member = User.objects.create_user(email="columns-member@example.com", name="Member")
+        tenant = baker.make(Publisher, name="Tenant with column rights")
+        join(
+            member,
+            tenant,
+            role(
+                tenant,
+                PermissionChoice.PORTAL_CREATE_TEXT_ASSET,
+                PermissionChoice.PORTAL_MANAGE_ASSET_COLUMNS,
+                PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES,
+            ),
+        )
+        join(member, self.publisher, role(self.publisher, PermissionChoice.PORTAL_CREATE_TEXT_ASSET))
+        self.authenticate_user(member, HTTP_X_TENANT=str(tenant.id))
 
         # Act
         response = self.post(columns=json.dumps(QA_COLUMNS))
