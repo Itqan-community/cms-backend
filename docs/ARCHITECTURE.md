@@ -365,11 +365,12 @@ Similar to ResourceVersion, **AssetVersion** tracks each uploaded file version o
 - Enables tracking of which Asset version corresponds to which Resource version
 - For translations and tafsirs, an uploaded CSV is imported into per-unit entries. To
   guide uploaders the portal serves an empty fill-in CSV per template — one row per
-  surah / ayah / word / page with a blank cell per text column (just `text` before the
-  asset exists; a group template has no rows to list, so its sheet is the header alone),
-  in the same columns as a version export, so a filled-in sheet imports as is:
-  `GET /portal/content/{category}/csv-template/?template=&mushaf_layout_id=` (asset
-  creation; `page` needs the layout) and `GET /portal/content/{category}/{slug}/csv-template/`
+  surah / ayah / word / page with a blank cell per text column (before the asset exists,
+  the `columns` keys the create form will send, else just `text`; a group template has no
+  rows to list, so its sheet is the header alone), in the same columns as a version
+  export, so a filled-in sheet imports as is:
+  `GET /portal/content/{category}/csv-template/?template=&mushaf_layout_id=&columns=` (asset
+  creation; `page` needs the layout; `columns` repeats per key) and `GET /portal/content/{category}/{slug}/csv-template/`
   (an existing asset's template).
 - For translations, tafsirs, mushafs and fonts, `name` is the **version number**
   (`major.minor`, e.g. `7.0`) and `label` the human-readable version name. The
@@ -442,9 +443,12 @@ column `key` is the CSV header and API name and is the same in every language; i
 `label_en` / `label_ar` are only for display, and may be left empty (the key is then
 shown). A key is plain ASCII (`a-z`, `0-9`, `_`, starting with a letter) so developers
 can use it as a CSV header, JSON field or identifier, and it may not shadow a unit header or any of the importer's unit aliases
-(`word_index`, `position`, …). Assets that predate columns — and any new one — get a
-single column keyed `text`, so their files are unchanged: `Asset.text_columns()` reads
-it without writing, and the first write saves it (`Asset.ensure_text_columns()`). A committed version freezes its ordered keys in
+(`word_index`, `position`, …). Assets that predate columns — and any new one created
+without columns — get a single column keyed `text`, so their files are unchanged:
+`Asset.text_columns()` reads it without writing, and the first write saves it
+(`Asset.ensure_text_columns()`). The create form may instead give a new asset its
+columns (`columns` on `POST /portal/text-assets/`), saved before its first version's
+file is imported, so that file can already carry them. A committed version freezes its ordered keys in
 `AssetVersion.column_keys`, which is its file's layout; drafts follow the asset's
 current columns. Replacing a committed version's file parses it with the asset's
 current columns and gives the version those keys, so its stored file carries every
@@ -567,7 +571,10 @@ from the parsed entries, so consumers download exactly what was reviewed.
   applies to every language; only a few users hold it. Filling and translating the
   cells needs only the content-edit permission. A column a committed version contains
   can't be re-keyed or deleted (`column_committed`); the last column can't be deleted
-  (`column_last`).
+  (`column_last`). The same two permissions are needed to send `columns` when creating
+  a text asset (`POST /portal/text-assets/`, a JSON list of `{key, label_en, label_ar}`
+  in order, replacing the default `text` column; `column_key_invalid`,
+  `column_key_taken` for a repeated key, `column_last` for an empty list).
   Adding a column is a minor change; reordering the columns a language's latest
   committed version has makes its next commit or restore major — a minor bump is
   refused with `major_bump_required`, and a draft reports `requires_major`.
