@@ -317,7 +317,8 @@ def create_text_asset(
     )
     enforce_publisher_membership(request.user, data.publisher_id)
     if data.columns is not None:
-        require_manage_columns(request)
+        # At the publisher receiving the asset, which the request's tenant need not be.
+        require_manage_columns(request, publisher_id=data.publisher_id)
     service = TextAssetService()
     text_asset = service.create_text_asset_with_optional_version(
         version_text=VersionText.from_data(data, prefix="version_"),
