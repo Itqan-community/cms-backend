@@ -73,6 +73,9 @@ DOWNLOAD_KINDS: tuple[str, ...] = (TrafficKind.VERSION_FILE, TrafficKind.GALLERY
 REGISTRY_CALLS = Q(kind=TrafficKind.API_CALL, endpoint__startswith="/packages/")
 # The file a CLI install downloads after resolving it.
 CLI_FILE_DOWNLOADS = Q(kind=TrafficKind.VERSION_FILE, channel=TrafficChannel.CLI)
+# A registry resolve from another client (a script calling /packages/ without the CLI) still records
+# an install, and its file download carries the same non-CLI channel. That use counts by its file.
+NON_CLI_INSTALLS = Q(kind__in=(TrafficKind.CLI_INSTALL, TrafficKind.CLI_UPDATE)) & ~Q(channel=TrafficChannel.CLI)
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,8 +104,9 @@ ROLLUP_METRICS: dict[str, RollupMetric] = {
     "updates": RollupMetric("sessions", (TrafficKind.CLI_UPDATE,)),
     "api_calls": RollupMetric("sessions", (TrafficKind.API_CALL,)),
     "public_api_calls": RollupMetric("sessions", (TrafficKind.API_CALL,), exclude=REGISTRY_CALLS),
-    # Every use of the content once: a CLI install's registry calls and file are part of the install.
-    "usage": RollupMetric("sessions", None, exclude=REGISTRY_CALLS | CLI_FILE_DOWNLOADS),
+    # Every use of the content once: a CLI install's registry calls and file are part of the install;
+    # an install from another client counts by its file download instead.
+    "usage": RollupMetric("sessions", None, exclude=REGISTRY_CALLS | CLI_FILE_DOWNLOADS | NON_CLI_INSTALLS),
     "views": RollupMetric("sessions", (TrafficKind.VIEW,)),
     "requests": RollupMetric("requests", None),
     "bytes": RollupMetric("bytes", None),
