@@ -14,6 +14,7 @@ from ninja.pagination import paginate
 from ninja.schema import DjangoGetter
 from pydantic import AwareDatetime, ConfigDict, Field, Json, model_validator
 
+from apps.content.columns import validate_column_key
 from apps.content.models import (
     GROUP_TEMPLATES,
     AssetTemplateChoice,
@@ -912,18 +913,25 @@ def _csv_template_response(content: bytes, filename: str) -> HttpResponse:
 @router.get(
     "content/{category}/csv-template/",
     response={
-        400: NinjaErrorResponse[Literal["mushaf_layout_required"]],
+        400: NinjaErrorResponse[Literal["mushaf_layout_required"]] | NinjaErrorResponse[Literal["column_key_invalid"]],
         404: NinjaErrorResponse[Literal["mushaf_layout_not_found"]]
         | NinjaErrorResponse[Literal["unsupported_content_category"]],
     },
 )
 def download_csv_template(
-    request: Request, category: str, template: AssetTemplateChoice, mushaf_layout_id: int | None = None
+    request: Request,
+    category: str,
+    template: AssetTemplateChoice,
+    mushaf_layout_id: int | None = None,
+    columns: list[str] = Query(None),
 ):
     """An empty CSV to fill in for a template, before the asset exists (asset
-    creation): one row per surah / ayah / word / page, blank ``text``. A page
-    template needs the mushaf layout, which sets the number of pages."""
+    creation): one row per surah / ayah / word / page, a blank cell per column
+    (``columns``, the keys the create form will send; ``text`` when omitted).
+    A page template needs the mushaf layout, which sets the number of pages."""
     _resolve(category, request, access="read")
+    for key in columns or []:
+        validate_column_key(key)
     page_count = None
     filename = f"{template}-template.csv"
     if template == AssetTemplateChoice.PAGE:
@@ -944,7 +952,7 @@ def download_csv_template(
         page_count = layout.page_count
         filename = "_".join(f"page-{layout.name}-template.csv".split())
     content = AssetContentService().repo.blank_template_csv_bytes(
-        unit_spec_for_template(template), page_count=page_count
+        unit_spec_for_template(template), page_count=page_count, column_keys=columns or None
     )
     return _csv_template_response(content, filename)
 
