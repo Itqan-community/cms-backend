@@ -18,7 +18,7 @@ def health_check(request):
     return JsonResponse(
         {
             "status": "healthy",
-            "service": "Fanar API",
+            "service": "Itqan CMS API",
             "timestamp": str(timezone.now()),
         }
     )
