@@ -31,6 +31,34 @@ class DownloadCsvTemplateTest(AssetContentBaseTest):
         self.assertEqual([["1", "1"], ["1", "2"], ["1", "3"]], [row[:2] for row in rows[1:]])
         self.assertEqual({""}, {row[4] for row in rows[1:]})
 
+    def test_download_csv_template_where_columns_given_should_have_a_blank_cell_per_column(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
+
+        # Act
+        response = self.client.get(
+            "/portal/content/text-assets/csv-template/?template=ayah&columns=question&columns=answer"
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        rows = _rows(response)
+        self.assertEqual(["surah", "ayah", "surah_name", "ayah_text", "question", "answer"], rows[0])
+        self.assertEqual({("", "")}, {(row[4], row[5]) for row in rows[1:]})
+
+    def test_download_csv_template_where_column_key_invalid_should_return_400(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
+
+        # Act
+        response = self.client.get("/portal/content/text-assets/csv-template/?template=ayah&columns=Bad Key")
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("column_key_invalid", response.json()["error_name"])
+
     def test_download_csv_template_where_page_without_layout_should_raise(self):
         # Arrange
         self.authenticate_user(self.user)

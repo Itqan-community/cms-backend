@@ -99,11 +99,23 @@ class AssetColumnService:
     def _require_free_key(self, asset: Asset, key: str, *, exclude_pk: int | None = None) -> None:
         validate_column_key(key)
         if self.repo.key_exists(asset, key, exclude_pk=exclude_pk):
-            raise ItqanError(
-                error_name="column_key_taken",
-                message=_("This asset already has a column with the key {key}.").format(key=key),
-                status_code=400,
-            )
+            raise self._key_taken_error(key)
+
+    @staticmethod
+    def _key_taken_error(key: str) -> ItqanError:
+        return ItqanError(
+            error_name="column_key_taken",
+            message=_("This asset already has a column with the key {key}.").format(key=key),
+            status_code=400,
+        )
+
+    @staticmethod
+    def _last_column_error() -> ItqanError:
+        return ItqanError(
+            error_name="column_last",
+            message=_("An asset needs at least one column."),
+            status_code=400,
+        )
 
     @staticmethod
     def _committed_error() -> ItqanError:
@@ -123,6 +135,30 @@ class AssetColumnService:
         )
         logger.info(f"Asset column created [asset_id={asset.pk}, key={key}]")
         return column
+
+    @transaction.atomic
+    def create_initial_columns(self, asset: Asset, columns: list[ColumnInfo]) -> list[AssetColumn]:
+        """Give a new asset ``columns``, in order, in place of the default ``text`` column.
+
+        For the create form, so a first version's file can already carry these columns.
+        """
+        if not columns:
+            raise self._last_column_error()
+        seen: set[str] = set()
+        for column in columns:
+            validate_column_key(column.key)
+            if column.key in seen:
+                raise self._key_taken_error(column.key)
+            seen.add(column.key)
+        asset = self.repo.lock_asset(asset)
+        created = [
+            self.repo.create(
+                asset, key=column.key, label_en=column.label_en.strip(), label_ar=column.label_ar.strip(), order=order
+            )
+            for order, column in enumerate(columns)
+        ]
+        logger.info(f"Asset columns created on asset creation [asset_id={asset.pk}, keys={sorted(seen)}]")
+        return created
 
     @transaction.atomic
     def update_column(
@@ -170,11 +206,7 @@ class AssetColumnService:
     def delete_column(self, column: AssetColumn) -> None:
         asset = self.repo.lock_asset(column.asset)
         if len(asset.text_columns()) <= 1:
-            raise ItqanError(
-                error_name="column_last",
-                message=_("An asset needs at least one column."),
-                status_code=400,
-            )
+            raise self._last_column_error()
         if self.is_committed(column):
             raise self._committed_error()
         # Only drafts can hold cells of an uncommitted column; they go with it.

@@ -70,7 +70,8 @@ def _get_asset(request: Request, category: CategoryChoice, slug: str) -> Asset:
     return AssetContentService()._get_asset_or_404(slug, category, publisher_q=request.publisher_q())
 
 
-def _require_manage_columns(request: Request) -> None:
+def require_manage_columns(request: Request) -> None:
+    """Adding or changing an asset's columns: a column applies to all of its languages."""
     check_permission(
         request.user, PermissionChoice.PORTAL_MANAGE_ASSET_COLUMNS, raise_exception=True, publisher=request.publisher
     )
@@ -106,7 +107,7 @@ def list_columns(request: Request, category: str, slug: str):
 def create_column(request: Request, category: str, slug: str, data: AssetColumnIn):
     """Add a column at the end; it appears in the next committed version."""
     resolved = _resolve(category, request, access="read")
-    _require_manage_columns(request)
+    require_manage_columns(request)
     asset = _get_asset(request, resolved, slug)
     column = AssetColumnService().create_column(asset, key=data.key, label_en=data.label_en, label_ar=data.label_ar)
     return 201, column
@@ -123,7 +124,7 @@ def create_column(request: Request, category: str, slug: str, data: AssetColumnI
 def reorder_columns(request: Request, category: str, slug: str, data: AssetColumnOrderIn):
     """Set the column order. Reordering columns of a committed version makes the next version major."""
     resolved = _resolve(category, request, access="read")
-    _require_manage_columns(request)
+    require_manage_columns(request)
     asset = _get_asset(request, resolved, slug)
     return AssetColumnService().reorder_columns(asset, data.keys)
 
@@ -141,7 +142,7 @@ def reorder_columns(request: Request, category: str, slug: str, data: AssetColum
 def update_column(request: Request, category: str, slug: str, key: str, data: AssetColumnPatchIn):
     """Change a column's labels, or its key while no committed version contains it."""
     resolved = _resolve(category, request, access="read")
-    _require_manage_columns(request)
+    require_manage_columns(request)
     asset = _get_asset(request, resolved, slug)
     service = AssetColumnService()
     column = service.get_column_or_404(asset, key)
@@ -159,7 +160,7 @@ def update_column(request: Request, category: str, slug: str, key: str, data: As
 def delete_column(request: Request, category: str, slug: str, key: str):
     """Delete a column no committed version contains, with its draft cells."""
     resolved = _resolve(category, request, access="read")
-    _require_manage_columns(request)
+    require_manage_columns(request)
     asset = _get_asset(request, resolved, slug)
     service = AssetColumnService()
     service.delete_column(service.get_column_or_404(asset, key))

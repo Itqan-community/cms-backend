@@ -4,8 +4,9 @@ from typing import Annotated, Literal
 from django.utils.translation import gettext_lazy as _
 from ninja import Field, File, FilterLookup, FilterSchema, Form, Query, Schema, UploadedFile
 from ninja.pagination import paginate
-from pydantic import AwareDatetime
+from pydantic import AwareDatetime, Json
 
+from apps.content.api.portal.asset_columns import require_manage_columns
 from apps.content.asset_tag_schemas import AssetTagOut
 from apps.content.channel_schemas import ChannelConflictResponse
 from apps.content.models import (
@@ -17,6 +18,7 @@ from apps.content.models import (
     StatusChoice,
     VersionStateChoice,
 )
+from apps.content.services.asset_columns import ColumnInfo
 from apps.content.services.text_asset import TextAssetService
 from apps.content.version_text import VersionText
 from apps.core.mixins.storage import absolute_file_url
@@ -130,6 +132,12 @@ class TextAssetDetailOut(Schema):
 # --- Input Schemas ---
 
 
+class TextAssetColumnIn(Schema):
+    key: str = Field(..., max_length=64)
+    label_en: str = Field(default="", max_length=255)
+    label_ar: str = Field(default="", max_length=255)
+
+
 class TextAssetCreateIn(Schema):
     name_ar: str = Field(default="", max_length=255)
     name_en: str = Field(default="", max_length=255)
@@ -161,6 +169,13 @@ class TextAssetCreateIn(Schema):
     slug: str | None = Field(
         default=None,
         description="Package name from `POST /portal/ai/translate/` (`slug_for`); built from the names when omitted.",
+    )
+    columns: Json[list[TextAssetColumnIn]] | None = Field(
+        default=None,
+        description=(
+            "JSON list of the asset's text columns, in order, replacing the default `text` column; "
+            "the uploaded file may then carry them. Needs the manage-columns and all-languages permissions."
+        ),
     )
 
 
@@ -281,7 +296,10 @@ def list_text_assets(request: Request, filters: TextAssetFilter = Query()):
         | NinjaErrorResponse[Literal["mushaf_layout_not_allowed"]]
         | NinjaErrorResponse[Literal["template_not_allowed"]]
         | NinjaErrorResponse[Literal["text_asset_tag_required"]]
-        | NinjaErrorResponse[Literal["asset_tag_not_found"]],
+        | NinjaErrorResponse[Literal["asset_tag_not_found"]]
+        | NinjaErrorResponse[Literal["column_key_invalid"]]
+        | NinjaErrorResponse[Literal["column_key_taken"]]
+        | NinjaErrorResponse[Literal["column_last"]],
         404: NinjaErrorResponse[Literal["publisher_not_found"]]
         | NinjaErrorResponse[Literal["text_asset_not_found"]]
         | NinjaErrorResponse[Literal["mushaf_layout_not_found"]],
@@ -298,12 +316,19 @@ def create_text_asset(
         f"Creating text asset [publisher_id={data.publisher_id}, language={data.language}, user_id={request.user.id}]"
     )
     enforce_publisher_membership(request.user, data.publisher_id)
+    if data.columns is not None:
+        require_manage_columns(request)
     service = TextAssetService()
     text_asset = service.create_text_asset_with_optional_version(
         version_text=VersionText.from_data(data, prefix="version_"),
         version_number=data.version_number,
         file=file,
         created_by_id=request.user.id,
+        columns=(
+            None
+            if data.columns is None
+            else [ColumnInfo(key=c.key, label_en=c.label_en, label_ar=c.label_ar) for c in data.columns]
+        ),
         publisher_id=data.publisher_id,
         name_ar=data.name_ar,
         name_en=data.name_en,
