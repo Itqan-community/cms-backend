@@ -63,7 +63,7 @@ class MemberTasksTest(BaseTestCase):
         self.assertIn(member_group().name, html)
         self.assertIn("rawtoken123", html)
         # Inherited from emails/base_message.html rather than the old bare markup.
-        self.assertIn("Thank you for using Itqan!", html)
+        self.assertIn("Thank you for using Fanar!", html)
         self.assertIn("background-color:#f4f8f6", html)
 
     @patch("apps.publishers.services.publisher_member_notification_service.email_service.send_email")
