@@ -781,10 +781,13 @@ def breakdown(
             for key in ranked
         ]
         if scope.privacy_floor:
-            listeners = repo.listeners_per_group(base_q, period, metric_kinds(metric), by, zone)
+            # Count listeners over the rows the value is built from, exclusions included.
+            spec = ROLLUP_METRICS.get(metric)
+            listener_q = base_q & ~spec.exclude if spec is not None and spec.exclude is not None else base_q
+            listeners = repo.listeners_per_group(listener_q, period, metric_kinds(metric), by, zone)
             listeners_before = (
                 repo.listeners_per_group(
-                    base_q, Period(*previous_period(period.start, period.end)), metric_kinds(metric), by, zone
+                    listener_q, Period(*previous_period(period.start, period.end)), metric_kinds(metric), by, zone
                 )
                 if compare
                 else {}
