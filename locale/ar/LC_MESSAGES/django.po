@@ -409,6 +409,10 @@ msgid "Column {key} not found."
 msgstr "العمود {key} غير موجود."
 
 #, python-brace-format
+msgid "The key {key} is used for more than one column."
+msgstr "المفتاح {key} مستخدم لأكثر من عمود."
+
+#, python-brace-format
 msgid "This asset already has a column with the key {key}."
 msgstr "يحتوي هذا الأصل بالفعل على عمود بالمفتاح {key}."
 
