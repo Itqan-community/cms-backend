@@ -23,6 +23,7 @@ from apps.content.repositories.asset_content import AssetContentRepository
 from apps.content.repositories.asset_review import AssetReviewRepository
 from apps.content.repositories.text_asset import TextAssetRepository
 from apps.content.services.asset_access import guard_channel_changes
+from apps.content.services.asset_columns import AssetColumnService, ColumnInfo
 from apps.content.services.asset_content import (
     VersionBump,
     adopt_current_columns,
@@ -219,16 +220,21 @@ class TextAssetService:
         version_number: str | None = None,
         file: Any = None,
         created_by_id: int | None = None,
+        columns: list[ColumnInfo] | None = None,
         **text_asset_kwargs: Any,
     ) -> Asset:
         """
         Business Logic: Create a text asset and, when a file is provided, its first
         version in a single atomic transaction.
 
-        ``text_asset_kwargs`` are forwarded verbatim to :meth:`create_text_asset`.
+        ``columns`` replace the default ``text`` column before the file is imported,
+        so the file may carry them. ``text_asset_kwargs`` are forwarded verbatim to
+        :meth:`create_text_asset`.
         """
         with transaction.atomic():
             text_asset = self.create_text_asset(**text_asset_kwargs)
+            if columns is not None:
+                AssetColumnService().create_initial_columns(text_asset, columns)
             if file is not None:
                 self.create_text_asset_version(
                     text_asset.slug,
