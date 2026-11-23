@@ -21,7 +21,7 @@ authentication rolls out more widely.
 
 ## Get an API key
 
-1. Sign in to the Asset Library at [fanar.itqan.dev](https://fanar.itqan.dev).
+1. Sign in to the Asset Library at [cms.itqan.dev](https://cms.itqan.dev).
 2. Open your account settings and go to **API Keys**.
 3. Create a key, give it a descriptive name (e.g. `my-recitation-app`), and copy it.
 4. Store it securely. Treat the key like a password — keep it in an environment \
