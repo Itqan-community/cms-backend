@@ -59,6 +59,20 @@ class DownloadCsvTemplateTest(AssetContentBaseTest):
         self.assertEqual(400, response.status_code, response.content)
         self.assertEqual("column_key_invalid", response.json()["error_name"])
 
+    def test_download_csv_template_where_column_keys_repeat_should_return_400(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
+
+        # Act
+        response = self.client.get(
+            "/portal/content/text-assets/csv-template/?template=ayah&columns=answer&columns=answer"
+        )
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("column_key_taken", response.json()["error_name"])
+
     def test_download_csv_template_where_page_without_layout_should_raise(self):
         # Arrange
         self.authenticate_user(self.user)

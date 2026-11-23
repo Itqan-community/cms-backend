@@ -370,7 +370,8 @@ Similar to ResourceVersion, **AssetVersion** tracks each uploaded file version o
   rows to list, so its sheet is the header alone), in the same columns as a version
   export, so a filled-in sheet imports as is:
   `GET /portal/content/{category}/csv-template/?template=&mushaf_layout_id=&columns=` (asset
-  creation; `page` needs the layout; `columns` repeats per key) and `GET /portal/content/{category}/{slug}/csv-template/`
+  creation; `page` needs the layout; `columns` repeats per key, and invalid or repeated keys
+  are refused as on create) and `GET /portal/content/{category}/{slug}/csv-template/`
   (an existing asset's template).
 - For translations, tafsirs, mushafs and fonts, `name` is the **version number**
   (`major.minor`, e.g. `7.0`) and `label` the human-readable version name. The
