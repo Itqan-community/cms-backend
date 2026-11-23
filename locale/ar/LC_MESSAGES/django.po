@@ -589,6 +589,10 @@ msgid "New Update for {asset_name}"
 msgstr "تحديث جديد لـ {asset_name}"
 
 #, python-brace-format
+msgid "Ayah {ayah_key} not found."
+msgstr "لم يتم العثور على الآية {ayah_key}."
+
+#, python-brace-format
 msgid "The range must end at or after its first ayah, within the same surah, and cover at most {max} ayahs."
 msgstr "يجب أن ينتهي النطاق عند آيته الأولى أو بعدها، وفي السورة نفسها، وألّا يتجاوز {max} آية."
 
@@ -757,10 +761,6 @@ msgstr "الآية {surah}:{ayah} ليس لها توقيت في هذا المق�
 #, python-brace-format
 msgid "Ayah range {from_ayah}-{to_ayah} has invalid timings."
 msgstr "نطاق الآيات {from_ayah}-{to_ayah} يحتوي على توقيتات غير صالحة."
-
-#, python-brace-format
-msgid "Ayah {ayah_key} not found."
-msgstr "لم يتم العثور على الآية {ayah_key}."
 
 #, python-brace-format
 msgid "Quality with slug {slug} not found."
