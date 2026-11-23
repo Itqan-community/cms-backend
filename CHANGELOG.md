@@ -1,3 +1,14 @@
+## v2.2.0 (2026-11-23)
+
+### Feat
+
+- **content**: let the create form set a text asset's columns
+
+### Fix
+
+- **content**: refuse repeated keys in the pre-create CSV template
+- **content**: check create-time column rights at the asset's publisher
+
 ## v2.1.0 (2026-11-23)
 
 ### Feat
