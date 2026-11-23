@@ -106,6 +106,21 @@ class TestDeveloperUsageReports(BaseTestCase):
         ]
         assert body["other"] is None
 
+    def test_breakdown_where_metric_excludes_rows_should_count_listeners_without_them(self):
+        # Arrange: in EG one listener made a public call; three others only called the CLI registry.
+        for listener in ("R1", "R2", "R3"):
+            event(listener, app_id=self.app.id, endpoint="/packages/resolve/{slug}/", country="EG")
+        daily(date(2026, 10, 12), app_id=self.app.id, sessions=3, endpoint="/packages/resolve/{slug}/", country="EG")
+        self.authenticate_user(self.user)
+
+        # Act
+        response = self.client.get(f"{BASE}/breakdown/?{RANGE}&metric=public_api_calls&by=country")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        values = {item["key"]: item["value"] for item in response.json()["items"]}
+        assert values["EG"] == "<3"
+
     def test_breakdown_where_privacy_floor_applies_should_hide_the_total(self):
         # Arrange
         self.authenticate_user(self.user)
