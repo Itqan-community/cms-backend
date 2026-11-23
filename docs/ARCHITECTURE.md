@@ -571,7 +571,8 @@ from the parsed entries, so consumers download exactly what was reviewed.
   applies to every language; only a few users hold it. Filling and translating the
   cells needs only the content-edit permission. A column a committed version contains
   can't be re-keyed or deleted (`column_committed`); the last column can't be deleted
-  (`column_last`). The same two permissions are needed to send `columns` when creating
+  (`column_last`). The same two permissions, held at the publisher receiving the asset
+  (`publisher_id`, not the request's tenant), are needed to send `columns` when creating
   a text asset (`POST /portal/text-assets/`, a JSON list of `{key, label_en, label_ar}`
   in order, replacing the default `text` column; `column_key_invalid`,
   `column_key_taken` for a repeated key, `column_last` for an empty list).
