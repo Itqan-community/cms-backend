@@ -8,7 +8,7 @@ sidebar_position: 2
 
 ## احصل على مفتاح API
 
-1. سجّل الدخول إلى مكتبة الأصول على **[fanar.itqan.dev](https://fanar.itqan.dev)**.
+1. سجّل الدخول إلى مكتبة الأصول على **[cms.itqan.dev](https://cms.itqan.dev)**.
 2. افتح إعدادات حسابك وانتقل إلى **مفاتيح API**.
 3. أنشئ مفتاحًا، وأعطه اسمًا وصفيًا (مثل `my-recitation-app`)، وانسخه.
 
