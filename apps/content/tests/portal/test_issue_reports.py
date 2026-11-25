@@ -359,6 +359,22 @@ class IssueReportPortalPublisherScopeTests(BaseTestCase):
         # Assert
         self.assertEqual(201, response.status_code, response.content)
 
+    def test_create_issue_report_where_staff_files_from_gallery_without_tenant_should_allow_any_publishers_asset(self):
+        # Arrange — the gallery sends no X-Tenant, so staff can file against any publisher's asset there
+        self.authenticate_user(self.staff_user)
+        payload = {
+            "asset_id": self.other_report.asset_id,
+            "description": "Staff report from the gallery.",
+            "context": {"surah": 1, "ayah": 1},
+        }
+
+        # Act
+        response = self.client.post("/portal/issue-reports/", payload, format="json")
+
+        # Assert
+        self.assertEqual(201, response.status_code, response.content)
+        self.assertEqual(self.other_report.asset_id, response.json()["asset_id"])
+
 
 class IssueReportAssetSearchTests(BaseTestCase):
     def setUp(self):
