@@ -395,7 +395,7 @@ Each result lists the asset's installable languages, source first, with the newe
   "category": "tafsir",
   "is_open_access": false,
   "access": "pending",
-  "access_request_url": "https://cms.itqan.dev/gallery/asset/42",
+  "access_request_url": "https://fanar.itqan.dev/gallery/asset/42",
   "publisher_name": "…",
   "languages": [
     {"language": "ar", "is_source": true, "latest_version": "2.4.0"},

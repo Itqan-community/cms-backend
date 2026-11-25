@@ -1,7 +1,7 @@
 ---
 sidebar_position: 2
 title: Response Structure
-description: How list and single-resource responses are structured in the Itqan CMS API.
+description: How list and single-resource responses are structured in the Fanar API.
 ---
 
 # Response Structure

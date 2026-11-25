@@ -1,12 +1,12 @@
 # Authentication Guide
 
-This document explains how authentication works in Itqan CMS, covering both internal users and external developers.
+This document explains how authentication works in Fanar, covering both internal users and external developers.
 
 ---
 
 ## Overview
 
-Itqan CMS uses **two distinct authentication systems** for different user types:
+Fanar uses **two distinct authentication systems** for different user types:
 
 | User Type | API | Authentication Method | Use Case |
 |-----------|-----|----------------------|----------|
@@ -215,7 +215,7 @@ Include the access token in the `Authorization` header for all API requests.
 sequenceDiagram
     participant App as Developer App
     participant API as Public API
-    participant System as Itqan CMS
+    participant System as Fanar
 
     App->>API: GET /assets<br/>Authorization: Bearer {access_token}
     API->>API: Validate access_token
@@ -292,7 +292,7 @@ flowchart LR
         Secrets[("🔒 client_secret<br/>(Environment Variable)")]
     end
 
-    subgraph Itqan["Itqan CMS"]
+    subgraph Itqan["Fanar"]
         DevAPI["Public API (/)"]
     end
 
@@ -367,7 +367,7 @@ Currently, all authenticated applications have full read/write access. Future ve
 ## Application Self-Identification (API Keys)
 
 ### Architecture Decision
-Itqan CMS uses the existing **API Key system** (`X-API-Key` header) as the standard mechanism for application self-identification.
+Fanar uses the existing **API Key system** (`X-API-Key` header) as the standard mechanism for application self-identification.
 
 > 💡 **Key Decision:** OAuth2 Applications and custom app-identity headers are **NOT used** for application self-identification in this epic.
 

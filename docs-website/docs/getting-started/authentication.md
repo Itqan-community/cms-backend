@@ -8,7 +8,7 @@ Itqan APIs use an **API key** to identify your application. Public read endpoint
 
 ## Get an API key
 
-1. Sign in to the Asset Library at **[cms.itqan.dev](https://cms.itqan.dev)**.
+1. Sign in to the Asset Library at **[fanar.itqan.dev](https://fanar.itqan.dev)**.
 2. Open your account settings and go to **API Keys**.
 3. Create a key, give it a descriptive name (e.g. `my-recitation-app`), and copy it.
 

@@ -15,7 +15,8 @@ from .base import *  # noqa: F401, F403
 DEBUG = False
 
 ALLOWED_HOSTS = [
-    "staging.api.cms.itqan.dev",  # Staging environment
+    "staging.api.fanar.itqan.dev",  # Staging environment (Fanar)
+    "staging.api.cms.itqan.dev",  # Staging environment (legacy, kept during migration)
     "localhost",  # For local Docker development
 ]
 
@@ -74,9 +75,11 @@ settings.DATABASES.update(
 
 CSRF_TRUSTED_ORIGINS = [
     "https://staging--saudi-recitation-center.netlify.app",
-    "https://staging.cms.itqan.dev",  # Staging frontend
+    "https://staging.fanar.itqan.dev",  # Staging frontend (Fanar)
+    "https://staging.cms.itqan.dev",  # Staging frontend (legacy, kept during migration)
     "https://staging.docs.cms.itqan.dev",  # Docs site "Try it" API calls
     "https://staging--itqan-cms.netlify.app",
+    "https://fanar.itqan.dev",
     "https://cms.itqan.dev",
     "https://itqan-cms.netlify.app",
     "http://localhost:4200",  # Angular dev server

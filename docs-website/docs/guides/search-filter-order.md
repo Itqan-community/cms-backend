@@ -1,7 +1,7 @@
 ---
 sidebar_position: 6
 title: Searching, Filtering, Ordering
-description: How to search, filter, and sort results across Itqan CMS API endpoints.
+description: How to search, filter, and sort results across Fanar API endpoints.
 ---
 
 # Searching, Filtering, Ordering
