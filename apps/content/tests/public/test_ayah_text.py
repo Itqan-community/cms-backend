@@ -348,12 +348,13 @@ class AyahTextPublicApiTest(GroupQuranDataMixin, BaseTestCase):
         # Arrange
         self._version(self._text_asset("tafsir-a"), "1.0", {self._ayah(1): {"text": "t"}})
 
-        for key in ("1-1", "x:1", "1:9", "115:1", "0:1"):
+        # "²" is a digit int() rejects; 5000 digits pass Python's int-string limit.
+        for key in ("1-1", "x:1", "1:9", "115:1", "0:1", "²:1", "1:" + "9" * 5000):
             # Act
             response = self.client.get(f"/ayahs/{key}/?assets=tafsir-a")
 
             # Assert
-            self.assertEqual(404, response.status_code, (key, response.content))
+            self.assertEqual(404, response.status_code, (key[:10], response.content[:200]))
             self.assertEqual("ayah_not_found", response.json()["error_name"])
 
     def test_get_ayah_text_where_range_is_invalid_should_return_400_invalid_ayah_range(self):
