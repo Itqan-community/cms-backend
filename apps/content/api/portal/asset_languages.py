@@ -12,6 +12,7 @@ from ninja import File, Form, Schema, UploadedFile
 from pydantic import Field
 
 from apps.content.api.portal.asset_content import _resolve
+from apps.content.api.portal.text_asset_versions import COLUMN_MAPPING_DESCRIPTION, column_mapping_from_form
 from apps.content.models import AssetLanguage, StatusChoice
 from apps.content.services.asset_language import AssetLanguageService
 from apps.content.services.asset_language_access import (
@@ -48,6 +49,7 @@ class AddLanguageIn(Schema):
     version_label_en: str = Field(default="", max_length=255)
     version_label_ar: str = Field(default="", max_length=255)
     version_number: str | None = Field(default=None, max_length=20)
+    column_mapping: str | None = Field(default=None, description=COLUMN_MAPPING_DESCRIPTION)
 
 
 class LanguageAvailabilityIn(Schema):
@@ -83,6 +85,8 @@ def list_languages(request: Request, category: str, slug: str) -> list[AssetLang
         | NinjaErrorResponse[Literal["content_file_unparseable"]]
         | NinjaErrorResponse[Literal["content_file_missing_columns"]]
         | NinjaErrorResponse[Literal["content_file_invalid_rows"]]
+        | NinjaErrorResponse[Literal["column_mapping_invalid"]]
+        | NinjaErrorResponse[Literal["column_mapping_incomplete"]]
         | NinjaErrorResponse[Literal["version_number_required"]]
         | NinjaErrorResponse[Literal["version_number_invalid"]],
         404: NinjaErrorResponse[Literal["text_asset_not_found"]]
@@ -127,6 +131,7 @@ def add_language(
                 language=data.language,
                 created_by_id=request.user.id,
                 publisher_q=publisher_q,
+                column_mapping=column_mapping_from_form(data.column_mapping),
             )
     return asset_language
 

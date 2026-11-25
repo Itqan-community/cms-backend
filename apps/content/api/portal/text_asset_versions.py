@@ -1,3 +1,4 @@
+import json
 from typing import Literal
 
 from django.db.models import Q
@@ -119,6 +120,35 @@ class TextAssetVersionListOut(VersionTextOut, PackageStatusOut):
         return absolute_file_url(context["request"], obj.file_url)
 
 
+# A JSON object sent with a file upload: field key -> 0-based column index in
+# the file's header row (null or left out: not in the file). Overrides the
+# header alias matching; columns it does not name are ignored.
+COLUMN_MAPPING_DESCRIPTION = (
+    'JSON object mapping each field (e.g. "surah", "ayah", a text column key) to a 0-based column index of the '
+    "file's header row. Overrides header name matching; unmapped columns are ignored."
+)
+
+
+def column_mapping_from_form(raw: str | None) -> dict[str, int | None] | None:
+    """Decode the ``column_mapping`` form field; ``None`` when it was not sent."""
+    if raw is None or not raw.strip():
+        return None
+    try:
+        mapping = json.loads(raw)
+    except ValueError:
+        mapping = None
+    if not isinstance(mapping, dict) or not all(
+        isinstance(key, str) and (value is None or (isinstance(value, int) and not isinstance(value, bool)))
+        for key, value in mapping.items()
+    ):
+        raise ItqanError(
+            error_name="column_mapping_invalid",
+            message=_("The column mapping must map each field to a column number."),
+            status_code=400,
+        )
+    return mapping
+
+
 class TextAssetVersionCreateIn(VersionTextIn):
     asset_id: int
     # Starts the language's number sequence; ignored once it has a version.
@@ -127,11 +157,13 @@ class TextAssetVersionCreateIn(VersionTextIn):
     language: str | None = None
     # Approve the uploaded changes on upload; needs the review permission.
     pre_approved: bool = False
+    column_mapping: str | None = Field(default=None, description=COLUMN_MAPPING_DESCRIPTION)
 
 
 # The version number (``name``) is fixed once issued, so updates can't change it.
 class TextAssetVersionPutIn(VersionTextIn):
     asset_id: int
+    column_mapping: str | None = Field(default=None, description=COLUMN_MAPPING_DESCRIPTION)
 
 
 class TextAssetVersionPatchIn(Schema):
@@ -140,6 +172,7 @@ class TextAssetVersionPatchIn(Schema):
     label_ar: str | None = Field(default=None, max_length=255)
     summary_en: str | None = None
     summary_ar: str | None = None
+    column_mapping: str | None = Field(default=None, description=COLUMN_MAPPING_DESCRIPTION)
 
 
 @router.get(
@@ -185,6 +218,8 @@ def list_text_asset_versions(request: Request, text_asset_slug: str, language: s
         | NinjaErrorResponse[Literal["content_file_unparseable"]]
         | NinjaErrorResponse[Literal["content_file_missing_columns"]]
         | NinjaErrorResponse[Literal["content_file_invalid_rows"]]
+        | NinjaErrorResponse[Literal["column_mapping_invalid"]]
+        | NinjaErrorResponse[Literal["column_mapping_incomplete"]]
         | NinjaErrorResponse[Literal["version_number_required"]]
         | NinjaErrorResponse[Literal["version_number_invalid"]],
         404: NinjaErrorResponse[Literal["text_asset_not_found"]],
@@ -232,6 +267,7 @@ def create_text_asset_version(
         created_by_id=request.user.id,
         approved_by=request.user if data.pre_approved else None,
         publisher_q=request.publisher_q(),
+        column_mapping=column_mapping_from_form(data.column_mapping),
     )
     return 201, version
 
@@ -245,7 +281,9 @@ def create_text_asset_version(
         | NinjaErrorResponse[Literal["version_not_latest"]]
         | NinjaErrorResponse[Literal["content_file_unparseable"]]
         | NinjaErrorResponse[Literal["content_file_missing_columns"]]
-        | NinjaErrorResponse[Literal["content_file_invalid_rows"]],
+        | NinjaErrorResponse[Literal["content_file_invalid_rows"]]
+        | NinjaErrorResponse[Literal["column_mapping_invalid"]]
+        | NinjaErrorResponse[Literal["column_mapping_incomplete"]],
         404: NinjaErrorResponse[Literal["text_asset_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
 )
@@ -277,6 +315,7 @@ def update_text_asset_version_put(
 
     fields = data.model_dump()
     fields.pop("asset_id", None)
+    column_mapping = column_mapping_from_form(fields.pop("column_mapping", None))
     if file:
         # Replacing the file changes the text; renaming or re-describing does not.
         check_permission(
@@ -289,7 +328,11 @@ def update_text_asset_version_put(
 
     require_version_id(request.user, asset, version_id)
     return service.update_text_asset_version(
-        text_asset_slug, version_id, fields=fields, publisher_q=request.publisher_q()
+        text_asset_slug,
+        version_id,
+        fields=fields,
+        publisher_q=request.publisher_q(),
+        column_mapping=column_mapping if file else None,
     )
 
 
@@ -302,7 +345,9 @@ def update_text_asset_version_put(
         | NinjaErrorResponse[Literal["version_not_latest"]]
         | NinjaErrorResponse[Literal["content_file_unparseable"]]
         | NinjaErrorResponse[Literal["content_file_missing_columns"]]
-        | NinjaErrorResponse[Literal["content_file_invalid_rows"]],
+        | NinjaErrorResponse[Literal["content_file_invalid_rows"]]
+        | NinjaErrorResponse[Literal["column_mapping_invalid"]]
+        | NinjaErrorResponse[Literal["column_mapping_incomplete"]],
         404: NinjaErrorResponse[Literal["text_asset_not_found"]] | NinjaErrorResponse[Literal["version_not_found"]],
     },
 )
@@ -334,6 +379,7 @@ def update_text_asset_version_patch(
 
     fields = data.model_dump(exclude_unset=True)
     fields.pop("asset_id", None)
+    column_mapping = column_mapping_from_form(fields.pop("column_mapping", None))
     if file:
         # Replacing the file changes the text; renaming or re-describing does not.
         check_permission(
@@ -346,7 +392,11 @@ def update_text_asset_version_patch(
 
     require_version_id(request.user, asset, version_id)
     return service.update_text_asset_version(
-        text_asset_slug, version_id, fields=fields, publisher_q=request.publisher_q()
+        text_asset_slug,
+        version_id,
+        fields=fields,
+        publisher_q=request.publisher_q(),
+        column_mapping=column_mapping if file else None,
     )
 
 

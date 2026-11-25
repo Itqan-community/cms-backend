@@ -104,6 +104,9 @@ msgstr "لم يتم العثور على الجودة {quality}."
 msgid "Some track IDs are invalid or do not exist."
 msgstr "بعض معرّفات المقاطع غير صالحة أو غير موجودة."
 
+msgid "The column mapping must map each field to a column number."
+msgstr "يجب أن تربط مطابقة الأعمدة كل حقل برقم عمود."
+
 #, python-brace-format
 msgid "Text asset with slug {slug} not found."
 msgstr "الأصل النصي ذو المعرّف {slug} غير موجود."
@@ -437,6 +440,14 @@ msgstr "بعض الصفوف غير صالحة: تكرر وحدة أو نطاقً
 
 msgid "The uploaded file could not be parsed into content entries."
 msgstr "تعذّر تحليل الملف المرفوع إلى إدخالات محتوى."
+
+#, python-brace-format
+msgid "Choose a file column for these fields: {fields}."
+msgstr "اختر عمودًا من الملف لهذه الحقول: {fields}."
+
+#, python-brace-format
+msgid "The column mapping can't be used for these fields: {fields}. Each field needs its own column from the file's header."
+msgstr "لا يمكن استخدام مطابقة الأعمدة لهذه الحقول: {fields}. يحتاج كل حقل إلى عمود خاص به من صف العناوين في الملف."
 
 #, python-brace-format
 msgid "The file is missing these columns: {columns}."
