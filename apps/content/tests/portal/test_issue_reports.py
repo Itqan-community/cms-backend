@@ -375,6 +375,42 @@ class IssueReportPortalPublisherScopeTests(BaseTestCase):
         self.assertEqual(201, response.status_code, response.content)
         self.assertEqual(self.other_report.asset_id, response.json()["asset_id"])
 
+    def test_list_issue_reports_where_member_lists_should_hide_reporter_email(self):
+        # Arrange
+        self.member.name = "Member Name"
+        self.member.save(update_fields=["name"])
+        self.authenticate_user(self.member, HTTP_X_TENANT=str(self.publisher.id))
+
+        # Act
+        response = self.client.get("/portal/issue-reports/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        reporter = response.json()["results"][0]["reporter"]
+        self.assertEqual({"id": self.member.id, "name": "Member Name", "email": None}, reporter)
+
+    def test_get_issue_report_where_member_views_should_hide_reporter_email(self):
+        # Arrange
+        self.authenticate_user(self.member, HTTP_X_TENANT=str(self.publisher.id))
+
+        # Act
+        response = self.client.get(f"/portal/issue-reports/{self.own_report.id}/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertIsNone(response.json()["reporter"]["email"])
+
+    def test_get_issue_report_where_staff_views_should_show_reporter_email(self):
+        # Arrange
+        self.authenticate_user(self.staff_user)
+
+        # Act
+        response = self.client.get(f"/portal/issue-reports/{self.own_report.id}/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual("member@example.com", response.json()["reporter"]["email"])
+
 
 class IssueReportAssetSearchTests(BaseTestCase):
     def setUp(self):
