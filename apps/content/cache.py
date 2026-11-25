@@ -73,14 +73,31 @@ def recitation_ayah_response_cache_key(asset_id: int, quality_token: str, ayah_k
 AYAH_TEXT_RESPONSE_CACHE_TTL = 60 * 5  # 5 minutes, like the recitation responses
 
 
+# Every text-asset save that may change who can read it (access policy, status, channels)
+# bumps this generation. It is part of the response key, so a warm response never
+# authorizes from a policy cached before the change.
+_AYAH_TEXT_GENERATION_KEY = "public_ayah_text_resp:generation"
+
+
 def ayah_text_response_cache_key(surah: int, from_ayah: int, to_ayah: int, slugs: list[str]) -> str:
     """Cache key of one ``GET /ayahs/{ayah_key}/`` response.
 
     Slugs are free text and their order is the response's order, so the ordered
-    list is hashed rather than embedded.
+    list is hashed rather than embedded. The key carries the current generation
+    (see :func:`invalidate_ayah_text_responses`).
     """
     digest = hashlib.blake2b(",".join(slugs).encode("utf-8"), digest_size=12).hexdigest()
-    return f"public_ayah_text_resp:{surah}:{from_ayah}:{to_ayah}:{digest}"
+    generation = cache.get(_AYAH_TEXT_GENERATION_KEY, 0)
+    return f"public_ayah_text_resp:{generation}:{surah}:{from_ayah}:{to_ayah}:{digest}"
+
+
+def invalidate_ayah_text_responses() -> None:
+    """Retire every cached ayah text response: the next request rebuilds under a new key.
+
+    Responses are keyed by ayah range and slugs, not by asset, so one asset's entries
+    can't be found; the old ones expire within AYAH_TEXT_RESPONSE_CACHE_TTL.
+    """
+    cache.set(_AYAH_TEXT_GENERATION_KEY, time.time_ns(), None)
 
 
 def invalidate_recitation_tracks_cache(asset_id: int) -> None:
