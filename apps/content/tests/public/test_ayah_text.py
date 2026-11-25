@@ -540,6 +540,18 @@ class AyahTextPublicApiTest(GroupQuranDataMixin, BaseTestCase):
         self.assertEqual("private, no-cache", response.headers.get("Cache-Control"))
         self.assertEqual("secret", response.json()["assets"][1]["rows"][0]["cells"]["text"])
 
+    def test_get_ayah_text_where_api_key_and_only_open_assets_should_return_200_privately_cached_for_5_minutes(self):
+        # Arrange
+        self._version(self._text_asset("open"), "1.0", {self._ayah(1): {"text": "open"}})
+        self._authenticate_with_api_key(self.user)
+
+        # Act
+        response = self.client.get("/ayahs/1:1/?assets=open")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual("private, max-age=300", response.headers.get("Cache-Control"))
+
     @override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=True)
     def test_get_ayah_text_where_cached_response_and_access_revoked_should_return_403_access_denied(self):
         # Arrange: warm the cache with access, then revoke it.
