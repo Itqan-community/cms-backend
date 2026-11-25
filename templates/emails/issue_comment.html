@@ -1,0 +1,20 @@
+{% extends "emails/base_message.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "New reply on your issue" %}{% endblock title %}
+
+{% block heading %}{% trans "New reply on your issue" %}{% endblock heading %}
+
+{% block content %}
+<p style="margin:0 0 24px;">{% blocktrans %}<strong>{{ publisher_name }}</strong> replied to your issue report for <strong>{{ asset_name }}</strong> (Issue #{{ report_id }}).{% endblocktrans %}</p>
+
+{% if context_label %}<p style="margin:0 0 24px;"><strong>{% trans "Location:" %}</strong> {{ context_label }}</p>
+{% endif %}
+<div style="margin:0 0 24px; padding:16px; background-color:#f4f8f6; border-radius:6px; white-space:pre-line;">{{ comment_body }}</div>
+
+<p style="margin:0 0 24px; text-align:center;">
+  <a href="{{ asset_url }}" style="display:inline-block; background-color:#2c5952; color:#ffffff; font-size:15px; font-weight:600; text-decoration:none; padding:12px 28px; border-radius:6px;">{% trans "View the asset" %}</a>
+</p>
+
+<p style="margin:0; color:#6e8782; font-size:14px;">{% trans "You are receiving this email because you opened this issue report." %}</p>
+{% endblock content %}

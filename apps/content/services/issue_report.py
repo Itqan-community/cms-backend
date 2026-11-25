@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
+from django.db import transaction
 from django.db.models import Q
 from django.utils.html import strip_tags
 from django.utils.translation import gettext as _
@@ -212,6 +213,11 @@ class IssueReportService:
             )
 
         comment = self.repo.create_comment(report=report, author=author, body=clean_body)
+        if author.pk != report.reporter_id:
+            from apps.content.tasks import send_issue_comment_email
+
+            comment_id = comment.pk
+            transaction.on_commit(lambda: send_issue_comment_email.delay(comment_id))
         logger.info(
             f"Issue report comment added [report_id={report_id}, comment_id={comment.pk}, author_id={author.pk}]"
         )

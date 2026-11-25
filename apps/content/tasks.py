@@ -154,6 +154,20 @@ def send_issue_status_update_email(self, report_id: int, old_status: str, new_st
         raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1)) from exc
 
 
+@shared_task(bind=True, max_retries=3)
+def send_issue_comment_email(self, comment_id: int) -> None:
+    """Email a new issue report comment to the reporter; retries like send_issue_status_update_email."""
+    logger.info(f"Task started [task=send_issue_comment_email, comment_id={comment_id}]")
+    try:
+        from apps.content.services.issue_report_notifications import IssueReportNotificationService
+
+        IssueReportNotificationService().notify_comment_added(comment_id)
+        logger.info(f"Task completed [task=send_issue_comment_email, comment_id={comment_id}]")
+    except Exception as exc:
+        logger.error(f"Task failed [task=send_issue_comment_email, comment_id={comment_id}]: {exc}")
+        raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1)) from exc
+
+
 @shared_task
 def send_access_request_outcome_email(request_id: int) -> None:
     logger.info(f"Task started [task=send_access_request_outcome_email, request_id={request_id}]")
