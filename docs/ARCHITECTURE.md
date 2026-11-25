@@ -472,7 +472,14 @@ the row numbers in `extra.rows`). A multi-column asset's file needs a header for
 every column key (`content_file_missing_columns`, the keys in `extra.missing`) — a
 missing column would otherwise read as all its cells removed — while a single-column
 asset still accepts the legacy text headers (`translation`, `text`, `content`,
-`المحتوى`); an upload identical to the previous version
+`المحتوى`). A file whose headers don't match can still be imported:
+`POST /portal/text-assets/{slug}/import-columns/` reads only the first 64 KB of the file
+and returns its header row, sample rows, the asset's fields, the auto-matched columns
+and the field sets that must be mapped; the upload (version create / replace, add
+language) then sends a `column_mapping` form field (JSON, field key → 0-based column
+index) that overrides header matching and ignores every column it doesn't name
+(`column_mapping_incomplete` with the unmapped fields in `extra.fields`, or
+`column_mapping_invalid`). An upload identical to the previous version
 records no changes. The stored file is then replaced by a CSV generated
 from the parsed entries, so consumers download exactly what was reviewed.
 
