@@ -1863,6 +1863,34 @@ class ContentIssueReport(BaseModel):
         super().save(*args, **kwargs)
 
 
+class ContentIssueReportComment(BaseModel):
+    """A message on an issue report's thread; publisher members reach the reporter this way, by email."""
+
+    report = models.ForeignKey(
+        ContentIssueReport,
+        on_delete=models.CASCADE,
+        related_name="comments",
+        help_text="Issue report the comment is on",
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="content_issue_report_comments",
+        help_text="User who wrote the comment; kept empty when the account is deleted so the thread survives",
+    )
+    body = models.TextField(help_text="Comment text (1-2000 characters)")
+
+    class Meta:
+        verbose_name = "Content Issue Report Comment"
+        verbose_name_plural = "Content Issue Report Comments"
+        ordering = ["created_at", "id"]
+        indexes = [models.Index(fields=["report", "created_at"])]
+
+    def __str__(self) -> str:
+        return f"ContentIssueReportComment(report={self.report_id}, author={self.author_id})"
+
+
 class EditorialRecommendation(BaseModel):
     """Admin-curated collection of assets for a featured spotlight (e.g. Ramadan, Hajj).
 

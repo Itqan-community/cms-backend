@@ -7,7 +7,7 @@ from django.db.models import Q
 from django.utils.html import strip_tags
 from django.utils.translation import gettext as _
 
-from apps.content.models import ContentIssueReport
+from apps.content.models import ContentIssueReport, ContentIssueReportComment
 from apps.content.repositories.issue_report import IssueReportRepository
 from apps.content.services.issue_context import validate_issue_context
 from apps.core.ninja_utils.errors import ItqanError
@@ -184,3 +184,35 @@ class IssueReportService:
 
         self.repo.delete_issue_report(report)
         logger.info(f"Issue report deleted [report_id={report_id}, deleted_by={user.pk}]")
+
+    def add_comment(
+        self, report_id: int, author: User, body: str, publisher_q: Q | None = None
+    ) -> ContentIssueReportComment:
+        """Add a comment to the thread of a report the author can see in the portal."""
+        report = self.get_issue_report(report_id, publisher_q=publisher_q)
+        if not report:
+            raise ItqanError(
+                error_name="report_not_found",
+                message=_("Issue report with ID {report_id} not found.").format(report_id=report_id),
+                status_code=404,
+            )
+
+        clean_body = strip_tags(body).strip()
+        if not clean_body:
+            raise ItqanError(
+                error_name="comment_empty",
+                message=_("Write a comment before sending it."),
+                status_code=400,
+            )
+        if len(clean_body) > 2000:
+            raise ItqanError(
+                error_name="comment_too_long",
+                message=_("A comment cannot exceed 2000 characters."),
+                status_code=400,
+            )
+
+        comment = self.repo.create_comment(report=report, author=author, body=clean_body)
+        logger.info(
+            f"Issue report comment added [report_id={report_id}, comment_id={comment.pk}, author_id={author.pk}]"
+        )
+        return comment

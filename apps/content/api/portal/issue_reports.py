@@ -6,7 +6,7 @@ from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import AwareDatetime, Field
 
-from apps.content.models import Asset, ContentIssueReport
+from apps.content.models import Asset, ContentIssueReport, ContentIssueReportComment
 from apps.content.repositories.issue_report import IssueReportRepository
 from apps.content.services.issue_report import IssueReportService
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
@@ -93,6 +93,29 @@ class IssueReportAssetOut(Schema):
     name: str
     category: str
     mushaf_layout: IssueReportAssetMushafLayoutOut | None = None
+
+
+class IssueReportCommentAuthorOut(Schema):
+    id: int
+    name: str
+    is_reporter: bool = Field(description="True when the reporter wrote the comment")
+
+
+class IssueReportCommentOut(Schema):
+    id: int
+    author: IssueReportCommentAuthorOut | None = Field(description="Null when the author's account was deleted")
+    body: str
+    created_at: AwareDatetime
+
+    @staticmethod
+    def resolve_author(obj: ContentIssueReportComment, context: dict) -> dict[str, Any] | None:
+        if obj.author is None:
+            return None
+        return {"id": obj.author.id, "name": obj.author.name, "is_reporter": obj.author_id == obj.report.reporter_id}
+
+
+class IssueReportCommentIn(Schema):
+    body: str = Field(description="1-2000 characters; HTML tags are removed")
 
 
 def _get_service() -> IssueReportService:
@@ -186,3 +209,34 @@ def delete_issue_report(request: Request, report_id: int):
     _get_service().delete_issue_report(report_id=report_id, user=request.user, publisher_q=request.publisher_q())
     logger.info(f"Issue report deleted [report_id={report_id}, user_id={request.user.id}]")
     return 204, None
+
+
+@router.get(
+    "issue-reports/{report_id}/comments/",
+    response={200: list[IssueReportCommentOut], 404: NinjaErrorResponse[Literal["report_not_found"]]},
+)
+def list_issue_report_comments(request: Request, report_id: int):
+    """The report's comment thread, oldest first."""
+    report = _get_service().get_issue_report(report_id, publisher_q=request.publisher_q())
+    if not report:
+        raise ItqanError(error_name="report_not_found", message=_("Issue report not found."), status_code=404)
+    comments = list(ContentIssueReportComment.objects.filter(report=report).select_related("author"))
+    for comment in comments:
+        comment.report = report  # marks the reporter's comments without a join
+    return comments
+
+
+@router.post(
+    "issue-reports/{report_id}/comments/",
+    response={
+        201: IssueReportCommentOut,
+        400: NinjaErrorResponse[Literal["comment_empty"]] | NinjaErrorResponse[Literal["comment_too_long"]],
+        404: NinjaErrorResponse[Literal["report_not_found"]],
+    },
+)
+def create_issue_report_comment(request: Request, report_id: int, data: IssueReportCommentIn):
+    logger.info(f"Adding issue report comment [report_id={report_id}, user_id={request.user.id}]")
+    comment = _get_service().add_comment(
+        report_id=report_id, author=request.user, body=data.body, publisher_q=request.publisher_q()
+    )
+    return 201, comment

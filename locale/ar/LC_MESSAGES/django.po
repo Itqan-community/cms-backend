@@ -696,6 +696,12 @@ msgstr "يمكنك فقط حذف تقارير المشكلات الخاصة بك
 msgid "You can only delete pending issue reports."
 msgstr "يمكنك فقط حذف تقارير المشكلات المعلقة."
 
+msgid "Write a comment before sending it."
+msgstr "اكتب تعليقًا قبل إرساله."
+
+msgid "A comment cannot exceed 2000 characters."
+msgstr "لا يمكن أن يتجاوز التعليق 2000 حرف."
+
 #, python-brace-format
 msgid "Your issue status has been updated: {old_status} → {new_status}"
 msgstr "تم تحديث حالة بلاغك: {old_status} ← {new_status}"
