@@ -16,11 +16,18 @@ from apps.content.services.asset_content import (
     is_head_version,
     version_delete_blocked_reason,
 )
+from apps.content.services.asset_content_import import (
+    PREVIEW_BYTES,
+    AssetContentParseError,
+    ColumnsPreview,
+    preview_content_columns,
+)
 from apps.content.services.asset_language_access import (
     filter_versions_to_allowed,
     require_language,
     require_version_id,
 )
+from apps.content.services.asset_templates import unit_spec_for
 from apps.content.services.text_asset import TextAssetService
 from apps.content.version_text import VersionText
 from apps.core.mixins.storage import absolute_file_url
@@ -175,6 +182,29 @@ class TextAssetVersionPatchIn(Schema):
     column_mapping: str | None = Field(default=None, description=COLUMN_MAPPING_DESCRIPTION)
 
 
+class ImportColumnFieldOut(Schema):
+    key: str
+    # "unit": where the row sits (surah, ayah, …); "text": one of the asset's text columns.
+    kind: Literal["unit", "text"]
+    label_en: str = ""
+    label_ar: str = ""
+
+
+class ImportColumnsPreviewOut(Schema):
+    # 1-based row number of the header row in the file.
+    header_row: int
+    headers: list[str]
+    # Up to 3 rows after the header, each cell cut to 120 characters.
+    samples: list[list[str]]
+    fields: list[ImportColumnFieldOut]
+    # Mapping every field of any one list is enough to import.
+    required: list[list[str]]
+    # Fields matched by header name: field key -> 0-based column index.
+    mapping: dict[str, int]
+    # The auto-matched fields already cover a required list.
+    complete: bool
+
+
 @router.get(
     "text-assets/{text_asset_slug}/versions/",
     response={
@@ -208,6 +238,60 @@ def list_text_asset_versions(request: Request, text_asset_slug: str, language: s
     else:
         versions = filter_versions_to_allowed(request.user, asset, versions)
     return with_change_counts(versions).order_by("-created_at")
+
+
+@router.post(
+    "text-assets/{text_asset_slug}/import-columns/",
+    response={
+        200: ImportColumnsPreviewOut,
+        400: NinjaErrorResponse[Literal["content_file_unparseable"]],
+        404: NinjaErrorResponse[Literal["text_asset_not_found"]],
+    },
+)
+@permission_required([permission_class(PermissionChoice.PORTAL_READ_TEXT_ASSET)])
+def preview_import_columns(request: Request, text_asset_slug: str, file: UploadedFile = File(...)):
+    """Read a content file's header row, auto-match it to the asset's fields and
+    list what still needs a column, so the uploader can map the rest.
+
+    Only the first 64 KB are read (clients may send just that slice), so a large
+    file is never parsed here.
+    """
+    try:
+        asset = Asset.objects.filter(request.publisher_q()).get(slug=text_asset_slug, category=CategoryChoice.TEXT)
+    except Asset.DoesNotExist as exc:
+        raise ItqanError(
+            error_name="text_asset_not_found",
+            message=_("Text asset with slug {slug} not found.").format(slug=text_asset_slug),
+            status_code=404,
+        ) from exc
+    columns = asset.text_columns()
+    prefix = file.read(PREVIEW_BYTES + 1)
+    try:
+        preview: ColumnsPreview = preview_content_columns(
+            prefix[:PREVIEW_BYTES],
+            unit_spec_for(asset),
+            [column.key for column in columns],
+            truncated=len(prefix) > PREVIEW_BYTES,
+        )
+    except AssetContentParseError as exc:
+        raise ItqanError(
+            error_name="content_file_unparseable",
+            message=_("The file's header row could not be read. Upload a UTF-8 CSV file with a header row."),
+            status_code=400,
+        ) from exc
+    return {
+        "header_row": preview.header_row,
+        "headers": preview.headers,
+        "samples": preview.samples,
+        "fields": [{"key": key, "kind": "unit"} for key in preview.unit_fields]
+        + [
+            {"key": column.key, "kind": "text", "label_en": column.label_en or "", "label_ar": column.label_ar or ""}
+            for column in columns
+        ],
+        "required": preview.required,
+        "mapping": preview.mapping,
+        "complete": preview.complete,
+    }
 
 
 @router.post(

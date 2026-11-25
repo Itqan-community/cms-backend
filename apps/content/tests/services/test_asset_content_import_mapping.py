@@ -2,13 +2,96 @@ from model_bakery import baker
 
 from apps.content.models import Asset, AssetTemplateChoice, CategoryChoice, StatusChoice
 from apps.content.services.asset_content_import import (
+    PREVIEW_BYTES,
     AssetContentColumnMappingError,
     AssetContentMissingColumnsError,
     parse_content_file,
+    preview_content_columns,
 )
 from apps.content.services.asset_templates import unit_spec_for
 from apps.content.tests.quran_data import QuranDataMixin
 from apps.core.tests.base import BaseTestCase
+
+
+class ColumnsPreviewTests(QuranDataMixin, BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.asset = baker.make(
+            Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.AYAH, status=StatusChoice.READY
+        )
+        self.spec = unit_spec_for(self.asset)
+
+    def test_preview_content_columns_where_headers_match_aliases_should_auto_map_and_be_complete(self):
+        # Arrange
+        raw = b"id,sura,aya,translation\n1,1,1,In the name\n"
+
+        # Act
+        preview = preview_content_columns(raw, self.spec, ["text"], truncated=False)
+
+        # Assert
+        self.assertEqual(preview.header_row, 1)
+        self.assertEqual(preview.headers, ["id", "sura", "aya", "translation"])
+        self.assertEqual(preview.mapping, {"surah": 1, "ayah": 2, "text": 3})
+        self.assertEqual(preview.required, [["surah", "ayah", "text"]])
+        self.assertTrue(preview.complete)
+
+    def test_preview_content_columns_where_headers_unknown_should_list_headers_and_samples(self):
+        # Arrange
+        raw = b"chapter,verse,meaning\n1,1,In the name\n1,2,Praise\n\n1,3,x\n2,1,y\n"
+
+        # Act
+        preview = preview_content_columns(raw, self.spec, ["text"], truncated=False)
+
+        # Assert
+        self.assertEqual(preview.headers, ["chapter", "verse", "meaning"])
+        self.assertEqual(preview.mapping, {})
+        self.assertFalse(preview.complete)
+        self.assertEqual(preview.samples, [["1", "1", "In the name"], ["1", "2", "Praise"], ["1", "3", "x"]])
+        self.assertEqual(preview.unit_fields, ["surah", "ayah"])
+
+    def test_preview_content_columns_where_preamble_should_find_header_below_it(self):
+        # Arrange
+        raw = b'"Exported from QuranEnc\nline two"\nid,surah,ayah,meaning\n1,1,1,x\n'
+
+        # Act
+        preview = preview_content_columns(raw, self.spec, ["text"], truncated=False)
+
+        # Assert
+        self.assertEqual(preview.header_row, 2)
+        self.assertEqual(preview.mapping, {"surah": 1, "ayah": 2})
+
+    def test_preview_content_columns_where_truncated_should_drop_the_cut_line(self):
+        # Arrange
+        raw = b"surah,ayah,text\n1,1,complete\n1,2,cut in the mid"
+
+        # Act
+        preview = preview_content_columns(raw, self.spec, ["text"], truncated=True)
+
+        # Assert
+        self.assertEqual(preview.samples, [["1", "1", "complete"]])
+
+    def test_preview_content_columns_where_long_cells_should_cut_samples(self):
+        # Arrange
+        raw = b"surah,ayah,text\n1,1," + b"x" * PREVIEW_BYTES
+
+        # Act
+        preview = preview_content_columns(raw[:PREVIEW_BYTES], self.spec, ["text"], truncated=True)
+
+        # Assert
+        self.assertEqual(preview.headers, ["surah", "ayah", "text"])
+        self.assertEqual(preview.samples, [])
+
+    def test_preview_content_columns_where_word_template_should_offer_word_id_or_triple(self):
+        # Arrange
+        asset = baker.make(
+            Asset, category=CategoryChoice.TEXT, template=AssetTemplateChoice.WORD, status=StatusChoice.READY
+        )
+
+        # Act
+        preview = preview_content_columns(b"a,b,c\n", unit_spec_for(asset), ["text"], truncated=False)
+
+        # Assert
+        self.assertEqual(preview.required, [["word_id", "text"], ["surah", "ayah", "word", "text"]])
 
 
 class ColumnMappingImportTests(QuranDataMixin, BaseTestCase):

@@ -376,13 +376,19 @@ def _read_rows(raw: bytes) -> list[list[str]]:
 
 # --- Column mapping -----------------------------------------------------------
 # A file whose headers don't match the aliases can still be imported: the
-# uploader maps each field to a file column and sends that ``column_mapping``
-# with the upload.
+# uploader previews its header row (``preview_content_columns``), maps each
+# field to a file column, and sends that ``column_mapping`` with the upload.
 # The mapping rewrites the header row to the canonical names, so the parsers
 # above run unchanged.
 
+# How much of a file the header preview reads: enough for any real header row
+# and a few sample rows, without parsing a large file.
+PREVIEW_BYTES = 64 * 1024
 # The header row is looked for among the first rows only (a preamble is short).
 _HEADER_SCAN_ROWS = 50
+_SAMPLE_ROWS = 3
+# Sample cells are cut to this length: a tafsir cell can run to pages.
+_SAMPLE_CELL_CHARS = 120
 
 
 def _unit_aliases(spec: UnitSpec) -> dict[str, frozenset[str]]:
@@ -421,10 +427,23 @@ def required_field_sets(spec: UnitSpec, column_keys: list[str]) -> list[list[str
     return [[*units, *column_keys]]
 
 
+def _auto_mapping(header: list[str], aliases: dict[str, frozenset[str] | set[str]]) -> dict[str, int]:
+    """Field -> column index by alias; the first matching column wins, as in the parsers."""
+    found: dict[str, int] = {}
+    for index, cell in enumerate(header):
+        name = cell.strip().lower()
+        for key, accepted in aliases.items():
+            if key not in found and name in accepted:
+                found[key] = index
+                break
+    return found
+
+
 def _locate_header_row(rows: list[list[str]], aliases: dict[str, frozenset[str] | set[str]]) -> int:
     """The header row: the first row naming any known field, else the first row
     with two or more filled cells (a header nothing matched), else the first
-    non-blank row. Only the first ``_HEADER_SCAN_ROWS`` rows are looked at."""
+    non-blank row. Only the first ``_HEADER_SCAN_ROWS`` rows are looked at, so
+    the full file and its preview agree."""
     known = set().union(*aliases.values())
     scanned = rows[:_HEADER_SCAN_ROWS]
     for index, row in enumerate(scanned):
@@ -472,6 +491,57 @@ def _apply_column_mapping(
     for key, index in chosen.items():
         header[index] = key
     return [*([] for _ in range(header_index)), header, *rows[header_index + 1 :]]
+
+
+@dataclass(frozen=True)
+class ColumnsPreview:
+    """A file's header row as the mapping dialog shows it.
+
+    ``header_row`` is 1-based; ``mapping`` holds the auto-matched fields.
+    """
+
+    header_row: int
+    headers: list[str]
+    samples: list[list[str]]
+    unit_fields: list[str]
+    required: list[list[str]]
+    mapping: dict[str, int]
+
+    @property
+    def complete(self) -> bool:
+        return _complete(self.mapping, self.required)
+
+
+def preview_content_columns(
+    prefix: bytes, spec: UnitSpec, column_keys: list[str], *, truncated: bool
+) -> ColumnsPreview:
+    """Read the header row and a few sample rows from the start of a file.
+
+    ``prefix`` is at most ``PREVIEW_BYTES`` of the file; ``truncated`` says the
+    file goes on, so its last, possibly cut, line is dropped (cutting at a line
+    break also keeps a multi-byte character whole). The rest of the file is
+    never read.
+    """
+    if truncated:
+        end = prefix.rfind(b"\n")
+        prefix = prefix[: end + 1] if end >= 0 else prefix
+    rows = _read_rows(prefix)
+    aliases = _field_aliases(spec, column_keys)
+    header_index = _locate_header_row(rows, aliases)
+    header = [cell.strip() for cell in rows[header_index]]
+    samples = [
+        [(cell or "").strip()[:_SAMPLE_CELL_CHARS] for cell in row]
+        for row in rows[header_index + 1 : header_index + 1 + _HEADER_SCAN_ROWS]
+        if any((cell or "").strip() for cell in row)
+    ][:_SAMPLE_ROWS]
+    return ColumnsPreview(
+        header_row=header_index + 1,
+        headers=header,
+        samples=samples,
+        unit_fields=list(_unit_aliases(spec)),
+        required=required_field_sets(spec, column_keys),
+        mapping=_auto_mapping(rows[header_index], aliases),
+    )
 
 
 def _parse_ayah_entries(rows: list[list[str]], log: _RowLog, text_headers: TextHeaders) -> dict[tuple[int, int], Cells]:
