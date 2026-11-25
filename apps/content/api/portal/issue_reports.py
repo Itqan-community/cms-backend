@@ -23,7 +23,8 @@ logger = logging.getLogger(__name__)
 
 class IssueReportOutReporter(Schema):
     id: int
-    email: str
+    name: str
+    email: str | None = Field(None, description="Staff only; publisher members reach the reporter through comments")
 
 
 class IssueReportOut(Schema):
@@ -40,6 +41,17 @@ class IssueReportOut(Schema):
     status: str
     created_at: AwareDatetime
     updated_at: AwareDatetime
+
+    @staticmethod
+    def resolve_reporter(obj: ContentIssueReport, context: dict) -> dict[str, Any]:
+        """The reporter's address is shown to staff only, so a publisher cannot contact them outside Fanar."""
+        request = context["request"]
+        reporter = obj.reporter
+        return {
+            "id": reporter.id,
+            "name": reporter.name,
+            "email": reporter.email if request.user.is_staff else None,
+        }
 
 
 class IssueReportCreateIn(Schema):
