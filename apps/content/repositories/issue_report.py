@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 from django.db.models import Q
 
-from apps.content.models import Asset, ContentIssueReport
+from apps.content.models import Asset, ContentIssueReport, ContentIssueReportComment
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
@@ -78,3 +78,9 @@ class IssueReportRepository:
 
     def delete_issue_report(self, report: ContentIssueReport) -> None:
         report.delete()
+
+    def create_comment(self, report: ContentIssueReport, author: User, body: str) -> ContentIssueReportComment:
+        comment = ContentIssueReportComment.objects.create(report=report, author=author, body=body)
+        # The output marks the reporter's own comments, so keep the loaded report on the comment.
+        comment.report = report
+        return comment
