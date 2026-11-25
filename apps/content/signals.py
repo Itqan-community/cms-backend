@@ -2,7 +2,11 @@ from django.db import transaction
 from django.db.models.signals import m2m_changed, post_delete, post_save
 from django.dispatch import receiver
 
-from apps.content.cache import invalidate_portal_asset_counts, invalidate_recitation_tracks_cache
+from apps.content.cache import (
+    invalidate_ayah_text_responses,
+    invalidate_portal_asset_counts,
+    invalidate_recitation_tracks_cache,
+)
 from apps.content.models import ASSET_CHANNEL_FIELDS, Asset, CategoryChoice, RecitationQuality, RecitationSurahTrack
 
 
@@ -41,6 +45,22 @@ def clear_public_recitation_cache_on_access_policy_change(
     if update_fields is not None and not ({"is_open_access", "status", *ASSET_CHANNEL_FIELDS} & set(update_fields)):
         return
     transaction.on_commit(lambda asset_id=instance.id: invalidate_recitation_tracks_cache(asset_id))
+
+
+@receiver(post_save, sender=Asset)
+def clear_public_ayah_text_cache_on_access_policy_change(sender, instance: Asset, update_fields=None, **kwargs) -> None:
+    """
+    Retire the cached ``GET /ayahs/{ayah_key}/`` responses when a text asset's access may have changed.
+
+    Their warm path authorizes from the ``is_open_access`` stored with the response, and
+    status or channel changes decide whether the asset is served at all. Deferred to
+    ``transaction.on_commit`` for the reason given on the recitation receiver above.
+    """
+    if instance.category != CategoryChoice.TEXT:
+        return
+    if update_fields is not None and not ({"is_open_access", "status", *ASSET_CHANNEL_FIELDS} & set(update_fields)):
+        return
+    transaction.on_commit(invalidate_ayah_text_responses)
 
 
 @receiver(post_save, sender=Asset)

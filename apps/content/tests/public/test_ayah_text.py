@@ -541,6 +541,41 @@ class AyahTextPublicApiTest(GroupQuranDataMixin, BaseTestCase):
         self.assertEqual(403, response.status_code, response.content)
         self.assertEqual("access_denied", response.json()["error_name"])
 
+    @override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=True)
+    def test_get_ayah_text_where_cached_open_asset_is_restricted_should_return_401_authentication_required(self):
+        # Arrange: warm the cache while the asset is open, then restrict it.
+        asset = self._text_asset("tafsir-a")
+        self._version(asset, "1.0", {self._ayah(1): {"text": "t"}})
+        self.assertEqual(200, self.client.get("/ayahs/1:1/?assets=tafsir-a").status_code)
+        asset.is_open_access = False
+        with self.captureOnCommitCallbacks(execute=True):
+            asset.save(update_fields=["is_open_access"])
+
+        # Act
+        response = self.client.get("/ayahs/1:1/?assets=tafsir-a")
+
+        # Assert
+        self.assertEqual(401, response.status_code, response.content)
+        self.assertEqual("authentication_required", response.json()["error_name"])
+        self.assertEqual(["tafsir-a"], response.json()["extra"]["assets"])
+
+    def test_get_ayah_text_where_cached_and_unrelated_field_saved_should_keep_the_cached_response(self):
+        # Arrange
+        asset = self._text_asset("tafsir-a")
+        self._version(asset, "1.0", {self._ayah(1): {"text": "t"}})
+        self.client.get("/ayahs/1:1/?assets=tafsir-a")
+        asset.name_en = "Renamed"
+        with self.captureOnCommitCallbacks(execute=True):
+            asset.save(update_fields=["name_en"])
+
+        # Act
+        with CaptureQueriesContext(connection) as queries:
+            response = self.client.get("/ayahs/1:1/?assets=tafsir-a")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(0, len(queries), [query["sql"] for query in queries.captured_queries])
+
     # --- performance ----------------------------------------------------------
 
     def _bake_mixed_assets(self, count: int) -> list[str]:
