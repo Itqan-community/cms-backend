@@ -37,6 +37,7 @@ from apps.content.models import (
 from apps.content.repositories.asset_content import AssetContentRepository
 from apps.content.repositories.asset_review import AssetReviewRepository
 from apps.content.services.asset_content_import import (
+    AssetContentColumnMappingError,
     AssetContentInvalidRowsError,
     AssetContentMissingColumnsError,
     AssetContentParseError,
@@ -107,7 +108,9 @@ _NOT_FOUND_ERROR = {
 }
 
 
-def import_uploaded_file_into_entries(version: AssetVersion, *, strict: bool = False) -> None:
+def import_uploaded_file_into_entries(
+    version: AssetVersion, *, strict: bool = False, column_mapping: dict[str, int | None] | None = None
+) -> None:
     """Parse an uploaded version file into entries, keyed to the asset's template unit.
 
     Called from the translation/tafsir version create/update flow so that any
@@ -125,6 +128,8 @@ def import_uploaded_file_into_entries(version: AssetVersion, *, strict: bool = F
     to storage, which consumes the upload stream (a large ``TemporaryUploadedFile``
     ends up at EOF / closed), so re-reading the upload directly would yield empty
     bytes. Reading the persisted file is reliable for uploads of any size.
+
+    ``column_mapping`` (field -> file column index) overrides header alias matching.
     """
     saved = getattr(version, "file_url", None)
     if not saved:
@@ -153,8 +158,17 @@ def import_uploaded_file_into_entries(version: AssetVersion, *, strict: bool = F
     spec = unit_spec_for(version.asset)
     try:
         parsed = parse_content_file(
-            raw, spec, version.asset, strict=strict, allowed_unit_ids=source_group_keys(version)
+            raw,
+            spec,
+            version.asset,
+            strict=strict,
+            allowed_unit_ids=source_group_keys(version),
+            column_mapping=column_mapping,
         )
+    except AssetContentColumnMappingError as exc:
+        # Raised whatever `strict` says: the uploader asked for this mapping explicitly.
+        logger.info(f"Column mapping rejected [version_id={version.pk}, fields={exc.fields}]")
+        raise column_mapping_error(exc) from exc
     except AssetContentMissingColumnsError as exc:
         # Raised whatever `strict` says: a version missing a column would drop all its cells.
         logger.info(f"Uploaded file is missing columns [version_id={version.pk}, missing={exc.missing}]")
@@ -203,6 +217,26 @@ def source_group_keys(version: AssetVersion) -> set[int] | None:
         # The head keeps its full entries: read only the ranges, never the text.
         return unit_spec_for(asset).stored_ranges(head, with_text=True)
     return {unit_id for (unit_id, _key), text in AssetContentRepository().reconstruct_entries(head).items() if text}
+
+
+def column_mapping_error(exc: AssetContentColumnMappingError) -> ItqanError:
+    fields = ", ".join(exc.fields)
+    if exc.incomplete:
+        return ItqanError(
+            error_name="column_mapping_incomplete",
+            message=_("Choose a file column for these fields: {fields}.").format(fields=fields),
+            status_code=400,
+            extra={"fields": exc.fields},
+        )
+    return ItqanError(
+        error_name="column_mapping_invalid",
+        message=_(
+            "The column mapping can't be used for these fields: {fields}. Each field needs its own column "
+            "from the file's header."
+        ).format(fields=fields),
+        status_code=400,
+        extra={"fields": exc.fields},
+    )
 
 
 def missing_columns_error(exc: AssetContentMissingColumnsError) -> ItqanError:

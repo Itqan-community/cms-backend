@@ -37,6 +37,7 @@ layout never reaches the database.
 
 from __future__ import annotations
 
+from collections import Counter
 import csv
 from dataclasses import dataclass, field
 import io
@@ -90,6 +91,21 @@ class AssetContentMissingColumnsError(AssetContentParseError):
     def __init__(self, missing: list[str]) -> None:
         self.missing = missing
         super().__init__(f"Header is missing columns: {', '.join(missing)}.")
+
+
+class AssetContentColumnMappingError(AssetContentParseError):
+    """An explicit ``column_mapping`` cannot be applied to the file.
+
+    ``incomplete``: some required fields are not mapped (``fields`` lists them).
+    Otherwise ``fields`` names the entries that are unknown, point past the
+    header, or share a column with another field.
+    """
+
+    def __init__(self, fields: list[str], *, incomplete: bool) -> None:
+        self.fields = fields
+        self.incomplete = incomplete
+        reason = "not mapped" if incomplete else "invalid"
+        super().__init__(f"Column mapping {reason}: {', '.join(fields)}.")
 
 
 class AssetContentInvalidRowsError(AssetContentParseError):
@@ -358,6 +374,106 @@ def _read_rows(raw: bytes) -> list[list[str]]:
     return rows
 
 
+# --- Column mapping -----------------------------------------------------------
+# A file whose headers don't match the aliases can still be imported: the
+# uploader maps each field to a file column and sends that ``column_mapping``
+# with the upload.
+# The mapping rewrites the header row to the canonical names, so the parsers
+# above run unchanged.
+
+# The header row is looked for among the first rows only (a preamble is short).
+_HEADER_SCAN_ROWS = 50
+
+
+def _unit_aliases(spec: UnitSpec) -> dict[str, frozenset[str]]:
+    """The template's unit fields and the header names auto-matched to each."""
+    template = spec.template
+    if template == AssetTemplateChoice.SURAH:
+        return {"surah": SURAH_HEADERS}
+    if template == AssetTemplateChoice.AYAH:
+        return {"surah": SURAH_HEADERS, "ayah": AYAH_HEADERS}
+    if template == AssetTemplateChoice.WORD:
+        return {
+            "word_id": WORD_ID_HEADERS,
+            "surah": SURAH_HEADERS,
+            "ayah": AYAH_HEADERS,
+            "word": WORD_POSITION_HEADERS,
+        }
+    if template == AssetTemplateChoice.PAGE:
+        return {"page": PAGE_HEADERS}
+    return {name: frozenset({name}) for name in RANGE_HEADERS_BY_TEMPLATE[template]}
+
+
+def _field_aliases(spec: UnitSpec, column_keys: list[str]) -> dict[str, frozenset[str] | set[str]]:
+    """Every field a file column can fill, unit fields first, with its aliases."""
+    return {**_unit_aliases(spec), **_text_headers(column_keys)}
+
+
+def required_field_sets(spec: UnitSpec, column_keys: list[str]) -> list[list[str]]:
+    """The field sets an import needs: mapping every field of any one set is enough.
+
+    A word file names its word by ``word_id`` or by its surah + ayah + position.
+    Every text column is required: an upload replaces a whole version.
+    """
+    units = list(_unit_aliases(spec))
+    if spec.template == AssetTemplateChoice.WORD:
+        return [["word_id", *column_keys], ["surah", "ayah", "word", *column_keys]]
+    return [[*units, *column_keys]]
+
+
+def _locate_header_row(rows: list[list[str]], aliases: dict[str, frozenset[str] | set[str]]) -> int:
+    """The header row: the first row naming any known field, else the first row
+    with two or more filled cells (a header nothing matched), else the first
+    non-blank row. Only the first ``_HEADER_SCAN_ROWS`` rows are looked at."""
+    known = set().union(*aliases.values())
+    scanned = rows[:_HEADER_SCAN_ROWS]
+    for index, row in enumerate(scanned):
+        if any(cell.strip().lower() in known for cell in row):
+            return index
+    for minimum in (2, 1):
+        for index, row in enumerate(scanned):
+            if sum(1 for cell in row if cell.strip()) >= minimum:
+                return index
+    raise AssetContentParseError("No header row found.")
+
+
+def _complete(mapping: dict[str, int], required: list[list[str]]) -> bool:
+    return any(all(key in mapping for key in fields) for fields in required)
+
+
+def _apply_column_mapping(
+    rows: list[list[str]], spec: UnitSpec, column_keys: list[str], column_mapping: dict[str, int | None]
+) -> list[list[str]]:
+    """Rewrite the header row so each mapped column carries its field's canonical
+    name and every other column is blank (ignored), overriding alias matching.
+
+    Rows above the header are blanked, so the parsers find this header row.
+    """
+    aliases = _field_aliases(spec, column_keys)
+    unknown = [key for key in column_mapping if key not in aliases]
+    if unknown:
+        raise AssetContentColumnMappingError(unknown, incomplete=False)
+    header_index = _locate_header_row(rows, aliases)
+    width = len(rows[header_index])
+    chosen = {key: index for key, index in column_mapping.items() if index is not None}
+    shared = {index for index, count in Counter(chosen.values()).items() if count > 1}
+    invalid = [
+        key
+        for key, index in chosen.items()
+        if isinstance(index, bool) or not isinstance(index, int) or not 0 <= index < width or index in shared
+    ]
+    if invalid:
+        raise AssetContentColumnMappingError(invalid, incomplete=False)
+    required = required_field_sets(spec, column_keys)
+    if not _complete(chosen, required):
+        missing = min(([key for key in fields if key not in chosen] for fields in required), key=len)
+        raise AssetContentColumnMappingError(missing, incomplete=True)
+    header = [""] * width
+    for key, index in chosen.items():
+        header[index] = key
+    return [*([] for _ in range(header_index)), header, *rows[header_index + 1 :]]
+
+
 def _parse_ayah_entries(rows: list[list[str]], log: _RowLog, text_headers: TextHeaders) -> dict[tuple[int, int], Cells]:
     """Parse an ayah-shaped file into {(surah, ayah): text}. Unchanged from the
     original ayah-only parser: rows with a non-integer surah/ayah are skipped
@@ -481,6 +597,7 @@ def parse_content_file(
     column_keys: list[str] | None = None,
     strict: bool = False,
     allowed_unit_ids: set[int] | None = None,
+    column_mapping: dict[str, int | None] | None = None,
 ) -> list[ParsedEntry]:
     """Parse raw file bytes into rows keyed to the asset's template unit.
 
@@ -495,12 +612,15 @@ def parse_content_file(
     ``AssetContentInvalidRowsError`` naming every such row that carries text.
     Group files are always strict. ``allowed_unit_ids`` (a translated language
     of a group asset: its source's ranges) flags any other valid unit as
-    ``NOT_IN_SOURCE``.
+    ``NOT_IN_SOURCE``. ``column_mapping`` (field -> 0-based column index of the
+    header row) overrides alias matching; columns it leaves out are ignored.
     """
     strict = strict or spec.is_group
     column_keys = column_keys or [column.key for column in asset.text_columns()]
     text_headers = _text_headers(column_keys)
     rows = _read_rows(raw)
+    if column_mapping is not None:
+        rows = _apply_column_mapping(rows, spec, column_keys, column_mapping)
     log = _RowLog()
 
     resolved: dict[object, int] = {}  # raw key -> candidate unit_id

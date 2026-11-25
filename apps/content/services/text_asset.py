@@ -351,6 +351,7 @@ class TextAssetService:
         created_by_id: int | None = None,
         approved_by: User | None = None,
         publisher_q: Q | None = None,
+        column_mapping: dict[str, int | None] | None = None,
     ) -> AssetVersion:
         """
         Business Logic: Create a new version for a text asset.
@@ -366,6 +367,8 @@ class TextAssetService:
 
         With ``approved_by`` (a reviewer), the recorded changes are approved on
         upload under their name, so the version is publishable straight away.
+
+        ``column_mapping`` (field -> file column index) overrides header alias matching.
         """
         asset = self._get_text_asset_or_404(text_asset_slug, publisher_q=publisher_q)
         with transaction.atomic():
@@ -382,7 +385,7 @@ class TextAssetService:
             )
             set_version_language(version, language)
             if file:
-                import_uploaded_file_into_entries(version, strict=True)
+                import_uploaded_file_into_entries(version, strict=True, column_mapping=column_mapping)
                 AssetContentRepository().record_upload_changes(version)
                 if approved_by is not None:
                     AssetReviewRepository().approve_changes(version.changes.all(), approved_by)
@@ -404,9 +407,12 @@ class TextAssetService:
         version_id: int,
         fields: dict[str, Any],
         publisher_q: Q | None = None,
+        column_mapping: dict[str, int | None] | None = None,
     ) -> AssetVersion:
         """
         Business Logic: Update an existing text asset version.
+
+        ``column_mapping`` applies to a replaced file (``fields["file_url"]``).
         """
         version = self._get_text_asset_version_or_404(text_asset_slug, version_id, publisher_q=publisher_q)
         # The version number is fixed once issued.
@@ -420,7 +426,7 @@ class TextAssetService:
             if fields.get("file_url"):
                 adopt_current_columns(updated)
                 # New content: re-recorded as changes, so it is reviewed again.
-                import_uploaded_file_into_entries(updated, strict=True)
+                import_uploaded_file_into_entries(updated, strict=True, column_mapping=column_mapping)
                 AssetContentRepository().record_upload_changes(updated)
                 AssetContentRepository().store_canonical_file(updated)
         logger.info(f"Text asset version updated [version_id={version_id}, asset_slug={text_asset_slug}]")
