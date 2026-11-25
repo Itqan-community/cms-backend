@@ -264,7 +264,7 @@ class AyahTextService:
         """``{version_id: {unit_id: {column_key: text}}}`` for the units covering the window.
 
         Versions holding entries are read in one query; a published version kept
-        only as deltas (a rollback target) is rebuilt and narrowed in Python.
+        only as deltas (a rollback target) or as a legacy file is rebuilt and narrowed in Python.
         """
         with_entries: dict[str, list[int]] = defaultdict(list)
         rebuilt: list[ServedAsset] = []

@@ -617,9 +617,7 @@ class AssetContentRepository:
         locked = self.asset_version_model.objects.select_for_update().get(pk=version.pk)
         if locked.entries.exists():
             return False
-        snapshot = self.reconstruct_entries(locked)
-        if not snapshot and locked.file_url:
-            snapshot = self._snapshot_from_file(locked)  # legacy file-only commit
+        snapshot = self.reconstruct_entries_or_file(locked)
         spec = unit_spec_for(locked.asset)
         columns = self._columns_by_key(locked.asset)
         rows = [
@@ -947,6 +945,14 @@ class AssetContentRepository:
         return self.diff_maps(
             spec, old_map, self.reconstruct_entries(version), column_keys=version.resolved_column_keys
         )
+
+    def reconstruct_entries_or_file(self, version: AssetVersion) -> Snapshot:
+        """:meth:`reconstruct_entries`, falling back to the stored file for a legacy
+        file-only commit (no entries and no deltas)."""
+        snapshot = self.reconstruct_entries(version)
+        if not snapshot and version.file_url:
+            snapshot = self._snapshot_from_file(version)
+        return snapshot
 
     def reconstruct_entries(self, version: AssetVersion) -> Snapshot:
         """Every cell at this commit.

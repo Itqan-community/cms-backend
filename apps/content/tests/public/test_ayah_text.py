@@ -3,6 +3,7 @@ import json
 from unittest.mock import patch
 
 from django.core.cache import cache
+from django.core.files.base import ContentFile
 from django.db import connection
 from django.test import override_settings
 from django.test.utils import CaptureQueriesContext
@@ -229,6 +230,20 @@ class AyahTextPublicApiTest(GroupQuranDataMixin, BaseTestCase):
         self.assertEqual(200, response.status_code, response.content)
         rows = response.json()["assets"][0]["rows"]
         self.assertEqual(["new 1:1", "kept 1:2"], [row["cells"]["text"] for row in rows])
+
+    def test_get_ayah_text_where_published_version_is_a_legacy_file_only_commit_should_read_the_file(self):
+        # Arrange: a published version with a stored file but no entries and no deltas.
+        asset = self._text_asset("tafsir-a")
+        legacy = self._version(asset, "1.0", {})
+        legacy.file_url.save("legacy.csv", ContentFile(b"surah,ayah,text\n1,1,from file\n1,2,second"), save=True)
+
+        # Act
+        response = self.client.get("/ayahs/1:1/?assets=tafsir-a&to=2")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        rows = response.json()["assets"][0]["rows"]
+        self.assertEqual(["from file", "second"], [row["cells"]["text"] for row in rows])
 
     def test_get_ayah_text_where_ayah_group_asset_should_return_the_group_covering_the_ayah(self):
         # Arrange

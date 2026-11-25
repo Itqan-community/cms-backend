@@ -105,5 +105,6 @@ class AyahTextRepository:
         )
 
     def rebuild_cells(self, version: AssetVersion) -> Snapshot:
-        """All cells of a published version that kept only its deltas (a rollback target)."""
-        return AssetContentRepository().reconstruct_entries(version)
+        """All cells of a published version without entries: one that kept only its
+        deltas (a rollback target), or a legacy commit stored only as a file."""
+        return AssetContentRepository().reconstruct_entries_or_file(version)
