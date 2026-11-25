@@ -125,9 +125,12 @@ def _invalid_range() -> ItqanError:
 def parse_ayah_key(ayah_key: str) -> tuple[int, int]:
     """``(surah, ayah)`` of a ``"surah:ayah"`` key; 404 ``ayah_not_found`` when malformed."""
     parts = ayah_key.strip().split(":")
-    if len(parts) != 2 or not all(part.isdigit() for part in parts):
+    if len(parts) != 2 or not all(part.isdecimal() for part in parts):
         raise _ayah_not_found(ayah_key)
-    surah, ayah = int(parts[0]), int(parts[1])
+    try:
+        surah, ayah = int(parts[0]), int(parts[1])
+    except ValueError:  # past Python's int-string length limit
+        raise _ayah_not_found(ayah_key) from None
     if not (1 <= surah <= 114) or ayah < 1:
         raise _ayah_not_found(ayah_key)
     return surah, ayah
