@@ -1,5 +1,9 @@
+from unittest.mock import patch
+
 from django.contrib.auth.models import Group
+from django.core import mail
 from django.db import connection
+from django.test import override_settings
 from django.test.utils import CaptureQueriesContext
 
 from apps.content.models import (
@@ -11,6 +15,8 @@ from apps.content.models import (
     Reciter,
     StatusChoice,
 )
+from apps.content.services.issue_report_notifications import IssueReportNotificationService
+from apps.content.tasks import send_issue_comment_email
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher, PublisherMember
 from apps.users.models import User
@@ -181,3 +187,73 @@ class IssueReportCommentPortalApiTests(BaseTestCase):
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual(6, len(response.json()))
         self.assertEqual(len(one_comment.captured_queries), len(six_comments.captured_queries))
+
+    def test_create_issue_report_comment_where_member_posts_should_email_the_reporter_after_commit(self):
+        # Arrange
+        self.authenticate_user(self.member, HTTP_X_TENANT=str(self.publisher.id))
+
+        # Act
+        with (
+            patch.object(send_issue_comment_email, send_issue_comment_email.delay.__name__) as delay,
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            response = self.client.post(self._url(self.report), {"body": "We fixed the audio."}, format="json")
+
+        # Assert
+        self.assertEqual(201, response.status_code, response.content)
+        delay.assert_called_once_with(response.json()["id"])
+
+    def test_create_issue_report_comment_where_reporter_comments_on_own_report_should_not_email(self):
+        # Arrange — the reporter is also a member of the publisher
+        PublisherMember.objects.create(
+            user=self.reporter,
+            publisher=self.publisher,
+            group=Group.objects.create(name="Reporter role"),
+            status=PublisherMember.StatusChoice.ACTIVE,
+        )
+        self.authenticate_user(self.reporter, HTTP_X_TENANT=str(self.publisher.id))
+
+        # Act
+        with (
+            patch.object(send_issue_comment_email, send_issue_comment_email.delay.__name__) as delay,
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            response = self.client.post(self._url(self.report), {"body": "Adding a detail."}, format="json")
+
+        # Assert
+        self.assertEqual(201, response.status_code, response.content)
+        self.assertTrue(response.json()["author"]["is_reporter"])
+        delay.assert_not_called()
+
+    @override_settings(FRONTEND_BASE_URL="https://fanar.example")
+    def test_notify_comment_added_where_comment_exists_should_email_reporter_without_author_address(self):
+        # Arrange
+        self.reporter.preferred_language = "en"
+        self.reporter.save(update_fields=["preferred_language"])
+        comment = ContentIssueReportComment.objects.create(
+            report=self.report, author=self.member, body="Fixed in the next version."
+        )
+
+        # Act
+        IssueReportNotificationService().notify_comment_added(comment.id)
+
+        # Assert
+        self.assertEqual(1, len(mail.outbox))
+        message = mail.outbox[0]
+        html = message.alternatives[0][0]
+        self.assertEqual(["reporter@example.com"], message.to)
+        self.assertEqual("New reply on your issue report for Own Publisher asset", message.subject)
+        self.assertIn("Fixed in the next version.", html)
+        self.assertIn("Own Publisher", html)
+        self.assertIn(f"https://fanar.example/gallery/asset/{self.report.asset_id}", html)
+        self.assertNotIn("member@example.com", html)
+
+    def test_notify_comment_added_where_comment_is_missing_should_send_nothing(self):
+        # Arrange
+        missing_id = 999999
+
+        # Act
+        IssueReportNotificationService().notify_comment_added(missing_id)
+
+        # Assert
+        self.assertEqual(0, len(mail.outbox))

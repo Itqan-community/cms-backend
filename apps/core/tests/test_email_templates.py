@@ -58,6 +58,14 @@ EMAIL_TEMPLATES = {
         "new_status": "Resolved",
         "issue_url": "https://example.com/issues/7",
     },
+    "emails/issue_comment.html": {
+        "report_id": 7,
+        "publisher_name": "Tafsir Center",
+        "asset_name": "Hafs Mushaf",
+        "context_label": "Page 12",
+        "comment_body": "Fixed in the next version.",
+        "asset_url": "https://example.com/gallery/asset/3",
+    },
     "emails/pending_access_requests_notification.html": {
         "count": 2,
         "access_requests_url": "https://example.com/requests",

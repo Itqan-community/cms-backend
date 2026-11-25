@@ -706,6 +706,10 @@ msgstr "لا يمكن أن يتجاوز التعليق 2000 حرف."
 msgid "Your issue status has been updated: {old_status} → {new_status}"
 msgstr "تم تحديث حالة بلاغك: {old_status} ← {new_status}"
 
+#, python-brace-format
+msgid "New reply on your issue report for {asset_name}"
+msgstr "رد جديد على بلاغك عن {asset_name}"
+
 msgid "Mushaf name (Arabic or English) is required."
 msgstr "اسم المصحف (بالعربية أو الإنجليزية) مطلوب."
 
@@ -1794,6 +1798,22 @@ msgstr "تصلك هذه الرسالة لأن لديك صلاحية الوصول
 msgid "Thank you for using Fanar!"
 msgstr "شكرًا لاستخدامك فنار!"
 
+msgid "New reply on your issue"
+msgstr "رد جديد على بلاغك"
+
+#, python-format
+msgid "<strong>%(publisher_name)s</strong> replied to your issue report for <strong>%(asset_name)s</strong> (Issue #%(report_id)s)."
+msgstr "ردّ <strong>%(publisher_name)s</strong> على بلاغك عن <strong>%(asset_name)s</strong> (البلاغ رقم %(report_id)s)."
+
+msgid "Location:"
+msgstr "الموضع:"
+
+msgid "View the asset"
+msgstr "عرض المورد"
+
+msgid "You are receiving this email because you opened this issue report."
+msgstr "تصلك هذه الرسالة لأنك من قام بفتح هذا البلاغ."
+
 msgid "Issue Status Updated"
 msgstr "تم تحديث حالة البلاغ"
 
@@ -1804,17 +1824,11 @@ msgstr "تم تحديث حالة البلاغ الخاص بك"
 msgid "The status of your issue report for <strong>%(asset_name)s</strong> (Issue #%(report_id)s) has changed."
 msgstr "تغيّرت حالة بلاغك بخصوص <strong>%(asset_name)s</strong> (البلاغ رقم %(report_id)s)."
 
-msgid "Location:"
-msgstr "الموضع:"
-
 msgid "Status change:"
 msgstr "تغيير الحالة:"
 
 msgid "View your issue"
 msgstr "عرض البلاغ"
-
-msgid "You are receiving this email because you opened this issue report."
-msgstr "تصلك هذه الرسالة لأنك من قام بفتح هذا البلاغ."
 
 msgid "Pending Access Requests"
 msgstr "طلبات الوصول المعلقة"
