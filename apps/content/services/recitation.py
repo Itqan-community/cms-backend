@@ -313,7 +313,7 @@ class RecitationService:
         # Resolve and validate one contiguous ayah range within a single surah.
         # Returns (track, quality, timings_subset, start_ms, end_ms) where the
         # subset covers every ayah in [from_ayah, to_ayah] in playback order.
-        # Range problems (order, bounds, gaps) raise 422 validation_error so
+        # Range problems (order, bounds, gaps) raise 400 validation_error so
         # clients can tell bad input apart from a missing track (404).
         from apps.core.mixins.constants import QURAN_SURAHS
 
@@ -321,7 +321,7 @@ class RecitationService:
             raise ItqanError(
                 error_name="validation_error",
                 message=_("Surah {surah} is out of range (1-114).").format(surah=surah_number),
-                status_code=422,
+                status_code=400,
             )
 
         if from_ayah > to_ayah:
@@ -330,7 +330,7 @@ class RecitationService:
                 message=_("Invalid ayah range: from ({from_ayah}) must not exceed to ({to_ayah}).").format(
                     from_ayah=from_ayah, to_ayah=to_ayah
                 ),
-                status_code=422,
+                status_code=400,
             )
 
         ayahs_count = QURAN_SURAHS[surah_number]["ayahs_count"]
@@ -344,7 +344,7 @@ class RecitationService:
                     surah=surah_number,
                     max=ayahs_count,
                 ),
-                status_code=422,
+                status_code=400,
             )
 
         quality_id = None
@@ -407,7 +407,7 @@ class RecitationService:
                         surah=surah_number,
                         ayah=ayah_number,
                     ),
-                    status_code=422,
+                    status_code=400,
                 )
 
             subset.append(timing)
@@ -422,7 +422,7 @@ class RecitationService:
                     from_ayah=from_ayah,
                     to_ayah=to_ayah,
                 ),
-                status_code=422,
+                status_code=400,
             )
 
         return track, matched_quality, subset, start_ms, end_ms

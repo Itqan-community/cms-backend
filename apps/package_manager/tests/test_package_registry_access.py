@@ -304,7 +304,7 @@ class PackageRequestAccessTests(BaseTestCase):
 
     def test_request_access_where_intended_use_invalid_or_purpose_blank_should_be_rejected(self):
         self.assertEqual(400, self._post(body={"intended_use": "hobby"}).status_code)
-        self.assertEqual(422, self._post(body={"intended_use": "commercial", "purpose": "  "}).status_code)
+        self.assertEqual(400, self._post(body={"intended_use": "commercial", "purpose": "  "}).status_code)
 
     def test_request_access_where_purpose_omitted_should_use_default(self):
         response = self._post(body={"intended_use": "commercial"})

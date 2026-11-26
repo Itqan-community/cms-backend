@@ -56,12 +56,11 @@ class RecitationRangeOut(Schema):
 @router.get(
     "recitations/{asset_id}/{surah_number}/range/",
     response={
-        400: NinjaErrorResponse[Literal["folder_param_renamed"]],
+        400: NinjaErrorResponse[Literal["folder_param_renamed"]] | NinjaErrorResponse[Literal["validation_error"]],
         200: RecitationRangeOut,
         401: NinjaErrorResponse[Literal["authentication_required"]],
         403: NinjaErrorResponse[Literal["access_denied"]],
         404: NinjaErrorResponse[Literal["not_found"]] | NinjaErrorResponse[Literal["quality_not_found"]],
-        422: NinjaErrorResponse[Literal["validation_error"]],
     },
 )
 def get_recitation_range(
@@ -116,7 +115,7 @@ def get_recitation_range(
         "is_open_access": asset.is_open_access,
     }
 
-    # Validate the range (422 on bad order/bounds/gaps) and resolve track+quality.
+    # Validate the range (400 on bad order/bounds/gaps) and resolve track+quality.
     track, resolved_quality, subset, start_ms, end_ms = service.get_range_segment(
         asset_id,
         surah_number,

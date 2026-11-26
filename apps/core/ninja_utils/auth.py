@@ -27,25 +27,25 @@ def _validate_external_user_id(request):
         raise ItqanError(
             "invalid_external_user_id",
             _("The external user identifier cannot be empty."),
-            status_code=422,
+            status_code=400,
         )
     if len(candidate) > EXTERNAL_USER_ID_MAX_LENGTH:
         raise ItqanError(
             "invalid_external_user_id",
             _("The external user identifier is too long."),
-            status_code=422,
+            status_code=400,
         )
     if "@" in candidate or EXTERNAL_USER_ID_PHONE_RE.fullmatch(candidate):
         raise ItqanError(
             "invalid_external_user_id",
             _("The external user identifier must not contain personal information."),
-            status_code=422,
+            status_code=400,
         )
     if not EXTERNAL_USER_ID_RE.fullmatch(candidate):
         raise ItqanError(
             "invalid_external_user_id",
             _("The external user identifier contains invalid characters."),
-            status_code=422,
+            status_code=400,
         )
 
     request.external_user_id = candidate

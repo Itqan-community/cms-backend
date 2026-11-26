@@ -292,8 +292,8 @@ class PackageAccessRequestOut(Schema):
         200: PackageAccessRequestOut,
         401: NinjaErrorResponse[Literal["authentication_required"]],
         404: NinjaErrorResponse[Literal["asset_not_found"]],
+        400: NinjaErrorResponse[Literal["validation_error"]],
         409: NinjaErrorResponse[Literal["access_not_required"]],
-        422: NinjaErrorResponse[Literal["validation_error"]],
     },
 )
 def request_package_access(request: Request, slug: str, data: PackageAccessRequestIn):
@@ -313,7 +313,7 @@ def request_package_access(request: Request, slug: str, data: PackageAccessReque
         )
     purpose = data.purpose.strip()
     if not purpose:
-        raise ItqanError(error_name="validation_error", message=_("Purpose can't be empty."), status_code=422)
+        raise ItqanError(error_name="validation_error", message=_("Purpose can't be empty."), status_code=400)
 
     asset = PackageRegistryService().find_asset(slug)
     if PackageRegistryService.catalog_access(asset) == CatalogAccess.OPEN:

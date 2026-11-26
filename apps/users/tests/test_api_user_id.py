@@ -45,14 +45,14 @@ class PublicApiExternalUserIdHeaderTestCase(BaseTestCase):
                 self.assertEqual(200, res.status_code, res.content)
                 self.assertEqual(valid_value.strip(), res.wsgi_request.external_user_id)
 
-    def test_public_api_rejects_empty_and_blank_values_with_422(self):
+    def test_public_api_rejects_empty_and_blank_values_with_400(self):
         for invalid_value in ["", " ", "\t", "\n", "   \n  "]:
             with self.subTest(invalid_value=repr(invalid_value)):
                 res = self._make_request(invalid_value)
-                self.assertEqual(422, res.status_code, res.content)
+                self.assertEqual(400, res.status_code, res.content)
                 self.assertEqual("invalid_external_user_id", res.json()["error_name"])
 
-    def test_public_api_rejects_invalid_character_sets_with_422(self):
+    def test_public_api_rejects_invalid_character_sets_with_400(self):
         for invalid_value in [
             "user id",
             "user/id",
@@ -68,10 +68,10 @@ class PublicApiExternalUserIdHeaderTestCase(BaseTestCase):
         ]:
             with self.subTest(invalid_value=invalid_value):
                 res = self._make_request(invalid_value)
-                self.assertEqual(422, res.status_code, res.content)
+                self.assertEqual(400, res.status_code, res.content)
                 self.assertEqual("invalid_external_user_id", res.json()["error_name"])
 
-    def test_public_api_rejects_obvious_pii_shapes_with_422(self):
+    def test_public_api_rejects_obvious_pii_shapes_with_400(self):
         for invalid_value in [
             "user@example.com",
             "1234567890",
@@ -80,10 +80,10 @@ class PublicApiExternalUserIdHeaderTestCase(BaseTestCase):
         ]:
             with self.subTest(invalid_value=invalid_value):
                 res = self._make_request(invalid_value)
-                self.assertEqual(422, res.status_code, res.content)
+                self.assertEqual(400, res.status_code, res.content)
                 self.assertEqual("invalid_external_user_id", res.json()["error_name"])
 
-    def test_public_api_rejects_values_starting_with_non_alphanumeric_character_with_422(self):
+    def test_public_api_rejects_values_starting_with_non_alphanumeric_character_with_400(self):
         for invalid_value in [
             ".user",
             "_user",
@@ -94,13 +94,13 @@ class PublicApiExternalUserIdHeaderTestCase(BaseTestCase):
         ]:
             with self.subTest(invalid_value=invalid_value):
                 res = self._make_request(invalid_value)
-                self.assertEqual(422, res.status_code, res.content)
+                self.assertEqual(400, res.status_code, res.content)
                 self.assertEqual("invalid_external_user_id", res.json()["error_name"])
 
-    def test_public_api_rejects_values_longer_than_64_characters_with_422(self):
+    def test_public_api_rejects_values_longer_than_64_characters_with_400(self):
         res = self._make_request("a" * 65)
 
-        self.assertEqual(422, res.status_code, res.content)
+        self.assertEqual(400, res.status_code, res.content)
         self.assertEqual("invalid_external_user_id", res.json()["error_name"])
 
     def test_same_external_user_id_is_namespaced_by_api_key_owner(self):

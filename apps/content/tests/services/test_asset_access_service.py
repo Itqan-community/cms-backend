@@ -97,7 +97,7 @@ class AssetAccessRequestServiceTests(BaseTestCase):
         with self.assertRaises(ItqanError) as ctx:
             self.service.reject(self.member, req.id, "   ")
         self.assertEqual("validation_error", ctx.exception.error_name)
-        self.assertEqual(422, ctx.exception.status_code)
+        self.assertEqual(400, ctx.exception.status_code)
 
     def test_reject_non_pending_raises_invalid_status(self):
         asset = _make_asset(self.publisher, auto_accept=False)

@@ -28,23 +28,23 @@ description: غلاف الخطأ الموحّد وكتالوج الأخطاء ا
 
 | HTTP | `error_name` | المُشغِّل | شكل `extra` |
 |---|---|---|---|
-| 400 | `validation_error` | معاملات استعلام أو جسم طلب غير صحيح | مصفوفة من كائنات الخطأ على مستوى الحقل |
+| 400 | `validation_error` | معاملات استعلام أو جسم طلب غير صحيح، أو قيم لا تستقيم معًا (مثل نطاق آيات يأتي فيه `from` بعد `to`). أخطاء التحقق تستخدم `400` دائمًا | مصفوفة من كائنات الخطأ على مستوى الحقل، أو `null` |
+| 400 | `invalid_external_user_id` | ترويسة `X-External-User-Id` فارغة أو طويلة جدًا أو تشبه بيانات شخصية أو تحتوي أحرفًا غير صالحة | `null` |
 | 400 | `invalid_json` | جسم طلب JSON مشوَّه | `null` |
 | 401 | `authentication_error` | بيانات اعتماد مفقودة أو غير صحيحة | `null` |
 | 401 | `invalid_api_key` | ترويسة `X-API-Key` تحمل مفتاحاً غير موجود أو مُلغى أو منتهي الصلاحية. الطلبات التي لا ترسل الترويسة لا تتأثر | `null` |
 | 401 | `token_not_valid` | توكن JWT منتهي الصلاحية أو مُلغى | `null` |
 | 403 | `permission_denied` | مُصادَق عليه لكن غير مُخوَّل | `null` |
 | 404 | `not_found` | المورد غير موجود | `null` |
-| 422 | `validation_error` | الطلب سليم الصياغة لكن قيمه لا تستقيم معًا، مثل نطاق آيات يأتي فيه `from` بعد `to` أو يتجاوز نهاية السورة. يبيّن `message` موضع الخطأ | `null` |
 | 4xx/5xx | `http_error` | مسار خطأ HTTP عام | `null` |
 | 500 | `internal_error` | استثناء خادم غير معالَج | `null` |
 | متغير | *(مخصص)* | خطأ منطق أعمال عبر `ItqanError` | خاص بكل نقطة نهاية؛ موثَّق في صفحة المرجع الخاصة بها |
 
 ### شكل `extra` لـ `validation_error`
 
-يختلف شكل `extra` باختلاف رمز الحالة، فتحقّق من نوعه قبل قراءته:
+يختلف شكل `extra` باختلاف سبب الخطأ، فتحقّق من نوعه قبل قراءته:
 
-- **400**: مصفوفة من كائنات الخطأ على مستوى الحقل، كائن لكل معامل أو حقل غير صحيح:
+- **معامل أو حقل غير صحيح**: مصفوفة من كائنات الخطأ على مستوى الحقل، كائن لكل معامل أو حقل غير صحيح:
 
 ```json
 {
@@ -56,7 +56,7 @@ description: غلاف الخطأ الموحّد وكتالوج الأخطاء ا
 }
 ```
 
-- **422**: `null`. كل قيمة صحيحة بمفردها لكنها لا تستقيم معًا، ويبيّن `message` موضع الخطأ:
+- **قيم لا تستقيم معًا**: `null`. كل قيمة صحيحة بمفردها، ويبيّن `message` موضع الخطأ:
 
 ```json
 {
@@ -89,7 +89,7 @@ async function apiFetch(url, options = {}) {
     case "not_found":
       return null;
     case "validation_error":
-      // اعرض message دائمًا؛ extra يسرد أخطاء الحقول في 400 وهو null في 422
+      // اعرض message دائمًا؛ extra إما قائمة بأخطاء الحقول أو null
       throw new ValidationError(error.message, Array.isArray(error.extra) ? error.extra : []);
     case "authentication_error":
     case "token_not_valid":
@@ -120,7 +120,7 @@ def api_fetch(url):
         if name == "not_found":
             return None
         elif name == "validation_error":
-            # احتفظ بـ message دائمًا؛ extra يسرد أخطاء الحقول في 400 وهو null في 422
+            # احتفظ بـ message دائمًا؛ extra إما قائمة بأخطاء الحقول أو null
             fields = error["extra"] if isinstance(error.get("extra"), list) else []
             raise ValueError(f"فشل التحقق: {error['message']}", fields)
         elif name in ("authentication_error", "token_not_valid"):

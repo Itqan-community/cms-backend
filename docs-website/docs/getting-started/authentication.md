@@ -77,7 +77,7 @@ curl {{API_BASE}}/reciters/ \
 The identifier may contain letters, numbers, `.`, `_`, `:`, and `-`, must start
 with a letter or number, and may be up to 64 characters long. Values that are
 empty, contain an email address, resemble a phone number, or use other invalid
-characters are rejected with a `422` response.
+characters are rejected with `400 invalid_external_user_id`.
 
 ## Errors
 

@@ -28,14 +28,14 @@ Every non-2xx response from the Fanar API uses the same envelope. Build your err
 
 | HTTP | `error_name` | Triggered by | `extra` shape |
 |---|---|---|---|
-| 400 | `validation_error` | Invalid query parameters or request body | Array of field-level error objects |
+| 400 | `validation_error` | Invalid query parameters or request body, or values that don't make sense together (e.g. an ayah range whose `from` is after `to`). Validation errors always use `400` | Array of field-level error objects, or `null` |
+| 400 | `invalid_external_user_id` | The `X-External-User-Id` header is empty, too long, looks like personal data or has invalid characters | `null` |
 | 400 | `invalid_json` | Malformed JSON request body | `null` |
 | 401 | `authentication_error` | Missing or invalid credentials | `null` |
 | 401 | `invalid_api_key` | The `X-API-Key` header holds a key that does not exist, was revoked or has expired. Calls without the header are not affected | `null` |
 | 401 | `token_not_valid` | Expired or revoked JWT token | `null` |
 | 403 | `permission_denied` | Authenticated but not authorized | `null` |
 | 404 | `not_found` | Resource does not exist | `null` |
-| 422 | `validation_error` | The request is well-formed but its values don't make sense together, e.g. an ayah range whose `from` is after `to` or past the end of the surah. `message` says what is wrong | `null` |
 | 429 | `throttled` | Rate limit exceeded (see [Rate Limits](#rate-limits)) | `null` |
 | 4xx/5xx | `http_error` | Generic HTTP error path | `null` |
 | 500 | `internal_error` | Unhandled server exception | `null` |
@@ -43,9 +43,9 @@ Every non-2xx response from the Fanar API uses the same envelope. Build your err
 
 ### `validation_error` Extra Shape
 
-`extra` depends on the status code, so check its type before reading it:
+`extra` depends on what failed, so check its type before reading it:
 
-- **400**: an array of field-level error objects, one per invalid parameter or body field:
+- **A parameter or body field is invalid**: an array of field-level error objects, one per invalid field:
 
 ```json
 {
@@ -57,7 +57,7 @@ Every non-2xx response from the Fanar API uses the same envelope. Build your err
 }
 ```
 
-- **422**: `null`. Each value is valid on its own but they don't make sense together, and `message` says what is wrong:
+- **The values don't make sense together**: `null`. Each value is valid on its own, and `message` says what is wrong:
 
 ```json
 {
@@ -91,7 +91,7 @@ async function apiFetch(url, options = {}) {
       // Resource doesn't exist — handle gracefully
       return null;
     case "validation_error":
-      // Always show message; extra lists field errors on 400 and is null on 422
+      // Always show message; extra is a list of field errors or null
       throw new ValidationError(error.message, Array.isArray(error.extra) ? error.extra : []);
     case "authentication_error":
     case "token_not_valid":
@@ -125,7 +125,7 @@ def api_fetch(url):
         if name == "not_found":
             return None
         elif name == "validation_error":
-            # Always keep message; extra lists field errors on 400 and is null on 422
+            # Always keep message; extra is a list of field errors or null
             fields = error["extra"] if isinstance(error.get("extra"), list) else []
             raise ValueError(f"Validation failed: {error['message']}", fields)
         elif name in ("authentication_error", "token_not_valid"):

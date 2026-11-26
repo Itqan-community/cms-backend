@@ -187,7 +187,7 @@ class AccessRequestsPortalApiTests(BaseTestCase):
         self.assertEqual("Not eligible", req.rejection_reason)
         self.assertEqual(self.member.id, req.rejected_by_id)
 
-    def test_reject_with_empty_reason_returns_422(self):
+    def test_reject_with_empty_reason_returns_400(self):
         req = self._make_request()
         self.authenticate_user(self.member)
         self.give_permission(self.member, PermissionChoice.PORTAL_VIEW_ACCESS_REQUESTS)
@@ -195,7 +195,7 @@ class AccessRequestsPortalApiTests(BaseTestCase):
 
         resp = self.client.post(f"/portal/access-requests/{req.id}/reject/", {"rejection_reason": "  "}, format="json")
 
-        self.assertEqual(422, resp.status_code)
+        self.assertEqual(400, resp.status_code)
         self.assertEqual("validation_error", resp.json()["error_name"])
 
     def test_reject_already_decided_request_returns_409(self):
