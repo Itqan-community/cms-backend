@@ -42,7 +42,9 @@ Every non-2xx response from the Fanar API uses the same envelope. Build your err
 
 ### `validation_error` Extra Shape
 
-When `error_name` is `validation_error`, `extra` contains an array of field-level error objects:
+`extra` depends on the status code, so check its type before reading it:
+
+- **400**: an array of field-level error objects, one per invalid parameter or body field:
 
 ```json
 {
@@ -53,6 +55,18 @@ When `error_name` is `validation_error`, `extra` contains an array of field-leve
   ]
 }
 ```
+
+- **422**: an empty object. Each value is valid on its own but they don't make sense together, and `message` says what is wrong:
+
+```json
+{
+  "error_name": "validation_error",
+  "message": "Invalid ayah range: from (5) must not exceed to (3).",
+  "extra": {}
+}
+```
+
+Show `message` in both cases. Read field errors from `extra` only when it is an array.
 
 ## Client Handling
 
@@ -76,8 +90,8 @@ async function apiFetch(url, options = {}) {
       // Resource doesn't exist — handle gracefully
       return null;
     case "validation_error":
-      // Show field errors to the user
-      throw new ValidationError(error.message, error.extra);
+      // Always show message; extra lists field errors on 400 and is {} on 422
+      throw new ValidationError(error.message, Array.isArray(error.extra) ? error.extra : []);
     case "authentication_error":
     case "token_not_valid":
       // Redirect to login or refresh token
@@ -110,7 +124,9 @@ def api_fetch(url):
         if name == "not_found":
             return None
         elif name == "validation_error":
-            raise ValueError(f"Validation failed: {error['extra']}")
+            # Always keep message; extra lists field errors on 400 and is {} on 422
+            fields = error["extra"] if isinstance(error.get("extra"), list) else []
+            raise ValueError(f"Validation failed: {error['message']}", fields)
         elif name in ("authentication_error", "token_not_valid"):
             raise PermissionError("Authentication required")
         elif name == "internal_error":

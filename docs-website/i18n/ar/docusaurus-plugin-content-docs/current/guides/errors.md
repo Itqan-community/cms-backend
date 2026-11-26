@@ -34,13 +34,16 @@ description: غلاف الخطأ الموحّد وكتالوج الأخطاء ا
 | 401 | `token_not_valid` | توكن JWT منتهي الصلاحية أو مُلغى | `null` |
 | 403 | `permission_denied` | مُصادَق عليه لكن غير مُخوَّل | `null` |
 | 404 | `not_found` | المورد غير موجود | `null` |
+| 422 | `validation_error` | الطلب سليم الصياغة لكن قيمه لا تستقيم معًا، مثل نطاق آيات يأتي فيه `from` بعد `to` أو يتجاوز نهاية السورة. يبيّن `message` موضع الخطأ | `{}` |
 | 4xx/5xx | `http_error` | مسار خطأ HTTP عام | `null` |
 | 500 | `internal_error` | استثناء خادم غير معالَج | `null` |
 | متغير | *(مخصص)* | خطأ منطق أعمال عبر `ItqanError` | خاص بكل نقطة نهاية؛ موثَّق في صفحة المرجع الخاصة بها |
 
 ### شكل `extra` لـ `validation_error`
 
-عندما يكون `error_name` هو `validation_error`، يحتوي `extra` على مصفوفة من كائنات الخطأ على مستوى الحقل:
+يختلف شكل `extra` باختلاف رمز الحالة، فتحقّق من نوعه قبل قراءته:
+
+- **400**: مصفوفة من كائنات الخطأ على مستوى الحقل، كائن لكل معامل أو حقل غير صحيح:
 
 ```json
 {
@@ -51,6 +54,18 @@ description: غلاف الخطأ الموحّد وكتالوج الأخطاء ا
   ]
 }
 ```
+
+- **422**: كائن فارغ. كل قيمة صحيحة بمفردها لكنها لا تستقيم معًا، ويبيّن `message` موضع الخطأ:
+
+```json
+{
+  "error_name": "validation_error",
+  "message": "نطاق الآيات غير صالح: من (5) يجب ألا تتجاوز إلى (3).",
+  "extra": {}
+}
+```
+
+اعرض `message` في الحالتين، ولا تقرأ أخطاء الحقول من `extra` إلا إذا كان مصفوفة.
 
 ## معالجة جانب العميل
 
@@ -73,7 +88,8 @@ async function apiFetch(url, options = {}) {
     case "not_found":
       return null;
     case "validation_error":
-      throw new ValidationError(error.message, error.extra);
+      // اعرض message دائمًا؛ extra يسرد أخطاء الحقول في 400 وهو {} في 422
+      throw new ValidationError(error.message, Array.isArray(error.extra) ? error.extra : []);
     case "authentication_error":
     case "token_not_valid":
       redirectToLogin();
@@ -103,7 +119,9 @@ def api_fetch(url):
         if name == "not_found":
             return None
         elif name == "validation_error":
-            raise ValueError(f"فشل التحقق: {error['extra']}")
+            # احتفظ بـ message دائمًا؛ extra يسرد أخطاء الحقول في 400 وهو {} في 422
+            fields = error["extra"] if isinstance(error.get("extra"), list) else []
+            raise ValueError(f"فشل التحقق: {error['message']}", fields)
         elif name in ("authentication_error", "token_not_valid"):
             raise PermissionError("المصادقة مطلوبة")
         elif name == "internal_error":
