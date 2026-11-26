@@ -77,6 +77,33 @@ class ImportColumnsPreviewApiTest(TextAssetVersionBaseTest):
         self.assertEqual(400, response.status_code, response.content)
         self.assertEqual("content_file_unparseable", response.json()["error_name"])
 
+    def test_preview_import_columns_where_quranenc_preamble_and_named_header_should_preview_and_upload(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
+        content = '"ترجمة معاني القرآن\nQuranEnc export"\nid,sura,aya,translation\n1,1,1,in the name\n'.encode()
+
+        # Act
+        preview = self.client.post(self._url(), data={"file": SimpleUploadedFile("t.csv", content)})
+        upload = self.client.post(
+            f"/portal/text-assets/{self.text_asset.slug}/versions/",
+            data={
+                "asset_id": self.text_asset.id,
+                "version_number": "1.0",
+                "summary_en": "first",
+                "file": SimpleUploadedFile("t.csv", content),
+            },
+        )
+
+        # Assert — no error, nothing to map (the dialog stays closed), and the upload imports by name
+        self.assertEqual(200, preview.status_code, preview.content)
+        self.assertTrue(preview.json()["complete"])
+        self.assertEqual(2, preview.json()["header_row"])
+        self.assertEqual(201, upload.status_code, upload.content)
+        version = AssetVersion.objects.get(id=upload.json()["id"])
+        self.assertEqual(["in the name"], [entry.text for entry in version.entries.all()])
+
     def test_preview_import_columns_where_title_above_header_should_say_the_header_must_be_first(self):
         # Arrange
         self.authenticate_user(self.user)
