@@ -7,6 +7,7 @@ from ninja.pagination import paginate
 from pydantic import AwareDatetime, Json
 
 from apps.content.api.portal.asset_columns import require_manage_columns
+from apps.content.api.portal.text_asset_versions import COLUMN_MAPPING_DESCRIPTION, column_mapping_from_form
 from apps.content.asset_tag_schemas import AssetTagOut
 from apps.content.channel_schemas import ChannelConflictResponse
 from apps.content.models import (
@@ -177,6 +178,7 @@ class TextAssetCreateIn(Schema):
             "the uploaded file may then carry them. Needs the manage-columns and all-languages permissions."
         ),
     )
+    column_mapping: str | None = Field(default=None, description=COLUMN_MAPPING_DESCRIPTION)
 
 
 class TextAssetPutIn(Schema):
@@ -292,6 +294,8 @@ def list_text_assets(request: Request, filters: TextAssetFilter = Query()):
         | NinjaErrorResponse[Literal["content_file_unparseable"]]
         | NinjaErrorResponse[Literal["content_file_missing_columns"]]
         | NinjaErrorResponse[Literal["content_file_invalid_rows"]]
+        | NinjaErrorResponse[Literal["column_mapping_invalid"]]
+        | NinjaErrorResponse[Literal["column_mapping_incomplete"]]
         | NinjaErrorResponse[Literal["mushaf_layout_required"]]
         | NinjaErrorResponse[Literal["mushaf_layout_not_allowed"]]
         | NinjaErrorResponse[Literal["template_not_allowed"]]
@@ -325,6 +329,7 @@ def create_text_asset(
         version_number=data.version_number,
         file=file,
         created_by_id=request.user.id,
+        column_mapping=column_mapping_from_form(data.column_mapping) if file else None,
         columns=(
             None
             if data.columns is None
