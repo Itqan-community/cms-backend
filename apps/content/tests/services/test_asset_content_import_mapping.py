@@ -5,6 +5,7 @@ from apps.content.services.asset_content_import import (
     PREVIEW_BYTES,
     AssetContentColumnMappingError,
     AssetContentMissingColumnsError,
+    AssetContentParseError,
     parse_content_file,
     preview_content_columns,
 )
@@ -81,6 +82,26 @@ class ColumnsPreviewTests(QuranDataMixin, BaseTestCase):
         self.assertEqual(preview.headers, ["surah", "ayah", "text"])
         self.assertEqual(preview.samples, [])
 
+    def test_preview_content_columns_where_data_cell_equals_an_alias_should_keep_the_real_header(self):
+        # Arrange — "text" in the first data row is a text alias, but that row is data
+        raw = b"chapter,verse,meaning\n1,1,text\n1,2,Praise\n"
+
+        # Act
+        preview = preview_content_columns(raw, self.spec, ["text"], truncated=False)
+
+        # Assert
+        self.assertEqual(preview.header_row, 1)
+        self.assertEqual(preview.headers, ["chapter", "verse", "meaning"])
+        self.assertEqual(preview.samples, [["1", "1", "text"], ["1", "2", "Praise"]])
+
+    def test_preview_content_columns_where_file_has_no_header_row_should_raise_parse_error(self):
+        # Arrange
+        raw = b"1,1,In the name\n1,2,Praise\n"
+
+        # Act / Assert
+        with self.assertRaises(AssetContentParseError):
+            preview_content_columns(raw, self.spec, ["text"], truncated=False)
+
     def test_preview_content_columns_where_word_template_should_offer_word_id_or_triple(self):
         # Arrange
         asset = baker.make(
@@ -144,6 +165,26 @@ class ColumnMappingImportTests(QuranDataMixin, BaseTestCase):
                 strict=True,
                 column_mapping={"surah": 0, "ayah": 1, "text": 2},
             )
+
+    def test_parse_content_file_where_data_cell_equals_an_alias_should_import_every_row(self):
+        # Arrange
+        raw = b"chapter,verse,meaning\n1,1,text\n1,2,Praise\n"
+
+        # Act
+        parsed = parse_content_file(
+            raw,
+            self.spec,
+            self.asset,
+            column_keys=["text"],
+            strict=True,
+            column_mapping={"surah": 0, "ayah": 1, "text": 2},
+        )
+
+        # Assert
+        self.assertEqual(
+            [(p.unit_id, p.cells) for p in parsed],
+            [(self.ayah1.id, {"text": "text"}), (self.ayah2.id, {"text": "Praise"})],
+        )
 
     def test_parse_content_file_where_two_columns_mapped_should_parse_both_and_ignore_extras(self):
         # Arrange
