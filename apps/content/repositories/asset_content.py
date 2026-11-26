@@ -947,12 +947,19 @@ class AssetContentRepository:
         )
 
     def reconstruct_entries_or_file(self, version: AssetVersion) -> Snapshot:
-        """:meth:`reconstruct_entries`, falling back to the stored file for a legacy
-        file-only commit (no entries and no deltas)."""
-        snapshot = self.reconstruct_entries(version)
-        if not snapshot and version.file_url:
-            snapshot = self._snapshot_from_file(version)
-        return snapshot
+        """:meth:`reconstruct_entries`, reading a legacy file-only commit's own file.
+
+        Pruning drops a commit's file along with its entries, so a version that has a
+        file but no entries is a legacy file-only commit: its file is its full content
+        and wins over the snapshot folded from earlier commits. An unreadable file
+        falls back to that fold.
+        """
+        direct = self._entries_map(version)
+        if direct:
+            return direct
+        if version.file_url and (from_file := self._snapshot_from_file(version)):
+            return from_file
+        return self.reconstruct_entries(version)
 
     def reconstruct_entries(self, version: AssetVersion) -> Snapshot:
         """Every cell at this commit.
