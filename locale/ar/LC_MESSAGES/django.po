@@ -107,12 +107,12 @@ msgstr "بعض معرّفات المقاطع غير صالحة أو غير مو�
 msgid "The column mapping must map each field to a column number."
 msgstr "يجب أن تربط مطابقة الأعمدة كل حقل برقم عمود."
 
+msgid "The file's header row could not be read. Upload a UTF-8 CSV file with a header row."
+msgstr "تعذّرت قراءة صف العناوين في الملف. ارفع ملف CSV بترميز UTF-8 يحتوي على صف عناوين."
+
 #, python-brace-format
 msgid "Text asset with slug {slug} not found."
 msgstr "الأصل النصي ذو المعرّف {slug} غير موجود."
-
-msgid "The file's header row could not be read. Upload a UTF-8 CSV file with a header row."
-msgstr "تعذّرت قراءة صف العناوين في الملف. ارفع ملف CSV بترميز UTF-8 يحتوي على صف عناوين."
 
 #, python-brace-format
 msgid "Provided asset_id {asset_id} does not match text asset id {expected_id}."

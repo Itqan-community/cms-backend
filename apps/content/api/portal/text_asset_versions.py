@@ -5,11 +5,21 @@ from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from ninja import File, Form, Query, Schema, UploadedFile
 from ninja.pagination import paginate
-from pydantic import AwareDatetime, Field
+from pydantic import AwareDatetime, Field, Json
 
 from apps.content.api.portal.asset_content import VersionTextIn, VersionTextOut
 from apps.content.api.portal.asset_review import change_counts, pending_review_count, with_change_counts
-from apps.content.models import Asset, AssetLanguage, AssetVersion, CategoryChoice, ChangeTypeChoice, VersionStateChoice
+from apps.content.models import (
+    DEFAULT_COLUMN_KEY,
+    Asset,
+    AssetLanguage,
+    AssetTemplateChoice,
+    AssetVersion,
+    CategoryChoice,
+    ChangeTypeChoice,
+    VersionStateChoice,
+)
+from apps.content.services.asset_columns import AssetColumnService
 from apps.content.services.asset_content import (
     VersionDeleteBlockedReason,
     is_first_version,
@@ -27,7 +37,7 @@ from apps.content.services.asset_language_access import (
     require_language,
     require_version_id,
 )
-from apps.content.services.asset_templates import unit_spec_for
+from apps.content.services.asset_templates import UnitSpec, unit_spec_for, unit_spec_for_template
 from apps.content.services.text_asset import TextAssetService
 from apps.content.version_text import VersionText
 from apps.core.mixins.storage import absolute_file_url
@@ -205,6 +215,53 @@ class ImportColumnsPreviewOut(Schema):
     complete: bool
 
 
+class ImportColumnIn(Schema):
+    key: str = Field(..., max_length=64)
+    label_en: str = Field(default="", max_length=255)
+    label_ar: str = Field(default="", max_length=255)
+
+
+class NewAssetImportColumnsIn(Schema):
+    template: AssetTemplateChoice
+    # The columns the create form will send (`columns`); just `text` when omitted.
+    columns: Json[list[ImportColumnIn]] | None = None
+
+
+def _import_columns_out(file: UploadedFile, spec: UnitSpec, columns: list) -> dict:
+    """Preview ``file``'s header row for ``columns`` (objects with key and labels).
+
+    Only the first 64 KB are read (clients may send just that slice), so a large
+    file is never parsed here.
+    """
+    prefix = file.read(PREVIEW_BYTES + 1)
+    try:
+        preview: ColumnsPreview = preview_content_columns(
+            prefix[:PREVIEW_BYTES],
+            spec,
+            [column.key for column in columns],
+            truncated=len(prefix) > PREVIEW_BYTES,
+        )
+    except AssetContentParseError as exc:
+        raise ItqanError(
+            error_name="content_file_unparseable",
+            message=_("The file's header row could not be read. Upload a UTF-8 CSV file with a header row."),
+            status_code=400,
+        ) from exc
+    return {
+        "header_row": preview.header_row,
+        "headers": preview.headers,
+        "samples": preview.samples,
+        "fields": [{"key": key, "kind": "unit"} for key in preview.unit_fields]
+        + [
+            {"key": column.key, "kind": "text", "label_en": column.label_en or "", "label_ar": column.label_ar or ""}
+            for column in columns
+        ],
+        "required": preview.required,
+        "mapping": preview.mapping,
+        "complete": preview.complete,
+    }
+
+
 @router.get(
     "text-assets/{text_asset_slug}/versions/",
     response={
@@ -251,11 +308,7 @@ def list_text_asset_versions(request: Request, text_asset_slug: str, language: s
 @permission_required([permission_class(PermissionChoice.PORTAL_READ_TEXT_ASSET)])
 def preview_import_columns(request: Request, text_asset_slug: str, file: UploadedFile = File(...)):
     """Read a content file's header row, auto-match it to the asset's fields and
-    list what still needs a column, so the uploader can map the rest.
-
-    Only the first 64 KB are read (clients may send just that slice), so a large
-    file is never parsed here.
-    """
+    list what still needs a column, so the uploader can map the rest."""
     try:
         asset = Asset.objects.filter(request.publisher_q()).get(slug=text_asset_slug, category=CategoryChoice.TEXT)
     except Asset.DoesNotExist as exc:
@@ -264,34 +317,27 @@ def preview_import_columns(request: Request, text_asset_slug: str, file: Uploade
             message=_("Text asset with slug {slug} not found.").format(slug=text_asset_slug),
             status_code=404,
         ) from exc
-    columns = asset.text_columns()
-    prefix = file.read(PREVIEW_BYTES + 1)
-    try:
-        preview: ColumnsPreview = preview_content_columns(
-            prefix[:PREVIEW_BYTES],
-            unit_spec_for(asset),
-            [column.key for column in columns],
-            truncated=len(prefix) > PREVIEW_BYTES,
-        )
-    except AssetContentParseError as exc:
-        raise ItqanError(
-            error_name="content_file_unparseable",
-            message=_("The file's header row could not be read. Upload a UTF-8 CSV file with a header row."),
-            status_code=400,
-        ) from exc
-    return {
-        "header_row": preview.header_row,
-        "headers": preview.headers,
-        "samples": preview.samples,
-        "fields": [{"key": key, "kind": "unit"} for key in preview.unit_fields]
-        + [
-            {"key": column.key, "kind": "text", "label_en": column.label_en or "", "label_ar": column.label_ar or ""}
-            for column in columns
-        ],
-        "required": preview.required,
-        "mapping": preview.mapping,
-        "complete": preview.complete,
-    }
+    return _import_columns_out(file, unit_spec_for(asset), asset.text_columns())
+
+
+@router.post(
+    "content/text-assets/import-columns/",
+    response={
+        200: ImportColumnsPreviewOut,
+        400: NinjaErrorResponse[Literal["content_file_unparseable"]]
+        | NinjaErrorResponse[Literal["column_key_invalid"]]
+        | NinjaErrorResponse[Literal["column_key_taken"]],
+    },
+)
+@permission_required([permission_class(PermissionChoice.PORTAL_CREATE_TEXT_ASSET)])
+def preview_new_asset_import_columns(
+    request: Request, data: Form[NewAssetImportColumnsIn], file: UploadedFile = File(...)
+):
+    """The same preview for the create form, before the asset exists: the fields
+    come from the chosen template and the columns the form will create."""
+    columns = data.columns or [ImportColumnIn(key=DEFAULT_COLUMN_KEY)]
+    AssetColumnService.validate_new_keys([column.key for column in columns])
+    return _import_columns_out(file, unit_spec_for_template(data.template), columns)
 
 
 @router.post(

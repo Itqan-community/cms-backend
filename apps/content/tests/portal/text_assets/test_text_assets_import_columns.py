@@ -225,3 +225,73 @@ class ImportWithColumnMappingApiTest(TextAssetVersionBaseTest):
         version = AssetVersion.objects.get(asset_language__language="es", asset=self.text_asset)
         self.assertEqual(["en el nombre"], [entry.text for entry in version.entries.all()])
         self.assertTrue(AssetLanguage.objects.filter(asset=self.text_asset, language="es").exists())
+
+
+class NewAssetImportColumnsPreviewApiTest(TextAssetVersionBaseTest):
+    url = "/portal/content/text-assets/import-columns/"
+
+    def test_preview_new_asset_import_columns_where_columns_given_should_return_their_fields(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TEXT_ASSET)
+        columns = [{"key": "question", "label_en": "Question", "label_ar": "السؤال"}, {"key": "answer"}]
+        file = SimpleUploadedFile("t.csv", b"sura,aya,question,reply\n1,1,q,a\n", content_type="text/csv")
+
+        # Act
+        response = self.client.post(self.url, data={"template": "ayah", "columns": json.dumps(columns), "file": file})
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual(
+            [
+                {"key": "surah", "kind": "unit", "label_en": "", "label_ar": ""},
+                {"key": "ayah", "kind": "unit", "label_en": "", "label_ar": ""},
+                {"key": "question", "kind": "text", "label_en": "Question", "label_ar": "السؤال"},
+                {"key": "answer", "kind": "text", "label_en": "", "label_ar": ""},
+            ],
+            body["fields"],
+        )
+        self.assertEqual({"surah": 0, "ayah": 1, "question": 2}, body["mapping"])
+        self.assertFalse(body["complete"])
+
+    def test_preview_new_asset_import_columns_where_no_columns_should_use_the_text_column(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TEXT_ASSET)
+        file = SimpleUploadedFile("t.csv", b"page,translation\n1,x\n", content_type="text/csv")
+
+        # Act
+        response = self.client.post(self.url, data={"template": "page", "file": file})
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual([["page", "text"]], body["required"])
+        self.assertTrue(body["complete"])
+
+    def test_preview_new_asset_import_columns_where_column_key_invalid_should_return_column_key_invalid(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_CREATE_TEXT_ASSET)
+        file = SimpleUploadedFile("t.csv", UNMATCHED_CSV, content_type="text/csv")
+
+        # Act
+        response = self.client.post(
+            self.url, data={"template": "ayah", "columns": json.dumps([{"key": "Surah"}]), "file": file}
+        )
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        self.assertEqual("column_key_invalid", response.json()["error_name"])
+
+    def test_preview_new_asset_import_columns_where_user_cannot_create_should_return_403(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        file = SimpleUploadedFile("t.csv", UNMATCHED_CSV, content_type="text/csv")
+
+        # Act
+        response = self.client.post(self.url, data={"template": "ayah", "file": file})
+
+        # Assert
+        self.assertEqual(403, response.status_code, response.content)
