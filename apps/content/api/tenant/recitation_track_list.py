@@ -1,7 +1,6 @@
 from typing import Literal
 
 from django.db.models import Q
-from django.http import Http404
 from django.utils.translation import gettext_lazy as _
 from ninja import Query, Schema
 from ninja.pagination import paginate
@@ -12,7 +11,7 @@ from apps.content.repositories.recitation import RecitationRepository
 from apps.content.services.recitation import RecitationService
 from apps.content.services.recitation_quality_resolution import reject_renamed_folder_param
 from apps.core.mixins.constants import QURAN_SURAHS
-from apps.core.ninja_utils.errors import NinjaErrorResponse
+from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
@@ -51,7 +50,7 @@ class RecitationSurahTrackOut(Schema):
     response={
         400: NinjaErrorResponse[Literal["folder_param_renamed"]],
         200: list[RecitationSurahTrackOut],
-        404: NinjaErrorResponse[Literal["not_found"]] | NinjaErrorResponse[Literal["quality_not_found"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]] | NinjaErrorResponse[Literal["quality_not_found"]],
     },
 )
 @paginate
@@ -64,7 +63,11 @@ def list_recitation_tracks(request: Request, asset_id: int, quality: str | None 
     # For now, we use a helper to maintain the 404 behavior
     asset = repo.get_asset_object(asset_id, request.publisher_q("publisher") & Q(in_tenants=True))
     if not asset:
-        raise Http404(str(_("No asset matches the given query.")))
+        raise ItqanError(
+            error_name="asset_not_found",
+            message=_("Asset with id {id} not found.").format(id=asset_id),
+            status_code=404,
+        )
 
     tracks = service.get_asset_tracks(
         asset_id,

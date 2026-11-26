@@ -185,6 +185,7 @@ class RecitationRangeTest(BaseTestCase):
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
+        self.assertEqual("asset_not_found", response.json()["error_name"])
 
     def test_get_range_where_surah_track_missing_should_return_404(self):
         # Arrange: asset only has surah 1.
@@ -195,6 +196,7 @@ class RecitationRangeTest(BaseTestCase):
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
+        self.assertEqual("track_not_found", response.json()["error_name"])
 
     def test_get_range_where_quality_unknown_should_return_404(self):
         # Arrange

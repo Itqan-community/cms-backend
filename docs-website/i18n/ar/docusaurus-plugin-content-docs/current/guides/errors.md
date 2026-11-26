@@ -35,7 +35,8 @@ description: غلاف الخطأ الموحّد وكتالوج الأخطاء ا
 | 401 | `invalid_api_key` | ترويسة `X-API-Key` تحمل مفتاحاً غير موجود أو مُلغى أو منتهي الصلاحية. الطلبات التي لا ترسل الترويسة لا تتأثر | `null` |
 | 401 | `token_not_valid` | توكن JWT منتهي الصلاحية أو مُلغى | `null` |
 | 403 | `permission_denied` | مُصادَق عليه لكن غير مُخوَّل | `null` |
-| 404 | `not_found` | المورد غير موجود | `null` |
+| 404 | `asset_not_found` | الأصل المذكور في المسار غير موجود أو غير متاح عبر الواجهة | `null` |
+| 404 | `not_found` | أي مورد آخر غير موجود | `null` |
 | 4xx/5xx | `http_error` | مسار خطأ HTTP عام | `null` |
 | 500 | `internal_error` | استثناء خادم غير معالَج | `null` |
 | متغير | *(مخصص)* | خطأ منطق أعمال عبر `ItqanError` | خاص بكل نقطة نهاية؛ موثَّق في صفحة المرجع الخاصة بها |
@@ -68,6 +69,14 @@ description: غلاف الخطأ الموحّد وكتالوج الأخطاء ا
 
 اعرض `message` في الحالتين، ولا تقرأ أخطاء الحقول من `extra` إلا إذا كان مصفوفة.
 
+### رموز «غير موجود»
+
+يسمّي الخطأ 404 الشيء المفقود:
+
+- `asset_not_found`: الأصل المذكور في المسار (بالمعرّف أو بالاسم المختصر slug) غير موجود، أو غير متاح عبر الواجهة، أو ليس له إصدار منشور. كل نقاط النهاية تستخدم هذا الاسم لهذه الحالة.
+- اسم أدق حين يكون الأصل موجودًا وجزء منه مفقودًا: `track_not_found` (لا يوجد مسار صوتي لهذه السورة)، `quality_not_found`، `ayah_not_found`، `language_not_found`، `version_not_found`.
+- `not_found` لأي شيء آخر.
+
 ## معالجة جانب العميل
 
 قم بالتحويل بناءً على `error_name`. لا تُحوِّل بناءً على `message` (يتغير مع اللغة) أو على حالة HTTP وحدها (معرّفات أخطاء متعددة تشترك في نفس حالة HTTP).
@@ -86,6 +95,7 @@ async function apiFetch(url, options = {}) {
   const error = await resp.json();
 
   switch (error.error_name) {
+    case "asset_not_found":
     case "not_found":
       return null;
     case "validation_error":
@@ -117,7 +127,7 @@ def api_fetch(url):
         error = json.load(e)
         name = error.get("error_name")
 
-        if name == "not_found":
+        if name in ("asset_not_found", "not_found"):
             return None
         elif name == "validation_error":
             # احتفظ بـ message دائمًا؛ extra إما قائمة بأخطاء الحقول أو null

@@ -35,7 +35,8 @@ Every non-2xx response from the Fanar API uses the same envelope. Build your err
 | 401 | `invalid_api_key` | The `X-API-Key` header holds a key that does not exist, was revoked or has expired. Calls without the header are not affected | `null` |
 | 401 | `token_not_valid` | Expired or revoked JWT token | `null` |
 | 403 | `permission_denied` | Authenticated but not authorized | `null` |
-| 404 | `not_found` | Resource does not exist | `null` |
+| 404 | `asset_not_found` | The asset in the path does not exist or is not offered through the API | `null` |
+| 404 | `not_found` | Any other resource that does not exist | `null` |
 | 429 | `throttled` | Rate limit exceeded (see [Rate Limits](#rate-limits)) | `null` |
 | 4xx/5xx | `http_error` | Generic HTTP error path | `null` |
 | 500 | `internal_error` | Unhandled server exception | `null` |
@@ -69,6 +70,14 @@ Every non-2xx response from the Fanar API uses the same envelope. Build your err
 
 Show `message` in both cases. Read field errors from `extra` only when it is an array.
 
+### Not-found codes
+
+A 404 names what is missing:
+
+- `asset_not_found`: the asset named in the path (by id or slug) does not exist, is not offered through the API, or has nothing published. Every endpoint uses this name for it.
+- A narrower name when the asset exists but a part of it does not: `track_not_found` (no track for that surah), `quality_not_found`, `ayah_not_found`, `language_not_found`, `version_not_found`.
+- `not_found` for anything else.
+
 ## Client Handling
 
 Branch on `error_name`. Do not branch on `message` (it changes with locale) or on HTTP status alone (multiple error names share the same status code).
@@ -87,6 +96,7 @@ async function apiFetch(url, options = {}) {
   const error = await resp.json();
 
   switch (error.error_name) {
+    case "asset_not_found":
     case "not_found":
       // Resource doesn't exist — handle gracefully
       return null;
@@ -122,7 +132,7 @@ def api_fetch(url):
         error = json.load(e)
         name = error.get("error_name")
 
-        if name == "not_found":
+        if name in ("asset_not_found", "not_found"):
             return None
         elif name == "validation_error":
             # Always keep message; extra is a list of field errors or null

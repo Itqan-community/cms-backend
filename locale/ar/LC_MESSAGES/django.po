@@ -121,6 +121,10 @@ msgstr "معرّف الأصل {asset_id} لا يطابق معرّف الأصل �
 msgid "One or more timing files could not be processed."
 msgstr "تعذر معالجة ملف توقيت واحد أو أكثر."
 
+#, python-brace-format
+msgid "Asset with id {id} not found."
+msgstr "لم يتم العثور على المورد ذو المعرف {id}."
+
 msgid "You must be signed in to get personalized recommendations."
 msgstr "يجب تسجيل الدخول للحصول على التوصيات الشخصية."
 
@@ -314,10 +318,6 @@ msgstr "تم رفض طلب وصولك إلى {asset_name}"
 #, python-brace-format
 msgid "You have {count} pending access request(s)"
 msgstr "لديك {count} طلب(ات) وصول معلقة"
-
-#, python-brace-format
-msgid "Asset with id {id} not found."
-msgstr "لم يتم العثور على المورد ذو المعرف {id}."
 
 #, python-brace-format
 msgid "Failed to initiate upload (R2 error: {error_code})."

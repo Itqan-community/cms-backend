@@ -374,7 +374,7 @@ class RecitationService:
 
         if track is None:
             raise ItqanError(
-                error_name="not_found",
+                error_name="track_not_found",
                 message=_("No track for surah {surah} on this recitation.").format(surah=surah_number),
                 status_code=404,
             )
