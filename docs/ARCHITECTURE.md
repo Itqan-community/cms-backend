@@ -475,8 +475,9 @@ asset still accepts the legacy text headers (`translation`, `text`, `content`,
 `المحتوى`). A file whose headers don't match can still be imported:
 `POST /portal/text-assets/{slug}/import-columns/` reads only the first 64 KB of the file
 and returns its header row, sample rows, the asset's fields, the auto-matched columns
-and the field sets that must be mapped; the upload (version create / replace, add
-language) then sends a `column_mapping` form field (JSON, field key → 0-based column
+and the field sets that must be mapped (`POST /portal/content/text-assets/import-columns/`
+does the same for an asset being created, from its `template` and `columns`); the
+upload (asset create, version create / replace, add language) then sends a `column_mapping` form field (JSON, field key → 0-based column
 index) that overrides header matching and ignores every column it doesn't name
 (`column_mapping_incomplete` with the unmapped fields in `extra.fields`, or
 `column_mapping_invalid`). An upload identical to the previous version
