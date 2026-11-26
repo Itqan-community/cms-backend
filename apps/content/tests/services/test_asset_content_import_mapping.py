@@ -105,6 +105,25 @@ class ColumnsPreviewTests(QuranDataMixin, BaseTestCase):
                 self.assertEqual(preview.header_row, 1)
                 self.assertEqual(preview.headers, ["chapter", "verse", "meaning"])
 
+    def test_preview_content_columns_where_ignored_only_alias_row_follows_data_should_keep_the_real_header(self):
+        # Arrange — ",,,text" has no number, but it sits below the first data row
+        raw = b"chapter,verse,meaning,notes\n1,1,First,\n,,,text\n1,2,Second,\n"
+
+        # Act
+        preview = preview_content_columns(raw, self.spec, ["text"], truncated=False)
+
+        # Assert
+        self.assertEqual(preview.header_row, 1)
+        self.assertEqual(preview.headers, ["chapter", "verse", "meaning", "notes"])
+
+    def test_preview_content_columns_where_no_data_row_should_raise_parse_error(self):
+        # Arrange — a header with nothing under it: there is no data to anchor the header to
+        raw = b"chapter,verse,meaning\n"
+
+        # Act / Assert
+        with self.assertRaises(AssetContentParseError):
+            preview_content_columns(raw, self.spec, ["text"], truncated=False)
+
     def test_preview_content_columns_where_file_has_no_header_row_should_raise_parse_error(self):
         # Arrange
         raw = b"1,1,In the name\n1,2,Praise\n"
@@ -120,7 +139,7 @@ class ColumnsPreviewTests(QuranDataMixin, BaseTestCase):
         )
 
         # Act
-        preview = preview_content_columns(b"a,b,c\n", unit_spec_for(asset), ["text"], truncated=False)
+        preview = preview_content_columns(b"a,b,c\n1,1,x\n", unit_spec_for(asset), ["text"], truncated=False)
 
         # Assert
         self.assertEqual(preview.required, [["word_id", "text"], ["surah", "ayah", "word", "text"]])
@@ -216,6 +235,36 @@ class ColumnMappingImportTests(QuranDataMixin, BaseTestCase):
             [(p.unit_id, p.cells) for p in parsed],
             [(self.ayah1.id, {"text": "text"}), (self.ayah2.id, {"text": "Praise"})],
         )
+
+    def test_parse_content_file_where_ignored_only_alias_row_follows_data_should_import_every_row(self):
+        # Arrange
+        raw = b"chapter,verse,meaning,notes\n1,1,First,\n,,,text\n1,2,Second,\n"
+
+        # Act
+        parsed = parse_content_file(
+            raw,
+            self.spec,
+            self.asset,
+            column_keys=["text"],
+            strict=True,
+            column_mapping={"surah": 0, "ayah": 1, "text": 2},
+        )
+
+        # Assert
+        self.assertEqual(
+            [(p.unit_id, p.cells) for p in parsed],
+            [(self.ayah1.id, {"text": "First"}), (self.ayah2.id, {"text": "Second"})],
+        )
+
+    def test_parse_content_file_where_mapping_and_no_data_row_should_raise_parse_error(self):
+        # Arrange
+        raw = b"Exported\nchapter,verse,meaning\n"
+
+        # Act / Assert
+        with self.assertRaises(AssetContentParseError):
+            parse_content_file(
+                raw, self.spec, self.asset, column_keys=["text"], column_mapping={"surah": 0, "ayah": 1, "text": 2}
+            )
 
     def test_parse_content_file_where_two_columns_mapped_should_parse_both_and_ignore_extras(self):
         # Arrange

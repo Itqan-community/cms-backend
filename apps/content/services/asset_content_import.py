@@ -456,22 +456,34 @@ def _could_be_header(row: list[str]) -> bool:
     return any(cells) and not any(_is_unit_number(cell) for cell in cells if cell)
 
 
-def _locate_header_row(rows: list[list[str]], aliases: dict[str, frozenset[str] | set[str]]) -> int:
-    """The header row, among the rows that could be one (``_could_be_header``):
-    the first naming any known field, else the first with two or more filled
-    cells (a header nothing matched), else the first. A data row is never taken,
-    even when a text cell equals an alias such as ``text``. Only the first
-    ``_HEADER_SCAN_ROWS`` rows are looked at, so the full file and its preview agree."""
-    known = set().union(*aliases.values())
-    candidates = [(index, row) for index, row in enumerate(rows[:_HEADER_SCAN_ROWS]) if _could_be_header(row)]
-    for index, row in candidates:
-        if any(cell.strip().lower() in known for cell in row):
-            return index
-    for minimum in (2, 1):
-        for index, row in candidates:
-            if sum(1 for cell in row if cell.strip()) >= minimum:
-                return index
-    raise AssetContentParseError("No header row found.")
+def _locate_header_row(rows: list[list[str]], *, data_may_follow: bool = False) -> int:
+    """The header row: the last non-blank row before the first data row (a row
+    with a cell the parsers read as a number), among the first ``_HEADER_SCAN_ROWS``
+    rows, so the full file and its preview agree.
+
+    Nothing below the first data row can be the header, so no data row is ever
+    blanked as preamble, whatever text it carries (an alias such as ``text`` in
+    an ignored column included). No guessing: a file with no data row in that
+    range, or nothing above its first one, is rejected. ``data_may_follow`` (a
+    preview of the file's start) lets a prefix that ends before its first data
+    row use its last non-blank row.
+    """
+    scanned = rows[:_HEADER_SCAN_ROWS]
+    first_data = next(
+        (
+            index
+            for index, row in enumerate(scanned)
+            if not _could_be_header(row) and any((cell or "").strip() for cell in row)
+        ),
+        None,
+    )
+    if first_data is None and not data_may_follow:
+        raise AssetContentParseError("No data rows found below a header row.")
+    above = scanned if first_data is None else scanned[:first_data]
+    header = next((index for index in range(len(above) - 1, -1, -1) if _could_be_header(above[index])), None)
+    if header is None:
+        raise AssetContentParseError("No header row found above the data.")
+    return header
 
 
 def _complete(mapping: dict[str, int], required: list[list[str]]) -> bool:
@@ -493,7 +505,7 @@ def _apply_column_mapping(
     unknown = [key for key in column_mapping if key not in aliases]
     if unknown:
         raise AssetContentColumnMappingError(unknown, incomplete=False)
-    header_index = _locate_header_row(rows, aliases)
+    header_index = _locate_header_row(rows)
     width = len(rows[header_index])
     chosen = {key: index for key, index in column_mapping.items() if index is not None}
     shared = {index for index, count in Counter(chosen.values()).items() if count > 1}
@@ -550,7 +562,7 @@ def preview_content_columns(
         prefix = prefix[: end + 1] if end >= 0 else prefix
     rows = _read_rows(prefix)
     aliases = _field_aliases(spec, column_keys)
-    header_index = _locate_header_row(rows, aliases)
+    header_index = _locate_header_row(rows, data_may_follow=truncated)
     header = [cell.strip() for cell in rows[header_index]]
     samples = [
         [(cell or "").strip()[:_SAMPLE_CELL_CHARS] for cell in row]
