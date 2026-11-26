@@ -119,7 +119,7 @@ class AyahTextPublicApiTest(GroupQuranDataMixin, BaseTestCase):
 
         # Assert
         self.assertEqual(200, response.status_code, response.content)
-        self.assertEqual("public, max-age=300, s-maxage=300", response.headers.get("Cache-Control"))
+        self.assertEqual("private, max-age=300", response.headers.get("Cache-Control"))
         body = response.json()
         self.assertEqual((1, 1, 1), (body["surah_number"], body["from_ayah"], body["to_ayah"]))
         self.assertEqual(1, len(body["assets"]))
@@ -602,6 +602,23 @@ class AyahTextPublicApiTest(GroupQuranDataMixin, BaseTestCase):
         self.assertEqual(401, response.status_code, response.content)
         self.assertEqual("authentication_required", response.json()["error_name"])
         self.assertEqual(["tafsir-a"], response.json()["extra"]["assets"])
+
+    def test_get_ayah_text_where_only_open_assets_should_never_let_shared_caches_store_the_response(self):
+        # Arrange: a shared (CDN) copy would outlive the asset being restricted.
+        asset = self._text_asset("tafsir-a")
+        self._version(asset, "1.0", {self._ayah(1): {"text": "t"}})
+
+        # Act
+        cold = self.client.get("/ayahs/1:1/?assets=tafsir-a")
+        warm = self.client.get("/ayahs/1:1/?assets=tafsir-a")
+
+        # Assert
+        for response in (cold, warm):
+            self.assertEqual(200, response.status_code, response.content)
+            cache_control = response.headers.get("Cache-Control")
+            self.assertEqual("private, max-age=300", cache_control)
+            self.assertNotIn("public", cache_control)
+            self.assertNotIn("s-maxage", cache_control)
 
     def test_get_ayah_text_where_cached_and_unrelated_field_saved_should_keep_the_cached_response(self):
         # Arrange

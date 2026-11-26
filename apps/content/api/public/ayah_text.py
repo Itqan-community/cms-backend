@@ -70,9 +70,11 @@ class AssetSlugsExtra(Schema):
 
 
 def _cache_control(refs: list[PublicAssetRef]) -> str:
-    # Shared caches may keep the response only when every asset in it is open.
+    # Never shared-cacheable: a CDN copy of an open response would outlive the asset
+    # being restricted, which only our own cache generation can retire. Warm hits are
+    # served from that cache without DB queries, so the CDN saves little.
     if all(ref.is_open_access for ref in refs):
-        return "public, max-age=300, s-maxage=300"
+        return "private, max-age=300"
     return "private, no-cache"
 
 
