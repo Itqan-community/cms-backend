@@ -1244,7 +1244,7 @@ class AssetContentService:
             snapshots: list[Snapshot] = []
 
             def load_snapshot() -> Snapshot:
-                snapshots.append(self.repo.reconstruct_entries(version))
+                snapshots.append(self.repo.reconstruct_entries_or_file(version))
                 return snapshots[0]
 
             self._forbid_orphaned_groups(version, load_snapshot)

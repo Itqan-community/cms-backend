@@ -1019,25 +1019,21 @@ class AssetContentRepository:
         `version` comes back empty, and every column `version` had still exists
         (committed columns can't be deleted).
 
-        ``snapshot`` is ``version``'s reconstructed cells when the caller has
-        already read them; otherwise they are reconstructed here.
+        ``snapshot`` is :meth:`reconstruct_entries_or_file` of ``version`` when the
+        caller has already read it; otherwise it is read here.
         """
         asset = version.asset
         spec = unit_spec_for(asset)
         language = version.asset_language.language if version.asset_language_id else asset.language
         previous_head = asset.get_latest_version(language)  # current head before restore
         if snapshot is None:
-            snapshot = self.reconstruct_entries(version)
+            # A legacy file-only commit (pre-entries) is parsed from its stored file so
+            # the restore materializes real entries + a delta, like any other commit.
+            # `_snapshot_from_file` resolves through this asset's own template spec,
+            # so `unit_id` already matches what `copies` below writes via
+            # `spec.unit_columns(unit_id)`.
+            snapshot = self.reconstruct_entries_or_file(version)
         order_index = self._order_map(version)
-        if not snapshot and version.file_url:
-            # Legacy file-only commit (pre-entries): parse its stored file so the
-            # restore materializes real entries + a delta, like any other commit.
-            # `_snapshot_from_file` resolves through this asset's own template
-            # spec, so `unit_id` already matches what `copies` below writes via
-            # `spec.unit_columns(unit_id)`. In practice every pre-entries legacy
-            # file belongs to an ayah-template asset, since templates postdate
-            # the entries system, but the resolution itself is template-generic.
-            snapshot = self._snapshot_from_file(version)
         columns = self._columns_by_key(asset)
         new_version = self.asset_version_model.objects.create(
             asset=asset,

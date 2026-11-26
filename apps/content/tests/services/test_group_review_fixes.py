@@ -101,7 +101,9 @@ class GroupReviewFixTests(GroupQuranDataMixin, BaseTestCase):
         repo = AssetContentRepository()
 
         # Act
-        with patch.object(repo, repo.reconstruct_entries.__name__, wraps=repo.reconstruct_entries) as reconstruct:
+        with patch.object(
+            repo, repo.reconstruct_entries_or_file.__name__, wraps=repo.reconstruct_entries_or_file
+        ) as reconstruct:
             AssetContentService(repo).restore_version(self.asset.slug, CategoryChoice.TEXT, old.pk)
 
         # Assert
@@ -115,7 +117,9 @@ class GroupReviewFixTests(GroupQuranDataMixin, BaseTestCase):
         repo = AssetContentRepository()
 
         # Act
-        with patch.object(repo, repo.reconstruct_entries.__name__, wraps=repo.reconstruct_entries) as reconstruct:
+        with patch.object(
+            repo, repo.reconstruct_entries_or_file.__name__, wraps=repo.reconstruct_entries_or_file
+        ) as reconstruct:
             AssetContentService(repo).restore_version(self.asset.slug, CategoryChoice.TEXT, old.pk)
 
         # Assert

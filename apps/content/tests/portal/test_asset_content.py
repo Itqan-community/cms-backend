@@ -1008,6 +1008,46 @@ class ReconstructAndRestoreTest(AssetContentBaseTest):
         # The restore records a delta like any other commit (all added here).
         self.assertTrue(latest.changes.exists())
 
+    def test_restore_file_only_version_after_one_with_entries_should_restore_its_own_file(self):
+        # Arrange: v1.0 keeps full entries; the later v1.1 is file-only with different
+        # text, and v1.2 is the head. Folding earlier commits would bring back v1.0.
+        from django.core.files.base import ContentFile
+
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
+        ar = self.translation.get_or_create_source_language()
+        now = timezone.now()
+        first = baker.make(
+            AssetVersion, asset=self.translation, asset_language=ar, name="1.0", state=VersionStateChoice.PUBLISHED
+        )
+        baker.make(AssetVersionEntry, version=first, ayah=self.ayahs[0], text="old 1:1")
+        baker.make(AssetVersionEntry, version=first, ayah=self.ayahs[1], text="old 1:2")
+        legacy = baker.make(
+            AssetVersion, asset=self.translation, asset_language=ar, name="1.1", state=VersionStateChoice.PUBLISHED
+        )
+        legacy.file_url.save("legacy.csv", ContentFile(b"surah,ayah,text\n1,1,new 1:1\n1,2,new 1:2"), save=True)
+        head = baker.make(
+            AssetVersion, asset=self.translation, asset_language=ar, name="1.2", state=VersionStateChoice.PUBLISHED
+        )
+        baker.make(AssetVersionEntry, version=head, ayah=self.ayahs[0], text="head 1:1")
+        AssetVersion.objects.filter(pk=first.pk).update(created_at=now - timedelta(hours=3))
+        AssetVersion.objects.filter(pk=legacy.pk).update(created_at=now - timedelta(hours=2))
+        AssetVersion.objects.filter(pk=head.pk).update(created_at=now - timedelta(hours=1))
+
+        # Act
+        resp = self.client.post(
+            f"/portal/content/text-assets/{self.translation.slug}/versions/{legacy.id}/restore/",
+            data={},
+            content_type="application/json",
+        )
+
+        # Assert
+        self.assertEqual(200, resp.status_code, resp.content)
+        latest = self.translation.get_latest_version("ar")
+        self.assertNotIn(latest.id, {first.id, legacy.id, head.id})
+        self.assertEqual("new 1:1", latest.entries.get(ayah_id=self.ayahs[0].id).text)
+        self.assertEqual("new 1:2", latest.entries.get(ayah_id=self.ayahs[1].id).text)
+
 
 class DiscardDraftTest(AssetContentBaseTest):
     def test_discard_draft_where_valid_should_delete_draft_and_entries(self):
